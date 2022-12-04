@@ -1,0 +1,3 @@
+[submodule "thirdparty/avalonia"]
+	path = thirdparty/avalonia
+	url = https://github.com/AvaloniaUI/Avalonia.git
