@@ -14,3 +14,9 @@ $ cd ./areg-sdk-tool
 # Step 3: Clone recursevely all sources, including dependencies that has availonia
 $ git clone --recurse-submodules https://github.com/aregtech/areg-sdk-tool.git .
 ```
+
+## Tools included
+
+This UI Tool for AREG SDK includes following applications:
+1. Service Interface designer
+2. Log viewer.
