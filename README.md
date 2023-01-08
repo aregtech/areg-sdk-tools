@@ -20,3 +20,5 @@ $ git clone --recurse-submodules https://github.com/aregtech/areg-sdk-tools.git 
 This UI Tool for AREG SDK includes following applications:
 1. Service Interface designer;
 2. Log viewer.
+
+> 💡 This project is under development and not ready yet.
