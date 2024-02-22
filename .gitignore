@@ -30,3 +30,5 @@
 *.exe
 *.out
 *.app
+AvaloniaUI/AvaloniaUITest/bin
+AvaloniaUI/AvaloniaUITest/obj
