@@ -4,23 +4,28 @@ using SimpleInjector;
 
 namespace AvaloniaUI;
 
-public static class Bootstrapper
+/// <summary>
+/// The <see cref="Bootstrapper"/> bootstraps the application.
+/// This is the location where service-registrations should occur.
+/// <remarks>
+/// No verification needed: container.Options.EnableAutoVerification is enabled, by default.
+/// <seealso href="https://docs.simpleinjector.org/en/latest/using.html#verifying-the-container-s-configuration"/>
+/// </remarks>
+/// 
+/// </summary>
+internal static class Bootstrapper
 {
-    public static Container Bootstrap()
+    /// <summary>
+    /// Create a container, add required registrations, return that container.
+    /// </summary>
+    /// <returns>The instantiated container containing all required registrations.</returns>
+    internal static void Bootstrap(Container container)
     {
-        // Create the container as usual.
-        var container = new Container();
-
         // Register all instances of ITopLevelPlugin
-        container.Collection.Register<ITopLevelPlugin>(Assembly.GetExecutingAssembly());
+        container.Collection.Register<ITestPlugin>(Assembly.GetExecutingAssembly());
         
-        // container.Register<ITopLevelPlugin, TopLevelPlugin1>(Lifestyle.Transient);
-        // container.Register<ITopLevelPlugin, TopLevelPlugin2>(Lifestyle.Transient);
-
-
-        // Perform verification
-        container.Verify();
-
-        return container;
+        // No verification required; it is performed automatically upon the first retrieval of
+        // a service by the app.
+        // container.Verify();
     }
 }

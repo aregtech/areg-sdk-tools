@@ -13,6 +13,15 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
+    public override void RegisterServices()
+    {
+        // In this case, call the base class impl first
+        base.RegisterServices();
+        
+        // instantiate the container, registering all services needed by the App
+        var container = AppContainer.Instance;
+    }
+
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
