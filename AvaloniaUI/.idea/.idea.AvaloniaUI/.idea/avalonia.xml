@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="AvaloniaUI/AvaloniaUI/App.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
+        <entry key="AvaloniaUI/AvaloniaUI/Views/MainView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
+        <entry key="AvaloniaUI/AvaloniaUI/Views/MainWindow.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
+        <entry key="AvaloniaUI/AvaloniaUI/Views/OpenServiceView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
+      </map>
+    </option>
+  </component>
+</project>
