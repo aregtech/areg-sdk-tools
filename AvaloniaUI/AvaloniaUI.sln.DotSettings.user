@@ -5,6 +5,7 @@
     &lt;TestId&gt;MSTest::E302CBA7-2247-4EB6-8809-E2B349951800::net8.0::AvaloniaUITest.TestBootstrapping.TestPluginCollections&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;MSTest::E302CBA7-2247-4EB6-8809-E2B349951800::net8.0::AvaloniaUITest.TestContainer&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;MSTest::E302CBA7-2247-4EB6-8809-E2B349951800::net8.0::AvaloniaUITest.TestBootstrapper&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;MSTest::E302CBA7-2247-4EB6-8809-E2B349951800::net8.0::AvaloniaUITest.TestModelSchema.TestValidateService&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	<s:Boolean x:Key="/Default/UnloadedProject/UnloadedProjects/=abeafb60_002D0bce_002D48aa_002D9c92_002D96c2efd87b85_0023AvaloniaUI_002EAndroid/@EntryIndexedValue">True</s:Boolean>

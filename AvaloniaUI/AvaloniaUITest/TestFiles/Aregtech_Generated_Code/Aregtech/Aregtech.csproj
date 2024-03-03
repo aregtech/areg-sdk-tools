@@ -1,0 +1,46 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="17.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6867330B-8C27-3441-862A-DD766E7D6EE2}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Aregtech</RootNamespace>
+    <AssemblyName>Aregtech</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+	<PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Aregtech_TypeInfo.cs" />
+   <Compile Include="Aregtech.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AltovaXML\AltovaXML.csproj">
+      <Project>{03AAA791-EC2D-4A90-ABBF-45337E52DFD6}</Project>
+      <Name>AltovaXML</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Altova\Altova.csproj">
+      <Project>{D43E6C54-2DF5-454E-9566-DFFE2F3A6946}</Project>
+      <Name>Altova</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+</Project>

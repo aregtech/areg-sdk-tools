@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<ServiceInterface FormatVersion="1.0.0">
+    <Overview ID="1" Name="MarksTestService" Version="0.1.0">
+        <Description/>
+    </Overview>
+    <DataTypeList>
+        <DataType ID="9" Name="T1_Struct" Type="Structure">
+            <FieldList>
+                <Field DataType="bool" ID="10" Name="T1_Struct_F1_bool">
+                    <Value IsDefault="true">false</Value>
+                </Field>
+                <Field DataType="T5_DefinedType_Array_ValueBase_T1_Struct" ID="11" Name="T1_Struct_F2_Has_User_Type">
+                    <Value IsDefault="true">xxxb678</Value>
+                </Field>
+            </FieldList>
+        </DataType>
+        <DataType ID="12" Name="T2_Enum" Type="Enumerate" Values="default">
+            <FieldList>
+                <EnumEntry ID="13" Name="T2_Enum_F1">
+                    <Value>111</Value>
+                </EnumEntry>
+                <EnumEntry ID="14" Name="T2_Enum_F2">
+                    <Value>222</Value>
+                </EnumEntry>
+            </FieldList>
+        </DataType>
+        <DataType ID="15" Name="T3_Imported" Type="Imported">
+            <Namespace>Namespace_3</Namespace>
+            <Location>Include-3</Location>
+        </DataType>
+        <DataType ID="16" Name="T4_DefinedType_Contains_T1_Struct" Type="DefinedType">
+            <Container>LinkedList</Container>
+            <BaseTypeValue>T1_Struct</BaseTypeValue>
+        </DataType>
+        <DataType ID="17" Name="T5_DefinedType_Array_ValueBase_T1_Struct" Type="DefinedType">
+            <Container>Array</Container>
+            <BaseTypeValue>T4_DefinedType_Contains_T1_Struct</BaseTypeValue>
+        </DataType>
+        <DataType ID="26" Name="T6_DefinedType_NEW_TYPE_ValueBase_T3_Imported" Type="DefinedType">
+            <Container>New Type</Container>
+            <BaseTypeValue>Namespace_3::T3_Imported</BaseTypeValue>
+        </DataType>
+    </DataTypeList>
+    <AttributeList>
+        <Attribute DataType="T6_DefinedType_NEW_TYPE_ValueBase_T3_Imported" ID="18" Name="Att_1" Notify="OnChange">
+            <Description>This is : Att_1</Description>
+        </Attribute>
+        <Attribute DataType="T5_DefinedType_Array_ValueBase_T1_Struct" ID="19" Name="Att_5" Notify="OnChange"/>
+    </AttributeList>
+    <MethodList>
+        <Method ID="2" MethodType="request" Name="M1_Req" Response="M2_Resp">
+            <Description>This is M1.</Description>
+            <ParamList>
+                <Parameter DataType="String" ID="3" Name="M1_P1"/>
+                <Parameter DataType="DateTime" ID="6" Name="M1_P2">
+                    <Value IsDefault="true">666</Value>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="7" MethodType="response" Name="M2_Resp">
+            <Description/>
+            <ParamList>
+                <Parameter DataType="T4_DefinedType_Contains_T1_Struct" ID="22" Name="M2_Resp_P1">
+                    <Value IsDefault="true">666</Value>
+                </Parameter>
+            </ParamList>
+        </Method>
+        <Method ID="20" MethodType="broadcast" Name="M3_Broad">
+            <Description/>
+        </Method>
+    </MethodList>
+    <ConstantList>
+        <Constant DataType="bool" ID="23" Name="Constant_1">
+            <Value>false</Value>
+        </Constant>
+    </ConstantList>
+    <IncludeList>
+        <Location ID="24" Name="NewInclude"/>
+    </IncludeList>
+</ServiceInterface>
