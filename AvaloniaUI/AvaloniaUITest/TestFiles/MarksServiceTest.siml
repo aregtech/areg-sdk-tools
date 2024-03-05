@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <ServiceInterface FormatVersion="1.0.0">
-    <Overview ID="1" Name="MarksTestService" Version="0.1.0">
-        <Description/>
+    <Overview ID="1" Name="MarksTestService" Version="0.1.0" isRemote="true">
+        <Description>Description of Marks Test Service!</Description>
     </Overview>
     <DataTypeList>
         <DataType ID="9" Name="T1_Struct" Type="Structure">
+            <Description>Description of "T1_Struct".</Description>
             <FieldList>
                 <Field DataType="bool" ID="10" Name="T1_Struct_F1_bool">
-                    <Value IsDefault="true">false</Value>
-                </Field>
-                <Field DataType="T5_DefinedType_Array_ValueBase_T1_Struct" ID="11" Name="T1_Struct_F2_Has_User_Type">
-                    <Value IsDefault="true">xxxb678</Value>
+                    <Value IsDefault="true">888</Value>
                 </Field>
             </FieldList>
         </DataType>
@@ -45,16 +43,14 @@
         <Attribute DataType="T6_DefinedType_NEW_TYPE_ValueBase_T3_Imported" ID="18" Name="Att_1" Notify="OnChange">
             <Description>This is : Att_1</Description>
         </Attribute>
-        <Attribute DataType="T5_DefinedType_Array_ValueBase_T1_Struct" ID="19" Name="Att_5" Notify="OnChange"/>
+        <Attribute DataType="T5_DefinedType_Array_ValueBase_T1_Struct" ID="19" Name="Att_5_Which_Is_Deprecated" Notify="OnChange"/>
     </AttributeList>
     <MethodList>
         <Method ID="2" MethodType="request" Name="M1_Req" Response="M2_Resp">
             <Description>This is M1.</Description>
             <ParamList>
                 <Parameter DataType="String" ID="3" Name="M1_P1"/>
-                <Parameter DataType="DateTime" ID="6" Name="M1_P2">
-                    <Value IsDefault="true">666</Value>
-                </Parameter>
+                <Parameter DataType="DateTime" ID="6" Name="M1_P2"/>
             </ParamList>
         </Method>
         <Method ID="7" MethodType="response" Name="M2_Resp">
@@ -68,9 +64,12 @@
         <Method ID="20" MethodType="broadcast" Name="M3_Broad">
             <Description/>
         </Method>
+        <Method ID="30" MethodType="response" Name="M4_Resp">
+            <Description/>
+        </Method>
     </MethodList>
     <ConstantList>
-        <Constant DataType="bool" ID="23" Name="Constant_1">
+        <Constant DataType="bool" ID="23" Name="Constant_111">
             <Value>false</Value>
         </Constant>
     </ConstantList>
