@@ -32,3 +32,9 @@
 *.app
 AvaloniaUI/AvaloniaUITest/bin
 AvaloniaUI/AvaloniaUITest/obj
+AvaloniaUI/Liquid_Technologies/bin
+AvaloniaUI/.vs/AvaloniaUI/DesignTimeBuild
+AvaloniaUI/.vs/AvaloniaUI/FileContentIndex
+AvaloniaUI/.vs/AvaloniaUI/v17
+AvaloniaUI/.vs
+AvaloniaUI/Liquid_Technologies/obj

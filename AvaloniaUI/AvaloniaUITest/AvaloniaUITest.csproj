@@ -15,19 +15,33 @@
         <PackageReference Include="Avalonia.Diagnostics" Version="11.0.9" />
         <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.9" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.9" />
-        <PackageReference Include="coverlet.collector" Version="6.0.0"/>
+        <PackageReference Include="coverlet.collector" Version="6.0.0" />
         <PackageReference Include="FluentAssertions" Version="7.0.0-alpha.3" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
-        <PackageReference Include="MSTest.TestAdapter" Version="3.1.1"/>
-        <PackageReference Include="MSTest.TestFramework" Version="3.1.1"/>
+        <PackageReference Include="LiquidTechnologies.XmlObjects.Runtime" Version="20.7.7" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+        <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
+        <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\AvaloniaUI\AvaloniaUI\AvaloniaUI.csproj" />
+      <ProjectReference Include="..\Liquid_Technologies\Liquid_Technologies.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="TestFiles\TestLiquidGenCodeFor_Artak_Sample_March_04.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="TestFiles\Artak_Sample_March_04.xsd">
+        <Generator>LxCodeGenerator</Generator>
+        <LastGenOutput>Artak_Sample_March_04.cs</LastGenOutput>
+        <Lx-GenerationModel>ConformantWithAccessors</Lx-GenerationModel>
+      </None>
     </ItemGroup>
 
 </Project>
