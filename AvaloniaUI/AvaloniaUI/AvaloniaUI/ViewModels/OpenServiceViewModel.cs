@@ -8,7 +8,7 @@ namespace AvaloniaUI.ViewModels;
 public class OpenServiceViewModel : ViewModelBase
 {
     private readonly Interaction<string?, string[]?> _selectServiceFileInteraction;
-    private string[]? _selectedServiceFile;
+    private string[]? _selectedServiceFiles;
 
     public OpenServiceViewModel()
     {
@@ -17,10 +17,10 @@ public class OpenServiceViewModel : ViewModelBase
     }
     
     // [Reactive]
-    public string[]? SelectedServiceFile
+    public string[]? SelectedServiceFiles
     {
-        get { return _selectedServiceFile; }
-        set { this.RaiseAndSetIfChanged(ref _selectedServiceFile, value); }
+        get { return _selectedServiceFiles; }
+        set { this.RaiseAndSetIfChanged(ref _selectedServiceFiles, value); }
     }
 
     public Interaction<string?, string[]?> SelectServiceFileInteraction => _selectServiceFileInteraction;
@@ -29,6 +29,6 @@ public class OpenServiceViewModel : ViewModelBase
 
     private async Task SelectFiles()
     {
-        SelectedServiceFile = await _selectServiceFileInteraction.Handle("Select the service file...");
+        SelectedServiceFiles = await _selectServiceFileInteraction.Handle("Select the service file...");
     }
 }

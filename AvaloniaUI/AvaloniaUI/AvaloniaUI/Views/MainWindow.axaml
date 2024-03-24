@@ -11,10 +11,12 @@
 
     <DockPanel>
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*, *" Background="Gray">
-            <Menu Grid.Column="0" 
-                HorizontalAlignment="Left">
+            <Menu Grid.Column="0"
+                  HorizontalAlignment="Left">
                 <MenuItem Header="_File">
-                    <MenuItem Header="_Open..." />
+                    <MenuItem Header="_Open..."
+                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+
                     <Separator />
                     <MenuItem Header="_Exit" />
                 </MenuItem>
@@ -31,7 +33,7 @@
                     <MenuItem Header="Paste" />
                 </MenuItem>
             </Menu>
-            
+
             <ComboBox Grid.Column="1"
                       x:Name="ThemeVariants"
                       HorizontalAlignment="Right"
@@ -43,8 +45,14 @@
                 </ComboBox.Items>
             </ComboBox>
         </Grid>
-        
-        <views:MainView />
-        
+
+        <Grid>
+            <views:OpenServiceView DataContext="{Binding OpenServiceInteraction}" />
+
+            <TextBlock Text="{Binding Greeting}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+
     </DockPanel>
 </Window>

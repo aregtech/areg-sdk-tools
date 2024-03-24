@@ -1,7 +1,10 @@
 ﻿namespace AvaloniaUI.ViewModels;
 
-public class MainViewModel : ViewModelBase
+public class MainWindowViewModel : ViewModelBase
 {
+    public MainWindowViewModel()
+    {
+    }
 
     public string Greeting => "Welcome to Avalonia!";
 
