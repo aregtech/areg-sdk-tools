@@ -7,6 +7,44 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="AvaloniaUI.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
-        Title="AvaloniaUI">
+        Title="System Interface Designer NT">
+
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*, *" Background="Gray">
+            <Menu Grid.Column="0" 
+                HorizontalAlignment="Left">
+                <MenuItem Header="_File">
+                    <MenuItem Header="_Open..." />
+                    <Separator />
+                    <MenuItem Header="_Exit" />
+                </MenuItem>
+                <MenuItem Header="_Edit">
+                    <MenuItem Header="Copy" />
+                    <MenuItem Header="Paste" />
+                </MenuItem>
+                <MenuItem Header="_View">
+                    <MenuItem Header="Copy" />
+                    <MenuItem Header="Paste" />
+                </MenuItem>
+                <MenuItem Header="_Project">
+                    <MenuItem Header="Copy" />
+                    <MenuItem Header="Paste" />
+                </MenuItem>
+            </Menu>
+            
+            <ComboBox Grid.Column="1"
+                      x:Name="ThemeVariants"
+                      HorizontalAlignment="Right"
+                      Margin="2">
+                <ComboBox.Items>
+                    <ThemeVariant>Default</ThemeVariant>
+                    <ThemeVariant>Light</ThemeVariant>
+                    <ThemeVariant>Dark</ThemeVariant>
+                </ComboBox.Items>
+            </ComboBox>
+        </Grid>
+        
         <views:MainView />
+        
+    </DockPanel>
 </Window>

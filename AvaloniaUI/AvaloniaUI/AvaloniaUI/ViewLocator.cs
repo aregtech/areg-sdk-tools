@@ -4,10 +4,10 @@ using Avalonia.Controls.Templates;
 using AvaloniaUI.ViewModels;
 
 namespace AvaloniaUI;
-/*
+
 public class ViewLocator : IDataTemplate
 {
-    public IControl? Build(object? data)
+    public Control? Build(object? data)
     {
         if (data is null)
             return null;
@@ -28,4 +28,3 @@ public class ViewLocator : IDataTemplate
         return data is ViewModelBase;
     }
 }
-*/
