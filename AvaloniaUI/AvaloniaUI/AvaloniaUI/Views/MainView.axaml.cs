@@ -1,23 +1,39 @@
+using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.ReactiveUI;
+using Avalonia.Styling;
 using AvaloniaUI.ViewModels;
 using ReactiveUI;
-using System.Linq;
 
 namespace AvaloniaUI.Views;
 
-public partial class OpenServiceView : ReactiveUserControl<OpenServiceViewModel>
+public partial class MainView : ReactiveUserControl<MainViewModel>
 {
-    public OpenServiceView()
+    public MainView()
     {
         InitializeComponent();
-        
-        this.WhenActivated(d =>
+
+        // For switching between Light & Dark themes:
+        ThemeVariants.SelectedItem = Application.Current!.RequestedThemeVariant;
+        ThemeVariants.SelectionChanged += (_, _) =>
         {
-            d(ViewModel?.SelectServiceFileInteraction.RegisterHandler(this.InteractionHandler)!);
-        });
+            if (ThemeVariants.SelectedItem is ThemeVariant themeVariant)
+            {
+                Application.Current.RequestedThemeVariant = themeVariant;
+            }
+        };
+
+        this
+            .WhenActivated(d =>
+            {
+                this.ViewModel?
+                    .OpenServiceInteraction
+                    .SelectServiceFileInteraction
+                    .RegisterHandler(this.InteractionHandler);
+            });
     }
     
     private async Task InteractionHandler(InteractionContext<string?, string[]?> context)

@@ -1,6 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:AvaloniaUI.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:AvaloniaUI.Views"
@@ -9,50 +8,6 @@
         Icon="/Assets/avalonia-logo.ico"
         Title="System Interface Designer NT">
 
-    <DockPanel>
-        <Grid DockPanel.Dock="Top" ColumnDefinitions="*, *" Background="Gray">
-            <Menu Grid.Column="0"
-                  HorizontalAlignment="Left">
-                <MenuItem Header="_File">
-                    <MenuItem Header="_Open..."
-                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+    <views:MainView />
 
-                    <Separator />
-                    <MenuItem Header="_Exit" />
-                </MenuItem>
-                <MenuItem Header="_Edit">
-                    <MenuItem Header="Copy" />
-                    <MenuItem Header="Paste" />
-                </MenuItem>
-                <MenuItem Header="_View">
-                    <MenuItem Header="Copy" />
-                    <MenuItem Header="Paste" />
-                </MenuItem>
-                <MenuItem Header="_Project">
-                    <MenuItem Header="Copy" />
-                    <MenuItem Header="Paste" />
-                </MenuItem>
-            </Menu>
-
-            <ComboBox Grid.Column="1"
-                      x:Name="ThemeVariants"
-                      HorizontalAlignment="Right"
-                      Margin="2">
-                <ComboBox.Items>
-                    <ThemeVariant>Default</ThemeVariant>
-                    <ThemeVariant>Light</ThemeVariant>
-                    <ThemeVariant>Dark</ThemeVariant>
-                </ComboBox.Items>
-            </ComboBox>
-        </Grid>
-
-        <Grid>
-            <views:OpenServiceView DataContext="{Binding OpenServiceInteraction}" />
-
-            <TextBlock Text="{Binding Greeting}"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-        </Grid>
-
-    </DockPanel>
 </Window>

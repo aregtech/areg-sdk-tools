@@ -1,8 +1,8 @@
 ﻿namespace AvaloniaUI.ViewModels;
 
-public class MainWindowViewModel : ViewModelBase
+public class MainViewModel : ViewModelBase
 {
-    public MainWindowViewModel()
+    public MainViewModel()
     {
     }
 
