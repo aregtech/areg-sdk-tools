@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Reactive.Disposables;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -27,12 +28,13 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
         };
 
         this
-            .WhenActivated(d =>
+            .WhenActivated(disposables =>
             {
                 this.ViewModel?
                     .OpenServiceInteraction
                     .SelectServiceFileInteraction
-                    .RegisterHandler(this.InteractionHandler);
+                    .RegisterHandler(this.InteractionHandler)
+                    .DisposeWith(disposables);
             });
     }
     

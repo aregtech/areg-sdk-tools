@@ -4,9 +4,11 @@
     <option name="projectPerEditor">
       <map>
         <entry key="AvaloniaUI/AvaloniaUI/App.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
+        <entry key="AvaloniaUI/AvaloniaUI/Views/ExplorerView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/MainView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/MainWindow.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/OpenServiceView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
+        <entry key="AvaloniaUI/AvaloniaUI/Views/ServiceTabView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
       </map>
     </option>
   </component>
