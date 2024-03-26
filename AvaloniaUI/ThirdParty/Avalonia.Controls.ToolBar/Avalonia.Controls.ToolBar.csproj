@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <LangVersion>default</LangVersion>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>$(ImplicitUsings)</ImplicitUsings>
+        <WarningsAsErrors>$(WarningsAsErrors)</WarningsAsErrors>
+
+        <Version>$(Version)</Version>
+        <Authors>$(Authors)</Authors>
+        <Product>$(Product)</Product>
+        <Description>$(Description)</Description>
+        <RepositoryUrl>$(RepositoryUrl)</RepositoryUrl>
+        <PackageId>$(PackageId)</PackageId>
+        <PackageTags>$(PackageTags)</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile >
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.0.9" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Themes\Assets\" />
+        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+    </ItemGroup>
+</Project>

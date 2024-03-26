@@ -16,6 +16,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvaloniaUITest", "AvaloniaU
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Liquid_Technologies", "Liquid_Technologies\Liquid_Technologies.csproj", "{149AE1F5-638E-4155-BD14-469AF7BFB7D6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ThirdParty", "ThirdParty", "{F8586C4A-FA86-4406-A7E5-493DC64CF51D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Avalonia.Controls.ToolBar", "ThirdParty\Avalonia.Controls.ToolBar\Avalonia.Controls.ToolBar.csproj", "{7FFFA1E4-0851-4FFC-BA9D-4BE1F84E470F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,9 +58,14 @@ Global
 		{149AE1F5-638E-4155-BD14-469AF7BFB7D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{149AE1F5-638E-4155-BD14-469AF7BFB7D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{149AE1F5-638E-4155-BD14-469AF7BFB7D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FFFA1E4-0851-4FFC-BA9D-4BE1F84E470F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FFFA1E4-0851-4FFC-BA9D-4BE1F84E470F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FFFA1E4-0851-4FFC-BA9D-4BE1F84E470F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FFFA1E4-0851-4FFC-BA9D-4BE1F84E470F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E302CBA7-2247-4EB6-8809-E2B349951800} = {A08B360F-CFF8-4D22-B366-FFFF9B897783}
 		{149AE1F5-638E-4155-BD14-469AF7BFB7D6} = {A08B360F-CFF8-4D22-B366-FFFF9B897783}
+		{7FFFA1E4-0851-4FFC-BA9D-4BE1F84E470F} = {F8586C4A-FA86-4406-A7E5-493DC64CF51D}
 	EndGlobalSection
 EndGlobal

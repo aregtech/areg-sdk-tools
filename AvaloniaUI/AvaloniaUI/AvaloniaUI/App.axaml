@@ -10,5 +10,6 @@
     <Application.Styles>
         <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
         <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.ToolBar/Themes/Avalonia.Controls.ToolBar.axaml" />
     </Application.Styles>
 </Application>

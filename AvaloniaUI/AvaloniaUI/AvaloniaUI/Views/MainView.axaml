@@ -3,20 +3,26 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:views="clr-namespace:AvaloniaUI.Views"
+             xmlns:controls="clr-namespace:Avalonia.Controls.ToolBar.Controls;assembly=Avalonia.Controls.ToolBar"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaUI.Views.MainView">
 
     <DockPanel>
         <Grid DockPanel.Dock="Top"
+              x:Name="DockPanelMainView"
+              RowDefinitions="Auto, Auto"
               ColumnDefinitions="*, *"
               Background="Gray">
-            <Menu Grid.Column="0"
+            <Menu Grid.Row="0"
+                  Grid.Column="0"
+                  x:Name="MenuMainView"
                   HorizontalAlignment="Left">
                 <MenuItem Header="_File">
                     <MenuItem Header="_Open..."
                               Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
 
                     <Separator />
+
                     <MenuItem Header="_Exit" />
                 </MenuItem>
                 <MenuItem Header="_Edit">
@@ -33,7 +39,8 @@
                 </MenuItem>
             </Menu>
 
-            <ComboBox Grid.Column="1"
+            <ComboBox Grid.Row="0"
+                      Grid.Column="1"
                       x:Name="ThemeVariants"
                       HorizontalAlignment="Right"
                       Margin="2">
@@ -43,9 +50,29 @@
                     <ThemeVariant>Dark</ThemeVariant>
                 </ComboBox.Items>
             </ComboBox>
+
+            <controls:ToolBar Grid.Row="1"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="2"
+                              x:Name="ToolBarMainView"
+                              IsEnabled="True"
+                              Orientation="Horizontal"
+                              HorizontalAlignment="Left"
+                              IsOverflowOpen="False"
+                              IsOverflowItem="False"
+                              OverflowMode="Never"
+                              ItemsSource="{Binding ToolBarViewModel.Items}">
+                <controls:ToolBar.Styles>
+                    <Style Selector="Button">
+                        <Setter Property="Command" Value="{Binding PressedElementCommand}" />
+                        <Setter Property="CommandParameter" Value="{Binding $self.Content}" />
+                    </Style>
+                </controls:ToolBar.Styles>
+            </controls:ToolBar>
         </Grid>
 
-        <Grid DockPanel.Dock="Bottom">
+        <Grid DockPanel.Dock="Bottom"
+              x:Name="DockPanel2MainView">
             <Grid
                 RowDefinitions="Auto, Auto"
                 ColumnDefinitions="Auto, Auto">
@@ -62,7 +89,7 @@
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center" />
         </Grid>
-        
-        <views:WorkspaceView/>
+
+        <views:WorkspaceView />
     </DockPanel>
 </UserControl>
