@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:views="clr-namespace:AvaloniaUI.Views"
              xmlns:controls="clr-namespace:Avalonia.Controls.ToolBar.Controls;assembly=Avalonia.Controls.ToolBar"
+             xmlns:actipro="http://schemas.actiprosoftware.com/avaloniaui"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaUI.Views.MainView">
 
@@ -39,17 +40,12 @@
                 </MenuItem>
             </Menu>
 
-            <ComboBox Grid.Row="0"
-                      Grid.Column="1"
-                      x:Name="ThemeVariants"
-                      HorizontalAlignment="Right"
-                      Margin="2">
-                <ComboBox.Items>
-                    <ThemeVariant>Default</ThemeVariant>
-                    <ThemeVariant>Light</ThemeVariant>
-                    <ThemeVariant>Dark</ThemeVariant>
-                </ComboBox.Items>
-            </ComboBox>
+            <actipro:ToggleThemeButton Grid.Row="0"
+                                       Grid.Column="1"
+                                       HorizontalAlignment="Right"
+                                       Margin="2"
+                                       ToolTip.Tip="Toggle Dark / Light Themes"
+                                       ToolTip.Placement="BottomEdgeAlignedLeft" />
 
             <controls:ToolBar Grid.Row="1"
                               Grid.Column="0"

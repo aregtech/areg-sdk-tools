@@ -2,13 +2,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:AvaloniaUI"
              x:Class="AvaloniaUI.App"
+             xmlns:actipro="http://schemas.actiprosoftware.com/avaloniaui"
              RequestedThemeVariant="Dark">
     <Application.DataTemplates>
-        <local:ViewLocator/>
+        <local:ViewLocator />
     </Application.DataTemplates>
 
     <Application.Styles>
         <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+        
+        <!-- NOTE: Any Styles included above the ModernTheme can be overwritten by the Actipro themes -->
+        <actipro:ModernTheme />
+        <!-- NOTE: Any Styles included below the ModernTheme cannot be overwritten by the Actipro themes -->
+
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.ToolBar/Themes/Avalonia.Controls.ToolBar.axaml" />
     </Application.Styles>

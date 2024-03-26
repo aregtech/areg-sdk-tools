@@ -1,11 +1,9 @@
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.ReactiveUI;
-using Avalonia.Styling;
 using AvaloniaUI.ViewModels;
 using ReactiveUI;
 
@@ -16,17 +14,7 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
     public MainView()
     {
         InitializeComponent();
-
-        // For switching between Light & Dark themes:
-        ThemeVariants.SelectedItem = Application.Current!.RequestedThemeVariant;
-        ThemeVariants.SelectionChanged += (_, _) =>
-        {
-            if (ThemeVariants.SelectedItem is ThemeVariant themeVariant)
-            {
-                Application.Current.RequestedThemeVariant = themeVariant;
-            }
-        };
-
+        
         this
             .WhenActivated(disposables =>
             {
