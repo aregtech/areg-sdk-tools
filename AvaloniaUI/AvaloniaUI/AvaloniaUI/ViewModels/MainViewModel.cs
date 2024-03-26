@@ -2,14 +2,12 @@
 
 public class MainViewModel : ViewModelBase
 {
+    // ReSharper disable once EmptyConstructor
     public MainViewModel()
     {
     }
 
     public string Greeting => "Welcome to Avalonia!";
 
-    public ToolbarViewModel ToolBarViewModel { get; } = new();
-    
     public OpenServiceViewModel OpenServiceInteraction { get; } = new();
-
 }

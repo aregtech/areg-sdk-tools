@@ -56,12 +56,21 @@
                               HorizontalAlignment="Left"
                               IsOverflowOpen="False"
                               IsOverflowItem="False"
-                              OverflowMode="Never"
-                              ItemsSource="{Binding ToolBarViewModel.Items}">
+                              OverflowMode="Never">
+                <controls:ToolBar.Items>
+                    <Button Content="Open"
+                            Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}"/>
+                    <Button>B2</Button>
+                    <Button>B3</Button>
+                </controls:ToolBar.Items>
+                
+                <!-- These are from:
+                          src/Avalonia.Controls.ToolBar.Demo/Views/Tabs/ToolBarTabView.axaml, L. 66
+                          Do we need them? The setter for "CommandParameter" hangs the App. -->
                 <controls:ToolBar.Styles>
                     <Style Selector="Button">
                         <Setter Property="Command" Value="{Binding PressedElementCommand}" />
-                        <Setter Property="CommandParameter" Value="{Binding $self.Content}" />
+                        <!-- <Setter Property="CommandParameter" Value="{Binding $self.Content}" /> -->
                     </Style>
                 </controls:ToolBar.Styles>
             </controls:ToolBar>
