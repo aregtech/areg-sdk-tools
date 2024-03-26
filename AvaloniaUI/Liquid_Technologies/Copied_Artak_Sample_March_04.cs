@@ -42,7 +42,7 @@ namespace Liquid_Technologies
 {
     #region Global Settings
     /// <summary>Contains library level properties, and ensures the version of the runtime used matches the version used to generate it.</summary>
-    [LxRuntimeRequirements("20.7.7.12879", "Trial for Non-Commercial Use Expiry [2024-03-22]", "9C4TUD6PBPWFLP3Q", LiquidTechnologies.XmlObjects.LicenseTermsType.Trial)]
+    [LxRuntimeRequirements("20.7.7.12879", "Trial for Non-Commercial Use Expiry [2024-04-09]", "CBMLU2TKYQQG1HAP", LiquidTechnologies.XmlObjects.LicenseTermsType.Trial)]
     public partial class LxRuntimeRequirementsWritten
     {
     }
