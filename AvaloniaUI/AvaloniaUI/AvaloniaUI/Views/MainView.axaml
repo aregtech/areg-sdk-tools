@@ -24,24 +24,22 @@
                               avaloniaIcons:MenuItem.Icon="mdi-open-in-app"
                               Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
                     <MenuItem Header="_Save"
-                              avaloniaIcons:MenuItem.Icon="mdi-content-save-outline"
-                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+                              avaloniaIcons:MenuItem.Icon="mdi-content-save-outline" />
                     <MenuItem Header="Save _All"
-                              avaloniaIcons:MenuItem.Icon="mdi-content-save-all-outline"
-                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+                              avaloniaIcons:MenuItem.Icon="mdi-content-save-all-outline" />
 
                     <Separator />
 
                     <MenuItem Header="_Close"
-                              avaloniaIcons:MenuItem.Icon="mdi-close-box-outline"
-                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+                              avaloniaIcons:MenuItem.Icon="mdi-close-box-outline" />
                     <MenuItem Header="Close Al_l"
-                              avaloniaIcons:MenuItem.Icon="mdi-close-box-multiple-outline"
-                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+                              avaloniaIcons:MenuItem.Icon="mdi-close-box-multiple-outline" />
 
                     <Separator />
 
-                    <MenuItem Header="_Exit" />
+                    <MenuItem Header="E_xit"
+                              avaloniaIcons:MenuItem.Icon="mdi-exit-run"
+                              Command="{Binding ExitApplicationInteraction.ExitApplicationCommand}" />
                 </MenuItem>
                 <MenuItem Header="_Edit"
                           IsEnabled="False">

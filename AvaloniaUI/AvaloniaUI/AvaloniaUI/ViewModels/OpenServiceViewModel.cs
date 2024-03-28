@@ -11,7 +11,7 @@ public class OpenServiceViewModel : ViewModelBase
 
     public OpenServiceViewModel()
     {
-        SelectServiceFileInteraction = new Interaction<string?, string[]?>();
+        OpenServiceFileInteraction = new Interaction<string?, string[]?>();
         SelectServiceFileCommand = ReactiveCommand.CreateFromTask(SelectFiles);
     }
     
@@ -22,12 +22,13 @@ public class OpenServiceViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _selectedServiceFiles, value);
     }
 
-    public Interaction<string?, string[]?> SelectServiceFileInteraction { get; }
+    public Interaction<string?, string[]?> OpenServiceFileInteraction { get; }
 
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public ICommand SelectServiceFileCommand { get; }
 
     private async Task SelectFiles()
     {
-        SelectedServiceFiles = await SelectServiceFileInteraction.Handle("Select the service file...");
+        SelectedServiceFiles = await OpenServiceFileInteraction.Handle("Select the service file...");
     }
 }
