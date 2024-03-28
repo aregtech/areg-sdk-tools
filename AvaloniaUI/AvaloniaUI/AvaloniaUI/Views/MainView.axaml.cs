@@ -21,12 +21,12 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
                 this.ViewModel?
                     .OpenServiceInteraction
                     .SelectServiceFileInteraction
-                    .RegisterHandler(this.InteractionHandler)
+                    .RegisterHandler(this.OpenServiceInteractionHandler)
                     .DisposeWith(disposables);
             });
     }
     
-    private async Task InteractionHandler(InteractionContext<string?, string[]?> context)
+    private async Task OpenServiceInteractionHandler(InteractionContext<string?, string[]?> context)
     {
         // Get our parent top level control in order to get the needed service (in our sample the storage provider. Can also be the clipboard etc.)
         var topLevel = TopLevel.GetTopLevel(this);

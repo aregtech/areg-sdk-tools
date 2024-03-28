@@ -1,6 +1,9 @@
 ﻿using System;
 using Avalonia;
 using Avalonia.ReactiveUI;
+using Projektanker.Icons.Avalonia;
+using Projektanker.Icons.Avalonia.FontAwesome;
+using Projektanker.Icons.Avalonia.MaterialDesign;
 
 namespace AvaloniaUI.Desktop;
 
@@ -15,8 +18,15 @@ abstract class Program
 
     // Avalonia configuration, don't remove; also used by visual designer.
     private static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        IconProvider
+            .Current
+            .Register<MaterialDesignIconProvider>()
+            .Register<FontAwesomeIconProvider>();
+
+        return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace()
             .UseReactiveUI();
+    }
 }

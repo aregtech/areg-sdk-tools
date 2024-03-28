@@ -3,8 +3,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:views="clr-namespace:AvaloniaUI.Views"
-             xmlns:controls="clr-namespace:Avalonia.Controls.ToolBar.Controls;assembly=Avalonia.Controls.ToolBar"
+             xmlns:toolbar="clr-namespace:Avalonia.Controls.ToolBar.Controls;assembly=Avalonia.Controls.ToolBar"
              xmlns:actipro="http://schemas.actiprosoftware.com/avaloniaui"
+             xmlns:avaloniaIcons="https://github.com/projektanker/icons.avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaUI.Views.MainView">
 
@@ -20,21 +21,40 @@
                   HorizontalAlignment="Left">
                 <MenuItem Header="_File">
                     <MenuItem Header="_Open..."
+                              avaloniaIcons:MenuItem.Icon="mdi-open-in-app"
+                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+                    <MenuItem Header="_Save"
+                              avaloniaIcons:MenuItem.Icon="mdi-content-save-outline"
+                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+                    <MenuItem Header="Save _All"
+                              avaloniaIcons:MenuItem.Icon="mdi-content-save-all-outline"
+                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+
+                    <Separator />
+
+                    <MenuItem Header="_Close"
+                              avaloniaIcons:MenuItem.Icon="mdi-close-box-outline"
+                              Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
+                    <MenuItem Header="Close Al_l"
+                              avaloniaIcons:MenuItem.Icon="mdi-close-box-multiple-outline"
                               Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}" />
 
                     <Separator />
 
                     <MenuItem Header="_Exit" />
                 </MenuItem>
-                <MenuItem Header="_Edit">
+                <MenuItem Header="_Edit"
+                          IsEnabled="False">
                     <MenuItem Header="Copy" />
                     <MenuItem Header="Paste" />
                 </MenuItem>
-                <MenuItem Header="_View">
+                <MenuItem Header="_View"
+                          IsEnabled="False">
                     <MenuItem Header="Copy" />
                     <MenuItem Header="Paste" />
                 </MenuItem>
-                <MenuItem Header="_Project">
+                <MenuItem Header="_Project"
+                          IsEnabled="False">
                     <MenuItem Header="Copy" />
                     <MenuItem Header="Paste" />
                 </MenuItem>
@@ -47,33 +67,42 @@
                                        ToolTip.Tip="Toggle Dark / Light Themes"
                                        ToolTip.Placement="BottomEdgeAlignedLeft" />
 
-            <controls:ToolBar Grid.Row="1"
-                              Grid.Column="0"
-                              Grid.ColumnSpan="2"
-                              x:Name="ToolBarMainView"
-                              IsEnabled="True"
-                              Orientation="Horizontal"
-                              HorizontalAlignment="Left"
-                              IsOverflowOpen="False"
-                              IsOverflowItem="False"
-                              OverflowMode="Never">
-                <controls:ToolBar.Items>
-                    <Button Content="Open"
-                            Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}"/>
-                    <Button>B2</Button>
-                    <Button>B3</Button>
-                </controls:ToolBar.Items>
-                
+            <toolbar:ToolBar Grid.Row="1"
+                             Grid.Column="0"
+                             Grid.ColumnSpan="2"
+                             x:Name="ToolBarMainView"
+                             IsEnabled="True"
+                             Orientation="Horizontal"
+                             HorizontalAlignment="Left"
+                             IsOverflowOpen="False"
+                             IsOverflowItem="False"
+                             OverflowMode="Never">
+
+                <toolbar:ToolBar.Items>
+                    <!-- Open Service-Interface -->
+                    <Button avaloniaIcons:Attached.Icon="mdi-open-in-app"
+                            Command="{Binding OpenServiceInteraction.SelectServiceFileCommand}"
+                            ToolTip.Tip="Open Service" />
+
+                    <!-- Save current Service-Interface -->
+                    <Button avaloniaIcons:Attached.Icon="mdi-content-save-outline"
+                            ToolTip.Tip="Save Service" />
+
+                    <!-- Save all Service-Interfaces -->
+                    <Button avaloniaIcons:Attached.Icon="mdi-content-save-all-outline"
+                            ToolTip.Tip="Save All Services" />
+                </toolbar:ToolBar.Items>
+
                 <!-- These are from:
                           src/Avalonia.Controls.ToolBar.Demo/Views/Tabs/ToolBarTabView.axaml, L. 66
                           Do we need them? The setter for "CommandParameter" hangs the App. -->
-                <controls:ToolBar.Styles>
+                <toolbar:ToolBar.Styles>
                     <Style Selector="Button">
                         <Setter Property="Command" Value="{Binding PressedElementCommand}" />
                         <!-- <Setter Property="CommandParameter" Value="{Binding $self.Content}" /> -->
                     </Style>
-                </controls:ToolBar.Styles>
-            </controls:ToolBar>
+                </toolbar:ToolBar.Styles>
+            </toolbar:ToolBar>
         </Grid>
 
         <Grid DockPanel.Dock="Bottom"
