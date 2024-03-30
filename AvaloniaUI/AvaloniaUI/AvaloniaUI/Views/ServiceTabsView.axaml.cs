@@ -3,9 +3,9 @@ using AvaloniaUI.ViewModels;
 
 namespace AvaloniaUI.Views;
 
-public partial class ServiceTabView : ReactiveUserControl<ServiceTabViewModel>
+public partial class ServiceTabsView : ReactiveUserControl<ServiceTabsViewModel>
 {
-    public ServiceTabView()
+    public ServiceTabsView()
     {
         InitializeComponent();
     }

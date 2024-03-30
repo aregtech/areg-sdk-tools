@@ -13,7 +13,7 @@ public class ExitApplicationViewModel : ViewModelBase
         ExitApplicationInteraction = new Interaction<Unit, bool?>();
         ExitApplicationCommand = ReactiveCommand.CreateFromTask(ExitApplication);
     }
-    
+
     public Interaction<Unit, bool?> ExitApplicationInteraction { get; }
 
     // ReSharper disable once UnusedAutoPropertyAccessor.Global

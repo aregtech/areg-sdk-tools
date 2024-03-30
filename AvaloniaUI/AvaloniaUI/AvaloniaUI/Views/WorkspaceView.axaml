@@ -16,6 +16,6 @@
 
         <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
         
-        <views:ServiceTabView Grid.Column="2"/>
+        <views:ServiceTabsView Grid.Column="2"/>
     </Grid>
 </UserControl>
