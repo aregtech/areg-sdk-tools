@@ -103,25 +103,6 @@
             </toolbar:ToolBar>
         </Grid>
 
-        <Grid DockPanel.Dock="Bottom"
-              x:Name="DockPanel2MainView">
-            <Grid
-                RowDefinitions="Auto, Auto"
-                ColumnDefinitions="Auto, Auto">
-                <TextBlock Grid.Row="0"
-                           Grid.Column="0"
-                           Text="Selected Service File:" />
-
-                <ListBox
-                    Grid.Row="0"
-                    Grid.Column="1"
-                    ItemsSource="{Binding OpenServiceInteraction.SelectedServiceFiles}" />
-            </Grid>
-            <TextBlock Text="{Binding Greeting}"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center" />
-        </Grid>
-
         <views:WorkspaceView />
     </DockPanel>
 </UserControl>
