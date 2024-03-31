@@ -5,24 +5,13 @@ namespace AvaloniaUI.ViewModels;
 
 public class ServiceTabsViewModel : ViewModelBase
 {
-    private readonly ObservableMessageConsumer<OpenServiceMsg> _openServiceConsumer;
-
     public ServiceTabsViewModel()
     {
-        _openServiceConsumer =
-            new ObservableMessageConsumer<OpenServiceMsg>(
-                OnNewServiceMessage,
-                OnNewServiceCompleted);
+        EventPublisher.GetEvent<OpenServiceMsg>().Subscribe(OnNewServiceMessage);
     }
 
-    private void OnNewServiceMessage(OpenServiceMsg msg)
+    private static void OnNewServiceMessage(string openServiceFile)
     {
-        Console.WriteLine($"New Service Opened: {msg.FullPath}!");
-    }
-
-    private void OnNewServiceCompleted()
-    {
-        Console.WriteLine($"New Service Completed! Disposing ...");
-        _openServiceConsumer.Dispose();
+        Console.WriteLine($"New Service Opened: {openServiceFile}!");
     }
 }

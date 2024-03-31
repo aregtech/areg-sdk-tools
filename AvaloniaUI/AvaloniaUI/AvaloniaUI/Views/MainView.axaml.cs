@@ -8,7 +8,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Avalonia.ReactiveUI;
 using AvaloniaUI.ViewModels;
-using AvaloniaUI.ViewModels.Msg;
 using MsBox.Avalonia;
 using MsBox.Avalonia.Enums;
 using ReactiveUI;
@@ -75,26 +74,9 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
 
         if (shouldCloseApp)
         {
-            ShutdownMessageProducers();
             FinalApplicationShutdown();
         }
     }
-
-    private void ShutdownMessageProducers()
-    {
-        // notify message observables to Dispose themselves (yuk)
-        // var allMessageObservables
-        //     = AppContainer.Instance.GetAllInstances<ObservableMessageProducer<OpenServiceMsg>>();
-        //
-        // foreach (var observableMessage in allMessageObservables)
-        // {
-        //     observableMessage.OnCompleted();
-        // }
-
-        var producer = AppContainer.Instance.GetInstance<ObservableMessageProducer<OpenServiceMsg>>();
-        producer.OnCompleted();
-    }
-
     private static void FinalApplicationShutdown()
     {
         switch (Application.Current?.ApplicationLifetime)

@@ -1,6 +1,6 @@
 using System.Reflection;
 using AvaloniaUI.Models;
-using AvaloniaUI.ViewModels.Msg;
+using Prism.Events;
 using SimpleInjector;
 
 namespace AvaloniaUI;
@@ -25,10 +25,9 @@ internal static class Bootstrapper
         // Register all instances of ITopLevelPlugin
         container.Collection.Register<ITestPlugin>(Assembly.GetExecutingAssembly());
 
-        // container.RegisterInstance( new ObservableMessage<OpenServiceMsg>());
-        // container.Collection.Register<IObservableMessage>(typeof(ObservableMessage<OpenServiceMsg>));
-        container.RegisterInstance(new ObservableMessageProducer<OpenServiceMsg>());
-
+        // Register the event-aggregator
+        container.Register<IEventAggregator, EventAggregator>(Lifestyle.Singleton);
+        
         // No verification required; it is performed automatically upon the first retrieval of
         // a service by the app.
         // container.Verify();

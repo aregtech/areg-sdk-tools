@@ -9,14 +9,9 @@ namespace AvaloniaUI.ViewModels;
 public class OpenServiceViewModel : ViewModelBase
 {
     private string[]? _selectedServiceFiles;
-    
-    private readonly ObservableMessageProducer<OpenServiceMsg> _openServiceMessageProducer;
 
     public OpenServiceViewModel()
     {
-        _openServiceMessageProducer =
-            AppContainer.Instance.GetInstance<ObservableMessageProducer<OpenServiceMsg>>();
-
         OpenServiceFileInteraction = new Interaction<string?, string[]?>();
         SelectServiceFileCommand = ReactiveCommand.CreateFromTask(SelectFiles);
     }
@@ -39,7 +34,7 @@ public class OpenServiceViewModel : ViewModelBase
 
         foreach (var file in SelectedServiceFiles!)
         {
-            _openServiceMessageProducer.NextMessage(new OpenServiceMsg(file));
+            EventPublisher.GetEvent<OpenServiceMsg>().Publish(file);
         }
     }
 }

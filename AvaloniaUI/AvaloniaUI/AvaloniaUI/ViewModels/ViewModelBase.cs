@@ -1,7 +1,9 @@
-﻿using ReactiveUI;
+﻿using Prism.Events;
+using ReactiveUI;
 
 namespace AvaloniaUI.ViewModels;
 
-public class ViewModelBase : ReactiveObject
+public abstract class ViewModelBase : ReactiveObject
 {
+    protected IEventAggregator EventPublisher { get; } = AppContainer.Instance.GetInstance<IEventAggregator>();
 }
