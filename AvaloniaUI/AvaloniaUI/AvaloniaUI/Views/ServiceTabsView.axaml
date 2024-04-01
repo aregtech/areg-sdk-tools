@@ -12,11 +12,12 @@
     </UserControl.DataContext>
 
     <Grid>
-        <TabControl ItemsSource="{Binding TabItems}"
-                    SelectedItem="{Binding SelectedTabItem}">
+        <TabControl ItemsSource="{Binding ServiceTabItems}"
+                    SelectedItem="{Binding SelectedServiceTabItem}">
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Header}" />
+                    <TextBlock Text="{Binding Header}" 
+                               FontSize="14"/>
                 </DataTemplate>
             </TabControl.ItemTemplate>
             <TabControl.ContentTemplate>

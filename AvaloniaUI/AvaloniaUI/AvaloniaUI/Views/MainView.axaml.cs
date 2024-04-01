@@ -16,6 +16,8 @@ namespace AvaloniaUI.Views;
 
 public partial class MainView : ReactiveUserControl<MainViewModel>
 {
+    private bool _shouldCloseApp; // this guards against shutting down the App twice (event comes twice)
+    
     public MainView()
     {
         InitializeComponent();
@@ -60,23 +62,29 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
     
     private async Task HandleExitApplicationInteraction(InteractionContext<Unit, bool?> context)
     {
-        var box = MessageBoxManager
-            .GetMessageBoxStandard(
-                title: "Application Shutdown",
-                text: "Do you wish to first save any open services?",
-                ButtonEnum.YesNo,
-                Icon.Stop);
-
-        var topLevel = TopLevel.GetTopLevel(this);
-        var result = await box.ShowWindowDialogAsync(topLevel as Window);
-        var shouldCloseApp = result == ButtonResult.Yes;
-        context.SetOutput(shouldCloseApp);
-
-        if (shouldCloseApp)
+        if (!_shouldCloseApp)
         {
-            FinalApplicationShutdown();
+            var box = MessageBoxManager
+                .GetMessageBoxStandard(
+                    title: "Application Shutdown",
+                    text: "Do you wish to first save any open services?",
+                    ButtonEnum.YesNo,
+                    Icon.Stop);
+
+            var topLevel = TopLevel.GetTopLevel(this);
+            var result = await box.ShowWindowDialogAsync(topLevel as Window);
+            
+            _shouldCloseApp = result == ButtonResult.Yes;
+            if (_shouldCloseApp)
+            {
+                FinalApplicationShutdown();
+            }
         }
+
+        // this terminates the interaction
+        context.SetOutput(_shouldCloseApp);
     }
+    
     private static void FinalApplicationShutdown()
     {
         switch (Application.Current?.ApplicationLifetime)
