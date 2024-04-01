@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              xmlns:viewModels="clr-namespace:AvaloniaUI.ViewModels"
+             xmlns:views="clr-namespace:AvaloniaUI.Views"
              x:Class="AvaloniaUI.Views.ServiceTabsView"
              Background="SteelBlue">
 
@@ -16,13 +17,13 @@
                     SelectedItem="{Binding SelectedServiceTabItem}">
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Header}" 
-                               FontSize="14"/>
+                    <TextBlock Text="{Binding Header}"
+                               FontSize="14" />
                 </DataTemplate>
             </TabControl.ItemTemplate>
             <TabControl.ContentTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding Content}" />
+                <DataTemplate DataType="{x:Type viewModels:ServiceTabItem}">
+                    <views:SingleServiceView DataContext="{Binding Content}" />
                 </DataTemplate>
             </TabControl.ContentTemplate>
         </TabControl>
