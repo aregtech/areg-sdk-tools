@@ -12,21 +12,35 @@
         <viewModels:ServiceTabsViewModel />
     </UserControl.DataContext>
 
-    <Grid>
-        <TabControl ItemsSource="{Binding ServiceTabItems}"
-                    SelectedItem="{Binding SelectedServiceTabItem}">
-            <TabControl.ItemTemplate>
+    <!-- The problem with the TabControl, it shares its content template for all tabs. See:
+    https://github.com/AvaloniaUI/Avalonia/issues/14529
+    https://github.com/AvaloniaUI/Avalonia/discussions/11837 -->
+    <Grid RowDefinitions="Auto, *">
+        <TabStrip Grid.Row="0"
+                  Name="ServiceTabsControl"
+                  ItemsSource="{Binding ServiceTabItems}"
+                  SelectedItem="{Binding SelectedServiceTabItem}">
+            <TabStrip.ItemTemplate>
                 <DataTemplate>
                     <TextBlock Text="{Binding Header}"
                                FontSize="14" />
                 </DataTemplate>
-            </TabControl.ItemTemplate>
-            <TabControl.ContentTemplate>
+            </TabStrip.ItemTemplate>
+        </TabStrip>
+
+        <ItemsControl Grid.Row="1"
+                      ItemsSource="{Binding ServiceTabItems}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Panel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type viewModels:ServiceTabItem}">
                     <views:SingleServiceView DataContext="{Binding Content}" />
                 </DataTemplate>
-            </TabControl.ContentTemplate>
-        </TabControl>
-
+                <!-- <dataTemplates:ViewLocatorForTabControl /> -->
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </UserControl>
