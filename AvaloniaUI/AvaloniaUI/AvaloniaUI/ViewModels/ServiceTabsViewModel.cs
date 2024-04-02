@@ -1,14 +1,15 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using AvaloniaUI.ViewModels.Msg;
 using ReactiveUI;
 
 namespace AvaloniaUI.ViewModels;
 
-public class ServiceTabItem(string header) : ViewModelBase
+public class ServiceTabItem(string openServiceFileFullPath) : ViewModelBase
 {
-    private SingleServiceViewModel _content = new();
+    private SingleServiceViewModel _content = new(openServiceFileFullPath);
         
-    public string Header { get; } = header;
+    public string Header { get; } = Path.GetFileName(openServiceFileFullPath);
 
     public SingleServiceViewModel Content
     {
@@ -37,13 +38,12 @@ public class ServiceTabsViewModel : ViewModelBase
     public ServiceTabsViewModel()
     {
         _serviceTabItems = new ObservableCollection<ServiceTabItem>();
-        EventPublisher.GetEvent<OpenServiceMsg>().Subscribe(OnNewServiceMessage);
+        EventPublisher.GetEvent<OpenServiceFullPathMsg>().Subscribe(OnNewServiceMessage);
     }
 
-    private void OnNewServiceMessage(string openServiceFile)
+    private void OnNewServiceMessage(string openServiceFileFullPath)
     {
-        // Console.WriteLine($"New Service Opened: {openServiceFile}!");
-        var newTabItem = new ServiceTabItem(openServiceFile);
+        var newTabItem = new ServiceTabItem(openServiceFileFullPath);
         ServiceTabItems.Add(newTabItem);
         SelectedServiceTabItem = newTabItem;
     }

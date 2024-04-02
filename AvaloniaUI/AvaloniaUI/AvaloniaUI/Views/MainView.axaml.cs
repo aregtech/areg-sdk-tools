@@ -57,7 +57,7 @@ public partial class MainView : ReactiveUserControl<MainViewModel>
                     }
                 });
 
-        context.SetOutput(storageFiles.Select(x => x.Name).ToArray());
+        context.SetOutput(storageFiles.Select(x => x.Path.ToString()).ToArray());
     }
     
     private async Task HandleExitApplicationInteraction(InteractionContext<Unit, bool?> context)

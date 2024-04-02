@@ -8,5 +8,22 @@
              x:Class="AvaloniaUI.Views.SingleServiceView"
              x:Name="UserControlSingleServiceView">
 
-    <TextBlock Text="{Binding TabMessage}" />
+    <DockPanel>
+        <TabControl DockPanel.Dock="Bottom"
+                    Margin="5">
+            <TabItem Header="Tab 1">
+                <TextBlock Margin="5">This is tab 1 content</TextBlock>
+            </TabItem>
+            <TabItem Header="Tab 2">
+                <TextBlock Margin="5">This is tab 2 content</TextBlock>
+            </TabItem>
+            <TabItem Header="Tab 3">
+                <TextBlock Margin="5">This is tab 3 content</TextBlock>
+            </TabItem>
+        </TabControl>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Text="{Binding TabMessage}" />
+
+    </DockPanel>
 </UserControl>
