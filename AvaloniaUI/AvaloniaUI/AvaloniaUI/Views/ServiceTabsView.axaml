@@ -17,7 +17,7 @@
     https://github.com/AvaloniaUI/Avalonia/discussions/11837 -->
     <Grid RowDefinitions="Auto, *">
         <TabStrip Grid.Row="0"
-                  Name="ServiceTabsControl"
+                  Name="ServiceTabStrip"
                   ItemsSource="{Binding ServiceTabItems}"
                   SelectedItem="{Binding SelectedServiceTabItem}">
             <TabStrip.ItemTemplate>
@@ -29,7 +29,8 @@
         </TabStrip>
 
         <ItemsControl Grid.Row="1"
-                      ItemsSource="{Binding ServiceTabItems}">
+                      ItemsSource="{Binding ServiceTabItems}"
+                      Name="ServiceTabsItemsControl">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <Panel />

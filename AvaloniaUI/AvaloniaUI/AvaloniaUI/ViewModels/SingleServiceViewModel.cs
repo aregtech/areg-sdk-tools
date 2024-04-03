@@ -1,20 +1,44 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
+using ReactiveUI;
+
 namespace AvaloniaUI.ViewModels;
+
+public class ServiceAspectTabItem(ServiceAspectType serviceAspectType) : ViewModelBase
+{
+    public string Header { get; } = serviceAspectType.ToString();
+    public ServiceAspectType Content { get; } = serviceAspectType;
+}
 
 public class SingleServiceViewModel : ViewModelBase
 {
     private readonly string _openServiceFileFullPath;
-    private static int _tabNum;
-    
-    public string TabMessage { get; set; }
+    private ObservableCollection<ServiceAspectTabItem> _serviceAspectTabItems = [];
+    private ServiceAspectTabItem? _selectedServiceAspectTabItem;
+
+    public ObservableCollection<ServiceAspectTabItem> ServiceAspectTabItems
+    {
+        get => _serviceAspectTabItems;
+        set => this.RaiseAndSetIfChanged(ref _serviceAspectTabItems, value);
+    }
+
+    public ServiceAspectTabItem? SelectedServiceAspectTabItem
+    {
+        get => _selectedServiceAspectTabItem;
+        set => this.RaiseAndSetIfChanged(ref _selectedServiceAspectTabItem, value);
+    }
     
     public SingleServiceViewModel(string openServiceFileFullPath)
     {
         _openServiceFileFullPath = openServiceFileFullPath;
-        TabMessage = $"Single-Service-View {_tabNum++} ...";
-    }
+        
+        foreach (var aspect in Enum.GetNames(typeof(ServiceAspectType)))
+        {
+            Enum.TryParse<ServiceAspectType>(aspect, out var aspectEnum);
+            _serviceAspectTabItems.Add(new ServiceAspectTabItem(aspectEnum));
+        }
 
-    static SingleServiceViewModel()
-    {
-        _tabNum = 1;
+        SelectedServiceAspectTabItem = _serviceAspectTabItems.First();
     }
 }

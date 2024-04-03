@@ -20,7 +20,7 @@ public class ViewLocator : IDataTemplate
             return (Control)Activator.CreateInstance(type)!;
         }
 
-        return new TextBlock { Text = name };
+        return new TextBlock { Text = "Not Found: " + name };
     }
 
     public bool Match(object? data)
