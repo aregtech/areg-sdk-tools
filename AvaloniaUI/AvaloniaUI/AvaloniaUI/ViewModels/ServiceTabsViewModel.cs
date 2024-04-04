@@ -7,11 +7,11 @@ namespace AvaloniaUI.ViewModels;
 
 public class ServiceTabItem(string openServiceFileFullPath) : ViewModelBase
 {
-    private SingleServiceViewModel _content = new(openServiceFileFullPath);
+    private ServiceTabViewModel _content = new(openServiceFileFullPath);
         
     public string Header { get; } = Path.GetFileName(openServiceFileFullPath);
 
-    public SingleServiceViewModel Content
+    public ServiceTabViewModel Content
     {
         get => _content;
         set => this.RaiseAndSetIfChanged(ref _content, value);

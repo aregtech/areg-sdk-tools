@@ -1,5 +1,3 @@
-<!-- x:DataType="viewModels:SingleServiceViewModel" -->
-
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -9,8 +7,8 @@
              xmlns:dataTemplates="clr-namespace:AvaloniaUI.Views.DataTemplates"
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="AvaloniaUI.Views.SingleServiceView"
-             x:Name="UserControlSingleServiceView">
+             x:Class="AvaloniaUI.Views.ServiceTabView"
+             x:Name="ServiceTabViewUserControl">
 
     <!-- The problem with the TabControl, it shares its content template for all tabs. See:
     https://github.com/AvaloniaUI/Avalonia/issues/14529

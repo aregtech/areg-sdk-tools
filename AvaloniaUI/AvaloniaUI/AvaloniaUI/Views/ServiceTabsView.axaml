@@ -6,7 +6,8 @@
              xmlns:viewModels="clr-namespace:AvaloniaUI.ViewModels"
              xmlns:views="clr-namespace:AvaloniaUI.Views"
              x:Class="AvaloniaUI.Views.ServiceTabsView"
-             Background="SteelBlue">
+             Background="SteelBlue"
+             x:Name="ServiceTabsViewUserControl">
 
     <UserControl.DataContext>
         <viewModels:ServiceTabsViewModel />
@@ -38,7 +39,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type viewModels:ServiceTabItem}">
-                    <views:SingleServiceView DataContext="{Binding Content}" />
+                    <views:ServiceTabView DataContext="{Binding Content}" />
                 </DataTemplate>
                 <!-- <dataTemplates:ViewLocatorForTabControl /> -->
             </ItemsControl.ItemTemplate>

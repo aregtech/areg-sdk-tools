@@ -11,7 +11,7 @@ public class ServiceAspectTabItem(ServiceAspectType serviceAspectType) : ViewMod
     public ServiceAspectType Content { get; } = serviceAspectType;
 }
 
-public class SingleServiceViewModel : ViewModelBase
+public class ServiceTabViewModel : ViewModelBase
 {
     private readonly string _openServiceFileFullPath;
     private ObservableCollection<ServiceAspectTabItem> _serviceAspectTabItems = [];
@@ -29,7 +29,7 @@ public class SingleServiceViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _selectedServiceAspectTabItem, value);
     }
     
-    public SingleServiceViewModel(string openServiceFileFullPath)
+    public ServiceTabViewModel(string openServiceFileFullPath)
     {
         _openServiceFileFullPath = openServiceFileFullPath;
         
