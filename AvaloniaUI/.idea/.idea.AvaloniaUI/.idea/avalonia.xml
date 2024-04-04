@@ -8,6 +8,7 @@
         <entry key="AvaloniaUI/AvaloniaUI/Views/MainView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/MainWindow.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/OpenServiceView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
+        <entry key="AvaloniaUI/AvaloniaUI/Views/OverViewAspectView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/ServiceTabView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/ServiceTabsView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/SingleServiceView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />

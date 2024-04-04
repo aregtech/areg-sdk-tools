@@ -6,6 +6,7 @@
              xmlns:viewModels="clr-namespace:AvaloniaUI.ViewModels"
              xmlns:dataTemplates="clr-namespace:AvaloniaUI.Views.DataTemplates"
              xmlns:system="clr-namespace:System;assembly=System.Runtime"
+             xmlns:views="clr-namespace:AvaloniaUI.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaUI.Views.ServiceTabView"
              x:Name="ServiceTabViewUserControl">
@@ -15,20 +16,33 @@
     https://github.com/AvaloniaUI/Avalonia/discussions/11837 -->
     <UserControl.IsVisible>
         <MultiBinding Converter="{x:Static converters:IsEqualConverter.Instance}">
-            <Binding></Binding>
+            <Binding />
             <Binding RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}"
                      Path="DataContext.SelectedServiceTabItem.Content">
             </Binding>
         </MultiBinding>
     </UserControl.IsVisible>
 
+    <UserControl.Resources>
+        <DataTemplate x:Key="BasicAspectInfo">
+            <TextBlock Text="{Binding ServiceAspectType, StringFormat='{}{0} Editor'}"
+                       FontStyle="Italic"
+                       FontSize="20" 
+                       Margin="5 10 5 10"/>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- The DataContext here is a "ServiceAspectTabItem" instance -->
     <UserControl.DataTemplates>
         <dataTemplates:ServiceAspectsTemplateSelector>
             <DataTemplate x:Key="Overview" DataType="viewModels:ServiceAspectType">
-                <ListBox>
-                    <ListBoxItem>Overview</ListBoxItem>
-                    <ListBoxItem>Overview</ListBoxItem>
-                </ListBox>
+                <StackPanel Orientation="Vertical"
+                            DataContext="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ContentControl},
+                            Path=DataContext}">
+                    <ContentControl Content="{Binding}"
+                                    ContentTemplate="{DynamicResource BasicAspectInfo}"/>
+                    <views:OverViewAspectView />
+                </StackPanel>
             </DataTemplate>
             <DataTemplate x:Key="DataTypes" DataType="viewModels:ServiceAspectType">
                 <ListBox>
@@ -93,10 +107,11 @@
 
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type viewModels:ServiceAspectTabItem}">
-                        <ContentControl Content="{Binding Content, Mode=OneWay}">
+                        <ContentControl Content="{Binding ServiceAspectType, Mode=OneWay}"
+                                        Name="ServiceAcpectContentControl">
                             <ContentControl.IsVisible>
                                 <MultiBinding Converter="{x:Static converters:IsEqualConverter.Instance}">
-                                    <Binding></Binding>
+                                    <Binding />
                                     <Binding
                                         RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}"
                                         Path="DataContext.SelectedServiceAspectTabItem">
