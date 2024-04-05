@@ -25,24 +25,26 @@
 
     <UserControl.Resources>
         <DataTemplate x:Key="BasicAspectInfo">
-            <TextBlock Text="{Binding ServiceAspectType, StringFormat='{}{0} Editor'}"
-                       FontStyle="Italic"
-                       FontSize="20" 
-                       Margin="5 10 5 10"/>
+            <StackPanel>
+                <TextBlock Text="{Binding ServiceAspectType, StringFormat='{}{0} Editor'}"
+                           FontStyle="Italic"
+                           FontSize="20" />
+
+                <TextBlock Text="{Binding EditorDescription}"
+                           FontSize="14"
+                           FontStyle="Italic"
+                           Margin="6 4 0 4" />
+            </StackPanel>
         </DataTemplate>
     </UserControl.Resources>
 
-    <!-- The DataContext here is a "ServiceAspectTabItem" instance -->
     <UserControl.DataTemplates>
         <dataTemplates:ServiceAspectsTemplateSelector>
             <DataTemplate x:Key="Overview" DataType="viewModels:ServiceAspectType">
-                <StackPanel Orientation="Vertical"
-                            DataContext="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ContentControl},
-                            Path=DataContext}">
-                    <ContentControl Content="{Binding}"
-                                    ContentTemplate="{DynamicResource BasicAspectInfo}"/>
-                    <views:OverViewAspectView />
-                </StackPanel>
+                <!-- DataContext: "ServiceAspectTabItem.AspectViewModelBase" unique aspect instance -->
+                <views:OverViewAspectView
+                    DataContext="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ContentControl},
+                            Path=DataContext.AspectViewModelBase}" />
             </DataTemplate>
             <DataTemplate x:Key="DataTypes" DataType="viewModels:ServiceAspectType">
                 <ListBox>
@@ -107,18 +109,33 @@
 
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type viewModels:ServiceAspectTabItem}">
-                        <ContentControl Content="{Binding ServiceAspectType, Mode=OneWay}"
-                                        Name="ServiceAcpectContentControl">
-                            <ContentControl.IsVisible>
-                                <MultiBinding Converter="{x:Static converters:IsEqualConverter.Instance}">
-                                    <Binding />
-                                    <Binding
-                                        RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}"
-                                        Path="DataContext.SelectedServiceAspectTabItem">
-                                    </Binding>
-                                </MultiBinding>
-                            </ContentControl.IsVisible>
-                        </ContentControl>
+
+                        <StackPanel>
+                            <!-- The Common Aspect Info -->
+                            <ContentControl Content="{Binding AspectViewModelBase}"
+                                            ContentTemplate="{DynamicResource BasicAspectInfo}"
+                                            Margin="4 10 4 0" />
+
+                            <!-- The Specific Aspect Info -->
+                            <ContentControl Content="{Binding ServiceAspectType, Mode=OneWay}"
+                                            Name="SpecificAspectContentControl"
+                                            Margin="10"
+                                            Padding="10"
+                                            BorderBrush="Bisque"
+                                            BorderThickness="2">
+
+                                <ContentControl.IsVisible>
+                                    <MultiBinding Converter="{x:Static converters:IsEqualConverter.Instance}">
+                                        <Binding />
+                                        <Binding
+                                            RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}"
+                                            Path="DataContext.SelectedServiceAspectTabItem">
+                                        </Binding>
+                                    </MultiBinding>
+                                </ContentControl.IsVisible>
+
+                            </ContentControl>
+                        </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

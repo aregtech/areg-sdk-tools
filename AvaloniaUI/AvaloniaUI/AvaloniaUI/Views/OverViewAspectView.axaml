@@ -1,5 +1,3 @@
-<!-- Note: The DataContext here is a "ServiceAspectTabItem" instance -->
-
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -7,10 +5,12 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="AvaloniaUI.Views.OverViewAspectView"
              x:Name="OverViewAspectViewUserControl">
-    <ListBox>
-        <!-- <TextBlock Text="{Binding SharedAspectViewModel.ServiceAspectTypeTemp}"></TextBlock> -->
-        <ListBoxItem>Overview</ListBoxItem>
-        <ListBoxItem>Overview</ListBoxItem>
-    </ListBox>
+    <StackPanel>
+        <TextBlock Text="{Binding Test, StringFormat='{}Specific value Test = {0}'}"/>
+        <ListBox>
+            <ListBoxItem>Overview</ListBoxItem>
+            <ListBoxItem>Overview</ListBoxItem>
+        </ListBox>
+    </StackPanel>
 
 </UserControl>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using AvaloniaUI.Helpers;
+using Liquid_Technologies.Ns;
 using ReactiveUI;
 
 namespace AvaloniaUI.ViewModels;
@@ -9,9 +10,9 @@ namespace AvaloniaUI.ViewModels;
 /// <summary>
 /// The item for a single aspect of type <see cref="ViewModels.ServiceAspectType"/>.
 /// It serves as the View-Model for the ServiceTabView.
-/// It serves as the DataContext of each Aspect-View, which share one single <see cref="SharedAspectViewModel"/>.
+/// It serves as the DataContext of each Aspect-View.
 /// </summary>
-public class ServiceAspectTabItem(ServiceAspectType serviceAspectType, AspectViewModel aspectViewModel)
+public class ServiceAspectTabItem(ServiceAspectType serviceAspectType, AspectViewModelBase aspectViewModelBase)
     : ViewModelBase
 {
     public string Header { get; } = serviceAspectType.ToString();
@@ -22,9 +23,9 @@ public class ServiceAspectTabItem(ServiceAspectType serviceAspectType, AspectVie
     public ServiceAspectType ServiceAspectType { get; } = serviceAspectType;
 
     /// <summary>
-    /// The shared VM for all aspects.
+    /// The specific Aspect-ViewModel for this aspect.
     /// </summary>
-    public AspectViewModel SharedAspectViewModel { get; } = aspectViewModel;
+    public AspectViewModelBase AspectViewModelBase { get; } = aspectViewModelBase;
 }
 
 public class ServiceTabViewModel : ViewModelBase
@@ -48,16 +49,31 @@ public class ServiceTabViewModel : ViewModelBase
     {
         var dataSource = openServiceFileFullPath.ReadServiceFile();
 
-        // we share one instance of ServiceAspectViewModel with many Views
-        var serviceAspectViewModel = new AspectViewModel(dataSource);
-
-        Enum.GetNames(typeof(ServiceAspectType))
-            .ToList()
-            .ForEach(x =>
-                _serviceAspectTabItems
-                    .Add(new ServiceAspectTabItem(
-                        x.ToEnum<ServiceAspectType>(), serviceAspectViewModel)));
+        foreach (var literal in Enum.GetNames(typeof(ServiceAspectType)))
+        {
+            var aspectType = literal.ToEnum<ServiceAspectType>();
+            _serviceAspectTabItems
+                .Add(new ServiceAspectTabItem(aspectType, AspectViewModelFactory(aspectType, dataSource)));
+        }
 
         SelectedServiceAspectTabItem = _serviceAspectTabItems.First();
+    }
+
+    private static AspectViewModelBase AspectViewModelFactory(ServiceAspectType aspectType,
+        ServiceInterfaceElm dataSource)
+    {
+        switch (aspectType)
+        {
+            case ServiceAspectType.Overview:
+                return new OverViewAspectViewModel(dataSource);
+            case ServiceAspectType.DataTypes:
+            case ServiceAspectType.Attributes:
+            case ServiceAspectType.Methods:
+            case ServiceAspectType.Constants:
+            case ServiceAspectType.Includes:
+            default:
+                return new OverViewAspectViewModel(dataSource);
+                // throw new ArgumentOutOfRangeException(nameof(aspectType), aspectType, null);
+        }
     }
 }
