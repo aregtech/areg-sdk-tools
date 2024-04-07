@@ -6,7 +6,7 @@ namespace AvaloniaUI.ViewModels;
 /// <summary>
 /// The base VM for all Aspect-Views of enum <see cref="ServiceAspectType"/>.
 /// </summary>
-public abstract class AspectViewModelBase : ViewModelBase
+public abstract class AspectViewModelBase : ViewModelBase , IAspectViewModel
 {
     protected ServiceInterfaceElm DataSource { get; }
     
@@ -20,4 +20,8 @@ public abstract class AspectViewModelBase : ViewModelBase
         
         dataSource.PrintServiceInterface();
     }
+
+    public abstract ServiceAspectType ServiceAspectType { get; }
+    
+    public abstract string EditorDescription { get; }
 }

@@ -47,10 +47,9 @@
                             Path=DataContext.AspectViewModelBase}" />
             </DataTemplate>
             <DataTemplate x:Key="DataTypes" DataType="viewModels:ServiceAspectType">
-                <ListBox>
-                    <ListBoxItem>DataTypes</ListBoxItem>
-                    <ListBoxItem>DataTypes</ListBoxItem>
-                </ListBox>
+                <views:DataTypeAspectView
+                    DataContext="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType=ContentControl},
+                            Path=DataContext.AspectViewModelBase}" />
             </DataTemplate>
             <DataTemplate x:Key="Attributes" DataType="viewModels:ServiceAspectType">
                 <ListBox>
@@ -111,30 +110,29 @@
                     <DataTemplate DataType="{x:Type viewModels:ServiceAspectTabItem}">
 
                         <StackPanel>
+                            <!-- The same problem with the TabControl, it shares its content template for all tabs.-->
+                            <StackPanel.IsVisible>
+                                <MultiBinding Converter="{x:Static converters:IsEqualConverter.Instance}">
+                                    <Binding />
+                                    <Binding
+                                        RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}"
+                                        Path="DataContext.SelectedServiceAspectTabItem">
+                                    </Binding>
+                                </MultiBinding>
+                            </StackPanel.IsVisible>
+
                             <!-- The Common Aspect Info -->
                             <ContentControl Content="{Binding AspectViewModelBase}"
                                             ContentTemplate="{DynamicResource BasicAspectInfo}"
                                             Margin="4 10 4 0" />
 
                             <!-- The Specific Aspect Info -->
-                            <ContentControl Content="{Binding ServiceAspectType, Mode=OneWay}"
+                            <ContentControl Content="{Binding AspectViewModelBase.ServiceAspectType, Mode=OneWay}"
                                             Name="SpecificAspectContentControl"
                                             Margin="10"
                                             Padding="10"
                                             BorderBrush="Bisque"
-                                            BorderThickness="2">
-
-                                <ContentControl.IsVisible>
-                                    <MultiBinding Converter="{x:Static converters:IsEqualConverter.Instance}">
-                                        <Binding />
-                                        <Binding
-                                            RelativeSource="{RelativeSource Mode=FindAncestor, AncestorType=ItemsControl}"
-                                            Path="DataContext.SelectedServiceAspectTabItem">
-                                        </Binding>
-                                    </MultiBinding>
-                                </ContentControl.IsVisible>
-
-                            </ContentControl>
+                                            BorderThickness="2" />
                         </StackPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

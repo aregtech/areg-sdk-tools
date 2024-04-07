@@ -12,15 +12,10 @@ namespace AvaloniaUI.ViewModels;
 /// It serves as the View-Model for the ServiceTabView.
 /// It serves as the DataContext of each Aspect-View.
 /// </summary>
-public class ServiceAspectTabItem(ServiceAspectType serviceAspectType, AspectViewModelBase aspectViewModelBase)
+public class ServiceAspectTabItem(AspectViewModelBase aspectViewModelBase)
     : ViewModelBase
 {
-    public string Header { get; } = serviceAspectType.ToString();
-
-    /// <summary>
-    /// Need this: it is the trigger for switching the view, and is once per tab.
-    /// </summary>
-    public ServiceAspectType ServiceAspectType { get; } = serviceAspectType;
+    public string Header { get; } = aspectViewModelBase.ServiceAspectType.ToString();
 
     /// <summary>
     /// The specific Aspect-ViewModel for this aspect.
@@ -53,7 +48,7 @@ public class ServiceTabViewModel : ViewModelBase
         {
             var aspectType = literal.ToEnum<ServiceAspectType>();
             _serviceAspectTabItems
-                .Add(new ServiceAspectTabItem(aspectType, AspectViewModelFactory(aspectType, dataSource)));
+                .Add(new ServiceAspectTabItem(AspectViewModelFactory(aspectType, dataSource)));
         }
 
         SelectedServiceAspectTabItem = _serviceAspectTabItems.First();
@@ -62,18 +57,15 @@ public class ServiceTabViewModel : ViewModelBase
     private static AspectViewModelBase AspectViewModelFactory(ServiceAspectType aspectType,
         ServiceInterfaceElm dataSource)
     {
-        switch (aspectType)
+        return aspectType switch
         {
-            case ServiceAspectType.Overview:
-                return new OverViewAspectViewModel(dataSource);
-            case ServiceAspectType.DataTypes:
-            case ServiceAspectType.Attributes:
-            case ServiceAspectType.Methods:
-            case ServiceAspectType.Constants:
-            case ServiceAspectType.Includes:
-            default:
-                return new OverViewAspectViewModel(dataSource);
-                // throw new ArgumentOutOfRangeException(nameof(aspectType), aspectType, null);
-        }
+            ServiceAspectType.Overview => new OverViewAspectViewModel(dataSource),
+            ServiceAspectType.DataTypes => new DataTypeAspectViewModel(dataSource),
+            ServiceAspectType.Attributes => new AttributeAspectViewModel(dataSource),
+            ServiceAspectType.Methods => new MethodAspectViewModel(dataSource),
+            ServiceAspectType.Constants => new ConstantsAspectViewModel(dataSource),
+            ServiceAspectType.Includes => new IncludeAspectViewModel(dataSource),
+            _ => throw new ArgumentOutOfRangeException(nameof(aspectType), aspectType, null)
+        };
     }
 }

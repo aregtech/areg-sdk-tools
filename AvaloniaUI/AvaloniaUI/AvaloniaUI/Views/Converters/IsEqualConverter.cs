@@ -11,6 +11,7 @@ public class IsEqualConverter : IMultiValueConverter
 
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
     {
-        return values.Count == 2 && values[0] == values[1];
+        var isEqual = values.Count == 2 && values[0] == values[1];
+        return isEqual;
     }
 }

@@ -5,6 +5,9 @@ namespace AvaloniaUI.ViewModels;
 /// </summary>
 public interface IAspectViewModel
 {
+    /// <summary>
+    /// Need this: it is the trigger for switching the view.
+    /// </summary>
     ServiceAspectType ServiceAspectType { get; }
     
     /// <summary>
