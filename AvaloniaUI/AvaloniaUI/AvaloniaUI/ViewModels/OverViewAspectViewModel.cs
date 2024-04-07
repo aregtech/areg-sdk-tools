@@ -1,16 +1,32 @@
+using System;
 using Liquid_Technologies.Ns;
 
 namespace AvaloniaUI.ViewModels;
 
 public class OverViewAspectViewModel : AspectViewModelBase
 {
-    public string Test { get; } = "Inside of OverViewAspectViewModel !!!!!";
-    
     public override ServiceAspectType ServiceAspectType { get; } = ServiceAspectType.Overview;
     
     public override string EditorDescription { get; } = "Service Interface General Description";
 
     public OverViewAspectViewModel(ServiceInterfaceElm dataSource) : base(dataSource)
     {
+        ServiceName = DataSource.Overview.Name;
+        IsRemoteService = DataSource.Overview.IsRemote;
+        
+        var version = new Version(DataSource.Overview.Version);
+        MajorVersion = version.Major;
+        MinorVersion = version.Minor;
+        PatchVersion = version.Build;
     }
+    
+    public string ServiceName { get; }
+    
+    public bool IsRemoteService { get; }
+    
+    public int MajorVersion { get; }
+
+    public int MinorVersion { get; }
+    
+    public int PatchVersion { get; }
 }
