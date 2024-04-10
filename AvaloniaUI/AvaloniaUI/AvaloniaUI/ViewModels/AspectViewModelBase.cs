@@ -1,5 +1,5 @@
 using AvaloniaUI.Helpers;
-using Liquid_Technologies.Ns;
+using XsdGen;
 
 namespace AvaloniaUI.ViewModels;
 
@@ -8,17 +8,17 @@ namespace AvaloniaUI.ViewModels;
 /// </summary>
 public abstract class AspectViewModelBase : ViewModelBase , IAspectViewModel
 {
-    protected ServiceInterfaceElm DataSource { get; }
+    protected ServiceInterface DataSource { get; }
     
     /// <summary>
     /// The base Ctor for all Aspect View-Models.
     /// </summary>
     /// <param name="dataSource">The data-source shared by all Aspect View-Models.</param>
-    protected AspectViewModelBase(ServiceInterfaceElm dataSource)
+    protected AspectViewModelBase(ServiceInterface dataSource)
     {
         DataSource = dataSource;
         
-        dataSource.PrintServiceInterface();
+        // dataSource.PrintServiceInterface();
     }
 
     public abstract ServiceAspectType ServiceAspectType { get; }

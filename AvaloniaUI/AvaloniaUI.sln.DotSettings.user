@@ -8,6 +8,7 @@
     &lt;TestId&gt;MSTest::E302CBA7-2247-4EB6-8809-E2B349951800::net8.0::AvaloniaUITest.TestModelSchema.TestValidateService&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;MSTest::E302CBA7-2247-4EB6-8809-E2B349951800::net8.0::AvaloniaUITest.TestModelSchema&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;MSTest::E302CBA7-2247-4EB6-8809-E2B349951800::net8.0::AvaloniaUITest.TestSchemaValidation&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;MSTest::E302CBA7-2247-4EB6-8809-E2B349951800::net8.0::AvaloniaUITest.TestSchemaCodeGen&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	<s:Boolean x:Key="/Default/ResxEditorPersonal/CheckedGroups/=Tests_002FAvaloniaUITest_002FTestFiles_002FArtakSampleMarch04Resources_002FSchemaData/@EntryIndexedValue">True</s:Boolean>

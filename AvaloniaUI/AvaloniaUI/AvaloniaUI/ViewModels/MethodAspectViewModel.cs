@@ -1,4 +1,4 @@
-using Liquid_Technologies.Ns;
+using XsdGen;
 
 namespace AvaloniaUI.ViewModels;
 
@@ -8,7 +8,7 @@ public class MethodAspectViewModel : AspectViewModelBase
 
     public override string EditorDescription { get; } = "All Methods";
 
-    public MethodAspectViewModel(ServiceInterfaceElm dataSource) : base(dataSource)
+    public MethodAspectViewModel(ServiceInterface dataSource) : base(dataSource)
     {
     }
 }

@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <None Update="Copied_Artak_Sample_March_04.xsd">
+        <Generator>LxCodeGenerator</Generator>
+        <LastGenOutput>Copied_Artak_Sample_March_04.cs</LastGenOutput>
+        <Lx-GenerationModel>ConformantWithAccessors</Lx-GenerationModel>
+      </None>
+    </ItemGroup>
+
+</Project>

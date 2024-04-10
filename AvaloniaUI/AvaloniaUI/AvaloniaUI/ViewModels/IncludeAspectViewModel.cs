@@ -1,4 +1,4 @@
-using Liquid_Technologies.Ns;
+using XsdGen;
 
 namespace AvaloniaUI.ViewModels;
 
@@ -8,7 +8,7 @@ public class IncludeAspectViewModel : AspectViewModelBase
 
     public override string EditorDescription { get; } = "All Includes";
 
-    public IncludeAspectViewModel(ServiceInterfaceElm dataSource) : base(dataSource)
+    public IncludeAspectViewModel(ServiceInterface dataSource) : base(dataSource)
     {
     }
 }

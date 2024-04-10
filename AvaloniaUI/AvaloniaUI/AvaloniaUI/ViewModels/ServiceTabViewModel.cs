@@ -2,8 +2,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using AvaloniaUI.Helpers;
-using Liquid_Technologies.Ns;
 using ReactiveUI;
+using XsdGen;
 
 namespace AvaloniaUI.ViewModels;
 
@@ -43,6 +43,10 @@ public class ServiceTabViewModel : ViewModelBase
     public ServiceTabViewModel(string openServiceFileFullPath)
     {
         var dataSource = openServiceFileFullPath.ReadServiceFile();
+        if (dataSource == null)
+        {
+            throw new ApplicationException();
+        }
 
         foreach (var literal in Enum.GetNames(typeof(ServiceAspectType)))
         {
@@ -54,8 +58,9 @@ public class ServiceTabViewModel : ViewModelBase
         SelectedServiceAspectTabItem = _serviceAspectTabItems.First();
     }
 
-    private static AspectViewModelBase AspectViewModelFactory(ServiceAspectType aspectType,
-        ServiceInterfaceElm dataSource)
+    private static AspectViewModelBase AspectViewModelFactory(
+        ServiceAspectType aspectType,
+        ServiceInterface dataSource)
     {
         return aspectType switch
         {

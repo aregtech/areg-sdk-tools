@@ -1,4 +1,4 @@
-using Liquid_Technologies.Ns;
+using XsdGen;
 
 namespace AvaloniaUI.ViewModels;
 
@@ -10,7 +10,7 @@ public class DataTypeAspectViewModel : AspectViewModelBase
 
     public override string EditorDescription { get; } = "All Data Types";
 
-    public DataTypeAspectViewModel(ServiceInterfaceElm dataSource) : base(dataSource)
+    public DataTypeAspectViewModel(ServiceInterface dataSource) : base(dataSource)
     {
     }
 }

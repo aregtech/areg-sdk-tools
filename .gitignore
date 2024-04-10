@@ -40,3 +40,6 @@ AvaloniaUI/.vs
 AvaloniaUI/Liquid_Technologies/obj
 AvaloniaUI/ThirdParty/Avalonia.Controls.ToolBar/obj
 AvaloniaUI/ThirdParty/Avalonia.Controls.ToolBar/bin
+AvaloniaUI/Schema/obj
+AvaloniaUI/Schema/bin
+AvaloniaUI/DotNetTools/.store

@@ -26,7 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Liquid_Technologies\Liquid_Technologies.csproj" />
+      <ProjectReference Include="..\..\Schema\Schema.csproj" />
       <ProjectReference Include="..\..\ThirdParty\Avalonia.Controls.ToolBar\Avalonia.Controls.ToolBar.csproj" />
     </ItemGroup>
 

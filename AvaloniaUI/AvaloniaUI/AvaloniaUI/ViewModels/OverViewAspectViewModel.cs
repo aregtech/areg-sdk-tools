@@ -1,5 +1,5 @@
 using System;
-using Liquid_Technologies.Ns;
+using XsdGen;
 
 namespace AvaloniaUI.ViewModels;
 
@@ -9,7 +9,7 @@ public class OverViewAspectViewModel : AspectViewModelBase
     
     public override string EditorDescription { get; } = "Service Interface General Description";
 
-    public OverViewAspectViewModel(ServiceInterfaceElm dataSource) : base(dataSource)
+    public OverViewAspectViewModel(ServiceInterface dataSource) : base(dataSource)
     {
         ServiceName = DataSource.Overview.Name;
         IsRemoteService = DataSource.Overview.IsRemote;

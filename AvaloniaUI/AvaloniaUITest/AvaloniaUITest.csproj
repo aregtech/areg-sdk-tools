@@ -29,7 +29,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\AvaloniaUI\AvaloniaUI\AvaloniaUI.csproj" />
-      <ProjectReference Include="..\Liquid_Technologies\Liquid_Technologies.csproj" />
     </ItemGroup>
 
     <ItemGroup>

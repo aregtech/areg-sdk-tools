@@ -1,45 +1,55 @@
 using System;
-using System.Xml.Schema;
-using Liquid_Technologies;
-using Liquid_Technologies.Ns;
-using LiquidTechnologies.XmlObjects;
+using System.IO;
+using System.Xml.Serialization;
+using XsdGen;
 
 namespace AvaloniaUI.Helpers;
 
+/// <summary>
+/// ----------------------------------
+/// Note:
+/// serializer.Deserialize(fs) is nothing but a wrapper around XmlReader.Create ( )
+/// See: TestValidateServiceViaSchema, which validates !!
+/// See: TestReadSimlFile !!
+/// ----------------------------------
+/// </summary>
 public static class SchemaHelpers
 {
-    private static int _numReadErrorsFound;
-
-    public static ServiceInterfaceElm ReadServiceFile(this string serviceFileFullPath)
+    public static ServiceInterface? ReadServiceFile(this string serviceFileFullPath)
     {
-        var validator = new CopiedArtakSampleMarch04Validator();
-        using var validatingReader = validator.CreateValidatingReader(serviceFileFullPath, ValidationEventHandler);
+        var serializer = new XmlSerializer(typeof(ServiceInterface));
+        
+        // If the XML document has been altered with unknown nodes or attributes, handle them with the
+        // UnknownNode and UnknownAttribute events.
+        serializer.UnknownNode += Serializer_UnknownNode;
+        serializer.UnknownAttribute += Serializer_UnknownAttribute;
+        
+        var fs = new FileStream(serviceFileFullPath, FileMode.Open);
 
-        var serializer = new LxSerializer<ServiceInterfaceElm>();
-        var lxReaderSettings = new LxReaderSettings
-        {
-            ErrorHandler = LxErrorHandler
-        };
-
-        var serviceInterfaceElm = serializer.Deserialize(validatingReader, lxReaderSettings);
-        return serviceInterfaceElm;
-    }
-    
-    private static void ValidationEventHandler(object? sender, ValidationEventArgs args)
-    {
-        _numReadErrorsFound++;
-
-        Console.WriteLine(
-            $@"Validation: [{args.Severity}] [L {args.Exception.LineNumber}] [Pos {args.Exception.LinePosition}]: {args.Message}");
+        var si = serializer.Deserialize(fs) as ServiceInterface;
+        return si;
     }
 
     /// <summary>
-    /// This is called by the Liquid XML Objects serializer.
-    /// See <see href="https://www.liquid-technologies.com/Reference/XmlDataBinding/xml-objects-code-xsd-validation.html"/>.
+    /// Currently, the reading of the service interface file does not validate.
+    /// This would do it as a separate step.
     /// </summary>
-    private static void LxErrorHandler(string msg, LxErrorSeverity severity, LxErrorCode errorCode,
-        TextLocation? location, object targetObject)
+    /// <param name="serviceInterface"></param>
+    public static void ValidateServiceFile(ServiceInterface serviceInterface)
     {
-        Console.WriteLine($@"Liquid XML Objects Validator : {severity} : {msg}");
+    }
+    
+
+    private static void Serializer_UnknownNode(object? sender, XmlNodeEventArgs e)
+    {
+        Console.WriteLine("Unknown Node:" + e.Name + "\t" + e.Text);
+        throw new ApplicationException();
+    }
+
+    private static void Serializer_UnknownAttribute(object? sender, XmlAttributeEventArgs e)
+    {
+        var attr = e.Attr;
+        Console.WriteLine("Unknown attribute " + attr.Name + "='" + attr.Value + "'");
+        throw new ApplicationException();
     }
 }
