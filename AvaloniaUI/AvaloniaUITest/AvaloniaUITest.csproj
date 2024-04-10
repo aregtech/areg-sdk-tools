@@ -17,7 +17,6 @@
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />
         <PackageReference Include="coverlet.collector" Version="6.0.0" />
         <PackageReference Include="FluentAssertions" Version="7.0.0-alpha.3" />
-        <PackageReference Include="LiquidTechnologies.XmlObjects.Runtime" Version="20.7.7" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
         <PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />
         <PackageReference Include="MSTest.TestFramework" Version="3.1.1" />
@@ -29,10 +28,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\AvaloniaUI\AvaloniaUI\AvaloniaUI.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Compile Remove="TestFiles\TestLiquidGenCodeFor_Artak_Sample_March_04.cs" />
     </ItemGroup>
 
     <ItemGroup>
