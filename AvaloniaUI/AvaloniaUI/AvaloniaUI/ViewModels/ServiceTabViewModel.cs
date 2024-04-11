@@ -48,6 +48,8 @@ public class ServiceTabViewModel : ViewModelBase
             throw new ApplicationException();
         }
 
+        dataSource.PrintServiceInterface();
+
         foreach (var literal in Enum.GetNames(typeof(ServiceAspectType)))
         {
             var aspectType = literal.ToEnum<ServiceAspectType>();

@@ -1,6 +1,6 @@
-using System.Xml.Serialization;
+using System.Xml.Schema;
 using AvaloniaUI.Helpers;
-using XsdGen;
+using FluentAssertions;
 
 namespace AvaloniaUITest;
 
@@ -17,40 +17,16 @@ public class TestSchemaCodeGen : TestSchemaBase
 {
     [TestMethod]
     [DataRow("Artak_Sample_March_04.xsd", "MarksServiceTest.siml")]
-    public void TestReadSimlFile(string schemaFileName, string serviceFileName)
+    public void TestReadAndValidateSimlFile(string schemaFileName, string serviceFileName)
     {
-        //----------------------------------
-        // Note:
-        // serializer.Deserialize(fs) is nothing but a wrapper around XmlReader.Create ( )
-        // See: TestValidateServiceViaSchema !!!!!
-        //----------------------------------
-        
-        var serializer = new XmlSerializer(typeof(ServiceInterface));
-        
-        // If the XML document has been altered with unknown nodes or attributes, handle them with the
-        // UnknownNode and UnknownAttribute events.
-        serializer.UnknownNode += Serializer_UnknownNode;
-        serializer.UnknownAttribute += Serializer_UnknownAttribute;
+        var schemaSet = CreateSchemaSet($@"{TestFilesPath}\{schemaFileName}");
+        var xDocument = CreateDocument($@"{TestFilesPath}\{serviceFileName}");
 
-        var filename = $@"{TestFilesPath}\{serviceFileName}";
-        var fs = new FileStream(filename, FileMode.Open);
+        xDocument.Should().NotBeNull();
+        xDocument.Validate(schemaSet, ValidationEventHandler);
 
-        var si = serializer.Deserialize(fs) as ServiceInterface;
-        si?.PrintServiceInterface();
-    }
-
-    private void Serializer_UnknownNode(object? sender, XmlNodeEventArgs e)
-    {
-        NumErrorsFound++;
-
-        Console.WriteLine("Unknown Node:" + e.Name + "\t" + e.Text);
-    }
-
-    private void Serializer_UnknownAttribute(object? sender, XmlAttributeEventArgs e)
-    {
-        NumErrorsFound++;
-
-        var attr = e.Attr;
-        Console.WriteLine("Unknown attribute " + attr.Name + "='" + attr.Value + "'");
+        var serviceInterface = CreateServiceInterface(xDocument, Serializer_UnknownNode, Serializer_UnknownAttribute);
+        serviceInterface.Should().NotBeNull();
+        serviceInterface?.PrintServiceInterface();
     }
 }

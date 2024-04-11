@@ -1,4 +1,3 @@
-using AvaloniaUI.Helpers;
 using XsdGen;
 
 namespace AvaloniaUI.ViewModels;
@@ -17,8 +16,6 @@ public abstract class AspectViewModelBase : ViewModelBase , IAspectViewModel
     protected AspectViewModelBase(ServiceInterface dataSource)
     {
         DataSource = dataSource;
-        
-        // dataSource.PrintServiceInterface();
     }
 
     public abstract ServiceAspectType ServiceAspectType { get; }

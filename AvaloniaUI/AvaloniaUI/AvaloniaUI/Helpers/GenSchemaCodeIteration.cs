@@ -6,6 +6,7 @@ namespace AvaloniaUI.Helpers;
 
 /// <summary>
 /// This directly uses and relies on the code-generation from a schema.
+/// It is throw-away code for development purposes only.
 /// </summary>
 public static class GenSchemaCodeIteration
 {

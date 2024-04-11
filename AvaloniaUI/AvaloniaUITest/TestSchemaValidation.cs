@@ -1,6 +1,5 @@
-using System.Xml;
-using System.Xml.Linq;
 using System.Xml.Schema;
+using FluentAssertions;
 
 namespace AvaloniaUITest;
 
@@ -27,36 +26,10 @@ public class TestSchemaValidation : TestSchemaBase
     [DataRow("Artak_Sample_March_04.xsd", "Sample.siml")]
     public void TestValidateServiceViaSchema(string schemaFileName, string serviceFileName)
     {
-        var xmlReaderSettings = CreateXmlReaderSettings();
-
-        var schema = new XmlSchemaSet();
-        schema.Add("", $@"{TestFilesPath}\{schemaFileName}");
-        var xmlReader = XmlReader.Create($@"{TestFilesPath}\{serviceFileName}", xmlReaderSettings);
-
-        const LoadOptions loadOptions = LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo;
-        var xmlDocument = XDocument.Load(xmlReader, loadOptions);
-
-        xmlDocument.Validate(schema, ValidationEventHandler);
-    }
-
-    private static XmlReaderSettings CreateXmlReaderSettings()
-    {
-        var settings = new XmlReaderSettings
-        {
-            ValidationType = ValidationType.Schema
-        };
-        settings.ValidationFlags |= XmlSchemaValidationFlags.ProcessInlineSchema;
-        settings.ValidationFlags |= XmlSchemaValidationFlags.ProcessSchemaLocation;
-        settings.ValidationFlags |= XmlSchemaValidationFlags.ReportValidationWarnings;
-
-        return settings;
-    }
-
-    private void ValidationEventHandler(object? sender, ValidationEventArgs args)
-    {
-        NumErrorsFound++;
-
-        Console.WriteLine(
-            $@"Validation: [{args.Severity}] [L {args.Exception.LineNumber}] [Pos {args.Exception.LinePosition}]: {args.Message}");
+        var schemaSet = CreateSchemaSet($@"{TestFilesPath}\{schemaFileName}");
+        var xDocument = CreateDocument($@"{TestFilesPath}\{serviceFileName}");
+        
+        xDocument.Should().NotBeNull();
+        xDocument.Validate(schemaSet, ValidationEventHandler);
     }
 }
