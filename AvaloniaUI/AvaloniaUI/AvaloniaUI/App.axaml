@@ -10,12 +10,14 @@
 
     <Application.Styles>
         <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
-        
+
         <!-- NOTE: Any Styles included above the ModernTheme can be overwritten by the Actipro themes -->
         <actipro:ModernTheme />
         <!-- NOTE: Any Styles included below the ModernTheme cannot be overwritten by the Actipro themes -->
 
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.ToolBar/Themes/Avalonia.Controls.ToolBar.axaml" />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+        <StyleInclude Source="Styles/DataGrid.axaml" />
     </Application.Styles>
 </Application>

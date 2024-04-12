@@ -3,26 +3,31 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
 using System.Xml.Serialization;
+using AvaloniaUI.ViewModels.Msg;
+using Prism.Events;
 using XsdGen;
 
 namespace AvaloniaUI.Helpers;
 
-public static class SchemaHelpers
+public class SchemaHelper(IEventAggregator eventAggregator)
 {
-    private static int NumErrorsFound { get; set; }
+    private int NumErrorsFound { get; set; }
+    private IEventAggregator _eventAggregator = eventAggregator;
 
-    public static ServiceInterface? ReadServiceFile(this string serviceFileFullPath)
+    public ServiceInterface? ReadServiceFile(string serviceFileFullPath)
     {
-        const string turkedSchemaFileLocation = @"e:\all\Data\Jobs\Aregtech\Repos\areg-sdk-tools\AvaloniaUI\Schema\Copied_Artak_Sample_March_04.xsd";
+        const string turkedSchemaFileLocation =
+            @"e:\all\Data\Jobs\Aregtech\Repos\areg-sdk-tools\AvaloniaUI\Schema\Copied_Artak_Sample_March_04.xsd";
 
         NumErrorsFound = 0;
         try
         {
             var schemaSet = CreateSchemaSet(turkedSchemaFileLocation);
             var xDocument = CreateDocument(serviceFileFullPath);
-        
+
             xDocument.Validate(schemaSet, ValidationEventHandler);
-            var serviceInterface = CreateServiceInterface(xDocument, Serializer_UnknownNode, Serializer_UnknownAttribute);
+            var serviceInterface =
+                CreateServiceInterface(xDocument, Serializer_UnknownNode, Serializer_UnknownAttribute);
 
             return serviceInterface;
         }
@@ -32,15 +37,15 @@ public static class SchemaHelpers
             throw;
         }
     }
-    
-    private static XmlSchemaSet CreateSchemaSet(string schemaFullFileName)
+
+    private XmlSchemaSet CreateSchemaSet(string schemaFullFileName)
     {
         var xmlSchemaSet = new XmlSchemaSet();
         xmlSchemaSet.Add("", schemaFullFileName);
         return xmlSchemaSet;
     }
 
-    private static XDocument CreateDocument(string serviceFullFileName)
+    private XDocument CreateDocument(string serviceFullFileName)
     {
         var xmlReaderSettings = CreateXmlReaderSettings();
 
@@ -57,7 +62,7 @@ public static class SchemaHelpers
     /// <param name="nodeEventHandler"></param>
     /// <param name="attributeEventHandler"></param>
     /// <returns></returns>
-    private static ServiceInterface? CreateServiceInterface(XDocument xDocument,
+    private ServiceInterface? CreateServiceInterface(XDocument xDocument,
         XmlNodeEventHandler nodeEventHandler,
         XmlAttributeEventHandler attributeEventHandler)
     {
@@ -70,10 +75,10 @@ public static class SchemaHelpers
         var serviceInterface = serializer.Deserialize(xmlReader) as ServiceInterface;
         return serviceInterface;
     }
-    
-    private static XmlReader? GetReader(XDocument doc) => doc.Root?.CreateReader();
-    
-    private static XmlReaderSettings CreateXmlReaderSettings()
+
+    private XmlReader? GetReader(XDocument doc) => doc.Root?.CreateReader();
+
+    private XmlReaderSettings CreateXmlReaderSettings()
     {
         var settings = new XmlReaderSettings
         {
@@ -92,31 +97,34 @@ public static class SchemaHelpers
     /// This would do it as a separate step.
     /// </summary>
     /// <param name="serviceInterface"></param>
-    public static void ValidateServiceFile(ServiceInterface serviceInterface)
+    public void ValidateServiceFile(ServiceInterface serviceInterface)
     {
     }
 
-    
-    private static void ValidationEventHandler(object? sender, ValidationEventArgs args)
-    {
-        Console.WriteLine(
-            $@"Validation: [{args.Severity}] [L {args.Exception.LineNumber}] [Pos {args.Exception.LinePosition}]: {args.Message}");
 
-        NumErrorsFound++;
+    private void ValidationEventHandler(object? sender, ValidationEventArgs args)
+    {
+        var msg =
+            $"Validation: [{args.Severity}] [L {args.Exception.LineNumber}] [Pos {args.Exception.LinePosition}]: {args.Message}";
+        _eventAggregator.GetEvent<LogMessage>().Publish(msg);
         
-        // throw new ValidationException(args.Message);
-    }
-
-    private static void Serializer_UnknownNode(object? sender, XmlNodeEventArgs args)
-    {
-        Console.WriteLine("Unknown Node:" + args.LineNumber + "\t" + args.Name + "\t" + args.Text);
         NumErrorsFound++;
     }
 
-    private static void Serializer_UnknownAttribute(object? sender, XmlAttributeEventArgs args)
+    private void Serializer_UnknownNode(object? sender, XmlNodeEventArgs args)
+    {
+        var msg = "Unknown Node:" + args.LineNumber + "\t" + args.Name + "\t" + args.Text;
+        _eventAggregator.GetEvent<LogMessage>().Publish(msg);
+        
+        NumErrorsFound++;
+    }
+
+    private void Serializer_UnknownAttribute(object? sender, XmlAttributeEventArgs args)
     {
         var attr = args.Attr;
-        Console.WriteLine("Unknown attribute " + attr.Name + "='" + attr.Value + "'");
+        var msg = "Unknown attribute " + attr.Name + "='" + attr.Value + "'";
+        _eventAggregator.GetEvent<LogMessage>().Publish(msg);
+        
         NumErrorsFound++;
     }
 }

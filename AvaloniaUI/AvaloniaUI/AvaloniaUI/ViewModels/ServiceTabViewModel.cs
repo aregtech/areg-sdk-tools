@@ -42,7 +42,8 @@ public class ServiceTabViewModel : ViewModelBase
 
     public ServiceTabViewModel(string openServiceFileFullPath)
     {
-        var dataSource = openServiceFileFullPath.ReadServiceFile();
+        var schemaHelper = new SchemaHelper(EventAggregator);
+        var dataSource = schemaHelper.ReadServiceFile(openServiceFileFullPath);
         if (dataSource == null)
         {
             throw new ApplicationException();

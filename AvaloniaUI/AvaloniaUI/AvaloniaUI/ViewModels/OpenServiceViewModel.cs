@@ -27,7 +27,7 @@ public class OpenServiceViewModel : ViewModelBase
         {
             foreach (var file in selectedServiceFiles)
             {
-                EventPublisher.GetEvent<OpenServiceFullPathMsg>().Publish(file);
+                EventAggregator.GetEvent<OpenServiceFullPathMsg>().Publish(file);
             }
         }
     }

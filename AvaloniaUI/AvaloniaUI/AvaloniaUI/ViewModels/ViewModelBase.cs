@@ -5,5 +5,5 @@ namespace AvaloniaUI.ViewModels;
 
 public abstract class ViewModelBase : ReactiveObject
 {
-    protected IEventAggregator EventPublisher { get; } = AppContainer.Instance.GetInstance<IEventAggregator>();
+    protected IEventAggregator EventAggregator { get; } = AppContainer.Instance.GetInstance<IEventAggregator>();
 }

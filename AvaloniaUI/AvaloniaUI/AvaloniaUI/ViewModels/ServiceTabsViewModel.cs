@@ -38,7 +38,7 @@ public class ServiceTabsViewModel : ViewModelBase
     public ServiceTabsViewModel()
     {
         _serviceTabItems = new ObservableCollection<ServiceTabItem>();
-        EventPublisher.GetEvent<OpenServiceFullPathMsg>().Subscribe(OnNewServiceMessage);
+        EventAggregator.GetEvent<OpenServiceFullPathMsg>().Subscribe(OnNewServiceMessage);
     }
 
     private void OnNewServiceMessage(string openServiceFileFullPath)

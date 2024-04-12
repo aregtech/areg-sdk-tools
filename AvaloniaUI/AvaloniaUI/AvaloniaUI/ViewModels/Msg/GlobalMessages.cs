@@ -12,3 +12,8 @@ public class OpenServiceFullPathMsg : PubSubEvent<string>;
 /// This message is ticked upon a "Close Application" event.
 /// </summary>
 public class CloseApplication : PubSubEvent;
+
+/// <summary>
+/// This message is used for logging to the local logging window.
+/// </summary>
+public class LogMessage : PubSubEvent<string>;

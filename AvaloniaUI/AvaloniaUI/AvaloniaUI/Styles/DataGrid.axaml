@@ -1,0 +1,50 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <Design.PreviewWith>
+        <Border Padding="20">
+            <!-- Add Controls for Previewer Here -->
+        </Border>
+    </Design.PreviewWith>
+
+    <Styles.Resources>
+        <system:Double x:Key="DataGridRowHeight">18</system:Double>
+        <system:Double x:Key="DataGridCellTextFontSize">12</system:Double>
+    </Styles.Resources>
+
+    <!--  This style is applied to any text column cell in any Data-Grid  -->
+    <Style Selector="TextBlock.DataGridCellText">
+        <Setter Property="Margin" Value="8 0 8 0" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="TextAlignment" Value="Left" />
+        <Setter Property="FontSize" Value="{StaticResource DataGridCellTextFontSize}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="ToolTip.Tip" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
+    </Style>
+
+    <!--  This style is applied to any text column header in any Data-Grid  -->
+    <Style Selector="TextBlock.DataGridColumnHeader">
+        <Setter Property="Margin" Value="8 0 8 0" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="None" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="FontWeight" Value="DemiBold" />
+    </Style>
+
+    <!--  This style changes the background for alternative rows on any Data-Grid  -->
+    <Style Selector="DataGridRow:nth-child(odd)">
+        <Setter Property="Background" Value="{DynamicResource SystemListLowColor}" />
+    </Style>
+    <Style Selector="DataGridRow:nth-child(even)">
+        <Setter Property="Background" Value="{DynamicResource SystemListMediumColor}" />
+    </Style>
+
+    <Style Selector="DataGridColumnHeader">
+        <Setter Property="Background" Value="{DynamicResource DataGridColumnHeaderBackgroundBrush}" />
+    </Style>
+
+</Styles>

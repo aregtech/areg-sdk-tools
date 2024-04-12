@@ -1,0 +1,56 @@
+<UserControl
+    x:Class="AvaloniaUI.Views.LoggerView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="clr-namespace:AvaloniaUI.ViewModels"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    x:DataType="viewModels:ILoggerViewModel"
+    mc:Ignorable="d">
+
+    <DataGrid
+        Name="LoggerDataGrid"
+        CanUserReorderColumns="False"
+        CanUserResizeColumns="True"
+        CanUserSortColumns="True"
+        GridLinesVisibility="All"
+        HorizontalScrollBarVisibility="Auto"
+        IsReadOnly="True"
+        ItemsSource="{Binding LoggerItems}"
+        RowBackground="Transparent"
+        RowHeight="{DynamicResource DataGridRowHeight}"
+        SelectedItem="{Binding SelectedLoggerItem, Mode=TwoWay}"
+        SelectionChanged="ErrorListDataGrid_OnSelectionChanged"
+        VerticalScrollBarVisibility="Auto">
+
+        <DataGrid.Columns>
+            <DataGridTemplateColumn Width="Auto">
+                <DataGridTemplateColumn.HeaderTemplate>
+                    <DataTemplate>
+                        <TextBlock Classes="DataGridColumnHeader" Text="Timestamp" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.HeaderTemplate>
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="viewModels:LoggerItem">
+                        <TextBlock Classes="DataGridCellText" Text="{Binding Timestamp}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Width="*">
+                <DataGridTemplateColumn.HeaderTemplate>
+                    <DataTemplate>
+                        <TextBlock Classes="DataGridColumnHeader" Text="Message" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.HeaderTemplate>
+                <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="viewModels:LoggerItem">
+                        <TextBlock Classes="DataGridCellText" Text="{Binding Message}" />
+                    </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

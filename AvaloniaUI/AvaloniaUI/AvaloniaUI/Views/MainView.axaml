@@ -103,6 +103,10 @@
             </toolbar:ToolBar>
         </Grid>
 
+        <Grid DockPanel.Dock="Bottom" Height="150" MinHeight="100">
+            <views:LoggerView DataContext="{Binding LoggerViewModel}"/>
+        </Grid>
+
         <views:WorkspaceView />
     </DockPanel>
 </UserControl>
