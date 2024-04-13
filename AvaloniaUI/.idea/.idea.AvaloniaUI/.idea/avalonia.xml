@@ -8,6 +8,7 @@
         <entry key="AvaloniaUI/AvaloniaUI/Views/DataTypeAspectView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/ErrorListView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/ExplorerView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
+        <entry key="AvaloniaUI/AvaloniaUI/Views/LoggerView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/MainView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/MainWindow.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />
         <entry key="AvaloniaUI/AvaloniaUI/Views/OpenServiceView.axaml" value="AvaloniaUI/AvaloniaUI.Desktop/AvaloniaUI.Desktop.csproj" />

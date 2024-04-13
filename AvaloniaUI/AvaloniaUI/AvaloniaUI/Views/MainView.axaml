@@ -89,6 +89,12 @@
                     <!-- Save all Service-Interfaces -->
                     <Button avaloniaIcons:Attached.Icon="mdi-content-save-all-outline"
                             ToolTip.Tip="Save All Services" />
+
+                    <!-- Clear Logger -->
+                    <Button avaloniaIcons:Attached.Icon="mdi-format-clear"
+                            ToolTip.Tip="Clear Logger"
+                            Margin="10 0 0 0"
+                            Command="{Binding LoggerViewModel.ClearCommand}" />
                 </toolbar:ToolBar.Items>
 
                 <!-- These are from:
@@ -104,7 +110,7 @@
         </Grid>
 
         <Grid DockPanel.Dock="Bottom" Height="150" MinHeight="100">
-            <views:LoggerView DataContext="{Binding LoggerViewModel}"/>
+            <views:LoggerView DataContext="{Binding LoggerViewModel}" />
         </Grid>
 
         <views:WorkspaceView />

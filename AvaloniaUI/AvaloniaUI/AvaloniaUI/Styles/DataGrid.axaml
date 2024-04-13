@@ -12,17 +12,6 @@
         <system:Double x:Key="DataGridCellTextFontSize">12</system:Double>
     </Styles.Resources>
 
-    <!--  This style is applied to any text column cell in any Data-Grid  -->
-    <Style Selector="TextBlock.DataGridCellText">
-        <Setter Property="Margin" Value="8 0 8 0" />
-        <Setter Property="TextWrapping" Value="NoWrap" />
-        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-        <Setter Property="TextAlignment" Value="Left" />
-        <Setter Property="FontSize" Value="{StaticResource DataGridCellTextFontSize}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="ToolTip.Tip" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
-    </Style>
-
     <!--  This style is applied to any text column header in any Data-Grid  -->
     <Style Selector="TextBlock.DataGridColumnHeader">
         <Setter Property="Margin" Value="8 0 8 0" />
@@ -33,6 +22,17 @@
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="FontWeight" Value="DemiBold" />
+    </Style>
+
+    <!--  This style is applied to any text column cell in any Data-Grid  -->
+    <Style Selector="TextBlock.DataGridCellText">
+        <Setter Property="Margin" Value="8 0 8 0" />
+        <Setter Property="TextWrapping" Value="NoWrap" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="TextAlignment" Value="Left" />
+        <Setter Property="FontSize" Value="{StaticResource DataGridCellTextFontSize}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="ToolTip.Tip" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
     </Style>
 
     <!--  This style changes the background for alternative rows on any Data-Grid  -->

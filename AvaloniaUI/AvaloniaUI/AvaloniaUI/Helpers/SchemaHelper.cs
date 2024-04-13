@@ -107,24 +107,25 @@ public class SchemaHelper(IEventAggregator eventAggregator)
         var msg =
             $"Validation: [{args.Severity}] [L {args.Exception.LineNumber}] [Pos {args.Exception.LinePosition}]: {args.Message}";
         _eventAggregator.GetEvent<LogMessage>().Publish(msg);
-        
+
         NumErrorsFound++;
     }
 
     private void Serializer_UnknownNode(object? sender, XmlNodeEventArgs args)
     {
-        var msg = "Unknown Node:" + args.LineNumber + "\t" + args.Name + "\t" + args.Text;
-        _eventAggregator.GetEvent<LogMessage>().Publish(msg);
-        
+        var msg = "Unknown Node: Line " + args.LineNumber + "\tName= '" + args.Name + "'\tText= '" + args.Text + "'";
+        var cleanMsg = msg.Replace("\n", "");
+        _eventAggregator.GetEvent<LogMessage>().Publish(cleanMsg);
+
         NumErrorsFound++;
     }
 
     private void Serializer_UnknownAttribute(object? sender, XmlAttributeEventArgs args)
     {
         var attr = args.Attr;
-        var msg = "Unknown attribute " + attr.Name + "='" + attr.Value + "'";
+        var msg = "Unknown attribute: Name=" + attr.Name + "\tValue= '" + attr.Value + "'";
         _eventAggregator.GetEvent<LogMessage>().Publish(msg);
-        
+
         NumErrorsFound++;
     }
 }

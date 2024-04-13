@@ -5,36 +5,38 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:AvaloniaUI.ViewModels"
+    xmlns:avaloniaIcons="https://github.com/projektanker/icons.avalonia"
     d:DesignHeight="450"
     d:DesignWidth="800"
     x:DataType="viewModels:ILoggerViewModel"
     mc:Ignorable="d">
 
-    <DataGrid
-        Name="LoggerDataGrid"
-        CanUserReorderColumns="False"
-        CanUserResizeColumns="True"
-        CanUserSortColumns="True"
-        GridLinesVisibility="All"
-        HorizontalScrollBarVisibility="Auto"
-        IsReadOnly="True"
-        ItemsSource="{Binding LoggerItems}"
-        RowBackground="Transparent"
-        RowHeight="{DynamicResource DataGridRowHeight}"
-        SelectedItem="{Binding SelectedLoggerItem, Mode=TwoWay}"
-        SelectionChanged="ErrorListDataGrid_OnSelectionChanged"
-        VerticalScrollBarVisibility="Auto">
+    <DataGrid Name="LoggerDataGrid"
+              CanUserReorderColumns="False"
+              CanUserResizeColumns="True"
+              CanUserSortColumns="True"
+              GridLinesVisibility="All"
+              HorizontalScrollBarVisibility="Auto"
+              IsReadOnly="True"
+              ItemsSource="{Binding LoggerItems}"
+              RowBackground="Transparent"
+              RowHeight="{DynamicResource DataGridRowHeight}"
+              SelectedItem="{Binding SelectedLoggerItem, Mode=TwoWay}"
+              SelectionChanged="ErrorListDataGrid_OnSelectionChanged"
+              VerticalScrollBarVisibility="Visible">
 
         <DataGrid.Columns>
             <DataGridTemplateColumn Width="Auto">
                 <DataGridTemplateColumn.HeaderTemplate>
                     <DataTemplate>
-                        <TextBlock Classes="DataGridColumnHeader" Text="Timestamp" />
+                        <TextBlock Classes="DataGridColumnHeader"
+                                   Text="Timestamp" />
                     </DataTemplate>
                 </DataGridTemplateColumn.HeaderTemplate>
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate DataType="viewModels:LoggerItem">
-                        <TextBlock Classes="DataGridCellText" Text="{Binding Timestamp}" />
+                        <TextBlock Classes="DataGridCellText"
+                                   Text="{Binding Timestamp}" />
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -42,12 +44,14 @@
             <DataGridTemplateColumn Width="*">
                 <DataGridTemplateColumn.HeaderTemplate>
                     <DataTemplate>
-                        <TextBlock Classes="DataGridColumnHeader" Text="Message" />
+                        <TextBlock Classes="DataGridColumnHeader"
+                                   Text="Message" />
                     </DataTemplate>
                 </DataGridTemplateColumn.HeaderTemplate>
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate DataType="viewModels:LoggerItem">
-                        <TextBlock Classes="DataGridCellText" Text="{Binding Message}" />
+                        <TextBlock Classes="DataGridCellText"
+                                   Text="{Binding Message}" />
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
