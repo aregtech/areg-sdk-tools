@@ -32,20 +32,18 @@ set(LUSAN_TRANS)
 
 include("${LUSAN_CMAKE_CONFIG}/common.cmake")
 
+if(NOT ${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+    message(FATAL_ERROR "You should use QT version 6 or greater to compile this project")
+endif()
+
 include_directories(${LUSAN_BASE})
 include_directories(${LUSAN_THIRDPARTY})
 include("${LUSAN_BASE}/CMakeLists.txt")
 
 list(APPEND PROJECT_SOURCES "${LUSAN_SRC}" "${LUSAN_UI}" "${LUSAN_RES}" "${LUSAN_TRANS}")
 
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
-    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
-else()
-    add_executable(${APP_NAME} ${PROJECT_SOURCES})
-    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
-endif()
-
+qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
+qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
 target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
