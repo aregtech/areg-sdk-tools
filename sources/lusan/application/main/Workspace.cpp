@@ -46,30 +46,30 @@ void Workspace::onWorskpacePathChanged(const QString & newText)
 
 void Workspace::onBrowseClicked(bool checked /*= true*/)
 {
-    QString curDir(std::filesystem::current_path().string().c_str());
+    QDir curDir(QString(std::filesystem::current_path().string().c_str()));
     QString txt(mWorkspace->comboboxWorkspacePath->currentText());
     if (txt.isEmpty() == false)
     {
         QDir dir(txt);
         if (dir.exists())
         {
-            curDir = dir.filesystemAbsolutePath().string().c_str();
+            curDir = dir;
         }
     }
-
+    
+    QString dirPath = curDir.path();
+    QString parentName = curDir.filesystemPath().parent_path().string().c_str();
+    
     QFileDialog dlgFile(  this
-                        , QString("Select Workspace Directory")
-                        , QString(curDir)
+                        , QString(tr("Select Workspace Directory"))
+                        , dirPath
                         , QString(""));
-    dlgFile.setLabelText(QFileDialog::DialogLabel::FileName, QString("Workspace Root:"));
+    dlgFile.setLabelText(QFileDialog::DialogLabel::FileName, QString(tr("Workspace Root:")));
+    
     
     dlgFile.setOptions(QFileDialog::Option::ShowDirsOnly);
     dlgFile.setFileMode(QFileDialog::Directory);
-    dlgFile.setDirectory(curDir);
-    // dlgFile.selectFile(QDir(curDir).dirName());
-    dlgFile.currentChanged(curDir);
-    dlgFile.directoryEntered(QDir(curDir).dirName());
-    dlgFile.fileSelected(QDir(curDir).dirName());
+    dlgFile.setDirectory(parentName);
     
     if (dlgFile.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
