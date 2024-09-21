@@ -7,6 +7,12 @@ QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
 }
+
+class QAction;
+class QActionGroup;
+class QLabel;
+class QMenu;
+
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -25,8 +31,34 @@ public:
     
     inline const QString & getWorkspaceRoot(void) const;
 
+private slots:
+
+    void onFileNewSI(void);
+    void onFileNewLog(void);
+    void onFileSave(void);
+    void onFileSaveAs(void);
+    void onFileOpen(void);
+    void onFileExit(void);
+    void onHelpAbout(void);
+
 private:
-    Ui::MainWindow *ui;
+    void _createActions(void);
+    void _createMenus(void);
+    void _createWndMain(void);
+
+private:
+    Ui::MainWindow *mWndMain;
+    QLabel *        mInfoBar;
+    QMenu *         mMenuFile;
+    QMenu *         mMenuHelp;
+    QAction *       mActFileNewSI;
+    QAction *       mActFileNewLog;
+    QAction *       mActFileSave;
+    QAction *       mActFileSaveAs;
+    QAction *       mActFileOpen;
+    QAction *       mActFileExit;
+    QAction *       mActHelpAbout;
+
     QString         mWorkspaceRoot;
 };
 
