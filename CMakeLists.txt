@@ -26,6 +26,7 @@ set(LUSAN_BASE          "${LUSAN_ROOT}/sources")
 set(LUSAN_THIRDPARTY    "${LUSAN_ROOT}/thirdparty")
 
 set(LUSAN_SRC)
+set(LUSAN_HDR)
 set(LUSAN_RES)
 set(LUSAN_UI)
 set(LUSAN_TRANS)
@@ -33,7 +34,7 @@ set(LUSAN_TRANS)
 include("${LUSAN_CMAKE_CONFIG}/common.cmake")
 
 if(NOT ${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    message(FATAL_ERROR "You should use QT version 6 or greater to compile this project")
+    message(FATAL_ERROR "LUSAN: >>> You should use QT version 6 or newer to compile this project")
 endif()
 
 include_directories(${LUSAN_BASE})
