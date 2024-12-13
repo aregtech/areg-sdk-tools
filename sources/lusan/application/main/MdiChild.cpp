@@ -23,31 +23,30 @@
 #include <QtWidgets>
 
 MdiChild::MdiChild()
+    : QTextEdit     ( )
+    , mCurFile      ( )
+    , mIsUntitled   ( true )
 {
     setAttribute(Qt::WA_DeleteOnClose);
-    isUntitled = true;
 }
 
 void MdiChild::newFile()
 {
     static int sequenceNumber = 1;
 
-    isUntitled = true;
-    curFile = tr("document%1.txt").arg(sequenceNumber++);
-    setWindowTitle(curFile + "[*]");
+    mIsUntitled = true;
+    mCurFile = tr("document%1.txt").arg(sequenceNumber++);
+    setWindowTitle(mCurFile + "[*]");
 
-    connect(document(), &QTextDocument::contentsChanged,
-        this, &MdiChild::documentWasModified);
+    connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::documentWasModified);
 }
 
 bool MdiChild::loadFile(const QString& fileName)
 {
     QFile file(fileName);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("MDI"),
-            tr("Cannot read file %1:\n%2.")
-            .arg(fileName)
-            .arg(file.errorString()));
+    if (!file.open(QFile::ReadOnly | QFile::Text))
+    {
+        QMessageBox::warning(this, tr("MDI"), tr("Cannot read file %1:\n%2.").arg(fileName).arg(file.errorString()));
         return false;
     }
 
@@ -58,30 +57,20 @@ bool MdiChild::loadFile(const QString& fileName)
 
     setCurrentFile(fileName);
 
-    connect(document(), &QTextDocument::contentsChanged,
-        this, &MdiChild::documentWasModified);
+    connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::documentWasModified);
 
     return true;
 }
 
 bool MdiChild::save()
 {
-    if (isUntitled) {
-        return saveAs();
-    }
-    else {
-        return saveFile(curFile);
-    }
+    return (mIsUntitled ? saveAs() : saveFile(mCurFile));
 }
 
 bool MdiChild::saveAs()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"),
-        curFile);
-    if (fileName.isEmpty())
-        return false;
-
-    return saveFile(fileName);
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), mCurFile);
+    return (fileName.isEmpty() ? false : saveFile(fileName));
 }
 
 bool MdiChild::saveFile(const QString& fileName)
@@ -90,21 +79,24 @@ bool MdiChild::saveFile(const QString& fileName)
 
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     QSaveFile file(fileName);
-    if (file.open(QFile::WriteOnly | QFile::Text)) {
+    if (file.open(QFile::WriteOnly | QFile::Text))
+    {
         QTextStream out(&file);
         out << toPlainText();
-        if (!file.commit()) {
-            errorMessage = tr("Cannot write file %1:\n%2.")
-                .arg(QDir::toNativeSeparators(fileName), file.errorString());
+        if (!file.commit()) 
+        {
+            errorMessage = tr("Cannot write file %1:\n%2.").arg(QDir::toNativeSeparators(fileName), file.errorString());
         }
     }
-    else {
-        errorMessage = tr("Cannot open file %1 for writing:\n%2.")
-            .arg(QDir::toNativeSeparators(fileName), file.errorString());
+    else
+    {
+        errorMessage = tr("Cannot open file %1 for writing:\n%2.").arg(QDir::toNativeSeparators(fileName), file.errorString());
     }
+
     QGuiApplication::restoreOverrideCursor();
 
-    if (!errorMessage.isEmpty()) {
+    if (!errorMessage.isEmpty())
+    {
         QMessageBox::warning(this, tr("MDI"), errorMessage);
         return false;
     }
@@ -115,15 +107,17 @@ bool MdiChild::saveFile(const QString& fileName)
 
 QString MdiChild::userFriendlyCurrentFile()
 {
-    return strippedName(curFile);
+    return strippedName(mCurFile);
 }
 
 void MdiChild::closeEvent(QCloseEvent* event)
 {
-    if (maybeSave()) {
+    if (maybeSave())
+    {
         event->accept();
     }
-    else {
+    else
+    {
         event->ignore();
     }
 }
@@ -137,14 +131,15 @@ bool MdiChild::maybeSave()
 {
     if (!document()->isModified())
         return true;
+
     const QMessageBox::StandardButton ret
         = QMessageBox::warning(this, tr("MDI"),
             tr("'%1' has been modified.\n"
-                "Do you want to save your changes?")
+               "Do you want to save your changes?")
             .arg(userFriendlyCurrentFile()),
-            QMessageBox::Save | QMessageBox::Discard
-            | QMessageBox::Cancel);
-    switch (ret) {
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
+    switch (ret)
+    {
     case QMessageBox::Save:
         return save();
     case QMessageBox::Cancel:
@@ -152,13 +147,14 @@ bool MdiChild::maybeSave()
     default:
         break;
     }
+
     return true;
 }
 
 void MdiChild::setCurrentFile(const QString& fileName)
 {
-    curFile = QFileInfo(fileName).canonicalFilePath();
-    isUntitled = false;
+    mCurFile = QFileInfo(fileName).canonicalFilePath();
+    mIsUntitled = false;
     document()->setModified(false);
     setWindowModified(false);
     setWindowTitle(userFriendlyCurrentFile() + "[*]");
