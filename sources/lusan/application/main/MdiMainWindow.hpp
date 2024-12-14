@@ -20,16 +20,24 @@
  ************************************************************************/
 
 #include <QMainWindow>
+#include <QAction>
+
+#include "lusan/application/main/NaviFileSystem.hpp"
+#include "lusan/application/main/Navigation.hpp"
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
 class MdiChild;
 QT_BEGIN_NAMESPACE
-class QAction;
-class QMenu;
+class QDockWidget;
+class QListView;
 class QMdiArea;
 class QMdiSubWindow;
+class QMenu;
+class QTabWidget;
+class QToolBar;
+class QTreeView;
 QT_END_NAMESPACE
 
 /**
@@ -172,57 +180,91 @@ private:
     void _createActions();
 
     /**
+     * \brief   Creates the menus for the main window.
+     **/
+    void _createMenus();
+
+    /**
+     * \brief   Creates the toolbars for the main window.
+     **/
+    void _createToolBars();
+
+    /**
      * \brief   Creates the status bar for the main window.
      **/
     void _createStatusBar();
 
     /**
+     * \brief   Creates the dock windows for the main window.
+     **/
+    void _createDockWindows();
+
+    /**
+     * \brief   Creates the MDI area for managing sub-windows.
+     **/
+    void _createMdiArea();
+
+    /**
      * \brief   Reads the settings for the main window.
      **/
-    void _readSettings();
+    void readSettings();
 
     /**
      * \brief   Writes the settings for the main window.
      **/
-    void _writeSettings();
+    void writeSettings();
 
     /**
      * \brief   Loads a file.
      * \param   fileName    The name of the file to load.
      * \return  True if the file was successfully loaded, false otherwise.
      **/
-    bool _loadFile(const QString& fileName);
+    bool loadFile(const QString& fileName);
 
     /**
      * \brief   Checks if there are recent files.
      * \return  True if there are recent files, false otherwise.
      **/
-    static bool _hasRecentFiles();
+    static bool hasRecentFiles();
 
     /**
      * \brief   Prepends a file to the recent files list.
      * \param   fileName    The name of the file to prepend.
      **/
-    void _prependToRecentFiles(const QString& fileName);
+    void prependToRecentFiles(const QString& fileName);
 
     /**
      * \brief   Sets the visibility of the recent files.
      * \param   visible     True to make recent files visible, false otherwise.
      **/
-    void _setRecentFilesVisibility(bool visible);
+    void setRecentFilesVisibility(bool visible);
 
     /**
      * \brief   Gets the active MDI child window.
      * \return  A pointer to the active MDI child window.
      **/
-    MdiChild* _activeMdiChild() const;
+    MdiChild* activeMdiChild() const;
 
     /**
      * \brief   Finds an MDI child window by file name.
      * \param   fileName    The name of the file.
      * \return  A pointer to the MDI sub-window containing the file.
      **/
-    QMdiSubWindow* _findMdiChild(const QString& fileName) const;
+    QMdiSubWindow* findMdiChild(const QString& fileName) const;
+
+    /**
+     * \brief   Returns a reference to the current instance of MdiMainWindow.
+     * \return  A reference to the current instance of MdiMainWindow.
+     **/
+    inline MdiMainWindow& self(void);
+
+    /**
+     * \brief   Initializes an action with the given parameters.
+     * \param   act     The action to initialize.
+     * \param   icon    The icon for the action.
+     * \param   txt     The text for the action.
+     **/
+    inline void initAction(QAction& act, const QIcon & icon, QString txt);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -232,44 +274,73 @@ private:
     QString     mWorkspaceRoot;
 
     //!< The MDI area for managing sub-windows.
-    QMdiArea*   mMdiArea;
+    QMdiArea*       mMdiArea;
+    //!< The navigation dock widget.
+    Navigation      mNavigation;
+    //!< The status dock widget.
+    QDockWidget*    mStatusDock;
+    //!< The list view widget.
+    QListView*      mListView;
+    //!< The status tab widget.
+    QTabWidget*     mStatusTabs;
+    //!< The file menu.
+    QMenu*          mFileMenu;
+    //!< The edit menu.
+    QMenu*          mEditMenu;
     //!< The window menu.
-    QMenu*      mMenuWindow;
+    QMenu*          mWindowMenu;
+    //!< The help menu.
+    QMenu*          mHelpMenu;
+    //!< The file toolbar.
+    QToolBar*       mFileToolBar;
+    //!< The edit toolbar.
+    QToolBar*       mEditToolBar;
+
     //!< Action for creating a new SI file.
-    QAction*    mActFileNewSI;
+    QAction          mActFileNewSI;
     //!< Action for creating a new log file.
-    QAction*    mActFileNewLog;
+    QAction         mActFileNewLog;
+    //!< Action for opening file.
+    QAction         mActFileOpen;
     //!< Action for saving the current file.
-    QAction*    mActFileSave;
+    QAction         mActFileSave;
     //!< Action for saving the current file with a new name.
-    QAction*    mActFileSaveAs;
-    //!< Actions for opening recent files.
-    QAction*    mActsRecentFiles[MaxRecentFiles];
-    //!< Separator for the file menu.
-    QAction*    mFileSeparator;
-    //!< Submenu for recent files.
-    QAction*    mActRecentFilesSubMenu;
+    QAction         mActFileSaveAs;
     //!< Action for closing the current file.
-    QAction*    mActFileClose;
+    QAction         mActFileClose;
     //!< Action for closing all files.
-    QAction*    mActFileCloseAll;
+    QAction         mActFileCloseAll;
+    //!< Action for exiting the application.
+    QAction         mActFileExit;
     //!< Action for cutting text.
-    QAction*    mActEditCut;
+    QAction         mActEditCut;
     //!< Action for copying text.
-    QAction*    mActEditCopy;
+    QAction         mActEditCopy;
     //!< Action for pasting text.
-    QAction*    mActEditPaste;
+    QAction         mActEditPaste;
     //!< Action for tiling windows.
-    QAction*    mActWindowsTile;
+    QAction         mActWindowsTile;
     //!< Action for cascading windows.
-    QAction*    mActWindowsCascade;
+    QAction         mActWindowsCascade;
     //!< Action for switching to the next window.
-    QAction*    mActWindowsNext;
+    QAction         mActWindowsNext;
     //!< Action for switching to the previous window.
-    QAction*    mActWindowsPrev;
+    QAction         mActWindowsPrev;
     //!< Separator for the window menu.
-    QAction*    mActWindowMenuSeparator;
+    QAction         mActWindowMenuSeparator;
+    //!< Action for showing the about dialog.
+    QAction*        mActHelpAbout;
+    //!< Submenu for recent files.
+    QAction*        mActRecentFilesSubMenu;
+    //!< Separator for the file menu.
+    QAction*        mFileSeparator;
+    //!< Actions for opening recent files.
+    QAction*        mActsRecentFiles[MaxRecentFiles];
 };
+
+//////////////////////////////////////////////////////////////////////////
+// Inline methods
+//////////////////////////////////////////////////////////////////////////
 
 inline void MdiMainWindow::setWorkspaceRoot(const QString& workspace)
 {
@@ -279,6 +350,11 @@ inline void MdiMainWindow::setWorkspaceRoot(const QString& workspace)
 inline const QString& MdiMainWindow::getWorkspaceRoot(void) const
 {
     return mWorkspaceRoot;
+}
+
+inline MdiMainWindow& MdiMainWindow::self(void)
+{
+    return (*this);
 }
 
 #endif // LUSAN_APPLICATION_MAIN_MDIMAINWINDOW_HPP
