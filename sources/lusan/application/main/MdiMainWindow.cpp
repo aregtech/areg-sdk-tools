@@ -56,32 +56,63 @@ namespace
 }
 
 MdiMainWindow::MdiMainWindow()
-    : mMdiArea(new QMdiArea)
+    : QMainWindow   ( )
+    , mWorkspaceRoot( )
+    , mMdiArea      ( nullptr )
+    , mNavigation   ( &self() )
+    , mStatusDock   ( nullptr )
+    , mListView     ( nullptr )
+    , mStatusTabs   ( nullptr )
+    , mFileMenu     (nullptr)
+    , mEditMenu     (nullptr)
+    , mWindowMenu   (nullptr)
+    , mHelpMenu     (nullptr)
+    , mFileToolBar  (nullptr)
+    , mEditToolBar  (nullptr)
+    , mActFileNewSI (&self())
+    , mActFileNewLog(&self())
+    , mActFileOpen  (&self())
+    , mActFileSave  (&self())
+    , mActFileSaveAs(&self())
+    , mActFileClose (&self())
+    , mActFileCloseAll(&self())
+    , mActFileExit  (&self())
+    , mActEditCut   (&self())
+    , mActEditCopy  (&self())
+    , mActEditPaste (&self())
+    , mActWindowsTile(&self())
+    , mActWindowsCascade(&self())
+    , mActWindowsNext(&self())
+    , mActWindowsPrev(&self())
+    , mActWindowMenuSeparator(&self())
+    , mActHelpAbout (nullptr)
+    , mActRecentFilesSubMenu(nullptr)
+    , mFileSeparator(nullptr)
 {
-    mMdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    mMdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setCentralWidget(mMdiArea);
-    connect(mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::updateMenus);
-
     _createActions();
+    _createMenus();
+    _createToolBars();
     _createStatusBar();
+    _createDockWindows();
+    _createMdiArea();
+    
+    updateWindowMenu();
     updateMenus();
+    readSettings();
 
-    _readSettings();
-
-    setWindowTitle(tr("MDI"));
+    setWindowTitle(tr("Lusan"));
     setUnifiedTitleAndToolBarOnMac(true);
 }
 
 bool MdiMainWindow::openFile(const QString& fileName)
 {
     bool result{ false };
-    if (QMdiSubWindow* existing = _findMdiChild(fileName))
+    if (QMdiSubWindow* existing = findMdiChild(fileName))
     {
         mMdiArea->setActiveSubWindow(existing);
         result = true;
     }
-    else if (_loadFile(fileName))
+    else if (loadFile(fileName))
     {
         statusBar()->showMessage(tr("File loaded"), 2000);
         result = true;
@@ -90,7 +121,7 @@ bool MdiMainWindow::openFile(const QString& fileName)
     return result;
 }
 
-bool MdiMainWindow::_loadFile(const QString& fileName)
+bool MdiMainWindow::loadFile(const QString& fileName)
 {
     MdiChild* child = createMdiChild();
     const bool succeeded = child->loadFile(fileName);
@@ -103,7 +134,7 @@ bool MdiMainWindow::_loadFile(const QString& fileName)
         child->close();
     }
 
-    MdiMainWindow::_prependToRecentFiles(fileName);
+    MdiMainWindow::prependToRecentFiles(fileName);
     return succeeded;
 }
 
@@ -116,7 +147,7 @@ void MdiMainWindow::closeEvent(QCloseEvent* event)
     }
     else
     {
-        _writeSettings();
+        writeSettings();
         event->accept();
     }
 }
@@ -146,7 +177,8 @@ void MdiMainWindow::onFileOpen()
 
 void MdiMainWindow::onFileSave()
 {
-    if (_activeMdiChild() && _activeMdiChild()->save())
+    MdiChild * active = activeMdiChild();
+    if ( (active != nullptr) && active->save())
     {
         statusBar()->showMessage(tr("File saved"), 2000);
     }
@@ -154,11 +186,11 @@ void MdiMainWindow::onFileSave()
 
 void MdiMainWindow::onFileSaveAs()
 {
-    MdiChild* child = _activeMdiChild();
-    if (child && child->saveAs())
+    MdiChild* child = activeMdiChild();
+    if ((child != nullptr) && child->saveAs())
     {
         statusBar()->showMessage(tr("File saved"), 2000);
-        MdiMainWindow::_prependToRecentFiles(child->currentFile());
+        MdiMainWindow::prependToRecentFiles(child->currentFile());
     }
 }
 
@@ -177,25 +209,28 @@ void MdiMainWindow::onFileExit(void)
 
 void MdiMainWindow::onEditCut()
 {
-    if (_activeMdiChild())
+    MdiChild* active = activeMdiChild();
+    if (active != nullptr)
     {
-        _activeMdiChild()->cut();
+        active->cut();
     }
 }
 
 void MdiMainWindow::onEditCopy()
 {
-    if (_activeMdiChild())
+    MdiChild* active = activeMdiChild();
+    if (active != nullptr)
     {
-        _activeMdiChild()->copy();
+        active->copy();
     }
 }
 
 void MdiMainWindow::onEditPaste()
 {
-    if (_activeMdiChild())
+    MdiChild* active = activeMdiChild();
+    if (active != nullptr)
     {
-        _activeMdiChild()->paste();
+        active->paste();
     }
 }
 
@@ -204,7 +239,7 @@ void MdiMainWindow::onHelpAbout()
     QMessageBox::about(this, tr("About Lusan"), tr("The <b>Lusan</b> in under construction."));
 }
 
-bool MdiMainWindow::_hasRecentFiles()
+bool MdiMainWindow::hasRecentFiles()
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     const int count = settings.beginReadArray(recentFilesKey());
@@ -212,7 +247,7 @@ bool MdiMainWindow::_hasRecentFiles()
     return count > 0;
 }
 
-void MdiMainWindow::_prependToRecentFiles(const QString& fileName)
+void MdiMainWindow::prependToRecentFiles(const QString& fileName)
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
 
@@ -225,10 +260,10 @@ void MdiMainWindow::_prependToRecentFiles(const QString& fileName)
         writeRecentFiles(recentFiles, settings);
     }
 
-    _setRecentFilesVisibility(!recentFiles.isEmpty());
+    setRecentFilesVisibility(!recentFiles.isEmpty());
 }
 
-void MdiMainWindow::_setRecentFilesVisibility(bool visible)
+void MdiMainWindow::setRecentFilesVisibility(bool visible)
 {
     mActRecentFilesSubMenu->setVisible(visible);
     mFileSeparator->setVisible(visible);
@@ -257,38 +292,39 @@ void MdiMainWindow::updateRecentFileActions()
 
 void MdiMainWindow::updateMenus()
 {
-    bool hasMdiChild = (_activeMdiChild() != nullptr);
-    mActFileSave->setEnabled(hasMdiChild);
-    mActFileSaveAs->setEnabled(hasMdiChild);
-    mActEditPaste->setEnabled(hasMdiChild);
-    mActFileClose->setEnabled(hasMdiChild);
-    mActFileCloseAll->setEnabled(hasMdiChild);
-    mActWindowsTile->setEnabled(hasMdiChild);
-    mActWindowsCascade->setEnabled(hasMdiChild);
-    mActWindowsNext->setEnabled(hasMdiChild);
-    mActWindowsPrev->setEnabled(hasMdiChild);
-    mActWindowMenuSeparator->setVisible(hasMdiChild);
-
-    bool hasSelection = (_activeMdiChild() && _activeMdiChild()->textCursor().hasSelection());
-    mActEditCut->setEnabled(hasSelection);
-    mActEditCopy->setEnabled(hasSelection);
+    MdiChild* active = activeMdiChild();    
+    bool hasMdiChild = (active != nullptr);
+    mActFileSave.setEnabled(hasMdiChild);
+    mActFileSaveAs.setEnabled(hasMdiChild);
+    mActEditPaste.setEnabled(hasMdiChild);
+    mActFileClose.setEnabled(hasMdiChild);
+    mActFileCloseAll.setEnabled(hasMdiChild);
+    mActWindowsTile.setEnabled(hasMdiChild);
+    mActWindowsCascade.setEnabled(hasMdiChild);
+    mActWindowsNext.setEnabled(hasMdiChild);
+    mActWindowsPrev.setEnabled(hasMdiChild);
+    mActWindowMenuSeparator.setVisible(hasMdiChild);
+    
+    bool hasSelection = ((active != nullptr) && active->textCursor().hasSelection());
+    mActEditCut.setEnabled(hasSelection);
+    mActEditCopy.setEnabled(hasSelection);
 }
 
 void MdiMainWindow::updateWindowMenu()
 {
-    mMenuWindow->clear();
-    mMenuWindow->addAction(mActFileClose);
-    mMenuWindow->addAction(mActFileCloseAll);
-    mMenuWindow->addSeparator();
-    mMenuWindow->addAction(mActWindowsTile);
-    mMenuWindow->addAction(mActWindowsCascade);
-    mMenuWindow->addSeparator();
-    mMenuWindow->addAction(mActWindowsNext);
-    mMenuWindow->addAction(mActWindowsPrev);
-    mMenuWindow->addAction(mActWindowMenuSeparator);
+    mWindowMenu->clear();
+    mWindowMenu->addAction(&mActFileClose);
+    mWindowMenu->addAction(&mActFileCloseAll);
+    mWindowMenu->addSeparator();
+    mWindowMenu->addAction(&mActWindowsTile);
+    mWindowMenu->addAction(&mActWindowsCascade);
+    mWindowMenu->addSeparator();
+    mWindowMenu->addAction(&mActWindowsNext);
+    mWindowMenu->addAction(&mActWindowsPrev);
+    mWindowMenu->addAction(&mActWindowMenuSeparator);
 
     QList<QMdiSubWindow*> windows = mMdiArea->subWindowList();
-    mActWindowMenuSeparator->setVisible(!windows.isEmpty());
+    mActWindowMenuSeparator.setVisible(!windows.isEmpty());
 
     for (int i = 0; i < windows.size(); ++i)
     {
@@ -305,7 +341,7 @@ void MdiMainWindow::updateWindowMenu()
             text = tr("%1 %2").arg(i + 1).arg(child->userFriendlyCurrentFile());
         }
 
-        QAction* action = mMenuWindow->addAction(  text
+        QAction* action = mWindowMenu->addAction(  text
                                                 , mdiSubWindow
                                                 , [this, mdiSubWindow]() {
                                                     mMdiArea->setActiveSubWindow(mdiSubWindow);
@@ -313,7 +349,7 @@ void MdiMainWindow::updateWindowMenu()
         );
 
         action->setCheckable(true);
-        action->setChecked(child == _activeMdiChild());
+        action->setChecked(child == activeMdiChild());
     }
 }
 
@@ -321,144 +357,144 @@ MdiChild* MdiMainWindow::createMdiChild()
 {
     MdiChild* child = new MdiChild;
     mMdiArea->addSubWindow(child);
-    connect(child, &QTextEdit::copyAvailable, mActEditCut, &QAction::setEnabled);
-    connect(child, &QTextEdit::copyAvailable, mActEditCopy, &QAction::setEnabled);
+    connect(child, &QTextEdit::copyAvailable, &mActEditCut, &QAction::setEnabled);
+    connect(child, &QTextEdit::copyAvailable, &mActEditCopy, &QAction::setEnabled);
 
     return child;
 }
 
+inline void MdiMainWindow::initAction(QAction& act, const QIcon& icon, QString txt)
+{
+    act.setParent(this);
+    act.setText(txt);
+    act.setIcon(icon);
+}
+
 void MdiMainWindow::_createActions()
 {
-    QMenu* fileMenu = menuBar()->addMenu(tr("&File"));
-    QToolBar* fileToolBar = addToolBar(tr("File"));
+    initAction(mActFileNewSI, QIcon::fromTheme(QIcon::ThemeIcon::AppointmentNew), tr("Service &Interface"));
+    mActFileNewSI.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_I));
+    mActFileNewSI.setStatusTip(tr("Create a new service interface file"));
+    connect(&mActFileNewSI, &QAction::triggered, this, &MdiMainWindow::onFileNewSI);
 
-    mActFileNewSI = new QAction(QIcon::fromTheme(QIcon::ThemeIcon::AppointmentNew), tr("Service &Interface"), this);
-    mActFileNewSI->setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_I));
-    mActFileNewSI->setStatusTip(tr("Create a new service interface file"));
-    connect(mActFileNewSI, &QAction::triggered, this, &MdiMainWindow::onFileNewSI);
-    fileMenu->addAction(mActFileNewSI);
-    fileToolBar->addAction(mActFileNewSI);
+    initAction(mActFileNewLog, QIcon::fromTheme(QIcon::ThemeIcon::ContactNew), tr("&Logs"));
+    mActFileNewLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_L));
+    mActFileNewLog.setStatusTip(tr("Create a new logs"));
+    connect(&mActFileNewLog, &QAction::triggered, this, &MdiMainWindow::onFileNewLog);
 
-    mActFileNewLog = new QAction(QIcon::fromTheme(QIcon::ThemeIcon::ContactNew), tr("&Logs"), this);
-    mActFileNewLog->setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_L));
-    mActFileNewLog->setStatusTip(tr("Create a new logs"));
-    connect(mActFileNewLog, &QAction::triggered, this, &MdiMainWindow::onFileNewLog);
-    fileMenu->addAction(mActFileNewLog);
-    fileToolBar->addAction(mActFileNewLog);
+    initAction(mActFileOpen, QIcon::fromTheme("document-open", QIcon(":/images/open.png")), tr("&Open..."));
+    mActFileOpen.setShortcuts(QKeySequence::Open);
+    mActFileOpen.setStatusTip(tr("Open an existing file"));
+    connect(&mActFileOpen, &QAction::triggered, this, &MdiMainWindow::onFileOpen);
 
-    const QIcon openIcon = QIcon::fromTheme("document-open", QIcon(":/images/open.png"));
-    QAction* openAct = new QAction(openIcon, tr("&Open..."), this);
-    openAct->setShortcuts(QKeySequence::Open);
-    openAct->setStatusTip(tr("Open an existing file"));
-    connect(openAct, &QAction::triggered, this, &MdiMainWindow::onFileOpen);
-    fileMenu->addAction(openAct);
-    fileToolBar->addAction(openAct);
+    initAction(mActFileSave, QIcon::fromTheme("document-save", QIcon(":/images/save.png")), tr("&Save"));
+    mActFileSave.setShortcuts(QKeySequence::Save);
+    mActFileSave.setStatusTip(tr("Save the document to disk"));
+    connect(&mActFileSave, &QAction::triggered, this, &MdiMainWindow::onFileSave);
 
-    const QIcon saveIcon = QIcon::fromTheme("document-save", QIcon(":/images/save.png"));
-    mActFileSave = new QAction(saveIcon, tr("&Save"), this);
-    mActFileSave->setShortcuts(QKeySequence::Save);
-    mActFileSave->setStatusTip(tr("Save the document to disk"));
-    connect(mActFileSave, &QAction::triggered, this, &MdiMainWindow::onFileSave);
-    fileToolBar->addAction(mActFileSave);
+    initAction(mActFileSaveAs, QIcon::fromTheme("document-save-as"), tr("Save &As..."));
+    mActFileSaveAs.setShortcuts(QKeySequence::SaveAs);
+    mActFileSaveAs.setStatusTip(tr("Save the document under a new name"));
+    connect(&mActFileSaveAs, &QAction::triggered, this, &MdiMainWindow::onFileSaveAs);
 
-    const QIcon saveAsIcon = QIcon::fromTheme("document-save-as");
-    mActFileSaveAs = new QAction(saveAsIcon, tr("Save &As..."), this);
-    mActFileSaveAs->setShortcuts(QKeySequence::SaveAs);
-    mActFileSaveAs->setStatusTip(tr("Save the document under a new name"));
-    connect(mActFileSaveAs, &QAction::triggered, this, &MdiMainWindow::onFileSaveAs);
-    fileMenu->addAction(mActFileSaveAs);
+    initAction(mActFileExit, QIcon::fromTheme("application-exit"), tr("E&xit"));
+    mActFileExit.setParent(qApp);
+    mActFileExit.setShortcuts(QKeySequence::Quit);
+    mActFileExit.setStatusTip(tr("Exit the application"));
+    connect(&mActFileExit, &QAction::triggered, qApp, &QApplication::closeAllWindows);
+    
+    initAction(mActEditCut, QIcon::fromTheme("edit-cut", QIcon(":/images/cut.png")), tr("Cu&t"));
+    mActEditCut.setShortcuts(QKeySequence::Cut);
+    mActEditCut.setStatusTip(tr("Cut the current selection's contents to the clipboard"));
+    connect(&mActEditCut, &QAction::triggered, this, &MdiMainWindow::onEditCut);
 
-    fileMenu->addSeparator();
+    initAction(mActEditCopy, QIcon::fromTheme("edit-copy", QIcon(":/images/copy.png")), tr("&Copy"));
+    mActEditCopy.setShortcuts(QKeySequence::Copy);
+    mActEditCopy.setStatusTip(tr("Copy the current selection's contents to the clipboard"));
+    connect(&mActEditCopy, &QAction::triggered, this, &MdiMainWindow::onEditCopy);
 
-    QMenu* recentMenu = fileMenu->addMenu(tr("Recent..."));
+    initAction(mActEditPaste, QIcon::fromTheme("edit-paste", QIcon(":/images/paste.png")), tr("&Paste"));
+    mActEditPaste.setShortcuts(QKeySequence::Paste);
+    mActEditPaste.setStatusTip(tr("Paste the clipboard's contents into the current selection"));
+    connect(&mActEditPaste, &QAction::triggered, this, &MdiMainWindow::onEditPaste);
+
+    initAction(mActFileClose, QIcon(), tr("Cl&ose"));
+    mActFileClose.setStatusTip(tr("Close the active window"));
+    connect(&mActFileClose, &QAction::triggered, mMdiArea, &QMdiArea::closeActiveSubWindow);
+
+    initAction(mActFileCloseAll, QIcon(), tr("Close &All"));
+    mActFileCloseAll.setStatusTip(tr("Close all the windows"));
+    connect(&mActFileCloseAll, &QAction::triggered, mMdiArea, &QMdiArea::closeAllSubWindows);
+
+    initAction(mActWindowsTile, QIcon(), tr("&Tile"));
+    mActWindowsTile.setStatusTip(tr("Tile the windows"));
+    connect(&mActWindowsTile, &QAction::triggered, mMdiArea, &QMdiArea::tileSubWindows);
+
+    initAction(mActWindowsCascade, QIcon(), tr("&Cascade"));
+    mActWindowsCascade.setStatusTip(tr("Cascade the windows"));
+    connect(&mActWindowsCascade, &QAction::triggered, mMdiArea, &QMdiArea::cascadeSubWindows);
+
+    initAction(mActWindowsNext, QIcon(), tr("Ne&xt"));
+    mActWindowsNext.setShortcuts(QKeySequence::NextChild);
+    mActWindowsNext.setStatusTip(tr("Move the focus to the next window"));
+    connect(&mActWindowsNext, &QAction::triggered, mMdiArea, &QMdiArea::activateNextSubWindow);
+
+    initAction(mActWindowsPrev, QIcon(), tr("Pre&vious"));
+    mActWindowsPrev.setShortcuts(QKeySequence::PreviousChild);
+    mActWindowsPrev.setStatusTip(tr("Move the focus to the previous window"));
+    connect(&mActWindowsPrev, &QAction::triggered, mMdiArea, &QMdiArea::activatePreviousSubWindow);
+    
+    mActWindowMenuSeparator.setSeparator(true);
+}
+
+void MdiMainWindow::_createMenus()
+{
+    mFileMenu = menuBar()->addMenu(tr("&File"));
+    mFileMenu->addAction(&mActFileNewSI);
+    mFileMenu->addAction(&mActFileNewLog);
+    mFileMenu->addAction(&mActFileOpen);
+    mFileMenu->addAction(&mActFileSaveAs);
+    mFileSeparator = mFileMenu->addSeparator();
+
+    QMenu* recentMenu = mFileMenu->addMenu(tr("Recent..."));
     connect(recentMenu, &QMenu::aboutToShow, this, &MdiMainWindow::updateRecentFileActions);
     mActRecentFilesSubMenu = recentMenu->menuAction();
-
     for (int i = 0; i < MaxRecentFiles; ++i)
     {
         mActsRecentFiles[i] = recentMenu->addAction(QString(), this, &MdiMainWindow::onFileOpenRecent);
         mActsRecentFiles[i]->setVisible(false);
     }
 
-    mFileSeparator = fileMenu->addSeparator();
+    setRecentFilesVisibility(MdiMainWindow::hasRecentFiles());
+    mFileMenu->addSeparator();
+    mFileMenu->addAction(&mActFileExit);
 
-    _setRecentFilesVisibility(MdiMainWindow::_hasRecentFiles());
+    mEditMenu = menuBar()->addMenu(tr("&Edit"));
+    mEditMenu->addAction(&mActEditCut);
+    mEditMenu->addAction(&mActEditCopy);
+    mEditMenu->addAction(&mActEditPaste);
 
-    fileMenu->addSeparator();
-
-    const QIcon exitIcon = QIcon::fromTheme("application-exit");
-    QAction* exitAct = fileMenu->addAction(exitIcon, tr("E&xit"), qApp, &QApplication::closeAllWindows);
-    exitAct->setShortcuts(QKeySequence::Quit);
-    exitAct->setStatusTip(tr("Exit the application"));
-    fileMenu->addAction(exitAct);
-
-    QMenu* editMenu = menuBar()->addMenu(tr("&Edit"));
-    QToolBar* editToolBar = addToolBar(tr("Edit"));
-
-    const QIcon cutIcon = QIcon::fromTheme("edit-cut", QIcon(":/images/cut.png"));
-    mActEditCut = new QAction(cutIcon, tr("Cu&t"), this);
-    mActEditCut->setShortcuts(QKeySequence::Cut);
-    mActEditCut->setStatusTip(tr("Cut the current selection's contents to the clipboard"));
-    connect(mActEditCut, &QAction::triggered, this, &MdiMainWindow::onEditCut);
-    editMenu->addAction(mActEditCut);
-    editToolBar->addAction(mActEditCut);
-
-    const QIcon copyIcon = QIcon::fromTheme("edit-copy", QIcon(":/images/copy.png"));
-    mActEditCopy = new QAction(copyIcon, tr("&Copy"), this);
-    mActEditCopy->setShortcuts(QKeySequence::Copy);
-    mActEditCopy->setStatusTip(tr("Copy the current selection's contents to the clipboard"));
-    connect(mActEditCopy, &QAction::triggered, this, &MdiMainWindow::onEditCopy);
-    editMenu->addAction(mActEditCopy);
-    editToolBar->addAction(mActEditCopy);
-
-    const QIcon pasteIcon = QIcon::fromTheme("edit-paste", QIcon(":/images/paste.png"));
-    mActEditPaste = new QAction(pasteIcon, tr("&Paste"), this);
-    mActEditPaste->setShortcuts(QKeySequence::Paste);
-    mActEditPaste->setStatusTip(tr("Paste the clipboard's contents into the current selection"));
-    connect(mActEditPaste, &QAction::triggered, this, &MdiMainWindow::onEditPaste);
-    editMenu->addAction(mActEditPaste);
-    editToolBar->addAction(mActEditPaste);
-
-    mMenuWindow = menuBar()->addMenu(tr("&Window"));
-    connect(mMenuWindow, &QMenu::aboutToShow, this, &MdiMainWindow::updateWindowMenu);
-
-    mActFileClose = new QAction(tr("Cl&ose"), this);
-    mActFileClose->setStatusTip(tr("Close the active window"));
-    connect(mActFileClose, &QAction::triggered,mMdiArea, &QMdiArea::closeActiveSubWindow);
-
-    mActFileCloseAll = new QAction(tr("Close &All"), this);
-    mActFileCloseAll->setStatusTip(tr("Close all the windows"));
-    connect(mActFileCloseAll, &QAction::triggered, mMdiArea, &QMdiArea::closeAllSubWindows);
-
-    mActWindowsTile = new QAction(tr("&Tile"), this);
-    mActWindowsTile->setStatusTip(tr("Tile the windows"));
-    connect(mActWindowsTile, &QAction::triggered, mMdiArea, &QMdiArea::tileSubWindows);
-
-    mActWindowsCascade = new QAction(tr("&Cascade"), this);
-    mActWindowsCascade->setStatusTip(tr("Cascade the windows"));
-    connect(mActWindowsCascade, &QAction::triggered, mMdiArea, &QMdiArea::cascadeSubWindows);
-
-    mActWindowsNext = new QAction(tr("Ne&xt"), this);
-    mActWindowsNext->setShortcuts(QKeySequence::NextChild);
-    mActWindowsNext->setStatusTip(tr("Move the focus to the next window"));
-    connect(mActWindowsNext, &QAction::triggered, mMdiArea, &QMdiArea::activateNextSubWindow);
-
-    mActWindowsPrev = new QAction(tr("Pre&vious"), this);
-    mActWindowsPrev->setShortcuts(QKeySequence::PreviousChild);
-    mActWindowsPrev->setStatusTip(tr("Move the focus to the previous window"));
-    connect(mActWindowsPrev, &QAction::triggered, mMdiArea, &QMdiArea::activatePreviousSubWindow);
-
-    mActWindowMenuSeparator = new QAction(this);
-    mActWindowMenuSeparator->setSeparator(true);
-
-    updateWindowMenu();
+    mWindowMenu = menuBar()->addMenu(tr("&Window"));
+    connect(mWindowMenu, &QMenu::aboutToShow, this, &MdiMainWindow::updateWindowMenu);
 
     menuBar()->addSeparator();
+    mHelpMenu = menuBar()->addMenu(tr("&Help"));
+    mActHelpAbout = mHelpMenu->addAction(tr("&About"), this, &MdiMainWindow::onHelpAbout);
+    mActHelpAbout->setStatusTip(tr("Show the application's About box"));
+}
 
-    QMenu* helpMenu = menuBar()->addMenu(tr("&Help"));
+void MdiMainWindow::_createToolBars()
+{
+    mFileToolBar = addToolBar(tr("File"));
+    mFileToolBar->addAction(&mActFileNewSI);
+    mFileToolBar->addAction(&mActFileNewLog);
+    mFileToolBar->addAction(&mActFileOpen);
+    mFileToolBar->addAction(&mActFileSave);
 
-    QAction* aboutAct = helpMenu->addAction(tr("&About"), this, &MdiMainWindow::onHelpAbout);
-    aboutAct->setStatusTip(tr("Show the application's About box"));
+    mEditToolBar = addToolBar(tr("Edit"));
+    mEditToolBar->addAction(&mActEditCut);
+    mEditToolBar->addAction(&mActEditCopy);
+    mEditToolBar->addAction(&mActEditPaste);
 }
 
 void MdiMainWindow::_createStatusBar()
@@ -466,7 +502,28 @@ void MdiMainWindow::_createStatusBar()
     statusBar()->showMessage(tr("Ready"));
 }
 
-void MdiMainWindow::_readSettings()
+void MdiMainWindow::_createDockWindows()
+{
+    addDockWidget(Qt::LeftDockWidgetArea, &mNavigation);
+
+    mStatusDock = new QDockWidget(tr("Status"), this);
+    mStatusTabs = new QTabWidget;
+    mListView = new QListView;
+    mStatusTabs->addTab(mListView, tr("Output"));
+    mStatusDock->setWidget(mStatusTabs);
+    addDockWidget(Qt::BottomDockWidgetArea, mStatusDock);
+}
+
+void MdiMainWindow::_createMdiArea()
+{
+    mMdiArea = new QMdiArea;
+    mMdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    mMdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setCentralWidget(mMdiArea);
+    connect(mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::updateMenus);
+}
+
+void MdiMainWindow::readSettings()
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     const QByteArray geometry = settings.value("geometry", QByteArray()).toByteArray();
@@ -482,19 +539,19 @@ void MdiMainWindow::_readSettings()
     }
 }
 
-void MdiMainWindow::_writeSettings()
+void MdiMainWindow::writeSettings()
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     settings.setValue("geometry", saveGeometry());
 }
 
-MdiChild* MdiMainWindow::_activeMdiChild() const
+MdiChild* MdiMainWindow::activeMdiChild() const
 {
     QMdiSubWindow* activeSubWindow = mMdiArea->activeSubWindow();
     return (activeSubWindow != nullptr ? qobject_cast<MdiChild*>(activeSubWindow->widget()) : nullptr);
 }
 
-QMdiSubWindow* MdiMainWindow::_findMdiChild(const QString& fileName) const
+QMdiSubWindow* MdiMainWindow::findMdiChild(const QString& fileName) const
 {
     QMdiSubWindow* result{ nullptr };
     QString canonicalFilePath = QFileInfo(fileName).canonicalFilePath();
