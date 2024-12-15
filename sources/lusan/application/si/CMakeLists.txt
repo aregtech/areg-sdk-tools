@@ -4,5 +4,6 @@ list(APPEND LUSAN_UI
 )
 
 list(APPEND LUSAN_SRC
+    ${LUSAN}/application/si/ServiceInterfaceView.cpp
     ${LUSAN}/application/si/ui/sioverview.cpp
 )

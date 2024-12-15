@@ -22,6 +22,7 @@
 #include <QMainWindow>
 #include <QAction>
 
+#include "lusan/application/main/MdiArea.hpp"
 #include "lusan/application/main/NaviFileSystem.hpp"
 #include "lusan/application/main/Navigation.hpp"
 
@@ -29,6 +30,7 @@
  * Dependencies
  ************************************************************************/
 class MdiChild;
+class ServiceInterfaceView;
 QT_BEGIN_NAMESPACE
 class QDockWidget;
 class QListView;
@@ -168,6 +170,12 @@ private slots:
      **/
     MdiChild* createMdiChild();
 
+    /**
+     * \brief   Creates a new Service Interface View.
+     * \return  A pointer to the new Service Interface View.
+     **/
+    ServiceInterfaceView* createServiceInterfaceView();
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -274,7 +282,7 @@ private:
     QString     mWorkspaceRoot;
 
     //!< The MDI area for managing sub-windows.
-    QMdiArea*       mMdiArea;
+    MdiArea         mMdiArea;
     //!< The navigation dock widget.
     Navigation      mNavigation;
     //!< The status dock widget.

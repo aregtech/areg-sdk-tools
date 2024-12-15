@@ -17,7 +17,8 @@
  *
  ************************************************************************/
 #include "lusan/application/main/MdiMainWindow.hpp"
-#include "lusan/application/main/MdiChild.hpp"
+#include "lusan/application/si/ServiceInterfaceView.hpp"
+#include "lusan/common/MdiChild.hpp"
 
 #include <QtWidgets>
 
@@ -58,7 +59,7 @@ namespace
 MdiMainWindow::MdiMainWindow()
     : QMainWindow   ( )
     , mWorkspaceRoot( )
-    , mMdiArea      ( nullptr )
+    , mMdiArea      ( this )
     , mNavigation   ( &self() )
     , mStatusDock   ( nullptr )
     , mListView     ( nullptr )
@@ -109,7 +110,7 @@ bool MdiMainWindow::openFile(const QString& fileName)
     bool result{ false };
     if (QMdiSubWindow* existing = findMdiChild(fileName))
     {
-        mMdiArea->setActiveSubWindow(existing);
+        mMdiArea.setActiveSubWindow(existing);
         result = true;
     }
     else if (loadFile(fileName))
@@ -140,8 +141,8 @@ bool MdiMainWindow::loadFile(const QString& fileName)
 
 void MdiMainWindow::closeEvent(QCloseEvent* event)
 {
-    mMdiArea->closeAllSubWindows();
-    if (mMdiArea->currentSubWindow())
+    mMdiArea.closeAllSubWindows();
+    if (mMdiArea.currentSubWindow())
     {
         event->ignore();
     }
@@ -154,7 +155,7 @@ void MdiMainWindow::closeEvent(QCloseEvent* event)
 
 void MdiMainWindow::onFileNewSI()
 {
-    MdiChild* child = createMdiChild();
+    ServiceInterfaceView* child = createServiceInterfaceView();
     child->newFile();
     child->show();
 }
@@ -305,7 +306,7 @@ void MdiMainWindow::updateMenus()
     mActWindowsPrev.setEnabled(hasMdiChild);
     mActWindowMenuSeparator.setVisible(hasMdiChild);
     
-    bool hasSelection = ((active != nullptr) && active->textCursor().hasSelection());
+    bool hasSelection = false;
     mActEditCut.setEnabled(hasSelection);
     mActEditCopy.setEnabled(hasSelection);
 }
@@ -323,7 +324,7 @@ void MdiMainWindow::updateWindowMenu()
     mWindowMenu->addAction(&mActWindowsPrev);
     mWindowMenu->addAction(&mActWindowMenuSeparator);
 
-    QList<QMdiSubWindow*> windows = mMdiArea->subWindowList();
+    QList<QMdiSubWindow*> windows = mMdiArea.subWindowList();
     mActWindowMenuSeparator.setVisible(!windows.isEmpty());
 
     for (int i = 0; i < windows.size(); ++i)
@@ -344,7 +345,7 @@ void MdiMainWindow::updateWindowMenu()
         QAction* action = mWindowMenu->addAction(  text
                                                 , mdiSubWindow
                                                 , [this, mdiSubWindow]() {
-                                                    mMdiArea->setActiveSubWindow(mdiSubWindow);
+                                                    mMdiArea.setActiveSubWindow(mdiSubWindow);
                                                     }
         );
 
@@ -356,10 +357,21 @@ void MdiMainWindow::updateWindowMenu()
 MdiChild* MdiMainWindow::createMdiChild()
 {
     MdiChild* child = new MdiChild;
-    mMdiArea->addSubWindow(child);
-    connect(child, &QTextEdit::copyAvailable, &mActEditCut, &QAction::setEnabled);
-    connect(child, &QTextEdit::copyAvailable, &mActEditCopy, &QAction::setEnabled);
+    mMdiArea.addSubWindow(child);
+    connect(child, &MdiChild::copyAvailable, &mActEditCut, &QAction::setEnabled);
+    connect(child, &MdiChild::copyAvailable, &mActEditCopy, &QAction::setEnabled);
 
+    return child;
+}
+
+ServiceInterfaceView* MdiMainWindow::createServiceInterfaceView()
+{
+    ServiceInterfaceView* child = new ServiceInterfaceView;
+    mMdiArea.addSubWindow(child);
+    connect(child, &ServiceInterfaceView::copyAvailable, &mActEditCut, &QAction::setEnabled);
+    connect(child, &ServiceInterfaceView::copyAvailable, &mActEditCopy, &QAction::setEnabled);
+    
+    child->showMaximized();
     return child;
 }
 
@@ -420,29 +432,29 @@ void MdiMainWindow::_createActions()
 
     initAction(mActFileClose, QIcon(), tr("Cl&ose"));
     mActFileClose.setStatusTip(tr("Close the active window"));
-    connect(&mActFileClose, &QAction::triggered, mMdiArea, &QMdiArea::closeActiveSubWindow);
+    connect(&mActFileClose, &QAction::triggered, &mMdiArea, &QMdiArea::closeActiveSubWindow);
 
     initAction(mActFileCloseAll, QIcon(), tr("Close &All"));
     mActFileCloseAll.setStatusTip(tr("Close all the windows"));
-    connect(&mActFileCloseAll, &QAction::triggered, mMdiArea, &QMdiArea::closeAllSubWindows);
+    connect(&mActFileCloseAll, &QAction::triggered, &mMdiArea, &QMdiArea::closeAllSubWindows);
 
     initAction(mActWindowsTile, QIcon(), tr("&Tile"));
     mActWindowsTile.setStatusTip(tr("Tile the windows"));
-    connect(&mActWindowsTile, &QAction::triggered, mMdiArea, &QMdiArea::tileSubWindows);
+    connect(&mActWindowsTile, &QAction::triggered, &mMdiArea, &QMdiArea::tileSubWindows);
 
     initAction(mActWindowsCascade, QIcon(), tr("&Cascade"));
     mActWindowsCascade.setStatusTip(tr("Cascade the windows"));
-    connect(&mActWindowsCascade, &QAction::triggered, mMdiArea, &QMdiArea::cascadeSubWindows);
+    connect(&mActWindowsCascade, &QAction::triggered, &mMdiArea, &QMdiArea::cascadeSubWindows);
 
     initAction(mActWindowsNext, QIcon(), tr("Ne&xt"));
     mActWindowsNext.setShortcuts(QKeySequence::NextChild);
     mActWindowsNext.setStatusTip(tr("Move the focus to the next window"));
-    connect(&mActWindowsNext, &QAction::triggered, mMdiArea, &QMdiArea::activateNextSubWindow);
+    connect(&mActWindowsNext, &QAction::triggered, &mMdiArea, &QMdiArea::activateNextSubWindow);
 
     initAction(mActWindowsPrev, QIcon(), tr("Pre&vious"));
     mActWindowsPrev.setShortcuts(QKeySequence::PreviousChild);
     mActWindowsPrev.setStatusTip(tr("Move the focus to the previous window"));
-    connect(&mActWindowsPrev, &QAction::triggered, mMdiArea, &QMdiArea::activatePreviousSubWindow);
+    connect(&mActWindowsPrev, &QAction::triggered, &mMdiArea, &QMdiArea::activatePreviousSubWindow);
     
     mActWindowMenuSeparator.setSeparator(true);
 }
@@ -516,11 +528,8 @@ void MdiMainWindow::_createDockWindows()
 
 void MdiMainWindow::_createMdiArea()
 {
-    mMdiArea = new QMdiArea;
-    mMdiArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    mMdiArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setCentralWidget(mMdiArea);
-    connect(mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::updateMenus);
+    setCentralWidget(&mMdiArea);
+    connect(&mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::updateMenus);
 }
 
 void MdiMainWindow::readSettings()
@@ -547,7 +556,7 @@ void MdiMainWindow::writeSettings()
 
 MdiChild* MdiMainWindow::activeMdiChild() const
 {
-    QMdiSubWindow* activeSubWindow = mMdiArea->activeSubWindow();
+    QMdiSubWindow* activeSubWindow = mMdiArea.activeSubWindow();
     return (activeSubWindow != nullptr ? qobject_cast<MdiChild*>(activeSubWindow->widget()) : nullptr);
 }
 
@@ -556,7 +565,7 @@ QMdiSubWindow* MdiMainWindow::findMdiChild(const QString& fileName) const
     QMdiSubWindow* result{ nullptr };
     QString canonicalFilePath = QFileInfo(fileName).canonicalFilePath();
 
-    const QList<QMdiSubWindow*> subWindows = mMdiArea->subWindowList();
+    const QList<QMdiSubWindow*> subWindows = mMdiArea.subWindowList();
     for (QMdiSubWindow* window : subWindows)
     {
         MdiChild* mdiChild = qobject_cast<MdiChild*>(window->widget());

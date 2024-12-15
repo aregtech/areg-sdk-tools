@@ -1,4 +1,3 @@
-
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -11,19 +10,26 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/application/main/MdiChild.cpp
+ *  \file        lusan/common/MdiChild.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application Multi-document interface (MDI) child window.
  *
  ************************************************************************/
 
-#include "lusan/application/main/MdiChild.hpp"
+#include "lusan/common/MdiChild.hpp"
+#include <QFile>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QGuiApplication>
+#include <QSaveFile>
+#include <QTextDocument>
+#include <QDir>
+#include <QFileInfo>
+#include <QEvent>
 
-#include <QtWidgets>
-
-MdiChild::MdiChild()
-    : QTextEdit     ( )
+MdiChild::MdiChild(QWidget* parent /*= nullptr*/)
+    : QAbstractScrollArea(parent)
     , mCurFile      ( )
     , mIsUntitled   ( true )
 {
@@ -37,12 +43,14 @@ void MdiChild::newFile()
     mIsUntitled = true;
     mCurFile = tr("document%1.txt").arg(sequenceNumber++);
     setWindowTitle(mCurFile + "[*]");
-
+#if 0
     connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::documentWasModified);
+#endif
 }
 
 bool MdiChild::loadFile(const QString& fileName)
 {
+#if 0
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text))
     {
@@ -54,11 +62,10 @@ bool MdiChild::loadFile(const QString& fileName)
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     setPlainText(in.readAll());
     QGuiApplication::restoreOverrideCursor();
-
-    setCurrentFile(fileName);
-
     connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::documentWasModified);
-
+#endif // 0
+    
+    setCurrentFile(fileName);
     return true;
 }
 
@@ -75,6 +82,7 @@ bool MdiChild::saveAs()
 
 bool MdiChild::saveFile(const QString& fileName)
 {
+#if 0
     QString errorMessage;
 
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
@@ -100,6 +108,7 @@ bool MdiChild::saveFile(const QString& fileName)
         QMessageBox::warning(this, tr("MDI"), errorMessage);
         return false;
     }
+#endif
 
     setCurrentFile(fileName);
     return true;
@@ -112,6 +121,7 @@ QString MdiChild::userFriendlyCurrentFile()
 
 void MdiChild::closeEvent(QCloseEvent* event)
 {
+#if 0
     if (maybeSave())
     {
         event->accept();
@@ -120,17 +130,18 @@ void MdiChild::closeEvent(QCloseEvent* event)
     {
         event->ignore();
     }
+#endif
 }
 
 void MdiChild::documentWasModified()
 {
-    setWindowModified(document()->isModified());
+    // setWindowModified(document()->isModified());
 }
 
 bool MdiChild::maybeSave()
 {
-    if (!document()->isModified())
-        return true;
+//    if (!document()->isModified())
+//        return true;
 
     const QMessageBox::StandardButton ret
         = QMessageBox::warning(this, tr("MDI"),
@@ -155,7 +166,7 @@ void MdiChild::setCurrentFile(const QString& fileName)
 {
     mCurFile = QFileInfo(fileName).canonicalFilePath();
     mIsUntitled = false;
-    document()->setModified(false);
+    // document()->setModified(false);
     setWindowModified(false);
     setWindowTitle(userFriendlyCurrentFile() + "[*]");
 }
@@ -163,4 +174,77 @@ void MdiChild::setCurrentFile(const QString& fileName)
 QString MdiChild::strippedName(const QString& fullFileName)
 {
     return QFileInfo(fullFileName).fileName();
+}
+
+void MdiChild::cut()
+{
+    // Implement cut functionality
+#if 0
+    if (textCursor().hasSelection())
+    {
+        textCursor().removeSelectedText();
+    }
+#endif
+}
+
+void MdiChild::copy()
+{
+#if 0
+    // Implement copy functionality
+    if (textCursor().hasSelection())
+    {
+        QApplication::clipboard()->setText(textCursor().selectedText());
+    }
+#endif
+}
+
+void MdiChild::paste()
+{
+    // Implement paste functionality
+    // textCursor().insertText(QApplication::clipboard()->text());
+}
+
+void MdiChild::undo()
+{
+    // Implement undo functionality
+    // document()->undo();
+}
+
+void MdiChild::redo()
+{
+    // Implement redo functionality
+    // document()->redo();
+}
+
+void MdiChild::clear()
+{
+    // Implement clear functionality
+    // document()->clear();
+}
+
+void MdiChild::selectAll()
+{
+    // Implement select all functionality
+    // textCursor().select(QTextCursor::Document);
+}
+
+void MdiChild::zoomIn(int range)
+{
+    // Implement zoom in functionality
+    QFont font = this->font();
+    font.setPointSize(font.pointSize() + range);
+    setFont(font);
+}
+
+void MdiChild::zoomOut(int range)
+{
+    // Implement zoom out functionality
+    QFont font = this->font();
+    font.setPointSize(font.pointSize() - range);
+    setFont(font);
+}
+
+void MdiChild::copyAvailable(bool available)
+{
+    
 }

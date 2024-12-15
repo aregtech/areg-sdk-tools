@@ -1,5 +1,5 @@
-#ifndef LUSAN_APPLICATION_MAIN_MDICHILD_HPP
-#define LUSAN_APPLICATION_MAIN_MDICHILD_HPP
+#ifndef LUSAN_COMMON_MDICHILD_HPP
+#define LUSAN_COMMON_MDICHILD_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,20 +12,20 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/application/main/MdiChild.hpp
+ *  \file        lusan/common/MdiChild.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application Multi-document interface (MDI) child window.
  *
  ************************************************************************/
 
-#include <QTextEdit>
+#include <QAbstractScrollArea>
 
 /**
  * \brief   The MdiChild class represents a child window in the MDI interface.
  *          It provides functionalities for file operations and text editing.
  **/
-class MdiChild : public QTextEdit
+class MdiChild : public QAbstractScrollArea
 {
     Q_OBJECT
 
@@ -36,7 +36,7 @@ public:
     /**
      * \brief   Constructor for MdiChild.
      **/
-    MdiChild();
+    MdiChild(QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // actions
@@ -85,12 +85,27 @@ public:
      **/
     inline const QString & currentFile(void) const;
 
+    void cut();
+    void copy();
+    void paste();
+
+    void undo();
+    void redo();
+
+    void clear();
+    void selectAll();
+    
+    void zoomIn(int range = 1);
+    void zoomOut(int range = 1);
+    
+    void copyAvailable(bool available);
+
 protected:
     /**
      * \brief   Handles the close event.
      * \param   event    The close event.
      **/
-    void closeEvent(QCloseEvent* event) override;
+    virtual void closeEvent(QCloseEvent* event) override;
 
 private slots:
     /**
@@ -134,4 +149,4 @@ inline const QString & MdiChild::currentFile(void) const
     return mCurFile;
 }
 
-#endif // LUSAN_APPLICATION_MAIN_MDICHILD_HPP
+#endif // LUSAN_COMMON_MDICHILD_HPP
