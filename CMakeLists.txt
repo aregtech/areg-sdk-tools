@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
 set(PROJECT_NAME    lusan)
-set(PROJECT_VERSION "1.0.0")
-set(PROJECT_VERSION_MAJOR 0)
+set(PROJECT_VERSION_MAJOR 1)
 set(PROJECT_VERSION_MINOR 0)
+set(PROJECT_VERSION_PATCH 0)
+set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 set(APP_NAME lusan)
 
 project("${PROJECT_NAME}" 
@@ -41,10 +42,10 @@ include_directories(${LUSAN_BASE})
 include_directories(${LUSAN_THIRDPARTY})
 include("${LUSAN_BASE}/CMakeLists.txt")
 
-list(APPEND PROJECT_SOURCES "${LUSAN_SRC}" "${LUSAN_UI}" "${LUSAN_RES}" "${LUSAN_TRANS}")
+list(APPEND PROJECT_SOURCES "${LUSAN_TRANS}" "${LUSAN_RES}" "${LUSAN_UI}" "${LUSAN_HDR}" "${LUSAN_SRC}")
 
-qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
+qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
 target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
