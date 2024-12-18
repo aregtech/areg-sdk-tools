@@ -1,6 +1,3 @@
-#ifndef LUSAN_APPLICATION_SI_SERVICEINTERFACE_HPP
-#define LUSAN_APPLICATION_SI_SERVICEINTERFACE_HPP
-
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -13,30 +10,28 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/ServiceInterface.hpp
+ *  \file        lusan/view/si/SIDataTypeList.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface main window.
+ *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
+#include "lusan/view/si/SIDataTypeList.hpp"
+#include "ui/ui_SIDataTypeList.h"
 
-#include "lusan/view/common/MdiChild.hpp"
-#include "lusan/view/si/SIOverview.hpp"
-#include "lusan/view/si/SIDataType.hpp"
-
-#include <QTabWidget>
-
-class ServiceInterface : public MdiChild
+SIDataTypeList::SIDataTypeList(QWidget *parent)
+    : QWidget(parent)
+    , ui(new Ui::SIDataTypeList)
 {
-    Q_OBJECT
-public:
-    ServiceInterface(QWidget *parent = nullptr);
-    virtual ~ServiceInterface(void);
-
-private:
-    QTabWidget  mTabWidget;
-    SIOverview  mOverview;
-    SIDataType  mDataType;
-};
-
-#endif // LUSAN_APPLICATION_SI_SERVICEINTERFACEVIEW_HPP
+    QFont font{this->font()};
+    font.setBold(false);
+    font.setItalic(false);
+    font.setPointSize(10);
+    this->setFont(font);
+    ui->setupUi(this);
+    QTableWidget* table = ui->tableDataType;
+    // table->setHorizontalHeaderLabels({ tr("Name:"), tr("Data Type:"), tr("Default Value:")});
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    setBaseSize(540, 600);
+    setMinimumSize(540, 600);
+}

@@ -1,0 +1,12 @@
+<RCC>
+    <qresource lang="Toolbar Icons" prefix="/icons">
+        <file alias="Add Data Type">icons/add_data_type.png</file>
+        <file alias="Delete Data Type">icons/delete_data_type.png</file>
+        <file alias="Add Field">icons/add_field.png</file>
+        <file alias="Delete Field">icons/delete_field.png</file>
+        <file alias="Insert Field">icons/insert_field.png</file>
+        <file alias="Move Down">icons/move_down.png</file>
+        <file alias="Move Up">icons/move_up.png</file>
+        <file>icons/no-name.png</file>
+    </qresource>
+</RCC>

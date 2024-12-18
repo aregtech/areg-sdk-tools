@@ -1,6 +1,5 @@
-#ifndef LUSAN_APPLICATION_SI_SERVICEINTERFACE_HPP
-#define LUSAN_APPLICATION_SI_SERVICEINTERFACE_HPP
-
+#ifndef LUSAN_APPLICATION_SI_SIDATATYPELIST_HPP
+#define LUSAN_APPLICATION_SI_SIDATATYPELIST_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -13,30 +12,27 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/ServiceInterface.hpp
+ *  \file        lusan/view/si/SIDataTypeList.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface main window.
+ *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
+#include <QWidget>
 
-#include "lusan/view/common/MdiChild.hpp"
-#include "lusan/view/si/SIOverview.hpp"
-#include "lusan/view/si/SIDataType.hpp"
+namespace Ui {
+    class SIDataTypeList;
+}
 
-#include <QTabWidget>
-
-class ServiceInterface : public MdiChild
+class SIDataTypeList : public QWidget
 {
     Q_OBJECT
+
 public:
-    ServiceInterface(QWidget *parent = nullptr);
-    virtual ~ServiceInterface(void);
+    explicit SIDataTypeList(QWidget *parent = nullptr);
 
 private:
-    QTabWidget  mTabWidget;
-    SIOverview  mOverview;
-    SIDataType  mDataType;
+    Ui::SIDataTypeList* ui;
 };
 
-#endif // LUSAN_APPLICATION_SI_SERVICEINTERFACEVIEW_HPP
+#endif // LUSAN_APPLICATION_SI_SIDATATYPELIST_HPP
