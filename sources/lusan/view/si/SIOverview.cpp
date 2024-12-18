@@ -18,7 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIOverview.hpp"
-#include "ui/ui_sioverview.h"
+#include "ui/ui_SIOverview.h"
 
 SIOverview::SIOverview(QWidget *parent)
     : QScrollArea{parent}

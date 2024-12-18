@@ -25,18 +25,20 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     : MdiChild(parent)
     , mTabWidget(this)
     , mOverview(this)
+    , mDataType(this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the sioverview widget as the first tab
     mTabWidget.addTab(&mOverview, tr("Overview"));
-    
+    mTabWidget.addTab(&mDataType, tr("Types"));
+
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
-    mOverview.setMinimumSize(480, 360);
-    mOverview.resize(930, 520);
+    mOverview.resize(1080, 660);
+    mDataType.resize(1080, 660);
 }
 
 ServiceInterface::~ServiceInterface(void)

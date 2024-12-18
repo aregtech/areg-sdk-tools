@@ -45,7 +45,8 @@ include("${LUSAN_BASE}/CMakeLists.txt")
 list(APPEND PROJECT_SOURCES "${LUSAN_TRANS}" "${LUSAN_RES}" "${LUSAN_UI}" "${LUSAN_HDR}" "${LUSAN_SRC}")
 
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
-qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
+qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES}
+)
 target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
