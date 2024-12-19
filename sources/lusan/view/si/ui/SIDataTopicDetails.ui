@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SIDataTypeDetails</class>
- <widget class="QWidget" name="SIDataTypeDetails">
+ <class>SIDataTopicDetails</class>
+ <widget class="QWidget" name="SIDataTopicDetails">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>540</width>
+    <width>580</width>
     <height>600</height>
    </rect>
   </property>
@@ -48,63 +48,13 @@
          <widget class="QLineEdit" name="editDataName"/>
         </item>
         <item row="1" column="0">
-         <widget class="QLabel" name="label_2">
+         <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>Type:</string>
+           <string>Details:</string>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QGroupBox" name="groupBox_2">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="title">
-           <string>Type Definition:</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayout">
-           <item row="0" column="0">
-            <widget class="QRadioButton" name="radioTypeStruct">
-             <property name="text">
-              <string>Structure</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QRadioButton" name="radioTypeImport">
-             <property name="text">
-              <string>Imported</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QRadioButton" name="radioTypeContainer">
-             <property name="text">
-              <string>Container</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QRadioButton" name="radioTypeEnum">
-             <property name="text">
-              <string>Enumerate</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>Container:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
          <widget class="QGroupBox" name="groupBox_3">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -113,13 +63,13 @@
            </sizepolicy>
           </property>
           <property name="title">
-           <string>Container Details:</string>
+           <string>Data Topic Details:</string>
           </property>
           <layout class="QFormLayout" name="formLayout_2">
            <item row="0" column="0">
             <widget class="QLabel" name="label_4">
              <property name="text">
-              <string>Object:</string>
+              <string>Type:</string>
              </property>
             </widget>
            </item>
@@ -129,24 +79,32 @@
            <item row="1" column="0">
             <widget class="QLabel" name="label_5">
              <property name="text">
-              <string>Key:</string>
+              <string>Notify:</string>
              </property>
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QComboBox" name="comboContainerKey"/>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_6">
-             <property name="text">
-              <string>Value:</string>
-             </property>
+            <widget class="QComboBox" name="comboContainerKey">
+             <item>
+              <property name="text">
+               <string>On Change</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Always</string>
+              </property>
+             </item>
             </widget>
            </item>
-           <item row="2" column="1">
-            <widget class="QComboBox" name="comboContainerValue"/>
-           </item>
           </layout>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>Description:</string>
+          </property>
          </widget>
         </item>
         <item row="3" column="1">
@@ -170,24 +128,7 @@
            <bool>false</bool>
           </property>
           <property name="placeholderText">
-           <string notr="true">Describe data here</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_7">
-          <property name="text">
-           <string>Description:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="1">
-         <widget class="QLineEdit" name="lineEdit">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+           <string notr="true">Describe topic here</string>
           </property>
          </widget>
         </item>
@@ -204,6 +145,32 @@
           </property>
          </widget>
         </item>
+        <item row="4" column="1">
+         <widget class="QLineEdit" name="lineEdit">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Policy::Preferred</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>80</width>
+            <height>80</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
       </item>
      </layout>
@@ -213,13 +180,8 @@
  </widget>
  <tabstops>
   <tabstop>editDataName</tabstop>
-  <tabstop>radioTypeStruct</tabstop>
-  <tabstop>radioTypeEnum</tabstop>
-  <tabstop>radioTypeImport</tabstop>
-  <tabstop>radioTypeContainer</tabstop>
   <tabstop>comboContainerObj</tabstop>
   <tabstop>comboContainerKey</tabstop>
-  <tabstop>comboContainerValue</tabstop>
   <tabstop>textDescribe</tabstop>
  </tabstops>
  <resources/>

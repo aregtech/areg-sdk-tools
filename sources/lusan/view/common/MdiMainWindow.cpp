@@ -59,32 +59,38 @@ MdiMainWindow::MdiMainWindow()
     : QMainWindow   ( )
     , mWorkspaceRoot( )
     , mMdiArea      ( this )
-    , mNavigation   ( &self() )
+    , mNavigation   ( this )
     , mStatusDock   ( nullptr )
     , mListView     ( nullptr )
     , mStatusTabs   ( nullptr )
     , mFileMenu     (nullptr)
     , mEditMenu     (nullptr)
+    , mViewMenu     (nullptr)
     , mWindowMenu   (nullptr)
     , mHelpMenu     (nullptr)
     , mFileToolBar  (nullptr)
     , mEditToolBar  (nullptr)
-    , mActFileNewSI (&self())
-    , mActFileNewLog(&self())
-    , mActFileOpen  (&self())
-    , mActFileSave  (&self())
-    , mActFileSaveAs(&self())
-    , mActFileClose (&self())
-    , mActFileCloseAll(&self())
-    , mActFileExit  (&self())
-    , mActEditCut   (&self())
-    , mActEditCopy  (&self())
-    , mActEditPaste (&self())
-    , mActWindowsTile(&self())
-    , mActWindowsCascade(&self())
-    , mActWindowsNext(&self())
-    , mActWindowsPrev(&self())
-    , mActWindowMenuSeparator(&self())
+    , mViewToolBar  (nullptr)
+    , mActFileNewSI (this)
+    , mActFileNewLog(this)
+    , mActFileOpen  (this)
+    , mActFileSave  (this)
+    , mActFileSaveAs(this)
+    , mActFileClose (this)
+    , mActFileCloseAll(this)
+    , mActFileExit  (this)
+    , mActEditCut   (this)
+    , mActEditCopy  (this)
+    , mActEditPaste (this)
+    , mActViewNavigator(this)
+    , mActViewWokspace(this)
+    , mActViewLogs  (this)
+    , mActViewStatus(this)
+    , mActWindowsTile(this)
+    , mActWindowsCascade(this)
+    , mActWindowsNext(this)
+    , mActWindowsPrev(this)
+    , mActWindowMenuSeparator(this)
     , mActHelpAbout (nullptr)
     , mActRecentFilesSubMenu(nullptr)
     , mFileSeparator(nullptr)
@@ -234,6 +240,22 @@ void MdiMainWindow::onEditPaste()
     }
 }
 
+void MdiMainWindow::onViewNavigator()
+{
+}
+
+void MdiMainWindow::onViewWorkspace()
+{
+}
+
+void MdiMainWindow::onViewLogs()
+{
+}
+
+void MdiMainWindow::onViewStatus()
+{
+}
+
 void MdiMainWindow::onHelpAbout()
 {
     QMessageBox::about(this, tr("About Lusan"), tr("The <b>Lusan</b> in under construction."));
@@ -371,7 +393,7 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView()
     connect(child, &ServiceInterface::copyAvailable, &mActEditCut, &QAction::setEnabled);
     connect(child, &ServiceInterface::copyAvailable, &mActEditCopy, &QAction::setEnabled);
     
-    // child->showMaximized();
+    child->showMaximized();
     return child;
 }
 
@@ -409,6 +431,14 @@ void MdiMainWindow::_createActions()
     mActFileSaveAs.setStatusTip(tr("Save the document under a new name"));
     connect(&mActFileSaveAs, &QAction::triggered, this, &MdiMainWindow::onFileSaveAs);
 
+    initAction(mActFileClose, QIcon(), tr("Cl&ose"));
+    mActFileClose.setStatusTip(tr("Close the active window"));
+    connect(&mActFileClose, &QAction::triggered, &mMdiArea, &QMdiArea::closeActiveSubWindow);
+
+    initAction(mActFileCloseAll, QIcon(), tr("Close &All"));
+    mActFileCloseAll.setStatusTip(tr("Close all the windows"));
+    connect(&mActFileCloseAll, &QAction::triggered, &mMdiArea, &QMdiArea::closeAllSubWindows);
+
     initAction(mActFileExit, QIcon::fromTheme("application-exit"), tr("E&xit"));
     mActFileExit.setParent(qApp);
     mActFileExit.setShortcuts(QKeySequence::Quit);
@@ -429,14 +459,26 @@ void MdiMainWindow::_createActions()
     mActEditPaste.setShortcuts(QKeySequence::Paste);
     mActEditPaste.setStatusTip(tr("Paste the clipboard's contents into the current selection"));
     connect(&mActEditPaste, &QAction::triggered, this, &MdiMainWindow::onEditPaste);
+    
+    QIcon iconNavi;
+    iconNavi.addFile(QString::fromUtf8(":/icons/View Navigator Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    initAction(mActViewNavigator, iconNavi, tr("&Navigator Window"));
+    mActWindowsTile.setStatusTip(tr("View Navigator Window"));
+    connect(&mActViewNavigator, &QAction::triggered, this, &MdiMainWindow::onViewNavigator);
 
-    initAction(mActFileClose, QIcon(), tr("Cl&ose"));
-    mActFileClose.setStatusTip(tr("Close the active window"));
-    connect(&mActFileClose, &QAction::triggered, &mMdiArea, &QMdiArea::closeActiveSubWindow);
+    initAction(mActViewWokspace, QIcon(), tr("&Workspace Navigator"));
+    mActWindowsTile.setStatusTip(tr("View Workspace Navigator Window"));
+    connect(&mActViewWokspace, &QAction::triggered, this, &MdiMainWindow::onViewWorkspace);
 
-    initAction(mActFileCloseAll, QIcon(), tr("Close &All"));
-    mActFileCloseAll.setStatusTip(tr("Close all the windows"));
-    connect(&mActFileCloseAll, &QAction::triggered, &mMdiArea, &QMdiArea::closeAllSubWindows);
+    initAction(mActViewLogs, QIcon(), tr("&Logs Navigator"));
+    mActWindowsTile.setStatusTip(tr("View Logs Navigator Window"));
+    connect(&mActViewLogs, &QAction::triggered, this, &MdiMainWindow::onViewLogs);
+    
+    QIcon iconStatus;
+    iconStatus.addFile(QString::fromUtf8(":/icons/View Status Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    initAction(mActViewStatus, iconStatus, tr("&Status Window"));
+    mActWindowsTile.setStatusTip(tr("View Status Window"));
+    connect(&mActViewStatus, &QAction::triggered, this, &MdiMainWindow::onViewStatus);
 
     initAction(mActWindowsTile, QIcon(), tr("&Tile"));
     mActWindowsTile.setStatusTip(tr("Tile the windows"));
@@ -486,6 +528,12 @@ void MdiMainWindow::_createMenus()
     mEditMenu->addAction(&mActEditCopy);
     mEditMenu->addAction(&mActEditPaste);
 
+    mViewMenu = menuBar()->addMenu(tr("&View"));
+    mViewMenu->addAction(&mActViewNavigator);
+    mViewMenu->addAction(&mActViewWokspace);
+    mViewMenu->addAction(&mActViewLogs);
+    mViewMenu->addAction(&mActViewStatus);
+
     mWindowMenu = menuBar()->addMenu(tr("&Window"));
     connect(mWindowMenu, &QMenu::aboutToShow, this, &MdiMainWindow::updateWindowMenu);
 
@@ -502,11 +550,17 @@ void MdiMainWindow::_createToolBars()
     mFileToolBar->addAction(&mActFileNewLog);
     mFileToolBar->addAction(&mActFileOpen);
     mFileToolBar->addAction(&mActFileSave);
+    mFileToolBar->addSeparator();
 
     mEditToolBar = addToolBar(tr("Edit"));
     mEditToolBar->addAction(&mActEditCut);
     mEditToolBar->addAction(&mActEditCopy);
     mEditToolBar->addAction(&mActEditPaste);
+    mEditToolBar->addSeparator();
+    
+    mViewToolBar = addToolBar(tr("View"));
+    mViewToolBar->addAction(&mActViewNavigator);
+    mViewToolBar->addAction(&mActViewStatus);
 }
 
 void MdiMainWindow::_createStatusBar()

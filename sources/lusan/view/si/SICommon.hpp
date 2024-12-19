@@ -1,3 +1,6 @@
+#ifndef LUSAN_APPLICATION_SI_SICOMMON_HPP
+#define LUSAN_APPLICATION_SI_SICOMMON_HPP
+
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -10,28 +13,21 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTypeList.hpp
+ *  \file        lusan/view/si/SICommon.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface main window.
  *
  ************************************************************************/
-#include "lusan/view/si/SIDataTypeList.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTypeList.h"
 
-SIDataTypeList::SIDataTypeList(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::SIDataTypeList)
+
+namespace SICommon
 {
-    QFont font{this->font()};
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    QTableWidget* table = ui->tableDataType;
-    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    constexpr unsigned int FRAME_WIDTH      = 1080;
+    constexpr unsigned int FRAME_HEIGHT     = 650;
+
+    constexpr unsigned int  WIDGET_WIDTH    = 540;
+    constexpr unsigned int  WIDGET_HEIGHT   = 600;
 }
+
+#endif // LUSAN_APPLICATION_SI_SICOMMON_HPP

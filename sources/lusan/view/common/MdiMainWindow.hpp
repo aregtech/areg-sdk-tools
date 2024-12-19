@@ -144,6 +144,14 @@ private slots:
      **/
     void onEditPaste();
 
+    void onViewNavigator();
+
+    void onViewWorkspace();
+
+    void onViewLogs();
+
+    void onViewStatus();
+    
     /**
      * \brief   Slot for showing the about dialog.
      **/
@@ -295,6 +303,8 @@ private:
     QMenu*          mFileMenu;
     //!< The edit menu.
     QMenu*          mEditMenu;
+    //!< The view menu.
+    QMenu*          mViewMenu;
     //!< The window menu.
     QMenu*          mWindowMenu;
     //!< The help menu.
@@ -303,6 +313,8 @@ private:
     QToolBar*       mFileToolBar;
     //!< The edit toolbar.
     QToolBar*       mEditToolBar;
+    //!< The view toolbar.
+    QToolBar*       mViewToolBar;
 
     //!< Action for creating a new SI file.
     QAction          mActFileNewSI;
@@ -320,12 +332,20 @@ private:
     QAction         mActFileCloseAll;
     //!< Action for exiting the application.
     QAction         mActFileExit;
+
     //!< Action for cutting text.
     QAction         mActEditCut;
     //!< Action for copying text.
     QAction         mActEditCopy;
     //!< Action for pasting text.
     QAction         mActEditPaste;
+
+    //!< View Workspace Explorer
+    QAction         mActViewNavigator;
+    QAction         mActViewWokspace;
+    QAction         mActViewLogs;
+    QAction         mActViewStatus;
+
     //!< Action for tiling windows.
     QAction         mActWindowsTile;
     //!< Action for cascading windows.

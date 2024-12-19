@@ -18,13 +18,28 @@
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
-#include "lusan/view/si/SIDataTypeDetails.hpp"
-#include "lusan/view/si/SIDataTypeList.hpp"
 #include <QScrollArea>
+
+class SIDataTypeDetails;
+class SIDataTypeList;
+class SIDataTypeFieldDetails;
 
 namespace Ui {
     class SIDataType;
 }
+
+class SIDataTypeWidget : public QWidget
+{
+    friend class SIDataType;
+
+    Q_OBJECT
+
+public:
+    explicit SIDataTypeWidget(QWidget* parent);
+
+private:
+    Ui::SIDataType * ui;
+};
 
 class SIDataType : public QScrollArea
 {
@@ -33,10 +48,14 @@ class SIDataType : public QScrollArea
 public:
     explicit SIDataType(QWidget *parent = nullptr);
 
+    virtual ~SIDataType(void);
+
 private:
-    Ui::SIDataType * ui;
-    SIDataTypeDetails mDetails;
-    SIDataTypeList    mList;
+    SIDataTypeDetails*      mTypeDetails;
+    SIDataTypeList*         mTypeList;
+    SIDataTypeFieldDetails* mFieldDetails;
+    SIDataTypeWidget*       mWidget;
+    Ui::SIDataType &        ui;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIDATATYPE_HPP

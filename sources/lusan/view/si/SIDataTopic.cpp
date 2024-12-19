@@ -10,43 +10,39 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataType.cpp
+ *  \file        lusan/view/si/SIDataTopic.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
 
-#include "lusan/view/si/SIDataType.hpp"
+#include "lusan/view/si/SIDataTopic.hpp"
 #include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataType.h"
+#include "ui/ui_SIDataTopic.h"
 
-#include "lusan/view/si/SIDataTypeDetails.hpp"
-#include "lusan/view/si/SIDataTypeFieldDetails.hpp"
-#include "lusan/view/si/SIDataTypeList.hpp"
+#include "lusan/view/si/SIDataTopicDetails.hpp"
+#include "lusan/view/si/SIDataTopicList.hpp"
 
-SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
+SIDataTopicWidget::SIDataTopicWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui     (new Ui::SIDataType)
+    , ui     (new Ui::SIDataTopic)
 {
     ui->setupUi(this);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
 }
 
-SIDataType::SIDataType(QWidget *parent)
+SIDataTopic::SIDataTopic(QWidget* parent)
     : QScrollArea   (parent)
-    , mTypeDetails  (new SIDataTypeDetails(this))
-    , mTypeList     (new SIDataTypeList(this))
-    , mFieldDetails (new SIDataTypeFieldDetails(this))
-    , mWidget       (new SIDataTypeWidget(this))
+    , mTopicDetails (new SIDataTopicDetails(this))
+    , mTopicList    (new SIDataTopicList(this))
+    , mWidget       (new SIDataTopicWidget(this))
     , ui            (*mWidget->ui)
 {
-    mFieldDetails->setHidden(true);
-    
-    ui.horizontalLayout->addWidget(mTypeList);
-    ui.horizontalLayout->addWidget(mTypeDetails);
-    
+    ui.horizontalLayout->addWidget(mTopicList);
+    ui.horizontalLayout->addWidget(mTopicDetails);
+
     // setWidgetResizable(true);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -55,8 +51,8 @@ SIDataType::SIDataType(QWidget *parent)
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
 }
 
-SIDataType::~SIDataType(void)
+SIDataTopic::~SIDataTopic(void)
 {
-    ui.horizontalLayout->removeWidget(mTypeList);
-    ui.horizontalLayout->removeWidget(mTypeDetails);
+    ui.horizontalLayout->removeWidget(mTopicList);
+    ui.horizontalLayout->removeWidget(mTopicDetails);
 }
