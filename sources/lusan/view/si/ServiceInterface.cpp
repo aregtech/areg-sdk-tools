@@ -23,23 +23,26 @@
 #include <QVBoxLayout>
 
 ServiceInterface::ServiceInterface(QWidget *parent)
-    : MdiChild(parent)
+    : MdiChild  (parent)
     , mTabWidget(this)
-    , mOverview(this)
-    , mDataType(this)
+    , mOverview (this)
+    , mDataType (this)
+    , mDataTopic(this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the sioverview widget as the first tab
-    mTabWidget.addTab(&mOverview, tr("Overview"));
-    mTabWidget.addTab(&mDataType, tr("Types"));
+    mTabWidget.addTab(&mOverview, tr("Service Overview"));
+    mTabWidget.addTab(&mDataType, tr("Data Types"));
+    mTabWidget.addTab(&mDataTopic, tr("Data Topics"));
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
-    // mOverview.resize(1080, 660);
-    // mDataType.resize(1080, 660);
+    // mOverview.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
+    // mDataType.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
+    // mDataTopic.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
 }
 
 ServiceInterface::~ServiceInterface(void)

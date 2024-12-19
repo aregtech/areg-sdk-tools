@@ -1,3 +1,5 @@
+#ifndef LUSAN_APPLICATION_SI_SIDATATOPIC_HPP
+#define LUSAN_APPLICATION_SI_SIDATATOPIC_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -10,28 +12,48 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTypeList.hpp
+ *  \file        lusan/view/si/SIDataTopic.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
-#include "lusan/view/si/SIDataTypeList.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTypeList.h"
+#include <QScrollArea>
 
-SIDataTypeList::SIDataTypeList(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::SIDataTypeList)
-{
-    QFont font{this->font()};
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    QTableWidget* table = ui->tableDataType;
-    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+namespace Ui {
+    class SIDataTopic;
 }
+
+class SIDataTopicDetails;
+class SIDataTopicList;
+
+class SIDataTopicWidget : public QWidget
+{
+    friend class SIDataTopic;
+
+    Q_OBJECT
+
+public:
+    explicit SIDataTopicWidget(QWidget* parent);
+
+private:
+    Ui::SIDataTopic* ui;
+};
+
+class SIDataTopic : public QScrollArea
+{
+    Q_OBJECT
+
+public:
+    explicit SIDataTopic(QWidget* parent = nullptr);
+
+    virtual ~SIDataTopic(void);
+
+private:
+    SIDataTopicDetails* mTopicDetails;
+    SIDataTopicList*    mTopicList;
+    SIDataTopicWidget*  mWidget;
+    Ui::SIDataTopic&    ui;
+};
+
+#endif // LUSAN_APPLICATION_SI_SIDATATOPIC_HPP

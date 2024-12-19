@@ -10,28 +10,26 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTypeList.hpp
+ *  \file        lusan/view/si/SIDataTopicDetails.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
-#include "lusan/view/si/SIDataTypeList.hpp"
+#include "lusan/view/si/SIDataTopicDetails.hpp"
 #include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTypeList.h"
+#include "ui/ui_SIDataTopicDetails.h"
 
-SIDataTypeList::SIDataTypeList(QWidget *parent)
+SIDataTopicDetails::SIDataTopicDetails(QWidget* parent)
     : QWidget(parent)
-    , ui(new Ui::SIDataTypeList)
+    , ui(new Ui::SIDataTopicDetails)
 {
-    QFont font{this->font()};
+    QFont font{ this->font() };
     font.setBold(false);
     font.setItalic(false);
     font.setPointSize(10);
     this->setFont(font);
     ui->setupUi(this);
-    QTableWidget* table = ui->tableDataType;
-    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }

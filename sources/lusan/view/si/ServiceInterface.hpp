@@ -23,6 +23,7 @@
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/si/SIOverview.hpp"
 #include "lusan/view/si/SIDataType.hpp"
+#include "lusan/view/si/SIDataTopic.hpp"
 
 #include <QTabWidget>
 
@@ -37,6 +38,7 @@ private:
     QTabWidget  mTabWidget;
     SIOverview  mOverview;
     SIDataType  mDataType;
+    SIDataTopic mDataTopic;
 };
 
 #endif // LUSAN_APPLICATION_SI_SERVICEINTERFACEVIEW_HPP

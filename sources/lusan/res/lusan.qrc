@@ -7,5 +7,8 @@
         <file alias="Insert Field">icons/insert_field.png</file>
         <file alias="Move Down">icons/move_down.png</file>
         <file alias="Move Up">icons/move_up.png</file>
+        <file alias="View Navigator Window">icons/view_navigation.png</file>
+        <file alias="View Status Window">icons/view_status.png</file>
+        <file alias="Sort Items">icons/sort.png</file>
     </qresource>
 </RCC>
