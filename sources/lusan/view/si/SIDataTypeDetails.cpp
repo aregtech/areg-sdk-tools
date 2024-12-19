@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/view/si/SIDataTypeDetails.hpp"
+#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIDataTypeDetails.h"
 
 SIDataTypeDetails::SIDataTypeDetails(QWidget *parent)
@@ -29,6 +30,6 @@ SIDataTypeDetails::SIDataTypeDetails(QWidget *parent)
     font.setPointSize(10);
     this->setFont(font);
     ui->setupUi(this);
-    setBaseSize(540, 600);
-    setMinimumSize(540, 600);
+    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }

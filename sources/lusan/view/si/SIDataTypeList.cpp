@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/view/si/SIDataTypeList.hpp"
+#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIDataTypeList.h"
 
 SIDataTypeList::SIDataTypeList(QWidget *parent)
@@ -32,6 +33,6 @@ SIDataTypeList::SIDataTypeList(QWidget *parent)
     QTableWidget* table = ui->tableDataType;
     // table->setHorizontalHeaderLabels({ tr("Name:"), tr("Data Type:"), tr("Default Value:")});
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    setBaseSize(540, 600);
-    setMinimumSize(540, 600);
+    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }

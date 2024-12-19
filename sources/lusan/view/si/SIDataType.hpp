@@ -26,6 +26,19 @@ namespace Ui {
     class SIDataType;
 }
 
+class SIDataTypeWidget : public QWidget
+{
+    friend class SIDataType;
+
+    Q_OBJECT
+
+public:
+    explicit SIDataTypeWidget(QWidget* parent);
+
+private:
+    Ui::SIDataType * ui;
+};
+
 class SIDataType : public QScrollArea
 {
     Q_OBJECT
@@ -33,10 +46,13 @@ class SIDataType : public QScrollArea
 public:
     explicit SIDataType(QWidget *parent = nullptr);
 
+    virtual ~SIDataType(void);
+
 private:
-    Ui::SIDataType * ui;
-    SIDataTypeDetails mDetails;
-    SIDataTypeList    mList;
+    SIDataTypeDetails*  mDetails;
+    SIDataTypeList*     mList;
+    SIDataTypeWidget*   mWidget;
+    Ui::SIDataType &    ui;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIDATATYPE_HPP

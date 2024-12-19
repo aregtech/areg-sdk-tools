@@ -43,13 +43,17 @@
   <widget class="QWidget" name="horizontalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>0</x>
-     <y>60</y>
-     <width>1081</width>
-     <height>741</height>
+     <x>5</x>
+     <y>59</y>
+     <width>1070</width>
+     <height>591</height>
     </rect>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout"/>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="sizeConstraint">
+     <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
+    </property>
+   </layout>
   </widget>
  </widget>
  <resources/>

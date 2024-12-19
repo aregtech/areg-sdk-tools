@@ -18,21 +18,38 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIDataType.hpp"
+#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIDataType.h"
+
+SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
+    : QWidget{ parent }
+    , ui(new Ui::SIDataType)
+{
+    ui->setupUi(this);
+    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+}
 
 SIDataType::SIDataType(QWidget *parent)
     : QScrollArea(parent)
-    , ui(new Ui::SIDataType)
-    , mDetails(this)
-    , mList(this)
+    , mDetails(new SIDataTypeDetails(this))
+    , mList(new SIDataTypeList(this))
+    , mWidget(new SIDataTypeWidget(this))
+    , ui(*mWidget->ui)
 {
-    ui->setupUi(this);
-    ui->horizontalLayout->addWidget(&mList);
-    ui->horizontalLayout->addWidget(&mDetails);
-    setWidgetResizable(true);
+    ui.horizontalLayout->addWidget(mList);
+    ui.horizontalLayout->addWidget(mDetails);
+    
+    // setWidgetResizable(true);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
-    setBaseSize(1020, 650);
-    resize(800, 480);
+    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
+}
+
+SIDataType::~SIDataType(void)
+{
+    ui.horizontalLayout->removeWidget(mList);
+    ui.horizontalLayout->removeWidget(mDetails);
 }
