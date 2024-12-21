@@ -37,7 +37,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Data Type Editor ...</string>
+    <string>Interface Data Topic Editor ...</string>
    </property>
   </widget>
   <widget class="QWidget" name="horizontalLayoutWidget">

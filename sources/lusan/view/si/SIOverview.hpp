@@ -20,18 +20,41 @@
  ************************************************************************/
 #include <QScrollArea>
 
+class SIOverviewDetails;
+class SIOverviewLinks;
+class SIOverviewParamDetails;
+
 namespace Ui {
     class SIOverview;
 }
 
+class SIOverviewWidget : public QWidget
+{
+    friend class SIOverview;
+
+    Q_OBJECT
+
+public:
+    explicit SIOverviewWidget(QWidget* parent);
+
+private:
+    Ui::SIOverview* ui;
+};
+
 class SIOverview : public QScrollArea
 {
     Q_OBJECT
+
 public:
-    explicit SIOverview(QWidget *parent = nullptr);
+    explicit SIOverview(QWidget* parent = nullptr);
+
+    virtual ~SIOverview(void);
 
 private:
-    Ui::SIOverview* mOverview;
+    SIOverviewDetails*  mOverviewDetails;
+    SIOverviewLinks*    mOverviewLinks;
+    SIOverviewWidget*   mWidget;
+    Ui::SIOverview&     ui;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIOVERVIEW_HPP

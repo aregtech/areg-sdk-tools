@@ -10,38 +10,42 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIOverview.cpp
+ *  \file        lusan/view/si/SIMethod.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
 
-#include "lusan/view/si/SIOverview.hpp"
+#include "lusan/view/si/SIMethod.hpp"
 #include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIOverview.h"
+#include "ui/ui_SIMethod.h"
 
-#include "lusan/view/si/SIOverviewDetails.hpp"
-#include "lusan/view/si/SIOverviewLinks.hpp"
+#include "lusan/view/si/SIMethodDetails.hpp"
+#include "lusan/view/si/SIMethodParamDetails.hpp"
+#include "lusan/view/si/SIMethodList.hpp"
 
-SIOverviewWidget::SIOverviewWidget(QWidget* parent)
+SIMethodWidget::SIMethodWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui(new Ui::SIOverview)
+    , ui(new Ui::SIMethod)
 {
     ui->setupUi(this);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
 }
 
-SIOverview::SIOverview(QWidget* parent)
-    : QScrollArea       (parent)
-    , mOverviewDetails  (new SIOverviewDetails(this))
-    , mOverviewLinks    (new SIOverviewLinks(this))
-    , mWidget           (new SIOverviewWidget(this))
-    , ui                (*mWidget->ui)
+SIMethod::SIMethod(QWidget* parent)
+    : QScrollArea   (parent)
+    , mMethodDetails(new SIMethodDetails(this))
+    , mMethodList   (new SIMethodList(this))
+    , mParamDetails (new SIMethodParamDetails(this))
+    , mWidget       (new SIMethodWidget(this))
+    , ui            (*mWidget->ui)
 {
-    ui.horizontalLayout->addWidget(mOverviewDetails);
-    ui.horizontalLayout->addWidget(mOverviewLinks);
+    mParamDetails->setHidden(true);
+
+    ui.horizontalLayout->addWidget(mMethodList);
+    ui.horizontalLayout->addWidget(mMethodDetails);
 
     // setWidgetResizable(true);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -51,8 +55,8 @@ SIOverview::SIOverview(QWidget* parent)
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
 }
 
-SIOverview::~SIOverview(void)
+SIMethod::~SIMethod(void)
 {
-    ui.horizontalLayout->removeWidget(mOverviewLinks);
-    ui.horizontalLayout->removeWidget(mOverviewDetails);
+    ui.horizontalLayout->removeWidget(mMethodList);
+    ui.horizontalLayout->removeWidget(mMethodDetails);
 }

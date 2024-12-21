@@ -10,7 +10,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTypeList.hpp
+ *  \file        lusan/view/si/SIDataTypeList.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
@@ -30,7 +30,7 @@ SIDataTypeList::SIDataTypeList(QWidget *parent)
     font.setPointSize(10);
     this->setFont(font);
     ui->setupUi(this);
-    QTableWidget* table = ui->tableDataType;
+    QTableWidget* table = ui->tableTypes;
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);

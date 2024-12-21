@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>540</width>
+    <width>580</width>
     <height>600</height>
    </rect>
   </property>
@@ -45,7 +45,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="editDataName"/>
+         <widget class="QLineEdit" name="editName"/>
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_2">
@@ -182,7 +182,7 @@
          </widget>
         </item>
         <item row="4" column="1">
-         <widget class="QLineEdit" name="lineEdit">
+         <widget class="QLineEdit" name="editDepricated">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -192,15 +192,18 @@
          </widget>
         </item>
         <item row="4" column="0">
-         <widget class="QCheckBox" name="checkBox">
+         <widget class="QCheckBox" name="checkDepricated">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="layoutDirection">
+           <enum>Qt::LayoutDirection::RightToLeft</enum>
+          </property>
           <property name="text">
-           <string>Depricated?</string>
+           <string>Depricated:</string>
           </property>
          </widget>
         </item>
@@ -212,7 +215,7 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>editDataName</tabstop>
+  <tabstop>editName</tabstop>
   <tabstop>radioTypeStruct</tabstop>
   <tabstop>radioTypeEnum</tabstop>
   <tabstop>radioTypeImport</tabstop>
@@ -221,6 +224,8 @@
   <tabstop>comboContainerKey</tabstop>
   <tabstop>comboContainerValue</tabstop>
   <tabstop>textDescribe</tabstop>
+  <tabstop>checkDepricated</tabstop>
+  <tabstop>editDepricated</tabstop>
  </tabstops>
  <resources/>
  <connections/>

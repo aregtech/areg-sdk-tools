@@ -1,3 +1,5 @@
+#ifndef LUSAN_APPLICATION_SI_SIOVERVIEWLINKS_HPP
+#define LUSAN_APPLICATION_SI_SIOVERVIEWLINKS_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -10,28 +12,27 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTopicList.hpp
+ *  \file        lusan/view/si/SIOverviewLinks.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
-#include "lusan/view/si/SIDataTopicList.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTopicList.h"
+#include <QWidget>
 
-SIDataTopicList::SIDataTopicList(QWidget* parent)
-    : QWidget(parent)
-    , ui(new Ui::SIDataTopicList)
-{
-    QFont font{ this->font() };
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    QTableWidget* table = ui->tableTopics;
-    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+namespace Ui {
+    class SIOverviewLinks;
 }
+
+class SIOverviewLinks : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit SIOverviewLinks(QWidget* parent = nullptr);
+
+private:
+    Ui::SIOverviewLinks* ui;
+};
+
+#endif // LUSAN_APPLICATION_SI_SIOVERVIEWLINKS_HPP

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SIDataTypeFieldDetails</class>
- <widget class="QWidget" name="SIDataTypeFieldDetails">
+ <class>SIMethodParamDetails</class>
+ <widget class="QWidget" name="SIMethodParamDetails">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,7 +17,7 @@
    <item>
     <widget class="QGroupBox" name="groupBoxDetails">
      <property name="title">
-      <string>Details:</string>
+      <string>Parameter Details:</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
@@ -45,12 +45,12 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="editFieldName"/>
+         <widget class="QLineEdit" name="editParamName"/>
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>Field:</string>
+           <string>Parameter:</string>
           </property>
          </widget>
         </item>
@@ -63,7 +63,7 @@
            </sizepolicy>
           </property>
           <property name="title">
-           <string>Field Type &amp;&amp; Value</string>
+           <string>Type &amp;&amp; Default Value:</string>
           </property>
           <layout class="QFormLayout" name="formLayout_2">
            <item row="0" column="0">
@@ -74,17 +74,31 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QComboBox" name="comboFieldType"/>
+            <widget class="QComboBox" name="comboParamType"/>
            </item>
-           <item row="1" column="0">
+           <item row="2" column="0">
             <widget class="QLabel" name="label_5">
              <property name="text">
               <string>Value:</string>
              </property>
             </widget>
            </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="editDefaultValue"/>
+           </item>
            <item row="1" column="1">
-            <widget class="QLineEdit" name="editFieldValue"/>
+            <widget class="QCheckBox" name="checkDefaultValue">
+             <property name="text">
+              <string>Has Default Value</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Default:</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -168,9 +182,10 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>editFieldName</tabstop>
-  <tabstop>comboFieldType</tabstop>
-  <tabstop>editFieldValue</tabstop>
+  <tabstop>editParamName</tabstop>
+  <tabstop>comboParamType</tabstop>
+  <tabstop>checkDefaultValue</tabstop>
+  <tabstop>editDefaultValue</tabstop>
   <tabstop>textDescribe</tabstop>
   <tabstop>checkDepricated</tabstop>
   <tabstop>editDepricated</tabstop>
