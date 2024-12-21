@@ -24,6 +24,7 @@
 #include "lusan/view/si/SIOverview.hpp"
 #include "lusan/view/si/SIDataType.hpp"
 #include "lusan/view/si/SIDataTopic.hpp"
+#include "lusan/view/si/SIMethod.hpp"
 
 #include <QTabWidget>
 
@@ -39,6 +40,7 @@ private:
     SIOverview  mOverview;
     SIDataType  mDataType;
     SIDataTopic mDataTopic;
+    SIMethod    mMethod;
 };
 
 #endif // LUSAN_APPLICATION_SI_SERVICEINTERFACEVIEW_HPP

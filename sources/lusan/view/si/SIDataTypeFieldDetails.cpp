@@ -10,7 +10,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTypeFieldDetails.hpp
+ *  \file        lusan/view/si/SIDataTypeFieldDetails.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.

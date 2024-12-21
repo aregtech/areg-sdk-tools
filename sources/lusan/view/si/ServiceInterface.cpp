@@ -28,12 +28,14 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     , mOverview (this)
     , mDataType (this)
     , mDataTopic(this)
+    , mMethod   (this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the sioverview widget as the first tab
     mTabWidget.addTab(&mOverview, tr("Service Overview"));
     mTabWidget.addTab(&mDataType, tr("Data Types"));
     mTabWidget.addTab(&mDataTopic, tr("Data Topics"));
+    mTabWidget.addTab(&mMethod, tr("Methods"));
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);

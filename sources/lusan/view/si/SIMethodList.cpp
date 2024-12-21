@@ -10,27 +10,27 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTopicList.hpp
+ *  \file        lusan/view/si/SIMethodList.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
-#include "lusan/view/si/SIDataTopicList.hpp"
+#include "lusan/view/si/SIMethodList.hpp"
 #include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTopicList.h"
+#include "ui/ui_SIMethodList.h"
 
-SIDataTopicList::SIDataTopicList(QWidget* parent)
+SIMethodList::SIMethodList(QWidget *parent)
     : QWidget(parent)
-    , ui(new Ui::SIDataTopicList)
+    , ui(new Ui::SIMethodList)
 {
-    QFont font{ this->font() };
+    QFont font{this->font()};
     font.setBold(false);
     font.setItalic(false);
     font.setPointSize(10);
     this->setFont(font);
     ui->setupUi(this);
-    QTableWidget* table = ui->tableTopics;
+    QTableWidget* table = ui->tableMethods;
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);

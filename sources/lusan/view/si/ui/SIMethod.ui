@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SIOverview</class>
- <widget class="QWidget" name="SIOverview">
+ <class>SIMethod</class>
+ <widget class="QWidget" name="SIMethod">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -37,7 +37,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Service Interface Overview ...</string>
+    <string>Methods Editor ...</string>
    </property>
   </widget>
   <widget class="QWidget" name="horizontalLayoutWidget">
