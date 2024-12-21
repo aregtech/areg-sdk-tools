@@ -37,7 +37,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Methods Editor ...</string>
+    <string>Service Interface Methods Editor ...</string>
    </property>
   </widget>
   <widget class="QWidget" name="horizontalLayoutWidget">

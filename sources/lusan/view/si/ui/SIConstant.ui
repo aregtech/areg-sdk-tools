@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SIDataType</class>
- <widget class="QWidget" name="SIDataType">
+ <class>SIConstant</class>
+ <widget class="QWidget" name="SIConstant">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -37,7 +37,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Service Interface Data Type Editor ...</string>
+    <string>Service Interface Constants Editor ...</string>
    </property>
   </widget>
   <widget class="QWidget" name="horizontalLayoutWidget">

@@ -29,6 +29,7 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     , mDataType (this)
     , mDataTopic(this)
     , mMethod   (this)
+    , mConstant (this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the sioverview widget as the first tab
@@ -36,12 +37,15 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     mTabWidget.addTab(&mDataType, tr("Data Types"));
     mTabWidget.addTab(&mDataTopic, tr("Data Topics"));
     mTabWidget.addTab(&mMethod, tr("Methods"));
+    mTabWidget.addTab(&mConstant, tr("Constants"));
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
+    setWidgetResizable(true);
+
     // mOverview.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
     // mDataType.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
     // mDataTopic.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);

@@ -1,4 +1,7 @@
 list(APPEND LUSAN_UI
+    ${LUSAN}/view/si/ui/SIConstant.ui
+    ${LUSAN}/view/si/ui/SIConstantDetails.ui
+    ${LUSAN}/view/si/ui/SIConstantList.ui
     ${LUSAN}/view/si/ui/SIDataTopic.ui
     ${LUSAN}/view/si/ui/SIDataTopicDetails.ui
     ${LUSAN}/view/si/ui/SIDataTopicList.ui
