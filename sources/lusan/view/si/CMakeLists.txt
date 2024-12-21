@@ -2,6 +2,9 @@ include("${LUSAN}/view/si/ui/CMakeLists.txt")
 
 list(APPEND LUSAN_SRC
     ${LUSAN}/view/si/ServiceInterface.cpp
+    ${LUSAN}/view/si/SIConstant.cpp
+    ${LUSAN}/view/si/SIConstantDetails.cpp
+    ${LUSAN}/view/si/SIConstantList.cpp
     ${LUSAN}/view/si/SIDataTopic.cpp
     ${LUSAN}/view/si/SIDataTopicDetails.cpp
     ${LUSAN}/view/si/SIDataTopicList.cpp
@@ -20,6 +23,9 @@ list(APPEND LUSAN_SRC
 
 list(APPEND LUSAN_HDR
     ${LUSAN}/view/si/ServiceInterface.hpp
+    ${LUSAN}/view/si/SIConstant.hpp
+    ${LUSAN}/view/si/SIConstantDetails.hpp
+    ${LUSAN}/view/si/SIConstantList.hpp
     ${LUSAN}/view/si/SIDataTopic.hpp
     ${LUSAN}/view/si/SIDataTopicDetails.hpp
     ${LUSAN}/view/si/SIDataTopicList.hpp
