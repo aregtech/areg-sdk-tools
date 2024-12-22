@@ -9,6 +9,9 @@ list(APPEND LUSAN_UI
     ${LUSAN}/view/si/ui/SIDataTypeDetails.ui
     ${LUSAN}/view/si/ui/SIDataTypeFieldDetails.ui
     ${LUSAN}/view/si/ui/SIDataTypeList.ui
+    ${LUSAN}/view/si/ui/SIInclude.ui
+    ${LUSAN}/view/si/ui/SIIncludeDetails.ui
+    ${LUSAN}/view/si/ui/SIIncludeList.ui
     ${LUSAN}/view/si/ui/SIMethodDetails.ui
     ${LUSAN}/view/si/ui/SIMethodParamDetails.ui
     ${LUSAN}/view/si/ui/SIMethod.ui

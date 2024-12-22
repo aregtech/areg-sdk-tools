@@ -24,8 +24,10 @@
 #include "lusan/view/si/SIConstant.hpp"
 #include "lusan/view/si/SIDataType.hpp"
 #include "lusan/view/si/SIDataTopic.hpp"
+#include "lusan/view/si/SIInclude.hpp"
 #include "lusan/view/si/SIMethod.hpp"
 #include "lusan/view/si/SIOverview.hpp"
+
 
 #include <QTabWidget>
 
@@ -43,6 +45,7 @@ private:
     SIDataTopic mDataTopic;
     SIMethod    mMethod;
     SIConstant  mConstant;
+    SIInclude   mInclude;
 };
 
 #endif // LUSAN_APPLICATION_SI_SERVICEINTERFACEVIEW_HPP
