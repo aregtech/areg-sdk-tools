@@ -12,6 +12,9 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/si/SIDataTypeDetails.cpp
     ${LUSAN}/view/si/SIDataTypeFieldDetails.cpp
     ${LUSAN}/view/si/SIDataTypeList.cpp
+    ${LUSAN}/view/si/SIInclude.cpp
+    ${LUSAN}/view/si/SIIncludeDetails.cpp
+    ${LUSAN}/view/si/SIIncludeList.cpp
     ${LUSAN}/view/si/SIMethod.cpp
     ${LUSAN}/view/si/SIMethodDetails.cpp
     ${LUSAN}/view/si/SIMethodList.cpp
@@ -33,6 +36,9 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/si/SIDataTypeDetails.hpp
     ${LUSAN}/view/si/SIDataTypeFieldDetails.hpp
     ${LUSAN}/view/si/SIDataTypeList.hpp
+    ${LUSAN}/view/si/SIInclude.hpp
+    ${LUSAN}/view/si/SIIncludeDetails.hpp
+    ${LUSAN}/view/si/SIIncludeList.hpp
     ${LUSAN}/view/si/SIMethod.hpp
     ${LUSAN}/view/si/SIMethodDetails.hpp
     ${LUSAN}/view/si/SIMethodList.hpp
