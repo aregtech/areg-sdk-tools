@@ -18,15 +18,26 @@
  ************************************************************************/
 
 #include "lusan/view/common/NaviFileSystem.hpp"
+#include "ui/ui_NaviFileSystem.h"
 
-NaviFileSystem::NaviFileSystem(void)
-    : QTreeView     ()
+NaviFileSystem::NaviFileSystem(QWidget* parent /*= nullptr*/)
+    : QWidget       (parent)
     , mListFilters  ()
+    , ui            (new Ui::NaviFileSystem)
 {
+    ui->setupUi(this);
+    this->setBaseSize(MIN_WIDTH, MIN_HEIGHT);
+    this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
+    this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 }
 
-NaviFileSystem::NaviFileSystem(const QList<QString> & filters)
-    : QTreeView     ()
+NaviFileSystem::NaviFileSystem(const QList<QString> & filters, QWidget* parent /*= nullptr*/)
+    : QWidget       (parent)
     , mListFilters  (filters)
+    , ui            (new Ui::NaviFileSystem)
 {
+    ui->setupUi(this);
+    this->setBaseSize(MIN_WIDTH, MIN_HEIGHT);
+    this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
+    this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 }
