@@ -21,17 +21,25 @@
 
 #include <QList>
 #include <QString>
-#include <QTreeView>
+#include <QWidget>
 
-class NaviFileSystem : public QTreeView
+namespace Ui {
+    class NaviFileSystem;
+}
+
+class NaviFileSystem : public QWidget
 {
+private:
+    static constexpr uint32_t  MIN_WIDTH{280};
+    static constexpr uint32_t  MIN_HEIGHT{280};
+    
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    NaviFileSystem(void);
+    NaviFileSystem(QWidget* parent = nullptr);
     
-    NaviFileSystem(const QList<QString> & filters);
+    NaviFileSystem(const QList<QString> & filters, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // public methods
@@ -47,7 +55,8 @@ private:
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
-    QList<QString>  mListFilters;
+    QList<QString>      mListFilters;
+    Ui::NaviFileSystem* ui;
 };
 
 #endif  // LUSAN_VIEW_COMMON_NAVIFILESYSTEM_HPP
