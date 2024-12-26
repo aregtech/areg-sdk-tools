@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/model/common/OptionsManager.hpp"
 #include "lusan/view/common/Workspace.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
@@ -28,7 +29,7 @@ int main(int argc, char *argv[])
 {
     LusanApplication a(argc, argv);
     LusanApplication::setOrganizationName("Aregtech");
-    LusanApplication::setApplicationName("Lusan, GUI application for AREG Framework");
+    LusanApplication::setApplicationName("lusan");
     LusanApplication::setApplicationVersion(QT_VERSION_STR);
 
     QTranslator translator;
@@ -43,11 +44,13 @@ int main(int argc, char *argv[])
         }
     }
     
+    OptionsManager & opt = LusanApplication::getOptions();
+    opt.readOptions();
     MdiMainWindow w;
-    Workspace workspace;
+    Workspace workspace(opt);
     if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
-        w.setWorkspaceRoot(workspace.getRootDirectory());
+        w.setWorkspaceRoot(opt.getActiveWorkspace().getWorkspaceRoot());
         w.show();
         return a.exec();
     }

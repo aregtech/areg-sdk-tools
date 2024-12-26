@@ -19,41 +19,78 @@
  *
  ************************************************************************/
 #include <QDialog>
+#include "lusan/model/common/WorkspaceModel.hpp"
 
 namespace Ui {
 class DialogWorkspace;
 }
+
+class OptionsManager;
+
 QT_BEGIN_NAMESPACE
 QT_END_NAMESPACE
 
+/**
+ * \class   Workspace
+ * \brief   Represents the workspace setup dialog in the Lusan application.
+ **/
 class Workspace : public QDialog
 {
     Q_OBJECT
 public:
-    Workspace(QWidget * parent = nullptr);
+    /**
+     * \brief   Constructor.
+     * \param   options The options manager.
+     * \param   parent  The parent widget.
+     **/
+    Workspace(OptionsManager & options, QWidget * parent = nullptr);
+
+    /**
+     * \brief   Destructor.
+     **/
     virtual ~Workspace(void);
     
-public:
-    inline const QString & getRootDirectory( void ) const;
-    
-protected:
+protected slots:
+    /**
+     * \brief   Slot called when the dialog is accepted.
+     **/
     void onAccept(void);
     
+    /**
+     * \brief   Slot called when the dialog is rejected.
+     **/
     void onReject(void);
     
+    /**
+     * \brief   Slot called when the workspace path is changed.
+     * \param   newText The new workspace path.
+     **/
     void onWorskpacePathChanged(const QString & newText);
     
+    /**
+     * \brief   Slot called when the browse button is clicked.
+     * \param   checked Indicates whether the button is checked.
+     **/
     void onBrowseClicked(bool checked = true);
     
+    /**
+     * \brief   Slot called when the workspace index is changed.
+     * \param   index   The new workspace index.
+     **/
+    void onWorskpaceIndexChanged(int index);
+    
+    /**
+     * \brief   Slot called when the path selection is changed.
+     * \param   topLeft     The top-left index of the selection.
+     * \param   bottomRight The bottom-right index of the selection.
+     * \param   roles       The roles of the selection.
+     **/
+    void onPathSelectionChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles);
+    
 private:
-    Ui::DialogWorkspace * mWorkspace;
-    QString mRoot;
-    QString mDescribe;
+    OptionsManager &        mOptions;       //!< The options manager.
+    Ui::DialogWorkspace *   mWorkspace;     //!< The UI dialog for workspace setup.
+    WorkspaceModel          mModel;         //!< The model for workspace entries.
 };
-
-inline const QString & Workspace::getRootDirectory( void ) const
-{
-    return mRoot;
-}
 
 #endif // LUSAN_VIEW_COMMON_WORKSPACE_HPP
