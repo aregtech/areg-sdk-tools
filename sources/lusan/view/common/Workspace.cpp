@@ -18,24 +18,42 @@
  ************************************************************************/
 
 #include "lusan/view/common/Workspace.hpp"
+#include "lusan/model/common/OptionsManager.hpp"
+#include "lusan/model/common/WorkspaceEntry.hpp"
+#include "lusan/app/LusanApplication.hpp"
+
 #include "lusan/view/common/DirSelectionDialog.hpp"
 #include "ui/ui_workspace.h"
 
 #include <QFile>
 #include <QFileDialog>
 
-Workspace::Workspace(QWidget * parent /*= nullptr*/)
-    : QDialog(parent)
+Workspace::Workspace(OptionsManager& options, QWidget * parent /*= nullptr*/)
+    : QDialog   (parent)
+    , mOptions  (options)
     , mWorkspace(new Ui::DialogWorkspace)
+    , mModel    (options, nullptr)
 {
     mWorkspace->setupUi(static_cast<QDialog *>(this));
     mWorkspace->buttonBoxOkCancel->button(QDialogButtonBox::StandardButton::Ok)->setEnabled(false);
     mWorkspace->comboboxWorkspacePath->setEditable(true);
-    
+    mWorkspace->comboboxWorkspacePath->setInsertPolicy(QComboBox::InsertAtBottom);
+    mWorkspace->comboboxWorkspacePath->setDuplicatesEnabled(false);
+    mWorkspace->comboboxWorkspacePath->setModel(&mModel);
+    if (mModel.rowCount() != 0)
+    {
+        const WorkspaceEntry & entry{mModel.getData(0)};
+        mWorkspace->comboboxWorkspacePath->setCurrentText(entry.getWorkspaceRoot());
+        mWorkspace->editWorkspaceDescription->setPlainText(entry.getWorkspaceDescription());
+        mWorkspace->comboboxWorkspacePath->setCurrentIndex(0);
+    }
+
     connect(mWorkspace->buttonBoxOkCancel, &QDialogButtonBox::accepted, this, &Workspace::onAccept);
     connect(mWorkspace->buttonBoxOkCancel, &QDialogButtonBox::rejected, this, &Workspace::onReject);
-    connect(mWorkspace->comboboxWorkspacePath, &QComboBox::currentTextChanged, this, &Workspace::onWorskpacePathChanged);
     connect(mWorkspace->buttonBrowse, &QPushButton::clicked, this, &Workspace::onBrowseClicked);
+    connect(mWorkspace->comboboxWorkspacePath, &QComboBox::currentTextChanged, this, &Workspace::onWorskpacePathChanged);
+    connect(mWorkspace->comboboxWorkspacePath, &QComboBox::activated, this, &Workspace::onWorskpaceIndexChanged);
+    connect(&mModel, &QAbstractItemModel::dataChanged, this, &Workspace::onPathSelectionChanged);
 }
 
 Workspace::~Workspace(void)
@@ -46,6 +64,10 @@ Workspace::~Workspace(void)
 
 void Workspace::onAccept(void)
 {
+    QString path { mWorkspace->comboboxWorkspacePath->currentText() };
+    QString describe { mWorkspace->editWorkspaceDescription->toPlainText() };
+    mOptions.addWorkspace(path, describe);
+    mOptions.writeOptions();
     done(static_cast<int>(QDialog::DialogCode::Accepted));
 }
 
@@ -92,7 +114,41 @@ void Workspace::onBrowseClicked(bool checked /*= true*/)
     if (dlgFile.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
         QString newDir = dlgFile.directory().path();
-        mWorkspace->comboboxWorkspacePath->setCurrentText(newDir);
-        mRoot = newDir;
+        int index = mModel.find(newDir);            
+        if (index >= 0)
+        {
+            mModel.activate(index);
+            const WorkspaceEntry& entry = mModel.getData(index);
+            mWorkspace->comboboxWorkspacePath->setCurrentIndex(index);
+            mWorkspace->comboboxWorkspacePath->setCurrentText(newDir);
+            mWorkspace->editWorkspaceDescription->setPlainText(entry.getWorkspaceDescription());
+        }
+        else
+        {
+            WorkspaceEntry entry{ mModel.addWorkspaceEntry(newDir, "") };
+            mWorkspace->comboboxWorkspacePath->setCurrentIndex(0);
+            mWorkspace->comboboxWorkspacePath->setCurrentText(newDir);
+            mWorkspace->editWorkspaceDescription->setPlainText("");
+        }        
+    }
+}
+
+void Workspace::onWorskpaceIndexChanged(int index)
+{
+    const WorkspaceEntry& entry = mModel.getData(index);
+    mWorkspace->editWorkspaceDescription->setPlainText(entry.getWorkspaceDescription());
+    if (mWorkspace->comboboxWorkspacePath->currentText() != entry.getWorkspaceRoot())
+    {
+        mWorkspace->comboboxWorkspacePath->setCurrentText(entry.getWorkspaceRoot());
+    }
+}
+
+void Workspace::onPathSelectionChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles)
+{
+    const WorkspaceEntry & entry = mModel.getData(topLeft.row());
+    mWorkspace->editWorkspaceDescription->setPlainText(entry.getWorkspaceDescription());
+    if (mWorkspace->comboboxWorkspacePath->currentText() != entry.getWorkspaceRoot())
+    {
+        mWorkspace->comboboxWorkspacePath->setCurrentText(entry.getWorkspaceRoot());
     }
 }

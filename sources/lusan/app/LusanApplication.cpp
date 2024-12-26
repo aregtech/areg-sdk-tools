@@ -18,8 +18,41 @@
  ************************************************************************/
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/model/common/WorkspaceEntry.hpp"
+
+LusanApplication * LusanApplication::theApp{nullptr};
 
 LusanApplication::LusanApplication(int argc, char* argv[])
-    : QApplication(argc, argv)
+    : QApplication  (argc, argv)
+    , mOptions      ( )
 {
+    LusanApplication::theApp = this;
+}
+
+LusanApplication::~LusanApplication(void)
+{
+    LusanApplication::theApp = nullptr;
+}
+
+OptionsManager& LusanApplication::getOptions(void)
+{
+    Q_ASSERT(LusanApplication::theApp != nullptr);
+    return LusanApplication::theApp->mOptions;
+}
+
+LusanApplication& LusanApplication::getApplication(void)
+{
+    Q_ASSERT(LusanApplication::theApp != nullptr);
+    return (*LusanApplication::theApp);
+}
+
+WorkspaceEntry LusanApplication::getActiveWorkspace(void)
+{
+    Q_ASSERT(LusanApplication::theApp != nullptr);
+    return LusanApplication::theApp->mOptions.getActiveWorkspace();
+}
+
+bool LusanApplication::isInitialized(void)
+{
+    return (LusanApplication::theApp != nullptr);
 }

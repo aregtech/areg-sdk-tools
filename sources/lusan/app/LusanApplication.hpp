@@ -20,12 +20,55 @@
  ************************************************************************/
 
 #include <QApplication>
+#include "lusan/model/common/OptionsManager.hpp"
 
+/**
+ * \class   LusanApplication
+ * \brief   Represents the main application object for managing GUI-related functionality.
+ **/
 class LusanApplication : public QApplication
 {
 public:
+    /**
+     * \brief   Constructor.
+     * \param   argc    The number of command-line arguments.
+     * \param   argv    The array of command-line arguments.
+     **/
     LusanApplication(int argc, char* argv[]);
-    virtual ~LusanApplication(void) = default;
+
+    /**
+     * \brief   Destructor.
+     **/
+    virtual ~LusanApplication(void);
+    
+public:
+    /**
+     * \brief   Gets the singleton instance of the application.
+     * \return  Reference to the LusanApplication instance.
+     **/
+    static LusanApplication& getApplication(void);
+    
+    /**
+     * \brief   Gets the options manager.
+     * \return  Reference to the OptionsManager instance.
+     **/
+    static OptionsManager& getOptions(void);
+    
+    /**
+     * \brief   Gets the active workspace.
+     * \return  The active WorkspaceEntry.
+     **/
+    static WorkspaceEntry getActiveWorkspace(void);
+    
+    /**
+     * \brief   Checks if the application is initialized.
+     * \return  True if the application is initialized, false otherwise.
+     **/
+    static bool isInitialized(void);
+    
+private:
+    static LusanApplication * theApp;   //!< The singleton instance of the application.
+    OptionsManager  mOptions;           //!< The options manager.
 };
 
 #endif // LUSAN_APP_LUSANAPPLICATION_HPP
