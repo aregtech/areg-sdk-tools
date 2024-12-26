@@ -18,7 +18,7 @@
  ************************************************************************/
 
 #include "lusan/model/common/WorkspaceModel.hpp"
-#include "lusan/model/common/OptionsManager.hpp"
+#include "lusan/data/common/OptionsManager.hpp"
 #include <algorithm>
 
 const WorkspaceEntry WorkspaceModel::InvalidWorkspace{};

@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/common/OptionsManager.hpp
+ *  \file        lusan/data/common/OptionsManager.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Dialog to select folder.
@@ -20,7 +20,7 @@
  ************************************************************************/
 
 #include <list>
-#include "lusan/model/common/WorkspaceEntry.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 
 class QXmlStreamReader;
 class QXmlStreamWriter;
