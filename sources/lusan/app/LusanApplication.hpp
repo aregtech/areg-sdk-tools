@@ -20,7 +20,7 @@
  ************************************************************************/
 
 #include <QApplication>
-#include "lusan/model/common/OptionsManager.hpp"
+#include "lusan/data/common/OptionsManager.hpp"
 
 /**
  * \class   LusanApplication

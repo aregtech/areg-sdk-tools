@@ -1,5 +1,5 @@
-#ifndef LUSAN_MODEL_COMMON_WORKSPACEENTRY_HPP
-#define LUSAN_MODEL_COMMON_WORKSPACEENTRY_HPP
+#ifndef LUSAN_DATA_COMMON_WORKSPACEENTRY_HPP
+#define LUSAN_DATA_COMMON_WORKSPACEENTRY_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/common/WorkspaceEntry.hpp
+ *  \file        lusan/data/common/WorkspaceEntry.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Dialog to select folder.
@@ -330,4 +330,4 @@ inline bool WorkspaceEntry::isValid(void) const
     return (mId != 0) && (mLastAccessed != 0);
 }
 
-#endif  // LUSAN_MODEL_COMMON_WORKSPACEENTRY_HPP
+#endif  // LUSAN_DATA_COMMON_WORKSPACEENTRY_HPP

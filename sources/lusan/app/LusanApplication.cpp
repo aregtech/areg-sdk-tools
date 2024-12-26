@@ -18,7 +18,7 @@
  ************************************************************************/
 
 #include "lusan/app/LusanApplication.hpp"
-#include "lusan/model/common/WorkspaceEntry.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 
 LusanApplication * LusanApplication::theApp{nullptr};
 

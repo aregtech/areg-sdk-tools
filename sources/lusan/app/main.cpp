@@ -18,7 +18,7 @@
  ************************************************************************/
 
 #include "lusan/app/LusanApplication.hpp"
-#include "lusan/model/common/OptionsManager.hpp"
+#include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/view/common/Workspace.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 

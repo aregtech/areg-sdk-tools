@@ -18,8 +18,8 @@
  ************************************************************************/
 
 #include "lusan/view/common/Workspace.hpp"
-#include "lusan/model/common/OptionsManager.hpp"
-#include "lusan/model/common/WorkspaceEntry.hpp"
+#include "lusan/data/common/OptionsManager.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/app/LusanApplication.hpp"
 
 #include "lusan/view/common/DirSelectionDialog.hpp"

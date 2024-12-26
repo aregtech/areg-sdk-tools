@@ -10,14 +10,14 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/common/OptionsManager.cpp
+ *  \file        lusan/data/common/OptionsManager.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Dialog to select folder.
  *
  ************************************************************************/
 
-#include "lusan/model/common/OptionsManager.hpp"
+#include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
 #include <QDir>
