@@ -6,6 +6,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/data/common/DataTypePrimitive.cpp
     ${LUSAN}/data/common/EnumEntry.cpp
     ${LUSAN}/data/common/OptionsManager.cpp
+    ${LUSAN}/data/common/ParamBase.cpp
     ${LUSAN}/data/common/WorkspaceEntry.cpp
 )
 
@@ -17,5 +18,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/DataTypePrimitive.hpp
     ${LUSAN}/data/common/EnumEntry.hpp
     ${LUSAN}/data/common/OptionsManager.hpp
+    ${LUSAN}/data/common/ParamBase.hpp
     ${LUSAN}/data/common/WorkspaceEntry.hpp
 )
