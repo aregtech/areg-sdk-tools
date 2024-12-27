@@ -105,14 +105,14 @@ public:
      * \param   xml         The XML stream reader.
      * \return  True if the workspace data was successfully read, false otherwise.
      **/
-    bool readWorkspace(QXmlStreamReader& xml);
+    bool readFromXml(QXmlStreamReader& xml);
 
     /**
      * \brief   Writes the workspace data to an XML stream.
      * \param   xml         The XML stream writer.
      * \return  True if the workspace data was successfully written, false otherwise.
      **/
-    bool writeWorkspace(QXmlStreamWriter& xml) const;
+    bool writeToXml(QXmlStreamWriter& xml) const;
 
     /**
      * \brief   Sets the root directory of the workspace.

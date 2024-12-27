@@ -139,7 +139,7 @@
          </widget>
         </item>
         <item row="4" column="0">
-         <widget class="QCheckBox" name="checkDepricated">
+         <widget class="QCheckBox" name="checkDeprecated">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -150,12 +150,12 @@
            <enum>Qt::LayoutDirection::RightToLeft</enum>
           </property>
           <property name="text">
-           <string>Depricated:</string>
+           <string>Deprecated:</string>
           </property>
          </widget>
         </item>
         <item row="4" column="1">
-         <widget class="QLineEdit" name="editDepricated">
+         <widget class="QLineEdit" name="editDeprecated">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -210,8 +210,8 @@
   <tabstop>radioBroadcast</tabstop>
   <tabstop>comboReply</tabstop>
   <tabstop>textDescribe</tabstop>
-  <tabstop>checkDepricated</tabstop>
-  <tabstop>editDepricated</tabstop>
+  <tabstop>checkDeprecated</tabstop>
+  <tabstop>editDeprecated</tabstop>
  </tabstops>
  <resources/>
  <connections/>

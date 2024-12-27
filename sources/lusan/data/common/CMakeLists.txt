@@ -1,9 +1,21 @@
 list(APPEND LUSAN_SRC
+    ${LUSAN}/data/common/DataTypeBase.cpp
+    ${LUSAN}/data/common/DataTypeBasic.cpp
+    ${LUSAN}/data/common/DataTypeCustom.cpp
+    ${LUSAN}/data/common/DataTypeEnum.cpp
+    ${LUSAN}/data/common/DataTypePrimitive.cpp
+    ${LUSAN}/data/common/EnumEntry.cpp
     ${LUSAN}/data/common/OptionsManager.cpp
     ${LUSAN}/data/common/WorkspaceEntry.cpp
 )
 
 list(APPEND LUSAN_HDR
+    ${LUSAN}/data/common/DataTypeBase.hpp
+    ${LUSAN}/data/common/DataTypeBasic.hpp
+    ${LUSAN}/data/common/DataTypeCustom.hpp
+    ${LUSAN}/data/common/DataTypeEnum.hpp
+    ${LUSAN}/data/common/DataTypePrimitive.hpp
+    ${LUSAN}/data/common/EnumEntry.hpp
     ${LUSAN}/data/common/OptionsManager.hpp
     ${LUSAN}/data/common/WorkspaceEntry.hpp
 )

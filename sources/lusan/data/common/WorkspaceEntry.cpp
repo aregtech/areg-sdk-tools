@@ -52,7 +52,7 @@ WorkspaceEntry::WorkspaceEntry(QXmlStreamReader& xml)
     , mIncludes()
     , mDelivery()
 {
-    readWorkspace(xml);
+    readFromXml(xml);
 }
 
 WorkspaceEntry::WorkspaceEntry(const WorkspaceEntry& src)
@@ -122,7 +122,7 @@ bool WorkspaceEntry::operator < (const WorkspaceEntry& other) const
     return (mLastAccessed < other.mLastAccessed);
 }
 
-bool WorkspaceEntry::readWorkspace(QXmlStreamReader& xml)
+bool WorkspaceEntry::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() != NELusanCommon::xmlElementWorkspace)
     {
@@ -229,7 +229,7 @@ void WorkspaceEntry::_readDirectories(QXmlStreamReader& xml)
     }
 }
 
-bool WorkspaceEntry::writeWorkspace(QXmlStreamWriter& xml) const
+bool WorkspaceEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(NELusanCommon::xmlElementWorkspace);
 
