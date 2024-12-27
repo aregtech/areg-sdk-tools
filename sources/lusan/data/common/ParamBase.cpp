@@ -28,7 +28,7 @@ ParamBase::ParamBase(void)
 {
 }
 
-ParamBase::ParamBase(uint32_t id, const QString& name, std::shared_ptr<DataTypeBase> type, bool isDeprecated, const QString& description, const QString& deprecateHint)
+ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint)
     : mId(id)
     , mName(name)
     , mType(type)
@@ -90,21 +90,12 @@ ParamBase& ParamBase::operator=(ParamBase&& other) noexcept
 
 bool ParamBase::operator==(const ParamBase& other) const
 {
-    bool result{ this == &other };
-    if (this != &other)
-    {
-        if ((mType != nullptr) && (other.mType != nullptr))
-        {
-            result = (mName == other.mName) && (mType == other.mType) && ((*mType) == (*other.mType));
-        }
-    }
-
-    return result;
+    return (this != &other ? (mName == other.mName) && (mType == other.mType) : true);
 }
 
 bool ParamBase::operator!=(const ParamBase& other) const
 {
-    return !(*this == other);
+    return (this != &other ? (mName != other.mName) || (mType != other.mType) : false);
 }
 
 uint32_t ParamBase::getId() const
@@ -127,12 +118,12 @@ void ParamBase::setName(const QString& name)
     mName = name;
 }
 
-std::shared_ptr<DataTypeBase> ParamBase::getType() const
+const QString & ParamBase::getType() const
 {
     return mType;
 }
 
-void ParamBase::setType(std::shared_ptr<DataTypeBase> type)
+void ParamBase::setType(const QString & type)
 {
     mType = type;
 }
@@ -169,5 +160,5 @@ void ParamBase::setDeprecateHint(const QString& deprecateHint)
 
 bool ParamBase::isValid() const
 {
-    return mId != 0 && !mName.isEmpty() && mType != nullptr;
+    return (mId != 0) && (mName.isEmpty() == false ) && (mType.isEmpty() == false);
 }

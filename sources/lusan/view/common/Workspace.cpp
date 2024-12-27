@@ -52,8 +52,15 @@ Workspace::Workspace(OptionsManager& options, QWidget * parent /*= nullptr*/)
     connect(mWorkspace->buttonBoxOkCancel, &QDialogButtonBox::rejected, this, &Workspace::onReject);
     connect(mWorkspace->buttonBrowse, &QPushButton::clicked, this, &Workspace::onBrowseClicked);
     connect(mWorkspace->comboboxWorkspacePath, &QComboBox::currentTextChanged, this, &Workspace::onWorskpacePathChanged);
+    connect(mWorkspace->comboboxWorkspacePath, &QComboBox::editTextChanged, this, &Workspace::onWorskpacePathChanged);
     connect(mWorkspace->comboboxWorkspacePath, &QComboBox::activated, this, &Workspace::onWorskpaceIndexChanged);
     connect(&mModel, &QAbstractItemModel::dataChanged, this, &Workspace::onPathSelectionChanged);
+    
+    QString text {mWorkspace->comboboxWorkspacePath->currentText()};
+    if (text.isEmpty() == false)
+    {
+        onWorskpacePathChanged(text);
+    }
 }
 
 Workspace::~Workspace(void)

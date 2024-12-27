@@ -29,7 +29,6 @@
  **/
 class ParamBase
 {
-    using DataType = std::shared_ptr<DataTypeBase>;
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -43,12 +42,12 @@ protected:
      * \brief   Constructor with initialization.
      * \param   id              The ID of the parameter.
      * \param   name            The name of the parameter.
-     * \param   type            The type of the parameter.
+     * \param   type            The data type name of the parameter.
      * \param   isDeprecated    The deprecated flag of the parameter.
      * \param   description     The description of the parameter.
      * \param   deprecateHint   The deprecation hint of the parameter.
      **/
-    ParamBase(uint32_t id, const QString& name, std::shared_ptr<DataTypeBase> type, bool isDeprecated, const QString& description, const QString& deprecateHint);
+    ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint);
 
     /**
      * \brief   Copy constructor.
@@ -124,15 +123,15 @@ public:
 
     /**
      * \brief   Gets the type of the parameter.
-     * \return  The type of the parameter.
+     * \return  The data type name of the parameter.
      **/
-    std::shared_ptr<DataTypeBase> getType() const;
+    const QString& getType() const;
 
     /**
      * \brief   Sets the type of the parameter.
-     * \param   type    The type of the parameter.
+     * \param   type    The data type name of the parameter.
      **/
-    void setType(std::shared_ptr<DataTypeBase> type);
+    void setType(const QString & type);
 
     /**
      * \brief   Gets the deprecated flag of the parameter.
@@ -170,16 +169,17 @@ public:
      **/
     void setDeprecateHint(const QString& deprecateHint);
 
-    /**
-     * \brief   Checks if the parameter is valid.
-     * \return  True if the parameter is valid, false otherwise.
-     **/
-    bool isValid() const;
-
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const;
+
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
@@ -196,10 +196,10 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
-private:
+protected:
     uint32_t    mId;            //!< The ID of the parameter.
     QString     mName;          //!< The name of the parameter.
-    DataType    mType;          //!< The type of the parameter.
+    QString     mType;          //!< The name of data type of the parameter.
     bool        mIsDeprecated;  //!< The deprecated flag of the parameter.
     QString     mDescription;   //!< The description of the parameter.
     QString     mDeprecateHint; //!< The deprecation hint of the parameter.

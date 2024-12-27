@@ -25,19 +25,26 @@
 #include <QLocale>
 #include <QTranslator>
 
+namespace
+{
+    const QString _organization {"Aregtech"};   //!< Name of organization
+    const QString _application  {"lusan"};      //!< Name of applicatin
+    const QString _version      {"1.0.0"};      //!< Application version
+}
+
 int main(int argc, char *argv[])
 {
     LusanApplication a(argc, argv);
-    LusanApplication::setOrganizationName("Aregtech");
-    LusanApplication::setApplicationName("lusan");
-    LusanApplication::setApplicationVersion(QT_VERSION_STR);
+    LusanApplication::setOrganizationName(_organization);
+    LusanApplication::setApplicationName(_application);
+    LusanApplication::setApplicationVersion(_version);
 
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages)
     {
         const QString baseName = "Lusan_" + QLocale(locale).name();
-        if (translator.load(":/ts/" + baseName))
+        if (translator.load(":/res/" + baseName))
         {
             a.installTranslator(&translator);
             break;

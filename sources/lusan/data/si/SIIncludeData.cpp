@@ -20,43 +20,43 @@
 #include "lusan/data/si/SIIncludeData.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-const SIIncludeEntry SIIncludeData::InvalidInclude;
+const IncludeEntry SIIncludeData::InvalidInclude;
 
 SIIncludeData::SIIncludeData(void)
 {
 }
 
-SIIncludeData::SIIncludeData(const QList<SIIncludeEntry>& includes)
-    : mIncludes(includes)
+SIIncludeData::SIIncludeData(const QList<IncludeEntry>& entries)
+    : mIncludes(entries)
 {
 }
 
-const QList<SIIncludeEntry>& SIIncludeData::getIncludes(void) const
+const QList<IncludeEntry>& SIIncludeData::getIncludes(void) const
 {
     return mIncludes;
 }
 
-void SIIncludeData::setIncludes(const QList<SIIncludeEntry>& includes)
+void SIIncludeData::setIncludes(const QList<IncludeEntry>& entries)
 {
-    mIncludes = includes;
+    mIncludes = entries;
 }
 
-int SIIncludeData::findInclude(const SIIncludeEntry& include) const
+int SIIncludeData::findInclude(const IncludeEntry& entry) const
 {
-    return mIncludes.indexOf(include);
+    return mIncludes.indexOf(entry);
 }
 
-void SIIncludeData::addInclude(const SIIncludeEntry& include)
+void SIIncludeData::addInclude(const IncludeEntry& entry)
 {
-    if (!mIncludes.contains(include))
+    if (!mIncludes.contains(entry))
     {
-        mIncludes.append(include);
+        mIncludes.append(entry);
     }
 }
 
-bool SIIncludeData::removeInclude(const SIIncludeEntry& include)
+bool SIIncludeData::removeInclude(const IncludeEntry& entry)
 {
-    int index = mIncludes.indexOf(include);
+    int index = mIncludes.indexOf(entry);
     if (index != -1)
     {
         mIncludes.removeAt(index);
@@ -66,14 +66,15 @@ bool SIIncludeData::removeInclude(const SIIncludeEntry& include)
     return false;
 }
 
-bool SIIncludeData::replaceInclude(const SIIncludeEntry& oldInclude, const SIIncludeEntry& newInclude)
+bool SIIncludeData::replaceInclude(const IncludeEntry& oldEntry, const IncludeEntry& newEntry)
 {
-    int index = mIncludes.indexOf(oldInclude);
+    int index = mIncludes.indexOf(oldEntry);
     if (index != -1)
     {
-        mIncludes[index] = newInclude;
+        mIncludes[index] = newEntry;
         return true;
     }
+
     return false;
 }
 
@@ -97,7 +98,7 @@ bool SIIncludeData::exists(const QString& location) const
     return findInclude(location) != -1;
 }
 
-const SIIncludeEntry & SIIncludeData::getInclude(const QString& location) const
+const IncludeEntry & SIIncludeData::getInclude(const QString& location) const
 {
     int index = findInclude(location);
     return (index != -1 ? mIncludes[index] : InvalidInclude);
@@ -111,7 +112,25 @@ bool SIIncludeData::removeInclude(const QString& location)
         mIncludes.removeAt(index);
         return true;
     }
+
     return false;
+}
+
+void SIIncludeData::addInclude(const IncludeEntry& elem, bool ascending)
+{
+    if (mIncludes.contains(elem) == false)
+    {
+        mIncludes.append(elem);
+        sortIncludes(ascending);
+    }
+}
+
+void SIIncludeData::sortIncludes(bool ascending)
+{
+    std::sort(mIncludes.begin(), mIncludes.end(), [ascending](const IncludeEntry& left, const IncludeEntry& right)
+        {
+            return (ascending ? left < right : left > right);
+        });
 }
 
 bool SIIncludeData::readFromXml(QXmlStreamReader& xml)
@@ -127,7 +146,7 @@ bool SIIncludeData::readFromXml(QXmlStreamReader& xml)
         {
             if (xml.name() == XmlSI::xmlSIElementLocation)
             {
-                SIIncludeEntry entry;
+                IncludeEntry entry;
                 if (entry.readFromXml(xml))
                 {
                     addInclude(entry);
@@ -144,9 +163,9 @@ bool SIIncludeData::readFromXml(QXmlStreamReader& xml)
 void SIIncludeData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementIncludeList);
-    for (const SIIncludeEntry& include : mIncludes)
+    for (const IncludeEntry& entry : mIncludes)
     {
-        include.writeToXml(xml);
+        entry.writeToXml(xml);
     }
 
     xml.writeEndElement();
