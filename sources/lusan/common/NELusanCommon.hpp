@@ -108,6 +108,7 @@ namespace NELusanCommon
 
     constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
     constexpr const char * const xmlElementFile             { "File" };
+
 }
 
 #endif  // LUSAN_COMMON_NELUSANCOMMON_HPP

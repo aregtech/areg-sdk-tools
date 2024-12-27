@@ -225,7 +225,7 @@ void OptionsManager::writeOptions(void)
                 xml.writeStartElement(NELusanCommon::xmlElementWorkspaceList);
                 for (const auto& entry : mWorkspaces)
                 {
-                    entry.writeWorkspace(xml);
+                    entry.writeToXml(xml);
                 }
                 xml.writeEndElement();
             xml.writeEndElement();
@@ -309,7 +309,7 @@ void OptionsManager::_readWorkspaceList(QXmlStreamReader& xml)
             if (xmlName == NELusanCommon::xmlElementWorkspace)
             {
                 WorkspaceEntry workspace;
-                workspace.readWorkspace(xml);
+                workspace.readFromXml(xml);
                 if (workspace.isValid())
                 {
                     mWorkspaces.push_back(workspace);
