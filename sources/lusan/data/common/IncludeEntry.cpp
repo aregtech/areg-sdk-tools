@@ -10,17 +10,18 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/si/SIIncludeEntry.cpp
+ *  \file        lusan/data/si/IncludeEntry.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Include Entry.
  *
  ************************************************************************/
 
-#include "lusan/data/si/SIIncludeEntry.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/common/XmlSI.hpp"
+#include "IncludeEntry.hpp"
 
-SIIncludeEntry::SIIncludeEntry(void)
+IncludeEntry::IncludeEntry(void)
     : mLocation     ( )
     , mEntryId      (0)
     , mDescription  ( )
@@ -29,7 +30,7 @@ SIIncludeEntry::SIIncludeEntry(void)
 {
 }
 
-SIIncludeEntry::SIIncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint)
+IncludeEntry::IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint)
     : mLocation     (path)
     , mEntryId      (id)
     , mDescription  (description)
@@ -38,7 +39,7 @@ SIIncludeEntry::SIIncludeEntry(const QString& path, uint32_t id, const QString& 
 {
 }
 
-SIIncludeEntry::SIIncludeEntry(const SIIncludeEntry& other)
+IncludeEntry::IncludeEntry(const IncludeEntry& other)
     : mLocation     (other.mLocation)
     , mEntryId      (other.mEntryId)
     , mDescription  (other.mDescription)
@@ -47,7 +48,7 @@ SIIncludeEntry::SIIncludeEntry(const SIIncludeEntry& other)
 {
 }
 
-SIIncludeEntry::SIIncludeEntry(SIIncludeEntry&& other) noexcept
+IncludeEntry::IncludeEntry(IncludeEntry&& other) noexcept
     : mLocation     (std::move(other.mLocation))
     , mEntryId      (other.mEntryId)
     , mDescription  (std::move(other.mDescription))
@@ -58,7 +59,7 @@ SIIncludeEntry::SIIncludeEntry(SIIncludeEntry&& other) noexcept
     other.mDeprecated   = false;
 }
 
-SIIncludeEntry& SIIncludeEntry::operator=(const SIIncludeEntry& other)
+IncludeEntry& IncludeEntry::operator=(const IncludeEntry& other)
 {
     if (this != &other)
     {
@@ -72,7 +73,7 @@ SIIncludeEntry& SIIncludeEntry::operator=(const SIIncludeEntry& other)
     return *this;
 }
 
-SIIncludeEntry& SIIncludeEntry::operator=(SIIncludeEntry&& other) noexcept
+IncludeEntry& IncludeEntry::operator=(IncludeEntry&& other) noexcept
 {
     if (this != &other)
     {
@@ -89,78 +90,88 @@ SIIncludeEntry& SIIncludeEntry::operator=(SIIncludeEntry&& other) noexcept
     return *this;
 }
 
-bool SIIncludeEntry::operator==(const SIIncludeEntry& other) const
+bool IncludeEntry::operator==(const IncludeEntry& other) const
 {
     return (mLocation == other.mLocation);
 }
 
-bool SIIncludeEntry::operator!=(const SIIncludeEntry& other) const
+bool IncludeEntry::operator!=(const IncludeEntry& other) const
 {
     return (mLocation != other.mLocation);
 }
 
-bool SIIncludeEntry::isValid(void) const
+bool IncludeEntry::operator < (const IncludeEntry& other) const
+{
+    return (mLocation < other.mLocation);
+}
+
+bool IncludeEntry::operator > (const IncludeEntry& other) const
+{
+    return (mLocation > other.mLocation);
+}
+
+bool IncludeEntry::isValid(void) const
 {
     return !mLocation.isEmpty();
 }
 
-const QString& SIIncludeEntry::getLocation(void) const
+const QString& IncludeEntry::getLocation(void) const
 {
     return mLocation;
 }
 
-void SIIncludeEntry::setLocation(const QString& path)
+void IncludeEntry::setLocation(const QString& path)
 {
     mLocation = path;
 }
 
-uint32_t SIIncludeEntry::getId(void) const
+uint32_t IncludeEntry::getId(void) const
 {
     return mEntryId;
 }
 
-void SIIncludeEntry::setId(uint32_t id)
+void IncludeEntry::setId(uint32_t id)
 {
     mEntryId = id;
 }
 
-const QString& SIIncludeEntry::getDescription(void) const
+const QString& IncludeEntry::getDescription(void) const
 {
     return mDescription;
 }
 
-void SIIncludeEntry::setDescription(const QString& description)
+void IncludeEntry::setDescription(const QString& description)
 {
     mDescription = description;
 }
 
-bool SIIncludeEntry::isDeprecated(void) const
+bool IncludeEntry::isDeprecated(void) const
 {
     return mDeprecated;
 }
 
-void SIIncludeEntry::setDeprecated(bool deprecated)
+void IncludeEntry::setDeprecated(bool deprecated)
 {
     mDeprecated = deprecated;
 }
 
-const QString& SIIncludeEntry::getDeprecationHint(void) const
+const QString& IncludeEntry::getDeprecationHint(void) const
 {
     return mDeprecateHint;
 }
 
-void SIIncludeEntry::setDeprecationHint(const QString& deprecationHint)
+void IncludeEntry::setDeprecationHint(const QString& deprecationHint)
 {
     mDeprecateHint = deprecationHint;
 }
 
-void SIIncludeEntry::deprecateEntry(const QString& deprecationHint)
+void IncludeEntry::deprecateEntry(const QString& deprecationHint)
 {
     mDeprecated     = true;
     mDeprecateHint  = deprecationHint;
 }
 
-bool SIIncludeEntry::readFromXml(QXmlStreamReader& xml)
+bool IncludeEntry::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() != XmlSI::xmlSIElementLocation)
     {
@@ -190,15 +201,22 @@ bool SIIncludeEntry::readFromXml(QXmlStreamReader& xml)
     return true;
 }
 
-void SIIncludeEntry::writeToXml(QXmlStreamWriter& xml) const
+void IncludeEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementLocation);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mEntryId));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mLocation);
+    if (mDeprecated)
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
+    }
     xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, mDeprecated ? "true" : "false");
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
+    if (mDeprecated && (mDeprecateHint.isEmpty() == false))
+    {
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
+    }
 
     xml.writeEndElement();
 }

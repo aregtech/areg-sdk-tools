@@ -27,6 +27,8 @@ namespace XmlSI
     /**
      * \brief   Common XML element names of the Service Interface data.
      **/
+    constexpr const char* const xmlSIElementConstant        { "Constant" };
+    constexpr const char* const xmlSIElementConstantList    { "ConstantList" };
     constexpr const char* const xmlSIElementDataType        { "DataType" };
     constexpr const char* const xmlSIElementDeprecateHint   { "DeprecateHint" };
     constexpr const char* const xmlSIElementDescription     { "Description" };
@@ -39,6 +41,7 @@ namespace XmlSI
     /**
      * \brief   Common XML element attributes of the Service Interface data.
      **/
+    constexpr const char* const xmlSIAttributeDataType      { "DataType" };
     constexpr const char* const xmlSIAttributeID            { "ID" };
     constexpr const char* const xmlSIAttributeIsDeprecated  { "IsDeprecated" };
     constexpr const char* const xmlSIAttributeName          { "Name" };

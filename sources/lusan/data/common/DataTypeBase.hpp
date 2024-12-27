@@ -139,12 +139,6 @@ public:
     eCategory getCategory(void) const;
 
     /**
-     * \brief   Checks if the data type is valid.
-     * \return  True if the data type is valid, false otherwise.
-     **/
-    bool isValid(void) const;
-
-    /**
      * \brief   Checks if the data type is a primitive type.
      * \return  True if the data type is a primitive type, false otherwise.
      **/
@@ -213,6 +207,12 @@ public:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Checks if the data type is valid.
+     * \return  True if the data type is valid, false otherwise.
+     **/
+    virtual bool isValid(void) const;
+
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.

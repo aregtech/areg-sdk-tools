@@ -93,6 +93,12 @@ public:
     void setId(uint32_t id);
 
     /**
+     * \brief   Checks if the data type is valid.
+     * \return  True if the data type is valid, false otherwise.
+     **/
+    virtual bool isValid(void) const override;
+
+    /**
      * \brief   Gets the type of the data type.
      * \return  The type of the data type.
      **/

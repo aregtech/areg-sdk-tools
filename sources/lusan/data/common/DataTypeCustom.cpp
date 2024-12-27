@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "DataTypeCustom.hpp"
 
 DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category)
     : DataTypeBase(eCategory::CustomDefined)
@@ -72,6 +73,11 @@ uint32_t DataTypeCustom::getId() const
 void DataTypeCustom::setId(uint32_t id)
 {
     mId = id;
+}
+
+bool DataTypeCustom::isValid(void) const
+{
+    return (mId != 0) && DataTypeBase::isValid();
 }
 
 QString DataTypeCustom::getType() const

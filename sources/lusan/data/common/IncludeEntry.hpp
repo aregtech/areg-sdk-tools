@@ -1,5 +1,5 @@
-#ifndef LUSAN_DATA_SI_SIINCLUDEENTRY_HPP
-#define LUSAN_DATA_SI_SIINCLUDEENTRY_HPP
+#ifndef LUSAN_DATA_SI_INCLUDEENTRY_HPP
+#define LUSAN_DATA_SI_INCLUDEENTRY_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/si/SIIncludeEntry.hpp
+ *  \file        lusan/data/si/IncludeEntry.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Include Entry.
@@ -24,10 +24,10 @@
 #include <QXmlStreamWriter>
 
  /**
-  * \class   SIIncludeEntry
+  * \class   IncludeEntry
   * \brief   Represents an include entry for service interfaces.
   **/
-class SIIncludeEntry
+class IncludeEntry
 {
 //////////////////////////////////////////////////////////////////////////
 // Public methods
@@ -36,7 +36,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIIncludeEntry(void);
+    IncludeEntry(void);
 
     /**
      * \brief   Parameterized constructor.
@@ -46,19 +46,19 @@ public:
      * \param   deprecated      The deprecated flag.
      * \param   deprecationHint The deprecation hint.
      **/
-    SIIncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint);
+    IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint);
 
     /**
      * \brief   Copy constructor.
-     * \param   other   The other SIIncludeEntry to copy from.
+     * \param   other   The other IncludeEntry to copy from.
      **/
-    SIIncludeEntry(const SIIncludeEntry& other);
+    IncludeEntry(const IncludeEntry& other);
 
     /**
      * \brief   Move constructor.
-     * \param   other   The other SIIncludeEntry to move from.
+     * \param   other   The other IncludeEntry to move from.
      **/
-    SIIncludeEntry(SIIncludeEntry&& other) noexcept;
+    IncludeEntry(IncludeEntry&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -67,31 +67,45 @@ public:
 
     /**
      * \brief   Copy assignment operator.
-     * \param   other   The other SIIncludeEntry to copy from.
-     * \return  Reference to the assigned SIIncludeEntry.
+     * \param   other   The other IncludeEntry to copy from.
+     * \return  Reference to the assigned IncludeEntry.
      **/
-    SIIncludeEntry& operator = (const SIIncludeEntry& other);
+    IncludeEntry& operator = (const IncludeEntry& other);
 
     /**
      * \brief   Move assignment operator.
-     * \param   other   The other SIIncludeEntry to move from.
-     * \return  Reference to the assigned SIIncludeEntry.
+     * \param   other   The other IncludeEntry to move from.
+     * \return  Reference to the assigned IncludeEntry.
      **/
-    SIIncludeEntry& operator = (SIIncludeEntry&& other) noexcept;
+    IncludeEntry& operator = (IncludeEntry&& other) noexcept;
 
      /**
       * \brief   Equality operator.
-      * \param   other   The other SIIncludeEntry to compare with.
+      * \param   other   The other IncludeEntry to compare with.
       * \return  True if both entries are equal, false otherwise.
       **/
-     bool operator == (const SIIncludeEntry& other) const;
+     bool operator == (const IncludeEntry& other) const;
 
      /**
       * \brief   Inequality operator.
-      * \param   other   The other SIIncludeEntry to compare with.
+      * \param   other   The other IncludeEntry to compare with.
       * \return  True if both entries are not equal, false otherwise.
       **/
-     bool operator != (const SIIncludeEntry& other) const;
+     bool operator != (const IncludeEntry& other) const;
+
+    /**
+     * \brief   Less than operator for sorting.
+     * \param   other   The other object to compare with.
+     * \return  True if this constant is less than the other, false otherwise.
+     **/
+    bool operator < (const IncludeEntry& other) const;
+
+    /**
+     * \brief   Less than operator for sorting.
+     * \param   other   The other object to compare with.
+     * \return  True if this constant is less than the other, false otherwise.
+     **/
+    bool operator > (const IncludeEntry& other) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -192,4 +206,4 @@ private:
     QString     mDeprecateHint; //!< The deprecation hint.
 };
 
-#endif  // LUSAN_DATA_SI_SIINCLUDEENTRY_HPP
+#endif  // LUSAN_DATA_SI_INCLUDEENTRY_HPP

@@ -22,7 +22,7 @@
 #include <QList>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
-#include "lusan/data/si/SIIncludeEntry.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 
  /**
   * \class   SIIncludeData
@@ -34,7 +34,7 @@ class SIIncludeData
 // Local types and static members
 //////////////////////////////////////////////////////////////////////////
 private:
-    static const SIIncludeEntry InvalidInclude; //!< Invalid include object
+    static const IncludeEntry InvalidInclude; //!< Invalid include object
 
 //////////////////////////////////////////////////////////////////////////
 // public methods
@@ -47,9 +47,9 @@ public:
 
     /**
      * \brief   Constructor with initialization.
-     * \param   includes    The list of include entries.
+     * \param   entries    The list of include entries.
      **/
-    SIIncludeData(const QList<SIIncludeEntry>& includes);
+    SIIncludeData(const QList<IncludeEntry>& entries);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -59,41 +59,41 @@ public:
      * \brief   Gets the list of include entries.
      * \return  The list of include entries.
      **/
-    const QList<SIIncludeEntry>& getIncludes(void) const;
+    const QList<IncludeEntry>& getIncludes(void) const;
 
     /**
      * \brief   Sets the list of include entries.
-     * \param   includes    The list of include entries.
+     * \param   entries    The list of include entries.
      **/
-    void setIncludes(const QList<SIIncludeEntry>& includes);
+    void setIncludes(const QList<IncludeEntry>& entries);
 
     /**
      * \brief   Searches for an include entry in the list.
-     * \param   include     The include entry to search for.
+     * \param   entry     The include entry to search for.
      * \return  The index of the include entry, or -1 if not found.
      **/
-    int findInclude(const SIIncludeEntry& include) const;
+    int findInclude(const IncludeEntry& entry) const;
 
     /**
      * \brief   Adds an include entry to the list.
-     * \param   include     The include entry to add.
+     * \param   entry     The include entry to add.
      **/
-    void addInclude(const SIIncludeEntry& include);
+    void addInclude(const IncludeEntry& entry);
 
     /**
      * \brief   Removes an include entry from the list.
-     * \param   include     The include entry to remove.
+     * \param   entry     The include entry to remove.
      * \return  True if the include entry was removed, false otherwise.
      **/
-    bool removeInclude(const SIIncludeEntry& include);
+    bool removeInclude(const IncludeEntry& entry);
 
     /**
      * \brief   Replaces an include entry in the list.
-     * \param   oldInclude  The include entry to replace.
-     * \param   newInclude  The new include entry.
+     * \param   oldEntry    The include entry to replace.
+     * \param   newEntry    The new include entry.
      * \return  True if the include entry was replaced, false otherwise.
      **/
-    bool replaceInclude(const SIIncludeEntry& oldInclude, const SIIncludeEntry& newInclude);
+    bool replaceInclude(const IncludeEntry& oldEntry, const IncludeEntry& newEntry);
 
     /**
      * \brief   Reads include data from an XML stream.
@@ -127,7 +127,7 @@ public:
      * \param   location    The location to search for.
      * \return  The include entry if found, otherwise an invalid include entry.
      **/
-    const SIIncludeEntry & getInclude(const QString& location) const;
+    const IncludeEntry & getInclude(const QString& location) const;
 
     /**
      * \brief   Removes an include entry by location.
@@ -136,11 +136,24 @@ public:
      **/
     bool removeInclude(const QString& location);
 
+    /**
+     * \brief   Adds an include entry to the list.
+     * \param   entry       The include entry to add.
+     * \param   ascending   If true, the entry is added in ascending order, otherwise in descending order.
+     **/
+    void addInclude(const IncludeEntry& entry, bool ascending);
+
+    /**
+     * \brief   Sorts the list of include entries.
+     * \param   ascending   If true, sorts in ascending order, otherwise in descending order.
+     **/
+    void sortIncludes(bool ascending);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    QList<SIIncludeEntry> mIncludes;  //!< The list of include entries.
+    QList<IncludeEntry> mIncludes;  //!< The list of include entries.
 };
 
 #endif  // LUSAN_DATA_SI_SIINCLUDEDATA_HPP
