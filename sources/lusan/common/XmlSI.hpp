@@ -28,6 +28,7 @@ namespace XmlSI
      * \brief   Common XML element names of the Service Interface data.
      **/
     constexpr const char* const xmlSIElementAttribute       { "Attribute" };
+    constexpr const char* const xmlSIElementAttributeList   { "AttributeList" };
     constexpr const char* const xmlSIElementConstant        { "Constant" };
     constexpr const char* const xmlSIElementConstantList    { "ConstantList" };
     constexpr const char* const xmlSIElementDataType        { "DataType" };
