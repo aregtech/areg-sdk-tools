@@ -28,9 +28,26 @@
 class DataTypeCustom : public DataTypeBase
 {
 //////////////////////////////////////////////////////////////////////////
+// Static members and types
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Gets the type of the data type.
+     * \return  The type of the data type.
+     **/
+    static QString getType(DataTypeBase::eCategory category);
+
+    /**
+     * \brief   Converts the data type category to string.
+     * \param   category    The category of the data type.
+     * \return  The string representation of the data type category.
+     **/
+    static DataTypeBase::eCategory fromTypeString(const QString & type);
+
+//////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
-protected:
+public:
 
     /**
      * \brief   Constructor with initialization of category.
@@ -57,6 +74,8 @@ protected:
      * \param   src     The source object to move from.
      **/
     DataTypeCustom(DataTypeCustom&& src) noexcept;
+
+    virtual ~DataTypeCustom(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -95,19 +114,15 @@ public:
     const QString& getDescription(void) const;
 
     void setDescription(const QString& description);
+    
+    QString getType(void) const;
 
     /**
      * \brief   Checks if the data type is valid.
      * \return  True if the data type is valid, false otherwise.
      **/
     virtual bool isValid(void) const override;
-
-    /**
-     * \brief   Gets the type of the data type.
-     * \return  The type of the data type.
-     **/
-    virtual QString getType() const;
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

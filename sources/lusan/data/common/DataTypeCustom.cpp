@@ -43,6 +43,10 @@ DataTypeCustom::DataTypeCustom(DataTypeCustom&& src) noexcept
 {
 }
 
+DataTypeCustom::~DataTypeCustom(void)
+{
+}
+
 DataTypeCustom& DataTypeCustom::operator=(const DataTypeCustom& other)
 {
     if (this != &other)
@@ -90,9 +94,14 @@ bool DataTypeCustom::isValid(void) const
     return (mId != 0) && DataTypeBase::isValid();
 }
 
-QString DataTypeCustom::getType() const
+QString DataTypeCustom::getType(void) const
 {
-    switch (mCategory)
+    return DataTypeCustom::getType(mCategory);
+}
+
+QString DataTypeCustom::getType(DataTypeBase::eCategory category)
+{
+    switch (category)
     {
     case DataTypeBase::eCategory::Enumeration:
         return "Enumerate";
@@ -104,6 +113,31 @@ QString DataTypeCustom::getType() const
         return "DefinedType";
     default:
         return "";
+    }
+}
+
+DataTypeBase::eCategory DataTypeCustom::fromTypeString(const QString& type)
+{
+    if (type == "Enumerate")
+    {
+        return DataTypeBase::eCategory::Enumeration;
+    }
+    else if (type == "Structure")
+    {
+        return DataTypeBase::eCategory::Structure;
+    }
+    else if (type == "Imported")
+    {
+        return DataTypeBase::eCategory::Imported;
+    }
+    else if (type == "DefinedType")
+    {
+        return DataTypeBase::eCategory::Container;
+    }
+    else
+    {
+        Q_ASSERT(false);
+        return DataTypeBase::eCategory::CustomDefined;
     }
 }
 
