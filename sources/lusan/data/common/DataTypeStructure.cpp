@@ -93,7 +93,7 @@ void DataTypeStructure::writeToXml(QXmlStreamWriter& xml) const
     xml.writeStartElement(XmlSI::xmlSIElementDataType);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
-    xml.writeAttribute(XmlSI::xmlSIAttributeType, "Structure");
+    xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
 
