@@ -1,5 +1,5 @@
-#ifndef LUSAN_DATA_COMMON_DATATYPEENUM_HPP
-#define LUSAN_DATA_COMMON_DATATYPEENUM_HPP
+#ifndef LUSAN_DATA_COMMON_DATATYPESTRUCTURE_HPP
+#define LUSAN_DATA_COMMON_DATATYPESTRUCTURE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,62 +12,60 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/common/DataTypeEnum.hpp
+ *  \file        lusan/data/common/DataTypeStructure.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Enum Data Type.
+ *  \brief       Lusan application, Structure Data Type.
  *
  ************************************************************************/
 
 #include "lusan/data/common/TEDataTypeContainer.hpp"
-#include "lusan/data/common/EnumEntry.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
 #include <QList>
 
- /**
- * \class   DataTypeEnum
- * \brief   Represents an enumeration data type in the Lusan application.
+/**
+ * \class   DataTypeStructure
+ * \brief   Represents a structure data type in the Lusan application.
  **/
-class DataTypeEnum : public TEDataTypeContainer<EnumEntry>
+class DataTypeStructure : public TEDataTypeContainer<FieldEntry>
 {
-    static constexpr const char* const  DEFAULT_VALUES  { "default" };
-
 public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeEnum(void);
+    DataTypeStructure(void);
 
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
      **/
-    DataTypeEnum(const QString& name);
+    DataTypeStructure(const QString& name);
 
     /**
      * \brief   Copy constructor.
      * \param   src     The source object to copy from.
      **/
-    DataTypeEnum(const DataTypeEnum& src);
+    DataTypeStructure(const DataTypeStructure& src);
 
     /**
      * \brief   Move constructor.
      * \param   src     The source object to move from.
      **/
-    DataTypeEnum(DataTypeEnum&& src) noexcept;
+    DataTypeStructure(DataTypeStructure&& src) noexcept;
 
     /**
      * \brief   Copy assignment operator.
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    DataTypeEnum& operator = (const DataTypeEnum& other);
+    DataTypeStructure& operator = (const DataTypeStructure& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    DataTypeEnum& operator = (DataTypeEnum&& other) noexcept;
+    DataTypeStructure& operator = (DataTypeStructure&& other) noexcept;
 
     /**
      * \brief   Reads data from an XML stream.
@@ -81,9 +79,7 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
-
-private:
-    QString mDerived;   //!< The type name of values. If name is empty, default is used.
 };
 
-#endif // LUSAN_DATA_COMMON_DATATYPEENUM_HPP
+#endif // LUSAN_DATA_COMMON_DATATYPESTRUCTURE_HPP
+

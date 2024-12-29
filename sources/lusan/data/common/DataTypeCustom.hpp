@@ -92,6 +92,10 @@ public:
      **/
     void setId(uint32_t id);
 
+    const QString& getDescription(void) const;
+
+    void setDescription(const QString& description);
+
     /**
      * \brief   Checks if the data type is valid.
      * \return  True if the data type is valid, false otherwise.
@@ -109,6 +113,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     uint32_t    mId;    //!< The ID of the data type.
+    QString     mDescription;   //!< The description of the data type.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

@@ -75,6 +75,16 @@ void DataTypeCustom::setId(uint32_t id)
     mId = id;
 }
 
+const QString& DataTypeCustom::getDescription(void) const
+{
+    return mDescription;
+}
+
+void DataTypeCustom::setDescription(const QString& description)
+{
+    mDescription = description;
+}
+
 bool DataTypeCustom::isValid(void) const
 {
     return (mId != 0) && DataTypeBase::isValid();

@@ -230,8 +230,8 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    eCategory   mCategory;  //!< The category of the data type.
-    QString     mName;      //!< The name of the data type.
+    eCategory   mCategory;      //!< The category of the data type.
+    QString     mName;          //!< The name of the data type.
 };
 
 #endif  // LUSAN_DATA_COMMON_DATATYPEBASE_HPP
