@@ -29,8 +29,11 @@ namespace XmlSI
      **/
     constexpr const char* const xmlSIElementAttribute       { "Attribute" };
     constexpr const char* const xmlSIElementAttributeList   { "AttributeList" };
+    constexpr const char* const xmlSIElementBaseTypeKey     { "BaseTypeKey" };
+    constexpr const char* const xmlSIElementBaseTypeValue   { "BaseTypeValue" };
     constexpr const char* const xmlSIElementConstant        { "Constant" };
     constexpr const char* const xmlSIElementConstantList    { "ConstantList" };
+    constexpr const char* const xmlSIElementContainer       { "Container" };
     constexpr const char* const xmlSIElementDataType        { "DataType" };
     constexpr const char* const xmlSIElementDataTypeList    { "DataTypeList" };
     constexpr const char* const xmlSIElementDeprecateHint   { "DeprecateHint" };

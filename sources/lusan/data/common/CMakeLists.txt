@@ -4,6 +4,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/data/common/DataTypeBase.cpp
     ${LUSAN}/data/common/DataTypeBasic.cpp
     ${LUSAN}/data/common/DataTypeCustom.cpp
+    ${LUSAN}/data/common/DataTypeDefined.cpp
     ${LUSAN}/data/common/DataTypeEnum.cpp
     ${LUSAN}/data/common/DataTypePrimitive.cpp
     ${LUSAN}/data/common/DataTypeStructure.cpp
@@ -20,6 +21,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/ConstantEntry.hpp
     ${LUSAN}/data/common/DataTypeBasic.hpp
     ${LUSAN}/data/common/DataTypeCustom.hpp
+    ${LUSAN}/data/common/DataTypeDefined.hpp
     ${LUSAN}/data/common/DataTypeEnum.hpp
     ${LUSAN}/data/common/DataTypePrimitive.hpp
     ${LUSAN}/data/common/DataTypeStructure.cpp
