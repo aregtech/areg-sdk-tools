@@ -101,7 +101,7 @@ QString DataTypeCustom::getType() const
     case DataTypeBase::eCategory::Imported:
         return "Imported";
     case DataTypeBase::eCategory::Container:
-        return "Container";
+        return "DefinedType";
     default:
         return "";
     }
