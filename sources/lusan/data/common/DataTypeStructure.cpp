@@ -10,72 +10,55 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/common/DataTypeEnum.cpp
+ *  \file        lusan/data/common/DataTypeStructure.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Enum Data Type.
+ *  \brief       Lusan application, Structure Data Type.
  *
  ************************************************************************/
-#include "lusan/data/common/DataTypeEnum.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-DataTypeEnum::DataTypeEnum(void)
-    : TEDataTypeContainer<EnumEntry>(eCategory::Enumeration)
-    , mDerived  ( "" )
+DataTypeStructure::DataTypeStructure(void)
+    : TEDataTypeContainer< FieldEntry>(eCategory::Structure)
 {
 }
 
-DataTypeEnum::DataTypeEnum(const QString& name)
-    : TEDataTypeContainer<EnumEntry>(eCategory::Enumeration, name, 0)
-    , mDerived("")
+DataTypeStructure::DataTypeStructure(const QString& name)
+    : TEDataTypeContainer< FieldEntry>(eCategory::Structure, name, 0)
 {
 }
 
-DataTypeEnum::DataTypeEnum(const DataTypeEnum& src)
-    : TEDataTypeContainer<EnumEntry>(src)
-    , mDerived(src.mDerived)
+DataTypeStructure::DataTypeStructure(const DataTypeStructure& src)
+    : TEDataTypeContainer< FieldEntry>(src)
 {
 }
 
-DataTypeEnum::DataTypeEnum(DataTypeEnum&& src) noexcept
-    : TEDataTypeContainer<EnumEntry>(std::move(src))
-    , mDerived(std::move(src.mDerived))
+DataTypeStructure::DataTypeStructure(DataTypeStructure&& src) noexcept
+    : TEDataTypeContainer< FieldEntry>(std::move(src))
 {
 }
 
-DataTypeEnum& DataTypeEnum::operator=(const DataTypeEnum& other)
+DataTypeStructure& DataTypeStructure::operator=(const DataTypeStructure& other)
 {
-    if (this != &other)
-    {
-        DataTypeBase::operator=(other);
-        mDerived = other.mDerived;
-    }
-
+    DataTypeBase::operator=(other);
     return *this;
 }
 
-DataTypeEnum& DataTypeEnum::operator=(DataTypeEnum&& other) noexcept
+DataTypeStructure& DataTypeStructure::operator=(DataTypeStructure&& other) noexcept
 {
-    if (this != &other)
-    {
-        DataTypeBase::operator=(std::move(other));
-        mDerived = std::move(other.mDerived);
-    }
-
+    DataTypeBase::operator=(std::move(other));
     return *this;
 }
 
-bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
+bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != XmlSI::xmlSIElementDataType)
         return false;
 
     QXmlStreamAttributes attributes = xml.attributes();
-    mId = attributes.hasAttribute(XmlSI::xmlSIAttributeID) ? attributes.value(XmlSI::xmlSIAttributeID).toInt() : 0;
-    mName = attributes.hasAttribute(XmlSI::xmlSIAttributeName) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "";
-    QString type = attributes.hasAttribute(XmlSI::xmlSIAttributeValues) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "";
-    mDerived = type == DEFAULT_VALUES ? "" : type;
-
+    setId(attributes.hasAttribute(XmlSI::xmlSIAttributeID) ? attributes.value(XmlSI::xmlSIAttributeID).toUInt() : 0);
+    setName(attributes.hasAttribute(XmlSI::xmlSIAttributeName) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "");
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementDescription)
@@ -86,9 +69,9 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
         {
             while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementFieldList))
             {
-                if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementEnumEntry)
+                if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementField)
                 {
-                    EnumEntry entry;
+                    FieldEntry entry;
                     if (entry.readFromXml(xml))
                     {
                         mFieldList.append(entry);
@@ -105,18 +88,17 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
     return true;
 }
 
-void DataTypeEnum::writeToXml(QXmlStreamWriter& xml) const
+void DataTypeStructure::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementDataType);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
-    xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
-    xml.writeAttribute(XmlSI::xmlSIAttributeValues, mDerived.isEmpty() ? DEFAULT_VALUES : mDerived);
+    xml.writeAttribute(XmlSI::xmlSIAttributeType, "Structure");
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
 
     xml.writeStartElement(XmlSI::xmlSIElementFieldList);
-    for (const EnumEntry& entry : mFieldList)
+    for (const FieldEntry& entry : mFieldList)
     {
         entry.writeToXml(xml);
     }

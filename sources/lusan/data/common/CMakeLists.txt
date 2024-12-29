@@ -6,7 +6,9 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/data/common/DataTypeCustom.cpp
     ${LUSAN}/data/common/DataTypeEnum.cpp
     ${LUSAN}/data/common/DataTypePrimitive.cpp
+    ${LUSAN}/data/common/DataTypeStructure.cpp
     ${LUSAN}/data/common/EnumEntry.cpp
+    ${LUSAN}/data/common/FieldEntry.cpp
     ${LUSAN}/data/common/IncludeEntry.cpp
     ${LUSAN}/data/common/OptionsManager.cpp
     ${LUSAN}/data/common/ParamBase.cpp
@@ -20,9 +22,12 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/DataTypeCustom.hpp
     ${LUSAN}/data/common/DataTypeEnum.hpp
     ${LUSAN}/data/common/DataTypePrimitive.hpp
-    ${LUSAN}/data/common/IncludeEntry.hpp
+    ${LUSAN}/data/common/DataTypeStructure.cpp
     ${LUSAN}/data/common/EnumEntry.hpp
+    ${LUSAN}/data/common/FieldEntry.hpp
+    ${LUSAN}/data/common/IncludeEntry.hpp
     ${LUSAN}/data/common/OptionsManager.hpp
     ${LUSAN}/data/common/ParamBase.hpp
+    ${LUSAN}/data/common/TEDataTypeContainer.hpp
     ${LUSAN}/data/common/WorkspaceEntry.hpp
 )

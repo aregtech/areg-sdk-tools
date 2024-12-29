@@ -168,19 +168,19 @@ bool AttributeEntry::readFromXml(QXmlStreamReader& xml)
 void AttributeEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementAttribute);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
-    xml.writeAttribute(XmlSI::xmlSIAttributeName, getName());
-    xml.writeAttribute(XmlSI::xmlSIAttributeDataType, getType());
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+    xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
+    xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
     xml.writeAttribute(XmlSI::xmlSIAttributeNotify, toString(mNotification));
     if (mIsDeprecated)
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
     }
 
-    xml.writeTextElement(XmlSI::xmlSIElementDescription, getDescription());
-    if (mIsDeprecated)
+    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+    if (mIsDeprecated && (mDeprecateHint.isEmpty() == false))
     {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
     }
 
     xml.writeEndElement();
