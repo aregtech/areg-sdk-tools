@@ -150,3 +150,8 @@ void SIConstantData::sortConstants(bool ascending)
         return ascending ? left < right : left > right;
         });
 }
+
+void SIConstantData::removeAll(void)
+{
+    mConstants.clear();
+}
