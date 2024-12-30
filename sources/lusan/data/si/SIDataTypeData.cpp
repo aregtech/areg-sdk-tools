@@ -94,7 +94,7 @@ bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
             if (xml.name() == XmlSI::xmlSIElementDataType)
             {
                 QString type = xml.attributes().value(XmlSI::xmlSIAttributeType).toString();
-                DataTypeCustom* dataType = DataTypeFactory::createDataType(type);
+                DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(type);
                 if (dataType && dataType->readFromXml(xml))
                 {
                     mDataTypes.append(dataType);

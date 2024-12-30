@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<PredefinedTypes FormatVersion="1.0.0">
+    <DataTypeList>
+        <DataType Type="Primitive" Name="bool" DefaultValue="false">
+            <Variant cpp="bool"/>
+            <Variant java="boolean"/>
+        </DataType>
+        <DataType Type="Primitive" Name="char" DefaultValue="0">
+            <Variant cpp="char"/>
+            <Variant java="char"/>
+        </DataType>
+        <DataType Type="Primitive" Name="uint8" DefaultValue="0">
+            <Variant cpp="unsigned char"/>
+            <Variant java="byte"/>
+        </DataType>
+        <DataType Type="Primitive" Name="int16" DefaultValue="0">
+            <Variant cpp="short"/>
+            <Variant java="short"/>
+        </DataType>
+        <DataType Type="Primitive" Name="uint16" DefaultValue="0">
+            <Variant cpp="unsigned short"/>
+            <Variant java="short"/>
+        </DataType>
+        <DataType Type="Primitive" Name="int32" DefaultValue="0">
+            <Variant cpp="int"/>
+            <Variant java="int"/>
+        </DataType>
+        <DataType Type="Primitive" Name="uint32" DefaultValue="0">
+            <Variant cpp="unsigned int"/>
+            <Variant java="int"/>
+        </DataType>
+        <DataType Type="Primitive" Name="int64" DefaultValue="0">
+            <Variant cpp="long long"/>
+            <Variant java="long"/>
+        </DataType>
+        <DataType Type="Primitive" Name="uint64" DefaultValue="0">
+            <Variant cpp="unsigned long long"/>
+            <Variant java="long"/>
+        </DataType>
+        <DataType Type="Primitive" Name="float" DefaultValue="0.0">
+            <Variant cpp="float"/>
+            <Variant java="float"/>
+        </DataType>
+        <DataType Type="Primitive" Name="double" DefaultValue="0.0">
+            <Variant cpp="double"/>
+            <Variant java="double"/>
+        </DataType>
+        <DataType Type="Basic" Name="String">
+            <Variant cpp="String" import="areg/base/String.hpp" />
+            <Variant java="String" import="java.lang.String" />
+        </DataType>
+        <DataType Type="Basic" Name="BinaryBuffer">
+            <Variant cpp="SharedBuffer" import="areg/base/SharedBuffer.hpp" />
+            <Variant java="ByteBuffer" import="java.nio.ByteBuffer" />
+        </DataType>
+        <DataType Type="Basic" Name="DateTime">
+            <Variant cpp="DateTime" import="areg/base/DateTime.hpp" />
+            <Variant java="Date" import="java.util.Date" />
+        </DataType>
+        <DataType Type="Container" Name="Array" HasKey="false" HasValue="true">
+            <Variant cpp="TEArrayList" import="areg/base/TEArrayList.hpp" />
+            <Variant java="ArrayList" import="java.util.ArrayList" />
+        </DataType>
+        <DataType Type="Container" Name="LinkedList" HasKey="false" HasValue="true">
+            <Variant cpp="TELinkedList" import="areg/base/TELinkedList.hpp" />
+            <Variant java="LinkedList" import="java.util.LinkedList" />
+        </DataType>
+        <DataType Type="Container" Name="HashMap" HasKey="true" HasValue="true">
+            <Variant cpp="TEHashMap" import="areg/base/TEHashMap.hpp" />
+            <Variant java="HashMap" import="java.util.HashMap" />
+        </DataType>
+        <DataType Type="Container" Name="Map" HasKey="true" HasValue="true">
+            <Variant cpp="TEMap" import="areg/base/TEMap.hpp" />
+            <Variant java="Map" import="java.util.Map" />
+        </DataType>
+        <DataType Type="Container" Name="Pair" HasKey="true" HasValue="true">
+            <Variant cpp="TEPair" import="areg/base/TEPair.hpp" />
+            <Variant java="Pair" import="javafx.util.Pair"/>
+        </DataType>
+        <DataType Type="Container" Name="New Type" HasKey="false" HasValue="true">
+            <Variant any="*" import="" />
+        </DataType>
+    </DataTypeList>
+</PredefinedTypes>

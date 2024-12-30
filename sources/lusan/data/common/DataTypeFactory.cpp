@@ -18,17 +18,108 @@
  ************************************************************************/
 
 #include "lusan/data/common/DataTypeFactory.hpp"
+
+#include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeDefined.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
+#include "lusan/data/common/DataTypePrimitive.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 
-DataTypeCustom* DataTypeFactory::createDataType(const QString& type)
+DataTypeBase::eCategory DataTypeFactory::fromString(const QString& dataType)
 {
-    return createDataType(DataTypeCustom::fromTypeString(type));
+    if (dataType == TypeNameBool)
+        return DataTypeBase::eCategory::Primitive;
+    else if (dataType == TypeNameChar)
+        return DataTypeBase::eCategory::PrimitiveSint;
+    else if (dataType == TypeNameUint8)
+        return DataTypeBase::eCategory::PrimitiveUint;
+    else if (dataType == TypeNameInt16)
+        return DataTypeBase::eCategory::PrimitiveSint;
+    else if (dataType == TypeNameUint16)
+        return DataTypeBase::eCategory::PrimitiveUint;
+    else if (dataType == TypeNameInt32)
+        return DataTypeBase::eCategory::PrimitiveUint;
+    else if (dataType == TypeNameUint32)
+        return DataTypeBase::eCategory::PrimitiveSint;
+    else if (dataType == TypeNameInt64)
+        return DataTypeBase::eCategory::PrimitiveSint;
+    else if (dataType == TypeNameUint64)
+        return DataTypeBase::eCategory::PrimitiveUint;
+    else if (dataType == TypeNameFloat)
+        return DataTypeBase::eCategory::PrimitiveFloat;
+    else if (dataType == TypeNameDouble)
+        return DataTypeBase::eCategory::PrimitiveFloat;
+    else if (dataType == TypeNameString)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNameBinary)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNameDateTime)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNameArray)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNameLinkedList)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNameHashMap)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNameMap)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNamePair)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNameNewType)
+        return DataTypeBase::eCategory::BasicObject;
+    else if (dataType == TypeNameEnumerate)
+        return DataTypeBase::eCategory::Enumeration;
+    else if (dataType == TypeNameStructure)
+        return DataTypeBase::eCategory::Structure;
+    else if (dataType == TypeNameImported)
+        return DataTypeBase::eCategory::Imported;
+    else if (dataType == TypeNameDefined)
+        return DataTypeBase::eCategory::Container;
+    else
+        return DataTypeBase::eCategory::Undefined;
 }
 
-DataTypeCustom* DataTypeFactory::createDataType(DataTypeBase::eCategory category)
+DataTypeBase* DataTypeFactory::createDataType(const QString& dataType)
+{
+    DataTypeBase::eCategory category{ DataTypeFactory::fromString(dataType) };
+
+    switch (category)
+    {
+    case DataTypeBase::eCategory::Primitive:
+        return new DataTypePrimitive(dataType);
+
+    case DataTypeBase::eCategory::PrimitiveSint:
+        return new DataTypePrimitiveInt(dataType);
+
+    case DataTypeBase::eCategory::PrimitiveUint:
+        return new DataTypePrimitiveUint(dataType);
+
+    case DataTypeBase::eCategory::PrimitiveFloat:
+        return new DataTypePrimitiveFloat(dataType);
+
+    case DataTypeBase::eCategory::BasicObject:
+        return new DataTypeBasic(dataType);
+
+    case DataTypeBase::eCategory::Enumeration:
+    case DataTypeBase::eCategory::Structure:
+    case DataTypeBase::eCategory::Imported:
+    case DataTypeBase::eCategory::Container:
+        return DataTypeFactory::createCustomDataType(category);
+
+    default:
+        return nullptr;
+    }
+}
+
+
+
+DataTypeCustom* DataTypeFactory::createCustomDataType(const QString& type)
+{
+    return createCustomDataType(DataTypeCustom::fromTypeString(type));
+}
+
+DataTypeCustom* DataTypeFactory::createCustomDataType(DataTypeBase::eCategory category)
 {
     switch (category)
     {

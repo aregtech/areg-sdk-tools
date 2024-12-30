@@ -27,6 +27,11 @@ DataTypePrimitive::DataTypePrimitive(DataTypeBase::eCategory category)
 {
 }
 
+DataTypePrimitive::DataTypePrimitive(const QString& name)
+    : DataTypeBase(DataTypeBase::eCategory::Primitive, name)
+{
+}
+
 DataTypePrimitive::DataTypePrimitive(const DataTypePrimitive& src)
     : DataTypeBase(src)
 {
@@ -78,12 +83,12 @@ void DataTypePrimitive::writeToXml(QXmlStreamWriter& xml) const
 //////////////////////////////////////////////////////////////////////////
 
 DataTypePrimitiveInt::DataTypePrimitiveInt(void)
-    : DataTypePrimitive(DataTypeBase::eCategory::PrimitiveInt)
+    : DataTypePrimitive(DataTypeBase::eCategory::PrimitiveSint)
 {
 }
 
 DataTypePrimitiveInt::DataTypePrimitiveInt(const QString& name)
-    : DataTypePrimitive(DataTypeBase::eCategory::PrimitiveInt, name)
+    : DataTypePrimitive(DataTypeBase::eCategory::PrimitiveSint, name)
 {
 }
 
@@ -103,6 +108,7 @@ DataTypePrimitiveInt& DataTypePrimitiveInt::operator=(const DataTypePrimitiveInt
     {
         DataTypePrimitive::operator=(other);
     }
+
     return *this;
 }
 
@@ -112,6 +118,7 @@ DataTypePrimitiveInt& DataTypePrimitiveInt::operator=(DataTypePrimitiveInt&& oth
     {
         DataTypePrimitive::operator=(std::move(other));
     }
+
     return *this;
 }
 

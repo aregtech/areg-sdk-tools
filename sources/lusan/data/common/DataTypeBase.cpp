@@ -110,9 +110,19 @@ bool DataTypeBase::isPredefined(void) const
     return ((static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::Primitive)) != 0) || (mCategory == eCategory::BasicObject);
 }
 
+bool DataTypeBase::isPrimitiveBool(void) const
+{
+    return (mCategory == eCategory::Primitive);
+}
+
 bool DataTypeBase::isPrimitiveInt(void) const
 {
-    return (mCategory == eCategory::PrimitiveInt);
+    return (static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::PrimitiveSint)) != 0;
+}
+
+bool DataTypeBase::isPrimitiveSint(void) const
+{
+    return (mCategory == eCategory::PrimitiveSint);
 }
 
 bool DataTypeBase::isPrimitiveUint(void) const

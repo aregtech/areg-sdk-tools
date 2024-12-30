@@ -113,8 +113,15 @@ public:
 
     const QString& getDescription(void) const;
 
+    /**
+     * \brief   Sets the description of the data type.
+     * \param   description The description of the data type.
+     **/
     void setDescription(const QString& description);
-    
+
+    /**
+     * \brief   Returns the name of the custom data type.
+     **/
     QString getType(void) const;
 
     /**
@@ -127,7 +134,7 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    uint32_t    mId;    //!< The ID of the data type.
+    uint32_t    mId;            //!< The ID of the data type.
     QString     mDescription;   //!< The description of the data type.
 
 //////////////////////////////////////////////////////////////////////////

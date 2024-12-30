@@ -1,5 +1,5 @@
-#ifndef LUSAN_DATA_COMMON_DATATYPEBASIC_HPP
-#define LUSAN_DATA_COMMON_DATATYPEBASIC_HPP
+#ifndef LUSAN_DATA_SI_SIMETHODBROADCAST_HPP
+#define LUSAN_DATA_SI_SIMETHODBROADCAST_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,19 +12,20 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/common/DataTypeBasic.hpp
+ *  \file        lusan/data/si/SIMethodBroadcast.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Basic Data Type.
+ *  \brief       Lusan application, Service Interface Method Broadcast.
  *
  ************************************************************************/
 
-#include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/data/si/SIMethodBase.hpp"
 
 /**
- * \brief   Basic object data type. Such as string or byte array.
+ * \class   SIMethodBroadcast
+ * \brief   Represents a service interface method broadcast in the Lusan application.
  **/
-class DataTypeBasic : public DataTypeBase
+class SIMethodBroadcast : public SIMethodBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -33,28 +34,35 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeBasic(void);
+    SIMethodBroadcast(void);
+
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id              The ID of the method.
+     * \param   name            The name of the method.
+     * \param   description     The description of the method.
+     **/
+    SIMethodBroadcast(uint32_t id, const QString& name, const QString& description);
 
     /**
      * \brief   Copy constructor.
      * \param   src     The source object to copy from.
      **/
-    DataTypeBasic(const DataTypeBasic& src);
+    SIMethodBroadcast(const SIMethodBroadcast& src);
 
     /**
      * \brief   Move constructor.
      * \param   src     The source object to move from.
      **/
-    DataTypeBasic(DataTypeBasic&& src) noexcept;
+    SIMethodBroadcast(SIMethodBroadcast&& src) noexcept;
 
     /**
-     * \brief   Constructor with name initialization.
-     * \param   name    The name of the data type.
+     * \brief   Destructor.
      **/
-    DataTypeBasic(const QString& name);
+    virtual ~SIMethodBroadcast(void);
 
 //////////////////////////////////////////////////////////////////////////
-// operators
+// Operators
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
@@ -62,41 +70,19 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    DataTypeBasic& operator=(const DataTypeBasic& other);
+    SIMethodBroadcast& operator=(const SIMethodBroadcast& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    DataTypeBasic& operator=(DataTypeBasic&& other) noexcept;
+    SIMethodBroadcast& operator=(SIMethodBroadcast&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes, operations and overrides
+// Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-
-    /**
-     * \brief   Sets the data container flag.
-     * \param   isDataContainer The flag, indicating whether the data type is a container.
-     * \param   hasKey          The flag, indicating whether the data type has a key.
-     **/
-    void setDataContainer(bool isDataContainer, bool hasKey);
-
-    /**
-     * \brief   Checks if the data type is a data container.
-     *          The object is a container if at least contains values.
-     *          Example of a data container is a linked list, array, hash map, etc.
-     * \return  True if the data type is a data container, false otherwise.
-     **/
-    bool isDataContainer(void) const;
-
-    /**
-     * \brief   Checks if the data type has a key.
-     * \return  True if the data type has a key, false otherwise.
-     **/
-    bool hasKey(void) const;
-
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
@@ -109,10 +95,6 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
-
-private:
-    bool    mHasKey;    //!< The flag, indicating whether the data type has a key.
-    bool    mHasValue;  //!< The flag, indicating whether the data type has a value.
 };
 
-#endif // LUSAN_DATA_COMMON_DATATYPEBASIC_HPP
+#endif // LUSAN_DATA_SI_SIMETHODBROADCAST_HPP

@@ -4,6 +4,10 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/data/si/SIConstantData.cpp
     ${LUSAN}/data/si/SIDataTypeData.cpp
     ${LUSAN}/data/si/SIIncludeData.cpp
+    ${LUSAN}/data/si/SIMethodBase.cpp
+    ${LUSAN}/data/si/SIMethodBroadcast.cpp
+    ${LUSAN}/data/si/SIMethodRequest.cpp
+    ${LUSAN}/data/si/SIMethodResponse.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -12,4 +16,8 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/si/SIConstantData.hpp
     ${LUSAN}/data/si/SIDataTypeData.hpp
     ${LUSAN}/data/si/SIIncludeData.hpp
+    ${LUSAN}/data/si/SIMethodBase.hpp
+    ${LUSAN}/data/si/SIMethodRequest.hpp
+    ${LUSAN}/data/si/SIMethodResponse.hpp
+    ${LUSAN}/data/si/SIMethodBroadcast.hpp
 )

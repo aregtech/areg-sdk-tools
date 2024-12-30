@@ -40,10 +40,10 @@ public:
     typedef enum class E_Category : uint16_t
     {
           Undefined     = 0x0000    //!< bits: 0000 0000 0000 0000, Undefined type
-        , Primitive     = 0x0008    //!< bits: 0000 0000 0000 1000, Primitive type
-        , PrimitiveInt  = 0x0009    //!< bits: 0000 0000 0000 1001, Primitive integer type
+        , Primitive     = 0x0008    //!< bits: 0000 0000 0000 1000, Primitive type, as well boolean type
+        , PrimitiveSint = 0x0009    //!< bits: 0000 0000 0000 1001, Primitive integer type
         , PrimitiveUint = 0x000B    //!< bits: 0000 0000 0000 1011, Primitive unsigned integer type
-        , PrimitiveFloat= 0x000C    //!< bits: 0000 0000 0000 1100, Primitive unsigned integer type
+        , PrimitiveFloat= 0x000C    //!< bits: 0000 0000 0000 1100, Primitive digit with floating point
         , BasicObject   = 0x0010    //!< bits: 0000 0000 0001 0000, Basic object
         , CustomDefined = 0x0100    //!< bits: 0000 0001 0000 0000, Custom type enumeration
         , Enumeration   = 0x0300    //!< bits: 0000 0011 0000 0000, Custom type enumeration
@@ -144,15 +144,35 @@ public:
      **/
     bool isPrimitive(void) const;
 
+    /**
+     * \brief   Checks if the data type is a custom defined type.
+     * \return  True if the data type is a custom defined type, false otherwise.
+     **/
     bool isCustomDefined(void) const;
 
+    /**
+     * \brief   Checks if the data type is a predefined type.
+     * \return  True if the data type is a predefined type, false otherwise.
+     **/
     bool isPredefined(void) const;
 
     /**
-     * \brief   Checks if the data type is a primitive integer type.
+     * \brief   Checks if the data type is a boolean type.
+     * \return  True if the data type is a boolean type, false otherwise.
+     **/
+    bool isPrimitiveBool(void) const;
+
+    /**
+     * \brief   Checks if the data type is a primitive signed integer type.
      * \return  True if the data type is a primitive integer type, false otherwise.
      **/
     bool isPrimitiveInt(void) const;
+
+    /**
+     * \brief   Checks if the data type is a primitive signed integer type.
+     * \return  True if the data type is a primitive integer type, false otherwise.
+     **/
+    bool isPrimitiveSint(void) const;
 
     /**
      * \brief   Checks if the data type is a primitive unsigned integer type.

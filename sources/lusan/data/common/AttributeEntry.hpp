@@ -56,12 +56,9 @@ public:
     static eNotification fromString(const QString& value);
 
 private:
-    /**
-     * \brief   The default notification type of the attribute.
-     **/
-    constexpr static eNotification DEFAULT_NOTIFICATION { eNotification::NotifyOnChange };
-    constexpr static const char* const NOTIFY_ONCHANGE  { "OnChange" }; //!< The string value of the notification type.
-    constexpr static const char* const NOTIFY_ALWAYS    { "Always" };   //!< The string value of the notification type.
+    static constexpr eNotification DEFAULT_NOTIFICATION { eNotification::NotifyOnChange };  //!< The default notification type of the attribute.
+    static constexpr const char* const NOTIFY_ONCHANGE  { "OnChange" }; //!< The string value of the notification type.
+    static constexpr const char* const NOTIFY_ALWAYS    { "Always" };   //!< The string value of the notification type.
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor

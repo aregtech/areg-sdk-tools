@@ -88,8 +88,16 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    /**
+     * \brief   Returns the list of fields.
+     * \return  The list of fields.
+     **/
     inline const QList<FieldType>& getFields(void) const;
 
+    /**
+     * \brief   Sets the list of fields.
+     * \param   fields  The list of fields to set.
+     **/
     inline void setFields(const QList<FieldType>& fields);
 
     /**
