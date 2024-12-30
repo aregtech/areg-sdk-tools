@@ -50,6 +50,7 @@ namespace XmlSI
     /**
      * \brief   Common XML element attributes of the Service Interface data.
      **/
+    constexpr const char* const xmlSIAttributeCategory      { "Category" };
     constexpr const char* const xmlSIAttributeDataType      { "DataType" };
     constexpr const char* const xmlSIAttributeID            { "ID" };
     constexpr const char* const xmlSIAttributeIsDefault     { "IsDefault" };
@@ -60,6 +61,7 @@ namespace XmlSI
     constexpr const char* const xmlSIAttributeType          { "Type" };
     constexpr const char* const xmlSIAttributeResponse      { "Response" };
     constexpr const char* const xmlSIAttributeValues        { "Values" };
+    constexpr const char* const xmlSIAttributeVersion       { "Version" };
 }
 
 #endif // LUSAN_COMMON_XMLSI_HPP

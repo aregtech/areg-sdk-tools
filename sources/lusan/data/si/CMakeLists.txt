@@ -8,6 +8,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/data/si/SIMethodBroadcast.cpp
     ${LUSAN}/data/si/SIMethodRequest.cpp
     ${LUSAN}/data/si/SIMethodResponse.cpp
+    ${LUSAN}/data/si/SIOverviewData.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -20,4 +21,5 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/si/SIMethodRequest.hpp
     ${LUSAN}/data/si/SIMethodResponse.hpp
     ${LUSAN}/data/si/SIMethodBroadcast.hpp
+    ${LUSAN}/data/si/SIOverviewData.hpp
 )
