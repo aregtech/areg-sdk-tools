@@ -32,13 +32,20 @@ class DataTypePrimitive : public DataTypeBase
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
-protected:
+public:
 
     /**
      * \brief   Constructor with category initialization.
      * \param   category    The category of the data type.
      **/
     DataTypePrimitive(DataTypeBase::eCategory category);
+
+    /**
+     * \brief   Constructor with name initialization.
+     * \param   name    The name of the data type.
+     **/
+    DataTypePrimitive(const QString& name);
+
     /**
      * \brief   Constructor with category and name initialization.
      * \param   category    The category of the data type.

@@ -54,9 +54,11 @@ namespace XmlSI
     constexpr const char* const xmlSIAttributeID            { "ID" };
     constexpr const char* const xmlSIAttributeIsDefault     { "IsDefault" };
     constexpr const char* const xmlSIAttributeIsDeprecated  { "IsDeprecated" };
+    constexpr const char* const xmlSIAttributeMethodType    { "MethodType" };
     constexpr const char* const xmlSIAttributeName          { "Name" };
     constexpr const char* const xmlSIAttributeNotify        { "Notify" };
     constexpr const char* const xmlSIAttributeType          { "Type" };
+    constexpr const char* const xmlSIAttributeResponse      { "Response" };
     constexpr const char* const xmlSIAttributeValues        { "Values" };
 }
 

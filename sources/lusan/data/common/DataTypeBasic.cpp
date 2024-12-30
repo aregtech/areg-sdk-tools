@@ -19,22 +19,30 @@
 #include "lusan/data/common/DataTypeBasic.hpp"
 
 DataTypeBasic::DataTypeBasic(void)
-    : DataTypeBase(eCategory::BasicObject)
+    : DataTypeBase  (eCategory::BasicObject)
+    , mHasValue     (false)
+    , mHasKey       (false)
 {
 }
 
 DataTypeBasic::DataTypeBasic(const DataTypeBasic& src)
-    : DataTypeBase(src)
+    : DataTypeBase  (src)
+    , mHasValue     (src.mHasValue)
+    , mHasKey       (src.mHasKey)
 {
 }
 
 DataTypeBasic::DataTypeBasic(DataTypeBasic&& src) noexcept
-    : DataTypeBase(std::move(src))
+    : DataTypeBase  (std::move(src))
+    , mHasValue     (src.mHasValue)
+    , mHasKey       (src.mHasKey)
 {
 }
 
 DataTypeBasic::DataTypeBasic(const QString& name)
-    : DataTypeBase(eCategory::BasicObject, name)
+    : DataTypeBase  (eCategory::BasicObject, name)
+    , mHasValue     (false)
+    , mHasKey   (false)
 {
 }
 
@@ -43,6 +51,8 @@ DataTypeBasic& DataTypeBasic::operator=(const DataTypeBasic& other)
     if (this != &other)
     {
         DataTypeBase::operator=(other);
+        mHasValue   = other.mHasValue;
+        mHasKey     = other.mHasKey;
     }
     return *this;
 }
@@ -52,8 +62,27 @@ DataTypeBasic& DataTypeBasic::operator=(DataTypeBasic&& other) noexcept
     if (this != &other)
     {
         DataTypeBase::operator=(std::move(other));
+        mHasValue   = other.mHasValue;
+        mHasKey     = other.mHasKey;
     }
+
     return *this;
+}
+
+void DataTypeBasic::setDataContainer(bool isDataContainer, bool hasKey)
+{
+    mHasValue   = isDataContainer;
+    mHasKey     = isDataContainer ? hasKey : false;
+}
+
+bool DataTypeBasic::isDataContainer(void) const
+{
+    return mHasValue;
+}
+
+bool DataTypeBasic::hasKey(void) const
+{
+    return mHasKey;
 }
 
 bool DataTypeBasic::readFromXml(QXmlStreamReader& xml)
