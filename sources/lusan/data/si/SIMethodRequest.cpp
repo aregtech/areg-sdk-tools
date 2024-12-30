@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodRequest.hpp"
-#include "SIMethodRequest.hpp"
 
 SIMethodRequest::SIMethodRequest(void)
     : SIMethodBase(SIMethodBase::eMethodType::MethodRequest)
@@ -92,7 +91,7 @@ bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
         mId = attributes.value(XmlSI::xmlSIAttributeID).toUInt();
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
         mResponse = attributes.hasAttribute(XmlSI::xmlSIAttributeResponse) ? attributes.value(XmlSI::xmlSIAttributeResponse).toString() : "";
-        bool isDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == "true" : false;
+        mIsDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == "true" : false;
         mDeprecateHint.clear();
 
         while (xml.readNextStartElement())
@@ -101,7 +100,7 @@ bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
             {
                 mDescription = xml.readElementText();
             }
-            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint && isDeprecated)
+            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint && mIsDeprecated)
             {
                 mDeprecateHint = xml.readElementText();
             }
@@ -150,18 +149,19 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
         xml.writeAttribute(XmlSI::xmlSIAttributeResponse, mResponse);
     }
 
+    if (mIsDeprecated)
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
+    }
+
     if (!mDescription.isEmpty())
     {
         xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
     }
 
-    if (mIsDeprecated)
+    if (mIsDeprecated && !mDeprecateHint.isEmpty())
     {
-        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
-        if (!mDeprecateHint.isEmpty())
-        {
-            xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
-        }
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
     }
 
     if (!mParameters.isEmpty())
@@ -171,6 +171,7 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
         {
             parameter.writeToXml(xml);
         }
+
         xml.writeEndElement();
     }
 
