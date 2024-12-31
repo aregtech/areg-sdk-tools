@@ -85,9 +85,9 @@ void SIMethodRequest::clearResponse(void)
 
 bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.name() == XmlSI::xmlSIElementAttribute && xml.attributes().value(XmlSI::xmlSIAttributeType) == getType())
+    QXmlStreamAttributes attributes = xml.attributes();
+    if (xml.name() == XmlSI::xmlSIElementMethod && attributes.value(XmlSI::xmlSIAttributeMethodType) == getType())
     {
-        QXmlStreamAttributes attributes = xml.attributes();
         mId = attributes.value(XmlSI::xmlSIAttributeID).toUInt();
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
         mResponse = attributes.hasAttribute(XmlSI::xmlSIAttributeResponse) ? attributes.value(XmlSI::xmlSIAttributeResponse).toString() : "";
@@ -104,7 +104,7 @@ bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
             {
                 mDeprecateHint = xml.readElementText();
             }
-            else if (xml.name() == XmlSI::xmlSIElementAttributeList)
+            else if (xml.name() == XmlSI::xmlSIElementParamList)
             {
                 while (xml.readNextStartElement())
                 {
@@ -140,9 +140,9 @@ bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
 
 void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
 {
-    xml.writeStartElement(XmlSI::xmlSIElementAttribute);
+    xml.writeStartElement(XmlSI::xmlSIElementMethod);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
-    xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
+    xml.writeAttribute(XmlSI::xmlSIAttributeMethodType, getType());
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     if (mResponse.isEmpty() == false)
     {
@@ -166,7 +166,7 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
 
     if (!mParameters.isEmpty())
     {
-        xml.writeStartElement(XmlSI::xmlSIElementAttributeList);
+        xml.writeStartElement(XmlSI::xmlSIElementParamList);
         for (const auto& parameter : mParameters)
         {
             parameter.writeToXml(xml);

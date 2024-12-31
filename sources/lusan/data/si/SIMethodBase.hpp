@@ -75,7 +75,8 @@ protected:
      * \param   src     The source object to move from.
      **/
     SIMethodBase(SIMethodBase&& src) noexcept;
-
+    
+public:
     /**
      * \brief   Destructor.
      **/

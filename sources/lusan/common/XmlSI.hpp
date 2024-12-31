@@ -43,8 +43,13 @@ namespace XmlSI
     constexpr const char* const xmlSIElementFieldList       { "FieldList" };
     constexpr const char* const xmlSIElementIncludeList     { "IncludeList" };
     constexpr const char* const xmlSIElementLocation        { "Location" };
+    constexpr const char* const xmlSIElementMethod          { "Method" };
+    constexpr const char* const xmlSIElementMethodList      { "MethodList" };
     constexpr const char* const xmlSIElementNamespace       { "Namespace" };
+    constexpr const char* const xmlSIElementOverview        { "Overview" };
     constexpr const char* const xmlSIElementParameter       { "Parameter" };
+    constexpr const char* const xmlSIElementParamList       { "ParamList" };
+    constexpr const char* const xmlSIElementServiceInterface{ "ServiceInterface" };
     constexpr const char* const xmlSIElementValue           { "Value" };
 
     /**
@@ -55,6 +60,7 @@ namespace XmlSI
     constexpr const char* const xmlSIAttributeID            { "ID" };
     constexpr const char* const xmlSIAttributeIsDefault     { "IsDefault" };
     constexpr const char* const xmlSIAttributeIsDeprecated  { "IsDeprecated" };
+    constexpr const char* const xmlSIAttributeFormatVersion { "FormatVersion" };
     constexpr const char* const xmlSIAttributeMethodType    { "MethodType" };
     constexpr const char* const xmlSIAttributeName          { "Name" };
     constexpr const char* const xmlSIAttributeNotify        { "Notify" };
