@@ -20,6 +20,8 @@
  *
  ************************************************************************/
 
+#include "lusan/common/VersionNumber.hpp"
+
 #include <QString>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -136,13 +138,15 @@ public:
      * \brief   Gets the version of the service interface.
      * \return  The version of the service interface.
      **/
-    const QString& getVersion() const;
+    const VersionNumber& getVersion() const;
 
     /**
      * \brief   Sets the version of the service interface.
      * \param   version  The version to set.
      **/
     void setVersion(const QString& version);
+    void setVersion(const VersionNumber& version);
+    void setVersion(int major, int minor, int patch);
 
     /**
      * \brief   Gets the category of the service interface.
@@ -196,13 +200,13 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    uint32_t    mId;            //!< The ID of the service interface.
-    QString     mName;          //!< The name of the service interface.
-    QString     mVersion;       //!< The version of the service interface.
-    eCategory   mCategory;      //!< The category of the service interface.
-    QString     mDescription;   //!< The description of the service interface.
-    bool        mIsDeprecated;  //!< Flag indicating whether the interface is deprecated.
-    QString     mDeprecateHint; //!< The deprecation hint.
+    uint32_t        mId;            //!< The ID of the service interface.
+    QString         mName;          //!< The name of the service interface.
+    VersionNumber   mVersion;       //!< The version of the service interface.
+    eCategory       mCategory;      //!< The category of the service interface.
+    QString         mDescription;   //!< The description of the service interface.
+    bool            mIsDeprecated;  //!< Flag indicating whether the interface is deprecated.
+    QString         mDeprecateHint; //!< The deprecation hint.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -229,14 +233,24 @@ inline void SIOverviewData::setName(const QString& name)
     mName = name;
 }
 
-inline const QString& SIOverviewData::getVersion() const
+inline const VersionNumber& SIOverviewData::getVersion() const
 {
     return mVersion;
 }
 
 inline void SIOverviewData::setVersion(const QString& version)
 {
+    mVersion.fromString(version);
+}
+
+inline void SIOverviewData::setVersion(const VersionNumber& version)
+{
     mVersion = version;
+}
+
+inline void SIOverviewData::setVersion(int major, int minor, int patch)
+{
+    mVersion = VersionNumber(major, minor, patch);
 }
 
 inline SIOverviewData::eCategory SIOverviewData::getCategory() const
