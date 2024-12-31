@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodData.hpp"
+#include "SIMethodData.hpp"
 
 namespace
 {
@@ -73,6 +74,9 @@ SIMethodData::~SIMethodData(void)
     qDeleteAll(mRequestMethods);
     qDeleteAll(mResponseMethods);
     qDeleteAll(mBroadcastMethods);
+    mRequestMethods.clear();
+    mResponseMethods.clear();
+    mBroadcastMethods.clear();
 }
 
 bool SIMethodData::addMethod(SIMethodBase* method, bool isUnique /*= true*/)
@@ -260,5 +264,15 @@ void SIMethodData::writeToXml(QXmlStreamWriter& xml) const
     }
 
     xml.writeEndElement();
+}
+
+void SIMethodData::removeAll(void)
+{
+    qDeleteAll(mRequestMethods);
+    qDeleteAll(mResponseMethods);
+    qDeleteAll(mBroadcastMethods);
+    mRequestMethods.clear();
+    mResponseMethods.clear();
+    mBroadcastMethods.clear();
 }
 

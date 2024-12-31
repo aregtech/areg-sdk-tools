@@ -31,6 +31,12 @@ SIDataTypeData::SIDataTypeData(QList<DataTypeCustom *>&& entries) noexcept
 {
 }
 
+SIDataTypeData::~SIDataTypeData(void)
+{
+    qDeleteAll(mDataTypes);
+    mDataTypes.clear();
+}
+
 const QList<DataTypeCustom *>& SIDataTypeData::getDataTypes(void) const
 {
     return mDataTypes;
@@ -129,10 +135,6 @@ void SIDataTypeData::writeToXml(QXmlStreamWriter& xml) const
 
 void SIDataTypeData::removeAll(void)
 {
-    for (auto* elem : mDataTypes)
-    {
-        delete elem;
-    }
-
+    qDeleteAll(mDataTypes);
     mDataTypes.clear();
 }

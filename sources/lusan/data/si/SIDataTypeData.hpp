@@ -44,6 +44,9 @@ public:
      **/
     SIDataTypeData(void);
 
+    /**
+     * \brief   Constructor. Copies data from given source.
+     **/
     SIDataTypeData(const SIDataTypeData& src) = default;
 
     /**
@@ -51,6 +54,8 @@ public:
      * \param   entries     The list of data types.
      **/
     SIDataTypeData(QList<DataTypeCustom *>&& entries) noexcept;
+
+    virtual ~SIDataTypeData(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -114,9 +119,9 @@ public:
      **/
     void removeAll(void);
 
-    //////////////////////////////////////////////////////////////////////////
-    // Hidden member variables.
-    //////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+// Hidden member variables.
+//////////////////////////////////////////////////////////////////////////
 private:
     QList<DataTypeCustom *> mDataTypes; //!< The list of data types.
 };
