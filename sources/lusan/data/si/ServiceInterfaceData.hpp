@@ -1,3 +1,5 @@
+#ifndef LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
+#define LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -16,9 +18,6 @@
  *  \brief       Lusan application, Service Interface Data.
  *
  ************************************************************************/
-
-#ifndef LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
-#define LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
 
 #include "lusan/data/si/SIOverviewData.hpp"
 #include "lusan/data/si/SIDataTypeData.hpp"
