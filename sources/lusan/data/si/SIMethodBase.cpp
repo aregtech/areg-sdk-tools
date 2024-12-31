@@ -47,7 +47,7 @@ SIMethodBase::SIMethodBase(const SIMethodBase& src)
     : MethodBase        (src)
     , mMethodType       (src.mMethodType)
     , mIsDeprecated     (src.mIsDeprecated)
-    , mDeprecateHint   (src.mDeprecateHint)
+    , mDeprecateHint    (src.mDeprecateHint)
 {
 }
 

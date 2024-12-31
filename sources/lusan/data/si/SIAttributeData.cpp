@@ -150,3 +150,8 @@ void SIAttributeData::sortAttributes(bool ascending)
         return ascending ? left < right : left > right;
     });
 }
+
+void SIAttributeData::removeAll(void)
+{
+    mAttributes.clear();
+}

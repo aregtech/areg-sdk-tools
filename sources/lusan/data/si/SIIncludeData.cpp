@@ -23,6 +23,7 @@
 const IncludeEntry SIIncludeData::InvalidInclude;
 
 SIIncludeData::SIIncludeData(void)
+    : mIncludes()
 {
 }
 
@@ -131,6 +132,11 @@ void SIIncludeData::sortIncludes(bool ascending)
         {
             return (ascending ? left < right : left > right);
         });
+}
+
+void SIIncludeData::removeAll(void)
+{
+    mIncludes.clear();
 }
 
 bool SIIncludeData::readFromXml(QXmlStreamReader& xml)

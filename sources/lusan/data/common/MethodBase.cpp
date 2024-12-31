@@ -158,3 +158,8 @@ void MethodBase::setDescription(const QString& description)
 {
     mDescription = description;
 }
+
+void MethodBase::removeAll(void)
+{
+    mParameters.clear();
+}

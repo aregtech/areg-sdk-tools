@@ -75,7 +75,7 @@ SIOverviewData::SIOverviewData(uint32_t id, const QString& name, const QString& 
 
 bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.name() == XmlSI::xmlSIElementAttribute)
+    if (xml.name() == XmlSI::xmlSIElementOverview)
     {
         QXmlStreamAttributes attributes = xml.attributes();
         mId = attributes.value(XmlSI::xmlSIAttributeID).toUInt();
@@ -108,7 +108,7 @@ bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
 
 void SIOverviewData::writeToXml(QXmlStreamWriter& xml) const
 {
-    xml.writeStartElement(XmlSI::xmlSIElementAttribute);
+    xml.writeStartElement(XmlSI::xmlSIElementOverview);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeVersion, mVersion);

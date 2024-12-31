@@ -64,9 +64,9 @@ SIMethodBroadcast& SIMethodBroadcast::operator=(SIMethodBroadcast&& other) noexc
 
 bool SIMethodBroadcast::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.name() == XmlSI::xmlSIElementAttribute && xml.attributes().value(XmlSI::xmlSIAttributeType) == getType())
+    QXmlStreamAttributes attributes = xml.attributes();
+    if (xml.name() == XmlSI::xmlSIElementMethod && attributes.value(XmlSI::xmlSIAttributeMethodType) == getType())
     {
-        QXmlStreamAttributes attributes = xml.attributes();
         mId = attributes.value(XmlSI::xmlSIAttributeID).toUInt();
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
         mIsDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == "true" : false;
@@ -82,7 +82,7 @@ bool SIMethodBroadcast::readFromXml(QXmlStreamReader& xml)
             {
                 mDeprecateHint = xml.readElementText();
             }
-            else if (xml.name() == XmlSI::xmlSIElementAttributeList)
+            else if (xml.name() == XmlSI::xmlSIElementParamList)
             {
                 while (xml.readNextStartElement())
                 {
@@ -116,9 +116,9 @@ bool SIMethodBroadcast::readFromXml(QXmlStreamReader& xml)
 
 void SIMethodBroadcast::writeToXml(QXmlStreamWriter& xml) const
 {
-    xml.writeStartElement(XmlSI::xmlSIElementAttribute);
+    xml.writeStartElement(XmlSI::xmlSIElementMethod);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
-    xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
+    xml.writeAttribute(XmlSI::xmlSIAttributeMethodType, getType());
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
 
     if (mIsDeprecated)
@@ -138,7 +138,7 @@ void SIMethodBroadcast::writeToXml(QXmlStreamWriter& xml) const
 
     if (!mParameters.isEmpty())
     {
-        xml.writeStartElement(XmlSI::xmlSIElementAttributeList);
+        xml.writeStartElement(XmlSI::xmlSIElementParamList);
         for (const auto& parameter : mParameters)
         {
             parameter.writeToXml(xml);
