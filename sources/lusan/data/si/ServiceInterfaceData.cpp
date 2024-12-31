@@ -86,7 +86,8 @@ bool ServiceInterfaceData::readFromXml(QXmlStreamReader& xml)
     if (xml.name() == XmlSI::xmlSIElementServiceInterface)
     {
         QXmlStreamAttributes attributes = xml.attributes();
-        if (attributes.value(XmlSI::xmlSIAttributeFormatVersion) != XML_FORMAT_VERSION)
+        QString version = attributes.value(XmlSI::xmlSIAttributeFormatVersion).toString();
+        if (VersionNumber(version).isCompatible(VersionNumber(XML_FORMAT_VERSION)) == false)
         {
             return false;
         }

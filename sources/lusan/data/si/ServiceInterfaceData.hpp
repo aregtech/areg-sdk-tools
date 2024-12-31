@@ -25,6 +25,8 @@
 #include "lusan/data/si/SIMethodData.hpp"
 #include "lusan/data/si/SIConstantData.hpp"
 #include "lusan/data/si/SIIncludeData.hpp"
+
+#include "lusan/common/VersionNumber.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 /**

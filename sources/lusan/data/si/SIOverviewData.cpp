@@ -111,7 +111,7 @@ void SIOverviewData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeStartElement(XmlSI::xmlSIElementOverview);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
-    xml.writeAttribute(XmlSI::xmlSIAttributeVersion, mVersion);
+    xml.writeAttribute(XmlSI::xmlSIAttributeVersion, mVersion.toString());
     xml.writeAttribute(XmlSI::xmlSIAttributeCategory, SIOverviewData::toString(mCategory));
     if (mIsDeprecated)
     {
