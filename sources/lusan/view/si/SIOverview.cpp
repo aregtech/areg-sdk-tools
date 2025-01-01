@@ -33,9 +33,10 @@ SIOverviewWidget::SIOverviewWidget(QWidget* parent)
     setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
 }
 
-SIOverview::SIOverview(QWidget* parent)
+SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     : QScrollArea       (parent)
-    , mOverviewDetails  (new SIOverviewDetails(this))
+    , mModel            (model)
+    , mOverviewDetails  (new SIOverviewDetails(model, this))
     , mOverviewLinks    (new SIOverviewLinks(this))
     , mWidget           (new SIOverviewWidget(this))
     , ui                (*mWidget->ui)

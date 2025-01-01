@@ -24,8 +24,9 @@
 
 ServiceInterface::ServiceInterface(QWidget *parent)
     : MdiChild  (parent)
+    , mModel    ( )
     , mTabWidget(this)
-    , mOverview (this)
+    , mOverview (mModel.getOverviewModel(), this)
     , mDataType (this)
     , mDataTopic(this)
     , mMethod   (this)

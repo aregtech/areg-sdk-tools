@@ -23,6 +23,7 @@
 class SIOverviewDetails;
 class SIOverviewLinks;
 class SIOverviewParamDetails;
+class SIOverviewModel;
 
 namespace Ui {
     class SIOverview;
@@ -46,11 +47,12 @@ class SIOverview : public QScrollArea
     Q_OBJECT
 
 public:
-    explicit SIOverview(QWidget* parent = nullptr);
+    explicit SIOverview(SIOverviewModel & model, QWidget* parent = nullptr);
 
     virtual ~SIOverview(void);
 
 private:
+    SIOverviewModel&    mModel;
     SIOverviewDetails*  mOverviewDetails;
     SIOverviewLinks*    mOverviewLinks;
     SIOverviewWidget*   mWidget;

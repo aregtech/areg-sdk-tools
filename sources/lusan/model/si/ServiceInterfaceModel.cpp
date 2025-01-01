@@ -1,5 +1,3 @@
-#ifndef LUSAN_APPLICATION_SI_SIOVERVIEWDETAILS_HPP
-#define LUSAN_APPLICATION_SI_SIOVERVIEWDETAILS_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,34 +10,17 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIOverviewDetails.hpp
+ *  \file        lusan/model/si/ServiceInterfaceModel.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface Model.
  *
  ************************************************************************/
-#include <QWidget>
-#include <QIntValidator>
 
-namespace Ui {
-    class SIOverviewDetails;
-}
+#include "lusan/model/si/ServiceInterfaceModel.hpp"
 
-class SIOverviewModel;
-
-class SIOverviewDetails : public QWidget
+ServiceInterfaceModel::ServiceInterfaceModel(void)
+    : mSIData()
+    , mModelOverview(mSIData.getOverviewData())
 {
-    Q_OBJECT
-
-public:
-    explicit SIOverviewDetails(SIOverviewModel &model, QWidget* parent = nullptr);
-    
-    void saveData(void) const;
-
-private:
-    Ui::SIOverviewDetails*  ui;
-    SIOverviewModel&        mModel;
-    QIntValidator           mVersionValidator;
-};
-
-#endif // LUSAN_APPLICATION_SI_SIOVERVIEWDETAILS_HPP
+}
