@@ -21,6 +21,7 @@
  ************************************************************************/
 
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/model/si/ServiceInterfaceModel.hpp"
 #include "lusan/view/si/SIConstant.hpp"
 #include "lusan/view/si/SIDataType.hpp"
 #include "lusan/view/si/SIDataTopic.hpp"
@@ -39,6 +40,7 @@ public:
     virtual ~ServiceInterface(void);
 
 private:
+    ServiceInterfaceModel   mModel;
     QTabWidget  mTabWidget;
     SIOverview  mOverview;
     SIDataType  mDataType;
