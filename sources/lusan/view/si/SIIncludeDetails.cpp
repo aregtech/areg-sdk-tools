@@ -21,8 +21,8 @@
 #include "ui/ui_SIIncludeDetails.h"
 
 SIIncludeDetails::SIIncludeDetails(QWidget* parent)
-    : QWidget(parent)
-    , ui(new Ui::SIIncludeDetails)
+    : QWidget   (parent)
+    , ui        (new Ui::SIIncludeDetails)
 {
     QFont font{ this->font() };
     font.setBold(false);
@@ -32,4 +32,55 @@ SIIncludeDetails::SIIncludeDetails(QWidget* parent)
     ui->setupUi(this);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+}
+
+SIIncludeDetails::~SIIncludeDetails(void)
+{
+    delete ui;
+    ui = nullptr;
+}
+
+QString SIIncludeDetails::getSelectedFile(void) const
+{
+    return ui->editInclude->text();
+}
+
+QString SIIncludeDetails::getDescription(void) const
+{
+    return ui->textDescribe->toPlainText();
+}
+
+bool SIIncludeDetails::isDeprecated(void) const
+{
+    return ui->checkDeprecated->isChecked();
+}
+
+QString SIIncludeDetails::getDeprecateHint(void) const
+{
+    return ui->editDeprecated->text();
+}
+
+QLineEdit * SIIncludeDetails::ctrlInclude(void)
+{
+    return ui->editInclude;
+}
+
+QLineEdit * SIIncludeDetails::ctrlDeprecateHint(void)
+{
+    return ui->editDeprecated;
+}
+
+QCheckBox * SIIncludeDetails::ctrlDepcrecateCheck(void)
+{
+    return ui->checkDeprecated;
+}
+
+QPlainTextEdit * SIIncludeDetails::ctrlDescription(void)
+{
+    return ui->textDescribe;
+}
+
+QPushButton * SIIncludeDetails::ctrlBrowseButton(void)
+{
+    return ui->buttonBrowse;
 }

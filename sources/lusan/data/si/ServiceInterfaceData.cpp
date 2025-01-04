@@ -29,6 +29,7 @@ ServiceInterfaceData::ServiceInterfaceData(void)
     , mMethodData()
     , mConstantData()
     , mIncludeData()
+    , mMaxId(0)
 {
 }
 
@@ -145,3 +146,12 @@ void ServiceInterfaceData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
+unsigned int ServiceInterfaceData::getNextId(void) const
+{
+    return ++mMaxId;
+}
+
+void ServiceInterfaceData::setMaxId(unsigned int id) const
+{
+    mMaxId = std::max(mMaxId, id);
+}

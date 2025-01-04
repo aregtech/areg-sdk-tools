@@ -20,6 +20,7 @@
  ************************************************************************/
 
 #include <QApplication>
+#include <QStringList>
 #include "lusan/data/common/OptionsManager.hpp"
 
 /**
@@ -28,6 +29,10 @@
  **/
 class LusanApplication : public QApplication
 {
+private:
+    static const QStringList     ExternalExts;  //!< The list of external file extensions.
+    static const QStringList     InternalExts;  //!< The list of internal file extensions.
+    
 public:
     /**
      * \brief   Constructor.
@@ -65,10 +70,34 @@ public:
      * \return  True if the application is initialized, false otherwise.
      **/
     static bool isInitialized(void);
+
+    /**
+     * \brief   Returns the list of supported file extensions.
+     * \return  The list of supported file extensions.
+     **/
+    static QStringList getSupportedFileExtensions(void);
+
+    /**
+     * \brief   Returns the list of external file extensions.
+     * \return  The list of external file extensions.
+     **/
+    static QStringList getExternalFileExtensions(void);
+
+    /**
+     * \brief   Returns the list of internal file extensions.
+     * \return  The list of internal file extensions.
+     **/
+    static QStringList getInternalFileExtensions(void);
+
+    /**
+     * \brief   Returns the list of workspace directories.
+     * \return  The list of workspace directories.
+     **/
+    static QStringList getWorkspaceDirectories(void);
     
 private:
-    static LusanApplication * theApp;   //!< The singleton instance of the application.
-    OptionsManager  mOptions;           //!< The options manager.
+    static LusanApplication *   theApp;     //!< The singleton instance of the application.
+    OptionsManager              mOptions;   //!< The options manager.
 };
 
 #endif // LUSAN_APP_LUSANAPPLICATION_HPP

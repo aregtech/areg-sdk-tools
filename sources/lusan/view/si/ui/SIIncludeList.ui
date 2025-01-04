@@ -33,13 +33,13 @@
         <rect>
          <x>0</x>
          <y>2</y>
-         <width>251</width>
+         <width>281</width>
          <height>38</height>
         </rect>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QToolButton" name="toolAddTopic">
+         <widget class="QToolButton" name="toolAddElem">
           <property name="maximumSize">
            <size>
             <width>32</width>
@@ -65,9 +65,8 @@
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Add Data Type</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/Add Data Type</normaloff>:/icons/Add Data Type</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -78,10 +77,42 @@
           <property name="shortcut">
            <string>Ctrl+R</string>
           </property>
+          <property name="autoRaise">
+           <bool>true</bool>
+          </property>
          </widget>
         </item>
         <item>
-         <widget class="QToolButton" name="toolDeleteTopic">
+         <widget class="QToolButton" name="toolUpdateElem">
+          <property name="maximumSize">
+           <size>
+            <width>32</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="toolTip">
+           <string>Update Selected</string>
+          </property>
+          <property name="text">
+           <string>Update</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/Update Item</normaloff>:/icons/Update Item</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="toolDeleteElem">
           <property name="maximumSize">
            <size>
             <width>32</width>
@@ -123,7 +154,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QToolButton" name="toolSort">
+         <widget class="QToolButton" name="toolInsertElem">
           <property name="maximumSize">
            <size>
             <width>32</width>
@@ -240,9 +271,8 @@
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Move Down</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/Move Down</normaloff>:/icons/Move Down</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -273,11 +303,14 @@
        </property>
        <item>
         <widget class="QTableWidget" name="tableIncludes">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="cursor" stdset="0">
-          <cursorShape>ArrowCursor</cursorShape>
+          <cursorShape>PointingHandCursor</cursorShape>
          </property>
          <property name="contextMenuPolicy">
-          <enum>Qt::ContextMenuPolicy::NoContextMenu</enum>
+          <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
          </property>
          <property name="autoFillBackground">
           <bool>true</bool>
@@ -286,10 +319,10 @@
           <number>1</number>
          </property>
          <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOn</enum>
+          <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
          </property>
          <property name="editTriggers">
-          <set>QAbstractItemView::EditTrigger::AllEditTriggers</set>
+          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
          </property>
          <property name="showDropIndicator" stdset="0">
           <bool>false</bool>
@@ -305,12 +338,15 @@
          </property>
          <property name="iconSize">
           <size>
-           <width>0</width>
-           <height>0</height>
+           <width>16</width>
+           <height>16</height>
           </size>
          </property>
          <property name="textElideMode">
           <enum>Qt::TextElideMode::ElideRight</enum>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
          </property>
          <property name="wordWrap">
           <bool>false</bool>
@@ -330,9 +366,15 @@
          <attribute name="horizontalHeaderStretchLastSection">
           <bool>true</bool>
          </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderHighlightSections">
+          <bool>false</bool>
+         </attribute>
          <column>
           <property name="text">
-           <string>Name:</string>
+           <string>Include Path:</string>
           </property>
           <property name="font">
            <font>
@@ -348,6 +390,17 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <tabstops>
+  <tabstop>toolAddElem</tabstop>
+  <tabstop>toolUpdateElem</tabstop>
+  <tabstop>toolDeleteElem</tabstop>
+  <tabstop>toolInsertElem</tabstop>
+  <tabstop>toolMoveUp</tabstop>
+  <tabstop>toolMoveDown</tabstop>
+  <tabstop>tableIncludes</tabstop>
+ </tabstops>
+ <resources>
+  <include location="../../../res/lusan.qrc"/>
+ </resources>
  <connections/>
 </ui>

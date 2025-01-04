@@ -8,6 +8,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/NaviFileSystem.cpp
     ${LUSAN}/view/common/Navigation.cpp
     ${LUSAN}/view/common/Workspace.cpp
+    ${LUSAN}/view/common/WorkspaceFileDialog.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -18,4 +19,5 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/NaviFileSystem.hpp
     ${LUSAN}/view/common/Navigation.hpp
     ${LUSAN}/view/common/Workspace.hpp
+    ${LUSAN}/view/common/WorkspaceFileDialog.hpp
 )

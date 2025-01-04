@@ -20,7 +20,29 @@
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
 
-LusanApplication * LusanApplication::theApp{nullptr};
+const QStringList   LusanApplication::ExternalExts
+{
+      "*.h"
+    , "*.c"
+    , "*.hh"
+    , "*.cc"
+    , "*.hpp"
+    , "*.cpp"
+    , "*.inc"
+    , "*.inl"
+    , "*.hxx"
+    , "*.cxx"
+};
+
+const QStringList   LusanApplication::InternalExts
+{
+      "*.siml"
+    , "*.dtml"
+    , "*.coml"
+    , "*.logs"
+};
+
+LusanApplication *  LusanApplication::theApp{nullptr};
 
 LusanApplication::LusanApplication(int argc, char* argv[])
     : QApplication  (argc, argv)
@@ -55,4 +77,103 @@ WorkspaceEntry LusanApplication::getActiveWorkspace(void)
 bool LusanApplication::isInitialized(void)
 {
     return (LusanApplication::theApp != nullptr);
+}
+
+QStringList LusanApplication::getSupportedFileExtensions(void)
+{
+    QString result(tr("Supported Files"));
+    result += " (";
+
+    int count = 0;
+    for (const QString& ext : ExternalExts)
+    {
+        if (count++ > 0)
+        {
+            result += " ";
+        }
+
+        result += ext;
+    }
+
+    for (const QString& ext : InternalExts)
+    {
+        if (count++ > 0)
+        {
+            result += " ";
+        }
+
+        result += ext;
+    }
+
+    result += ")";
+    return QStringList(result);
+}
+
+QStringList LusanApplication::getExternalFileExtensions(void)
+{
+    QString externals(tr("External Files"));
+    externals += " (";
+
+    int count = 0;
+    for (const QString& ext : ExternalExts)
+    {
+        if (count ++ > 0)
+        {
+            externals += " ";
+        }
+
+        externals += ext;
+    }
+
+    externals += ")";
+    return QStringList(externals);
+}
+
+QStringList LusanApplication::getInternalFileExtensions(void)
+{
+    QString internals(tr("Internal Files"));
+    internals += " (";
+
+    int count = 0;
+    for (const QString& ext : InternalExts)
+    {
+        if (count++ > 0)
+        {
+            internals += " ";
+        }
+
+        internals += ext;
+    }
+
+    internals += ")";
+    return QStringList(internals);
+}
+
+QStringList LusanApplication::getWorkspaceDirectories(void)
+{
+    QStringList result;
+    if (LusanApplication::theApp != nullptr)
+    {
+        const WorkspaceEntry & workspace = LusanApplication::theApp->mOptions.getActiveWorkspace();
+        
+        Q_ASSERT(workspace.getWorkspaceRoot().isEmpty() == false);
+        result.append(workspace.getWorkspaceRoot());
+        
+        if (workspace.getDirSources().isEmpty() == false)
+        {
+            result.append(workspace.getDirSources());
+        }
+        
+        if (workspace.getDirIncludes().isEmpty() == false)
+        {
+            result.append(workspace.getDirIncludes());
+        }
+        
+        if (workspace.getDirDelivery().isEmpty() == false)
+        {
+            result.append(workspace.getDirDelivery());
+        }
+    }
+    
+    return result;
 }
