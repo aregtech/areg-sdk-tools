@@ -20,9 +20,13 @@
 #include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIIncludeList.h"
 
-SIIncludeList::SIIncludeList(QWidget* parent)
-    : QWidget(parent)
-    , ui(new Ui::SIIncludeList)
+#include "lusan/view/si/SIIncludeDetails.hpp"
+#include "lusan/model/si/SIIncludeModel.hpp"
+
+SIIncludeList::SIIncludeList(SIIncludeModel& model, QWidget* parent)
+    : QWidget   (parent)
+    , ui        (new Ui::SIIncludeList)
+    , mModel    (model)
 {
     QFont font{ this->font() };
     font.setBold(false);
@@ -34,4 +38,39 @@ SIIncludeList::SIIncludeList(QWidget* parent)
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+}
+
+QToolButton* SIIncludeList::ctrlButtonAdd(void) const
+{
+    return ui->toolAddElem;
+}
+
+QToolButton* SIIncludeList::ctrlButtonRemove(void) const
+{
+    return ui->toolDeleteElem;
+}
+
+QToolButton* SIIncludeList::ctrlButtonUp(void) const
+{
+    return ui->toolMoveUp;
+}
+
+QToolButton* SIIncludeList::ctrlButtonDown(void) const
+{
+    return ui->toolMoveDown;
+}
+
+QToolButton* SIIncludeList::ctrlButtonInsert(void) const
+{
+    return ui->toolInsertElem;
+}
+
+QToolButton* SIIncludeList::ctrlButtonUpdate(void) const
+{
+    return ui->toolUpdateElem;
+}
+
+QTableWidget* SIIncludeList::ctrlTableIncludes(void) const
+{
+    return ui->tableIncludes;
 }

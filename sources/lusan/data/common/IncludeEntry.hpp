@@ -1,5 +1,5 @@
-#ifndef LUSAN_DATA_SI_INCLUDEENTRY_HPP
-#define LUSAN_DATA_SI_INCLUDEENTRY_HPP
+#ifndef LUSAN_DATA_COMMON_INCLUDEENTRY_HPP
+#define LUSAN_DATA_COMMON_INCLUDEENTRY_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/si/IncludeEntry.hpp
+ *  \file        lusan/data/common/IncludeEntry.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Include Entry.
@@ -199,11 +199,11 @@ public:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    uint32_t    mEntryId;       //!< The unique ID.
     QString     mLocation;      //!< The file path.
     QString     mDescription;   //!< The description.
     bool        mDeprecated;    //!< The deprecated flag.
     QString     mDeprecateHint; //!< The deprecation hint.
+    uint32_t    mId;            //!< The unique ID.
 };
 
-#endif  // LUSAN_DATA_SI_INCLUDEENTRY_HPP
+#endif  // LUSAN_DATA_COMMON_INCLUDEENTRY_HPP

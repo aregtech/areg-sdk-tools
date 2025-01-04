@@ -24,9 +24,17 @@
   ************************************************************************/
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/model/si/SIOverviewModel.hpp"
+#include "lusan/model/si/SIIncludeModel.hpp"
 
+/**
+ * \class   ServiceInterfaceModel
+ * \brief   The model of the service interface.
+ **/
 class ServiceInterfaceModel
 {
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     ServiceInterfaceModel(void);
 
@@ -34,16 +42,33 @@ public:
 
 
 public:
+    /**
+     * \brief   Returns the overview model.
+     **/
     inline SIOverviewModel& getOverviewModel(void);
 
+    /**
+     * \brief   Returns the include model.
+     **/
+    inline SIIncludeModel & getIncludesModel(void);
+
 private:
-    ServiceInterfaceData    mSIData;
-    SIOverviewModel         mModelOverview;
+    ServiceInterfaceData    mSIData;        //!< The service interface data.
+    SIOverviewModel         mModelOverview; //!< The overview model.
+    SIIncludeModel          mModelInclude;  //!< The include model.
 };
 
+//////////////////////////////////////////////////////////////////////////
+// ServiceInterfaceModel class inline functions
+//////////////////////////////////////////////////////////////////////////
 inline SIOverviewModel& ServiceInterfaceModel::getOverviewModel(void)
 {
     return mModelOverview;
+}
+
+inline SIIncludeModel & ServiceInterfaceModel::getIncludesModel(void)
+{
+    return mModelInclude;
 }
 
 #endif  // LUSAN_MODEL_SI_SERVICEINTERFACEMODEL_HPP

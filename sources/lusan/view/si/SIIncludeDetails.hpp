@@ -20,19 +20,111 @@
  ************************************************************************/
 #include <QWidget>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 namespace Ui {
     class SIIncludeDetails;
 }
+    
+class QPushButton;
+class QCheckBox;
+class QLineEdit;
+class QPlainTextEdit;
 
+//////////////////////////////////////////////////////////////////////////
+// SIIncludeDetails class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \brief   The Service Interface Include file details page.
+ **/
 class SIIncludeDetails : public QWidget
 {
+    friend class SIInclude;
     Q_OBJECT
 
+//////////////////////////////////////////////////////////////////////////
+// Constructor
+//////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Constructor.
+     * \param   parent  The parent widget.
+     **/
     explicit SIIncludeDetails(QWidget* parent = nullptr);
 
+    virtual ~SIIncludeDetails(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the selected file.
+     **/
+    QString getSelectedFile(void) const;
+
+    /**
+     * \brief   Returns the description of the selected file.
+     **/
+    QString getDescription(void) const;
+
+    /**
+     * \brief   Returns true if the selected file is deprecated.
+     **/
+    bool isDeprecated(void) const;
+
+    /**
+     * \brief   Returns the hint of the deprecated file.
+     **/
+    QString getDeprecateHint(void) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Protected controls
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    /**
+     * \brief   Returns the control of the include file path.
+     **/
+    QLineEdit * ctrlInclude(void);
+
+    /**
+     * \brief   Returns the control of the deprecation hint.
+     **/
+    QLineEdit * ctrlDeprecateHint(void);
+
+    /**
+     * \brief   Returns the control of the deprecation flag.
+     **/
+    QCheckBox * ctrlDepcrecateCheck(void);
+
+    /**
+     * \brief   Returns the control of the description.
+     **/
+    QPlainTextEdit * ctrlDescription(void);
+
+    /**
+     * \brief   Returns the control of the browse button.
+     **/
+    QPushButton * ctrlBrowseButton(void);
+    
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIIncludeDetails* ui;
+    Ui::SIIncludeDetails*   ui; //!< The user interface object.
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    SIIncludeDetails(const SIIncludeDetails& /*src*/) = delete;
+    SIIncludeDetails& operator = (const SIIncludeDetails& /*src*/) = delete;
+    SIIncludeDetails(SIIncludeDetails&& /*src*/) = delete;
+    SIIncludeDetails& operator = (SIIncludeDetails&& /*src*/) = delete;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIINCLUDEDETAILS_HPP

@@ -20,7 +20,7 @@
 #define LUSAN_MODEL_SI_SIOVERVIEWMODEL_HPP
 
 /************************************************************************
- * Inlcudes
+ * Includes
  ************************************************************************/
 #include "lusan/data/si/SIOverviewData.hpp"
 

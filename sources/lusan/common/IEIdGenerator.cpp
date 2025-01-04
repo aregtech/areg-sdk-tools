@@ -10,18 +10,11 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/si/ServiceInterfaceModel.cpp
+ *  \file        lusan/common/IEIdGenerator.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Model.
+ *  \brief       Lusan application, ID Generator interface.
  *
  ************************************************************************/
 
-#include "lusan/model/si/ServiceInterfaceModel.hpp"
-
-ServiceInterfaceModel::ServiceInterfaceModel(void)
-    : mSIData()
-    , mModelOverview(mSIData.getOverviewData())
-    , mModelInclude(mSIData.getIncludeData())
-{
-}
+#include "lusan/common/IEIdGenerator.hpp"

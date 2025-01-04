@@ -20,19 +20,89 @@
  ************************************************************************/
 #include <QWidget>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 namespace Ui {
     class SIIncludeList;
 }
 
+class QTableWidget;
+class QToolButton;
+class SIIncludeModel;
+
+//////////////////////////////////////////////////////////////////////////
+// SIIncludeList class declaration
+//////////////////////////////////////////////////////////////////////////
+/**
+ * \brief   The Service Interface Include list page.
+ **/
 class SIIncludeList : public QWidget
 {
+    friend class SIInclude;
     Q_OBJECT
 
+//////////////////////////////////////////////////////////////////////////
+// Constructor
+//////////////////////////////////////////////////////////////////////////
 public:
-    explicit SIIncludeList(QWidget* parent = nullptr);
+    explicit SIIncludeList(SIIncludeModel & model, QWidget* parent = nullptr);
+    
+//////////////////////////////////////////////////////////////////////////
+// Protected members
+//////////////////////////////////////////////////////////////////////////
+protected:
 
+    /**
+     * \brief   Returns the control of the add entry tool button.
+     **/
+    QToolButton* ctrlButtonAdd(void) const;
+
+    /**
+     * \brief   Returns the control of the remove entry tool button.
+     **/
+    QToolButton* ctrlButtonRemove(void) const;
+
+    /**
+     * \brief   Returns the control of the up entry tool button.
+     **/
+    QToolButton* ctrlButtonUp(void) const;
+
+    /**
+     * \brief   Returns the control of the down entry tool button.
+     **/
+    QToolButton* ctrlButtonDown(void) const;
+
+    /**
+     * \brief   Returns the control of the insert entry tool button.
+     **/
+    QToolButton* ctrlButtonInsert(void) const;
+
+    /**
+     * \brief   Returns the control of the update entry tool button.
+     **/
+    QToolButton* ctrlButtonUpdate(void) const;    
+
+    /**
+     * \brief   Returns the control of the includes table widget.
+     **/
+    QTableWidget* ctrlTableIncludes(void) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIIncludeList* ui;
+    Ui::SIIncludeList*  ui;
+    SIIncludeModel&     mModel;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    SIIncludeList(const SIIncludeList& /*src*/) = delete;
+    SIIncludeList& operator = (const SIIncludeList& /*src*/) = delete;
+    SIIncludeList(SIIncludeList&& /*src*/) = delete;
+    SIIncludeList& operator = (SIIncludeList&& /*src*/) = delete;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIINCLUDELIST_HPP

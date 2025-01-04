@@ -10,7 +10,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/si/IncludeEntry.cpp
+ *  \file        lusan/data/common/IncludeEntry.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Include Entry.
@@ -23,39 +23,39 @@
 
 IncludeEntry::IncludeEntry(void)
     : mLocation     ( )
-    , mEntryId      (0)
     , mDescription  ( )
     , mDeprecated   (false)
     , mDeprecateHint( )
+    , mId           (0)
 {
 }
 
 IncludeEntry::IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint)
     : mLocation     (path)
-    , mEntryId      (id)
     , mDescription  (description)
     , mDeprecated   (deprecated)
     , mDeprecateHint(deprecationHint)
+    , mId           (id)
 {
 }
 
 IncludeEntry::IncludeEntry(const IncludeEntry& other)
     : mLocation     (other.mLocation)
-    , mEntryId      (other.mEntryId)
     , mDescription  (other.mDescription)
     , mDeprecated   (other.mDeprecated)
     , mDeprecateHint(other.mDeprecateHint)
+    , mId           (other.mId)
 {
 }
 
 IncludeEntry::IncludeEntry(IncludeEntry&& other) noexcept
     : mLocation     (std::move(other.mLocation))
-    , mEntryId      (other.mEntryId)
     , mDescription  (std::move(other.mDescription))
     , mDeprecated   (other.mDeprecated)
     , mDeprecateHint(std::move(other.mDeprecateHint))
+    , mId           (other.mId)
 {
-    other.mEntryId      = 0;
+    other.mId           = 0;
     other.mDeprecated   = false;
 }
 
@@ -64,7 +64,7 @@ IncludeEntry& IncludeEntry::operator=(const IncludeEntry& other)
     if (this != &other)
     {
         mLocation       = other.mLocation;
-        mEntryId        = other.mEntryId;
+        mId             = other.mId;
         mDescription    = other.mDescription;
         mDeprecated     = other.mDeprecated;
         mDeprecateHint  = other.mDeprecateHint;
@@ -78,12 +78,12 @@ IncludeEntry& IncludeEntry::operator=(IncludeEntry&& other) noexcept
     if (this != &other)
     {
         mLocation       = std::move(other.mLocation);
-        mEntryId        = other.mEntryId;
+        mId             = other.mId;
         mDescription    = std::move(other.mDescription);
         mDeprecated     = other.mDeprecated;
         mDeprecateHint  = std::move(other.mDeprecateHint);
 
-        other.mEntryId      = 0;
+        other.mId           = 0;
         other.mDeprecated   = false;
     }
 
@@ -127,12 +127,12 @@ void IncludeEntry::setLocation(const QString& path)
 
 uint32_t IncludeEntry::getId(void) const
 {
-    return mEntryId;
+    return mId;
 }
 
 void IncludeEntry::setId(uint32_t id)
 {
-    mEntryId = id;
+    mId = id;
 }
 
 const QString& IncludeEntry::getDescription(void) const
@@ -178,7 +178,7 @@ bool IncludeEntry::readFromXml(QXmlStreamReader& xml)
         return false;
     }
 
-    mEntryId = xml.attributes().value(XmlSI::xmlSIAttributeID).toUInt();
+    setId(xml.attributes().value(XmlSI::xmlSIAttributeID).toUInt());
     mLocation = xml.attributes().value(XmlSI::xmlSIAttributeName).toString();
     mDeprecated = xml.attributes().value(XmlSI::xmlSIAttributeIsDeprecated).toString() == "true";
 
@@ -204,7 +204,7 @@ bool IncludeEntry::readFromXml(QXmlStreamReader& xml)
 void IncludeEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementLocation);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mEntryId));
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mLocation);
     if (mDeprecated)
     {

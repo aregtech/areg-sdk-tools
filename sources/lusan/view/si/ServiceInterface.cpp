@@ -31,7 +31,7 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     , mDataTopic(this)
     , mMethod   (this)
     , mConstant (this)
-    , mInclude  (this)
+    , mInclude  (mModel.getIncludesModel(), this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the sioverview widget as the first tab
