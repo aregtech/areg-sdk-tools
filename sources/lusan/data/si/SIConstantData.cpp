@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/si/SIConstantData.hpp"
+#include "lusan/data/si/SIDataTypeData.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 const ConstantEntry SIConstantData::InvalidConstant = ConstantEntry();
@@ -45,9 +46,13 @@ int SIConstantData::findConstant(const ConstantEntry& entry) const
     return mConstants.indexOf(entry);
 }
 
-void SIConstantData::addConstant(const ConstantEntry& entry)
+bool SIConstantData::addConstant(const ConstantEntry& entry, bool unique /*= true*/)
 {
+    if (findConstant(entry.getName()) != -1)
+        return false;
+
     mConstants.append(entry);
+    return true;
 }
 
 bool SIConstantData::removeConstant(const ConstantEntry& entry)
@@ -135,15 +140,6 @@ bool SIConstantData::removeConstant(const QString& name)
     return false;
 }
 
-void SIConstantData::addConstant(const ConstantEntry& entry, bool ascending)
-{
-    if (mConstants.contains(entry) == false)
-    {
-        mConstants.append(entry);
-        sortConstants(ascending);
-    }
-}
-
 void SIConstantData::sortConstants(bool ascending)
 {
     std::sort(mConstants.begin(), mConstants.end(), [ascending](const ConstantEntry& left, const ConstantEntry& right) {
@@ -154,4 +150,120 @@ void SIConstantData::sortConstants(bool ascending)
 void SIConstantData::removeAll(void)
 {
     mConstants.clear();
+}
+
+bool SIConstantData::update(const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint)
+{
+    int index = findConstant(name);
+    if (index != -1)
+    {
+        ConstantEntry newEntry(0, name, type, value, isDeprecated, description, deprecateHint);
+        mConstants[index] = newEntry;
+        return true;
+    }
+
+    return false;
+}
+
+bool SIConstantData::updateValue(const QString& name, const QString& value)
+{
+    int index = findConstant(name);
+    if (index != -1)
+    {
+        mConstants[index].setValue(value);
+        return true;
+    }
+
+    return false;
+}
+
+bool SIConstantData::updateName(const QString& oldName, const QString& newName, bool unique /*= true*/)
+{
+    bool result{false};
+    int index = findConstant(oldName);
+    if (index != -1)
+    {
+        if (unique)
+        {
+            if (findConstant(newName) == -1)
+            {
+                mConstants[index].setName(newName);
+                result = true;
+            }
+        }
+        else
+        {
+            mConstants[index].setName(newName);
+            result = true;
+        }
+    }
+    
+    return result;
+}
+
+bool SIConstantData::updateType(const QString& name, const QString& type)
+{
+    int index = findConstant(name);
+    if (index != -1)
+    {
+        mConstants[index].setType(type);
+        return true;
+    }
+
+    return false;
+}
+
+bool SIConstantData::updateDeprecation(const QString& name, bool isDeprecated)
+{
+    int index = findConstant(name);
+    if (index != -1)
+    {
+        mConstants[index].setDeprecated(isDeprecated);
+        return true;
+    }
+
+    return false;
+}
+
+bool SIConstantData::updateDescription(const QString& name, const QString& description)
+{
+    int index = findConstant(name);
+    if (index != -1)
+    {
+        mConstants[index].setDescription(description);
+        return true;
+    }
+
+    return false;
+}
+
+bool SIConstantData::updateDeprecateHint(const QString& name, const QString& deprecateHint)
+{
+    int index = findConstant(name);
+    if (index != -1)
+    {
+        mConstants[index].setDeprecateHint(deprecateHint);
+        return true;
+    }
+
+    return false;
+}
+
+bool SIConstantData::validate(const SIDataTypeData& dataType) const
+{
+    for (const ConstantEntry& entry : mConstants)
+    {
+        if (dataType.findDataType(entry.getType()) == nullptr)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+ConstantEntry* SIConstantData::find(const QString& name) const
+{
+    int index = findConstant(name);
+    return (index != -1) ? const_cast<ConstantEntry*>(&mConstants[index]) : nullptr;
 }

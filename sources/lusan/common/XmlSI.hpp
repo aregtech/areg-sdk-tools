@@ -57,6 +57,8 @@ namespace XmlSI
      **/
     constexpr const char* const xmlSIAttributeCategory      { "Category" };
     constexpr const char* const xmlSIAttributeDataType      { "DataType" };
+    constexpr const char* const xmlSIAttributeHasKey        { "HasKey" };
+    constexpr const char* const xmlSIAttributeHasValue      { "HasValue" };
     constexpr const char* const xmlSIAttributeID            { "ID" };
     constexpr const char* const xmlSIAttributeIsDefault     { "IsDefault" };
     constexpr const char* const xmlSIAttributeIsDeprecated  { "IsDeprecated" };
@@ -68,6 +70,13 @@ namespace XmlSI
     constexpr const char* const xmlSIAttributeResponse      { "Response" };
     constexpr const char* const xmlSIAttributeValues        { "Values" };
     constexpr const char* const xmlSIAttributeVersion       { "Version" };
+    
+
+    constexpr const char* const xmlSIValuePrimitive         { "Primitive" };
+    constexpr const char* const xmlSIValueBasic             { "Basic" };
+    constexpr const char* const xmlSIValueContainer         { "Container" };
+    constexpr const char* const xmlSIValueTrue              { "true" };
+    constexpr const char* const xmlSIValueFalse             { "false" };
 }
 
 #endif // LUSAN_COMMON_XMLSI_HPP

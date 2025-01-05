@@ -13,4 +13,7 @@
         <file alias="Edit Item">icons/edit.png</file>
         <file alias="Update Item">icons/update.png</file>
     </qresource>
+    <qresource prefix="/data">
+        <file alias="Predefined Types">datatype.xml</file>
+    </qresource>
 </RCC>

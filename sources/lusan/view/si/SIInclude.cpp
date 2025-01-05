@@ -47,19 +47,19 @@ SIIncludeWidget::SIIncludeWidget(QWidget* parent)
 }
 
 SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
-    : QScrollArea   (parent)
-    , mModel        (model)
-    , mPageDetails  (new SIIncludeDetails(this))
-    , mPageList     (new SIIncludeList(model, this))
-    , mWidget       (new SIIncludeWidget(this))
-    , ui            (*mWidget->ui)
-    , mCurUrl       ( )
-    , mCurFile      ( )
-    , mCurFilter    ( )
-    , mCurView      ( -1 )
+    : QScrollArea(parent)
+    , mModel    (model)
+    , mDetails  (new SIIncludeDetails(this))
+    , mList     (new SIIncludeList(model, this))
+    , mWidget   (new SIIncludeWidget(this))
+    , ui        (*mWidget->ui)
+    , mCurUrl   ( )
+    , mCurFile  ( )
+    , mCurFilter( )
+    , mCurView  ( -1 )
 {
-    ui.horizontalLayout->addWidget(mPageList);
-    ui.horizontalLayout->addWidget(mPageDetails);
+    ui.horizontalLayout->addWidget(mList);
+    ui.horizontalLayout->addWidget(mDetails);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -70,14 +70,14 @@ SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
     setupSignals();
     updateData();
     
-    QTableWidget * table = mPageList->ctrlTableIncludes();
+    QTableWidget * table = mList->ctrlTableList();
     table->setSelectionMode(QAbstractItemView::SelectionMode::SingleSelection);
 }
 
 SIInclude::~SIInclude(void)
 {
-    ui.horizontalLayout->removeWidget(mPageList);
-    ui.horizontalLayout->removeWidget(mPageDetails);
+    ui.horizontalLayout->removeWidget(mList);
+    ui.horizontalLayout->removeWidget(mDetails);
 }
 
 QStringList SIInclude::getSupportedExtensions(void)
@@ -90,7 +90,7 @@ QStringList SIInclude::getSupportedExtensions(void)
 
 void SIInclude::updateData(void)
 {
-    QTableWidget * table = mPageList->ctrlTableIncludes();
+    QTableWidget * table = mList->ctrlTableList();
     const QList<IncludeEntry> & entries = mModel.entries();
     if (entries.isEmpty() == false)
     {
@@ -105,64 +105,64 @@ void SIInclude::updateData(void)
 
 void SIInclude::setupSignals(void)
 {
-    Q_ASSERT(mPageDetails != nullptr);
-    Q_ASSERT(mPageList != nullptr);
+    Q_ASSERT(mDetails != nullptr);
+    Q_ASSERT(mList != nullptr);
     
-    connect(  mPageDetails->ctrlInclude()
+    connect(  mDetails->ctrlInclude()
             , &QLineEdit::textChanged
             , this
             , [this](const QString& text)
                 {
-                    this->mPageList->ctrlButtonAdd()->setEnabled(text.isEmpty() == false);
+                    this->mList->ctrlButtonAdd()->setEnabled(text.isEmpty() == false);
                 }
             );
     
-    connect(mPageList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIInclude::onAddClicked);
-    connect(mPageList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIInclude::onRemoveClicked);
-    connect(mPageList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIInclude::onInsertClicked);
-    connect(mPageList->ctrlButtonUpdate(), &QToolButton::clicked, this, &SIInclude::onUpdateClicked);
-    connect(mPageList->ctrlTableIncludes(), &QTableWidget::currentCellChanged, this, &SIInclude::onCurCellChanged);
-    connect(mPageDetails->ctrlBrowseButton(), &QPushButton::clicked, this, &SIInclude::onBrowseClicked);        
+    connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIInclude::onAddClicked);
+    connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIInclude::onRemoveClicked);
+    connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIInclude::onInsertClicked);
+    connect(mList->ctrlButtonUpdate(), &QToolButton::clicked, this, &SIInclude::onUpdateClicked);
+    connect(mList->ctrlTableList(), &QTableWidget::currentCellChanged, this, &SIInclude::onCurCellChanged);
+    connect(mDetails->ctrlBrowseButton(), &QPushButton::clicked, this, &SIInclude::onBrowseClicked);
 }
 
 void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
 {
-    QTableWidget* table = mPageList->ctrlTableIncludes();
+    QTableWidget* table = mList->ctrlTableList();
     if (currentRow != -1)
     {
         QTableWidgetItem * current = table->item(currentRow, currentColumn);
         const IncludeEntry * data = mModel.data(current->text());
         Q_ASSERT(data != nullptr);
-        mPageList->ctrlButtonRemove()->setEnabled(true);
-        mPageList->ctrlButtonDown()->setEnabled(currentRow < (table->rowCount() - 1));
-        mPageList->ctrlButtonUp()->setEnabled(currentRow != 0);
-        mPageDetails->ctrlInclude()->setText(data->getLocation());
-        mPageDetails->ctrlDescription()->setPlainText(data->getDescription());
-        mPageDetails->ctrlDepcrecateCheck()->setChecked(data->isDeprecated());
-        mPageDetails->ctrlDeprecateHint()->setText(data->getDeprecationHint());
+        mList->ctrlButtonRemove()->setEnabled(true);
+        mList->ctrlButtonMoveDown()->setEnabled(currentRow < (table->rowCount() - 1));
+        mList->ctrlButtonMoveUp()->setEnabled(currentRow != 0);
+        mDetails->ctrlInclude()->setText(data->getLocation());
+        mDetails->ctrlDescription()->setPlainText(data->getDescription());
+        mDetails->ctrlDepcrecateCheck()->setChecked(data->isDeprecated());
+        mDetails->ctrlDeprecateHint()->setText(data->getDeprecationHint());
     }
     else
     {
-        mPageList->ctrlButtonRemove()->setEnabled(false);
-        mPageList->ctrlButtonDown()->setEnabled(false);
-        mPageList->ctrlButtonUp()->setEnabled(false);
-        mPageDetails->ctrlInclude()->setText("");
-        mPageDetails->ctrlDescription()->setPlainText("");
-        mPageDetails->ctrlDepcrecateCheck()->setChecked(false);
-        mPageDetails->ctrlDeprecateHint()->setText("");
+        mList->ctrlButtonRemove()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mDetails->ctrlInclude()->setText("");
+        mDetails->ctrlDescription()->setPlainText("");
+        mDetails->ctrlDepcrecateCheck()->setChecked(false);
+        mDetails->ctrlDeprecateHint()->setText("");
     }
 }
 
 void SIInclude::onAddClicked(void)
 {
-    QString location = mPageDetails->ctrlInclude()->text();
-    QString describe = mPageDetails->ctrlDescription()->toPlainText();
-    bool isDeprecate = mPageDetails->ctrlDepcrecateCheck()->isChecked();
-    QString hint     = mPageDetails->ctrlDeprecateHint()->text();
+    QString location = mDetails->ctrlInclude()->text();
+    QString describe = mDetails->ctrlDescription()->toPlainText();
+    bool isDeprecate = mDetails->ctrlDepcrecateCheck()->isChecked();
+    QString hint     = mDetails->ctrlDeprecateHint()->text();
     if ( (location.isEmpty() == false) && mModel.addEntry(location, describe, isDeprecate, hint) )
     {
         Q_ASSERT(mModel.rowCount() != 0);
-        QTableWidget * table = mPageList->ctrlTableIncludes();
+        QTableWidget * table = mList->ctrlTableList();
         QTableWidgetItem * current = table->currentItem();
         int rowCount = table->rowCount();
         table->setRowCount(rowCount + 1);
@@ -179,7 +179,7 @@ void SIInclude::onAddClicked(void)
 
 void SIInclude::onRemoveClicked(void)
 {
-    QTableWidget* table = mPageList->ctrlTableIncludes();
+    QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
     if (row != -1)
     {
@@ -199,16 +199,16 @@ void SIInclude::onRemoveClicked(void)
 
 void SIInclude::onInsertClicked(void)
 {
-    QTableWidget* table = mPageList->ctrlTableIncludes();
-    QString location = mPageDetails->ctrlInclude()->text();
+    QTableWidget* table = mList->ctrlTableList();
+    QString location = mDetails->ctrlInclude()->text();
     int row = table->currentRow();
     if ((row != -1) && (location.isEmpty() == false))
     {
         QTableWidgetItem* item = table->currentItem();
         QString before   = item->text();
-        QString describe = mPageDetails->ctrlDescription()->toPlainText();
-        bool isDeprecate = mPageDetails->ctrlDepcrecateCheck()->isChecked();
-        QString hint = mPageDetails->ctrlDeprecateHint()->text();
+        QString describe = mDetails->ctrlDescription()->toPlainText();
+        bool isDeprecate = mDetails->ctrlDepcrecateCheck()->isChecked();
+        QString hint = mDetails->ctrlDeprecateHint()->text();
         if (mModel.insertEntry(before, location, describe, isDeprecate, hint))
         {
             int rowCount = table->rowCount();
@@ -230,14 +230,14 @@ void SIInclude::onInsertClicked(void)
 
 void SIInclude::onUpdateClicked(void)
 {
-    QTableWidget* table = mPageList->ctrlTableIncludes();
+    QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
     if (row != -1)
     {
-        QString location = mPageDetails->ctrlInclude()->text();
-        QString describe = mPageDetails->ctrlDescription()->toPlainText();
-        bool isDeprecate = mPageDetails->ctrlDepcrecateCheck()->isChecked();
-        QString hint = mPageDetails->ctrlDeprecateHint()->text();
+        QString location = mDetails->ctrlInclude()->text();
+        QString describe = mDetails->ctrlDescription()->toPlainText();
+        bool isDeprecate = mDetails->ctrlDepcrecateCheck()->isChecked();
+        QString hint = mDetails->ctrlDeprecateHint()->text();
         if (mModel.updateEntry(row, location, describe, isDeprecate, hint))
         {
             QTableWidgetItem* item = table->currentItem();
@@ -283,9 +283,9 @@ void SIInclude::onBrowseClicked(void)
     if (dialog.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
         QString include = dialog.getSelectedFileRelativePath();
-        mPageDetails->ctrlInclude()->setText(include);
-        mPageDetails->ctrlDescription()->setFocus();
-        mPageDetails->ctrlDescription()->selectAll();
+        mDetails->ctrlInclude()->setText(include);
+        mDetails->ctrlDescription()->setFocus();
+        mDetails->ctrlDescription()->selectAll();
 
         mCurUrl = dialog.directoryUrl().path();
         mCurFile = dialog.getSelectedFilePath();

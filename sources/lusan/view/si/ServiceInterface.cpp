@@ -30,7 +30,7 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     , mDataType (this)
     , mDataTopic(this)
     , mMethod   (this)
-    , mConstant (this)
+    , mConstant (mModel.getConstantsModel(), this)
     , mInclude  (mModel.getIncludesModel(), this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
