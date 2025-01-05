@@ -50,12 +50,12 @@ QToolButton* SIIncludeList::ctrlButtonRemove(void) const
     return ui->toolDeleteElem;
 }
 
-QToolButton* SIIncludeList::ctrlButtonUp(void) const
+QToolButton* SIIncludeList::ctrlButtonMoveUp(void) const
 {
     return ui->toolMoveUp;
 }
 
-QToolButton* SIIncludeList::ctrlButtonDown(void) const
+QToolButton* SIIncludeList::ctrlButtonMoveDown(void) const
 {
     return ui->toolMoveDown;
 }
@@ -70,7 +70,7 @@ QToolButton* SIIncludeList::ctrlButtonUpdate(void) const
     return ui->toolUpdateElem;
 }
 
-QTableWidget* SIIncludeList::ctrlTableIncludes(void) const
+QTableWidget* SIIncludeList::ctrlTableList(void) const
 {
     return ui->tableIncludes;
 }

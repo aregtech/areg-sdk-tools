@@ -19,39 +19,39 @@
 
 #include "lusan/data/si/SIDataTypeData.hpp"
 #include "lusan/common/XmlSI.hpp"
+#include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/data/common/DataTypePrimitive.hpp"
+
+#include <QFile>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+
+#include <algorithm>
+#include <memory>
 
 SIDataTypeData::SIDataTypeData(void)
-    : mDataTypes()
+    : mCustomDataTypes      ( )
 {
 }
 
 SIDataTypeData::SIDataTypeData(QList<DataTypeCustom *>&& entries) noexcept
-    : mDataTypes(std::move(entries))
+    : mCustomDataTypes      (std::move(entries))
 {
 }
 
 SIDataTypeData::~SIDataTypeData(void)
 {
-    qDeleteAll(mDataTypes);
-    mDataTypes.clear();
+    qDeleteAll(mCustomDataTypes);
+    mCustomDataTypes.clear();
 }
 
-const QList<DataTypeCustom *>& SIDataTypeData::getDataTypes(void) const
+int SIDataTypeData::findCustomDataType(const DataTypeCustom& entry) const
 {
-    return mDataTypes;
-}
-
-void SIDataTypeData::setDataTypes(QList<DataTypeCustom *>&& entries)
-{
-    mDataTypes = std::move(entries);
-}
-
-int SIDataTypeData::findDataType(const DataTypeCustom& entry) const
-{
-    for (int i = 0; i < mDataTypes.size(); ++i)
+    for (int i = 0; i < mCustomDataTypes.size(); ++i)
     {
-        if (*mDataTypes[i] == entry)
+        if (*mCustomDataTypes[i] == entry)
         {
             return i;
         }
@@ -60,31 +60,36 @@ int SIDataTypeData::findDataType(const DataTypeCustom& entry) const
     return -1;
 }
 
-void SIDataTypeData::addDataType(DataTypeCustom * entry)
+void SIDataTypeData::addCustomDataType(DataTypeCustom * entry)
 {
-    mDataTypes.append(entry);
+    mCustomDataTypes.append(entry);
 }
 
-bool SIDataTypeData::removeDataType(const DataTypeCustom& entry)
+bool SIDataTypeData::removeCustomDataType(const DataTypeCustom& entry)
 {
-    int index = findDataType(entry);
+    int index = findCustomDataType(entry);
     if (index != -1)
     {
-        delete mDataTypes[index];
-        mDataTypes.removeAt(index);
+        delete mCustomDataTypes[index];
+        mCustomDataTypes.removeAt(index);
         return true;
     }
 
     return false;
 }
 
-bool SIDataTypeData::replaceDataType(const DataTypeCustom& oldEntry, DataTypeCustom * newEntry)
+bool SIDataTypeData::replaceCustomDataType(const DataTypeCustom& oldEntry, DataTypeCustom * newEntry)
 {
-    int index = findDataType(oldEntry);
+    if (&oldEntry != newEntry)
+    {
+        return true;
+    }
+
+    int index = findCustomDataType(oldEntry);
     if (index != -1)
     {
-        delete mDataTypes[index];
-        mDataTypes[index] = newEntry;
+        delete mCustomDataTypes[index];
+        mCustomDataTypes[index] = newEntry;
         return true;
     }
 
@@ -103,7 +108,7 @@ bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
                 DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(type);
                 if (dataType && dataType->readFromXml(xml))
                 {
-                    mDataTypes.append(dataType);
+                    mCustomDataTypes.append(dataType);
                 }
                 else
                 {
@@ -125,7 +130,7 @@ bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
 void SIDataTypeData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementDataTypeList);
-    for (const auto& dataType : mDataTypes)
+    for (const auto& dataType : mCustomDataTypes)
     {
         dataType->writeToXml(xml);
     }
@@ -135,6 +140,160 @@ void SIDataTypeData::writeToXml(QXmlStreamWriter& xml) const
 
 void SIDataTypeData::removeAll(void)
 {
-    qDeleteAll(mDataTypes);
-    mDataTypes.clear();
+    qDeleteAll(mCustomDataTypes);
+    mCustomDataTypes.clear();
+}
+
+const QList<DataTypePrimitive*>& SIDataTypeData::getPrimitiveDataTypes(void) const
+{
+    return DataTypeFactory::getPrimitiveTypes();
+}
+
+const QList<DataTypeBasic*>& SIDataTypeData::getBasicDataTypes(void) const
+{
+    return DataTypeFactory::getBasicTypes();
+}
+
+const QList<DataTypeBasic*>& SIDataTypeData::getContainerDatTypes(void) const
+{
+    return DataTypeFactory::getContainerTypes();
+}
+
+const QList<DataTypeCustom*>& SIDataTypeData::getCustomDataTypes(void) const
+{
+    return mCustomDataTypes;
+}
+
+void SIDataTypeData::setCustomDataTypes(QList<DataTypeCustom*>&& entries)
+{
+    mCustomDataTypes = std::move(entries);
+}
+
+void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase*>& exclude /*= QList<DataTypeCustom *>*/, bool makeSorting /*= true*/) const
+{
+    out_dataTypes.clear();
+    const QList<DataTypePrimitive*>& primitives = getPrimitiveDataTypes();
+    for (DataTypePrimitive* dataType : primitives)
+    {
+        if (exists<DataTypeBase>(exclude, dataType->getName()) == false)
+        {
+            out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
+        }
+    }
+
+
+    const QList<DataTypeBasic*>& basics = getBasicDataTypes();
+    for (DataTypeBasic* dataType : basics)
+    {
+        if (exists<DataTypeBase>(exclude, dataType->getName()) == false)
+        {
+            out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
+        }
+    }
+
+    const QList<DataTypeBasic*>& containers = getContainerDatTypes();
+    for (DataTypeBasic* dataType : containers)
+    {
+        if (exists<DataTypeBase>(exclude, dataType->getName()) == false)
+        {
+            out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
+        }
+    }
+
+    for (DataTypeCustom* dataType : mCustomDataTypes)
+    {
+        if (exists<DataTypeBase>(exclude, dataType->getName()) == false)
+        {
+            out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
+        }
+    }
+
+    if (makeSorting)
+    {
+        std::sort(out_dataTypes.begin(), out_dataTypes.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
+            {
+                Q_ASSERT(lhs->getName() != rhs->getName());
+                return lhs->getName() < rhs->getName();
+            });
+    }
+}
+
+bool SIDataTypeData::existsPrimitive(const QList<DataTypePrimitive*> dataTypes, const QString& searchName) const
+{
+    return exists<DataTypePrimitive>(dataTypes, searchName);
+}
+
+bool SIDataTypeData::existsBasic(const QList<DataTypeBasic*> dataTypes, const QString& searchName) const
+{
+    return exists<DataTypeBasic>(dataTypes, searchName);
+}
+
+bool SIDataTypeData::existsContainer(const QList<DataTypeBasic*> dataTypes, const QString& searchName) const
+{
+    return exists<DataTypeBasic>(dataTypes, searchName);
+}
+
+bool SIDataTypeData::existsCustom(const QList<DataTypeCustom*> dataTypes, const QString& searchName) const
+{
+    return exists<DataTypeCustom>(dataTypes, searchName);
+}
+
+bool SIDataTypeData::exists(const QString& typeName) const
+{
+    if (existsCustom(mCustomDataTypes, typeName))
+        return true;
+
+    const QList<DataTypePrimitive*>& primitives = getPrimitiveDataTypes();
+    if (existsPrimitive(primitives, typeName))
+        return true;
+
+    const QList<DataTypeBasic*>& basics = getBasicDataTypes();
+    if (existsBasic(basics, typeName))
+        return true;
+
+    const QList<DataTypeBasic*>& containers = getContainerDatTypes();
+    if (existsContainer(containers, typeName))
+        return true;
+
+    return false;
+}
+
+DataTypeBase* SIDataTypeData::findDataType(const QString& typeName) const
+{
+    for (DataTypeCustom* dataType : mCustomDataTypes)
+    {
+        if (dataType->getName() == typeName)
+        {
+            return static_cast<DataTypeBase *>(dataType);
+        }
+    }
+
+    const QList<DataTypePrimitive*>& primitives = getPrimitiveDataTypes();
+    for (DataTypePrimitive* dataType : primitives)
+    {
+        if (dataType->getName() == typeName)
+        {
+            return static_cast<DataTypeBase *>(dataType);
+        }
+    }
+
+    const QList<DataTypeBasic*>& basics = getBasicDataTypes();
+    for (DataTypeBasic* dataType : basics)
+    {
+        if (dataType->getName() == typeName)
+        {
+            return static_cast<DataTypeBase *>(dataType);
+        }
+    }
+
+    const QList<DataTypeBasic*>& containers = getContainerDatTypes();
+    for (DataTypeBasic* dataType : containers)
+    {
+        if (dataType->getName() == typeName)
+        {
+            return static_cast<DataTypeBase *>(dataType);
+        }
+    }
+
+    return nullptr;
 }

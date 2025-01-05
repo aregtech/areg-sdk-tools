@@ -20,14 +20,14 @@
  ************************************************************************/
 
 #include <QList>
-#include <QXmlStreamReader>
-#include <QXmlStreamWriter>
-#include "lusan/data/common/DataTypeCustom.hpp"
-#include "lusan/data/common/DataTypeFactory.hpp"
+#include <QString>
 
-#include <memory>
-
+class QXmlStreamReader;
+class QXmlStreamWriter;
+class DataTypeBase;
 class DataTypeCustom;
+class DataTypePrimitive;
+class DataTypeBasic;
 
  /**
   * \class   SIDataTypeData
@@ -62,36 +62,24 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Gets the list of data types.
-     * \return  The list of data types.
-     **/
-    const QList<DataTypeCustom *>& getDataTypes(void) const;
-
-    /**
-     * \brief   Sets the list of data types.
-     * \param   entries     The list of data types.
-     **/
-    void setDataTypes(QList<DataTypeCustom *>&& entries);
-
-    /**
      * \brief   Searches for a data type in the list.
      * \param   entry   The data type to search for.
      * \return  The index of the data type, or -1 if not found.
      **/
-    int findDataType(const DataTypeCustom& entry) const;
+    int findCustomDataType(const DataTypeCustom& entry) const;
 
     /**
      * \brief   Adds a data type to the list.
      * \param   entry   The data type to add.
      **/
-    void addDataType(DataTypeCustom* entry);
+    void addCustomDataType(DataTypeCustom* entry);
 
     /**
      * \brief   Removes a data type from the list.
      * \param   entry   The data type to remove.
      * \return  True if the data type was removed, false otherwise.
      **/
-    bool removeDataType(const DataTypeCustom& entry);
+    bool removeCustomDataType(const DataTypeCustom& entry);
 
     /**
      * \brief   Replaces a data type in the list.
@@ -99,7 +87,7 @@ public:
      * \param   newEntry    The new data type.
      * \return  True if the data type was replaced, false otherwise.
      **/
-    bool replaceDataType(const DataTypeCustom& oldEntry, DataTypeCustom * newEntry);
+    bool replaceCustomDataType(const DataTypeCustom& oldEntry, DataTypeCustom * newEntry);
 
     /**
      * \brief   Reads data type data from an XML stream.
@@ -119,11 +107,61 @@ public:
      **/
     void removeAll(void);
 
+    const QList<DataTypePrimitive*>& getPrimitiveDataTypes(void) const;
+
+    const QList<DataTypeBasic*>& getBasicDataTypes(void) const;
+
+    const QList<DataTypeBasic*>& getContainerDatTypes(void) const;
+
+    /**
+     * \brief   Gets the list of data types.
+     * \return  The list of data types.
+     **/
+    const QList<DataTypeCustom*>& getCustomDataTypes(void) const;
+
+    /**
+     * \brief   Sets the list of data types.
+     * \param   entries     The list of data types.
+     **/
+    void setCustomDataTypes(QList<DataTypeCustom *>&& entries);
+
+    void getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase *>& exclude = QList<DataTypeBase*>(), bool makeSorting = true) const;
+
+    bool existsPrimitive(const QList<DataTypePrimitive*> dataTypes, const QString& searchName) const;
+
+    bool existsBasic(const QList<DataTypeBasic*> dataTypes, const QString& searchName) const;
+
+    bool existsContainer(const QList<DataTypeBasic*> dataTypes, const QString& searchName) const;
+
+    bool existsCustom(const QList<DataTypeCustom*> dataTypes, const QString& searchName) const;
+
+    template<class DataType>
+    bool exists(const QList<DataType*> & dataTypes, const QString& typeName) const;
+
+    bool exists(const QString& typeName) const;
+
+    DataTypeBase* findDataType(const QString& typeName) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    QList<DataTypeCustom *> mDataTypes; //!< The list of data types.
+    QList<DataTypeCustom *>     mCustomDataTypes;       //!< The list of data types.
 };
+
+template<class DataType>
+inline bool SIDataTypeData::exists(const QList<DataType*>& dataTypes, const QString& typeName) const
+{
+    for (const DataType* dataType : dataTypes)
+    {
+        Q_ASSERT(dataType != nullptr);
+        if (dataType->getName() == typeName)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 #endif  // LUSAN_DATA_SI_SIDATATYPEDATA_HPP

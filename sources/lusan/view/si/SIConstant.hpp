@@ -26,6 +26,8 @@ namespace Ui {
 
 class SIConstantDetails;
 class SIConstantList;
+class SIConstantModel;
+class DataTypesModel;
 
 class SIConstantWidget : public QWidget
 {
@@ -45,15 +47,77 @@ class SIConstant : public QScrollArea
     Q_OBJECT
 
 public:
-    explicit SIConstant(QWidget* parent = nullptr);
+    explicit SIConstant(SIConstantModel& model, QWidget* parent = nullptr);
 
     virtual ~SIConstant(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Slots
+//////////////////////////////////////////////////////////////////////////
+protected slots:
+
+    /**
+     * \brief   Triggered when the current cell is changed.
+     * \param   currentRow      The current row index.
+     * \param   currentColumn   The current column index.
+     * \param   previousRow     The previous row index.
+     * \param   previousColumn  The previous column index.
+     **/
+    void onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn);
+
+    /**
+     * \brief   Triggered when the add button is clicked.
+     **/
+    void onAddClicked(void);
+
+    /**
+     * \brief   Triggered when the remove button is clicked.
+     **/
+    void onRemoveClicked(void);
+
+    /**
+     * \brief   Triggered when the insert button is clicked.
+     **/
+    void onInsertClicked(void);
+
+    /**
+     * \brief   Triggered when the update button is clicked.
+     **/
+    void onUpdateClicked(void);
+
+    void onNameChanged(const QString& newName);
+
+    void onTypeChanged(const QString& newType);
+    
+    void onTypesOpened(void);
+
+    void onValueChanged(const QString& newValue);
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
 private:
-    SIConstantDetails*  mTopicDetails;
-    SIConstantList*     mTopicList;
+
+    /**
+     * \brief   Initializes the SIInclude object.
+     **/
+    void updateData(void);
+    
+    void updateDataTypes(void);
+
+    /**
+     * \brief   Initializes the signals.
+     **/
+    void setupSignals(void);
+
+private:
+    SIConstantModel&    mModel;
+    SIConstantDetails*  mDetails;
+    SIConstantList*     mList;
     SIConstantWidget*   mWidget;
     Ui::SIConstant&     ui;
+    DataTypesModel*     mTypeModel;
+    uint32_t            mCount;
 };
 
 #endif // LUSAN_APPLICATION_SI_SICONSTANT_HPP

@@ -31,7 +31,47 @@ SIConstantList::SIConstantList(QWidget* parent)
     this->setFont(font);
     ui->setupUi(this);
     QTableWidget* table = ui->tableConstants;
-    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    // table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Interactive);
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Interactive);
+    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+    table->horizontalHeader()->setSortIndicatorClearable(true);
+    table->horizontalHeader()->setStretchLastSection(true);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+}
+
+QToolButton* SIConstantList::ctrlButtonAdd(void)
+{
+    return ui->toolAddElem;
+}
+
+QToolButton* SIConstantList::ctrlButtonUpdate(void)
+{
+    return ui->toolUpdateElem;
+}
+
+QToolButton* SIConstantList::ctrlButtonRemove(void)
+{
+    return ui->toolDeleteElem;
+}
+
+QToolButton* SIConstantList::ctrlButtonInsert(void)
+{
+    return ui->toolInsertElem;
+}
+
+QToolButton* SIConstantList::ctrlButtonMoveUp(void)
+{
+    return ui->toolMoveUp;
+}
+
+QToolButton* SIConstantList::ctrlButtonMoveDown(void)
+{
+    return ui->toolMoveDown;
+}
+
+QTableWidget* SIConstantList::ctrlTableList(void)
+{
+    return ui->tableConstants;
 }

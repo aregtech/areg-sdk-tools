@@ -46,7 +46,13 @@ public:
      * \param   description     The description of the constant.
      * \param   deprecateHint   The deprecation hint of the constant.
      **/
-    ConstantEntry(uint32_t id, const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint);
+    ConstantEntry(  uint32_t id
+                  , const QString& name
+                  , const QString& type = "bool"
+                  , const QString& value= "false"
+                  , bool isDeprecated = false
+                  , const QString& description = ""
+                  , const QString& deprecateHint = "");
 
     /**
      * \brief   Copy constructor.

@@ -24,12 +24,29 @@ namespace Ui {
     class SIConstantDetails;
 }
 
+class QCheckBox;
+class QComboBox;
+class QLineEdit;
+class QPlainTextEdit;
+
 class SIConstantDetails : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit SIConstantDetails(QWidget* parent = nullptr);
+
+    QLineEdit* ctrlName(void);
+
+    QComboBox* ctrlTypes(void);
+
+    QLineEdit* ctrlValue(void);
+
+    QPlainTextEdit* ctrlDescription(void);
+
+    QCheckBox* ctrlDepricated(void);
+
+    QLineEdit* ctrlDeprecateHint(void);
 
 private:
     Ui::SIConstantDetails* ui;

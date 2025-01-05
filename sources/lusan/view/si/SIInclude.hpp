@@ -140,16 +140,16 @@ private:
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIIncludeModel&     mModel;         //!< The model of the SIInclude section.
-    SIIncludeDetails*   mPageDetails;   //!< The details page.
-    SIIncludeList*      mPageList;      //!< The list page.
-    SIIncludeWidget*    mWidget;        //!< The widget object.
-    Ui::SIInclude&      ui;             //!< The UI object.
+    SIIncludeModel&     mModel;     //!< The model of the SIInclude section.
+    SIIncludeDetails*   mDetails;   //!< The details page.
+    SIIncludeList*      mList;      //!< The list page.
+    SIIncludeWidget*    mWidget;    //!< The widget object.
+    Ui::SIInclude&      ui;         //!< The UI object.
 
-    QString                 mCurUrl;    //!< The current URL.
-    QString                 mCurFile;   //!< The current file.
-    QString                 mCurFilter; //!< The current filter.
-    int                     mCurView;   //!< The current view mode.
+    QString             mCurUrl;    //!< The current URL.
+    QString             mCurFile;   //!< The current file.
+    QString             mCurFilter; //!< The current filter.
+    int                 mCurView;   //!< The current view mode.
 };
 
 #endif // LUSAN_APPLICATION_SI_SIINCLUDE_HPP

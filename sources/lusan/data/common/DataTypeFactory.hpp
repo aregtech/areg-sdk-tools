@@ -23,6 +23,9 @@
 #include <memory>
 #include "lusan/data/common/DataTypeBase.hpp"
 
+class DataTypeBase;
+class DataTypePrimitive;
+class DataTypeBasic;
 class DataTypeCustom;
 
 /**
@@ -44,7 +47,7 @@ public:
     static constexpr const char* const  TypeNameFloat       { "float"       };  //!< The single precision floating point data type
     static constexpr const char* const  TypeNameDouble      { "double"      };  //!< The double precision floating point data type
     static constexpr const char* const  TypeNameString      { "String"      };  //!< The string data type
-    static constexpr const char* const  TypeNameBinary      { "Binary"      };  //!< The binary (Byte Buffer) data type
+    static constexpr const char* const  TypeNameBinary      { "BinaryBuffer"};  //!< The binary (Byte Buffer) data type
     static constexpr const char* const  TypeNameDateTime    { "DateTime"    };  //!< The date and time data type
     static constexpr const char* const  TypeNameArray       { "Array"       };  //!< The array data type
     static constexpr const char* const  TypeNameLinkedList  { "LinkedList"  };  //!< The linked list data type
@@ -84,6 +87,21 @@ public:
      * \return  Returns the created data type object.
      **/
     static DataTypeCustom* createCustomDataType(DataTypeBase::eCategory category);
+
+    static const QList<DataTypePrimitive*>& getPrimitiveTypes(void);
+
+    static const QList<DataTypeBasic*>& getBasicTypes(void);
+
+    static const QList<DataTypeBasic*>& getContainerTypes(void);
+
+private:
+
+    static void _initPredefined(void);
+
+private:
+    static QList<DataTypePrimitive*>   mPredefinePrimitiveTypes;    //!< The list of primitive data types.
+    static QList<DataTypeBasic*>       mPredefinedBasicTypes;       //!< The list of basic data types.
+    static QList<DataTypeBasic*>       mPredefinedContainerTypes;   //!< The list of container data types.
 };
 
 #endif  // LUSAN_DATA_COMMON_DATATYPEFACTORY_HPP

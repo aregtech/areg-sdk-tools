@@ -24,6 +24,8 @@
 #include <QXmlStreamWriter>
 #include "lusan/data/common/ConstantEntry.hpp"
 
+class SIDataTypeData;
+
 /**
  * \class   SIConstantData
  * \brief   Manages constant data for service interfaces.
@@ -78,8 +80,8 @@ public:
      * \brief   Adds a constant to the list.
      * \param   entry   The constant to add.
      **/
-    void addConstant(const ConstantEntry& entry);
-
+    bool addConstant(const ConstantEntry& entry, bool unique = true);
+    
     /**
      * \brief   Removes a constant from the list.
      * \param   entry   The constant to remove.
@@ -137,13 +139,6 @@ public:
     bool removeConstant(const QString& name);
 
     /**
-     * \brief   Adds a constant to the list and sorts the list.
-     * \param   entry       The constant to add.
-     * \param   ascending   If true, sorts in ascending order, otherwise in descending order.
-     **/
-    void addConstant(const ConstantEntry& entry, bool ascending);
-
-    /**
      * \brief   Sorts the list of constants.
      * \param   ascending   If true, sorts in ascending order, otherwise in descending order.
      **/
@@ -153,6 +148,24 @@ public:
      * \brief   Removes all constants from the list.
      **/
     void removeAll(void);
+
+    bool update(const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint);
+    
+    bool updateName(const QString& oldName, const QString& newName, bool unique = true);
+
+    bool updateValue(const QString& name, const QString& value);
+
+    bool updateType(const QString& name, const QString& type);
+
+    bool updateDeprecation(const QString& name, bool isDeprecated);
+
+    bool updateDescription(const QString& name, const QString& description);
+
+    bool updateDeprecateHint(const QString& name, const QString& deprecateHint);
+
+    bool validate(const SIDataTypeData& dataType) const;
+
+    ConstantEntry* find(const QString& name) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.

@@ -24,12 +24,29 @@ namespace Ui {
     class SIConstantList;
 }
 
+class QToolButton;
+class QTableWidget;
+
 class SIConstantList : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit SIConstantList(QWidget* parent = nullptr);
+
+    QToolButton* ctrlButtonAdd(void);
+
+    QToolButton* ctrlButtonUpdate(void);
+
+    QToolButton* ctrlButtonRemove(void);
+
+    QToolButton* ctrlButtonInsert(void);
+
+    QToolButton* ctrlButtonMoveUp(void);
+
+    QToolButton* ctrlButtonMoveDown(void);
+
+    QTableWidget* ctrlTableList(void);
 
 private:
     Ui::SIConstantList* ui;

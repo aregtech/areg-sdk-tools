@@ -66,12 +66,12 @@ protected:
     /**
      * \brief   Returns the control of the up entry tool button.
      **/
-    QToolButton* ctrlButtonUp(void) const;
+    QToolButton* ctrlButtonMoveUp(void) const;
 
     /**
      * \brief   Returns the control of the down entry tool button.
      **/
-    QToolButton* ctrlButtonDown(void) const;
+    QToolButton* ctrlButtonMoveDown(void) const;
 
     /**
      * \brief   Returns the control of the insert entry tool button.
@@ -86,7 +86,7 @@ protected:
     /**
      * \brief   Returns the control of the includes table widget.
      **/
-    QTableWidget* ctrlTableIncludes(void) const;
+    QTableWidget* ctrlTableList(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
