@@ -67,7 +67,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    AttributeEntry(void);
+    AttributeEntry(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -79,7 +79,14 @@ public:
      * \param   description     The description of the attribute.
      * \param   deprecateHint   The deprecation hint of the attribute.
      **/
-    AttributeEntry(uint32_t id, const QString& name, const QString& type, eNotification notification, bool isDeprecated, const QString& description, const QString& deprecateHint);
+    AttributeEntry(   uint32_t id
+                    , const QString& name
+                    , const QString& type           = "bool"
+                    , eNotification notification    = DEFAULT_NOTIFICATION
+                    , bool isDeprecated             = false
+                    , const QString& description    = ""
+                    , const QString& deprecateHint  = ""
+                    , ElementBase* parent           = nullptr);
 
     /**
      * \brief   Copy constructor.

@@ -19,6 +19,8 @@
  *
  ************************************************************************/
 
+#include "lusan/common/ElementBase.hpp"
+
 #include <QString>
 #include <memory>
 #include "lusan/data/common/DataTypeBase.hpp"
@@ -27,7 +29,7 @@
  * \class   ParamBase
  * \brief   Represents a parameter base in the Lusan application.
  **/
-class ParamBase
+class ParamBase : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -36,7 +38,7 @@ protected:
     /**
      * \brief   Default constructor.
      **/
-    ParamBase(void);
+    ParamBase(ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -47,7 +49,7 @@ protected:
      * \param   description     The description of the parameter.
      * \param   deprecateHint   The deprecation hint of the parameter.
      **/
-    ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint);
+    ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.
@@ -97,17 +99,6 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Gets the ID of the parameter.
-     * \return  The ID of the parameter.
-     **/
-    uint32_t getId() const;
-
-    /**
-     * \brief   Sets the ID of the parameter.
-     * \param   id  The ID of the parameter.
-     **/
-    void setId(uint32_t id);
 
     /**
      * \brief   Gets the name of the parameter.

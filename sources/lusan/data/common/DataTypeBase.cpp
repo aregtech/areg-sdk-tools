@@ -19,27 +19,31 @@
 
 #include "lusan/data/common/DataTypeBase.hpp"
 
-DataTypeBase::DataTypeBase(void)
-    : mCategory (eCategory::Undefined)
-    , mName     ( )
+DataTypeBase::DataTypeBase(ElementBase* parent /*= nullptr*/)
+    : ElementBase   (parent)
+    , mCategory     (eCategory::Undefined)
+    , mName         ( )
 {
 }
 
-DataTypeBase::DataTypeBase(eCategory category, const QString& name /*= QString()*/)
-    : mCategory (category)
-    , mName     (name)
+DataTypeBase::DataTypeBase(eCategory category, const QString& name /*= QString()*/, uint32_t id /*= 0*/, ElementBase* parent /*= nullptr*/)
+    : ElementBase   (id, parent)
+    , mCategory     (category)
+    , mName         (name)
 {
 }
 
 DataTypeBase::DataTypeBase(const DataTypeBase& other)
-    : mCategory (other.mCategory)
-    , mName     (other.mName)
+    : ElementBase   (other)
+    , mCategory     (other.mCategory)
+    , mName         (other.mName)
 {
 }
 
 DataTypeBase::DataTypeBase(DataTypeBase&& other) noexcept
-    : mCategory (other.mCategory)
-    , mName     (std::move(other.mName))
+    : ElementBase   (std::move(other))
+    , mCategory     (other.mCategory)
+    , mName         (std::move(other.mName))
 {
 }
 
@@ -47,7 +51,8 @@ DataTypeBase& DataTypeBase::operator = (const DataTypeBase& other)
 {
     if (this != &other)
     {
-        mName = other.mName;
+        ElementBase::operator = (other);
+        mName     = other.mName;
         mCategory = other.mCategory;
     }
 
@@ -58,6 +63,7 @@ DataTypeBase& DataTypeBase::operator=(DataTypeBase&& other) noexcept
 {
     if (this != &other)
     {
+        ElementBase::operator = (std::move(other));
         mName = std::move(other.mName);
         mCategory = other.mCategory;
     }

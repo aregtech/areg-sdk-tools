@@ -34,7 +34,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    ConstantEntry(void);
+    ConstantEntry(ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -52,7 +52,8 @@ public:
                   , const QString& value= "false"
                   , bool isDeprecated = false
                   , const QString& description = ""
-                  , const QString& deprecateHint = "");
+                  , const QString& deprecateHint = ""
+                  , ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.

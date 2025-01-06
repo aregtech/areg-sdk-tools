@@ -18,6 +18,7 @@
  *  \brief       Lusan application, Method Base.
  *
  ************************************************************************/
+#include "lusan/common/ElementBase.hpp"
 
 #include <QList>
 #include <QString>
@@ -27,7 +28,7 @@
   * \class   MethodBase
   * \brief   Represents a method base in the Lusan application.
   **/
-class MethodBase
+class MethodBase    : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -36,7 +37,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    MethodBase(void);
+    MethodBase(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -44,7 +45,7 @@ public:
      * \param   name            The name of the method.
      * \param   description     The description of the method.
      **/
-    MethodBase(uint32_t id, const QString& name, const QString& description);
+    MethodBase(uint32_t id, const QString& name, const QString& description, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.
@@ -72,14 +73,14 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    MethodBase& operator=(const MethodBase& other);
+    MethodBase& operator = (const MethodBase& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    MethodBase& operator=(MethodBase&& other) noexcept;
+    MethodBase& operator = (MethodBase&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -90,7 +91,7 @@ public:
      * \param   parameter   The method parameter to add.
      * \return  True if the parameter was added, false otherwise.
      **/
-    bool addParameter(MethodParameter parameter);
+    bool addParameter(MethodParameter&& parameter);
 
     /**
      * \brief   Removes a method parameter from the list by name.
@@ -105,7 +106,7 @@ public:
      * \param   parameter   The method parameter to insert.
      * \return  True if the parameter was inserted, false otherwise.
      **/
-    bool insertParameter(int index, MethodParameter parameter);
+    bool insertParameter(int index, MethodParameter&& parameter);
 
     /**
      * \brief   Searches for a method parameter by name.
@@ -113,18 +114,6 @@ public:
      * \return  Pointer to the method parameter if found, nullptr otherwise.
      **/
     MethodParameter* findParameter(const QString& name) const;
-
-    /**
-     * \brief   Gets the ID of the method.
-     * \return  The ID of the method.
-     **/
-    uint32_t getId() const;
-
-    /**
-     * \brief   Sets the ID of the method.
-     * \param   id  The ID of the method.
-     **/
-    void setId(uint32_t id);
 
     /**
      * \brief   Gets the name of the method.
@@ -172,7 +161,6 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    uint32_t mId;           //!< The method ID.
     QString mName;          //!< The method name.
     QString mDescription;   //!< The method description.
     QList<MethodParameter> mParameters; //!< The list of method parameters.

@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/common/ElementBase.hpp"
 #include <QList>
 #include <QString>
 
@@ -33,7 +34,7 @@ class DataTypeBasic;
   * \class   SIDataTypeData
   * \brief   Manages data type data for service interfaces.
   **/
-class SIDataTypeData
+class SIDataTypeData    : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -42,7 +43,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIDataTypeData(void);
+    SIDataTypeData(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor. Copies data from given source.
@@ -53,7 +54,7 @@ public:
      * \brief   Constructor with initialization.
      * \param   entries     The list of data types.
      **/
-    SIDataTypeData(QList<DataTypeCustom *>&& entries) noexcept;
+    SIDataTypeData(QList<DataTypeCustom *>&& entries, ElementBase* parent = nullptr) noexcept;
 
     virtual ~SIDataTypeData(void);
 

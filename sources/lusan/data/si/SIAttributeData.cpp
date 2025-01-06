@@ -19,48 +19,66 @@
 #include "lusan/data/si/SIAttributeData.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-const ConstantEntry SIAttributeData::InvalidAttribute = ConstantEntry();
+const AttributeEntry SIAttributeData::InvalidAttribute = AttributeEntry();
 
-SIAttributeData::SIAttributeData(void)
+SIAttributeData::SIAttributeData(ElementBase* parent /*= nullptr*/)
+    : ElementBase(parent)
 {
 }
 
-SIAttributeData::SIAttributeData(const QList<ConstantEntry>& entries)
+SIAttributeData::SIAttributeData(const QList<AttributeEntry>& entries, ElementBase* parent /*= nullptr*/)
     : mAttributes(entries)
 {
+    for (AttributeEntry& entry : mAttributes)
+    {
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
+    }
 }
 
-const QList<ConstantEntry>& SIAttributeData::getAttributes(void) const
+const QList<AttributeEntry>& SIAttributeData::getAttributes(void) const
 {
     return mAttributes;
 }
 
-void SIAttributeData::setAttributes(const QList<ConstantEntry>& entries)
+void SIAttributeData::setAttributes(const QList<AttributeEntry>& entries)
 {
     mAttributes = entries;
+    for (AttributeEntry& entry : mAttributes)
+    {
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
+    }
 }
 
-int SIAttributeData::findAttribute(const ConstantEntry& entry) const
+int SIAttributeData::findAttribute(const AttributeEntry& entry) const
 {
     return mAttributes.indexOf(entry);
 }
 
-void SIAttributeData::addAttribute(const ConstantEntry& entry)
-{
-    mAttributes.append(entry);
-}
-
-bool SIAttributeData::removeAttribute(const ConstantEntry& entry)
+bool SIAttributeData::removeAttribute(const AttributeEntry& entry)
 {
     return mAttributes.removeOne(entry);
 }
 
-bool SIAttributeData::replaceAttribute(const ConstantEntry& oldEntry, const ConstantEntry& newEntry)
+bool SIAttributeData::replaceAttribute(const AttributeEntry& oldEntry, AttributeEntry&& newEntry)
 {
     int index = findAttribute(oldEntry);
     if (index != -1)
     {
-        mAttributes[index] = newEntry;
+        if (newEntry.getParent() != this)
+        {
+            newEntry.setParent(this);
+            newEntry.setId(getNextId());
+        }
+
+        mAttributes[index] = std::move(newEntry);
         return true;
     }
 
@@ -76,10 +94,10 @@ bool SIAttributeData::readFromXml(QXmlStreamReader& xml)
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementAttribute)
         {
-            ConstantEntry entry;
+            AttributeEntry entry(this);
             if (entry.readFromXml(xml))
             {
-                addAttribute(entry);
+                addAttribute(std::move(entry), true);
             }
         }
 
@@ -92,7 +110,7 @@ bool SIAttributeData::readFromXml(QXmlStreamReader& xml)
 void SIAttributeData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementAttributeList);
-    for (const ConstantEntry& entry : mAttributes)
+    for (const AttributeEntry& entry : mAttributes)
     {
         entry.writeToXml(xml);
     }
@@ -109,6 +127,7 @@ int SIAttributeData::findAttribute(const QString& name) const
             return i;
         }
     }
+
     return -1;
 }
 
@@ -117,7 +136,7 @@ bool SIAttributeData::exists(const QString& name) const
     return findAttribute(name) != -1;
 }
 
-const ConstantEntry& SIAttributeData::getAttribute(const QString& name) const
+const AttributeEntry& SIAttributeData::getAttribute(const QString& name) const
 {
     int index = findAttribute(name);
     return (index != -1) ? mAttributes[index] : InvalidAttribute;
@@ -135,18 +154,26 @@ bool SIAttributeData::removeAttribute(const QString& name)
     return false;
 }
 
-void SIAttributeData::addAttribute(const ConstantEntry& entry, bool ascending)
+bool SIAttributeData::addAttribute(AttributeEntry&& entry, bool unique)
 {
-    if (mAttributes.contains(entry) == false)
+    if ((unique == false) || (mAttributes.contains(entry) == false))
     {
-        mAttributes.append(entry);
-        sortAttributes(ascending);
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
+
+        mAttributes.append(std::move(entry));
+        return true;
     }
+
+    return false;
 }
 
 void SIAttributeData::sortAttributes(bool ascending)
 {
-    std::sort(mAttributes.begin(), mAttributes.end(), [ascending](const ConstantEntry& left, const ConstantEntry& right) {
+    std::sort(mAttributes.begin(), mAttributes.end(), [ascending](const AttributeEntry& left, const AttributeEntry& right) {
         return ascending ? left < right : left > right;
     });
 }

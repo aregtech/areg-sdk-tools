@@ -35,13 +35,13 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeEnum(void);
+    DataTypeEnum(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
      **/
-    DataTypeEnum(const QString& name);
+    DataTypeEnum(const QString& name, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.

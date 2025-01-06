@@ -20,15 +20,23 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-MethodParameter::MethodParameter(void)
+MethodParameter::MethodParameter(ElementBase* parent /*= nullptr*/)
     : ParamBase ( )
     , mValue    ( )
     , mIsDefault(false)
 {
 }
 
-MethodParameter::MethodParameter(uint32_t id, const QString& name, const QString& type, bool isDeprecated, const QString& description, const QString& deprecateHint, const QString& value, bool isDefault)
-    : ParamBase (id, name, type, isDeprecated, description, deprecateHint)
+MethodParameter::MethodParameter( uint32_t id
+                                , const QString& name
+                                , const QString& type
+                                , bool isDeprecated
+                                , const QString& description
+                                , const QString& deprecateHint
+                                , const QString& value
+                                , bool isDefault
+                                , ElementBase* parent /*= nullptr*/)
+    : ParamBase (id, name, type, isDeprecated, description, deprecateHint, parent)
     , mValue    (value)
     , mIsDefault(isDefault)
 {
@@ -48,11 +56,11 @@ MethodParameter::MethodParameter(MethodParameter&& src) noexcept
 {
 }
 
-MethodParameter& MethodParameter::operator=(const MethodParameter& other)
+MethodParameter& MethodParameter::operator = (const MethodParameter& other)
 {
     if (this != &other)
     {
-        ParamBase::operator=(other);
+        ParamBase::operator = (other);
         mValue = other.mValue;
         mIsDefault = other.mIsDefault;
     }
@@ -60,13 +68,13 @@ MethodParameter& MethodParameter::operator=(const MethodParameter& other)
     return *this;
 }
 
-MethodParameter& MethodParameter::operator=(MethodParameter&& other) noexcept
+MethodParameter& MethodParameter::operator = (MethodParameter&& other) noexcept
 {
     if (this != &other)
     {
-        ParamBase::operator=(std::move(other));
-        mValue = std::move(other.mValue);
-        mIsDefault = other.mIsDefault;
+        ParamBase::operator = (std::move(other));
+        mValue      = std::move(other.mValue);
+        mIsDefault  = other.mIsDefault;
     }
 
     return *this;
@@ -96,15 +104,15 @@ bool MethodParameter::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() == XmlSI::xmlSIElementParameter)
     {
+        setId(xml.attributes().value(XmlSI::xmlSIAttributeID).toUInt());
         mType = xml.attributes().value(XmlSI::xmlSIAttributeDataType).toString();
-        mId = xml.attributes().value(XmlSI::xmlSIAttributeID).toUInt();
         mName = xml.attributes().value(XmlSI::xmlSIAttributeName).toString();
 
         while (xml.readNextStartElement())
         {
             if (xml.name() == XmlSI::xmlSIElementValue)
             {
-                mIsDefault  = xml.attributes().value(XmlSI::xmlSIAttributeIsDefault).toString() == "true";
+                mIsDefault  = xml.attributes().value(XmlSI::xmlSIAttributeIsDefault).toString() == XmlSI::xmlSIValueTrue;
                 mValue      = xml.readElementText();
             }
             else if (xml.name() == XmlSI::xmlSIElementDescription)
@@ -126,14 +134,14 @@ bool MethodParameter::readFromXml(QXmlStreamReader& xml)
 void MethodParameter::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementParameter);
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
 
     if (!mValue.isEmpty())
     {
         xml.writeStartElement(XmlSI::xmlSIElementValue);
-        xml.writeAttribute(XmlSI::xmlSIAttributeIsDefault, mIsDefault ? "true" : "false");
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDefault, mIsDefault ? XmlSI::xmlSIValueTrue : XmlSI::xmlSIValueFalse);
         xml.writeCharacters(mValue);
         xml.writeEndElement();
     }

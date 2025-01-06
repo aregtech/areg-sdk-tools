@@ -31,14 +31,25 @@
 #include <algorithm>
 #include <memory>
 
-SIDataTypeData::SIDataTypeData(void)
-    : mCustomDataTypes      ( )
+SIDataTypeData::SIDataTypeData(ElementBase* parent /*= nullptr*/)
+    : ElementBase       (parent)
+    , mCustomDataTypes  ( )
 {
 }
 
-SIDataTypeData::SIDataTypeData(QList<DataTypeCustom *>&& entries) noexcept
-    : mCustomDataTypes      (std::move(entries))
+SIDataTypeData::SIDataTypeData(QList<DataTypeCustom *>&& entries, ElementBase* parent /*= nullptr*/) noexcept
+    : ElementBase       (parent)
+    , mCustomDataTypes  (std::move(entries))
 {
+    for (DataTypeCustom* entry : mCustomDataTypes)
+    {
+        Q_ASSERT(entry != nullptr);
+        if (entry->getParent() != this)
+        {
+            entry->setParent(this);
+            entry->setId(getNextId());
+        }
+    }
 }
 
 SIDataTypeData::~SIDataTypeData(void)
@@ -62,7 +73,16 @@ int SIDataTypeData::findCustomDataType(const DataTypeCustom& entry) const
 
 void SIDataTypeData::addCustomDataType(DataTypeCustom * entry)
 {
-    mCustomDataTypes.append(entry);
+    if (entry != nullptr)
+    {
+        if (entry->getParent() != this)
+        {
+            entry->setParent(this);
+            entry->setId(getNextId());
+        }
+
+        mCustomDataTypes.append(entry);
+    }
 }
 
 bool SIDataTypeData::removeCustomDataType(const DataTypeCustom& entry)
@@ -90,6 +110,12 @@ bool SIDataTypeData::replaceCustomDataType(const DataTypeCustom& oldEntry, DataT
     {
         delete mCustomDataTypes[index];
         mCustomDataTypes[index] = newEntry;
+        if (newEntry->getParent() != this)
+        {
+            newEntry->setParent(this);
+            newEntry->setId(getNextId());
+        }
+
         return true;
     }
 
@@ -106,13 +132,17 @@ bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
             {
                 QString type = xml.attributes().value(XmlSI::xmlSIAttributeType).toString();
                 DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(type);
-                if (dataType && dataType->readFromXml(xml))
+                if (dataType != nullptr)
                 {
-                    mCustomDataTypes.append(dataType);
-                }
-                else
-                {
-                    xml.skipCurrentElement();
+                    dataType->setParent(this);
+                    if (dataType->readFromXml(xml))
+                    {
+                        mCustomDataTypes.append(dataType);
+                    }
+                    else
+                    {
+                        xml.skipCurrentElement();
+                    }
                 }
             }
             else
@@ -130,7 +160,7 @@ bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
 void SIDataTypeData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementDataTypeList);
-    for (const auto& dataType : mCustomDataTypes)
+    for (const DataTypeCustom* dataType : mCustomDataTypes)
     {
         dataType->writeToXml(xml);
     }
@@ -167,6 +197,15 @@ const QList<DataTypeCustom*>& SIDataTypeData::getCustomDataTypes(void) const
 void SIDataTypeData::setCustomDataTypes(QList<DataTypeCustom*>&& entries)
 {
     mCustomDataTypes = std::move(entries);
+    for (DataTypeCustom* entry : mCustomDataTypes)
+    {
+        Q_ASSERT(entry != nullptr);
+        if (entry->getParent() != this)
+        {
+            entry->setParent(this);
+            entry->setId(getNextId());
+        }
+    }
 }
 
 void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase*>& exclude /*= QList<DataTypeCustom *>*/, bool makeSorting /*= true*/) const

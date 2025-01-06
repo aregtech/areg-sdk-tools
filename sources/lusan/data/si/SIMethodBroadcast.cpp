@@ -19,14 +19,13 @@
 #include "lusan/data/si/SIMethodBroadcast.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-SIMethodBroadcast::SIMethodBroadcast(void)
-    : SIMethodBase()
+SIMethodBroadcast::SIMethodBroadcast(ElementBase* parent /*= nullptr*/)
+    : SIMethodBase(eMethodType::MethodBroadcast, parent)
 {
-    mMethodType = eMethodType::MethodBroadcast;
 }
 
-SIMethodBroadcast::SIMethodBroadcast(uint32_t id, const QString& name, const QString& description)
-    : SIMethodBase(id, name, description, eMethodType::MethodBroadcast)
+SIMethodBroadcast::SIMethodBroadcast(uint32_t id, const QString& name, const QString& description, ElementBase* parent /*= nullptr*/)
+    : SIMethodBase(id, name, description, eMethodType::MethodBroadcast, parent)
 {
 }
 
@@ -44,20 +43,20 @@ SIMethodBroadcast::~SIMethodBroadcast(void)
 {
 }
 
-SIMethodBroadcast& SIMethodBroadcast::operator=(const SIMethodBroadcast& other)
+SIMethodBroadcast& SIMethodBroadcast::operator = (const SIMethodBroadcast& other)
 {
     if (this != &other)
     {
-        SIMethodBase::operator=(other);
+        SIMethodBase::operator = (other);
     }
     return *this;
 }
 
-SIMethodBroadcast& SIMethodBroadcast::operator=(SIMethodBroadcast&& other) noexcept
+SIMethodBroadcast& SIMethodBroadcast::operator = (SIMethodBroadcast&& other) noexcept
 {
     if (this != &other)
     {
-        SIMethodBase::operator=(std::move(other));
+        SIMethodBase::operator = (std::move(other));
     }
     return *this;
 }
@@ -67,9 +66,9 @@ bool SIMethodBroadcast::readFromXml(QXmlStreamReader& xml)
     QXmlStreamAttributes attributes = xml.attributes();
     if (xml.name() == XmlSI::xmlSIElementMethod && attributes.value(XmlSI::xmlSIAttributeMethodType) == getType())
     {
-        mId = attributes.value(XmlSI::xmlSIAttributeID).toUInt();
+        setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
-        mIsDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == "true" : false;
+        mIsDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false;
         mDeprecateHint.clear();
 
         while (xml.readNextStartElement())
@@ -88,7 +87,7 @@ bool SIMethodBroadcast::readFromXml(QXmlStreamReader& xml)
                 {
                     if (xml.name() == XmlSI::xmlSIElementParameter)
                     {
-                        MethodParameter parameter;
+                        MethodParameter parameter(this);
                         if (parameter.readFromXml(xml))
                         {
                             mParameters.append(parameter);
@@ -117,13 +116,13 @@ bool SIMethodBroadcast::readFromXml(QXmlStreamReader& xml)
 void SIMethodBroadcast::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementMethod);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeMethodType, getType());
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
 
     if (mIsDeprecated)
     {
-        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
     }
 
     if (!mDescription.isEmpty())
@@ -143,6 +142,7 @@ void SIMethodBroadcast::writeToXml(QXmlStreamWriter& xml) const
         {
             parameter.writeToXml(xml);
         }
+
         xml.writeEndElement();
     }
 

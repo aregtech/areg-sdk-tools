@@ -36,7 +36,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIMethodResponse(void);
+    SIMethodResponse(ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -44,7 +44,7 @@ public:
      * \param   name            The name of the method.
      * \param   description     The description of the method.
      **/
-    SIMethodResponse(uint32_t id, const QString& name, const QString& description);
+    SIMethodResponse(uint32_t id, const QString& name, const QString& description, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.

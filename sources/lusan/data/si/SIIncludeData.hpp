@@ -18,17 +18,18 @@
  *  \brief       Lusan application, Service Interface Include Data.
  *
  ************************************************************************/
+#include "lusan/common/ElementBase.hpp"
+#include "lusan/data/common/IncludeEntry.hpp"
 
 #include <QList>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
-#include "lusan/data/common/IncludeEntry.hpp"
 
  /**
   * \class   SIIncludeData
   * \brief   Manages include data for service interfaces.
   **/
-class SIIncludeData
+class SIIncludeData : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Local types and static members
@@ -43,13 +44,13 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIIncludeData(void);
+    SIIncludeData(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
      * \param   entries    The list of include entries.
      **/
-    SIIncludeData(const QList<IncludeEntry>& entries);
+    SIIncludeData(const QList<IncludeEntry>& entries, ElementBase* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -78,7 +79,7 @@ public:
      * \brief   Adds an include entry to the list.
      * \param   entry     The include entry to add.
      **/
-    void addInclude(const IncludeEntry& entry);
+    bool addInclude(IncludeEntry&& entry, bool unique);
 
     /**
      * \brief   Removes an include entry from the list.
@@ -93,7 +94,7 @@ public:
      * \param   newEntry    The new include entry.
      * \return  True if the include entry was replaced, false otherwise.
      **/
-    bool replaceInclude(const IncludeEntry& oldEntry, const IncludeEntry& newEntry);
+    bool replaceInclude(const IncludeEntry& oldEntry, IncludeEntry&& newEntry);
 
     /**
      * \brief   Reads include data from an XML stream.
@@ -135,13 +136,6 @@ public:
      * \return  True if the include entry was removed, false otherwise.
      **/
     bool removeInclude(const QString& location);
-
-    /**
-     * \brief   Adds an include entry to the list.
-     * \param   entry       The include entry to add.
-     * \param   ascending   If true, the entry is added in ascending order, otherwise in descending order.
-     **/
-    void addInclude(const IncludeEntry& entry, bool ascending);
 
     /**
      * \brief   Sorts the list of include entries.

@@ -62,8 +62,9 @@ namespace
     }
 }
 
-SIMethodData::SIMethodData(void)
-    : mRequestMethods   ( )
+SIMethodData::SIMethodData(ElementBase* parent /*= nullptr*/)
+    : ElementBase       (parent)
+    , mRequestMethods   ( )
     , mResponseMethods  ( )
     , mBroadcastMethods ( )
 {
@@ -89,6 +90,12 @@ bool SIMethodData::addMethod(SIMethodBase* method, bool isUnique /*= true*/)
         }
     }
 
+    if (method->getParent() != this)
+    {
+        method->setParent(this);
+        method->setId(getNextId());
+    }
+    
     switch (method->getMethodType())
     {
     case SIMethodBase::eMethodType::MethodRequest:
@@ -125,6 +132,12 @@ bool SIMethodData::removeMethod(const QString& name, SIMethodBase::eMethodType m
 
 void SIMethodData::insertMethod(int index, SIMethodBase* method)
 {
+    if (method->getParent() != this)
+    {
+        method->setParent(this);
+        method->setId(getNextId());
+    }
+
     switch (method->getMethodType())
     {
     case SIMethodBase::eMethodType::MethodRequest:
@@ -214,13 +227,13 @@ bool SIMethodData::readFromXml(QXmlStreamReader& xml)
                 switch (methodType)
                 {
                 case SIMethodBase::eMethodType::MethodRequest:
-                    method = new SIMethodRequest();
+                    method = new SIMethodRequest(this);
                     break;
                 case SIMethodBase::eMethodType::MethodResponse:
-                    method = new SIMethodResponse();
+                    method = new SIMethodResponse(this);
                     break;
                 case SIMethodBase::eMethodType::MethodBroadcast:
-                    method = new SIMethodBroadcast();
+                    method = new SIMethodBroadcast(this);
                     break;
                 default:
                     xml.skipCurrentElement();

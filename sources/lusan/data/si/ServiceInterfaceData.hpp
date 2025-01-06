@@ -19,7 +19,7 @@
  *
  ************************************************************************/
 
-#include "lusan/common/IEIdGenerator.hpp"
+#include "lusan/common/ElementBase.hpp"
 
 #include "lusan/data/si/SIOverviewData.hpp"
 #include "lusan/data/si/SIDataTypeData.hpp"
@@ -35,7 +35,7 @@
  * \class   ServiceInterfaceData
  * \brief   Represents the service interface data in the Lusan application.
  **/
-class ServiceInterfaceData  : public IEIdGenerator
+class ServiceInterfaceData  : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
@@ -50,6 +50,8 @@ public:
      * \brief   Default constructor.
      **/
     ServiceInterfaceData(void);
+
+    ServiceInterfaceData(const QString& filePath);
 
     /**
      * \brief   Destructor.
@@ -137,22 +139,6 @@ public:
     inline SIIncludeData& getIncludeData(void);
 
 //////////////////////////////////////////////////////////////////////////
-// Overrides
-//////////////////////////////////////////////////////////////////////////
-public:
-    /**
-     * \brief   Returns the next available ID.
-     **/
-    virtual unsigned int getNextId(void) const override;
-
-    /**
-     * \brief   Sets the maximum ID. It checks before setting the maximum ID.
-     *          If the passed ID is less than the actual saved, it is ignored
-     * \param   id  The maximum ID to set.
-     **/
-    virtual void setMaxId(unsigned int id) const override;
-
-//////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
@@ -163,7 +149,6 @@ private:
     SIMethodData     mMethodData;     //!< The method data.
     SIConstantData   mConstantData;   //!< The constant data.
     SIIncludeData    mIncludeData;    //!< The include data.
-    mutable uint32_t mMaxId;          //!< The maximum ID.
 };
 
 //////////////////////////////////////////////////////////////////////////

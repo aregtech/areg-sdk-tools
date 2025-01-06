@@ -19,10 +19,12 @@
  *
  ************************************************************************/
 
+#include "lusan/common/ElementBase.hpp"
+
+#include "lusan/data/common/ConstantEntry.hpp"
 #include <QList>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
-#include "lusan/data/common/ConstantEntry.hpp"
 
 class SIDataTypeData;
 
@@ -30,7 +32,7 @@ class SIDataTypeData;
  * \class   SIConstantData
  * \brief   Manages constant data for service interfaces.
  **/
-class SIConstantData
+class SIConstantData    : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Local types and static members
@@ -45,13 +47,13 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIConstantData(void);
+    SIConstantData(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
      * \param   entries     The list of constants.
      **/
-    SIConstantData(const QList<ConstantEntry>& entries);
+    SIConstantData(const QList<ConstantEntry>& entries, ElementBase* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -80,7 +82,7 @@ public:
      * \brief   Adds a constant to the list.
      * \param   entry   The constant to add.
      **/
-    bool addConstant(const ConstantEntry& entry, bool unique = true);
+    bool addConstant(ConstantEntry&& entry, bool unique = true);
     
     /**
      * \brief   Removes a constant from the list.
@@ -95,7 +97,7 @@ public:
      * \param   newEntry    The new constant.
      * \return  True if the constant was replaced, false otherwise.
      **/
-    bool replaceConstant(const ConstantEntry& oldEntry, const ConstantEntry& newEntry);
+    bool replaceConstant(const ConstantEntry& oldEntry, ConstantEntry&& newEntry);
 
     /**
      * \brief   Reads constant data from an XML stream.

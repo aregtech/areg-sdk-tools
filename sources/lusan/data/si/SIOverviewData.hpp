@@ -20,6 +20,7 @@
  *
  ************************************************************************/
 
+#include "lusan/common/ElementBase.hpp"
 #include "lusan/common/VersionNumber.hpp"
 
 #include <QString>
@@ -30,7 +31,7 @@
  * \class   SIOverviewData
  * \brief   Represents the overview data of a service interface in the Lusan application.
  **/
-class SIOverviewData
+class SIOverviewData    : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants.
@@ -74,7 +75,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIOverviewData(void);
+    SIOverviewData(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -86,7 +87,14 @@ public:
      * \param   isDeprecated    Flag indicating whether the interface is deprecated.
      * \param   deprecateHint   The deprecation hint.
      **/
-    SIOverviewData(uint32_t id, const QString& name, const QString& version, eCategory category, const QString& description, bool isDeprecated, const QString& deprecateHint);
+    SIOverviewData( uint32_t id
+                  , const QString& name
+                  , const QString& version
+                  , eCategory category
+                  , const QString& description
+                  , bool isDeprecated
+                  , const QString& deprecateHint
+                  , ElementBase* parent = nullptr);
 
     /**
      * \brief   Destructor.
@@ -109,18 +117,6 @@ public:
      * \param   xml     The XML stream writer.
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
-
-    /**
-     * \brief   Gets the ID of the service interface.
-     * \return  The ID of the service interface.
-     **/
-    uint32_t getId() const;
-
-    /**
-     * \brief   Sets the ID of the service interface.
-     * \param   id  The ID to set.
-     **/
-    void setId(uint32_t id);
 
     /**
      * \brief   Gets the name of the service interface.
@@ -200,7 +196,6 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    uint32_t        mId;            //!< The ID of the service interface.
     QString         mName;          //!< The name of the service interface.
     VersionNumber   mVersion;       //!< The version of the service interface.
     eCategory       mCategory;      //!< The category of the service interface.
@@ -212,16 +207,6 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // SIOverviewData inline methods
 //////////////////////////////////////////////////////////////////////////
-
-inline uint32_t SIOverviewData::getId() const
-{
-    return mId;
-}
-
-inline void SIOverviewData::setId(uint32_t id)
-{
-    mId = id;
-}
 
 inline const QString& SIOverviewData::getName() const
 {

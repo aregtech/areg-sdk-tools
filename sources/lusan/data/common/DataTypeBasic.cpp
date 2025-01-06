@@ -46,7 +46,7 @@ DataTypeBasic::DataTypeBasic(const QString& name)
 {
 }
 
-DataTypeBasic& DataTypeBasic::operator=(const DataTypeBasic& other)
+DataTypeBasic& DataTypeBasic::operator = (const DataTypeBasic& other)
 {
     if (this != &other)
     {
@@ -87,11 +87,9 @@ bool DataTypeBasic::hasKey(void) const
 
 bool DataTypeBasic::readFromXml(QXmlStreamReader& xml)
 {
-    // Implement XML reading logic here
     return true;
 }
 
 void DataTypeBasic::writeToXml(QXmlStreamWriter& xml) const
 {
-    // Implement XML writing logic here
 }

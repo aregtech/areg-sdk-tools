@@ -79,7 +79,7 @@ public:
      **/
     bool updateConstantType(const QString& name, const QString& type);
 
-    bool addContant(const ConstantEntry& newEntry, bool unique = true);
+    bool addContant(ConstantEntry&& newEntry, bool unique = true);
     
     bool updateConstantName(const QString& oldName, const QString& newName);
 

@@ -44,14 +44,21 @@ AttributeEntry::eNotification AttributeEntry::fromString(const QString& value)
     }
 }
 
-AttributeEntry::AttributeEntry(void)
-    : ParamBase()
+AttributeEntry::AttributeEntry(ElementBase* parent /*= nullptr*/)
+    : ParamBase(parent)
     , mNotification(eNotification::NotifyOnChange)
 {
 }
 
-AttributeEntry::AttributeEntry(uint32_t id, const QString& name, const QString& type, eNotification notification, bool isDeprecated, const QString& description, const QString& deprecateHint)
-    : ParamBase(id, name, type, isDeprecated, description, deprecateHint)
+AttributeEntry::AttributeEntry(   uint32_t id
+                                , const QString& name
+                                , const QString& type           /*= "bool"*/
+                                , eNotification notification    /*= DEFAULT_NOTIFICATION*/
+                                , bool isDeprecated             /*= false*/
+                                , const QString& description    /*= ""*/
+                                , const QString& deprecateHint  /*= ""*/
+                                , ElementBase* parent           /*= nullptr*/)
+    : ParamBase(id, name, type, isDeprecated, description, deprecateHint, parent)
     , mNotification(notification)
 {
 }
@@ -68,21 +75,21 @@ AttributeEntry::AttributeEntry(AttributeEntry&& src) noexcept
 {
 }
 
-AttributeEntry& AttributeEntry::operator=(const AttributeEntry& other)
+AttributeEntry& AttributeEntry::operator = (const AttributeEntry& other)
 {
-    ParamBase::operator=(other);
+    ParamBase::operator = (other);
     mNotification = other.mNotification;
     return *this;
 }
 
-AttributeEntry& AttributeEntry::operator=(AttributeEntry&& other) noexcept
+AttributeEntry& AttributeEntry::operator = (AttributeEntry&& other) noexcept
 {
-    ParamBase::operator=(std::move(other));
+    ParamBase::operator = (std::move(other));
     mNotification = other.mNotification;
     return *this;
 }
 
-bool AttributeEntry::operator==(const AttributeEntry& other) const
+bool AttributeEntry::operator == (const AttributeEntry& other) const
 {
     return ParamBase::operator == (other);
 }
@@ -142,7 +149,7 @@ bool AttributeEntry::readFromXml(QXmlStreamReader& xml)
 
     if (attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated))
     {
-        setDeprecated(attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == "true");
+        setDeprecated(attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue);
     }
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementAttribute))
@@ -168,13 +175,13 @@ bool AttributeEntry::readFromXml(QXmlStreamReader& xml)
 void AttributeEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementAttribute);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
     xml.writeAttribute(XmlSI::xmlSIAttributeNotify, toString(mNotification));
     if (mIsDeprecated)
     {
-        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIElementAttribute);
     }
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);

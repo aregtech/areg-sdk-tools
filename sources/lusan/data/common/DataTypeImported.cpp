@@ -19,15 +19,15 @@
 #include "lusan/data/common/DataTypeImported.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-DataTypeImported::DataTypeImported(void)
-    : DataTypeCustom(eCategory::Imported)
+DataTypeImported::DataTypeImported(ElementBase* parent /*= nullptr*/)
+    : DataTypeCustom(eCategory::Imported, parent)
     , mNamespace    ( )
     , mLocation     ( )
 {
 }
 
-DataTypeImported::DataTypeImported(const QString& name)
-    : DataTypeCustom(eCategory::Imported, 0, name)
+DataTypeImported::DataTypeImported(const QString& name, ElementBase* parent /*= nullptr*/)
+    : DataTypeCustom(eCategory::Imported, 0, name, parent)
     , mNamespace    ( )
     , mLocation     ( )
 {
@@ -47,25 +47,25 @@ DataTypeImported::DataTypeImported(DataTypeImported&& src) noexcept
 {
 }
 
-DataTypeImported& DataTypeImported::operator=(const DataTypeImported& other)
+DataTypeImported& DataTypeImported::operator = (const DataTypeImported& other)
 {
     if (this != &other)
     {
-        DataTypeBase::operator=(other);
-        mNamespace = other.mNamespace;
-        mLocation = other.mLocation;
+        DataTypeBase::operator = (other);
+        mNamespace  = other.mNamespace;
+        mLocation   = other.mLocation;
     }
 
     return *this;
 }
 
-DataTypeImported& DataTypeImported::operator=(DataTypeImported&& other) noexcept
+DataTypeImported& DataTypeImported::operator = (DataTypeImported&& other) noexcept
 {
     if (this != &other)
     {
-        DataTypeBase::operator=(std::move(other));
-        mNamespace = std::move(other.mNamespace);
-        mLocation = std::move(other.mLocation);
+        DataTypeBase::operator = (std::move(other));
+        mNamespace  = std::move(other.mNamespace);
+        mLocation   = std::move(other.mLocation);
     }
 
     return *this;
@@ -77,8 +77,8 @@ bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
         return false;
 
     QXmlStreamAttributes attributes = xml.attributes();
-    setId(attributes.hasAttribute(XmlSI::xmlSIAttributeID) ? attributes.value(XmlSI::xmlSIAttributeID).toUInt() : 0);
-    setName(attributes.hasAttribute(XmlSI::xmlSIAttributeName) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "");
+    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+    setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
@@ -107,7 +107,7 @@ bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
 void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementDataType);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
 
@@ -117,4 +117,3 @@ void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement(); // DataType
 }
-

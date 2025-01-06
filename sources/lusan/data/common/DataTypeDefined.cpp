@@ -19,16 +19,16 @@
 #include "lusan/data/common/DataTypeDefined.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-DataTypeDefined::DataTypeDefined(void)
-    : DataTypeCustom(eCategory::CustomDefined)
+DataTypeDefined::DataTypeDefined(ElementBase* parent /*= nullptr*/)
+    : DataTypeCustom(eCategory::CustomDefined, parent)
     , mContainer    ( )
     , mBaseTypeValue( )
     , mBaseTypeKey  ( )
 {
 }
 
-DataTypeDefined::DataTypeDefined(const QString& name)
-    : DataTypeCustom(eCategory::CustomDefined, 0, name)
+DataTypeDefined::DataTypeDefined(const QString& name, ElementBase* parent /*= nullptr*/)
+    : DataTypeCustom(eCategory::CustomDefined, 0, name, parent)
     , mContainer    ( )
     , mBaseTypeValue( )
     , mBaseTypeKey  ( )
@@ -51,27 +51,27 @@ DataTypeDefined::DataTypeDefined(DataTypeDefined&& src) noexcept
 {
 }
 
-DataTypeDefined& DataTypeDefined::operator=(const DataTypeDefined& other)
+DataTypeDefined& DataTypeDefined::operator = (const DataTypeDefined& other)
 {
     if (this != &other)
     {
-        DataTypeBase::operator=(other);
-        mContainer = other.mContainer;
-        mBaseTypeValue = other.mBaseTypeValue;
-        mBaseTypeKey = other.mBaseTypeKey;
+        DataTypeBase::operator = (other);
+        mContainer      = other.mContainer;
+        mBaseTypeValue  = other.mBaseTypeValue;
+        mBaseTypeKey    = other.mBaseTypeKey;
     }
 
     return *this;
 }
 
-DataTypeDefined& DataTypeDefined::operator=(DataTypeDefined&& other) noexcept
+DataTypeDefined& DataTypeDefined::operator = (DataTypeDefined&& other) noexcept
 {
     if (this != &other)
     {
-        DataTypeBase::operator=(std::move(other));
-        mContainer = std::move(other.mContainer);
-        mBaseTypeValue = std::move(other.mBaseTypeValue);
-        mBaseTypeKey = std::move(other.mBaseTypeKey);
+        DataTypeBase::operator = (std::move(other));
+        mContainer      = std::move(other.mContainer);
+        mBaseTypeValue  = std::move(other.mBaseTypeValue);
+        mBaseTypeKey    = std::move(other.mBaseTypeKey);
     }
     
     return *this;
@@ -83,8 +83,8 @@ bool DataTypeDefined::readFromXml(QXmlStreamReader& xml)
         return false;
 
     QXmlStreamAttributes attributes = xml.attributes();
-    setId(attributes.hasAttribute(XmlSI::xmlSIAttributeID) ? attributes.value(XmlSI::xmlSIAttributeID).toUInt() : 0);
-    setName(attributes.hasAttribute(XmlSI::xmlSIAttributeName) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "");
+    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+    setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
@@ -117,7 +117,7 @@ bool DataTypeDefined::readFromXml(QXmlStreamReader& xml)
 void DataTypeDefined::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementDataType);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
 

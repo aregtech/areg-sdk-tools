@@ -19,17 +19,17 @@
 #include "lusan/data/common/EnumEntry.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-EnumEntry::EnumEntry(void)
-    : mId   (0)
-    , mName ("")
-    , mValue("")
+EnumEntry::EnumEntry(ElementBase* parent /*= nullptr*/)
+    : ElementBase   (parent)
+    , mName         ("")
+    , mValue        ("")
 {
 }
 
-EnumEntry::EnumEntry(uint32_t id, const QString& name, const QString& value)
-    : mId   (id)
-    , mName (name)
-    , mValue(value)
+EnumEntry::EnumEntry(uint32_t id, const QString& name, const QString& value, ElementBase* parent /*= nullptr*/)
+    : ElementBase   (id, parent)
+    , mName         (name)
+    , mValue        (value)
 {
 }
 
@@ -39,15 +39,8 @@ bool EnumEntry::readFromXml(QXmlStreamReader& xml)
         return false;
 
     QXmlStreamAttributes attributes = xml.attributes();
-    if (attributes.hasAttribute(XmlSI::xmlSIAttributeID))
-    {
-        mId = attributes.value(XmlSI::xmlSIAttributeID).toInt();
-    }
-
-    if (attributes.hasAttribute(XmlSI::xmlSIAttributeName))
-    {
-        mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
-    }
+    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+    mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementEnumEntry))
     {
@@ -65,20 +58,10 @@ bool EnumEntry::readFromXml(QXmlStreamReader& xml)
 void EnumEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementEnumEntry);
-        xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+        xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
         xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
         xml.writeTextElement(XmlSI::xmlSIElementValue, mValue);
     xml.writeEndElement();
-}
-
-uint32_t EnumEntry::getId() const
-{
-    return mId;
-}
-
-void EnumEntry::setId(uint32_t id)
-{
-    mId = id;
 }
 
 const QString & EnumEntry::getName() const

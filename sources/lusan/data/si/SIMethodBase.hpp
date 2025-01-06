@@ -51,9 +51,9 @@ protected:
     /**
      * \brief   Default constructor.
      **/
-    SIMethodBase(void);
+    SIMethodBase(ElementBase * parent = nullptr);
     
-    SIMethodBase(eMethodType methodType);
+    SIMethodBase(eMethodType methodType, ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -62,7 +62,7 @@ protected:
      * \param   description     The description of the method.
      * \param   methodType      The type of the method.
      **/
-    SIMethodBase(uint32_t id, const QString& name, const QString& description, eMethodType methodType);
+    SIMethodBase(uint32_t id, const QString& name, const QString& description, eMethodType methodType, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.
@@ -91,14 +91,18 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    SIMethodBase& operator=(const SIMethodBase& other);
+    SIMethodBase& operator = (const SIMethodBase& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    SIMethodBase& operator=(SIMethodBase&& other) noexcept;
+    SIMethodBase& operator = (SIMethodBase&& other) noexcept;
+
+    bool operator == (const SIMethodBase& other) const;
+
+    bool operator != (const SIMethodBase& other) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

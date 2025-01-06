@@ -34,7 +34,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    FieldEntry(void);
+    FieldEntry(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -46,7 +46,7 @@ public:
      * \param   description     The description of the field.
      * \param   deprecateHint   The deprecation hint of the field.
      **/
-    FieldEntry(uint32_t id, const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint);
+    FieldEntry(uint32_t id, const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.
