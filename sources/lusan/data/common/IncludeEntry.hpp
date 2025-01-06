@@ -18,6 +18,7 @@
  *  \brief       Lusan application, Service Interface Include Entry.
  *
  ************************************************************************/
+#include "lusan/common/ElementBase.hpp"
 
 #include <QString>
 #include <QXmlStreamReader>
@@ -27,7 +28,7 @@
   * \class   IncludeEntry
   * \brief   Represents an include entry for service interfaces.
   **/
-class IncludeEntry
+class IncludeEntry  : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Public methods
@@ -36,7 +37,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    IncludeEntry(void);
+    IncludeEntry(ElementBase * parent = nullptr);
 
     /**
      * \brief   Parameterized constructor.
@@ -46,7 +47,7 @@ public:
      * \param   deprecated      The deprecated flag.
      * \param   deprecationHint The deprecation hint.
      **/
-    IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint);
+    IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint, ElementBase * parent = nullptr);
 
     /**
      * \brief   Copy constructor.
@@ -129,18 +130,6 @@ public:
     void setLocation(const QString& path);
 
     /**
-     * \brief   Gets the unique ID.
-     * \return  The unique ID.
-     **/
-    uint32_t getId(void) const;
-
-    /**
-     * \brief   Sets the unique ID.
-     * \param   id      The unique ID.
-     **/
-    void setId(uint32_t id);
-
-    /**
      * \brief   Gets the description.
      * \return  The description.
      **/
@@ -203,7 +192,6 @@ private:
     QString     mDescription;   //!< The description.
     bool        mDeprecated;    //!< The deprecated flag.
     QString     mDeprecateHint; //!< The deprecation hint.
-    uint32_t    mId;            //!< The unique ID.
 };
 
 #endif  // LUSAN_DATA_COMMON_INCLUDEENTRY_HPP

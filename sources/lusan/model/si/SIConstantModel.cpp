@@ -31,7 +31,7 @@ bool SIConstantModel::createConstant(const QString& name, const QString& type, c
         return false;
 
     ConstantEntry entry(0, name, type, value, isDeprecated, description, deprecateHint);
-    mConstantData.addConstant(entry);
+    mConstantData.addConstant(std::move(entry));
     return true;
 }
 
@@ -50,9 +50,9 @@ bool SIConstantModel::updateConstantType(const QString& name, const QString& typ
     return mConstantData.updateType(name, type);
 }
 
-bool SIConstantModel::addContant(const ConstantEntry& newEntry, bool unique /*= true*/)
+bool SIConstantModel::addContant(ConstantEntry&& newEntry, bool unique /*= true*/)
 {
-    return mConstantData.addConstant(newEntry, unique);
+    return mConstantData.addConstant(std::move(newEntry), unique);
 }
 
 bool SIConstantModel::updateConstantName(const QString& oldName, const QString& newName)

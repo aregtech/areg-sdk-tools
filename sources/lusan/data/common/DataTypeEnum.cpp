@@ -19,14 +19,14 @@
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-DataTypeEnum::DataTypeEnum(void)
-    : TEDataTypeContainer<EnumEntry>(eCategory::Enumeration)
+DataTypeEnum::DataTypeEnum(ElementBase* parent /*= nullptr*/)
+    : TEDataTypeContainer<EnumEntry>(eCategory::Enumeration, parent)
     , mDerived  ( "" )
 {
 }
 
-DataTypeEnum::DataTypeEnum(const QString& name)
-    : TEDataTypeContainer<EnumEntry>(eCategory::Enumeration, name, 0)
+DataTypeEnum::DataTypeEnum(const QString& name, ElementBase* parent /*= nullptr*/)
+    : TEDataTypeContainer<EnumEntry>(eCategory::Enumeration, name, 0, parent)
     , mDerived("")
 {
 }
@@ -43,22 +43,22 @@ DataTypeEnum::DataTypeEnum(DataTypeEnum&& src) noexcept
 {
 }
 
-DataTypeEnum& DataTypeEnum::operator=(const DataTypeEnum& other)
+DataTypeEnum& DataTypeEnum::operator = (const DataTypeEnum& other)
 {
     if (this != &other)
     {
-        DataTypeBase::operator=(other);
+        DataTypeBase::operator = (other);
         mDerived = other.mDerived;
     }
 
     return *this;
 }
 
-DataTypeEnum& DataTypeEnum::operator=(DataTypeEnum&& other) noexcept
+DataTypeEnum& DataTypeEnum::operator = (DataTypeEnum&& other) noexcept
 {
     if (this != &other)
     {
-        DataTypeBase::operator=(std::move(other));
+        DataTypeBase::operator = (std::move(other));
         mDerived = std::move(other.mDerived);
     }
 
@@ -71,8 +71,8 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
         return false;
 
     QXmlStreamAttributes attributes = xml.attributes();
-    mId = attributes.hasAttribute(XmlSI::xmlSIAttributeID) ? attributes.value(XmlSI::xmlSIAttributeID).toInt() : 0;
-    mName = attributes.hasAttribute(XmlSI::xmlSIAttributeName) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "";
+    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+    mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
     QString type = attributes.hasAttribute(XmlSI::xmlSIAttributeValues) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "";
     mDerived = type == DEFAULT_VALUES ? "" : type;
 
@@ -88,7 +88,7 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
             {
                 if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementEnumEntry)
                 {
-                    EnumEntry entry;
+                    EnumEntry entry(this);
                     if (entry.readFromXml(xml))
                     {
                         mFieldList.append(entry);
@@ -108,7 +108,7 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
 void DataTypeEnum::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementDataType);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
     xml.writeAttribute(XmlSI::xmlSIAttributeValues, mDerived.isEmpty() ? DEFAULT_VALUES : mDerived);

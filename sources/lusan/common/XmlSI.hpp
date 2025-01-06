@@ -77,6 +77,8 @@ namespace XmlSI
     constexpr const char* const xmlSIValueContainer         { "Container" };
     constexpr const char* const xmlSIValueTrue              { "true" };
     constexpr const char* const xmlSIValueFalse             { "false" };
+
+    constexpr const unsigned int xmlElementId               { 50u };
 }
 
 #endif // LUSAN_COMMON_XMLSI_HPP

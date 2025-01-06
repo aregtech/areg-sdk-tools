@@ -34,7 +34,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIMethodBroadcast(void);
+    SIMethodBroadcast(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -42,7 +42,7 @@ public:
      * \param   name            The name of the method.
      * \param   description     The description of the method.
      **/
-    SIMethodBroadcast(uint32_t id, const QString& name, const QString& description);
+    SIMethodBroadcast(uint32_t id, const QString& name, const QString& description, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.
@@ -70,14 +70,14 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    SIMethodBroadcast& operator=(const SIMethodBroadcast& other);
+    SIMethodBroadcast& operator = (const SIMethodBroadcast& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    SIMethodBroadcast& operator=(SIMethodBroadcast&& other) noexcept;
+    SIMethodBroadcast& operator = (SIMethodBroadcast&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

@@ -19,16 +19,16 @@
 
 #include "lusan/data/common/MethodBase.hpp"
 
-MethodBase::MethodBase(void)
-    : mId           (0)
+MethodBase::MethodBase(ElementBase* parent /*= nullptr*/)
+    : ElementBase   (parent)
     , mName         ()
     , mDescription  ()
     , mParameters   ()
 {
 }
 
-MethodBase::MethodBase(uint32_t id, const QString& name, const QString& description)
-    : mId           (id)
+MethodBase::MethodBase(uint32_t id, const QString& name, const QString& description, ElementBase* parent /*= nullptr*/)
+    : ElementBase   (id, parent)
     , mName         (name)
     , mDescription  (description)
     , mParameters   ()
@@ -36,7 +36,7 @@ MethodBase::MethodBase(uint32_t id, const QString& name, const QString& descript
 }
 
 MethodBase::MethodBase(const MethodBase& src)
-    : mId           (src.mId)
+    : ElementBase   (src)
     , mName         (src.mName)
     , mDescription  (src.mDescription)
     , mParameters   (src.mParameters)
@@ -44,7 +44,7 @@ MethodBase::MethodBase(const MethodBase& src)
 }
 
 MethodBase::MethodBase(MethodBase&& src) noexcept
-    : mId           (src.mId)
+    : ElementBase   (std::move(src))
     , mName         (std::move(src.mName))
     , mDescription  (std::move(src.mDescription))
     , mParameters   (std::move(src.mParameters))
@@ -55,35 +55,42 @@ MethodBase::~MethodBase(void)
 {
 }
 
-MethodBase& MethodBase::operator=(const MethodBase& other)
+MethodBase& MethodBase::operator = (const MethodBase& other)
 {
     if (this != &other)
     {
-        mId = other.mId;
-        mName = other.mName;
-        mDescription = other.mDescription;
+        ElementBase::operator = (other);
+        mName       = other.mName;
+        mDescription= other.mDescription;
         mParameters = other.mParameters;
     }
+
     return *this;
 }
 
-MethodBase& MethodBase::operator=(MethodBase&& other) noexcept
+MethodBase& MethodBase::operator = (MethodBase&& other) noexcept
 {
     if (this != &other)
     {
-        mId = other.mId;
-        mName = std::move(other.mName);
-        mDescription = std::move(other.mDescription);
+        ElementBase::operator = (std::move(other));
+        mName       = std::move(other.mName);
+        mDescription= std::move(other.mDescription);
         mParameters = std::move(other.mParameters);
     }
 
     return *this;
 }
 
-bool MethodBase::addParameter(MethodParameter parameter)
+bool MethodBase::addParameter(MethodParameter&& parameter)
 {
     if (findParameter(parameter.getName()) == nullptr)
     {
+        if (parameter.getParent() != this)
+        {
+            parameter.setParent(this);
+            parameter.setId(getNextId());
+        }
+
         mParameters.append(std::move(parameter));
         return true;
     }
@@ -105,10 +112,16 @@ bool MethodBase::removeParameter(const QString& name)
     return false;
 }
 
-bool MethodBase::insertParameter(int index, MethodParameter parameter)
+bool MethodBase::insertParameter(int index, MethodParameter&& parameter)
 {
     if (findParameter(parameter.getName()) == nullptr && index >= 0 && index <= mParameters.size())
     {
+        if (parameter.getParent() != this)
+        {
+            parameter.setParent(this);
+            parameter.setId(getNextId());
+        }
+
         mParameters.insert(index, std::move(parameter));
         return true;
     }
@@ -127,16 +140,6 @@ MethodParameter* MethodBase::findParameter(const QString& name) const
     }
 
     return nullptr;
-}
-
-uint32_t MethodBase::getId() const
-{
-    return mId;
-}
-
-void MethodBase::setId(uint32_t id)
-{
-    mId = id;
 }
 
 const QString& MethodBase::getName() const

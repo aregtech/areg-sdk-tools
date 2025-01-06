@@ -53,7 +53,7 @@ public:
      * \brief   Constructor with initialization of category.
      * \param   category    The category of the data type.
      **/
-    DataTypeCustom(DataTypeBase::eCategory category);
+    DataTypeCustom(DataTypeBase::eCategory category, ElementBase* parent = nullptr);
     
     /**
      * \brief   Constructor with initialization.
@@ -61,7 +61,7 @@ public:
      * \param   id          The ID of the data type.
      * \param   name        The name of the data type.
      **/
-    DataTypeCustom(DataTypeBase::eCategory category, uint32_t id, const QString& name);
+    DataTypeCustom(DataTypeBase::eCategory category, uint32_t id, const QString& name, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.
@@ -86,31 +86,19 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    DataTypeCustom& operator=(const DataTypeCustom& other);
+    DataTypeCustom& operator = (const DataTypeCustom& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    DataTypeCustom& operator=(DataTypeCustom&& other) noexcept;
+    DataTypeCustom& operator = (DataTypeCustom&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Gets the ID of the data type.
-     * \return  The ID of the data type.
-     **/
-    uint32_t getId() const;
-
-    /**
-     * \brief   Sets the ID of the data type.
-     * \param   id  The ID of the data type.
-     **/
-    void setId(uint32_t id);
-
     const QString& getDescription(void) const;
 
     /**
@@ -134,7 +122,6 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    uint32_t    mId;            //!< The ID of the data type.
     QString     mDescription;   //!< The description of the data type.
 
 //////////////////////////////////////////////////////////////////////////

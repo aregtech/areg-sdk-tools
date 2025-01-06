@@ -33,13 +33,13 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeStructure(void);
+    DataTypeStructure(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
      **/
-    DataTypeStructure(const QString& name);
+    DataTypeStructure(const QString& name, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.

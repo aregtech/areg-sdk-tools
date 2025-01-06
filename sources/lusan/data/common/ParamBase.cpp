@@ -18,8 +18,8 @@
  ************************************************************************/
 #include "lusan/data/common/ParamBase.hpp"
 
-ParamBase::ParamBase(void)
-    : mId(0)
+ParamBase::ParamBase(ElementBase* parent /*= nullptr*/)
+    : ElementBase(parent)
     , mName()
     , mType()
     , mIsDeprecated(false)
@@ -28,8 +28,8 @@ ParamBase::ParamBase(void)
 {
 }
 
-ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint)
-    : mId(id)
+ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint, ElementBase* parent /*= nullptr*/)
+    : ElementBase(id, parent)
     , mName(name)
     , mType(type)
     , mIsDeprecated(isDeprecated)
@@ -39,7 +39,7 @@ ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, boo
 }
 
 ParamBase::ParamBase(const ParamBase& src)
-    : mId(src.mId)
+    : ElementBase(static_cast<const ElementBase &>(src))
     , mName(src.mName)
     , mType(src.mType)
     , mIsDeprecated(src.mIsDeprecated)
@@ -49,7 +49,7 @@ ParamBase::ParamBase(const ParamBase& src)
 }
 
 ParamBase::ParamBase(ParamBase&& src) noexcept
-    : mId(src.mId)
+    : ElementBase(std::move(src))
     , mName(std::move(src.mName))
     , mType(std::move(src.mType))
     , mIsDeprecated(src.mIsDeprecated)
@@ -62,7 +62,8 @@ ParamBase& ParamBase::operator=(const ParamBase& other)
 {
     if (this != &other)
     {
-        mId = other.mId;
+        ElementBase::operator=(other);
+
         mName = other.mName;
         mType = other.mType;
         mIsDeprecated = other.mIsDeprecated;
@@ -77,35 +78,25 @@ ParamBase& ParamBase::operator=(ParamBase&& other) noexcept
 {
     if (this != &other)
     {
-        mId = other.mId;
+        ElementBase::operator=(std::move(other));
+
         mName = std::move(other.mName);
         mType = std::move(other.mType);
         mIsDeprecated = other.mIsDeprecated;
         mDescription = std::move(other.mDescription);
         mDeprecateHint = std::move(other.mDeprecateHint);
     }
-
     return *this;
 }
 
-bool ParamBase::operator==(const ParamBase& other) const
+bool ParamBase::operator == (const ParamBase& other) const
 {
-    return (this != &other ? (mName == other.mName) && (mType == other.mType) : true);
+    return (mName == other.mName);
 }
 
-bool ParamBase::operator!=(const ParamBase& other) const
+bool ParamBase::operator != (const ParamBase& other) const
 {
-    return (this != &other ? (mName != other.mName) || (mType != other.mType) : false);
-}
-
-uint32_t ParamBase::getId() const
-{
-    return mId;
-}
-
-void ParamBase::setId(uint32_t id)
-{
-    mId = id;
+    return (mName != other.mName);
 }
 
 const QString & ParamBase::getName() const
@@ -160,5 +151,5 @@ void ParamBase::setDeprecateHint(const QString& deprecateHint)
 
 bool ParamBase::isValid() const
 {
-    return (mId != 0) && (mName.isEmpty() == false ) && (mType.isEmpty() == false);
+    return (getId() != 0) && (mName.isEmpty() == false ) && (mType.isEmpty() == false);
 }

@@ -20,20 +20,23 @@
  *
  ************************************************************************/
 
-#include <QList>
-#include <QString>
-#include <QXmlStreamReader>
-#include <QXmlStreamWriter>
+#include "lusan/common/ElementBase.hpp"
+
 #include "lusan/data/si/SIMethodRequest.hpp"
 #include "lusan/data/si/SIMethodResponse.hpp"
 #include "lusan/data/si/SIMethodBroadcast.hpp"
 #include "lusan/common/XmlSI.hpp"
 
+#include <QList>
+#include <QString>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+
 /**
  * \class   SIMethodData
  * \brief   Represents the method data of a service interface in the Lusan application.
  **/
-class SIMethodData
+class SIMethodData  : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -42,7 +45,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIMethodData(void);
+    SIMethodData(ElementBase * parent = nullptr);
 
     /**
      * \brief   Destructor.

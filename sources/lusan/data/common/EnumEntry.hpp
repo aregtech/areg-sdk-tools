@@ -19,6 +19,8 @@
  *
  ************************************************************************/
 
+#include "lusan/common/ElementBase.hpp"
+
 #include <QString>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -26,7 +28,7 @@
 /**
  * \brief   A single entry of the enumeration data type.
  **/
-class EnumEntry
+class EnumEntry : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // constructors / destructor
@@ -35,7 +37,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    EnumEntry(void);
+    EnumEntry(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with parameters.
@@ -43,7 +45,7 @@ public:
      * \param   name    The name of the enum entry.
      * \param   value   The value of the enum entry.
      **/
-    EnumEntry(uint32_t id, const QString& name, const QString & value);
+    EnumEntry(uint32_t id, const QString& name, const QString & value, ElementBase* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
@@ -61,18 +63,6 @@ public:
      * \param   xml     The XML stream writer.
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
-
-    /**
-     * \brief   Gets the ID of the enum entry.
-     * \return  The ID of the enum entry.
-     **/
-    uint32_t getId() const;
-
-    /**
-     * \brief   Sets the ID of the enum entry.
-     * \param   id  The new ID of the enum entry.
-     **/
-    void setId(uint32_t id);
 
     /**
      * \brief   Gets the name of the enum entry.
@@ -102,7 +92,6 @@ public:
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    uint32_t    mId;    //!< The ID of the enum entry.
     QString     mName;  //!< The name of the enum entry.
     QString     mValue; //!< The value of the enum entry.
 };

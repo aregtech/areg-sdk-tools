@@ -19,14 +19,21 @@
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-ConstantEntry::ConstantEntry(void)
-    : ParamBase()
-    , mValue()
+ConstantEntry::ConstantEntry(ElementBase* parent /*= nullptr*/)
+    : ParamBase (parent)
+    , mValue    ()
 {
 }
 
-ConstantEntry::ConstantEntry(uint32_t id, const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint)
-    : ParamBase(id, name, type, isDeprecated, description, deprecateHint)
+ConstantEntry::ConstantEntry( uint32_t id
+                            , const QString& name
+                            , const QString& type           /*= "bool"*/
+                            , const QString& value          /*= "true"*/
+                            , bool isDeprecated             /*= false*/
+                            , const QString& description    /*= ""*/
+                            , const QString& deprecateHint  /*= ""*/
+                            , ElementBase* parent           /*= nullptr*/)
+    : ParamBase(id, name, type, isDeprecated, description, deprecateHint, parent)
     , mValue(value)
 {
 }
@@ -67,12 +74,12 @@ ConstantEntry& ConstantEntry::operator = (ConstantEntry&& other) noexcept
 
 bool ConstantEntry::operator == (const ConstantEntry& other) const
 {
-    return (this != &other ? (mName == other.mName) && (mType == other.mType) : true);
+    return ParamBase::operator == (other);
 }
 
 bool ConstantEntry::operator != (const ConstantEntry& other) const
 {
-    return (this != &other ? (mName != other.mName) || (mType != other.mType) : false);
+    return ParamBase::operator != (other);
 }
 
 bool ConstantEntry::operator < (const ConstantEntry& other) const
@@ -101,10 +108,10 @@ bool ConstantEntry::readFromXml(QXmlStreamReader& xml)
         return false;
 
     QXmlStreamAttributes attributes = xml.attributes();
-    setId(attributes.hasAttribute(XmlSI::xmlSIAttributeID)          ? attributes.value(XmlSI::xmlSIAttributeID).toUInt()        : 0);
-    setName(attributes.hasAttribute(XmlSI::xmlSIAttributeName)      ? attributes.value(XmlSI::xmlSIAttributeName).toString()    : "");
-    setType(attributes.hasAttribute(XmlSI::xmlSIAttributeDataType)  ? attributes.value(XmlSI::xmlSIAttributeDataType).toString(): "");
-    setDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == "true" : false);
+    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+    setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
+    setType(attributes.value(XmlSI::xmlSIAttributeDataType).toString());
+    setDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementConstant))
     {
@@ -135,12 +142,12 @@ void ConstantEntry::writeToXml(QXmlStreamWriter& xml) const
     if (isValid())
     {
         xml.writeStartElement(XmlSI::xmlSIElementConstant);
-        xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+        xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
         xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
         xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
         if (mIsDeprecated)
         {
-            xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
+            xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
         }
 
         xml.writeTextElement(XmlSI::xmlSIElementValue, mValue);

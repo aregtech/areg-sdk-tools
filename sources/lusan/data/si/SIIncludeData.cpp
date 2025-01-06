@@ -22,14 +22,24 @@
 
 const IncludeEntry SIIncludeData::InvalidInclude;
 
-SIIncludeData::SIIncludeData(void)
-    : mIncludes()
+SIIncludeData::SIIncludeData(ElementBase* parent /*= nullptr*/)
+    : ElementBase   (parent)
+    , mIncludes     ()
 {
 }
 
-SIIncludeData::SIIncludeData(const QList<IncludeEntry>& entries)
-    : mIncludes(entries)
+SIIncludeData::SIIncludeData(const QList<IncludeEntry>& entries, ElementBase* parent /*= nullptr*/)
+    : ElementBase   (parent)
+    , mIncludes(entries)
 {
+    for (IncludeEntry& entry : mIncludes)
+    {
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
+    }
 }
 
 const QList<IncludeEntry>& SIIncludeData::getIncludes(void) const
@@ -40,6 +50,14 @@ const QList<IncludeEntry>& SIIncludeData::getIncludes(void) const
 void SIIncludeData::setIncludes(const QList<IncludeEntry>& entries)
 {
     mIncludes = entries;
+    for (IncludeEntry& entry : mIncludes)
+    {
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
+    }
 }
 
 int SIIncludeData::findInclude(const IncludeEntry& entry) const
@@ -47,12 +65,21 @@ int SIIncludeData::findInclude(const IncludeEntry& entry) const
     return mIncludes.indexOf(entry);
 }
 
-void SIIncludeData::addInclude(const IncludeEntry& entry)
+bool SIIncludeData::addInclude(IncludeEntry&& entry, bool unique)
 {
-    if (!mIncludes.contains(entry))
+    if ((unique == false) || (exists(entry.getLocation()) == false))
     {
-        mIncludes.append(entry);
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
+
+        mIncludes.append(std::move(entry));
+        return true;
     }
+
+    return false;
 }
 
 bool SIIncludeData::removeInclude(const IncludeEntry& entry)
@@ -67,12 +94,18 @@ bool SIIncludeData::removeInclude(const IncludeEntry& entry)
     return false;
 }
 
-bool SIIncludeData::replaceInclude(const IncludeEntry& oldEntry, const IncludeEntry& newEntry)
+bool SIIncludeData::replaceInclude(const IncludeEntry& oldEntry, IncludeEntry&& newEntry)
 {
     int index = mIncludes.indexOf(oldEntry);
     if (index != -1)
     {
-        mIncludes[index] = newEntry;
+        if (newEntry.getParent() != this)
+        {
+            newEntry.setParent(this);
+            newEntry.setId(getNextId());
+        }
+
+        mIncludes[index] = std::move(newEntry);
         return true;
     }
 
@@ -117,15 +150,6 @@ bool SIIncludeData::removeInclude(const QString& location)
     return false;
 }
 
-void SIIncludeData::addInclude(const IncludeEntry& elem, bool ascending)
-{
-    if (mIncludes.contains(elem) == false)
-    {
-        mIncludes.append(elem);
-        sortIncludes(ascending);
-    }
-}
-
 void SIIncludeData::sortIncludes(bool ascending)
 {
     std::sort(mIncludes.begin(), mIncludes.end(), [ascending](const IncludeEntry& left, const IncludeEntry& right)
@@ -152,10 +176,10 @@ bool SIIncludeData::readFromXml(QXmlStreamReader& xml)
         {
             if (xml.name() == XmlSI::xmlSIElementLocation)
             {
-                IncludeEntry entry;
+                IncludeEntry entry(this);
                 if (entry.readFromXml(xml))
                 {
-                    addInclude(entry);
+                    addInclude(std::move(entry), true);
                 }
             }
         }

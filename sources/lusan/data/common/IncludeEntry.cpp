@@ -21,50 +21,49 @@
 #include "lusan/common/XmlSI.hpp"
 #include "IncludeEntry.hpp"
 
-IncludeEntry::IncludeEntry(void)
-    : mLocation     ( )
+IncludeEntry::IncludeEntry(ElementBase* parent /*= nullptr*/)
+    : ElementBase   (parent)
+    , mLocation     ( )
     , mDescription  ( )
     , mDeprecated   (false)
     , mDeprecateHint( )
-    , mId           (0)
 {
 }
 
-IncludeEntry::IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint)
-    : mLocation     (path)
+IncludeEntry::IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint, ElementBase* parent /*= nullptr*/)
+    : ElementBase   (id, parent)
+    , mLocation     (path)
     , mDescription  (description)
     , mDeprecated   (deprecated)
     , mDeprecateHint(deprecationHint)
-    , mId           (id)
 {
 }
 
 IncludeEntry::IncludeEntry(const IncludeEntry& other)
-    : mLocation     (other.mLocation)
+    : ElementBase   (other)
+    , mLocation     (other.mLocation)
     , mDescription  (other.mDescription)
     , mDeprecated   (other.mDeprecated)
     , mDeprecateHint(other.mDeprecateHint)
-    , mId           (other.mId)
 {
 }
 
 IncludeEntry::IncludeEntry(IncludeEntry&& other) noexcept
-    : mLocation     (std::move(other.mLocation))
+    : ElementBase(std::move(other))
+    , mLocation     (std::move(other.mLocation))
     , mDescription  (std::move(other.mDescription))
     , mDeprecated   (other.mDeprecated)
     , mDeprecateHint(std::move(other.mDeprecateHint))
-    , mId           (other.mId)
 {
-    other.mId           = 0;
     other.mDeprecated   = false;
 }
 
-IncludeEntry& IncludeEntry::operator=(const IncludeEntry& other)
+IncludeEntry& IncludeEntry::operator = (const IncludeEntry& other)
 {
     if (this != &other)
     {
+        ElementBase::operator = (other);
         mLocation       = other.mLocation;
-        mId             = other.mId;
         mDescription    = other.mDescription;
         mDeprecated     = other.mDeprecated;
         mDeprecateHint  = other.mDeprecateHint;
@@ -77,13 +76,12 @@ IncludeEntry& IncludeEntry::operator=(IncludeEntry&& other) noexcept
 {
     if (this != &other)
     {
+        ElementBase::operator = (std::move(other));
         mLocation       = std::move(other.mLocation);
-        mId             = other.mId;
         mDescription    = std::move(other.mDescription);
         mDeprecated     = other.mDeprecated;
         mDeprecateHint  = std::move(other.mDeprecateHint);
 
-        other.mId           = 0;
         other.mDeprecated   = false;
     }
 
@@ -123,16 +121,6 @@ const QString& IncludeEntry::getLocation(void) const
 void IncludeEntry::setLocation(const QString& path)
 {
     mLocation = path;
-}
-
-uint32_t IncludeEntry::getId(void) const
-{
-    return mId;
-}
-
-void IncludeEntry::setId(uint32_t id)
-{
-    mId = id;
 }
 
 const QString& IncludeEntry::getDescription(void) const
@@ -195,6 +183,7 @@ bool IncludeEntry::readFromXml(QXmlStreamReader& xml)
                 mDeprecateHint = xml.readElementText();
             }
         }
+
         xml.readNext();
     }
 
@@ -210,7 +199,6 @@ void IncludeEntry::writeToXml(QXmlStreamWriter& xml) const
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
     }
-    xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, mDeprecated ? "true" : "false");
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
     if (mDeprecated && (mDeprecateHint.isEmpty() == false))

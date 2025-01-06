@@ -19,22 +19,24 @@
  *
  ************************************************************************/
 
+#include "lusan/common/ElementBase.hpp"
+
+#include "lusan/data/common/AttributeEntry.hpp"
 #include <QList>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
-#include "lusan/data/common/ConstantEntry.hpp"
 
 /**
  * \class   SIAttributeData
  * \brief   Manages attribute data for service interfaces.
  **/
-class SIAttributeData
+class SIAttributeData   : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Local types and static members
 //////////////////////////////////////////////////////////////////////////
 private:
-    static const ConstantEntry InvalidAttribute; //!< Invalid attribute object
+    static const AttributeEntry InvalidAttribute; //!< Invalid attribute object
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -43,13 +45,13 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    SIAttributeData(void);
+    SIAttributeData(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
      * \param   entries     The list of attributes.
      **/
-    SIAttributeData(const QList<ConstantEntry>& entries);
+    SIAttributeData(const QList<AttributeEntry>& entries, ElementBase* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -59,33 +61,27 @@ public:
      * \brief   Gets the list of attributes.
      * \return  The list of attributes.
      **/
-    const QList<ConstantEntry>& getAttributes(void) const;
+    const QList<AttributeEntry>& getAttributes(void) const;
 
     /**
      * \brief   Sets the list of attributes.
      * \param   entries     The list of attributes.
      **/
-    void setAttributes(const QList<ConstantEntry>& entries);
+    void setAttributes(const QList<AttributeEntry>& entries);
 
     /**
      * \brief   Searches for an attribute in the list.
      * \param   entry   The attribute to search for.
      * \return  The index of the attribute, or -1 if not found.
      **/
-    int findAttribute(const ConstantEntry& entry) const;
-
-    /**
-     * \brief   Adds an attribute to the list.
-     * \param   entry   The attribute to add.
-     **/
-    void addAttribute(const ConstantEntry& entry);
+    int findAttribute(const AttributeEntry& entry) const;
 
     /**
      * \brief   Removes an attribute from the list.
      * \param   entry   The attribute to remove.
      * \return  True if the attribute was removed, false otherwise.
      **/
-    bool removeAttribute(const ConstantEntry& entry);
+    bool removeAttribute(const AttributeEntry& entry);
 
     /**
      * \brief   Replaces an attribute in the list.
@@ -93,7 +89,7 @@ public:
      * \param   newEntry    The new attribute.
      * \return  True if the attribute was replaced, false otherwise.
      **/
-    bool replaceAttribute(const ConstantEntry& oldEntry, const ConstantEntry& newEntry);
+    bool replaceAttribute(const AttributeEntry& oldEntry, AttributeEntry&& newEntry);
 
     /**
      * \brief   Reads attribute data from an XML stream.
@@ -127,7 +123,7 @@ public:
      * \param   name    The name to search for.
      * \return  The attribute if found, otherwise an invalid attribute.
      **/
-    const ConstantEntry& getAttribute(const QString& name) const;
+    const AttributeEntry& getAttribute(const QString& name) const;
 
     /**
      * \brief   Removes an attribute by name.
@@ -138,10 +134,10 @@ public:
 
     /**
      * \brief   Adds an attribute to the list and sorts the list.
-     * \param   entry       The attribute to add.
-     * \param   ascending   If true, sorts in ascending order, otherwise in descending order.
+     * \param   entry   The attribute to add.
+     * \param   unique  If true, the entry is unique.
      **/
-    void addAttribute(const ConstantEntry& entry, bool ascending);
+    bool addAttribute(AttributeEntry&& entry, bool unique);
 
     /**
      * \brief   Sorts the list of attributes.
@@ -158,7 +154,7 @@ public:
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    QList<ConstantEntry> mAttributes; //!< The list of attributes.
+    QList<AttributeEntry> mAttributes; //!< The list of attributes.
 };
 
 #endif  // LUSAN_DATA_SI_SIATTRIBUTEDATA_HPP

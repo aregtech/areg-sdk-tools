@@ -22,15 +22,37 @@
 #include <QFile>
 
 ServiceInterfaceData::ServiceInterfaceData(void)
-    : mFilePath     ()
-    , mOverviewData()
-    , mDataTypeData()
-    , mAttributeData()
-    , mMethodData()
-    , mConstantData()
-    , mIncludeData()
-    , mMaxId(0)
+    : ElementBase   (1u, nullptr)
+    , mFilePath     ( )
+    , mOverviewData (this)
+    , mDataTypeData (this)
+    , mAttributeData(this)
+    , mMethodData   (this)
+    , mConstantData (this)
+    , mIncludeData  (this)
 {
+    mOverviewData.setId(getNextId());
+    // mDataTypeData.setId(getNextId());
+    // mAttributeData.setId(getNextId());
+    // mMethodData.setId(getNextId());
+    // mConstantData.setId(getNextId());
+    // mIncludeData.setId(getNextId());
+}
+
+ServiceInterfaceData::ServiceInterfaceData(const QString& filePath)
+    : ElementBase(1u, nullptr)
+    , mFilePath()
+    , mOverviewData(this)
+    , mDataTypeData(this)
+    , mAttributeData(this)
+    , mMethodData(this)
+    , mConstantData(this)
+    , mIncludeData(this)
+{
+    if (readFromFile(filePath) == false)
+    {
+        mOverviewData.setId(getNextId());
+    }
 }
 
 bool ServiceInterfaceData::readFromFile(const QString& filePath)
@@ -144,14 +166,4 @@ void ServiceInterfaceData::writeToXml(QXmlStreamWriter& xml) const
     mIncludeData.writeToXml(xml);
 
     xml.writeEndElement();
-}
-
-unsigned int ServiceInterfaceData::getNextId(void) const
-{
-    return ++mMaxId;
-}
-
-void ServiceInterfaceData::setMaxId(unsigned int id) const
-{
-    mMaxId = std::max(mMaxId, id);
 }

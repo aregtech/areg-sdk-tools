@@ -41,7 +41,7 @@ protected:
      * \brief   Initializes by category.
      * \param   category    The category of the data type.
      **/
-    TEDataTypeContainer(DataTypeBase::eCategory category);
+    TEDataTypeContainer(DataTypeBase::eCategory category, ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with name initialization.
@@ -49,7 +49,7 @@ protected:
      * \param   name        The name of the data type.
      * \param   id          The ID of the data type.
      **/ 
-    TEDataTypeContainer(DataTypeBase::eCategory category, const QString& name, uint32_t id);
+    TEDataTypeContainer(DataTypeBase::eCategory category, const QString& name, uint32_t id, ElementBase* parent = nullptr);
 
 public:
     /**
@@ -106,7 +106,7 @@ public:
      * \param   unique  If true, ensures the field is unique.
      * \return  True if the field was added, false otherwise.
      **/
-    bool addField(const FieldType& field, bool unique = true);
+    bool addField(FieldType& field, bool unique = true);
 
     /**
      * \brief   Inserts an field at a specific position.
@@ -115,7 +115,7 @@ public:
      * \param   unique  If true, ensures the field is unique.
      * \return  True if the field was inserted, false otherwise.
      **/
-    bool insertField(int index, const FieldType& field, bool unique = true);
+    bool insertField(int index, FieldType& field, bool unique = true);
 
     /**
      * \brief   Removes an field by name.
@@ -183,14 +183,17 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 
 template<class FieldType>
-TEDataTypeContainer<FieldType>::TEDataTypeContainer(DataTypeBase::eCategory category)
-    : DataTypeCustom(category)
+TEDataTypeContainer<FieldType>::TEDataTypeContainer(DataTypeBase::eCategory category, ElementBase* parent /*= nullptr*/)
+    : DataTypeCustom(category, parent)
 {
 }
 
 template<class FieldType>
-TEDataTypeContainer<FieldType>::TEDataTypeContainer(DataTypeBase::eCategory category, const QString& name, uint32_t id)
-    : DataTypeCustom(category, id, name)
+TEDataTypeContainer<FieldType>::TEDataTypeContainer(  DataTypeBase::eCategory category
+                                                    , const QString& name
+                                                    , uint32_t id
+                                                    , ElementBase* parent /*= nullptr*/)
+    : DataTypeCustom(category, id, name, parent)
 {
 }
 
@@ -216,6 +219,7 @@ TEDataTypeContainer<FieldType>& TEDataTypeContainer<FieldType>::operator=(const 
         DataTypeBase::operator=(other);
         mFieldList = other.mFieldList;
     }
+
     return *this;
 }
 
@@ -227,6 +231,7 @@ TEDataTypeContainer<FieldType>& TEDataTypeContainer<FieldType>::operator=(TEData
         DataTypeBase::operator=(std::move(other));
         mFieldList = std::move(other.mFieldList);
     }
+
     return *this;
 }
 
@@ -240,10 +245,18 @@ template<class FieldType>
 inline void TEDataTypeContainer<FieldType>::setFields(const QList<FieldType>& fields)
 {
     mFieldList = fields;
+    for (auto& entry : mFieldList)
+    {
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            setMaxId(entry.getId());
+        }
+    }
 }
 
 template<class FieldType>
-bool TEDataTypeContainer<FieldType>::addField(const FieldType& field, bool unique)
+bool TEDataTypeContainer<FieldType>::addField(FieldType& field, bool unique)
 {
     if (unique)
     {
@@ -257,12 +270,18 @@ bool TEDataTypeContainer<FieldType>::addField(const FieldType& field, bool uniqu
         }
     }
 
+    if (field.getParent() != nullptr)
+    {
+        field.setParent(this);
+        field.setId(getNextId());
+    }
+
     mFieldList.append(field);
     return true;
 }
 
 template<class FieldType>
-bool TEDataTypeContainer<FieldType>::insertField(int index, const FieldType& field, bool unique)
+bool TEDataTypeContainer<FieldType>::insertField(int index, FieldType& field, bool unique)
 {
     if (unique)
     {
@@ -280,6 +299,8 @@ bool TEDataTypeContainer<FieldType>::insertField(int index, const FieldType& fie
         return false;
     }
     
+    field.setParent(this);
+    field.setId(getNextId());
     mFieldList.insert(index, field);
     return true;
 }

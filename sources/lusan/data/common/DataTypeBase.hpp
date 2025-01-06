@@ -18,6 +18,7 @@
  *  \brief       Lusan application, Data Type Base.
  *
  ************************************************************************/
+#include "lusan/common/ElementBase.hpp"
 
 #include <QString>
 #include <QXmlStreamReader>
@@ -27,7 +28,7 @@
   * \class   DataTypeBase
   * \brief   Base class for data types in the Lusan application.
   **/
-class DataTypeBase
+class DataTypeBase  : public ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
@@ -59,14 +60,14 @@ protected:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeBase(void);
+    DataTypeBase(ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
      * \param   name        The name of the data type.
      * \param   category    The category of the data type.
      **/
-    DataTypeBase(eCategory category, const QString& name = QString());
+    DataTypeBase(eCategory category, const QString& name = QString(), uint32_t id = 0, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.

@@ -19,13 +19,13 @@
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-DataTypeStructure::DataTypeStructure(void)
-    : TEDataTypeContainer< FieldEntry>(eCategory::Structure)
+DataTypeStructure::DataTypeStructure(ElementBase* parent /*= nullptr*/)
+    : TEDataTypeContainer< FieldEntry>(eCategory::Structure, parent)
 {
 }
 
-DataTypeStructure::DataTypeStructure(const QString& name)
-    : TEDataTypeContainer< FieldEntry>(eCategory::Structure, name, 0)
+DataTypeStructure::DataTypeStructure(const QString& name, ElementBase* parent /*= nullptr*/)
+    : TEDataTypeContainer< FieldEntry>(eCategory::Structure, name, 0, parent)
 {
 }
 
@@ -39,15 +39,15 @@ DataTypeStructure::DataTypeStructure(DataTypeStructure&& src) noexcept
 {
 }
 
-DataTypeStructure& DataTypeStructure::operator=(const DataTypeStructure& other)
+DataTypeStructure& DataTypeStructure::operator = (const DataTypeStructure& other)
 {
-    DataTypeBase::operator=(other);
+    DataTypeBase::operator = (other);
     return *this;
 }
 
-DataTypeStructure& DataTypeStructure::operator=(DataTypeStructure&& other) noexcept
+DataTypeStructure& DataTypeStructure::operator = (DataTypeStructure&& other) noexcept
 {
-    DataTypeBase::operator=(std::move(other));
+    DataTypeBase::operator = (std::move(other));
     return *this;
 }
 
@@ -57,8 +57,8 @@ bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
         return false;
 
     QXmlStreamAttributes attributes = xml.attributes();
-    setId(attributes.hasAttribute(XmlSI::xmlSIAttributeID) ? attributes.value(XmlSI::xmlSIAttributeID).toUInt() : 0);
-    setName(attributes.hasAttribute(XmlSI::xmlSIAttributeName) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "");
+    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+    setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementDescription)
@@ -71,7 +71,7 @@ bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
             {
                 if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementField)
                 {
-                    FieldEntry entry;
+                    FieldEntry entry(this);
                     if (entry.readFromXml(xml))
                     {
                         mFieldList.append(entry);
@@ -91,7 +91,7 @@ bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
 void DataTypeStructure::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementDataType);
-    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(mId));
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
 

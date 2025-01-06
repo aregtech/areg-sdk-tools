@@ -22,13 +22,23 @@
 
 const ConstantEntry SIConstantData::InvalidConstant = ConstantEntry();
 
-SIConstantData::SIConstantData(void)
+SIConstantData::SIConstantData(ElementBase* parent /*= nullptr*/)
+    : ElementBase(parent)
 {
 }
 
-SIConstantData::SIConstantData(const QList<ConstantEntry>& entries)
-    : mConstants(entries)
+SIConstantData::SIConstantData(const QList<ConstantEntry>& entries, ElementBase* parent /*= nullptr*/)
+    : ElementBase(parent)
+    , mConstants(entries)
 {
+    for (ConstantEntry& entry : mConstants)
+    {
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
+    }
 }
 
 const QList<ConstantEntry>& SIConstantData::getConstants(void) const
@@ -39,6 +49,14 @@ const QList<ConstantEntry>& SIConstantData::getConstants(void) const
 void SIConstantData::setConstants(const QList<ConstantEntry>& entries)
 {
     mConstants = entries;
+    for (ConstantEntry& entry : mConstants)
+    {
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
+    }
 }
 
 int SIConstantData::findConstant(const ConstantEntry& entry) const
@@ -46,13 +64,21 @@ int SIConstantData::findConstant(const ConstantEntry& entry) const
     return mConstants.indexOf(entry);
 }
 
-bool SIConstantData::addConstant(const ConstantEntry& entry, bool unique /*= true*/)
+bool SIConstantData::addConstant(ConstantEntry&& entry, bool unique /*= true*/)
 {
-    if (findConstant(entry.getName()) != -1)
-        return false;
+    if ((unique == false) || (findConstant(entry.getName()) == -1))
+    {
+        if (entry.getParent() != this)
+        {
+            entry.setParent(this);
+            entry.setId(getNextId());
+        }
 
-    mConstants.append(entry);
-    return true;
+        mConstants.append(std::move(entry));
+        return true;
+    }
+
+    return false;
 }
 
 bool SIConstantData::removeConstant(const ConstantEntry& entry)
@@ -60,11 +86,17 @@ bool SIConstantData::removeConstant(const ConstantEntry& entry)
     return mConstants.removeOne(entry);
 }
 
-bool SIConstantData::replaceConstant(const ConstantEntry& oldEntry, const ConstantEntry& newEntry)
+bool SIConstantData::replaceConstant(const ConstantEntry& oldEntry, ConstantEntry&& newEntry)
 {
     int index = findConstant(oldEntry);
     if (index != -1)
     {
+        if (newEntry.getParent() != this)
+        {
+            newEntry.setParent(this);
+            newEntry.setId(getNextId());
+        }
+
         mConstants[index] = newEntry;
         return true;
     }
@@ -81,10 +113,10 @@ bool SIConstantData::readFromXml(QXmlStreamReader& xml)
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementConstant)
         {
-            ConstantEntry entry;
+            ConstantEntry entry(this);
             if (entry.readFromXml(xml))
             {
-                addConstant(entry);
+                addConstant(std::move(entry), true);
             }
         }
 

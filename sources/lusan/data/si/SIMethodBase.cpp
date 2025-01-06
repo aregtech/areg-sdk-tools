@@ -19,43 +19,43 @@
 
 #include "lusan/data/si/SIMethodBase.hpp"
 
-SIMethodBase::SIMethodBase(void)
-    : MethodBase()
-    , mMethodType(eMethodType::MethodUnknown)
-    , mIsDeprecated(false)
+SIMethodBase::SIMethodBase(ElementBase* parent /*= nullptr*/)
+    : MethodBase    (parent)
+    , mMethodType   (eMethodType::MethodUnknown)
+    , mIsDeprecated (false)
     , mDeprecateHint()
 {
 }
 
-SIMethodBase::SIMethodBase(eMethodType methodType)
-    : MethodBase()
-    , mMethodType(methodType)
-    , mIsDeprecated(false)
+SIMethodBase::SIMethodBase(eMethodType methodType, ElementBase* parent /*= nullptr*/)
+    : MethodBase    (parent)
+    , mMethodType   (methodType)
+    , mIsDeprecated (false)
     , mDeprecateHint()
 {
 }
 
-SIMethodBase::SIMethodBase(uint32_t id, const QString& name, const QString& description, eMethodType methodType)
-    : MethodBase(id, name, description)
-    , mMethodType(methodType)
-    , mIsDeprecated(false)
+SIMethodBase::SIMethodBase(uint32_t id, const QString& name, const QString& description, eMethodType methodType, ElementBase* parent /*= nullptr*/)
+    : MethodBase    (id, name, description, parent)
+    , mMethodType   (methodType)
+    , mIsDeprecated (false)
     , mDeprecateHint()
 {
 }
 
 SIMethodBase::SIMethodBase(const SIMethodBase& src)
-    : MethodBase        (src)
-    , mMethodType       (src.mMethodType)
-    , mIsDeprecated     (src.mIsDeprecated)
-    , mDeprecateHint    (src.mDeprecateHint)
+    : MethodBase    (src)
+    , mMethodType   (src.mMethodType)
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDeprecateHint(src.mDeprecateHint)
 {
 }
 
 SIMethodBase::SIMethodBase(SIMethodBase&& src) noexcept
-    : MethodBase        (std::move(src))
-    , mMethodType       (src.mMethodType)
-    , mIsDeprecated     (src.mIsDeprecated)
-    , mDeprecateHint   (std::move(src.mDeprecateHint))
+    : MethodBase    (std::move(src))
+    , mMethodType   (src.mMethodType)
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDeprecateHint(std::move(src.mDeprecateHint))
 {
 }
 
@@ -63,30 +63,40 @@ SIMethodBase::~SIMethodBase(void)
 {
 }
 
-SIMethodBase& SIMethodBase::operator=(const SIMethodBase& other)
+SIMethodBase& SIMethodBase::operator = (const SIMethodBase& other)
 {
     if (this != &other)
     {
-        MethodBase::operator=(other);
-        mMethodType = other.mMethodType;
-        mIsDeprecated = other.mIsDeprecated;
-        mDeprecateHint = other.mDeprecateHint;
+        MethodBase::operator = (other);
+        mMethodType     = other.mMethodType;
+        mIsDeprecated   = other.mIsDeprecated;
+        mDeprecateHint  = other.mDeprecateHint;
     }
 
     return *this;
 }
 
-SIMethodBase& SIMethodBase::operator=(SIMethodBase&& other) noexcept
+SIMethodBase& SIMethodBase::operator = (SIMethodBase&& other) noexcept
 {
     if (this != &other)
     {
-        MethodBase::operator=(std::move(other));
-        mMethodType = other.mMethodType;
-        mIsDeprecated = other.mIsDeprecated;
-        mDeprecateHint = std::move(other.mDeprecateHint);
+        MethodBase::operator = (std::move(other));
+        mMethodType     = other.mMethodType;
+        mIsDeprecated   = other.mIsDeprecated;
+        mDeprecateHint  = std::move(other.mDeprecateHint);
     }
 
     return *this;
+}
+
+bool SIMethodBase::operator == (const SIMethodBase& other) const
+{
+    return (this != &other ? (mName == other.mName) && (mMethodType == other.mMethodType) : true);
+}
+
+bool SIMethodBase::operator != (const SIMethodBase& other) const
+{
+    return (this != &other ? (mName != other.mName) || (mMethodType != other.mMethodType) : false);
 }
 
 SIMethodBase::eMethodType SIMethodBase::getMethodType() const

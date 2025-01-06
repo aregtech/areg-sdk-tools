@@ -19,27 +19,26 @@
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "DataTypeCustom.hpp"
 
-DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category)
-    : DataTypeBase(eCategory::CustomDefined)
-    , mId(0)
+DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category, ElementBase* parent /*= nullptr*/)
+    : DataTypeBase(eCategory::CustomDefined, "", 0, parent)
+    , mDescription()
 {
 }
 
-DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category, uint32_t id, const QString& name)
-    : DataTypeBase(category, name)
-    , mId(id)
+DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category, uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
+    : DataTypeBase(category, name, id, parent)
 {
 }
 
 DataTypeCustom::DataTypeCustom(const DataTypeCustom& src)
     : DataTypeBase(src)
-    , mId(src.mId)
+    , mDescription(src.mDescription)
 {
 }
 
 DataTypeCustom::DataTypeCustom(DataTypeCustom&& src) noexcept
     : DataTypeBase(std::move(src))
-    , mId(src.mId)
+    , mDescription(std::move(src.mDescription))
 {
 }
 
@@ -47,36 +46,26 @@ DataTypeCustom::~DataTypeCustom(void)
 {
 }
 
-DataTypeCustom& DataTypeCustom::operator=(const DataTypeCustom& other)
+DataTypeCustom& DataTypeCustom::operator = (const DataTypeCustom& other)
 {
     if (this != &other)
     {
-        DataTypeBase::operator=(other);
-        mId = other.mId;
+        DataTypeBase::operator = (other);
+        mDescription = other.mDescription;
     }
 
     return *this;
 }
 
-DataTypeCustom& DataTypeCustom::operator=(DataTypeCustom&& other) noexcept
+DataTypeCustom& DataTypeCustom::operator = (DataTypeCustom&& other) noexcept
 {
     if (this != &other)
     {
-        DataTypeBase::operator=(std::move(other));
-        mId = other.mId;
+        DataTypeBase::operator = (std::move(other));
+        mDescription = std::move(other.mDescription);
     }
 
     return *this;
-}
-
-uint32_t DataTypeCustom::getId() const
-{
-    return mId;
-}
-
-void DataTypeCustom::setId(uint32_t id)
-{
-    mId = id;
 }
 
 const QString& DataTypeCustom::getDescription(void) const
@@ -91,7 +80,7 @@ void DataTypeCustom::setDescription(const QString& description)
 
 bool DataTypeCustom::isValid(void) const
 {
-    return (mId != 0) && DataTypeBase::isValid();
+    return (getId() != 0) && DataTypeBase::isValid();
 }
 
 QString DataTypeCustom::getType(void) const

@@ -137,23 +137,24 @@ void SIConstant::onAddClicked(void)
         name =_defName + QString::number(++ mCount);
     } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
     
-    ConstantEntry entry(0, name);
-    if (mModel.addContant(entry, true))
+    ConstantEntry elem(0, name);
+    if (mModel.addContant(std::move(elem), true))
     {
-        mDetails->ctrlName()->setText(entry.getName());
-        mDetails->ctrlTypes()->setCurrentText(entry.getType());
-        mDetails->ctrlValue()->setText(entry.getValue());
-        mDetails->ctrlDescription()->setPlainText(entry.getDescription());
-        mDetails->ctrlDeprecateHint()->setText(entry.getDeprecateHint());
-        mDetails->ctrlDepricated()->setChecked(entry.isDeprecated());
+        const ConstantEntry * entry = mModel.findConstant(name);
+        mDetails->ctrlName()->setText(entry->getName());
+        mDetails->ctrlTypes()->setCurrentText(entry->getType());
+        mDetails->ctrlValue()->setText(entry->getValue());
+        mDetails->ctrlDescription()->setPlainText(entry->getDescription());
+        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
+        mDetails->ctrlDepricated()->setChecked(entry->isDeprecated());
         
         int row = table->rowCount();
         table->insertRow(row);
-        QTableWidgetItem* item = new QTableWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::MediaRecord), entry.getName());
-        item->setData(static_cast<int>(Qt::ItemDataRole::UserRole), QVariant::fromValue(entry));
+        QTableWidgetItem* item = new QTableWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::MediaRecord), entry->getName());
+        item->setData(static_cast<int>(Qt::ItemDataRole::UserRole), QVariant::fromValue(*entry));
         table->setItem(row, 0, item);
-        table->setItem(row, 1, new QTableWidgetItem(entry.getType()));
-        table->setItem(row, 2, new QTableWidgetItem(entry.getValue()));
+        table->setItem(row, 1, new QTableWidgetItem(entry->getType()));
+        table->setItem(row, 2, new QTableWidgetItem(entry->getValue()));
         table->selectRow(row);
         table->scrollToItem(item);
         

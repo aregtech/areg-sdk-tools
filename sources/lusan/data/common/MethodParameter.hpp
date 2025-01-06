@@ -34,7 +34,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    MethodParameter(void);
+    MethodParameter(ElementBase * parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -47,7 +47,15 @@ public:
      * \param   value           The value of the parameter.
      * \param   isDefault       The default flag of the parameter.
      **/
-    MethodParameter(uint32_t id, const QString& name, const QString& type, bool isDeprecated, const QString& description, const QString& deprecateHint, const QString& value, bool isDefault);
+    MethodParameter(  uint32_t id
+                    , const QString& name
+                    , const QString& type
+                    , bool isDeprecated
+                    , const QString& description
+                    , const QString& deprecateHint
+                    , const QString& value
+                    , bool isDefault
+                    , ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.
@@ -70,14 +78,14 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    MethodParameter& operator=(const MethodParameter& other);
+    MethodParameter& operator = (const MethodParameter& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    MethodParameter& operator=(MethodParameter&& other) noexcept;
+    MethodParameter& operator = (MethodParameter&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
