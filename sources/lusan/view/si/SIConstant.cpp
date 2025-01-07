@@ -29,10 +29,8 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QHeaderView>
 #include <QLineEdit>
 #include <QPlainTextEdit>
-#include <QPushButton>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QToolButton>
@@ -272,6 +270,43 @@ void SIConstant::onEditorDataChanged(const QModelIndex &index, const QString &ne
     cellChanged(index.row(), index.column(), newValue);
 }
 
+void SIConstant::onDeprectedChecked(bool isChecked)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        ConstantEntry* entry = _findConstant(row);
+        Q_ASSERT(entry != nullptr);
+        entry->setDeprecated(isChecked);
+        mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+    }
+}
+
+void SIConstant::onDeprecateHintChanged(const QString& newText)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        ConstantEntry* entry = _findConstant(row);
+        Q_ASSERT(entry != nullptr);
+        entry->setDeprecateHint(newText);
+    }
+}
+
+void SIConstant::onDescriptionChanged(void)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        ConstantEntry* entry = _findConstant(row);
+        Q_ASSERT(entry != nullptr);
+        entry->setDescription(mDetails->ctrlDescription()->toPlainText());
+    }
+}
+
 void SIConstant::cellChanged(int row, int col, const QString& newValue)
 {
     ConstantEntry* entry = _findConstant(row);
@@ -357,13 +392,16 @@ void SIConstant::setupSignals(void)
     Q_ASSERT(mList != nullptr);
     
     connect(mList->ctrlTableList(),    &QTableWidget::currentCellChanged, this, &SIConstant::onCurCellChanged);
-    connect(mList->ctrlButtonAdd(),    &QToolButton::clicked, this, &SIConstant::onAddClicked);
-    connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIConstant::onRemoveClicked);
-    connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIConstant::onInsertClicked);
-    connect(mDetails->ctrlName(),      &QLineEdit::textChanged, this, &SIConstant::onNameChanged);
-    connect(mDetails->ctrlTypes(),     &QComboBox::editTextChanged, this, &SIConstant::onTypeChanged);
-    connect(mDetails->ctrlValue(),     &QLineEdit::textChanged, this, SIConstant::onValueChanged);
-    connect(mTableCell, &TableCell::editorDataChanged, this, &SIConstant::onEditorDataChanged);
+    connect(mList->ctrlButtonAdd(),    &QToolButton::clicked        , this, &SIConstant::onAddClicked);
+    connect(mList->ctrlButtonRemove(), &QToolButton::clicked        , this, &SIConstant::onRemoveClicked);
+    connect(mList->ctrlButtonInsert(), &QToolButton::clicked        , this, &SIConstant::onInsertClicked);
+    connect(mDetails->ctrlName(),      &QLineEdit::textChanged      , this, &SIConstant::onNameChanged);
+    connect(mDetails->ctrlTypes(),     &QComboBox::currentTextChanged, this, &SIConstant::onTypeChanged);
+    connect(mDetails->ctrlValue(),     &QLineEdit::textChanged      , this, &SIConstant::onValueChanged);
+    connect(mDetails->ctrlDeprecated(),&QCheckBox::toggled          , this, &SIConstant::onDeprectedChecked);
+    connect(mDetails->ctrlDeprecateHint(),&QLineEdit::textEdited    , this, &SIConstant::onDeprecateHintChanged);
+    connect(mDetails->ctrlDescription(),&QPlainTextEdit::textChanged, this, &SIConstant::onDescriptionChanged);
+    connect(mTableCell                , &TableCell::editorDataChanged,this, &SIConstant::onEditorDataChanged);
 }
 
 void SIConstant::blockBasicSignals(bool doBlock)

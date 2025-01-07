@@ -139,6 +139,23 @@ protected slots:
      **/
     void onEditorDataChanged(const QModelIndex &index, const QString &newValue);
 
+    /**
+     * \brief   Triggered when the deprecated flag is changed.
+     * \param   isChecked   The flag to indicate if the constant is deprecated.
+     **/
+    void onDeprectedChecked(bool isChecked);
+
+    /**
+     * \brief   Triggered when the deprecation hint is changed.
+     * \param   newText The new deprecation hint.
+     **/
+    void onDeprecateHintChanged(const QString& newText);
+
+    /**
+     * \brief   Triggered when the description is changed.
+     **/
+    void onDescriptionChanged(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////

@@ -33,3 +33,33 @@ SIDataTopicDetails::SIDataTopicDetails(QWidget* parent)
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
+
+QLineEdit* SIDataTopicDetails::ctrlName(void)
+{
+    return ui->editName;
+}
+
+QComboBox* SIDataTopicDetails::ctrlTypes(void)
+{
+    return ui->comboTypes;
+}
+
+QComboBox* SIDataTopicDetails::ctrlNotification(void)
+{
+    return ui->comboNotify;
+}
+
+QPlainTextEdit* SIDataTopicDetails::ctrlDescription(void)
+{
+    return ui->textDescribe;
+}
+
+QCheckBox* SIDataTopicDetails::ctrlDeprecated(void)
+{
+    return ui->checkDeprecated;
+}
+
+QLineEdit* SIDataTopicDetails::ctrlDeprecateHint(void)
+{
+    return ui->editDeprecated;
+}
