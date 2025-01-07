@@ -24,12 +24,31 @@ namespace Ui {
     class SIDataTopicDetails;
 }
 
+class QCheckBox;
+class QComboBox;
+class QLineEdit;
+class QPlainTextEdit;
+
 class SIDataTopicDetails : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit SIDataTopicDetails(QWidget* parent = nullptr);
+
+    // Getters to access controls
+
+    QLineEdit* ctrlName(void);
+
+    QComboBox* ctrlTypes(void);
+
+    QComboBox* ctrlNotification(void);
+
+    QPlainTextEdit* ctrlDescription(void);
+
+    QCheckBox* ctrlDeprecated(void);
+
+    QLineEdit* ctrlDeprecateHint(void);
 
 private:
     Ui::SIDataTopicDetails* ui;

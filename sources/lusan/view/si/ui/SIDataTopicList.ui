@@ -123,7 +123,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QToolButton" name="toolSort">
+         <widget class="QToolButton" name="toolInsertTopic">
           <property name="maximumSize">
            <size>
             <width>32</width>
@@ -274,7 +274,10 @@
        <item>
         <widget class="QTableWidget" name="tableTopics">
          <property name="cursor" stdset="0">
-          <cursorShape>ArrowCursor</cursorShape>
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+         <property name="mouseTracking">
+          <bool>true</bool>
          </property>
          <property name="contextMenuPolicy">
           <enum>Qt::ContextMenuPolicy::NoContextMenu</enum>
@@ -286,10 +289,10 @@
           <number>1</number>
          </property>
          <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOn</enum>
+          <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
          </property>
          <property name="editTriggers">
-          <set>QAbstractItemView::EditTrigger::AllEditTriggers</set>
+          <set>QAbstractItemView::EditTrigger::DoubleClicked|QAbstractItemView::EditTrigger::SelectedClicked</set>
          </property>
          <property name="showDropIndicator" stdset="0">
           <bool>false</bool>
@@ -305,12 +308,15 @@
          </property>
          <property name="iconSize">
           <size>
-           <width>0</width>
-           <height>0</height>
+           <width>16</width>
+           <height>16</height>
           </size>
          </property>
          <property name="textElideMode">
-          <enum>Qt::TextElideMode::ElideRight</enum>
+          <enum>Qt::TextElideMode::ElideLeft</enum>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
          </property>
          <property name="wordWrap">
           <bool>false</bool>
@@ -329,6 +335,12 @@
          </attribute>
          <attribute name="horizontalHeaderStretchLastSection">
           <bool>true</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+         <attribute name="verticalHeaderHighlightSections">
+          <bool>false</bool>
          </attribute>
          <column>
           <property name="text">

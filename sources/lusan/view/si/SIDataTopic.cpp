@@ -21,8 +21,59 @@
 #include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIDataTopic.h"
 
+#include "lusan/model/common/DataTypesModel.hpp"
+#include "lusan/model/si/SIDataTopicModel.hpp"
 #include "lusan/view/si/SIDataTopicDetails.hpp"
 #include "lusan/view/si/SIDataTopicList.hpp"
+#include "lusan/view/common/TableCell.hpp"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QTableWidget>
+#include <QTableWidgetItem>
+#include <QToolButton>
+
+//////////////////////////////////////////////////////////////////////////
+// SIDataTopicModel class implementation
+//////////////////////////////////////////////////////////////////////////
+
+SITopicNotifyModel::SITopicNotifyModel(QObject* parent /*= nullptr*/)
+    : QAbstractListModel(parent)
+{
+}
+
+int SITopicNotifyModel::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
+{
+    return 2;
+}
+
+QVariant SITopicNotifyModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
+{
+    if (!index.isValid())
+        return QVariant();
+
+    switch (static_cast<Qt::ItemDataRole>(role))
+    {
+    case Qt::ItemDataRole::DisplayRole:
+    case Qt::ItemDataRole::DecorationRole:
+    case Qt::ItemDataRole::EditRole:
+        return QVariant(AttributeEntry::toString(NotificationList[index.row()]));
+        break;
+
+    case Qt::ItemDataRole::UserRole:
+        return QVariant::fromValue(NotificationList[index.row()]);
+
+    default:
+        return QVariant();
+    }
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// SIDataTopicWidget class implementation
+//////////////////////////////////////////////////////////////////////////
 
 SIDataTopicWidget::SIDataTopicWidget(QWidget* parent)
     : QWidget{ parent }
@@ -33,26 +84,373 @@ SIDataTopicWidget::SIDataTopicWidget(QWidget* parent)
     setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
 }
 
-SIDataTopic::SIDataTopic(QWidget* parent)
+//////////////////////////////////////////////////////////////////////////
+// SIDataTopic class implementation
+//////////////////////////////////////////////////////////////////////////
+
+SIDataTopic::SIDataTopic(SIDataTopicModel& model, QWidget* parent)
     : QScrollArea   (parent)
-    , mTopicDetails (new SIDataTopicDetails(this))
-    , mTopicList    (new SIDataTopicList(this))
+    , mModel        (model)
+    , mDetails      (new SIDataTopicDetails(this))
+    , mList         (new SIDataTopicList(this))
     , mWidget       (new SIDataTopicWidget(this))
     , ui            (*mWidget->ui)
+    , mTypeModel    (new DataTypesModel(model.getDataTypeData()))
+    , mNotifyModel  (new SITopicNotifyModel(this))
+    , mTableCell    (nullptr)
+    , mCount        (0)
 {
-    ui.horizontalLayout->addWidget(mTopicList);
-    ui.horizontalLayout->addWidget(mTopicDetails);
+    ui.horizontalLayout->addWidget(mList);
+    ui.horizontalLayout->addWidget(mDetails);
 
-    // setWidgetResizable(true);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
+
+    updateWidgets();
+    updateData();
+    setupSignals();
 }
 
 SIDataTopic::~SIDataTopic(void)
 {
-    ui.horizontalLayout->removeWidget(mTopicList);
-    ui.horizontalLayout->removeWidget(mTopicDetails);
+    ui.horizontalLayout->removeWidget(mList);
+    ui.horizontalLayout->removeWidget(mDetails);
+}
+
+void SIDataTopic::updateData(void)
+{
+    QTableWidget* table = mList->ctrlTable();
+    const QList<AttributeEntry>& list = mModel.getAttributes();
+    if (!list.isEmpty())
+    {
+        table->setRowCount(list.size());
+        int row{ 0 };
+        for (const AttributeEntry& entry : list)
+        {
+            QTableWidgetItem* col0 = new QTableWidgetItem(entry.getName());
+            QTableWidgetItem* col1 = new QTableWidgetItem(entry.getType());
+            QTableWidgetItem* col2 = new QTableWidgetItem(AttributeEntry::toString(entry.getNotification()));
+
+            col0->setData(static_cast<int>(Qt::ItemDataRole::UserRole), entry.getId());
+            table->setItem(row, 0, col0);
+            table->setItem(row, 1, col1);
+            table->setItem(row, 2, col2);
+
+            ++row;
+        }
+
+        table->scrollToTop();
+    }
+}
+
+void SIDataTopic::updateWidgets(void)
+{
+    mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
+
+    mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel, mNotifyModel}, QList<int>{1, 2}, mList->ctrlTable());
+    mDetails->ctrlTypes()->setModel(mTypeModel);
+    mList->ctrlTable()->setItemDelegate(mTableCell);
+
+    mDetails->ctrlName()->setEnabled(false);
+    mDetails->ctrlTypes()->setEnabled(false);
+    mDetails->ctrlNotification()->setEnabled(false);
+}
+
+void SIDataTopic::setupSignals(void)
+{
+    Q_ASSERT(mDetails != nullptr);
+    Q_ASSERT(mList != nullptr);
+
+    connect(mList->ctrlTable()          , &QTableWidget::currentCellChanged, this, &SIDataTopic::onCurCellChanged);
+    connect(mList->ctrlButtonAdd()      , &QToolButton::clicked         , this, &SIDataTopic::onAddClicked);
+    connect(mList->ctrlButtonRemove()   , &QToolButton::clicked         , this, &SIDataTopic::onRemoveClicked);
+    connect(mList->ctrlButtonInsert()   , &QToolButton::clicked         , this, &SIDataTopic::onInsertClicked);
+    connect(mDetails->ctrlName()        , &QLineEdit::textChanged       , this, &SIDataTopic::onNameChanged);
+    connect(mDetails->ctrlTypes()       , &QComboBox::currentTextChanged, this, &SIDataTopic::onTypeChanged);
+    connect(mDetails->ctrlNotification(), &QComboBox::currentTextChanged, this, &SIDataTopic::onNotificationChanged);
+    connect(mDetails->ctrlDeprecated()  , &QCheckBox::toggled           , this, &SIDataTopic::onDeprectedChecked);
+    connect(mDetails->ctrlDeprecateHint(),&QLineEdit::textEdited        , this, &SIDataTopic::onDeprecateHintChanged);
+    connect(mDetails->ctrlDescription() , &QPlainTextEdit::textChanged  , this, &SIDataTopic::onDescriptionChanged);
+    connect(mTableCell                  , &TableCell::editorDataChanged , this, &SIDataTopic::onEditorDataChanged);
+}
+
+void SIDataTopic::blockBasicSignals(bool doBlock)
+{
+    mList->ctrlTable()->blockSignals(doBlock);
+    mDetails->ctrlName()->blockSignals(doBlock);
+    mDetails->ctrlTypes()->blockSignals(doBlock);
+    mDetails->ctrlNotification()->blockSignals(doBlock);
+}
+
+void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
+{
+    blockBasicSignals(true);
+    if (currentRow == -1)
+    {
+        mDetails->ctrlName()->setText("");
+        mDetails->ctrlTypes()->setCurrentIndex(0);
+        mDetails->ctrlNotification()->setCurrentIndex(0);
+        mDetails->ctrlDescription()->setPlainText("");
+        mDetails->ctrlDeprecateHint()->setText("");
+        mDetails->ctrlDeprecated()->setChecked(false);
+
+        mDetails->ctrlName()->setEnabled(false);
+        mDetails->ctrlTypes()->setEnabled(false);
+        mDetails->ctrlNotification()->setEnabled(false);
+
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
+    }
+    else if (currentRow != previousRow)
+    {
+        const AttributeEntry* entry = _findAttribute(currentRow);
+        Q_ASSERT(entry != nullptr);
+        mDetails->ctrlName()->setText(entry->getName());
+        mDetails->ctrlTypes()->setCurrentText(entry->getType());
+        mDetails->ctrlNotification()->setCurrentText(AttributeEntry::toString(entry->getNotification()));
+        mDetails->ctrlDescription()->setPlainText(entry->getDescription());
+        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
+        mDetails->ctrlDeprecated()->setChecked(entry->isDeprecated());
+
+        if (currentRow == 0)
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+        else if (currentRow == static_cast<int>(mList->ctrlTable()->rowCount() - 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+
+        mList->ctrlButtonRemove()->setEnabled(true);
+    }
+
+    blockBasicSignals(false);
+}
+
+void SIDataTopic::onAddClicked(void)
+{
+    static const QString _defName("NewAttribute");
+
+    QTableWidget* table = mList->ctrlTable();
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++mCount);
+    } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
+
+    uint32_t id = mModel.createAttribute(name);
+    if (id != 0)
+    {
+        blockBasicSignals(true);
+
+        mDetails->ctrlName()->setEnabled(true);
+        mDetails->ctrlTypes()->setEnabled(true);
+        mDetails->ctrlNotification()->setEnabled(true);
+
+        mDetails->ctrlTypes()->setCurrentIndex(0);
+        AttributeEntry* entry = mModel.findAttribute(id);
+        entry->setType(mDetails->ctrlTypes()->currentText());
+
+        QTableWidgetItem* current = table->currentItem();
+        if (current != nullptr)
+        {
+            current->setSelected(false);
+        }
+
+        int row = table->rowCount();
+        table->setRowCount(row + 1);
+        QTableWidgetItem* col0 = new QTableWidgetItem(entry->getName());
+        QTableWidgetItem* col1 = new QTableWidgetItem(entry->getType());
+        QTableWidgetItem* col2 = new QTableWidgetItem(AttributeEntry::toString(entry->getNotification()));
+        col0->setData(static_cast<int>(Qt::ItemDataRole::UserRole), entry->getId());
+
+        table->setItem(row, 0, col0);
+        table->setItem(row, 1, col1);
+        table->setItem(row, 2, col2);
+        table->selectRow(row);
+        table->scrollToItem(col0);
+
+        mDetails->ctrlName()->setText(entry->getName());
+        mDetails->ctrlTypes()->setCurrentText(entry->getType());
+        mDetails->ctrlNotification()->setCurrentText(AttributeEntry::toString(entry->getNotification()));
+        mDetails->ctrlDescription()->setPlainText(entry->getDescription());
+        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
+        mDetails->ctrlDeprecated()->setChecked(entry->isDeprecated());
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
+
+        blockBasicSignals(false);
+    }
+}
+
+void SIDataTopic::onRemoveClicked(void)
+{
+    // Implementation for removing an attribute
+}
+
+void SIDataTopic::onInsertClicked(void)
+{
+    // Implementation for inserting an attribute
+}
+
+void SIDataTopic::onNameChanged(const QString& newName)
+{
+    QTableWidget* table = mList->ctrlTable();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        blockBasicSignals(true);
+        AttributeEntry* entry = _findAttribute(row);
+        Q_ASSERT(entry != nullptr);
+        QTableWidgetItem* col0 = table->item(row, 0);
+        entry->setName(newName);
+        col0->setText(newName);
+        blockBasicSignals(false);
+    }
+}
+
+void SIDataTopic::onTypeChanged(const QString& newType)
+{
+    QTableWidget* table = mList->ctrlTable();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        blockBasicSignals(true);
+        AttributeEntry* entry = _findAttribute(row);
+        Q_ASSERT(entry != nullptr);
+        QTableWidgetItem* col1 = table->item(row, 1);
+        entry->setType(newType);
+        col1->setText(newType);
+        blockBasicSignals(false);
+    }
+}
+
+void SIDataTopic::onNotificationChanged(const QString& newValue)
+{
+    QTableWidget* table = mList->ctrlTable();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        AttributeEntry* entry = _findAttribute(row);
+        Q_ASSERT(entry != nullptr);
+        QTableWidgetItem* col2 = table->item(row, 2);
+        entry->setNotification(newValue);
+        col2->setText(newValue);
+    }
+}
+
+void SIDataTopic::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
+{
+    QTableWidget* table = mList->ctrlTable();
+    if ((index.row() < 0) || (index.row() >= table->rowCount()) || (index.column() < 0))
+        return;
+
+    cellChanged(index.row(), index.column(), newValue);
+}
+
+void SIDataTopic::onDeprectedChecked(bool isChecked)
+{
+    QTableWidget* table = mList->ctrlTable();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        AttributeEntry* entry = _findAttribute(row);
+        Q_ASSERT(entry != nullptr);
+        entry->setDeprecated(isChecked);
+        mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+    }
+}
+
+void SIDataTopic::onDeprecateHintChanged(const QString& newText)
+{
+    QTableWidget* table = mList->ctrlTable();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        AttributeEntry* entry = _findAttribute(row);
+        Q_ASSERT(entry != nullptr);
+        entry->setDeprecateHint(newText);
+    }
+}
+
+void SIDataTopic::onDescriptionChanged(void)
+{
+    QTableWidget* table = mList->ctrlTable();
+    int row = table->currentRow();
+    if (row >= 0)
+    {
+        AttributeEntry* entry = _findAttribute(row);
+        Q_ASSERT(entry != nullptr);
+        entry->setDescription(mDetails->ctrlDescription()->toPlainText());
+    }
+}
+
+void SIDataTopic::cellChanged(int row, int col, const QString& newValue)
+{
+    AttributeEntry* entry = _findAttribute(row);
+    Q_ASSERT(entry != nullptr);
+
+    if (col == 0)
+    {
+        if (mDetails->ctrlName()->text() != newValue)
+        {
+            blockBasicSignals(true);
+            entry->setName(newValue);
+            mDetails->ctrlName()->setText(newValue);
+            blockBasicSignals(false);
+        }
+    }
+    else if (col == 1)
+    {
+        if (mDetails->ctrlTypes()->currentText() != newValue)
+        {
+            blockBasicSignals(true);
+            entry->setType(newValue);
+            mDetails->ctrlTypes()->setCurrentText(newValue);
+            blockBasicSignals(false);
+        }
+    }
+    else if (col == 2)
+    {
+        if (mDetails->ctrlNotification()->currentText() != newValue)
+        {
+            blockBasicSignals(true);
+            entry->setNotification(newValue);
+            mDetails->ctrlNotification()->setCurrentText(newValue);
+            blockBasicSignals(false);
+        }
+    }
+}
+
+inline AttributeEntry* SIDataTopic::_findAttribute(int row)
+{
+    QTableWidget* table = mList->ctrlTable();
+    if (row < 0 || row > table->rowCount())
+        return nullptr;
+
+    QTableWidgetItem* item = table->item(row, 0);
+    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
+    return mModel.findAttribute(id);
+}
+
+inline const AttributeEntry* SIDataTopic::_findAttribute(int row) const
+{
+    QTableWidget* table = mList->ctrlTable();
+    if (row < 0 || row > table->rowCount())
+        return nullptr;
+
+    QTableWidgetItem* item = table->item(row, 0);
+    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
+    return mModel.findAttribute(id);
 }

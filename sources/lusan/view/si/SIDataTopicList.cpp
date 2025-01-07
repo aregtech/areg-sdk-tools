@@ -35,3 +35,33 @@ SIDataTopicList::SIDataTopicList(QWidget* parent)
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
+
+QToolButton* SIDataTopicList::ctrlButtonAdd(void)
+{
+    return ui->toolAddTopic;
+}
+
+QToolButton* SIDataTopicList::ctrlButtonRemove(void)
+{
+    return ui->toolDeleteTopic;
+}
+
+QToolButton* SIDataTopicList::ctrlButtonInsert(void)
+{
+    return ui->toolInsertTopic;
+}
+
+QToolButton* SIDataTopicList::ctrlButtonMoveUp(void)
+{
+    return ui->toolMoveUp;
+}
+
+QToolButton* SIDataTopicList::ctrlButtonMoveDown(void)
+{
+    return ui->toolMoveDown;
+}
+
+QTableWidget* SIDataTopicList::ctrlTable(void)
+{
+    return ui->tableTopics;
+}

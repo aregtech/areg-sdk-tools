@@ -23,6 +23,9 @@
 namespace Ui {
     class SIDataTopicList;
 }
+    
+class QToolButton;
+class QTableWidget;
 
 class SIDataTopicList : public QWidget
 {
@@ -30,6 +33,20 @@ class SIDataTopicList : public QWidget
 
 public:
     explicit SIDataTopicList(QWidget* parent = nullptr);
+
+    // Getters to access controls
+
+    QToolButton * ctrlButtonAdd(void);
+
+    QToolButton* ctrlButtonRemove(void);
+
+    QToolButton* ctrlButtonInsert(void);
+
+    QToolButton* ctrlButtonMoveUp(void);
+
+    QToolButton* ctrlButtonMoveDown(void);
+
+    QTableWidget* ctrlTable(void);
 
 private:
     Ui::SIDataTopicList* ui;

@@ -28,19 +28,19 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     , mTabWidget(this)
     , mOverview (mModel.getOverviewModel(), this)
     , mDataType (this)
-    , mDataTopic(this)
+    , mDataTopic(mModel.getDataTopicModel(), this)
     , mMethod   (this)
     , mConstant (mModel.getConstantsModel(), this)
     , mInclude  (mModel.getIncludesModel(), this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the sioverview widget as the first tab
-    mTabWidget.addTab(&mOverview, tr("Service Overview"));
-    mTabWidget.addTab(&mDataType, tr("Data Types"));
+    mTabWidget.addTab(&mOverview , tr("Overview"));
+    mTabWidget.addTab(&mDataType , tr("Data Types"));
     mTabWidget.addTab(&mDataTopic, tr("Data Topics"));
-    mTabWidget.addTab(&mMethod, tr("Methods"));
-    mTabWidget.addTab(&mConstant, tr("Constants"));
-    mTabWidget.addTab(&mInclude, tr("Includes"));
+    mTabWidget.addTab(&mMethod   , tr("Methods"));
+    mTabWidget.addTab(&mConstant , tr("Constants"));
+    mTabWidget.addTab(&mInclude  , tr("Includes"));
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
