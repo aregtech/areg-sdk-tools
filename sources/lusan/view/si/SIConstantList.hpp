@@ -18,7 +18,14 @@
  *  \brief       Lusan application, Service Interface, Data Topic section.
  *
  ************************************************************************/
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include <QWidget>
+
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 
 namespace Ui {
     class SIConstantList;
@@ -27,29 +34,62 @@ namespace Ui {
 class QToolButton;
 class QTableWidget;
 
+//////////////////////////////////////////////////////////////////////////
+// SIConstantList class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \brief   The SIConstantList class is a widget to display the list of constants.
+ *          The widget contains the list of constants, and buttons to add, remove,
+ *          insert, move up, and move down the constants in the list.
+ **/
 class SIConstantList : public QWidget
 {
     Q_OBJECT
 
+//////////////////////////////////////////////////////////////////////////
+// Public members
+//////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Default constructor.
+     * \param   parent  The parent widget.
+     **/
     explicit SIConstantList(QWidget* parent = nullptr);
 
+    /**
+     * \brief   Returns add button object.
+     **/
     QToolButton* ctrlButtonAdd(void);
 
-    QToolButton* ctrlButtonUpdate(void);
-
+    /**
+     * \brief   Returns remove button object.
+     **/
     QToolButton* ctrlButtonRemove(void);
 
+    /**
+     * \brief   Returns insert button object.
+     **/
     QToolButton* ctrlButtonInsert(void);
 
+    /**
+     * \brief   Returns move up button object.
+     **/
     QToolButton* ctrlButtonMoveUp(void);
 
+    /**
+     * \brief   Returns move down button object.
+     **/
     QToolButton* ctrlButtonMoveDown(void);
 
+    /**
+     * \brief   Returns the table widget object.
+     **/
     QTableWidget* ctrlTableList(void);
 
 private:
-    Ui::SIConstantList* ui;
+    Ui::SIConstantList* ui; //!< The user interface object.
 };
 
 #endif // LUSAN_APPLICATION_SI_SICONSTANTLIST_HPP

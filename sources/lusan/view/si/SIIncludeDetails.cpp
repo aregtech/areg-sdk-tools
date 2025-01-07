@@ -70,7 +70,7 @@ QLineEdit * SIIncludeDetails::ctrlDeprecateHint(void)
     return ui->editDeprecated;
 }
 
-QCheckBox * SIIncludeDetails::ctrlDepcrecateCheck(void)
+QCheckBox * SIIncludeDetails::ctrlDeprecated(void)
 {
     return ui->checkDeprecated;
 }

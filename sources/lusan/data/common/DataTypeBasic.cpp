@@ -17,79 +17,110 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeBasic.hpp"
+#include "DataTypeBasic.hpp"
 
-DataTypeBasic::DataTypeBasic(void)
+ //////////////////////////////////////////////////////////////////////////
+ // DataTypeBasicObject class implementation
+ //////////////////////////////////////////////////////////////////////////
+
+DataTypeBasicObject::DataTypeBasicObject(void)
     : DataTypeBase  (eCategory::BasicObject)
-    , mHasValue     (false)
-    , mHasKey       (false)
 {
 }
 
-DataTypeBasic::DataTypeBasic(const DataTypeBasic& src)
+DataTypeBasicObject::DataTypeBasicObject(const DataTypeBasicObject& src)
     : DataTypeBase  (src)
-    , mHasValue     (src.mHasValue)
-    , mHasKey       (src.mHasKey)
 {
 }
 
-DataTypeBasic::DataTypeBasic(DataTypeBasic&& src) noexcept
+DataTypeBasicObject::DataTypeBasicObject(DataTypeBasicObject&& src) noexcept
     : DataTypeBase  (std::move(src))
-    , mHasValue     (src.mHasValue)
-    , mHasKey       (src.mHasKey)
 {
 }
 
-DataTypeBasic::DataTypeBasic(const QString& name)
+DataTypeBasicObject::DataTypeBasicObject(const QString& name)
     : DataTypeBase  (eCategory::BasicObject, name)
-    , mHasValue     (false)
-    , mHasKey   (false)
 {
 }
 
-DataTypeBasic& DataTypeBasic::operator = (const DataTypeBasic& other)
+DataTypeBasicObject& DataTypeBasicObject::operator = (const DataTypeBasicObject& other)
 {
-    if (this != &other)
-    {
-        DataTypeBase::operator=(other);
-        mHasValue   = other.mHasValue;
-        mHasKey     = other.mHasKey;
-    }
+    DataTypeBase::operator = (other);
     return *this;
 }
 
-DataTypeBasic& DataTypeBasic::operator=(DataTypeBasic&& other) noexcept
+DataTypeBasicObject& DataTypeBasicObject::operator = (DataTypeBasicObject&& other) noexcept
 {
-    if (this != &other)
-    {
-        DataTypeBase::operator=(std::move(other));
-        mHasValue   = other.mHasValue;
-        mHasKey     = other.mHasKey;
-    }
-
+    DataTypeBase::operator=(std::move(other));
     return *this;
 }
 
-void DataTypeBasic::setDataContainer(bool isDataContainer, bool hasKey)
-{
-    mHasValue   = isDataContainer;
-    mHasKey     = isDataContainer ? hasKey : false;
-}
-
-bool DataTypeBasic::isDataContainer(void) const
-{
-    return mHasValue;
-}
-
-bool DataTypeBasic::hasKey(void) const
-{
-    return mHasKey;
-}
-
-bool DataTypeBasic::readFromXml(QXmlStreamReader& xml)
+bool DataTypeBasicObject::readFromXml(QXmlStreamReader& xml)
 {
     return true;
 }
 
-void DataTypeBasic::writeToXml(QXmlStreamWriter& xml) const
+void DataTypeBasicObject::writeToXml(QXmlStreamWriter& xml) const
+{
+}
+
+//////////////////////////////////////////////////////////////////////////
+// DataTypeBasicContainer class implementation
+//////////////////////////////////////////////////////////////////////////
+
+DataTypeBasicContainer::DataTypeBasicContainer(void)
+    : DataTypeBase  (eCategory::BasicContainer)
+    , mHasKey       (false)
+{
+}
+
+DataTypeBasicContainer::DataTypeBasicContainer(const DataTypeBasicContainer& src)
+    : DataTypeBase  (src)
+    , mHasKey       (src.mHasKey)
+{
+}
+
+DataTypeBasicContainer::DataTypeBasicContainer(DataTypeBasicContainer&& src) noexcept
+    : DataTypeBase  (std::move(src))
+    , mHasKey       (src.mHasKey)
+{
+}
+
+DataTypeBasicContainer::DataTypeBasicContainer(const QString& name)
+    : DataTypeBase  (eCategory::BasicContainer, name)
+    , mHasKey       (false)
+{
+}
+
+DataTypeBasicContainer& DataTypeBasicContainer::operator = (const DataTypeBasicContainer& other)
+{
+    DataTypeBase::operator = (other);
+    mHasKey = other.mHasKey;
+    return *this;
+}
+
+DataTypeBasicContainer& DataTypeBasicContainer::operator = (DataTypeBasicContainer&& other) noexcept
+{
+    DataTypeBase::operator = (std::move(other));
+    mHasKey = other.mHasKey;
+    return *this;
+}
+
+void DataTypeBasicContainer::setKey(bool hasKey)
+{
+    mHasKey = hasKey;
+}
+
+bool DataTypeBasicContainer::hasKey(void) const
+{
+    return mHasKey;
+}
+
+bool DataTypeBasicContainer::readFromXml(QXmlStreamReader& xml)
+{
+    return true;
+}
+
+void DataTypeBasicContainer::writeToXml(QXmlStreamWriter& xml) const
 {
 }

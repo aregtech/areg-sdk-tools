@@ -20,7 +20,7 @@
  ************************************************************************/
 
 #include "lusan/data/common/DataTypeCustom.hpp"
-#include <QList>
+#include "lusan/data/common/TEDataContainer.hpp"
 
 //////////////////////////////////////////////////////////////////////////
 // TEDataTypeContainer class template declaration
@@ -31,7 +31,7 @@
  * \brief   Template class for managing a list of data type fields.
  **/
 template<class FieldType>
-class TEDataTypeContainer : public DataTypeCustom
+class TEDataTypeContainer   : public TEDataContainer< FieldType, DataTypeCustom >
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors
@@ -39,16 +39,31 @@ class TEDataTypeContainer : public DataTypeCustom
 protected:
     /**
      * \brief   Initializes by category.
-     * \param   category    The category of the data type.
+     * \param   parent  The parent element.
      **/
-    TEDataTypeContainer(DataTypeBase::eCategory category, ElementBase * parent = nullptr);
-
+    TEDataTypeContainer(ElementBase * parent = nullptr);
+    
+    /**
+     * \brief   Initializes by category.
+     * \param   id          The ID of the data type.
+     * \param   parent  The parent element.
+     **/
+    explicit TEDataTypeContainer(uint32_t id, ElementBase * parent = nullptr);
+    
+    /**
+     * \brief   Initializes by category.
+     * \param   category    The category of the data type.
+     * \param   parent  The parent element.
+     **/
+    explicit TEDataTypeContainer(DataTypeBase::eCategory category, ElementBase * parent = nullptr);
+    
     /**
      * \brief   Constructor with name initialization.
      * \param   category    The category of the data type.
      * \param   name        The name of the data type.
      * \param   id          The ID of the data type.
-     **/ 
+     * \param   parent      The parent element.
+     **/
     TEDataTypeContainer(DataTypeBase::eCategory category, const QString& name, uint32_t id, ElementBase* parent = nullptr);
 
 public:
@@ -56,13 +71,13 @@ public:
      * \brief   Copy constructor.
      * \param   src     The source object to copy from.
      **/
-    TEDataTypeContainer(const TEDataTypeContainer& src);
+    TEDataTypeContainer(const TEDataTypeContainer<FieldType>& src);
 
     /**
      * \brief   Move constructor.
      * \param   src     The source object to move from.
      **/
-    TEDataTypeContainer(TEDataTypeContainer&& src) noexcept;
+    TEDataTypeContainer(TEDataTypeContainer<FieldType>&& src) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -74,14 +89,14 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    TEDataTypeContainer& operator = (const TEDataTypeContainer& other);
+    TEDataTypeContainer& operator = (const TEDataTypeContainer<FieldType>& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    TEDataTypeContainer& operator = (TEDataTypeContainer&& other) noexcept;
+    TEDataTypeContainer& operator = (TEDataTypeContainer<FieldType>&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -89,93 +104,15 @@ public:
 public:
 
     /**
-     * \brief   Returns the list of fields.
-     * \return  The list of fields.
-     **/
-    inline const QList<FieldType>& getFields(void) const;
-
-    /**
-     * \brief   Sets the list of fields.
-     * \param   fields  The list of fields to set.
-     **/
-    inline void setFields(const QList<FieldType>& fields);
-
-    /**
-     * \brief   Adds a new field.
-     * \param   field   The field to add.
-     * \param   unique  If true, ensures the field is unique.
-     * \return  True if the field was added, false otherwise.
-     **/
-    bool addField(FieldType& field, bool unique = true);
-
-    /**
-     * \brief   Inserts an field at a specific position.
-     * \param   index   The position to insert the field.
-     * \param   field   The field to insert.
-     * \param   unique  If true, ensures the field is unique.
-     * \return  True if the field was inserted, false otherwise.
-     **/
-    bool insertField(int index, FieldType& field, bool unique = true);
-
-    /**
-     * \brief   Removes an field by name.
-     * \param   name    The name of the field to remove.
-     * \return  True if the field was removed, false otherwise.
-     **/
-    bool removeField(const QString& name);
-
-    /**
-     * \brief   Removes all fields.
-     **/
-    void removeAllFields();
-
-    /**
-     * \brief   Finds an field by name.
-     * \param   name    The name of the field to find.
-     * \return  The field if found, nullptr otherwise.
-     **/
-    const FieldType* findField(const QString& name) const;
-
-    /**
-     * \brief   Finds the index of an field by name.
-     * \param   name    The name of the field to find.
-     * \return  The index of the field if found, -1 otherwise.
-     **/
-    int findIndex(const QString& name) const;
-
-    /**
-     * \brief   Checks if an field exists by name.
-     * \param   name    The name of the field to check.
-     * \return  True if the field exists, false otherwise.
-     **/
-    bool hasField(const QString& name) const;
-
-    /**
      * \brief   Checks if the object is valid.
      * \return  True if the object is valid, false otherwise.
      **/
-    bool isValid() const override;
+    virtual bool isValid() const override;
 
     /**
      * \brief   Invalidates the object.
      **/
     void invalidate();
-
-//////////////////////////////////////////////////////////////////////////
-// Protected methods
-//////////////////////////////////////////////////////////////////////////
-protected:
-    /**
-     * \brief   Checks if the fields are unique.
-     * \return  True if the fields are unique, false otherwise.
-     **/
-    bool checkUniqueness(void) const;
-
-//////////////////////////////////////////////////////////////////////////
-// Protected members
-//////////////////////////////////////////////////////////////////////////
-protected:
-    QList<FieldType> mFieldList; //!< The list of fields.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -183,9 +120,22 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 
 template<class FieldType>
-TEDataTypeContainer<FieldType>::TEDataTypeContainer(DataTypeBase::eCategory category, ElementBase* parent /*= nullptr*/)
-    : DataTypeCustom(category, parent)
+TEDataTypeContainer<FieldType>::TEDataTypeContainer(ElementBase* parent)
+    : TEDataContainer< FieldType, DataTypeCustom >(parent)
 {
+}
+
+template<class FieldType>
+TEDataTypeContainer<FieldType>::TEDataTypeContainer(uint32_t id, ElementBase* parent)
+    : TEDataContainer< FieldType, DataTypeCustom >(id, parent)
+{
+}
+
+template<class FieldType>
+TEDataTypeContainer<FieldType>::TEDataTypeContainer(DataTypeBase::eCategory category, ElementBase* parent /*= nullptr*/)
+    : TEDataContainer< FieldType, DataTypeCustom >(parent)
+{
+    DataTypeCustom::mCategory = category;
 }
 
 template<class FieldType>
@@ -193,201 +143,53 @@ TEDataTypeContainer<FieldType>::TEDataTypeContainer(  DataTypeBase::eCategory ca
                                                     , const QString& name
                                                     , uint32_t id
                                                     , ElementBase* parent /*= nullptr*/)
-    : DataTypeCustom(category, id, name, parent)
+    : TEDataContainer< FieldType, DataTypeCustom >(id, parent)
+{
+    DataTypeCustom::mCategory   = category;
+    DataTypeCustom::mName       = name;
+}
+
+template<class FieldType>
+TEDataTypeContainer<FieldType>::TEDataTypeContainer(const TEDataTypeContainer<FieldType>& src)
+    : TEDataContainer< FieldType, DataTypeCustom >(src)
 {
 }
 
 template<class FieldType>
-TEDataTypeContainer<FieldType>::TEDataTypeContainer(const TEDataTypeContainer& src)
-    : DataTypeCustom(src)
-    , mFieldList(src.mFieldList)
+TEDataTypeContainer<FieldType>::TEDataTypeContainer(TEDataTypeContainer<FieldType>&& src) noexcept
+    : TEDataContainer< FieldType, DataTypeCustom >(std::move(src))
 {
 }
 
 template<class FieldType>
-TEDataTypeContainer<FieldType>::TEDataTypeContainer(TEDataTypeContainer&& src) noexcept
-    : DataTypeCustom(std::move(src))
-    , mFieldList(std::move(src.mFieldList))
+TEDataTypeContainer<FieldType>& TEDataTypeContainer<FieldType>::operator = (const TEDataTypeContainer<FieldType>& other)
 {
-}
-
-template<class FieldType>
-TEDataTypeContainer<FieldType>& TEDataTypeContainer<FieldType>::operator=(const TEDataTypeContainer& other)
-{
-    if (this != &other)
-    {
-        DataTypeBase::operator=(other);
-        mFieldList = other.mFieldList;
-    }
-
-    return *this;
-}
-
-template<class FieldType>
-TEDataTypeContainer<FieldType>& TEDataTypeContainer<FieldType>::operator=(TEDataTypeContainer&& other) noexcept
-{
-    if (this != &other)
-    {
-        DataTypeBase::operator=(std::move(other));
-        mFieldList = std::move(other.mFieldList);
-    }
-
-    return *this;
-}
-
-template<class FieldType>
-inline const QList<FieldType>& TEDataTypeContainer<FieldType>::getFields(void) const
-{
-    return mFieldList;
-}
-
-template<class FieldType>
-inline void TEDataTypeContainer<FieldType>::setFields(const QList<FieldType>& fields)
-{
-    mFieldList = fields;
-    for (auto& entry : mFieldList)
-    {
-        if (entry.getParent() != this)
-        {
-            entry.setParent(this);
-            setMaxId(entry.getId());
-        }
-    }
-}
-
-template<class FieldType>
-bool TEDataTypeContainer<FieldType>::addField(FieldType& field, bool unique)
-{
-    if (unique)
-    {
-        const QString& name{ field.getName() };
-        for (const FieldType& existingField : mFieldList)
-        {
-            if (existingField.getName() == name)
-            {
-                return false;
-            }
-        }
-    }
-
-    if (field.getParent() != nullptr)
-    {
-        field.setParent(this);
-        field.setId(getNextId());
-    }
-
-    mFieldList.append(field);
-    return true;
-}
-
-template<class FieldType>
-bool TEDataTypeContainer<FieldType>::insertField(int index, FieldType& field, bool unique)
-{
-    if (unique)
-    {
-        for (const FieldType& existingField : mFieldList)
-        {
-            if (existingField.getName() == field.getName())
-            {
-                return false;
-            }
-        }
-    }
-
-    if (index < 0 || index > mFieldList.size())
-    {
-        return false;
-    }
+    using BaseClass  = TEDataContainer< FieldType, DataTypeCustom >;
+    BaseClass::operator = (static_cast<const BaseClass &>(other));
     
-    field.setParent(this);
-    field.setId(getNextId());
-    mFieldList.insert(index, field);
-    return true;
+    return *this;
 }
 
 template<class FieldType>
-bool TEDataTypeContainer<FieldType>::removeField(const QString& name)
+TEDataTypeContainer<FieldType>& TEDataTypeContainer<FieldType>::operator = (TEDataTypeContainer<FieldType>&& other) noexcept
 {
-    for (int i = 0; i < mFieldList.size(); ++i)
-    {
-        if (mFieldList[i].getName() == name)
-        {
-            mFieldList.removeAt(i);
-            return true;
-        }
-    }
-
-    return false;
-}
-
-template<class FieldType>
-void TEDataTypeContainer<FieldType>::removeAllFields()
-{
-    mFieldList.clear();
-}
-
-template<class FieldType>
-const FieldType* TEDataTypeContainer<FieldType>::findField(const QString& name) const
-{
-    for (const FieldType& field : mFieldList)
-    {
-        if (field.getName() == name)
-        {
-            return &field;
-        }
-    }
-
-    return nullptr;
-}
-
-template<class FieldType>
-int TEDataTypeContainer<FieldType>::findIndex(const QString& name) const
-{
-    for (int i = 0; i < mFieldList.size(); ++i)
-    {
-        if (mFieldList[i].getName() == name)
-        {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-template<class FieldType>
-bool TEDataTypeContainer<FieldType>::hasField(const QString& name) const
-{
-    return findField(name) != nullptr;
+    using BaseClass  = TEDataContainer< FieldType, DataTypeCustom >;
+    BaseClass::operator = (std::move<BaseClass &&>(other));
+    return *this;
 }
 
 template<class FieldType>
 bool TEDataTypeContainer<FieldType>::isValid() const
 {
-    return !mFieldList.isEmpty();
+    using BaseClass  = TEDataContainer< FieldType, DataTypeCustom >;
+    return (BaseClass::mElementList.isEmpty() == false);
 }
 
 template<class FieldType>
 void TEDataTypeContainer<FieldType>::invalidate()
 {
-    mFieldList.clear();
-}
-
-template<class FieldType>
-bool TEDataTypeContainer<FieldType>::checkUniqueness(void) const
-{
-    for (int i = 0; i < mFieldList.size(); ++i)
-    {
-        const QString& name{ mFieldList[i].getName() };
-        for (int j = i + 1; j < mFieldList.size(); ++j)
-        {
-            if (name == mFieldList[j].getName())
-            {
-                return false;
-            }
-        }
-    }
-
-    return true;
+    using BaseClass  = TEDataContainer< FieldType, DataTypeCustom >;
+    return BaseClass::mElementList.clear();
 }
 
 #endif // LUSAN_DATA_COMMON_TEDATATYPECONTAINER_HPP

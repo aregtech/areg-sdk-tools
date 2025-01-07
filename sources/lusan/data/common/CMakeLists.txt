@@ -39,6 +39,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/MethodParameter.hpp
     ${LUSAN}/data/common/OptionsManager.hpp
     ${LUSAN}/data/common/ParamBase.hpp
+    ${LUSAN}/data/common/TEDataContainer.hpp
     ${LUSAN}/data/common/TEDataTypeContainer.hpp
     ${LUSAN}/data/common/WorkspaceEntry.hpp
 )

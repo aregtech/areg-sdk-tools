@@ -18,7 +18,11 @@
  *  \brief       Lusan application, Method Base.
  *
  ************************************************************************/
-#include "lusan/common/ElementBase.hpp"
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/data/common/TEDataContainer.hpp"
 
 #include <QList>
 #include <QString>
@@ -28,7 +32,7 @@
   * \class   MethodBase
   * \brief   Represents a method base in the Lusan application.
   **/
-class MethodBase    : public ElementBase
+class MethodBase    : public TEDataContainer< MethodParameter, ElementBase >
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -36,6 +40,7 @@ class MethodBase    : public ElementBase
 public:
     /**
      * \brief   Default constructor.
+     * \param   parent  The parent element.
      **/
     MethodBase(ElementBase * parent = nullptr);
 
@@ -44,6 +49,7 @@ public:
      * \param   id              The ID of the method.
      * \param   name            The name of the method.
      * \param   description     The description of the method.
+     * \param   parent          The parent element.
      **/
     MethodBase(uint32_t id, const QString& name, const QString& description, ElementBase* parent = nullptr);
 
@@ -86,34 +92,6 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Adds a method parameter to the list.
-     * \param   parameter   The method parameter to add.
-     * \return  True if the parameter was added, false otherwise.
-     **/
-    bool addParameter(MethodParameter&& parameter);
-
-    /**
-     * \brief   Removes a method parameter from the list by name.
-     * \param   name    The name of the parameter to remove.
-     * \return  True if the parameter was removed, false otherwise.
-     **/
-    bool removeParameter(const QString& name);
-
-    /**
-     * \brief   Inserts a method parameter into the list at the specified position.
-     * \param   index       The position to insert the parameter.
-     * \param   parameter   The method parameter to insert.
-     * \return  True if the parameter was inserted, false otherwise.
-     **/
-    bool insertParameter(int index, MethodParameter&& parameter);
-
-    /**
-     * \brief   Searches for a method parameter by name.
-     * \param   name    The name of the parameter to search for.
-     * \return  Pointer to the method parameter if found, nullptr otherwise.
-     **/
-    MethodParameter* findParameter(const QString& name) const;
 
     /**
      * \brief   Gets the name of the method.
@@ -140,11 +118,6 @@ public:
     void setDescription(const QString& description);
 
     /**
-     * \brief   remove all entries and frees resources.
-     **/
-    void removeAll(void);
-
-    /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
@@ -163,7 +136,6 @@ public:
 protected:
     QString mName;          //!< The method name.
     QString mDescription;   //!< The method description.
-    QList<MethodParameter> mParameters; //!< The list of method parameters.
 };
 
 #endif // LUSAN_DATA_COMMON_METHODBASE_HPP

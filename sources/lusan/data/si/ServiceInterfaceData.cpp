@@ -22,7 +22,7 @@
 #include <QFile>
 
 ServiceInterfaceData::ServiceInterfaceData(void)
-    : ElementBase   (1u, nullptr)
+    : ElementBase   (MINIMUM_ID, nullptr)
     , mFilePath     ( )
     , mOverviewData (this)
     , mDataTypeData (this)

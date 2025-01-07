@@ -46,6 +46,7 @@ public:
         , PrimitiveUint = 0x000B    //!< bits: 0000 0000 0000 1011, Primitive unsigned integer type
         , PrimitiveFloat= 0x000C    //!< bits: 0000 0000 0000 1100, Primitive digit with floating point
         , BasicObject   = 0x0010    //!< bits: 0000 0000 0001 0000, Basic object
+        , BasicContainer= 0x0020    //!< bits: 0000 0000 0010 0001, Basic container
         , CustomDefined = 0x0100    //!< bits: 0000 0001 0000 0000, Custom type enumeration
         , Enumeration   = 0x0300    //!< bits: 0000 0011 0000 0000, Custom type enumeration
         , Structure     = 0x0500    //!< bits: 0000 0101 0000 0000, Custom type structure
@@ -59,13 +60,16 @@ public:
 protected:
     /**
      * \brief   Default constructor.
+     * \param   parent  The parent element.
      **/
     DataTypeBase(ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
-     * \param   name        The name of the data type.
      * \param   category    The category of the data type.
+     * \param   name        The name of the data type.
+     * \param   id          The ID of the data type.
+     * \param   parent      The parent element.
      **/
     DataTypeBase(eCategory category, const QString& name = QString(), uint32_t id = 0, ElementBase* parent = nullptr);
 
@@ -192,6 +196,12 @@ public:
      * \return  True if the data type is a basic object, false otherwise.
      **/
     bool isBasicObject(void) const;
+
+    /**
+     * \brief   Checks if the data type is a basic container.
+     * \return  True if the data type is a basic container, false otherwise.
+     **/
+    bool isBasicContainer(void) const;
 
     /**
      * \brief   Checks if the data type is an enumeration.

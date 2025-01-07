@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 #include <QScrollArea>
+#include <QIntValidator>
 
 class SIOverviewDetails;
 class SIOverviewLinks;
@@ -51,12 +52,49 @@ public:
 
     virtual ~SIOverview(void);
 
+protected:
+
+    void onCheckedPublic(bool isChecked);
+
+    void onCheckedPrivate(bool isChecked);
+
+    void onCheckedInternet(bool isChecked);
+
+    void onDeprecatedChecked(bool isChecked);
+
+    void onDescriptionChanged(void);
+
+    void onDeprecateHintChanged(const QString& newText);
+
+    void onMajorChanged(const QString& major);
+
+    void onMinorChanged(const QString& minor);
+
+    void onPatchChanged(const QString& patch);
+
+private:
+    /**
+     * \brief   Initializes the SIConstant object.
+     **/
+    void updateWidgets(void);
+
+    /**
+     * \brief   Initializes the SIInclude object.
+     **/
+    void updateData(void);
+
+    /**
+     * \brief   Initializes the signals.
+     **/
+    void setupSignals(void);
+
 private:
     SIOverviewModel&    mModel;
-    SIOverviewDetails*  mOverviewDetails;
-    SIOverviewLinks*    mOverviewLinks;
+    SIOverviewDetails*  mDetails;
+    SIOverviewLinks*    mLinks;
     SIOverviewWidget*   mWidget;
     Ui::SIOverview&     ui;
+    QIntValidator       mVersionValidator;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIOVERVIEW_HPP

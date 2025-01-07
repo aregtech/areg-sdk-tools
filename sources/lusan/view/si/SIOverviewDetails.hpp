@@ -19,12 +19,15 @@
  *
  ************************************************************************/
 #include <QWidget>
-#include <QIntValidator>
 
 namespace Ui {
     class SIOverviewDetails;
 }
-
+    
+class QCheckBox;
+class QLineEdit;
+class QPlainTextEdit;
+class QRadioButton;
 class SIOverviewModel;
 
 class SIOverviewDetails : public QWidget
@@ -32,14 +35,30 @@ class SIOverviewDetails : public QWidget
     Q_OBJECT
 
 public:
-    explicit SIOverviewDetails(SIOverviewModel &model, QWidget* parent = nullptr);
+    explicit SIOverviewDetails(QWidget* parent = nullptr);
+        
+    QLineEdit* ctrlMajor(void);
     
-    void saveData(void) const;
+    QLineEdit* ctrlMinor(void);
+    
+    QLineEdit* ctrlPatch(void);
+    
+    QLineEdit* ctrlName(void);
+    
+    QRadioButton* ctrlPublic(void);
+    
+    QRadioButton* ctrlPrivate(void);
+    
+    QRadioButton* ctrlInternet(void);
+    
+    QPlainTextEdit* ctrlDescription(void);
+    
+    QCheckBox* ctrlDeprecated(void);
+    
+    QLineEdit* ctrlDeprecateHint(void);
 
 private:
     Ui::SIOverviewDetails*  ui;
-    SIOverviewModel&        mModel;
-    QIntValidator           mVersionValidator;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIOVERVIEWDETAILS_HPP

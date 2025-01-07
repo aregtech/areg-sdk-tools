@@ -46,11 +46,6 @@ QToolButton* SIConstantList::ctrlButtonAdd(void)
     return ui->toolAddElem;
 }
 
-QToolButton* SIConstantList::ctrlButtonUpdate(void)
-{
-    return ui->toolUpdateElem;
-}
-
 QToolButton* SIConstantList::ctrlButtonRemove(void)
 {
     return ui->toolDeleteElem;

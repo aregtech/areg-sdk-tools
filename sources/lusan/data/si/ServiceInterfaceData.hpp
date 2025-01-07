@@ -40,7 +40,9 @@ class ServiceInterfaceData  : public ElementBase
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
-    static constexpr const char* const XML_FORMAT_VERSION   { "1.0.0" }; //!< The XML format version.
+    static constexpr const char* const XML_FORMAT_VERSION   { "1.0.0" };//!< The XML format version.
+
+    static constexpr const uint32_t     MINIMUM_ID          { 50u };     //!< The invalid ID value.
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -51,6 +53,10 @@ public:
      **/
     ServiceInterfaceData(void);
 
+    /**
+     * \brief   Constructor with file path.
+     * \param   filePath    The file path of the service interface data to load and initialize.
+     **/
     ServiceInterfaceData(const QString& filePath);
 
     /**

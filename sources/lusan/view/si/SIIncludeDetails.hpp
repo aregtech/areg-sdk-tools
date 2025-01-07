@@ -99,7 +99,7 @@ protected:
     /**
      * \brief   Returns the control of the deprecation flag.
      **/
-    QCheckBox * ctrlDepcrecateCheck(void);
+    QCheckBox * ctrlDeprecated(void);
 
     /**
      * \brief   Returns the control of the description.

@@ -19,16 +19,23 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include "lusan/common/ElementBase.hpp"
 #include <QList>
 #include <QString>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class QXmlStreamReader;
 class QXmlStreamWriter;
 class DataTypeBase;
 class DataTypeCustom;
 class DataTypePrimitive;
-class DataTypeBasic;
+class DataTypeBasicContainer;
+class DataTypeBasicObject;
 
  /**
   * \class   SIDataTypeData
@@ -42,6 +49,7 @@ class SIDataTypeData    : public ElementBase
 public:
     /**
      * \brief   Default constructor.
+     * \param   parent  The parent element.
      **/
     SIDataTypeData(ElementBase * parent = nullptr);
 
@@ -108,11 +116,20 @@ public:
      **/
     void removeAll(void);
 
+    /**
+     * \brief   Returns the list of primitive data types objects.
+     **/
     const QList<DataTypePrimitive*>& getPrimitiveDataTypes(void) const;
 
-    const QList<DataTypeBasic*>& getBasicDataTypes(void) const;
+    /**
+     * \brief   Returns the list of basic data types objects.
+     **/
+    const QList<DataTypeBasicObject*>& getBasicDataTypes(void) const;
 
-    const QList<DataTypeBasic*>& getContainerDatTypes(void) const;
+    /**
+     * \brief   Returns the list of basic container data types objects.
+     **/
+    const QList<DataTypeBasicContainer*>& getContainerDatTypes(void) const;
 
     /**
      * \brief   Gets the list of data types.
@@ -126,28 +143,81 @@ public:
      **/
     void setCustomDataTypes(QList<DataTypeCustom *>&& entries);
 
-    void getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase *>& exclude = QList<DataTypeBase*>(), bool makeSorting = true) const;
+    /**
+     * \brief   Gets the list of data types.
+     * \param   out_dataTypes   On output, this contains the list of data types.
+     * \param   excludes        The list of data types to exclude. User for filtering.
+     * \param   makeSorting     If true, the list of data types is sorted.
+     **/
+    void getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase *>& excludes = QList<DataTypeBase *>(), bool makeSorting = true) const;
 
+    /**
+     * \brief   Searches for a data type by name in the list of primitive data type objects.
+     * \param   dataType    The list of primitive data types to search.
+     * \param   searchName  The name of the data type to search.
+     * \return  Returns true if the name is found in the list of primitives. Otherwise, returns false.
+     **/
     bool existsPrimitive(const QList<DataTypePrimitive*> dataTypes, const QString& searchName) const;
 
-    bool existsBasic(const QList<DataTypeBasic*> dataTypes, const QString& searchName) const;
+    /**
+     * \brief   Searches for a data type by name in the list of basic data type objects.
+     * \param   dataType    The list of basic data types to search.
+     * \param   searchName  The name of the data type to search.
+     * \return  Returns true if the name is found in the list of basic data types. Otherwise, returns false.
+     **/
+    bool existsBasic(const QList<DataTypeBasicObject*> dataTypes, const QString& searchName) const;
 
-    bool existsContainer(const QList<DataTypeBasic*> dataTypes, const QString& searchName) const;
+    /**
+     * \brief   Searches for a data type by name in the list of basic container data type objects.
+     * \param   dataType    The list of basic container data types to search.
+     * \param   searchName  The name of the data type to search.
+     * \return  Returns true if the name is found in the list of basic container data types. Otherwise, returns false.
+     **/
+    bool existsContainer(const QList<DataTypeBasicContainer*> dataTypes, const QString& searchName) const;
 
+    /**
+     * \brief   Searches for a data type by name in the list of custom data type objects.
+     * \param   dataType    The list of custom data types to search.
+     * \param   searchName  The name of the data type to search.
+     * \return  Returns true if the name is found in the list of custom data types. Otherwise, returns false.
+     **/
     bool existsCustom(const QList<DataTypeCustom*> dataTypes, const QString& searchName) const;
 
+    /**
+     * \brief   Searches for a data type by name in the list of data type objects.
+     * \param   typeName    The name of the data type to search.
+     * \return  Returns true if the name is found in the list of data types. Otherwise, returns false.
+     **/
     template<class DataType>
     bool exists(const QList<DataType*> & dataTypes, const QString& typeName) const;
 
+    /**
+     * \brief   Searches for a data type by name in the list of all data type objects.
+     * \param   typeName    The name of the data type to search.
+     * \return  Returns true if the name is found in the list of data types. Otherwise, returns false.
+     **/
     bool exists(const QString& typeName) const;
 
+    /**
+     * \brief   Searches for a data type by name in the list of all data type objects.
+     * \param   typeName    The name of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
     DataTypeBase* findDataType(const QString& typeName) const;
+
+    /**
+     * \brief   Searches for a data type by unique ID in the list of all data type objects.
+     * \param   id  The ID of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
+    DataTypeBase* findDataType(uint32_t id) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    QList<DataTypeCustom *>     mCustomDataTypes;       //!< The list of data types.
+    QList<DataTypeCustom *>     mCustomDataTypes;   //!< The list of data types.
+    QList<DataTypeBase *>       mDataTypes;         //!< The list of all data types.
 };
 
 template<class DataType>

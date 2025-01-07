@@ -65,11 +65,6 @@ QToolButton* SIIncludeList::ctrlButtonInsert(void) const
     return ui->toolInsertElem;
 }
 
-QToolButton* SIIncludeList::ctrlButtonUpdate(void) const
-{
-    return ui->toolUpdateElem;
-}
-
 QTableWidget* SIIncludeList::ctrlTableList(void) const
 {
     return ui->tableIncludes;

@@ -18,8 +18,15 @@
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include <QWidget>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 namespace Ui {
     class SIConstantDetails;
 }
@@ -29,27 +36,60 @@ class QComboBox;
 class QLineEdit;
 class QPlainTextEdit;
 
+//////////////////////////////////////////////////////////////////////////
+// SIConstantDetails class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \brief   The Service Interface Constant Details widget.
+ *          The widget is used to display and edit the details of the constant.
+ **/
 class SIConstantDetails : public QWidget
 {
     Q_OBJECT
 
+//////////////////////////////////////////////////////////////////////////
+// Public members
+//////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Default constructor.
+     * \param   parent  The parent widget of the constant details.
+     **/
     explicit SIConstantDetails(QWidget* parent = nullptr);
 
+    /**
+     * \brief   Returns the constant name widget object.
+     **/
     QLineEdit* ctrlName(void);
 
+    /**
+     * \brief   Returns the constant type widget object.
+     **/
     QComboBox* ctrlTypes(void);
 
+    /**
+     * \brief   Returns the constant value widget object.
+     **/
     QLineEdit* ctrlValue(void);
 
+    /**
+     * \brief   Returns the constant description widget object.
+     **/
     QPlainTextEdit* ctrlDescription(void);
 
-    QCheckBox* ctrlDepricated(void);
+    /**
+     * \brief   Returns the constant deprecated flag widget object.
+     **/
+    QCheckBox* ctrlDeprecated(void);
 
+    /**
+     * \brief   Returns the constant deprecation hint widget object.
+     **/
     QLineEdit* ctrlDeprecateHint(void);
 
 private:
-    Ui::SIConstantDetails* ui;
+    Ui::SIConstantDetails* ui;  //!< The user interface object.
 };
 
 #endif // LUSAN_APPLICATION_SI_SICONSTANTDETAILS_HPP

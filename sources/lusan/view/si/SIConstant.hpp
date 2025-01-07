@@ -18,17 +18,35 @@
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include <QScrollArea>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 namespace Ui {
     class SIConstant;
 }
+    
+class QTableWidgetItem;
 
+class ConstantEntry;
+class DataTypesModel;
 class SIConstantDetails;
 class SIConstantList;
 class SIConstantModel;
-class DataTypesModel;
+class TableCell;
 
+//////////////////////////////////////////////////////////////////////////
+// SIConstantWidget class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \brief   The widget to display the constant details.
+ **/
 class SIConstantWidget : public QWidget
 {
     friend class SIConstant;
@@ -42,11 +60,27 @@ private:
     Ui::SIConstant* ui;
 };
 
+
+//////////////////////////////////////////////////////////////////////////
+// SIConstant class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \brief   The widget to display the constant details.
+ **/
 class SIConstant : public QScrollArea
 {
     Q_OBJECT
 
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Initializes the SIConstant object.
+     * \param   model   The model of the constant.
+     * \param   parent  The parent widget.
+     **/
     explicit SIConstant(SIConstantModel& model, QWidget* parent = nullptr);
 
     virtual ~SIConstant(void);
@@ -81,17 +115,29 @@ protected slots:
     void onInsertClicked(void);
 
     /**
-     * \brief   Triggered when the update button is clicked.
+     * \brief   Triggered when the move up button is clicked.
+     * \param   newName     The new name of the constant object.
      **/
-    void onUpdateClicked(void);
-
     void onNameChanged(const QString& newName);
 
+    /**
+     * \brief   Triggered when the type is changed.
+     * \param   newType The new type of the constant.
+     **/
     void onTypeChanged(const QString& newType);
-    
-    void onTypesOpened(void);
 
+    /**
+     * \brief   Triggered when the value is changed.
+     * \param   newValue    The new value of the constant.
+     **/
     void onValueChanged(const QString& newValue);
+
+    /**
+     * \brief   Triggered when the cell editor data is changed.
+     * \param   index       The index of the cell.
+     * \param   newValue    The new value of the cell.
+     **/
+    void onEditorDataChanged(const QModelIndex &index, const QString &newValue);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -99,25 +145,51 @@ protected slots:
 private:
 
     /**
-     * \brief   Initializes the SIInclude object.
+     * \brief   Initializes the SIConstant object.
      **/
     void updateData(void);
-    
-    void updateDataTypes(void);
+
+    /**
+     * \brief   Updates the widgets.
+     **/
+    void updateWidgets(void);
 
     /**
      * \brief   Initializes the signals.
      **/
     void setupSignals(void);
 
+    /**
+     * \brief   Blocks the basic signals.
+     * \param   doBlock     If true, blocks the signals, otherwise unblocks.
+     **/
+    void blockBasicSignals(bool doBlock);
+
+    /**
+     * \brief   Triggered when the cell data is changed to update other controls.
+     **/
+    void cellChanged(int row, int col, const QString& newValue);
+
+    /**
+     * \brief   Finds and returns valid pointer to the constant entry in the specified row.
+     * \param   row     The row index of the constant entry.
+     **/
+    inline ConstantEntry* _findConstant(int row);
+    inline const ConstantEntry* _findConstant(int row) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden members
+//////////////////////////////////////////////////////////////////////////
 private:
-    SIConstantModel&    mModel;
-    SIConstantDetails*  mDetails;
-    SIConstantList*     mList;
-    SIConstantWidget*   mWidget;
-    Ui::SIConstant&     ui;
-    DataTypesModel*     mTypeModel;
-    uint32_t            mCount;
+    SIConstantModel&    mModel;     //!< The model of the constant.
+    SIConstantDetails*  mDetails;   //!< The details widget of the constant.
+    SIConstantList*     mList;      //!< The list widget of the constant.
+    SIConstantWidget*   mWidget;    //!< The widget of the constant.
+    Ui::SIConstant&     ui;         //!< The user interface of the constant.
+    DataTypesModel*     mTypeModel; //!< The model of the data types.
+    DataTypesModel*     mComboModel;//< The model of the combo box.
+    TableCell*          mTableCell; //!< The table cell object.
+    uint32_t            mCount;     //!< The counter to generate names.
 };
 
 #endif // LUSAN_APPLICATION_SI_SICONSTANT_HPP

@@ -19,70 +19,15 @@
 #include "lusan/data/si/SIAttributeData.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-const AttributeEntry SIAttributeData::InvalidAttribute = AttributeEntry();
-
 SIAttributeData::SIAttributeData(ElementBase* parent /*= nullptr*/)
-    : ElementBase(parent)
+    : TEDataContainer< AttributeEntry, ElementBase >(parent)
 {
 }
 
 SIAttributeData::SIAttributeData(const QList<AttributeEntry>& entries, ElementBase* parent /*= nullptr*/)
-    : mAttributes(entries)
+    : TEDataContainer< AttributeEntry, ElementBase >(parent)
 {
-    for (AttributeEntry& entry : mAttributes)
-    {
-        if (entry.getParent() != this)
-        {
-            entry.setParent(this);
-            entry.setId(getNextId());
-        }
-    }
-}
-
-const QList<AttributeEntry>& SIAttributeData::getAttributes(void) const
-{
-    return mAttributes;
-}
-
-void SIAttributeData::setAttributes(const QList<AttributeEntry>& entries)
-{
-    mAttributes = entries;
-    for (AttributeEntry& entry : mAttributes)
-    {
-        if (entry.getParent() != this)
-        {
-            entry.setParent(this);
-            entry.setId(getNextId());
-        }
-    }
-}
-
-int SIAttributeData::findAttribute(const AttributeEntry& entry) const
-{
-    return mAttributes.indexOf(entry);
-}
-
-bool SIAttributeData::removeAttribute(const AttributeEntry& entry)
-{
-    return mAttributes.removeOne(entry);
-}
-
-bool SIAttributeData::replaceAttribute(const AttributeEntry& oldEntry, AttributeEntry&& newEntry)
-{
-    int index = findAttribute(oldEntry);
-    if (index != -1)
-    {
-        if (newEntry.getParent() != this)
-        {
-            newEntry.setParent(this);
-            newEntry.setId(getNextId());
-        }
-
-        mAttributes[index] = std::move(newEntry);
-        return true;
-    }
-
-    return false;
+    setElements(entries);
 }
 
 bool SIAttributeData::readFromXml(QXmlStreamReader& xml)
@@ -97,7 +42,7 @@ bool SIAttributeData::readFromXml(QXmlStreamReader& xml)
             AttributeEntry entry(this);
             if (entry.readFromXml(xml))
             {
-                addAttribute(std::move(entry), true);
+                addElement(std::move(entry), true);
             }
         }
 
@@ -110,75 +55,12 @@ bool SIAttributeData::readFromXml(QXmlStreamReader& xml)
 void SIAttributeData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementAttributeList);
-    for (const AttributeEntry& entry : mAttributes)
+
+    const QList<AttributeEntry>& elements = getElements();
+    for (const AttributeEntry& entry : elements)
     {
         entry.writeToXml(xml);
     }
 
     xml.writeEndElement(); // AttributeList
-}
-
-int SIAttributeData::findAttribute(const QString& name) const
-{
-    for (int i = 0; i < mAttributes.size(); ++i)
-    {
-        if (mAttributes[i].getName() == name)
-        {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-bool SIAttributeData::exists(const QString& name) const
-{
-    return findAttribute(name) != -1;
-}
-
-const AttributeEntry& SIAttributeData::getAttribute(const QString& name) const
-{
-    int index = findAttribute(name);
-    return (index != -1) ? mAttributes[index] : InvalidAttribute;
-}
-
-bool SIAttributeData::removeAttribute(const QString& name)
-{
-    int index = findAttribute(name);
-    if (index != -1)
-    {
-        mAttributes.removeAt(index);
-        return true;
-    }
-
-    return false;
-}
-
-bool SIAttributeData::addAttribute(AttributeEntry&& entry, bool unique)
-{
-    if ((unique == false) || (mAttributes.contains(entry) == false))
-    {
-        if (entry.getParent() != this)
-        {
-            entry.setParent(this);
-            entry.setId(getNextId());
-        }
-
-        mAttributes.append(std::move(entry));
-        return true;
-    }
-
-    return false;
-}
-
-void SIAttributeData::sortAttributes(bool ascending)
-{
-    std::sort(mAttributes.begin(), mAttributes.end(), [ascending](const AttributeEntry& left, const AttributeEntry& right) {
-        return ascending ? left < right : left > right;
-    });
-}
-
-void SIAttributeData::removeAll(void)
-{
-    mAttributes.clear();
 }

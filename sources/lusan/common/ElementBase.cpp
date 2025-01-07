@@ -43,7 +43,6 @@ ElementBase::ElementBase(ElementBase&& src)
     , mParent (src.mParent)
 {
     setMaxId(src.mId);
-    src.mId = 0;
     src.mParent = nullptr;
 }
 
@@ -54,16 +53,15 @@ ElementBase::~ElementBase(void)
 
 ElementBase& ElementBase::operator = (const ElementBase& src)
 {
-    setId(src.mId);
     mParent = src.mParent;
+    setId(src.mId);
     return *this;
 }
 
 ElementBase& ElementBase::operator = (ElementBase&& src)
 {
-    setId(src.mId);
     mParent = src.mParent;
-    src.mId = 0;
+    setId(src.mId);
     src.mParent = nullptr;
     return *this;
 }
@@ -77,3 +75,4 @@ bool ElementBase::operator != (const ElementBase& src) const
 {
     return (mId != src.mId);
 }
+

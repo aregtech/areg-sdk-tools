@@ -21,136 +21,37 @@
 
 SIIncludeModel::SIIncludeModel(SIIncludeData& includeData)
     : mIncludeData(includeData)
-    , mEntries(mIncludeData.getIncludes())
 {
 }
 
-int SIIncludeModel::rowCount() const
+uint32_t SIIncludeModel::createInclude(const QString& name)
 {
-    return mEntries.size();
+    IncludeEntry entry(0, name);
+    return (mIncludeData.addElement(std::move(entry), true) ? entry.getId() : 0);
 }
 
-int SIIncludeModel::columnCount() const
+bool SIIncludeModel::deleteInclude(uint32_t id)
 {
-    return 1; // Single column model
+    return mIncludeData.removeElement(id);
 }
 
-const IncludeEntry * SIIncludeModel::data(int row) const
+const QList<IncludeEntry>& SIIncludeModel::getIncludes(void) const
 {
-    
-    if ((row >= 0) && (row < static_cast<int>(mEntries.size())))
-    {
-        return &mEntries.at(row);
-    }
-    
-    return nullptr;
+    return mIncludeData.getElements();
 }
 
-const IncludeEntry* SIIncludeModel::data(const QString& location) const
+const IncludeEntry* SIIncludeModel::findInclude(uint32_t id) const
 {
-    int index = findEntry(location);
-    return (index != -1 ? &mEntries[index] : nullptr);
+    return mIncludeData.findElement(id);
 }
 
-bool SIIncludeModel::addEntry(const QString& location, const QString& description, bool isDeprecated, const QString& deprecateHint)
+IncludeEntry* SIIncludeModel::findInclude(uint32_t id)
 {
-    int index = findEntry(location);
-    if (index != -1)
-        return false;
-
-    IncludeEntry newEntry(location, mEntries.size() + 1, description, isDeprecated, deprecateHint);
-    mEntries.append(newEntry);
-    return true;
+    return mIncludeData.findElement(id);
 }
 
-bool SIIncludeModel::updateEntry(int index, const QString& location, const QString& description, bool isDeprecated, const QString& deprecateHint)
+void SIIncludeModel::sortInclude(bool ascending)
 {
-    if (index < 0 || index >= mEntries.size())
-        return false;
-
-    IncludeEntry& entry = mEntries[index];
-    entry.setLocation(location);
-    entry.setDescription(description);
-    entry.setDeprecated(isDeprecated);
-    entry.setDeprecationHint(deprecateHint);
-    return true;
+    mIncludeData.sortElementsByName(ascending);
 }
 
-bool SIIncludeModel::updateEntry(const QString& oldLocation, const QString& newLocation, const QString& description, bool isDeprecated, const QString& deprecateHint)
-{
-    int index = findEntry(oldLocation);
-    if (index == -1)
-        return false;
-
-    return updateEntry(index, newLocation, description, isDeprecated, deprecateHint);
-}
-
-bool SIIncludeModel::removeEntry(const QString& location)
-{
-    int index = findEntry(location);
-    if (index == -1)
-        return false;
-    
-    mEntries.removeAt(index);
-    return true;
-}
-
-bool SIIncludeModel::removeEntry(int index)
-{
-    if (index < 0 || index >= mEntries.size())
-        return false;
-
-    mEntries.removeAt(index);
-    return true;
-}
-
-bool SIIncludeModel::insertEntry(int index, const QString& location, const QString& description, bool isDeprecated, const QString& deprecateHint)
-{
-    if (index < 0 || index > mEntries.size())
-        return false;
-
-    int found = findEntry(location);
-    if (found != -1)
-        return false;
-
-    IncludeEntry newEntry(location, index + 1, description, isDeprecated, deprecateHint);
-    mEntries.insert(index, newEntry);
-    return true;
-}
-
-bool SIIncludeModel::insertEntry(const QString& beforeLocation, const QString& location, const QString& description, bool isDeprecated, const QString& deprecateHint)
-{
-    int index = findEntry(beforeLocation);
-    if (index == -1)
-        return false;
-    
-    return insertEntry(index, location, description, isDeprecated, deprecateHint);
-}
-
-void SIIncludeModel::sortEntries(bool ascending)
-{
-    std::sort(mEntries.begin(), mEntries.end(), [ascending](const IncludeEntry& a, const IncludeEntry& b) {
-        return ascending ? a.getLocation() < b.getLocation() : a.getLocation() > b.getLocation();
-        });
-}
-
-int SIIncludeModel::findEntry(const QString& location) const
-{
-    for (int i = 0; i < mEntries.size(); ++i)
-    {
-        if (mEntries[i].getLocation() == location)
-            return i;
-    }
-    
-    return -1;
-}
-
-void SIIncludeModel::updateModel(void)
-{
-    mEntries = mIncludeData.getIncludes();
-}
-
-void SIIncludeModel::updateData(void)
-{
-    mIncludeData.setIncludes(mEntries);
-}

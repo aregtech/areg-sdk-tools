@@ -74,7 +74,7 @@ bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
                     FieldEntry entry(this);
                     if (entry.readFromXml(xml))
                     {
-                        mFieldList.append(entry);
+                        addElement(std::move(entry), true);
                     }
                 }
 
@@ -98,7 +98,7 @@ void DataTypeStructure::writeToXml(QXmlStreamWriter& xml) const
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
 
     xml.writeStartElement(XmlSI::xmlSIElementFieldList);
-    for (const FieldEntry& entry : mFieldList)
+    for (const FieldEntry& entry : mElementList)
     {
         entry.writeToXml(xml);
     }

@@ -22,11 +22,9 @@
 #include "lusan/model/si/SIOverviewModel.hpp"
 
 
-SIOverviewDetails::SIOverviewDetails(SIOverviewModel& model, QWidget* parent)
+SIOverviewDetails::SIOverviewDetails(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::SIOverviewDetails)
-    , mModel(model)
-    , mVersionValidator(0, 999999, this)
 {
     QFont font{ this->font() };
     font.setBold(false);
@@ -36,67 +34,54 @@ SIOverviewDetails::SIOverviewDetails(SIOverviewModel& model, QWidget* parent)
     ui->setupUi(this);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    
-    // Set up validators for QLineEdit objects to accept only integer values
-    ui->editVersionMajor->setValidator(&mVersionValidator);
-    ui->editVersionMinor->setValidator(&mVersionValidator);
-    ui->editVersionPatch->setValidator(&mVersionValidator);
-    
-    ui->editServiceName->setText(model.getName());
-    ui->editServiceName->setReadOnly(true);
-    ui->radioInternet->setEnabled(false);
-    switch(model.getCategory())
-    {
-    case SIOverviewData::eCategory::InterfacePrivate:
-        ui->radioPrivate->setChecked(true);
-        break;
-    
-    case SIOverviewData::eCategory::InterfacePublic:
-        ui->radioPublic->setChecked(true);
-        break;
-    
-    case SIOverviewData::eCategory::InterfaceInternet:
-        Q_ASSERT(false);
-        ui->radioPublic->setChecked(true);
-        break;
-        
-    default:        
-        ui->radioPrivate->setChecked(true);
-        break;
-    }
-    
-    const VersionNumber& version {model.getVersion()};
-    ui->editVersionMajor->setText(QString::number(version.getMajor()));
-    ui->editVersionMinor->setText(QString::number(version.getMinor()));
-    ui->editVersionPatch->setText(QString::number(version.getPatch()));
-    
-    ui->textDescribe->setPlainText(model.getDescription());
-    ui->checkDeprecated->setChecked(model.isDeprecated());
-    ui->editDeprecated->setText(model.getDeprecateHint());    
 }
 
-void SIOverviewDetails::saveData(void) const
+QLineEdit* SIOverviewDetails::ctrlMajor(void)
 {
-    
-    uint32_t major = ui->editVersionMajor->text().toUInt();
-    uint32_t minor = ui->editVersionMinor->text().toUInt();
-    uint32_t patch = ui->editVersionPatch->text().toUInt();
-    mModel.setVersion(major, minor, patch);
-    
-    if (ui->radioPrivate->isChecked())
-    {
-        mModel.setCategory(SIOverviewData::eCategory::InterfacePrivate);
-    }
-    else if (ui->radioPublic->isChecked())
-    {
-        mModel.setCategory(SIOverviewData::eCategory::InterfacePublic);
-    }
-    else
-    {
-        mModel.setCategory(SIOverviewData::eCategory::InterfaceUnknown);
-    }
-    
-    mModel.setDescription(ui->textDescribe->toPlainText());
-    mModel.setIsDeprecated(ui->checkDeprecated->isChecked());
-    mModel.setDeprecateHint(ui->editDeprecated->text());
+    return ui->editVersionMajor;
+}
+
+QLineEdit* SIOverviewDetails::ctrlMinor(void)
+{
+    return ui->editVersionMinor;
+}
+
+QLineEdit* SIOverviewDetails::ctrlPatch(void)
+{
+    return ui->editVersionPatch;
+}
+
+QLineEdit* SIOverviewDetails::ctrlName(void)
+{
+    return ui->editServiceName;
+}
+
+QRadioButton* SIOverviewDetails::ctrlPublic(void)
+{
+    return ui->radioPublic;
+}
+
+QRadioButton* SIOverviewDetails::ctrlPrivate(void)
+{
+    return ui->radioPrivate;
+}
+
+QRadioButton* SIOverviewDetails::ctrlInternet(void)
+{
+    return ui->radioInternet;
+}
+
+QPlainTextEdit* SIOverviewDetails::ctrlDescription(void)
+{
+    return ui->textDescribe;
+}
+
+QCheckBox* SIOverviewDetails::ctrlDeprecated(void)
+{
+    return ui->checkDeprecated;
+}
+
+QLineEdit* SIOverviewDetails::ctrlDeprecateHint(void)
+{
+    return ui->editDeprecated;
 }

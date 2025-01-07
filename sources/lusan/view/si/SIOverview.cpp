@@ -21,8 +21,14 @@
 #include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIOverview.h"
 
+#include "lusan/model/si/SIOverviewModel.hpp"
 #include "lusan/view/si/SIOverviewDetails.hpp"
 #include "lusan/view/si/SIOverviewLinks.hpp"
+
+#include <QCheckBox>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QRadioButton>
 
 SIOverviewWidget::SIOverviewWidget(QWidget* parent)
     : QWidget{ parent }
@@ -35,14 +41,15 @@ SIOverviewWidget::SIOverviewWidget(QWidget* parent)
 
 SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     : QScrollArea       (parent)
-    , mModel            (model)
-    , mOverviewDetails  (new SIOverviewDetails(model, this))
-    , mOverviewLinks    (new SIOverviewLinks(this))
-    , mWidget           (new SIOverviewWidget(this))
-    , ui                (*mWidget->ui)
+    , mModel    (model)
+    , mDetails  (new SIOverviewDetails(this))
+    , mLinks    (new SIOverviewLinks(this))
+    , mWidget   (new SIOverviewWidget(this))
+    , ui        (*mWidget->ui)
+    , mVersionValidator(0, 999999, this)
 {
-    ui.horizontalLayout->addWidget(mOverviewDetails);
-    ui.horizontalLayout->addWidget(mOverviewLinks);
+    ui.horizontalLayout->addWidget(mDetails);
+    ui.horizontalLayout->addWidget(mLinks);
 
     // setWidgetResizable(true);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -50,10 +57,124 @@ SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
+    
+    updateWidgets();
+    updateData();
+    setupSignals();
 }
 
 SIOverview::~SIOverview(void)
 {
-    ui.horizontalLayout->removeWidget(mOverviewLinks);
-    ui.horizontalLayout->removeWidget(mOverviewDetails);
+    ui.horizontalLayout->removeWidget(mLinks);
+    ui.horizontalLayout->removeWidget(mDetails);
+}
+
+void SIOverview::onCheckedPublic(bool isChecked)
+{
+    if (isChecked)
+    {
+        mModel.setCategory(SIOverviewData::eCategory::InterfacePublic);
+    }
+}
+
+void SIOverview::onCheckedPrivate(bool isChecked)
+{
+    if (isChecked)
+    {
+        mModel.setCategory(SIOverviewData::eCategory::InterfacePrivate);
+    }
+}
+
+void SIOverview::onCheckedInternet(bool isChecked)
+{
+    if (isChecked)
+    {
+        mModel.setCategory(SIOverviewData::eCategory::InterfaceInternet);
+    }
+}
+
+void SIOverview::onDeprecatedChecked(bool isChecked)
+{
+    mModel.setIsDeprecated(isChecked);
+    mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+}
+
+void SIOverview::onDescriptionChanged(void)
+{
+    mModel.setDescription(mDetails->ctrlDescription()->toPlainText());
+}
+
+void SIOverview::onDeprecateHintChanged(const QString& newText)
+{
+    mModel.setDeprecateHint(newText);
+}
+
+void SIOverview::onMajorChanged(const QString& major)
+{
+    mModel.setVersion(major.toUInt(), mDetails->ctrlMinor()->text().toUInt(), mDetails->ctrlPatch()->text().toUInt());
+}
+
+void SIOverview::onMinorChanged(const QString& minor)
+{
+    mModel.setVersion(mDetails->ctrlMajor()->text().toUInt(), minor.toUInt(),  mDetails->ctrlPatch()->text().toUInt());
+}
+
+void SIOverview::onPatchChanged(const QString& patch)
+{
+    mModel.setVersion(mDetails->ctrlMajor()->text().toUInt(), mDetails->ctrlMinor()->text().toUInt(), patch.toUInt());
+}
+
+void SIOverview::updateWidgets(void)
+{
+    mDetails->ctrlMajor()->setValidator(&mVersionValidator);
+    mDetails->ctrlMinor()->setValidator(&mVersionValidator);
+    mDetails->ctrlPatch()->setValidator(&mVersionValidator);
+    mDetails->ctrlName()->setReadOnly(true);
+    mDetails->ctrlInternet()->setEnabled(false);
+}
+
+void SIOverview::updateData(void)
+{
+    const VersionNumber& version{ mModel.getVersion() };
+
+    mDetails->ctrlMajor()->setText(QString::number(version.getMajor()));
+    mDetails->ctrlMinor()->setText(QString::number(version.getMinor()));
+    mDetails->ctrlPatch()->setText(QString::number(version.getPatch()));
+    mDetails->ctrlName()->setText(mModel.getName());
+    mDetails->ctrlDeprecated()->setChecked(mModel.isDeprecated());
+    mDetails->ctrlDeprecateHint()->setText(mModel.getDeprecateHint());
+    mDetails->ctrlDescription()->setPlainText(mModel.getDescription());
+
+    switch (mModel.getCategory())
+    {
+    case SIOverviewData::eCategory::InterfacePrivate:
+        mDetails->ctrlPrivate()->setChecked(true);
+        break;
+
+    case SIOverviewData::eCategory::InterfacePublic:
+        mDetails->ctrlPublic()->setChecked(true);
+        break;
+
+    case SIOverviewData::eCategory::InterfaceInternet:
+        Q_ASSERT(false);
+        mDetails->ctrlPublic()->setChecked(true);
+        break;
+
+    default:
+        mDetails->ctrlPrivate()->setChecked(true);
+        break;
+    }
+}
+
+void SIOverview::setupSignals(void)
+{
+    connect(mDetails->ctrlMajor(), &QLineEdit::textEdited, this, &SIOverview::onMajorChanged);
+    connect(mDetails->ctrlMinor(), &QLineEdit::textEdited, this, &SIOverview::onMinorChanged);
+    connect(mDetails->ctrlPatch(), &QLineEdit::textEdited, this, &SIOverview::onPatchChanged);
+    connect(mDetails->ctrlPublic(), &QRadioButton::toggled, this, &SIOverview::onCheckedPublic);
+    connect(mDetails->ctrlPrivate(), &QRadioButton::toggled, this, &SIOverview::onCheckedPrivate);
+    connect(mDetails->ctrlInternet(), &QRadioButton::toggled, this, &SIOverview::onCheckedInternet);
+    connect(mDetails->ctrlDeprecated(), &QCheckBox::toggled, this, &SIOverview::onDeprecatedChecked);
+    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textEdited, this, &SIOverview::onDeprecateHintChanged);
+    connect(mDetails->ctrlDescription(), &QPlainTextEdit::textChanged, this, &SIOverview::onDescriptionChanged);
 }

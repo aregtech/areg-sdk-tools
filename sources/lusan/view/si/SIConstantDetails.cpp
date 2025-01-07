@@ -54,7 +54,7 @@ QPlainTextEdit* SIConstantDetails::ctrlDescription(void)
     return ui->textDescribe;
 }
 
-QCheckBox* SIConstantDetails::ctrlDepricated(void)
+QCheckBox* SIConstantDetails::ctrlDeprecated(void)
 {
     return ui->checkDeprecated;
 }

@@ -33,6 +33,54 @@ EnumEntry::EnumEntry(uint32_t id, const QString& name, const QString& value, Ele
 {
 }
 
+EnumEntry::EnumEntry(const EnumEntry& src)
+    : ElementBase(src)
+    , mName(src.mName)
+    , mValue(src.mValue)
+{
+}
+
+EnumEntry::EnumEntry(EnumEntry&& src) noexcept
+    : ElementBase(std::move(src))
+    , mName(std::move(src.mName))
+    , mValue(std::move(src.mValue))
+{
+}
+
+EnumEntry& EnumEntry::operator = (const EnumEntry& other)
+{
+    if (this != &other)
+    {
+        ElementBase::operator = (other);
+        mName = other.mName;
+        mValue = other.mValue;
+    }
+
+    return *this;
+}
+
+EnumEntry& EnumEntry::operator=(EnumEntry&& other) noexcept
+{
+    if (this != &other)
+    {
+        ElementBase::operator = (std::move(other));
+        mName = std::move(other.mName);
+        mValue = std::move(other.mValue);
+    }
+
+    return *this;
+}
+
+bool EnumEntry::operator == (const EnumEntry& other) const
+{
+    return (mName == other.mName);
+}
+
+bool EnumEntry::operator!=(const EnumEntry& other) const
+{
+    return (mName != other.mName);
+}
+
 bool EnumEntry::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != XmlSI::xmlSIElementEnumEntry)

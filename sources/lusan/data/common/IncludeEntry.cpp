@@ -30,6 +30,16 @@ IncludeEntry::IncludeEntry(ElementBase* parent /*= nullptr*/)
 {
 }
 
+IncludeEntry::IncludeEntry(uint32_t id, const QString & location, ElementBase * parent /*= nullptr*/)
+    : ElementBase   (id, parent)
+    , mLocation     ( location )
+    , mDescription  ( )
+    , mDeprecated   (false)
+    , mDeprecateHint( )
+{
+    
+}    
+
 IncludeEntry::IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint, ElementBase* parent /*= nullptr*/)
     : ElementBase   (id, parent)
     , mLocation     (path)

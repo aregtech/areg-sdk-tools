@@ -57,8 +57,12 @@ const char* SIOverviewData::toString(SIOverviewData::eCategory category)
 
 SIOverviewData::SIOverviewData(ElementBase* parent /*= nullptr*/)
     : ElementBase   (parent)
+    , mName         ("NewServiceInterface")
+    , mVersion      (0, 0, 1)
     , mCategory     (eCategory::InterfacePrivate)
+    , mDescription  ("")
     , mIsDeprecated (false)
+    , mDeprecateHint("")
 {
 }
 
