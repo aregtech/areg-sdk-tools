@@ -19,6 +19,9 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include "lusan/data/si/SIConstantData.hpp"
 #include "lusan/data/si/SIDataTypeData.hpp"
 
@@ -47,56 +50,39 @@ public:
     /**
      * \brief   Creates a ConstantEntry and sets it in SIConstantData.
      * \param   name            The name of the constant.
-     * \param   type            The data type name of the constant.
-     * \param   value           The value of the constant.
-     * \param   isDeprecated    The deprecated flag of the constant.
-     * \param   description     The description of the constant.
-     * \param   deprecateHint   The deprecation hint of the constant.
      * \return  True if the constant was added, false otherwise.
      **/
-    bool createConstant(const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint);
+    uint32_t createConstant(const QString& name);
 
     /**
-     * \brief   Deletes a ConstantEntry in SIConstantData by name.
-     * \param   name    The name of the constant to delete.
+     * \brief   Deletes the constant by ID.
+     * \param   id  The ID of the constant to delete.
      * \return  True if the constant was deleted, false otherwise.
      **/
-    bool deleteConstant(const QString& name);
+    bool deleteConstant(uint32_t id);
 
     /**
-     * \brief   Updates the value of a ConstantEntry.
-     * \param   name    The name of the constant to update.
-     * \param   value   The new value of the constant.
-     * \return  True if the constant was updated, false otherwise.
+     * \brief   Returns the list of constants.
      **/
-    bool updateConstantValue(const QString& name, const QString& value);
-
-    /**
-     * \brief   Updates the data type of a ConstantEntry.
-     * \param   name    The name of the constant to update.
-     * \param   type    The new data type of the constant.
-     * \return  True if the constant was updated, false otherwise.
-     **/
-    bool updateConstantType(const QString& name, const QString& type);
-
-    bool addContant(ConstantEntry&& newEntry, bool unique = true);
-    
-    bool updateConstantName(const QString& oldName, const QString& newName);
-
-    bool updateConstantDeprecation(const QString& name, bool isDeprecated);
-
-    bool updateConstantDescription(const QString& name, const QString& description);
-
-    bool updateConstantDeprecateHint(const QString& name, const QString& deprecateHint);
-
-    bool updateConstant(const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint);
-
-    void getConstantTypes(QStringList& out_dataTypes) const;
-
     const QList<ConstantEntry> & getConstants(void) const;
 
-    const ConstantEntry* findConstant(const QString& name) const;
+    /**
+     * \brief   Searches the constant entry in the list by given unique ID.
+     * \param   id  The unique ID of the constant element to search.
+     * \return  Returns valid pointer if the element found. Otherwise, returns nullptr.
+     **/
+    const ConstantEntry* findConstant(uint32_t id) const;
+    ConstantEntry* findConstant(uint32_t id);
 
+    /**
+     * \brief   Sorts the constant elements in the list..
+     * \param   ascending   If true, the sorting is ascending. Otherwise, descending.
+     **/
+    void sortConstants(bool ascending);
+
+    /**
+     * \brief   Returns the instance of data type data object relevant with the constants.
+     **/
     inline SIDataTypeData& getDataTypeData(void);
 
 //////////////////////////////////////////////////////////////////////////

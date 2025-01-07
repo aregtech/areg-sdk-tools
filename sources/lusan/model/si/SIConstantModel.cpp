@@ -25,80 +25,34 @@ SIConstantModel::SIConstantModel(SIConstantData& constantData, SIDataTypeData& d
 {
 }
 
-bool SIConstantModel::createConstant(const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint)
+uint32_t SIConstantModel::createConstant(const QString& name)
 {
-    if (mConstantData.exists(name))
-        return false;
-
-    ConstantEntry entry(0, name, type, value, isDeprecated, description, deprecateHint);
-    mConstantData.addConstant(std::move(entry));
-    return true;
+    uint32_t id = mConstantData.getNextId();
+    ConstantEntry entry(id, name, &mConstantData);
+    return (mConstantData.addElement(std::move(entry), true) ? id : 0);
 }
 
-bool SIConstantModel::deleteConstant(const QString& name)
+bool SIConstantModel::deleteConstant(uint32_t id)
 {
-    return mConstantData.removeConstant(name);
-}
-
-bool SIConstantModel::updateConstantValue(const QString& name, const QString& value)
-{
-    return mConstantData.updateValue(name, value);
-}
-
-bool SIConstantModel::updateConstantType(const QString& name, const QString& type)
-{
-    return mConstantData.updateType(name, type);
-}
-
-bool SIConstantModel::addContant(ConstantEntry&& newEntry, bool unique /*= true*/)
-{
-    return mConstantData.addConstant(std::move(newEntry), unique);
-}
-
-bool SIConstantModel::updateConstantName(const QString& oldName, const QString& newName)
-{
-    return mConstantData.updateName(oldName, newName);
-}
-
-bool SIConstantModel::updateConstantDeprecation(const QString& name, bool isDeprecated)
-{
-    return mConstantData.updateDeprecation(name, isDeprecated);
-}
-
-bool SIConstantModel::updateConstantDescription(const QString& name, const QString& description)
-{
-    return mConstantData.updateDescription(name, description);
-}
-
-bool SIConstantModel::updateConstantDeprecateHint(const QString& name, const QString& deprecateHint)
-{
-    return mConstantData.updateDeprecateHint(name, deprecateHint);
-}
-
-bool SIConstantModel::updateConstant(const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint)
-{
-    return mConstantData.update(name, type, value, isDeprecated, description, deprecateHint);
-}
-
-void SIConstantModel::getConstantTypes(QStringList& out_dataTypes) const
-{
-    QList<DataTypeBase*> dataTypes;
-    mDataTypeData.getDataType(dataTypes, QList<DataTypeBase*>(), false);
-    int index = static_cast<int>(out_dataTypes.size());
-    out_dataTypes.resize(out_dataTypes.size() + dataTypes.size());
-    
-    for (const auto& dataType : dataTypes)
-    {
-        out_dataTypes[index ++] = dataType->getName();
-    }
+    return mConstantData.removeElement(id);
 }
 
 const QList<ConstantEntry>& SIConstantModel::getConstants(void) const
 {
-    return mConstantData.getConstants();
+    return mConstantData.getElements();
 }
 
-const ConstantEntry* SIConstantModel::findConstant(const QString& name) const
+const ConstantEntry* SIConstantModel::findConstant(uint32_t id) const
 {
-    return mConstantData.exists(name) ? &mConstantData.getConstant(name) : nullptr;
+    return mConstantData.findElement(id);
+}
+
+ConstantEntry* SIConstantModel::findConstant(uint32_t id)
+{
+    return mConstantData.findElement(id);
+}
+
+void SIConstantModel::sortConstants(bool ascending)
+{
+    mConstantData.sortElementsByName(ascending);
 }

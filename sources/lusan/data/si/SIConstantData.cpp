@@ -20,88 +20,15 @@
 #include "lusan/data/si/SIDataTypeData.hpp"
 #include "lusan/common/XmlSI.hpp"
 
-const ConstantEntry SIConstantData::InvalidConstant = ConstantEntry();
-
 SIConstantData::SIConstantData(ElementBase* parent /*= nullptr*/)
-    : ElementBase(parent)
+    : TEDataContainer< ConstantEntry, ElementBase>(parent)
 {
 }
 
 SIConstantData::SIConstantData(const QList<ConstantEntry>& entries, ElementBase* parent /*= nullptr*/)
-    : ElementBase(parent)
-    , mConstants(entries)
+    : TEDataContainer< ConstantEntry, ElementBase>(parent)
 {
-    for (ConstantEntry& entry : mConstants)
-    {
-        if (entry.getParent() != this)
-        {
-            entry.setParent(this);
-            entry.setId(getNextId());
-        }
-    }
-}
-
-const QList<ConstantEntry>& SIConstantData::getConstants(void) const
-{
-    return mConstants;
-}
-
-void SIConstantData::setConstants(const QList<ConstantEntry>& entries)
-{
-    mConstants = entries;
-    for (ConstantEntry& entry : mConstants)
-    {
-        if (entry.getParent() != this)
-        {
-            entry.setParent(this);
-            entry.setId(getNextId());
-        }
-    }
-}
-
-int SIConstantData::findConstant(const ConstantEntry& entry) const
-{
-    return mConstants.indexOf(entry);
-}
-
-bool SIConstantData::addConstant(ConstantEntry&& entry, bool unique /*= true*/)
-{
-    if ((unique == false) || (findConstant(entry.getName()) == -1))
-    {
-        if (entry.getParent() != this)
-        {
-            entry.setParent(this);
-            entry.setId(getNextId());
-        }
-
-        mConstants.append(std::move(entry));
-        return true;
-    }
-
-    return false;
-}
-
-bool SIConstantData::removeConstant(const ConstantEntry& entry)
-{
-    return mConstants.removeOne(entry);
-}
-
-bool SIConstantData::replaceConstant(const ConstantEntry& oldEntry, ConstantEntry&& newEntry)
-{
-    int index = findConstant(oldEntry);
-    if (index != -1)
-    {
-        if (newEntry.getParent() != this)
-        {
-            newEntry.setParent(this);
-            newEntry.setId(getNextId());
-        }
-
-        mConstants[index] = newEntry;
-        return true;
-    }
-
-    return false;
+    setElements(entries);
 }
 
 bool SIConstantData::readFromXml(QXmlStreamReader& xml)
@@ -116,7 +43,7 @@ bool SIConstantData::readFromXml(QXmlStreamReader& xml)
             ConstantEntry entry(this);
             if (entry.readFromXml(xml))
             {
-                addConstant(std::move(entry), true);
+                addElement(std::move(entry), true);
             }
         }
 
@@ -129,173 +56,11 @@ bool SIConstantData::readFromXml(QXmlStreamReader& xml)
 void SIConstantData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementConstantList);
-    for (const ConstantEntry& entry : mConstants)
+    const QList<ConstantEntry>& elements = getElements();
+    for (const ConstantEntry& entry : elements)
     {
         entry.writeToXml(xml);
     }
 
     xml.writeEndElement(); // ConstantList
-}
-
-int SIConstantData::findConstant(const QString& name) const
-{
-    for (int i = 0; i < mConstants.size(); ++i)
-    {
-        if (mConstants[i].getName() == name)
-        {
-            return i;
-        }
-    }
-    return -1;
-}
-
-bool SIConstantData::exists(const QString& name) const
-{
-    return findConstant(name) != -1;
-}
-
-const ConstantEntry& SIConstantData::getConstant(const QString& name) const
-{
-    int index = findConstant(name);
-    return (index != -1) ? mConstants[index] : InvalidConstant;
-}
-
-bool SIConstantData::removeConstant(const QString& name)
-{
-    int index = findConstant(name);
-    if (index != -1)
-    {
-        mConstants.removeAt(index);
-        return true;
-    }
-
-    return false;
-}
-
-void SIConstantData::sortConstants(bool ascending)
-{
-    std::sort(mConstants.begin(), mConstants.end(), [ascending](const ConstantEntry& left, const ConstantEntry& right) {
-        return ascending ? left < right : left > right;
-        });
-}
-
-void SIConstantData::removeAll(void)
-{
-    mConstants.clear();
-}
-
-bool SIConstantData::update(const QString& name, const QString& type, const QString& value, bool isDeprecated, const QString& description, const QString& deprecateHint)
-{
-    int index = findConstant(name);
-    if (index != -1)
-    {
-        ConstantEntry newEntry(0, name, type, value, isDeprecated, description, deprecateHint);
-        mConstants[index] = newEntry;
-        return true;
-    }
-
-    return false;
-}
-
-bool SIConstantData::updateValue(const QString& name, const QString& value)
-{
-    int index = findConstant(name);
-    if (index != -1)
-    {
-        mConstants[index].setValue(value);
-        return true;
-    }
-
-    return false;
-}
-
-bool SIConstantData::updateName(const QString& oldName, const QString& newName, bool unique /*= true*/)
-{
-    bool result{false};
-    int index = findConstant(oldName);
-    if (index != -1)
-    {
-        if (unique)
-        {
-            if (findConstant(newName) == -1)
-            {
-                mConstants[index].setName(newName);
-                result = true;
-            }
-        }
-        else
-        {
-            mConstants[index].setName(newName);
-            result = true;
-        }
-    }
-    
-    return result;
-}
-
-bool SIConstantData::updateType(const QString& name, const QString& type)
-{
-    int index = findConstant(name);
-    if (index != -1)
-    {
-        mConstants[index].setType(type);
-        return true;
-    }
-
-    return false;
-}
-
-bool SIConstantData::updateDeprecation(const QString& name, bool isDeprecated)
-{
-    int index = findConstant(name);
-    if (index != -1)
-    {
-        mConstants[index].setDeprecated(isDeprecated);
-        return true;
-    }
-
-    return false;
-}
-
-bool SIConstantData::updateDescription(const QString& name, const QString& description)
-{
-    int index = findConstant(name);
-    if (index != -1)
-    {
-        mConstants[index].setDescription(description);
-        return true;
-    }
-
-    return false;
-}
-
-bool SIConstantData::updateDeprecateHint(const QString& name, const QString& deprecateHint)
-{
-    int index = findConstant(name);
-    if (index != -1)
-    {
-        mConstants[index].setDeprecateHint(deprecateHint);
-        return true;
-    }
-
-    return false;
-}
-
-bool SIConstantData::validate(const SIDataTypeData& dataType) const
-{
-    for (const ConstantEntry& entry : mConstants)
-    {
-        if (dataType.findDataType(entry.getType()) == nullptr)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-ConstantEntry* SIConstantData::find(const QString& name) const
-{
-    int index = findConstant(name);
-    return (index != -1) ? const_cast<ConstantEntry*>(&mConstants[index]) : nullptr;
 }

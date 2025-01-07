@@ -92,7 +92,7 @@ bool SIMethodResponse::readFromXml(QXmlStreamReader& xml)
                         MethodParameter parameter(this);
                         if (parameter.readFromXml(xml))
                         {
-                            mParameters.append(parameter);
+                            addElement(std::move(parameter), false);
                         }
                         else
                         {
@@ -136,11 +136,12 @@ void SIMethodResponse::writeToXml(QXmlStreamWriter& xml) const
     {
         xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
     }
-
-    if (!mParameters.isEmpty())
+    
+    const QList<MethodParameter>& elements = getElements();
+    if (elements.isEmpty() == false)
     {
         xml.writeStartElement(XmlSI::xmlSIElementParamList);
-        for (const auto& parameter : mParameters)
+        for (const auto& parameter : elements)
         {
             parameter.writeToXml(xml);
         }

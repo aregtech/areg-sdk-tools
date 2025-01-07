@@ -30,10 +30,12 @@
 namespace Ui {
     class SIInclude;
 }
-
+    
+class IncludeEntry;
 class SIIncludeDetails;
 class SIIncludeList;
 class SIIncludeModel;
+class TableCell;
 
 /**
  * \brief   The widget object for SIInclude page.
@@ -107,19 +109,46 @@ protected slots:
     void onInsertClicked(void);
 
     /**
-     * \brief   Triggered when the update button is clicked.
-     **/
-    void onUpdateClicked(void);
-
-    /**
      * \brief   Triggered when the browse button is clicked.
      **/
     void onBrowseClicked(void);
+
+    /**
+     * \brief   Triggered when the include field is changed.
+     **/
+    void onIncludeChanged(const QString & newText);
+    
+    /**
+     * \brief   Triggered when the description text is changed.
+     **/
+    void onDescriptionChanged(void);
+    
+    /**
+     * \brief   Triggered when the deprecated check box is clicked.
+     **/
+    void onDeprectedClicked(Qt::CheckState newState);
+    
+    /**
+     * \brief   Triggered when the deprecation hint field is changed.
+     **/
+    void onDeprecateHint(const QString & newText);
+
+    /**
+     * \brief   Triggered when the cell editor data is changed.
+     * \param   index       The index of the cell.
+     * \param   newValue    The new value of the cell.
+     **/
+    void onEditorDataChanged(const QModelIndex &index, const QString &newValue);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
+    
+    /**
+     * \brief   Initializes the SIConstant object.
+     **/
+    void updateWidgets(void);
 
     /**
      * \brief   Initializes the SIInclude object.
@@ -136,6 +165,30 @@ private:
      **/
     static QStringList getSupportedExtensions(void);
 
+    /**
+     * \brief   Finds and returns valid pointer to the include object entry in the specified row.
+     * \param   row     The row index of the include entry.
+     **/
+    inline IncludeEntry* _findInclude(int row);    
+    inline const IncludeEntry* _findInclude(int row) const;
+
+    /**
+     * \brief   Adds new include entry at the specified row.
+     * \param   row     The row index to add new include object
+     **/
+    inline void _addInclude(int row);
+    
+    /**
+     * \brief   Blocks the basic signals.
+     * \param   doBlock     If true, blocks the signals, otherwise unblocks.
+     **/
+    inline void blockBasicSignals(bool doBlock);
+    
+    /**
+     * \brief   Triggered when the cell data is changed to update other controls.
+     **/
+    inline void cellChanged(int row, int col, const QString& newValue);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
@@ -145,11 +198,14 @@ private:
     SIIncludeList*      mList;      //!< The list page.
     SIIncludeWidget*    mWidget;    //!< The widget object.
     Ui::SIInclude&      ui;         //!< The UI object.
+    TableCell*          mTableCell; //!< The table cell.
 
     QString             mCurUrl;    //!< The current URL.
     QString             mCurFile;   //!< The current file.
     QString             mCurFilter; //!< The current filter.
     int                 mCurView;   //!< The current view mode.
+    
+    uint32_t            mCount;     //!< The counter to generate names.
 };
 
 #endif // LUSAN_APPLICATION_SI_SIINCLUDE_HPP

@@ -146,6 +146,11 @@ bool DataTypeBase::isBasicObject(void) const
     return (mCategory == eCategory::BasicObject);
 }
 
+bool DataTypeBase::isBasicContainer(void) const
+{
+    return (mCategory == eCategory::BasicContainer);
+}
+
 bool DataTypeBase::isEnumeration(void) const
 {
     return (mCategory == eCategory::Enumeration);

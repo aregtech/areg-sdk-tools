@@ -47,11 +47,25 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
-public:
+protected:
+
+    /**
+     * \brief   Default constructor.
+     * \param   parent  The parent element.
+     **/
+    DataTypeCustom(ElementBase * parent = nullptr);
+
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id      The ID of the data type.
+     * \param   parent  The parent element.
+     **/
+    DataTypeCustom(uint32_t id, ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization of category.
      * \param   category    The category of the data type.
+     * \param   parent      The parent element.
      **/
     DataTypeCustom(DataTypeBase::eCategory category, ElementBase* parent = nullptr);
     
@@ -60,6 +74,7 @@ public:
      * \param   category    The category of the data type.
      * \param   id          The ID of the data type.
      * \param   name        The name of the data type.
+     * \param   parent      The parent element.
      **/
     DataTypeCustom(DataTypeBase::eCategory category, uint32_t id, const QString& name, ElementBase* parent = nullptr);
 
@@ -74,7 +89,9 @@ public:
      * \param   src     The source object to move from.
      **/
     DataTypeCustom(DataTypeCustom&& src) noexcept;
-
+    
+public:
+    
     virtual ~DataTypeCustom(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -99,6 +116,10 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Returns description string of the custom data type.
+     **/
     const QString& getDescription(void) const;
 
     /**
@@ -117,18 +138,12 @@ public:
      * \return  True if the data type is valid, false otherwise.
      **/
     virtual bool isValid(void) const override;
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
     QString     mDescription;   //!< The description of the data type.
-
-//////////////////////////////////////////////////////////////////////////
-// Forbidden calls
-//////////////////////////////////////////////////////////////////////////
-public:
-    DataTypeCustom(void) = delete;
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPECUSTOM_HPP

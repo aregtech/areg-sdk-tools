@@ -20,6 +20,9 @@
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/data/si/SIDataTypeData.hpp"
 #include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/data/common/DataTypeBasic.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/DataTypePrimitive.hpp"
 
 DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData,  QObject* parent)
     : QAbstractListModel(parent)
@@ -68,6 +71,76 @@ void DataTypesModel::setFilter(const QList<DataTypeBase*>& excludes)
     mExcludeList = excludes;
 }
 
+void DataTypesModel::setFilter(const QList<DataTypeBase::eCategory>& excludes)
+{
+    mExcludeList.clear();
+    for (DataTypeBase::eCategory category : excludes)
+    {
+        switch (category)
+        {
+        case DataTypeBase::eCategory::Primitive:
+        case DataTypeBase::eCategory::PrimitiveSint:
+        case DataTypeBase::eCategory::PrimitiveUint:
+        case DataTypeBase::eCategory::PrimitiveFloat:
+            {
+                const QList<DataTypePrimitive*>& list = mDataTypeData.getPrimitiveDataTypes();
+                for (DataTypePrimitive* dataType : list)
+                {
+                    if (dataType->getCategory() == category)
+                    {
+                        mExcludeList.append(dataType);
+                    }
+                }
+            }
+            break;
+
+        case DataTypeBase::eCategory::BasicObject:
+            {
+                const QList<DataTypeBasicObject*>& list = mDataTypeData.getBasicDataTypes();
+                uint32_t count = mExcludeList.size();
+                mExcludeList.resize(count + list.size());
+                for (DataTypeBasicObject* dataType : list)
+                {
+                    mExcludeList[count ++] = dataType;
+                }
+            }
+            break;
+
+        case DataTypeBase::eCategory::BasicContainer:
+            {
+                const QList<DataTypeBasicContainer*>& list = mDataTypeData.getContainerDatTypes();
+                uint32_t count = mExcludeList.size();
+                mExcludeList.resize(count + list.size());
+                for (DataTypeBasicContainer* dataType : list)
+                {
+                    mExcludeList[count ++] = dataType;
+                }
+            }
+            break;
+
+        case DataTypeBase::eCategory::Enumeration:
+        case DataTypeBase::eCategory::Structure:
+        case DataTypeBase::eCategory::Imported:
+        case DataTypeBase::eCategory::Container:
+            {
+                const QList<DataTypeCustom*>& list = mDataTypeData.getCustomDataTypes();
+                for (DataTypeCustom* dataType : list)
+                {
+                    if (dataType->getCategory() == category)
+                    {
+                        mExcludeList.append(dataType);
+                    }
+                }
+            }
+            break;
+
+        default:
+            break;
+
+        }
+    }
+}
+
 void DataTypesModel::clearFilter()
 {
     mExcludeList.clear();
@@ -78,7 +151,7 @@ int DataTypesModel::rowCount(const QModelIndex& parent) const
     Q_UNUSED(parent);
     QList<DataTypeBase*> list;
     mDataTypeData.getDataType(list, mExcludeList, false);
-    return (list.size() + 1);
+    return static_cast<int>(list.size());
 }
 
 QVariant DataTypesModel::data(const QModelIndex& index, int role) const
@@ -89,7 +162,7 @@ QVariant DataTypesModel::data(const QModelIndex& index, int role) const
     
     QList<DataTypeBase*> list;
     mDataTypeData.getDataType(list, mExcludeList, false);
-    DataTypeBase* dataType = (index.row() == 0) || (index.row() > list.size()) ? nullptr : list[index.row() - 1];
+    DataTypeBase* dataType = (index.row() >= list.size()) ? nullptr : list[index.row()];
     switch (static_cast<Qt::ItemDataRole>(role))
     {
     case Qt::ItemDataRole::DisplayRole:

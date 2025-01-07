@@ -179,12 +179,12 @@ const QList<DataTypePrimitive*>& SIDataTypeData::getPrimitiveDataTypes(void) con
     return DataTypeFactory::getPrimitiveTypes();
 }
 
-const QList<DataTypeBasic*>& SIDataTypeData::getBasicDataTypes(void) const
+const QList<DataTypeBasicObject*>& SIDataTypeData::getBasicDataTypes(void) const
 {
     return DataTypeFactory::getBasicTypes();
 }
 
-const QList<DataTypeBasic*>& SIDataTypeData::getContainerDatTypes(void) const
+const QList<DataTypeBasicContainer*>& SIDataTypeData::getContainerDatTypes(void) const
 {
     return DataTypeFactory::getContainerTypes();
 }
@@ -208,32 +208,32 @@ void SIDataTypeData::setCustomDataTypes(QList<DataTypeCustom*>&& entries)
     }
 }
 
-void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase*>& exclude /*= QList<DataTypeCustom *>*/, bool makeSorting /*= true*/) const
+void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase*>& excludes /*= QList<DataTypeCustom *>*/, bool makeSorting /*= true*/) const
 {
     out_dataTypes.clear();
     const QList<DataTypePrimitive*>& primitives = getPrimitiveDataTypes();
     for (DataTypePrimitive* dataType : primitives)
     {
-        if (exists<DataTypeBase>(exclude, dataType->getName()) == false)
+        if (exists<DataTypeBase>(excludes, dataType->getName()) == false)
         {
             out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
         }
     }
 
 
-    const QList<DataTypeBasic*>& basics = getBasicDataTypes();
-    for (DataTypeBasic* dataType : basics)
+    const QList<DataTypeBasicObject*>& basics = getBasicDataTypes();
+    for (DataTypeBasicObject* dataType : basics)
     {
-        if (exists<DataTypeBase>(exclude, dataType->getName()) == false)
+        if (exists<DataTypeBase>(excludes, dataType->getName()) == false)
         {
             out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
         }
     }
 
-    const QList<DataTypeBasic*>& containers = getContainerDatTypes();
-    for (DataTypeBasic* dataType : containers)
+    const QList<DataTypeBasicContainer*>& containers = getContainerDatTypes();
+    for (DataTypeBasicContainer* dataType : containers)
     {
-        if (exists<DataTypeBase>(exclude, dataType->getName()) == false)
+        if (exists<DataTypeBase>(excludes, dataType->getName()) == false)
         {
             out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
         }
@@ -241,7 +241,7 @@ void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QLis
 
     for (DataTypeCustom* dataType : mCustomDataTypes)
     {
-        if (exists<DataTypeBase>(exclude, dataType->getName()) == false)
+        if (exists<DataTypeBase>(excludes, dataType->getName()) == false)
         {
             out_dataTypes.append(static_cast<DataTypeBase*>(dataType));
         }
@@ -262,14 +262,14 @@ bool SIDataTypeData::existsPrimitive(const QList<DataTypePrimitive*> dataTypes, 
     return exists<DataTypePrimitive>(dataTypes, searchName);
 }
 
-bool SIDataTypeData::existsBasic(const QList<DataTypeBasic*> dataTypes, const QString& searchName) const
+bool SIDataTypeData::existsBasic(const QList<DataTypeBasicObject*> dataTypes, const QString& searchName) const
 {
-    return exists<DataTypeBasic>(dataTypes, searchName);
+    return exists<DataTypeBasicObject>(dataTypes, searchName);
 }
 
-bool SIDataTypeData::existsContainer(const QList<DataTypeBasic*> dataTypes, const QString& searchName) const
+bool SIDataTypeData::existsContainer(const QList<DataTypeBasicContainer*> dataTypes, const QString& searchName) const
 {
-    return exists<DataTypeBasic>(dataTypes, searchName);
+    return exists<DataTypeBasicContainer>(dataTypes, searchName);
 }
 
 bool SIDataTypeData::existsCustom(const QList<DataTypeCustom*> dataTypes, const QString& searchName) const
@@ -286,11 +286,11 @@ bool SIDataTypeData::exists(const QString& typeName) const
     if (existsPrimitive(primitives, typeName))
         return true;
 
-    const QList<DataTypeBasic*>& basics = getBasicDataTypes();
+    const QList<DataTypeBasicObject*>& basics = getBasicDataTypes();
     if (existsBasic(basics, typeName))
         return true;
 
-    const QList<DataTypeBasic*>& containers = getContainerDatTypes();
+    const QList<DataTypeBasicContainer*>& containers = getContainerDatTypes();
     if (existsContainer(containers, typeName))
         return true;
 
@@ -316,8 +316,8 @@ DataTypeBase* SIDataTypeData::findDataType(const QString& typeName) const
         }
     }
 
-    const QList<DataTypeBasic*>& basics = getBasicDataTypes();
-    for (DataTypeBasic* dataType : basics)
+    const QList<DataTypeBasicObject*>& basics = getBasicDataTypes();
+    for (DataTypeBasicObject* dataType : basics)
     {
         if (dataType->getName() == typeName)
         {
@@ -325,12 +325,52 @@ DataTypeBase* SIDataTypeData::findDataType(const QString& typeName) const
         }
     }
 
-    const QList<DataTypeBasic*>& containers = getContainerDatTypes();
-    for (DataTypeBasic* dataType : containers)
+    const QList<DataTypeBasicContainer*>& containers = getContainerDatTypes();
+    for (DataTypeBasicContainer* dataType : containers)
     {
         if (dataType->getName() == typeName)
         {
             return static_cast<DataTypeBase *>(dataType);
+        }
+    }
+
+    return nullptr;
+}
+
+DataTypeBase* SIDataTypeData::findDataType(uint32_t id) const
+{
+    for (DataTypeCustom* dataType : mCustomDataTypes)
+    {
+        if (dataType->getId() == id)
+        {
+            return static_cast<DataTypeBase*>(dataType);
+        }
+    }
+
+    const QList<DataTypePrimitive*>& primitives = getPrimitiveDataTypes();
+    for (DataTypePrimitive* dataType : primitives)
+    {
+        if (dataType->getId() == id)
+        {
+            return static_cast<DataTypeBase*>(dataType);
+        }
+    }
+
+    const QList<DataTypeBasicObject*>& basics = getBasicDataTypes();
+    for (DataTypeBasicObject* dataType : basics)
+    {
+        if (dataType->getId() == id)
+        {
+            return static_cast<DataTypeBase*>(dataType);
+        }
+    }
+
+    const QList<DataTypeBasicContainer*>& containers = getContainerDatTypes();
+    for (DataTypeBasicContainer* dataType : containers)
+    {
+        if (dataType->getId() == id)
+        {
+            return static_cast<DataTypeBase*>(dataType);
         }
     }
 

@@ -91,7 +91,7 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
                     EnumEntry entry(this);
                     if (entry.readFromXml(xml))
                     {
-                        mFieldList.append(entry);
+                        addElement(std::move(entry), true);
                     }
                 }
 
@@ -116,7 +116,8 @@ void DataTypeEnum::writeToXml(QXmlStreamWriter& xml) const
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
 
     xml.writeStartElement(XmlSI::xmlSIElementFieldList);
-    for (const EnumEntry& entry : mFieldList)
+    const QList<EnumEntry> & elements = getElements();
+    for (const EnumEntry& entry : elements)
     {
         entry.writeToXml(xml);
     }

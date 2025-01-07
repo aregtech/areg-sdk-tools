@@ -25,6 +25,13 @@ ConstantEntry::ConstantEntry(ElementBase* parent /*= nullptr*/)
 {
 }
 
+ConstantEntry::ConstantEntry(uint32_t id, const QString & name, ElementBase* parent /*= nullptr*/)
+    : ParamBase(id, name, "bool", false, "", "", parent)
+    , mValue   (XmlSI::xmlSIValueTrue)
+{
+}
+
+
 ConstantEntry::ConstantEntry( uint32_t id
                             , const QString& name
                             , const QString& type           /*= "bool"*/

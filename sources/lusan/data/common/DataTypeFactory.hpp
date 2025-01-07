@@ -19,13 +19,20 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Include files
+ ************************************************************************/
 #include <QString>
 #include <memory>
 #include "lusan/data/common/DataTypeBase.hpp"
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class DataTypeBase;
 class DataTypePrimitive;
-class DataTypeBasic;
+class DataTypeBasicObject;
+class DataTypeBasicContainer;
 class DataTypeCustom;
 
 /**
@@ -88,20 +95,38 @@ public:
      **/
     static DataTypeCustom* createCustomDataType(DataTypeBase::eCategory category);
 
+    /**
+     * \brief   Returns the list of primitive data type objects.
+     **/
     static const QList<DataTypePrimitive*>& getPrimitiveTypes(void);
 
-    static const QList<DataTypeBasic*>& getBasicTypes(void);
+    /**
+     * \brief   Returns the list of basic data type objects.
+     **/
+    static const QList<DataTypeBasicObject*>& getBasicTypes(void);
 
-    static const QList<DataTypeBasic*>& getContainerTypes(void);
+    /**
+     * \brief   Returns the list of container data type objects.
+     **/
+    static const QList<DataTypeBasicContainer*>& getContainerTypes(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
 private:
 
+    /**
+     * \brief   Initializes the predefined data types.
+     **/
     static void _initPredefined(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden objects
+//////////////////////////////////////////////////////////////////////////
 private:
-    static QList<DataTypePrimitive*>   mPredefinePrimitiveTypes;    //!< The list of primitive data types.
-    static QList<DataTypeBasic*>       mPredefinedBasicTypes;       //!< The list of basic data types.
-    static QList<DataTypeBasic*>       mPredefinedContainerTypes;   //!< The list of container data types.
+    static QList<DataTypePrimitive*>        mPredefinePrimitiveTypes;    //!< The list of primitive data types.
+    static QList<DataTypeBasicObject*>      mPredefinedBasicTypes;       //!< The list of basic data types.
+    static QList<DataTypeBasicContainer*>   mPredefinedContainerTypes;   //!< The list of container data types.
 };
 
 #endif  // LUSAN_DATA_COMMON_DATATYPEFACTORY_HPP

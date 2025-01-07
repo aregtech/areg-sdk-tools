@@ -21,10 +21,13 @@
 
 #include "lusan/data/common/DataTypeBase.hpp"
 
+//////////////////////////////////////////////////////////////////////////
+// DataTypeBasicObject class declaration
+//////////////////////////////////////////////////////////////////////////
 /**
  * \brief   Basic object data type. Such as string or byte array.
  **/
-class DataTypeBasic : public DataTypeBase
+class DataTypeBasicObject : public DataTypeBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -33,25 +36,25 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeBasic(void);
+    DataTypeBasicObject(void);
 
     /**
      * \brief   Copy constructor.
      * \param   src     The source object to copy from.
      **/
-    DataTypeBasic(const DataTypeBasic& src);
+    DataTypeBasicObject(const DataTypeBasicObject& src);
 
     /**
      * \brief   Move constructor.
      * \param   src     The source object to move from.
      **/
-    DataTypeBasic(DataTypeBasic&& src) noexcept;
+    DataTypeBasicObject(DataTypeBasicObject&& src) noexcept;
 
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
      **/
-    DataTypeBasic(const QString& name);
+    DataTypeBasicObject(const QString& name);
 
 //////////////////////////////////////////////////////////////////////////
 // operators
@@ -62,14 +65,84 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    DataTypeBasic& operator=(const DataTypeBasic& other);
+    DataTypeBasicObject& operator = (const DataTypeBasicObject& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    DataTypeBasic& operator=(DataTypeBasic&& other) noexcept;
+    DataTypeBasicObject& operator = (DataTypeBasicObject&& other) noexcept;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes, operations and overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Reads data from an XML stream.
+     * \param   xml     The XML stream reader.
+     * \return  True if the data was successfully read, false otherwise.
+     **/
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
+
+    /**
+     * \brief   Writes data to an XML stream.
+     * \param   xml     The XML stream writer.
+     **/
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+};
+
+//////////////////////////////////////////////////////////////////////////
+// DataTypeBasicContainer class declaration
+//////////////////////////////////////////////////////////////////////////
+
+class DataTypeBasicContainer : public DataTypeBase
+{
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Default constructor.
+     **/
+    DataTypeBasicContainer(void);
+
+    /**
+     * \brief   Copy constructor.
+     * \param   src     The source object to copy from.
+     **/
+    DataTypeBasicContainer(const DataTypeBasicContainer& src);
+
+    /**
+     * \brief   Move constructor.
+     * \param   src     The source object to move from.
+     **/
+    DataTypeBasicContainer(DataTypeBasicContainer&& src) noexcept;
+
+    /**
+     * \brief   Constructor with name initialization.
+     * \param   name    The name of the data type.
+     **/
+    DataTypeBasicContainer(const QString& name);
+
+//////////////////////////////////////////////////////////////////////////
+// operators
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Copy assignment operator.
+     * \param   other   The other object to copy from.
+     * \return  Reference to this object.
+     **/
+    DataTypeBasicContainer& operator=(const DataTypeBasicContainer& other);
+
+    /**
+     * \brief   Move assignment operator.
+     * \param   other   The other object to move from.
+     * \return  Reference to this object.
+     **/
+    DataTypeBasicContainer& operator=(DataTypeBasicContainer&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes, operations and overrides
@@ -78,18 +151,9 @@ public:
 
     /**
      * \brief   Sets the data container flag.
-     * \param   isDataContainer The flag, indicating whether the data type is a container.
-     * \param   hasKey          The flag, indicating whether the data type has a key.
+     * \param   hasKey  If true, the data type is a container with key-value pair.
      **/
-    void setDataContainer(bool isDataContainer, bool hasKey);
-
-    /**
-     * \brief   Checks if the data type is a data container.
-     *          The object is a container if at least contains values.
-     *          Example of a data container is a linked list, array, hash map, etc.
-     * \return  True if the data type is a data container, false otherwise.
-     **/
-    bool isDataContainer(void) const;
+    void setKey(bool hasKey);
 
     /**
      * \brief   Checks if the data type has a key.
@@ -112,7 +176,6 @@ public:
 
 private:
     bool    mHasKey;    //!< The flag, indicating whether the data type has a key.
-    bool    mHasValue;  //!< The flag, indicating whether the data type has a value.
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPEBASIC_HPP

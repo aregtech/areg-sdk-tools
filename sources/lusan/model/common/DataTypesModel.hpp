@@ -19,8 +19,15 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include <QAbstractListModel>
+#include "lusan/data/common/DataTypeBase.hpp"
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class DataTypeBase;
 class SIDataTypeData;
 
@@ -40,14 +47,43 @@ public:
      **/
     DataTypesModel(SIDataTypeData& dataTypeData, QObject* parent = nullptr);
 
+    /**
+     * \brief   Constructor with initialization.
+     * \param   dataTypeData    The instance of SIDataTypeData.
+     * \param   excludes        The list of data types to exclude.
+     * \param   parent          The parent object.
+     **/
     DataTypesModel(SIDataTypeData& dataTypeData, const QStringList &excludes, QObject* parent = nullptr);
 
+    /**
+     * \brief   Constructor with initialization.
+     * \param   dataTypeData    The instance of SIDataTypeData.
+     * \param   excludes        The list of data types to exclude.
+     * \param   parent          The parent object.
+     **/
     DataTypesModel(SIDataTypeData& dataTypeData, const QList<DataTypeBase*> &excludes, QObject* parent = nullptr);
 
+    /**
+     * \brief   Sets the list of data type objects when need to display data type elements.
+     * \param   excludes        The list of data type names to exclude.
+     **/
     void setFilter(const QStringList& excludes);
 
+    /**
+     * \brief   Sets the list of data type objects when need to display data type elements.
+     * \param   excludes        The list of data types to exclude.
+     **/
     void setFilter(const QList<DataTypeBase*>& excludes);
 
+    /**
+     * \brief   Sets the list of data type objects when need to display data type elements.
+     * \param   excludes     The list of data type categories to exclude.
+     **/
+    void setFilter(const QList<DataTypeBase::eCategory> & excludes);
+
+    /**
+     * \brief   Clears the filter list.
+     **/
     void clearFilter();
 
     /**
@@ -64,8 +100,6 @@ public:
      * \return  The data for the given role and section.
      **/
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
-
-    DataTypeBase* getDataType(int index) const;
 
 private:
     SIDataTypeData&         mDataTypeData;  //!< Reference to the SIDataTypeData instance.

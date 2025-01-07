@@ -17,10 +17,21 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeCustom.hpp"
-#include "DataTypeCustom.hpp"
+
+DataTypeCustom::DataTypeCustom(ElementBase * parent /*= nullptr*/)
+    : DataTypeBase(eCategory::CustomDefined, "", 0, parent)
+    , mDescription()
+{
+}
+
+DataTypeCustom::DataTypeCustom(uint32_t id, ElementBase* parent)
+    : DataTypeBase(eCategory::CustomDefined, "", id, parent)
+    , mDescription()
+{
+}
 
 DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category, ElementBase* parent /*= nullptr*/)
-    : DataTypeBase(eCategory::CustomDefined, "", 0, parent)
+    : DataTypeBase(category, "", 0, parent)
     , mDescription()
 {
 }

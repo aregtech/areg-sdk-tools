@@ -19,6 +19,9 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Include files
+ ************************************************************************/
 #include "lusan/common/ElementBase.hpp"
 
 #include <QString>
@@ -44,8 +47,68 @@ public:
      * \param   id      The ID of the enum entry.
      * \param   name    The name of the enum entry.
      * \param   value   The value of the enum entry.
+     * \param   parent  The parent element.
      **/
     EnumEntry(uint32_t id, const QString& name, const QString & value, ElementBase* parent = nullptr);
+
+    /**
+     * \brief   Copy constructor.
+     * \param   src     The source object to copy from.
+     **/
+    EnumEntry(const EnumEntry& src);
+
+    /**
+     * \brief   Move constructor.
+     * \param   src     The source object to move from.
+     **/
+    EnumEntry(EnumEntry&& src) noexcept;
+
+//////////////////////////////////////////////////////////////////////////
+// Operators
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Copy assignment operator.
+     * \param   other   The other object to copy from.
+     * \return  Reference to this object.
+     **/
+    EnumEntry& operator = (const EnumEntry& other);
+
+    /**
+     * \brief   Move assignment operator.
+     * \param   other   The other object to move from.
+     * \return  Reference to this object.
+     **/
+    EnumEntry& operator = (EnumEntry&& other) noexcept;
+
+    /**
+     * \brief   Equality operator.
+     * \param   other   The other object to compare with.
+     * \return  True if the enum entries are equal, false otherwise.
+     **/
+    bool operator == (const EnumEntry& other) const;
+
+    /**
+     * \brief   Inequality operator.
+     * \param   other   The other object to compare with.
+     * \return  True if the enum entries are not equal, false otherwise.
+     **/
+    bool operator != (const EnumEntry& other) const;
+
+    /**
+     * \brief   Less than operator for sorting.
+     * \param   other   The other object to compare with.
+     * \return  True if this enum entry is less than the other, false otherwise.
+     **/
+    bool operator < (const EnumEntry& other) const;
+
+    /**
+     * \brief   Greater than operator for sorting.
+     * \param   other   The other object to compare with.
+     * \return  True if this enum entry is greater than the other, false otherwise.
+     **/
+    bool operator > (const EnumEntry& other) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes

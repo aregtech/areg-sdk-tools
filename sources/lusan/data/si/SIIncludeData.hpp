@@ -18,7 +18,11 @@
  *  \brief       Lusan application, Service Interface Include Data.
  *
  ************************************************************************/
-#include "lusan/common/ElementBase.hpp"
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/data/common/TEDataContainer.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 
 #include <QList>
@@ -29,14 +33,8 @@
   * \class   SIIncludeData
   * \brief   Manages include data for service interfaces.
   **/
-class SIIncludeData : public ElementBase
+class SIIncludeData : public TEDataContainer< IncludeEntry, ElementBase>
 {
-//////////////////////////////////////////////////////////////////////////
-// Local types and static members
-//////////////////////////////////////////////////////////////////////////
-private:
-    static const IncludeEntry InvalidInclude; //!< Invalid include object
-
 //////////////////////////////////////////////////////////////////////////
 // public methods
 //////////////////////////////////////////////////////////////////////////
@@ -56,45 +54,6 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Gets the list of include entries.
-     * \return  The list of include entries.
-     **/
-    const QList<IncludeEntry>& getIncludes(void) const;
-
-    /**
-     * \brief   Sets the list of include entries.
-     * \param   entries    The list of include entries.
-     **/
-    void setIncludes(const QList<IncludeEntry>& entries);
-
-    /**
-     * \brief   Searches for an include entry in the list.
-     * \param   entry     The include entry to search for.
-     * \return  The index of the include entry, or -1 if not found.
-     **/
-    int findInclude(const IncludeEntry& entry) const;
-
-    /**
-     * \brief   Adds an include entry to the list.
-     * \param   entry     The include entry to add.
-     **/
-    bool addInclude(IncludeEntry&& entry, bool unique);
-
-    /**
-     * \brief   Removes an include entry from the list.
-     * \param   entry     The include entry to remove.
-     * \return  True if the include entry was removed, false otherwise.
-     **/
-    bool removeInclude(const IncludeEntry& entry);
-
-    /**
-     * \brief   Replaces an include entry in the list.
-     * \param   oldEntry    The include entry to replace.
-     * \param   newEntry    The new include entry.
-     * \return  True if the include entry was replaced, false otherwise.
-     **/
-    bool replaceInclude(const IncludeEntry& oldEntry, IncludeEntry&& newEntry);
 
     /**
      * \brief   Reads include data from an XML stream.
@@ -109,50 +68,6 @@ public:
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
 
-    /**
-     * \brief   Finds an include entry by location.
-     * \param   location    The location to search for.
-     * \return  The index of the include entry, or -1 if not found.
-     **/
-    int findInclude(const QString& location) const;
-
-    /**
-     * \brief   Checks if an include entry exists by location.
-     * \param   location    The location to check.
-     * \return  True if the include entry exists, false otherwise.
-     **/
-    bool exists(const QString& location) const;
-
-    /**
-     * \brief   Gets an include entry by location.
-     * \param   location    The location to search for.
-     * \return  The include entry if found, otherwise an invalid include entry.
-     **/
-    const IncludeEntry & getInclude(const QString& location) const;
-
-    /**
-     * \brief   Removes an include entry by location.
-     * \param   location    The location to remove.
-     * \return  True if the include entry was removed, false otherwise.
-     **/
-    bool removeInclude(const QString& location);
-
-    /**
-     * \brief   Sorts the list of include entries.
-     * \param   ascending   If true, sorts in ascending order, otherwise in descending order.
-     **/
-    void sortIncludes(bool ascending);
-
-    /**
-     * \brief   remove all entries and frees resources.
-     **/
-    void removeAll(void);
-
-//////////////////////////////////////////////////////////////////////////
-// Hidden member variables.
-//////////////////////////////////////////////////////////////////////////
-private:
-    QList<IncludeEntry> mIncludes;  //!< The list of include entries.
 };
 
 #endif  // LUSAN_DATA_SI_SIINCLUDEDATA_HPP

@@ -79,11 +79,6 @@ protected:
     QToolButton* ctrlButtonInsert(void) const;
 
     /**
-     * \brief   Returns the control of the update entry tool button.
-     **/
-    QToolButton* ctrlButtonUpdate(void) const;    
-
-    /**
      * \brief   Returns the control of the includes table widget.
      **/
     QTableWidget* ctrlTableList(void) const;
@@ -92,8 +87,8 @@ protected:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIIncludeList*  ui;
-    SIIncludeModel&     mModel;
+    Ui::SIIncludeList*  ui;     //!< The user interface object.
+    SIIncludeModel&     mModel; //!< The model of the include list.
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls

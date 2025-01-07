@@ -18,6 +18,10 @@
  *  \brief       Lusan application, Service Interface Include Entry.
  *
  ************************************************************************/
+
+/************************************************************************
+ * Include files
+ ************************************************************************/
 #include "lusan/common/ElementBase.hpp"
 
 #include <QString>
@@ -36,9 +40,18 @@ class IncludeEntry  : public ElementBase
 public:
     /**
      * \brief   Default constructor.
+     * \param   parent  The parent element.
      **/
     IncludeEntry(ElementBase * parent = nullptr);
 
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id          The ID of the include entry.
+     * \param   location    The file path of the include entry.
+     * \param   parent      The parent element.
+     **/
+    IncludeEntry(uint32_t id, const QString & location, ElementBase * parent = nullptr);
+    
     /**
      * \brief   Parameterized constructor.
      * \param   path            The file path.
@@ -46,6 +59,7 @@ public:
      * \param   description     The description.
      * \param   deprecated      The deprecated flag.
      * \param   deprecationHint The deprecation hint.
+     * \param   parent          The parent element.
      **/
     IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint, ElementBase * parent = nullptr);
 
@@ -118,16 +132,26 @@ public:
     bool isValid(void) const;
 
     /**
-     * \brief   Gets the file path.
+     * \brief   Gets the include file path location.
      * \return  The file path.
      **/
     const QString& getLocation(void) const;
 
     /**
-     * \brief   Sets the file path.
+     * \brief   Sets the include file path location.
      * \param   path    The file path.
      **/
     void setLocation(const QString& path);
+
+    /**
+     * \brief   Gets the name of the include entry, i.e. the location.
+     **/
+    inline const QString& getName(void) const;
+
+    /**
+     * \brief   Sets the name of the include entry, i.e. the location.
+     **/
+    inline void setName(const QString& path);
 
     /**
      * \brief   Gets the description.
@@ -193,5 +217,19 @@ private:
     bool        mDeprecated;    //!< The deprecated flag.
     QString     mDeprecateHint; //!< The deprecation hint.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// IncludeEntry inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline const QString& IncludeEntry::getName(void) const
+{
+    return getLocation();
+}
+
+inline void IncludeEntry::setName(const QString& path)
+{
+    setLocation(path);
+}
 
 #endif  // LUSAN_DATA_COMMON_INCLUDEENTRY_HPP

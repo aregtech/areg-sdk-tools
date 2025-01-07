@@ -30,9 +30,9 @@
 #include <QFile>
 #include <QXmlStreamReader>
 
-QList<DataTypePrimitive*>   DataTypeFactory::mPredefinePrimitiveTypes;    //!< The list of primitive data types.
-QList<DataTypeBasic*>       DataTypeFactory::mPredefinedBasicTypes;       //!< The list of basic data types.
-QList<DataTypeBasic*>       DataTypeFactory::mPredefinedContainerTypes;   //!< The list of container data types.
+QList<DataTypePrimitive*>       DataTypeFactory::mPredefinePrimitiveTypes;    //!< The list of primitive data types.
+QList<DataTypeBasicObject*>     DataTypeFactory::mPredefinedBasicTypes;       //!< The list of basic data types.
+QList<DataTypeBasicContainer*>  DataTypeFactory::mPredefinedContainerTypes;   //!< The list of container data types.
 
 
 DataTypeBase::eCategory DataTypeFactory::fromString(const QString& dataType)
@@ -66,17 +66,17 @@ DataTypeBase::eCategory DataTypeFactory::fromString(const QString& dataType)
     else if (dataType == TypeNameDateTime)
         return DataTypeBase::eCategory::BasicObject;
     else if (dataType == TypeNameArray)
-        return DataTypeBase::eCategory::BasicObject;
+        return DataTypeBase::eCategory::BasicContainer;
     else if (dataType == TypeNameLinkedList)
-        return DataTypeBase::eCategory::BasicObject;
+        return DataTypeBase::eCategory::BasicContainer;
     else if (dataType == TypeNameHashMap)
-        return DataTypeBase::eCategory::BasicObject;
+        return DataTypeBase::eCategory::BasicContainer;
     else if (dataType == TypeNameMap)
-        return DataTypeBase::eCategory::BasicObject;
+        return DataTypeBase::eCategory::BasicContainer;
     else if (dataType == TypeNamePair)
-        return DataTypeBase::eCategory::BasicObject;
+        return DataTypeBase::eCategory::BasicContainer;
     else if (dataType == TypeNameNewType)
-        return DataTypeBase::eCategory::BasicObject;
+        return DataTypeBase::eCategory::BasicContainer;
     else if (dataType == TypeNameEnumerate)
         return DataTypeBase::eCategory::Enumeration;
     else if (dataType == TypeNameStructure)
@@ -108,7 +108,10 @@ DataTypeBase* DataTypeFactory::createDataType(const QString& dataType)
         return new DataTypePrimitiveFloat(dataType);
 
     case DataTypeBase::eCategory::BasicObject:
-        return new DataTypeBasic(dataType);
+        return new DataTypeBasicObject(dataType);
+
+    case DataTypeBase::eCategory::BasicContainer:
+        return new DataTypeBasicContainer(dataType);
 
     case DataTypeBase::eCategory::Enumeration:
     case DataTypeBase::eCategory::Structure:
@@ -120,8 +123,6 @@ DataTypeBase* DataTypeFactory::createDataType(const QString& dataType)
         return nullptr;
     }
 }
-
-
 
 DataTypeCustom* DataTypeFactory::createCustomDataType(const QString& type)
 {
@@ -152,14 +153,14 @@ const QList<DataTypePrimitive*>& DataTypeFactory::getPrimitiveTypes(void)
     return mPredefinePrimitiveTypes;
 }
 
-const QList<DataTypeBasic*>& DataTypeFactory::getBasicTypes(void)
+const QList<DataTypeBasicObject*>& DataTypeFactory::getBasicTypes(void)
 {
     if (mPredefinedBasicTypes.isEmpty())
         _initPredefined();
     return mPredefinedBasicTypes;
 }
 
-const QList<DataTypeBasic*>& DataTypeFactory::getContainerTypes(void)
+const QList<DataTypeBasicContainer*>& DataTypeFactory::getContainerTypes(void)
 {
     if (mPredefinedContainerTypes.isEmpty())
         _initPredefined();
@@ -186,6 +187,7 @@ void DataTypeFactory::_initPredefined(void)
         if ((xml.readNext() == QXmlStreamReader::StartElement) && (xml.name() == XmlSI::xmlSIElementDataType))
         {
             QXmlStreamAttributes attributes = xml.attributes();
+            uint32_t id = attributes.value(XmlSI::xmlSIAttributeID).toUInt();
             QString typeName = attributes.value(XmlSI::xmlSIAttributeType).toString();
             QString name = attributes.value(XmlSI::xmlSIAttributeName).toString();
             bool hasKey = attributes.hasAttribute(XmlSI::xmlSIAttributeHasKey) ? attributes.value(XmlSI::xmlSIAttributeHasKey).toString() == XmlSI::xmlSIValueTrue : false;
@@ -193,19 +195,22 @@ void DataTypeFactory::_initPredefined(void)
             DataTypeBase* dataType = DataTypeFactory::createDataType(name);
             if (dataType != nullptr)
             {
+                dataType->setId(id);
+                dataType->setParent(static_cast<ElementBase *>(nullptr));
+
                 if (typeName == XmlSI::xmlSIValuePrimitive)
                 {
                     mPredefinePrimitiveTypes.append(static_cast<DataTypePrimitive*>(dataType));
                 }
                 else if (typeName == XmlSI::xmlSIValueBasic)
                 {
-                    mPredefinedBasicTypes.append(static_cast<DataTypeBasic*>(dataType));
+                    mPredefinedBasicTypes.append(static_cast<DataTypeBasicObject*>(dataType));
                 }
                 else if (typeName == XmlSI::xmlSIValueContainer)
                 {
                     Q_ASSERT(hasValue);
-                    DataTypeBasic* container = static_cast<DataTypeBasic*>(dataType);
-                    container->setDataContainer(hasValue, hasKey);
+                    DataTypeBasicContainer* container = static_cast<DataTypeBasicContainer*>(dataType);
+                    container->setKey(hasKey);
                     mPredefinedContainerTypes.append(container);
                 }
             }

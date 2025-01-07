@@ -33,9 +33,18 @@ class ConstantEntry : public ParamBase
 public:
     /**
      * \brief   Default constructor.
+     * \param   parent  The parent element.
      **/
     ConstantEntry(ElementBase* parent = nullptr);
 
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id      The ID of the constant.
+     * \param   name    The name of the constant.
+     * \param   parent  The parent element.
+     **/
+    ConstantEntry(uint32_t id, const QString & name, ElementBase* parent = nullptr);
+    
     /**
      * \brief   Constructor with initialization.
      * \param   id              The ID of the constant.
@@ -45,6 +54,7 @@ public:
      * \param   isDeprecated    The deprecated flag of the constant.
      * \param   description     The description of the constant.
      * \param   deprecateHint   The deprecation hint of the constant.
+     * \param   parent          The parent element.
      **/
     ConstantEntry(  uint32_t id
                   , const QString& name

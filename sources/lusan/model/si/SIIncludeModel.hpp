@@ -19,12 +19,15 @@
 #ifndef LUSAN_MODEL_SI_SIINCLUDEMODEL_HPP
 #define LUSAN_MODEL_SI_SIINCLUDEMODEL_HPP
 
- /************************************************************************
-  * Includes
-  ************************************************************************/
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include <QAbstractTableModel>
 #include "lusan/data/si/SIIncludeData.hpp"
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class SIIncludeData;
 
 /**
@@ -47,143 +50,45 @@ public:
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
 public:
+    
     /**
-     * \brief   Updates the model object.
+     * \brief   Creates a IncludeEntry and sets it in SIIncludeData.
+     * \param   name            The name of the constant.
+     * \return  True if the constant was added, false otherwise.
      **/
-    void updateModel(void);
+    uint32_t createInclude(const QString& name);
 
     /**
-     * \brief   Updates the data object.
+     * \brief   Deletes the constant by ID.
+     * \param   id  The ID of the constant to delete.
+     * \return  True if the constant was deleted, false otherwise.
      **/
-    void updateData(void);
+    bool deleteInclude(uint32_t id);
 
     /**
-     * \brief   Returns the number of rows in the model.
+     * \brief   Returns the list of include objects.
      **/
-    int rowCount(void) const;
+    const QList<IncludeEntry>& getIncludes(void) const;
 
     /**
-     * \brief   Returns the number of columns in the model.
-     * \param   parent  The parent index.
-     * \return  The number of columns.
+     * \brief   Searches the include entry in the list by given unique ID.
+     * \param   id  The unique ID of the include element to search.
+     * \return  Returns valid pointer if the element found. Otherwise, returns nullptr.
      **/
-    int columnCount(void) const;
+    const IncludeEntry* findInclude(uint32_t id) const;
+    IncludeEntry* findInclude(uint32_t id);
 
     /**
-     * \brief   Returns the data stored under the given row index.
-     * \param   row     The index of the item.
-     * \return  The data for the item or nullptr if there is no data under the given index.
+     * \brief   Sorts the include elements in the list.
+     * \param   ascending   If true, sorts in ascending order. Otherwise, sorts in descending order.
      **/
-    const IncludeEntry * data(int row) const;
-
-    /**
-     * \brief   Returns the data stored under the given unique location.
-     * \param   location    The unique location of the item.
-     * \return  The data for the item or nullptr if there is no data with the specified location.
-     **/
-    const IncludeEntry * data(const QString & location) const;
-
-    /**
-     * \brief   Adds a new unique entry.
-     * \param   location        The file path.
-     * \param   description     The description.
-     * \param   isDeprecated    The deprecated flag.
-     * \param   deprecateHint   The deprecation hint.
-     * \return  Returns true if new entry with the unique location is added. Otherwise, returns false.
-     **/
-    bool addEntry(const QString& location, const QString& description, bool isDeprecated, const QString& deprecateHint);
-
-    /**
-     * \brief   Updates an entry by index.
-     * \param   index           The index of the entry to update.
-     * \param   location        The new location.
-     * \param   description     The new description.
-     * \param   isDeprecated    The new deprecated flag.
-     * \param   deprecateHint   The new deprecation hint.
-     * \return  True if the entry was updated, false otherwise.
-     **/
-    bool updateEntry(int index, const QString& location, const QString& description, bool isDeprecated, const QString& deprecateHint);
-
-    /**
-     * \brief   Updates an entry by location.
-     * \param   oldLocation     The old location of the entry.
-     * \param   newLocation     The new location of the entry.
-     * \param   description     The new description.
-     * \param   isDeprecated    The new deprecated flag.
-     * \param   deprecateHint   The new deprecation hint.
-     * \return  True if the entry was updated, false otherwise.
-     **/
-    bool updateEntry(const QString & oldLocation, const QString& newLocation, const QString& description, bool isDeprecated, const QString& deprecateHint);
-
-    /**
-     * \brief   Removes an entry by location.
-     * \param   location    The location of the entry to remove.
-     * \return  True if the entry was removed, false otherwise.
-     **/
-    bool removeEntry(const QString& location);
-
-    /**
-     * \brief   Removes an entry by index.
-     * \param   index   The index of the entry to remove.
-     * \return  True if the entry was removed, false otherwise.
-     **/
-    bool removeEntry(int index);
-
-    /**
-     * \brief   Inserts a new entry at the specified location by shifting all other following items.
-     * \param   index           The index of the entry to insert before.
-     * \param   location        The new location.
-     * \param   description     The new description.
-     * \param   isDeprecated    The new deprecated flag.
-     * \param   deprecateHint   The new deprecation hint.
-     * \return  True if the entry was inserted, false otherwise.
-     **/
-    bool insertEntry(int index, const QString& location, const QString& description, bool isDeprecated, const QString& deprecateHint);
-
-    /**
-     * \brief   Inserts a new entry at the specified location by shifting all other following items.
-     * \param   beforeLocation  The location to insert before.
-     * \param   location        The new location.
-     * \param   description     The new description.
-     * \param   isDeprecated    The new deprecated flag.
-     * \param   deprecateHint   The new deprecation hint.
-     * \return  True if the entry was inserted, false otherwise.
-     **/
-    bool insertEntry(const QString& beforeLocation, const QString& location, const QString& description, bool isDeprecated, const QString& deprecateHint);
-
-    /**
-     * \brief   Sorts all entries.
-     * \param   ascending   If true, sorts in ascending order, otherwise in descending order.
-     **/
-    void sortEntries(bool ascending);
-
-    /**
-     * \brief   Finds an entry by location.
-     * \param   location    The location to search for.
-     * \return  The index of the entry, or -1 if not found.
-     **/
-    int findEntry(const QString& location) const;
-   
-    /**
-     * \brief   Returns the list of include entries.
-     **/
-    inline const QList<IncludeEntry> & entries(void) const;
+    void sortInclude(bool ascending);
 
 //////////////////////////////////////////////////////////////////////////
 // hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
     SIIncludeData& mIncludeData;  //!< Reference to the SIIncludeData instance.
-    QList<IncludeEntry> mEntries; //!< List of include entries.
 };
-
-//////////////////////////////////////////////////////////////////////////
-// SIIncludeModel class inline functions
-//////////////////////////////////////////////////////////////////////////
-
-inline const QList<IncludeEntry> & SIIncludeModel::entries(void) const
-{
-    return mEntries;
-}
 
 #endif // LUSAN_MODEL_SI_SIINCLUDEMODEL_HPP
