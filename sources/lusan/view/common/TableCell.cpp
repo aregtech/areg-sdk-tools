@@ -83,16 +83,18 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
         QComboBox* combo = new QComboBox(parent);
         combo->setModel(model);
         combo->setProperty("index", index);
-        connect(combo, &QComboBox::currentTextChanged, this, &onCurrentTextChanged);
+        connect(combo, &QComboBox::currentTextChanged, this, &TableCell::onCurrentTextChanged);
         return combo;
     }
     else if ( isValidColumn(index.column()) )
     {
         QLineEdit* editor = new QLineEdit(parent);
         editor->setProperty("index", index);
-        connect(editor, &QLineEdit::textChanged, this, &onCurrentTextChanged);
+        connect(editor, &QLineEdit::textChanged, this, &TableCell::onCurrentTextChanged);
         return editor;
     }
+
+    return nullptr;
 }
 
 void TableCell::setEditorData(QWidget* editor, const QModelIndex& index) const

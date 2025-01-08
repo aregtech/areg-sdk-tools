@@ -39,7 +39,7 @@ SIMethodRequest::SIMethodRequest(const SIMethodRequest& src)
 
 SIMethodRequest::SIMethodRequest(SIMethodRequest&& src) noexcept
     : SIMethodBase(std::move(src))
-    , mResponse   (std::move(mResponse))
+    , mResponse   (std::move(src.mResponse))
 {
 }
 
