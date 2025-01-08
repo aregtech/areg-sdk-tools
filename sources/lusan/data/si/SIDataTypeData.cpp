@@ -33,7 +33,6 @@
 #include <QXmlStreamWriter>
 
 #include <algorithm>
-#include <memory>
 
 SIDataTypeData::SIDataTypeData(ElementBase* parent /*= nullptr*/)
     : ElementBase       (parent)
@@ -72,6 +71,19 @@ int SIDataTypeData::findCustomDataType(uint32_t id) const
     for (int i = 0; i < static_cast<int>(mCustomDataTypes.size()); ++i)
     {
         if (mCustomDataTypes[i]->getId() == id)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+int SIDataTypeData::findCustomDataType(const QString& name) const
+{
+    for (int i = 0; i < static_cast<int>(mCustomDataTypes.size()); ++i)
+    {
+        if (mCustomDataTypes[i]->getName() == name)
         {
             return i;
         }

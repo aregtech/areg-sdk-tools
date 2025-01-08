@@ -27,7 +27,7 @@
 #include "lusan/data/si/SIDataTypeData.hpp"
 
 SIDataTypeModel::SIDataTypeModel(SIDataTypeData& data, QObject* parent)
-    : QAbstractItemModel(parent)
+    : QAbstractTableModel(parent)
     , mData(data)
 {
 }
@@ -210,4 +210,16 @@ DataTypeCustom* SIDataTypeModel::convertDataType(DataTypeCustom* dataType, DataT
     DataTypeCustom* result = mData.convertDataType(dataType, category);
     submit();
     return result;
+}
+
+DataTypeCustom* SIDataTypeModel::findDataType(const QString& name)
+{
+    int index = mData.findCustomDataType(name);
+    return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
+}
+
+DataTypeCustom* SIDataTypeModel::findDataType(uint32_t id)
+{
+    int index = mData.findCustomDataType(id);
+    return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
 }

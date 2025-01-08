@@ -115,7 +115,7 @@ SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsEnum(void) const
     return CtrlGroup{ui->labelEnum, ui->groupEnum};
 }
 
-SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrDetailsImport(void) const
+SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsImport(void) const
 {
     return CtrlGroup{ui->labelImport, ui->groupImport};
 }
@@ -128,4 +128,32 @@ SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsContainer(void) const
 QFormLayout* SIDataTypeDetails::ctrlLayout(void) const
 {
     return ui->formLayout;
+}
+
+QSpacerItem* SIDataTypeDetails::ctrlSpacer1(void) const
+{
+    return ui->verticalSpacer1;
+}
+
+QSpacerItem* SIDataTypeDetails::ctrlSpacer2(void) const
+{
+    return ui->verticalSpacer2;
+}
+
+SIDataTypeDetails::SpaceItem SIDataTypeDetails::ctrlSpacer(void) const
+{
+    return SpaceItem{ ui->verticalSpacer1, ui->verticalSpacer2 };
+}
+
+void SIDataTypeDetails::setSpace(int newHeight)
+{
+    newHeight = newHeight > 0 ? newHeight : 1;
+    ui->verticalSpacer1->changeSize(20, newHeight, QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
+    ui->verticalSpacer2->changeSize(20, newHeight, QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
+}
+
+void SIDataTypeDetails::changeSpace(int delta)
+{
+    int newHeight = ui->verticalSpacer1->minimumSize().height();
+    setSpace(newHeight + delta);
 }

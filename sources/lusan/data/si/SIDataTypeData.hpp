@@ -93,8 +93,20 @@ public:
      * \brief   Adds a data type to the list.
      * \param   entry   The data type to add.
      **/
+    int findCustomDataType(const QString& name) const;
+
+    /**
+     * \brief   Adds a data type to the list.
+     * \param   entry   The data type to add.
+     **/
     void addCustomDataType(DataTypeCustom* entry);
-    
+
+    /**
+     * \brief   Adds a data type to the list.
+     * \param   name        The name of the data type.
+     * \param   category    The category of the data type.
+     * \return  The created data type object.
+     **/
     DataTypeCustom* addCustomDataType(const QString& name, DataTypeBase::eCategory category);
     
     /**

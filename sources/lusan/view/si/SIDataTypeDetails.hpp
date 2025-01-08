@@ -34,6 +34,7 @@ class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 class QRadioButton;
+class QSpacerItem;
 
 class SIDataTypeDetails : public QWidget
 {
@@ -41,6 +42,8 @@ class SIDataTypeDetails : public QWidget
 
 public:
     using CtrlGroup = std::pair<QLabel*, QGroupBox*>;
+
+    using SpaceItem = std::pair<QSpacerItem*, QSpacerItem*>;
 
 public:
     explicit SIDataTypeDetails(QWidget *parent = nullptr);
@@ -77,11 +80,21 @@ public:
 
     SIDataTypeDetails::CtrlGroup ctrlDetailsEnum(void) const;
 
-    SIDataTypeDetails::CtrlGroup ctrDetailsImport(void) const;
+    SIDataTypeDetails::CtrlGroup ctrlDetailsImport(void) const;
 
     SIDataTypeDetails::CtrlGroup ctrlDetailsContainer(void) const;
 
     QFormLayout* ctrlLayout(void) const;
+
+    QSpacerItem* ctrlSpacer1(void) const;
+
+    QSpacerItem* ctrlSpacer2(void) const;
+
+    SpaceItem ctrlSpacer(void) const;
+
+    void setSpace(int newHeight);
+
+    void changeSpace(int delta);
     
 private:
     Ui::SIDataTypeDetails* ui;

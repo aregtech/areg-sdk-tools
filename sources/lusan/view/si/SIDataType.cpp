@@ -21,6 +21,11 @@
 #include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIDataType.h"
 
+#include "lusan/data/common/DataTypeDefined.hpp"
+#include "lusan/data/common/DataTypeEnum.hpp"
+#include "lusan/data/common/DataTypeImported.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/model/si/SIDataTypeModel.hpp"
 #include "lusan/view/si/SIDataTypeDetails.hpp"
 #include "lusan/view/si/SIDataTypeFieldDetails.hpp"
 #include "lusan/view/si/SIDataTypeList.hpp"
@@ -34,6 +39,9 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QRadioButton>
+#include <QSpacerItem>
+#include <QTableWidget>
+#include <QToolButton>
 
 SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
     : QWidget{ parent }
@@ -44,13 +52,15 @@ SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
     setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
 }
 
-SIDataType::SIDataType(QWidget *parent)
+SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     : QScrollArea   (parent)
     , mDetails  (new SIDataTypeDetails(this))
     , mList     (new SIDataTypeList(this))
     , mFields   (new SIDataTypeFieldDetails(this))
     , mWidget   (new SIDataTypeWidget(this))
     , ui        (*mWidget->ui)
+    , mModel    (model)
+    , mCount    (0)
 {
     mFields->setHidden(true);
     
@@ -65,12 +75,67 @@ SIDataType::SIDataType(QWidget *parent)
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     
     updateWidgets();
+    setupSignals();
 }
 
 SIDataType::~SIDataType(void)
 {
+    mList->ctrlTableList()->setModel(nullptr);
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mDetails);
+}
+
+void SIDataType::closeEvent(QCloseEvent *event)
+{
+    mList->ctrlTableList()->setModel(nullptr);
+    mModel.setParent(nullptr);
+    QScrollArea::closeEvent(event);
+}
+
+void SIDataType::hideEvent(QHideEvent *event)
+{
+    mList->ctrlTableList()->setModel(nullptr);
+    mModel.setParent(nullptr);
+    QScrollArea::hideEvent(event);
+}
+
+void SIDataType::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
+{
+}
+
+void SIDataType::onAddClicked(void)
+{
+    static const QString _defName("NewDataType");
+
+    QTableView* table = mList->ctrlTableList();
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++mCount);
+    } while (mModel.findDataType(name) != nullptr);
+
+    DataTypeCustom* dataType = mModel.addDataType(name, DataTypeBase::eCategory::Structure);
+    mDetails->ctrlName()->setText(dataType->getName());
+    mDetails->ctrlTypeStruct()->setChecked(true);
+    mDetails->ctrlDeprecated()->setChecked(dataType->getIsDeprecated());
+    mDetails->ctrlDeprecateHint()->setText(dataType->getDeprecateHint());
+    mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
+}
+
+void SIDataType::onRemoveClicked(void)
+{
+}
+
+void SIDataType::onNameChanged(const QString& newName)
+{
+}
+
+void SIDataType::onDeprectedChecked(bool isChecked)
+{
+}
+
+void SIDataType::onDeprecateHintChanged(const QString& newText)
+{
 }
 
 void SIDataType::updateData(void)
@@ -78,17 +143,54 @@ void SIDataType::updateData(void)
     
 }
 
+void SIDataType::onDescriptionChanged(void)
+{
+}
+
+void SIDataType::showEnumDetails(bool show)
+{
+    static constexpr int _space{180};
+    SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsEnum()};
+    mDetails->changeSpace((show ? -1 : 1) * _space);
+    item.first->setHidden(!show);
+    item.second->setHidden(!show);
+}
+
+void SIDataType::showImportDetails(bool show)
+{
+    static constexpr int _space{120};
+    SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsImport()};
+    mDetails->changeSpace((show ? -1 : 1) * _space);
+    item.first->setHidden(!show);
+    item.second->setHidden(!show);
+}
+
+void SIDataType::showContainerDetails(bool show)
+{
+    static constexpr int _space{60};
+    SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsContainer()};
+    mDetails->changeSpace((show ? -1 : 1) * _space);
+    item.first->setHidden(!show);
+    item.second->setHidden(!show);
+}
+
 void SIDataType::updateWidgets(void)
 {
-    mDetails->ctrlDetailsEnum().first->setHidden(true);
-    mDetails->ctrlDetailsEnum().second->setHidden(true);
-    mDetails->ctrlDetailsContainer().first->setHidden(true);
-    mDetails->ctrlDetailsContainer().second->setHidden(true);
-    mDetails->ctrDetailsImport().first->setHidden(true);
-    mDetails->ctrDetailsImport().second->setHidden(true);
+    showEnumDetails(false);
+    showContainerDetails(false);
+    showImportDetails(false);
+    mModel.setParent(mList->ctrlTableList());
+    mList->ctrlTableList()->setModel(&mModel);
 }
 
 void SIDataType::setupSignals(void)
 {
-    
+    // connect(mList->ctrlTableList(),    &QTableWidget::currentCellChanged, this, &SIDataType::onCurCellChanged);
+    connect(mList->ctrlButtonAdd(),    &QToolButton::clicked        , this, &SIDataType::onAddClicked);
+    connect(mList->ctrlButtonRemove(), &QToolButton::clicked        , this, &SIDataType::onRemoveClicked);
+    connect(mDetails->ctrlName(),      &QLineEdit::textChanged      , this, &SIDataType::onNameChanged);
+    connect(mDetails->ctrlDeprecated(),&QCheckBox::toggled          , this, &SIDataType::onDeprectedChecked);
+    connect(mDetails->ctrlDeprecateHint(),&QLineEdit::textEdited    , this, &SIDataType::onDeprecateHintChanged);
+    connect(mDetails->ctrlDescription(),&QPlainTextEdit::textChanged, this, &SIDataType::onDescriptionChanged);
+    // connect(mTableCell                , &TableCell::editorDataChanged,this, &SIConstant::onEditorDataChanged);
 }

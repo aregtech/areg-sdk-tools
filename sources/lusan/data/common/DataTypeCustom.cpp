@@ -94,6 +94,32 @@ bool DataTypeCustom::isValid(void) const
     return (getId() != 0) && DataTypeBase::isValid();
 }
 
+bool DataTypeCustom::getIsDeprecated(void) const
+{
+    return mIsDeprecated;
+}
+
+bool DataTypeCustom::setDeprecated(bool isDeprecated)
+{
+    mIsDeprecated = isDeprecated;
+}
+
+const QString& DataTypeCustom::getDeprecateHint(void) const
+{
+    return mDeprecateHint;
+}
+
+void DataTypeCustom::setDeprecateHint(const QString& hint)
+{
+    mDeprecateHint = hint;
+}
+
+void DataTypeCustom::setDeprecated(bool isDeprecated, const QString& reason)
+{
+    mIsDeprecated = isDeprecated;
+    mDeprecateHint = reason;
+}
+
 QString DataTypeCustom::getType(void) const
 {
     return DataTypeCustom::getType(mCategory);

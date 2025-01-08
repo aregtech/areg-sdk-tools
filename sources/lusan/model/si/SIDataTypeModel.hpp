@@ -19,7 +19,7 @@
  *
  ************************************************************************/
 
-#include <QAbstractItemModel>
+#include <QAbstractTableModel>
 #include "lusan/data/common/DataTypeBase.hpp"
 
 class SIDataTypeData;
@@ -29,7 +29,7 @@ class DataTypeCustom;
  * \class SIDataTypeModel
  * \brief Model to manage custom data types for the table view.
  */
-class SIDataTypeModel : public QAbstractItemModel
+class SIDataTypeModel : public QAbstractTableModel
 {
     Q_OBJECT
 
@@ -90,6 +90,10 @@ public:
     DataTypeCustom * addDataType(const QString & name, DataTypeBase::eCategory category);
 
     DataTypeCustom* convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category);
+
+    DataTypeCustom* findDataType(const QString& name);
+
+    DataTypeCustom* findDataType(uint32_t id);
 
 private:
     SIDataTypeData& mData; //!< The data object.

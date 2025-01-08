@@ -30,8 +30,48 @@ SIDataTypeList::SIDataTypeList(QWidget *parent)
     font.setPointSize(10);
     this->setFont(font);
     ui->setupUi(this);
-    QTableWidget* table = ui->tableTypes;
+    QTableView* table = ui->tableTypes;
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+}
+
+QTableView* SIDataTypeList::ctrlTableList(void) const
+{
+    return ui->tableTypes;
+}
+
+QToolButton* SIDataTypeList::ctrlButtonAdd(void) const
+{
+    return ui->toolAddType;
+}
+
+QToolButton* SIDataTypeList::ctrlButtonRemove(void) const
+{
+    return ui->toolDeleteType;
+}
+
+QToolButton* SIDataTypeList::ctrlButtonMoveUp(void) const
+{
+    return ui->toolMoveUp;
+}
+
+QToolButton* SIDataTypeList::ctrlButtonMoveDown(void) const
+{
+    return ui->toolMoveDown;
+}
+
+QToolButton* SIDataTypeList::ctrlButtonAddField(void) const
+{
+    return ui->toolFieldAdd;
+}
+
+QToolButton* SIDataTypeList::ctrlButtonRemoveField(void) const
+{
+    return ui->toolFieldDelete;
+}
+
+QToolButton* SIDataTypeList::ctrlButtonInsertField(void) const
+{
+    return ui->toolFieldInsert;
 }

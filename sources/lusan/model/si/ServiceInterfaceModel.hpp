@@ -25,6 +25,7 @@
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 #include "lusan/model/si/SIConstantModel.hpp"
 #include "lusan/model/si/SIDataTopicModel.hpp"
+#include "lusan/model/si/SIDataTypeModel.hpp"
 #include "lusan/model/si/SIIncludeModel.hpp"
 #include "lusan/model/si/SIOverviewModel.hpp"
 
@@ -63,10 +64,13 @@ public:
      * \brief   Returns the include model.
      **/
     inline SIIncludeModel & getIncludesModel(void);
-    
+
+    inline SIDataTypeModel& getDataTypeModel(void);
+
 private:
     ServiceInterfaceData    mSIData;        //!< The service interface data.
     SIOverviewModel         mModelOverview; //!< The overview model.
+    SIDataTypeModel         mModelDataType; //!< The data type model.
     SIDataTopicModel        mModelTopics;   //!< The data topics (attributes) model.
     SIConstantModel         mModelConstant; //!< The constant model.
     SIIncludeModel          mModelInclude;  //!< The include model.
@@ -79,6 +83,11 @@ private:
 inline SIOverviewModel& ServiceInterfaceModel::getOverviewModel(void)
 {
     return mModelOverview;
+}
+
+inline SIDataTypeModel& ServiceInterfaceModel::getDataTypeModel(void)
+{
+    return mModelDataType;
 }
 
 inline SIDataTopicModel& ServiceInterfaceModel::getDataTopicModel(void)

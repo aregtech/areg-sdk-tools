@@ -128,6 +128,16 @@ public:
      **/
     void setDescription(const QString& description);
 
+    bool getIsDeprecated(void) const;
+
+    bool setDeprecated(bool isDeprecated);
+
+    const QString& getDeprecateHint(void) const;
+
+    void setDeprecateHint(const QString& hint);
+
+    void setDeprecated(bool isDeprecated, const QString& reason);
+
     /**
      * \brief   Returns the name of the custom data type.
      **/
@@ -144,6 +154,8 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     QString     mDescription;   //!< The description of the data type.
+    QString     mDeprecateHint; //!< The data type deprication reason.
+    bool        mIsDeprecated;  //!< Flag, indicating the data type is deprecated.
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPECUSTOM_HPP
