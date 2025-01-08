@@ -33,3 +33,99 @@ SIDataTypeDetails::SIDataTypeDetails(QWidget *parent)
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
+
+
+QLineEdit* SIDataTypeDetails::ctrlName(void) const
+{
+    return ui->editName;
+}
+
+QRadioButton* SIDataTypeDetails::ctrlTypeStruct(void) const
+{
+    return ui->radioTypeStruct;
+}
+
+QRadioButton* SIDataTypeDetails::ctrlTypeEnum(void) const
+{
+    return ui->radioTypeEnum;
+}
+
+QRadioButton* SIDataTypeDetails::ctrlTypeImport(void) const
+{
+    return ui->radioTypeImport;
+}
+
+QRadioButton* SIDataTypeDetails::ctrlContainer(void) const
+{
+    return ui->radioTypeContainer;
+}
+
+QComboBox* SIDataTypeDetails::ctrlContainerObject(void) const
+{
+    return ui->comboContainerObject;
+}
+
+QComboBox* SIDataTypeDetails::ctrlContainerKey(void) const
+{
+    return ui->comboContainerKey;
+}
+
+QComboBox* SIDataTypeDetails::ctrlContainerValue(void) const
+{
+    return ui->comboContainerValue;
+}
+
+QPlainTextEdit* SIDataTypeDetails::ctrlDescription(void) const
+{
+    return ui->textDescribe;
+}
+
+QCheckBox* SIDataTypeDetails::ctrlDeprecated(void) const
+{
+    return ui->checkDeprecated;
+}
+
+QLineEdit* SIDataTypeDetails::ctrlDeprecateHint(void) const
+{
+    return ui->editDeprecated;
+}
+
+QComboBox* SIDataTypeDetails::ctrlEnumDerived(void) const
+{
+    return ui->comboEnumDerive;
+}
+
+QLineEdit* SIDataTypeDetails::ctrlImportLocation(void) const
+{
+    return ui->editImportInclude;
+}
+
+QPushButton* SIDataTypeDetails::ctrlButtonBrowse(void) const
+{
+    return ui->buttonImportInclude;
+}
+
+QLineEdit* SIDataTypeDetails::ctrlImportNamespace(void) const
+{
+    return ui->editImportNamespace;
+}
+
+SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsEnum(void) const
+{
+    return CtrlGroup{ui->labelEnum, ui->groupEnum};
+}
+
+SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrDetailsImport(void) const
+{
+    return CtrlGroup{ui->labelImport, ui->groupImport};
+}
+
+SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsContainer(void) const
+{
+    return CtrlGroup{ui->labelContainer, ui->groupContainer};
+}
+
+QFormLayout* SIDataTypeDetails::ctrlLayout(void) const
+{
+    return ui->formLayout;
+}

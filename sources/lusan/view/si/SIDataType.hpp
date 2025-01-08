@@ -49,11 +49,28 @@ public:
     explicit SIDataType(QWidget *parent = nullptr);
 
     virtual ~SIDataType(void);
-
+    
 private:
-    SIDataTypeDetails*      mTypeDetails;
-    SIDataTypeList*         mTypeList;
-    SIDataTypeFieldDetails* mFieldDetails;
+    
+    /**
+     * \brief Updates the data in the table.
+     */
+    void updateData(void);
+    
+    /**
+     * \brief Updates the widgets.
+     */
+    void updateWidgets(void);
+    
+    /**
+     * \brief Initializes the signals.
+     */
+    void setupSignals(void);
+    
+private:
+    SIDataTypeDetails*      mDetails;
+    SIDataTypeList*         mList;
+    SIDataTypeFieldDetails* mFields;
     SIDataTypeWidget*       mWidget;
     Ui::SIDataType &        ui;
 };

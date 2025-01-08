@@ -25,6 +25,16 @@
 #include "lusan/view/si/SIDataTypeFieldDetails.hpp"
 #include "lusan/view/si/SIDataTypeList.hpp"
 
+#include <QCheckBox>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QRadioButton>
+
 SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
     : QWidget{ parent }
     , ui     (new Ui::SIDataType)
@@ -36,16 +46,16 @@ SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
 
 SIDataType::SIDataType(QWidget *parent)
     : QScrollArea   (parent)
-    , mTypeDetails  (new SIDataTypeDetails(this))
-    , mTypeList     (new SIDataTypeList(this))
-    , mFieldDetails (new SIDataTypeFieldDetails(this))
-    , mWidget       (new SIDataTypeWidget(this))
-    , ui            (*mWidget->ui)
+    , mDetails  (new SIDataTypeDetails(this))
+    , mList     (new SIDataTypeList(this))
+    , mFields   (new SIDataTypeFieldDetails(this))
+    , mWidget   (new SIDataTypeWidget(this))
+    , ui        (*mWidget->ui)
 {
-    mFieldDetails->setHidden(true);
+    mFields->setHidden(true);
     
-    ui.horizontalLayout->addWidget(mTypeList);
-    ui.horizontalLayout->addWidget(mTypeDetails);
+    ui.horizontalLayout->addWidget(mList);
+    ui.horizontalLayout->addWidget(mDetails);
     
     // setWidgetResizable(true);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -53,10 +63,32 @@ SIDataType::SIDataType(QWidget *parent)
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
+    
+    updateWidgets();
 }
 
 SIDataType::~SIDataType(void)
 {
-    ui.horizontalLayout->removeWidget(mTypeList);
-    ui.horizontalLayout->removeWidget(mTypeDetails);
+    ui.horizontalLayout->removeWidget(mList);
+    ui.horizontalLayout->removeWidget(mDetails);
+}
+
+void SIDataType::updateData(void)
+{
+    
+}
+
+void SIDataType::updateWidgets(void)
+{
+    mDetails->ctrlDetailsEnum().first->setHidden(true);
+    mDetails->ctrlDetailsEnum().second->setHidden(true);
+    mDetails->ctrlDetailsContainer().first->setHidden(true);
+    mDetails->ctrlDetailsContainer().second->setHidden(true);
+    mDetails->ctrDetailsImport().first->setHidden(true);
+    mDetails->ctrDetailsImport().second->setHidden(true);
+}
+
+void SIDataType::setupSignals(void)
+{
+    
 }

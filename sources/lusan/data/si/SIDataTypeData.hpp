@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/common/ElementBase.hpp"
+#include "lusan/data/common/DataTypeBase.hpp"
 #include <QList>
 #include <QString>
 
@@ -31,11 +32,15 @@
  ************************************************************************/
 class QXmlStreamReader;
 class QXmlStreamWriter;
-class DataTypeBase;
+
 class DataTypeCustom;
-class DataTypePrimitive;
 class DataTypeBasicContainer;
 class DataTypeBasicObject;
+class DataTypeDefined;
+class DataTypeEnum;
+class DataTypeImported;
+class DataTypePrimitive;
+class DataTypeStructure;
 
  /**
   * \class   SIDataTypeData
@@ -78,17 +83,33 @@ public:
     int findCustomDataType(const DataTypeCustom& entry) const;
 
     /**
+     * \brief   Searches for a data type in the list.
+     * \param   id      The ID of the data type to search for.
+     * \return  The data type, or nullptr if not found.
+     **/
+    int findCustomDataType(uint32_t id) const;
+
+    /**
      * \brief   Adds a data type to the list.
      * \param   entry   The data type to add.
      **/
     void addCustomDataType(DataTypeCustom* entry);
-
+    
+    DataTypeCustom* addCustomDataType(const QString& name, DataTypeBase::eCategory category);
+    
     /**
      * \brief   Removes a data type from the list.
      * \param   entry   The data type to remove.
      * \return  True if the data type was removed, false otherwise.
      **/
     bool removeCustomDataType(const DataTypeCustom& entry);
+
+    /**
+     * \brief   Removes a data type from the list.
+     * \param   id      The ID of the data type to remove.
+     * \return  True if the data type was removed, false otherwise.
+     **/
+    bool removeCustomDataType(uint32_t id);
 
     /**
      * \brief   Replaces a data type in the list.
@@ -211,6 +232,20 @@ public:
      * \return  Returns the data type object if found. Otherwise, returns nullptr.
      **/
     DataTypeBase* findDataType(uint32_t id) const;
+
+    DataTypeStructure* addStructure(const QString& name);
+
+    DataTypeEnum* addEnum(const QString& name);
+
+    DataTypeDefined* addDefined(const QString& name);
+
+    DataTypeImported* addImported(const QString& name);
+
+    DataTypeCustom* convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category);
+
+private:
+
+    DataTypeCustom* _createType(const QString& name, ElementBase * parent, uint32_t id, DataTypeBase::eCategory category);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
