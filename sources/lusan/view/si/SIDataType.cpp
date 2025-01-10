@@ -29,6 +29,7 @@
 #include "lusan/view/si/SIDataTypeDetails.hpp"
 #include "lusan/view/si/SIDataTypeFieldDetails.hpp"
 #include "lusan/view/si/SIDataTypeList.hpp"
+// #include "lusan/common/NELusanCommon.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -70,13 +71,13 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     ui.horizontalLayout->addWidget(mDetails);
     ui.horizontalLayout->addWidget(mFields);
     
-    // setWidgetResizable(true);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
-    
+
+    updateData();
     updateWidgets();
     setupSignals();
 }
@@ -85,6 +86,7 @@ SIDataType::~SIDataType(void)
 {
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mDetails);
+    ui.horizontalLayout->removeWidget(mFields);
 }
 
 void SIDataType::closeEvent(QCloseEvent *event)
@@ -287,6 +289,85 @@ void SIDataType::onDescriptionChanged(void)
 {
 }
 
+void SIDataType::onStructSelected(bool checked)
+{
+    if (checked)
+    {
+        QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+        onCovertDataType(item, DataTypeBase::eCategory::Structure);
+    }
+}
+
+void SIDataType::onEnumSelected(bool checked)
+{
+    if (checked)
+    {
+        QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+        onCovertDataType(item, DataTypeBase::eCategory::Enumeration);
+    }
+}
+
+void SIDataType::onImportSelected(bool checked)
+{
+    if (checked)
+    {
+        QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+        onCovertDataType(item, DataTypeBase::eCategory::Imported);
+    }
+}
+
+void SIDataType::onContainerSelected(bool checked)
+{
+    if (checked)
+    {
+        QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+        onCovertDataType(item, DataTypeBase::eCategory::Container);
+    }
+}
+
+void SIDataType::onCovertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory)
+{
+    Q_ASSERT(current != nullptr);
+    Q_ASSERT(current->parent() == nullptr);
+
+    DataTypeCustom* dataType = current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    uint32_t id = current->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    if ((id == 0) && (dataType->getCategory() != newCategory))
+    {
+        switch (newCategory)
+        {
+        case DataTypeBase::eCategory::Structure:
+            dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Structure);
+            Q_ASSERT(static_cast<DataTypeStructure*>(dataType)->hasElements() == false);
+            updateNodeStructure(current, static_cast<DataTypeStructure*>(dataType));
+            selectedStruct(static_cast<DataTypeStructure*>(dataType));
+            break;
+
+        case DataTypeBase::eCategory::Enumeration:
+            dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Enumeration);
+            Q_ASSERT(static_cast<DataTypeEnum*>(dataType)->hasElements() == false);
+            updateNodeEnum(current, static_cast<DataTypeEnum*>(dataType));
+            selectedEnum(static_cast<DataTypeEnum*>(dataType));
+            break;
+
+        case DataTypeBase::eCategory::Imported:
+            dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Imported);
+            updateNodeImported(current, static_cast<DataTypeImported*>(dataType));
+            selectedImport(static_cast<DataTypeImported*>(dataType));
+            break;
+
+        case DataTypeBase::eCategory::Container:
+            dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Container);
+            updateNodeContainer(current, static_cast<DataTypeDefined*>(dataType));
+            selectedContainer(static_cast<DataTypeDefined*>(dataType));
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
 void SIDataType::showEnumDetails(bool show)
 {
     static constexpr int _space{180};
@@ -338,6 +419,10 @@ void SIDataType::setupSignals(void)
     connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled               , this, &SIDataType::onDeprectedChecked);
     connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::textEdited            , this, &SIDataType::onDeprecateHintChanged);
     connect(mDetails->ctrlDescription()     , &QPlainTextEdit::textChanged      , this, &SIDataType::onDescriptionChanged);
+    connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked            , this, &SIDataType::onStructSelected);
+    connect(mDetails->ctrlTypeEnum()        , &QRadioButton::clicked            , this, &SIDataType::onEnumSelected);
+    connect(mDetails->ctrlTypeImport()      , &QRadioButton::clicked            , this, &SIDataType::onImportSelected);
+    connect(mDetails->ctrlTypeContainer()   , &QRadioButton::clicked            , this, &SIDataType::onContainerSelected);
     // connect(mTableCell                , &TableCell::editorDataChanged,this, &SIConstant::onEditorDataChanged);
 }
 
@@ -372,12 +457,7 @@ void SIDataType::blockBasicSignals(bool doBlock)
 
 void SIDataType::selectedStruct(DataTypeStructure* dataType)
 {
-    if (mDetails->isHidden())
-    {
-        mFields->hide();
-        mDetails->show();
-    }
-    
+    activateFields(false);
     showEnumDetails(false);
     showImportDetails(false);
     showContainerDetails(false);
@@ -401,12 +481,7 @@ void SIDataType::selectedStruct(DataTypeStructure* dataType)
 
 void SIDataType::selectedEnum(DataTypeEnum* dataType)
 {
-    if (mDetails->isHidden())
-    {
-        mFields->hide();
-        mDetails->show();
-    }
-    
+    activateFields(false);
     showEnumDetails(false);
     showImportDetails(false);
     showContainerDetails(false);
@@ -431,12 +506,7 @@ void SIDataType::selectedEnum(DataTypeEnum* dataType)
 
 void SIDataType::selectedImport(DataTypeImported* dataType)
 {
-    if (mDetails->isHidden())
-    {
-        mFields->hide();
-        mDetails->show();
-    }
-    
+    activateFields(false);
     showEnumDetails(false);
     showImportDetails(true);
     showContainerDetails(false);
@@ -450,6 +520,7 @@ void SIDataType::selectedImport(DataTypeImported* dataType)
     {
         name = dataType->getNamespace() + "::" + dataType->getName();
     }
+
     mDetails->ctrlName()->setText(name);
     mDetails->ctrlTypeImport()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
@@ -473,12 +544,7 @@ void SIDataType::selectedImport(DataTypeImported* dataType)
 
 void SIDataType::selectedContainer(DataTypeDefined* dataType)
 {
-    if (mDetails->isHidden())
-    {
-        mFields->hide();
-        mDetails->show();
-    }
-    
+    activateFields(false);
     showEnumDetails(false);
     showImportDetails(true);
     showContainerDetails(false);
@@ -489,7 +555,6 @@ void SIDataType::selectedContainer(DataTypeDefined* dataType)
     mDetails->ctrlDeprecated()->setChecked(dataType->getIsDeprecated());
     mDetails->ctrlDeprecateHint()->setText(dataType->getDeprecateHint());
 
-    mDetails->ctrlTypeContainer()->setText(dataType->getContainer());
     mDetails->ctrlContainerValue()->setCurrentText(dataType->getValue());
     mDetails->ctrlContainerKey()->setCurrentText(dataType->getKey());
     mDetails->ctrlContainerKey()->setEnabled(dataType->canHaveKey());
@@ -507,12 +572,7 @@ void SIDataType::selectedContainer(DataTypeDefined* dataType)
 
 void SIDataType::selectedStructField(const FieldEntry& field, DataTypeStructure* parent)
 {
-    if (mFields->isHidden())
-    {
-        mDetails->hide();
-        mFields->show();
-    }
-    
+    activateFields(true);
     mFields->ctrlName()->setText(field.getName());
     mFields->ctrlTypes()->setCurrentText(field.getType());
     mFields->ctrlValue()->setText(field.getValue());
@@ -527,12 +587,7 @@ void SIDataType::selectedStructField(const FieldEntry& field, DataTypeStructure*
 
 void SIDataType::selectedEnumField(const EnumEntry& field, DataTypeEnum* parent)
 {
-    if (mFields->isHidden())
-    {
-        mDetails->hide();
-        mFields->show();
-    }
-
+    activateFields(true);
     mFields->ctrlName()->setText(field.getName());
     mFields->ctrlValue()->setText(field.getValue());
     mFields->ctrlDescription()->setPlainText(field.getDescription());
@@ -661,4 +716,26 @@ void SIDataType::updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataT
     child->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherSnow));
     child->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
     child->setData(1, Qt::ItemDataRole::UserRole, field.getId());
+}
+
+void SIDataType::activateFields(bool activate)
+{
+    if (activate)
+    {
+        if (mFields->isHidden())
+        {
+            mDetails->hide();
+            mFields->show();
+            // mFields->ctrlDescription()->move(NELusanCommon::DescPos);
+        }
+    }
+    else
+    {
+        if (mDetails->isHidden())
+        {
+            mFields->hide();
+            mDetails->show();
+            // mDetails->ctrlDescription()->move(NELusanCommon::DescPos);
+        }
+    }
 }

@@ -265,7 +265,9 @@ public:
      **/
     bool sortElementsByName(bool ascending = true);
     
-    bool hasElements(void) const;;
+    bool hasElements(void) const;
+
+    int getElementCount(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Protected methods
@@ -662,6 +664,12 @@ template<class Data, class ElemBase>
 bool TEDataContainer<Data, ElemBase>::hasElements(void) const
 {
     return (mElementList.isEmpty() == false);
+}
+
+template<class Data, class ElemBase>
+int TEDataContainer<Data, ElemBase>::getElementCount(void) const
+{
+    return static_cast<int>(mElementList.size());
 }
 
 template<class Data, class ElemBase>

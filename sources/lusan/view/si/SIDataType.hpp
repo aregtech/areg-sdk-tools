@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 #include <QScrollArea>
+#include "lusan/data/common/DataTypeBase.hpp"
 
 class DataTypeCustom;
 class DataTypeDefined;
@@ -109,7 +110,18 @@ protected:
      **/
     void onDescriptionChanged(void);
 
+    void onStructSelected(bool checked);
+
+    void onEnumSelected(bool checked);
+
+    void onImportSelected(bool checked);
+
+    void onContainerSelected(bool checked);
+
+
 private:
+
+    void onCovertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory);
 
     void showEnumDetails(bool show);
 
@@ -169,6 +181,8 @@ private:
     void updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure* dataType, const FieldEntry& field) const;
 
     void updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataType, const EnumEntry& field) const;
+
+    void activateFields(bool activate);
 
 private:
     SIDataTypeDetails*      mDetails;

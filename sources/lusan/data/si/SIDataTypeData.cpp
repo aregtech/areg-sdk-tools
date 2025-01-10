@@ -442,6 +442,11 @@ DataTypeCustom* SIDataTypeData::addCustomDataType(const QString& name, DataTypeB
 
 DataTypeCustom* SIDataTypeData::convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category)
 {
+    if (dataType->getCategory() == category)
+    {
+        return dataType;
+    }
+
     DataTypeCustom* newType = _createType(dataType->getName(), dataType->getParent(), dataType->getId(), category);
     int i = mCustomDataTypes.indexOf(dataType);
     if (i != -1)
@@ -467,8 +472,6 @@ void SIDataTypeData::sort(bool ascending)
 
 DataTypeCustom* SIDataTypeData::_createType(const QString& name, ElementBase* parent, uint32_t id, DataTypeBase::eCategory category)
 {
-    Q_ASSERT(findDataType(id) == nullptr);
-
     DataTypeCustom* result = DataTypeFactory::createCustomDataType(category);
     Q_ASSERT(result != nullptr);
     result->setParent(parent);
