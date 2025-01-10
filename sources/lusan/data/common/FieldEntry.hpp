@@ -36,6 +36,8 @@ public:
      **/
     FieldEntry(ElementBase * parent = nullptr);
 
+    FieldEntry(uint32_t id, const QString& name, ElementBase* parent = nullptr);
+
     /**
      * \brief   Constructor with initialization.
      * \param   id              The ID of the field.
@@ -114,7 +116,7 @@ public:
      * \brief   Gets the value of the field.
      * \return  The value of the field.
      **/
-    QString getValue() const;
+    const QString& getValue() const;
 
     /**
      * \brief   Sets the value of the field.

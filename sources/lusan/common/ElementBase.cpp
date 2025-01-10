@@ -18,6 +18,8 @@
  ************************************************************************/
 #include "lusan/common/ElementBase.hpp"
 
+const QString   ElementBase::EmptyString;
+
 ElementBase::ElementBase(ElementBase* parent /*= nullptr*/)
     : mId     (0)
     , mParent (parent)

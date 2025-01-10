@@ -99,7 +99,7 @@ bool DataTypeCustom::getIsDeprecated(void) const
     return mIsDeprecated;
 }
 
-bool DataTypeCustom::setDeprecated(bool isDeprecated)
+void DataTypeCustom::setDeprecated(bool isDeprecated)
 {
     mIsDeprecated = isDeprecated;
 }

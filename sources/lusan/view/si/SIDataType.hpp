@@ -20,10 +20,18 @@
  ************************************************************************/
 #include <QScrollArea>
 
+class DataTypeCustom;
+class DataTypeDefined;
+class DataTypeEnum;
+class DataTypeImported;
+class DataTypeStructure;
 class SIDataTypeDetails;
 class SIDataTypeList;
 class SIDataTypeFieldDetails;
 class SIDataTypeModel;
+class EnumEntry;
+class FieldEntry;
+class QTreeWidgetItem;
 
 namespace Ui {
     class SIDataType;
@@ -45,7 +53,7 @@ private:
 class SIDataType : public QScrollArea
 {
     Q_OBJECT
-
+    
 public:
     explicit SIDataType(SIDataTypeModel & model, QWidget *parent = nullptr);
 
@@ -64,12 +72,14 @@ protected:
      * \param previousRow The previous row index.
      * \param previousColumn The previous column index.
      */
-    void onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn);
+    void onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 
     /**
      * \brief Triggered when the add button is clicked.
      */
     void onAddClicked(void);
+    
+    void onAddFieldClicked(void);
 
     /**
      * \brief Triggered when the remove button is clicked.
@@ -122,6 +132,44 @@ private:
      */
     void setupSignals(void);
     
+    /**
+     * \brief Blocks the basic signals.
+     * \param doBlock If true, blocks the signals, otherwise unblocks.
+     */
+    void blockBasicSignals(bool doBlock);
+
+    void selectedStruct(DataTypeStructure* dataType);
+
+    void selectedEnum(DataTypeEnum* dataType);
+
+    void selectedImport(DataTypeImported* dataType);
+
+    void selectedContainer(DataTypeDefined* dataType);
+
+    void selectedStructField(const FieldEntry& field, DataTypeStructure* parent);
+
+    void selectedEnumField(const EnumEntry& field, DataTypeEnum* parent);
+
+    QTreeWidgetItem* createNodeStructure(DataTypeStructure* dataType) const;
+
+    QTreeWidgetItem* createNodeEnum(DataTypeEnum* dataType) const;
+
+    QTreeWidgetItem* createNodeImported(DataTypeImported* dataType) const;
+    
+    QTreeWidgetItem* createNodeContainer(DataTypeDefined* dataType) const;
+
+    void updateNodeStructure(QTreeWidgetItem* node, DataTypeStructure* dataType) const;
+
+    void updateNodeEnum(QTreeWidgetItem* node, DataTypeEnum* dataType) const;
+
+    void updateNodeImported(QTreeWidgetItem* node, DataTypeImported* dataType) const;
+
+    void updateNodeContainer(QTreeWidgetItem* node, DataTypeDefined* dataType) const;
+
+    void updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure* dataType, const FieldEntry& field) const;
+
+    void updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataType, const EnumEntry& field) const;
+
 private:
     SIDataTypeDetails*      mDetails;
     SIDataTypeList*         mList;

@@ -56,7 +56,7 @@ public:
     
     QRadioButton* ctrlTypeImport(void) const;
     
-    QRadioButton* ctrlContainer(void) const;
+    QRadioButton* ctrlTypeContainer(void) const;
     
     QComboBox* ctrlContainerObject(void) const;
     

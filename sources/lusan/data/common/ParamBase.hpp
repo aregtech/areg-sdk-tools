@@ -128,13 +128,13 @@ public:
      * \brief   Gets the deprecated flag of the parameter.
      * \return  The deprecated flag of the parameter.
      **/
-    bool isDeprecated() const;
+    bool getIsDeprecated() const;
 
     /**
      * \brief   Sets the deprecated flag of the parameter.
      * \param   isDeprecated    The deprecated flag of the parameter.
      **/
-    void setDeprecated(bool isDeprecated);
+    void setIsDeprecated(bool isDeprecated);
 
     /**
      * \brief   Gets the description of the parameter.

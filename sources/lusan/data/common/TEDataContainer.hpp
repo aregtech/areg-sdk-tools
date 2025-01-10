@@ -221,6 +221,8 @@ public:
      **/
     Data* findElement(uint32_t id) const;
 
+    int findIndex(const Data& field) const;
+
     /**
      * \brief   Finds the index of a data element by name.
      * \param   name    The name of the element to find.
@@ -262,6 +264,8 @@ public:
      * \return  True if the elements were sorted, false otherwise.
      **/
     bool sortElementsByName(bool ascending = true);
+    
+    bool hasElements(void) const;;
 
 //////////////////////////////////////////////////////////////////////////
 // Protected methods
@@ -606,6 +610,12 @@ int TEDataContainer<Data, ElemBase>::findIndex(const QString& name) const
 }
 
 template<class Data, class ElemBase>
+int TEDataContainer<Data, ElemBase>::findIndex(const Data& field) const
+{
+    return findIndex(field.getId());
+}
+
+template<class Data, class ElemBase>
 int TEDataContainer<Data, ElemBase>::findIndex(uint32_t id) const
 {
     for (int i = 0; i < mElementList.size(); ++i)
@@ -646,6 +656,12 @@ bool TEDataContainer<Data, ElemBase>::sortElementsByName(bool ascending)
         });
 
     return true;
+}
+
+template<class Data, class ElemBase>
+bool TEDataContainer<Data, ElemBase>::hasElements(void) const
+{
+    return (mElementList.isEmpty() == false);
 }
 
 template<class Data, class ElemBase>

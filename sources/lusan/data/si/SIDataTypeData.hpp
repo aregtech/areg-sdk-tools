@@ -254,6 +254,8 @@ public:
     DataTypeImported* addImported(const QString& name);
 
     DataTypeCustom* convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category);
+    
+    void sort(bool ascending);
 
 private:
 

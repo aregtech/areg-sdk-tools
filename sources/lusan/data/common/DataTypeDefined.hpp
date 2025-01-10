@@ -91,16 +91,66 @@ public:
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
-    /**
-     * \brief   Checks if the container can hold key-value pairs.
-     * \return  True if the container can hold key-value pairs, false otherwise.
-     **/
-    bool isKeyValueContainer() const;
+    bool canHaveKey(void) const;
+
+    inline const QString& getContainer(void) const;
+
+    inline void setContainer(const QString& valContainer);
+
+    inline bool hasKey(void) const;
+
+
+    inline const QString& getKey(void) const;
+
+    inline void setKey(const QString& key);
+
+    inline const QString& getValue(void) const;
+
+    inline void setValue(const QString& value);
 
 private:
-    QString mContainer;      //!< The container type.
-    QString mBaseTypeValue;  //!< The base type value.
-    QString mBaseTypeKey;    //!< The base type key (optional).
+    QString mContainer; //!< The container type.
+    QString mValue;     //!< The base type value.
+    QString mKey;       //!< The base type key (optional).
 };
+
+//////////////////////////////////////////////////////////////////////////
+// DataTypeDefined class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline const QString& DataTypeDefined::getContainer(void) const
+{
+    return mContainer;
+}
+
+inline void DataTypeDefined::setContainer(const QString& valContainer)
+{
+    mContainer = valContainer;
+}
+
+inline bool DataTypeDefined::hasKey(void) const
+{
+    return mKey.isEmpty() == false;
+}
+
+inline const QString& DataTypeDefined::getKey(void) const
+{
+    return mKey;
+}
+
+inline void DataTypeDefined::setKey(const QString& key)
+{
+    mKey = key;
+}
+
+inline const QString& DataTypeDefined::getValue(void) const
+{
+    return mValue;
+}
+
+inline void DataTypeDefined::setValue(const QString& value)
+{
+    mValue = value;
+}
 
 #endif // LUSAN_DATA_COMMON_DATATYPEDEFINED_HPP

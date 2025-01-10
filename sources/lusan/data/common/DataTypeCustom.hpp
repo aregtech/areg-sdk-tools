@@ -130,7 +130,7 @@ public:
 
     bool getIsDeprecated(void) const;
 
-    bool setDeprecated(bool isDeprecated);
+    void setDeprecated(bool isDeprecated);
 
     const QString& getDeprecateHint(void) const;
 

@@ -17,37 +17,40 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeDefined.hpp"
+#include "lusan/data/common/DataTypeBasic.hpp"
+#include "lusan/data/common/DataTypeFactory.hpp"
+
 #include "lusan/common/XmlSI.hpp"
 
 DataTypeDefined::DataTypeDefined(ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::CustomDefined, parent)
     , mContainer    ( )
-    , mBaseTypeValue( )
-    , mBaseTypeKey  ( )
+    , mValue( )
+    , mKey  ( )
 {
 }
 
 DataTypeDefined::DataTypeDefined(const QString& name, ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::CustomDefined, 0, name, parent)
     , mContainer    ( )
-    , mBaseTypeValue( )
-    , mBaseTypeKey  ( )
+    , mValue( )
+    , mKey  ( )
 {
 }
 
 DataTypeDefined::DataTypeDefined(const DataTypeDefined& src)
     : DataTypeCustom(src)
     , mContainer    (src.mContainer)
-    , mBaseTypeValue(src.mBaseTypeValue)
-    , mBaseTypeKey  (src.mBaseTypeKey)
+    , mValue(src.mValue)
+    , mKey  (src.mKey)
 {
 }
 
 DataTypeDefined::DataTypeDefined(DataTypeDefined&& src) noexcept
     : DataTypeCustom(std::move(src))
-    , mContainer    (std::move(src.mContainer))
-    , mBaseTypeValue(std::move(src.mBaseTypeValue))
-    , mBaseTypeKey  (std::move(src.mBaseTypeKey))
+    , mContainer(std::move(src.mContainer))
+    , mValue    (std::move(src.mValue))
+    , mKey      (std::move(src.mKey))
 {
 }
 
@@ -56,9 +59,9 @@ DataTypeDefined& DataTypeDefined::operator = (const DataTypeDefined& other)
     if (this != &other)
     {
         DataTypeBase::operator = (other);
-        mContainer      = other.mContainer;
-        mBaseTypeValue  = other.mBaseTypeValue;
-        mBaseTypeKey    = other.mBaseTypeKey;
+        mContainer  = other.mContainer;
+        mValue      = other.mValue;
+        mKey        = other.mKey;
     }
 
     return *this;
@@ -69,9 +72,9 @@ DataTypeDefined& DataTypeDefined::operator = (DataTypeDefined&& other) noexcept
     if (this != &other)
     {
         DataTypeBase::operator = (std::move(other));
-        mContainer      = std::move(other.mContainer);
-        mBaseTypeValue  = std::move(other.mBaseTypeValue);
-        mBaseTypeKey    = std::move(other.mBaseTypeKey);
+        mContainer  = std::move(other.mContainer);
+        mValue      = std::move(other.mValue);
+        mKey        = std::move(other.mKey);
     }
     
     return *this;
@@ -100,11 +103,11 @@ bool DataTypeDefined::readFromXml(QXmlStreamReader& xml)
             }
             else if (xml.name() == XmlSI::xmlSIElementBaseTypeValue)
             {
-                mBaseTypeValue = xml.readElementText();
+                mValue = xml.readElementText();
             }
             else if (xml.name() == XmlSI::xmlSIElementBaseTypeKey)
             {
-                mBaseTypeKey = xml.readElementText();
+                mKey = xml.readElementText();
             }
         }
 
@@ -123,16 +126,27 @@ void DataTypeDefined::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
     xml.writeTextElement(XmlSI::xmlSIElementContainer, mContainer);
-    xml.writeTextElement(XmlSI::xmlSIElementBaseTypeValue, mBaseTypeValue);
-    if (!mBaseTypeKey.isEmpty())
+    xml.writeTextElement(XmlSI::xmlSIElementBaseTypeValue, mValue);
+    if (canHaveKey())
     {
-        xml.writeTextElement(XmlSI::xmlSIElementBaseTypeKey, mBaseTypeKey);
+        xml.writeTextElement(XmlSI::xmlSIElementBaseTypeKey, mKey);
     }
 
     xml.writeEndElement(); // DataType
 }
 
-bool DataTypeDefined::isKeyValueContainer() const
+bool DataTypeDefined::canHaveKey(void) const
 {
-    return !mBaseTypeKey.isEmpty();
+    bool result{ false };
+    const QList<DataTypeBasicContainer*> containerTypes = DataTypeFactory::getContainerTypes();
+    for (const DataTypeBasicContainer* container : containerTypes)
+    {
+        if (container->getName() == mContainer)
+        {
+            result = container->hasKey();
+            break;
+        }
+    }
+
+    return result;
 }

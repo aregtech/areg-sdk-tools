@@ -149,7 +149,7 @@ bool AttributeEntry::readFromXml(QXmlStreamReader& xml)
 
     if (attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated))
     {
-        setDeprecated(attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue);
+        setIsDeprecated(attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue);
     }
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementAttribute))

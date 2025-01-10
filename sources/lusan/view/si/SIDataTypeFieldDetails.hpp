@@ -20,6 +20,11 @@
  ************************************************************************/
 #include <QWidget>
 
+class QCheckBox;
+class QComboBox;
+class QLineEdit;
+class QPlainTextEdit;
+
 namespace Ui {
     class SIDataTypeFieldDetails;
 }
@@ -30,7 +35,19 @@ class SIDataTypeFieldDetails : public QWidget
 
 public:
     explicit SIDataTypeFieldDetails(QWidget* parent = nullptr);
-
+    
+    QLineEdit* ctrlName(void) const;
+    
+    QComboBox* ctrlTypes(void) const;
+    
+    QLineEdit* ctrlValue(void) const;
+    
+    QPlainTextEdit* ctrlDescription(void) const;
+    
+    QCheckBox* ctrlDeprecated(void) const;
+    
+    QLineEdit* ctrlDeprecateHint(void) const;
+    
 private:
     Ui::SIDataTypeFieldDetails* ui;
 };

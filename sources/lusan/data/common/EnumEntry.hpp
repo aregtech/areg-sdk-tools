@@ -150,13 +150,48 @@ public:
      * \param   value   The new value of the enum entry.
      **/
     void setValue(const QString & value);
+    
+    const QString getDescription(void) const;
+    
+    void setDescription(const QString& describe);
+    
+    inline void setIsDeprecated(bool isDeprecated);
+    
+    inline bool getIsDeprecated(void) const;
+    
+    inline void setDeprecateHint(const QString & hint);
+    
+    inline const QString& getDeprecateHint(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    QString     mName;  //!< The name of the enum entry.
-    QString     mValue; //!< The value of the enum entry.
+    QString     mName;      //!< The name of the enum entry.
+    QString     mValue;     //!< The value of the enum entry.
+    QString     mDescribe;  //!< The description of the enum entry
 };
+
+//////////////////////////////////////////////////////////////////////////
+// EnumEntry class inline methods.
+//////////////////////////////////////////////////////////////////////////
+
+inline void EnumEntry::setIsDeprecated(bool isDeprecated)
+{
+}
+
+inline bool EnumEntry::getIsDeprecated(void) const
+{
+    return false;
+}
+
+inline void EnumEntry::setDeprecateHint(const QString & hint)
+{
+}
+
+inline const QString& EnumEntry::getDeprecateHint(void) const
+{
+    return EmptyString;
+}
 
 #endif // LUSAN_DATA_COMMON_ENUMENTRY_HPP

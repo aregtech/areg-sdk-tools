@@ -27,13 +27,13 @@ DataTypeEnum::DataTypeEnum(ElementBase* parent /*= nullptr*/)
 
 DataTypeEnum::DataTypeEnum(const QString& name, ElementBase* parent /*= nullptr*/)
     : TEDataTypeContainer<EnumEntry>(eCategory::Enumeration, name, 0, parent)
-    , mDerived("")
+    , mDerived  ("")
 {
 }
 
 DataTypeEnum::DataTypeEnum(const DataTypeEnum& src)
     : TEDataTypeContainer<EnumEntry>(src)
-    , mDerived(src.mDerived)
+    , mDerived  (src.mDerived)
 {
 }
 
@@ -124,4 +124,11 @@ void DataTypeEnum::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement(); // FieldList
     xml.writeEndElement(); // DataType
+}
+
+EnumEntry* DataTypeEnum::addField(const QString& name)
+{
+    uint32_t id{ getNextId() };
+    addElement(std::move(EnumEntry(id, name, "", this)), true);
+    return findElement(id);
 }

@@ -457,6 +457,14 @@ DataTypeCustom* SIDataTypeData::convertDataType(DataTypeCustom* dataType, DataTy
     return newType;
 }
 
+void SIDataTypeData::sort(bool ascending)
+{
+    std::sort(mCustomDataTypes.begin(), mCustomDataTypes.end(), [ascending](DataTypeCustom* lhs, DataTypeCustom* rhs)
+              {
+                  return (ascending ? lhs->getName() < rhs->getName() : lhs->getName() > rhs->getName());
+              });
+}
+
 DataTypeCustom* SIDataTypeData::_createType(const QString& name, ElementBase* parent, uint32_t id, DataTypeBase::eCategory category)
 {
     Q_ASSERT(findDataType(id) == nullptr);

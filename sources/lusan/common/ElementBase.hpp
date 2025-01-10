@@ -19,6 +19,8 @@
 #ifndef LUSAN_COMMON_ELEMENTBASE_HPP
 #define LUSAN_COMMON_ELEMENTBASE_HPP
 
+#include <QString>
+
 /************************************************************************
  * \class ElementBase
  * \brief Base class for elements in the Lusan application.
@@ -29,6 +31,8 @@
  ************************************************************************/
 class ElementBase
 {
+protected:
+    static const QString   EmptyString;
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////

@@ -26,193 +26,38 @@
 #include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/data/si/SIDataTypeData.hpp"
 
-SIDataTypeModel::SIDataTypeModel(SIDataTypeData& data, QObject* parent)
-    : QAbstractTableModel(parent)
-    , mData(data)
+SIDataTypeModel::SIDataTypeModel(SIDataTypeData& data)
+    : mData(data)
 {
 }
 
-int SIDataTypeModel::rowCount(const QModelIndex& parent) const
+DataTypeCustom* SIDataTypeModel::createDataType(const QString& name, DataTypeBase::eCategory category)
 {
-    if (!parent.isValid())
-        return mData.getCustomDataTypes().size();
-
-    DataTypeCustom* dataType = static_cast<DataTypeCustom*>(parent.internalPointer());
-    if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-    {
-        return static_cast<DataTypeEnum*>(dataType)->getElements().size();
-    }
-    else if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-    {
-        return static_cast<DataTypeStructure*>(dataType)->getElements().size();
-    }
-
-    return 0;
+    return mData.addCustomDataType(name, category);
 }
 
-int SIDataTypeModel::columnCount(const QModelIndex& parent) const
+bool SIDataTypeModel::deleteDataType(uint32_t id)
 {
-    return 3;
+    return mData.removeCustomDataType(id);
 }
 
-QVariant SIDataTypeModel::data(const QModelIndex& index, int role) const
+bool SIDataTypeModel::deleteDataType(const DataTypeCustom* dataType)
 {
-    if (!index.isValid())
-        return QVariant();
-
-    int row = index.row();
-    int col = index.column();
-
-    switch (role)
-    {
-    case static_cast<int>(Qt::ItemDataRole::DisplayRole):
-    case static_cast<int>(Qt::ItemDataRole::EditRole):
-    {
-        DataTypeCustom* dataType = static_cast<DataTypeCustom*>(index.internalPointer());
-        if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-        {
-            if (col == 0)
-            {
-                return static_cast<DataTypeEnum*>(dataType)->getElements().at(row).getName();
-            }
-            else if (col == 2)
-            {
-                return static_cast<DataTypeEnum*>(dataType)->getElements().at(row).getValue();
-            }
-        }
-        else if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-        {
-            if (col == 0)
-            {
-                return static_cast<DataTypeStructure*>(dataType)->getElements().at(row).getName();
-            }
-            else if (col == 1)
-            {
-                return static_cast<DataTypeStructure*>(dataType)->getElements().at(row).getType();
-            }
-            else if (index.column() == 2)
-            {
-                return static_cast<DataTypeStructure*>(dataType)->getElements().at(row).getValue();
-            }
-        }
-        else
-        {
-            if (col == 0)
-            {
-                return dataType->getName();
-            }
-        }
-    }
-    break;
-
-    case static_cast<int>(Qt::ItemDataRole::UserRole):
-    {
-        DataTypeCustom* dataType = static_cast<DataTypeCustom*>(index.internalPointer());
-        if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-        {
-            return static_cast<DataTypeEnum*>(dataType)->getElements().at(row).getId();
-        }
-        else if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-        {
-            return static_cast<DataTypeStructure*>(dataType)->getElements().at(row).getId();
-        }
-        else
-        {
-            return dataType->getId();
-        }
-    }
-    break;
-
-    default:
-        break;
-    }
-
-    return QVariant();
-}
-
-QVariant SIDataTypeModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-    {
-        switch (section)
-        {
-        case 0:
-            return QString("Name:");
-        case 1:
-            return QString("Data Type:");
-        case 2:
-            return QString("Default Value:");
-        }
-    }
-
-    return QVariant();
-}
-
-QModelIndex SIDataTypeModel::index(int row, int column, const QModelIndex& parent) const
-{
-    if (!parent.isValid())
-    {
-        return createIndex(row, column, mData.getCustomDataTypes().at(row));
-    }
-
-    DataTypeCustom* dataType = static_cast<DataTypeCustom*>(parent.internalPointer());
-    if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-    {
-        return createIndex(row, column, dataType);
-    }
-    else if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-    {
-        return createIndex(row, column, dataType);
-    }
-    else
-    {
-        return createIndex(row, column, dataType);
-    }
-}
-
-QModelIndex SIDataTypeModel::parent(const QModelIndex& index) const
-{
-    if (!index.isValid())
-        return QModelIndex();
-
-    int col = index.column();
-    int row = index.row();
-    DataTypeCustom* dataType = static_cast<DataTypeCustom*>(index.internalPointer());
-    uint32_t id = data(index, static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
-    if (dataType->getId() != id)
-    {
-        if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-        {
-            int pos = mData.getCustomDataTypes().indexOf(dataType);
-            return createIndex(pos, 0, dataType);
-        }
-        else if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-        {
-            int pos = mData.getCustomDataTypes().indexOf(dataType);
-            return createIndex(pos, 0, dataType);
-        }
-    }
-
-    return QModelIndex();
-}
-
-DataTypeCustom* SIDataTypeModel::addDataType(const QString& name, DataTypeBase::eCategory category)
-{
-    const QList<DataTypeCustom*>& dataTypes = mData.getCustomDataTypes();
-    beginInsertRows(QModelIndex(), dataTypes.size(), dataTypes.size());
-    DataTypeCustom* dataType = mData.addCustomDataType(name, category);
-    endInsertRows();
-    return dataType;
+    return mData.removeCustomDataType(dataType->getId());
 }
 
 DataTypeCustom* SIDataTypeModel::convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category)
 {
-    DataTypeCustom* result = mData.convertDataType(dataType, category);
-    submit();
-    return result;
+    return mData.convertDataType(dataType, category);
 }
 
 DataTypeCustom* SIDataTypeModel::findDataType(const QString& name)
+{
+    int index = mData.findCustomDataType(name);
+    return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
+}
+
+const DataTypeCustom* SIDataTypeModel::findDataType(const QString& name) const
 {
     int index = mData.findCustomDataType(name);
     return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
@@ -222,4 +67,236 @@ DataTypeCustom* SIDataTypeModel::findDataType(uint32_t id)
 {
     int index = mData.findCustomDataType(id);
     return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
+}
+
+const DataTypeCustom* SIDataTypeModel::findDataType(uint32_t id) const
+{
+    int index = mData.findCustomDataType(id);
+    return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
+}
+
+void SIDataTypeModel::sortDataTypes(bool ascending)
+{
+    mData.sort(ascending);
+}
+
+const QList<DataTypeCustom*>& SIDataTypeModel::getDataTypes(void) const
+{
+    return mData.getCustomDataTypes();
+}
+
+int SIDataTypeModel::getDataTypeCount(void) const
+{
+    return static_cast<int>(mData.getCustomDataTypes().size());
+}
+
+ElementBase* SIDataTypeModel::ceateDataTypeChild(DataTypeCustom* dataType, const QString& name)
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<DataTypeStructure*>(dataType)->addField(name);
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<DataTypeEnum*>(dataType)->addField(name);
+    }
+
+    return nullptr;
+}
+
+void SIDataTypeModel::deleteDataTypeChild(DataTypeCustom* dataType, uint32_t childId)
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        static_cast<DataTypeStructure*>(dataType)->removeElement(childId);
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        static_cast<DataTypeEnum*>(dataType)->removeElement(childId);
+    }
+}
+
+void SIDataTypeModel::deleteDataTypeChild(DataTypeCustom* dataType, const ElementBase& child)
+{
+    deleteDataTypeChild(dataType, child.getId());
+}
+
+ElementBase* SIDataTypeModel::findDataTypeChild(DataTypeCustom* dataType, uint32_t childId)
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<DataTypeStructure*>(dataType)->findElement(childId);
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<DataTypeEnum*>(dataType)->findElement(childId);
+    }
+
+    return nullptr;
+}
+
+const ElementBase* SIDataTypeModel::findDataTypeChild(DataTypeCustom* dataType, uint32_t childId) const
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<DataTypeStructure*>(dataType)->findElement(childId);
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<DataTypeEnum*>(dataType)->findElement(childId);
+    }
+
+    return nullptr;
+}
+
+QList<FieldEntry> SIDataTypeModel::getStructChildren(DataTypeCustom* dataType) const
+{
+    QList<FieldEntry> result;
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        result = static_cast<DataTypeStructure*>(dataType)->getElements();
+    }
+
+    return result;
+}
+
+QList<EnumEntry> SIDataTypeModel::getEnumChildren(DataTypeCustom* dataType) const
+{
+    QList<EnumEntry> result;
+    if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        result = static_cast<DataTypeEnum*>(dataType)->getElements();
+    }
+
+    return result;
+}
+
+int SIDataTypeModel::getDataTypeChildCount(const DataTypeCustom* dataType) const
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<const DataTypeStructure*>(dataType)->getElements().size();
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<const DataTypeEnum*>(dataType)->getElements().size();
+    }
+
+    return 0;
+}
+
+void SIDataTypeModel::sortDataTypeChildren(DataTypeCustom* dataType, bool ascending)
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        static_cast<DataTypeStructure*>(dataType)->sortElementsByName(ascending);
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        static_cast<DataTypeEnum*>(dataType)->sortElementsByName(ascending);
+    }
+}
+
+bool SIDataTypeModel::hasChildren(const DataTypeCustom* dataType) const
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<const DataTypeStructure*>(dataType)->hasElements();
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<const DataTypeEnum*>(dataType)->hasElements();
+    }
+
+    return false;
+}
+
+bool SIDataTypeModel::canHaveChildren(const DataTypeCustom* dataType) const
+{
+    return (dataType->getCategory() == DataTypeBase::eCategory::Structure) || (dataType->getCategory() == DataTypeBase::eCategory::Enumeration);
+}
+
+int SIDataTypeModel::getChildCount(const DataTypeCustom* dataType) const
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<int>(static_cast<const DataTypeStructure*>(dataType)->getElements().size());
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<int>(static_cast<const DataTypeEnum*>(dataType)->getElements().size());
+    }
+
+    return 0;
+}
+
+int SIDataTypeModel::findIndex(uint32_t id) const
+{
+    return mData.findCustomDataType(id);
+}
+
+int SIDataTypeModel::findIndex(const DataTypeCustom* dataType) const
+{
+    return mData.findCustomDataType(dataType->getId());
+}
+
+int SIDataTypeModel::findChildIndex(const DataTypeCustom* dataType, uint32_t childId) const
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<const DataTypeStructure*>(dataType)->findIndex(childId);
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<const DataTypeEnum*>(dataType)->findIndex(childId);
+    }
+
+    return -1;
+}
+
+int SIDataTypeModel::findChildIndex(const DataTypeCustom* dataType, const ElementBase& child) const
+{
+    return findChildIndex(dataType, child.getId());
+}
+
+int SIDataTypeModel::findChildIndex(const DataTypeCustom* dataType, const QString& childName) const
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<const DataTypeStructure*>(dataType)->findIndex(childName);
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<const DataTypeEnum*>(dataType)->findIndex(childName);
+    }
+
+    return -1;
+}
+
+ElementBase* SIDataTypeModel::findChild(const DataTypeCustom* dataType, uint32_t childId) const
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<ElementBase *>(static_cast<const DataTypeStructure*>(dataType)->findElement(childId));
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<ElementBase*>(static_cast<const DataTypeEnum*>(dataType)->findElement(childId));
+    }
+
+    return nullptr;
+}
+
+ElementBase* SIDataTypeModel::findChild(const DataTypeCustom* dataType, const QString& childName) const
+{
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        return static_cast<ElementBase*>(static_cast<const DataTypeStructure*>(dataType)->findElement(childName));
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        return static_cast<ElementBase*>(static_cast<const DataTypeEnum*>(dataType)->findElement(childName));
+    }
+
+    return nullptr;
 }

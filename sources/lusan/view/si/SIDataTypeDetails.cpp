@@ -55,7 +55,7 @@ QRadioButton* SIDataTypeDetails::ctrlTypeImport(void) const
     return ui->radioTypeImport;
 }
 
-QRadioButton* SIDataTypeDetails::ctrlContainer(void) const
+QRadioButton* SIDataTypeDetails::ctrlTypeContainer(void) const
 {
     return ui->radioTypeContainer;
 }

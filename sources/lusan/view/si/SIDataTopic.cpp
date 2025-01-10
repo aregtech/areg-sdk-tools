@@ -214,7 +214,7 @@ void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previo
         mDetails->ctrlNotification()->setCurrentText(AttributeEntry::toString(entry->getNotification()));
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
         mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->isDeprecated());
+        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
 
         if (currentRow == 0)
         {
@@ -286,7 +286,7 @@ void SIDataTopic::onAddClicked(void)
         mDetails->ctrlNotification()->setCurrentText(AttributeEntry::toString(entry->getNotification()));
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
         mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->isDeprecated());
+        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
 
@@ -367,7 +367,7 @@ void SIDataTopic::onDeprectedChecked(bool isChecked)
     {
         AttributeEntry* entry = _findAttribute(row);
         Q_ASSERT(entry != nullptr);
-        entry->setDeprecated(isChecked);
+        entry->setIsDeprecated(isChecked);
         mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
     }
 }
