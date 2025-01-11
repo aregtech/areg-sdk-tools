@@ -25,6 +25,13 @@ FieldEntry::FieldEntry(ElementBase* parent /*= nullptr*/)
 {
 }
 
+FieldEntry::FieldEntry(uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
+    : ParamBase(id, name, "bool", false, "", "", parent)
+    , mValue("false")
+{
+}
+
+
 FieldEntry::FieldEntry(   uint32_t id
                         , const QString& name
                         , const QString& type
@@ -92,7 +99,7 @@ bool FieldEntry::operator > (const FieldEntry& other) const
     return getName() > other.getName();
 }
 
-QString FieldEntry::getValue() const
+const QString& FieldEntry::getValue() const
 {
     return mValue;
 }
@@ -111,7 +118,7 @@ bool FieldEntry::readFromXml(QXmlStreamReader& xml)
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
     setType(attributes.value(XmlSI::xmlSIAttributeDataType).toString());
-    setDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
+    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementField))
     {

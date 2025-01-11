@@ -21,29 +21,33 @@
 
 EnumEntry::EnumEntry(ElementBase* parent /*= nullptr*/)
     : ElementBase   (parent)
-    , mName         ("")
-    , mValue        ("")
+    , mName     ("")
+    , mValue    ("")
+    , mDescribe ("")
 {
 }
 
 EnumEntry::EnumEntry(uint32_t id, const QString& name, const QString& value, ElementBase* parent /*= nullptr*/)
     : ElementBase   (id, parent)
-    , mName         (name)
-    , mValue        (value)
+    , mName     (name)
+    , mValue    (value)
+    , mDescribe ("")
 {
 }
 
 EnumEntry::EnumEntry(const EnumEntry& src)
     : ElementBase(src)
-    , mName(src.mName)
-    , mValue(src.mValue)
+    , mName     (src.mName)
+    , mValue    (src.mValue)
+    , mDescribe (src.mDescribe)
 {
 }
 
 EnumEntry::EnumEntry(EnumEntry&& src) noexcept
     : ElementBase(std::move(src))
-    , mName(std::move(src.mName))
-    , mValue(std::move(src.mValue))
+    , mName     (std::move(src.mName))
+    , mValue    (std::move(src.mValue))
+    , mDescribe (std::move(src.mDescribe))
 {
 }
 
@@ -54,6 +58,7 @@ EnumEntry& EnumEntry::operator = (const EnumEntry& other)
         ElementBase::operator = (other);
         mName = other.mName;
         mValue = other.mValue;
+        mDescribe = other.mDescribe;
     }
 
     return *this;
@@ -66,6 +71,7 @@ EnumEntry& EnumEntry::operator=(EnumEntry&& other) noexcept
         ElementBase::operator = (std::move(other));
         mName = std::move(other.mName);
         mValue = std::move(other.mValue);
+        mDescribe = std::move(other.mDescribe);
     }
 
     return *this;
@@ -92,9 +98,16 @@ bool EnumEntry::readFromXml(QXmlStreamReader& xml)
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementEnumEntry))
     {
-        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementValue)
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
-            mValue = xml.readElementText();
+            if (xml.name() == XmlSI::xmlSIElementValue)
+            {
+                mValue = xml.readElementText();
+            }
+            else if (xml.name() == XmlSI::xmlSIElementDescription)
+            {
+                mDescribe = xml.readElementText();
+            }
         }
 
         xml.readNext();
@@ -109,6 +122,7 @@ void EnumEntry::writeToXml(QXmlStreamWriter& xml) const
         xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
         xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
         xml.writeTextElement(XmlSI::xmlSIElementValue, mValue);
+        xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescribe);
     xml.writeEndElement();
 }
 
@@ -130,4 +144,14 @@ const QString& EnumEntry::getValue() const
 void EnumEntry::setValue(const QString& value)
 {
     mValue = value;
+}
+
+const QString EnumEntry::getDescription(void) const
+{
+    return mDescribe;
+}
+
+void EnumEntry::setDescription(const QString& describe)
+{
+    mDescribe = describe;
 }

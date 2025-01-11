@@ -119,12 +119,12 @@ void ParamBase::setType(const QString & type)
     mType = type;
 }
 
-bool ParamBase::isDeprecated() const
+bool ParamBase::getIsDeprecated() const
 {
     return mIsDeprecated;
 }
 
-void ParamBase::setDeprecated(bool isDeprecated)
+void ParamBase::setIsDeprecated(bool isDeprecated)
 {
     mIsDeprecated = isDeprecated;
 }

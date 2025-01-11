@@ -167,6 +167,61 @@ const QList<DataTypeBasicContainer*>& DataTypeFactory::getContainerTypes(void)
     return mPredefinedContainerTypes;
 }
 
+int DataTypeFactory::getPredefinedTypes(QList<DataTypeBase *>& result, const QList<DataTypeBase::eCategory> & categories)
+{
+    int initCount = static_cast<int>(result.size());
+    for (auto category : categories)
+    {
+        switch (category)
+        {
+        case DataTypeBase::eCategory::Primitive:
+        case DataTypeBase::eCategory::PrimitiveSint:
+        case DataTypeBase::eCategory::PrimitiveUint:
+        case DataTypeBase::eCategory::PrimitiveFloat:
+        {
+            const QList<DataTypePrimitive*>& types { DataTypeFactory::getPrimitiveTypes() };
+            for (auto dataType : types)
+            {
+                if (dataType->getCategory() == category)
+                {
+                    result.append(dataType);
+                }
+            }
+        }
+        break;
+        
+        case DataTypeBase::eCategory::BasicObject:
+        {
+            const QList<DataTypeBasicObject*>& types {DataTypeFactory::getBasicTypes()};
+            uint32_t count = result.size();
+            result.resize(count + types.size());
+            for (auto dataType : types)
+            {
+                result[count++] = dataType;
+            }
+        }
+        break;
+            
+        case DataTypeBase::eCategory::BasicContainer:
+        {
+            const QList<DataTypeBasicContainer*>& types {DataTypeFactory::getContainerTypes()};
+            uint32_t count = result.size();
+            result.resize(count + types.size());
+            for (auto dataType : types)
+            {
+                result[count++] = dataType;
+            }
+        }
+        break;
+        
+        default:
+            break;
+        }
+    }
+    
+    return static_cast<int>(result.size()) - initCount;
+}
+
 void DataTypeFactory::_initPredefined(void)
 {
     Q_ASSERT(mPredefinePrimitiveTypes.isEmpty());

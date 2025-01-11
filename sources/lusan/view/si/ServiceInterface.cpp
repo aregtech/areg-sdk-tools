@@ -26,12 +26,12 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     : MdiChild  (parent)
     , mModel    ( )
     , mTabWidget(this)
-    , mOverview (mModel.getOverviewModel(), this)
-    , mDataType (this)
-    , mDataTopic(mModel.getDataTopicModel(), this)
+    , mOverview (mModel.getOverviewModel()  , this)
+    , mDataType (mModel.getDataTypeModel()  , this)
+    , mDataTopic(mModel.getDataTopicModel() , this)
     , mMethod   (this)
-    , mConstant (mModel.getConstantsModel(), this)
-    , mInclude  (mModel.getIncludesModel(), this)
+    , mConstant (mModel.getConstantsModel() , this)
+    , mInclude  (mModel.getIncludesModel()  , this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the sioverview widget as the first tab

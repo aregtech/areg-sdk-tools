@@ -110,6 +110,14 @@ public:
      **/
     static const QList<DataTypeBasicContainer*>& getContainerTypes(void);
 
+    /**
+     * \brief   Returns the list of predefined data types.
+     * \param   result      On output, the list of predefined data types.
+     * \param   categories  The list of data type categories to search.
+     * \return  Returns the number of predefined data types copied in the 'result'.
+     **/
+    static int getPredefinedTypes(QList<DataTypeBase *>& result, const QList<DataTypeBase::eCategory> & categories);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////

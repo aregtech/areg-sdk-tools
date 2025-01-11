@@ -106,3 +106,10 @@ void DataTypeStructure::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement(); // FieldList
     xml.writeEndElement(); // DataType
 }
+
+FieldEntry* DataTypeStructure::addField(const QString& name)
+{
+    uint32_t id{ getNextId() };
+    addElement(std::move(FieldEntry(id, name, this)), true);
+    return findElement(id);
+}

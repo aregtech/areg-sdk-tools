@@ -127,7 +127,7 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
         mDetails->ctrlValue()->setText(entry->getValue());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
         mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->isDeprecated());
+        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
         
         if (currentRow == 0)
         {
@@ -199,7 +199,7 @@ void SIConstant::onAddClicked(void)
         mDetails->ctrlValue()->setText(entry->getValue());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
         mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->isDeprecated());
+        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
         
@@ -278,7 +278,7 @@ void SIConstant::onDeprectedChecked(bool isChecked)
     {
         ConstantEntry* entry = _findConstant(row);
         Q_ASSERT(entry != nullptr);
-        entry->setDeprecated(isChecked);
+        entry->setIsDeprecated(isChecked);
         mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
     }
 }

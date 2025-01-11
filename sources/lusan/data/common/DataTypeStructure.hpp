@@ -29,6 +29,9 @@
  **/
 class DataTypeStructure : public TEDataTypeContainer<FieldEntry>
 {
+
+    static constexpr const char* const  DefName{ "field" };
+
 public:
     /**
      * \brief   Default constructor.
@@ -79,6 +82,8 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
+    FieldEntry* addField(const QString& name);
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPESTRUCTURE_HPP

@@ -24,12 +24,32 @@ namespace Ui {
     class SIDataTypeList;
 }
 
+class QTreeWidget;
+class QToolButton;
+
+
 class SIDataTypeList : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit SIDataTypeList(QWidget *parent = nullptr);
+
+    QTreeWidget* ctrlTableList(void) const;
+
+    QToolButton* ctrlToolAdd(void) const;
+
+    QToolButton* ctrlToolRemove(void) const;
+
+    QToolButton* ctrlToolMoveUp(void) const;
+
+    QToolButton* ctrlToolMoveDown(void) const;
+
+    QToolButton* ctrlToolAddField(void) const;
+
+    QToolButton* ctrlToolRemoveField(void) const;
+
+    QToolButton* ctrlToolInsertField(void) const;
 
 private:
     Ui::SIDataTypeList* ui;

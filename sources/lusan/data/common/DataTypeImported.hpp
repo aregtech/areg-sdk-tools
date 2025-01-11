@@ -90,11 +90,43 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    
+    inline const QString& getNamespace(void) const;
+
+    inline void setNamespace(const QString& space);
+
+    inline const QString& getLocation(void) const;
+
+    inline void setLocation(const QString& location);
 
 private:
     QString mNamespace; //!< The namespace of the imported data type.
     QString mLocation;  //!< The location of the imported data type.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// DataTypeImported class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline const QString& DataTypeImported::getNamespace(void) const
+{
+    return mNamespace;
+}
+
+inline void DataTypeImported::setNamespace(const QString& space)
+{
+    mNamespace = space;
+}
+
+inline const QString& DataTypeImported::getLocation(void) const
+{
+    return mLocation;
+}
+
+inline void DataTypeImported::setLocation(const QString& location)
+{
+    mLocation = location;
+}
 
 #endif // LUSAN_DATA_COMMON_DATATYPEIMPORTED_HPP
 

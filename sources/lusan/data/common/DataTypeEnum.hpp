@@ -31,6 +31,8 @@ class DataTypeEnum : public TEDataTypeContainer<EnumEntry>
 {
     static constexpr const char* const  DEFAULT_VALUES  { "default" };
 
+    static constexpr const char* const  DefName         { "EnumField" };
+
 public:
     /**
      * \brief   Default constructor.
@@ -82,8 +84,24 @@ public:
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
+    EnumEntry* addField(const QString& name);
+    
+    inline const QString& getDerived(void) const;
+    
+    inline void setDerived(const QString& derived);
+
 private:
-    QString mDerived;   //!< The type name of values. If name is empty, default is used.
+    QString     mDerived;   //!< The type name of values. If name is empty, default is used.
 };
+
+inline const QString& DataTypeEnum::getDerived(void) const
+{
+    return mDerived;
+}
+
+inline void DataTypeEnum::setDerived(const QString& derived)
+{
+    mDerived = derived;
+}
 
 #endif // LUSAN_DATA_COMMON_DATATYPEENUM_HPP

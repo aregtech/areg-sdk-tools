@@ -21,6 +21,7 @@
 
 #include <QStringList>
 #include <QString>
+#include <QPoint>
 
 /**
  * \namespace NELusanCommon
@@ -52,6 +53,8 @@ namespace NELusanCommon
      * \brief   The options file name.
      **/
     extern const QString    OPTIONS;
+
+    // constexpr const QPoint  DescPos {120, 235};
 
     /**
      * \brief   Gets the options file path.
