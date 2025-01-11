@@ -293,14 +293,73 @@ void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QLis
     }
 }
 
+int SIDataTypeData::getDataTypes(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase::eCategory>& includes, bool makeSorting /*= false*/) const
+{
+    out_dataTypes.clear();
+    for (auto category : includes)
+    {
+        switch(category)
+        {
+        case DataTypeBase::eCategory::Primitive:
+        case DataTypeBase::eCategory::PrimitiveSint:
+        case DataTypeBase::eCategory::PrimitiveUint:
+        case DataTypeBase::eCategory::PrimitiveFloat:
+        case DataTypeBase::eCategory::BasicObject:
+        case DataTypeBase::eCategory::BasicContainer:
+            DataTypeFactory::getPredefinedTypes(out_dataTypes, QList<DataTypeBase::eCategory>{category});
+            break;
+            
+        case DataTypeBase::eCategory::Enumeration:
+        case DataTypeBase::eCategory::Structure:
+        case DataTypeBase::eCategory::Imported:
+        case DataTypeBase::eCategory::Container:
+        {
+            for (DataTypeCustom* dataType : mCustomDataTypes)
+            {
+                if (dataType->getCategory() == category)
+                {
+                    out_dataTypes.append(dataType);
+                }
+            }
+        }
+        break;
+        
+        default:
+            break;
+        }
+    }
+    
+    if (makeSorting)
+    {
+        std::sort(out_dataTypes.begin(), out_dataTypes.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
+                  {
+                      Q_ASSERT(lhs->getName() != rhs->getName());
+                      return lhs->getName() < rhs->getName();
+                  });
+    }
+    
+    return static_cast<int>(out_dataTypes.size());
+}
+
 bool SIDataTypeData::existsPrimitive(const QList<DataTypePrimitive*> dataTypes, const QString& searchName) const
 {
     return exists<DataTypePrimitive>(dataTypes, searchName);
 }
 
+bool SIDataTypeData::existsPrimitive(const QList<DataTypePrimitive*> dataTypes, uint32_t id) const
+{
+    return exists<DataTypePrimitive>(dataTypes, id);
+}
+    
+
 bool SIDataTypeData::existsBasic(const QList<DataTypeBasicObject*> dataTypes, const QString& searchName) const
 {
     return exists<DataTypeBasicObject>(dataTypes, searchName);
+}
+
+bool SIDataTypeData::existsBasic(const QList<DataTypeBasicObject*> dataTypes, uint32_t id) const
+{
+    return exists<DataTypeBasicObject>(dataTypes, id);
 }
 
 bool SIDataTypeData::existsContainer(const QList<DataTypeBasicContainer*> dataTypes, const QString& searchName) const
@@ -308,9 +367,19 @@ bool SIDataTypeData::existsContainer(const QList<DataTypeBasicContainer*> dataTy
     return exists<DataTypeBasicContainer>(dataTypes, searchName);
 }
 
+bool SIDataTypeData::existsContainer(const QList<DataTypeBasicContainer*> dataTypes, uint32_t id) const
+{
+    return exists<DataTypeBasicContainer>(dataTypes, id);
+}
+
 bool SIDataTypeData::existsCustom(const QList<DataTypeCustom*> dataTypes, const QString& searchName) const
 {
     return exists<DataTypeCustom>(dataTypes, searchName);
+}
+
+bool SIDataTypeData::existsCustom(const QList<DataTypeCustom*> dataTypes, uint32_t id) const
+{
+    return exists<DataTypeCustom>(dataTypes, id);
 }
 
 bool SIDataTypeData::exists(const QString& typeName) const
@@ -330,6 +399,26 @@ bool SIDataTypeData::exists(const QString& typeName) const
     if (existsContainer(containers, typeName))
         return true;
 
+    return false;
+}
+
+bool SIDataTypeData::exists(uint32_t id) const
+{
+    if (existsCustom(mCustomDataTypes, id))
+        return true;
+    
+    const QList<DataTypePrimitive*>& primitives = getPrimitiveDataTypes();
+    if (existsPrimitive(primitives, id))
+        return true;
+    
+    const QList<DataTypeBasicObject*>& basics = getBasicDataTypes();
+    if (existsBasic(basics, id))
+        return true;
+    
+    const QList<DataTypeBasicContainer*>& containers = getContainerDatTypes();
+    if (existsContainer(containers, id))
+        return true;
+    
     return false;
 }
 

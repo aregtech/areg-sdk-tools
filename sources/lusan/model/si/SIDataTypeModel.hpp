@@ -20,6 +20,8 @@
  ************************************************************************/
 
 #include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/data/common/DataTypePrimitive.hpp"
+#include "lusan/data/common/DataTypeBasic.hpp"
 #include <QList>
 
 class DataTypeCustom;
@@ -41,12 +43,50 @@ public:
      */
     SIDataTypeModel(SIDataTypeData & data);
 
+    /**
+     * \brief Returns instance of data type data object.
+     */
     inline SIDataTypeData& getDataTypeData(void);
+    
+    /**
+     * \brief   Returns the list of basic container data types objects.
+     **/
+    const QList<DataTypeBasicContainer*>& getContainerDatTypes(void) const;
 
+    /**
+     * \brief   Returns the list of custom data types objects.
+     **/
+    const QList<DataTypeCustom *>& getCustomDataTypes(void) const;
+
+    /**
+     * \brief   Gets list of data types of specified categories and returns number of data types copied.
+     * \param   result          On output, this contains the list of data types.
+     * \param   categories      The list of data type categories to include.
+     * \param   makeSorting     If true, the list of data types will be sorted.
+     * \return  Returns the number of data types copied to the 'result' list.
+     **/
+    int getDataTypes(QList<DataTypeBase *> & result, const QList<DataTypeBase::eCategory> & categories, bool makeSorting = false);
+
+    /**
+     * \brief   Creates new data type object with specified name and category.
+     * \param   name        The name of data type.
+     * \param   category    The category of data type.
+     * \return  Returns the pointer to created data type object.
+     **/
     DataTypeCustom * createDataType(const QString & name, DataTypeBase::eCategory category);
-    
+
+    /**
+     * \brief   Deletes data type object from the list by specified ID.
+     * \param   id  The ID of data type to delete.
+     * \return  Returns true if data type object was deleted. Otherwise, returns false.
+     **/
     bool deleteDataType(uint32_t id);
-    
+
+    /**
+     * \brief   Deletes data type object from the list.
+     * \param   dataType    The pointer to data type object to delete.
+     * \return  Returns true if data type object was deleted. Otherwise, returns false.
+     **/
     bool deleteDataType(const DataTypeCustom* dataType);
     
     DataTypeCustom* convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category);

@@ -21,11 +21,15 @@
 #include <QScrollArea>
 #include "lusan/data/common/DataTypeBase.hpp"
 
+class DataTypeBasicContainer;
 class DataTypeCustom;
+class DataTypeContainer;
 class DataTypeDefined;
 class DataTypeEnum;
 class DataTypeImported;
+class DataTypePrimitive;
 class DataTypeStructure;
+class DataTypesModel;
 class SIDataTypeDetails;
 class SIDataTypeList;
 class SIDataTypeFieldDetails;
@@ -91,8 +95,10 @@ protected:
      * \brief Triggered when the name is changed.
      * \param newName The new name of the attribute.
      */
-    void onNameChanged(const QString& newName);
-
+    void onTypeNameChanged(const QString& newName);
+    
+    void onFieldNameChanged(const QString& newName);
+    
     /**
      * \brief   Triggered when the deprecated flag is changed.
      * \param   isChecked   The flag to indicate if the constant is deprecated.
@@ -117,11 +123,16 @@ protected:
     void onImportSelected(bool checked);
 
     void onContainerSelected(bool checked);
-
-
+    
+    void onContainerObjectChanged(int index);
+    
+    void onContainerKeyChanged(int index);
+    
+    void onContainerValueChanged(int index);
+    
 private:
 
-    void onCovertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory);
+    void onConvertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory);
 
     void showEnumDetails(bool show);
 
@@ -183,6 +194,12 @@ private:
     void updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataType, const EnumEntry& field) const;
 
     void activateFields(bool activate);
+    
+    static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
+    
+    static const QList<DataTypeBase *>& _getIntegerTypes(void);
+    
+    static const QList<DataTypeBase *>& _getPredefinedTypes(void);
 
 private:
     SIDataTypeDetails*      mDetails;

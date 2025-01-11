@@ -31,12 +31,7 @@ SIConstantList::SIConstantList(QWidget* parent)
     this->setFont(font);
     ui->setupUi(this);
     QTableWidget* table = ui->tableConstants;
-    // table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Interactive);
-    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Interactive);
-    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
-    table->horizontalHeader()->setSortIndicatorClearable(true);
-    table->horizontalHeader()->setStretchLastSection(true);
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }

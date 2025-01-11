@@ -141,6 +141,127 @@ void DataTypesModel::setFilter(const QList<DataTypeBase::eCategory>& excludes)
     }
 }
 
+void DataTypesModel::setInclusiveFilter(const QStringList& inclusive)
+{
+    mExcludeList.clear();
+    mDataTypeData.getDataType(mExcludeList, QList<DataTypeBase*>(), false);
+    for (const QString& entry : inclusive)
+    {
+        DataTypeBase* dataType = mDataTypeData.findDataType(entry);
+        int index = mExcludeList.indexOf(dataType);
+        if (index >= 0)
+        {
+            mExcludeList.removeAt(index);
+        }
+    }
+}
+
+void DataTypesModel::setInclusiveFilter(const QList<DataTypeBase*>& inclusive)
+{
+    mExcludeList.clear();
+    mDataTypeData.getDataType(mExcludeList, QList<DataTypeBase*>(), false);
+    for (DataTypeBase* dataType : inclusive)
+    {
+        int index = mExcludeList.indexOf(dataType);
+        if (index >= 0)
+        {
+            mExcludeList.removeAt(index);
+        }
+    }
+}
+
+void DataTypesModel::setInclusiveFilter(const QList<DataTypeBase::eCategory>& inclusive)
+{
+    mExcludeList.clear();
+    mDataTypeData.getDataType(mExcludeList, QList<DataTypeBase*>(), false);
+    for (DataTypeBase::eCategory category : inclusive)
+    {
+        switch (category)
+        {
+        case DataTypeBase::eCategory::Primitive:
+        case DataTypeBase::eCategory::PrimitiveSint:
+        case DataTypeBase::eCategory::PrimitiveUint:
+        case DataTypeBase::eCategory::PrimitiveFloat:
+        {
+            const QList<DataTypePrimitive*>& list = mDataTypeData.getPrimitiveDataTypes();
+            for (DataTypePrimitive* dataType : list)
+            {
+                int index = mExcludeList.indexOf(dataType);
+                if (index >= 0)
+                {
+                    mExcludeList.removeAt(index);
+                }
+            }
+        }
+        break;
+
+        case DataTypeBase::eCategory::BasicObject:
+        {
+            const QList<DataTypeBasicObject*>& list = mDataTypeData.getBasicDataTypes();
+            for (DataTypeBasicObject* dataType : list)
+            {
+                int index = mExcludeList.indexOf(dataType);
+                if (index >= 0)
+                {
+                    mExcludeList.removeAt(index);
+                }
+            }
+        }
+        break;
+
+        case DataTypeBase::eCategory::BasicContainer:
+        {
+            const QList<DataTypeBasicContainer*>& list = mDataTypeData.getContainerDatTypes();
+            for (DataTypeBasicContainer* dataType : list)
+            {
+                int index = mExcludeList.indexOf(dataType);
+                if (index >= 0)
+                {
+                    mExcludeList.removeAt(index);
+                }
+            }
+        }
+        break;
+
+        case DataTypeBase::eCategory::Enumeration:
+        case DataTypeBase::eCategory::Structure:
+        case DataTypeBase::eCategory::Imported:
+        case DataTypeBase::eCategory::Container:
+        {
+            const QList<DataTypeCustom*>& list = mDataTypeData.getCustomDataTypes();
+            for (DataTypeCustom* dataType : list)
+            {
+                int index = mExcludeList.indexOf(dataType);
+                if (index >= 0)
+                {
+                    mExcludeList.removeAt(index);
+                }
+            }
+        }
+        break;
+
+        default:
+            break;
+        }
+    }
+}
+
+void DataTypesModel::addToFilter(const DataTypeBase* dataType)
+{
+    if ((dataType != nullptr) && (mExcludeList.contains(dataType) == false))
+    {
+        mExcludeList.append(const_cast<DataTypeBase *>(dataType));
+    }
+}
+
+void DataTypesModel::removeFromFilter(const DataTypeBase* dataType)
+{
+    if ((dataType != nullptr) && (mExcludeList.contains(dataType) == true))
+    {
+        mExcludeList.removeAll(dataType);
+    }
+}
+
 void DataTypesModel::clearFilter()
 {
     mExcludeList.clear();
@@ -160,19 +281,26 @@ QVariant DataTypesModel::data(const QModelIndex& index, int role) const
         return QVariant();
     
     
-    QList<DataTypeBase*> list;
-    mDataTypeData.getDataType(list, mExcludeList, false);
-    DataTypeBase* dataType = (index.row() >= list.size()) ? nullptr : list[index.row()];
     switch (static_cast<Qt::ItemDataRole>(role))
     {
     case Qt::ItemDataRole::DisplayRole:
-    case Qt::ItemDataRole::DecorationRole:
     case Qt::ItemDataRole::EditRole:
+    {
+        QList<DataTypeBase*> list;
+        mDataTypeData.getDataType(list, mExcludeList, false);
+        DataTypeBase* dataType = (index.row() >= list.size()) ? nullptr : list[index.row()];
         return QVariant(dataType != nullptr ? dataType->getName() : QString(""));
-        break;
+    }
+    break;
     
     case Qt::ItemDataRole::UserRole:
+    {
+        QList<DataTypeBase*> list;
+        mDataTypeData.getDataType(list, mExcludeList, false);
+        DataTypeBase* dataType = (index.row() >= list.size()) ? nullptr : list[index.row()];
         return QVariant::fromValue(dataType);
+    }
+    break;
     
     default:
         return QVariant();

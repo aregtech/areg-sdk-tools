@@ -23,7 +23,7 @@
 #include "lusan/common/XmlSI.hpp"
 
 DataTypeDefined::DataTypeDefined(ElementBase* parent /*= nullptr*/)
-    : DataTypeCustom(eCategory::CustomDefined, parent)
+    : DataTypeCustom(eCategory::Container, parent)
     , mContainer    ( )
     , mValue( )
     , mKey  ( )
@@ -31,7 +31,7 @@ DataTypeDefined::DataTypeDefined(ElementBase* parent /*= nullptr*/)
 }
 
 DataTypeDefined::DataTypeDefined(const QString& name, ElementBase* parent /*= nullptr*/)
-    : DataTypeCustom(eCategory::CustomDefined, 0, name, parent)
+    : DataTypeCustom(eCategory::Container, 0, name, parent)
     , mContainer    ( )
     , mValue( )
     , mKey  ( )

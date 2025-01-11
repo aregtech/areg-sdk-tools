@@ -31,6 +31,21 @@ SIDataTypeModel::SIDataTypeModel(SIDataTypeData& data)
 {
 }
 
+int SIDataTypeModel::getDataTypes(QList<DataTypeBase *> & result, const QList<DataTypeBase::eCategory> & categories, bool makeSorting /*= false*/)
+{
+    return mData.getDataTypes(result, categories, makeSorting);
+}
+
+const QList<DataTypeBasicContainer*>& SIDataTypeModel::getContainerDatTypes(void) const
+{
+    return mData.getContainerDatTypes();
+}
+
+const QList<DataTypeCustom *>& SIDataTypeModel::getCustomDataTypes(void) const
+{
+    return mData.getCustomDataTypes();
+}
+
 DataTypeCustom* SIDataTypeModel::createDataType(const QString& name, DataTypeBase::eCategory category)
 {
     return mData.addCustomDataType(name, category);

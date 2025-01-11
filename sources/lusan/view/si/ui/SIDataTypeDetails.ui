@@ -140,28 +140,21 @@
            <property name="bottomMargin">
             <number>0</number>
            </property>
-           <item row="0" column="0">
+           <item row="2" column="0">
             <widget class="QLabel" name="labelContainerKey">
              <property name="text">
               <string>Key:</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="labelContainerObject">
-             <property name="text">
-              <string>Object:</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
+           <item row="5" column="0">
             <widget class="QLabel" name="labelContainerValue">
              <property name="text">
               <string>Value:</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="1">
+           <item row="2" column="1">
             <widget class="QComboBox" name="comboContainerKey">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -171,7 +164,17 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="5" column="1">
+            <widget class="QComboBox" name="comboContainerValue">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
             <widget class="QComboBox" name="comboContainerObject">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -181,13 +184,10 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
-            <widget class="QComboBox" name="comboContainerValue">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+           <item row="0" column="0">
+            <widget class="QLabel" name="labelContainerObject">
+             <property name="text">
+              <string>Object:</string>
              </property>
             </widget>
            </item>

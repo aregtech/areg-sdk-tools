@@ -82,6 +82,36 @@ public:
     void setFilter(const QList<DataTypeBase::eCategory> & excludes);
 
     /**
+     * \brief   Marks all data types excluded, except the given names to include.
+     * \param   inclusive   The list of data type names to include.
+     **/
+    void setInclusiveFilter(const QStringList& inclusive);
+
+    /**
+     * \brief   Marks all data types excluded, except the given data types to include.
+     * \param   inclusive   The list of data types to include.
+     **/
+    void setInclusiveFilter(const QList<DataTypeBase*>& inclusive);
+
+    /**
+     * \brief   Marks all data types excluded, except the given categories to include.
+     * \param   inclusive   The list of data type categories to include.
+     **/
+    void setInclusiveFilter(const QList<DataTypeBase::eCategory>& inclusive);
+
+    /**
+     * \brief   Adds the data type to the filter list to exclude.
+     * \param   dataType    The data type to add to the filter list.
+     **/
+    void addToFilter(const DataTypeBase* dataType);
+
+    /**
+     * \brief   Removes the data type from the filter list.
+     * \param   dataType    The data type to remove from the filter list.
+     **/
+    void removeFromFilter(const DataTypeBase* dataType);
+    
+    /**
      * \brief   Clears the filter list.
      **/
     void clearFilter();
