@@ -1,5 +1,5 @@
-#ifndef LUSAN_DATA_COMMON_DATATYPEDEFINED_HPP
-#define LUSAN_DATA_COMMON_DATATYPEDEFINED_HPP
+#ifndef LUSAN_DATA_COMMON_DATATYPECONTAINER_HPP
+#define LUSAN_DATA_COMMON_DATATYPECONTAINER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,20 +12,20 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/common/DataTypeDefined.hpp
+ *  \file        lusan/data/common/DataTypeContainer.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Defined Data Type.
+ *  \brief       Lusan application, Container Data Type.
  *
  ************************************************************************/
 
 #include "lusan/data/common/DataTypeCustom.hpp"
 
 /**
- * \class   DataTypeDefined
- * \brief   Represents a defined data type in the Lusan application.
+ * \class   DataTypeContainer
+ * \brief   Represents a Container data type in the Lusan application.
  **/
-class DataTypeDefined : public DataTypeCustom
+class DataTypeContainer : public DataTypeCustom
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors
@@ -34,25 +34,25 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeDefined(ElementBase* parent = nullptr);
+    DataTypeContainer(ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
      **/
-    DataTypeDefined(const QString& name, ElementBase* parent = nullptr);
+    DataTypeContainer(const QString& name, ElementBase* parent = nullptr);
 
     /**
      * \brief   Copy constructor.
      * \param   src     The source object to copy from.
      **/
-    DataTypeDefined(const DataTypeDefined& src);
+    DataTypeContainer(const DataTypeContainer& src);
 
     /**
      * \brief   Move constructor.
      * \param   src     The source object to move from.
      **/
-    DataTypeDefined(DataTypeDefined&& src) noexcept;
+    DataTypeContainer(DataTypeContainer&& src) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -64,14 +64,14 @@ public:
      * \param   other   The other object to copy from.
      * \return  Reference to this object.
      **/
-    DataTypeDefined& operator = (const DataTypeDefined& other);
+    DataTypeContainer& operator = (const DataTypeContainer& other);
 
     /**
      * \brief   Move assignment operator.
      * \param   other   The other object to move from.
      * \return  Reference to this object.
      **/
-    DataTypeDefined& operator = (DataTypeDefined&& other) noexcept;
+    DataTypeContainer& operator = (DataTypeContainer&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes, operations and overrides
@@ -115,42 +115,42 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// DataTypeDefined class inline methods
+// DataTypeContainer class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& DataTypeDefined::getContainer(void) const
+inline const QString& DataTypeContainer::getContainer(void) const
 {
     return mContainer;
 }
 
-inline void DataTypeDefined::setContainer(const QString& valContainer)
+inline void DataTypeContainer::setContainer(const QString& valContainer)
 {
     mContainer = valContainer;
 }
 
-inline bool DataTypeDefined::hasKey(void) const
+inline bool DataTypeContainer::hasKey(void) const
 {
     return mKey.isEmpty() == false;
 }
 
-inline const QString& DataTypeDefined::getKey(void) const
+inline const QString& DataTypeContainer::getKey(void) const
 {
     return mKey;
 }
 
-inline void DataTypeDefined::setKey(const QString& key)
+inline void DataTypeContainer::setKey(const QString& key)
 {
     mKey = key;
 }
 
-inline const QString& DataTypeDefined::getValue(void) const
+inline const QString& DataTypeContainer::getValue(void) const
 {
     return mValue;
 }
 
-inline void DataTypeDefined::setValue(const QString& value)
+inline void DataTypeContainer::setValue(const QString& value)
 {
     mValue = value;
 }
 
-#endif // LUSAN_DATA_COMMON_DATATYPEDEFINED_HPP
+#endif // LUSAN_DATA_COMMON_DATATYPECONTAINER_HPP

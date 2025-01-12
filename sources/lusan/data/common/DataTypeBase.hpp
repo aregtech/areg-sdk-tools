@@ -47,7 +47,7 @@ public:
         , PrimitiveFloat= 0x000C    //!< bits: 0000 0000 0000 1100, Primitive digit with floating point
         , BasicObject   = 0x0010    //!< bits: 0000 0000 0001 0000, Basic object
         , BasicContainer= 0x0020    //!< bits: 0000 0000 0010 0001, Basic container
-        , CustomDefined = 0x0100    //!< bits: 0000 0001 0000 0000, Custom type enumeration
+        , CustomDefined = 0x0100    //!< bits: 0000 0001 0000 0000, Custom type basic
         , Enumeration   = 0x0300    //!< bits: 0000 0011 0000 0000, Custom type enumeration
         , Structure     = 0x0500    //!< bits: 0000 0101 0000 0000, Custom type structure
         , Imported      = 0x0900    //!< bits: 0000 1001 0000 0000, Custom type imported

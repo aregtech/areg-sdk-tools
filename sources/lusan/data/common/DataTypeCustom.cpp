@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/common/XmlSI.hpp"
 
 DataTypeCustom::DataTypeCustom(ElementBase * parent /*= nullptr*/)
     : DataTypeBase(eCategory::CustomDefined, "", 0, parent)
@@ -130,13 +131,13 @@ QString DataTypeCustom::getType(DataTypeBase::eCategory category)
     switch (category)
     {
     case DataTypeBase::eCategory::Enumeration:
-        return "Enumerate";
+        return XmlSI::xmlSIValueEnumeration;
     case DataTypeBase::eCategory::Structure:
-        return "Structure";
+        return XmlSI::xmlSIValueStructure;
     case DataTypeBase::eCategory::Imported:
-        return "Imported";
+        return XmlSI::xmlSIValueImported;
     case DataTypeBase::eCategory::Container:
-        return "DefinedType";
+        return XmlSI::xmlSIValueContainer;
     default:
         return "";
     }
@@ -144,19 +145,19 @@ QString DataTypeCustom::getType(DataTypeBase::eCategory category)
 
 DataTypeBase::eCategory DataTypeCustom::fromTypeString(const QString& type)
 {
-    if (type == "Enumerate")
+    if (type == XmlSI::xmlSIValueEnumeration)
     {
         return DataTypeBase::eCategory::Enumeration;
     }
-    else if (type == "Structure")
+    else if (type == XmlSI::xmlSIValueStructure)
     {
         return DataTypeBase::eCategory::Structure;
     }
-    else if (type == "Imported")
+    else if (type == XmlSI::xmlSIValueImported)
     {
         return DataTypeBase::eCategory::Imported;
     }
-    else if (type == "DefinedType")
+    else if (type == XmlSI::xmlSIValueContainer)
     {
         return DataTypeBase::eCategory::Container;
     }

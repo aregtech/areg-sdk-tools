@@ -24,7 +24,7 @@
 class DataTypeBasicContainer;
 class DataTypeCustom;
 class DataTypeContainer;
-class DataTypeDefined;
+class DataTypeContainer;
 class DataTypeEnum;
 class DataTypeImported;
 class DataTypePrimitive;
@@ -167,7 +167,7 @@ private:
 
     void selectedImport(DataTypeImported* dataType);
 
-    void selectedContainer(DataTypeDefined* dataType);
+    void selectedContainer(DataTypeContainer* dataType);
 
     void selectedStructField(const FieldEntry& field, DataTypeStructure* parent);
 
@@ -179,7 +179,7 @@ private:
 
     QTreeWidgetItem* createNodeImported(DataTypeImported* dataType) const;
     
-    QTreeWidgetItem* createNodeContainer(DataTypeDefined* dataType) const;
+    QTreeWidgetItem* createNodeContainer(DataTypeContainer* dataType) const;
 
     void updateNodeStructure(QTreeWidgetItem* node, DataTypeStructure* dataType) const;
 
@@ -187,7 +187,7 @@ private:
 
     void updateNodeImported(QTreeWidgetItem* node, DataTypeImported* dataType) const;
 
-    void updateNodeContainer(QTreeWidgetItem* node, DataTypeDefined* dataType) const;
+    void updateNodeContainer(QTreeWidgetItem* node, DataTypeContainer* dataType) const;
 
     void updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure* dataType, const FieldEntry& field) const;
 

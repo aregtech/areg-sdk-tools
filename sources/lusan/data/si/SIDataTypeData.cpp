@@ -21,7 +21,7 @@
 #include "lusan/common/XmlSI.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
-#include "lusan/data/common/DataTypeDefined.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
@@ -244,7 +244,7 @@ void SIDataTypeData::setCustomDataTypes(QList<DataTypeCustom*>&& entries)
     }
 }
 
-void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase*>& excludes /*= QList<DataTypeCustom *>*/, bool makeSorting /*= true*/) const
+void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase*>& excludes /*= QList<DataTypeCustom *>*/, bool makeSorting /*= false*/) const
 {
     out_dataTypes.clear();
     const QList<DataTypePrimitive*>& primitives = getPrimitiveDataTypes();
@@ -512,9 +512,9 @@ DataTypeEnum* SIDataTypeData::addEnum(const QString& name)
     return static_cast<DataTypeEnum*>(addCustomDataType(name, DataTypeBase::eCategory::Enumeration));
 }
 
-DataTypeDefined* SIDataTypeData::addDefined(const QString& name)
+DataTypeContainer* SIDataTypeData::addContainer(const QString& name)
 {
-    return static_cast<DataTypeDefined*>(addCustomDataType(name, DataTypeBase::eCategory::Container));
+    return static_cast<DataTypeContainer*>(addCustomDataType(name, DataTypeBase::eCategory::Container));
 }
 
 DataTypeImported* SIDataTypeData::addImported(const QString& name)

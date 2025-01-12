@@ -71,12 +71,40 @@ namespace XmlSI
     constexpr const char* const xmlSIAttributeValues        { "Values" };
     constexpr const char* const xmlSIAttributeVersion       { "Version" };
     
-
-    constexpr const char* const xmlSIValuePrimitive         { "Primitive" };
-    constexpr const char* const xmlSIValueBasic             { "Basic" };
-    constexpr const char* const xmlSIValueContainer         { "Container" };
     constexpr const char* const xmlSIValueTrue              { "true" };
     constexpr const char* const xmlSIValueFalse             { "false" };
+
+    constexpr const char* const xmlSIValuePrimitive         { "Primitive" };
+    constexpr const char* const xmlSIValueBool              { "bool" };
+    constexpr const char* const xmlSIValueChar              { "char" };
+    constexpr const char* const xmlSIValueUint8             { "uint8" };
+    constexpr const char* const xmlSIValueInt16             { "int16" };
+    constexpr const char* const xmlSIValueUint16            { "uint16" };
+    constexpr const char* const xmlSIValueInt32             { "int32" };
+    constexpr const char* const xmlSIValueUint32            { "uint32" };
+    constexpr const char* const xmlSIValueInt64             { "int64" };
+    constexpr const char* const xmlSIValueUint64            { "uint64" };
+    constexpr const char* const xmlSIValueFloat             { "float" };
+    constexpr const char* const xmlSIValueDouble            { "double" };
+
+    constexpr const char* const xmlSIValueBasicObject       { "BasicObject" };
+    constexpr const char* const xmlSIValueString            { "String" };
+    constexpr const char* const xmlSIValueBinary            { "BinaryBuffer" };
+    constexpr const char* const xmlSIValueDateTime          { "DateTime" };
+
+    constexpr const char* const xmlSIValueBasicContainer    { "BasicContainer" };
+    constexpr const char* const xmlSIValueArray             { "Array" };
+    constexpr const char* const xmlSIValueLinkedList        { "LinkedList" };
+    constexpr const char* const xmlSIValueHashMap           { "HashMap" };
+    constexpr const char* const xmlSIValueMap               { "Map" };
+    constexpr const char* const xmlSIValuePair              { "Pair" };
+    constexpr const char* const xmlSIValueNewType           { "NewType" };
+
+    constexpr const char* const xmlSIValueStructure         { "Structure" };
+    constexpr const char* const xmlSIValueEnumeration       { "Enumeration" };
+    constexpr const char* const xmlSIValueImported          { "Imported" };
+    constexpr const char* const xmlSIValueContainer         { "Container" };
+
 
     constexpr const unsigned int xmlElementId               { 50u };
 }
