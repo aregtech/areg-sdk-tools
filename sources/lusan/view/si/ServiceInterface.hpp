@@ -39,6 +39,16 @@ public:
     ServiceInterface(QWidget *parent = nullptr);
     virtual ~ServiceInterface(void);
 
+public slots:
+
+    void slotDataTypeCreated(DataTypeCustom* dataType);
+
+    void slotDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
+
+    void slotlDataTypeRemoved(DataTypeCustom* dataType);
+
+    void slotlDataTypeUpdated(DataTypeCustom* dataType);
+
 private:
     ServiceInterfaceModel   mModel;
     QTabWidget  mTabWidget;

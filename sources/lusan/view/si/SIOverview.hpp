@@ -20,6 +20,7 @@
  ************************************************************************/
 #include <QScrollArea>
 #include <QIntValidator>
+#include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 class SIOverviewDetails;
 class SIOverviewLinks;
@@ -44,6 +45,7 @@ private:
 };
 
 class SIOverview : public QScrollArea
+                 , public IEDataTypeConsumer
 {
     Q_OBJECT
 
@@ -51,6 +53,8 @@ public:
     explicit SIOverview(SIOverviewModel & model, QWidget* parent = nullptr);
 
     virtual ~SIOverview(void);
+
+public:
 
 protected:
 

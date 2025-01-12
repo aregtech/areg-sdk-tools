@@ -28,6 +28,8 @@ DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData,  QObject* parent)
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( )
+    , mDataTypeList ( )
+    , mCountPredef  ( 0 )
 {
 }
 
@@ -35,6 +37,8 @@ DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QStringList& 
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( )
+    , mDataTypeList ( )
+    , mCountPredef  ( 0 )
 {
     for (const QString& entry : excludes)
     {
@@ -50,6 +54,8 @@ DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QList<DataTyp
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( excludes )
+    , mDataTypeList ( )
+    , mCountPredef  ( 0 )
 {
 }
 
@@ -270,14 +276,12 @@ void DataTypesModel::clearFilter()
 int DataTypesModel::rowCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    QList<DataTypeBase*> list;
-    mDataTypeData.getDataType(list, mExcludeList, false);
-    return static_cast<int>(list.size());
+    return static_cast<int>(mDataTypeList.size());
 }
 
 QVariant DataTypesModel::data(const QModelIndex& index, int role) const
 {
-    if (!index.isValid())
+    if (!index.isValid() || (index.row() >= static_cast<int>(mDataTypeList.size())) )
         return QVariant();
     
     
@@ -286,23 +290,152 @@ QVariant DataTypesModel::data(const QModelIndex& index, int role) const
     case Qt::ItemDataRole::DisplayRole:
     case Qt::ItemDataRole::EditRole:
     {
-        QList<DataTypeBase*> list;
-        mDataTypeData.getDataType(list, mExcludeList, false);
-        DataTypeBase* dataType = (index.row() >= list.size()) ? nullptr : list[index.row()];
-        return QVariant(dataType != nullptr ? dataType->getName() : QString(""));
+        DataTypeBase* dataType = mDataTypeList[index.row()];
+        Q_ASSERT(dataType != nullptr);
+        return QVariant(dataType->getName());
     }
     break;
     
     case Qt::ItemDataRole::UserRole:
     {
-        QList<DataTypeBase*> list;
-        mDataTypeData.getDataType(list, mExcludeList, false);
-        DataTypeBase* dataType = (index.row() >= list.size()) ? nullptr : list[index.row()];
+        DataTypeBase* dataType = mDataTypeList[index.row()];
+        Q_ASSERT(dataType != nullptr);
         return QVariant::fromValue(dataType);
     }
     break;
     
     default:
         return QVariant();
+    }
+}
+
+bool DataTypesModel::dataTypeCreated(DataTypeCustom* dataType)
+{
+    const int count{ mCountPredef };
+    Q_ASSERT(mDataTypeList.indexOf(dataType) == -1);
+    if (mExcludeList.indexOf(dataType) == -1)
+    {
+        beginInsertRows(QModelIndex(), static_cast<int>(mDataTypeList.size()), static_cast<int>(mDataTypeList.size()));
+        mDataTypeList.append(dataType);
+        endInsertRows();
+        _sort(false);
+
+        return true;
+    }
+
+    return false;
+}
+
+bool DataTypesModel::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+{
+    const int count{ mCountPredef };
+    Q_ASSERT(mDataTypeList.indexOf(newType) == -1);
+    int index = mDataTypeList.indexOf(oldType);
+    if (index >= 0)
+    {
+        mDataTypeList[index] = newType;
+        _sort(false);
+        return true;
+    }
+
+    return false;
+}
+
+bool DataTypesModel::dataTypeRemoved(DataTypeCustom* dataType)
+{
+    const int count{ mCountPredef };
+    int index = mDataTypeList.indexOf(dataType);
+    if (index >= 0)
+    {
+        beginRemoveRows(QModelIndex(), index, index);
+        mDataTypeList.removeAt(index);
+        endRemoveRows();
+
+        return true;
+    }
+
+    return false;
+}
+
+bool DataTypesModel::dataTypeUpdated(DataTypeCustom* dataType)
+{
+    return (mDataTypeList.indexOf(dataType) != -1);
+}
+
+void DataTypesModel::updateDataTypeLists(void)
+{
+    mDataTypeList.clear();
+    mCountPredef = 0;
+    mDataTypeData.getDataType(mDataTypeList, mExcludeList, true);
+    for (DataTypeBase* dataType : mDataTypeList)
+    {
+        if (dataType->isPredefined())
+        {
+            ++mCountPredef;
+        }
+    }
+}
+
+bool DataTypesModel::removeDataType(DataTypeCustom* dataType)
+{
+    int index = mDataTypeList.indexOf(dataType);
+    if (index >= 0)
+    {
+        Q_ASSERT(mExcludeList.indexOf(dataType) == -1);
+        mExcludeList.append(dataType);
+        beginRemoveRows(QModelIndex(), index, index);
+        mDataTypeList.removeAt(index);
+        endRemoveRows();
+
+        return true;
+    }
+    else if (mExcludeList.indexOf(dataType) == -1)
+    {
+        mExcludeList.append(dataType);
+        return false;
+    }
+
+    return false;
+}
+
+bool DataTypesModel::addDataType(DataTypeCustom* dataType)
+{
+    if (mDataTypeList.indexOf(dataType) < 0)
+    {
+        int index = mExcludeList.indexOf(dataType);
+        Q_ASSERT(index != -1);
+        if (index >= 0)
+        {
+            mExcludeList.removeAt(index);
+        }
+        
+        beginInsertRows(QModelIndex(), static_cast<int>(mDataTypeList.size()), static_cast<int>(mDataTypeList.size()));
+        mDataTypeList.append(dataType);
+        endInsertRows();
+        _sort(false);
+
+        return true;
+    }
+
+    return false;
+}
+
+inline void DataTypesModel::_sort(bool sortPredefined /*= true*/)
+{
+    const int count{ mCountPredef };
+    if (count > 0)
+    {
+        if (sortPredefined)
+        {
+            std::sort(mDataTypeList.begin() + count, mDataTypeList.begin() + count - 1, [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
+                {
+                    return lhs->getId() < rhs->getId();
+                });
+        }
+
+        std::sort(mDataTypeList.begin() + count, mDataTypeList.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
+            {
+                return lhs->getName().compare(rhs->getName(), Qt::CaseSensitivity::CaseInsensitive) < 0;
+            });
     }
 }

@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QScrollArea>
+#include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 /************************************************************************
  * Dependencies
@@ -47,7 +48,7 @@ class TableCell;
 /**
  * \brief   The widget to display the constant details.
  **/
-class SIConstantWidget : public QWidget
+class SIConstantWidget  : public QWidget
 {
     friend class SIConstant;
 
@@ -68,7 +69,8 @@ private:
 /**
  * \brief   The widget to display the constant details.
  **/
-class SIConstant : public QScrollArea
+class SIConstant    : public QScrollArea
+                    , public IEDataTypeConsumer
 {
     Q_OBJECT
 
@@ -84,6 +86,16 @@ public:
     explicit SIConstant(SIConstantModel& model, QWidget* parent = nullptr);
 
     virtual ~SIConstant(void);
+    
+protected:
+
+    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)  override;
+
+    virtual void dataTypeCreated(DataTypeCustom * dataType) override;
+
+    virtual void dataTypeRemoved(DataTypeCustom* dataType) override;
+
+    virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -204,7 +216,6 @@ private:
     SIConstantWidget*   mWidget;    //!< The widget of the constant.
     Ui::SIConstant&     ui;         //!< The user interface of the constant.
     DataTypesModel*     mTypeModel; //!< The model of the data types.
-    DataTypesModel*     mComboModel;//< The model of the combo box.
     TableCell*          mTableCell; //!< The table cell object.
     uint32_t            mCount;     //!< The counter to generate names.
 };

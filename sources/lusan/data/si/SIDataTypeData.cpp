@@ -244,7 +244,7 @@ void SIDataTypeData::setCustomDataTypes(QList<DataTypeCustom*>&& entries)
     }
 }
 
-void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase*>& excludes /*= QList<DataTypeCustom *>*/, bool makeSorting /*= false*/) const
+void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QList<DataTypeBase*>& excludes /*= QList<DataTypeBase *>*/, bool makeSorting /*= false*/) const
 {
     out_dataTypes.clear();
     const QList<DataTypePrimitive*>& primitives = getPrimitiveDataTypes();
@@ -275,6 +275,16 @@ void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QLis
         }
     }
 
+    if (makeSorting)
+    {
+        std::sort(out_dataTypes.begin(), out_dataTypes.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
+            {
+                return lhs->getId() < rhs->getId();
+            });
+    }
+
+    int begin = static_cast<int>(out_dataTypes.size());
+
     for (DataTypeCustom* dataType : mCustomDataTypes)
     {
         if (exists<DataTypeBase>(excludes, dataType->getName()) == false)
@@ -285,11 +295,13 @@ void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QLis
 
     if (makeSorting)
     {
-        std::sort(out_dataTypes.begin(), out_dataTypes.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
-            {
-                Q_ASSERT(lhs->getName() != rhs->getName());
-                return lhs->getName() < rhs->getName();
-            });
+        if (begin < static_cast<int>(out_dataTypes.size()))
+        {
+            std::sort(out_dataTypes.begin() + begin, out_dataTypes.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
+                {
+                    return lhs->getName().compare(rhs->getName(), Qt::CaseSensitivity::CaseInsensitive) < 0;
+                });
+        }
     }
 }
 
@@ -541,7 +553,6 @@ DataTypeCustom* SIDataTypeData::convertDataType(DataTypeCustom* dataType, DataTy
     if (i != -1)
     {
         mCustomDataTypes[i] = newType;
-        delete dataType;
     }
     else
     {

@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 #include <QScrollArea>
+#include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 class SIMethodDetails;
 class SIMethodList;
@@ -41,7 +42,8 @@ private:
     Ui::SIMethod* ui;
 };
 
-class SIMethod : public QScrollArea
+class SIMethod  : public QScrollArea
+                , public IEDataTypeConsumer
 {
     Q_OBJECT
 

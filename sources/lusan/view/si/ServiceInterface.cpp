@@ -19,6 +19,7 @@
 
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/si/SICommon.hpp"
+#include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 #include <QVBoxLayout>
 
@@ -52,8 +53,53 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     // mOverview.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
     // mDataType.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
     // mDataTopic.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
+
+    connect(&mDataType, &SIDataType::signalDataTypeConverted, this, &ServiceInterface::slotDataTypeConverted);
+    connect(&mDataType, &SIDataType::signalDataTypeCreated  , this, &ServiceInterface::slotDataTypeCreated);
+    connect(&mDataType, &SIDataType::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
+    connect(&mDataType, &SIDataType::signalDataTypeUpdated  , this, &ServiceInterface::slotlDataTypeUpdated);
 }
 
 ServiceInterface::~ServiceInterface(void)
 {
+}
+
+void ServiceInterface::slotDataTypeCreated(DataTypeCustom* dataType)
+{
+    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeCreated(dataType);
+    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeCreated(dataType);
+    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeCreated(dataType);
+    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeCreated(dataType);
+    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeCreated(dataType);
+    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeCreated(dataType);
+}
+
+void ServiceInterface::slotDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+{
+    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeConverted(oldType, newType);
+    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeConverted(oldType, newType);
+    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeConverted(oldType, newType);
+    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeConverted(oldType, newType);
+    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeConverted(oldType, newType);
+    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeConverted(oldType, newType);
+}
+
+void ServiceInterface::slotlDataTypeRemoved(DataTypeCustom* dataType)
+{
+    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeRemoved(dataType);
+    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeRemoved(dataType);
+    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeRemoved(dataType);
+    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeRemoved(dataType);
+    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeRemoved(dataType);
+    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeRemoved(dataType);
+}
+
+void ServiceInterface::slotlDataTypeUpdated(DataTypeCustom* dataType)
+{
+    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeUpdated(dataType);
+    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeUpdated(dataType);
+    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeUpdated(dataType);
+    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeUpdated(dataType);
+    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeUpdated(dataType);
+    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeUpdated(dataType);
 }
