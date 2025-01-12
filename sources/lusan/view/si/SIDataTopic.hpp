@@ -20,6 +20,7 @@
  ************************************************************************/
 
 #include "lusan/data/common/AttributeEntry.hpp"
+#include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 #include <QAbstractListModel>
 #include <QScrollArea>
@@ -93,7 +94,8 @@ private:
  * \class SIDataTopic
  * \brief The widget to display the data topic details.
  */
-class SIDataTopic : public QScrollArea
+class SIDataTopic   : public QScrollArea
+                    , public IEDataTypeConsumer
 {
     Q_OBJECT
 
@@ -109,6 +111,16 @@ public:
      * \brief Destructor.
      */
     virtual ~SIDataTopic(void);
+
+protected:
+
+    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)  override;
+
+    virtual void dataTypeCreated(DataTypeCustom* dataType) override;
+
+    virtual void dataTypeRemoved(DataTypeCustom* dataType) override;
+
+    virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
 
 private:
     /**

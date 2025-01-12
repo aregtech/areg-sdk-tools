@@ -29,6 +29,7 @@
  * Dependencies
  ************************************************************************/
 class DataTypeBase;
+class DataTypeCustom;
 class SIDataTypeData;
 
 /**
@@ -131,10 +132,29 @@ public:
      **/
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
+    bool dataTypeCreated(DataTypeCustom* dataType);
+
+    bool dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
+
+    bool dataTypeRemoved(DataTypeCustom* dataType);
+
+    bool dataTypeUpdated(DataTypeCustom* dataType);
+
+    void updateDataTypeLists(void);
+
+    bool removeDataType(DataTypeCustom* dataType);
+
+    bool addDataType(DataTypeCustom* dataType);
+
+private:
+
+    inline void _sort(bool sortPredefined = true);
+
 private:
     SIDataTypeData&         mDataTypeData;  //!< Reference to the SIDataTypeData instance.
     QList<DataTypeBase*>    mExcludeList;   //!< Filtered list of data types.
-
+    QList<DataTypeBase*>    mDataTypeList;  //!< The list of all data types.
+    int                     mCountPredef;   //!< The number of predefined entries, which are set at the beginning of mDataTypeList;
 };
 
 #endif  // LUSAN_MODEL_COMMON_DATATYPESMODEL_HPP

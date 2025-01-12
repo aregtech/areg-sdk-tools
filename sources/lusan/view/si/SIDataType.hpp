@@ -20,6 +20,7 @@
  ************************************************************************/
 #include <QScrollArea>
 #include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 class DataTypeBasicContainer;
 class DataTypeCustom;
@@ -30,12 +31,14 @@ class DataTypeImported;
 class DataTypePrimitive;
 class DataTypeStructure;
 class DataTypesModel;
+class EnumEntry;
+class FieldEntry;
+class SIDataTypeData;
 class SIDataTypeDetails;
 class SIDataTypeList;
 class SIDataTypeFieldDetails;
 class SIDataTypeModel;
-class EnumEntry;
-class FieldEntry;
+class TableCell;
 class QTreeWidgetItem;
 
 namespace Ui {
@@ -55,7 +58,8 @@ private:
     Ui::SIDataType * ui;
 };
 
-class SIDataType : public QScrollArea
+class SIDataType    : public QScrollArea
+                    , public IEDataTypeConsumer
 {
     Q_OBJECT
     
@@ -64,12 +68,18 @@ public:
 
     virtual ~SIDataType(void);
 
+signals:
+
+    void signalDataTypeCreated(DataTypeCustom* dataType);
+
+    void signalDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
+
+    void signalDataTypeRemoved(DataTypeCustom* dataType);
+
+    void signalDataTypeUpdated(DataTypeCustom* dataType);
+
 protected:
     
-    virtual void closeEvent(QCloseEvent *event) override;
-
-    virtual void hideEvent(QHideEvent *event) override;
-
     /**
      * \brief Triggered when the current cell is changed.
      * \param currentRow The current row index.
@@ -132,7 +142,7 @@ protected:
     
 private:
 
-    void onConvertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory);
+    void convertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory);
 
     void showEnumDetails(bool show);
 
@@ -161,17 +171,17 @@ private:
      */
     void blockBasicSignals(bool doBlock);
 
-    void selectedStruct(DataTypeStructure* dataType);
+    void selectedStruct(DataTypeCustom* oldType, DataTypeStructure* dataType);
 
-    void selectedEnum(DataTypeEnum* dataType);
+    void selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType);
 
-    void selectedImport(DataTypeImported* dataType);
+    void selectedImport(DataTypeCustom* oldType, DataTypeImported* dataType);
 
-    void selectedContainer(DataTypeContainer* dataType);
+    void selectedContainer(DataTypeCustom* oldType, DataTypeContainer* dataType);
 
-    void selectedStructField(const FieldEntry& field, DataTypeStructure* parent);
+    void selectedStructField(DataTypeCustom* oldType, const FieldEntry& field, DataTypeStructure* parent);
 
-    void selectedEnumField(const EnumEntry& field, DataTypeEnum* parent);
+    void selectedEnumField(DataTypeCustom* oldType, const EnumEntry& field, DataTypeEnum* parent);
 
     QTreeWidgetItem* createNodeStructure(DataTypeStructure* dataType) const;
 
@@ -208,6 +218,8 @@ private:
     SIDataTypeWidget*       mWidget;
     Ui::SIDataType &        ui;
     SIDataTypeModel&        mModel;
+    DataTypesModel*         mTypeModel;
+    TableCell*              mTableCell; //!< The table cell object.
 
     uint32_t                mCount;
 };

@@ -27,11 +27,11 @@
 #include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/model/si/SIDataTypeModel.hpp"
 #include "lusan/view/si/SIDataTypeDetails.hpp"
 #include "lusan/view/si/SIDataTypeFieldDetails.hpp"
 #include "lusan/view/si/SIDataTypeList.hpp"
-#include "lusan/model/common/DataTypesModel.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -105,7 +105,8 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mWidget   (new SIDataTypeWidget(this))
     , ui        (*mWidget->ui)
     , mModel    (model)
-
+    , mTypeModel(new DataTypesModel(model.getDataTypeData()))
+    , mTableCell(nullptr)
     , mCount    (0)
 {
     mFields->setHidden(true);
@@ -132,16 +133,6 @@ SIDataType::~SIDataType(void)
     ui.horizontalLayout->removeWidget(mFields);
 }
 
-void SIDataType::closeEvent(QCloseEvent *event)
-{
-    QScrollArea::closeEvent(event);
-}
-
-void SIDataType::hideEvent(QHideEvent *event)
-{
-    QScrollArea::hideEvent(event);
-}
-
 void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
     if ((current == nullptr) || (current == previous))
@@ -151,24 +142,25 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
     DataTypeCustom* dataType = current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
     uint32_t id = current->data(1, Qt::ItemDataRole::UserRole).toUInt();
     
+    blockBasicSignals(true);
     if (id == 0)
     {
         switch (dataType->getCategory())
         {
         case DataTypeBase::eCategory::Structure:
-            selectedStruct(static_cast<DataTypeStructure*>(dataType));
+            selectedStruct(oldType, static_cast<DataTypeStructure*>(dataType));
             break;
 
         case DataTypeBase::eCategory::Enumeration:
-            selectedEnum(static_cast<DataTypeEnum*>(dataType));
+            selectedEnum(oldType, static_cast<DataTypeEnum*>(dataType));
             break;
 
         case DataTypeBase::eCategory::Imported:
-            selectedImport(static_cast<DataTypeImported*>(dataType));
+            selectedImport(oldType, static_cast<DataTypeImported*>(dataType));
             break;
 
         case DataTypeBase::eCategory::Container:
-            selectedContainer(static_cast<DataTypeContainer*>(dataType));
+            selectedContainer(oldType, static_cast<DataTypeContainer*>(dataType));
             break;
 
         default:
@@ -181,18 +173,17 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
         ElementBase * field = mModel.findChild(dataType, id);
         Q_ASSERT(field != nullptr);
 
-        blockBasicSignals(true);
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
-            selectedStructField(*static_cast<FieldEntry*>(field), static_cast<DataTypeStructure*>(dataType));
+            selectedStructField(oldType, *static_cast<FieldEntry*>(field), static_cast<DataTypeStructure*>(dataType));
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
-            selectedEnumField(*static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
+            selectedEnumField(oldType, *static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
         }
-
-        blockBasicSignals(false);
     }
+    
+    blockBasicSignals(false);
 }
 
 void SIDataType::onAddClicked(void)
@@ -208,6 +199,7 @@ void SIDataType::onAddClicked(void)
 
     blockBasicSignals(true);
     
+    DataTypeCustom* oldType  = nullptr;    
     DataTypeCustom* dataType = mModel.createDataType(name, DataTypeBase::eCategory::Structure);
     int pos = table->topLevelItemCount();
     QTreeWidgetItem * item = createNodeStructure(static_cast<DataTypeStructure *>(dataType));
@@ -215,12 +207,14 @@ void SIDataType::onAddClicked(void)
     QTreeWidgetItem * cur = table->currentItem();
     if (cur != nullptr)
     {
+        oldType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>();
         cur->setSelected(false);
     }
     
     item->setSelected(true);
     table->setCurrentItem(item);
-    selectedStruct(static_cast<DataTypeStructure*>(dataType));
+    selectedStruct(oldType, static_cast<DataTypeStructure*>(dataType));
+    emit signalDataTypeCreated(dataType);
     blockBasicSignals(false);
 }
 
@@ -266,12 +260,12 @@ void SIDataType::onAddFieldClicked(void)
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
             updateChildNodeStruct(item, static_cast<DataTypeStructure*>(dataType), *static_cast<FieldEntry *>(field));
-            selectedStructField(*static_cast<FieldEntry *>(field), static_cast<DataTypeStructure*>(dataType));
+            selectedStructField(nullptr, *static_cast<FieldEntry *>(field), static_cast<DataTypeStructure*>(dataType));
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
             updateChildNodeEnum(item, static_cast<DataTypeEnum*>(dataType), *static_cast<EnumEntry*>(field));
-            selectedEnumField(*static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
+            selectedEnumField(nullptr, *static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
         }
         
         blockBasicSignals(false);
@@ -292,6 +286,8 @@ void SIDataType::onTypeNameChanged(const QString& newName)
     Q_ASSERT(dataType != nullptr);
     dataType->setName(newName);
     item->setText(0, newName);
+
+    emit signalDataTypeUpdated(dataType);
 }
 
 void SIDataType::onFieldNameChanged(const QString& newName)
@@ -325,43 +321,6 @@ void SIDataType::onDeprecateHintChanged(const QString& newText)
 {
 }
 
-void SIDataType::updateData(void)
-{
-    const QList<DataTypeCustom*>& list = mModel.getDataTypes();
-    QTreeWidget* table = mList->ctrlTableList();
-    int count = 0;
-    for (DataTypeCustom* entry : list)
-    {
-        QTreeWidgetItem* item{ nullptr };
-        switch (entry->getCategory())
-        {
-        case DataTypeBase::eCategory::Structure:
-            item = createNodeStructure(static_cast<DataTypeStructure*>(entry));
-            break;
-
-        case DataTypeBase::eCategory::Enumeration:
-            item = createNodeEnum(static_cast<DataTypeEnum*>(entry));
-            break;
-
-        case DataTypeBase::eCategory::Imported:
-            item = createNodeImported(static_cast<DataTypeImported*>(entry));
-            break;
-
-        case DataTypeBase::eCategory::Container:
-            item = createNodeContainer(static_cast<DataTypeContainer*>(entry));
-            break;
-
-        default:
-            break;
-        }
-
-        if (item != nullptr)
-        {
-            table->insertTopLevelItem(count++, item);
-        }
-    }
-}
-
 void SIDataType::onDescriptionChanged(void)
 {
 }
@@ -370,8 +329,10 @@ void SIDataType::onStructSelected(bool checked)
 {
     if (checked)
     {
+        blockBasicSignals(true);
         QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
-        onConvertDataType(item, DataTypeBase::eCategory::Structure);
+        convertDataType(item, DataTypeBase::eCategory::Structure);
+        blockBasicSignals(false);
     }
 }
 
@@ -379,8 +340,10 @@ void SIDataType::onEnumSelected(bool checked)
 {
     if (checked)
     {
+        blockBasicSignals(true);
         QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
-        onConvertDataType(item, DataTypeBase::eCategory::Enumeration);
+        convertDataType(item, DataTypeBase::eCategory::Enumeration);
+        blockBasicSignals(false);
     }
 }
 
@@ -388,8 +351,10 @@ void SIDataType::onImportSelected(bool checked)
 {
     if (checked)
     {
+        blockBasicSignals(true);
         QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
-        onConvertDataType(item, DataTypeBase::eCategory::Imported);
+        convertDataType(item, DataTypeBase::eCategory::Imported);
+        blockBasicSignals(false);
     }
 }
 
@@ -397,12 +362,14 @@ void SIDataType::onContainerSelected(bool checked)
 {
     if (checked)
     {
+        blockBasicSignals(true);
         QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
-        onConvertDataType(item, DataTypeBase::eCategory::Container);
+        convertDataType(item, DataTypeBase::eCategory::Container);
+        blockBasicSignals(false);
     }
 }
 
-void SIDataType::onConvertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory)
+void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory)
 {
     Q_ASSERT(current != nullptr);
     Q_ASSERT(current->parent() == nullptr);
@@ -411,41 +378,58 @@ void SIDataType::onConvertDataType(QTreeWidgetItem* current, DataTypeBase::eCate
     uint32_t id = current->data(1, Qt::ItemDataRole::UserRole).toUInt();
     if ((id == 0) && (dataType->getCategory() != newCategory))
     {
-        blockBasicSignals(true);
         current->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom*>(nullptr)));
+        DataTypeCustom* oldType = dataType;
+        DataTypeCustom* newType = nullptr;
+        
+        QList<QTreeWidgetItem*> children {current->takeChildren()};
+        for (auto child : children)
+        {
+            current->removeChild(child);
+            delete child;
+        }
+        
         switch (newCategory)
         {
         case DataTypeBase::eCategory::Structure:
             dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Structure);
+            newType = dataType;
             Q_ASSERT(static_cast<DataTypeStructure*>(dataType)->hasElements() == false);
             updateNodeStructure(current, static_cast<DataTypeStructure*>(dataType));
-            selectedStruct(static_cast<DataTypeStructure*>(dataType));
+            selectedStruct(nullptr, static_cast<DataTypeStructure*>(dataType));
             break;
 
         case DataTypeBase::eCategory::Enumeration:
             dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Enumeration);
+            newType = dataType;
             Q_ASSERT(static_cast<DataTypeEnum*>(dataType)->hasElements() == false);
             updateNodeEnum(current, static_cast<DataTypeEnum*>(dataType));
-            selectedEnum(static_cast<DataTypeEnum*>(dataType));
+            selectedEnum(nullptr, static_cast<DataTypeEnum*>(dataType));
             break;
 
         case DataTypeBase::eCategory::Imported:
             dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Imported);
+            newType = dataType;
             updateNodeImported(current, static_cast<DataTypeImported*>(dataType));
-            selectedImport(static_cast<DataTypeImported*>(dataType));
+            selectedImport(nullptr, static_cast<DataTypeImported*>(dataType));
             break;
 
         case DataTypeBase::eCategory::Container:
             dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Container);
+            newType = dataType;
             updateNodeContainer(current, static_cast<DataTypeContainer*>(dataType));
-            selectedContainer(static_cast<DataTypeContainer*>(dataType));
+            selectedContainer(nullptr, static_cast<DataTypeContainer*>(dataType));
             break;
 
         default:
             break;
         }
-        
-        blockBasicSignals(false);
+
+        if (newType != nullptr)
+        {
+            emit signalDataTypeConverted(oldType, newType);
+            delete oldType;
+        }
     }
 }
 
@@ -468,13 +452,12 @@ void SIDataType::onContainerObjectChanged(int index)
 
 void SIDataType::onContainerKeyChanged(int index)
 {
-    QComboBox* key = mDetails->ctrlContainerKey();
-    if ((index < 0) || (index >= key->count()))
+    if ((index < 0) || (index >= mDetails->ctrlContainerKey()->count()))
     {
         return;
     }
     
-    DataTypeBase*  dataType = key->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>();
+    DataTypeBase*  dataType = mDetails->ctrlContainerKey()->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>();
     Q_ASSERT(dataType != nullptr);
     QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
     DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
@@ -484,13 +467,12 @@ void SIDataType::onContainerKeyChanged(int index)
 
 void SIDataType::onContainerValueChanged(int index)
 {
-    QComboBox* value = mDetails->ctrlContainerValue();
-    if ((index < 0) || (index >= value->count()))
+    if ((index < 0) || (index >= mDetails->ctrlContainerValue()->count()))
     {
         return;
     }
     
-    DataTypeBase*  dataType = value->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>();
+    DataTypeBase*  dataType = mDetails->ctrlContainerValue()->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>();
     Q_ASSERT(dataType != nullptr);
     QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
     DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
@@ -525,11 +507,48 @@ void SIDataType::showContainerDetails(bool show)
     item.second->setHidden(!show);
 }
 
+void SIDataType::updateData(void)
+{
+    const QList<DataTypeCustom*>& list = mModel.getDataTypes();
+    QTreeWidget* table = mList->ctrlTableList();
+    int count = 0;
+    for (DataTypeCustom* entry : list)
+    {
+        QTreeWidgetItem* item{ nullptr };
+        switch (entry->getCategory())
+        {
+        case DataTypeBase::eCategory::Structure:
+            item = createNodeStructure(static_cast<DataTypeStructure*>(entry));
+            break;
+            
+        case DataTypeBase::eCategory::Enumeration:
+            item = createNodeEnum(static_cast<DataTypeEnum*>(entry));
+            break;
+            
+        case DataTypeBase::eCategory::Imported:
+            item = createNodeImported(static_cast<DataTypeImported*>(entry));
+            break;
+            
+        case DataTypeBase::eCategory::Container:
+            item = createNodeContainer(static_cast<DataTypeContainer*>(entry));
+            break;
+            
+        default:
+            break;
+        }
+        
+        if (item != nullptr)
+        {
+            table->insertTopLevelItem(count++, item);
+        }
+    }
+}
+
 void SIDataType::updateWidgets(void)
 {
-    // mDetails->ctrlContainerKey()->setModel(mModelKey);
-    // mDetails->ctrlContainerValue()->setModel(mModelValue);
-    // mFields->ctrlTypes()->setModel(mModelFields);
+    mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
+    mTypeModel->updateDataTypeLists();
+    // mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel}, QList<int>{1}, mList->ctrlTableList());
     
     QComboBox* container = mDetails->ctrlContainerObject();
     const QList<DataTypeBasicContainer*>& containers {_getContainerTypes()};
@@ -545,21 +564,10 @@ void SIDataType::updateWidgets(void)
         enumDerive->addItem(dataType->getName(), QVariant::fromValue(static_cast<DataTypeBase *>(dataType)));
     }
     
-    const QList<DataTypeBase *> predefined {_getPredefinedTypes()};
-    QComboBox* types = mFields->ctrlTypes();
-    for (auto dataType : predefined)
-    {
-        types->addItem(dataType->getName(), QVariant::fromValue(static_cast<DataTypeBase *>(dataType)));
-    }
-    
-    QComboBox* keys = mDetails->ctrlContainerKey();
-    QComboBox* values = mDetails->ctrlContainerValue();
-    for (auto dataType : predefined)
-    {
-        keys->addItem(dataType->getName(), QVariant::fromValue(static_cast<DataTypeBase *>(dataType)));
-        values->addItem(dataType->getName(), QVariant::fromValue(static_cast<DataTypeBase *>(dataType)));
-    }
-    
+    mFields->ctrlTypes()->setModel(mTypeModel);    
+    mDetails->ctrlContainerKey()->setModel(mTypeModel);
+    mDetails->ctrlContainerValue()->setModel(mTypeModel);
+        
     showEnumDetails(false);
     showContainerDetails(false);
     showImportDetails(false);
@@ -625,8 +633,15 @@ void SIDataType::blockBasicSignals(bool doBlock)
     mList->ctrlTableList()->blockSignals(doBlock);
 }
 
-void SIDataType::selectedStruct(DataTypeStructure* dataType)
+void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* dataType)
 {
+    Q_ASSERT(dataType != nullptr);
+    mTypeModel->removeDataType(dataType);
+    if ((oldType != nullptr) && (oldType != dataType))
+    {
+        mTypeModel->addDataType(oldType);
+    }    
+    
     activateFields(false);
     showEnumDetails(false);
     showImportDetails(false);
@@ -649,8 +664,15 @@ void SIDataType::selectedStruct(DataTypeStructure* dataType)
     mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
-void SIDataType::selectedEnum(DataTypeEnum* dataType)
+void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
 {
+    Q_ASSERT(dataType != nullptr);
+    mTypeModel->removeDataType(dataType);
+    if ((oldType != nullptr) && (oldType != dataType))
+    {
+        mTypeModel->addDataType(oldType);
+    }
+    
     activateFields(false);
     showEnumDetails(true);
     showImportDetails(false);
@@ -674,8 +696,13 @@ void SIDataType::selectedEnum(DataTypeEnum* dataType)
     mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
-void SIDataType::selectedImport(DataTypeImported* dataType)
+void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataType)
 {
+    if ((oldType != nullptr) && (oldType != dataType))
+    {
+        mTypeModel->addDataType(oldType);
+    }
+    
     activateFields(false);
     showEnumDetails(false);
     showImportDetails(true);
@@ -712,42 +739,21 @@ void SIDataType::selectedImport(DataTypeImported* dataType)
     mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
-void SIDataType::selectedContainer(DataTypeContainer* dataType)
+void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* dataType)
 {
+    Q_ASSERT(dataType != nullptr);
+    mTypeModel->removeDataType(dataType);
+    if ((oldType != nullptr) && (oldType != dataType))
+    {
+        mTypeModel->addDataType(oldType);
+    }
+    
     activateFields(false);
     showEnumDetails(false);
     showImportDetails(false);
     showContainerDetails(true);
     
-    const QList<DataTypeBase *> predefined {_getPredefinedTypes()};
-    const QList<DataTypeCustom *>& customs {mModel.getCustomDataTypes()};
-    QComboBox* keys = mDetails->ctrlContainerKey();
-    QComboBox* values = mDetails->ctrlContainerValue();
-    Q_ASSERT(keys->count() == values->count());
-    
-    const int countPredefined    {static_cast<int>(predefined.size())};
-    while (keys->count() > countPredefined)
-    {
-        keys->removeItem(keys->count() - 1);
-        values->removeItem(values->count() - 1);
-    }
-    
-    if (customs.size() > 1)
-    {
-        keys->insertSeparator(keys->count());
-        values->insertSeparator(values->count());
-        
-        for (auto type : customs)
-        {
-            if (type->getId() != dataType->getId())
-            {
-                keys->addItem(type->getName(), QVariant::fromValue(type));
-                values->addItem(type->getName(), QVariant::fromValue(type));
-            }
-        }
-    }
-    
-    keys->setEnabled(dataType->canHaveKey());
+    mDetails->ctrlContainerKey()->setEnabled(dataType->canHaveKey());
     mDetails->ctrlName()->setText(dataType->getName());
     mDetails->ctrlTypeContainer()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
@@ -769,33 +775,18 @@ void SIDataType::selectedContainer(DataTypeContainer* dataType)
     mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
-void SIDataType::selectedStructField(const FieldEntry& field, DataTypeStructure* parent)
+void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& field, DataTypeStructure* parent)
 {
-    activateFields(true);
-    
-    const QList<DataTypeBase *>& predefined {_getPredefinedTypes()};
-    const QList<DataTypeCustom *>& customs {mModel.getCustomDataTypes()};
-    QComboBox* types = mFields->ctrlTypes();
-    
-    const int countPredefined    {static_cast<int>(predefined.size())};
-    while (types->count() > countPredefined)
+    Q_ASSERT(parent != nullptr);
+    mTypeModel->removeDataType(parent);
+    if ((oldType != nullptr) && (oldType != static_cast<DataTypeCustom *>(parent)))
     {
-        types->removeItem(types->count() - 1);
+        mTypeModel->addDataType(oldType);
     }
     
-    if (customs.size() > 1)
-    {
-        types->insertSeparator(customs.size());
-        for (auto type : customs)
-        {
-            if (type->getId() != parent->getId())
-            {
-                types->addItem(type->getName(), QVariant::fromValue(types));
-            }
-        }
-    }        
+    activateFields(true);
     
-    types->setEnabled(true);
+    mFields->ctrlTypes()->setEnabled(true);
     mFields->ctrlName()->setText(field.getName());
     mFields->ctrlTypes()->setCurrentText(field.getType());
     mFields->ctrlValue()->setText(field.getValue());
@@ -808,8 +799,15 @@ void SIDataType::selectedStructField(const FieldEntry& field, DataTypeStructure*
     mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
-void SIDataType::selectedEnumField(const EnumEntry& field, DataTypeEnum* parent)
+void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& field, DataTypeEnum* parent)
 {
+    Q_ASSERT(parent != nullptr);
+    mTypeModel->removeDataType(parent);
+    if ((oldType != nullptr) && (oldType != static_cast<DataTypeCustom *>(parent)))
+    {
+        mTypeModel->addDataType(oldType);
+    }
+    
     activateFields(true);
     mFields->ctrlTypes()->setEnabled(false);
     mFields->ctrlName()->setText(field.getName());

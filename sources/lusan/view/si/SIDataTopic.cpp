@@ -120,6 +120,26 @@ SIDataTopic::~SIDataTopic(void)
     ui.horizontalLayout->removeWidget(mDetails);
 }
 
+void SIDataTopic::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+{
+    mTypeModel->dataTypeConverted(oldType, newType);
+}
+
+void SIDataTopic::dataTypeCreated(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeCreated(dataType);
+}
+
+void SIDataTopic::dataTypeRemoved(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeRemoved(dataType);
+}
+
+void SIDataTopic::dataTypeUpdated(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeUpdated(dataType);
+}
+
 void SIDataTopic::updateData(void)
 {
     QTableWidget* table = mList->ctrlTable();
@@ -149,6 +169,7 @@ void SIDataTopic::updateData(void)
 void SIDataTopic::updateWidgets(void)
 {
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
+    mTypeModel->updateDataTypeLists();
 
     mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel, mNotifyModel}, QList<int>{1, 2}, mList->ctrlTable());
     mDetails->ctrlTypes()->setModel(mTypeModel);

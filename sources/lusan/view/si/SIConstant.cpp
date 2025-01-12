@@ -52,7 +52,6 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
     , mWidget   (new SIConstantWidget(this))
     , ui        (*mWidget->ui)
     , mTypeModel(new DataTypesModel(model.getDataTypeData()))
-    , mComboModel(new DataTypesModel(model.getDataTypeData()))
     , mTableCell(nullptr)
     , mCount    (0)
 {
@@ -75,6 +74,27 @@ SIConstant::~SIConstant(void)
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mDetails);
 }
+
+void SIConstant::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+{
+    mTypeModel->dataTypeConverted(oldType, newType);
+}
+
+void SIConstant::dataTypeCreated(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeCreated(dataType);
+}
+
+void SIConstant::dataTypeRemoved(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeRemoved(dataType);
+}
+
+void SIConstant::dataTypeUpdated(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeUpdated(dataType);
+}
+
 
 inline ConstantEntry* SIConstant::_findConstant(int row)
 {
@@ -373,9 +393,9 @@ void SIConstant::updateData(void)
 void SIConstant::updateWidgets(void)
 {
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
-    mComboModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
+    mTypeModel->updateDataTypeLists();
     
-    mTableCell = new TableCell(QList<QAbstractItemModel *>{mComboModel}, QList<int>{1}, mList->ctrlTableList());
+    mTableCell = new TableCell(QList<QAbstractItemModel *>{mTypeModel}, QList<int>{1}, mList->ctrlTableList());
     mDetails->ctrlTypes()->setModel(mTypeModel);
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
     mList->ctrlTableList()->setItemDelegateForColumn(1, mTableCell);

@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QScrollArea>
+#include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 /************************************************************************
  * Dependencies
@@ -62,6 +63,7 @@ private:
  *          and allows to add, remove, update, and insert new entries.
  **/
 class SIInclude : public QScrollArea
+                , public IEDataTypeConsumer
 {
     Q_OBJECT
 
