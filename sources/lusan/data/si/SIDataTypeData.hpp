@@ -36,7 +36,7 @@ class QXmlStreamWriter;
 class DataTypeCustom;
 class DataTypeBasicContainer;
 class DataTypeBasicObject;
-class DataTypeDefined;
+class DataTypeContainer;
 class DataTypeEnum;
 class DataTypeImported;
 class DataTypePrimitive;
@@ -319,7 +319,7 @@ public:
      * \param   name    The name of the primitive data type.
      * \return  The created Container custom data type object.
      **/
-    DataTypeDefined* addDefined(const QString& name);
+    DataTypeContainer* addContainer(const QString& name);
 
     /**
      * \brief   Adds an Imported custom data type to the list.

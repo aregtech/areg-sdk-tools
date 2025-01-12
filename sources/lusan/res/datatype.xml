@@ -45,39 +45,39 @@
             <Variant cpp="double"/>
             <Variant java="double"/>
         </DataType>
-        <DataType ID="12" Type="Basic" Name="String">
+        <DataType ID="12" Type="BasicObject" Name="String">
             <Variant cpp="String" import="areg/base/String.hpp" />
             <Variant java="String" import="java.lang.String" />
         </DataType>
-        <DataType ID="13" Type="Basic" Name="BinaryBuffer">
+        <DataType ID="13" Type="BasicObject" Name="BinaryBuffer">
             <Variant cpp="SharedBuffer" import="areg/base/SharedBuffer.hpp" />
             <Variant java="ByteBuffer" import="java.nio.ByteBuffer" />
         </DataType>
-        <DataType ID="14" Type="Basic" Name="DateTime">
+        <DataType ID="14" Type="BasicObject" Name="DateTime">
             <Variant cpp="DateTime" import="areg/base/DateTime.hpp" />
             <Variant java="Date" import="java.util.Date" />
         </DataType>
-        <DataType ID="15" Type="Container" Name="Array" HasKey="false" HasValue="true">
+        <DataType ID="15" Type="BasicContainer" Name="Array" HasKey="false" HasValue="true">
             <Variant cpp="TEArrayList" import="areg/base/TEArrayList.hpp" />
             <Variant java="ArrayList" import="java.util.ArrayList" />
         </DataType>
-        <DataType ID="16" Type="Container" Name="LinkedList" HasKey="false" HasValue="true">
+        <DataType ID="16" Type="BasicContainer" Name="LinkedList" HasKey="false" HasValue="true">
             <Variant cpp="TELinkedList" import="areg/base/TELinkedList.hpp" />
             <Variant java="LinkedList" import="java.util.LinkedList" />
         </DataType>
-        <DataType ID="17" Type="Container" Name="HashMap" HasKey="true" HasValue="true">
+        <DataType ID="17" Type="BasicContainer" Name="HashMap" HasKey="true" HasValue="true">
             <Variant cpp="TEHashMap" import="areg/base/TEHashMap.hpp" />
             <Variant java="HashMap" import="java.util.HashMap" />
         </DataType>
-        <DataType ID="18" Type="Container" Name="Map" HasKey="true" HasValue="true">
+        <DataType ID="18" Type="BasicContainer" Name="Map" HasKey="true" HasValue="true">
             <Variant cpp="TEMap" import="areg/base/TEMap.hpp" />
             <Variant java="Map" import="java.util.Map" />
         </DataType>
-        <DataType ID="19" Type="Container" Name="Pair" HasKey="true" HasValue="true">
+        <DataType ID="19" Type="BasicContainer" Name="Pair" HasKey="true" HasValue="true">
             <Variant cpp="TEPair" import="areg/base/TEPair.hpp" />
             <Variant java="Pair" import="javafx.util.Pair"/>
         </DataType>
-        <DataType ID="20" Type="Container" Name="New Type" HasKey="false" HasValue="true">
+        <DataType ID="20" Type="BasicContainer" Name="New Type" HasKey="false" HasValue="true">
             <Variant any="*" import="" />
         </DataType>
         <DataType ID="50" Type="Dummy" Name="Empty" HasKey="false" HasValue="false">

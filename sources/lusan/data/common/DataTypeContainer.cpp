@@ -10,19 +10,19 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/common/DataTypeDefined.cpp
+ *  \file        lusan/data/common/DataTypeContainer.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Defined Data Type.
+ *  \brief       Lusan application, Container Data Type.
  *
  ************************************************************************/
-#include "lusan/data/common/DataTypeDefined.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
 
 #include "lusan/common/XmlSI.hpp"
 
-DataTypeDefined::DataTypeDefined(ElementBase* parent /*= nullptr*/)
+DataTypeContainer::DataTypeContainer(ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::Container, parent)
     , mContainer    ( )
     , mValue( )
@@ -30,7 +30,7 @@ DataTypeDefined::DataTypeDefined(ElementBase* parent /*= nullptr*/)
 {
 }
 
-DataTypeDefined::DataTypeDefined(const QString& name, ElementBase* parent /*= nullptr*/)
+DataTypeContainer::DataTypeContainer(const QString& name, ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::Container, 0, name, parent)
     , mContainer    ( )
     , mValue( )
@@ -38,7 +38,7 @@ DataTypeDefined::DataTypeDefined(const QString& name, ElementBase* parent /*= nu
 {
 }
 
-DataTypeDefined::DataTypeDefined(const DataTypeDefined& src)
+DataTypeContainer::DataTypeContainer(const DataTypeContainer& src)
     : DataTypeCustom(src)
     , mContainer    (src.mContainer)
     , mValue(src.mValue)
@@ -46,7 +46,7 @@ DataTypeDefined::DataTypeDefined(const DataTypeDefined& src)
 {
 }
 
-DataTypeDefined::DataTypeDefined(DataTypeDefined&& src) noexcept
+DataTypeContainer::DataTypeContainer(DataTypeContainer&& src) noexcept
     : DataTypeCustom(std::move(src))
     , mContainer(std::move(src.mContainer))
     , mValue    (std::move(src.mValue))
@@ -54,7 +54,7 @@ DataTypeDefined::DataTypeDefined(DataTypeDefined&& src) noexcept
 {
 }
 
-DataTypeDefined& DataTypeDefined::operator = (const DataTypeDefined& other)
+DataTypeContainer& DataTypeContainer::operator = (const DataTypeContainer& other)
 {
     if (this != &other)
     {
@@ -67,7 +67,7 @@ DataTypeDefined& DataTypeDefined::operator = (const DataTypeDefined& other)
     return *this;
 }
 
-DataTypeDefined& DataTypeDefined::operator = (DataTypeDefined&& other) noexcept
+DataTypeContainer& DataTypeContainer::operator = (DataTypeContainer&& other) noexcept
 {
     if (this != &other)
     {
@@ -80,7 +80,7 @@ DataTypeDefined& DataTypeDefined::operator = (DataTypeDefined&& other) noexcept
     return *this;
 }
 
-bool DataTypeDefined::readFromXml(QXmlStreamReader& xml)
+bool DataTypeContainer::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != XmlSI::xmlSIElementDataType)
         return false;
@@ -117,7 +117,7 @@ bool DataTypeDefined::readFromXml(QXmlStreamReader& xml)
     return true;
 }
 
-void DataTypeDefined::writeToXml(QXmlStreamWriter& xml) const
+void DataTypeContainer::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementDataType);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
@@ -135,7 +135,7 @@ void DataTypeDefined::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement(); // DataType
 }
 
-bool DataTypeDefined::canHaveKey(void) const
+bool DataTypeContainer::canHaveKey(void) const
 {
     bool result{ false };
     const QList<DataTypeBasicContainer*> containerTypes = DataTypeFactory::getContainerTypes();

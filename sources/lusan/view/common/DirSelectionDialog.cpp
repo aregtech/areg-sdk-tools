@@ -78,7 +78,7 @@ void DirSelectionDialog::_initialize(const QString & curDir)
     mTreeViewDirs->sortByColumn(0, Qt::AscendingOrder);
     for (int i = 1; i < mModel->columnCount(); i++)
     {
-        // hide not required colums
+        // hide not required columns
         mTreeViewDirs->setColumnHidden(i, true);
     }
     

@@ -21,7 +21,7 @@
 
 #include "lusan/common/XmlSI.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
-#include "lusan/data/common/DataTypeDefined.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
 #include "lusan/data/common/DataTypePrimitive.hpp"
@@ -37,53 +37,53 @@ QList<DataTypeBasicContainer*>  DataTypeFactory::mPredefinedContainerTypes;   //
 
 DataTypeBase::eCategory DataTypeFactory::fromString(const QString& dataType)
 {
-    if (dataType == TypeNameBool)
+    if (dataType == XmlSI::xmlSIValueBool)
         return DataTypeBase::eCategory::Primitive;
-    else if (dataType == TypeNameChar)
+    else if (dataType == XmlSI::xmlSIValueChar)
         return DataTypeBase::eCategory::PrimitiveSint;
-    else if (dataType == TypeNameUint8)
+    else if (dataType == XmlSI::xmlSIValueUint8)
         return DataTypeBase::eCategory::PrimitiveUint;
-    else if (dataType == TypeNameInt16)
+    else if (dataType == XmlSI::xmlSIValueInt16)
         return DataTypeBase::eCategory::PrimitiveSint;
-    else if (dataType == TypeNameUint16)
+    else if (dataType == XmlSI::xmlSIValueUint16)
         return DataTypeBase::eCategory::PrimitiveUint;
-    else if (dataType == TypeNameInt32)
+    else if (dataType == XmlSI::xmlSIValueInt32)
         return DataTypeBase::eCategory::PrimitiveUint;
-    else if (dataType == TypeNameUint32)
+    else if (dataType == XmlSI::xmlSIValueUint32)
         return DataTypeBase::eCategory::PrimitiveSint;
-    else if (dataType == TypeNameInt64)
+    else if (dataType == XmlSI::xmlSIValueInt64)
         return DataTypeBase::eCategory::PrimitiveSint;
-    else if (dataType == TypeNameUint64)
+    else if (dataType == XmlSI::xmlSIValueUint64)
         return DataTypeBase::eCategory::PrimitiveUint;
-    else if (dataType == TypeNameFloat)
+    else if (dataType == XmlSI::xmlSIValueFloat)
         return DataTypeBase::eCategory::PrimitiveFloat;
-    else if (dataType == TypeNameDouble)
+    else if (dataType == XmlSI::xmlSIValueDouble)
         return DataTypeBase::eCategory::PrimitiveFloat;
-    else if (dataType == TypeNameString)
+    else if (dataType == XmlSI::xmlSIValueString)
         return DataTypeBase::eCategory::BasicObject;
-    else if (dataType == TypeNameBinary)
+    else if (dataType == XmlSI::xmlSIValueBinary)
         return DataTypeBase::eCategory::BasicObject;
-    else if (dataType == TypeNameDateTime)
+    else if (dataType == XmlSI::xmlSIValueDateTime)
         return DataTypeBase::eCategory::BasicObject;
-    else if (dataType == TypeNameArray)
+    else if (dataType == XmlSI::xmlSIValueArray)
         return DataTypeBase::eCategory::BasicContainer;
-    else if (dataType == TypeNameLinkedList)
+    else if (dataType == XmlSI::xmlSIValueLinkedList)
         return DataTypeBase::eCategory::BasicContainer;
-    else if (dataType == TypeNameHashMap)
+    else if (dataType == XmlSI::xmlSIValueHashMap)
         return DataTypeBase::eCategory::BasicContainer;
-    else if (dataType == TypeNameMap)
+    else if (dataType == XmlSI::xmlSIValueMap)
         return DataTypeBase::eCategory::BasicContainer;
-    else if (dataType == TypeNamePair)
+    else if (dataType == XmlSI::xmlSIValuePair)
         return DataTypeBase::eCategory::BasicContainer;
-    else if (dataType == TypeNameNewType)
+    else if (dataType == XmlSI::xmlSIValueNewType)
         return DataTypeBase::eCategory::BasicContainer;
-    else if (dataType == TypeNameEnumerate)
+    else if (dataType == XmlSI::xmlSIValueEnumeration)
         return DataTypeBase::eCategory::Enumeration;
-    else if (dataType == TypeNameStructure)
+    else if (dataType == XmlSI::xmlSIValueStructure)
         return DataTypeBase::eCategory::Structure;
-    else if (dataType == TypeNameImported)
+    else if (dataType == XmlSI::xmlSIValueImported)
         return DataTypeBase::eCategory::Imported;
-    else if (dataType == TypeNameDefined)
+    else if (dataType == XmlSI::xmlSIValueContainer)
         return DataTypeBase::eCategory::Container;
     else
         return DataTypeBase::eCategory::Undefined;
@@ -140,7 +140,7 @@ DataTypeCustom* DataTypeFactory::createCustomDataType(DataTypeBase::eCategory ca
     case DataTypeBase::eCategory::Imported:
         return new DataTypeImported();
     case DataTypeBase::eCategory::Container:
-        return new DataTypeDefined();
+        return new DataTypeContainer();
     default:
         return nullptr;
     }
@@ -218,6 +218,11 @@ int DataTypeFactory::getPredefinedTypes(QList<DataTypeBase *>& result, const QLi
             break;
         }
     }
+
+    std::sort(result.begin() + initCount, result.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
+        {
+            return lhs->getId() < rhs->getId();
+        });
     
     return static_cast<int>(result.size()) - initCount;
 }
@@ -257,11 +262,11 @@ void DataTypeFactory::_initPredefined(void)
                 {
                     mPredefinePrimitiveTypes.append(static_cast<DataTypePrimitive*>(dataType));
                 }
-                else if (typeName == XmlSI::xmlSIValueBasic)
+                else if (typeName == XmlSI::xmlSIValueBasicObject)
                 {
                     mPredefinedBasicTypes.append(static_cast<DataTypeBasicObject*>(dataType));
                 }
-                else if (typeName == XmlSI::xmlSIValueContainer)
+                else if (typeName == XmlSI::xmlSIValueBasicContainer)
                 {
                     Q_ASSERT(hasValue);
                     DataTypeBasicContainer* container = static_cast<DataTypeBasicContainer*>(dataType);

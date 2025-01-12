@@ -22,7 +22,7 @@
 #include "ui/ui_SIDataType.h"
 
 #include "lusan/data/common/DataTypeBasic.hpp"
-#include "lusan/data/common/DataTypeDefined.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
@@ -168,7 +168,7 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
             break;
 
         case DataTypeBase::eCategory::Container:
-            selectedContainer(static_cast<DataTypeDefined*>(dataType));
+            selectedContainer(static_cast<DataTypeContainer*>(dataType));
             break;
 
         default:
@@ -348,7 +348,7 @@ void SIDataType::updateData(void)
             break;
 
         case DataTypeBase::eCategory::Container:
-            item = createNodeContainer(static_cast<DataTypeDefined*>(entry));
+            item = createNodeContainer(static_cast<DataTypeContainer*>(entry));
             break;
 
         default:
@@ -437,8 +437,8 @@ void SIDataType::onConvertDataType(QTreeWidgetItem* current, DataTypeBase::eCate
 
         case DataTypeBase::eCategory::Container:
             dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Container);
-            updateNodeContainer(current, static_cast<DataTypeDefined*>(dataType));
-            selectedContainer(static_cast<DataTypeDefined*>(dataType));
+            updateNodeContainer(current, static_cast<DataTypeContainer*>(dataType));
+            selectedContainer(static_cast<DataTypeContainer*>(dataType));
             break;
 
         default:
@@ -460,7 +460,7 @@ void SIDataType::onContainerObjectChanged(int index)
     DataTypeBasicContainer*  dataType = static_cast<DataTypeBasicContainer *>(container->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>());
     Q_ASSERT(dataType != nullptr);
     QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
-    DataTypeDefined* typeContainer = static_cast<DataTypeDefined*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
+    DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
     Q_ASSERT(typeContainer->getCategory() == DataTypeBase::eCategory::Container);
     typeContainer->setContainer(dataType->getName());
     mDetails->ctrlContainerKey()->setEnabled(dataType->hasKey());
@@ -477,7 +477,7 @@ void SIDataType::onContainerKeyChanged(int index)
     DataTypeBase*  dataType = key->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>();
     Q_ASSERT(dataType != nullptr);
     QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
-    DataTypeDefined* typeContainer = static_cast<DataTypeDefined*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
+    DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
     Q_ASSERT(typeContainer->getCategory() == DataTypeBase::eCategory::Container);
     typeContainer->setKey(dataType->getName());
 }
@@ -493,7 +493,7 @@ void SIDataType::onContainerValueChanged(int index)
     DataTypeBase*  dataType = value->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>();
     Q_ASSERT(dataType != nullptr);
     QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
-    DataTypeDefined* typeContainer = static_cast<DataTypeDefined*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
+    DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
     Q_ASSERT(typeContainer->getCategory() == DataTypeBase::eCategory::Container);
     typeContainer->setKey(dataType->getName());
 }
@@ -712,7 +712,7 @@ void SIDataType::selectedImport(DataTypeImported* dataType)
     mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
-void SIDataType::selectedContainer(DataTypeDefined* dataType)
+void SIDataType::selectedContainer(DataTypeContainer* dataType)
 {
     activateFields(false);
     showEnumDetails(false);
@@ -844,7 +844,7 @@ QTreeWidgetItem* SIDataType::createNodeImported(DataTypeImported* dataType) cons
     return item;
 }
 
-QTreeWidgetItem* SIDataType::createNodeContainer(DataTypeDefined* dataType) const
+QTreeWidgetItem* SIDataType::createNodeContainer(DataTypeContainer* dataType) const
 {
     QTreeWidgetItem* item = new QTreeWidgetItem();
     updateNodeContainer(item, dataType);
@@ -904,7 +904,7 @@ void SIDataType::updateNodeImported(QTreeWidgetItem* node, DataTypeImported* dat
     node->setText(1, QString());
 }
 
-void SIDataType::updateNodeContainer(QTreeWidgetItem* node, DataTypeDefined* dataType) const
+void SIDataType::updateNodeContainer(QTreeWidgetItem* node, DataTypeContainer* dataType) const
 {
     node->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherStorm));
     node->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
