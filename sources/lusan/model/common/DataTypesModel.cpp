@@ -403,7 +403,6 @@ bool DataTypesModel::addDataType(DataTypeCustom* dataType)
     if (mDataTypeList.indexOf(dataType) < 0)
     {
         int index = mExcludeList.indexOf(dataType);
-        Q_ASSERT(index != -1);
         if (index >= 0)
         {
             mExcludeList.removeAt(index);

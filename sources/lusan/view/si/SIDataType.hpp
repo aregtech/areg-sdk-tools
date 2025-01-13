@@ -141,6 +141,14 @@ protected:
     void onContainerValueChanged(int index);
 
     void onEnumDerivedChanged(int index);
+
+    void onImportLocationChanged(const QString& newText);
+
+    void onImportNamespaceChanged(const QString& newText);
+
+    void onImportObjectChanged(const QString& newText);
+
+    void onImportLocationBrowse(void);
     
 private:
 
@@ -208,6 +216,8 @@ private:
     void activateFields(bool activate);
 
     void updateContainerNames(QTreeWidgetItem* node, DataTypeContainer *dataType) const;
+
+    void updateImportNames(QTreeWidgetItem* node, DataTypeImported* dataType) const;
     
     static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
     
@@ -224,6 +234,9 @@ private:
     SIDataTypeModel&        mModel;
     DataTypesModel*         mTypeModel;
     TableCell*              mTableCell; //!< The table cell object.
+    QString                 mCurUrl;
+    QString                 mCurFile;
+    int                     mCurView;
 
     uint32_t                mCount;
 };

@@ -21,6 +21,7 @@
 #include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIDataType.h"
 
+#include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
@@ -29,6 +30,7 @@
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/model/si/SIDataTypeModel.hpp"
+#include "lusan/view/common/WorkspaceFileDialog.hpp"
 #include "lusan/view/si/SIDataTypeDetails.hpp"
 #include "lusan/view/si/SIDataTypeFieldDetails.hpp"
 #include "lusan/view/si/SIDataTypeList.hpp"
@@ -107,6 +109,9 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mModel    (model)
     , mTypeModel(new DataTypesModel(model.getDataTypeData()))
     , mTableCell(nullptr)
+    , mCurUrl   ( )
+    , mCurFile  ( )
+    , mCurView  (-1)
     , mCount    (0)
 {
     mFields->setHidden(true);
@@ -509,6 +514,77 @@ void SIDataType::onEnumDerivedChanged(int index)
     }
 }
 
+void SIDataType::onImportLocationChanged(const QString& newText)
+{
+    QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
+    DataTypeImported* dataType = static_cast<DataTypeImported*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>());
+    dataType->setLocation(newText);
+}
+
+void SIDataType::onImportNamespaceChanged(const QString& newText)
+{
+    QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
+    DataTypeImported* dataType = static_cast<DataTypeImported*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>());
+    dataType->setNamespace(newText);
+    blockBasicSignals(true);
+    updateImportNames(current, dataType);
+    blockBasicSignals(false);
+}
+
+void SIDataType::onImportObjectChanged(const QString& newText)
+{
+    QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
+    DataTypeImported* dataType = static_cast<DataTypeImported*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>());
+    dataType->setObject(newText);
+    blockBasicSignals(true);
+    updateImportNames(current, dataType);
+    blockBasicSignals(false);
+}
+
+void SIDataType::onImportLocationBrowse(void)
+{
+    WorkspaceFileDialog dialog(  true
+                               , false
+                               , LusanApplication::getWorkspaceDirectories()
+                               , LusanApplication::getExternalFileExtensions()
+                               , tr("Select Imported File")
+                               , this);
+
+    if (mCurUrl.isEmpty())
+    {
+        mCurUrl = LusanApplication::getWorkspaceDirectories().at(0);
+    }
+
+    QString curFile  = mDetails->ctrlImportLocation()->text();
+    curFile = curFile.isEmpty() ? mCurFile : curFile;
+
+    dialog.setDirectoryUrl(QUrl::fromLocalFile(mCurUrl));
+    dialog.setDirectory(mCurUrl);
+
+    if (curFile.isEmpty() == false)
+    {
+        QFileInfo info(curFile);
+        dialog.setDirectory(info.absoluteDir());
+        dialog.selectFile(curFile);
+    }
+
+    if (mCurView != -1)
+    {
+        dialog.setViewMode(static_cast<QFileDialog::ViewMode>(mCurView));
+    }
+
+    dialog.clearHistory();
+    if (dialog.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
+    {
+        mCurUrl = dialog.directoryUrl().path();
+        mCurFile = dialog.getSelectedFilePath();
+        mCurView = static_cast<int>(dialog.viewMode());
+
+        QString location = dialog.getSelectedFileRelativePath();
+        mDetails->ctrlImportLocation()->setText(location);
+    }
+}
+
 void SIDataType::showEnumDetails(bool show)
 {
     static constexpr int _space{180};
@@ -625,6 +701,10 @@ void SIDataType::setupSignals(void)
     connect(mDetails->ctrlContainerKey()    , &QComboBox::currentIndexChanged   , this, &SIDataType::onContainerKeyChanged);
     connect(mDetails->ctrlContainerValue()  , &QComboBox::currentIndexChanged   , this, &SIDataType::onContainerValueChanged);
     connect(mDetails->ctrlEnumDerived()     , &QComboBox::currentIndexChanged   , this, &SIDataType::onEnumDerivedChanged);
+    connect(mDetails->ctrlImportLocation()  , &QLineEdit::textChanged           , this, &SIDataType::onImportLocationChanged);
+    connect(mDetails->ctrlImportNamespace() , &QLineEdit::textChanged           , this, &SIDataType::onImportNamespaceChanged);
+    connect(mDetails->ctrlImportObject()    , &QLineEdit::textChanged           , this, &SIDataType::onImportObjectChanged);
+    connect(mDetails->ctrlButtonBrowse()    , &QPushButton::pressed             , this, &SIDataType::onImportLocationBrowse);
     
     connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
     connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled               , this, &SIDataType::onDeprectedChecked);
@@ -999,6 +1079,22 @@ void SIDataType::updateContainerNames(QTreeWidgetItem* node, DataTypeContainer* 
     else
     {
         typeName = QString("%1<%2>").arg(dataType->getContainer(), dataType->getValue());
+    }
+
+    node->setText(0, dataType->getName());
+    node->setText(1, typeName);
+}
+
+void SIDataType::updateImportNames(QTreeWidgetItem* node, DataTypeImported* dataType) const
+{
+    Q_ASSERT(node != nullptr);
+    Q_ASSERT(dataType != nullptr);
+    Q_ASSERT(dataType->getCategory() == DataTypeBase::eCategory::Imported);
+
+    QString typeName;
+    if (!dataType->getObject().isEmpty() || !dataType->getNamespace().isEmpty())
+    {
+        typeName = QString("%1::%2").arg(dataType->getNamespace(), dataType->getObject());
     }
 
     node->setText(0, dataType->getName());
