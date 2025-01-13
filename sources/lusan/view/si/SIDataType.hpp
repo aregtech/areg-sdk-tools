@@ -139,6 +139,8 @@ protected:
     void onContainerKeyChanged(int index);
     
     void onContainerValueChanged(int index);
+
+    void onEnumDerivedChanged(int index);
     
 private:
 
