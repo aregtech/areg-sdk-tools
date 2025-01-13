@@ -100,7 +100,7 @@ bool DataTypeCustom::getIsDeprecated(void) const
     return mIsDeprecated;
 }
 
-void DataTypeCustom::setDeprecated(bool isDeprecated)
+void DataTypeCustom::setIsDeprecated(bool isDeprecated)
 {
     mIsDeprecated = isDeprecated;
 }
@@ -115,7 +115,7 @@ void DataTypeCustom::setDeprecateHint(const QString& hint)
     mDeprecateHint = hint;
 }
 
-void DataTypeCustom::setDeprecated(bool isDeprecated, const QString& reason)
+void DataTypeCustom::setIsDeprecated(bool isDeprecated, const QString& reason)
 {
     mIsDeprecated = isDeprecated;
     mDeprecateHint = reason;

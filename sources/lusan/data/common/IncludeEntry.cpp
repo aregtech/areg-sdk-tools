@@ -148,7 +148,7 @@ bool IncludeEntry::isDeprecated(void) const
     return mDeprecated;
 }
 
-void IncludeEntry::setDeprecated(bool deprecated)
+void IncludeEntry::setIsDeprecated(bool deprecated)
 {
     mDeprecated = deprecated;
 }

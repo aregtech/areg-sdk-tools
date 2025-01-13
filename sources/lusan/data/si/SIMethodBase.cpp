@@ -128,7 +128,7 @@ void SIMethodBase::markDeprecated(bool isDeprecated, const QString& hint)
     }
 }
 
-void SIMethodBase::setDeprecated(bool isDeprecated)
+void SIMethodBase::setIsDeprecated(bool isDeprecated)
 {
     mIsDeprecated = isDeprecated;
     if (isDeprecated)

@@ -107,8 +107,6 @@ protected:
      */
     void onTypeNameChanged(const QString& newName);
     
-    void onFieldNameChanged(const QString& newName);
-    
     /**
      * \brief   Triggered when the deprecated flag is changed.
      * \param   isChecked   The flag to indicate if the constant is deprecated.
@@ -149,6 +147,18 @@ protected:
     void onImportObjectChanged(const QString& newText);
 
     void onImportLocationBrowse(void);
+
+    void onFieldNameChanged(const QString& newName);
+
+    void onFieldTypeChanged(int index);
+
+    void onFieldValueChanged(const QString& newValue);
+
+    void onFieldDescriptionChanged(void);
+
+    void onFieldDeprecatedChecked(bool isChecked);
+
+    void onFieldDeprecateHint(const QString& newText);
     
 private:
 
@@ -218,6 +228,8 @@ private:
     void updateContainerNames(QTreeWidgetItem* node, DataTypeContainer *dataType) const;
 
     void updateImportNames(QTreeWidgetItem* node, DataTypeImported* dataType) const;
+
+    inline ElementBase* getSelectedField(void) const;
     
     static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
     

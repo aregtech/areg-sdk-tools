@@ -175,7 +175,7 @@ public:
      * \brief   Sets the deprecated flag.
      * \param   deprecated  The deprecated flag.
      **/
-    void setDeprecated(bool deprecated);
+    void setIsDeprecated(bool deprecated);
 
     /**
      * \brief   Gets the deprecation hint.
