@@ -153,16 +153,15 @@ void SIInclude::setupSignals(void)
                 }
             );
     
-    connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIInclude::onAddClicked);
-    connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIInclude::onRemoveClicked);
-    connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIInclude::onInsertClicked);
-    connect(mList->ctrlTableList(), &QTableWidget::currentCellChanged, this, &SIInclude::onCurCellChanged);
-    
-    connect(mDetails->ctrlBrowseButton(), &QPushButton::clicked, this, &SIInclude::onBrowseClicked);    
-    connect(mDetails->ctrlInclude(), &QLineEdit::textChanged, this, &SIInclude::onIncludeChanged);
-    connect(mDetails->ctrlDescription(), &QPlainTextEdit::textChanged, this, &SIInclude::onDescriptionChanged);
-    connect(mDetails->ctrlDeprecated(), &QCheckBox::checkStateChanged, this, &SIInclude::onDeprectedClicked);
-    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textChanged, this, &SIInclude::onDeprecateHint);
+    connect(mList->ctrlTableList()      , &QTableWidget::currentCellChanged, this, &SIInclude::onCurCellChanged);
+    connect(mList->ctrlButtonAdd()      , &QToolButton::clicked         , this, &SIInclude::onAddClicked);
+    connect(mList->ctrlButtonRemove()   , &QToolButton::clicked         , this, &SIInclude::onRemoveClicked);
+    connect(mList->ctrlButtonInsert()   , &QToolButton::clicked         , this, &SIInclude::onInsertClicked);
+    connect(mDetails->ctrlBrowseButton(), &QPushButton::clicked         , this, &SIInclude::onBrowseClicked);    
+    connect(mDetails->ctrlInclude()     , &QLineEdit::textChanged       , this, &SIInclude::onIncludeChanged);
+    connect(mDetails->ctrlDescription() , &QPlainTextEdit::textChanged  , this, &SIInclude::onDescriptionChanged);
+    connect(mDetails->ctrlDeprecated()  , &QCheckBox::checkStateChanged , this, &SIInclude::onDeprectedClicked);
+    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textChanged      , this, &SIInclude::onDeprecateHint);
     
     connect(mTableCell, &TableCell::editorDataChanged, this, &SIInclude::onEditorDataChanged);
 }

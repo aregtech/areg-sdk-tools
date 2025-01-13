@@ -41,6 +41,7 @@ namespace XmlSI
     constexpr const char* const xmlSIElementEnumEntry       { "EnumEntry" };
     constexpr const char* const xmlSIElementField           { "Field" };
     constexpr const char* const xmlSIElementFieldList       { "FieldList" };
+    constexpr const char* const xmlSIElementImportedObject  { "ImportedObject" };
     constexpr const char* const xmlSIElementIncludeList     { "IncludeList" };
     constexpr const char* const xmlSIElementLocation        { "Location" };
     constexpr const char* const xmlSIElementMethod          { "Method" };

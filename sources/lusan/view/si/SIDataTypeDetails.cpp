@@ -110,6 +110,11 @@ QLineEdit* SIDataTypeDetails::ctrlImportNamespace(void) const
     return ui->editImportNamespace;
 }
 
+QLineEdit* SIDataTypeDetails::ctrlImportObject(void) const
+{
+    return ui->editImportObject;
+}
+
 SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsEnum(void) const
 {
     return CtrlGroup{ui->labelEnum, ui->groupEnum};

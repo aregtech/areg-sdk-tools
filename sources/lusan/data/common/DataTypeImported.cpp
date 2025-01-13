@@ -22,6 +22,7 @@
 DataTypeImported::DataTypeImported(ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::Imported, parent)
     , mNamespace    ( )
+    , mObject       ( )
     , mLocation     ( )
 {
 }
@@ -29,6 +30,7 @@ DataTypeImported::DataTypeImported(ElementBase* parent /*= nullptr*/)
 DataTypeImported::DataTypeImported(const QString& name, ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::Imported, 0, name, parent)
     , mNamespace    ( )
+    , mObject       ( )
     , mLocation     ( )
 {
 }
@@ -36,6 +38,7 @@ DataTypeImported::DataTypeImported(const QString& name, ElementBase* parent /*= 
 DataTypeImported::DataTypeImported(const DataTypeImported& src)
     : DataTypeCustom(src)
     , mNamespace    (src.mNamespace)
+    , mObject       (src.mObject)
     , mLocation     (src.mLocation)
 {
 }
@@ -43,6 +46,7 @@ DataTypeImported::DataTypeImported(const DataTypeImported& src)
 DataTypeImported::DataTypeImported(DataTypeImported&& src) noexcept
     : DataTypeCustom(std::move(src))
     , mNamespace    (std::move(src.mNamespace))
+    , mObject       (std::move(src.mObject))
     , mLocation     (std::move(src.mLocation))
 {
 }
@@ -53,6 +57,7 @@ DataTypeImported& DataTypeImported::operator = (const DataTypeImported& other)
     {
         DataTypeBase::operator = (other);
         mNamespace  = other.mNamespace;
+        mObject     = other.mObject;
         mLocation   = other.mLocation;
     }
 
@@ -65,6 +70,7 @@ DataTypeImported& DataTypeImported::operator = (DataTypeImported&& other) noexce
     {
         DataTypeBase::operator = (std::move(other));
         mNamespace  = std::move(other.mNamespace);
+        mObject     = std::move(other.mObject);
         mLocation   = std::move(other.mLocation);
     }
 
@@ -96,6 +102,10 @@ bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
             {
                 mLocation = xml.readElementText();
             }
+            else if (xml.name() == XmlSI::xmlSIElementImportedObject)
+            {
+                mObject = xml.readElementText();
+            }
         }
 
         xml.readNext();
@@ -113,6 +123,7 @@ void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
     xml.writeTextElement(XmlSI::xmlSIElementNamespace, mNamespace);
+    xml.writeTextElement(XmlSI::xmlSIElementImportedObject, mObject);
     xml.writeTextElement(XmlSI::xmlSIElementLocation, mLocation);
 
     xml.writeEndElement(); // DataType

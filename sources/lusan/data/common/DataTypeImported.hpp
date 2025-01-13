@@ -99,8 +99,13 @@ public:
 
     inline void setLocation(const QString& location);
 
+    inline const QString& getObject(void) const;
+
+    inline void setObject(const QString& object);
+
 private:
     QString mNamespace; //!< The namespace of the imported data type.
+    QString mObject;    //!< The object of the imported data type in the namespace.
     QString mLocation;  //!< The location of the imported data type.
 };
 
@@ -126,6 +131,16 @@ inline const QString& DataTypeImported::getLocation(void) const
 inline void DataTypeImported::setLocation(const QString& location)
 {
     mLocation = location;
+}
+
+inline const QString& DataTypeImported::getObject(void) const
+{
+    return mObject;
+}
+
+inline void DataTypeImported::setObject(const QString& object)
+{
+    mObject = object;
 }
 
 #endif // LUSAN_DATA_COMMON_DATATYPEIMPORTED_HPP

@@ -22,7 +22,6 @@
 #include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/app/LusanApplication.hpp"
 
-#include "lusan/view/common/DirSelectionDialog.hpp"
 #include "ui/ui_workspace.h"
 
 #include <QFile>

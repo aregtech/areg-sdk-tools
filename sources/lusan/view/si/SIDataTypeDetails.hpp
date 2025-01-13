@@ -78,6 +78,8 @@ public:
     
     QLineEdit* ctrlImportNamespace(void) const;
 
+    QLineEdit* ctrlImportObject(void) const;
+
     SIDataTypeDetails::CtrlGroup ctrlDetailsEnum(void) const;
 
     SIDataTypeDetails::CtrlGroup ctrlDetailsImport(void) const;
