@@ -364,7 +364,7 @@ void SIInclude::onDeprectedClicked(Qt::CheckState newState)
     {
         IncludeEntry* entry = _findInclude(row);
         Q_ASSERT(entry != nullptr);
-        entry->setDeprecated(newState == Qt::CheckState::Checked);
+        entry->setIsDeprecated(newState == Qt::CheckState::Checked);
         mDetails->ctrlDeprecateHint()->setEnabled(newState == Qt::CheckState::Checked);
     }
 }

@@ -136,7 +136,7 @@ public:
      * \brief   Sets the method as deprecated.
      * \param   isDeprecated    Flag, indicating whether method is deprecated or not.
      **/
-    void setDeprecated(bool isDeprecated);
+    void setIsDeprecated(bool isDeprecated);
 
     /**
      * \brief   Checks if the method is deprecated.

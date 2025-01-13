@@ -130,13 +130,13 @@ public:
 
     bool getIsDeprecated(void) const;
 
-    void setDeprecated(bool isDeprecated);
+    void setIsDeprecated(bool isDeprecated);
 
     const QString& getDeprecateHint(void) const;
 
     void setDeprecateHint(const QString& hint);
 
-    void setDeprecated(bool isDeprecated, const QString& reason);
+    void setIsDeprecated(bool isDeprecated, const QString& reason);
 
     /**
      * \brief   Returns the name of the custom data type.

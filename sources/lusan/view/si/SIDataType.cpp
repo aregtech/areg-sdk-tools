@@ -295,39 +295,37 @@ void SIDataType::onTypeNameChanged(const QString& newName)
     emit signalDataTypeUpdated(dataType);
 }
 
-void SIDataType::onFieldNameChanged(const QString& newName)
+void SIDataType::onDeprectedChecked(bool isChecked)
 {
     QTreeWidgetItem * item = mList->ctrlTableList()->currentItem();
     if (item == nullptr)
         return;
-    
-    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
-    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
-    Q_ASSERT(id != 0);
-    ElementBase* field = mModel.findChild(dataType, id);
-    Q_ASSERT(field != nullptr);
-    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-    {
-        static_cast<FieldEntry*>(field)->setName(newName);
-        item->setText(0, newName);
-    }
-    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-    {
-        static_cast<EnumEntry*>(field)->setName(newName);
-        item->setText(0, newName);
-    }
-}
 
-void SIDataType::onDeprectedChecked(bool isChecked)
-{
+    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    Q_ASSERT(dataType != nullptr);
+    dataType->setIsDeprecated(isChecked);
 }
 
 void SIDataType::onDeprecateHintChanged(const QString& newText)
 {
+    QTreeWidgetItem * item = mList->ctrlTableList()->currentItem();
+    if (item == nullptr)
+        return;
+
+    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    Q_ASSERT(dataType != nullptr);
+    dataType->setDeprecateHint(dataType->getIsDeprecated() ? newText : QString());
 }
 
 void SIDataType::onDescriptionChanged(void)
 {
+    QTreeWidgetItem * item = mList->ctrlTableList()->currentItem();
+    if (item == nullptr)
+        return;
+
+    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    Q_ASSERT(dataType != nullptr);
+    dataType->setDescription(mDetails->ctrlDescription()->toPlainText());
 }
 
 void SIDataType::onStructSelected(bool checked)
@@ -585,6 +583,119 @@ void SIDataType::onImportLocationBrowse(void)
     }
 }
 
+void SIDataType::onFieldNameChanged(const QString& newName)
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
+    ElementBase* field = getSelectedField();
+    if ((dataType != nullptr) && (field != nullptr))
+    {
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            static_cast<FieldEntry*>(field)->setName(newName);
+            item->setText(0, newName);
+        }
+        else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+        {
+            static_cast<EnumEntry*>(field)->setName(newName);
+            item->setText(0, newName);
+        }
+    }
+}
+
+void SIDataType::onFieldTypeChanged(int index)
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
+    ElementBase* field = getSelectedField();
+    QComboBox* types = mFields->ctrlTypes();
+    DataTypeBase* selType = index >= 0 ? types->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>() : nullptr;
+
+    if ((dataType != nullptr) && (field != nullptr) && (selType != nullptr))
+    {
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            static_cast<FieldEntry*>(field)->setType(selType->getName());
+            item->setText(1, selType->getName());
+        }
+    }
+}
+
+void SIDataType::onFieldValueChanged(const QString& newValue)
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
+    ElementBase* field = getSelectedField();
+    if ((dataType != nullptr) && (field != nullptr))
+    {
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            static_cast<FieldEntry*>(field)->setValue(newValue);
+            item->setText(2, newValue);
+        }
+        else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+        {
+            static_cast<EnumEntry*>(field)->setValue(newValue);
+            item->setText(2, newValue);
+        }
+    }
+}
+
+void SIDataType::onFieldDescriptionChanged(void)
+{
+    QString descr{mFields->ctrlDescription()->toPlainText()};
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
+    ElementBase* field = getSelectedField();
+    if ((dataType != nullptr) && (field != nullptr))
+    {
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            static_cast<FieldEntry*>(field)->setDescription(descr);
+        }
+        else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+        {
+            static_cast<EnumEntry*>(field)->setDescription(descr);
+        }
+    }
+}
+
+void SIDataType::onFieldDeprecatedChecked(bool isChecked)
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
+    ElementBase* field = getSelectedField();
+    if ((dataType != nullptr) && (field != nullptr))
+    {
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            static_cast<FieldEntry*>(field)->setIsDeprecated(isChecked);
+        }
+        else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+        {
+            static_cast<EnumEntry*>(field)->setIsDeprecated(isChecked);
+        }
+    }
+}
+
+void SIDataType::onFieldDeprecateHint(const QString& newText)
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
+    ElementBase* field = getSelectedField();
+    if ((dataType != nullptr) && (field != nullptr))
+    {
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            static_cast<FieldEntry*>(field)->setDeprecateHint(static_cast<FieldEntry*>(field)->getIsDeprecated() ? newText : QString());
+        }
+        else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+        {
+            static_cast<EnumEntry*>(field)->setDeprecateHint(static_cast<EnumEntry*>(field)->getIsDeprecated() ? newText : QString());
+        }
+    }
+}
+
 void SIDataType::showEnumDetails(bool show)
 {
     static constexpr int _space{180};
@@ -692,7 +803,6 @@ void SIDataType::setupSignals(void)
     connect(mList->ctrlToolAdd()            , &QToolButton::clicked             , this, &SIDataType::onAddClicked);
     connect(mList->ctrlToolAddField()       , &QToolButton::clicked             , this, &SIDataType::onAddFieldClicked);
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged           , this, &SIDataType::onTypeNameChanged);
-    connect(mFields->ctrlName()             , &QLineEdit::textChanged           , this, &SIDataType::onFieldNameChanged);
     connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked            , this, &SIDataType::onStructSelected);
     connect(mDetails->ctrlTypeEnum()        , &QRadioButton::clicked            , this, &SIDataType::onEnumSelected);
     connect(mDetails->ctrlTypeImport()      , &QRadioButton::clicked            , this, &SIDataType::onImportSelected);
@@ -705,11 +815,18 @@ void SIDataType::setupSignals(void)
     connect(mDetails->ctrlImportNamespace() , &QLineEdit::textChanged           , this, &SIDataType::onImportNamespaceChanged);
     connect(mDetails->ctrlImportObject()    , &QLineEdit::textChanged           , this, &SIDataType::onImportObjectChanged);
     connect(mDetails->ctrlButtonBrowse()    , &QPushButton::pressed             , this, &SIDataType::onImportLocationBrowse);
-    
-    connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
     connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled               , this, &SIDataType::onDeprectedChecked);
     connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::textEdited            , this, &SIDataType::onDeprecateHintChanged);
     connect(mDetails->ctrlDescription()     , &QPlainTextEdit::textChanged      , this, &SIDataType::onDescriptionChanged);
+
+    connect(mFields->ctrlName()             , &QLineEdit::textChanged           , this, &SIDataType::onFieldNameChanged);
+    connect(mFields->ctrlTypes()            , &QComboBox::currentIndexChanged   , this, &SIDataType::onFieldTypeChanged);
+    connect(mFields->ctrlValue()            , &QLineEdit::textChanged           , this, &SIDataType::onFieldValueChanged);
+    connect(mFields->ctrlDescription()      , &QPlainTextEdit::textChanged      , this, &SIDataType::onFieldDescriptionChanged);
+    connect(mFields->ctrlDeprecated()       , &QCheckBox::toggled               , this, &SIDataType::onFieldDeprecatedChecked);
+    connect(mFields->ctrlDeprecateHint()    , &QLineEdit::textChanged           , this, &SIDataType::onFieldDeprecateHint);
+
+    connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
     // connect(mTableCell                , &TableCell::editorDataChanged,this, &SIConstant::onEditorDataChanged);
 }
 
@@ -1099,4 +1216,12 @@ void SIDataType::updateImportNames(QTreeWidgetItem* node, DataTypeImported* data
 
     node->setText(0, dataType->getName());
     node->setText(1, typeName);
+}
+
+inline ElementBase* SIDataType::getSelectedField(void) const
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
+    uint32_t id = item != nullptr ? item->data(1, Qt::ItemDataRole::UserRole).toUInt() : 0;
+    return ((item != nullptr) && (id != 0)) ? mModel.findChild(dataType, id) : nullptr;
 }
