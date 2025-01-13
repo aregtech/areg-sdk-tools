@@ -447,7 +447,18 @@ void SIDataType::onContainerObjectChanged(int index)
     DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
     Q_ASSERT(typeContainer->getCategory() == DataTypeBase::eCategory::Container);
     typeContainer->setContainer(dataType->getName());
-    mDetails->ctrlContainerKey()->setEnabled(dataType->hasKey());
+    if (dataType->hasKey())
+    {
+        mDetails->ctrlContainerKey()->setEnabled(true);
+        typeContainer->setKey(mDetails->ctrlContainerKey()->currentText());
+    }
+    else
+    {
+        mDetails->ctrlContainerKey()->setEnabled(false);
+        typeContainer->setKey(QString());
+    }
+
+    updateContainerNames(current, typeContainer);
 }
 
 void SIDataType::onContainerKeyChanged(int index)
@@ -463,6 +474,7 @@ void SIDataType::onContainerKeyChanged(int index)
     DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
     Q_ASSERT(typeContainer->getCategory() == DataTypeBase::eCategory::Container);
     typeContainer->setKey(dataType->getName());
+    updateContainerNames(current, typeContainer);
 }
 
 void SIDataType::onContainerValueChanged(int index)
@@ -477,7 +489,8 @@ void SIDataType::onContainerValueChanged(int index)
     QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
     DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
     Q_ASSERT(typeContainer->getCategory() == DataTypeBase::eCategory::Container);
-    typeContainer->setKey(dataType->getName());
+    typeContainer->setValue(dataType->getName());
+    updateContainerNames(current, typeContainer);
 }
 
 void SIDataType::onEnumDerivedChanged(int index)
@@ -925,18 +938,10 @@ void SIDataType::updateNodeContainer(QTreeWidgetItem* node, DataTypeContainer* d
     node->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherStorm));
     node->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
     node->setData(1, Qt::ItemDataRole::UserRole, 0);
-    QString typeName;
-    if (dataType->hasKey())
-    {
-        typeName = QString("%1<%2, %3>").arg(dataType->getContainer(), dataType->getKey(), dataType->getValue());
-    }
-    else if (dataType->getContainer().isEmpty() == false)
-    {
-        typeName = QString("%1<%2>").arg(dataType->getContainer(), dataType->getValue());
-    }
-
-    node->setText(0, dataType->getName());
-    node->setText(1, typeName);
+    dataType->setContainer(mDetails->ctrlContainerObject()->currentText());
+    dataType->setValue(mDetails->ctrlContainerValue()->currentText());
+    dataType->setKey(dataType->canHaveKey() ? mDetails->ctrlContainerKey()->currentText() : QString());
+    updateContainerNames(node, dataType);
 }
 
 void SIDataType::updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure* dataType, const FieldEntry& field) const
@@ -978,4 +983,24 @@ void SIDataType::activateFields(bool activate)
             // mDetails->ctrlDescription()->move(NELusanCommon::DescPos);
         }
     }
+}
+
+void SIDataType::updateContainerNames(QTreeWidgetItem* node, DataTypeContainer* dataType) const
+{
+    Q_ASSERT(node != nullptr);
+    Q_ASSERT(dataType != nullptr);
+    Q_ASSERT(dataType->getCategory() == DataTypeBase::eCategory::Container);
+
+    QString typeName;
+    if (dataType->canHaveKey())
+    {
+        typeName = QString("%1<%2, %3>").arg(dataType->getContainer(), dataType->getKey(), dataType->getValue());
+    }
+    else
+    {
+        typeName = QString("%1<%2>").arg(dataType->getContainer(), dataType->getValue());
+    }
+
+    node->setText(0, dataType->getName());
+    node->setText(1, typeName);
 }
