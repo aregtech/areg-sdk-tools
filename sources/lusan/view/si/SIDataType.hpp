@@ -206,6 +206,8 @@ private:
     void updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataType, const EnumEntry& field) const;
 
     void activateFields(bool activate);
+
+    void updateContainerNames(QTreeWidgetItem* node, DataTypeContainer *dataType) const;
     
     static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
     
