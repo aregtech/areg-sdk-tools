@@ -480,6 +480,22 @@ void SIDataType::onContainerValueChanged(int index)
     typeContainer->setKey(dataType->getName());
 }
 
+void SIDataType::onEnumDerivedChanged(int index)
+{
+    if (index >= 0)
+    {
+        blockBasicSignals(true);
+        DataTypeBase* dataType = mDetails->ctrlEnumDerived()->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>();
+        QString derived{dataType != nullptr ? dataType->getName() : QString("")};
+        QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
+        current->setText(1, derived);
+        DataTypeEnum* typeEnum = static_cast<DataTypeEnum*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>());
+        Q_ASSERT((typeEnum != nullptr) && (typeEnum->getCategory() == DataTypeBase::eCategory::Enumeration));
+        typeEnum->setDerived(derived);
+        blockBasicSignals(false);
+    }
+}
+
 void SIDataType::showEnumDetails(bool show)
 {
     static constexpr int _space{180};
@@ -559,6 +575,7 @@ void SIDataType::updateWidgets(void)
     
     QComboBox* enumDerive = mDetails->ctrlEnumDerived();
     const QList<DataTypeBase*>& integers{_getIntegerTypes()};
+    enumDerive->addItem(QString(), QVariant::fromValue(static_cast<DataTypeBase*>(nullptr)));
     for (auto dataType : integers)
     {
         enumDerive->addItem(dataType->getName(), QVariant::fromValue(static_cast<DataTypeBase *>(dataType)));
@@ -594,6 +611,7 @@ void SIDataType::setupSignals(void)
     connect(mDetails->ctrlContainerObject() , &QComboBox::currentIndexChanged   , this, &SIDataType::onContainerObjectChanged);
     connect(mDetails->ctrlContainerKey()    , &QComboBox::currentIndexChanged   , this, &SIDataType::onContainerKeyChanged);
     connect(mDetails->ctrlContainerValue()  , &QComboBox::currentIndexChanged   , this, &SIDataType::onContainerValueChanged);
+    connect(mDetails->ctrlEnumDerived()     , &QComboBox::currentIndexChanged   , this, &SIDataType::onEnumDerivedChanged);
     
     connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
     connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled               , this, &SIDataType::onDeprectedChecked);
