@@ -21,6 +21,8 @@
 
 #include <QWidget>
 
+class QMdiSubWindow;
+
 /**
  * \brief   The MdiChild class represents a child window in the MDI interface.
  *          It provides functionalities for file operations and text editing.
@@ -102,6 +104,10 @@ public:
 
     inline const QString& getDocumentName(void) const;
 
+    inline QMdiSubWindow* getMdiSubwindow(void) const;
+
+    inline void setMdiSubwindow(QMdiSubWindow * mdiSubwindow);
+
 protected:
 
     virtual QString newDocumentName(void);
@@ -154,6 +160,8 @@ protected:
 
     //!< Indicates whether the file is untitled.
     bool    mIsUntitled;
+
+    QMdiSubWindow * mMdiSubWindow;
 };
 
 inline const QString & MdiChild::currentFile(void) const
@@ -166,5 +174,14 @@ inline const QString& MdiChild::getDocumentName(void) const
     return mDocName;
 }
 
+inline QMdiSubWindow* MdiChild::getMdiSubwindow(void) const
+{
+    return mMdiSubWindow;
+}
+
+inline void MdiChild::setMdiSubwindow(QMdiSubWindow * mdiSubwindow)
+{
+    mMdiSubWindow = mdiSubwindow;
+}
 
 #endif // LUSAN_VIEW_COMMON_MDICHILD_HPP

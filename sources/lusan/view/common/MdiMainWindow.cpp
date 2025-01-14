@@ -398,7 +398,8 @@ MdiChild* MdiMainWindow::createMdiChild()
 ServiceInterface* MdiMainWindow::createServiceInterfaceView()
 {
     ServiceInterface* child = new ServiceInterface(&mMdiArea);
-    mMdiArea.addSubWindow(child);
+    QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
+    child->setMdiSubwindow(mdiSub);
 
     connect(child, &ServiceInterface::copyAvailable, &mActEditCut, &QAction::setEnabled);
     connect(child, &ServiceInterface::copyAvailable, &mActEditCopy, &QAction::setEnabled);

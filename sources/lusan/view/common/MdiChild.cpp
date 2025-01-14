@@ -34,6 +34,7 @@ MdiChild::MdiChild(QWidget* parent /*= nullptr*/)
     , mCurFile      ( )
     , mDocName      ( )
     , mIsUntitled   ( true )
+    , mMdiSubWindow ( nullptr )
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
 }
