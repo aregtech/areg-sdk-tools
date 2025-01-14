@@ -33,7 +33,25 @@ SIMethodBase::SIMethodBase(eMethodType methodType, ElementBase* parent /*= nullp
     , mIsDeprecated (false)
     , mDeprecateHint()
 {
+
 }
+
+SIMethodBase::SIMethodBase(eMethodType methodType, const QString& name, ElementBase* parent /*= nullptr*/)
+    : MethodBase    (parent->getNextId(), name, QString(), parent)
+    , mMethodType   (methodType)
+    , mIsDeprecated (false)
+    , mDeprecateHint()
+{
+}
+
+SEMethodsBase::SEMethodsBase(uint32_t id, eMethodType methodType, const QString& name, ElementBase* parent /*= nullptr*/)
+    : MethodBase    (id, name, QString(), parent)
+    , mMethodType   (methodType)
+    , mIsDeprecated (false)
+    , mDeprecateHint()
+{
+}
+
 
 SIMethodBase::SIMethodBase(uint32_t id, const QString& name, const QString& description, eMethodType methodType, ElementBase* parent /*= nullptr*/)
     : MethodBase    (id, name, description, parent)

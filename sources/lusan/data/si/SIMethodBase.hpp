@@ -55,6 +55,10 @@ protected:
     
     SIMethodBase(eMethodType methodType, ElementBase* parent = nullptr);
 
+    SEMethodsBase(eMethodType methodType, const QString& name, ElementBase* parent = nullptr);
+
+    SEMethodsBase(uint32_t id, eMethodType methodType, const QString& name, ElementBase* parent = nullptr);
+
     /**
      * \brief   Constructor with initialization.
      * \param   id              The ID of the method.

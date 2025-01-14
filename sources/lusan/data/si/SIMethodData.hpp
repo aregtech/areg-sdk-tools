@@ -59,10 +59,11 @@ public:
     /**
      * \brief   Adds a method object to the list.
      * \param   method      The method object to add.
-     * \param   isUnique    If true, the method is added only if it is unique.
      * \return  True if the method was added, false otherwise.
      **/
-    bool addMethod(SIMethodBase* method, bool isUnique = true);
+    bool addMethod(SIMethodBase* method);
+
+    SIMethodBase* addMethod(const QString& name, SIMethodBase::eMethodType methodType);
 
     /**
      * \brief   Removes a method object from the list by name and type.
@@ -72,12 +73,9 @@ public:
      **/
     bool removeMethod(const QString& name, SIMethodBase::eMethodType methodType);
 
-    /**
-     * \brief   Inserts a method object into the list at the specified position.
-     * \param   index   The position to insert the method.
-     * \param   method  The method object to insert.
-     **/
-    void insertMethod(int index, SIMethodBase* method);
+    bool removeMethod(uint32_t id);
+
+    void removeMethod(SIMethodBase* method);
 
     /**
      * \brief   Searches for a method object by name and type.
@@ -86,6 +84,8 @@ public:
      * \return  The method object if found, nullptr otherwise.
      **/
     SIMethodBase* findMethod(const QString& name, SIMethodBase::eMethodType methodType) const;
+
+    SIMethodBase* findMethod(uint32_t id) const;
 
     /**
      * \brief   Searches for a method object by name.
@@ -120,7 +120,9 @@ public:
      * \param   request The name of the request method to check connected response.
      * \return  The connected response method object if found, empty string otherwise.
      **/
-    QString getRequestConnectedResponse(const QString& request) const;
+    QString getResponse(const QString& request) const;
+
+    QString 
 
     /**
      * \brief   Checks whether the response method is connected to any request method.
@@ -171,6 +173,14 @@ public:
      **/
     void removeAll(void);
 
+private:
+
+    SIMethodBase* _convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType);
+
+    SIMethodBase* _createMethod(SIMethodBase::eMethodType methodType, const QString& name);
+
+    void _addMethod(SIMethodBase* method);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -178,6 +188,7 @@ private:
     QList<SIMethodRequest*>    mRequestMethods;    //!< List of request methods.
     QList<SIMethodResponse*>   mResponseMethods;   //!< List of response methods.
     QList<SIMethodBroadcast*>  mBroadcastMethods;  //!< List of broadcast methods.
+    QList< SIMethodBase*>      mAllMethods;        //!< List of all methods.
 };
 
 //////////////////////////////////////////////////////////////////////////

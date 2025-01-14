@@ -23,22 +23,40 @@
 namespace
 {
     template<class Method>
-    bool removeMethodFromList(QList<Method*>& list, const QString& name)
+    Method* removeMethodFromList(QList<Method*>& list, const QString& name)
     {
+        Method* result{ nullptr };
         for (auto it = list.begin(); it != list.end(); ++it)
         {
             if ((*it)->getName() == name)
             {
-                delete *it;
+                result = (*it);
                 list.erase(it);
-                return true;
+                break;
             }
         }
         
-        return false;
+        return result;
     }
     
-    template<class Method>    
+    template<class Method>
+    Method* removeMethodFromList(QList<Method*>& list, uint32_t id)
+    {
+        Method* result{ nullptr };
+        for (auto it = list.begin(); it != list.end(); ++it)
+        {
+            if ((*it)->getId() == id)
+            {
+                result = (*it);
+                list.erase(it);
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    template<class Method>
     Method* findMethodInList(const QList<Method*>& list, const QString& name)
     {
         for (const auto& method : list)
@@ -53,12 +71,76 @@ namespace
     }
     
     template<class Method>
+    Method* findMethodInList(const QList<Method*>& list, const uint32_t id)
+    {
+        for (const auto& method : list)
+        {
+            if (method->getId() == id)
+            {
+                return method;
+            }
+        }
+
+        return nullptr;
+    }
+
+    template<class Method>
+    int32_t findMethodIndex(const QList<Method*>& list, const QString& name)
+    {
+        int32_t result = -1;
+        for (int i = 0; i < list.size(); ++i)
+        {
+            if (list.at(i)->getName() == name)
+            {
+                result = i;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    template<class Method>
+    int32_t findMethodIndex(const QList<Method*>& list, uint32_t id)
+    {
+        int32_t result = -1;
+        for (int i = 0; i < list.size(); ++i)
+        {
+            if (list.at(i)->getId() == id)
+            {
+                result = i;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    template<class Method>
     void appendMethodList(const QList<Method*>& list, QList<SIMethodBase *>& result)
     {
         for (Method* method : list)
         {
             result.append(method);
         }
+    }
+
+    template<class Method>
+    void sortList(QList<Method*>& list, bool ascending)
+    {
+        std::sort(list.begin(), list.end(), [ascending](const Method* lhs, const Method* rhs)
+            {
+                return (ascending ? (lhs->getId() < rhs->getId()) : (lhs->getId() > rhs->getId()));
+            });
+    }
+
+    template<class Method>
+    void sortListByName(QList<Method*>& list, bool ascending)
+    {
+        std::sort(list.begin(), list.end(), [ascending](const Method* lhs, const Method* rhs)
+            {
+                return (ascending ? (lhs->getName() < rhs->getName()) : (lhs->getName() > rhs->getName()));
+            });
     }
 }
 
@@ -67,92 +149,122 @@ SIMethodData::SIMethodData(ElementBase* parent /*= nullptr*/)
     , mRequestMethods   ( )
     , mResponseMethods  ( )
     , mBroadcastMethods ( )
+    , mAllMethods       ( )
 {
 }
 
 SIMethodData::~SIMethodData(void)
 {
-    qDeleteAll(mRequestMethods);
-    qDeleteAll(mResponseMethods);
-    qDeleteAll(mBroadcastMethods);
+    qDeleteAll(mAllMethods);
+    mAllMethods.clear();
     mRequestMethods.clear();
     mResponseMethods.clear();
     mBroadcastMethods.clear();
 }
 
-bool SIMethodData::addMethod(SIMethodBase* method, bool isUnique /*= true*/)
+bool SIMethodData::addMethod(SIMethodBase* method)
 {
-    if (isUnique)
-    {
-        if (findMethod(method->getName(), method->getMethodType()) != nullptr)
-        {
-            return false;
-        }
-    }
-
-    if (method->getParent() != this)
+    if ((method->getParent() != this) || (method->getParent() == nullptr))
     {
         method->setParent(this);
         method->setId(getNextId());
     }
+    else if (findMethodInList(mAllMethods, method->getId()) != nullptr)
+    {
+        return false;
+    }
+
     
     switch (method->getMethodType())
     {
     case SIMethodBase::eMethodType::MethodRequest:
+        mAllMethods.append(method);
         mRequestMethods.append(static_cast<SIMethodRequest*>(method));
         break;
+
     case SIMethodBase::eMethodType::MethodResponse:
+        mAllMethods.append(method);
         mResponseMethods.append(static_cast<SIMethodResponse*>(method));
         break;
+
     case SIMethodBase::eMethodType::MethodBroadcast:
+        mAllMethods.append(method);
         mBroadcastMethods.append(static_cast<SIMethodBroadcast*>(method));
         break;
+
     default:
         delete method;
+        return false;
         break;
     }
 
     return true;
 }
 
+SIMethodBase* SIMethodData::addMethod(const QString& name, SIMethodBase::eMethodType methodType)
+{
+    return _createMethod(methodType, name);
+}
+
 bool SIMethodData::removeMethod(const QString& name, SIMethodBase::eMethodType methodType)
 {
+    SIMethodBase* method {nullptr};
     switch (methodType)
     {
     case SIMethodBase::eMethodType::MethodRequest:
-        return removeMethodFromList(mRequestMethods, name);
+        method = removeMethodFromList(mRequestMethods, name);
+        break;
+
     case SIMethodBase::eMethodType::MethodResponse:
-        return removeMethodFromList(mResponseMethods, name);
+        method =  removeMethodFromList(mResponseMethods, name);
+        break;
+
     case SIMethodBase::eMethodType::MethodBroadcast:
-        return removeMethodFromList(mBroadcastMethods, name);
+        method = removeMethodFromList(mBroadcastMethods, name);
+        break;
+
     default:
         return false;
     }
+
+    bool result = mAllMethods.removeOne(method);
+    delete method;
+    return result;
 }
 
-void SIMethodData::insertMethod(int index, SIMethodBase* method)
+bool SIMethodData::removeMethod(uint32_t id)
 {
-    if (method->getParent() != this)
-    {
-        method->setParent(this);
-        method->setId(getNextId());
-    }
+
+    SIMethodBase * method = findMethodInList(mAllMethods, id);
+    removeMethod(method);
+    return (method != nullptr);
+}
+
+void SIMethodData::removeMethod(SIMethodBase* method)
+{
+    if (method == nullptr)
+        return;
 
     switch (method->getMethodType())
     {
     case SIMethodBase::eMethodType::MethodRequest:
-        mRequestMethods.insert(index, static_cast<SIMethodRequest*>(method));
+        mRequestMethods.removeOne(method);
         break;
+
     case SIMethodBase::eMethodType::MethodResponse:
-        mResponseMethods.insert(index, static_cast<SIMethodResponse*>(method));
+        mResponseMethods.removeOne(method);
         break;
+
     case SIMethodBase::eMethodType::MethodBroadcast:
-        mBroadcastMethods.insert(index, static_cast<SIMethodBroadcast*>(method));
+        mBroadcastMethods.removeOne(method);
         break;
+
     default:
-        delete method;
         break;
     }
+
+    mAllMethods.removeOne(method);
+    delete method;
 }
 
 SIMethodBase* SIMethodData::findMethod(const QString& name, SIMethodBase::eMethodType methodType) const
@@ -170,16 +282,18 @@ SIMethodBase* SIMethodData::findMethod(const QString& name, SIMethodBase::eMetho
     }
 }
 
-QList<SIMethodBase*> SIMethodData::getAllMethods(void) const
+SIMethodBase* SIMethodData::findMethod(uint32_t id) const
 {
-    QList<SIMethodBase*> methods;
-    appendMethodList(mRequestMethods, methods);
-    appendMethodList(mResponseMethods, methods);
-    appendMethodList(mBroadcastMethods, methods);
-    return methods;
+    return findMethodInList(mAllMethods, id);
 }
 
-inline QString SIMethodData::getRequestConnectedResponse(const QString& request) const
+
+QList<SIMethodBase*> SIMethodData::getAllMethods(void) const
+{
+    return mAllMethods;
+}
+
+QString SIMethodData::getResponse(const QString& request) const
 {
     QString result;
 
@@ -281,11 +395,90 @@ void SIMethodData::writeToXml(QXmlStreamWriter& xml) const
 
 void SIMethodData::removeAll(void)
 {
-    qDeleteAll(mRequestMethods);
-    qDeleteAll(mResponseMethods);
-    qDeleteAll(mBroadcastMethods);
+    qDeleteAll(mAllMethods);
     mRequestMethods.clear();
     mResponseMethods.clear();
     mBroadcastMethods.clear();
+    mAllMethods.clear();
 }
 
+SIMethodBase* SIMethodData::_convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType)
+{
+    SIMethodBase* result{ nullptr };
+    switch (methodType)
+    {
+    case SIMethodBase::eMethodType::MethodRequest:
+        result = new SIMethodRequest(method->getId(), method->getName(), method->getDescription(), this);
+        break;
+
+    case SIMethodBase::eMethodType::MethodResponse:
+        result = new SIMethodResponse(method->getId(), method->getName(), method->getDescription(), this);
+        break;
+
+    case SIMethodBase::eMethodType::MethodBroadcast:
+        result = new SIMethodBroadcast(method->getId(), method->getName(), method->getDescription(), this);
+        break;
+
+    default:
+        break;
+    }
+
+    if (result != nullptr)
+    {
+        result->setIsDeprecated(method->isDeprecated());
+        result->setDeprecateHint(method->getDeprecateHint());
+        result->setElements(method->getElements());
+
+        removeMethod(method);
+        _addMethod(result);
+    }
+
+    return result;
+}
+
+SIMethodBase* SIMethodData::_createMethod(SIMethodBase::eMethodType methodType, const QString& name)
+{
+    SIMethodBase* result{ nullptr };
+    switch (methodType)
+    {
+    case SIMethodBase::eMethodType::MethodRequest:
+        result = new SIMethodRequest(getNextId(), name, this);
+        break;
+
+    case SIMethodBase::eMethodType::MethodResponse:
+        result = new SIMethodResponse(getNextId(), name, this);
+        break;
+
+    case SIMethodBase::eMethodType::MethodBroadcast:
+        result = new SIMethodBroadcast(getNextId(), name, this);
+        break;
+
+    default:
+        break;
+    }
+
+    _addMethod(result);
+    return result;
+}
+
+void SIMethodData::_addMethod(SIMethodBase* method)
+{
+    if (method != nullptr)
+    {
+        mAllMethods.append(method);
+        switch (method->getMethodType())
+        {
+        case SIMethodBase::eMethodType::MethodRequest:
+            mRequestMethods.append(static_cast<SIMethodRequest*>(method));
+            break;
+        case SIMethodBase::eMethodType::MethodResponse:
+            mResponseMethods.append(static_cast<SIMethodResponse*>(method));
+            break;
+        case SIMethodBase::eMethodType::MethodBroadcast:
+            mBroadcastMethods.append(static_cast<SIMethodBroadcast*>(method));
+            break;
+        default:
+            break;
+        }
+    }
+}
