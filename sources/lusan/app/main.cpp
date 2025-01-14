@@ -41,11 +41,6 @@ int main(int argc, char *argv[])
     LusanApplication::setApplicationName(_application);
     LusanApplication::setApplicationVersion(_version);
     
-    QCommonStyle* style = new QCommonStyle;
-    style->standardPalette();
-    // QApplication::setStyle(QStyleFactory::create("Fusion"));
-    // QApplication::setStyle(style);
-
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages)
