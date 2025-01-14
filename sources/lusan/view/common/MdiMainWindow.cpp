@@ -377,23 +377,33 @@ void MdiMainWindow::updateWindowMenu()
 
 MdiChild* MdiMainWindow::createMdiChild()
 {
+#if 0
+    // QMdiSubWindow* subWindow = new QMdiSubWindow;
     MdiChild* child = new MdiChild;
+    // subWindow->setWidget(new MdiChild);
+    // subWindow->setAttribute(Qt::WA_DeleteOnClose);
+
     mMdiArea.addSubWindow(child);
     connect(child, &MdiChild::copyAvailable, &mActEditCut, &QAction::setEnabled);
     connect(child, &MdiChild::copyAvailable, &mActEditCopy, &QAction::setEnabled);
-    child->showMaximized();
-
+    showMaximized();
+    mMdiArea.showMaximized();
+    // child->showMaximized();
     return child;
+#else
+    return nullptr;
+#endif
 }
 
 ServiceInterface* MdiMainWindow::createServiceInterfaceView()
 {
-    ServiceInterface* child = new ServiceInterface;
+    ServiceInterface* child = new ServiceInterface(&mMdiArea);
     mMdiArea.addSubWindow(child);
+
     connect(child, &ServiceInterface::copyAvailable, &mActEditCut, &QAction::setEnabled);
     connect(child, &ServiceInterface::copyAvailable, &mActEditCopy, &QAction::setEnabled);
     
-    child->showMaximized();
+    mMdiArea.showMaximized();
     return child;
 }
 

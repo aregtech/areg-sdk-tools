@@ -23,12 +23,11 @@
 MdiArea::MdiArea(QWidget* parent /*= nullptr*/)
     : QMdiArea(parent)
 {
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setSizeAdjustPolicy(QMdiArea::SizeAdjustPolicy::AdjustToContents);
+    setDocumentMode(true);
     setViewMode(ViewMode::TabbedView);
     setTabsClosable(true);
     setTabsMovable(true);
-    setTabShape(QTabWidget::TabShape::Triangular);
+    setTabShape(QTabWidget::TabShape::Rounded);
     setTabPosition(QTabWidget::TabPosition::North);
 }

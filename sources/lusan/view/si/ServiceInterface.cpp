@@ -23,6 +23,8 @@
 
 #include <QVBoxLayout>
 
+uint32_t ServiceInterface::_count{0};
+
 ServiceInterface::ServiceInterface(QWidget *parent)
     : MdiChild  (parent)
     , mModel    ( )
@@ -48,8 +50,6 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
-    setWidgetResizable(true);
-
     // mOverview.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
     // mDataType.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
     // mDataTopic.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
@@ -58,6 +58,9 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     connect(&mDataType, &SIDataType::signalDataTypeCreated  , this, &ServiceInterface::slotDataTypeCreated);
     connect(&mDataType, &SIDataType::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
     connect(&mDataType, &SIDataType::signalDataTypeUpdated  , this, &ServiceInterface::slotlDataTypeUpdated);
+    
+    this->setWindowTitle("NewServiceInterface");    
+    setAttribute(Qt::WA_DeleteOnClose);
 }
 
 ServiceInterface::~ServiceInterface(void)

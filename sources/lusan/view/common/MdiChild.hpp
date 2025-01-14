@@ -19,13 +19,13 @@
  *
  ************************************************************************/
 
-#include <QScrollArea>
+#include <QWidget>
 
 /**
  * \brief   The MdiChild class represents a child window in the MDI interface.
  *          It provides functionalities for file operations and text editing.
  **/
-class MdiChild : public QScrollArea
+class MdiChild : public QWidget
 {
     Q_OBJECT
 

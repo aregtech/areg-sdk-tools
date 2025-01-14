@@ -119,12 +119,14 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     ui.horizontalLayout->addWidget(mList);
     ui.horizontalLayout->addWidget(mDetails);
     ui.horizontalLayout->addWidget(mFields);
-    
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
+    setWidgetResizable(true);
+    setWidget(mWidget);
 
     updateData();
     updateWidgets();
@@ -795,6 +797,8 @@ void SIDataType::updateWidgets(void)
     mList->ctrlToolInsertField()->setEnabled(false);
     mList->ctrlToolMoveUp()->setEnabled(false);
     mList->ctrlToolMoveDown()->setEnabled(false);
+    
+    disableTypes(true);
 }
 
 void SIDataType::setupSignals(void)
@@ -863,6 +867,7 @@ void SIDataType::blockBasicSignals(bool doBlock)
 
 void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* dataType)
 {
+    disableTypes(false);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
@@ -894,6 +899,7 @@ void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* data
 
 void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
 {
+    disableTypes(false);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
@@ -926,6 +932,7 @@ void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
 
 void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataType)
 {
+    disableTypes(false);
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
@@ -969,6 +976,7 @@ void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataT
 
 void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* dataType)
 {
+    disableTypes(false);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
@@ -1224,4 +1232,12 @@ inline ElementBase* SIDataType::getSelectedField(void) const
     DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
     uint32_t id = item != nullptr ? item->data(1, Qt::ItemDataRole::UserRole).toUInt() : 0;
     return ((item != nullptr) && (id != 0)) ? mModel.findChild(dataType, id) : nullptr;
+}
+
+inline void SIDataType::disableTypes(bool disable)
+{
+    mDetails->ctrlTypeStruct()->setDisabled(disable);
+    mDetails->ctrlTypeEnum()->setDisabled(disable);
+    mDetails->ctrlTypeImport()->setDisabled(disable);
+    mDetails->ctrlTypeContainer()->setDisabled(disable);
 }

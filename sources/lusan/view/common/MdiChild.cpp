@@ -30,15 +30,11 @@
 #include <QEvent>
 
 MdiChild::MdiChild(QWidget* parent /*= nullptr*/)
-    : QScrollArea   (parent)
+    : QWidget(parent)
     , mCurFile      ( )
     , mIsUntitled   ( true )
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
 }
 
 void MdiChild::newFile()

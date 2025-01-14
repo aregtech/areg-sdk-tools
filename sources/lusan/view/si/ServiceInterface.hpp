@@ -35,6 +35,14 @@
 class ServiceInterface : public MdiChild
 {
     Q_OBJECT
+    
+private:
+    
+    static  uint32_t                   _count;
+    static constexpr const char* const _defName {"NewServiceInterface"};
+    
+public:
+    
 public:
     ServiceInterface(QWidget *parent = nullptr);
     virtual ~ServiceInterface(void);
