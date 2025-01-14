@@ -100,6 +100,16 @@ public:
     
     void copyAvailable(bool available);
 
+    inline const QString& getDocumentName(void) const;
+
+protected:
+
+    virtual QString newDocumentName(void);
+
+    virtual const QString& newDocument(void) const;
+
+    virtual const QString& newDocumentExt(void) const;
+
 protected:
     /**
      * \brief   Handles the close event.
@@ -136,9 +146,11 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // member variables
 //////////////////////////////////////////////////////////////////////////
-private:
+protected:
     //!< The current file name.
     QString mCurFile;
+
+    QString mDocName;
 
     //!< Indicates whether the file is untitled.
     bool    mIsUntitled;
@@ -148,5 +160,11 @@ inline const QString & MdiChild::currentFile(void) const
 {
     return mCurFile;
 }
+
+inline const QString& MdiChild::getDocumentName(void) const
+{
+    return mDocName;
+}
+
 
 #endif // LUSAN_VIEW_COMMON_MDICHILD_HPP

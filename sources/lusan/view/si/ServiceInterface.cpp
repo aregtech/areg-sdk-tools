@@ -55,12 +55,30 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     connect(&mDataType, &SIDataType::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
     connect(&mDataType, &SIDataType::signalDataTypeUpdated  , this, &ServiceInterface::slotlDataTypeUpdated);
     
-    this->setWindowTitle("NewServiceInterface");    
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
 ServiceInterface::~ServiceInterface(void)
 {
+}
+
+QString ServiceInterface::newDocumentName(void)
+{
+    static uint32_t _seqNr{0};
+    mDocName = newDocument() + QString::number(++_seqNr);
+    return mDocName + newDocumentExt();
+}
+
+const QString& ServiceInterface::newDocument(void) const
+{
+    static const QString _newSIDoc{"NewServiceInterface"};
+    return _newSIDoc;
+}
+
+const QString& ServiceInterface::newDocumentExt(void) const
+{
+    static const QString _extSI {".siml"};
+    return _extSI;
 }
 
 void ServiceInterface::slotDataTypeCreated(DataTypeCustom* dataType)

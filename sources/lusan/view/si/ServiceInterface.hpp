@@ -57,6 +57,14 @@ public slots:
 
     void slotlDataTypeUpdated(DataTypeCustom* dataType);
 
+protected:
+
+    virtual QString newDocumentName(void) override;
+
+    virtual const QString& newDocument(void) const override;
+
+    virtual const QString& newDocumentExt(void) const override;
+
 private:
     ServiceInterfaceModel   mModel;
     QTabWidget  mTabWidget;
