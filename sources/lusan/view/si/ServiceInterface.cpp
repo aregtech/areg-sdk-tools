@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/si/ServiceInterface.hpp"
-#include "lusan/view/si/SICommon.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 #include <QVBoxLayout>
@@ -37,6 +36,7 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     , mInclude  (mModel.getIncludesModel()  , this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
+    mTabWidget.setTabShape(QTabWidget::Triangular);
     // Add the sioverview widget as the first tab
     mTabWidget.addTab(&mOverview , tr("Overview"));
     mTabWidget.addTab(&mDataType , tr("Data Types"));
@@ -50,10 +50,6 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
-    // mOverview.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
-    // mDataType.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
-    // mDataTopic.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
-
     connect(&mDataType, &SIDataType::signalDataTypeConverted, this, &ServiceInterface::slotDataTypeConverted);
     connect(&mDataType, &SIDataType::signalDataTypeCreated  , this, &ServiceInterface::slotDataTypeCreated);
     connect(&mDataType, &SIDataType::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
