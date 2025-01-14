@@ -24,6 +24,8 @@
 
 #include <QLocale>
 #include <QTranslator>
+#include <QCommonStyle>
+#include <QStyleFactory>
 
 namespace
 {
@@ -38,7 +40,7 @@ int main(int argc, char *argv[])
     LusanApplication::setOrganizationName(_organization);
     LusanApplication::setApplicationName(_application);
     LusanApplication::setApplicationVersion(_version);
-
+    
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages)
@@ -58,6 +60,7 @@ int main(int argc, char *argv[])
     if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
         w.setWorkspaceRoot(opt.getActiveWorkspace().getWorkspaceRoot());
+        w.showMaximized();  
         w.show();
         return a.exec();
     }

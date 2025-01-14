@@ -231,6 +231,8 @@ private:
 
     inline ElementBase* getSelectedField(void) const;
     
+    inline void disableTypes(bool disable);
+    
     static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
     
     static const QList<DataTypeBase *>& _getIntegerTypes(void);

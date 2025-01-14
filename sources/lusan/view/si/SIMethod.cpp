@@ -47,12 +47,14 @@ SIMethod::SIMethod(QWidget* parent)
     ui.horizontalLayout->addWidget(mMethodList);
     ui.horizontalLayout->addWidget(mMethodDetails);
 
-    // setWidgetResizable(true);
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
+
+    setWidgetResizable(true);
+    setWidget(mWidget);
 }
 
 SIMethod::~SIMethod(void)

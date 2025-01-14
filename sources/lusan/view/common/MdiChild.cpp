@@ -30,24 +30,40 @@
 #include <QEvent>
 
 MdiChild::MdiChild(QWidget* parent /*= nullptr*/)
-    : QScrollArea   (parent)
+    : QWidget(parent)
     , mCurFile      ( )
+    , mDocName      ( )
     , mIsUntitled   ( true )
+    , mMdiSubWindow ( nullptr )
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
+}
+
+QString MdiChild::newDocumentName(void)
+{
+    static uint32_t _seqNr{0};
+    mDocName = newDocument() + QString::number(++_seqNr);
+    return (mDocName + newDocumentExt());
+}
+
+const QString& MdiChild::newDocument(void) const
+{
+    static const QString _newDoc{"document"};
+    return _newDoc;
+}
+
+const QString& MdiChild::newDocumentExt(void) const
+{
+    static const QString _newExt("");
+    return _newExt;
 }
 
 void MdiChild::newFile()
 {
-    static int sequenceNumber = 1;
-
     mIsUntitled = true;
-    mCurFile = tr("document%1.txt").arg(sequenceNumber++);
+    mCurFile = newDocumentName();
     setWindowTitle(mCurFile + "[*]");
+    setWindowModified(true);
 #if 0
     connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::documentWasModified);
 #endif

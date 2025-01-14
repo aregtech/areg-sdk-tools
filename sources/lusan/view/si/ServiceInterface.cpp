@@ -18,10 +18,11 @@
  ************************************************************************/
 
 #include "lusan/view/si/ServiceInterface.hpp"
-#include "lusan/view/si/SICommon.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 #include <QVBoxLayout>
+
+uint32_t ServiceInterface::_count{0};
 
 ServiceInterface::ServiceInterface(QWidget *parent)
     : MdiChild  (parent)
@@ -35,6 +36,7 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     , mInclude  (mModel.getIncludesModel()  , this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
+    mTabWidget.setTabShape(QTabWidget::Triangular);
     // Add the sioverview widget as the first tab
     mTabWidget.addTab(&mOverview , tr("Overview"));
     mTabWidget.addTab(&mDataType , tr("Data Types"));
@@ -48,20 +50,35 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
-    setWidgetResizable(true);
-
-    // mOverview.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
-    // mDataType.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
-    // mDataTopic.resize(SICommon::FRAME_WIDTH, SICommon::FRAME_WIDTH);
-
     connect(&mDataType, &SIDataType::signalDataTypeConverted, this, &ServiceInterface::slotDataTypeConverted);
     connect(&mDataType, &SIDataType::signalDataTypeCreated  , this, &ServiceInterface::slotDataTypeCreated);
     connect(&mDataType, &SIDataType::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
     connect(&mDataType, &SIDataType::signalDataTypeUpdated  , this, &ServiceInterface::slotlDataTypeUpdated);
+    
+    setAttribute(Qt::WA_DeleteOnClose);
 }
 
 ServiceInterface::~ServiceInterface(void)
 {
+}
+
+QString ServiceInterface::newDocumentName(void)
+{
+    static uint32_t _seqNr{0};
+    mDocName = newDocument() + QString::number(++_seqNr);
+    return mDocName + newDocumentExt();
+}
+
+const QString& ServiceInterface::newDocument(void) const
+{
+    static const QString _newSIDoc{"NewServiceInterface"};
+    return _newSIDoc;
+}
+
+const QString& ServiceInterface::newDocumentExt(void) const
+{
+    static const QString _extSI {".siml"};
+    return _extSI;
 }
 
 void ServiceInterface::slotDataTypeCreated(DataTypeCustom* dataType)
