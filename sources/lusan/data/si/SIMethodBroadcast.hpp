@@ -35,7 +35,14 @@ public:
      * \brief   Default constructor.
      **/
     SIMethodBroadcast(ElementBase * parent = nullptr);
-
+    
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id              The ID of the method.
+     * \param   name            The name of the method.
+     **/
+    SIMethodBroadcast(uint32_t id, const QString& name, ElementBase* parent = nullptr);
+    
     /**
      * \brief   Constructor with initialization.
      * \param   id              The ID of the method.

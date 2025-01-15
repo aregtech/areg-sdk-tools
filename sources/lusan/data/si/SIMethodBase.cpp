@@ -44,7 +44,7 @@ SIMethodBase::SIMethodBase(eMethodType methodType, const QString& name, ElementB
 {
 }
 
-SEMethodsBase::SEMethodsBase(uint32_t id, eMethodType methodType, const QString& name, ElementBase* parent /*= nullptr*/)
+SIMethodBase::SIMethodBase(uint32_t id, eMethodType methodType, const QString& name, ElementBase* parent /*= nullptr*/)
     : MethodBase    (id, name, QString(), parent)
     , mMethodType   (methodType)
     , mIsDeprecated (false)

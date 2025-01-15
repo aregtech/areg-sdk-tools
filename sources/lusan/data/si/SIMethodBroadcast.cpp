@@ -29,6 +29,11 @@ SIMethodBroadcast::SIMethodBroadcast(uint32_t id, const QString& name, const QSt
 {
 }
 
+SIMethodBroadcast::SIMethodBroadcast(uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
+    : SIMethodBase(id, name, QString(), eMethodType::MethodBroadcast, parent)
+{
+}
+
 SIMethodBroadcast::SIMethodBroadcast(const SIMethodBroadcast& src)
     : SIMethodBase(src)
 {

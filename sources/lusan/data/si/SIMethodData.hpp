@@ -116,15 +116,6 @@ public:
     inline bool hasBroadcast(const QString& broadcast) const;
 
     /**
-     * \brief   Gets the response method object by name, which is connected to the specified request.
-     * \param   request The name of the request method to check connected response.
-     * \return  The connected response method object if found, empty string otherwise.
-     **/
-    QString getResponse(const QString& request) const;
-
-    QString 
-
-    /**
      * \brief   Checks whether the response method is connected to any request method.
      * \param   response    The name of the response method to check connected request.
      * \return  True if the response method is connected to any request, false otherwise.

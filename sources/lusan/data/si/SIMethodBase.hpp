@@ -22,6 +22,10 @@
 #include "lusan/data/common/MethodBase.hpp"
 #include <QString>
 
+class SIMethodRequest;
+class SIMethodResponse;
+class SIMethodBroadcast;
+
 /**
  * \class   SIMethodBase
  * \brief   Represents a service interface method base in the Lusan application.
@@ -55,9 +59,9 @@ protected:
     
     SIMethodBase(eMethodType methodType, ElementBase* parent = nullptr);
 
-    SEMethodsBase(eMethodType methodType, const QString& name, ElementBase* parent = nullptr);
+    SIMethodBase(eMethodType methodType, const QString& name, ElementBase* parent = nullptr);
 
-    SEMethodsBase(uint32_t id, eMethodType methodType, const QString& name, ElementBase* parent = nullptr);
+    SIMethodBase(uint32_t id, eMethodType methodType, const QString& name, ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.

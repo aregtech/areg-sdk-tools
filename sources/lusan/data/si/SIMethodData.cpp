@@ -18,7 +18,9 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodData.hpp"
-#include "SIMethodData.hpp"
+#include "lusan/data/si/SIMethodBroadcast.hpp"
+#include "lusan/data/si/SIMethodRequest.hpp"
+#include "lusan/data/si/SIMethodResponse.hpp"
 
 namespace
 {
@@ -293,29 +295,13 @@ QList<SIMethodBase*> SIMethodData::getAllMethods(void) const
     return mAllMethods;
 }
 
-QString SIMethodData::getResponse(const QString& request) const
-{
-    QString result;
-
-    for (const SIMethodRequest* method : mRequestMethods)
-    {
-        if (method->getName() == request)
-        {
-            result = method->getConectedResponse();
-            break;
-        }
-    }
-
-    return result;
-}
-
 bool SIMethodData::hasResponseConnectedRequest(const QString& response) const
 {
     bool result{ false };
 
     for (const SIMethodRequest* method : mRequestMethods)
     {
-        if (method->getConectedResponse() == response)
+        if (method->getConectedResponseName() == response)
         {
             result = true;
             break;
@@ -354,7 +340,7 @@ bool SIMethodData::readFromXml(QXmlStreamReader& xml)
                     continue;
                 }
 
-                if ((method->readFromXml(xml) == false) || (addMethod(method, true) == false))
+                if ((method->readFromXml(xml) == false) || (addMethod(method) == false))
                 {
                     delete method;
                 }
@@ -363,6 +349,11 @@ bool SIMethodData::readFromXml(QXmlStreamReader& xml)
             {
                 xml.skipCurrentElement();
             }
+        }
+
+        for (SIMethodRequest* req : mRequestMethods)
+        {
+            req->normalize(mResponseMethods);
         }
 
         return true;

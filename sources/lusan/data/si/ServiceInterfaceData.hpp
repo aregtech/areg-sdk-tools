@@ -40,7 +40,7 @@ class ServiceInterfaceData  : public ElementBase
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
-    static constexpr const char* const XML_FORMAT_VERSION   { "1.0.0" };//!< The XML format version.
+    static constexpr const char* const XML_FORMAT_VERSION   { "1.1.0" };//!< The XML format version.
 
     static constexpr const uint32_t     MINIMUM_ID          { 50u };     //!< The invalid ID value.
 
