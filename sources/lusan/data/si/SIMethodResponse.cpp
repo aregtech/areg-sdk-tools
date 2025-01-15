@@ -22,7 +22,6 @@
 SIMethodResponse::SIMethodResponse(ElementBase* parent /*= nullptr*/)
     : SIMethodBase(eMethodType::MethodResponse, parent)
 {
-    emit signalResponseRemoved(*this);
 }
 
 SIMethodResponse::SIMethodResponse(uint32_t id, const QString& name, const QString& description, ElementBase* parent /*= nullptr*/)

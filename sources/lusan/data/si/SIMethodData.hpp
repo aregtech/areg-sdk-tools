@@ -22,10 +22,9 @@
 
 #include "lusan/common/ElementBase.hpp"
 
+#include "lusan/data/si/SIMethodBroadcast.hpp"
 #include "lusan/data/si/SIMethodRequest.hpp"
 #include "lusan/data/si/SIMethodResponse.hpp"
-#include "lusan/data/si/SIMethodBroadcast.hpp"
-#include "lusan/common/XmlSI.hpp"
 
 #include <QList>
 #include <QString>
@@ -86,6 +85,8 @@ public:
     SIMethodBase* findMethod(const QString& name, SIMethodBase::eMethodType methodType) const;
 
     SIMethodBase* findMethod(uint32_t id) const;
+
+    SIMethodResponse* findReqResponse(uint32_t reqId) const;
 
     /**
      * \brief   Searches for a method object by name.

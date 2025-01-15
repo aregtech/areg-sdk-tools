@@ -18,9 +18,8 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodData.hpp"
-#include "lusan/data/si/SIMethodBroadcast.hpp"
-#include "lusan/data/si/SIMethodRequest.hpp"
-#include "lusan/data/si/SIMethodResponse.hpp"
+#include "lusan/common/XmlSI.hpp"
+
 
 namespace
 {
@@ -295,20 +294,13 @@ QList<SIMethodBase*> SIMethodData::getAllMethods(void) const
     return mAllMethods;
 }
 
-bool SIMethodData::hasResponseConnectedRequest(const QString& response) const
+SIMethodResponse* SIMethodData::findReqResponse(uint32_t reqId) const
 {
-    bool result{ false };
-
-    for (const SIMethodRequest* method : mRequestMethods)
-    {
-        if (method->getConectedResponseName() == response)
-        {
-            result = true;
-            break;
-        }
-    }
-
-    return result;
+    SIMethodBase* method = findMethod(reqId);
+    if ((method == nullptr) || (method->getMethodType() != SIMethodBase::eMethodType::MethodRequest))
+        return nullptr;
+    else
+        return static_cast<SIMethodRequest *>(method)->getConectedResponse();
 }
 
 bool SIMethodData::readFromXml(QXmlStreamReader& xml)
