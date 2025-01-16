@@ -33,3 +33,38 @@ SIMethodParamDetails::SIMethodParamDetails(QWidget* parent)
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
+
+QLineEdit * SIMethodParamDetails::ctrlParamName(void) const
+{
+    return ui->editParamName;
+}
+
+QComboBox * SIMethodParamDetails::ctrlParamType(void) const
+{
+    return ui->comboParamType;
+}
+
+QLineEdit * SIMethodParamDetails::ctrlParamDefaultValue(void) const
+{
+    return ui->editDefaultValue;
+}
+
+QCheckBox * SIMethodParamDetails::ctrlParamHasDefaultValue(void) const
+{
+    return ui->checkDefaultValue;
+}
+
+QPlainTextEdit * SIMethodParamDetails::ctrlParamDescription(void) const
+{
+    return ui->textDescribe;
+}
+
+QCheckBox * SIMethodParamDetails::ctrlParamIsDeprecated(void) const
+{
+    return ui->checkDeprecated;
+}
+
+QLineEdit * SIMethodParamDetails::ctrlParamDeprecateHint(void) const
+{
+    return ui->editDeprecated;
+}

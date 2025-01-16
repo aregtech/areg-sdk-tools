@@ -34,24 +34,28 @@ SIMethodWidget::SIMethodWidget(QWidget* parent)
     setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
 }
 
-SIMethod::SIMethod(QWidget* parent)
+SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
     : QScrollArea   (parent)
-    , mMethodDetails(new SIMethodDetails(this))
-    , mMethodList   (new SIMethodList(this))
-    , mParamDetails (new SIMethodParamDetails(this))
+    , mModel        (model)
+    , mDetails      (new SIMethodDetails(this))
+    , mList         (new SIMethodList(this))
+    , mParams       (new SIMethodParamDetails(this))
     , mWidget       (new SIMethodWidget(this))
     , ui            (*mWidget->ui)
 {
-    mParamDetails->setHidden(true);
+    mParams->setHidden(true);
 
-    ui.horizontalLayout->addWidget(mMethodList);
-    ui.horizontalLayout->addWidget(mMethodDetails);
-
+    ui.horizontalLayout->addWidget(mList);
+    ui.horizontalLayout->addWidget(mDetails);
+    ui.horizontalLayout->addWidget(mParams);
+    
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
+    setWidgetResizable(true);
+    setWidget(mWidget);
 
     setWidgetResizable(true);
     setWidget(mWidget);
@@ -59,6 +63,7 @@ SIMethod::SIMethod(QWidget* parent)
 
 SIMethod::~SIMethod(void)
 {
-    ui.horizontalLayout->removeWidget(mMethodList);
-    ui.horizontalLayout->removeWidget(mMethodDetails);
+    ui.horizontalLayout->removeWidget(mList);
+    ui.horizontalLayout->removeWidget(mDetails);
+    ui.horizontalLayout->removeWidget(mParams);
 }

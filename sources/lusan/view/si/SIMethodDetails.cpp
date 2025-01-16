@@ -33,3 +33,43 @@ SIMethodDetails::SIMethodDetails(QWidget* parent)
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
+
+QLineEdit * SIMethodDetails::ctrlName(void) const
+{
+    return ui->editName;
+}
+
+QRadioButton * SIMethodDetails::ctrlBroadcast(void) const
+{
+    return ui->radioBroadcast;
+}
+
+QRadioButton * SIMethodDetails::ctrlRequest(void) const
+{
+    return ui->radioRequest;
+}
+
+QRadioButton * SIMethodDetails::ctrlResponse(void) const
+{
+    return ui->radioResponse;
+}
+
+QComboBox * SIMethodDetails::ctrlConnectedResponse(void) const
+{
+    return  ui->comboReply;
+}
+
+QPlainTextEdit * SIMethodDetails::ctrlDescription(void) const
+{
+    return ui->textDescribe;
+}
+
+QCheckBox * SIMethodDetails::ctrlIsDeprecated(void) const
+{
+    return ui->checkDeprecated;
+}
+
+QLineEdit * SIMethodDetails::ctrlDeprecateHint(void) const
+{
+    return ui->editDeprecated;
+}

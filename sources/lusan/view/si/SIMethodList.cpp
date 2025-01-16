@@ -30,8 +30,48 @@ SIMethodList::SIMethodList(QWidget *parent)
     font.setPointSize(10);
     this->setFont(font);
     ui->setupUi(this);
-    QTableWidget* table = ui->tableMethods;
-    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    QTreeWidget* table = ui->treeMethods;
+    table->header()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+}
+
+QToolButton * SIMethodList::ctrlButtonAdd(void) const
+{
+    return ui->toolAddMethod;
+}
+
+QToolButton * SIMethodList::ctrlButtonRemove(void) const
+{
+    return ui->toolDeleteMethod;
+}
+
+QToolButton * SIMethodList::ctrlButtonParamAdd(void) const
+{
+    return ui->toolParamAdd;
+}
+
+QToolButton * SIMethodList::ctrlButtonParamRemove(void) const
+{
+    return ui->toolParamDelete;
+}
+
+QToolButton * SIMethodList::ctrlButtonParamInsert(void) const
+{
+    return ui->toolParamInsert;
+}
+
+QToolButton * SIMethodList::ctrlButtonMoveUp(void) const
+{
+    return ui->toolMoveUp;
+}
+
+QToolButton * SIMethodList::ctrlButtonMoveDown(void) const
+{
+    return ui->toolMoveDown;
+}
+
+QTreeWidget * SIMethodList::ctrlList(void) const
+{
+    return ui->treeMethods;
 }

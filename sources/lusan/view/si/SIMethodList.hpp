@@ -20,6 +20,9 @@
  ************************************************************************/
 #include <QWidget>
 
+class QToolButton;
+class QTreeWidget;
+
 namespace Ui {
     class SIMethodList;
 }
@@ -30,6 +33,22 @@ class SIMethodList : public QWidget
 
 public:
     explicit SIMethodList(QWidget* parent = nullptr);
+    
+    QToolButton * ctrlButtonAdd(void) const;
+    
+    QToolButton * ctrlButtonRemove(void) const;
+    
+    QToolButton * ctrlButtonParamAdd(void) const;
+    
+    QToolButton * ctrlButtonParamRemove(void) const;
+    
+    QToolButton * ctrlButtonParamInsert(void) const;
+    
+    QToolButton * ctrlButtonMoveUp(void) const;
+    
+    QToolButton * ctrlButtonMoveDown(void) const;
+    
+    QTreeWidget * ctrlList(void) const;
 
 private:
     Ui::SIMethodList* ui;

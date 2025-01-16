@@ -26,6 +26,7 @@ class SIMethodBase;
 class SIMethodRequest;
 class SIMethodResponse;
 class SIMethodBroadcast;
+class SIDataTypeData;
 
 /**
  * \class SIMethodModel
@@ -38,7 +39,7 @@ public:
      * \brief Constructor with initialization.
      * \param data The method data object.
      */
-    SIMethodModel(SIMethodData& data);
+    SIMethodModel(SIMethodData& data, SIDataTypeData& dataType);
 
     /**
      * \brief Creates a new method object with specified name and type.
@@ -94,7 +95,8 @@ public:
     const QList<MethodParameter>& getMethodParameters(const QString& name, SIMethodBase::eMethodType methodType) const;
 
 private:
-    SIMethodData& mData; //!< The method data object.
+    SIMethodData&   mData;      //!< The method data object.
+    SIDataTypeData& mDataType;  //!< The data type data object.
 };
 
 #endif // LUSAN_MODEL_SI_SIMETHODMODEL_HPP
