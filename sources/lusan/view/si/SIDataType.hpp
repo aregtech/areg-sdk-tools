@@ -174,17 +174,17 @@ private:
      * \brief Updates the data in the table.
      */
     void updateData(void);
-    
+
     /**
      * \brief Updates the widgets.
      */
     void updateWidgets(void);
-    
+
     /**
      * \brief Initializes the signals.
      */
     void setupSignals(void);
-    
+
     /**
      * \brief Blocks the basic signals.
      * \param doBlock If true, blocks the signals, otherwise unblocks.

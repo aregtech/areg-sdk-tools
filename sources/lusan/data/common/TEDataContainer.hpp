@@ -264,9 +264,17 @@ public:
      * \return  True if the elements were sorted, false otherwise.
      **/
     bool sortElementsByName(bool ascending = true);
-    
+
+    /**
+     * \brief   Checks whether the container has list of elements.
+     * \return  True if the container object has elements, false otherwise.
+     **/
     bool hasElements(void) const;
 
+    /**
+     * \brief   Returns the number of elements in the container.
+     * \return  The number of elements in the container.
+     **/
     int getElementCount(void) const;
 
 //////////////////////////////////////////////////////////////////////////

@@ -159,7 +159,7 @@ public:
      * \brief   Gets the list of all method objects.
      * \return  The list of all method objects.
      **/
-    QList<SIMethodBase*> getAllMethods(void) const;
+    inline const QList<SIMethodBase*>& getAllMethods(void) const;
 
     /**
      * \brief   Gets the list of request method objects.
@@ -281,6 +281,11 @@ inline bool SIMethodData::hasResponse(const QString& response) const
 inline bool SIMethodData::hasBroadcast(const QString& broadcast) const
 {
     return (findMethod(broadcast, SIMethodBase::eMethodType::MethodBroadcast) != nullptr);
+}
+
+inline const QList<SIMethodBase*>& SIMethodData::getAllMethods(void) const
+{
+    return mAllMethods;
 }
 
 inline const QList<SIMethodRequest*>& SIMethodData::getRequests(void) const

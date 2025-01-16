@@ -37,15 +37,12 @@
 
 #include <QCheckBox>
 #include <QComboBox>
-#include <QFormLayout>
 #include <QGroupBox>
 #include <QIcon>
-#include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QRadioButton>
-#include <QSpacerItem>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>

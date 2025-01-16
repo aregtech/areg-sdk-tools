@@ -21,10 +21,12 @@
 #include <QScrollArea>
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
+class SIMethodBase;
 class SIMethodDetails;
 class SIMethodList;
 class SIMethodParamDetails;
 class SIMethodModel;
+class QTreeWidgetItem;
 
 namespace Ui {
     class SIMethod;
@@ -53,13 +55,71 @@ public:
 
     virtual ~SIMethod(void);
 
+protected:
+
+    void onNameChanged(const QString & newName);
+
+    void onRequestSelected(bool isSelected);
+
+    void onResponseSelected(bool isSelected);
+
+    void onBroadcastSelected(bool isSelected);
+
+    void onConnectedResponseChanged(int index);
+
+    void onAddClicked(void);
+
+    void onRemoveClicked(void);
+
+    void onParamAddClicked(void);
+
+    void onParamRemoveClicked(void);
+
+    void onParamInsertClicked(void);
+
+    void onMoveUpClicked(void);
+
+    void onMoveDownClicked(void);
+
+    void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+
+private:
+    /**
+     * \brief Updates the data in the table.
+     */
+    void updateData(void);
+
+    /**
+     * \brief Updates the widgets.
+     */
+    void updateWidgets(void);
+
+    /**
+     * \brief Initializes the signals.
+     */
+    void setupSignals(void);
+
+    /**
+     * \brief Blocks the basic signals.
+     * \param doBlock If true, blocks the signals, otherwise unblocks.
+     */
+    void blockBasicSignals(bool doBlock);
+
+    void showParamDetails(bool show);
+
+    void showMethodDetails(bool show);
+
+    QTreeWidgetItem* updateMethodNode(QTreeWidgetItem* item, SIMethodBase* method);
+
 private:
     SIMethodModel &         mModel;
     SIMethodDetails*        mDetails;
     SIMethodList*           mList;
     SIMethodParamDetails*   mParams;
     SIMethodWidget*         mWidget;
-    Ui::SIMethod&          ui;
+    Ui::SIMethod&           ui;
+
+    uint32_t               mCount;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIMETHOD_HPP

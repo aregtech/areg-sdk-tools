@@ -291,11 +291,6 @@ bool SIMethodData::hasResponseConnectedRequest(uint32_t respId) const
     return false;
 }
 
-QList<SIMethodBase*> SIMethodData::getAllMethods(void) const
-{
-    return mAllMethods;
-}
-
 bool SIMethodData::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() == XmlSI::xmlSIElementMethodList)
@@ -396,8 +391,15 @@ SIMethodBase* SIMethodData::convertMethod(SIMethodBase* method, SIMethodBase::eM
         newMethod->setIsDeprecated(method->isDeprecated());
         newMethod->setDeprecateHint(method->getDeprecateHint());
 
-        removeMethod(method);
-        addMethod(newMethod);
+        int index = mAllMethods.indexOf(method);
+        if (index >= 0)
+        {
+            mAllMethods[index] = newMethod;
+        }
+        else
+        {
+            mAllMethods.append(newMethod);
+        }
     }
 
     return newMethod;
