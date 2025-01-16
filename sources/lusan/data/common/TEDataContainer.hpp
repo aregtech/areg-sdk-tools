@@ -320,15 +320,15 @@ TEDataContainer<Data, ElemBase>::TEDataContainer(unsigned int id, ElementBase* p
 
 template<class Data, class ElemBase>
 TEDataContainer<Data, ElemBase>::TEDataContainer(const TEDataContainer& src)
-    : ElemBase( src)
-    , mElementList(src.mElementList)
+    : ElemBase      (src)
+    , mElementList  (src.mElementList)
 {
 }
 
 template<class Data, class ElemBase>
 TEDataContainer<Data, ElemBase>::TEDataContainer(TEDataContainer&& src) noexcept
-    : ElemBase(std::move(src))
-    , mElementList(std::move(src.mElementList))
+    : ElemBase      (std::move(src))
+    , mElementList  (std::move(src.mElementList))
 {
 }
 

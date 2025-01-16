@@ -29,6 +29,11 @@ SIMethodResponse::SIMethodResponse(uint32_t id, const QString& name, const QStri
 {
 }
 
+SIMethodResponse::SIMethodResponse(uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
+    : SIMethodBase(id, name, QString(), eMethodType::MethodResponse, parent)
+{
+}
+
 SIMethodResponse::SIMethodResponse(const SIMethodResponse& src)
     : SIMethodBase(src)
 {

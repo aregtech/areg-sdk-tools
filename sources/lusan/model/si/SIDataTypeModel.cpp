@@ -164,26 +164,30 @@ const ElementBase* SIDataTypeModel::findDataTypeChild(DataTypeCustom* dataType, 
     return nullptr;
 }
 
-QList<FieldEntry> SIDataTypeModel::getStructChildren(DataTypeCustom* dataType) const
+const QList<FieldEntry>& SIDataTypeModel::getStructChildren(DataTypeCustom* dataType) const
 {
-    QList<FieldEntry> result;
+    static const QList<FieldEntry> _empty{};
     if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
     {
-        result = static_cast<DataTypeStructure*>(dataType)->getElements();
+        return static_cast<DataTypeStructure*>(dataType)->getElements();
     }
-
-    return result;
+    else
+    {
+        return _empty;
+    }
 }
 
-QList<EnumEntry> SIDataTypeModel::getEnumChildren(DataTypeCustom* dataType) const
+const QList<EnumEntry>& SIDataTypeModel::getEnumChildren(DataTypeCustom* dataType) const
 {
-    QList<EnumEntry> result;
+    static const QList<EnumEntry> _empty{};
     if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
-        result = static_cast<DataTypeEnum*>(dataType)->getElements();
+        return static_cast<DataTypeEnum*>(dataType)->getElements();
     }
-
-    return result;
+    else
+    {
+        return _empty;
+    }
 }
 
 int SIDataTypeModel::getDataTypeChildCount(const DataTypeCustom* dataType) const

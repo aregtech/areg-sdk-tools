@@ -111,9 +111,9 @@ public:
     ElementBase* findDataTypeChild(DataTypeCustom* dataType, uint32_t childId);
     const ElementBase* findDataTypeChild(DataTypeCustom* dataType, uint32_t childId) const;
 
-    QList<FieldEntry> getStructChildren(DataTypeCustom* dataType) const;
+    const QList<FieldEntry>& getStructChildren(DataTypeCustom* dataType) const;
 
-    QList<EnumEntry> getEnumChildren(DataTypeCustom* dataType) const;
+    const QList<EnumEntry>& getEnumChildren(DataTypeCustom* dataType) const;
 
     int getDataTypeChildCount(const DataTypeCustom* dataType) const;
 

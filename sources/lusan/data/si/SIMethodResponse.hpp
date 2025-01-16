@@ -22,6 +22,7 @@
 
 #include "lusan/data/si/SIMethodBase.hpp"
 #include "lusan/common/XmlSI.hpp"
+#include <QMetaMethod>
 
 /**
  * \class   SIMethodResponse
@@ -37,7 +38,14 @@ public:
      * \brief   Default constructor.
      **/
     SIMethodResponse(ElementBase* parent = nullptr);
-
+    
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id              The ID of the method.
+     * \param   name            The name of the method.
+     **/
+    SIMethodResponse(uint32_t id, const QString& name, ElementBase* parent = nullptr);
+    
     /**
      * \brief   Constructor with initialization.
      * \param   id              The ID of the method.

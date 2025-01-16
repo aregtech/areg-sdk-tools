@@ -36,7 +36,14 @@ public:
      * \brief   Default constructor.
      **/
     SIMethodRequest(ElementBase * parent = nullptr);
-
+    
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id              The ID of the method.
+     * \param   name            The name of the method.
+     **/
+    SIMethodRequest(uint32_t id, const QString& name, ElementBase* parent = nullptr);
+    
     /**
      * \brief   Constructor with initialization.
      * \param   id              The ID of the method.
@@ -85,17 +92,21 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
 
-    /**
-     * \brief   Connects the response to the request.
-     * \param   response    The name of the connected response.
-     **/
-    void connectResponse(const QString& response);
+    void normalize(const QList<SIMethodResponse*>& listResponses);
+
+    void connectResponse(SIMethodResponse* respMethod);
 
     /**
      * \brief   Returns the connected response name.
      * \return  The connected response name.
      **/
-    const QString& getConectedResponse(void) const;
+    const QString& getConectedResponseName(void) const;
+
+    /**
+     * \brief   Returns the connected response object.
+     * \return  The connected response object.
+     **/
+    SIMethodResponse* getConectedResponse(void) const;
 
     /**
      * \brief   Clears the connected response name.
@@ -116,7 +127,8 @@ public:
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
 private:
-    QString     mResponse;  //!< The connected response name.
+    SIMethodResponse*   mRespMethod;    //!< The connected response object. If set, has highest priority of information
+    QString             mRespName;      //!< The connected response name. Has lowest priority of information.
 };
 
 #endif // LUSAN_DATA_SI_SIMETHODREQUEST_HPP
