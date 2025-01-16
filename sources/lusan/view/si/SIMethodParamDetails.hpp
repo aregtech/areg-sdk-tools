@@ -20,6 +20,11 @@
  ************************************************************************/
 #include <QWidget>
 
+class QCheckBox;
+class QComboBox;
+class QLineEdit;
+class QPlainTextEdit ;
+
 namespace Ui {
     class SIMethodParamDetails;
 }
@@ -30,6 +35,20 @@ class SIMethodParamDetails : public QWidget
 
 public:
     explicit SIMethodParamDetails(QWidget* parent = nullptr);
+    
+    QLineEdit * ctrlParamName(void) const;
+    
+    QComboBox * ctrlParamType(void) const;
+    
+    QLineEdit * ctrlParamDefaultValue(void) const;
+    
+    QCheckBox * ctrlParamHasDefaultValue(void) const;
+    
+    QPlainTextEdit * ctrlParamDescription(void) const;
+    
+    QCheckBox * ctrlParamIsDeprecated(void) const;
+    
+    QLineEdit * ctrlParamDeprecateHint(void) const;
 
 private:
     Ui::SIMethodParamDetails* ui;

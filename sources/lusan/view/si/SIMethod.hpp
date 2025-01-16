@@ -24,6 +24,7 @@
 class SIMethodDetails;
 class SIMethodList;
 class SIMethodParamDetails;
+class SIMethodModel;
 
 namespace Ui {
     class SIMethod;
@@ -48,14 +49,15 @@ class SIMethod  : public QScrollArea
     Q_OBJECT
 
 public:
-    explicit SIMethod(QWidget* parent = nullptr);
+    explicit SIMethod(SIMethodModel & model, QWidget* parent = nullptr);
 
     virtual ~SIMethod(void);
 
 private:
-    SIMethodDetails*        mMethodDetails;
-    SIMethodList*           mMethodList;
-    SIMethodParamDetails*   mParamDetails;
+    SIMethodModel &         mModel;
+    SIMethodDetails*        mDetails;
+    SIMethodList*           mList;
+    SIMethodParamDetails*   mParams;
     SIMethodWidget*         mWidget;
     Ui::SIMethod&          ui;
 };

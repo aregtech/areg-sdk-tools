@@ -19,8 +19,9 @@
 
 #include "lusan/model/si/SIMethodModel.hpp"
 
-SIMethodModel::SIMethodModel(SIMethodData& data)
-    : mData(data)
+SIMethodModel::SIMethodModel(SIMethodData& data, SIDataTypeData& dataType)
+    : mData     (data)
+    , mDataType (dataType)
 {
 }
 

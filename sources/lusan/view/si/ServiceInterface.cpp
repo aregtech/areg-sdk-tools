@@ -31,7 +31,7 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     , mOverview (mModel.getOverviewModel()  , this)
     , mDataType (mModel.getDataTypeModel()  , this)
     , mDataTopic(mModel.getDataTopicModel() , this)
-    , mMethod   (this)
+    , mMethod   (mModel.getMethodsModel()   , this)
     , mConstant (mModel.getConstantsModel() , this)
     , mInclude  (mModel.getIncludesModel()  , this)
 {

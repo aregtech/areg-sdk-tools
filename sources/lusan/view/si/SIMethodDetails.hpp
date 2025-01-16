@@ -20,6 +20,12 @@
  ************************************************************************/
 #include <QWidget>
 
+class QCheckBox;
+class QComboBox;
+class QLineEdit;
+class QPlainTextEdit;
+class QRadioButton;
+
 namespace Ui {
     class SIMethodDetails;
 }
@@ -30,6 +36,22 @@ class SIMethodDetails : public QWidget
 
 public:
     explicit SIMethodDetails(QWidget* parent = nullptr);
+    
+    QLineEdit * ctrlName(void) const;
+    
+    QRadioButton * ctrlBroadcast(void) const;
+    
+    QRadioButton * ctrlRequest(void) const;
+    
+    QRadioButton * ctrlResponse(void) const;
+    
+    QComboBox * ctrlConnectedResponse(void) const;
+    
+    QPlainTextEdit * ctrlDescription(void) const;
+    
+    QCheckBox * ctrlIsDeprecated(void) const;
+    
+    QLineEdit * ctrlDeprecateHint(void) const;
 
 private:
     Ui::SIMethodDetails* ui;

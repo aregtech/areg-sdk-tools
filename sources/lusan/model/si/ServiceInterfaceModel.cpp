@@ -25,6 +25,7 @@ ServiceInterfaceModel::ServiceInterfaceModel(void)
     , mModelDataType(mSIData.getDataTypeData())
     , mModelTopics  (mSIData.getAttributeData() , mSIData.getDataTypeData())
     , mModelConstant(mSIData.getConstantData()  , mSIData.getDataTypeData())
+    , mModelMethods (mSIData.getMethodData()    , mSIData.getDataTypeData())
     , mModelInclude (mSIData.getIncludeData())
 {
 }
