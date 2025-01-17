@@ -429,6 +429,20 @@ void SIMethodData::sortById(bool ascending)
         });
 }
 
+QList<SIMethodRequest*> SIMethodData::getConnectedRequests(SIMethodResponse* response) const
+{
+    QList<SIMethodRequest*> result;
+    for (auto reqeust : mRequestMethods)
+    {
+        if (reqeust->getConectedResponse() == response)
+        {
+            result.append(reqeust);
+        }
+    }
+
+    return result;
+}
+
 SIMethodBase* SIMethodData::createMethod(SIMethodBase::eMethodType methodType, const QString& name)
 {
     return createMethod(methodType, name, getNextId());

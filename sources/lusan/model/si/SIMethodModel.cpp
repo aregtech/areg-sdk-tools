@@ -84,6 +84,11 @@ const QList<MethodParameter>& SIMethodModel::getMethodParameters(const QString& 
     return method != nullptr ? method->getElements() : _empty;
 }
 
+QList<SIMethodRequest*> SIMethodModel::getConnectedRequests(SIMethodResponse* response) const
+{
+    return mData.getConnectedRequests(response);
+}
+
 SIMethodBase* SIMethodModel::convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType)
 {
     return mData.convertMethod(method, methodType);

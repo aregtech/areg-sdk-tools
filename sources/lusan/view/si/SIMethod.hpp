@@ -27,6 +27,9 @@ class SIMethodList;
 class SIMethodParamDetails;
 class SIMethodModel;
 class QTreeWidgetItem;
+class SIMethodBroadcast;
+class SIMethodRequest;
+class SIMethodResponse;
 
 namespace Ui {
     class SIMethod;
@@ -110,6 +113,8 @@ private:
     void showMethodDetails(bool show);
 
     QTreeWidgetItem* updateMethodNode(QTreeWidgetItem* item, SIMethodBase* method);
+
+    void selectRequest(SIMethodRequest* request);
 
 private:
     SIMethodModel &         mModel;

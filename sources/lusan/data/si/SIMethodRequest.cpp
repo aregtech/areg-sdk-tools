@@ -103,16 +103,10 @@ void SIMethodRequest::connectResponse(SIMethodResponse* respMethod)
     if (mRespMethod != respMethod)
     {
         mRespName.clear();
-        if (mRespMethod != nullptr)
-        {
-            // disconnect(mRespMethod, &SIMethodResponse::signalResponseRemoved, this, &SIMethodRequest::slotResponseRemoved);
-        }
-
         mRespMethod = respMethod;
-        mRespName   = respMethod->getName();
         if (mRespMethod != nullptr)
         {
-            // connect(mRespMethod, &SIMethodResponse::signalResponseRemoved, this, &SIMethodRequest::slotResponseRemoved);
+            mRespName   = respMethod->getName();
         }
     }
 }

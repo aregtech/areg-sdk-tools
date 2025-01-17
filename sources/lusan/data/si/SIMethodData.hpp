@@ -233,6 +233,13 @@ public:
      **/
     void sortById(bool ascending);
 
+    /**
+     * \brief   Gets the list of request methods connected to the given response method.
+     * \param   response    The response method object.
+     * \return  The list of request methods connected to the response method.
+     **/
+    QList<SIMethodRequest*> getConnectedRequests(SIMethodResponse* response) const;
+
 private:
     /**
      * \brief   Adds a method object to the appropriate list.

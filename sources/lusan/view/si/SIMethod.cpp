@@ -77,6 +77,10 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
 
     setWidgetResizable(true);
     setWidget(mWidget);
+    
+    updateData();
+    updateWidgets();
+    setupSignals();
 }
 
 SIMethod::~SIMethod(void)
@@ -105,21 +109,40 @@ void SIMethod::onRequestSelected(bool isSelected)
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
-    if (item == nullptr)
+    if ((item == nullptr) || (isSelected == false))
         return;
 
-    SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
-    if (method->getMethodType() == SIMethodBase::eMethodType::MethodRequest)
+    SIMethodBase* oldMethod = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    if (oldMethod->getMethodType() == SIMethodBase::eMethodType::MethodRequest)
         return;
 
-    mModel.convertMethod(method->getName(), SIMethodBase::eMethodType::MethodRequest);
+    SIMethodBase *newMethod = mModel.convertMethod(oldMethod, SIMethodBase::eMethodType::MethodRequest);
+    Q_ASSERT(oldMethod != newMethod);
+    static_cast<SIMethodRequest*>(newMethod)->connectResponse(nullptr);
+    int count = item->childCount();
+    for (int i = 0; i < count; ++i)
     {
-        static_cast<SIMethodRequest*>(method)->setConnectedResponse(nullptr);
+        QTreeWidgetItem* child = item->child(i);
+        Q_ASSERT(child != nullptr);
+        child->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(newMethod));
     }
-    else
+
+    if (oldMethod->getMethodType() == SIMethodBase::eMethodType::MethodResponse)
     {
-        method->setMethodType(SIMethodBase::eMethodType::MethodRequest);
+        SIMethodResponse* resp = static_cast<SIMethodRequest *>(oldMethod)->getConectedResponse();
+        int index = mDetails->ctrlConnectedResponse()->findData(QVariant::fromValue(resp),Qt::ItemDataRole::UserRole);
+        mDetails->ctrlConnectedResponse()->removeItem(index);
+        QList<SIMethodRequest*> requests = mModel.getConnectedRequests(resp);
+        for (auto request : requests)
+        {
+            request->connectResponse(static_cast<SIMethodResponse*>(nullptr));
+        }
     }
+    
+    blockBasicSignals(true);
+    selectRequest(static_cast<SIMethodRequest*>(newMethod));
+    blockBasicSignals(false);
+    delete oldMethod;
 }
 
 void SIMethod::onResponseSelected(bool isSelected)
@@ -145,13 +168,21 @@ void SIMethod::onAddClicked(void)
     } while (mModel.findMethod(name, SIMethodBase::eMethodType::MethodRequest) != nullptr);
 
     blockBasicSignals(true);
-
+    
+    QTreeWidgetItem* cur = table->currentItem();
+    if (cur != nullptr)
+    {
+        cur->setSelected(false);
+    }
+    
     SIMethodBase * newMethod = mModel.createMethod(name, SIMethodBase::eMethodType::MethodRequest);
     Q_ASSERT(newMethod != nullptr);
     QTreeWidgetItem* item = updateMethodNode(new QTreeWidgetItem(table), newMethod);
     table->addTopLevelItem(item);
-    mDetails->ctrlName()->setFocus();
-    mDetails->ctrlName()->selectAll();
+    item->setSelected(true);
+    table->setCurrentItem(item);
+    selectRequest(static_cast<SIMethodRequest *>(newMethod));
+    blockBasicSignals(false);    
 }
 
 void SIMethod::onRemoveClicked(void)
@@ -245,6 +276,13 @@ void SIMethod::setupSignals(void)
 
 void SIMethod::blockBasicSignals(bool doBlock)
 {
+    mDetails->ctrlName()->blockSignals(doBlock);
+    mDetails->ctrlRequest()->blockSignals(doBlock);
+    mDetails->ctrlResponse()->blockSignals(doBlock);
+    mDetails->ctrlBroadcast()->blockSignals(doBlock);
+    mDetails->ctrlConnectedResponse()->blockSignals(doBlock);
+
+    mList->ctrlTableList()->blockSignals(doBlock);
 }
 
 void SIMethod::showParamDetails(bool show)
@@ -260,7 +298,7 @@ QTreeWidgetItem* SIMethod::updateMethodNode(QTreeWidgetItem* item, SIMethodBase*
     item->setText(0, method->getName());
     item->setIcon(0, QIcon());
     item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
-    item->setText(1, method->getMethodType() == SIMethodBase::eMethodType::MethodRequest ? static_cast<SIMethodRequest*>(method)->getConectedResponseName() : QString());
+    item->setText(3, method->getMethodType() == SIMethodBase::eMethodType::MethodRequest ? static_cast<SIMethodRequest*>(method)->getConectedResponseName() : QString());
     item->setData(1, Qt::ItemDataRole::UserRole, 0);
 
     if (method->hasElements())
@@ -282,3 +320,37 @@ QTreeWidgetItem* SIMethod::updateMethodNode(QTreeWidgetItem* item, SIMethodBase*
     return item;
 }
 
+void SIMethod::selectRequest(SIMethodRequest* request)
+{
+    if (request != nullptr)
+    {
+        mDetails->ctrlName()->setEnabled(true);
+        mDetails->ctrlRequest()->setChecked(true);
+        mDetails->ctrlRequest()->setEnabled(true);
+        mDetails->ctrlResponse()->setEnabled(true);
+        mDetails->ctrlBroadcast()->setEnabled(true);
+        mDetails->ctrlConnectedResponse()->setEnabled(true);
+        
+        mDetails->ctrlName()->setText(request->getName());
+        mDetails->ctrlConnectedResponse()->setCurrentText(request->getConectedResponseName());
+        mDetails->ctrlDescription()->setPlainText(request->getDescription());
+        mDetails->ctrlDeprecateHint()->setText(request->getDeprecateHint());
+        mDetails->ctrlIsDeprecated()->setChecked(request->isDeprecated());
+
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
+    }
+    else
+    {
+        mDetails->ctrlName()->setText(QString());
+        mDetails->ctrlRequest()->setChecked(false);
+        mDetails->ctrlRequest()->setEnabled(false);
+        mDetails->ctrlResponse()->setEnabled(false);
+        mDetails->ctrlBroadcast()->setEnabled(false);
+        mDetails->ctrlConnectedResponse()->setEnabled(false);
+        mDetails->ctrlConnectedResponse()->setCurrentText(QString());
+        mDetails->ctrlDescription()->setPlainText(QString());
+        mDetails->ctrlDeprecateHint()->setText(QString());
+        mDetails->ctrlIsDeprecated()->setChecked(false);
+    }
+}

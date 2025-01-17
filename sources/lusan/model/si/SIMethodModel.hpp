@@ -114,6 +114,13 @@ public:
      **/
     const QList<MethodParameter>& getMethodParameters(const QString& name, SIMethodBase::eMethodType methodType) const;
 
+    /**
+     * \brief   Gets the list of request methods connected to the given response method.
+     * \param   response    The response method object.
+     * \return  The list of request methods connected to the response method.
+     **/
+    QList<SIMethodRequest*> getConnectedRequests(SIMethodResponse* response) const;
+
     SIMethodBase* convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType);
 
 private:

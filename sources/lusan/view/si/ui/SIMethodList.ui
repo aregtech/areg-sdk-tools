@@ -392,21 +392,26 @@
           <enum>Qt::TextElideMode::ElideNone</enum>
          </property>
          <property name="columnCount">
-          <number>3</number>
+          <number>4</number>
          </property>
          <column>
           <property name="text">
-           <string notr="true">1</string>
+           <string notr="true">Name:</string>
           </property>
          </column>
          <column>
           <property name="text">
-           <string notr="true">2</string>
+           <string notr="true">DataType:</string>
           </property>
          </column>
          <column>
           <property name="text">
-           <string notr="true">3</string>
+           <string notr="true">Value:</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Response:</string>
           </property>
          </column>
         </widget>
