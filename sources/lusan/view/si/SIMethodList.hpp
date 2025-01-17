@@ -48,7 +48,7 @@ public:
     
     QToolButton * ctrlButtonMoveDown(void) const;
     
-    QTreeWidget * ctrlList(void) const;
+    QTreeWidget * ctrlTableList(void) const;
 
 private:
     Ui::SIMethodList* ui;

@@ -45,6 +45,26 @@ SIMethodBase* SIMethodModel::findMethod(uint32_t id) const
     return mData.findMethod(id);
 }
 
+const QList<SIMethodBase*>& SIMethodModel::getMethodList(void) const
+{
+    return mData.getAllMethods();
+}
+
+const QList<SIMethodBroadcast*>& SIMethodModel::getBroadcastMethods(void) const
+{
+    return mData.getBroadcasts();
+}
+
+const QList<SIMethodRequest*>& SIMethodModel::getRequestMethods(void) const
+{
+    return mData.getRequests();
+}
+
+const QList<SIMethodResponse*>& SIMethodModel::getResponseMethods(void) const
+{
+    return mData.getResponses();
+}
+
 SIMethodBase* SIMethodModel::findMethod(const QString& name, SIMethodBase::eMethodType methodType) const
 {
     return mData.findMethod(name, methodType);
@@ -62,4 +82,14 @@ const QList<MethodParameter>& SIMethodModel::getMethodParameters(const QString& 
     static const QList<MethodParameter> _empty{};
     SIMethodBase* method = findMethod(name, methodType);
     return method != nullptr ? method->getElements() : _empty;
+}
+
+QList<SIMethodRequest*> SIMethodModel::getConnectedRequests(SIMethodResponse* response) const
+{
+    return mData.getConnectedRequests(response);
+}
+
+SIMethodBase* SIMethodModel::convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType)
+{
+    return mData.convertMethod(method, methodType);
 }

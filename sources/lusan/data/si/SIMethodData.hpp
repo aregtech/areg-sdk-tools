@@ -159,7 +159,7 @@ public:
      * \brief   Gets the list of all method objects.
      * \return  The list of all method objects.
      **/
-    QList<SIMethodBase*> getAllMethods(void) const;
+    inline const QList<SIMethodBase*>& getAllMethods(void) const;
 
     /**
      * \brief   Gets the list of request method objects.
@@ -233,6 +233,13 @@ public:
      **/
     void sortById(bool ascending);
 
+    /**
+     * \brief   Gets the list of request methods connected to the given response method.
+     * \param   response    The response method object.
+     * \return  The list of request methods connected to the response method.
+     **/
+    QList<SIMethodRequest*> getConnectedRequests(SIMethodResponse* response) const;
+
 private:
     /**
      * \brief   Adds a method object to the appropriate list.
@@ -281,6 +288,11 @@ inline bool SIMethodData::hasResponse(const QString& response) const
 inline bool SIMethodData::hasBroadcast(const QString& broadcast) const
 {
     return (findMethod(broadcast, SIMethodBase::eMethodType::MethodBroadcast) != nullptr);
+}
+
+inline const QList<SIMethodBase*>& SIMethodData::getAllMethods(void) const
+{
+    return mAllMethods;
 }
 
 inline const QList<SIMethodRequest*>& SIMethodData::getRequests(void) const

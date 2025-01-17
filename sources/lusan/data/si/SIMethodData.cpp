@@ -291,11 +291,6 @@ bool SIMethodData::hasResponseConnectedRequest(uint32_t respId) const
     return false;
 }
 
-QList<SIMethodBase*> SIMethodData::getAllMethods(void) const
-{
-    return mAllMethods;
-}
-
 bool SIMethodData::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() == XmlSI::xmlSIElementMethodList)
@@ -396,8 +391,15 @@ SIMethodBase* SIMethodData::convertMethod(SIMethodBase* method, SIMethodBase::eM
         newMethod->setIsDeprecated(method->isDeprecated());
         newMethod->setDeprecateHint(method->getDeprecateHint());
 
-        removeMethod(method);
-        addMethod(newMethod);
+        int index = mAllMethods.indexOf(method);
+        if (index >= 0)
+        {
+            mAllMethods[index] = newMethod;
+        }
+        else
+        {
+            mAllMethods.append(newMethod);
+        }
     }
 
     return newMethod;
@@ -425,6 +427,20 @@ void SIMethodData::sortById(bool ascending)
     std::sort(mAllMethods.begin(), mAllMethods.end(), [ascending](SIMethodBase* a, SIMethodBase* b) {
         return ascending ? a->getId() < b->getId() : a->getId() > b->getId();
         });
+}
+
+QList<SIMethodRequest*> SIMethodData::getConnectedRequests(SIMethodResponse* response) const
+{
+    QList<SIMethodRequest*> result;
+    for (auto reqeust : mRequestMethods)
+    {
+        if (reqeust->getConectedResponse() == response)
+        {
+            result.append(reqeust);
+        }
+    }
+
+    return result;
 }
 
 SIMethodBase* SIMethodData::createMethod(SIMethodBase::eMethodType methodType, const QString& name)

@@ -71,7 +71,7 @@ QToolButton * SIMethodList::ctrlButtonMoveDown(void) const
     return ui->toolMoveDown;
 }
 
-QTreeWidget * SIMethodList::ctrlList(void) const
+QTreeWidget * SIMethodList::ctrlTableList(void) const
 {
     return ui->treeMethods;
 }

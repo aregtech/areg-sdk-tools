@@ -80,6 +80,26 @@ public:
     SIMethodBase* findMethod(const QString& name, SIMethodBase::eMethodType methodType) const;
 
     /**
+     * \brief   Gets the list of methods.
+     **/
+    const QList<SIMethodBase*>& getMethodList(void) const;
+
+    /**
+     * \brief   Gets the list of broadcast methods.
+     **/
+    const QList<SIMethodBroadcast*>& getBroadcastMethods(void) const;
+
+    /**
+     * \brief   Gets the list of request methods.
+     **/
+    const QList<SIMethodRequest*>& getRequestMethods(void) const;
+
+    /**
+     * \brief   Gets the list of response methods.
+     **/
+    const QList<SIMethodResponse*>& getResponseMethods(void) const;
+
+    /**
      * \brief Gets the list of parameters of the method by ID.
      * \param id  The ID of the method.
      * \return  Returns the list of parameters of the method.
@@ -93,6 +113,15 @@ public:
      * \return  Returns the list of parameters of the method.
      **/
     const QList<MethodParameter>& getMethodParameters(const QString& name, SIMethodBase::eMethodType methodType) const;
+
+    /**
+     * \brief   Gets the list of request methods connected to the given response method.
+     * \param   response    The response method object.
+     * \return  The list of request methods connected to the response method.
+     **/
+    QList<SIMethodRequest*> getConnectedRequests(SIMethodResponse* response) const;
+
+    SIMethodBase* convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType);
 
 private:
     SIMethodData&   mData;      //!< The method data object.
