@@ -164,6 +164,8 @@ public:
      **/
     const QString& getDeprecateHint(void) const;
 
+    MethodParameter* addParameter(const QString& name, const QString& type = "bool");
+
     /**
      * \brief   Converts the method type to a string value.
      * \param   methodType  The method type to convert.

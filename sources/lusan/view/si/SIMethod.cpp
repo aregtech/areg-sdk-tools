@@ -28,7 +28,6 @@
 #include "lusan/data/si/SIMethodBroadcast.hpp"
 #include "lusan/data/si/SIMethodRequest.hpp"
 #include "lusan/data/si/SIMethodResponse.hpp"
-#include "lusan/data/si/SIMethodData.hpp"
 #include "lusan/model/si/SIMethodModel.hpp"
 
 #include <QCheckBox>
@@ -119,6 +118,12 @@ void SIMethod::onRequestSelected(bool isSelected)
     SIMethodBase *newMethod = mModel.convertMethod(oldMethod, SIMethodBase::eMethodType::MethodRequest);
     Q_ASSERT(oldMethod != newMethod);
     static_cast<SIMethodRequest*>(newMethod)->connectResponse(nullptr);
+    item->setText(0, newMethod->getName());
+    item->setIcon(0, QIcon());
+    item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(newMethod));
+    item->setText(3, newMethod->getMethodType() == SIMethodBase::eMethodType::MethodRequest ? static_cast<SIMethodRequest*>(newMethod)->getConectedResponseName() : QString());
+    item->setData(1, Qt::ItemDataRole::UserRole, 0);
+
     int count = item->childCount();
     for (int i = 0; i < count; ++i)
     {
@@ -151,6 +156,42 @@ void SIMethod::onResponseSelected(bool isSelected)
 
 void SIMethod::onBroadcastSelected(bool isSelected)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    if ((item == nullptr) || (isSelected == false))
+        return;
+
+    SIMethodBase* oldMethod = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    if (oldMethod->getMethodType() == SIMethodBase::eMethodType::MethodBroadcast)
+        return;
+
+    SIMethodBase* newMethod = mModel.convertMethod(oldMethod, SIMethodBase::eMethodType::MethodBroadcast);
+    Q_ASSERT(oldMethod != newMethod);
+    item->setText(0, newMethod->getName());
+    item->setIcon(0, QIcon());
+    item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(newMethod));
+    item->setText(3, QString());
+    item->setData(1, Qt::ItemDataRole::UserRole, 0);
+
+    int count = item->childCount();
+    for (int i = 0; i < count; ++i)
+    {
+        QTreeWidgetItem* child = item->child(i);
+        Q_ASSERT(child != nullptr);
+        child->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(newMethod));
+    }
+
+    if (oldMethod->getMethodType() == SIMethodBase::eMethodType::MethodResponse)
+    {
+        SIMethodResponse* resp = static_cast<SIMethodRequest*>(oldMethod)->getConectedResponse();
+        int index = mDetails->ctrlConnectedResponse()->findData(QVariant::fromValue(resp), Qt::ItemDataRole::UserRole);
+        mDetails->ctrlConnectedResponse()->removeItem(index);
+    }
+
+    blockBasicSignals(true);
+    selectBroadcast(static_cast<SIMethodBroadcast*>(newMethod));
+    blockBasicSignals(false);
+    delete oldMethod;
 }
 
 void SIMethod::onConnectedResponseChanged(int index)
@@ -191,6 +232,40 @@ void SIMethod::onRemoveClicked(void)
 
 void SIMethod::onParamAddClicked(void)
 {
+    static const QString _defName("newParam");
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* cur = table->currentItem();
+    Q_ASSERT(cur != nullptr);
+    QTreeWidgetItem* parent = cur->parent();
+    parent = parent == nullptr ? cur : parent;
+    if (parent == nullptr)
+        return;
+
+    SIMethodBase* method = cur->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    uint32_t cnt{ 0 };
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++cnt);
+    } while (method->findElement(name) != nullptr);
+
+    MethodParameter* param = mModel.addParameter(method, name);
+    if (param != nullptr)
+    {
+
+        QTreeWidgetItem* item = new QTreeWidgetItem(parent);
+        item->setText(0, param->getName());
+        item->setIcon(0, QIcon());
+        item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
+        item->setText(1, param->getType());
+        item->setData(1, Qt::ItemDataRole::UserRole, param->getId());
+        item->setText(2, param->getValue());
+        parent->addChild(item);
+        cur->setSelected(false);
+        item->setSelected(true);
+        item->setExpanded(true);
+        table->setCurrentItem(item);
+    }
 }
 
 void SIMethod::onParamRemoveClicked(void)
@@ -330,12 +405,51 @@ void SIMethod::selectRequest(SIMethodRequest* request)
         mDetails->ctrlResponse()->setEnabled(true);
         mDetails->ctrlBroadcast()->setEnabled(true);
         mDetails->ctrlConnectedResponse()->setEnabled(true);
+        mList->ctrlButtonRemove()->setEnabled(true);
+        mList->ctrlButtonParamAdd()->setEnabled(true);
         
         mDetails->ctrlName()->setText(request->getName());
         mDetails->ctrlConnectedResponse()->setCurrentText(request->getConectedResponseName());
         mDetails->ctrlDescription()->setPlainText(request->getDescription());
         mDetails->ctrlDeprecateHint()->setText(request->getDeprecateHint());
         mDetails->ctrlIsDeprecated()->setChecked(request->isDeprecated());
+
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
+    }
+    else
+    {
+        mDetails->ctrlName()->setText(QString());
+        mDetails->ctrlRequest()->setChecked(false);
+        mDetails->ctrlRequest()->setEnabled(false);
+        mDetails->ctrlResponse()->setEnabled(false);
+        mDetails->ctrlBroadcast()->setEnabled(false);
+        mDetails->ctrlConnectedResponse()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
+        mList->ctrlButtonParamAdd()->setEnabled(false);
+        mDetails->ctrlConnectedResponse()->setCurrentText(QString());
+        mDetails->ctrlDescription()->setPlainText(QString());
+        mDetails->ctrlDeprecateHint()->setText(QString());
+        mDetails->ctrlIsDeprecated()->setChecked(false);
+    }
+}
+
+void SIMethod::selectBroadcast(SIMethodBroadcast* broadcast)
+{
+    if (broadcast != nullptr)
+    {
+        mDetails->ctrlName()->setEnabled(true);
+        mDetails->ctrlBroadcast()->setChecked(true);
+        mDetails->ctrlRequest()->setEnabled(true);
+        mDetails->ctrlResponse()->setEnabled(true);
+        mDetails->ctrlBroadcast()->setEnabled(true);
+        mDetails->ctrlConnectedResponse()->setEnabled(false);
+
+        mDetails->ctrlName()->setText(broadcast->getName());
+        mDetails->ctrlConnectedResponse()->setCurrentText(QString());
+        mDetails->ctrlDescription()->setPlainText(broadcast->getDescription());
+        mDetails->ctrlDeprecateHint()->setText(broadcast->getDeprecateHint());
+        mDetails->ctrlIsDeprecated()->setChecked(broadcast->isDeprecated());
 
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();

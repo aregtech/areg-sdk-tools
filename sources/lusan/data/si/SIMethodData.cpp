@@ -443,6 +443,11 @@ QList<SIMethodRequest*> SIMethodData::getConnectedRequests(SIMethodResponse* res
     return result;
 }
 
+MethodParameter* SIMethodData::addParameter(SIMethodBase* method, const QString& name, const QString& type /*= "bool"*/)
+{
+    return (method != nullptr ? method->addParameter(name, type) : nullptr);
+}
+
 SIMethodBase* SIMethodData::createMethod(SIMethodBase::eMethodType methodType, const QString& name)
 {
     return createMethod(methodType, name, getNextId());
