@@ -170,6 +170,13 @@ const QString& SIMethodBase::getDeprecateHint(void) const
     return mDeprecateHint;
 }
 
+MethodParameter* SIMethodBase::addParameter(const QString& name, const QString& type /*= "bool"*/)
+{
+    MethodParameter param{ getNextId(), name, type, QString(), false, this};
+    addElement(param, true);
+    return findElement(name);
+}
+
 QString SIMethodBase::toString(eMethodType methodType)
 {
     switch (methodType)

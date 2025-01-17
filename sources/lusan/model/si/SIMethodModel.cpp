@@ -93,3 +93,8 @@ SIMethodBase* SIMethodModel::convertMethod(SIMethodBase* method, SIMethodBase::e
 {
     return mData.convertMethod(method, methodType);
 }
+
+MethodParameter* SIMethodModel::addParameter(SIMethodBase* method, const QString& name, const QString& type /*= "bool"*/)
+{
+    return mData.addParameter(method, name, type);
+}

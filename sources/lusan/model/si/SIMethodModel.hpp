@@ -123,6 +123,8 @@ public:
 
     SIMethodBase* convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType);
 
+    MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
+
 private:
     SIMethodData&   mData;      //!< The method data object.
     SIDataTypeData& mDataType;  //!< The data type data object.

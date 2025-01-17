@@ -240,6 +240,8 @@ public:
      **/
     QList<SIMethodRequest*> getConnectedRequests(SIMethodResponse* response) const;
 
+    MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
+
 private:
     /**
      * \brief   Adds a method object to the appropriate list.

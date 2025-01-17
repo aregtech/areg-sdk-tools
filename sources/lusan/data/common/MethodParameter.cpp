@@ -29,6 +29,18 @@ MethodParameter::MethodParameter(ElementBase* parent /*= nullptr*/)
 
 MethodParameter::MethodParameter( uint32_t id
                                 , const QString& name
+                                , const QString& type   /*= "bool"*/
+                                , const QString& value  /*= ""*/
+                                , bool isDefault        /*= false*/
+                                , ElementBase* parent   /*= nullptr*/)
+    : ParamBase (id, name, type, false, QString(), QString(), parent)
+    , mValue    (value)
+    , mIsDefault(isDefault)
+{
+}
+
+MethodParameter::MethodParameter( uint32_t id
+                                , const QString& name
                                 , const QString& type
                                 , bool isDeprecated
                                 , const QString& description

@@ -116,6 +116,8 @@ private:
 
     void selectRequest(SIMethodRequest* request);
 
+    void selectBroadcast(SIMethodBroadcast* broadcast);
+
 private:
     SIMethodModel &         mModel;
     SIMethodDetails*        mDetails;
