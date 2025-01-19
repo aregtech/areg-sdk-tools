@@ -97,7 +97,9 @@ public:
     DataTypeCustom* findDataType(uint32_t id);
     const DataTypeCustom* findDataType(uint32_t id) const;
 
-    void sortDataTypes(bool ascending);
+    void sortByName(bool ascending);
+    
+    void sortById(bool ascending);
 
     const QList<DataTypeCustom*>& getDataTypes(void) const;
 

@@ -21,11 +21,13 @@
 #include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIConstant.h"
 
+#include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/model/common/DataTypesModel.hpp"
+#include "lusan/model/si/SIConstantModel.hpp"
+#include "lusan/view/common/TableCell.hpp"
 #include "lusan/view/si/SIConstantDetails.hpp"
 #include "lusan/view/si/SIConstantList.hpp"
-#include "lusan/model/si/SIConstantModel.hpp"
-#include "lusan/model/common/DataTypesModel.hpp"
-#include "lusan/view/common/TableCell.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -90,11 +92,37 @@ void SIConstant::dataTypeCreated(DataTypeCustom* dataType)
 void SIConstant::dataTypeRemoved(DataTypeCustom* dataType)
 {
     mTypeModel->dataTypeRemoved(dataType);
+    QTableWidget* table = mList->ctrlTableList();
+    int count = table->rowCount();
+    for (int i = 0; i < count; ++ i)
+    {
+        QTableWidgetItem * item = table->item(i, 1);
+        DataTypeBase * savedData = item->data(Qt::ItemDataRole::UserRole).value<DataTypeBase *>();
+        if (savedData == static_cast<DataTypeBase *>(dataType))
+        {
+            item->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+            item->setText("<invalid>");
+            item->setData(Qt::ItemDataRole::UserRole,   QVariant::fromValue<DataTypeBase *>(nullptr));
+        }
+    }
 }
 
 void SIConstant::dataTypeUpdated(DataTypeCustom* dataType)
 {
+    Q_ASSERT(dataType != nullptr);
+    const QString& name = dataType->getName();
     mTypeModel->dataTypeUpdated(dataType);
+    QTableWidget* table = mList->ctrlTableList();
+    int count = table->rowCount();
+    for (int i = 0; i < count; ++ i)
+    {
+        QTableWidgetItem * item = table->item(i, 1);
+        DataTypeBase * savedData = item->data(Qt::ItemDataRole::UserRole).value<DataTypeBase *>();
+        if ((savedData == static_cast<DataTypeBase *>(dataType)) && (item->text() != name))
+        {
+            item->setText(name);
+        }
+    }
 }
 
 
@@ -208,7 +236,11 @@ void SIConstant::onAddClicked(void)
         QTableWidgetItem* col0 = new QTableWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::MediaRecord), entry->getName());
         QTableWidgetItem* col2 = new QTableWidgetItem(entry->getValue());
         QTableWidgetItem* col1 = new QTableWidgetItem(entry->getType());
+        DataTypeBase* dataType = mModel.getDataTypeData().findDataType(entry->getType());
+        Q_ASSERT(dataType != nullptr);
+        
         col0->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , entry->getId());
+        col1->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , QVariant::fromValue<DataTypeBase *>(dataType));
 
         table->setItem(row, 0, col0);
         table->setItem(row, 1, col1);
@@ -263,8 +295,12 @@ void SIConstant::onTypeChanged(const QString& newType)
         ConstantEntry* entry = _findConstant(row);
         Q_ASSERT(entry != nullptr);
         QTableWidgetItem* col1 = table->item(row, 1);
+        DataTypeBase * dataType = mModel.getDataTypeData().findDataType(newType);
+        Q_ASSERT(dataType != nullptr);
+        
         entry->setType(newType);
         col1->setText(newType);
+        col1->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , QVariant::fromValue<DataTypeBase *>(dataType));
         blockBasicSignals(false);
     }
 }
@@ -349,6 +385,11 @@ void SIConstant::cellChanged(int row, int col, const QString& newValue)
         if (mDetails->ctrlTypes()->currentText() != newValue)
         {
             blockBasicSignals(true);
+            QTableWidgetItem * col1 = mList->ctrlTableList()->item(row, col);
+            DataTypeBase * dataType = mModel.getDataTypeData().findDataType(newValue);
+            Q_ASSERT(dataType != nullptr);
+            
+            col1->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , QVariant::fromValue<DataTypeBase *>(dataType));
             entry->setType(newValue);
             mDetails->ctrlTypes()->setCurrentText(newValue);
             blockBasicSignals(false);
@@ -377,10 +418,13 @@ void SIConstant::updateData(void)
         for (const ConstantEntry & entry : list)
         {
             QTableWidgetItem* col0 = new QTableWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::MediaRecord), entry.getName());
-            QTableWidgetItem* col2 = new QTableWidgetItem(entry.getValue());
             QTableWidgetItem* col1 = new QTableWidgetItem(entry.getType());
+            QTableWidgetItem* col2 = new QTableWidgetItem(entry.getValue());
+            DataTypeBase * dataType= mModel.getDataTypeData().findDataType(entry.getType());
+            Q_ASSERT(dataType != nullptr);
             
             col0->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , entry.getId());
+            col1->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , QVariant::fromValue<DataTypeBase *>(dataType));
             table->setItem(row, 0, col0);
             table->setItem(row, 1, col1);
             table->setItem(row, 2, col2);

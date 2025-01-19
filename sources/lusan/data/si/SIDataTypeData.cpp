@@ -36,12 +36,15 @@
 
 SIDataTypeData::SIDataTypeData(ElementBase* parent /*= nullptr*/)
     : ElementBase       (parent)
+    , QObject           ( )
     , mCustomDataTypes  ( )
+    , mDataTypes        ( )
 {
 }
 
 SIDataTypeData::SIDataTypeData(QList<DataTypeCustom *>&& entries, ElementBase* parent /*= nullptr*/) noexcept
     : ElementBase       (parent)
+    , QObject           ( )
     , mCustomDataTypes  (std::move(entries))
 {
     for (DataTypeCustom* entry : mCustomDataTypes)
@@ -103,6 +106,7 @@ void SIDataTypeData::addCustomDataType(DataTypeCustom * entry)
         }
 
         mCustomDataTypes.append(entry);
+        emit signalDataTypeCreated(entry);
     }
 }
 
@@ -111,8 +115,10 @@ bool SIDataTypeData::removeCustomDataType(const DataTypeCustom& entry)
     int index = findCustomDataType(entry);
     if (index != -1)
     {
-        delete mCustomDataTypes[index];
+        DataTypeCustom* dataType = mCustomDataTypes[index];
         mCustomDataTypes.removeAt(index);
+        emit signalDataTypeRemoved(dataType);
+        delete dataType;
         return true;
     }
 
@@ -125,8 +131,10 @@ bool SIDataTypeData::removeCustomDataType(uint32_t id)
     {
         if (mCustomDataTypes[i]->getId() == id)
         {
-            delete mCustomDataTypes[i];
+            DataTypeCustom* dataType = mCustomDataTypes[i];
             mCustomDataTypes.removeAt(i);
+            emit signalDataTypeRemoved(dataType);
+            delete dataType;
             return true;
         }
     }
@@ -144,14 +152,16 @@ bool SIDataTypeData::replaceCustomDataType(const DataTypeCustom& oldEntry, DataT
     int index = findCustomDataType(oldEntry);
     if (index != -1)
     {
-        delete mCustomDataTypes[index];
+        DataTypeCustom* dataType = mCustomDataTypes[index];
         mCustomDataTypes[index] = newEntry;
         if (newEntry->getParent() != this)
         {
             newEntry->setParent(this);
             newEntry->setId(getNextId());
         }
-
+        
+        emit signalDataTypeConverted(dataType, newEntry);        
+        delete dataType;
         return true;
     }
 
@@ -277,10 +287,7 @@ void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QLis
 
     if (makeSorting)
     {
-        std::sort(out_dataTypes.begin(), out_dataTypes.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
-            {
-                return lhs->getId() < rhs->getId();
-            });
+        NELusanCommon::sortById(out_dataTypes, true);
     }
 
     int begin = static_cast<int>(out_dataTypes.size());
@@ -297,10 +304,7 @@ void SIDataTypeData::getDataType(QList<DataTypeBase*>& out_dataTypes, const QLis
     {
         if (begin < static_cast<int>(out_dataTypes.size()))
         {
-            std::sort(out_dataTypes.begin() + begin, out_dataTypes.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
-                {
-                    return lhs->getName().compare(rhs->getName(), Qt::CaseSensitivity::CaseInsensitive) < 0;
-                });
+            NELusanCommon::sortById<const DataTypeBase *>(out_dataTypes.begin() + begin, out_dataTypes.end(), true);
         }
     }
 }
@@ -318,14 +322,22 @@ int SIDataTypeData::getDataTypes(QList<DataTypeBase*>& out_dataTypes, const QLis
         case DataTypeBase::eCategory::PrimitiveFloat:
         case DataTypeBase::eCategory::BasicObject:
         case DataTypeBase::eCategory::BasicContainer:
+        {
+            uint32_t begin {static_cast<uint32_t>(out_dataTypes.size())};
             DataTypeFactory::getPredefinedTypes(out_dataTypes, QList<DataTypeBase::eCategory>{category});
-            break;
+            if (makeSorting)
+            {
+                NELusanCommon::sortById<const DataTypeBase *>(out_dataTypes.begin() + begin, out_dataTypes.end(), true);
+            }
+        }
+        break;
             
         case DataTypeBase::eCategory::Enumeration:
         case DataTypeBase::eCategory::Structure:
         case DataTypeBase::eCategory::Imported:
         case DataTypeBase::eCategory::Container:
         {
+            uint32_t begin {static_cast<uint32_t>(out_dataTypes.size())};
             for (DataTypeCustom* dataType : mCustomDataTypes)
             {
                 if (dataType->getCategory() == category)
@@ -333,21 +345,17 @@ int SIDataTypeData::getDataTypes(QList<DataTypeBase*>& out_dataTypes, const QLis
                     out_dataTypes.append(dataType);
                 }
             }
+            
+            if (makeSorting)
+            {
+                NELusanCommon::sortByName<const DataTypeBase*>(out_dataTypes.begin() + begin, out_dataTypes.end(), true);
+            }
         }
         break;
         
         default:
             break;
         }
-    }
-    
-    if (makeSorting)
-    {
-        std::sort(out_dataTypes.begin(), out_dataTypes.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
-                  {
-                      Q_ASSERT(lhs->getName() != rhs->getName());
-                      return lhs->getName() < rhs->getName();
-                  });
     }
     
     return static_cast<int>(out_dataTypes.size());
@@ -538,6 +546,7 @@ DataTypeCustom* SIDataTypeData::addCustomDataType(const QString& name, DataTypeB
 {
     DataTypeCustom* dataType = _createType(name, this, getNextId(), category);
     mCustomDataTypes.append(dataType);
+    emit signalDataTypeCreated(dataType);
     return dataType;
 }
 
@@ -559,15 +568,19 @@ DataTypeCustom* SIDataTypeData::convertDataType(DataTypeCustom* dataType, DataTy
         mCustomDataTypes.append(newType);
     }
     
+    emit signalDataTypeConverted(dataType, newType);
+    
     return newType;
 }
 
-void SIDataTypeData::sort(bool ascending)
+void SIDataTypeData::sortByName(bool ascending)
 {
-    std::sort(mCustomDataTypes.begin(), mCustomDataTypes.end(), [ascending](DataTypeCustom* lhs, DataTypeCustom* rhs)
-              {
-                  return (ascending ? lhs->getName() < rhs->getName() : lhs->getName() > rhs->getName());
-              });
+    NELusanCommon::sortByName(mCustomDataTypes, true);
+}
+
+void SIDataTypeData::sortById(bool ascending)
+{
+    NELusanCommon::sortById(mCustomDataTypes, true);
 }
 
 DataTypeCustom* SIDataTypeData::_createType(const QString& name, ElementBase* parent, uint32_t id, DataTypeBase::eCategory category)

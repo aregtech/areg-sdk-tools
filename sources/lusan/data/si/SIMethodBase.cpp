@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodBase.hpp"
+#include "lusan/common/XmlSI.hpp"
 
 SIMethodBase::SIMethodBase(ElementBase* parent /*= nullptr*/)
     : MethodBase    (parent)
@@ -177,16 +178,65 @@ MethodParameter* SIMethodBase::addParameter(const QString& name, const QString& 
     return findElement(name);
 }
 
+bool SIMethodBase::hasParamDefault(const QString& paramName) const
+{
+    return hasEntryDefault(findIndex(paramName));
+}
+
+bool SIMethodBase::hasParamDefault(uint32_t paramId) const
+{
+    return hasEntryDefault(findIndex(paramId));
+}
+
+bool SIMethodBase::hasEntryDefault(int index) const
+{
+    return ((index >= 0) && (index < static_cast<int>(mElementList.size())) ? mElementList.at(index).hasDefault() : false);
+}
+
+bool SIMethodBase::canParamHaveDefault(const QString& paramName) const
+{
+    return canEntryHaveDefault(findIndex(paramName));
+}
+
+bool SIMethodBase::canParamHaveDefault(uint32_t paramId) const
+{
+    return canEntryHaveDefault(findIndex(paramId));
+}
+
+bool SIMethodBase::canEntryHaveDefault(int index) const
+{
+    if (mElementList.isEmpty() == false)
+    {
+        for (int i = static_cast<int>(mElementList.size()); i >= index; --i)
+        {
+            if ((i > index) && mElementList.at(i).hasDefault())
+            {
+                continue;
+            }
+            else if (i == index)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+
+    return false;
+}
+
 QString SIMethodBase::toString(eMethodType methodType)
 {
     switch (methodType)
     {
     case eMethodType::MethodRequest:
-        return "request";
+        return XmlSI::xmlSIMethodTypeRequest;
     case eMethodType::MethodResponse:
-        return "response";
+        return XmlSI::xmlSIMethodTypeResponse;
     case eMethodType::MethodBroadcast:
-        return "broadcast";
+        return XmlSI::xmlSIMethodTypeBroadcast;
     default:
         return "";
     }
@@ -194,15 +244,15 @@ QString SIMethodBase::toString(eMethodType methodType)
 
 SIMethodBase::eMethodType SIMethodBase::fromString(const QString& methodTypeStr)
 {
-    if (methodTypeStr == "request")
+    if (methodTypeStr == XmlSI::xmlSIMethodTypeRequest)
     {
         return eMethodType::MethodRequest;
     }
-    else if (methodTypeStr == "response")
+    else if (methodTypeStr == XmlSI::xmlSIMethodTypeResponse)
     {
         return eMethodType::MethodResponse;
     }
-    else if (methodTypeStr == "broadcast")
+    else if (methodTypeStr == XmlSI::xmlSIMethodTypeBroadcast)
     {
         return eMethodType::MethodBroadcast;
     }

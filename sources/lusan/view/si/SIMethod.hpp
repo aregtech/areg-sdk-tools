@@ -30,6 +30,8 @@ class QTreeWidgetItem;
 class SIMethodBroadcast;
 class SIMethodRequest;
 class SIMethodResponse;
+class MethodParameter;
+class DataTypesModel;
 
 namespace Ui {
     class SIMethod;
@@ -57,7 +59,16 @@ public:
     explicit SIMethod(SIMethodModel & model, QWidget* parent = nullptr);
 
     virtual ~SIMethod(void);
-
+    
+protected:
+    virtual void dataTypeCreated(DataTypeCustom* dataType);
+    
+    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
+    
+    virtual void dataTypeRemoved(DataTypeCustom* dataType);
+    
+    virtual void dataTypeUpdated(DataTypeCustom* dataType);
+    
 protected:
 
     void onNameChanged(const QString & newName);
@@ -67,8 +78,14 @@ protected:
     void onResponseSelected(bool isSelected);
 
     void onBroadcastSelected(bool isSelected);
+    
+    void onDeprecateChecked(bool isChecked);
+    
+    void onDeprecateChanged(const QString & newText);
+    
+    void onDescriptionChanged(void);
 
-    void onConnectedResponseChanged(int index);
+    void onConnectedResponseChanged(const QString& newText);
 
     void onAddClicked(void);
 
@@ -85,6 +102,20 @@ protected:
     void onMoveDownClicked(void);
 
     void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+    
+    void onParamNameChanged(const QString& newText);
+    
+    void onParamTypeChanged(const QString & newText);
+    
+    void onParamDefaultChecked(bool isChecked);
+    
+    void onParamDefaultChanged(const QString& newText);
+    
+    void onParamDescriptionChanged(void);
+    
+    void onParamDeprecateChecked(bool isChecked);
+    
+    void onParamDeprecateHintChanged(const QString& newText);
 
 private:
     /**
@@ -114,9 +145,13 @@ private:
 
     QTreeWidgetItem* updateMethodNode(QTreeWidgetItem* item, SIMethodBase* method);
 
-    void selectRequest(SIMethodRequest* request);
+    void showMethodDetails(SIMethodBase* method);
 
-    void selectBroadcast(SIMethodBroadcast* broadcast);
+    void showParamDetails(SIMethodBase* method, const MethodParameter& param);
+
+    bool getCurrentMethod(QTreeWidgetItem*& item, SIMethodBase*& method);
+
+    bool getCurrentParam(QTreeWidgetItem*& item, SIMethodBase*& method, MethodParameter*& param);
 
 private:
     SIMethodModel &         mModel;
@@ -124,6 +159,7 @@ private:
     SIMethodList*           mList;
     SIMethodParamDetails*   mParams;
     SIMethodWidget*         mWidget;
+    DataTypesModel*         mParamTypes;
     Ui::SIMethod&           ui;
 
     uint32_t               mCount;

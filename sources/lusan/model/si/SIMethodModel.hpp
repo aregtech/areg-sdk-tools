@@ -124,10 +124,24 @@ public:
     SIMethodBase* convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType);
 
     MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
+    
+    inline SIDataTypeData& getDataTypeData(void);
+    
+    inline const SIDataTypeData& getDataTypeData(void) const;
 
 private:
     SIMethodData&   mData;      //!< The method data object.
     SIDataTypeData& mDataType;  //!< The data type data object.
 };
+
+inline SIDataTypeData& SIMethodModel::getDataTypeData(void)
+{
+    return mDataType;
+}
+
+inline const SIDataTypeData& SIMethodModel::getDataTypeData(void) const
+{
+    return mDataType;
+}
 
 #endif // LUSAN_MODEL_SI_SIMETHODMODEL_HPP
