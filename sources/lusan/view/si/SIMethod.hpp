@@ -32,6 +32,7 @@ class SIMethodRequest;
 class SIMethodResponse;
 class MethodParameter;
 class DataTypesModel;
+class ReplyMethodModel;
 
 namespace Ui {
     class SIMethod;
@@ -139,10 +140,6 @@ private:
      */
     void blockBasicSignals(bool doBlock);
 
-    void showParamDetails(bool show);
-
-    void showMethodDetails(bool show);
-
     QTreeWidgetItem* updateMethodNode(QTreeWidgetItem* item, SIMethodBase* method);
 
     void showMethodDetails(SIMethodBase* method);
@@ -160,6 +157,7 @@ private:
     SIMethodParamDetails*   mParams;
     SIMethodWidget*         mWidget;
     DataTypesModel*         mParamTypes;
+    ReplyMethodModel*       mReplyModel;
     Ui::SIMethod&           ui;
 
     uint32_t               mCount;

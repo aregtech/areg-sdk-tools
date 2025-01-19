@@ -207,25 +207,7 @@ void SIMethodData::removeMethod(SIMethodBase* method)
     if (method == nullptr)
         return;
 
-    mAllMethods.removeOne(method);
-    switch (method->getMethodType())
-    {
-    case SIMethodBase::eMethodType::MethodRequest:
-        mRequestMethods.removeOne(static_cast<SIMethodRequest*>(method));
-        break;
-
-    case SIMethodBase::eMethodType::MethodResponse:
-        mResponseMethods.removeOne(static_cast<SIMethodResponse*>(method));
-        break;
-    
-    case SIMethodBase::eMethodType::MethodBroadcast:
-        mBroadcastMethods.removeOne(static_cast<SIMethodBroadcast*>(method));
-        break;
-    
-    default:
-        break;
-    }
-
+    removeMethodFromList(method);
     delete method;
 }
 
@@ -255,7 +237,7 @@ SIMethodBase* SIMethodData::findMethod(uint32_t id) const
     return nullptr;
 }
 
-SIMethodResponse* SIMethodData::findReqResponse(uint32_t reqId) const
+SIMethodResponse* SIMethodData::findConnectedResponse(uint32_t reqId) const
 {
     SIMethodBase* method = findMethod(reqId);
     if ((method == nullptr) || (method->getMethodType() != SIMethodBase::eMethodType::MethodRequest))
@@ -391,15 +373,7 @@ SIMethodBase* SIMethodData::convertMethod(SIMethodBase* method, SIMethodBase::eM
         newMethod->setIsDeprecated(method->isDeprecated());
         newMethod->setDeprecateHint(method->getDeprecateHint());
 
-        int index = mAllMethods.indexOf(method);
-        if (index >= 0)
-        {
-            mAllMethods[index] = newMethod;
-        }
-        else
-        {
-            mAllMethods.append(newMethod);
-        }
+        replaceMethodInList(method, newMethod);
     }
 
     return newMethod;
@@ -410,23 +384,18 @@ bool SIMethodData::replaceMethod(SIMethodBase* oldMethod, SIMethodBase* newMetho
     if (oldMethod == nullptr || newMethod == nullptr)
         return false;
 
-    removeMethod(oldMethod);
-    addMethod(newMethod);
+    replaceMethodInList(oldMethod, newMethod);
     return true;
 }
 
 void SIMethodData::sortByName(bool ascending)
 {
-    std::sort(mAllMethods.begin(), mAllMethods.end(), [ascending](SIMethodBase* a, SIMethodBase* b) {
-        return ascending ? a->getName() < b->getName() : a->getName() > b->getName();
-        });
+    NELusanCommon::sortByName(mAllMethods, ascending);
 }
 
 void SIMethodData::sortById(bool ascending)
 {
-    std::sort(mAllMethods.begin(), mAllMethods.end(), [ascending](SIMethodBase* a, SIMethodBase* b) {
-        return ascending ? a->getId() < b->getId() : a->getId() > b->getId();
-        });
+    NELusanCommon::sortById(mAllMethods, ascending);
 }
 
 QList<SIMethodRequest*> SIMethodData::getConnectedRequests(SIMethodResponse* response) const
@@ -468,6 +437,74 @@ void SIMethodData::addMethodToList(SIMethodBase* method)
             break;
         case SIMethodBase::eMethodType::MethodBroadcast:
             mBroadcastMethods.append(static_cast<SIMethodBroadcast*>(method));
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void SIMethodData::removeMethodFromList(SIMethodBase* method)
+{
+    if (method != nullptr)
+    {
+        mAllMethods.removeOne(method);
+        switch (method->getMethodType())
+        {
+        case SIMethodBase::eMethodType::MethodRequest:
+            mRequestMethods.removeOne(static_cast<SIMethodRequest*>(method));
+            break;
+        case SIMethodBase::eMethodType::MethodResponse:
+            mResponseMethods.removeOne(static_cast<SIMethodResponse*>(method));
+            break;
+        case SIMethodBase::eMethodType::MethodBroadcast:
+            mBroadcastMethods.removeOne(static_cast<SIMethodBroadcast*>(method));
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void SIMethodData::replaceMethodInList(SIMethodBase* oldMethod, SIMethodBase* newMethod)
+{
+    if (oldMethod != nullptr && newMethod != nullptr)
+    {
+        int index = mAllMethods.indexOf(oldMethod);
+        if (index >= 0)
+        {
+            mAllMethods[index] = newMethod;
+        }
+        else
+        {
+            mAllMethods.append(newMethod);
+        }
+
+        switch (oldMethod->getMethodType())
+        {
+        case SIMethodBase::eMethodType::MethodRequest:
+            mRequestMethods.removeOne(static_cast<SIMethodRequest*>(oldMethod));
+            break;
+        case SIMethodBase::eMethodType::MethodResponse:
+            mResponseMethods.removeOne(static_cast<SIMethodResponse*>(oldMethod));
+            break;
+        case SIMethodBase::eMethodType::MethodBroadcast:
+            mBroadcastMethods.removeOne(static_cast<SIMethodBroadcast*>(oldMethod));
+            break;
+        default:
+            break;
+        }
+
+        switch (newMethod->getMethodType())
+        {
+        case SIMethodBase::eMethodType::MethodRequest:
+            mRequestMethods.append(static_cast<SIMethodRequest*>(newMethod));
+            break;
+        case SIMethodBase::eMethodType::MethodResponse:
+            mResponseMethods.append(static_cast<SIMethodResponse*>(newMethod));
+            break;
+        case SIMethodBase::eMethodType::MethodBroadcast:
+            mBroadcastMethods.append(static_cast<SIMethodBroadcast*>(newMethod));
             break;
         default:
             break;
