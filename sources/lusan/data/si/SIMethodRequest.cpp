@@ -113,7 +113,7 @@ void SIMethodRequest::connectResponse(SIMethodResponse* respMethod)
 
 const QString& SIMethodRequest::getConectedResponseName(void) const
 {
-    return mRespName;
+    return mRespMethod != nullptr ? mRespMethod->getName() : mRespName;
 }
 
 SIMethodResponse* SIMethodRequest::getConectedResponse(void) const

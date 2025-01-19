@@ -111,7 +111,7 @@ public:
      * \param   reqId       The ID of the request method.
      * \return  The response method object if found, nullptr otherwise.
      **/
-    SIMethodResponse* findReqResponse(uint32_t reqId) const;
+    SIMethodResponse* findConnectedResponse(uint32_t reqId) const;
 
     /**
      * \brief   Checks if a method exists in the list.
@@ -248,6 +248,19 @@ private:
      * \param   method      The method object to add.
      **/
     void addMethodToList(SIMethodBase* method);
+
+    /**
+     * \brief   Removes a method object from the appropriate list.
+     * \param   method      The method object to remove.
+     **/
+    void removeMethodFromList(SIMethodBase* method);
+
+    /**
+     * \brief   Replaces a method object in the list.
+     * \param   oldMethod   The old method object.
+     * \param   newMethod   The new method object.
+     **/
+    void replaceMethodInList(SIMethodBase* oldMethod, SIMethodBase* newMethod);
 
     /**
      * \brief   Creates a method object based on the given name and type.

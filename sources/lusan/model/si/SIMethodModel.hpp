@@ -129,6 +129,10 @@ public:
     
     inline const SIDataTypeData& getDataTypeData(void) const;
 
+    inline SIMethodData& getMethodData(void);
+
+    inline const SIMethodData& getMethodData(void) const;
+
 private:
     SIMethodData&   mData;      //!< The method data object.
     SIDataTypeData& mDataType;  //!< The data type data object.
@@ -142,6 +146,16 @@ inline SIDataTypeData& SIMethodModel::getDataTypeData(void)
 inline const SIDataTypeData& SIMethodModel::getDataTypeData(void) const
 {
     return mDataType;
+}
+
+inline SIMethodData& SIMethodModel::getMethodData(void)
+{
+    return mData;
+}
+
+inline const SIMethodData& SIMethodModel::getMethodData(void) const
+{
+    return mData;
 }
 
 #endif // LUSAN_MODEL_SI_SIMETHODMODEL_HPP
