@@ -25,10 +25,16 @@
 #include "lusan/view/si/SIMethodParamDetails.hpp"
 #include "lusan/view/si/SIMethodList.hpp"
 
+
 #include "lusan/data/si/SIMethodBroadcast.hpp"
 #include "lusan/data/si/SIMethodRequest.hpp"
 #include "lusan/data/si/SIMethodResponse.hpp"
+#include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/model/si/SIMethodModel.hpp"
+#include "lusan/model/common/DataTypesModel.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -57,6 +63,7 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
     , mList         (new SIMethodList(this))
     , mParams       (new SIMethodParamDetails(this))
     , mWidget       (new SIMethodWidget(this))
+    , mParamTypes   (new DataTypesModel(model.getDataTypeData()))
     , ui            (*mWidget->ui)
     , mCount        (0)
 {
@@ -87,6 +94,95 @@ SIMethod::~SIMethod(void)
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mDetails);
     ui.horizontalLayout->removeWidget(mParams);
+}
+
+void SIMethod::dataTypeCreated(DataTypeCustom* dataType)
+{
+    mParamTypes->dataTypeCreated(dataType);
+}
+
+void SIMethod::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+{
+    mParamTypes->dataTypeConverted(oldType, newType);
+}
+
+void SIMethod::dataTypeRemoved(DataTypeCustom* dataType)
+{
+    blockBasicSignals(true);
+    mParamTypes->dataTypeRemoved(dataType);
+
+    QTreeWidget* table = mList->ctrlTableList();
+    int count = table->topLevelItemCount();
+    for (int i = 0; i < count; ++i)
+    {
+        QTreeWidgetItem* item = table->topLevelItem(i);
+        if (item != nullptr)
+        {
+            SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+            Q_ASSERT(method != nullptr);
+            if (method->isEmpty() == false)
+            {
+                int childCount = item->childCount();
+                for (int j = 0; j < childCount; ++j)
+                {
+                    QTreeWidgetItem *child = item->child(j);
+                    Q_ASSERT(child != nullptr);
+                    DataTypeBase* savedType = child->data(2, Qt::ItemDataRole::UserRole).value<DataTypeBase *>();
+                    if (savedType == static_cast<DataTypeBase *>(dataType))
+                    {
+                        child->setData(2, Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase *>(nullptr));
+                        // child->setIcon(1, QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+                        child->setText(1, "<invalid>");
+                        uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
+                        MethodParameter* param = method->findElement(id);
+                        Q_ASSERT(param != nullptr);
+                        param->setType(QString());
+                    }
+                }
+            }
+        }
+    }
+    
+    blockBasicSignals(false);
+}
+
+void SIMethod::dataTypeUpdated(DataTypeCustom* dataType)
+{
+    blockBasicSignals(true);
+    
+    mParamTypes->dataTypeUpdated(dataType);
+    QTreeWidget* table = mList->ctrlTableList();
+    int count = table->topLevelItemCount();
+    const QString& name  = dataType->getName();
+    for (int i = 0; i < count; ++i)
+    {
+        QTreeWidgetItem* item = table->topLevelItem(i);
+        if (item != nullptr)
+        {
+            SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+            Q_ASSERT(method != nullptr);
+            if (method->isEmpty() == false)
+            {
+                int childCount = item->childCount();
+                for (int j = 0; j < childCount; ++j)
+                {
+                    QTreeWidgetItem *child = item->child(j);
+                    Q_ASSERT(child != nullptr);
+                    DataTypeBase* savedType = child->data(2, Qt::ItemDataRole::UserRole).value<DataTypeBase *>();
+                    if ((savedType == static_cast<DataTypeBase *>(dataType)) && (name != item->text(1)))
+                    {
+                        child->setText(1, dataType->getName());
+                        uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
+                        MethodParameter* param = method->findElement(id);
+                        Q_ASSERT(param != nullptr);
+                        param->setType(dataType->getName());
+                    }                    
+                }
+            }
+        }
+    }
+    
+    blockBasicSignals(false);
 }
 
 void SIMethod::onNameChanged(const QString& newName)
@@ -145,7 +241,7 @@ void SIMethod::onRequestSelected(bool isSelected)
     }
     
     blockBasicSignals(true);
-    selectRequest(static_cast<SIMethodRequest*>(newMethod));
+    showMethodDetails(newMethod);
     blockBasicSignals(false);
     delete oldMethod;
 }
@@ -189,12 +285,24 @@ void SIMethod::onBroadcastSelected(bool isSelected)
     }
 
     blockBasicSignals(true);
-    selectBroadcast(static_cast<SIMethodBroadcast*>(newMethod));
+    showMethodDetails(newMethod);
     blockBasicSignals(false);
     delete oldMethod;
 }
 
-void SIMethod::onConnectedResponseChanged(int index)
+void SIMethod::onDeprecateChecked(bool isChecked)
+{
+}
+
+void SIMethod::onDeprecateChanged(const QString& newText)
+{
+}
+
+void SIMethod::onDescriptionChanged(void)
+{
+}
+
+void SIMethod::onConnectedResponseChanged(const QString& newText)
 {
 }
 
@@ -222,7 +330,7 @@ void SIMethod::onAddClicked(void)
     table->addTopLevelItem(item);
     item->setSelected(true);
     table->setCurrentItem(item);
-    selectRequest(static_cast<SIMethodRequest *>(newMethod));
+    showMethodDetails(newMethod);
     blockBasicSignals(false);    
 }
 
@@ -248,23 +356,30 @@ void SIMethod::onParamAddClicked(void)
     {
         name = _defName + QString::number(++cnt);
     } while (method->findElement(name) != nullptr);
-
+    
     MethodParameter* param = mModel.addParameter(method, name);
     if (param != nullptr)
     {
-
+        
+        blockBasicSignals(true);
         QTreeWidgetItem* item = new QTreeWidgetItem(parent);
+        DataTypeBase* dataType = mModel.getDataTypeData().findDataType(param->getType());
+        Q_ASSERT(dataType != nullptr);
         item->setText(0, param->getName());
         item->setIcon(0, QIcon());
         item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
         item->setText(1, param->getType());
         item->setData(1, Qt::ItemDataRole::UserRole, param->getId());
         item->setText(2, param->getValue());
+        item->setData(2, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
         parent->addChild(item);
         cur->setSelected(false);
         item->setSelected(true);
         item->setExpanded(true);
         table->setCurrentItem(item);
+        
+        showParamDetails(method, *param);
+        blockBasicSignals(false);
     }
 }
 
@@ -288,8 +403,67 @@ void SIMethod::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previ
 {
 }
 
+void SIMethod::onParamNameChanged(const QString& newText)
+{
+    
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    Q_ASSERT(item != nullptr);
+    SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>();
+    Q_ASSERT(method != nullptr);
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    Q_ASSERT(id != 0);
+    MethodParameter* param = method->findElement(id);
+    Q_ASSERT(param != nullptr);
+    
+    param->setName(newText);    
+    item->setText(0, newText);
+}
+
+void SIMethod::onParamTypeChanged(const QString& newText)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    Q_ASSERT(item != nullptr);
+    SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>();
+    Q_ASSERT(method != nullptr);
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    Q_ASSERT(id != 0);
+    MethodParameter* param = method->findElement(id);
+    Q_ASSERT(param != nullptr);
+    DataTypeBase* dataType = mModel.getDataTypeData().findDataType(newText);
+    Q_ASSERT(dataType != nullptr);
+    
+    param->setType(newText);    
+    item->setText(1, newText);
+    item->setData(2, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
+}
+
+void SIMethod::onParamDefaultChecked(bool isChecked)
+{
+}
+
+void SIMethod::onParamDefaultChanged(const QString& newText)
+{
+}
+
+void SIMethod::onParamDescriptionChanged(void)
+{
+}
+
+void SIMethod::onParamDeprecateChecked(bool isChecked)
+{
+}
+
+void SIMethod::onParamDeprecateHintChanged(const QString& newText)
+{
+}
+
 void SIMethod::updateData(void)
 {
+    mParamTypes->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
+    mParamTypes->updateDataTypeLists();
+    
     const QList<SIMethodBase*>& list = mModel.getMethodList();
     QTreeWidget* table = mList->ctrlTableList();
     table->clear();
@@ -302,6 +476,7 @@ void SIMethod::updateData(void)
 
 void SIMethod::updateWidgets(void)
 {
+    
     const QList<SIMethodResponse*>& responses = mModel.getResponseMethods();
     QComboBox* combo = mDetails->ctrlConnectedResponse();
     combo->clear();
@@ -330,23 +505,36 @@ void SIMethod::updateWidgets(void)
     mList->ctrlButtonParamInsert()->setEnabled(false);
 
     mList->ctrlButtonAdd()->setEnabled(true);
+    mParams->ctrlParamType()->setModel(mParamTypes);
 }
 
 void SIMethod::setupSignals(void)
 {
-    connect(mDetails->ctrlName(), &QLineEdit::textChanged, this, &SIMethod::onNameChanged);
-    connect(mDetails->ctrlRequest(), &QRadioButton::toggled, this, &SIMethod::onRequestSelected);
-    connect(mDetails->ctrlResponse(), &QRadioButton::toggled, this, &SIMethod::onResponseSelected);
-    connect(mDetails->ctrlBroadcast(), &QRadioButton::toggled, this, &SIMethod::onBroadcastSelected);
-    connect(mDetails->ctrlConnectedResponse(), &QComboBox::currentIndexChanged, this, &SIMethod::onConnectedResponseChanged);
-    connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIMethod::onAddClicked);
-    connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIMethod::onRemoveClicked);
-    connect(mList->ctrlButtonParamAdd(), &QToolButton::clicked, this, &SIMethod::onParamAddClicked);
-    connect(mList->ctrlButtonParamRemove(), &QToolButton::clicked, this, &SIMethod::onParamRemoveClicked);
-    connect(mList->ctrlButtonParamInsert(), &QToolButton::clicked, this, &SIMethod::onParamInsertClicked);
-    connect(mList->ctrlButtonMoveUp(), &QToolButton::clicked, this, &SIMethod::onMoveUpClicked);
-    connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked, this, &SIMethod::onMoveDownClicked);
-    connect(mList->ctrlTableList(), &QTreeWidget::currentItemChanged, this, &SIMethod::onCurCellChanged);
+    connect(mDetails->ctrlName()            , &QLineEdit::textChanged       , this, &SIMethod::onNameChanged);
+    connect(mDetails->ctrlRequest()         , &QRadioButton::toggled        , this, &SIMethod::onRequestSelected);
+    connect(mDetails->ctrlResponse()        , &QRadioButton::toggled        , this, &SIMethod::onResponseSelected);
+    connect(mDetails->ctrlBroadcast()       , &QRadioButton::toggled        , this, &SIMethod::onBroadcastSelected);
+    connect(mDetails->ctrlIsDeprecated()    , &QCheckBox::toggled           , this, &SIMethod::onDeprecateChecked);
+    connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::textEdited        , this, &SIMethod::onDeprecateChanged);
+    connect(mDetails->ctrlDescription()     , &QPlainTextEdit::textChanged  , this, &SIMethod::onDescriptionChanged);
+    connect(mDetails->ctrlConnectedResponse(), &QComboBox::currentTextChanged, this, &SIMethod::onConnectedResponseChanged);
+    
+    connect(mList->ctrlButtonAdd()          , &QToolButton::clicked         , this, &SIMethod::onAddClicked);
+    connect(mList->ctrlButtonRemove()       , &QToolButton::clicked         , this, &SIMethod::onRemoveClicked);
+    connect(mList->ctrlButtonParamAdd()     , &QToolButton::clicked         , this, &SIMethod::onParamAddClicked);
+    connect(mList->ctrlButtonParamRemove()  , &QToolButton::clicked         , this, &SIMethod::onParamRemoveClicked);
+    connect(mList->ctrlButtonParamInsert()  , &QToolButton::clicked         , this, &SIMethod::onParamInsertClicked);
+    connect(mList->ctrlButtonMoveUp()       , &QToolButton::clicked         , this, &SIMethod::onMoveUpClicked);
+    connect(mList->ctrlButtonMoveDown()     , &QToolButton::clicked         , this, &SIMethod::onMoveDownClicked);
+    connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged, this, &SIMethod::onCurCellChanged);
+    
+    connect(mParams->ctrlParamName()        , &QLineEdit::textChanged       , this, &SIMethod::onParamNameChanged);
+    connect(mParams->ctrlParamType()        , &QComboBox::currentTextChanged, this, &SIMethod::onParamTypeChanged);
+    connect(mParams->ctrlParamHasDefault()  , &QCheckBox::toggled           , this, &SIMethod::onParamDefaultChecked);
+    connect(mParams->ctrlParamDefaultValue(), &QLineEdit::textChanged       , this, &SIMethod::onParamDefaultChanged);
+    connect(mParams->ctrlParamDescription() , &QPlainTextEdit::textChanged  , this, &SIMethod::onParamDescriptionChanged);
+    connect(mParams->ctrlParamIsDeprecated(), &QCheckBox::toggled           , this, &SIMethod::onParamDeprecateChecked);
+    connect(mParams->ctrlParamDeprecateHint(),&QLineEdit::textEdited        , this, &SIMethod::onParamDeprecateHintChanged);
 }
 
 void SIMethod::blockBasicSignals(bool doBlock)
@@ -356,6 +544,11 @@ void SIMethod::blockBasicSignals(bool doBlock)
     mDetails->ctrlResponse()->blockSignals(doBlock);
     mDetails->ctrlBroadcast()->blockSignals(doBlock);
     mDetails->ctrlConnectedResponse()->blockSignals(doBlock);
+    
+    mParams->ctrlParamName()->blockSignals(doBlock);
+    mParams->ctrlParamType()->blockSignals(doBlock);
+    mParams->ctrlParamHasDefaultValue()->blockSignals(doBlock);
+    mParams->ctrlParamDefaultValue()->blockSignals(doBlock);
 
     mList->ctrlTableList()->blockSignals(doBlock);
 }
@@ -382,12 +575,14 @@ QTreeWidgetItem* SIMethod::updateMethodNode(QTreeWidgetItem* item, SIMethodBase*
         for (const MethodParameter& param : params)
         {
             QTreeWidgetItem* paramItem = new QTreeWidgetItem(item);
+            DataTypeBase *dataType = mModel.getDataTypeData().findDataType(param.getType());
             paramItem->setText(0, param.getName());
             paramItem->setIcon(0, QIcon());
             paramItem->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
             paramItem->setText(1, param.getType());
             paramItem->setData(1, Qt::ItemDataRole::UserRole, param.getId());
             paramItem->setText(2, param.getValue());
+            paramItem->setData(2, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
             item->addChild(paramItem);
         }
     }
@@ -395,24 +590,46 @@ QTreeWidgetItem* SIMethod::updateMethodNode(QTreeWidgetItem* item, SIMethodBase*
     return item;
 }
 
-void SIMethod::selectRequest(SIMethodRequest* request)
+void SIMethod::showMethodDetails(SIMethodBase* method)
 {
-    if (request != nullptr)
+    mParams->hide();
+    mDetails->setVisible(true);
+    if (method != nullptr)
     {
         mDetails->ctrlName()->setEnabled(true);
-        mDetails->ctrlRequest()->setChecked(true);
         mDetails->ctrlRequest()->setEnabled(true);
         mDetails->ctrlResponse()->setEnabled(true);
         mDetails->ctrlBroadcast()->setEnabled(true);
-        mDetails->ctrlConnectedResponse()->setEnabled(true);
         mList->ctrlButtonRemove()->setEnabled(true);
         mList->ctrlButtonParamAdd()->setEnabled(true);
-        
-        mDetails->ctrlName()->setText(request->getName());
-        mDetails->ctrlConnectedResponse()->setCurrentText(request->getConectedResponseName());
-        mDetails->ctrlDescription()->setPlainText(request->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(request->getDeprecateHint());
-        mDetails->ctrlIsDeprecated()->setChecked(request->isDeprecated());
+        mList->ctrlButtonParamRemove()->setEnabled(false);
+        mList->ctrlButtonParamInsert()->setEnabled(false);
+
+        mDetails->ctrlName()->setText(method->getName());
+        mDetails->ctrlDescription()->setPlainText(method->getDescription());
+        mDetails->ctrlDeprecateHint()->setText(method->getDeprecateHint());
+        mDetails->ctrlIsDeprecated()->setChecked(method->isDeprecated());
+
+        switch (method->getMethodType())
+        {
+        case SIMethodBase::eMethodType::MethodRequest:
+            mDetails->ctrlConnectedResponse()->setEnabled(true);
+            mDetails->ctrlConnectedResponse()->setCurrentText(static_cast<SIMethodRequest *>(method)->getConectedResponseName());
+            mDetails->ctrlRequest()->setChecked(true);
+            break;
+        case SIMethodBase::eMethodType::MethodResponse:
+            mDetails->ctrlConnectedResponse()->setEnabled(false);
+            mDetails->ctrlConnectedResponse()->setCurrentText(QString());
+            mDetails->ctrlResponse()->setChecked(true);
+            break;
+        case SIMethodBase::eMethodType::MethodBroadcast:
+            mDetails->ctrlConnectedResponse()->setEnabled(false);
+            mDetails->ctrlConnectedResponse()->setCurrentText(QString());
+            mDetails->ctrlBroadcast()->setChecked(true);
+            break;
+        default:
+            break;
+        }
 
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
@@ -434,37 +651,77 @@ void SIMethod::selectRequest(SIMethodRequest* request)
     }
 }
 
-void SIMethod::selectBroadcast(SIMethodBroadcast* broadcast)
+void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& param)
 {
-    if (broadcast != nullptr)
+    mDetails->hide();
+    mParams->setVisible(true);
+    if (method != nullptr)
     {
-        mDetails->ctrlName()->setEnabled(true);
-        mDetails->ctrlBroadcast()->setChecked(true);
-        mDetails->ctrlRequest()->setEnabled(true);
-        mDetails->ctrlResponse()->setEnabled(true);
-        mDetails->ctrlBroadcast()->setEnabled(true);
-        mDetails->ctrlConnectedResponse()->setEnabled(false);
-
-        mDetails->ctrlName()->setText(broadcast->getName());
-        mDetails->ctrlConnectedResponse()->setCurrentText(QString());
-        mDetails->ctrlDescription()->setPlainText(broadcast->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(broadcast->getDeprecateHint());
-        mDetails->ctrlIsDeprecated()->setChecked(broadcast->isDeprecated());
-
-        mDetails->ctrlName()->setFocus();
-        mDetails->ctrlName()->selectAll();
+        mParams->ctrlParamName()->setText(param.getName());
+        mParams->ctrlParamType()->setCurrentText(param.getType());
+        if (param.hasDefault())
+        {
+            mParams->ctrlParamHasDefaultValue()->setChecked(true);
+            mParams->ctrlParamDefaultValue()->setText(param.getValue());
+            mParams->ctrlParamDefaultValue()->setEnabled(true);
+        }
+        else
+        {
+            mParams->ctrlParamHasDefaultValue()->setChecked(false);
+            mParams->ctrlParamDefaultValue()->setText(QString());
+            mParams->ctrlParamDefaultValue()->setEnabled(false);
+        }
+        
+        mParams->ctrlParamDescription()->setPlainText(param.getDescription());
+        mParams->ctrlParamIsDeprecated()->setChecked(param.getIsDeprecated());
+        mParams->ctrlParamDeprecateHint()->setText(param.getIsDeprecated() ? param.getDeprecateHint() : QString());
+        mParams->ctrlParamName()->setFocus();
+        mParams->ctrlParamName()->selectAll();        
     }
     else
     {
-        mDetails->ctrlName()->setText(QString());
-        mDetails->ctrlRequest()->setChecked(false);
-        mDetails->ctrlRequest()->setEnabled(false);
-        mDetails->ctrlResponse()->setEnabled(false);
-        mDetails->ctrlBroadcast()->setEnabled(false);
-        mDetails->ctrlConnectedResponse()->setEnabled(false);
-        mDetails->ctrlConnectedResponse()->setCurrentText(QString());
-        mDetails->ctrlDescription()->setPlainText(QString());
-        mDetails->ctrlDeprecateHint()->setText(QString());
-        mDetails->ctrlIsDeprecated()->setChecked(false);
+        mParams->ctrlParamName()->setText(QString());
+        mParams->ctrlParamType()->setCurrentText(QString());
+        mParams->ctrlParamDefaultValue()->setText(QString());
+        mParams->ctrlParamDescription()->setPlainText(QString());
+        mParams->ctrlParamIsDeprecated()->setChecked(false);
+        mParams->ctrlParamDeprecateHint()->setText(QString());
     }
+}
+
+bool SIMethod::getCurrentMethod(QTreeWidgetItem*& item, SIMethodBase*& method)
+{
+    bool result{ false };
+    QTreeWidget* table = mList->ctrlTableList();
+    item = table->currentItem();
+    method = nullptr;
+    if (item != nullptr)
+    {
+        method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+        result = (method != nullptr);
+    }
+
+    return result;
+}
+
+bool SIMethod::getCurrentParam(QTreeWidgetItem*& item, SIMethodBase*& method, MethodParameter*& param)
+{
+    bool result{ false };
+    QTreeWidget* table = mList->ctrlTableList();
+    item = table->currentItem();
+    method = nullptr;
+    param = nullptr;
+    if (item != nullptr)
+    {
+        method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+        uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+        if (id != 0)
+        {
+            Q_ASSERT(item->parent() != nullptr);
+            param = method->findElement(id);
+            result = (param != nullptr);
+        }
+    }
+
+    return false;
 }

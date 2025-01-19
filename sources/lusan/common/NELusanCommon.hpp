@@ -19,9 +19,13 @@
  *
  ************************************************************************/
 
-#include <QStringList>
-#include <QString>
+#include <QList>
 #include <QPoint>
+#include <QString>
+#include <QStringList>
+
+#include <algorithm>
+#include <type_traits>
 
 /**
  * \namespace NELusanCommon
@@ -111,7 +115,135 @@ namespace NELusanCommon
 
     constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
     constexpr const char * const xmlElementFile             { "File" };
+    
+    template<typename T>
+    struct get_id
+    {
+        uint32_t operator()(const T & entry){return entry.getId();};
+    };
+    
+    template<typename T>
+    struct get_id<T*>
+    {
+        uint32_t operator()(const T* entry){return entry->getId();};
+    };
+    
+    template<typename T>
+    struct get_name
+    {
+        const QString& operator()(const T & entry){return entry.getName();};
+    };
+    
+    template<typename T>
+    struct get_name<T*>
+    {
+        const QString& operator()(const T* entry){return entry->getName();};
+    };
+        
+    template <class Type, class Iter>
+    void sortByName(Iter first, Iter last, bool ascending)
+    {
+        std::sort(first, last, [ascending](Type lhs, Type rhs) -> bool
+                  {
+                      int res = get_name<Type>{}(lhs).compare(get_name<Type>{}(rhs), Qt::CaseInsensitive);
+                      return ascending ? res < 0 : res > 0;
+                  });
+    }
+    
+    template <class Type>
+    void sortByName(QList<Type>& list, bool ascending)
+    {
+        NELusanCommon::sortByName<const Type &>(list.begin(), list.end(), ascending);
+    }
 
+    template <class Type>
+    void sortByName(QList<Type *>& list, bool ascending)
+    {
+        NELusanCommon::sortByName<const Type*>(list.begin(), list.end(), ascending);
+    }
+    
+    template<class Type, typename Iter = QList<Type *>::iterator>
+    void sortById( Iter first, Iter last, bool ascending)
+    {
+        std::sort(first, last, [ascending](Type lhs, Type rhs) -> bool
+            {
+                return ascending ? get_id<Type>{}(lhs) < get_id<Type>{}(rhs) : get_id<Type>{}(lhs) > get_id<Type>{}(rhs);
+            });
+    }
+    
+    template <class Type>
+    void sortById(QList<Type>& list, bool ascending)
+    {
+        NELusanCommon::sortById<const Type &>(list.begin(), list.end(), ascending);
+    }
+
+    template <class Type>
+    void sortById(QList<Type *>& list, bool ascending)
+    {
+        NELusanCommon::sortById<const Type *>(list.begin(), list.end(), ascending);
+    }
+
+    template <class Type>
+    void moveUp(QList<Type>& list, int index)
+    {
+        if ((index > 0) && (index < list.size()))
+        {
+            Type& one = list.at(index);
+            Type& two = list.at(index - 1);
+            uint32_t id = one.getId();
+            one.setId(two.getId());
+            two.setId(id);
+
+            list.at(index) = two;
+            list.at(index - 1) = one;
+        }
+    }
+
+    template <class Type>
+    void moveUp(QList<Type *>& list, int index)
+    {
+        if ((index > 0) && (index < list.size()))
+        {
+            Type* one = list.at(index);
+            Type* two = list.at(index - 1);
+            uint32_t id = one->getId();
+            one->setId(two->getId());
+            two->setId(id);
+
+            list.at(index) = two;
+            list.at(index - 1) = one;
+        }
+    }
+
+    template <class Type>
+    void moveDown(QList<Type>& list, int index)
+    {
+        if ((index >= 0) && (index < list.size() - 1))
+        {
+            Type& one = list.at(index);
+            Type& two = list.at(index + 1);
+            uint32_t id = one.getId();
+            one.setId(two.getId());
+            two.setId(id);
+            list.at(index) = two;
+            list.at(index + 1) = one;
+        }
+    }
+
+    template <class Type>
+    void moveDown(QList<Type*>& list, int index)
+    {
+        if ((index >= 0) && (index < list.size() - 1))
+        {
+            Type* one = list.at(index);
+            Type* two = list.at(index + 1);
+            uint32_t id = one->getId();
+            one->setId(two->getId());
+            two->setId(id);
+            list.at(index) = two;
+            list.at(index + 1) = one;
+        }
+    }
 }
 
 #endif  // LUSAN_COMMON_NELUSANCOMMON_HPP

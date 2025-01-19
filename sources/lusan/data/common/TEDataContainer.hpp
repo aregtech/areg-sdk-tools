@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include <QList>
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/ElementBase.hpp"
 
 //////////////////////////////////////////////////////////////////////////
@@ -90,7 +91,9 @@ public:
      * \brief   Returns the list of data elements.
      * \return  The list of data elements.
      **/
-    const QList<Data>& getElements(void) const;
+    inline const QList<Data>& getElements(void) const;
+
+    inline bool isEmpty(void) const;
 
     /**
      * \brief   Sets the list of data elements.
@@ -261,9 +264,14 @@ public:
     /**
      * \brief   Sorts the elements by name.
      * \param   ascending   If true, sorts in ascending order, otherwise in descending order.
-     * \return  True if the elements were sorted, false otherwise.
      **/
-    bool sortElementsByName(bool ascending = true);
+    void sortElementsByName(bool ascending = true);
+
+    /**
+     * \brief   Sorts the elements by ID.
+     * \param   ascending   If true, sorts in ascending order, otherwise in descending order.
+     **/
+    void sortElementsById(bool ascending = true);
 
     /**
      * \brief   Checks whether the container has list of elements.
@@ -365,9 +373,15 @@ TEDataContainer<Data, ElemBase>& TEDataContainer<Data, ElemBase>::operator = (TE
 }
 
 template<class Data, class ElemBase>
-const QList<Data>& TEDataContainer<Data, ElemBase>::getElements(void) const
+inline const QList<Data>& TEDataContainer<Data, ElemBase>::getElements(void) const
 {
     return mElementList;
+}
+
+template<class Data, class ElemBase>
+inline bool TEDataContainer<Data, ElemBase>::isEmpty(void) const
+{
+    return mElementList.isEmpty();
 }
 
 template<class Data, class ElemBase>
@@ -658,14 +672,15 @@ bool TEDataContainer<Data, ElemBase>::hasElement(const Data& element) const
 }
 
 template<class Data, class ElemBase>
-bool TEDataContainer<Data, ElemBase>::sortElementsByName(bool ascending)
+void TEDataContainer<Data, ElemBase>::sortElementsByName(bool ascending)
 {
-    std::sort(mElementList.begin(), mElementList.end(), [ascending](const Data& left, const Data& right)
-        {
-            return (ascending ? left.getName() < right.getName() : left.getName() > right.getName());
-        });
+    NELusanCommon::sortByName(mElementList, ascending);
+}
 
-    return true;
+template<class Data, class ElemBase>
+inline void TEDataContainer<Data, ElemBase>::sortElementsById(bool ascending)
+{
+    NELusanCommon::sortById(mElementList, ascending);
 }
 
 template<class Data, class ElemBase>

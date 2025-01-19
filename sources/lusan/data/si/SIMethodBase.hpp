@@ -166,6 +166,18 @@ public:
 
     MethodParameter* addParameter(const QString& name, const QString& type = "bool");
 
+    bool hasParamDefault(const QString& paramName) const;
+
+    bool hasParamDefault(uint32_t paramId) const;
+
+    bool hasEntryDefault(int index) const;
+
+    bool canParamHaveDefault(const QString& paramName) const;
+
+    bool canParamHaveDefault(uint32_t paramId) const;
+
+    bool canEntryHaveDefault(int index) const;
+
     /**
      * \brief   Converts the method type to a string value.
      * \param   methodType  The method type to convert.

@@ -102,7 +102,7 @@ void MethodParameter::setValue(const QString& value)
     mValue = value;
 }
 
-bool MethodParameter::isDefault() const
+bool MethodParameter::hasDefault() const
 {
     return mIsDefault;
 }

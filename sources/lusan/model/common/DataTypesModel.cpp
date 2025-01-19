@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/model/common/DataTypesModel.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/si/SIDataTypeData.hpp"
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
@@ -424,17 +425,11 @@ inline void DataTypesModel::_sort(bool sortPredefined /*= true*/)
     const int count{ mCountPredef };
     if (count > 0)
     {
-        if (sortPredefined)
+        if ((sortPredefined) && (count > 0))
         {
-            std::sort(mDataTypeList.begin() + count, mDataTypeList.begin() + count - 1, [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
-                {
-                    return lhs->getId() < rhs->getId();
-                });
+            NELusanCommon::sortById<const DataTypeBase *>(mDataTypeList.begin(), mDataTypeList.begin() + count - 1, true);
         }
-
-        std::sort(mDataTypeList.begin() + count, mDataTypeList.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
-            {
-                return lhs->getName().compare(rhs->getName(), Qt::CaseSensitivity::CaseInsensitive) < 0;
-            });
+        
+        NELusanCommon::sortByName<const DataTypeBase *>(mDataTypeList.begin() + count, mDataTypeList.end(), true);
     }
 }

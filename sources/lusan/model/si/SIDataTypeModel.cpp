@@ -90,9 +90,14 @@ const DataTypeCustom* SIDataTypeModel::findDataType(uint32_t id) const
     return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
 }
 
-void SIDataTypeModel::sortDataTypes(bool ascending)
+void SIDataTypeModel::sortByName(bool ascending)
 {
-    mData.sort(ascending);
+    mData.sortByName(ascending);
+}
+
+void SIDataTypeModel::sortById(bool ascending)
+{
+    mData.sortById(ascending);
 }
 
 const QList<DataTypeCustom*>& SIDataTypeModel::getDataTypes(void) const

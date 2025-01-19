@@ -23,6 +23,8 @@
  * Includes
  ************************************************************************/
 #include "lusan/common/ElementBase.hpp"
+#include <QObject>
+
 #include "lusan/data/common/DataTypeBase.hpp"
 #include <QList>
 #include <QString>
@@ -46,8 +48,11 @@ class DataTypeStructure;
   * \class   SIDataTypeData
   * \brief   Manages data type data for service interfaces.
   **/
-class SIDataTypeData    : public ElementBase
+class SIDataTypeData    : public QObject
+                        , public ElementBase
 {
+    Q_OBJECT
+    
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -70,7 +75,15 @@ public:
     SIDataTypeData(QList<DataTypeCustom *>&& entries, ElementBase* parent = nullptr) noexcept;
 
     virtual ~SIDataTypeData(void);
-
+    
+signals:
+        
+    void signalDataTypeCreated(DataTypeCustom* dataType);
+    
+    void signalDataTypeRemoved(const DataTypeCustom* dataType);
+    
+    void signalDataTypeConverted(const DataTypeCustom* oldType, DataTypeCustom* newType);
+    
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
@@ -342,7 +355,9 @@ public:
      *                      should be sorted ascending or descending.
      *                      If true, the sorting is ascending.
      **/
-    void sort(bool ascending);
+    void sortByName(bool ascending);
+    
+    void sortById(bool ascending);
 
 private:
 

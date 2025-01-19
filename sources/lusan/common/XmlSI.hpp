@@ -106,7 +106,12 @@ namespace XmlSI
     constexpr const char* const xmlSIValueImported          { "Imported" };
     constexpr const char* const xmlSIValueContainer         { "Container" };
 
+    constexpr const char* const xmlSIMethodTypeRequest      { "Request" };
+    constexpr const char* const xmlSIMethodTypeResponse     { "Response" };
+    constexpr const char* const xmlSIMethodTypeBroadcast    { "Broadcast" };
 
+    constexpr const char* const xmlSIDefaultType            { xmlSIValueBool };
+    constexpr const char* const xmlSIDefaulValue            { xmlSIValueFalse };
     constexpr const unsigned int xmlElementId               { 50u };
 }
 

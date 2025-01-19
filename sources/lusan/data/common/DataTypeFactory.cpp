@@ -19,6 +19,7 @@
 
 #include "lusan/data/common/DataTypeFactory.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeContainer.hpp"
@@ -219,11 +220,7 @@ int DataTypeFactory::getPredefinedTypes(QList<DataTypeBase *>& result, const QLi
         }
     }
 
-    std::sort(result.begin() + initCount, result.end(), [](const DataTypeBase* lhs, const DataTypeBase* rhs) -> bool
-        {
-            return lhs->getId() < rhs->getId();
-        });
-    
+    NELusanCommon::sortById<const DataTypeBase*>(result.begin() + initCount, result.end(), true);
     return static_cast<int>(result.size()) - initCount;
 }
 

@@ -122,7 +122,7 @@ public:
      * \brief   Gets the default flag of the parameter.
      * \return  The default flag of the parameter.
      **/
-    bool isDefault() const;
+    bool hasDefault() const;
 
     /**
      * \brief   Sets the default flag of the parameter.

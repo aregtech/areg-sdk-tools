@@ -44,6 +44,11 @@ QComboBox * SIMethodParamDetails::ctrlParamType(void) const
     return ui->comboParamType;
 }
 
+QCheckBox* SIMethodParamDetails::ctrlParamHasDefault(void) const
+{
+    return ui->checkDefaultValue;
+}
+
 QLineEdit * SIMethodParamDetails::ctrlParamDefaultValue(void) const
 {
     return ui->editDefaultValue;
