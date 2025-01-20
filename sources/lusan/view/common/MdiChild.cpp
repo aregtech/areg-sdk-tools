@@ -103,35 +103,15 @@ bool MdiChild::saveAs()
 
 bool MdiChild::saveFile(const QString& fileName)
 {
-#if 0
-    QString errorMessage;
-
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
-    QSaveFile file(fileName);
-    if (file.open(QFile::WriteOnly | QFile::Text))
-    {
-        QTextStream out(&file);
-        out << toPlainText();
-        if (!file.commit()) 
-        {
-            errorMessage = tr("Cannot write file %1:\n%2.").arg(QDir::toNativeSeparators(fileName), file.errorString());
-        }
-    }
-    else
-    {
-        errorMessage = tr("Cannot open file %1 for writing:\n%2.").arg(QDir::toNativeSeparators(fileName), file.errorString());
-    }
-
+    mIsUntitled = writeToFile(fileName);
     QGuiApplication::restoreOverrideCursor();
-
-    if (!errorMessage.isEmpty())
-    {
-        QMessageBox::warning(this, tr("MDI"), errorMessage);
-        return false;
-    }
-#endif
-
     setCurrentFile(fileName);
+    return mIsUntitled;
+}
+
+bool MdiChild::writeToFile(const QString& filePath)
+{
     return true;
 }
 

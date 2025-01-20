@@ -71,6 +71,11 @@ SIOverview::~SIOverview(void)
     ui.horizontalLayout->removeWidget(mDetails);
 }
 
+void SIOverview::setServiceInterfaceName(const QString & siName)
+{
+    mDetails->ctrlName()->setText(siName);
+}
+    
 void SIOverview::onCheckedPublic(bool isChecked)
 {
     if (isChecked)

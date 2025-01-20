@@ -44,7 +44,9 @@ public:
 
     virtual ~ServiceInterfaceModel(void) = default;
 
-
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Returns the overview model.
@@ -66,10 +68,50 @@ public:
      **/
     inline SIIncludeModel & getIncludesModel(void);
 
+    /**
+     * \brief   Returns the data type model.
+     **/
     inline SIDataTypeModel& getDataTypeModel(void);
-    
+
+    /**
+     * \brief   Returns the methods model.
+     **/
     inline SIMethodModel& getMethodsModel(void);
 
+    /**
+     * \brief   Saves the service interface data to the file.
+     * \param   filePath    The file path to save the data.
+     * \return  Returns true if the data was successfully saved, false otherwise.
+     **/
+    inline bool saveToFile(const QString& filePath);
+    
+    /**
+     * \brief   Returns the file format version.
+     * \return  The file format version.
+     **/
+    inline QString getFileFormatVersion(void) const;
+
+    /**
+     * \brief   Gets the name of the service interface.
+     * \return  The name of the service interface.
+     **/
+    inline const QString& getName() const;
+
+    /**
+     * \brief   Gets the version of the service interface.
+     * \return  The version of the service interface.
+     **/
+    inline const VersionNumber& getVersion() const;
+
+    /**
+     * \brief   Gets the category of the service interface.
+     * \return  The category of the service interface.
+     **/
+    inline SIOverviewData::eCategory getCategory() const;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden class members
+//////////////////////////////////////////////////////////////////////////
 private:
     ServiceInterfaceData    mSIData;        //!< The service interface data.
     SIOverviewModel         mModelOverview; //!< The overview model.
@@ -78,6 +120,15 @@ private:
     SIMethodModel           mModelMethods;  //!< The methods model.
     SIConstantModel         mModelConstant; //!< The constant model.
     SIIncludeModel          mModelInclude;  //!< The include model.
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    ServiceInterfaceModel(const ServiceInterfaceModel& /*src*/) = delete;
+    ServiceInterfaceModel(ServiceInterfaceModel&& /*src*/) noexcept = delete;
+    ServiceInterfaceModel& operator = (const ServiceInterfaceModel& /*src*/) = delete;
+    ServiceInterfaceModel& operator = (ServiceInterfaceModel&& /*src*/) noexcept = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -112,6 +163,31 @@ inline SIConstantModel& ServiceInterfaceModel::getConstantsModel(void)
 inline SIIncludeModel & ServiceInterfaceModel::getIncludesModel(void)
 {
     return mModelInclude;
+}
+
+inline bool ServiceInterfaceModel::saveToFile(const QString& filePath)
+{
+    return mSIData.writeToFile(filePath);
+}
+
+inline QString ServiceInterfaceModel::getFileFormatVersion(void) const
+{
+    return mSIData.getFileFormatVersion();
+}
+
+inline const QString& ServiceInterfaceModel::getName() const
+{
+    return mModelOverview.getName();
+}
+
+inline const VersionNumber& ServiceInterfaceModel::getVersion() const
+{
+    return mModelOverview.getVersion();
+}
+
+inline SIOverviewData::eCategory ServiceInterfaceModel::getCategory() const
+{
+    return mModelOverview.getCategory();
 }
 
 #endif  // LUSAN_MODEL_SI_SERVICEINTERFACEMODEL_HPP

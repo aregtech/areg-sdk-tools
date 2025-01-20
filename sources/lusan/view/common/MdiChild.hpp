@@ -108,15 +108,33 @@ public:
 
     inline void setMdiSubwindow(QMdiSubWindow * mdiSubwindow);
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
 protected:
 
+    /**
+     * \brief   Returns the default file name of new created document.
+     **/
     virtual QString newDocumentName(void);
 
+    /**
+     * \brief   Returns the default name of new created document.
+     **/
     virtual const QString& newDocument(void) const;
 
+    /**
+     * \brief   Returns the default extension of new created document.
+     **/
     virtual const QString& newDocumentExt(void) const;
 
-protected:
+    /**
+     * \brief   Reads the document from the file.
+     * \param   filePath    The path of the file to read.
+     * \return  True if the document was successfully read, false otherwise.
+     **/
+    virtual bool writeToFile(const QString& filePath);
+
     /**
      * \brief   Handles the close event.
      * \param   event    The close event.
@@ -150,19 +168,18 @@ private:
     QString strippedName(const QString& fullFileName);
 
 //////////////////////////////////////////////////////////////////////////
-// member variables
+// Protected member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    //!< The current file name.
-    QString mCurFile;
-
-    QString mDocName;
-
-    //!< Indicates whether the file is untitled.
-    bool    mIsUntitled;
-
-    QMdiSubWindow * mMdiSubWindow;
+    QString         mCurFile;       //!< The current file name.
+    QString         mDocName;       //!< The document name.
+    bool            mIsUntitled;    //!< Indicates whether the file is untitled.
+    QMdiSubWindow*  mMdiSubWindow;  //!< The MDI subwindow.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// MdiChild class inline methods
+//////////////////////////////////////////////////////////////////////////
 
 inline const QString & MdiChild::currentFile(void) const
 {

@@ -20,6 +20,7 @@
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 
 #include <QFile>
+#include <QFileInfo>
 
 ServiceInterfaceData::ServiceInterfaceData(void)
     : ElementBase   (MINIMUM_ID, nullptr)
@@ -84,14 +85,18 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
     return false;
 }
 
-bool ServiceInterfaceData::writeToFile(const QString& filePath /*= ""*/) const
+bool ServiceInterfaceData::writeToFile(const QString& filePath /*= ""*/)
 {
     QString path = filePath.isEmpty() ? mFilePath : filePath;
     if (!path.isEmpty())
     {
         QFile file(path);
-        if (file.open(QIODevice::WriteOnly))
+        if (file.open(QFile::WriteOnly | QFile::Text))
         {
+            QFileInfo info(QString(file.filesystemFileName().c_str()));
+            const QString & serviceName = info.baseName();
+            mOverviewData.setName(serviceName);
+            
             QXmlStreamWriter xml(&file);
             xml.setAutoFormatting(true);
             xml.writeStartDocument();

@@ -70,6 +70,12 @@ public:
 public:
 
     /**
+     * \brief   Returns the file format version.
+     * \return  The file format version.
+     **/
+    inline QString getFileFormatVersion(void) const;
+
+    /**
      * \brief   Reads data from a file.
      * \param   filePath    The file path to read the data.
      * \return  Returns true if the data was successfully read, false otherwise.
@@ -81,7 +87,7 @@ public:
      * \param   filePath    The file path to write the data.
      * \return  Returns true if the data was successfully written, false otherwise.
      **/
-    bool writeToFile(const QString& filePath = "") const;
+    bool writeToFile(const QString& filePath = "");
 
     /**
      * \brief   Reads data from an XML stream.
@@ -160,6 +166,11 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // ServiceInterfaceData inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline QString ServiceInterfaceData::getFileFormatVersion(void) const
+{
+    return ServiceInterfaceData::XML_FORMAT_VERSION;
+}
 
 inline const QString& ServiceInterfaceData::getFilePath(void) const
 {
