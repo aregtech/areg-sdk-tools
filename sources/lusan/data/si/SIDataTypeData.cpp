@@ -170,7 +170,7 @@ bool SIDataTypeData::replaceCustomDataType(const DataTypeCustom& oldEntry, DataT
 
 bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.readNextStartElement() && xml.name() == XmlSI::xmlSIElementDataTypeList)
+    if (xml.isStartElement() && (xml.name() == XmlSI::xmlSIElementDataTypeList))
     {
         while (xml.readNextStartElement())
         {

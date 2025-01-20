@@ -176,13 +176,13 @@ private slots:
      * \brief   Creates a new MDI child window.
      * \return  A pointer to the new MDI child window.
      **/
-    MdiChild* createMdiChild();
+    MdiChild* createMdiChild(const QString& filePath = QString());
 
     /**
      * \brief   Creates a new Service Interface View.
      * \return  A pointer to the new Service Interface View.
      **/
-    ServiceInterface* createServiceInterfaceView();
+    ServiceInterface* createServiceInterfaceView(const QString& filePath = QString());
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

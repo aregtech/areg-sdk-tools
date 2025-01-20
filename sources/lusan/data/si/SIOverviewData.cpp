@@ -86,7 +86,7 @@ SIOverviewData::SIOverviewData( uint32_t id
 
 bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.name() == XmlSI::xmlSIElementOverview)
+    if (xml.isStartElement() && (xml.name() == XmlSI::xmlSIElementOverview))
     {
         QXmlStreamAttributes attributes = xml.attributes();
         setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());

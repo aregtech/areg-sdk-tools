@@ -39,6 +39,11 @@ MdiChild::MdiChild(QWidget* parent /*= nullptr*/)
     setAttribute(Qt::WA_DeleteOnClose, true);
 }
 
+bool MdiChild::openSucceeded(void) const
+{
+    return false;
+}
+
 QString MdiChild::newDocumentName(void)
 {
     static uint32_t _seqNr{0};

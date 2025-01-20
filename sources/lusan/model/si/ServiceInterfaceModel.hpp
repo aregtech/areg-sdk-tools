@@ -40,7 +40,7 @@ class ServiceInterfaceModel
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    ServiceInterfaceModel(void);
+    ServiceInterfaceModel(const QString& filePath = QString());
 
     virtual ~ServiceInterfaceModel(void) = default;
 
@@ -108,7 +108,12 @@ public:
      * \return  The category of the service interface.
      **/
     inline SIOverviewData::eCategory getCategory() const;
-
+    
+    /**
+     * \brief   Returns the file open operation success flag.
+     **/
+    inline bool openSucceeded(void) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // Hidden class members
 //////////////////////////////////////////////////////////////////////////
@@ -188,6 +193,11 @@ inline const VersionNumber& ServiceInterfaceModel::getVersion() const
 inline SIOverviewData::eCategory ServiceInterfaceModel::getCategory() const
 {
     return mModelOverview.getCategory();
+}
+
+inline bool ServiceInterfaceModel::openSucceeded(void) const
+{
+    return mSIData.openSucceeded();
 }
 
 #endif  // LUSAN_MODEL_SI_SERVICEINTERFACEMODEL_HPP

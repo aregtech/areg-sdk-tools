@@ -49,15 +49,10 @@ class ServiceInterfaceData  : public ElementBase
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Default constructor.
-     **/
-    ServiceInterfaceData(void);
-
-    /**
      * \brief   Constructor with file path.
      * \param   filePath    The file path of the service interface data to load and initialize.
      **/
-    ServiceInterfaceData(const QString& filePath);
+    ServiceInterfaceData(const QString& filePath = QString());
 
     /**
      * \brief   Destructor.
@@ -149,18 +144,21 @@ public:
      **/
     inline const SIIncludeData& getIncludeData(void) const;
     inline SIIncludeData& getIncludeData(void);
-
+    
+    inline bool openSucceeded(void) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QString          mFilePath;       //!< The file path of the service interface data.
-    SIOverviewData   mOverviewData;   //!< The overview data.
-    SIDataTypeData   mDataTypeData;   //!< The data type data.
-    SIAttributeData  mAttributeData;  //!< The attribute data.
-    SIMethodData     mMethodData;     //!< The method data.
-    SIConstantData   mConstantData;   //!< The constant data.
-    SIIncludeData    mIncludeData;    //!< The include data.
+    QString         mFilePath;      //!< The file path of the service interface data.
+    SIOverviewData  mOverviewData;  //!< The overview data.
+    SIDataTypeData  mDataTypeData;  //!< The data type data.
+    SIAttributeData mAttributeData; //!< The attribute data.
+    SIMethodData    mMethodData;    //!< The method data.
+    SIConstantData  mConstantData;  //!< The constant data.
+    SIIncludeData   mIncludeData;   //!< The include data.
+    bool            mOpenSuccess;   //!< File, indicating if openning file succeeded.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -235,6 +233,11 @@ inline const SIIncludeData& ServiceInterfaceData::getIncludeData(void) const
 inline SIIncludeData& ServiceInterfaceData::getIncludeData(void)
 {
     return mIncludeData;
+}
+
+inline bool ServiceInterfaceData::openSucceeded(void) const
+{
+    return mOpenSuccess;
 }
 
 #endif // LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
