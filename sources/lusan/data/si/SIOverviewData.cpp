@@ -86,35 +86,35 @@ SIOverviewData::SIOverviewData( uint32_t id
 
 bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.name() == XmlSI::xmlSIElementOverview)
-    {
-        QXmlStreamAttributes attributes = xml.attributes();
-        setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
-        mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
-        mVersion = attributes.value(XmlSI::xmlSIAttributeVersion).toString();
-        QString categoryStr = attributes.value(XmlSI::xmlSIAttributeCategory).toString();
-        mCategory = SIOverviewData::fromString(categoryStr);
-        mIsDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false;
-        mDeprecateHint.clear();
+    if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementOverview))
+        return false;
 
-        while (xml.readNextStartElement())
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+    mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
+    mVersion = attributes.value(XmlSI::xmlSIAttributeVersion).toString();
+    QString categoryStr = attributes.value(XmlSI::xmlSIAttributeCategory).toString();
+    mCategory = SIOverviewData::fromString(categoryStr);
+    mIsDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false;
+    mDeprecateHint.clear();
+
+    while (xml.readNextStartElement())
+    {
+        if (xml.name() == XmlSI::xmlSIElementDescription)
         {
-            if (xml.name() == XmlSI::xmlSIElementDescription)
-            {
-                mDescription = xml.readElementText();
-            }
-            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint && mIsDeprecated)
-            {
-                mDeprecateHint = xml.readElementText();
-            }
-            else
-            {
-                xml.skipCurrentElement();
-            }
+            mDescription = xml.readElementText();
         }
-        return true;
+        else if (xml.name() == XmlSI::xmlSIElementDeprecateHint && mIsDeprecated)
+        {
+            mDeprecateHint = xml.readElementText();
+        }
+        else
+        {
+            xml.skipCurrentElement();
+        }
     }
-    return false;
+
+    return true;
 }
 
 void SIOverviewData::writeToXml(QXmlStreamWriter& xml) const

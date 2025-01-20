@@ -19,6 +19,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 
+#include <QFileInfo>
 #include <QtWidgets>
 
 namespace
@@ -129,18 +130,22 @@ bool MdiMainWindow::openFile(const QString& fileName)
 
 bool MdiMainWindow::loadFile(const QString& fileName)
 {
-    MdiChild* child = createMdiChild();
-    const bool succeeded = child->loadFile(fileName);
-    if (succeeded)
+    bool succeeded{false};
+    MdiChild* child = createMdiChild(fileName);
+    if (child != nullptr)
     {
-        child->show();
-    }
-    else
-    {
-        child->close();
+        if (child->openSucceeded())
+        {
+            succeeded = true;
+            child->show();
+            MdiMainWindow::prependToRecentFiles(fileName);
+        }
+        else
+        {
+            child->close();
+        }
     }
 
-    MdiMainWindow::prependToRecentFiles(fileName);
     return succeeded;
 }
 
@@ -167,9 +172,11 @@ void MdiMainWindow::onFileNewSI()
 
 void MdiMainWindow::onFileNewLog()
 {
+#if 0
     MdiChild* child = createMdiChild();
     child->newFile();
     child->show();
+#endif
 }
 
 void MdiMainWindow::onFileOpen()
@@ -375,29 +382,23 @@ void MdiMainWindow::updateWindowMenu()
     }
 }
 
-MdiChild* MdiMainWindow::createMdiChild()
+MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
 {
-#if 0
-    // QMdiSubWindow* subWindow = new QMdiSubWindow;
-    MdiChild* child = new MdiChild;
-    // subWindow->setWidget(new MdiChild);
-    // subWindow->setAttribute(Qt::WA_DeleteOnClose);
-
-    mMdiArea.addSubWindow(child);
-    connect(child, &MdiChild::copyAvailable, &mActEditCut, &QAction::setEnabled);
-    connect(child, &MdiChild::copyAvailable, &mActEditCopy, &QAction::setEnabled);
-    showMaximized();
-    mMdiArea.showMaximized();
-    // child->showMaximized();
-    return child;
-#else
-    return nullptr;
-#endif
+    QFileInfo info(filePath);
+    QString ext{info.suffix()};
+    if (ext == ServiceInterface::fileExtension())
+    {
+        return createServiceInterfaceView(filePath);
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
-ServiceInterface* MdiMainWindow::createServiceInterfaceView()
+ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& filePath /*= QString()*/)
 {
-    ServiceInterface* child = new ServiceInterface(&mMdiArea);
+    ServiceInterface* child = new ServiceInterface(filePath, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
 
@@ -518,6 +519,7 @@ void MdiMainWindow::_createMenus()
     mFileMenu->addAction(&mActFileNewSI);
     mFileMenu->addAction(&mActFileNewLog);
     mFileMenu->addAction(&mActFileOpen);
+    mFileMenu->addAction(&mActFileSave);
     mFileMenu->addAction(&mActFileSaveAs);
     mFileSeparator = mFileMenu->addSeparator();
 

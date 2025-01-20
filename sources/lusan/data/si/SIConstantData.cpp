@@ -33,7 +33,7 @@ SIConstantData::SIConstantData(const QList<ConstantEntry>& entries, ElementBase*
 
 bool SIConstantData::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != XmlSI::xmlSIElementConstantList)
+    if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementConstantList))
         return false;
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementConstantList))

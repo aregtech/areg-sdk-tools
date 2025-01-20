@@ -19,8 +19,8 @@
 
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 
-ServiceInterfaceModel::ServiceInterfaceModel(void)
-    : mSIData()
+ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString()*/)
+    : mSIData       (filePath)
     , mModelOverview(mSIData.getOverviewData())
     , mModelDataType(mSIData.getDataTypeData())
     , mModelTopics  (mSIData.getAttributeData() , mSIData.getDataTypeData())

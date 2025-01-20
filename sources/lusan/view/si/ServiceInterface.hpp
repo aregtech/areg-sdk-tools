@@ -42,10 +42,16 @@ private:
     static constexpr const char* const _defName {"NewServiceInterface"};
     
 //////////////////////////////////////////////////////////////////////////
+// Public static methods
+//////////////////////////////////////////////////////////////////////////
+public:
+    static const QString& fileExtension(void);
+
+//////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    ServiceInterface(QWidget *parent = nullptr);
+    ServiceInterface(const QString & filePath = QString(), QWidget *parent = nullptr);
 
     virtual ~ServiceInterface(void);
 
@@ -65,8 +71,15 @@ public slots:
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
+public:
+    
+    /**
+     * \brief   Returns the file open operation success flag.
+     **/
+    virtual bool openSucceeded(void) const override;
+    
 protected:
-
+    
     /**
      * \brief   Returns the default file name of new created document.
      **/

@@ -22,7 +22,7 @@
 #include <QFile>
 #include <QFileInfo>
 
-ServiceInterfaceData::ServiceInterfaceData(void)
+ServiceInterfaceData::ServiceInterfaceData(const QString& filePath /*= QString()*/)
     : ElementBase   (MINIMUM_ID, nullptr)
     , mFilePath     ( )
     , mOverviewData (this)
@@ -31,26 +31,9 @@ ServiceInterfaceData::ServiceInterfaceData(void)
     , mMethodData   (this)
     , mConstantData (this)
     , mIncludeData  (this)
+    , mOpenSuccess  (false)
 {
-    mOverviewData.setId(getNextId());
-    // mDataTypeData.setId(getNextId());
-    // mAttributeData.setId(getNextId());
-    // mMethodData.setId(getNextId());
-    // mConstantData.setId(getNextId());
-    // mIncludeData.setId(getNextId());
-}
-
-ServiceInterfaceData::ServiceInterfaceData(const QString& filePath)
-    : ElementBase(1u, nullptr)
-    , mFilePath()
-    , mOverviewData(this)
-    , mDataTypeData(this)
-    , mAttributeData(this)
-    , mMethodData(this)
-    , mConstantData(this)
-    , mIncludeData(this)
-{
-    if (readFromFile(filePath) == false)
+    if (filePath.isEmpty() || (readFromFile(filePath) == false))
     {
         mOverviewData.setId(getNextId());
     }
@@ -58,6 +41,7 @@ ServiceInterfaceData::ServiceInterfaceData(const QString& filePath)
 
 bool ServiceInterfaceData::readFromFile(const QString& filePath)
 {
+    mOpenSuccess = false;
     mFilePath.clear();
     QFile file(filePath);
     if (file.open(QIODevice::ReadOnly))
@@ -70,6 +54,9 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
                 if (readFromXml(xml))
                 {
                     mFilePath = filePath;
+                    QFileInfo info(filePath);
+                    QString name = info.baseName();
+                    mOverviewData.setName(name);
                 }
                 else
                 {
@@ -79,10 +66,10 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
         }
 
         file.close();
-        return xml.hasError() == false;
+        mOpenSuccess = xml.hasError() == false;
     }
 
-    return false;
+    return mOpenSuccess;
 }
 
 bool ServiceInterfaceData::writeToFile(const QString& filePath /*= ""*/)

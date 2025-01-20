@@ -111,6 +111,13 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
+public:
+    
+    /**
+     * \brief   Returns the file open operation success flag.
+     **/
+    virtual bool openSucceeded(void) const;
+    
 protected:
 
     /**
@@ -141,13 +148,7 @@ protected:
      **/
     virtual void closeEvent(QCloseEvent* event) override;
 
-private slots:
-    /**
-     * \brief   Slot called when the document is modified.
-     **/
-    void documentWasModified();
-
-private:
+protected:
     /**
      * \brief   Prompts the user to save changes if necessary.
      * \return  True if the user chose to save or discard changes, false if the user canceled.
@@ -166,6 +167,12 @@ private:
      * \return  The file name without path.
      **/
     QString strippedName(const QString& fullFileName);
+
+private slots:
+    /**
+     * \brief   Slot called when the document is modified.
+     **/
+    void documentWasModified();
 
 //////////////////////////////////////////////////////////////////////////
 // Protected member variables

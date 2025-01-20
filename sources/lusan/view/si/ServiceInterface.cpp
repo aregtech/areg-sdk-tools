@@ -22,11 +22,17 @@
 
 #include <QVBoxLayout>
 
+const QString& ServiceInterface::fileExtension(void)
+{
+    static const QString _extSI{ "siml" };
+    return _extSI;
+}
+
 uint32_t ServiceInterface::_count{0};
 
-ServiceInterface::ServiceInterface(QWidget *parent)
+ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWidget *parent /*= nullptr*/)
     : MdiChild  (parent)
-    , mModel    ( )
+    , mModel    (filePath)
     , mTabWidget(this)
     , mOverview (mModel.getOverviewModel()  , this)
     , mDataType (mModel.getDataTypeModel()  , this)
@@ -56,10 +62,21 @@ ServiceInterface::ServiceInterface(QWidget *parent)
     connect(&mDataType, &SIDataType::signalDataTypeUpdated  , this, &ServiceInterface::slotlDataTypeUpdated);
     
     setAttribute(Qt::WA_DeleteOnClose);
+
+    if ((filePath.isEmpty() == false) && openSucceeded())
+    {
+        mIsUntitled = false;
+        setCurrentFile(filePath);
+    }
 }
 
 ServiceInterface::~ServiceInterface(void)
 {
+}
+
+bool ServiceInterface::openSucceeded(void) const
+{
+    return mModel.openSucceeded();
 }
 
 QString ServiceInterface::newDocumentName(void)

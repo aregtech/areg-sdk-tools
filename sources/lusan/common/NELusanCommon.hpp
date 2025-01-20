@@ -25,7 +25,6 @@
 #include <QStringList>
 
 #include <algorithm>
-#include <type_traits>
 
 /**
  * \namespace NELusanCommon
@@ -162,7 +161,7 @@ namespace NELusanCommon
         NELusanCommon::sortByName<const Type*>(list.begin(), list.end(), ascending);
     }
     
-    template<class Type, typename Iter = QList<Type *>::iterator>
+    template<class Type, typename Iter>
     void sortById( Iter first, Iter last, bool ascending)
     {
         std::sort(first, last, [ascending](Type lhs, Type rhs) -> bool
