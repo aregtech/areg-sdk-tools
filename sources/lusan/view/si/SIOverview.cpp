@@ -22,12 +22,14 @@
 #include "ui/ui_SIOverview.h"
 
 #include "lusan/model/si/SIOverviewModel.hpp"
+#include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/si/SIOverviewDetails.hpp"
 #include "lusan/view/si/SIOverviewLinks.hpp"
 
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QPlainTextEdit>
+#include <QPushButton>
 #include <QRadioButton>
 
 SIOverviewWidget::SIOverviewWidget(QWidget* parent)
@@ -131,6 +133,31 @@ void SIOverview::onPatchChanged(const QString& patch)
     mModel.setVersion(mDetails->ctrlMajor()->text().toUInt(), mDetails->ctrlMinor()->text().toUInt(), patch.toUInt());
 }
 
+void SIOverview::onLinkConstantsClicked(bool /*checked*/)
+{
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageConstants));
+}
+
+void SIOverview::onLinkDataTypesClicked(bool /*checked*/)
+{
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageDataTypes));
+}
+
+void SIOverview::onLinkIncludesClicked(bool /*checked*/)
+{
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageInclude));
+}
+
+void SIOverview::onLinkMethodsClicked(bool /*checked*/)
+{
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageMethods));
+}
+
+void SIOverview::onLinkTopicsClicked(bool /*checked*/)
+{
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageAttributes));
+}
+
 void SIOverview::updateWidgets(void)
 {
     mDetails->ctrlMajor()->setValidator(&mVersionValidator);
@@ -175,13 +202,19 @@ void SIOverview::updateData(void)
 
 void SIOverview::setupSignals(void)
 {
-    connect(mDetails->ctrlMajor(), &QLineEdit::textEdited, this, &SIOverview::onMajorChanged);
-    connect(mDetails->ctrlMinor(), &QLineEdit::textEdited, this, &SIOverview::onMinorChanged);
-    connect(mDetails->ctrlPatch(), &QLineEdit::textEdited, this, &SIOverview::onPatchChanged);
-    connect(mDetails->ctrlPublic(), &QRadioButton::toggled, this, &SIOverview::onCheckedPublic);
-    connect(mDetails->ctrlPrivate(), &QRadioButton::toggled, this, &SIOverview::onCheckedPrivate);
-    connect(mDetails->ctrlInternet(), &QRadioButton::toggled, this, &SIOverview::onCheckedInternet);
-    connect(mDetails->ctrlDeprecated(), &QCheckBox::toggled, this, &SIOverview::onDeprecatedChecked);
-    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textEdited, this, &SIOverview::onDeprecateHintChanged);
-    connect(mDetails->ctrlDescription(), &QPlainTextEdit::textChanged, this, &SIOverview::onDescriptionChanged);
+    connect(mDetails->ctrlMajor()       , &QLineEdit::textEdited    , this, &SIOverview::onMajorChanged);
+    connect(mDetails->ctrlMinor()       , &QLineEdit::textEdited    , this, &SIOverview::onMinorChanged);
+    connect(mDetails->ctrlPatch()       , &QLineEdit::textEdited    , this, &SIOverview::onPatchChanged);
+    connect(mDetails->ctrlPublic()      , &QRadioButton::toggled    , this, &SIOverview::onCheckedPublic);
+    connect(mDetails->ctrlPrivate()     , &QRadioButton::toggled    , this, &SIOverview::onCheckedPrivate);
+    connect(mDetails->ctrlInternet()    , &QRadioButton::toggled    , this, &SIOverview::onCheckedInternet);
+    connect(mDetails->ctrlDeprecated()  , &QCheckBox::toggled       , this, &SIOverview::onDeprecatedChecked);
+    connect(mDetails->ctrlDeprecateHint(),&QLineEdit::textEdited    , this, &SIOverview::onDeprecateHintChanged);
+    connect(mDetails->ctrlDescription() , &QPlainTextEdit::textChanged, this, &SIOverview::onDescriptionChanged);
+
+    connect(mLinks->linkConstants() , &QPushButton::clicked , this, &SIOverview::onLinkConstantsClicked);
+    connect(mLinks->linkDataTypes() , &QPushButton::clicked , this, &SIOverview::onLinkDataTypesClicked);
+    connect(mLinks->linkIncludes()  , &QPushButton::clicked , this, &SIOverview::onLinkIncludesClicked);
+    connect(mLinks->linkMethods()   , &QPushButton::clicked , this, &SIOverview::onLinkMethodsClicked);
+    connect(mLinks->linkTopics()    , &QPushButton::clicked , this, &SIOverview::onLinkTopicsClicked);
 }

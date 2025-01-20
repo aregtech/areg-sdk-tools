@@ -21,6 +21,7 @@
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 #include <QVBoxLayout>
+#include <QIcon>
 
 const QString& ServiceInterface::fileExtension(void)
 {
@@ -42,14 +43,16 @@ ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWi
     , mInclude  (mModel.getIncludesModel()  , this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
-    mTabWidget.setTabShape(QTabWidget::Triangular);
     // Add the sioverview widget as the first tab
-    mTabWidget.addTab(&mOverview , tr("Overview"));
-    mTabWidget.addTab(&mDataType , tr("Data Types"));
-    mTabWidget.addTab(&mDataTopic, tr("Data Topics"));
-    mTabWidget.addTab(&mMethod   , tr("Methods"));
-    mTabWidget.addTab(&mConstant , tr("Constants"));
-    mTabWidget.addTab(&mInclude  , tr("Includes"));
+    mTabWidget.addTab(&mOverview , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Overview"));
+    mTabWidget.addTab(&mDataType , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Data Types"));
+    mTabWidget.addTab(&mDataTopic, QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Data Topics"));
+    mTabWidget.addTab(&mMethod   , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Methods"));
+    mTabWidget.addTab(&mConstant , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Constants"));
+    mTabWidget.addTab(&mInclude  , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Includes"));
+    mTabWidget.setTabShape(QTabWidget::Triangular);
+    mTabWidget.setTabsClosable(false);
+    mTabWidget.setMovable(false);
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -60,6 +63,7 @@ ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWi
     connect(&mDataType, &SIDataType::signalDataTypeCreated  , this, &ServiceInterface::slotDataTypeCreated);
     connect(&mDataType, &SIDataType::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
     connect(&mDataType, &SIDataType::signalDataTypeUpdated  , this, &ServiceInterface::slotlDataTypeUpdated);
+    connect(&mOverview, &SIOverview::signalPageLinkClicked  , this, &ServiceInterface::slotPageLinkClicked);
     
     setAttribute(Qt::WA_DeleteOnClose);
 
@@ -143,4 +147,9 @@ void ServiceInterface::slotlDataTypeUpdated(DataTypeCustom* dataType)
     static_cast<IEDataTypeConsumer&>(mMethod).dataTypeUpdated(dataType);
     static_cast<IEDataTypeConsumer&>(mConstant).dataTypeUpdated(dataType);
     static_cast<IEDataTypeConsumer&>(mInclude).dataTypeUpdated(dataType);
+}
+
+void ServiceInterface::slotPageLinkClicked(int page)
+{
+    mTabWidget.setCurrentIndex(page);
 }

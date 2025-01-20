@@ -20,6 +20,7 @@
  ************************************************************************/
 #include <QWidget>
 
+class QPushButton;
 namespace Ui {
     class SIOverviewLinks;
 }
@@ -30,6 +31,31 @@ class SIOverviewLinks : public QWidget
 
 public:
     explicit SIOverviewLinks(QWidget* parent = nullptr);
+
+    /**
+     * \brief   Link to the data types tabbed page.
+     **/
+    QPushButton* linkDataTypes(void) const;
+
+    /**
+     * \brief   Link to the attributes tabbed page.
+     **/
+    QPushButton* linkTopics(void) const;
+
+    /**
+     * \brief   Link to the methods tabbed page.
+     **/
+    QPushButton* linkMethods(void) const;
+
+    /**
+     * \brief   Link to the constants tabbed page.
+     **/
+    QPushButton* linkConstants(void) const;
+
+    /**
+     * \brief   Link to the includes tabbed page.
+     **/
+    QPushButton* linkIncludes(void) const;
 
 private:
     Ui::SIOverviewLinks* ui;

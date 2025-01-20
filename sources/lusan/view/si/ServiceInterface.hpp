@@ -45,7 +45,24 @@ private:
 // Public static methods
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Returns the file extension of the service interface document.
+     **/
     static const QString& fileExtension(void);
+
+    /**
+     * \brief   The list of pages in the service interface
+     **/
+    enum eSIPages
+    {
+          PageOverview      = 0 //!< The overview page
+        , PageDataTypes         //!< The data types page
+        , PageAttributes        //!< The data topics page
+        , PageMethods           //!< The methods page
+        , PageConstants         //!< The constants page
+        , PageIncludes          //!< The includes page
+    };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -60,13 +77,36 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public slots:
 
+    /**
+     * \brief   Triggered when a new data type is created.
+     * \param   dataType    The pointer to the created data type.
+     **/
     void slotDataTypeCreated(DataTypeCustom* dataType);
 
+    /**
+     * \brief   Triggered when a data type is converted.
+     * \param   oldType     The pointer to the old data type.
+     * \param   newType     The pointer to the new data type.
+     **/
     void slotDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
 
+    /**
+     * \brief   Triggered when a data type is removed.
+     * \param   dataType    The pointer to the removed data type.
+     **/
     void slotlDataTypeRemoved(DataTypeCustom* dataType);
 
+    /**
+     * \brief   Triggered when a data type is updated.
+     * \param   dataType    The pointer to the updated data type.
+     **/
     void slotlDataTypeUpdated(DataTypeCustom* dataType);
+
+    /**
+     * \brief   Triggered when a page link is clicked.
+     * \param   page    The index of the clicked page.
+     **/
+    void slotPageLinkClicked(int page);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

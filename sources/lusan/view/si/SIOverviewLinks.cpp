@@ -33,3 +33,28 @@ SIOverviewLinks::SIOverviewLinks(QWidget* parent)
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
+
+QPushButton* SIOverviewLinks::linkDataTypes(void) const
+{
+    return ui->linkDataTypes;
+}
+
+QPushButton* SIOverviewLinks::linkTopics(void) const
+{
+    return ui->linkTopics;
+}
+
+QPushButton* SIOverviewLinks::linkMethods(void) const
+{
+    return ui->linkMethods;
+}
+
+QPushButton* SIOverviewLinks::linkConstants(void) const
+{
+    return ui->linkConstants;
+}
+
+QPushButton* SIOverviewLinks::linkIncludes(void) const
+{
+    return ui->linkIncludes;
+}
