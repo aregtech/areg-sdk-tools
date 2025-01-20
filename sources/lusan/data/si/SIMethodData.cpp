@@ -331,17 +331,8 @@ void SIMethodData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementMethodList);
 
-    for (const auto& method : mRequestMethods)
-    {
-        method->writeToXml(xml);
-    }
-
-    for (const auto& method : mResponseMethods)
-    {
-        method->writeToXml(xml);
-    }
-
-    for (const auto& method : mBroadcastMethods)
+    Q_ASSERT(mAllMethods.size() == (mBroadcastMethods.size() + mRequestMethods.size() + mResponseMethods.size()));
+    for (const SIMethodBase* method : mAllMethods)
     {
         method->writeToXml(xml);
     }

@@ -18,10 +18,17 @@
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include <QScrollArea>
 #include <QIntValidator>
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class SIOverviewDetails;
 class SIOverviewLinks;
 class SIOverviewParamDetails;
@@ -31,6 +38,9 @@ namespace Ui {
     class SIOverview;
 }
 
+/************************************************************************
+ * \brief   The helper widget.
+ ************************************************************************/
 class SIOverviewWidget : public QWidget
 {
     friend class SIOverview;
@@ -44,18 +54,34 @@ private:
     Ui::SIOverview* ui;
 };
 
+/**
+ * \brief   The widget to display the overview details of the service interface.
+ *          The widget contains the information about the service interface, such as
+ *          name, version, description, and other details.
+ **/
 class SIOverview : public QScrollArea
                  , public IEDataTypeConsumer
 {
     Q_OBJECT
 
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     explicit SIOverview(SIOverviewModel & model, QWidget* parent = nullptr);
 
     virtual ~SIOverview(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
 public:
+    
+    void setServiceInterfaceName(const QString & siName);
 
+//////////////////////////////////////////////////////////////////////////
+// Slots
+//////////////////////////////////////////////////////////////////////////
 protected:
 
     void onCheckedPublic(bool isChecked);
@@ -76,6 +102,9 @@ protected:
 
     void onPatchChanged(const QString& patch);
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
 private:
     /**
      * \brief   Initializes the SIConstant object.
@@ -92,6 +121,9 @@ private:
      **/
     void setupSignals(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden member variables
+//////////////////////////////////////////////////////////////////////////
 private:
     SIOverviewModel&    mModel;
     SIOverviewDetails*  mDetails;

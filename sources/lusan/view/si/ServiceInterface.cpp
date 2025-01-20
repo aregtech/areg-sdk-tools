@@ -81,6 +81,13 @@ const QString& ServiceInterface::newDocumentExt(void) const
     return _extSI;
 }
 
+bool ServiceInterface::writeToFile(const QString& filePath)
+{
+    bool result = mModel.saveToFile(filePath);
+    mOverview.setServiceInterfaceName(mModel.getName());
+    return result;
+}
+
 void ServiceInterface::slotDataTypeCreated(DataTypeCustom* dataType)
 {
     static_cast<IEDataTypeConsumer&>(mOverview).dataTypeCreated(dataType);

@@ -41,12 +41,17 @@ private:
     static  uint32_t                   _count;
     static constexpr const char* const _defName {"NewServiceInterface"};
     
-public:
-    
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     ServiceInterface(QWidget *parent = nullptr);
+
     virtual ~ServiceInterface(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Slots
+//////////////////////////////////////////////////////////////////////////
 public slots:
 
     void slotDataTypeCreated(DataTypeCustom* dataType);
@@ -57,23 +62,45 @@ public slots:
 
     void slotlDataTypeUpdated(DataTypeCustom* dataType);
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
 protected:
 
+    /**
+     * \brief   Returns the default file name of new created document.
+     **/
     virtual QString newDocumentName(void) override;
 
+    /**
+     * \brief   Returns the default name of new created document.
+     **/
     virtual const QString& newDocument(void) const override;
 
+    /**
+     * \brief   Returns the default extension of new created document.
+     **/
     virtual const QString& newDocumentExt(void) const override;
 
+    /**
+     * \brief   Reads the document from the file.
+     * \param   filePath    The path of the file to read.
+     * \return  True if the document was successfully read, false otherwise.
+     **/
+    virtual bool writeToFile(const QString& filePath) override;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    ServiceInterfaceModel   mModel;
-    QTabWidget  mTabWidget;
-    SIOverview  mOverview;
-    SIDataType  mDataType;
-    SIDataTopic mDataTopic;
-    SIMethod    mMethod;
-    SIConstant  mConstant;
-    SIInclude   mInclude;
+    ServiceInterfaceModel   mModel; //!< The model of the service interface
+    QTabWidget  mTabWidget; //!< The tab widget to display the service interface elements
+    SIOverview  mOverview;  //!< The overview widget
+    SIDataType  mDataType;  //!< The data type widget
+    SIDataTopic mDataTopic; //!< The data topic widget
+    SIMethod    mMethod;    //!< The method widget
+    SIConstant  mConstant;  //!< The constant widget
+    SIInclude   mInclude;   //!< The include widget
 };
 
 #endif // LUSAN_APPLICATION_SI_SERVICEINTERFACEVIEW_HPP
