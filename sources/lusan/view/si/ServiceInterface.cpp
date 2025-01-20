@@ -62,6 +62,12 @@ ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWi
     connect(&mDataType, &SIDataType::signalDataTypeUpdated  , this, &ServiceInterface::slotlDataTypeUpdated);
     
     setAttribute(Qt::WA_DeleteOnClose);
+
+    if ((filePath.isEmpty() == false) && openSucceeded())
+    {
+        mIsUntitled = false;
+        setCurrentFile(filePath);
+    }
 }
 
 ServiceInterface::~ServiceInterface(void)

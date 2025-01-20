@@ -275,56 +275,54 @@ bool SIMethodData::hasResponseConnectedRequest(uint32_t respId) const
 
 bool SIMethodData::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.name() == XmlSI::xmlSIElementMethodList)
+    if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementMethodList))
+        return false;
+
+    while (xml.readNextStartElement())
     {
-        while (xml.readNextStartElement())
+        if (xml.name() == XmlSI::xmlSIElementMethod)
         {
-            if (xml.name() == XmlSI::xmlSIElementMethod)
+            QXmlStreamAttributes attributes = xml.attributes();
+            QString methodTypeStr = attributes.value(XmlSI::xmlSIAttributeMethodType).toString();
+            SIMethodBase::eMethodType methodType = SIMethodBase::fromString(methodTypeStr);
+
+            SIMethodBase* method = nullptr;
+            switch (methodType)
             {
-                QXmlStreamAttributes attributes = xml.attributes();
-                QString methodTypeStr = attributes.value(XmlSI::xmlSIAttributeMethodType).toString();
-                SIMethodBase::eMethodType methodType = SIMethodBase::fromString(methodTypeStr);
+            case SIMethodBase::eMethodType::MethodRequest:
+                method = new SIMethodRequest(this);
+                break;
 
-                SIMethodBase* method = nullptr;
-                switch (methodType)
-                {
-                case SIMethodBase::eMethodType::MethodRequest:
-                    method = new SIMethodRequest(this);
-                    break;
+            case SIMethodBase::eMethodType::MethodResponse:
+                method = new SIMethodResponse(this);
+                break;
 
-                case SIMethodBase::eMethodType::MethodResponse:
-                    method = new SIMethodResponse(this);
-                    break;
+            case SIMethodBase::eMethodType::MethodBroadcast:
+                method = new SIMethodBroadcast(this);
+                break;
 
-                case SIMethodBase::eMethodType::MethodBroadcast:
-                    method = new SIMethodBroadcast(this);
-                    break;
-
-                default:
-                    xml.skipCurrentElement();
-                    continue;
-                }
-
-                if ((method->readFromXml(xml) == false) || (addMethod(method) == false))
-                {
-                    delete method;
-                }
-            }
-            else
-            {
+            default:
                 xml.skipCurrentElement();
+                continue;
+            }
+
+            if ((method->readFromXml(xml) == false) || (addMethod(method) == false))
+            {
+                delete method;
             }
         }
-
-        for (SIMethodRequest* req : mRequestMethods)
+        else
         {
-            req->normalize(mResponseMethods);
+            xml.skipCurrentElement();
         }
-
-        return true;
     }
 
-    return false;
+    for (SIMethodRequest* req : mRequestMethods)
+    {
+        req->normalize(mResponseMethods);
+    }
+
+    return true;
 }
 
 void SIMethodData::writeToXml(QXmlStreamWriter& xml) const

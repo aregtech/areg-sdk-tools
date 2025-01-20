@@ -170,37 +170,35 @@ bool SIDataTypeData::replaceCustomDataType(const DataTypeCustom& oldEntry, DataT
 
 bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.isStartElement() && (xml.name() == XmlSI::xmlSIElementDataTypeList))
+    if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementDataTypeList))
+        return false;
+
+    while (xml.readNextStartElement())
     {
-        while (xml.readNextStartElement())
+        if (xml.name() == XmlSI::xmlSIElementDataType)
         {
-            if (xml.name() == XmlSI::xmlSIElementDataType)
+            QString type = xml.attributes().value(XmlSI::xmlSIAttributeType).toString();
+            DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(type);
+            if (dataType != nullptr)
             {
-                QString type = xml.attributes().value(XmlSI::xmlSIAttributeType).toString();
-                DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(type);
-                if (dataType != nullptr)
+                dataType->setParent(this);
+                if (dataType->readFromXml(xml))
                 {
-                    dataType->setParent(this);
-                    if (dataType->readFromXml(xml))
-                    {
-                        mCustomDataTypes.append(dataType);
-                    }
-                    else
-                    {
-                        xml.skipCurrentElement();
-                    }
+                    mCustomDataTypes.append(dataType);
+                }
+                else
+                {
+                    xml.skipCurrentElement();
                 }
             }
-            else
-            {
-                xml.skipCurrentElement();
-            }
         }
-
-        return true;
+        else
+        {
+            xml.skipCurrentElement();
+        }
     }
 
-    return false;
+    return true;
 }
 
 void SIDataTypeData::writeToXml(QXmlStreamWriter& xml) const

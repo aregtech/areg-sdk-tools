@@ -64,11 +64,6 @@ public:
     SIDataTypeData(ElementBase * parent = nullptr);
 
     /**
-     * \brief   Constructor. Copies data from given source.
-     **/
-    SIDataTypeData(const SIDataTypeData& src) = default;
-
-    /**
      * \brief   Constructor with initialization.
      * \param   entries     The list of data types.
      **/
@@ -377,6 +372,15 @@ private:
 private:
     QList<DataTypeCustom *>     mCustomDataTypes;   //!< The list of data types.
     QList<DataTypeBase *>       mDataTypes;         //!< The list of all data types.
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls.
+//////////////////////////////////////////////////////////////////////////
+private:
+    SIDataTypeData(const SIDataTypeData& /*src*/) = delete;
+    SIDataTypeData(SIDataTypeData&& /*src*/) noexcept = delete;
+    SIDataTypeData& operator = (const SIDataTypeData& /*src*/) = delete;
+    SIDataTypeData& operator = (SIDataTypeData&& /*src*/) noexcept = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
