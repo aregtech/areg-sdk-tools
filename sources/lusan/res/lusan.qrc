@@ -1,4 +1,4 @@
-<RCC>
+﻿<RCC>
     <qresource lang="Toolbar Icons" prefix="/icons">
         <file alias="Add Data Type">icons/add_data_type.png</file>
         <file alias="Delete Data Type">icons/delete_data_type.png</file>

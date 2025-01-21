@@ -1,4 +1,4 @@
-/************************************************************************
+﻿/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
  *  with this distribution or contact us at info[at]aregtech.com.
  *
- *  \copyright   � 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/view/si/SIOverview.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
@@ -135,27 +135,27 @@ void SIOverview::onPatchChanged(const QString& patch)
 
 void SIOverview::onLinkConstantsClicked(bool /*checked*/)
 {
-    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageConstants));
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageConstants));
 }
 
 void SIOverview::onLinkDataTypesClicked(bool /*checked*/)
 {
-    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageDataTypes));
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageDataTypes));
 }
 
 void SIOverview::onLinkIncludesClicked(bool /*checked*/)
 {
-    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageInclude));
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageIncludes));
 }
 
 void SIOverview::onLinkMethodsClicked(bool /*checked*/)
 {
-    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageMethods));
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageMethods));
 }
 
 void SIOverview::onLinkTopicsClicked(bool /*checked*/)
 {
-    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::PageAttributes));
+    emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageAttributes));
 }
 
 void SIOverview::updateWidgets(void)

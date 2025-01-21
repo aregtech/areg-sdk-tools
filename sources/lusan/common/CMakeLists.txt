@@ -1,4 +1,4 @@
-list(APPEND LUSAN_SRC
+﻿list(APPEND LUSAN_SRC
     ${LUSAN}/common/ElementBase.cpp
     ${LUSAN}/common/NELusanCommon.cpp
     ${LUSAN}/common/VersionNumber.cpp

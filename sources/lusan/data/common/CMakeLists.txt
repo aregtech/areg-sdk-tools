@@ -1,4 +1,4 @@
-list(APPEND LUSAN_SRC
+﻿list(APPEND LUSAN_SRC
     ${LUSAN}/data/common/AttributeEntry.cpp
     ${LUSAN}/data/common/ConstantEntry.cpp
     ${LUSAN}/data/common/DataTypeBase.cpp

@@ -1,4 +1,4 @@
-// File: lusan/data/common/TEDataContainer.hpp
+﻿// File: lusan/data/common/TEDataContainer.hpp
 
 #ifndef LUSAN_DATA_COMMON_TEDATACONTAINER_HPP
 #define LUSAN_DATA_COMMON_TEDATACONTAINER_HPP
@@ -13,7 +13,7 @@
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
  *  with this distribution or contact us at info[at]aregtech.com.
  *
- *  \copyright   � 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/data/common/TEDataContainer.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
@@ -93,6 +93,9 @@ public:
      **/
     inline const QList<Data>& getElements(void) const;
 
+    /**
+     * \brief   Checks if the container is empty.
+     **/
     inline bool isEmpty(void) const;
 
     /**
@@ -224,6 +227,11 @@ public:
      **/
     Data* findElement(uint32_t id) const;
 
+    /**
+     * \brief   Finds the index of a data element by name.
+     * \param   name    The name of the element to find.
+     * \return  The index of the element if found, -1 otherwise.
+     **/
     int findIndex(const Data& field) const;
 
     /**
@@ -284,6 +292,32 @@ public:
      * \return  The number of elements in the container.
      **/
     int getElementCount(void) const;
+
+    /**
+     * \brief   Swaps 2 elements by given index. It will as well swap the IDs.
+     **/
+    void swapElements(int index1, int index2);
+
+    /**
+     * \brief   Swaps 2 elements by given values. It will as well swap the IDs.
+     **/
+    void swapElements(const Data& elem1, const Data& elem2);
+
+    /**
+     * \brief   Orders the elements by given list of IDs.
+     * \param   orderedIds  The list of ordered IDs.
+     * \return  True if the elements are ordered, false otherwise.
+     **/
+    bool orderElements(const QList<uint32_t>& orderedIds);
+
+    /**
+     * \brief   Set the ordered list IDs for elements in container,
+     *          i.e. sets the IDs without changing the content of container.
+     *          The number of entries in the list and in container should be same.
+     *          The IDs in in the order list should be unique.
+     * \param   orderedIds  The list of ordered IDs.
+     **/
+    void setOrderedIds(const QList<uint32_t>& orderIds);
 
 //////////////////////////////////////////////////////////////////////////
 // Protected methods
@@ -693,6 +727,66 @@ template<class Data, class ElemBase>
 int TEDataContainer<Data, ElemBase>::getElementCount(void) const
 {
     return static_cast<int>(mElementList.size());
+}
+
+template<class Data, class ElemBase>
+void TEDataContainer<Data, ElemBase>::swapElements(int index1, int index2)
+{
+    Data temp = mElementList[index1];
+    mElementList[index1] = mElementList[index2];
+    mElementList[index1].setId(temp.getId());
+    temp.setId(mElementList[index2].getId());
+    mElementList[index2] = temp;
+}
+
+template<class Data, class ElemBase>
+void TEDataContainer<Data, ElemBase>::swapElements(const Data& elem1, const Data& elem2)
+{
+    int index1 = findIndex(elem1);
+    int index2 = findIndex(elem2);
+    if ((index1 >= 0) && (index2 >= 0))
+    {
+        swapElements(index1, index2);
+    }
+}
+
+template<class Data, class ElemBase>
+bool TEDataContainer<Data, ElemBase>::orderElements(const QList<uint32_t>& orderedIds)
+{
+    if (orderedIds.size() != mElementList.size())
+    {
+        return false;
+    }
+
+    int count = static_cast<int>(mElementList.size());
+    for (int i = 0; i < count; ++i)
+    {
+        uint32_t id = orderedIds[i];
+        int index = findIndex(id);
+        if (index < 0)
+        {
+            return false;
+        }
+        else if (index != i)
+        {
+            swapElements(i, index);
+        }
+    }
+
+    return true;
+}
+
+template<class Data, class ElemBase>
+void TEDataContainer<Data, ElemBase>::setOrderedIds(const QList<uint32_t>& orderedIds)
+{
+    if (orderedIds.size() != mElementList.size())
+        return;
+
+    int count = static_cast<int>(mElementList.size());
+    for (int i = 0; i < count; ++i)
+    {
+        mElementList.at(i).setId(orderedIds[i]);
+    }
 }
 
 template<class Data, class ElemBase>

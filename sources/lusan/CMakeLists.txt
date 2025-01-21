@@ -1,4 +1,4 @@
-set(LUSAN "${LUSAN_BASE}/lusan")
+﻿set(LUSAN "${LUSAN_BASE}/lusan")
 
 include(${LUSAN}/app/CMakeLists.txt)
 include(${LUSAN}/common/CMakeLists.txt)

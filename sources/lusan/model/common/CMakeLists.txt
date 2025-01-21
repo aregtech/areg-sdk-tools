@@ -1,4 +1,4 @@
-list(APPEND LUSAN_SRC
+﻿list(APPEND LUSAN_SRC
     ${LUSAN}/model/common/DataTypesModel.cpp
     ${LUSAN}/model/common/ReplyMethodModel.cpp
     ${LUSAN}/model/common/WorkspaceModel.cpp

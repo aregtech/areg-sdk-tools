@@ -1,4 +1,4 @@
-list(APPEND LUSAN_UI
+﻿list(APPEND LUSAN_UI
     ${LUSAN}/view/si/ui/SIConstant.ui
     ${LUSAN}/view/si/ui/SIConstantDetails.ui
     ${LUSAN}/view/si/ui/SIConstantList.ui

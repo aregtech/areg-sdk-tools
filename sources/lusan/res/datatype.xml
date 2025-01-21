@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <PredefinedTypes FormatVersion="1.0.0">
     <DataTypeList>
         <DataType ID="1" Type="Primitive" Name="bool" DefaultValue="false">

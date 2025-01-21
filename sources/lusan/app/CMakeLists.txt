@@ -1,4 +1,4 @@
-list(APPEND LUSAN_SRC
+﻿list(APPEND LUSAN_SRC
     ${LUSAN}/app/LusanApplication.cpp
     ${LUSAN}/app/main.cpp
 )

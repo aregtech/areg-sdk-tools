@@ -1,4 +1,4 @@
-#ifndef LUSAN_DATA_COMMON_CONSTANTENTRY_HPP
+﻿#ifndef LUSAN_DATA_COMMON_CONSTANTENTRY_HPP
 #define LUSAN_DATA_COMMON_CONSTANTENTRY_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
  *  with this distribution or contact us at info[at]aregtech.com.
  *
- *  \copyright   � 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/data/common/ConstantEntry.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
