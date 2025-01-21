@@ -114,6 +114,21 @@ namespace NELusanCommon
 
     constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
     constexpr const char * const xmlElementFile             { "File" };
+
+    enum class eSorting : uint8_t
+    {
+          SortingAscending      = 1
+        , SortingDescending     = 2
+    };
+
+    enum class eSortingType : uint8_t
+    {
+          NoSorting         = 0     //!< bits: 0000 0000, No sorting
+        , SortingByIdAsc    = 5     //!< bits: 0000 0101, Sorting by ID ascending
+        , SortingByIdDesc   = 6     //!< bits: 0000 0110, Sorting by ID descending
+        , SortingByNameAsc  = 9     //!< bits: 0000 1001, Sorting by Name ascending
+        , SortingByNameDesc = 10    //!< bits: 0000 1010, Sorting by Name descending
+    };
     
     template<typename T>
     struct get_id
