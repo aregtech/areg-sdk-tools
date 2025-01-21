@@ -73,12 +73,6 @@ public:
      * \param   xml         The XML stream writer.
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
-
-//////////////////////////////////////////////////////////////////////////
-// Hidden member variables.
-//////////////////////////////////////////////////////////////////////////
-private:
-    QList<ConstantEntry> mConstants; //!< The list of constants.
 };
 
 #endif  // LUSAN_DATA_SI_SICONSTANTDATA_HPP

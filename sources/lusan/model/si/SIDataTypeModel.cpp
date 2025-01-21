@@ -68,26 +68,26 @@ DataTypeCustom* SIDataTypeModel::convertDataType(DataTypeCustom* dataType, DataT
 
 DataTypeCustom* SIDataTypeModel::findDataType(const QString& name)
 {
-    int index = mData.findCustomDataType(name);
-    return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
+    DataTypeCustom** result = mData.findElement(name);
+    return (result != nullptr ? *result : nullptr);
 }
 
 const DataTypeCustom* SIDataTypeModel::findDataType(const QString& name) const
 {
-    int index = mData.findCustomDataType(name);
-    return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
+    DataTypeCustom** result = mData.findElement(name);
+    return (result != nullptr ? *result : nullptr);
 }
 
 DataTypeCustom* SIDataTypeModel::findDataType(uint32_t id)
 {
-    int index = mData.findCustomDataType(id);
-    return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
+    DataTypeCustom** result = mData.findElement(id);
+    return (result != nullptr ? *result : nullptr);
 }
 
 const DataTypeCustom* SIDataTypeModel::findDataType(uint32_t id) const
 {
-    int index = mData.findCustomDataType(id);
-    return (index < 0 ? nullptr : mData.getCustomDataTypes().at(index));
+    DataTypeCustom** result = mData.findElement(id);
+    return (result != nullptr ? *result : nullptr);
 }
 
 void SIDataTypeModel::sortByName(bool ascending)
@@ -256,12 +256,12 @@ int SIDataTypeModel::getChildCount(const DataTypeCustom* dataType) const
 
 int SIDataTypeModel::findIndex(uint32_t id) const
 {
-    return mData.findCustomDataType(id);
+    return mData.findIndex(id);
 }
 
 int SIDataTypeModel::findIndex(const DataTypeCustom* dataType) const
 {
-    return mData.findCustomDataType(dataType->getId());
+    return mData.findIndex(dataType->getId());
 }
 
 int SIDataTypeModel::findChildIndex(const DataTypeCustom* dataType, uint32_t childId) const
