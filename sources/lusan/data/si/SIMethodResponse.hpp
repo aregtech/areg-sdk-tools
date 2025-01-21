@@ -1,4 +1,4 @@
-#ifndef LUSAN_DATA_SI_SIMETHODRESPONSE_HPP
+﻿#ifndef LUSAN_DATA_SI_SIMETHODRESPONSE_HPP
 #define LUSAN_DATA_SI_SIMETHODRESPONSE_HPP
 
 /************************************************************************
@@ -12,7 +12,7 @@
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
  *  with this distribution or contact us at info[at]aregtech.com.
  *
- *  \copyright   � 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/data/si/SIMethodResponse.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan

@@ -1,4 +1,4 @@
-include("${LUSAN}/view/common//ui/CMakeLists.txt")
+﻿include("${LUSAN}/view/common//ui/CMakeLists.txt")
 
 list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/DirSelectionDialog.cpp

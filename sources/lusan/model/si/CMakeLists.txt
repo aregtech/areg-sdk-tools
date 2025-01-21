@@ -1,4 +1,4 @@
-list(APPEND LUSAN_SRC
+﻿list(APPEND LUSAN_SRC
     ${LUSAN}/model/si/ServiceInterfaceModel.cpp
     ${LUSAN}/model/si/SIConstantModel.cpp
     ${LUSAN}/model/si/SIDataTopicModel.cpp
