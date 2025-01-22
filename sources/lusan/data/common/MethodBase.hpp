@@ -32,7 +32,7 @@
   * \class   MethodBase
   * \brief   Represents a method base in the Lusan application.
   **/
-class MethodBase    : public TEDataContainer< MethodParameter, ElementBase >
+class MethodBase    : public TEDataContainer<MethodParameter, ElementBase >
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
