@@ -163,7 +163,7 @@ void SIInclude::setupSignals(void)
     connect(mDetails->ctrlBrowseButton(), &QPushButton::clicked         , this, &SIInclude::onBrowseClicked);    
     connect(mDetails->ctrlInclude()     , &QLineEdit::textChanged       , this, &SIInclude::onIncludeChanged);
     connect(mDetails->ctrlDescription() , &QPlainTextEdit::textChanged  , this, &SIInclude::onDescriptionChanged);
-    connect(mDetails->ctrlDeprecated()  , &QCheckBox::checkStateChanged , this, &SIInclude::onDeprectedClicked);
+    connect(mDetails->ctrlDeprecated()  , &QCheckBox::toggled           , this, &SIInclude::onDeprecatedChecked);
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textChanged      , this, &SIInclude::onDeprecateHint);
     
     connect(mTableCell, &TableCell::editorDataChanged, this, &SIInclude::onEditorDataChanged);
@@ -193,10 +193,10 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
         Q_ASSERT(entry != nullptr);
         mDetails->ctrlInclude()->setText(entry->getLocation());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecated()->setChecked(entry->isDeprecated());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecationHint());
+        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
+        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
         mDetails->ctrlBrowseButton()->setEnabled(true);
-        mDetails->ctrlDeprecateHint()->setEnabled(entry->isDeprecated());
+        mDetails->ctrlDeprecateHint()->setEnabled(entry->getIsDeprecated());
         mList->ctrlButtonRemove()->setEnabled(true);
 
         if (currentRow == 0)
@@ -359,7 +359,7 @@ void SIInclude::onDescriptionChanged(void)
     }
 }
 
-void SIInclude::onDeprectedClicked(Qt::CheckState newState)
+void SIInclude::onDeprecatedChecked(bool isChecked)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -367,8 +367,13 @@ void SIInclude::onDeprectedClicked(Qt::CheckState newState)
     {
         IncludeEntry* entry = _findInclude(row);
         Q_ASSERT(entry != nullptr);
-        entry->setIsDeprecated(newState == Qt::CheckState::Checked);
-        mDetails->ctrlDeprecateHint()->setEnabled(newState == Qt::CheckState::Checked);
+        entry->setIsDeprecated(isChecked);
+        mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+        if (isChecked == false)
+        {
+            entry->setDeprecateHint(QString());
+            mDetails->ctrlDeprecateHint()->setText(QString());
+        }
     }
 }
 
@@ -380,7 +385,10 @@ void SIInclude::onDeprecateHint(const QString& newText)
     {
         IncludeEntry* entry = _findInclude(row);
         Q_ASSERT(entry != nullptr);
-        entry->setDeprecationHint(newText);
+        if (entry->getIsDeprecated())
+        {
+            entry->setDeprecateHint(newText);
+        }
     }
 }
 
@@ -410,8 +418,8 @@ void SIInclude::_addInclude(int pos)
         const IncludeEntry * entry = mModel.findInclude(id);
         mDetails->ctrlInclude()->setText(entry->getName());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecationHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->isDeprecated());
+        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
+        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
         
         QTableWidgetItem * current = table->currentItem();
         if (current != nullptr)
@@ -427,7 +435,7 @@ void SIInclude::_addInclude(int pos)
         table->selectRow(row);
         table->scrollToItem(item);
         
-        mDetails->ctrlDeprecateHint()->setEnabled(entry->isDeprecated());
+        mDetails->ctrlDeprecateHint()->setEnabled(entry->getIsDeprecated());
         mDetails->ctrlInclude()->setFocus();
         mDetails->ctrlInclude()->selectAll();
 

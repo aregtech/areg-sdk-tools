@@ -150,7 +150,7 @@ public:
      * \brief   Checks if the method is deprecated.
      * \return  True if the method is deprecated, false otherwise.
      **/
-    bool isDeprecated(void) const;
+    bool getIsDeprecated(void) const;
 
     /**
      * \brief   Sets the hint, why method is deprecated.

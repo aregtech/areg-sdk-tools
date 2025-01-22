@@ -18,13 +18,13 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIOverview.hpp"
-#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIOverview.h"
 
 #include "lusan/model/si/SIOverviewModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/si/SIOverviewDetails.hpp"
 #include "lusan/view/si/SIOverviewLinks.hpp"
+#include "lusan/view/si/SICommon.hpp"
 
 #include <QCheckBox>
 #include <QLineEdit>
@@ -106,6 +106,7 @@ void SIOverview::onDeprecatedChecked(bool isChecked)
 {
     mModel.setIsDeprecated(isChecked);
     mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+    mDetails->ctrlDeprecateHint()->setText(isChecked ? mModel.getDeprecateHint() : QString());
 }
 
 void SIOverview::onDescriptionChanged(void)
@@ -175,9 +176,9 @@ void SIOverview::updateData(void)
     mDetails->ctrlMinor()->setText(QString::number(version.getMinor()));
     mDetails->ctrlPatch()->setText(QString::number(version.getPatch()));
     mDetails->ctrlName()->setText(mModel.getName());
-    mDetails->ctrlDeprecated()->setChecked(mModel.isDeprecated());
-    mDetails->ctrlDeprecateHint()->setText(mModel.getDeprecateHint());
     mDetails->ctrlDescription()->setPlainText(mModel.getDescription());
+
+    SICommon::enableDeprecated<SIOverviewDetails, SIOverviewModel>(mDetails, &mModel, true);
 
     switch (mModel.getCategory())
     {

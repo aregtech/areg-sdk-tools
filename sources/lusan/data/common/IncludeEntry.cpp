@@ -143,7 +143,7 @@ void IncludeEntry::setDescription(const QString& description)
     mDescription = description;
 }
 
-bool IncludeEntry::isDeprecated(void) const
+bool IncludeEntry::getIsDeprecated(void) const
 {
     return mDeprecated;
 }
@@ -153,12 +153,12 @@ void IncludeEntry::setIsDeprecated(bool deprecated)
     mDeprecated = deprecated;
 }
 
-const QString& IncludeEntry::getDeprecationHint(void) const
+const QString& IncludeEntry::getDeprecateHint(void) const
 {
     return mDeprecateHint;
 }
 
-void IncludeEntry::setDeprecationHint(const QString& deprecationHint)
+void IncludeEntry::setDeprecateHint(const QString& deprecationHint)
 {
     mDeprecateHint = deprecationHint;
 }

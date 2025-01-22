@@ -267,7 +267,7 @@ SIMethodBase* SIMethodData::convertMethod(SIMethodBase* method, SIMethodBase::eM
     {
         newMethod->setElements(method->getElements());
         newMethod->setDescription(method->getDescription());
-        newMethod->setIsDeprecated(method->isDeprecated());
+        newMethod->setIsDeprecated(method->getIsDeprecated());
         newMethod->setDeprecateHint(method->getDeprecateHint());
 
         replaceMethodInList(method, newMethod);

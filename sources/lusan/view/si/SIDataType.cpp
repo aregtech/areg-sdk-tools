@@ -300,9 +300,15 @@ void SIDataType::onDeprectedChecked(bool isChecked)
     if (item == nullptr)
         return;
 
-    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
-    Q_ASSERT(dataType != nullptr);
-    dataType->setIsDeprecated(isChecked);
+    DataTypeCustom* entry = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    Q_ASSERT(entry != nullptr);
+    entry->setIsDeprecated(isChecked);
+    mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+    if (isChecked == false)
+    {
+        entry->setDeprecateHint(QString());
+        mDetails->ctrlDeprecateHint()->setText(QString());
+    }
 }
 
 void SIDataType::onDeprecateHintChanged(const QString& newText)
@@ -311,9 +317,12 @@ void SIDataType::onDeprecateHintChanged(const QString& newText)
     if (item == nullptr)
         return;
 
-    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
-    Q_ASSERT(dataType != nullptr);
-    dataType->setDeprecateHint(dataType->getIsDeprecated() ? newText : QString());
+    DataTypeCustom* entry = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    Q_ASSERT(entry != nullptr);
+    if (entry->getIsDeprecated())
+    {
+        entry->setDeprecateHint(newText);
+    }
 }
 
 void SIDataType::onDescriptionChanged(void)
@@ -663,16 +672,33 @@ void SIDataType::onFieldDeprecatedChecked(bool isChecked)
 {
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
     DataTypeCustom* dataType = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
-    ElementBase* field = getSelectedField();
-    if ((dataType != nullptr) && (field != nullptr))
+    ElementBase* entry = getSelectedField();
+    if ((dataType != nullptr) && (entry != nullptr))
     {
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
-            static_cast<FieldEntry*>(field)->setIsDeprecated(isChecked);
+            static_cast<FieldEntry*>(entry)->setIsDeprecated(isChecked);
+            mFields->ctrlDeprecateHint()->setEnabled(isChecked);
+            if (isChecked == false)
+            {
+                static_cast<FieldEntry*>(entry)->setDeprecateHint(QString());
+                mFields->ctrlDeprecateHint()->setText(QString());
+            }
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
-            static_cast<EnumEntry*>(field)->setIsDeprecated(isChecked);
+            static_cast<EnumEntry*>(entry)->setIsDeprecated(isChecked);
+            mFields->ctrlDeprecateHint()->setEnabled(isChecked);
+            if (isChecked == false)
+            {
+                static_cast<EnumEntry*>(entry)->setDeprecateHint(QString());
+                mFields->ctrlDeprecateHint()->setText(QString());
+            }
+        }
+        else
+        {
+            mFields->ctrlDeprecateHint()->setEnabled(false);
+            mFields->ctrlDeprecateHint()->setText(QString());
         }
     }
 }
@@ -686,11 +712,19 @@ void SIDataType::onFieldDeprecateHint(const QString& newText)
     {
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
-            static_cast<FieldEntry*>(field)->setDeprecateHint(static_cast<FieldEntry*>(field)->getIsDeprecated() ? newText : QString());
+            FieldEntry* entry = static_cast<FieldEntry*>(field);
+            if (entry->getIsDeprecated())
+            {
+                entry->setDeprecateHint(newText);
+            }
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
-            static_cast<EnumEntry*>(field)->setDeprecateHint(static_cast<EnumEntry*>(field)->getIsDeprecated() ? newText : QString());
+            EnumEntry* entry = static_cast<EnumEntry*>(field);
+            if (entry->getIsDeprecated())
+            {
+                entry->setDeprecateHint(newText);
+            }
         }
     }
 }
@@ -783,6 +817,12 @@ void SIDataType::updateWidgets(void)
     mFields->ctrlTypes()->setModel(mTypeModel);    
     mDetails->ctrlContainerKey()->setModel(mTypeModel);
     mDetails->ctrlContainerValue()->setModel(mTypeModel);
+    mDetails->ctrlDeprecated()->setChecked(false);
+    mDetails->ctrlDeprecateHint()->setEnabled(false);
+    mDetails->ctrlDeprecateHint()->setText(QString());
+    mFields->ctrlDeprecated()->setChecked(false);
+    mFields->ctrlDeprecateHint()->setEnabled(false);
+    mFields->ctrlDeprecateHint()->setText(QString());
         
     showEnumDetails(false);
     showContainerDetails(false);
@@ -880,8 +920,10 @@ void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* data
     mDetails->ctrlName()->setText(dataType->getName());
     mDetails->ctrlTypeStruct()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
+    
     mDetails->ctrlDeprecated()->setChecked(dataType->getIsDeprecated());
-    mDetails->ctrlDeprecateHint()->setText(dataType->getDeprecateHint());
+    mDetails->ctrlDeprecateHint()->setEnabled(dataType->getIsDeprecated());
+    mDetails->ctrlDeprecateHint()->setText(dataType->getIsDeprecated() ? dataType->getDeprecateHint() : QString());
 
     mList->ctrlToolAdd()->setEnabled(true);
     mList->ctrlToolRemove()->setEnabled(true);
@@ -912,10 +954,12 @@ void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
     mDetails->ctrlName()->setText(dataType->getName());
     mDetails->ctrlTypeEnum()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
-    mDetails->ctrlDeprecated()->setChecked(dataType->getIsDeprecated());
-    mDetails->ctrlDeprecateHint()->setText(dataType->getDeprecateHint());
     mDetails->ctrlEnumDerived()->setCurrentText(dataType->getDerived());
-
+    
+    mDetails->ctrlDeprecated()->setChecked(dataType->getIsDeprecated());
+    mDetails->ctrlDeprecateHint()->setEnabled(dataType->getIsDeprecated());
+    mDetails->ctrlDeprecateHint()->setText(dataType->getIsDeprecated() ? dataType->getDeprecateHint() : QString());
+    
     mList->ctrlToolAdd()->setEnabled(true);
     mList->ctrlToolRemove()->setEnabled(true);
     mList->ctrlToolAddField()->setEnabled(true);
@@ -953,9 +997,11 @@ void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataT
     mDetails->ctrlName()->setText(name);
     mDetails->ctrlTypeImport()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
+    
     mDetails->ctrlDeprecated()->setChecked(dataType->getIsDeprecated());
-    mDetails->ctrlDeprecateHint()->setText(dataType->getDeprecateHint());
-
+    mDetails->ctrlDeprecateHint()->setEnabled(dataType->getIsDeprecated());
+    mDetails->ctrlDeprecateHint()->setText(dataType->getIsDeprecated() ? dataType->getDeprecateHint() : QString());
+    
     mDetails->ctrlImportLocation()->setText(dataType->getLocation());
     mDetails->ctrlImportNamespace()->setText(dataType->getNamespace());
     mDetails->ctrlButtonBrowse()->setEnabled(true);
@@ -990,9 +1036,11 @@ void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* d
     mDetails->ctrlName()->setText(dataType->getName());
     mDetails->ctrlTypeContainer()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
+    
     mDetails->ctrlDeprecated()->setChecked(dataType->getIsDeprecated());
-    mDetails->ctrlDeprecateHint()->setText(dataType->getDeprecateHint());
-
+    mDetails->ctrlDeprecateHint()->setEnabled(dataType->getIsDeprecated());
+    mDetails->ctrlDeprecateHint()->setText(dataType->getIsDeprecated() ? dataType->getDeprecateHint() : QString());
+    
     mDetails->ctrlContainerValue()->setCurrentText(dataType->getValue());
     mDetails->ctrlContainerKey()->setCurrentText(dataType->getKey());
     mDetails->ctrlContainerKey()->setEnabled(dataType->canHaveKey());
@@ -1027,6 +1075,10 @@ void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& 
     mFields->ctrlDeprecated()->setChecked(field.getIsDeprecated());
     mFields->ctrlDeprecateHint()->setText(field.getDeprecateHint());
     
+    mFields->ctrlDeprecated()->setChecked(field.getIsDeprecated());
+    mFields->ctrlDeprecateHint()->setEnabled(field.getIsDeprecated());
+    mFields->ctrlDeprecateHint()->setText(field.getIsDeprecated() ? field.getDeprecateHint() : QString());
+    
     int index = parent->findIndex(field.getId());    
     mList->ctrlToolMoveUp()->setEnabled(index > 0);
     mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
@@ -1046,8 +1098,10 @@ void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& fie
     mFields->ctrlName()->setText(field.getName());
     mFields->ctrlValue()->setText(field.getValue());
     mFields->ctrlDescription()->setPlainText(field.getDescription());
+    
     mFields->ctrlDeprecated()->setChecked(field.getIsDeprecated());
-    mFields->ctrlDeprecateHint()->setText(field.getDeprecateHint());
+    mFields->ctrlDeprecateHint()->setEnabled(field.getIsDeprecated());
+    mFields->ctrlDeprecateHint()->setText(field.getIsDeprecated() ? field.getDeprecateHint() : QString());
     
     int index = parent->findIndex(field.getId());    
     mList->ctrlToolMoveUp()->setEnabled(index > 0);

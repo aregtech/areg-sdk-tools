@@ -180,6 +180,9 @@ void SIDataTopic::updateWidgets(void)
     mDetails->ctrlName()->setEnabled(false);
     mDetails->ctrlTypes()->setEnabled(false);
     mDetails->ctrlNotification()->setEnabled(false);
+    mDetails->ctrlDeprecated()->setEnabled(false);
+    mDetails->ctrlDeprecateHint()->setEnabled(false);
+    mDetails->ctrlDeprecateHint()->setText(QString());
 }
 
 void SIDataTopic::setupSignals(void)
@@ -216,9 +219,11 @@ void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previo
         mDetails->ctrlName()->setText("");
         mDetails->ctrlTypes()->setCurrentIndex(0);
         mDetails->ctrlNotification()->setCurrentIndex(0);
-        mDetails->ctrlDescription()->setPlainText("");
-        mDetails->ctrlDeprecateHint()->setText("");
+        mDetails->ctrlDescription()->setPlainText(QString());
+        mDetails->ctrlDeprecateHint()->setText(QString());
+        mDetails->ctrlDeprecateHint()->setEnabled(false);
         mDetails->ctrlDeprecated()->setChecked(false);
+        mDetails->ctrlDeprecated()->setEnabled(false);
 
         mDetails->ctrlName()->setEnabled(false);
         mDetails->ctrlTypes()->setEnabled(false);
@@ -236,8 +241,19 @@ void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previo
         mDetails->ctrlTypes()->setCurrentText(entry->getType());
         mDetails->ctrlNotification()->setCurrentText(AttributeEntry::toString(entry->getNotification()));
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
+
+        mDetails->ctrlDeprecated()->setEnabled(true);
         mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
+        if (entry->getIsDeprecated())
+        {
+            mDetails->ctrlDeprecateHint()->setEnabled(true);
+            mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
+        }
+        else
+        {
+            mDetails->ctrlDeprecateHint()->setEnabled(false);
+            mDetails->ctrlDeprecateHint()->setText(QString());
+        }
 
         if (currentRow == 0)
         {
@@ -392,6 +408,11 @@ void SIDataTopic::onDeprectedChecked(bool isChecked)
         Q_ASSERT(entry != nullptr);
         entry->setIsDeprecated(isChecked);
         mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+        if (isChecked == false)
+        {
+            entry->setDeprecateHint(QString());
+            mDetails->ctrlDeprecateHint()->setText(QString());
+        }
     }
 }
 
@@ -403,7 +424,10 @@ void SIDataTopic::onDeprecateHintChanged(const QString& newText)
     {
         AttributeEntry* entry = _findAttribute(row);
         Q_ASSERT(entry != nullptr);
-        entry->setDeprecateHint(newText);
+        if (entry->getIsDeprecated())
+        {
+            entry->setDeprecateHint(newText);
+        }
     }
 }
 

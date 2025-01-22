@@ -156,7 +156,7 @@ void SIMethodBase::setIsDeprecated(bool isDeprecated)
     }
 }
 
-bool SIMethodBase::isDeprecated(void) const
+bool SIMethodBase::getIsDeprecated(void) const
 {
     return mIsDeprecated;
 }

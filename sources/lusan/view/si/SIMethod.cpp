@@ -348,10 +348,35 @@ void SIMethod::onBroadcastSelected(bool isSelected)
 
 void SIMethod::onDeprecateChecked(bool isChecked)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    SIMethodBase* method = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>() : nullptr;
+    if (method == nullptr)
+        return;
+    
+    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
+    method->setIsDeprecated(isChecked);
+    mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+    if (isChecked == false)
+    {
+        method->setDeprecateHint(QString());
+        mDetails->ctrlDeprecateHint()->setText(QString());
+    }
 }
 
 void SIMethod::onDeprecateChanged(const QString& newText)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    SIMethodBase* method = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>() : nullptr;
+    if (method == nullptr)
+        return;
+    
+    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
+    if (method->getIsDeprecated())
+    {
+        method->setDeprecateHint(newText);
+    }
 }
 
 void SIMethod::onDescriptionChanged(void)
@@ -545,10 +570,41 @@ void SIMethod::onParamDescriptionChanged(void)
 
 void SIMethod::onParamDeprecateChecked(bool isChecked)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    SIMethodBase* method = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>() : nullptr;
+    if (method == nullptr)
+        return;
+
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    Q_ASSERT(id != 0);
+    MethodParameter * param = method->findElement(id);
+    Q_ASSERT(param != nullptr);
+    param->setIsDeprecated(isChecked);
+    mParams->ctrlParamIsDeprecated()->setEnabled(isChecked);
+    if (isChecked == false)
+    {
+        param->setDeprecateHint(QString());
+        mParams->ctrlParamDeprecateHint()->setText(QString());
+    }
 }
 
 void SIMethod::onParamDeprecateHintChanged(const QString& newText)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    SIMethodBase* method = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>() : nullptr;
+    if (method == nullptr)
+        return;
+    
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    Q_ASSERT(id != 0);
+    MethodParameter * param = method->findElement(id);
+    Q_ASSERT(param != nullptr);
+    if (param->getIsDeprecated())
+    {
+        param->setDeprecateHint(newText);
+    }        
 }
 
 void SIMethod::updateData(void)
@@ -669,7 +725,7 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
         mDetails->ctrlName()->setText(method->getName());
         mDetails->ctrlDescription()->setPlainText(method->getDescription());
         mDetails->ctrlDeprecateHint()->setText(method->getDeprecateHint());
-        mDetails->ctrlIsDeprecated()->setChecked(method->isDeprecated());
+        mDetails->ctrlIsDeprecated()->setChecked(method->getIsDeprecated());
 
         switch (method->getMethodType())
         {

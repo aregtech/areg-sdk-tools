@@ -338,6 +338,11 @@ void SIConstant::onDeprectedChecked(bool isChecked)
         Q_ASSERT(entry != nullptr);
         entry->setIsDeprecated(isChecked);
         mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+        if (isChecked == false)
+        {
+            entry->setDeprecateHint(QString());
+            mDetails->ctrlDeprecateHint()->setText(QString());
+        }
     }
 }
 
@@ -349,7 +354,10 @@ void SIConstant::onDeprecateHintChanged(const QString& newText)
     {
         ConstantEntry* entry = _findConstant(row);
         Q_ASSERT(entry != nullptr);
-        entry->setDeprecateHint(newText);
+        if (entry->getIsDeprecated())
+        {
+            entry->setDeprecateHint(newText);
+        }
     }
 }
 
