@@ -135,8 +135,7 @@ bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
         setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
         mRespName = attributes.hasAttribute(XmlSI::xmlSIAttributeResponse) ? attributes.value(XmlSI::xmlSIAttributeResponse).toString() : "";
-        mIsDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false;
-        mDeprecateHint.clear();
+        setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
         while (xml.readNextStartElement())
         {
@@ -144,9 +143,9 @@ bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
             {
                 mDescription = xml.readElementText();
             }
-            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint && mIsDeprecated)
+            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
             {
-                mDeprecateHint = xml.readElementText();
+                setDeprecateHint(xml.readElementText());
             }
             else if (xml.name() == XmlSI::xmlSIElementParamList)
             {
@@ -193,21 +192,17 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
         xml.writeAttribute(XmlSI::xmlSIAttributeResponse, mRespName);
     }
 
-    if (mIsDeprecated)
+    if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
     }
 
-    if (!mDescription.isEmpty())
+    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+    if (getIsDeprecated())
     {
-        xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
     }
 
-    if (mIsDeprecated && !mDeprecateHint.isEmpty())
-    {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
-    }
-    
     const QList<MethodParameter> & elements = getElements();
     if (elements.isEmpty() == false)
     {

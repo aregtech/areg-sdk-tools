@@ -124,15 +124,16 @@ bool ConstantEntry::readFromXml(QXmlStreamReader& xml)
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
-            if (xml.name() == XmlSI::xmlSIElementValue)
+            QStringView xmlName{ xml.name() };
+            if (xmlName == XmlSI::xmlSIElementValue)
             {
                 mValue = xml.readElementText();
             }
-            else if (xml.name() == XmlSI::xmlSIElementDescription)
+            else if (xmlName == XmlSI::xmlSIElementDescription)
             {
                 setDescription(xml.readElementText());
             }
-            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
+            else if (xmlName == XmlSI::xmlSIElementDeprecateHint)
             {
                 setDeprecateHint(xml.readElementText());
             }
@@ -152,16 +153,16 @@ void ConstantEntry::writeToXml(QXmlStreamWriter& xml) const
         xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
         xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
         xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
-        if (mIsDeprecated)
+        if (getIsDeprecated())
         {
             xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
         }
 
         xml.writeTextElement(XmlSI::xmlSIElementValue, mValue);
         xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-        if (mIsDeprecated && (mDeprecateHint.isEmpty() == false))
+        if (getIsDeprecated())
         {
-            xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
+            xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
         }
 
         xml.writeEndElement();

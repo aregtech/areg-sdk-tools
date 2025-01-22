@@ -150,26 +150,49 @@ public:
      * \param   value   The new value of the enum entry.
      **/
     void setValue(const QString & value);
-    
+
+    /**
+     * \brief   Returns the description of the enum entry.
+     **/
     const QString getDescription(void) const;
-    
+
+    /**
+     * \brief   Sets the description of the enum entry.
+     * \param   describe    The description of the enum entry.
+     **/
     void setDescription(const QString& describe);
-    
+
+    /**
+     * \brief   Sets the flag, indicating if the enum entry is deprecated.
+     * \param   isDeprecated    If true, the enum entry is deprecated.
+     **/
     inline void setIsDeprecated(bool isDeprecated);
-    
+
+    /**
+     * \brief   Returns true if the enum entry is deprecated.
+     **/
     inline bool getIsDeprecated(void) const;
-    
+  
+    /**
+     * \brief   Sets the deprecation hint of the enum entry.
+     * \param   hint    The deprecation hint of the enum entry.
+     **/
     inline void setDeprecateHint(const QString & hint);
-    
+
+    /**
+     * \brief   Returns the deprecation hint of the enum entry.
+     **/
     inline const QString& getDeprecateHint(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    QString     mName;      //!< The name of the enum entry.
-    QString     mValue;     //!< The value of the enum entry.
-    QString     mDescribe;  //!< The description of the enum entry
+    QString     mName;          //!< The name of the enum entry.
+    QString     mValue;         //!< The value of the enum entry.
+    QString     mDescription;   //!< The description of the enum entry
+    QString     mDeprecateHint; //!< The deprecation hint of the enum entry.
+    bool        mIsDeprecated;  //!< Flag, indicating if the enum entry is deprecated.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -178,20 +201,22 @@ private:
 
 inline void EnumEntry::setIsDeprecated(bool isDeprecated)
 {
+    mIsDeprecated = isDeprecated;
 }
 
 inline bool EnumEntry::getIsDeprecated(void) const
 {
-    return false;
+    return mIsDeprecated;
 }
 
 inline void EnumEntry::setDeprecateHint(const QString & hint)
 {
+    mDeprecateHint = mIsDeprecated ? hint : QString();
 }
 
 inline const QString& EnumEntry::getDeprecateHint(void) const
 {
-    return EmptyString;
+    return (mIsDeprecated ? mDeprecateHint : EmptyString);
 }
 
 #endif // LUSAN_DATA_COMMON_ENUMENTRY_HPP

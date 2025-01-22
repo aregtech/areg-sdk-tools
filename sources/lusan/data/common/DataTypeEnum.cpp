@@ -75,14 +75,26 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
     mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
     QString type = attributes.hasAttribute(XmlSI::xmlSIAttributeValues) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "";
     mDerived = type == DEFAULT_VALUES ? "" : type;
+    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
-        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementDescription)
+        if (xml.tokenType() != QXmlStreamReader::StartElement)
+        {
+            xml.readNext();
+            continue;
+        }
+        
+        QStringView xmlName{xml.name()};
+        if (xmlName == XmlSI::xmlSIElementDescription)
         {
             mDescription = xml.readElementText();
         }
-        else if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementFieldList)
+        else if (xmlName == XmlSI::xmlSIElementDeprecateHint)
+        {
+            setDeprecateHint(xml.readElementText());
+        }
+        else if (xmlName == XmlSI::xmlSIElementFieldList)
         {
             while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementFieldList))
             {
@@ -112,8 +124,16 @@ void DataTypeEnum::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
     xml.writeAttribute(XmlSI::xmlSIAttributeValues, mDerived.isEmpty() ? DEFAULT_VALUES : mDerived);
+    if (getIsDeprecated())
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+    }
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+    if (getIsDeprecated())
+    {
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
+    }
 
     xml.writeStartElement(XmlSI::xmlSIElementFieldList);
     const QList<EnumEntry> & elements = getElements();

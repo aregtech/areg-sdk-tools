@@ -21,36 +21,49 @@
 
 DataTypeCustom::DataTypeCustom(ElementBase * parent /*= nullptr*/)
     : DataTypeBase(eCategory::CustomDefined, "", 0, parent)
-    , mDescription()
+    , mDescription  ()
+    , mDeprecateHint()
+    , mIsDeprecated (false)
 {
 }
 
 DataTypeCustom::DataTypeCustom(uint32_t id, ElementBase* parent)
     : DataTypeBase(eCategory::CustomDefined, "", id, parent)
-    , mDescription()
+    , mDescription  ()
+    , mDeprecateHint()
+    , mIsDeprecated (false)
 {
 }
 
 DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category, ElementBase* parent /*= nullptr*/)
     : DataTypeBase(category, "", 0, parent)
-    , mDescription()
+    , mDescription  ()
+    , mDeprecateHint()
+    , mIsDeprecated (false)
 {
 }
 
 DataTypeCustom::DataTypeCustom(DataTypeBase::eCategory category, uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
     : DataTypeBase(category, name, id, parent)
+    , mDescription  ()
+    , mDeprecateHint()
+    , mIsDeprecated (false)
 {
 }
 
 DataTypeCustom::DataTypeCustom(const DataTypeCustom& src)
-    : DataTypeBase(src)
-    , mDescription(src.mDescription)
+    : DataTypeBase  (src)
+    , mDescription  (src.mDescription)
+    , mDeprecateHint(src.mDeprecateHint)
+    , mIsDeprecated (src.mIsDeprecated)
 {
 }
 
 DataTypeCustom::DataTypeCustom(DataTypeCustom&& src) noexcept
-    : DataTypeBase(std::move(src))
-    , mDescription(std::move(src.mDescription))
+    : DataTypeBase  (std::move(src))
+    , mDescription  (std::move(src.mDescription))
+    , mDeprecateHint(std::move(src.mDeprecateHint))
+    , mIsDeprecated (src.mIsDeprecated)
 {
 }
 
@@ -63,7 +76,9 @@ DataTypeCustom& DataTypeCustom::operator = (const DataTypeCustom& other)
     if (this != &other)
     {
         DataTypeBase::operator = (other);
-        mDescription = other.mDescription;
+        mDescription    = other.mDescription;
+        mDeprecateHint  = other.mDeprecateHint;
+        mIsDeprecated   = other.mIsDeprecated;
     }
 
     return *this;
@@ -74,7 +89,9 @@ DataTypeCustom& DataTypeCustom::operator = (DataTypeCustom&& other) noexcept
     if (this != &other)
     {
         DataTypeBase::operator = (std::move(other));
-        mDescription = std::move(other.mDescription);
+        mDescription    = std::move(other.mDescription);
+        mDeprecateHint  = std::move(other.mDeprecateHint);
+        mIsDeprecated   = other.mIsDeprecated;
     }
 
     return *this;
@@ -107,12 +124,12 @@ void DataTypeCustom::setIsDeprecated(bool isDeprecated)
 
 const QString& DataTypeCustom::getDeprecateHint(void) const
 {
-    return mDeprecateHint;
+    return mIsDeprecated ? mDeprecateHint : ElementBase::EmptyString;
 }
 
 void DataTypeCustom::setDeprecateHint(const QString& hint)
 {
-    mDeprecateHint = hint;
+    mDeprecateHint = mIsDeprecated ? hint : QString();
 }
 
 void DataTypeCustom::setIsDeprecated(bool isDeprecated, const QString& reason)
