@@ -49,7 +49,7 @@ public:
     
     QPlainTextEdit * ctrlDescription(void) const;
     
-    QCheckBox * ctrlIsDeprecated(void) const;
+    QCheckBox * ctrlDeprecated(void) const;
     
     QLineEdit * ctrlDeprecateHint(void) const;
 

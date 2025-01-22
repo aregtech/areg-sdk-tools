@@ -64,12 +64,12 @@ QPlainTextEdit * SIMethodParamDetails::ctrlParamDescription(void) const
     return ui->textDescribe;
 }
 
-QCheckBox * SIMethodParamDetails::ctrlParamIsDeprecated(void) const
+QCheckBox * SIMethodParamDetails::ctrlDeprecated(void) const
 {
     return ui->checkDeprecated;
 }
 
-QLineEdit * SIMethodParamDetails::ctrlParamDeprecateHint(void) const
+QLineEdit * SIMethodParamDetails::ctrlDeprecateHint(void) const
 {
     return ui->editDeprecated;
 }

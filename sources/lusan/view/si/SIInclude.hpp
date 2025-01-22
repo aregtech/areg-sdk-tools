@@ -128,7 +128,7 @@ protected slots:
     /**
      * \brief   Triggered when the deprecated check box is clicked.
      **/
-    void onDeprectedClicked(Qt::CheckState newState);
+    void onDeprecatedChecked(bool isChecked);
     
     /**
      * \brief   Triggered when the deprecation hint field is changed.

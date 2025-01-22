@@ -85,9 +85,9 @@ void SIOverviewModel::setDescription(const QString& description)
     mData.setDescription(description);
 }
 
-bool SIOverviewModel::isDeprecated() const
+bool SIOverviewModel::getIsDeprecated() const
 {
-    return mData.isDeprecated();
+    return mData.getIsDeprecated();
 }
 
 void SIOverviewModel::setIsDeprecated(bool isDeprecated)

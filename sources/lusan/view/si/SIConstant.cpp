@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIConstant.hpp"
-#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIConstant.h"
 
 #include "lusan/data/common/DataTypeBase.hpp"
@@ -36,6 +35,8 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QToolButton>
+
+#include "lusan/view/si/SICommon.hpp"
 
 SIConstantWidget::SIConstantWidget(QWidget* parent)
     : QWidget{ parent }
@@ -157,8 +158,8 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
         mDetails->ctrlTypes()->setCurrentText("");
         mDetails->ctrlValue()->setText("");
         mDetails->ctrlDescription()->setPlainText("");
-        mDetails->ctrlDeprecateHint()->setText("");
-        mDetails->ctrlDeprecated()->setChecked(false);
+
+        SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, nullptr, false);
 
         mDetails->ctrlName()->setEnabled(false);
         mDetails->ctrlTypes()->setEnabled(false);
@@ -176,9 +177,9 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
         mDetails->ctrlTypes()->setCurrentText(entry->getType());
         mDetails->ctrlValue()->setText(entry->getValue());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
-        
+
+        SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, entry, true);
+
         if (currentRow == 0)
         {
             mList->ctrlButtonMoveUp()->setEnabled(false);
@@ -252,11 +253,11 @@ void SIConstant::onAddClicked(void)
         mDetails->ctrlTypes()->setCurrentText(entry->getType());
         mDetails->ctrlValue()->setText(entry->getValue());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
         
+        SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, entry, true);
+
         blockBasicSignals(false);
     }
 }
@@ -336,8 +337,7 @@ void SIConstant::onDeprectedChecked(bool isChecked)
     {
         ConstantEntry* entry = _findConstant(row);
         Q_ASSERT(entry != nullptr);
-        entry->setIsDeprecated(isChecked);
-        mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+        SICommon::checkedDeprecated<SIConstantDetails, ConstantEntry>(mDetails, entry, isChecked);
     }
 }
 
@@ -349,7 +349,7 @@ void SIConstant::onDeprecateHintChanged(const QString& newText)
     {
         ConstantEntry* entry = _findConstant(row);
         Q_ASSERT(entry != nullptr);
-        entry->setDeprecateHint(newText);
+        SICommon::setDeprecateHint<SIConstantDetails, ConstantEntry>(mDetails, entry, newText);
     }
 }
 
@@ -446,6 +446,8 @@ void SIConstant::updateWidgets(void)
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
     mList->ctrlTableList()->setItemDelegateForColumn(1, mTableCell);
     mList->ctrlTableList()->setItemDelegateForColumn(2, mTableCell);
+
+    SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, nullptr, false);
 
     mDetails->ctrlName()->setEnabled(false);
     mDetails->ctrlTypes()->setEnabled(false);

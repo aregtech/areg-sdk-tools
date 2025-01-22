@@ -169,7 +169,7 @@ public:
      * \brief   Gets the deprecated flag.
      * \return  The deprecated flag.
      **/
-    bool isDeprecated(void) const;
+    bool getIsDeprecated(void) const;
 
     /**
      * \brief   Sets the deprecated flag.
@@ -181,13 +181,13 @@ public:
      * \brief   Gets the deprecation hint.
      * \return  The deprecation hint.
      **/
-    const QString& getDeprecationHint(void) const;
+    const QString& getDeprecateHint(void) const;
 
     /**
      * \brief   Sets the deprecation hint.
      * \param   deprecationHint The deprecation hint.
      **/
-    void setDeprecationHint(const QString& deprecationHint);
+    void setDeprecateHint(const QString& deprecationHint);
 
     /**
      * \brief   Deprecates the entry. Sets deprecation flag and the comment

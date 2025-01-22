@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIOverview.hpp"
-#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIOverview.h"
 
 #include "lusan/model/si/SIOverviewModel.hpp"
@@ -31,6 +30,8 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QRadioButton>
+
+#include "lusan/view/si/SICommon.hpp"
 
 SIOverviewWidget::SIOverviewWidget(QWidget* parent)
     : QWidget{ parent }
@@ -104,8 +105,7 @@ void SIOverview::onCheckedInternet(bool isChecked)
 
 void SIOverview::onDeprecatedChecked(bool isChecked)
 {
-    mModel.setIsDeprecated(isChecked);
-    mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+    SICommon::checkedDeprecated<SIOverviewDetails, SIOverviewModel>(mDetails, &mModel, isChecked);
 }
 
 void SIOverview::onDescriptionChanged(void)
@@ -115,7 +115,7 @@ void SIOverview::onDescriptionChanged(void)
 
 void SIOverview::onDeprecateHintChanged(const QString& newText)
 {
-    mModel.setDeprecateHint(newText);
+    SICommon::setDeprecateHint<SIOverviewDetails, SIOverviewModel>(mDetails, &mModel, newText);
 }
 
 void SIOverview::onMajorChanged(const QString& major)
@@ -175,9 +175,9 @@ void SIOverview::updateData(void)
     mDetails->ctrlMinor()->setText(QString::number(version.getMinor()));
     mDetails->ctrlPatch()->setText(QString::number(version.getPatch()));
     mDetails->ctrlName()->setText(mModel.getName());
-    mDetails->ctrlDeprecated()->setChecked(mModel.isDeprecated());
-    mDetails->ctrlDeprecateHint()->setText(mModel.getDeprecateHint());
     mDetails->ctrlDescription()->setPlainText(mModel.getDescription());
+
+    SICommon::enableDeprecated<SIOverviewDetails, SIOverviewModel>(mDetails, &mModel, true);
 
     switch (mModel.getCategory())
     {

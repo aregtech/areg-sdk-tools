@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIDataTopic.hpp"
-#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIDataTopic.h"
 
 #include "lusan/model/common/DataTypesModel.hpp"
@@ -34,6 +33,8 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QToolButton>
+
+#include "lusan/view/si/SICommon.hpp"
 
 //////////////////////////////////////////////////////////////////////////
 // SIDataTopicModel class implementation
@@ -180,6 +181,8 @@ void SIDataTopic::updateWidgets(void)
     mDetails->ctrlName()->setEnabled(false);
     mDetails->ctrlTypes()->setEnabled(false);
     mDetails->ctrlNotification()->setEnabled(false);
+
+    SICommon::enableDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, nullptr, false);
 }
 
 void SIDataTopic::setupSignals(void)
@@ -216,9 +219,8 @@ void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previo
         mDetails->ctrlName()->setText("");
         mDetails->ctrlTypes()->setCurrentIndex(0);
         mDetails->ctrlNotification()->setCurrentIndex(0);
-        mDetails->ctrlDescription()->setPlainText("");
-        mDetails->ctrlDeprecateHint()->setText("");
-        mDetails->ctrlDeprecated()->setChecked(false);
+        mDetails->ctrlDescription()->setPlainText(QString());
+        SICommon::enableDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, nullptr, false);
 
         mDetails->ctrlName()->setEnabled(false);
         mDetails->ctrlTypes()->setEnabled(false);
@@ -236,8 +238,8 @@ void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previo
         mDetails->ctrlTypes()->setCurrentText(entry->getType());
         mDetails->ctrlNotification()->setCurrentText(AttributeEntry::toString(entry->getNotification()));
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
+
+        SICommon::enableDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, entry, true);
 
         if (currentRow == 0)
         {
@@ -308,8 +310,9 @@ void SIDataTopic::onAddClicked(void)
         mDetails->ctrlTypes()->setCurrentText(entry->getType());
         mDetails->ctrlNotification()->setCurrentText(AttributeEntry::toString(entry->getNotification()));
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
+
+        SICommon::enableDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, entry, true);
+
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
 
@@ -390,8 +393,7 @@ void SIDataTopic::onDeprectedChecked(bool isChecked)
     {
         AttributeEntry* entry = _findAttribute(row);
         Q_ASSERT(entry != nullptr);
-        entry->setIsDeprecated(isChecked);
-        mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
+        SICommon::checkedDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, entry, isChecked);
     }
 }
 
@@ -403,7 +405,7 @@ void SIDataTopic::onDeprecateHintChanged(const QString& newText)
     {
         AttributeEntry* entry = _findAttribute(row);
         Q_ASSERT(entry != nullptr);
-        entry->setDeprecateHint(newText);
+        SICommon::setDeprecateHint<SIDataTopicDetails, AttributeEntry>(mDetails, entry, newText);
     }
 }
 

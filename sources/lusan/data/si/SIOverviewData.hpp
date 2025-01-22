@@ -172,7 +172,7 @@ public:
      * \brief   Checks if the service interface is deprecated.
      * \return  True if the service interface is deprecated, false otherwise.
      **/
-    bool isDeprecated() const;
+    bool getIsDeprecated() const;
 
     /**
      * \brief   Sets the deprecation status of the service interface.
@@ -258,7 +258,7 @@ inline void SIOverviewData::setDescription(const QString& description)
     mDescription = description;
 }
 
-inline bool SIOverviewData::isDeprecated() const
+inline bool SIOverviewData::getIsDeprecated() const
 {
     return mIsDeprecated;
 }

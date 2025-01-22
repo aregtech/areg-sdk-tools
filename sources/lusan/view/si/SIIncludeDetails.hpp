@@ -41,7 +41,6 @@ class QPlainTextEdit;
  **/
 class SIIncludeDetails : public QWidget
 {
-    friend class SIInclude;
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
@@ -80,11 +79,6 @@ public:
      * \brief   Returns the hint of the deprecated file.
      **/
     QString getDeprecateHint(void) const;
-
-//////////////////////////////////////////////////////////////////////////
-// Protected controls
-//////////////////////////////////////////////////////////////////////////
-protected:
 
     /**
      * \brief   Returns the control of the include file path.
