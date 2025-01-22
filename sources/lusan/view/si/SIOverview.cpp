@@ -24,13 +24,14 @@
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/si/SIOverviewDetails.hpp"
 #include "lusan/view/si/SIOverviewLinks.hpp"
-#include "lusan/view/si/SICommon.hpp"
 
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QRadioButton>
+
+#include "lusan/view/si/SICommon.hpp"
 
 SIOverviewWidget::SIOverviewWidget(QWidget* parent)
     : QWidget{ parent }
@@ -104,9 +105,7 @@ void SIOverview::onCheckedInternet(bool isChecked)
 
 void SIOverview::onDeprecatedChecked(bool isChecked)
 {
-    mModel.setIsDeprecated(isChecked);
-    mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
-    mDetails->ctrlDeprecateHint()->setText(isChecked ? mModel.getDeprecateHint() : QString());
+    SICommon::checkedDeprecated<SIOverviewDetails, SIOverviewModel>(mDetails, &mModel, isChecked);
 }
 
 void SIOverview::onDescriptionChanged(void)
@@ -116,7 +115,7 @@ void SIOverview::onDescriptionChanged(void)
 
 void SIOverview::onDeprecateHintChanged(const QString& newText)
 {
-    mModel.setDeprecateHint(newText);
+    SICommon::setDeprecateHint<SIOverviewDetails, SIOverviewModel>(mDetails, &mModel, newText);
 }
 
 void SIOverview::onMajorChanged(const QString& major)

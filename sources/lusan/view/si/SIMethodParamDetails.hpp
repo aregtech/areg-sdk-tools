@@ -48,9 +48,9 @@ public:
     
     QPlainTextEdit * ctrlParamDescription(void) const;
     
-    QCheckBox * ctrlParamIsDeprecated(void) const;
+    QCheckBox * ctrlDeprecated(void) const;
     
-    QLineEdit * ctrlParamDeprecateHint(void) const;
+    QLineEdit * ctrlDeprecateHint(void) const;
 
 private:
     Ui::SIMethodParamDetails* ui;

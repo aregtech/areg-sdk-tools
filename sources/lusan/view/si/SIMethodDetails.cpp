@@ -64,7 +64,7 @@ QPlainTextEdit * SIMethodDetails::ctrlDescription(void) const
     return ui->textDescribe;
 }
 
-QCheckBox * SIMethodDetails::ctrlIsDeprecated(void) const
+QCheckBox * SIMethodDetails::ctrlDeprecated(void) const
 {
     return ui->checkDeprecated;
 }

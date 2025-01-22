@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIMethod.hpp"
-#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIMethod.h"
 
 #include "lusan/view/si/SIMethodDetails.hpp"
@@ -26,7 +25,6 @@
 #include "lusan/view/si/SIMethodList.hpp"
 
 
-#include "lusan/data/si/SIMethodBroadcast.hpp"
 #include "lusan/data/si/SIMethodRequest.hpp"
 #include "lusan/data/si/SIMethodResponse.hpp"
 #include "lusan/data/si/SIDataTypeData.hpp"
@@ -47,6 +45,7 @@
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 
+#include "lusan/view/si/SICommon.hpp"
 
 SIMethodWidget::SIMethodWidget(QWidget* parent)
     : QWidget{ parent }
@@ -355,13 +354,7 @@ void SIMethod::onDeprecateChecked(bool isChecked)
         return;
     
     Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
-    method->setIsDeprecated(isChecked);
-    mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
-    if (isChecked == false)
-    {
-        method->setDeprecateHint(QString());
-        mDetails->ctrlDeprecateHint()->setText(QString());
-    }
+    SICommon::checkedDeprecated<SIMethodDetails, SIMethodBase>(mDetails, method, isChecked);
 }
 
 void SIMethod::onDeprecateChanged(const QString& newText)
@@ -371,12 +364,8 @@ void SIMethod::onDeprecateChanged(const QString& newText)
     SIMethodBase* method = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>() : nullptr;
     if (method == nullptr)
         return;
-    
-    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
-    if (method->getIsDeprecated())
-    {
-        method->setDeprecateHint(newText);
-    }
+   
+    SICommon::setDeprecateHint<SIMethodDetails, SIMethodBase>(mDetails, method, newText);
 }
 
 void SIMethod::onDescriptionChanged(void)
@@ -580,13 +569,8 @@ void SIMethod::onParamDeprecateChecked(bool isChecked)
     Q_ASSERT(id != 0);
     MethodParameter * param = method->findElement(id);
     Q_ASSERT(param != nullptr);
-    param->setIsDeprecated(isChecked);
-    mParams->ctrlParamIsDeprecated()->setEnabled(isChecked);
-    if (isChecked == false)
-    {
-        param->setDeprecateHint(QString());
-        mParams->ctrlParamDeprecateHint()->setText(QString());
-    }
+
+    SICommon::checkedDeprecated<SIMethodParamDetails, MethodParameter>(mParams, param, isChecked);
 }
 
 void SIMethod::onParamDeprecateHintChanged(const QString& newText)
@@ -600,11 +584,7 @@ void SIMethod::onParamDeprecateHintChanged(const QString& newText)
     uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
     Q_ASSERT(id != 0);
     MethodParameter * param = method->findElement(id);
-    Q_ASSERT(param != nullptr);
-    if (param->getIsDeprecated())
-    {
-        param->setDeprecateHint(newText);
-    }        
+    SICommon::setDeprecateHint<SIMethodParamDetails, MethodParameter>(mParams, param, newText);
 }
 
 void SIMethod::updateData(void)
@@ -639,7 +619,7 @@ void SIMethod::setupSignals(void)
     connect(mDetails->ctrlRequest()         , &QRadioButton::toggled        , this, &SIMethod::onRequestSelected);
     connect(mDetails->ctrlResponse()        , &QRadioButton::toggled        , this, &SIMethod::onResponseSelected);
     connect(mDetails->ctrlBroadcast()       , &QRadioButton::toggled        , this, &SIMethod::onBroadcastSelected);
-    connect(mDetails->ctrlIsDeprecated()    , &QCheckBox::toggled           , this, &SIMethod::onDeprecateChecked);
+    connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled           , this, &SIMethod::onDeprecateChecked);
     connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::textEdited        , this, &SIMethod::onDeprecateChanged);
     connect(mDetails->ctrlDescription()     , &QPlainTextEdit::textChanged  , this, &SIMethod::onDescriptionChanged);
     connect(mDetails->ctrlConnectedResponse(), &QComboBox::currentTextChanged, this, &SIMethod::onConnectedResponseChanged);
@@ -658,8 +638,8 @@ void SIMethod::setupSignals(void)
     connect(mParams->ctrlParamHasDefault()  , &QCheckBox::toggled           , this, &SIMethod::onParamDefaultChecked);
     connect(mParams->ctrlParamDefaultValue(), &QLineEdit::textChanged       , this, &SIMethod::onParamDefaultChanged);
     connect(mParams->ctrlParamDescription() , &QPlainTextEdit::textChanged  , this, &SIMethod::onParamDescriptionChanged);
-    connect(mParams->ctrlParamIsDeprecated(), &QCheckBox::toggled           , this, &SIMethod::onParamDeprecateChecked);
-    connect(mParams->ctrlParamDeprecateHint(),&QLineEdit::textEdited        , this, &SIMethod::onParamDeprecateHintChanged);
+    connect(mParams->ctrlDeprecated()       , &QCheckBox::toggled           , this, &SIMethod::onParamDeprecateChecked);
+    connect(mParams->ctrlDeprecateHint()    , &QLineEdit::textEdited        , this, &SIMethod::onParamDeprecateHintChanged);
 }
 
 void SIMethod::blockBasicSignals(bool doBlock)
@@ -724,8 +704,8 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
 
         mDetails->ctrlName()->setText(method->getName());
         mDetails->ctrlDescription()->setPlainText(method->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(method->getDeprecateHint());
-        mDetails->ctrlIsDeprecated()->setChecked(method->getIsDeprecated());
+
+        SICommon::enableDeprecated<SIMethodDetails, SIMethodBase>(mDetails, method, true);
 
         switch (method->getMethodType())
         {
@@ -763,8 +743,7 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
         mList->ctrlButtonParamAdd()->setEnabled(false);
         mDetails->ctrlConnectedResponse()->setCurrentText(QString());
         mDetails->ctrlDescription()->setPlainText(QString());
-        mDetails->ctrlDeprecateHint()->setText(QString());
-        mDetails->ctrlIsDeprecated()->setChecked(false);
+        SICommon::enableDeprecated<SIMethodDetails, SIMethodBase>(mDetails, nullptr, false);
     }
 }
 
@@ -790,8 +769,7 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
         }
         
         mParams->ctrlParamDescription()->setPlainText(param.getDescription());
-        mParams->ctrlParamIsDeprecated()->setChecked(param.getIsDeprecated());
-        mParams->ctrlParamDeprecateHint()->setText(param.getIsDeprecated() ? param.getDeprecateHint() : QString());
+        SICommon::enableDeprecated<SIMethodParamDetails, MethodParameter>(mParams, &param, true);
         mParams->ctrlParamName()->setFocus();
         mParams->ctrlParamName()->selectAll();        
     }
@@ -801,8 +779,7 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
         mParams->ctrlParamType()->setCurrentText(QString());
         mParams->ctrlParamDefaultValue()->setText(QString());
         mParams->ctrlParamDescription()->setPlainText(QString());
-        mParams->ctrlParamIsDeprecated()->setChecked(false);
-        mParams->ctrlParamDeprecateHint()->setText(QString());
+        SICommon::enableDeprecated<SIMethodParamDetails, MethodParameter>(mParams, nullptr, false);
     }
 }
 

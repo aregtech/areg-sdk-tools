@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIInclude.hpp"
-#include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIInclude.h"
 
 #include "lusan/app/LusanApplication.hpp"
@@ -37,6 +36,8 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QToolButton>
+
+#include "lusan/view/si/SICommon.hpp"
 
 namespace
 {
@@ -123,6 +124,7 @@ void SIInclude::updateWidgets(void)
 {
     mTableCell = new TableCell(QList<QAbstractItemModel *>(), QList<int>(), mList->ctrlTableList());
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
+    SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
 }
 
 void SIInclude::updateData(void)
@@ -178,14 +180,13 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
     {
         mDetails->ctrlInclude()->setText("");
         mDetails->ctrlDescription()->setPlainText("");
-        mDetails->ctrlDeprecated()->setChecked(false);
-        mDetails->ctrlDeprecateHint()->setText("");
         mDetails->ctrlBrowseButton()->setEnabled(false);
-        mDetails->ctrlDeprecateHint()->setEnabled(false);
 
         mList->ctrlButtonMoveUp()->setEnabled(false);
         mList->ctrlButtonMoveDown()->setEnabled(false);
         mList->ctrlButtonRemove()->setEnabled(false);
+
+        SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
     }
     else if (currentRow != previousRow)
     {
@@ -193,10 +194,10 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
         Q_ASSERT(entry != nullptr);
         mDetails->ctrlInclude()->setText(entry->getLocation());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
         mDetails->ctrlBrowseButton()->setEnabled(true);
-        mDetails->ctrlDeprecateHint()->setEnabled(entry->getIsDeprecated());
+
+        SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, entry, true);
+
         mList->ctrlButtonRemove()->setEnabled(true);
 
         if (currentRow == 0)
@@ -221,16 +222,6 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
         mList->ctrlButtonRemove()->setEnabled(true);
         mList->ctrlButtonMoveDown()->setEnabled(currentRow < (table->rowCount() - 1));
         mList->ctrlButtonMoveUp()->setEnabled(currentRow != 0);
-    }
-    else
-    {
-        mList->ctrlButtonRemove()->setEnabled(false);
-        mList->ctrlButtonMoveDown()->setEnabled(false);
-        mList->ctrlButtonMoveUp()->setEnabled(false);
-        mDetails->ctrlInclude()->setText("");
-        mDetails->ctrlDescription()->setPlainText("");
-        mDetails->ctrlDeprecated()->setChecked(false);
-        mDetails->ctrlDeprecateHint()->setText("");
     }
 
     blockBasicSignals(false);
@@ -367,13 +358,7 @@ void SIInclude::onDeprecatedChecked(bool isChecked)
     {
         IncludeEntry* entry = _findInclude(row);
         Q_ASSERT(entry != nullptr);
-        entry->setIsDeprecated(isChecked);
-        mDetails->ctrlDeprecateHint()->setEnabled(isChecked);
-        if (isChecked == false)
-        {
-            entry->setDeprecateHint(QString());
-            mDetails->ctrlDeprecateHint()->setText(QString());
-        }
+        SICommon::checkedDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, entry, isChecked);
     }
 }
 
@@ -385,10 +370,7 @@ void SIInclude::onDeprecateHint(const QString& newText)
     {
         IncludeEntry* entry = _findInclude(row);
         Q_ASSERT(entry != nullptr);
-        if (entry->getIsDeprecated())
-        {
-            entry->setDeprecateHint(newText);
-        }
+        SICommon::setDeprecateHint<SIIncludeDetails, IncludeEntry>(mDetails, entry, newText);
     }
 }
 
@@ -418,8 +400,8 @@ void SIInclude::_addInclude(int pos)
         const IncludeEntry * entry = mModel.findInclude(id);
         mDetails->ctrlInclude()->setText(entry->getName());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-        mDetails->ctrlDeprecated()->setChecked(entry->getIsDeprecated());
+
+        SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, entry, true);
         
         QTableWidgetItem * current = table->currentItem();
         if (current != nullptr)
@@ -435,7 +417,6 @@ void SIInclude::_addInclude(int pos)
         table->selectRow(row);
         table->scrollToItem(item);
         
-        mDetails->ctrlDeprecateHint()->setEnabled(entry->getIsDeprecated());
         mDetails->ctrlInclude()->setFocus();
         mDetails->ctrlInclude()->selectAll();
 

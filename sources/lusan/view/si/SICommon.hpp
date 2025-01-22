@@ -20,6 +20,7 @@
  *
  ************************************************************************/
 
+#include <QString>
 
 namespace SICommon
 {
@@ -29,18 +30,27 @@ namespace SICommon
     constexpr unsigned int  WIDGET_WIDTH    = 540;
     constexpr unsigned int  WIDGET_HEIGHT   = 600;
 
+    /**
+     * \brief   The template function to enable or disable the deprication flag and deprecated hint.
+     **/
     template<class Widget, class Entry>
-    inline void enableDeprecated(Widget* widget, Entry* entry, bool enable);
+    inline void enableDeprecated(Widget* widget, const Entry* entry, bool enable);
 
+    /**
+     * \brief   The template function to set or reset the deprecated flag.
+     **/
     template<class Widget, class Entry>
     inline void checkedDeprecated(Widget* widget, Entry* entry, bool isChecked);
 
+    /**
+     * \brief   The template function to set or reset the deprecated hint.
+     **/
     template<class Widget, class Entry>
     inline void setDeprecateHint(Widget* widget, Entry* entry, const QString& newText);
 }
 
 template<class Widget, class Entry>
-inline void SICommon::enableDeprecated(Widget* widget, Entry* entry, bool enable)
+inline void SICommon::enableDeprecated(Widget* widget, const Entry* entry, bool enable)
 {
     widget->ctrlDeprecated()->setEnabled(enable);
     if (enable)
@@ -69,16 +79,10 @@ inline void SICommon::enableDeprecated(Widget* widget, Entry* entry, bool enable
 template<class Widget, class Entry>
 inline void SICommon::checkedDeprecated(Widget* widget, Entry* entry, bool isChecked)
 {
-    if (isChecked)
-    {
-        widget->ctrlDeprecateHint()->setEnabled(true);
-        widget->ctrlDeprecateHint()->setText(entry->getDeprecateHint());
-    }
-    else
-    {
-        widget->ctrlDeprecateHint()->setEnabled(false);
-        widget->ctrlDeprecateHint()->setText(QString());
-    }
+    entry->setIsDeprecated(isChecked);
+    widget->ctrlDeprecateHint()->setEnabled(isChecked);
+    widget->ctrlDeprecateHint()->setText(isChecked ? entry->getDeprecateHint() : QString());
+    widget->ctrlDeprecateHint()->setFocus();
 }
 
 template<class Widget, class Entry>
