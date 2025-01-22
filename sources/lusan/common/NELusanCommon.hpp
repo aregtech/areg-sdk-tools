@@ -114,6 +114,27 @@ namespace NELusanCommon
 
     constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
     constexpr const char * const xmlElementFile             { "File" };
+
+    enum class eSorting : uint8_t
+    {
+          SortingAscending      = 1     //!< bits: 0000 0001, Sort elements ascending
+        , SortingDescending     = 2     //!< bits: 0000 0010, Sort elements descending
+    };
+
+    enum class eOrdering : uint8_t
+    {
+          OrderById             = 4     //!< bits: 0000 0100, Order elements by ID
+        , OrderByName           = 8     //!< bits: 0000 1000, Order elements by name
+    };
+
+    enum class eSortingType : uint8_t
+    {
+          NoSorting         = 0     //!< bits: 0000 0000, No sorting
+        , SortByIdAsc       = 5     //!< bits: 0000 0101, Sorting by ID ascending
+        , SortByIdDesc      = 6     //!< bits: 0000 0110, Sorting by ID descending
+        , SortByNameAsc     = 9     //!< bits: 0000 1001, Sorting by Name ascending
+        , SortByNameDesc    = 10    //!< bits: 0000 1010, Sorting by Name descending
+    };
     
     template<typename T>
     struct get_id
@@ -138,7 +159,22 @@ namespace NELusanCommon
     {
         const QString& operator()(const T* entry){return entry->getName();};
     };
-        
+
+    template<typename T>
+    struct get_ref
+    {
+        T& operator()(T& entry) { return entry; };
+        const T& operator() (const T& entry) { return entry; };
+    };
+
+
+    template<typename T>
+    struct get_ref<T*>
+    {
+        T& operator()(T* entry) { return (*entry); };
+        const T& operator() (const T* entry) { return (*entry); };
+    };
+
     template <class Type, class Iter>
     void sortByName(Iter first, Iter last, bool ascending)
     {

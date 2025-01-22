@@ -55,101 +55,13 @@ namespace
 
         return result;
     }
-
-    template<class Method>
-    Method* findMethodInList(const QList<Method*>& list, const QString& name)
-    {
-        for (const auto& method : list)
-        {
-            if (method->getName() == name)
-            {
-                return method;
-            }
-        }
-
-        return nullptr;
-    }
-
-    template<class Method>
-    Method* findMethodInList(const QList<Method*>& list, const uint32_t id)
-    {
-        for (const auto& method : list)
-        {
-            if (method->getId() == id)
-            {
-                return method;
-            }
-        }
-
-        return nullptr;
-    }
-
-    template<class Method>
-    int32_t findMethodIndex(const QList<Method*>& list, const QString& name)
-    {
-        int32_t result = -1;
-        for (int i = 0; i < list.size(); ++i)
-        {
-            if (list.at(i)->getName() == name)
-            {
-                result = i;
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    template<class Method>
-    int32_t findMethodIndex(const QList<Method*>& list, uint32_t id)
-    {
-        int32_t result = -1;
-        for (int i = 0; i < list.size(); ++i)
-        {
-            if (list.at(i)->getId() == id)
-            {
-                result = i;
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    template<class Method>
-    void appendMethodList(const QList<Method*>& list, QList<SIMethodBase*>& result)
-    {
-        for (Method* method : list)
-        {
-            result.append(method);
-        }
-    }
-
-    template<class Method>
-    void sortList(QList<Method*>& list, bool ascending)
-    {
-        std::sort(list.begin(), list.end(), [ascending](const Method* lhs, const Method* rhs)
-            {
-                return (ascending ? (lhs->getId() < rhs->getId()) : (lhs->getId() > rhs->getId()));
-            });
-    }
-
-    template<class Method>
-    void sortListByName(QList<Method*>& list, bool ascending)
-    {
-        std::sort(list.begin(), list.end(), [ascending](const Method* lhs, const Method* rhs)
-            {
-                return (ascending ? (lhs->getName() < rhs->getName()) : (lhs->getName() > rhs->getName()));
-            });
-    }
 }
 
 SIMethodData::SIMethodData(ElementBase* parent /*= nullptr*/)
-    : ElementBase       (parent)
+    : TEDataContainer<SIMethodBase*, ElementBase> (parent)
     , mRequestMethods   ( )
     , mResponseMethods  ( )
     , mBroadcastMethods ( )
-    , mAllMethods       ( )
 {
 }
 
@@ -160,7 +72,7 @@ SIMethodData::~SIMethodData(void)
 
 bool SIMethodData::addMethod(SIMethodBase* method)
 {
-    if (method == nullptr || hasMethod(*method))
+    if (method == nullptr || hasMethod(method))
         return false;
 
     addMethodToList(method);
@@ -213,9 +125,10 @@ void SIMethodData::removeMethod(SIMethodBase* method)
 
 SIMethodBase* SIMethodData::findMethod(const QString& name, SIMethodBase::eMethodType methodType) const
 {
-    for (SIMethodBase* method : mAllMethods)
+    const QList<SIMethodBase*>& allMethods = getElements();
+    for (SIMethodBase* method : allMethods)
     {
-        if (method->getName() == name && method->getMethodType() == methodType)
+        if ((method->getName() == name) && (method->getMethodType() == methodType))
         {
             return method;
         }
@@ -226,15 +139,8 @@ SIMethodBase* SIMethodData::findMethod(const QString& name, SIMethodBase::eMetho
 
 SIMethodBase* SIMethodData::findMethod(uint32_t id) const
 {
-    for (SIMethodBase* method : mAllMethods)
-    {
-        if (method->getId() == id)
-        {
-            return method;
-        }
-    }
-
-    return nullptr;
+    SIMethodBase** result = findElement(id);
+    return (result != nullptr ? *result : nullptr);
 }
 
 SIMethodResponse* SIMethodData::findConnectedResponse(uint32_t reqId) const
@@ -329,8 +235,9 @@ void SIMethodData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementMethodList);
 
-    Q_ASSERT(mAllMethods.size() == (mBroadcastMethods.size() + mRequestMethods.size() + mResponseMethods.size()));
-    for (const SIMethodBase* method : mAllMethods)
+    const QList<SIMethodBase*>& allMethods = getElements();
+    Q_ASSERT(allMethods.size() == (mBroadcastMethods.size() + mRequestMethods.size() + mResponseMethods.size()));
+    for (const SIMethodBase* method : allMethods)
     {
         method->writeToXml(xml);
     }
@@ -340,8 +247,9 @@ void SIMethodData::writeToXml(QXmlStreamWriter& xml) const
 
 void SIMethodData::removeAll(void)
 {
-    qDeleteAll(mAllMethods);
-    mAllMethods.clear();
+    QList<SIMethodBase *>& allMethods = getElements();
+    qDeleteAll(allMethods);
+    allMethods.clear();
     mRequestMethods.clear();
     mResponseMethods.clear();
     mBroadcastMethods.clear();
@@ -379,12 +287,12 @@ bool SIMethodData::replaceMethod(SIMethodBase* oldMethod, SIMethodBase* newMetho
 
 void SIMethodData::sortByName(bool ascending)
 {
-    NELusanCommon::sortByName(mAllMethods, ascending);
+    sortElementsByName(ascending);
 }
 
 void SIMethodData::sortById(bool ascending)
 {
-    NELusanCommon::sortById(mAllMethods, ascending);
+    sortElementsById(ascending);
 }
 
 QList<SIMethodRequest*> SIMethodData::getConnectedRequests(SIMethodResponse* response) const
@@ -415,7 +323,7 @@ void SIMethodData::addMethodToList(SIMethodBase* method)
 {
     if (method != nullptr)
     {
-        mAllMethods.append(method);
+        addElement(method, false);
         switch (method->getMethodType())
         {
         case SIMethodBase::eMethodType::MethodRequest:
@@ -437,7 +345,7 @@ void SIMethodData::removeMethodFromList(SIMethodBase* method)
 {
     if (method != nullptr)
     {
-        mAllMethods.removeOne(method);
+        removeElement(method->getId());
         switch (method->getMethodType())
         {
         case SIMethodBase::eMethodType::MethodRequest:
@@ -458,17 +366,7 @@ void SIMethodData::removeMethodFromList(SIMethodBase* method)
 void SIMethodData::replaceMethodInList(SIMethodBase* oldMethod, SIMethodBase* newMethod)
 {
     if (oldMethod != nullptr && newMethod != nullptr)
-    {
-        int index = mAllMethods.indexOf(oldMethod);
-        if (index >= 0)
-        {
-            mAllMethods[index] = newMethod;
-        }
-        else
-        {
-            mAllMethods.append(newMethod);
-        }
-
+    { 
         switch (oldMethod->getMethodType())
         {
         case SIMethodBase::eMethodType::MethodRequest:
@@ -484,6 +382,8 @@ void SIMethodData::replaceMethodInList(SIMethodBase* oldMethod, SIMethodBase* ne
             break;
         }
 
+        replaceElement(oldMethod, newMethod);
+        
         switch (newMethod->getMethodType())
         {
         case SIMethodBase::eMethodType::MethodRequest:

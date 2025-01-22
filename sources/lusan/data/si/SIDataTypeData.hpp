@@ -22,6 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/data/common/TEDataContainer.hpp"
 #include "lusan/common/ElementBase.hpp"
 #include <QObject>
 
@@ -49,7 +50,7 @@ class DataTypeStructure;
   * \brief   Manages data type data for service interfaces.
   **/
 class SIDataTypeData    : public QObject
-                        , public ElementBase
+                        , public TEDataContainer<DataTypeCustom*, ElementBase>
 {
     Q_OBJECT
     
@@ -83,25 +84,6 @@ signals:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Searches for a data type in the list.
-     * \param   entry   The data type to search for.
-     * \return  The index of the data type, or -1 if not found.
-     **/
-    int findCustomDataType(const DataTypeCustom& entry) const;
-
-    /**
-     * \brief   Searches for a data type in the list.
-     * \param   id      The ID of the data type to search for.
-     * \return  The data type, or nullptr if not found.
-     **/
-    int findCustomDataType(uint32_t id) const;
-
-    /**
-     * \brief   Adds a data type to the list.
-     * \param   entry   The data type to add.
-     **/
-    int findCustomDataType(const QString& name) const;
 
     /**
      * \brief   Adds a data type to the list.
@@ -137,7 +119,7 @@ public:
      * \param   newEntry    The new data type.
      * \return  True if the data type was replaced, false otherwise.
      **/
-    bool replaceCustomDataType(const DataTypeCustom& oldEntry, DataTypeCustom * newEntry);
+    bool replaceCustomDataType(DataTypeCustom* oldEntry, DataTypeCustom * newEntry);
 
     /**
      * \brief   Reads data type data from an XML stream.
@@ -270,7 +252,7 @@ public:
      * \return  Returns true if the name is found in the list of data types. Otherwise, returns false.
      **/
     template<class DataType>
-    bool exists(const QList<DataType*> & dataTypes, const QString& typeName) const;
+    inline bool exists(const QList<DataType*> & dataTypes, const QString& typeName) const;
 
     /**
      * \brief   Searches for a data type by ID in the list of data type objects.
@@ -278,7 +260,7 @@ public:
      * \return  Returns true if the name is found in the list of data types. Otherwise, returns false.
      **/
     template<class DataType>
-    bool exists(const QList<DataType*> & dataTypes, uint32_t id) const;
+    inline bool exists(const QList<DataType*> & dataTypes, uint32_t id) const;
     
     /**
      * \brief   Searches for a data type by name in the list of all data type objects.
@@ -293,6 +275,12 @@ public:
      * \return  Returns true if the name is found in the list of data types. Otherwise, returns false.
      **/
     bool exists(uint32_t id) const;
+
+    template<class DataType>
+    inline DataType* findDataType(const QList<DataType*>& dataTypes, const QString& typeName) const;
+
+    template<class DataType>
+    inline DataType* findDataType(const QList<DataType*>& dataTypes, uint32_t id) const;
 
     /**
      * \brief   Searches for a data type by name in the list of all data type objects.
@@ -367,13 +355,6 @@ private:
     DataTypeCustom* _createType(const QString& name, ElementBase * parent, uint32_t id, DataTypeBase::eCategory category);
 
 //////////////////////////////////////////////////////////////////////////
-// Hidden member variables.
-//////////////////////////////////////////////////////////////////////////
-private:
-    QList<DataTypeCustom *>     mCustomDataTypes;   //!< The list of data types.
-    QList<DataTypeBase *>       mDataTypes;         //!< The list of all data types.
-
-//////////////////////////////////////////////////////////////////////////
 // Forbidden calls.
 //////////////////////////////////////////////////////////////////////////
 private:
@@ -415,6 +396,34 @@ inline bool SIDataTypeData::exists(const QList<DataType*>& dataTypes, uint32_t i
     }
     
     return false;
+}
+
+template<class DataType>
+inline DataType* SIDataTypeData::findDataType(const QList<DataType*>& dataTypes, const QString& typeName) const
+{
+    for (DataType* dataType : dataTypes)
+    {
+        if (dataType->getName() == typeName)
+        {
+            return dataType;
+        }
+    }
+
+    return nullptr;
+}
+
+template<class DataType>
+inline DataType* SIDataTypeData::findDataType(const QList<DataType*>& dataTypes, uint32_t id) const
+{
+    for (DataType* dataType : dataTypes)
+    {
+        if (dataType->getId() == id)
+        {
+            return dataType;
+        }
+    }
+
+    return nullptr;
 }
 
 #endif  // LUSAN_DATA_SI_SIDATATYPEDATA_HPP

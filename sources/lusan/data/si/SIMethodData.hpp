@@ -20,7 +20,9 @@
  *
  ************************************************************************/
 
+#include "lusan/data/common/TEDataContainer.hpp"
 #include "lusan/common/ElementBase.hpp"
+#include <QObject>
 
 #include "lusan/data/si/SIMethodBroadcast.hpp"
 #include "lusan/data/si/SIMethodRequest.hpp"
@@ -35,7 +37,8 @@
   * \class   SIMethodData
   * \brief   Represents the method data of a service interface in the Lusan application.
   **/
-class SIMethodData : public ElementBase
+class SIMethodData  : public QObject
+                    , public TEDataContainer<SIMethodBase*, ElementBase>
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -118,7 +121,7 @@ public:
      * \param   method      The method object to check.
      * \return  True if the method exists, false otherwise.
      **/
-    inline bool hasMethod(const SIMethodBase& method) const;
+    inline bool hasMethod(SIMethodBase* method) const;
 
     /**
      * \brief   Checks if a request method exists by name.
@@ -278,16 +281,15 @@ private:
     QList<SIMethodRequest*>    mRequestMethods;    //!< List of request methods.
     QList<SIMethodResponse*>   mResponseMethods;   //!< List of response methods.
     QList<SIMethodBroadcast*>  mBroadcastMethods;  //!< List of broadcast methods.
-    QList<SIMethodBase*>       mAllMethods;        //!< List of all methods.
 };
 
 //////////////////////////////////////////////////////////////////////////
 // SIMethodData class inline methods.
 //////////////////////////////////////////////////////////////////////////
 
-inline bool SIMethodData::hasMethod(const SIMethodBase& method) const
+inline bool SIMethodData::hasMethod(SIMethodBase* method) const
 {
-    return mAllMethods.contains(const_cast<SIMethodBase*>(&method));
+    return mElementList.contains(method);
 }
 
 inline bool SIMethodData::hasRequest(const QString& request) const
@@ -307,7 +309,7 @@ inline bool SIMethodData::hasBroadcast(const QString& broadcast) const
 
 inline const QList<SIMethodBase*>& SIMethodData::getAllMethods(void) const
 {
-    return mAllMethods;
+    return getElements();
 }
 
 inline const QList<SIMethodRequest*>& SIMethodData::getRequests(void) const
