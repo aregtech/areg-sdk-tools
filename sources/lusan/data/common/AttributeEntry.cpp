@@ -147,20 +147,17 @@ bool AttributeEntry::readFromXml(QXmlStreamReader& xml)
         mNotification = fromString(notifyValue);
     }
 
-    if (attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated))
-    {
-        setIsDeprecated(attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue);
-    }
-
+    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementAttribute))
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
-            if (xml.name() == XmlSI::xmlSIElementDescription)
+            QStringView xmlName = xml.name();
+            if (xmlName == XmlSI::xmlSIElementDescription)
             {
                 setDescription(xml.readElementText());
             }
-            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
+            else if (xmlName == XmlSI::xmlSIElementDeprecateHint)
             {
                 setDeprecateHint(xml.readElementText());
             }
@@ -179,15 +176,15 @@ void AttributeEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
     xml.writeAttribute(XmlSI::xmlSIAttributeNotify, toString(mNotification));
-    if (mIsDeprecated)
+    if (getIsDeprecated())
     {
-        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIElementAttribute);
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
     }
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    if (mIsDeprecated && (mDeprecateHint.isEmpty() == false))
+    if (getIsDeprecated())
     {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
     }
 
     xml.writeEndElement();

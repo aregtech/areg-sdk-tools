@@ -21,33 +21,41 @@
 
 EnumEntry::EnumEntry(ElementBase* parent /*= nullptr*/)
     : ElementBase   (parent)
-    , mName     ("")
-    , mValue    ("")
-    , mDescribe ("")
+    , mName         ( )
+    , mValue        ( )
+    , mDescription  ( )
+    , mDeprecateHint( )
+    , mIsDeprecated (false)
 {
 }
 
 EnumEntry::EnumEntry(uint32_t id, const QString& name, const QString& value, ElementBase* parent /*= nullptr*/)
     : ElementBase   (id, parent)
-    , mName     (name)
-    , mValue    (value)
-    , mDescribe ("")
+    , mName         (name)
+    , mValue        (value)
+    , mDescription  ( )
+    , mDeprecateHint( )
+    , mIsDeprecated (false)
 {
 }
 
 EnumEntry::EnumEntry(const EnumEntry& src)
-    : ElementBase(src)
-    , mName     (src.mName)
-    , mValue    (src.mValue)
-    , mDescribe (src.mDescribe)
+    : ElementBase   (src)
+    , mName         (src.mName)
+    , mValue        (src.mValue)
+    , mDescription  (src.mDescription)
+    , mDeprecateHint(src.mDeprecateHint)
+    , mIsDeprecated (src.mIsDeprecated)
 {
 }
 
 EnumEntry::EnumEntry(EnumEntry&& src) noexcept
-    : ElementBase(std::move(src))
-    , mName     (std::move(src.mName))
-    , mValue    (std::move(src.mValue))
-    , mDescribe (std::move(src.mDescribe))
+    : ElementBase   (std::move(src))
+    , mName         (std::move(src.mName))
+    , mValue        (std::move(src.mValue))
+    , mDescription  (std::move(src.mDescription))
+    , mDeprecateHint(std::move(src.mDeprecateHint))
+    , mIsDeprecated (src.mIsDeprecated)
 {
 }
 
@@ -56,9 +64,12 @@ EnumEntry& EnumEntry::operator = (const EnumEntry& other)
     if (this != &other)
     {
         ElementBase::operator = (other);
-        mName = other.mName;
-        mValue = other.mValue;
-        mDescribe = other.mDescribe;
+        mName           = other.mName;
+        mValue          = other.mValue;
+        mDescription    = other.mDescription;
+        mDeprecateHint  = other.mDeprecateHint;
+        mIsDeprecated   = other.mIsDeprecated;
+
     }
 
     return *this;
@@ -69,9 +80,11 @@ EnumEntry& EnumEntry::operator=(EnumEntry&& other) noexcept
     if (this != &other)
     {
         ElementBase::operator = (std::move(other));
-        mName = std::move(other.mName);
-        mValue = std::move(other.mValue);
-        mDescribe = std::move(other.mDescribe);
+        mName           = std::move(other.mName);
+        mValue          = std::move(other.mValue);
+        mDescription    = std::move(other.mDescription);
+        mDeprecateHint  = std::move(other.mDeprecateHint);
+        mIsDeprecated   = std::move(other.mIsDeprecated);
     }
 
     return *this;
@@ -95,6 +108,7 @@ bool EnumEntry::readFromXml(QXmlStreamReader& xml)
     QXmlStreamAttributes attributes = xml.attributes();
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
+    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementEnumEntry))
     {
@@ -106,7 +120,11 @@ bool EnumEntry::readFromXml(QXmlStreamReader& xml)
             }
             else if (xml.name() == XmlSI::xmlSIElementDescription)
             {
-                mDescribe = xml.readElementText();
+                mDescription = xml.readElementText();
+            }
+            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
+            {
+                setDeprecateHint(xml.readElementText());
             }
         }
 
@@ -119,10 +137,19 @@ bool EnumEntry::readFromXml(QXmlStreamReader& xml)
 void EnumEntry::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementEnumEntry);
-        xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
-        xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
-        xml.writeTextElement(XmlSI::xmlSIElementValue, mValue);
-        xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescribe);
+    xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
+    xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
+    if (getIsDeprecated())
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+    }
+    xml.writeTextElement(XmlSI::xmlSIElementValue, mValue);
+    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+    if (getIsDeprecated())
+    {
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
+    }
+
     xml.writeEndElement();
 }
 
@@ -148,10 +175,10 @@ void EnumEntry::setValue(const QString& value)
 
 const QString EnumEntry::getDescription(void) const
 {
-    return mDescribe;
+    return mDescription;
 }
 
 void EnumEntry::setDescription(const QString& describe)
 {
-    mDescribe = describe;
+    mDescription = describe;
 }

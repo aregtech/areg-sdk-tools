@@ -60,9 +60,20 @@ SIOverviewData::SIOverviewData(ElementBase* parent /*= nullptr*/)
     , mName         ("NewServiceInterface")
     , mVersion      (0, 0, 1)
     , mCategory     (eCategory::InterfacePrivate)
-    , mDescription  ("")
+    , mDescription  ()
     , mIsDeprecated (false)
-    , mDeprecateHint("")
+    , mDeprecateHint()
+{
+}
+
+SIOverviewData::SIOverviewData(uint32_t id, const QString& name, ElementBase* parent)
+    : ElementBase(id, parent)
+    , mName         (name)
+    , mVersion      (0, 0, 1)
+    , mCategory     (eCategory::InterfacePrivate)
+    , mDescription  ()
+    , mIsDeprecated (false)
+    , mDeprecateHint()
 {
 }
 
@@ -95,8 +106,7 @@ bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
     mVersion = attributes.value(XmlSI::xmlSIAttributeVersion).toString();
     QString categoryStr = attributes.value(XmlSI::xmlSIAttributeCategory).toString();
     mCategory = SIOverviewData::fromString(categoryStr);
-    mIsDeprecated = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false;
-    mDeprecateHint.clear();
+    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
     while (xml.readNextStartElement())
     {
@@ -104,9 +114,9 @@ bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
         {
             mDescription = xml.readElementText();
         }
-        else if (xml.name() == XmlSI::xmlSIElementDeprecateHint && mIsDeprecated)
+        else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
         {
-            mDeprecateHint = xml.readElementText();
+            setDeprecateHint(xml.readElementText());
         }
         else
         {
@@ -124,19 +134,15 @@ void SIOverviewData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeVersion, mVersion.toString());
     xml.writeAttribute(XmlSI::xmlSIAttributeCategory, SIOverviewData::toString(mCategory));
-    if (mIsDeprecated)
+    if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
     }
 
-    if (!mDescription.isEmpty())
+    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+    if (getIsDeprecated())
     {
-        xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    }
-
-    if (mIsDeprecated && !mDeprecateHint.isEmpty())
-    {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
     }
 
     xml.writeEndElement();

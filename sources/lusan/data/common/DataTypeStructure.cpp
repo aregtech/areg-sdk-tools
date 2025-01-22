@@ -59,13 +59,25 @@ bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
     QXmlStreamAttributes attributes = xml.attributes();
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
+    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
+
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
-        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementDescription)
+        if (xml.tokenType() != QXmlStreamReader::StartElement)
+        {
+            xml.readNext();
+            continue;
+        }
+
+        if (xml.name() == XmlSI::xmlSIElementDescription)
         {
             mDescription = xml.readElementText();
         }
-        else if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementFieldList)
+        else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
+        {
+            setDeprecateHint(xml.readElementText());
+        }
+        else if (xml.name() == XmlSI::xmlSIElementFieldList)
         {
             while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementFieldList))
             {
@@ -94,8 +106,16 @@ void DataTypeStructure::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
+    if (getIsDeprecated())
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+    }
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+    if (getIsDeprecated())
+    {
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
+    }
 
     xml.writeStartElement(XmlSI::xmlSIElementFieldList);
     for (const FieldEntry& entry : mElementList)

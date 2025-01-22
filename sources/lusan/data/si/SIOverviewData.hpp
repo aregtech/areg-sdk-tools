@@ -74,8 +74,17 @@ public:
 public:
     /**
      * \brief   Default constructor.
+     * \param   parent          The parent element.
      **/
     SIOverviewData(ElementBase * parent = nullptr);
+
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id              The ID of the service interface.
+     * \param   name            The name of the service interface.
+     * \param   parent          The parent element.
+     **/
+    SIOverviewData(uint32_t id, const QString& name, ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -86,6 +95,7 @@ public:
      * \param   description     The description of the service interface.
      * \param   isDeprecated    Flag indicating whether the interface is deprecated.
      * \param   deprecateHint   The deprecation hint.
+     * \param   parent          The parent element.
      **/
     SIOverviewData( uint32_t id
                   , const QString& name
@@ -270,12 +280,12 @@ inline void SIOverviewData::setIsDeprecated(bool isDeprecated)
 
 inline const QString& SIOverviewData::getDeprecateHint() const
 {
-    return mDeprecateHint;
+    return mIsDeprecated ? mDeprecateHint : ElementBase::EmptyString;
 }
 
 inline void SIOverviewData::setDeprecateHint(const QString& deprecateHint)
 {
-    mDeprecateHint = deprecateHint;
+    mDeprecateHint = mIsDeprecated ? deprecateHint : ElementBase::EmptyString;
 }
 
 #endif // LUSAN_DATA_SI_SIOVERVIEWDATA_HPP

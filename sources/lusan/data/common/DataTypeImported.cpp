@@ -85,27 +85,36 @@ bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
     QXmlStreamAttributes attributes = xml.attributes();
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
+    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
-        if (xml.tokenType() == QXmlStreamReader::StartElement)
+        if (xml.tokenType() != QXmlStreamReader::StartElement)
         {
-            if (xml.name() == XmlSI::xmlSIElementDescription)
-            {
-                setDescription(xml.readElementText());
-            }
-            else if (xml.name() == XmlSI::xmlSIElementNamespace)
-            {
-                mNamespace = xml.readElementText();
-            }
-            else if (xml.name() == XmlSI::xmlSIElementLocation)
-            {
-                mLocation = xml.readElementText();
-            }
-            else if (xml.name() == XmlSI::xmlSIElementImportedObject)
-            {
-                mObject = xml.readElementText();
-            }
+            xml.readNext();
+            continue;
+        }
+
+        QStringView xmlName{ xml.name() };
+        if (xmlName == XmlSI::xmlSIElementDescription)
+        {
+            setDescription(xml.readElementText());
+        }
+        else if (xmlName == XmlSI::xmlSIElementNamespace)
+        {
+            mNamespace = xml.readElementText();
+        }
+        else if (xmlName == XmlSI::xmlSIElementLocation)
+        {
+            mLocation = xml.readElementText();
+        }
+        else if (xmlName == XmlSI::xmlSIElementImportedObject)
+        {
+            mObject = xml.readElementText();
+        }
+        else if (xmlName == XmlSI::xmlSIElementDeprecateHint)
+        {
+            setDeprecateHint(xml.readElementText());
         }
 
         xml.readNext();
@@ -120,11 +129,20 @@ void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeType, getType());
+    if (getIsDeprecated())
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+    }
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
     xml.writeTextElement(XmlSI::xmlSIElementNamespace, mNamespace);
     xml.writeTextElement(XmlSI::xmlSIElementImportedObject, mObject);
     xml.writeTextElement(XmlSI::xmlSIElementLocation, mLocation);
+
+    if (getIsDeprecated())
+    {
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
+    }
 
     xml.writeEndElement(); // DataType
 }

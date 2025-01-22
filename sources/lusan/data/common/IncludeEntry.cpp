@@ -175,10 +175,11 @@ bool IncludeEntry::readFromXml(QXmlStreamReader& xml)
     {
         return false;
     }
-
-    setId(xml.attributes().value(XmlSI::xmlSIAttributeID).toUInt());
-    mLocation = xml.attributes().value(XmlSI::xmlSIAttributeName).toString();
-    mDeprecated = xml.attributes().value(XmlSI::xmlSIAttributeIsDeprecated).toString() == "true";
+    
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+    mLocation = attributes.value(XmlSI::xmlSIAttributeName).toString();
+    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementLocation))
     {
@@ -190,7 +191,7 @@ bool IncludeEntry::readFromXml(QXmlStreamReader& xml)
             }
             else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
             {
-                mDeprecateHint = xml.readElementText();
+                setDeprecateHint(xml.readElementText());
             }
         }
 
@@ -205,15 +206,15 @@ void IncludeEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeStartElement(XmlSI::xmlSIElementLocation);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mLocation);
-    if (mDeprecated)
+    if (getIsDeprecated())
     {
-        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, "true");
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
     }
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    if (mDeprecated && (mDeprecateHint.isEmpty() == false))
+    if (getIsDeprecated())
     {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, mDeprecateHint);
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
     }
 
     xml.writeEndElement();

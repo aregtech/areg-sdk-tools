@@ -28,6 +28,16 @@ ParamBase::ParamBase(ElementBase* parent /*= nullptr*/)
 {
 }
 
+ParamBase::ParamBase(uint32_t id, const QString& name, const QString& type, ElementBase* parent /*= nullptr*/)
+    : ElementBase(id, parent)
+    , mName(name)
+    , mType(type)
+    , mIsDeprecated(false)
+    , mDescription()
+    , mDeprecateHint()
+{
+}
+
 ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint, ElementBase* parent /*= nullptr*/)
     : ElementBase(id, parent)
     , mName(name)

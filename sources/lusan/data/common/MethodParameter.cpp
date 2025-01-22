@@ -116,9 +116,11 @@ bool MethodParameter::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() == XmlSI::xmlSIElementParameter)
     {
-        setId(xml.attributes().value(XmlSI::xmlSIAttributeID).toUInt());
-        mType = xml.attributes().value(XmlSI::xmlSIAttributeDataType).toString();
-        mName = xml.attributes().value(XmlSI::xmlSIAttributeName).toString();
+        QXmlStreamAttributes attributes = xml.attributes();
+        setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+        mType = attributes.value(XmlSI::xmlSIAttributeDataType).toString();
+        mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
+        setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
         while (xml.readNextStartElement())
         {
@@ -130,6 +132,10 @@ bool MethodParameter::readFromXml(QXmlStreamReader& xml)
             else if (xml.name() == XmlSI::xmlSIElementDescription)
             {
                 mDescription = xml.readElementText();
+            }
+            else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
+            {
+                setDeprecateHint(xml.readElementText());
             }
             else
             {
@@ -149,6 +155,10 @@ void MethodParameter::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
+    if (getIsDeprecated())
+    {
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+    }
 
     if (!mValue.isEmpty())
     {
@@ -158,9 +168,10 @@ void MethodParameter::writeToXml(QXmlStreamWriter& xml) const
         xml.writeEndElement();
     }
 
-    if (!mDescription.isEmpty())
+    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+    if (getIsDeprecated())
     {
-        xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
+        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
     }
 
     xml.writeEndElement();

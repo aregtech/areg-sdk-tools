@@ -37,8 +37,18 @@ class ParamBase : public ElementBase
 protected:
     /**
      * \brief   Default constructor.
+     * \param   parent          The parent element.
      **/
     ParamBase(ElementBase* parent = nullptr);
+
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id              The ID of the parameter.
+     * \param   name            The name of the parameter.
+     * \param   type            The data type name of the parameter.
+     * \param   parent          The parent element.
+     **/
+    ParamBase(uint32_t id, const QString& name, const QString& type, ElementBase* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -48,6 +58,7 @@ protected:
      * \param   isDeprecated    The deprecated flag of the parameter.
      * \param   description     The description of the parameter.
      * \param   deprecateHint   The deprecation hint of the parameter.
+     * \param   parent          The parent element.
      **/
     ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint, ElementBase* parent = nullptr);
 
