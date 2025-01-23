@@ -195,20 +195,6 @@ const QList<EnumEntry>& SIDataTypeModel::getEnumChildren(DataTypeCustom* dataTyp
     }
 }
 
-int SIDataTypeModel::getDataTypeChildCount(const DataTypeCustom* dataType) const
-{
-    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
-    {
-        return static_cast<const DataTypeStructure*>(dataType)->getElements().size();
-    }
-    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
-    {
-        return static_cast<const DataTypeEnum*>(dataType)->getElements().size();
-    }
-
-    return 0;
-}
-
 void SIDataTypeModel::sortDataTypeChildren(DataTypeCustom* dataType, bool ascending)
 {
     if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
@@ -323,4 +309,14 @@ ElementBase* SIDataTypeModel::findChild(const DataTypeCustom* dataType, const QS
     }
 
     return nullptr;
+}
+
+void SIDataTypeModel::updateDataType(DataTypeCustom* dataType, const QString& newName)
+{
+    mData.updateDataType(dataType, newName);
+}
+
+void SIDataTypeModel::updateDataType(uint32_t id, const QString& newName)
+{
+    mData.updateDataType(id, newName);
 }

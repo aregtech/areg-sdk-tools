@@ -73,13 +73,32 @@ public:
     virtual ~SIDataTypeData(void);
     
 signals:
-        
+
+    /**
+     * \brief   Triggered when new data type is created.
+     * \param   dataType    New created data type object.
+     **/
     void signalDataTypeCreated(DataTypeCustom* dataType);
-    
-    void signalDataTypeRemoved(DataTypeCustom* dataType);
-    
+
+    /**
+     * \brief   Triggered when the data type is deleted and invalidated.
+     * \param   dataType    The data type object to be deleted.
+     **/
+    void signalDataTypeDeleted(DataTypeCustom* dataType);
+
+    /**
+     * \brief   Triggered when the data type is converted.
+     * \param   oldType     The old data type object.
+     * \param   newType     The new data type object.
+     **/
     void signalDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
-    
+
+    /**
+     * \brief   Triggered when the data type is updated.
+     * \param   dataType    The data type object to update.
+     **/
+    void signalDataTypeUpdated(DataTypeCustom* dataType);
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
@@ -333,14 +352,34 @@ public:
     DataTypeCustom* convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category);
 
     /**
-     * \brief   Sorts custom data types ascending or descending.
+     * \brief   Sorts custom data types ascending or descending by name.
      * \param   ascending   Flag, indicating whether the list of custom data types
      *                      should be sorted ascending or descending.
      *                      If true, the sorting is ascending.
      **/
     void sortByName(bool ascending);
-    
+   
+    /**
+     * \brief   Sorts custom data types ascending or descending by ID.
+     * \param   ascending   Flag, indicating whether the list of custom data types
+     *                      should be sorted ascending or descending.
+     *                      If true, the sorting is ascending.
+     **/
     void sortById(bool ascending);
+
+    /**
+     * \brief   Updates the data type object.
+     * \param   dataType    The data type object to update.
+     * \param   newName     The new name of the data type.
+     **/
+    void updateDataType(DataTypeCustom* dataType, const QString& newName);
+
+    /**
+     * \brief   Updates the data type object.
+     * \param   id          The ID of the data type object to update.
+     * \param   newName     The new name of the data type.
+     **/
+    void updateDataType(uint32_t id, const QString& newName);
 
 private:
 

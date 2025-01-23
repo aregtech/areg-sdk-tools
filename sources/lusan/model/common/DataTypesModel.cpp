@@ -350,7 +350,7 @@ bool DataTypesModel::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* 
     return false;
 }
 
-bool DataTypesModel::dataTypeRemoved(DataTypeCustom* dataType)
+bool DataTypesModel::dataTypeDeleted(DataTypeCustom* dataType)
 {
     int conv = mExcludeList.indexOf(dataType);
     if (conv >= 0)

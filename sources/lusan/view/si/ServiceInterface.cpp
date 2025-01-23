@@ -61,9 +61,10 @@ ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWi
     setLayout(layout);
     
     SIDataTypeData& data = mModel.getData().getDataTypeData();
-    connect(&data, &SIDataTypeData::signalDataTypeCreated  , this, &ServiceInterface::slotDataTypeCreated);
-    connect(&data, &SIDataTypeData::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
-    connect(&data, &SIDataTypeData::signalDataTypeConverted, this, &ServiceInterface::slotDataTypeConverted);
+    connect(&data, &SIDataTypeData::signalDataTypeCreated   , this, &ServiceInterface::slotDataTypeCreated);
+    connect(&data, &SIDataTypeData::signalDataTypeDeleted   , this, &ServiceInterface::slotDataTypeDeleted);
+    connect(&data, &SIDataTypeData::signalDataTypeConverted , this, &ServiceInterface::slotDataTypeConverted);
+    connect(&data, &SIDataTypeData::signalDataTypeUpdated   , this, &ServiceInterface::slotDataTypeUpdated);
     connect(&mOverview, &SIOverview::signalPageLinkClicked  , this, &ServiceInterface::slotPageLinkClicked);
     
     setAttribute(Qt::WA_DeleteOnClose);
@@ -130,17 +131,17 @@ void ServiceInterface::slotDataTypeConverted(DataTypeCustom* oldType, DataTypeCu
     static_cast<IEDataTypeConsumer&>(mInclude).dataTypeConverted(oldType, newType);
 }
 
-void ServiceInterface::slotlDataTypeRemoved(DataTypeCustom* dataType)
+void ServiceInterface::slotDataTypeDeleted(DataTypeCustom* dataType)
 {
-    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeRemoved(dataType);
-    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeRemoved(dataType);
-    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeRemoved(dataType);
-    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeRemoved(dataType);
-    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeRemoved(dataType);
-    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeRemoved(dataType);
+    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeDeleted(dataType);
+    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeDeleted(dataType);
+    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeDeleted(dataType);
+    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeDeleted(dataType);
+    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeDeleted(dataType);
+    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeDeleted(dataType);
 }
 
-void ServiceInterface::slotlDataTypeUpdated(DataTypeCustom* dataType)
+void ServiceInterface::slotDataTypeUpdated(DataTypeCustom* dataType)
 {
     static_cast<IEDataTypeConsumer&>(mOverview).dataTypeUpdated(dataType);
     static_cast<IEDataTypeConsumer&>(mDataType).dataTypeUpdated(dataType);

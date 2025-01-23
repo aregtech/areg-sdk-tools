@@ -132,26 +132,74 @@ public:
      **/
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
+    /**
+     * \brief   Triggered when new data type is created.
+     * \param   dataType    New created data type object.
+     * \return  Returns true if new created data type is in the list. Otherwise, returns false.
+     **/
     bool dataTypeCreated(DataTypeCustom* dataType);
 
+    /**
+     * \brief   Triggered when the data type is converted.
+     * \param   oldType     The old data type object.
+     * \param   newType     The new data type object.
+     * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
+     **/
     bool dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
 
-    bool dataTypeRemoved(DataTypeCustom* dataType);
+    /**
+     * \brief   Triggered when the data type is deleted and invalidated.
+     * \param   dataType    The data type object to be deleted.
+     * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
+     **/
+    bool dataTypeDeleted(DataTypeCustom* dataType);
 
+    /**
+     * \brief   Triggered when the data type is updated.
+     * \param   dataType    The data type object to update.
+     * \return  Returns true if the data type is updated. Otherwise, returns false.
+     **/
     bool dataTypeUpdated(DataTypeCustom* dataType);
 
+    /**
+     * \brief   Updates the list of data types.
+     *          Uses filter list to exclude data types.
+     **/
     void updateDataTypeLists(void);
 
+    /**
+     * \brief   Searches for the data type in the list. If find, removes and includes in the filter.
+     * \param   typeName    The name of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
     bool removeDataType(DataTypeCustom* dataType);
 
+    /**
+     * \brief   Searches the field entry in the data type fields list
+     *          and removes it if found.
+     * \param   dataType    The data type object to check the field list.
+     * \param   fieldId     The ID of the field to remove.
+     * \return  Returns true if successfully removed the field.
+     **/
     bool removeField(DataTypeCustom* dataType, uint32_t fieldId);
 
+    /**
+     * \brief   Adds the data type to the list.
+     * \param   dataType    The data type object to add.
+     * \return  Returns true if the data type is added. Otherwise, returns false.
+     **/
     bool addDataType(DataTypeCustom* dataType);
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden calls.
+//////////////////////////////////////////////////////////////////////////
 private:
 
     inline void _sort(bool sortPredefined = true);
 
+//////////////////////////////////////////////////////////////////////////
+// Member variables.
+//////////////////////////////////////////////////////////////////////////
 private:
     SIDataTypeData&         mDataTypeData;  //!< Reference to the SIDataTypeData instance.
     QList<DataTypeBase*>    mExcludeList;   //!< Filtered list of data types.

@@ -243,6 +243,15 @@ public:
      **/
     QList<SIMethodRequest*> getConnectedRequests(SIMethodResponse* response) const;
 
+    /**
+     * \brief   Adds new parameter to the selected method. Returns new parameter object if operation succeeded.
+     *          The parameters should have unique names in the parameter list of the method.
+     * \param   method  The valid pointer to the method object to add new parameter.
+     * \param   name    The name of the parameter.
+     * \param   type    The type of the parameter.
+     * \return  Returns new parameter object if operation succeeded. Otherwise, returns nullptr.
+     *          The parameters should have unique names in the parameter list of the method.
+     **/
     MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
 
 private:

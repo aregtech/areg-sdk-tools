@@ -133,9 +133,9 @@ void SIDataTopic::dataTypeCreated(DataTypeCustom* dataType)
     mTypeModel->dataTypeCreated(dataType);
 }
 
-void SIDataTopic::dataTypeRemoved(DataTypeCustom* dataType)
+void SIDataTopic::dataTypeDeleted(DataTypeCustom* dataType)
 {
-    mTypeModel->dataTypeRemoved(dataType);
+    mTypeModel->dataTypeDeleted(dataType);
 }
 
 void SIDataTopic::dataTypeUpdated(DataTypeCustom* dataType)

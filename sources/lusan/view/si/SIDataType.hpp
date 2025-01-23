@@ -68,16 +68,6 @@ public:
 
     virtual ~SIDataType(void);
 
-signals:
-
-    void signalDataTypeCreated(DataTypeCustom* dataType);
-
-    void signalDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
-
-    void signalDataTypeRemoved(DataTypeCustom* dataType);
-
-    void signalDataTypeUpdated(DataTypeCustom* dataType);
-
 protected:
     
     /**
@@ -93,7 +83,10 @@ protected:
      * \brief Triggered when the add button is clicked.
      */
     void onAddClicked(void);
-    
+
+    /**
+     * \brief Triggered when the add field button is clicked.
+     */
     void onAddFieldClicked(void);
 
     /**
@@ -101,6 +94,9 @@ protected:
      */
     void onRemoveClicked(void);
 
+    /**
+     * \brief Triggered when the remove field button is clicked.
+     */
     void onRemoveFieldClicked(void);
 
     /**
@@ -126,60 +122,172 @@ protected:
      **/
     void onDescriptionChanged(void);
 
+    /**
+     * \brief   Triggered when the struct is selected.
+     * \param   checked The flag to indicate if the struct is selected.
+     **/
     void onStructSelected(bool checked);
 
+    /**
+     * \brief   Triggered when the enum is selected.
+     * \param   checked The flag to indicate if the enum is selected.
+     **/
     void onEnumSelected(bool checked);
 
+    /**
+     * \brief   Triggered when the import is selected.
+     * \param   checked The flag to indicate if the import is selected.
+     **/
     void onImportSelected(bool checked);
 
+    /**
+     * \brief   Triggered when the container is selected.
+     * \param   checked The flag to indicate if the container is selected.
+     **/
     void onContainerSelected(bool checked);
-    
+
+    /**
+     * \brief   Triggered when the container object is changed,
+     *          i.e. other container object is selected.
+     * \param   index The index of the container object.
+     **/
     void onContainerObjectChanged(int index);
-    
+
+    /**
+     * \brief   Triggered when the container key is changed,
+     * \param   index The index of the container key.
+     **/
     void onContainerKeyChanged(int index);
-    
+
+    /**
+     * \brief   Triggered when the container value is changed,
+     * \param   index The index of the container value.
+     **/
     void onContainerValueChanged(int index);
 
+    /**
+     * \brief   Triggered when the enum derived is changed,
+     * \param   index The index of the enum derived.
+     **/
     void onEnumDerivedChanged(int index);
 
+    /**
+     * \brief   Triggered when the import location is changed,
+     * \param   newText The new location.
+     **/
     void onImportLocationChanged(const QString& newText);
 
+    /**
+     * \brief   Triggered when the import namespace is changed,
+     * \param   newText The new namespace.
+     **/
     void onImportNamespaceChanged(const QString& newText);
 
+    /**
+     * \brief   Triggered when the import object is changed,
+     * \param   newText The new object.
+     **/
     void onImportObjectChanged(const QString& newText);
 
+    /**
+     * \brief   Triggered when the import location browse button is clicked.
+     **/
     void onImportLocationBrowse(void);
 
+    /**
+     * \brief   Triggered when the field name is changed.
+     * \param   newName The new name of the field.
+     **/
     void onFieldNameChanged(const QString& newName);
 
+    /**
+     * \brief   Triggered when the field type is changed.
+     * \param   index The index of the field type.
+     **/
     void onFieldTypeChanged(int index);
 
+    /**
+     * \brief   Triggered when the field value is changed.
+     * \param   newValue The new value of the field.
+     **/
     void onFieldValueChanged(const QString& newValue);
 
+    /**
+     * \brief   Triggered when the field description is changed.
+     **/
     void onFieldDescriptionChanged(void);
 
+    /**
+     * \brief   Triggered when the field deprecated flag is changed.
+     * \param   isChecked The flag to indicate if the field is deprecated.
+     **/
     void onFieldDeprecatedChecked(bool isChecked);
 
+    /**
+     * \brief   Triggered when the field deprecation hint is changed.
+     * \param   newText The new deprecation hint.
+     **/
     void onFieldDeprecateHint(const QString& newText);
 
 protected:
 
-    virtual void dataTypeCreated(DataTypeCustom* dataType);
+    /**
+     * \brief   Triggered when new data type is created.
+     * \param   dataType    New created data type object.
+     * \return  Returns true if new created data type is in the list. Otherwise, returns false.
+     **/
+    virtual void dataTypeCreated(DataTypeCustom* dataType) override;
 
-    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
+    /**
+     * \brief   Triggered when the data type is converted.
+     * \param   oldType     The old data type object.
+     * \param   newType     The new data type object.
+     * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
+     **/
+    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
 
-    virtual void dataTypeRemoved(DataTypeCustom* dataType);
+    /**
+     * \brief   Triggered when the data type is deleted and invalidated.
+     * \param   dataType    The data type object to be deleted.
+     * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
+     **/
+    virtual void dataTypeDeleted(DataTypeCustom* dataType) override;
 
-    virtual void dataTypeUpdated(DataTypeCustom* dataType);
+    /**
+     * \brief   Triggered when the data type is updated.
+     * \param   dataType    The data type object to update.
+     * \return  Returns true if the data type is updated. Otherwise, returns false.
+     **/
+    virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
 
 private:
 
+    /**
+     * \brief   Called to convert the data type saved in specified tree node.
+     * \param   current     The tree node to convert the data type.
+     * \param   newCategory The new category of the data type.
+     **/
     void convertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory);
 
+    /**
+     * \brief   Called to show or hide the details of enumeration object.
+     * \param   current     The tree node to update the data type.
+     * \param   show        If true, shows the details, otherwise hides.
+     **/
     void showEnumDetails(bool show);
 
+    /**
+     * \brief   Called to show or hide the details of structure object.
+     * \param   current     The tree node to update the data type.
+     * \param   show        If true, shows the details, otherwise hides.
+     **/
     void showImportDetails(bool show);
 
+    /**
+     * \brief   Called to show or hide the details of structure object.
+     * \param   current     The tree node to update the data type.
+     * \param   show        If true, shows the details, otherwise hides.
+     **/
     void showContainerDetails(bool show);
     
     /**
