@@ -107,10 +107,10 @@ void SIMethod::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newTyp
     mParamTypes->dataTypeConverted(oldType, newType);
 }
 
-void SIMethod::dataTypeRemoved(DataTypeCustom* dataType)
+void SIMethod::dataTypeDeleted(DataTypeCustom* dataType)
 {
     blockBasicSignals(true);
-    mParamTypes->dataTypeRemoved(dataType);
+    mParamTypes->dataTypeDeleted(dataType);
 
     QTreeWidget* table = mList->ctrlTableList();
     int count = table->topLevelItemCount();

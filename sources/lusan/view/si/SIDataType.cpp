@@ -219,7 +219,6 @@ void SIDataType::onAddClicked(void)
     item->setSelected(true);
     table->setCurrentItem(item);
     selectedStruct(oldType, static_cast<DataTypeStructure*>(dataType));
-    emit signalDataTypeCreated(dataType);
     blockBasicSignals(false);
 }
 
@@ -279,6 +278,49 @@ void SIDataType::onAddFieldClicked(void)
 
 void SIDataType::onRemoveClicked(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    if (item == nullptr)
+        return;
+    
+    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>();
+    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    item = id == 0 ? item : item->parent();
+
+    int index = table->indexOfTopLevelItem(item);
+    index = index + 1 == table->topLevelItemCount() ? index - 1 : index + 1;
+    QTreeWidgetItem* next = (index >= 0) && (index < table->topLevelItemCount()) ? table->topLevelItem(index) : nullptr;
+    item->setSelected(false);
+    if (next != nullptr)
+    {
+        next->setSelected(true);
+        table->setCurrentItem(next);
+    }
+    
+    deleteTreeNode(item);
+}
+
+void SIDataType::onRemoveFieldClicked(void)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    if (item == nullptr)
+        return;
+    
+    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() != 0);
+    QTreeWidgetItem* parent = item->parent();
+    int index = parent->indexOfChild(item);
+    index = index + 1 == parent->childCount() ? index - 1 : index + 1;
+    QTreeWidgetItem* next = (index >= 0) && (index < parent->childCount()) ? parent->child(index) : parent;
+    item->setSelected(false);
+    if (next != nullptr)
+    {
+        next->setSelected(true);
+        table->setCurrentItem(next);
+    }
+    
+    deleteTreeNode(item);
 }
 
 void SIDataType::onTypeNameChanged(const QString& newName)
@@ -289,10 +331,8 @@ void SIDataType::onTypeNameChanged(const QString& newName)
     
     DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
     Q_ASSERT(dataType != nullptr);
-    dataType->setName(newName);
     item->setText(0, newName);
-
-    emit signalDataTypeUpdated(dataType);
+    mModel.updateDataType(dataType, newName);
 }
 
 void SIDataType::onDeprectedChecked(bool isChecked)
@@ -372,6 +412,26 @@ void SIDataType::onContainerSelected(bool checked)
     }
 }
 
+void SIDataType::dataTypeCreated(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeCreated(dataType);
+}
+
+void SIDataType::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+{
+    mTypeModel->dataTypeConverted(oldType, newType);
+}
+
+void SIDataType::dataTypeDeleted(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeDeleted(dataType);
+}
+
+void SIDataType::dataTypeUpdated(DataTypeCustom* dataType)
+{
+    mTypeModel->dataTypeUpdated(dataType);
+}
+
 void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory)
 {
     Q_ASSERT(current != nullptr);
@@ -430,7 +490,6 @@ void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCatego
 
         if (newType != nullptr)
         {
-            emit signalDataTypeConverted(oldType, newType);
             delete oldType;
         }
     }
@@ -815,6 +874,9 @@ void SIDataType::setupSignals(void)
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged  , this, &SIDataType::onCurCellChanged);
     connect(mList->ctrlToolAdd()            , &QToolButton::clicked             , this, &SIDataType::onAddClicked);
     connect(mList->ctrlToolAddField()       , &QToolButton::clicked             , this, &SIDataType::onAddFieldClicked);
+    connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
+    connect(mList->ctrlToolRemoveField()    , &QToolButton::clicked             , this, &SIDataType::onRemoveFieldClicked);
+
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged           , this, &SIDataType::onTypeNameChanged);
     connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked            , this, &SIDataType::onStructSelected);
     connect(mDetails->ctrlTypeEnum()        , &QRadioButton::clicked            , this, &SIDataType::onEnumSelected);
@@ -839,7 +901,6 @@ void SIDataType::setupSignals(void)
     connect(mFields->ctrlDeprecated()       , &QCheckBox::toggled               , this, &SIDataType::onFieldDeprecatedChecked);
     connect(mFields->ctrlDeprecateHint()    , &QLineEdit::textChanged           , this, &SIDataType::onFieldDeprecateHint);
 
-    connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
     // connect(mTableCell                , &TableCell::editorDataChanged,this, &SIConstant::onEditorDataChanged);
 }
 
@@ -1032,6 +1093,7 @@ void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& 
     
     activateFields(true);
     
+    
     mFields->ctrlTypes()->setEnabled(true);
     mFields->ctrlName()->setText(field.getName());
     mFields->ctrlTypes()->setCurrentText(field.getType());
@@ -1039,6 +1101,12 @@ void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& 
     mFields->ctrlDescription()->setPlainText(field.getDescription());
 
     SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, &field, true);
+    
+    mList->ctrlToolAdd()->setEnabled(true);
+    mList->ctrlToolRemove()->setEnabled(false);
+    mList->ctrlToolAddField()->setEnabled(true);
+    mList->ctrlToolInsertField()->setEnabled(true);
+    mList->ctrlToolRemoveField()->setEnabled(true);
     
     int index = parent->findIndex(field.getId());    
     mList->ctrlToolMoveUp()->setEnabled(index > 0);
@@ -1061,7 +1129,13 @@ void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& fie
     mFields->ctrlDescription()->setPlainText(field.getDescription());
     
     SICommon::enableDeprecated<SIDataTypeFieldDetails, EnumEntry>(mFields, &field, true);
-
+    
+    mList->ctrlToolAdd()->setEnabled(true);
+    mList->ctrlToolRemove()->setEnabled(false);
+    mList->ctrlToolAddField()->setEnabled(true);
+    mList->ctrlToolInsertField()->setEnabled(true);
+    mList->ctrlToolRemoveField()->setEnabled(true);
+    
     int index = parent->findIndex(field.getId());    
     mList->ctrlToolMoveUp()->setEnabled(index > 0);
     mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
@@ -1250,4 +1324,38 @@ inline void SIDataType::disableTypes(bool disable)
     mDetails->ctrlTypeEnum()->setDisabled(disable);
     mDetails->ctrlTypeImport()->setDisabled(disable);
     mDetails->ctrlTypeContainer()->setDisabled(disable);
+}
+
+inline void SIDataType::deleteTreeNode(QTreeWidgetItem* node)
+{
+    if (node == nullptr)
+        return;
+
+    DataTypeCustom* dataType = node->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    uint32_t id = node->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    QTreeWidgetItem* parent = node->parent();
+    int count = node->childCount();
+    for (int i = 0; i < count; ++i)
+    {
+        QTreeWidgetItem *child = node->child(i);
+        node->removeChild(child);
+        Q_ASSERT(child != nullptr);
+        delete child;
+    }
+
+    if (id == 0)
+    {
+        mModel.deleteDataType(dataType);
+    }
+    else
+    {
+        mModel.deleteDataTypeChild(dataType, id);
+    }
+    
+    if (parent != nullptr)
+    {
+        parent->removeChild(node);
+    }
+    
+    delete node;
 }

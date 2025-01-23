@@ -69,7 +69,7 @@ bool SIDataTypeData::removeCustomDataType(uint32_t id)
     if (removeElement(id, &dataType))
     {
         Q_ASSERT(dataType != nullptr);
-        emit signalDataTypeRemoved(dataType);
+        emit signalDataTypeDeleted(dataType);
         delete dataType;
         return true;
     }
@@ -461,6 +461,24 @@ void SIDataTypeData::sortByName(bool ascending)
 void SIDataTypeData::sortById(bool ascending)
 {
     sortElementsById(ascending);
+}
+
+void SIDataTypeData::updateDataType(DataTypeCustom* dataType, const QString& newName)
+{
+    if (dataType->getName() != newName)
+    {
+        dataType->setName(newName);
+        emit signalDataTypeUpdated(dataType);
+    }
+}
+
+void SIDataTypeData::updateDataType(uint32_t id, const QString& newName)
+{
+    DataTypeCustom* dataType = findDataType(getElements(), id);
+    if (dataType != nullptr)
+    {
+        updateDataType(dataType, newName);
+    }
 }
 
 DataTypeCustom* SIDataTypeData::_createType(const QString& name, ElementBase* parent, uint32_t id, DataTypeBase::eCategory category)

@@ -90,9 +90,9 @@ void SIConstant::dataTypeCreated(DataTypeCustom* dataType)
     mTypeModel->dataTypeCreated(dataType);
 }
 
-void SIConstant::dataTypeRemoved(DataTypeCustom* dataType)
+void SIConstant::dataTypeDeleted(DataTypeCustom* dataType)
 {
-    mTypeModel->dataTypeRemoved(dataType);
+    mTypeModel->dataTypeDeleted(dataType);
     QTableWidget* table = mList->ctrlTableList();
     int count = table->rowCount();
     for (int i = 0; i < count; ++ i)

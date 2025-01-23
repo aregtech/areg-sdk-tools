@@ -94,13 +94,13 @@ public slots:
      * \brief   Triggered when a data type is removed.
      * \param   dataType    The pointer to the removed data type.
      **/
-    void slotlDataTypeRemoved(DataTypeCustom* dataType);
+    void slotDataTypeDeleted(DataTypeCustom* dataType);
 
     /**
      * \brief   Triggered when a data type is updated.
      * \param   dataType    The pointer to the updated data type.
      **/
-    void slotlDataTypeUpdated(DataTypeCustom* dataType);
+    void slotDataTypeUpdated(DataTypeCustom* dataType);
 
     /**
      * \brief   Triggered when a page link is clicked.

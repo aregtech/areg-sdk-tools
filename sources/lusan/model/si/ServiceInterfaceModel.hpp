@@ -113,6 +113,10 @@ public:
      * \brief   Returns the file open operation success flag.
      **/
     inline bool openSucceeded(void) const;
+
+    inline ServiceInterfaceData& getData(void);
+
+    inline const ServiceInterfaceData& getData(void) const;
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden class members
@@ -199,5 +203,16 @@ inline bool ServiceInterfaceModel::openSucceeded(void) const
 {
     return mSIData.openSucceeded();
 }
+
+inline ServiceInterfaceData& ServiceInterfaceModel::getData(void)
+{
+    return mSIData;
+}
+
+inline const ServiceInterfaceData& ServiceInterfaceModel::getData(void) const
+{
+    return mSIData;
+}
+
 
 #endif  // LUSAN_MODEL_SI_SERVICEINTERFACEMODEL_HPP

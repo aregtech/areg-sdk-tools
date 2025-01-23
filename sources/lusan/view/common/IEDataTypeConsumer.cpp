@@ -28,7 +28,7 @@ void IEDataTypeConsumer::dataTypeConverted(DataTypeCustom* oldType, DataTypeCust
 
 }
 
-void IEDataTypeConsumer::dataTypeRemoved(DataTypeCustom* dataType)
+void IEDataTypeConsumer::dataTypeDeleted(DataTypeCustom* dataType)
 {
 
 }

@@ -88,62 +88,205 @@ public:
      * \return  Returns true if data type object was deleted. Otherwise, returns false.
      **/
     bool deleteDataType(const DataTypeCustom* dataType);
-    
+
+    /**
+     * \brief   Converts data type object to new category.
+     * \param   dataType    The pointer to data type object to convert.
+     * \param   category    The new category of data type.
+     * \return  Returns the pointer to converted data type object.
+     **/
     DataTypeCustom* convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category);
 
+    /**
+     * \brief   Searches for data type object by specified name.
+     * \param   name    The name of data type to search.
+     * \return  Returns the pointer to data type object if found. Otherwise, returns nullptr.
+     **/
     DataTypeCustom* findDataType(const QString& name);
     const DataTypeCustom* findDataType(const QString& name) const;
-    
+
+    /**
+     * \brief   Searches for data type object by specified ID.
+     * \param   id  The ID of data type to search.
+     * \return  Returns the pointer to data type object if found. Otherwise, returns nullptr.
+     **/
     DataTypeCustom* findDataType(uint32_t id);
     const DataTypeCustom* findDataType(uint32_t id) const;
 
+    /**
+     * \brief   Sorts the list of custom data types by name.
+     * \param   ascending   Flag, indicating whether the list of custom data types
+     *                      should be sorted ascending or descending.
+     *                      If true, the sorting is ascending.
+     **/
     void sortByName(bool ascending);
-    
+
+    /**
+     * \brief   Sorts the list of custom data types by ID.
+     * \param   ascending   Flag, indicating whether the list of custom data types
+     *                      should be sorted ascending or descending.
+     *                      If true, the sorting is ascending.
+     **/
     void sortById(bool ascending);
 
+    /**
+     * \brief   Returns the list of custom data types.
+     **/
     const QList<DataTypeCustom*>& getDataTypes(void) const;
 
+    /**
+     * \brief   Returns the size of custom data type objects.
+     **/
     int getDataTypeCount(void) const;
 
+    /**
+     * \brief   Creates a new child field in the specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   name        The name of the child field of the custom data type.
+     *                      The name should be unique.
+     * \return  Returns the pointer to created child data type object.
+     **/
     ElementBase* ceateDataTypeChild(DataTypeCustom* dataType, const QString& name);
-    
+
+    /**
+     * \brief   Deletes the child field from the specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   childId     The ID of the child field to delete.
+     **/
     void deleteDataTypeChild(DataTypeCustom* dataType, uint32_t childId);
+
+    /**
+     * \brief   Deletes the child field from the specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   child       The child field to delete.
+     **/
     void deleteDataTypeChild(DataTypeCustom* dataType, const ElementBase& child);
 
+    /**
+     * \brief   Finds the child field in the specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   childId     The ID of the child field to find.
+     * \return  Returns the pointer to found child field object. If not found, returns nullptr.
+     **/
     ElementBase* findDataTypeChild(DataTypeCustom* dataType, uint32_t childId);
     const ElementBase* findDataTypeChild(DataTypeCustom* dataType, uint32_t childId) const;
 
+    /**
+     * \brief   Returns the list of specified custom data type object fields.
+     * \param   dataType    The structure data type object.
+     **/
     const QList<FieldEntry>& getStructChildren(DataTypeCustom* dataType) const;
 
+    /**
+     * \brief   Returns the list of specified custom data type object fields.
+     * \param   dataType    The enumeration data type object.
+     **/
     const QList<EnumEntry>& getEnumChildren(DataTypeCustom* dataType) const;
 
-    int getDataTypeChildCount(const DataTypeCustom* dataType) const;
-
+    /**
+     * \brief   Sorts the data type fields entries by name.
+     * \param   dataType    The custom data type object to sort the fields.
+     * \param   ascending   If true, the sorting is ascending.
+     **/
     void sortDataTypeChildren(DataTypeCustom* dataType, bool ascending);
 
+    /**
+     * \brief   Returns true if data type has child fields.
+     * \param   dataType    The custom data type object to sort the fields.
+     **/
     bool hasChildren(const DataTypeCustom* dataType) const;
 
+    /**
+     * \brief   Returns true if data type can have child fields,
+     *          i.e. data type is structure or enumeration
+     * \param   dataType    The custom data type object to sort the fields.
+     **/
     bool canHaveChildren(const DataTypeCustom* dataType) const;
 
+    /**
+     * \brief   Returns the number of child fields in the specified custom data type object.
+     * \param   dataType    The custom data type object.
+     **/
     int getChildCount(const DataTypeCustom* dataType) const;
 
+    /**
+     * \brief   Returns the index of the specified custom data type ID object in the list.
+     * \param   id  The ID of the custom data type object.
+     * \return  Returns valid index of the custom data type object in the list. Otherwise, returns -1.
+     **/
     int findIndex(uint32_t id) const;
 
+    /**
+     * \brief   Returns the index of the specified custom data type object in the list.
+     * \param   dataType    The custom data type object.
+     * \return  Returns valid index of the custom data type object in the list. Otherwise, returns -1.
+     **/
     int findIndex(const DataTypeCustom* dataType) const;
 
+    /**
+     * \brief   Returns the index of the child field of specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   childId     The ID of the child field.
+     * \return  Returns valid index of the custom data type object in the list. Otherwise, returns -1.
+     **/
     int findChildIndex(const DataTypeCustom* dataType, uint32_t childId) const;
 
+    /**
+     * \brief   Returns the index of the child field of specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   child       The child field object.
+     * \return  Returns valid index of the custom data type object in the list. Otherwise, returns -1.
+     **/
     int findChildIndex(const DataTypeCustom* dataType, const ElementBase& child) const;
 
+    /**
+     * \brief   Returns the index of the child field of specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   childName   The name of the child field.
+     * \return  Returns valid index of the custom data type object in the list. Otherwise, returns -1.
+     **/
     int findChildIndex(const DataTypeCustom* dataType, const QString& childName) const;
 
+    /**
+     * \brief   Returns the pointer of the child field of specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   childId     The ID of the child field.
+     * \return  Returns valid pointer to child field object. If not found, returns nullptr.
+     **/
     ElementBase* findChild(const DataTypeCustom* dataType, uint32_t childId) const;
 
+    /**
+     * \brief   Returns the pointer of the child field of specified custom data type object.
+     * \param   dataType    The custom data type object.
+     * \param   child       The child field object.
+     * \return  Returns valid pointer to child field object. If not found, returns nullptr.
+     **/
     ElementBase* findChild(const DataTypeCustom* dataType, const QString& childName) const;
 
+    /**
+     * \brief   Updates the data type object.
+     * \param   dataType    The data type object to update.
+     * \param   newName     The new name of the data type.
+     **/
+    void updateDataType(DataTypeCustom* dataType, const QString& newName);
+
+    /**
+     * \brief   Updates the data type object.
+     * \param   id          The ID of the data type object to update.
+     * \param   newName     The new name of the data type.
+     **/
+    void updateDataType(uint32_t id, const QString& newName);
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden members
+//////////////////////////////////////////////////////////////////////////
 private:
     SIDataTypeData& mData; //!< The data object.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// SIDataTypeModel class inline methods
+//////////////////////////////////////////////////////////////////////////
 
 inline SIDataTypeData& SIDataTypeModel::getDataTypeData(void)
 {

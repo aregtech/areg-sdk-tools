@@ -157,7 +157,7 @@ QVariant WorkspaceModel::data(const QModelIndex& index, int role) const
         break;
     
     case static_cast<int>(Qt::InitialSortOrderRole):
-        result = item.getKey();
+        result = QVariant::fromValue<qulonglong>(static_cast<qulonglong>(item.getKey()));
         break;
         
     default:
