@@ -19,6 +19,7 @@
 
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
+#include "lusan/data/si/ServiceInterfaceData.hpp"
 
 #include <QVBoxLayout>
 #include <QIcon>
@@ -59,10 +60,10 @@ ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWi
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
-    connect(&mDataType, &SIDataType::signalDataTypeConverted, this, &ServiceInterface::slotDataTypeConverted);
-    connect(&mDataType, &SIDataType::signalDataTypeCreated  , this, &ServiceInterface::slotDataTypeCreated);
-    connect(&mDataType, &SIDataType::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
-    connect(&mDataType, &SIDataType::signalDataTypeUpdated  , this, &ServiceInterface::slotlDataTypeUpdated);
+    SIDataTypeData& data = mModel.getData().getDataTypeData();
+    connect(&data, &SIDataTypeData::signalDataTypeCreated  , this, &ServiceInterface::slotDataTypeCreated);
+    connect(&data, &SIDataTypeData::signalDataTypeRemoved  , this, &ServiceInterface::slotlDataTypeRemoved);
+    connect(&data, &SIDataTypeData::signalDataTypeConverted, this, &ServiceInterface::slotDataTypeConverted);
     connect(&mOverview, &SIOverview::signalPageLinkClicked  , this, &ServiceInterface::slotPageLinkClicked);
     
     setAttribute(Qt::WA_DeleteOnClose);

@@ -279,6 +279,48 @@ void SIDataType::onAddFieldClicked(void)
 
 void SIDataType::onRemoveClicked(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    if (item == nullptr)
+        return;
+    
+    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>();
+    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    item = id == 0 ? item : item->parent();
+
+    int index = table->indexOfTopLevelItem(item);
+    index = index + 1 == table->topLevelItemCount() ? index - 1 : index + 1;
+    QTreeWidgetItem* next = (index >= 0) && (index < table->topLevelItemCount()) ? table->topLevelItem(index) : nullptr;
+    item->setSelected(false);
+    emit signalDataTypeRemoved(dataType);
+    deleteTreeNode(item);
+    if (next != nullptr)
+    {
+        next->setSelected(true);
+        table->setCurrentItem(next);
+    }
+}
+
+void SIDataType::onRemoveFieldClicked(void)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    if (item == nullptr)
+        return;
+    
+    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() != 0);
+    QTreeWidgetItem* parent = item->parent();
+    int index = parent->indexOfChild(item);
+    index = index + 1 == parent->childCount() ? index - 1 : index + 1;
+    QTreeWidgetItem* next = (index >= 0) && (index < parent->childCount()) ? parent->child(index) : parent;
+    item->setSelected(false);
+    deleteTreeNode(item);
+    if (next != nullptr)
+    {
+        next->setSelected(true);
+        table->setCurrentItem(next);
+    }
 }
 
 void SIDataType::onTypeNameChanged(const QString& newName)
@@ -815,6 +857,9 @@ void SIDataType::setupSignals(void)
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged  , this, &SIDataType::onCurCellChanged);
     connect(mList->ctrlToolAdd()            , &QToolButton::clicked             , this, &SIDataType::onAddClicked);
     connect(mList->ctrlToolAddField()       , &QToolButton::clicked             , this, &SIDataType::onAddFieldClicked);
+    connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
+    connect(mList->ctrlToolRemoveField()    , &QToolButton::clicked             , this, &SIDataType::onRemoveFieldClicked);
+
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged           , this, &SIDataType::onTypeNameChanged);
     connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked            , this, &SIDataType::onStructSelected);
     connect(mDetails->ctrlTypeEnum()        , &QRadioButton::clicked            , this, &SIDataType::onEnumSelected);
@@ -839,7 +884,6 @@ void SIDataType::setupSignals(void)
     connect(mFields->ctrlDeprecated()       , &QCheckBox::toggled               , this, &SIDataType::onFieldDeprecatedChecked);
     connect(mFields->ctrlDeprecateHint()    , &QLineEdit::textChanged           , this, &SIDataType::onFieldDeprecateHint);
 
-    connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
     // connect(mTableCell                , &TableCell::editorDataChanged,this, &SIConstant::onEditorDataChanged);
 }
 
@@ -1250,4 +1294,38 @@ inline void SIDataType::disableTypes(bool disable)
     mDetails->ctrlTypeEnum()->setDisabled(disable);
     mDetails->ctrlTypeImport()->setDisabled(disable);
     mDetails->ctrlTypeContainer()->setDisabled(disable);
+}
+
+inline void SIDataType::deleteTreeNode(QTreeWidgetItem* node)
+{
+    if (node == nullptr)
+        return;
+
+    DataTypeCustom* dataType = node->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    uint32_t id = node->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    if (id == 0)
+    {
+        mModel.deleteDataType(dataType);
+    }
+    else
+    {
+        mModel.deleteDataTypeChild(dataType, id);
+    }
+
+    QTreeWidgetItem* parent = node->parent();
+    int count = node->childCount();
+    for (int i = 0; i < count; ++i)
+    {
+        QTreeWidgetItem *child = node->child(i);
+        node->removeChild(child);
+        Q_ASSERT(child != nullptr);
+        delete child;
+    }
+
+    if (parent != nullptr)
+    {
+        parent->removeChild(node);
+    }
+
+    delete node;
 }

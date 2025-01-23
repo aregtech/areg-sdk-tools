@@ -76,9 +76,9 @@ signals:
         
     void signalDataTypeCreated(DataTypeCustom* dataType);
     
-    void signalDataTypeRemoved(const DataTypeCustom* dataType);
+    void signalDataTypeRemoved(DataTypeCustom* dataType);
     
-    void signalDataTypeConverted(const DataTypeCustom* oldType, DataTypeCustom* newType);
+    void signalDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

@@ -77,4 +77,3 @@ bool ElementBase::operator != (const ElementBase& src) const
 {
     return (mId != src.mId);
 }
-

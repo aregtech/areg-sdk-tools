@@ -101,6 +101,8 @@ protected:
      */
     void onRemoveClicked(void);
 
+    void onRemoveFieldClicked(void);
+
     /**
      * \brief Triggered when the name is changed.
      * \param newName The new name of the attribute.
@@ -159,7 +161,17 @@ protected:
     void onFieldDeprecatedChecked(bool isChecked);
 
     void onFieldDeprecateHint(const QString& newText);
-    
+
+protected:
+
+    virtual void dataTypeCreated(DataTypeCustom* dataType);
+
+    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType);
+
+    virtual void dataTypeRemoved(DataTypeCustom* dataType);
+
+    virtual void dataTypeUpdated(DataTypeCustom* dataType);
+
 private:
 
     void convertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory);
@@ -232,12 +244,15 @@ private:
     inline ElementBase* getSelectedField(void) const;
     
     inline void disableTypes(bool disable);
+
+    inline void deleteTreeNode(QTreeWidgetItem* node);
     
     static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
     
     static const QList<DataTypeBase *>& _getIntegerTypes(void);
     
     static const QList<DataTypeBase *>& _getPredefinedTypes(void);
+
 
 private:
     SIDataTypeDetails*      mDetails;

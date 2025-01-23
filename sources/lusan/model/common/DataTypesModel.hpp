@@ -144,6 +144,8 @@ public:
 
     bool removeDataType(DataTypeCustom* dataType);
 
+    bool removeField(DataTypeCustom* dataType, uint32_t fieldId);
+
     bool addDataType(DataTypeCustom* dataType);
 
 private:
