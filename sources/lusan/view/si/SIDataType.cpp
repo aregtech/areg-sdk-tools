@@ -105,7 +105,8 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mWidget   (new SIDataTypeWidget(this))
     , ui        (*mWidget->ui)
     , mModel    (model)
-    , mTypeModel(new DataTypesModel(model.getDataTypeData(), false))
+    , mTypeModel(new DataTypesModel(model.getDataTypeData(), true))
+    , mValueModel(new DataTypesModel(model.getDataTypeData(), false))
     , mKeysModel(new DataTypesModel(model.getDataTypeData(), true))
     , mTableCell(nullptr)
     , mCurUrl   ( )
@@ -416,24 +417,28 @@ void SIDataType::onContainerSelected(bool checked)
 void SIDataType::dataTypeCreated(DataTypeCustom* dataType)
 {
     mTypeModel->dataTypeCreated(dataType);
+    mValueModel->dataTypeCreated(dataType);
     mKeysModel->dataTypeCreated(dataType);
 }
 
 void SIDataType::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
 {
     mTypeModel->dataTypeConverted(oldType, newType);
+    mValueModel->dataTypeConverted(oldType, newType);
     mKeysModel->dataTypeConverted(oldType, newType);
 }
 
 void SIDataType::dataTypeDeleted(DataTypeCustom* dataType)
 {
     mTypeModel->dataTypeDeleted(dataType);
+    mValueModel->dataTypeDeleted(dataType);
     mKeysModel->dataTypeDeleted(dataType);
 }
 
 void SIDataType::dataTypeUpdated(DataTypeCustom* dataType)
 {
     mTypeModel->dataTypeUpdated(dataType);
+    mValueModel->dataTypeUpdated(dataType);
     mKeysModel->dataTypeUpdated(dataType);
 }
 
@@ -858,6 +863,8 @@ void SIDataType::updateWidgets(void)
 {
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
+    mValueModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
+    mValueModel->updateDataTypeLists();
     mKeysModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mKeysModel->updateDataTypeLists();
     
@@ -878,8 +885,8 @@ void SIDataType::updateWidgets(void)
         enumDerive->addItem(dataType->getName(), QVariant::fromValue(static_cast<DataTypeBase *>(dataType)));
     }
     
-    mFields->ctrlTypes()->setModel(mTypeModel);    
-    mDetails->ctrlContainerValue()->setModel(mTypeModel);
+    mFields->ctrlTypes()->setModel(mTypeModel);
+    mDetails->ctrlContainerValue()->setModel(mValueModel);
     mDetails->ctrlContainerKey()->setModel(mKeysModel);
 
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, nullptr, false);
@@ -896,7 +903,7 @@ void SIDataType::updateWidgets(void)
     mList->ctrlToolMoveUp()->setEnabled(false);
     mList->ctrlToolMoveDown()->setEnabled(false);
     
-    disableTypes(true);
+    enableTypeSelection(false);
 }
 
 void SIDataType::setupSignals(void)
@@ -968,13 +975,15 @@ void SIDataType::blockBasicSignals(bool doBlock)
 
 void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* dataType)
 {
-    disableTypes(false);
+    enableTypeSelection(true);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
+    mValueModel->removeDataType(dataType);
     mKeysModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
+        mValueModel->addDataType(oldType);
         mKeysModel->addDataType(oldType);
     }    
     
@@ -1002,13 +1011,15 @@ void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* data
 
 void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
 {
-    disableTypes(false);
+    enableTypeSelection(true);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
+    mValueModel->removeDataType(dataType);
     mKeysModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
+        mValueModel->addDataType(oldType);
         mKeysModel->addDataType(oldType);
     }
 
@@ -1037,10 +1048,11 @@ void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
 
 void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataType)
 {
-    disableTypes(false);
+    enableTypeSelection(true);
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
+        mValueModel->addDataType(oldType);
         mKeysModel->addDataType(oldType);
     }
     
@@ -1082,13 +1094,15 @@ void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataT
 
 void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* dataType)
 {
-    disableTypes(false);
+    enableTypeSelection(true);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
+    mValueModel->removeDataType(dataType);
     mKeysModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
+        mValueModel->addDataType(oldType);
         mKeysModel->addDataType(oldType);
     }
     
@@ -1133,11 +1147,14 @@ void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* d
 void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& field, DataTypeStructure* parent)
 {
     Q_ASSERT(parent != nullptr);
+    mTypeModel->removeEmptyEntry();
     mTypeModel->removeDataType(parent);
+    mValueModel->removeDataType(parent);
     mKeysModel->removeDataType(parent);
     if ((oldType != nullptr) && (oldType != static_cast<DataTypeCustom *>(parent)))
     {
         mTypeModel->addDataType(oldType);
+        mValueModel->addDataType(oldType);
         mKeysModel->addDataType(oldType);
     }
     
@@ -1166,15 +1183,19 @@ void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& 
 void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& field, DataTypeEnum* parent)
 {
     Q_ASSERT(parent != nullptr);
+    mTypeModel->addEmptyEntry();
     mTypeModel->removeDataType(parent);
+    mValueModel->removeDataType(parent);
     mKeysModel->removeDataType(parent);
     if ((oldType != nullptr) && (oldType != static_cast<DataTypeCustom *>(parent)))
     {
         mTypeModel->addDataType(oldType);
+        mValueModel->addDataType(oldType);
         mKeysModel->addDataType(oldType);
     }
     
     activateFields(true);
+    mFields->ctrlTypes()->setCurrentIndex(0);
     mFields->ctrlTypes()->setEnabled(false);
     mFields->ctrlName()->setText(field.getName());
     mFields->ctrlValue()->setText(field.getValue());
@@ -1379,12 +1400,12 @@ inline ElementBase* SIDataType::getSelectedField(void) const
     return ((item != nullptr) && (id != 0)) ? mModel.findChild(dataType, id) : nullptr;
 }
 
-inline void SIDataType::disableTypes(bool disable)
+inline void SIDataType::enableTypeSelection(bool enable)
 {
-    mDetails->ctrlTypeStruct()->setDisabled(disable);
-    mDetails->ctrlTypeEnum()->setDisabled(disable);
-    mDetails->ctrlTypeImport()->setDisabled(disable);
-    mDetails->ctrlTypeContainer()->setDisabled(disable);
+    mDetails->ctrlTypeStruct()->setEnabled(enable);
+    mDetails->ctrlTypeEnum()->setEnabled(enable);
+    mDetails->ctrlTypeImport()->setEnabled(enable);
+    mDetails->ctrlTypeContainer()->setEnabled(enable);
 }
 
 inline void SIDataType::deleteTreeNode(QTreeWidgetItem* node)
