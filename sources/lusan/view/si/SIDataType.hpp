@@ -311,72 +311,194 @@ private:
      */
     void blockBasicSignals(bool doBlock);
 
+    /**
+     * \brief   Triggered when in the tree table the structure data type item is selected.
+     * \param   oldType     The previously selected data type object.
+     * \param   dataType    The actual selected structure data type object.
+     **/
     void selectedStruct(DataTypeCustom* oldType, DataTypeStructure* dataType);
 
+    /**
+     * \brief   Triggered when in the tree table the enumeration data type item is selected.
+     * \param   oldType     The previously selected data type object.
+     * \param   dataType    The actual selected enumeration data type object.
+     **/
     void selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType);
 
+     /**
+      * \brief   Triggered when in the tree table the imported data type item is selected.
+      * \param   oldType     The previously selected data type object.
+      * \param   dataType    The actual selected imported data type object.
+      **/
     void selectedImport(DataTypeCustom* oldType, DataTypeImported* dataType);
 
+    /**
+     * \brief   Triggered when in the tree table the container data type item is selected.
+     * \param   oldType     The previously selected data type object.
+     * \param   dataType    The actual selected container data type object.
+     **/
     void selectedContainer(DataTypeCustom* oldType, DataTypeContainer* dataType);
 
+    /**
+     * \brief   Triggered when in the tree table the structure field item is selected.
+     * \param   oldType     The previously selected data type object.
+     * \param   field       The actual selected field entry object.
+     * \param   parent      The parent structure data type object.
+     **/
     void selectedStructField(DataTypeCustom* oldType, const FieldEntry& field, DataTypeStructure* parent);
 
+    /**
+     * \brief   Triggered when in the tree table the enumeration field item is selected.
+     * \param   oldType     The previously selected data type object.
+     * \param   field       The actual selected enumeration entry object.
+     * \param   parent      The parent enumeration data type object.
+     **/
     void selectedEnumField(DataTypeCustom* oldType, const EnumEntry& field, DataTypeEnum* parent);
 
+    /**
+     * \brief   Creates the tree node for the structure data type.
+     * \param   dataType    The structure data type object.
+     * \return  Returns the created tree node.
+     **/
     QTreeWidgetItem* createNodeStructure(DataTypeStructure* dataType) const;
 
+    /**
+     * \brief   Creates the tree node for the enumeration data type.
+     * \param   dataType    The enumeration data type object.
+     * \return  Returns the created tree node.
+     **/
     QTreeWidgetItem* createNodeEnum(DataTypeEnum* dataType) const;
 
+    /**
+     * \brief   Creates the tree node for the imported data type.
+     * \param   dataType    The imported data type object.
+     * \return  Returns the created tree node.
+     **/
     QTreeWidgetItem* createNodeImported(DataTypeImported* dataType) const;
-    
+
+    /**
+     * \brief   Creates the tree node for the container data type.
+     * \param   dataType    The container data type object.
+     * \return  Returns the created tree node.
+     **/
     QTreeWidgetItem* createNodeContainer(DataTypeContainer* dataType) const;
 
+    /**
+     * \brief   Updates the tree node for the structure data type.
+     * \param   node        The tree node to update the data type.
+     * \param   dataType    The structure data type object.
+     **/
     void updateNodeStructure(QTreeWidgetItem* node, DataTypeStructure* dataType) const;
 
+    /**
+     * \brief   Updates the tree node for the enumeration data type.
+     * \param   node        The tree node to update the data type.
+     * \param   dataType    The enumeration data type object.
+     **/
     void updateNodeEnum(QTreeWidgetItem* node, DataTypeEnum* dataType) const;
 
+    /**
+     * \brief   Updates the tree node for the imported data type.
+     * \param   node        The tree node to update the data type.
+     * \param   dataType    The imported data type object.
+     **/
     void updateNodeImported(QTreeWidgetItem* node, DataTypeImported* dataType) const;
 
+    /**
+     * \brief   Updates the tree node for the container data type.
+     * \param   node        The tree node to update the data type.
+     * \param   dataType    The container data type object.
+     **/
     void updateNodeContainer(QTreeWidgetItem* node, DataTypeContainer* dataType) const;
 
+    /**
+     * \brief   Updates the tree node for the structure field.
+     * \param   child       The tree node to update the field.
+     * \param   dataType    The structure data type object.
+     * \param   field       The field entry object.
+     **/
     void updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure* dataType, const FieldEntry& field) const;
 
+    /**
+     * \brief   Updates the tree node for the enumeration field.
+     * \param   child       The tree node to update the field.
+     * \param   dataType    The enumeration data type object.
+     * \param   field       The enumeration entry object.
+     **/
     void updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataType, const EnumEntry& field) const;
 
+    /**
+     * \brief   Activates or deactivates the field details widget.
+     * \param   activate    If true, activates and shows the field details widget.
+     *                      Otherwise, deactivates and hides.
+     **/
     void activateFields(bool activate);
 
+    /**
+     * \brief   Updates the container names on the tree table.
+     * \param   node        The tree node to update the data type.
+     * \param   dataType    The container data type object.
+     **/
     void updateContainerNames(QTreeWidgetItem* node, DataTypeContainer *dataType) const;
 
+    /**
+     * \brief   Updates the import names on the tree table.
+     * \param   node        The tree node to update the data type.
+     * \param   dataType    The imported data type object.
+     **/
     void updateImportNames(QTreeWidgetItem* node, DataTypeImported* dataType) const;
 
+    /**
+     * \brief   Gets the field object of structure or enumeration of selected node of tree table.
+     **/
     inline ElementBase* getSelectedField(void) const;
-    
-    inline void disableTypes(bool disable);
 
+    /**
+     * \brief   Disables or enables the radio buttons to select data type object.
+     **/
+    inline void enableTypeSelection(bool enable);
+
+    /**
+     * \brief   Deletes the tree node from the tree table.
+     * \param   node    The tree node to delete.
+     **/
     inline void deleteTreeNode(QTreeWidgetItem* node);
-    
+
+    /**
+     * \brief   Returns list of basic container data type objects.
+     **/
     static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
-    
+
+    /**
+     * \brief   Returns list of custom data type objects.
+     **/
     static const QList<DataTypeBase *>& _getIntegerTypes(void);
-    
+
+    /**
+     * \brief   Returns list of predefined data type objects.
+     **/
     static const QList<DataTypeBase *>& _getPredefinedTypes(void);
 
 
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    SIDataTypeDetails*      mDetails;
-    SIDataTypeList*         mList;
-    SIDataTypeFieldDetails* mFields;
-    SIDataTypeWidget*       mWidget;
-    Ui::SIDataType &        ui;
-    SIDataTypeModel&        mModel;
-    DataTypesModel*         mTypeModel;
-    DataTypesModel*         mKeysModel;
+    SIDataTypeDetails*      mDetails;   //!< The data type details widget.
+    SIDataTypeList*         mList;      //!< The data type list (tree table) widget.
+    SIDataTypeFieldDetails* mFields;    //!< The data type field details widget.
+    SIDataTypeWidget*       mWidget;    //!< The helper widget.
+    Ui::SIDataType &        ui;         //!< The UI helper object.
+    SIDataTypeModel&        mModel;     //!< The data type main model object.
+    DataTypesModel*         mTypeModel; //!< The model to display data types in the type combo-box.
+    DataTypesModel*         mValueModel;//!< The model to display data types in the value combo-box.
+    DataTypesModel*         mKeysModel; //!< The model to display data types in the key combo-box.
     TableCell*              mTableCell; //!< The table cell object.
-    QString                 mCurUrl;
-    QString                 mCurFile;
-    int                     mCurView;
+    QString                 mCurUrl;    //!< The current URL used when browse imported file location.
+    QString                 mCurFile;   //!< The current file to import data types.
+    int                     mCurView;   //!< The current view of the file open dialog.
 
-    uint32_t                mCount;
+    uint32_t                mCount;     //!< The counter used to generate data type names.
 };
 
 #endif // LUSAN_APPLICATION_SI_SIDATATYPE_HPP
