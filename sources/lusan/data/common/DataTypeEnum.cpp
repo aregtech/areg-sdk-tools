@@ -73,7 +73,7 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
     QXmlStreamAttributes attributes = xml.attributes();
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
-    QString type = attributes.hasAttribute(XmlSI::xmlSIAttributeValues) ? attributes.value(XmlSI::xmlSIAttributeName).toString() : "";
+    QString type = attributes.hasAttribute(XmlSI::xmlSIAttributeValues) ? attributes.value(XmlSI::xmlSIAttributeValues).toString() : "";
     mDerived = type == DEFAULT_VALUES ? "" : type;
     setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 

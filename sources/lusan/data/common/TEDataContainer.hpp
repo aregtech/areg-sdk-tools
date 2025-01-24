@@ -1034,16 +1034,13 @@ Data* TEDataContainer<Data, ElemBase>::checkElement(const Data& element, bool un
         elem.setId(ElemBase::getNextId());
     }
 
-    if (unique)
+    if (elem.getId() != 0)
     {
-        if (elem.getId() != 0)
-        {
-            found = findElement(elem.getId());
-        }
-        else
-        {
-            found = findElement(elem.getName());
-        }
+        found = findElement(elem.getId());
+    }
+    else if (unique)
+    {
+        found = findElement(elem.getName());
     }
 
     return found;

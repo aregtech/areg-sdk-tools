@@ -443,7 +443,7 @@ DataTypeCustom* SIDataTypeData::convertDataType(DataTypeCustom* dataType, DataTy
     }
 
     DataTypeCustom* newType = _createType(dataType->getName(), dataType->getParent(), dataType->getId(), category);
-    if (replaceElement(dataType, newType, false) == false)
+    if (replaceElement(dataType, newType, true) == false)
     {
         addElement(newType, false);
     }

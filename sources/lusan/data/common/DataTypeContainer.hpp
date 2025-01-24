@@ -140,7 +140,7 @@ inline const QString& DataTypeContainer::getKey(void) const
 
 inline void DataTypeContainer::setKey(const QString& key)
 {
-    mKey = key;
+    mKey = canHaveKey() ? key : QString();
 }
 
 inline const QString& DataTypeContainer::getValue(void) const

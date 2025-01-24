@@ -370,6 +370,7 @@ private:
     Ui::SIDataType &        ui;
     SIDataTypeModel&        mModel;
     DataTypesModel*         mTypeModel;
+    DataTypesModel*         mKeysModel;
     TableCell*              mTableCell; //!< The table cell object.
     QString                 mCurUrl;
     QString                 mCurFile;

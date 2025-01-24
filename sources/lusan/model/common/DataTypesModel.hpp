@@ -25,6 +25,8 @@
 #include <QAbstractListModel>
 #include "lusan/data/common/DataTypeBase.hpp"
 
+#include "lusan/data/common/DataTypeEmpty.hpp"
+
 /************************************************************************
  * Dependencies
  ************************************************************************/
@@ -46,7 +48,7 @@ public:
      * \param   dataTypeData    The instance of SIDataTypeData.
      * \param   parent          The parent object.
      **/
-    DataTypesModel(SIDataTypeData& dataTypeData, QObject* parent = nullptr);
+    DataTypesModel(SIDataTypeData& dataTypeData, bool hasEmpty, QObject* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -54,7 +56,7 @@ public:
      * \param   excludes        The list of data types to exclude.
      * \param   parent          The parent object.
      **/
-    DataTypesModel(SIDataTypeData& dataTypeData, const QStringList &excludes, QObject* parent = nullptr);
+    DataTypesModel(SIDataTypeData& dataTypeData, const QStringList &excludes, bool hasEmpty, QObject* parent = nullptr);
 
     /**
      * \brief   Constructor with initialization.
@@ -62,7 +64,7 @@ public:
      * \param   excludes        The list of data types to exclude.
      * \param   parent          The parent object.
      **/
-    DataTypesModel(SIDataTypeData& dataTypeData, const QList<DataTypeBase*> &excludes, QObject* parent = nullptr);
+    DataTypesModel(SIDataTypeData& dataTypeData, const QList<DataTypeBase*> &excludes, bool hasEmpty, QObject* parent = nullptr);
 
     /**
      * \brief   Sets the list of data type objects when need to display data type elements.
@@ -190,6 +192,15 @@ public:
      **/
     bool addDataType(DataTypeCustom* dataType);
 
+    /**
+     * \brief   Returns flag, indicating whether the list can have an empty entry.
+     **/
+    inline bool hasEmptyEntry(void) const;
+
+    inline void addEmptyEntry(void);
+
+    inline void removeEmptyEntry(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls.
 //////////////////////////////////////////////////////////////////////////
@@ -205,6 +216,39 @@ private:
     QList<DataTypeBase*>    mExcludeList;   //!< Filtered list of data types.
     QList<DataTypeBase*>    mDataTypeList;  //!< The list of all data types.
     int                     mCountPredef;   //!< The number of predefined entries, which are set at the beginning of mDataTypeList;
+    const bool              mHasEmpty;      //!< Flag, indicating whether there can be an empty entry in the list.
+    static DataTypeEmpty    _emptyType;     //!< The empty data type object.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// DataTypesModel class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool DataTypesModel::hasEmptyEntry(void) const
+{
+    return mHasEmpty;
+}
+
+inline void DataTypesModel::addEmptyEntry(void)
+{
+    if (mHasEmpty && (mDataTypeList.indexOf(&_emptyType) < 0))
+    {
+        ++ mCountPredef;
+        beginInsertRows(QModelIndex(), 0, 0);
+        mDataTypeList.insert(0, &_emptyType);
+        endInsertRows();
+    }
+}
+
+inline void DataTypesModel::removeEmptyEntry(void)
+{
+    if (mHasEmpty && (mDataTypeList.indexOf(&_emptyType) >= 0))
+    {
+        --mCountPredef;
+        beginRemoveRows(QModelIndex(), 0, 0);
+        mDataTypeList.removeAll(&_emptyType);
+        endRemoveRows();
+    }
+}
 
 #endif  // LUSAN_MODEL_COMMON_DATATYPESMODEL_HPP
