@@ -54,7 +54,7 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
     , mList     (new SIConstantList(this))
     , mWidget   (new SIConstantWidget(this))
     , ui        (*mWidget->ui)
-    , mTypeModel(new DataTypesModel(model.getDataTypeData()))
+    , mTypeModel(new DataTypesModel(model.getDataTypeData(), false))
     , mTableCell(nullptr)
     , mCount    (0)
 {

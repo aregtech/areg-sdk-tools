@@ -105,7 +105,8 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mWidget   (new SIDataTypeWidget(this))
     , ui        (*mWidget->ui)
     , mModel    (model)
-    , mTypeModel(new DataTypesModel(model.getDataTypeData()))
+    , mTypeModel(new DataTypesModel(model.getDataTypeData(), false))
+    , mKeysModel(new DataTypesModel(model.getDataTypeData(), true))
     , mTableCell(nullptr)
     , mCurUrl   ( )
     , mCurFile  ( )
@@ -415,21 +416,25 @@ void SIDataType::onContainerSelected(bool checked)
 void SIDataType::dataTypeCreated(DataTypeCustom* dataType)
 {
     mTypeModel->dataTypeCreated(dataType);
+    mKeysModel->dataTypeCreated(dataType);
 }
 
 void SIDataType::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
 {
     mTypeModel->dataTypeConverted(oldType, newType);
+    mKeysModel->dataTypeConverted(oldType, newType);
 }
 
 void SIDataType::dataTypeDeleted(DataTypeCustom* dataType)
 {
     mTypeModel->dataTypeDeleted(dataType);
+    mKeysModel->dataTypeDeleted(dataType);
 }
 
 void SIDataType::dataTypeUpdated(DataTypeCustom* dataType)
 {
     mTypeModel->dataTypeUpdated(dataType);
+    mKeysModel->dataTypeUpdated(dataType);
 }
 
 void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCategory newCategory)
@@ -479,6 +484,21 @@ void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCatego
 
         case DataTypeBase::eCategory::Container:
             dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Container);
+            static_cast<DataTypeContainer *>(dataType)->setContainer(mDetails->ctrlContainerObject()->itemText(0));
+            static_cast<DataTypeContainer *>(dataType)->setValue(mDetails->ctrlContainerValue()->itemText(0));
+            if (static_cast<DataTypeContainer *>(dataType)->canHaveKey())
+            {
+                mKeysModel->removeEmptyEntry();
+                mDetails->ctrlContainerKey()->setCurrentIndex(0);
+                static_cast<DataTypeContainer *>(dataType)->setKey(mDetails->ctrlContainerKey()->itemText(0));
+            }
+            else
+            {
+                mKeysModel->addEmptyEntry();
+                mDetails->ctrlContainerKey()->setCurrentIndex(0);
+                static_cast<DataTypeContainer *>(dataType)->setKey(QString());
+            }
+            
             newType = dataType;
             updateNodeContainer(current, static_cast<DataTypeContainer*>(dataType));
             selectedContainer(nullptr, static_cast<DataTypeContainer*>(dataType));
@@ -509,16 +529,23 @@ void SIDataType::onContainerObjectChanged(int index)
     DataTypeContainer* typeContainer = static_cast<DataTypeContainer*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>());
     Q_ASSERT(typeContainer->getCategory() == DataTypeBase::eCategory::Container);
     typeContainer->setContainer(dataType->getName());
+    
+    blockBasicSignals(true);
     if (dataType->hasKey())
     {
+        mKeysModel->removeEmptyEntry();
+        mDetails->ctrlContainerKey()->setCurrentIndex(0);
         mDetails->ctrlContainerKey()->setEnabled(true);
         typeContainer->setKey(mDetails->ctrlContainerKey()->currentText());
     }
     else
     {
+        mKeysModel->addEmptyEntry();
+        mDetails->ctrlContainerKey()->setCurrentIndex(0);
         mDetails->ctrlContainerKey()->setEnabled(false);
         typeContainer->setKey(QString());
     }
+    blockBasicSignals(false);
 
     updateContainerNames(current, typeContainer);
 }
@@ -831,6 +858,9 @@ void SIDataType::updateWidgets(void)
 {
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
+    mKeysModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
+    mKeysModel->updateDataTypeLists();
+    
     // mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel}, QList<int>{1}, mList->ctrlTableList());
     
     QComboBox* container = mDetails->ctrlContainerObject();
@@ -849,8 +879,8 @@ void SIDataType::updateWidgets(void)
     }
     
     mFields->ctrlTypes()->setModel(mTypeModel);    
-    mDetails->ctrlContainerKey()->setModel(mTypeModel);
     mDetails->ctrlContainerValue()->setModel(mTypeModel);
+    mDetails->ctrlContainerKey()->setModel(mKeysModel);
 
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, nullptr, false);
     SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, nullptr, false);
@@ -941,9 +971,11 @@ void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* data
     disableTypes(false);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
+    mKeysModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
+        mKeysModel->addDataType(oldType);
     }    
     
     activateFields(false);
@@ -973,11 +1005,13 @@ void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
     disableTypes(false);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
+    mKeysModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
+        mKeysModel->addDataType(oldType);
     }
-    
+
     activateFields(false);
     showEnumDetails(true);
     showImportDetails(false);
@@ -1007,6 +1041,7 @@ void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataT
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
+        mKeysModel->addDataType(oldType);
     }
     
     activateFields(false);
@@ -1050,9 +1085,11 @@ void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* d
     disableTypes(false);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->removeDataType(dataType);
+    mKeysModel->removeDataType(dataType);
     if ((oldType != nullptr) && (oldType != dataType))
     {
         mTypeModel->addDataType(oldType);
+        mKeysModel->addDataType(oldType);
     }
     
     activateFields(false);
@@ -1068,8 +1105,18 @@ void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* d
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
 
     mDetails->ctrlContainerValue()->setCurrentText(dataType->getValue());
-    mDetails->ctrlContainerKey()->setCurrentText(dataType->getKey());
-    mDetails->ctrlContainerKey()->setEnabled(dataType->canHaveKey());
+    if (dataType->canHaveKey())
+    {
+        mKeysModel->removeEmptyEntry();
+        mDetails->ctrlContainerKey()->setEnabled(true);
+        mDetails->ctrlContainerKey()->setCurrentText(dataType->getKey());
+    }
+    else
+    {
+        mKeysModel->addEmptyEntry();
+        mDetails->ctrlContainerKey()->setCurrentIndex(0);
+        mDetails->ctrlContainerKey()->setEnabled(false);
+    }
 
     mList->ctrlToolAdd()->setEnabled(true);
     mList->ctrlToolRemove()->setEnabled(true);
@@ -1086,9 +1133,11 @@ void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& 
 {
     Q_ASSERT(parent != nullptr);
     mTypeModel->removeDataType(parent);
+    mKeysModel->removeDataType(parent);
     if ((oldType != nullptr) && (oldType != static_cast<DataTypeCustom *>(parent)))
     {
         mTypeModel->addDataType(oldType);
+        mKeysModel->addDataType(oldType);
     }
     
     activateFields(true);
@@ -1117,9 +1166,11 @@ void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& fie
 {
     Q_ASSERT(parent != nullptr);
     mTypeModel->removeDataType(parent);
+    mKeysModel->removeDataType(parent);
     if ((oldType != nullptr) && (oldType != static_cast<DataTypeCustom *>(parent)))
     {
         mTypeModel->addDataType(oldType);
+        mKeysModel->addDataType(oldType);
     }
     
     activateFields(true);
@@ -1227,10 +1278,18 @@ void SIDataType::updateNodeContainer(QTreeWidgetItem* node, DataTypeContainer* d
     node->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherStorm));
     node->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
     node->setData(1, Qt::ItemDataRole::UserRole, 0);
-    dataType->setContainer(mDetails->ctrlContainerObject()->currentText());
-    dataType->setValue(mDetails->ctrlContainerValue()->currentText());
-    dataType->setKey(dataType->canHaveKey() ? mDetails->ctrlContainerKey()->currentText() : QString());
-    updateContainerNames(node, dataType);
+    QString typeName;
+    if (dataType->canHaveKey())
+    {
+        typeName = QString("%1<%2, %3>").arg(dataType->getContainer(), dataType->getKey(), dataType->getValue());
+    }
+    else
+    {
+        typeName = QString("%1<%2>").arg(dataType->getContainer(), dataType->getValue());
+    }
+    
+    node->setText(0, dataType->getName());
+    node->setText(1, typeName);
 }
 
 void SIDataType::updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure* dataType, const FieldEntry& field) const

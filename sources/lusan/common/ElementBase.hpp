@@ -138,14 +138,14 @@ public:
      * \brief Gets the next available ID.
      * \return The next available ID.
      */
-    inline unsigned int getNextId(void) const;
+    virtual unsigned int getNextId(void) const;
     
 protected:
     /**
      * \brief Sets the maximum ID.
      * \param id The maximum ID to set.
      */
-    inline void setMaxId(unsigned int id) const;
+    void setMaxId(unsigned int id) const;
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
@@ -173,23 +173,6 @@ inline unsigned int ElementBase::getId(void) const
     }
 
     return mId;
-}
-
-inline void ElementBase::setMaxId(unsigned int id) const
-{
-    if (mParent != nullptr)
-    {
-        mParent->setMaxId(id);
-    }
-    else
-    {
-        mId = (mId > id ? mId : id);
-    }
-}
-
-inline unsigned int ElementBase::getNextId(void) const
-{
-    return (mParent != nullptr ? mParent->getNextId() : ++mId);
 }
 
 inline void ElementBase::setParent(ElementBase* parent) const

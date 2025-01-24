@@ -27,21 +27,25 @@
 #include "lusan/data/common/DataTypePrimitive.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 
-DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData,  QObject* parent)
+DataTypeEmpty DataTypesModel::_emptyType;
+
+DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData,  bool hasEmpty, QObject* parent)
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( )
     , mDataTypeList ( )
     , mCountPredef  ( 0 )
+    , mHasEmpty     (hasEmpty)
 {
 }
 
-DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QStringList& excludes, QObject* parent)
+DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QStringList& excludes, bool hasEmpty, QObject* parent)
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( )
     , mDataTypeList ( )
     , mCountPredef  ( 0 )
+    , mHasEmpty     (hasEmpty)
 {
     for (const QString& entry : excludes)
     {
@@ -53,12 +57,13 @@ DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QStringList& 
     }
 }
 
-DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QList<DataTypeBase*>& excludes, QObject* parent)
+DataTypesModel::DataTypesModel(SIDataTypeData& dataTypeData, const QList<DataTypeBase*>& excludes, bool hasEmpty, QObject* parent)
     : QAbstractListModel(parent)
     , mDataTypeData (dataTypeData)
     , mExcludeList  ( excludes )
     , mDataTypeList ( )
     , mCountPredef  ( 0 )
+    , mHasEmpty     (hasEmpty)
 {
 }
 

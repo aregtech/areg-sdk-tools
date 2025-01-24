@@ -77,3 +77,21 @@ bool ElementBase::operator != (const ElementBase& src) const
 {
     return (mId != src.mId);
 }
+
+unsigned int ElementBase::getNextId(void) const
+{
+    return (mParent != nullptr ? mParent->getNextId() : ++mId);
+}
+
+void ElementBase::setMaxId(unsigned int id) const
+{
+    if (mParent != nullptr)
+    {
+        mParent->setMaxId(id);
+    }
+    else
+    {
+        mId = (mId > id ? mId : id);
+    }
+}
+
