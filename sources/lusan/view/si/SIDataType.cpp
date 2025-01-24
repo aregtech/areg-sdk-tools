@@ -1104,6 +1104,7 @@ void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* d
     
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
 
+    mDetails->ctrlContainerObject()->setCurrentText(dataType->getContainer());
     mDetails->ctrlContainerValue()->setCurrentText(dataType->getValue());
     if (dataType->canHaveKey())
     {
@@ -1245,11 +1246,12 @@ void SIDataType::updateNodeEnum(QTreeWidgetItem* node, DataTypeEnum* dataType) c
     node->setData(1, Qt::ItemDataRole::UserRole, 0);
 
     node->setText(0, dataType->getName());
-    node->setText(1, QString());
+    node->setText(1, dataType->getDerived());
     const QList<EnumEntry>& fields = dataType->getElements();
     for (const EnumEntry& field : fields)
     {
         QTreeWidgetItem* child = new QTreeWidgetItem();
+        updateChildNodeEnum(child, dataType, field);
         node->addChild(child);
     }
 }
