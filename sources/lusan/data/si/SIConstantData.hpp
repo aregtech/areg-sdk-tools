@@ -73,6 +73,8 @@ public:
      * \param   xml         The XML stream writer.
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
+
+    void validate(const QList<DataTypeCustom*>& dataTypes);
 };
 
 #endif  // LUSAN_DATA_SI_SICONSTANTDATA_HPP

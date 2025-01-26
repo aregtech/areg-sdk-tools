@@ -19,66 +19,66 @@
 #include "lusan/data/common/ParamBase.hpp"
 
 ParamBase::ParamBase(ElementBase* parent /*= nullptr*/)
-    : ElementBase(parent)
-    , mName()
-    , mType()
-    , mIsDeprecated(false)
-    , mDescription()
+    : ElementBase   (parent)
+    , mName         ()
+    , mParamType    ()
+    , mIsDeprecated (false)
+    , mDescription  ()
     , mDeprecateHint()
 {
 }
 
 ParamBase::ParamBase(uint32_t id, const QString& name, const QString& type, ElementBase* parent /*= nullptr*/)
-    : ElementBase(id, parent)
-    , mName(name)
-    , mType(type)
-    , mIsDeprecated(false)
-    , mDescription()
+    : ElementBase(  id, parent)
+    , mName         (name)
+    , mParamType    (type)
+    , mIsDeprecated (false)
+    , mDescription  ()
     , mDeprecateHint()
 {
 }
 
 ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint, ElementBase* parent /*= nullptr*/)
-    : ElementBase(id, parent)
-    , mName(name)
-    , mType(type)
-    , mIsDeprecated(isDeprecated)
-    , mDescription(description)
+    : ElementBase   (id, parent)
+    , mName         (name)
+    , mParamType    (type)
+    , mIsDeprecated (isDeprecated)
+    , mDescription  (description)
     , mDeprecateHint(deprecateHint)
 {
 }
 
 ParamBase::ParamBase(const ParamBase& src)
-    : ElementBase(static_cast<const ElementBase &>(src))
-    , mName(src.mName)
-    , mType(src.mType)
-    , mIsDeprecated(src.mIsDeprecated)
-    , mDescription(src.mDescription)
+    : ElementBase   (static_cast<const ElementBase &>(src))
+    , mName         (src.mName)
+    , mParamType    (src.mParamType)
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDescription  (src.mDescription)
     , mDeprecateHint(src.mDeprecateHint)
 {
 }
 
 ParamBase::ParamBase(ParamBase&& src) noexcept
-    : ElementBase(std::move(src))
-    , mName(std::move(src.mName))
-    , mType(std::move(src.mType))
-    , mIsDeprecated(src.mIsDeprecated)
-    , mDescription(std::move(src.mDescription))
+    : ElementBase   (std::move(src))
+    , mName         (std::move(src.mName))
+    , mParamType    (std::move(src.mParamType))
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDescription  (std::move(src.mDescription))
     , mDeprecateHint(std::move(src.mDeprecateHint))
 {
 }
 
-ParamBase& ParamBase::operator=(const ParamBase& other)
+ParamBase& ParamBase::operator = (const ParamBase& other)
 {
     if (this != &other)
     {
-        ElementBase::operator=(other);
+        ElementBase::operator = (other);
 
-        mName = other.mName;
-        mType = other.mType;
-        mIsDeprecated = other.mIsDeprecated;
-        mDescription = other.mDescription;
-        mDeprecateHint = other.mDeprecateHint;
+        mName           = other.mName;
+        mParamType      = other.mParamType;
+        mIsDeprecated   = other.mIsDeprecated;
+        mDescription    = other.mDescription;
+        mDeprecateHint  = other.mDeprecateHint;
     }
 
     return *this;
@@ -88,14 +88,15 @@ ParamBase& ParamBase::operator=(ParamBase&& other) noexcept
 {
     if (this != &other)
     {
-        ElementBase::operator=(std::move(other));
+        ElementBase::operator = (std::move(other));
 
-        mName = std::move(other.mName);
-        mType = std::move(other.mType);
-        mIsDeprecated = other.mIsDeprecated;
-        mDescription = std::move(other.mDescription);
-        mDeprecateHint = std::move(other.mDeprecateHint);
+        mName           = std::move(other.mName);
+        mParamType      = std::move(other.mParamType);
+        mIsDeprecated   = other.mIsDeprecated;
+        mDescription    = std::move(other.mDescription);
+        mDeprecateHint  = std::move(other.mDeprecateHint);
     }
+
     return *this;
 }
 
@@ -107,6 +108,16 @@ bool ParamBase::operator == (const ParamBase& other) const
 bool ParamBase::operator != (const ParamBase& other) const
 {
     return (mName != other.mName);
+}
+
+bool ParamBase::validate(const QList<DataTypeCustom*>& customTypes)
+{
+    return mParamType.validate(customTypes);
+}
+
+void ParamBase::invalidate(void)
+{
+    mParamType.invalidate();
 }
 
 const QString & ParamBase::getName() const
@@ -121,12 +132,27 @@ void ParamBase::setName(const QString& name)
 
 const QString & ParamBase::getType() const
 {
-    return mType;
+    return mParamType.getName();
 }
 
 void ParamBase::setType(const QString & type)
 {
-    mType = type;
+    mParamType = type;
+}
+
+void ParamBase::setType(const QString& type, const QList<DataTypeCustom*>& customTypes)
+{
+    mParamType.setName(type, customTypes);
+}
+
+void ParamBase::setParamType(DataTypeBase* dataType)
+{
+    mParamType.setDataType(dataType);
+}
+
+DataTypeBase* ParamBase::getParamType(void) const
+{
+    return const_cast<ParamType &>(mParamType).getDataType();
 }
 
 bool ParamBase::getIsDeprecated() const
@@ -161,5 +187,5 @@ void ParamBase::setDeprecateHint(const QString& deprecateHint)
 
 bool ParamBase::isValid() const
 {
-    return (getId() != 0) && (mName.isEmpty() == false ) && (mType.isEmpty() == false);
+    return (getId() != 0) && (mName.isEmpty() == false ) && (mParamType.isValid() == false);
 }

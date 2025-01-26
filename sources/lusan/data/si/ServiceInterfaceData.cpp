@@ -66,7 +66,18 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
         }
 
         file.close();
-        mOpenSuccess = xml.hasError() == false;
+
+        if (xml.hasError() == false)
+        {
+            mOpenSuccess = true;
+            const QList<DataTypeCustom*>& dataTypes = mDataTypeData.getCustomDataTypes();
+            mOverviewData.validate(dataTypes);
+            mDataTypeData.validate(dataTypes);
+            mAttributeData.validate(dataTypes);
+            mMethodData.validate(dataTypes);
+            mConstantData.validate(dataTypes);
+            mIncludeData.validate(dataTypes);
+        }
     }
 
     return mOpenSuccess;

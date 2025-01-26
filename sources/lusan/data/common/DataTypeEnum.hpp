@@ -31,8 +31,6 @@ class DataTypeEnum : public TEDataTypeContainer<EnumEntry>
 {
     static constexpr const char* const  DEFAULT_VALUES  { "default" };
 
-    static constexpr const char* const  DefName         { "EnumField" };
-
 public:
     /**
      * \brief   Default constructor.

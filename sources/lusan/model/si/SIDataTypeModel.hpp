@@ -22,9 +22,12 @@
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/data/common/DataTypePrimitive.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
+
 #include <QList>
 
 class DataTypeCustom;
+class DataTypeStructure;
+class DataTypeContainer;
 class ElementBase;
 class EnumEntry;
 class FieldEntry;
@@ -112,6 +115,12 @@ public:
      **/
     DataTypeCustom* findDataType(uint32_t id);
     const DataTypeCustom* findDataType(uint32_t id) const;
+    
+    const DataTypeBase* findStructFieldType(const DataTypeStructure* dataType, const QString& childName) const;
+    DataTypeBase* findStructFieldType(const DataTypeStructure* dataType, const QString& childName);
+    
+    const DataTypeBase* findStructFieldType(const DataTypeStructure* dataType, uint32_t childId) const;
+    DataTypeBase* findStructFieldType(const DataTypeStructure* dataType, uint32_t childId);
 
     /**
      * \brief   Sorts the list of custom data types by name.
@@ -276,7 +285,23 @@ public:
      * \param   newName     The new name of the data type.
      **/
     void updateDataType(uint32_t id, const QString& newName);
-
+    
+    DataTypeBase* getTypeFromName(const QString & typeName);
+    
+    const DataTypeBase* getTypeFromName(const QString& typeName) const;
+    
+    DataTypeBase* getTypeFromId(uint32_t typeId);
+    
+    const DataTypeBase* getTypeFromId(uint32_t typeId) const;
+    
+    DataTypeCustom* getCustomTypeFromName(const QString & typeName);
+    
+    const DataTypeCustom* getCustomTypeFromName(const QString& typeName) const;
+    
+    DataTypeCustom* getCustomTypeFromId(uint32_t typeId);
+    
+    const DataTypeCustom* getCustomTypeFromId(uint32_t typeId) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////

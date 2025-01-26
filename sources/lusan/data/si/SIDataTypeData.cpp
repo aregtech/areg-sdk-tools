@@ -351,6 +351,9 @@ bool SIDataTypeData::exists(uint32_t id) const
 
 DataTypeBase* SIDataTypeData::findDataType(const QString& typeName) const
 {
+    if (typeName.isEmpty())
+        return nullptr;
+    
     DataTypeCustom* dataType = findDataType(getElements(), typeName);
     if (dataType != nullptr)
     {
@@ -380,6 +383,9 @@ DataTypeBase* SIDataTypeData::findDataType(const QString& typeName) const
 
 DataTypeBase* SIDataTypeData::findDataType(uint32_t id) const
 {
+    if (id == 0)
+        return nullptr;
+    
     DataTypeCustom* dataType = findDataType(getElements(), id);
     if (dataType != nullptr)
     {
@@ -405,6 +411,26 @@ DataTypeBase* SIDataTypeData::findDataType(uint32_t id) const
     }
 
     return nullptr;
+}
+
+DataTypeCustom* SIDataTypeData::findCustomDataType(const QString& typeName) const
+{
+    return (typeName.isEmpty() == false ? findDataType(getElements(), typeName) : nullptr);
+}
+
+DataTypeCustom* SIDataTypeData::findCustomDataType(const QString& typeName)
+{
+    return (typeName.isEmpty() == false ? findDataType(getElements(), typeName) : nullptr);
+}
+
+DataTypeCustom* SIDataTypeData::findCustomDataType(uint32_t typeId) const
+{
+    return (typeId != 0 ? findDataType(getElements(), typeId) : nullptr);
+}
+
+DataTypeCustom* SIDataTypeData::findCustomDataType(uint32_t typeId)
+{
+    return (typeId != 0 ? findDataType(getElements(), typeId) : nullptr);
 }
 
 DataTypeStructure* SIDataTypeData::addStructure(const QString& name)
@@ -478,6 +504,22 @@ void SIDataTypeData::updateDataType(uint32_t id, const QString& newName)
     if (dataType != nullptr)
     {
         updateDataType(dataType, newName);
+    }
+}
+
+void SIDataTypeData::validate(const QList<DataTypeCustom*>& dataTypes)
+{
+    QList<DataTypeCustom*>& list = getElements();
+    for (DataTypeCustom* entry : list)
+    {
+        if (entry->isStructure())
+        {
+            static_cast<DataTypeStructure *>(entry)->validate(dataTypes);
+        }
+        else if (entry->isContainer())
+        {
+            static_cast<DataTypeContainer*>(entry)->validate(dataTypes);
+        }
     }
 }
 

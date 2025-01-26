@@ -254,6 +254,8 @@ public:
      **/
     MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
 
+    void validate(const QList<DataTypeCustom*>& dataTypes);
+
 private:
     /**
      * \brief   Adds a method object to the appropriate list.

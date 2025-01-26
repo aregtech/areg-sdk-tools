@@ -24,33 +24,33 @@
 
 DataTypeContainer::DataTypeContainer(ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::Container, parent)
-    , mContainer    ( )
-    , mValue( )
-    , mKey  ( )
+    , mContainer( )
+    , mValueType( )
+    , mKeyType  ( )
 {
 }
 
 DataTypeContainer::DataTypeContainer(const QString& name, ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::Container, 0, name, parent)
-    , mContainer    ( )
-    , mValue( )
-    , mKey  ( )
+    , mContainer( )
+    , mValueType( )
+    , mKeyType  ( )
 {
 }
 
 DataTypeContainer::DataTypeContainer(const DataTypeContainer& src)
     : DataTypeCustom(src)
-    , mContainer    (src.mContainer)
-    , mValue(src.mValue)
-    , mKey  (src.mKey)
+    , mContainer(src.mContainer)
+    , mValueType(src.mValueType)
+    , mKeyType  (src.mKeyType)
 {
 }
 
 DataTypeContainer::DataTypeContainer(DataTypeContainer&& src) noexcept
     : DataTypeCustom(std::move(src))
     , mContainer(std::move(src.mContainer))
-    , mValue    (std::move(src.mValue))
-    , mKey      (std::move(src.mKey))
+    , mValueType(std::move(src.mValueType))
+    , mKeyType  (std::move(src.mKeyType))
 {
 }
 
@@ -60,8 +60,8 @@ DataTypeContainer& DataTypeContainer::operator = (const DataTypeContainer& other
     {
         DataTypeBase::operator = (other);
         mContainer  = other.mContainer;
-        mValue      = other.mValue;
-        mKey        = other.mKey;
+        mValueType  = other.mValueType;
+        mKeyType    = other.mKeyType;
     }
 
     return *this;
@@ -73,11 +73,16 @@ DataTypeContainer& DataTypeContainer::operator = (DataTypeContainer&& other) noe
     {
         DataTypeBase::operator = (std::move(other));
         mContainer  = std::move(other.mContainer);
-        mValue      = std::move(other.mValue);
-        mKey        = std::move(other.mKey);
+        mValueType  = std::move(other.mValueType);
+        mKeyType    = std::move(other.mKeyType);
     }
     
     return *this;
+}
+
+QString DataTypeContainer::toString(void)
+{
+    return (canHaveKey() ? (mContainer + "<" + mKeyType.getName() + ", " + mValueType.getName() + ">") : (mContainer + "<" + mValueType.getName() + ">"));
 }
 
 bool DataTypeContainer::readFromXml(QXmlStreamReader& xml)
@@ -105,11 +110,11 @@ bool DataTypeContainer::readFromXml(QXmlStreamReader& xml)
             }
             else if (xmlName == XmlSI::xmlSIElementBaseTypeValue)
             {
-                mValue = xml.readElementText();
+                mValueType.setName(xml.readElementText());
             }
             else if (xmlName == XmlSI::xmlSIElementBaseTypeKey)
             {
-                mKey = xml.readElementText();
+                mKeyType.setName(xml.readElementText());
             }
             else if (xmlName == XmlSI::xmlSIElementDeprecateHint)
             {
@@ -136,10 +141,10 @@ void DataTypeContainer::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
     xml.writeTextElement(XmlSI::xmlSIElementContainer, mContainer);
-    xml.writeTextElement(XmlSI::xmlSIElementBaseTypeValue, mValue);
+    xml.writeTextElement(XmlSI::xmlSIElementBaseTypeValue, mValueType.getName());
     if (canHaveKey())
     {
-        xml.writeTextElement(XmlSI::xmlSIElementBaseTypeKey, mKey);
+        xml.writeTextElement(XmlSI::xmlSIElementBaseTypeKey, mKeyType.getName());
     }
 
     if (getIsDeprecated())

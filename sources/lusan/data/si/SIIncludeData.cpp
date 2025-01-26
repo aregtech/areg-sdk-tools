@@ -26,7 +26,7 @@ SIIncludeData::SIIncludeData(ElementBase* parent /*= nullptr*/)
 }
 
 SIIncludeData::SIIncludeData(const QList<IncludeEntry>& entries, ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< IncludeEntry, ElementBase>(parent)
+    : TEDataContainer<IncludeEntry, ElementBase>(parent)
 {
     setElements(entries);
 }
@@ -66,4 +66,8 @@ void SIIncludeData::writeToXml(QXmlStreamWriter& xml) const
     }
 
     xml.writeEndElement();
+}
+
+void SIIncludeData::validate(const QList<DataTypeCustom*>& /*dataTypes*/)
+{
 }

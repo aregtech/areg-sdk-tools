@@ -49,9 +49,9 @@ DataTypeBase::eCategory DataTypeFactory::fromString(const QString& dataType)
     else if (dataType == XmlSI::xmlSIValueUint16)
         return DataTypeBase::eCategory::PrimitiveUint;
     else if (dataType == XmlSI::xmlSIValueInt32)
-        return DataTypeBase::eCategory::PrimitiveUint;
-    else if (dataType == XmlSI::xmlSIValueUint32)
         return DataTypeBase::eCategory::PrimitiveSint;
+    else if (dataType == XmlSI::xmlSIValueUint32)
+        return DataTypeBase::eCategory::PrimitiveUint;
     else if (dataType == XmlSI::xmlSIValueInt64)
         return DataTypeBase::eCategory::PrimitiveSint;
     else if (dataType == XmlSI::xmlSIValueUint64)

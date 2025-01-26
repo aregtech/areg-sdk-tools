@@ -135,7 +135,7 @@ namespace NELusanCommon
         , SortByNameAsc     = 9     //!< bits: 0000 1001, Sorting by Name ascending
         , SortByNameDesc    = 10    //!< bits: 0000 1010, Sorting by Name descending
     };
-    
+        
     template<typename T>
     struct get_id
     {

@@ -64,3 +64,12 @@ void SIConstantData::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement(); // ConstantList
 }
+
+void SIConstantData::validate(const QList<DataTypeCustom*>& dataTypes)
+{
+    QList< ConstantEntry>& list = getElements();
+    for (ConstantEntry& entry : list)
+    {
+        entry.validate(dataTypes);
+    }
+}

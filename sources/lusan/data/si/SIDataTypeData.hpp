@@ -314,7 +314,13 @@ public:
      * \return  Returns the data type object if found. Otherwise, returns nullptr.
      **/
     DataTypeBase* findDataType(uint32_t id) const;
-
+    
+    DataTypeCustom* findCustomDataType(const QString& typeName) const;
+    DataTypeCustom* findCustomDataType(const QString& typeName);
+    
+    DataTypeCustom* findCustomDataType(const uint32_t typeId) const;
+    DataTypeCustom* findCustomDataType(const uint32_t typeId);
+    
     /**
      * \brief   Adds a Structure custom data type to the list.
      * \param   name    The name of the primitive data type.
@@ -380,6 +386,8 @@ public:
      * \param   newName     The new name of the data type.
      **/
     void updateDataType(uint32_t id, const QString& newName);
+
+    void validate(const QList<DataTypeCustom*>& dataTypes);
 
 private:
 

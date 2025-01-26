@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 DataTypeStructure::DataTypeStructure(ElementBase* parent /*= nullptr*/)
@@ -132,4 +133,45 @@ FieldEntry* DataTypeStructure::addField(const QString& name)
     uint32_t id{ getNextId() };
     addElement(std::move(FieldEntry(id, name, this)), true);
     return findElement(id);
+}
+
+void DataTypeStructure::removeField(const QString& name)
+{
+    removeElement(name);
+}
+
+void DataTypeStructure::removeField(uint32_t id)
+{
+    removeElement(id);
+}
+
+DataTypeBase* DataTypeStructure::getFieldType(const QString& name) const
+{
+    FieldEntry * field = findElement(name);
+    return (field != nullptr ? field->getParamType() : nullptr);
+}
+
+DataTypeBase* DataTypeStructure::getFieldType(uint32_t id) const
+{
+    FieldEntry* field = findElement(id);
+    return (field != nullptr ? field->getParamType() : nullptr);
+}
+
+bool DataTypeStructure::validate(const QList<DataTypeCustom*>& customTypes)
+{
+    bool result{ true };
+    for (FieldEntry& entry : mElementList)
+    {
+        result &= entry.validate(customTypes);
+    }
+
+    return result;
+}
+
+void DataTypeStructure::invalidate(void)
+{
+    for (FieldEntry& entry : mElementList)
+    {
+        entry.invalidate();
+    }
 }

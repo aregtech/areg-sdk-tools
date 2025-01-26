@@ -19,7 +19,12 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Includes
+ ************************************************************************/
+
 #include "lusan/common/ElementBase.hpp"
+#include "lusan/data/common/ParamType.hpp"
 
 #include <QString>
 #include <memory>
@@ -111,6 +116,10 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    bool validate(const QList<DataTypeCustom*>& customTypes);
+    
+    void invalidate(void);
+
     /**
      * \brief   Gets the name of the parameter.
      * \return  The name of the parameter.
@@ -134,6 +143,12 @@ public:
      * \param   type    The data type name of the parameter.
      **/
     void setType(const QString & type);
+
+    void setType(const QString& type, const QList<DataTypeCustom*>& customTypes);
+
+    void setParamType(DataTypeBase* dataType);
+
+    DataTypeBase* getParamType(void) const;
 
     /**
      * \brief   Gets the deprecated flag of the parameter.
@@ -170,7 +185,7 @@ public:
      * \param   deprecateHint   The deprecation hint of the parameter.
      **/
     void setDeprecateHint(const QString& deprecateHint);
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -199,9 +214,8 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    uint32_t    mId;            //!< The ID of the parameter.
     QString     mName;          //!< The name of the parameter.
-    QString     mType;          //!< The name of data type of the parameter.
+    ParamType   mParamType;     //!< The name of data type of the parameter.
     bool        mIsDeprecated;  //!< The deprecated flag of the parameter.
     QString     mDescription;   //!< The description of the parameter.
     QString     mDeprecateHint; //!< The deprecation hint of the parameter.

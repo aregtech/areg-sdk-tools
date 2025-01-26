@@ -314,6 +314,15 @@ MethodParameter* SIMethodData::addParameter(SIMethodBase* method, const QString&
     return (method != nullptr ? method->addParameter(name, type) : nullptr);
 }
 
+void SIMethodData::validate(const QList<DataTypeCustom*>& dataTypes)
+{
+    QList<SIMethodBase*>& list = getElements();
+    for (SIMethodBase* entry : list)
+    {
+        entry->validate(dataTypes);
+    }
+}
+
 SIMethodBase* SIMethodData::createMethod(SIMethodBase::eMethodType methodType, const QString& name)
 {
     return createMethod(methodType, name, getNextId());

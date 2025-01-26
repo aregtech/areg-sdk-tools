@@ -41,15 +41,10 @@ MethodParameter::MethodParameter( uint32_t id
 
 MethodParameter::MethodParameter( uint32_t id
                                 , const QString& name
-                                , const QString& type
-                                , bool isDeprecated
-                                , const QString& description
-                                , const QString& deprecateHint
-                                , const QString& value
-                                , bool isDefault
+                                , bool isDefault      /*= false*/
                                 , ElementBase* parent /*= nullptr*/)
-    : ParamBase (id, name, type, isDeprecated, description, deprecateHint, parent)
-    , mValue    (value)
+    : ParamBase (id, name, QString(), parent)
+    , mValue    ( )
     , mIsDefault(isDefault)
 {
 }
@@ -118,8 +113,8 @@ bool MethodParameter::readFromXml(QXmlStreamReader& xml)
     {
         QXmlStreamAttributes attributes = xml.attributes();
         setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
-        mType = attributes.value(XmlSI::xmlSIAttributeDataType).toString();
-        mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
+        mParamType  = attributes.value(XmlSI::xmlSIAttributeDataType).toString();
+        mName       = attributes.value(XmlSI::xmlSIAttributeName).toString();
         setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
         while (xml.readNextStartElement())
@@ -153,7 +148,7 @@ void MethodParameter::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementParameter);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
-    xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
+    xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mParamType.getName());
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     if (getIsDeprecated())
     {

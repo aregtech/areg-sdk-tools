@@ -64,3 +64,12 @@ void SIAttributeData::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement(); // AttributeList
 }
+
+void SIAttributeData::validate(const QList<DataTypeCustom*>& dataTypes)
+{
+    QList< AttributeEntry>& list = getElements();
+    for (AttributeEntry& entry : list)
+    {
+        entry.validate(dataTypes);
+    }
+}
