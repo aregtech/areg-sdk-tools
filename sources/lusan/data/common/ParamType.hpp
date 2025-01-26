@@ -209,10 +209,19 @@ inline DataTypeBase* ParamType::getDataType(void)
 
 inline void ParamType::setDataType(DataTypeBase* dataType)
 {
-    mDataType = dataType;
-    if (mDataType != nullptr)
+    if (dataType != nullptr)
     {
+        mDataType = dataType;
         mTypeName = mDataType->getName();
+    }
+    else
+    {
+        if (mDataType != nullptr)
+        {
+            mTypeName = mDataType->getName();
+        }
+
+        mDataType = nullptr;
     }
 }
 

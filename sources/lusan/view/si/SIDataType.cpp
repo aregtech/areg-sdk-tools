@@ -433,6 +433,60 @@ void SIDataType::dataTypeDeleted(DataTypeCustom* dataType)
     mTypeModel->dataTypeDeleted(dataType);
     mValueModel->dataTypeDeleted(dataType);
     mKeysModel->dataTypeDeleted(dataType);
+
+    QTreeWidget* table = mList->ctrlTableList();
+    int cntTop = table->topLevelItemCount();
+    for (int i = 0; i < cntTop; ++i)
+    {
+        QTreeWidgetItem* top = table->topLevelItem(i);
+        Q_ASSERT(top != nullptr);
+        DataTypeCustom* topType = top->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+        if (topType == dataType)
+            continue;
+
+        if (topType->isStructure())
+        {
+            int cntFields = top->childCount();
+            for (int j = 0; j < cntFields; ++j)
+            {
+                QTreeWidgetItem* child = top->child(j);
+                Q_ASSERT(child != nullptr);
+                uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
+                FieldEntry* field = static_cast<DataTypeStructure*>(topType)->findElement(id);
+                if ((field != nullptr) && (field->getParamType() == dataType))
+                {
+                    field->setParamType(nullptr);
+                    child->setIcon(1, QIcon::fromTheme("dialog-warning"));
+                    child->setText(1, field->getType());
+                }
+                else if (field == nullptr)
+                {
+                    child->setText(1, "<invalid>");
+                }
+            }
+        }
+        else if (topType->isContainer())
+        {
+            DataTypeContainer* container = static_cast<DataTypeContainer*>(topType);
+            bool warn{ false };
+            if (container->getKeyDataType() == dataType)
+            {
+                warn = true;
+                container->setKeyDataType(nullptr);
+            }
+            if (container->getValueDataType() == dataType)
+            {
+                warn = true;
+                container->setValueDataType(nullptr);
+            }
+
+            top->setText(1, container->toString());
+            if (warn)
+            {
+                top->setIcon(1, QIcon::fromTheme("dialog-warning"));
+            }
+        }
+    }
 }
 
 void SIDataType::dataTypeUpdated(DataTypeCustom* dataType)
@@ -1414,7 +1468,7 @@ inline void SIDataType::deleteTreeNode(QTreeWidgetItem* node)
     uint32_t id = node->data(1, Qt::ItemDataRole::UserRole).toUInt();
     QTreeWidgetItem* parent = node->parent();
     int count = node->childCount();
-    for (int i = 0; i < count; ++i)
+    for (int i = count - 1; i >- 0; --i)
     {
         QTreeWidgetItem *child = node->child(i);
         node->removeChild(child);
