@@ -94,3 +94,52 @@ void MethodBase::setDescription(const QString& description)
 {
     mDescription = description;
 }
+
+MethodParameter* MethodBase::addParam(const QString& name)
+{
+    uint32_t id{ getNextId() };
+    bool isDefault = mElementList.size() > 0 ? mElementList.last().hasDefault() : false;
+    addElement(std::move(MethodParameter(id, name, isDefault, this)), true);
+    return findElement(id);
+}
+
+void MethodBase::removeParam(const QString& name)
+{
+    removeElement(name);
+}
+
+void MethodBase::removeParam(uint32_t id)
+{
+    removeElement(id);
+}
+
+DataTypeBase* MethodBase::getParamType(const QString& name) const
+{
+    MethodParameter* param = findElement(name);
+    return (param != nullptr ? param->getParamType() : nullptr);
+}
+
+DataTypeBase* MethodBase::getParamType(uint32_t id) const
+{
+    MethodParameter* param = findElement(id);
+    return (param != nullptr ? param->getParamType() : nullptr);
+}
+
+bool MethodBase::validate(const QList<DataTypeCustom*>& customTypes)
+{
+    bool result = true;
+    for (MethodParameter& param : getElements())
+    {
+        result &= param.validate(customTypes);
+    }
+
+    return result;
+}
+
+void MethodBase::invalidate(void)
+{
+    for (MethodParameter& param : getElements())
+    {
+        param.invalidate();
+    }
+}

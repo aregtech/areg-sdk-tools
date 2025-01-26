@@ -130,6 +130,20 @@ public:
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const = 0;
 
+    MethodParameter* addParam(const QString& name);
+
+    void removeParam(const QString& name);
+
+    void removeParam(uint32_t id);
+
+    DataTypeBase* getParamType(const QString& name) const;
+
+    DataTypeBase* getParamType(uint32_t id) const;
+
+    bool validate(const QList<DataTypeCustom*>& customTypes);
+
+    void invalidate(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

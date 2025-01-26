@@ -174,7 +174,7 @@ void AttributeEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeStartElement(XmlSI::xmlSIElementAttribute);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
-    xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
+    xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mParamType.getName());
     xml.writeAttribute(XmlSI::xmlSIAttributeNotify, toString(mNotification));
     if (getIsDeprecated())
     {

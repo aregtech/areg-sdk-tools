@@ -77,6 +77,8 @@ public:
 // Attributes, operations and overrides
 //////////////////////////////////////////////////////////////////////////
 public:
+    
+    QString toString(void);
 
     /**
      * \brief   Reads data from an XML stream.

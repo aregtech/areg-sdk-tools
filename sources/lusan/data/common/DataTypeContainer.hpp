@@ -20,6 +20,7 @@
  ************************************************************************/
 
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/ParamType.hpp"
 
 /**
  * \class   DataTypeContainer
@@ -77,6 +78,8 @@ public:
 // Attributes, operations and overrides
 //////////////////////////////////////////////////////////////////////////
 public:
+    
+    QString toString(void);
 
     /**
      * \brief   Reads data from an XML stream.
@@ -99,19 +102,34 @@ public:
 
     inline bool hasKey(void) const;
 
-
     inline const QString& getKey(void) const;
 
     inline void setKey(const QString& key);
-
+    
+    inline void setKey(const QString& key, const QList<DataTypeCustom *>& customTypes);
+    
+    inline DataTypeBase* getKeyDataType(void) const;
+    
+    inline void setKeyDataType(DataTypeBase *dataType);
+    
     inline const QString& getValue(void) const;
 
     inline void setValue(const QString& value);
+    
+    inline void setValue(const QString& value, const QList<DataTypeCustom*>& customTypes);
 
+    inline DataTypeBase* getValueDataType(void) const;
+    
+    inline void setValueDataType(DataTypeBase *dataType);
+    
+    bool validate(const QList<DataTypeCustom *>& customTypes);
+
+    void invalidate(void);
+    
 private:
-    QString mContainer; //!< The container type.
-    QString mValue;     //!< The base type value.
-    QString mKey;       //!< The base type key (optional).
+    QString     mContainer; //!< The container type.
+    ParamType   mValueType; //!< The base type value.
+    ParamType   mKeyType;   //!< The base type key (optional).
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -130,27 +148,76 @@ inline void DataTypeContainer::setContainer(const QString& valContainer)
 
 inline bool DataTypeContainer::hasKey(void) const
 {
-    return mKey.isEmpty() == false;
+    return mKeyType.isEmpty() == false;
 }
 
 inline const QString& DataTypeContainer::getKey(void) const
 {
-    return mKey;
+    return mKeyType.getName();
 }
 
 inline void DataTypeContainer::setKey(const QString& key)
 {
-    mKey = canHaveKey() ? key : QString();
+    mKeyType.setName(canHaveKey() ? key : QString());
+}
+
+inline void DataTypeContainer::setKey(const QString& key, const QList<DataTypeCustom *>& customTypes)
+{
+    mKeyType.setName(key, customTypes);
+}
+
+inline DataTypeBase* DataTypeContainer::getKeyDataType(void) const
+{
+    return const_cast<ParamType &>(mKeyType).getDataType();
+}
+
+inline void DataTypeContainer::setKeyDataType(DataTypeBase* dataType)
+{
+    mKeyType.setDataType(dataType);
 }
 
 inline const QString& DataTypeContainer::getValue(void) const
 {
-    return mValue;
+    return mValueType.getName();
 }
 
 inline void DataTypeContainer::setValue(const QString& value)
 {
-    mValue = value;
+    mValueType.setName(value);
+}
+
+inline void DataTypeContainer::setValue(const QString& value, const QList<DataTypeCustom*>& customTypes)
+{
+    mValueType.setName(value, customTypes);
+}
+
+inline DataTypeBase* DataTypeContainer::getValueDataType(void) const
+{
+    return const_cast<ParamType &>(mValueType).getDataType();
+}
+
+inline void DataTypeContainer::setValueDataType(DataTypeBase* dataType)
+{
+    mValueType.setDataType(dataType);
+}
+
+inline bool DataTypeContainer::validate(const QList<DataTypeCustom*>& customTypes)
+{
+    if (canHaveKey())
+    {
+        return mValueType.validate(customTypes) && mKeyType.validate(customTypes);
+    }
+    else
+    {
+        mKeyType.invalidate();
+        return mValueType.validate(customTypes);
+    }
+}
+
+inline void DataTypeContainer::invalidate(void)
+{
+    mValueType.invalidate();
+    mKeyType.invalidate();
 }
 
 #endif // LUSAN_DATA_COMMON_DATATYPECONTAINER_HPP

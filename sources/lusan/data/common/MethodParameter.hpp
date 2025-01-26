@@ -35,7 +35,20 @@ public:
      * \brief   Default constructor.
      **/
     MethodParameter(ElementBase * parent = nullptr);
-
+    
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id              The ID of the parameter.
+     * \param   name            The name of the parameter.
+     * \param   type            The data type name of the parameter.
+     * \param   value           The value of the parameter.
+     * \param   isDefault       The default flag of the parameter.
+     **/
+    MethodParameter(  uint32_t id
+                    , const QString& name
+                    , bool isDefault        = false
+                    , ElementBase* parent   = nullptr);
+    
     /**
      * \brief   Constructor with initialization.
      * \param   id              The ID of the parameter.
@@ -49,8 +62,8 @@ public:
                     , const QString& type   = "bool"
                     , const QString& value  = ""
                     , bool isDefault        = false
-                    , ElementBase* parent = nullptr);
-
+                    , ElementBase* parent   = nullptr);
+    
     /**
      * \brief   Constructor with initialization.
      * \param   id              The ID of the parameter.

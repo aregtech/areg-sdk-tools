@@ -152,7 +152,7 @@ void ConstantEntry::writeToXml(QXmlStreamWriter& xml) const
         xml.writeStartElement(XmlSI::xmlSIElementConstant);
         xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
         xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
-        xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mType);
+        xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mParamType.getName());
         if (getIsDeprecated())
         {
             xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);

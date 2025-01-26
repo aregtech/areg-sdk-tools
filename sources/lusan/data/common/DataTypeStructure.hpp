@@ -84,6 +84,18 @@ public:
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
     FieldEntry* addField(const QString& name);
+
+    void removeField(const QString& name);
+
+    void removeField(uint32_t id);
+
+    DataTypeBase* getFieldType(const QString& name) const;
+
+    DataTypeBase* getFieldType(uint32_t id) const;
+
+    bool validate(const QList<DataTypeCustom*>& customTypes);
+
+    void invalidate(void);
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPESTRUCTURE_HPP

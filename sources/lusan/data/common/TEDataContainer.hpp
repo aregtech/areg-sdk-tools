@@ -1,6 +1,4 @@
-﻿// File: lusan/data/common/TEDataContainer.hpp
-
-#ifndef LUSAN_DATA_COMMON_TEDATACONTAINER_HPP
+﻿#ifndef LUSAN_DATA_COMMON_TEDATACONTAINER_HPP
 #define LUSAN_DATA_COMMON_TEDATACONTAINER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.

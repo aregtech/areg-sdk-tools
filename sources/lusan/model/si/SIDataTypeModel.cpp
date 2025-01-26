@@ -90,6 +90,42 @@ const DataTypeCustom* SIDataTypeModel::findDataType(uint32_t id) const
     return (result != nullptr ? *result : nullptr);
 }
 
+const DataTypeBase* SIDataTypeModel::findStructFieldType(const DataTypeStructure* dataType, const QString& childName) const
+{
+    if (dataType == nullptr)
+        return nullptr;
+    
+    FieldEntry* entry = dataType->findElement(childName);
+    return (entry != nullptr ? mData.findDataType(entry->getId()) : nullptr);
+}
+
+DataTypeBase* SIDataTypeModel::findStructFieldType(const DataTypeStructure* dataType, const QString& childName)
+{
+    if (dataType == nullptr)
+        return nullptr;
+    
+    FieldEntry* entry = dataType->findElement(childName);
+    return (entry != nullptr ? mData.findDataType(entry->getId()) : nullptr);
+}
+
+const DataTypeBase* SIDataTypeModel::findStructFieldType(const DataTypeStructure* dataType, uint32_t childId) const
+{
+    if (dataType == nullptr)
+        return nullptr;
+    
+    FieldEntry* entry = dataType->findElement(childId);
+    return (entry != nullptr ? mData.findDataType(entry->getId()) : nullptr);
+}
+
+DataTypeBase* SIDataTypeModel::findStructFieldType(const DataTypeStructure* dataType, uint32_t childId)
+{
+    if (dataType == nullptr)
+        return nullptr;
+    
+    FieldEntry* entry = dataType->findElement(childId);
+    return (entry != nullptr ? mData.findDataType(entry->getId()) : nullptr);
+}
+
 void SIDataTypeModel::sortByName(bool ascending)
 {
     mData.sortByName(ascending);
@@ -112,16 +148,21 @@ int SIDataTypeModel::getDataTypeCount(void) const
 
 ElementBase* SIDataTypeModel::ceateDataTypeChild(DataTypeCustom* dataType, const QString& name)
 {
+    ElementBase* result{nullptr};
     if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
     {
-        return static_cast<DataTypeStructure*>(dataType)->addField(name);
+        result = static_cast<DataTypeStructure*>(dataType)->addField(name);
+        if (result != nullptr)
+        {
+            static_cast<FieldEntry *>(result)->validate(getCustomDataTypes());
+        }
     }
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
-        return static_cast<DataTypeEnum*>(dataType)->addField(name);
+        result = static_cast<DataTypeEnum*>(dataType)->addField(name);
     }
 
-    return nullptr;
+    return result;
 }
 
 void SIDataTypeModel::deleteDataTypeChild(DataTypeCustom* dataType, uint32_t childId)
@@ -319,4 +360,44 @@ void SIDataTypeModel::updateDataType(DataTypeCustom* dataType, const QString& ne
 void SIDataTypeModel::updateDataType(uint32_t id, const QString& newName)
 {
     mData.updateDataType(id, newName);
+}
+
+DataTypeBase* SIDataTypeModel::getTypeFromName(const QString & typeName)
+{
+    return mData.findDataType(typeName);
+}
+
+const DataTypeBase* SIDataTypeModel::getTypeFromName(const QString& typeName) const
+{
+    return mData.findDataType(typeName);
+}
+
+DataTypeBase* SIDataTypeModel::getTypeFromId(uint32_t typeId)
+{
+    return mData.findDataType(typeId);
+}
+
+const DataTypeBase* SIDataTypeModel::getTypeFromId(uint32_t typeId) const
+{
+    return mData.findDataType(typeId);
+}
+
+DataTypeCustom* SIDataTypeModel::getCustomTypeFromName(const QString & typeName)
+{
+    return mData.findCustomDataType(typeName);
+}
+
+const DataTypeCustom* SIDataTypeModel::getCustomTypeFromName(const QString& typeName) const
+{
+    return mData.findCustomDataType(typeName);
+}
+
+DataTypeCustom* SIDataTypeModel::getCustomTypeFromId(uint32_t typeId)
+{
+    return mData.findCustomDataType(typeId);
+}
+
+const DataTypeCustom* SIDataTypeModel::getCustomTypeFromId(uint32_t typeId) const
+{
+    return mData.findCustomDataType(typeId);
 }

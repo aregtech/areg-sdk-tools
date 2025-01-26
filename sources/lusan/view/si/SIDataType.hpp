@@ -417,7 +417,7 @@ private:
      * \param   dataType    The structure data type object.
      * \param   field       The field entry object.
      **/
-    void updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure* dataType, const FieldEntry& field) const;
+    void updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure* dataType, FieldEntry& field) const;
 
     /**
      * \brief   Updates the tree node for the enumeration field.
@@ -425,7 +425,7 @@ private:
      * \param   dataType    The enumeration data type object.
      * \param   field       The enumeration entry object.
      **/
-    void updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataType, const EnumEntry& field) const;
+    void updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataType, EnumEntry& field) const;
 
     /**
      * \brief   Activates or deactivates the field details widget.
@@ -463,7 +463,7 @@ private:
      * \param   node    The tree node to delete.
      **/
     inline void deleteTreeNode(QTreeWidgetItem* node);
-
+    
     /**
      * \brief   Returns list of basic container data type objects.
      **/

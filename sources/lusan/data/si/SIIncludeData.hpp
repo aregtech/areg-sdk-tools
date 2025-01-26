@@ -29,6 +29,8 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+class DataTypeCustom;
+
  /**
   * \class   SIIncludeData
   * \brief   Manages include data for service interfaces.
@@ -68,6 +70,7 @@ public:
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
 
+    void validate(const QList<DataTypeCustom*>& dataTypes);
 };
 
 #endif  // LUSAN_DATA_SI_SIINCLUDEDATA_HPP

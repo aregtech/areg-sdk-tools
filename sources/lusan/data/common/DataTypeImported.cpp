@@ -77,6 +77,11 @@ DataTypeImported& DataTypeImported::operator = (DataTypeImported&& other) noexce
     return *this;
 }
 
+QString DataTypeImported::toString(void)
+{
+    return (mNamespace.isEmpty() ? mObject : mNamespace + "::" + mObject);
+}
+
 bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != XmlSI::xmlSIElementDataType)

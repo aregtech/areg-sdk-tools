@@ -27,6 +27,8 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+class DataTypeCustom;
+
 /**
  * \class   SIOverviewData
  * \brief   Represents the overview data of a service interface in the Lusan application.
@@ -202,6 +204,8 @@ public:
      **/
     void setDeprecateHint(const QString& deprecateHint);
 
+    void validate(const QList<DataTypeCustom*>& dataTypes);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -286,6 +290,10 @@ inline const QString& SIOverviewData::getDeprecateHint() const
 inline void SIOverviewData::setDeprecateHint(const QString& deprecateHint)
 {
     mDeprecateHint = mIsDeprecated ? deprecateHint : ElementBase::EmptyString;
+}
+
+inline void SIOverviewData::validate(const QList<DataTypeCustom*>& /*dataTypes*/)
+{
 }
 
 #endif // LUSAN_DATA_SI_SIOVERVIEWDATA_HPP
