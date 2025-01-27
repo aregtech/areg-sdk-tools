@@ -168,3 +168,31 @@ void ConstantEntry::writeToXml(QXmlStreamWriter& xml) const
         xml.writeEndElement();
     }
 }
+
+QIcon ConstantEntry::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return QIcon::fromTheme(QIcon::ThemeIcon::InputGaming);
+    case ElementBase::eDisplay::DisplayType:
+        return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+    default:
+        return QIcon();
+    }
+}
+
+QString ConstantEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return getType();
+    case ElementBase::eDisplay::DisplayValue:
+        return mValue;
+    default:
+        return QString();
+    }
+}

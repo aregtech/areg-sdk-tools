@@ -217,3 +217,29 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement();
 }
+
+QIcon SIMethodRequest::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading);
+    case ElementBase::eDisplay::DisplayLink:
+        return (getConectedResponseName().isEmpty() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogInformation));
+    default:
+        return QIcon();
+    }
+}
+
+QString SIMethodRequest::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayLink:
+        return getConectedResponseName();
+    default:
+        return QString();
+    }
+}

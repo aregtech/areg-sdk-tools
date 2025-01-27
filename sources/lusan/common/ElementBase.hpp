@@ -20,6 +20,7 @@
 #define LUSAN_COMMON_ELEMENTBASE_HPP
 
 #include <QString>
+#include <QIcon>
 
 /************************************************************************
  * \class ElementBase
@@ -31,6 +32,16 @@
  ************************************************************************/
 class ElementBase
 {
+public:
+    enum class eDisplay : int16_t
+    {
+          DisplayNothing    = -1
+        , DisplayName       = 0
+        , DisplayType       = 1
+        , DisplayValue      = 2
+        , DisplayLink       = 3
+    };
+
 protected:
     static const QString   EmptyString;
 //////////////////////////////////////////////////////////////////////////
@@ -134,12 +145,28 @@ public:
      */
     inline ElementBase* getParent(void) const;
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const;
+
     /**
      * \brief Gets the next available ID.
      * \return The next available ID.
      */
     virtual unsigned int getNextId(void) const;
-    
+
 protected:
     /**
      * \brief Sets the maximum ID.

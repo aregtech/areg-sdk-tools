@@ -190,3 +190,30 @@ void AttributeEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
+QIcon AttributeEntry::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return QIcon::fromTheme(QIcon::ThemeIcon::Battery);
+    case ElementBase::eDisplay::DisplayType:
+        return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+    default:
+        return QIcon();
+    }
+}
+
+QString AttributeEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return getType();
+    case ElementBase::eDisplay::DisplayValue:
+        return toString(mNotification);
+    default:
+        return QString();
+    }
+}

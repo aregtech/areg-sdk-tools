@@ -26,7 +26,7 @@ class DataTypeContainer;
 class DataTypeCustom;
 class DataTypeEnum;
 class DataTypeImported;
-class DataTypeStructure;
+class DataTypeStructure; 
 
 class ParamType
 {

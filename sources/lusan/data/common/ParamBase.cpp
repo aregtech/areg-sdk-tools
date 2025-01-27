@@ -19,7 +19,7 @@
 #include "lusan/data/common/ParamBase.hpp"
 
 ParamBase::ParamBase(ElementBase* parent /*= nullptr*/)
-    : ElementBase   (parent)
+    : DocumentElem  (parent)
     , mName         ()
     , mParamType    ()
     , mIsDeprecated (false)
@@ -29,7 +29,7 @@ ParamBase::ParamBase(ElementBase* parent /*= nullptr*/)
 }
 
 ParamBase::ParamBase(uint32_t id, const QString& name, const QString& type, ElementBase* parent /*= nullptr*/)
-    : ElementBase(  id, parent)
+    : DocumentElem  (  id, parent)
     , mName         (name)
     , mParamType    (type)
     , mIsDeprecated (false)
@@ -39,7 +39,7 @@ ParamBase::ParamBase(uint32_t id, const QString& name, const QString& type, Elem
 }
 
 ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint, ElementBase* parent /*= nullptr*/)
-    : ElementBase   (id, parent)
+    : DocumentElem  (id, parent)
     , mName         (name)
     , mParamType    (type)
     , mIsDeprecated (isDeprecated)
@@ -49,7 +49,7 @@ ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, boo
 }
 
 ParamBase::ParamBase(const ParamBase& src)
-    : ElementBase   (static_cast<const ElementBase &>(src))
+    : DocumentElem  (static_cast<const DocumentElem &>(src))
     , mName         (src.mName)
     , mParamType    (src.mParamType)
     , mIsDeprecated (src.mIsDeprecated)
@@ -59,7 +59,7 @@ ParamBase::ParamBase(const ParamBase& src)
 }
 
 ParamBase::ParamBase(ParamBase&& src) noexcept
-    : ElementBase   (std::move(src))
+    : DocumentElem  (std::move(src))
     , mName         (std::move(src.mName))
     , mParamType    (std::move(src.mParamType))
     , mIsDeprecated (src.mIsDeprecated)
@@ -72,7 +72,7 @@ ParamBase& ParamBase::operator = (const ParamBase& other)
 {
     if (this != &other)
     {
-        ElementBase::operator = (other);
+        DocumentElem::operator = (other);
 
         mName           = other.mName;
         mParamType      = other.mParamType;
@@ -88,7 +88,7 @@ ParamBase& ParamBase::operator=(ParamBase&& other) noexcept
 {
     if (this != &other)
     {
-        ElementBase::operator = (std::move(other));
+        DocumentElem::operator = (std::move(other));
 
         mName           = std::move(other.mName);
         mParamType      = std::move(other.mParamType);

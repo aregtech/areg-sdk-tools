@@ -152,3 +152,33 @@ EnumEntry* DataTypeEnum::addField(const QString& name)
     addElement(std::move(EnumEntry(id, name, "", this)), true);
     return findElement(id);
 }
+
+bool DataTypeEnum::isValid() const
+{
+    return (getName().isEmpty() == false);
+}
+
+QIcon DataTypeEnum::getIcon(ElementBase::eDisplay display) const
+{
+    if (display == ElementBase::eDisplay::DisplayName)
+    {
+        return QIcon::fromTheme(QIcon::ThemeIcon::MediaTape);
+    }
+    else
+    {
+        return QIcon();
+    }
+}
+
+QString DataTypeEnum::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return mDerived;
+    default:
+        return QString();
+    }
+}

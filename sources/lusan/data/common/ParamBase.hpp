@@ -22,8 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-
-#include "lusan/common/ElementBase.hpp"
+#include "lusan/data/common/DocumentElem.hpp"
 #include "lusan/data/common/ParamType.hpp"
 
 #include <QString>
@@ -34,7 +33,7 @@
  * \class   ParamBase
  * \brief   Represents a parameter base in the Lusan application.
  **/
-class ParamBase : public ElementBase
+class ParamBase : public DocumentElem
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -112,6 +111,17 @@ public:
     bool operator!=(const ParamBase& other) const;
 
 //////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+
+//////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -186,30 +196,6 @@ public:
      **/
     void setDeprecateHint(const QString& deprecateHint);
     
-//////////////////////////////////////////////////////////////////////////
-// Overrides
-//////////////////////////////////////////////////////////////////////////
-public:
-
-    /**
-     * \brief   Checks if the parameter is valid.
-     * \return  True if the parameter is valid, false otherwise.
-     **/
-    virtual bool isValid() const;
-
-    /**
-     * \brief   Reads data from an XML stream.
-     * \param   xml     The XML stream reader.
-     * \return  True if the data was successfully read, false otherwise.
-     **/
-    virtual bool readFromXml(QXmlStreamReader& xml) = 0;
-
-    /**
-     * \brief   Writes data to an XML stream.
-     * \param   xml     The XML stream writer.
-     **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const = 0;
-
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

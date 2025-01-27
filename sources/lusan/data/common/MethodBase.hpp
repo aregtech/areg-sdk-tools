@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/data/common/TEDataContainer.hpp"
+#include "lusan/data/common/DocumentElem.hpp"
 
 #include <QList>
 #include <QString>
@@ -32,7 +33,7 @@
   * \class   MethodBase
   * \brief   Represents a method base in the Lusan application.
   **/
-class MethodBase    : public TEDataContainer<MethodParameter, ElementBase >
+class MethodBase    : public TEDataContainer<MethodParameter, DocumentElem >
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -89,6 +90,17 @@ public:
     MethodBase& operator = (MethodBase&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+    
+    /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+    
+//////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -116,19 +128,6 @@ public:
      * \param   description     The description of the method.
      **/
     void setDescription(const QString& description);
-
-    /**
-     * \brief   Reads data from an XML stream.
-     * \param   xml     The XML stream reader.
-     * \return  True if the data was successfully read, false otherwise.
-     **/
-    virtual bool readFromXml(QXmlStreamReader& xml) = 0;
-
-    /**
-     * \brief   Writes data to an XML stream.
-     * \param   xml     The XML stream writer.
-     **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const = 0;
 
     MethodParameter* addParam(const QString& name);
 

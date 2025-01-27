@@ -164,3 +164,31 @@ void FieldEntry::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement();
 }
+
+QIcon FieldEntry::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading);
+    case ElementBase::eDisplay::DisplayType:
+        return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+    default:
+        return QIcon();
+    }
+}
+
+QString FieldEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return mParamType.getName();
+    case ElementBase::eDisplay::DisplayValue:
+        return mValue;
+    default:
+        return QString();
+    }
+}

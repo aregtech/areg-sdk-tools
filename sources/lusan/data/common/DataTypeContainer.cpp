@@ -80,11 +80,6 @@ DataTypeContainer& DataTypeContainer::operator = (DataTypeContainer&& other) noe
     return *this;
 }
 
-QString DataTypeContainer::toString(void)
-{
-    return (canHaveKey() ? (mContainer + "<" + mKeyType.getName() + ", " + mValueType.getName() + ">") : (mContainer + "<" + mValueType.getName() + ">"));
-}
-
 bool DataTypeContainer::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != XmlSI::xmlSIElementDataType)
@@ -169,4 +164,38 @@ bool DataTypeContainer::canHaveKey(void) const
     }
 
     return result;
+}
+
+QString DataTypeContainer::toString(void) const
+{
+    if (canHaveKey())
+        return getName() + "<" + getKey() + ", " + getValue() + ">";
+    else
+        return getName() + "<" + getValue() + ">";
+}
+
+QIcon DataTypeContainer::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return QIcon::fromTheme(QIcon::ThemeIcon::DocumentRevert);
+    case ElementBase::eDisplay::DisplayType:
+        return (!canHaveKey() || mKeyType.isValid()) && mValueType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning);
+    default:
+        return QIcon();
+    }
+}
+
+QString DataTypeContainer::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return toString();
+    default:
+        return QString();
+    }
 }

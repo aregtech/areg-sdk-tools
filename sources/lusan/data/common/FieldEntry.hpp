@@ -109,22 +109,6 @@ public:
     bool operator > (const FieldEntry& other) const;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes and operations
-//////////////////////////////////////////////////////////////////////////
-public:
-    /**
-     * \brief   Gets the value of the field.
-     * \return  The value of the field.
-     **/
-    const QString& getValue() const;
-
-    /**
-     * \brief   Sets the value of the field.
-     * \param   value   The value of the field.
-     **/
-    void setValue(const QString& value);
-
-//////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -140,6 +124,34 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Gets the value of the field.
+     * \return  The value of the field.
+     **/
+    const QString& getValue() const;
+
+    /**
+     * \brief   Sets the value of the field.
+     * \param   value   The value of the field.
+     **/
+    void setValue(const QString& value);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

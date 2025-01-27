@@ -20,28 +20,28 @@
 #include "lusan/data/common/MethodBase.hpp"
 
 MethodBase::MethodBase(ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< MethodParameter, ElementBase >(parent)
+    : TEDataContainer< MethodParameter, DocumentElem >(parent)
     , mName         ()
     , mDescription  ()
 {
 }
 
 MethodBase::MethodBase(uint32_t id, const QString& name, const QString& description, ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< MethodParameter, ElementBase >(id, parent)
+    : TEDataContainer< MethodParameter, DocumentElem >(id, parent)
     , mName         (name)
     , mDescription  (description)
 {
 }
 
 MethodBase::MethodBase(const MethodBase& src)
-    : TEDataContainer< MethodParameter, ElementBase >(src)
+    : TEDataContainer< MethodParameter, DocumentElem >(src)
     , mName         (src.mName)
     , mDescription  (src.mDescription)
 {
 }
 
 MethodBase::MethodBase(MethodBase&& src) noexcept
-    : TEDataContainer< MethodParameter, ElementBase >(std::move(src))
+    : TEDataContainer< MethodParameter, DocumentElem >(std::move(src))
     , mName         (std::move(src.mName))
     , mDescription  (std::move(src.mDescription))
 {
@@ -55,7 +55,7 @@ MethodBase& MethodBase::operator = (const MethodBase& other)
 {
     if (this != &other)
     {
-        TEDataContainer< MethodParameter, ElementBase >::operator = (other);
+        TEDataContainer< MethodParameter, DocumentElem >::operator = (other);
         mName       = other.mName;
         mDescription= other.mDescription;
     }
@@ -67,12 +67,17 @@ MethodBase& MethodBase::operator = (MethodBase&& other) noexcept
 {
     if (this != &other)
     {
-        TEDataContainer< MethodParameter, ElementBase >::operator = (std::move(other));
+        TEDataContainer< MethodParameter, DocumentElem >::operator = (std::move(other));
         mName       = std::move(other.mName);
         mDescription= std::move(other.mDescription);
     }
 
     return *this;
+}
+
+bool MethodBase::isValid() const
+{
+    return mName.isEmpty() == false;
 }
 
 const QString& MethodBase::getName() const

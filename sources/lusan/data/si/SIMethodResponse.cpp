@@ -150,3 +150,13 @@ void SIMethodResponse::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement();
 }
+
+QIcon SIMethodResponse::getIcon(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName ? QIcon::fromTheme(QIcon::ThemeIcon::SyncSynchronizing) : QIcon());
+}
+
+QString SIMethodResponse::getString(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName ? getName() : QString());
+}

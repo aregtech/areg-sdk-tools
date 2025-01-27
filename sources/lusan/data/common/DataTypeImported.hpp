@@ -74,11 +74,9 @@ public:
     DataTypeImported& operator = (DataTypeImported&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes, operations and overrides
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    
-    QString toString(void);
 
     /**
      * \brief   Reads data from an XML stream.
@@ -92,19 +90,39 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes, operations
+//////////////////////////////////////////////////////////////////////////
+public:
     
     inline const QString& getNamespace(void) const;
-
+    
     inline void setNamespace(const QString& space);
-
+    
     inline const QString& getLocation(void) const;
-
+    
     inline void setLocation(const QString& location);
-
+    
     inline const QString& getObject(void) const;
-
+    
     inline void setObject(const QString& object);
-
+    
+private:
+    QString toString(void) const;
+        
 private:
     QString mNamespace; //!< The namespace of the imported data type.
     QString mObject;    //!< The object of the imported data type in the namespace.

@@ -175,3 +175,28 @@ void DataTypeStructure::invalidate(void)
         entry.invalidate();
     }
 }
+
+QIcon DataTypeStructure::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return QIcon::fromTheme(QIcon::ThemeIcon::InsertText);
+    case ElementBase::eDisplay::DisplayType:
+        return (isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+    default:
+        QIcon();
+    }
+}
+
+QString DataTypeStructure::getString(ElementBase::eDisplay display) const
+{
+    if (display == ElementBase::eDisplay::DisplayName)
+    {
+        return getName();
+    }
+    else
+    {
+        return QString();
+    }
+}

@@ -11,6 +11,7 @@
     ${LUSAN}/data/common/DataTypeImported.cpp
     ${LUSAN}/data/common/DataTypePrimitive.cpp
     ${LUSAN}/data/common/DataTypeStructure.cpp
+    ${LUSAN}/data/common/DocumentElem.cpp
     ${LUSAN}/data/common/EnumEntry.cpp
     ${LUSAN}/data/common/FieldEntry.cpp
     ${LUSAN}/data/common/IncludeEntry.cpp
@@ -35,6 +36,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/DataTypeImported.hpp
     ${LUSAN}/data/common/DataTypePrimitive.hpp
     ${LUSAN}/data/common/DataTypeStructure.cpp
+    ${LUSAN}/data/common/DocumentElem.hpp
     ${LUSAN}/data/common/EnumEntry.hpp
     ${LUSAN}/data/common/FieldEntry.hpp
     ${LUSAN}/data/common/IncludeEntry.hpp
