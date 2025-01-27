@@ -285,7 +285,6 @@ void SIDataType::onRemoveClicked(void)
     if (item == nullptr)
         return;
     
-    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>();
     Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
     uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
     item = id == 0 ? item : item->parent();
@@ -293,18 +292,18 @@ void SIDataType::onRemoveClicked(void)
     int index = table->indexOfTopLevelItem(item);
     index = index + 1 == table->topLevelItemCount() ? index - 1 : index + 1;
     QTreeWidgetItem* next = (index >= 0) && (index < table->topLevelItemCount()) ? table->topLevelItem(index) : nullptr;
+    table->setCurrentItem(next);
     item->setSelected(false);
+    
+    deleteTreeNode(item);
     if (next != nullptr)
     {
-        table->setCurrentItem(next);
         next->setSelected(true);
     }
     else
     {
         showClean();
     }
-    
-    deleteTreeNode(item);
 }
 
 void SIDataType::onRemoveFieldClicked(void)
@@ -563,6 +562,7 @@ void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCatego
 
         case DataTypeBase::eCategory::Container:
             dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Container);
+            newType = dataType;
             static_cast<DataTypeContainer *>(dataType)->setContainer(mDetails->ctrlContainerObject()->itemText(0));
             static_cast<DataTypeContainer *>(dataType)->setValue(mDetails->ctrlContainerValue()->itemText(0));
             if (static_cast<DataTypeContainer *>(dataType)->canHaveKey())
@@ -578,7 +578,6 @@ void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCatego
                 static_cast<DataTypeContainer *>(dataType)->setKey(QString());
             }
             
-            newType = dataType;
             updateNodeContainer(current, static_cast<DataTypeContainer*>(dataType));
             selectedContainer(nullptr, static_cast<DataTypeContainer*>(dataType));
             break;

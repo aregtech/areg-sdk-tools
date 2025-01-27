@@ -185,7 +185,7 @@ QIcon DataTypeStructure::getIcon(ElementBase::eDisplay display) const
     case ElementBase::eDisplay::DisplayType:
         return (isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
     default:
-        QIcon();
+        return QIcon();
     }
 }
 

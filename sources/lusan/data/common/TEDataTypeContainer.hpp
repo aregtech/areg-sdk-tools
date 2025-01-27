@@ -182,7 +182,8 @@ template<class FieldType>
 bool TEDataTypeContainer<FieldType>::isValid() const
 {
     using BaseClass  = TEDataContainer< FieldType, DataTypeCustom >;
-    return (BaseClass::mElementList.isEmpty() == false);
+    // return (BaseClass::mElementList.isEmpty() == false);
+    return (BaseClass::getName().isEmpty() == false);
 }
 
 template<class FieldType>
