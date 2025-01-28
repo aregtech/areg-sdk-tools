@@ -38,74 +38,64 @@ namespace
     }
 }
 
-ParamType::ParamType(void)
-    : mDataType (nullptr)
-    , mTypeName ( )
+//////////////////////////////////////////////////////////////////////////
+// TypeFinder class implementation
+//////////////////////////////////////////////////////////////////////////
+
+DataTypeBase* TypeFinder::findObject(const QString name, const QList<DataTypeCustom*>& listTypes) const
 {
+    DataTypeBase* dataType{ nullptr };
+    
+    dataType = static_cast<DataTypeBase*>(findDataType(listTypes, name));
+    if (dataType != nullptr)
+    {
+        return dataType;
+    }
+
+    dataType = static_cast<DataTypeBase*>(findDataType(DataTypeFactory::getPrimitiveTypes(), name));
+    if (dataType != nullptr)
+    {
+        return dataType;
+    }
+
+    dataType = static_cast<DataTypeBase*>(findDataType(DataTypeFactory::getBasicTypes(), name));
+    if (dataType != nullptr)
+    {
+        return dataType;
+    }
+    
+    return nullptr;
 }
 
-ParamType::ParamType(const ParamType& src)
-    : mDataType (src.mDataType)
-    , mTypeName (src.mTypeName)
-{
-}
+//////////////////////////////////////////////////////////////////////////
+// ParamType class implementation
+//////////////////////////////////////////////////////////////////////////
 
-ParamType::ParamType(ParamType&& src) noexcept
-    : mDataType (src.mDataType)
-    , mTypeName (std::move(src.mTypeName))
-{
-}
 
 ParamType::ParamType(const QString& typeName)
-    : mDataType(nullptr)
-    , mTypeName(typeName)
+    : TETypeWrap<DataTypeBase, DataTypeCustom, TypeFinder>(typeName)
 {
 }
 
 ParamType::ParamType(const QString& typeName, const QList<DataTypeCustom*>& customTypes)
-    : mDataType(nullptr)
-    , mTypeName(typeName)
+    : TETypeWrap<DataTypeBase, DataTypeCustom, TypeFinder>(typeName, customTypes)
 {
-    validate(customTypes);
 }
 
 ParamType::ParamType(DataTypeBase* dataType)
-    : mDataType (dataType)
-    , mTypeName (dataType != nullptr ? dataType->getName() : "")
+    : TETypeWrap<DataTypeBase, DataTypeCustom, TypeFinder>(dataType)
 {
-}
-
-ParamType& ParamType::operator = (const ParamType& src)
-{
-    if (this != &src)
-    {
-        mDataType = src.mDataType;
-        mTypeName = src.mTypeName;
-    }
-
-    return (*this);
-}
-
-ParamType& ParamType::operator = (ParamType&& src) noexcept
-{
-    if (this != &src)
-    {
-        mDataType = src.mDataType;
-        mTypeName = std::move(src.mTypeName);
-    }
-
-    return (*this);
 }
 
 ParamType& ParamType::operator = (const DataTypeBase* dataType)
 {
-    setDataType(const_cast<DataTypeBase*>(dataType));
+    setType(const_cast<DataTypeBase*>(dataType));
     return (*this);
 }
 
 ParamType& ParamType::operator = (DataTypeBase* dataType)
 {
-    setDataType(dataType);
+    setType(dataType);
     return (*this);
 }
 
@@ -121,11 +111,11 @@ bool ParamType::operator == (const ParamType& other) const
     {
         return true;
     }
-    else if ((mDataType == other.mDataType) && (mDataType != nullptr))
+    else if ((mTypeObj == other.mTypeObj) && (mTypeObj != nullptr))
     {
         return true;
     }
-    else if ((mDataType != nullptr) && (other.mDataType != nullptr) && (mDataType->getName() == other.mDataType->getName()))
+    else if ((mTypeObj != nullptr) && (other.mTypeObj != nullptr) && (mTypeObj->getName() == other.mTypeObj->getName()))
     {
         return true;
     }
@@ -146,7 +136,7 @@ bool ParamType::operator != (const ParamType& other) const
 
 bool ParamType::operator == (const DataTypeBase* dataType) const
 {
-    return (mDataType != nullptr) && (mDataType == dataType);
+    return (mTypeObj != nullptr) && (mTypeObj == dataType);
 }
 
 bool ParamType::operator != (const DataTypeBase* dataType) const
@@ -156,9 +146,9 @@ bool ParamType::operator != (const DataTypeBase* dataType) const
 
 bool ParamType::operator == (const QString& typeName) const
 {
-    if (mDataType != nullptr)
+    if (mTypeObj != nullptr)
     {
-        return (mDataType->getName() == typeName);
+        return (mTypeObj->getName() == typeName);
     }
     else
     {
@@ -173,85 +163,50 @@ bool ParamType::operator != (const QString& typeName) const
 
 ParamType::operator const DataTypeCustom* (void) const
 {
-    return (isCustomDefined() ? static_cast<const DataTypeCustom*>(mDataType) : static_cast<const DataTypeCustom *>(nullptr));
+    return (isCustomDefined() ? static_cast<const DataTypeCustom*>(mTypeObj) : static_cast<const DataTypeCustom *>(nullptr));
 }
 
 ParamType::operator DataTypeCustom* (void)
 {
-    return (isCustomDefined() ? static_cast<DataTypeCustom*>(mDataType) : static_cast<DataTypeCustom*>(nullptr));
+    return (isCustomDefined() ? static_cast<DataTypeCustom*>(mTypeObj) : static_cast<DataTypeCustom*>(nullptr));
 }
 
 ParamType::operator const DataTypeStructure* (void) const
 {
-    return (isStructure() ? static_cast<const DataTypeStructure*>(mDataType) : static_cast<const DataTypeStructure*>(nullptr));
+    return (isStructure() ? static_cast<const DataTypeStructure*>(mTypeObj) : static_cast<const DataTypeStructure*>(nullptr));
 }
 
 ParamType::operator DataTypeStructure* (void)
 {
-    return (isStructure() ? static_cast<DataTypeStructure*>(mDataType) : static_cast<DataTypeStructure*>(nullptr));
+    return (isStructure() ? static_cast<DataTypeStructure*>(mTypeObj) : static_cast<DataTypeStructure*>(nullptr));
 }
 
 ParamType::operator const DataTypeEnum* (void) const
 {
-    return (isEnumeration() ? static_cast<const DataTypeEnum*>(mDataType) : static_cast<const DataTypeEnum*>(nullptr));
+    return (isEnumeration() ? static_cast<const DataTypeEnum*>(mTypeObj) : static_cast<const DataTypeEnum*>(nullptr));
 }
 
 ParamType::operator DataTypeEnum* (void)
 {
-    return (isEnumeration() ? static_cast<DataTypeEnum*>(mDataType) : static_cast<DataTypeEnum*>(nullptr));
+    return (isEnumeration() ? static_cast<DataTypeEnum*>(mTypeObj) : static_cast<DataTypeEnum*>(nullptr));
 }
 
 ParamType::operator const DataTypeContainer* (void) const
 {
-    return (isContainer() ? static_cast<const DataTypeContainer*>(mDataType) : static_cast<const DataTypeContainer*>(nullptr));
+    return (isContainer() ? static_cast<const DataTypeContainer*>(mTypeObj) : static_cast<const DataTypeContainer*>(nullptr));
 }
 
 ParamType::operator DataTypeContainer* (void)
 {
-    return (isContainer() ? static_cast<DataTypeContainer*>(mDataType) : static_cast<DataTypeContainer*>(nullptr));
+    return (isContainer() ? static_cast<DataTypeContainer*>(mTypeObj) : static_cast<DataTypeContainer*>(nullptr));
 }
 
 ParamType::operator const DataTypeImported* (void) const
 {
-    return (isImported() ? static_cast<const DataTypeImported*>(mDataType) : static_cast<const DataTypeImported*>(nullptr));
+    return (isImported() ? static_cast<const DataTypeImported*>(mTypeObj) : static_cast<const DataTypeImported*>(nullptr));
 }
 
 ParamType::operator DataTypeImported* (void)
 {
-    return (isImported() ? static_cast<DataTypeImported*>(mDataType) : static_cast<DataTypeImported*>(nullptr));
-}
-
-ParamType::operator const QString& (void) const
-{
-    return mDataType->getName();
-}
-
-bool ParamType::validate(const QList<DataTypeCustom*>& customTypes)
-{
-    if ((mDataType == nullptr) && (mTypeName.isEmpty() == false))
-    {
-        mDataType = static_cast<DataTypeBase *>(findDataType(customTypes, mTypeName));
-        if (mDataType != nullptr)
-        {
-            return true;
-        }
-
-        mDataType = static_cast<DataTypeBase*>(findDataType(DataTypeFactory::getPrimitiveTypes(), mTypeName));
-        if (mDataType != nullptr)
-        {
-            return true;
-        }
-
-        mDataType = static_cast<DataTypeBase*>(findDataType(DataTypeFactory::getBasicTypes(), mTypeName));
-        if (mDataType != nullptr)
-        {
-            return true;
-        }
-    }
-    else if (mDataType != nullptr)
-    {
-        mTypeName = mDataType->getName();
-    }
-
-    return false;
+    return (isImported() ? static_cast<DataTypeImported*>(mTypeObj) : static_cast<DataTypeImported*>(nullptr));
 }

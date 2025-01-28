@@ -18,7 +18,8 @@
  *  \brief       Lusan application, parameter type.
  *
  ************************************************************************/
-#include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/TETypeWrap.hpp"
 #include <QList>
 #include <QString>
 
@@ -26,21 +27,38 @@ class DataTypeContainer;
 class DataTypeCustom;
 class DataTypeEnum;
 class DataTypeImported;
-class DataTypeStructure; 
+class DataTypeStructure;
 
-class ParamType
+//////////////////////////////////////////////////////////////////////////
+// TypeFinder class declaration
+//////////////////////////////////////////////////////////////////////////
+
+class TypeFinder : public TETypeFind<DataTypeBase, DataTypeCustom>
 {
 public:
-    ParamType(void);
-    ParamType(const ParamType& src);
-    ParamType(ParamType&& src) noexcept;
+    TypeFinder(void) = default;
+    ~TypeFinder(void) = default;
+public:
+    DataTypeBase* findObject(const QString name, const QList<DataTypeCustom*>& listTypes) const;
+};
+
+//////////////////////////////////////////////////////////////////////////
+// ParamType class declaration
+//////////////////////////////////////////////////////////////////////////
+
+class ParamType : public TETypeWrap<DataTypeBase, DataTypeCustom, TypeFinder>
+{
+public:
+    ParamType(void) = default;
+    ParamType(const ParamType& src) = default;
+    ParamType(ParamType&& src) noexcept = default;
 
     ParamType(const QString& typeName);
     ParamType(const QString& typeName, const QList<DataTypeCustom*>& customTypes);
     ParamType(DataTypeBase* dataType);
 
-    ParamType& operator = (const ParamType& src);
-    ParamType& operator = (ParamType&& src) noexcept;
+    ParamType& operator = (const ParamType& src) = default;
+    ParamType& operator = (ParamType&& src) noexcept = default;
 
     ParamType& operator = (const DataTypeBase* dataType);
     ParamType& operator = (DataTypeBase* dataType);
@@ -70,30 +88,6 @@ public:
 
     operator const DataTypeImported* (void) const;
     operator DataTypeImported* (void);
-
-    operator const QString& (void) const;
-
-    inline const DataTypeBase* getDataType(void) const;
-    
-    inline DataTypeBase* getDataType(void);
-    
-    inline void setDataType(DataTypeBase* dataType);
-    
-    inline void setDataType(const DataTypeBase* dataType);
-    
-    inline void setName(const QString& typeName);
-    
-    inline void setName(const QString& typeName, const QList<DataTypeCustom *>& customTypes);
-    
-    inline const QString& getName(void) const;
-    
-    inline bool isEmpty(void) const;
-    
-    inline bool isValid(void) const;
-
-    inline void invalidate();
-
-    bool validate(const QList<DataTypeCustom *> & customTypes);
 
     /**
      * \brief   Gets the category of the data type.
@@ -191,162 +185,90 @@ public:
      * \return  True if the data type matches the specified type, false otherwise.
      **/
     inline bool isTypeOf(const QString& theType) const;
-
-private:
-    DataTypeBase*   mDataType;
-    QString         mTypeName;
 };
 
-inline const DataTypeBase* ParamType::getDataType(void) const
-{
-    return mDataType;
-}
-
-inline DataTypeBase* ParamType::getDataType(void)
-{
-    return mDataType;
-}
-
-inline void ParamType::setDataType(DataTypeBase* dataType)
-{
-    if (dataType != nullptr)
-    {
-        mDataType = dataType;
-        mTypeName = mDataType->getName();
-    }
-    else
-    {
-        if (mDataType != nullptr)
-        {
-            mTypeName = mDataType->getName();
-        }
-
-        mDataType = nullptr;
-    }
-}
-
-inline void ParamType::setDataType(const DataTypeBase* dataType)
-{
-    setDataType(const_cast<DataTypeBase*>(dataType));
-}
-
-inline void ParamType::setName(const QString& typeName)
-{
-    if (mDataType == nullptr)
-    {
-        mTypeName = typeName;
-    }
-    else if (typeName != mTypeName)
-    {
-        mDataType = nullptr;
-        mTypeName = typeName;
-    }
-}
-
-inline void ParamType::setName(const QString& typeName, const QList<DataTypeCustom *>& customTypes)
-{
-    setName(typeName);
-    validate(customTypes);
-}
-
-inline const QString& ParamType::getName(void) const
-{
-    return (mDataType != nullptr ? mDataType->getName() : mTypeName);
-}
-
-inline bool ParamType::isEmpty(void) const
-{
-    return mDataType != nullptr ? mDataType->getName().isEmpty() : mTypeName.isEmpty();
-}
-
-inline bool ParamType::isValid(void) const
-{
-    return (mDataType != nullptr);
-}
-
-inline void ParamType::invalidate()
-{
-    mDataType = nullptr;
-}
+//////////////////////////////////////////////////////////////////////////
+// ParamType class inline functions
+//////////////////////////////////////////////////////////////////////////
 
 inline DataTypeBase::eCategory ParamType::getCategory(void) const
 {
-    return mDataType->getCategory();
+    return mTypeObj->getCategory();
 }
 
 inline bool ParamType::isPrimitive(void) const
 {
-    return mDataType->isPrimitive();
+    return mTypeObj->isPrimitive();
 }
 
 inline bool ParamType::isCustomDefined(void) const
 {
-    return mDataType->isCustomDefined();
+    return mTypeObj->isCustomDefined();
 }
 
 inline bool ParamType::isPredefined(void) const
 {
-    return mDataType->isPredefined();
+    return mTypeObj->isPredefined();
 }
 
 inline bool ParamType::isPrimitiveBool(void) const
 {
-    return mDataType->isPrimitiveBool();
+    return mTypeObj->isPrimitiveBool();
 }
 
 inline bool ParamType::isPrimitiveInt(void) const
 {
-    return mDataType->isPrimitiveInt();
+    return mTypeObj->isPrimitiveInt();
 }
 
 inline bool ParamType::isPrimitiveSint(void) const
 {
-    return mDataType->isPrimitiveSint();
+    return mTypeObj->isPrimitiveSint();
 }
 
 inline bool ParamType::isPrimitiveUint(void) const
 {
-    return mDataType->isPrimitiveUint();
+    return mTypeObj->isPrimitiveUint();
 }
 
 inline bool ParamType::isPrimitiveFloat(void) const
 {
-    return mDataType->isPrimitiveFloat();
+    return mTypeObj->isPrimitiveFloat();
 }
 
 inline bool ParamType::isBasicObject(void) const
 {
-    return mDataType->isBasicObject();
+    return mTypeObj->isBasicObject();
 }
 
 inline bool ParamType::isBasicContainer(void) const
 {
-    return mDataType->isBasicContainer();
+    return mTypeObj->isBasicContainer();
 }
 
 inline bool ParamType::isEnumeration(void) const
 {
-    return mDataType->isEnumeration();
+    return mTypeObj->isEnumeration();
 }
 
 inline bool ParamType::isStructure(void) const
 {
-    return mDataType->isStructure();
+    return mTypeObj->isStructure();
 }
 
 inline bool ParamType::isImported(void) const
 {
-    return mDataType->isImported();
+    return mTypeObj->isImported();
 }
 
 inline bool ParamType::isContainer(void) const
 {
-    return mDataType->isContainer();
+    return mTypeObj->isContainer();
 }
 
 inline bool ParamType::isTypeOf(const QString& theType) const
 {
-    return mDataType->isTypeOf(theType);
+    return mTypeObj->isTypeOf(theType);
 }
 
 #endif  // LUSAN_DATA_COMMON_PARAMTYPE_HPP

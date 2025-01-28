@@ -147,12 +147,12 @@ void ParamBase::setType(const QString& type, const QList<DataTypeCustom*>& custo
 
 void ParamBase::setParamType(DataTypeBase* dataType)
 {
-    mParamType.setDataType(dataType);
+    mParamType.setType(dataType);
 }
 
 DataTypeBase* ParamBase::getParamType(void) const
 {
-    return const_cast<ParamType &>(mParamType).getDataType();
+    return const_cast<ParamType &>(mParamType).getType();
 }
 
 bool ParamBase::getIsDeprecated() const
