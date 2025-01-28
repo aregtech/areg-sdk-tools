@@ -47,5 +47,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/common/ParamType.hpp
     ${LUSAN}/data/common/TEDataContainer.hpp
     ${LUSAN}/data/common/TEDataTypeContainer.hpp
+    ${LUSAN}/data/common/TETypeWrap.hpp
     ${LUSAN}/data/common/WorkspaceEntry.hpp
 )

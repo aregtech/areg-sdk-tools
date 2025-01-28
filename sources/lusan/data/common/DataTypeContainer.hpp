@@ -185,12 +185,12 @@ inline void DataTypeContainer::setKey(const QString& key, const QList<DataTypeCu
 
 inline DataTypeBase* DataTypeContainer::getKeyDataType(void) const
 {
-    return const_cast<ParamType &>(mKeyType).getDataType();
+    return const_cast<ParamType &>(mKeyType).getType();
 }
 
 inline void DataTypeContainer::setKeyDataType(DataTypeBase* dataType)
 {
-    mKeyType.setDataType(dataType);
+    mKeyType.setType(dataType);
 }
 
 inline const QString& DataTypeContainer::getValue(void) const
@@ -210,12 +210,12 @@ inline void DataTypeContainer::setValue(const QString& value, const QList<DataTy
 
 inline DataTypeBase* DataTypeContainer::getValueDataType(void) const
 {
-    return const_cast<ParamType &>(mValueType).getDataType();
+    return const_cast<ParamType &>(mValueType).getType();
 }
 
 inline void DataTypeContainer::setValueDataType(DataTypeBase* dataType)
 {
-    mValueType.setDataType(dataType);
+    mValueType.setType(dataType);
 }
 
 inline bool DataTypeContainer::validate(const QList<DataTypeCustom*>& customTypes)
