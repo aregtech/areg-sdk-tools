@@ -20,28 +20,28 @@
 #include "lusan/data/common/DataTypeBase.hpp"
 
 DataTypeBase::DataTypeBase(ElementBase* parent /*= nullptr*/)
-    : ElementBase   (parent)
+    : DocumentElem  (parent)
     , mCategory     (eCategory::Undefined)
     , mName         ( )
 {
 }
 
 DataTypeBase::DataTypeBase(eCategory category, const QString& name /*= QString()*/, uint32_t id /*= 0*/, ElementBase* parent /*= nullptr*/)
-    : ElementBase   (id, parent)
+    : DocumentElem  (id, parent)
     , mCategory     (category)
     , mName         (name)
 {
 }
 
 DataTypeBase::DataTypeBase(const DataTypeBase& other)
-    : ElementBase   (other)
+    : DocumentElem  (other)
     , mCategory     (other.mCategory)
     , mName         (other.mName)
 {
 }
 
 DataTypeBase::DataTypeBase(DataTypeBase&& other) noexcept
-    : ElementBase   (std::move(other))
+    : DocumentElem  (std::move(other))
     , mCategory     (other.mCategory)
     , mName         (std::move(other.mName))
 {
@@ -51,7 +51,7 @@ DataTypeBase& DataTypeBase::operator = (const DataTypeBase& other)
 {
     if (this != &other)
     {
-        ElementBase::operator = (other);
+        DocumentElem::operator = (other);
         mName     = other.mName;
         mCategory = other.mCategory;
     }
@@ -63,7 +63,7 @@ DataTypeBase& DataTypeBase::operator=(DataTypeBase&& other) noexcept
 {
     if (this != &other)
     {
-        ElementBase::operator = (std::move(other));
+        DocumentElem::operator = (std::move(other));
         mName = std::move(other.mName);
         mCategory = other.mCategory;
     }
@@ -174,4 +174,14 @@ bool DataTypeBase::isContainer(void) const
 bool DataTypeBase::isTypeOf(const QString& theType) const
 {
     return (mName == theType);
+}
+
+QIcon DataTypeBase::getIcon(ElementBase::eDisplay display) const
+{
+    return QIcon();
+}
+
+QString DataTypeBase::getString(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName ? getName() : QString());
 }

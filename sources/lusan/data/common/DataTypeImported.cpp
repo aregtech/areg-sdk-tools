@@ -77,11 +77,6 @@ DataTypeImported& DataTypeImported::operator = (DataTypeImported&& other) noexce
     return *this;
 }
 
-QString DataTypeImported::toString(void)
-{
-    return (mNamespace.isEmpty() ? mObject : mNamespace + "::" + mObject);
-}
-
 bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != XmlSI::xmlSIElementDataType)
@@ -150,4 +145,35 @@ void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
     }
 
     xml.writeEndElement(); // DataType
+}
+
+QString DataTypeImported::toString(void) const
+{
+    return (mNamespace.isEmpty() ? mObject : mNamespace + "::" + mObject);
+}
+
+QIcon DataTypeImported::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return QIcon::fromTheme(QIcon::ThemeIcon::InsertImage);
+    case ElementBase::eDisplay::DisplayType:
+        return (isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+    default:
+        return QIcon();
+    }
+}
+
+QString DataTypeImported::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return toString();
+    default:
+        return QString();
+    }
 }

@@ -25,7 +25,7 @@
  * \class   DataTypeCustom
  * \brief   Represents a custom data type in the Lusan application.
  **/
-class DataTypeCustom : public DataTypeBase
+class DataTypeCustom    : public DataTypeBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Static members and types
@@ -113,6 +113,16 @@ public:
     DataTypeCustom& operator = (DataTypeCustom&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+
+//////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -142,12 +152,6 @@ public:
      * \brief   Returns the name of the custom data type.
      **/
     QString getType(void) const;
-
-    /**
-     * \brief   Checks if the data type is valid.
-     * \return  True if the data type is valid, false otherwise.
-     **/
-    virtual bool isValid(void) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

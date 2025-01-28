@@ -185,6 +185,18 @@ public:
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

@@ -464,6 +464,10 @@ private:
      **/
     inline void deleteTreeNode(QTreeWidgetItem* node);
     
+    inline void setNodeText(QTreeWidgetItem* node, DocumentElem * elem) const;
+    
+    inline void showClean(void);
+    
     /**
      * \brief   Returns list of basic container data type objects.
      **/

@@ -22,7 +22,7 @@
 /************************************************************************
  * Include files
  ************************************************************************/
-#include "lusan/common/ElementBase.hpp"
+#include "lusan/data/common/DocumentElem.hpp"
 
 #include <QString>
 #include <QXmlStreamReader>
@@ -32,7 +32,7 @@
   * \class   IncludeEntry
   * \brief   Represents an include entry for service interfaces.
   **/
-class IncludeEntry  : public ElementBase
+class IncludeEntry  : public DocumentElem
 {
 //////////////////////////////////////////////////////////////////////////
 // Public methods
@@ -123,14 +123,44 @@ public:
     bool operator > (const IncludeEntry& other) const;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes and operations
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Reads include entry data from an XML stream.
+     * \param   xml     The XML stream reader.
+     * \return  True if the include entry data was successfully read, false otherwise.
+     **/
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
+
+    /**
+     * \brief   Writes include entry data to an XML stream.
+     * \param   xml     The XML stream writer.
+     **/
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
     /**
      * \brief   Returns true if the entry is valid. The entry is valid if location parameter is not empty.
      **/
-    bool isValid(void) const;
+    virtual bool isValid(void) const override;
 
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
     /**
      * \brief   Gets the include file path location.
      * \return  The file path.
@@ -194,19 +224,6 @@ public:
      * \param   deprecationHint     The comment to add for deprecation.
      */
     void deprecateEntry(const QString& deprecationHint);
-
-    /**
-     * \brief   Reads include entry data from an XML stream.
-     * \param   xml     The XML stream reader.
-     * \return  True if the include entry data was successfully read, false otherwise.
-     **/
-    bool readFromXml(QXmlStreamReader& xml);
-
-    /**
-     * \brief   Writes include entry data to an XML stream.
-     * \param   xml     The XML stream writer.
-     **/
-    void writeToXml(QXmlStreamWriter& xml) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

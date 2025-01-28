@@ -22,7 +22,7 @@
 /************************************************************************
  * Include files
  ************************************************************************/
-#include "lusan/common/ElementBase.hpp"
+#include "lusan/data/common/DocumentElem.hpp"
 
 #include <QString>
 #include <QXmlStreamReader>
@@ -31,7 +31,7 @@
 /**
  * \brief   A single entry of the enumeration data type.
  **/
-class EnumEntry : public ElementBase
+class EnumEntry : public DocumentElem
 {
 //////////////////////////////////////////////////////////////////////////
 // constructors / destructor
@@ -111,7 +111,7 @@ public:
     bool operator > (const EnumEntry& other) const;
 
 //////////////////////////////////////////////////////////////////////////
-// Operations and attributes
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
@@ -119,14 +119,36 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    bool readFromXml(QXmlStreamReader& xml);
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    void writeToXml(QXmlStreamWriter& xml) const;
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    
+    /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+    
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
 
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Operations and attributes
+//////////////////////////////////////////////////////////////////////////
+public:
     /**
      * \brief   Gets the name of the enum entry.
      * \return  The name of the enum entry.

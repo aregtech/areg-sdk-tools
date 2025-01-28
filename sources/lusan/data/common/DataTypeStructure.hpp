@@ -69,7 +69,21 @@ public:
      * \return  Reference to this object.
      **/
     DataTypeStructure& operator = (DataTypeStructure&& other) noexcept;
-
+    
+    FieldEntry* addField(const QString& name);
+    
+    void removeField(const QString& name);
+    
+    void removeField(uint32_t id);
+    
+    DataTypeBase* getFieldType(const QString& name) const;
+    
+    DataTypeBase* getFieldType(uint32_t id) const;
+    
+    bool validate(const QList<DataTypeCustom*>& customTypes);
+    
+    void invalidate(void);
+    
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
@@ -82,20 +96,19 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
-
-    FieldEntry* addField(const QString& name);
-
-    void removeField(const QString& name);
-
-    void removeField(uint32_t id);
-
-    DataTypeBase* getFieldType(const QString& name) const;
-
-    DataTypeBase* getFieldType(uint32_t id) const;
-
-    bool validate(const QList<DataTypeCustom*>& customTypes);
-
-    void invalidate(void);
+    
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+    
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPESTRUCTURE_HPP

@@ -22,7 +22,7 @@
 #include "IncludeEntry.hpp"
 
 IncludeEntry::IncludeEntry(ElementBase* parent /*= nullptr*/)
-    : ElementBase   (parent)
+    : DocumentElem  (parent)
     , mLocation     ( )
     , mDescription  ( )
     , mDeprecated   (false)
@@ -31,7 +31,7 @@ IncludeEntry::IncludeEntry(ElementBase* parent /*= nullptr*/)
 }
 
 IncludeEntry::IncludeEntry(uint32_t id, const QString & location, ElementBase * parent /*= nullptr*/)
-    : ElementBase   (id, parent)
+    : DocumentElem  (id, parent)
     , mLocation     ( location )
     , mDescription  ( )
     , mDeprecated   (false)
@@ -41,7 +41,7 @@ IncludeEntry::IncludeEntry(uint32_t id, const QString & location, ElementBase * 
 }    
 
 IncludeEntry::IncludeEntry(const QString& path, uint32_t id, const QString& description, bool deprecated, const QString& deprecationHint, ElementBase* parent /*= nullptr*/)
-    : ElementBase   (id, parent)
+    : DocumentElem  (id, parent)
     , mLocation     (path)
     , mDescription  (description)
     , mDeprecated   (deprecated)
@@ -50,7 +50,7 @@ IncludeEntry::IncludeEntry(const QString& path, uint32_t id, const QString& desc
 }
 
 IncludeEntry::IncludeEntry(const IncludeEntry& other)
-    : ElementBase   (other)
+    : DocumentElem  (other)
     , mLocation     (other.mLocation)
     , mDescription  (other.mDescription)
     , mDeprecated   (other.mDeprecated)
@@ -59,7 +59,7 @@ IncludeEntry::IncludeEntry(const IncludeEntry& other)
 }
 
 IncludeEntry::IncludeEntry(IncludeEntry&& other) noexcept
-    : ElementBase(std::move(other))
+    : DocumentElem  (std::move(other))
     , mLocation     (std::move(other.mLocation))
     , mDescription  (std::move(other.mDescription))
     , mDeprecated   (other.mDeprecated)
@@ -72,7 +72,7 @@ IncludeEntry& IncludeEntry::operator = (const IncludeEntry& other)
 {
     if (this != &other)
     {
-        ElementBase::operator = (other);
+        DocumentElem::operator = (other);
         mLocation       = other.mLocation;
         mDescription    = other.mDescription;
         mDeprecated     = other.mDeprecated;
@@ -86,7 +86,7 @@ IncludeEntry& IncludeEntry::operator=(IncludeEntry&& other) noexcept
 {
     if (this != &other)
     {
-        ElementBase::operator = (std::move(other));
+        DocumentElem::operator = (std::move(other));
         mLocation       = std::move(other.mLocation);
         mDescription    = std::move(other.mDescription);
         mDeprecated     = other.mDeprecated;
@@ -116,11 +116,6 @@ bool IncludeEntry::operator < (const IncludeEntry& other) const
 bool IncludeEntry::operator > (const IncludeEntry& other) const
 {
     return (mLocation > other.mLocation);
-}
-
-bool IncludeEntry::isValid(void) const
-{
-    return !mLocation.isEmpty();
 }
 
 const QString& IncludeEntry::getLocation(void) const
@@ -218,4 +213,19 @@ void IncludeEntry::writeToXml(QXmlStreamWriter& xml) const
     }
 
     xml.writeEndElement();
+}
+
+bool IncludeEntry::isValid(void) const
+{
+    return !mLocation.isEmpty();
+}
+
+QIcon IncludeEntry::getIcon(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName ? QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading) : QIcon());
+}
+
+QString IncludeEntry::getString(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName ? mLocation : QString());
 }

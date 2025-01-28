@@ -87,7 +87,7 @@ public:
     SIMethodBroadcast& operator = (SIMethodBroadcast&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes and operations
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
@@ -102,6 +102,18 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
 };
 
 #endif // LUSAN_DATA_SI_SIMETHODBROADCAST_HPP

@@ -20,7 +20,7 @@
 #include "lusan/common/XmlSI.hpp"
 
 EnumEntry::EnumEntry(ElementBase* parent /*= nullptr*/)
-    : ElementBase   (parent)
+    : DocumentElem(parent)
     , mName         ( )
     , mValue        ( )
     , mDescription  ( )
@@ -30,7 +30,7 @@ EnumEntry::EnumEntry(ElementBase* parent /*= nullptr*/)
 }
 
 EnumEntry::EnumEntry(uint32_t id, const QString& name, const QString& value, ElementBase* parent /*= nullptr*/)
-    : ElementBase   (id, parent)
+    : DocumentElem   (id, parent)
     , mName         (name)
     , mValue        (value)
     , mDescription  ( )
@@ -40,7 +40,7 @@ EnumEntry::EnumEntry(uint32_t id, const QString& name, const QString& value, Ele
 }
 
 EnumEntry::EnumEntry(const EnumEntry& src)
-    : ElementBase   (src)
+    : DocumentElem   (src)
     , mName         (src.mName)
     , mValue        (src.mValue)
     , mDescription  (src.mDescription)
@@ -50,7 +50,7 @@ EnumEntry::EnumEntry(const EnumEntry& src)
 }
 
 EnumEntry::EnumEntry(EnumEntry&& src) noexcept
-    : ElementBase   (std::move(src))
+    : DocumentElem   (std::move(src))
     , mName         (std::move(src.mName))
     , mValue        (std::move(src.mValue))
     , mDescription  (std::move(src.mDescription))
@@ -63,7 +63,7 @@ EnumEntry& EnumEntry::operator = (const EnumEntry& other)
 {
     if (this != &other)
     {
-        ElementBase::operator = (other);
+        DocumentElem::operator = (other);
         mName           = other.mName;
         mValue          = other.mValue;
         mDescription    = other.mDescription;
@@ -79,7 +79,7 @@ EnumEntry& EnumEntry::operator=(EnumEntry&& other) noexcept
 {
     if (this != &other)
     {
-        ElementBase::operator = (std::move(other));
+        DocumentElem::operator = (std::move(other));
         mName           = std::move(other.mName);
         mValue          = std::move(other.mValue);
         mDescription    = std::move(other.mDescription);
@@ -181,4 +181,27 @@ const QString EnumEntry::getDescription(void) const
 void EnumEntry::setDescription(const QString& describe)
 {
     mDescription = describe;
+}
+
+bool EnumEntry::isValid() const
+{
+    return getName().isEmpty() == false;
+}
+
+QIcon EnumEntry::getIcon(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName ? QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading) : QIcon());
+}
+
+QString EnumEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayValue:
+        return mValue;
+    default:
+        return QString();
+    }
 }

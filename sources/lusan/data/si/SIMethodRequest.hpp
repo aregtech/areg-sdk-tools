@@ -88,6 +88,35 @@ public:
     SIMethodRequest& operator=(SIMethodRequest&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Reads data from an XML stream.
+     * \param   xml     The XML stream reader.
+     * \return  True if the data was successfully read, false otherwise.
+     **/
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
+
+    /**
+     * \brief   Writes data to an XML stream.
+     * \param   xml     The XML stream writer.
+     **/
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+
+//////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -112,19 +141,6 @@ public:
      * \brief   Clears the connected response name.
      **/
     void clearResponse(void);
-
-    /**
-     * \brief   Reads data from an XML stream.
-     * \param   xml     The XML stream reader.
-     * \return  True if the data was successfully read, false otherwise.
-     **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-
-    /**
-     * \brief   Writes data to an XML stream.
-     * \param   xml     The XML stream writer.
-     **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
 private:
     SIMethodResponse*   mRespMethod;    //!< The connected response object. If set, has highest priority of information

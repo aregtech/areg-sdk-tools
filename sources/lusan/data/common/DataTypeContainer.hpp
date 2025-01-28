@@ -75,12 +75,9 @@ public:
     DataTypeContainer& operator = (DataTypeContainer&& other) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes, operations and overrides
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    
-    QString toString(void);
-
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
@@ -94,6 +91,22 @@ public:
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+    
+//////////////////////////////////////////////////////////////////////////
+// Attributes, operations
+//////////////////////////////////////////////////////////////////////////
+public:
     bool canHaveKey(void) const;
 
     inline const QString& getContainer(void) const;
@@ -126,6 +139,10 @@ public:
 
     void invalidate(void);
     
+private:
+    
+    QString toString(void) const;
+        
 private:
     QString     mContainer; //!< The container type.
     ParamType   mValueType; //!< The base type value.

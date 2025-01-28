@@ -18,7 +18,7 @@
  *  \brief       Lusan application, Data Type Base.
  *
  ************************************************************************/
-#include "lusan/common/ElementBase.hpp"
+#include "lusan/data/common/DocumentElem.hpp"
 
 #include <QString>
 #include <QXmlStreamReader>
@@ -28,7 +28,7 @@
   * \class   DataTypeBase
   * \brief   Base class for data types in the Lusan application.
   **/
-class DataTypeBase  : public ElementBase
+class DataTypeBase  : public DocumentElem
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
@@ -120,6 +120,28 @@ public:
      * \return  True if the name or category are not equal, false otherwise.
      **/
     bool operator != (const DataTypeBase& other) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+    
+    /**
+     * \brief   Checks if the data type is valid.
+     * \return  True if the data type is valid, false otherwise.
+     **/
+    virtual bool isValid(void) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -233,30 +255,7 @@ public:
      * \return  True if the data type matches the specified type, false otherwise.
      **/
     bool isTypeOf(const QString& theType) const;
-
-//////////////////////////////////////////////////////////////////////////
-// Overrides
-//////////////////////////////////////////////////////////////////////////
-public:
-    /**
-     * \brief   Checks if the data type is valid.
-     * \return  True if the data type is valid, false otherwise.
-     **/
-    virtual bool isValid(void) const;
-
-    /**
-     * \brief   Reads data from an XML stream.
-     * \param   xml     The XML stream reader.
-     * \return  True if the data was successfully read, false otherwise.
-     **/
-    virtual bool readFromXml(QXmlStreamReader& xml) = 0;
-
-    /**
-     * \brief   Writes data to an XML stream.
-     * \param   xml     The XML stream writer.
-     **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const = 0;
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

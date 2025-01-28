@@ -83,6 +83,16 @@ unsigned int ElementBase::getNextId(void) const
     return (mParent != nullptr ? mParent->getNextId() : ++mId);
 }
 
+QIcon ElementBase::getIcon(ElementBase::eDisplay display) const
+{
+    return QIcon();
+}
+
+QString ElementBase::getString(ElementBase::eDisplay display) const
+{
+    return QString();
+}
+
 void ElementBase::setMaxId(unsigned int id) const
 {
     if (mParent != nullptr)

@@ -69,6 +69,10 @@ public:
      **/
     DataTypeEnum& operator = (DataTypeEnum&& other) noexcept;
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
@@ -81,13 +85,35 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
-
+    
+    /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+    
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const override;
+    
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
     EnumEntry* addField(const QString& name);
     
     inline const QString& getDerived(void) const;
     
     inline void setDerived(const QString& derived);
-
+    
 private:
     QString     mDerived;   //!< The type name of values. If name is empty, default is used.
 };

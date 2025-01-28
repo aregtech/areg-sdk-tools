@@ -150,3 +150,13 @@ void SIMethodBroadcast::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement();
 }
+
+QIcon SIMethodBroadcast::getIcon(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName ? QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading) : QIcon());
+}
+
+QString SIMethodBroadcast::getString(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName ? getName() : QString());
+}

@@ -285,7 +285,6 @@ void SIDataType::onRemoveClicked(void)
     if (item == nullptr)
         return;
     
-    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>();
     Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
     uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
     item = id == 0 ? item : item->parent();
@@ -293,14 +292,18 @@ void SIDataType::onRemoveClicked(void)
     int index = table->indexOfTopLevelItem(item);
     index = index + 1 == table->topLevelItemCount() ? index - 1 : index + 1;
     QTreeWidgetItem* next = (index >= 0) && (index < table->topLevelItemCount()) ? table->topLevelItem(index) : nullptr;
+    table->setCurrentItem(next);
     item->setSelected(false);
+    
+    deleteTreeNode(item);
     if (next != nullptr)
     {
         next->setSelected(true);
-        table->setCurrentItem(next);
     }
-    
-    deleteTreeNode(item);
+    else
+    {
+        showClean();
+    }
 }
 
 void SIDataType::onRemoveFieldClicked(void)
@@ -332,8 +335,7 @@ void SIDataType::onTypeNameChanged(const QString& newName)
         return;
     
     DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
-    Q_ASSERT(dataType != nullptr);
-    item->setText(0, newName);
+    setNodeText(item, dataType);
     mModel.updateDataType(dataType, newName);
 }
 
@@ -456,35 +458,24 @@ void SIDataType::dataTypeDeleted(DataTypeCustom* dataType)
                 if ((field != nullptr) && (field->getParamType() == dataType))
                 {
                     field->setParamType(nullptr);
-                    child->setIcon(1, QIcon::fromTheme("dialog-warning"));
-                    child->setText(1, field->getType());
                 }
-                else if (field == nullptr)
-                {
-                    child->setText(1, "<invalid>");
-                }
+                
+                setNodeText(child, field);
             }
         }
         else if (topType->isContainer())
         {
             DataTypeContainer* container = static_cast<DataTypeContainer*>(topType);
-            bool warn{ false };
             if (container->getKeyDataType() == dataType)
             {
-                warn = true;
                 container->setKeyDataType(nullptr);
             }
             if (container->getValueDataType() == dataType)
             {
-                warn = true;
                 container->setValueDataType(nullptr);
             }
-
-            top->setText(1, container->toString());
-            if (warn)
-            {
-                top->setIcon(1, QIcon::fromTheme("dialog-warning"));
-            }
+            
+            setNodeText(top, topType);
         }
     }
 }
@@ -514,13 +505,12 @@ void SIDataType::dataTypeUpdated(DataTypeCustom* dataType)
                 Q_ASSERT(child != nullptr);
                 uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
                 FieldEntry* field = static_cast<DataTypeStructure *>(topType)->findElement(id);
-                child->setText(1, field != nullptr ? field->getType() : "<invalid>");
+                setNodeText(child, field);
             }
         }
         else if (topType->isContainer())
         {
-            DataTypeContainer *container = static_cast<DataTypeContainer *>(topType);
-            top->setText(1, container->toString());
+            setNodeText(top, topType);
         }
     }
 }
@@ -572,6 +562,7 @@ void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCatego
 
         case DataTypeBase::eCategory::Container:
             dataType = mModel.convertDataType(dataType, DataTypeBase::eCategory::Container);
+            newType = dataType;
             static_cast<DataTypeContainer *>(dataType)->setContainer(mDetails->ctrlContainerObject()->itemText(0));
             static_cast<DataTypeContainer *>(dataType)->setValue(mDetails->ctrlContainerValue()->itemText(0));
             if (static_cast<DataTypeContainer *>(dataType)->canHaveKey())
@@ -587,7 +578,6 @@ void SIDataType::convertDataType(QTreeWidgetItem* current, DataTypeBase::eCatego
                 static_cast<DataTypeContainer *>(dataType)->setKey(QString());
             }
             
-            newType = dataType;
             updateNodeContainer(current, static_cast<DataTypeContainer*>(dataType));
             selectedContainer(nullptr, static_cast<DataTypeContainer*>(dataType));
             break;
@@ -676,12 +666,12 @@ void SIDataType::onEnumDerivedChanged(int index)
     {
         blockBasicSignals(true);
         DataTypeBase* dataType = mDetails->ctrlEnumDerived()->itemData(index, Qt::ItemDataRole::UserRole).value<DataTypeBase*>();
-        QString derived{dataType != nullptr ? dataType->getName() : QString("")};
         QTreeWidgetItem* current = mList->ctrlTableList()->currentItem();
-        current->setText(1, derived);
+        QString derived{dataType != nullptr ? dataType->getName() : QString("")};
         DataTypeEnum* typeEnum = static_cast<DataTypeEnum*>(current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>());
         Q_ASSERT((typeEnum != nullptr) && (typeEnum->getCategory() == DataTypeBase::eCategory::Enumeration));
         typeEnum->setDerived(derived);
+        setNodeText(current, typeEnum);
         blockBasicSignals(false);
     }
 }
@@ -767,12 +757,12 @@ void SIDataType::onFieldNameChanged(const QString& newName)
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
             static_cast<FieldEntry*>(field)->setName(newName);
-            item->setText(0, newName);
+            setNodeText(item, static_cast<FieldEntry*>(field));
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
             static_cast<EnumEntry*>(field)->setName(newName);
-            item->setText(0, newName);
+            setNodeText(item, static_cast<EnumEntry*>(field));
         }
     }
 }
@@ -790,7 +780,7 @@ void SIDataType::onFieldTypeChanged(int index)
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
             static_cast<FieldEntry *>(field)->setParamType(selType);
-            item->setText(1, selType->getName());
+            setNodeText(item, static_cast<FieldEntry *>(field));
         }
     }
 }
@@ -805,12 +795,12 @@ void SIDataType::onFieldValueChanged(const QString& newValue)
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
             static_cast<FieldEntry*>(field)->setValue(newValue);
-            item->setText(2, newValue);
+            setNodeText(item, static_cast<FieldEntry *>(field));
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
             static_cast<EnumEntry*>(field)->setValue(newValue);
-            item->setText(2, newValue);
+            setNodeText(item, static_cast<EnumEntry *>(field));
         }
     }
 }
@@ -971,22 +961,8 @@ void SIDataType::updateWidgets(void)
     mFields->ctrlTypes()->setModel(mTypeModel);
     mDetails->ctrlContainerValue()->setModel(mValueModel);
     mDetails->ctrlContainerKey()->setModel(mKeysModel);
-
-    SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, nullptr, false);
-    SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, nullptr, false);
-        
-    showEnumDetails(false);
-    showContainerDetails(false);
-    showImportDetails(false);
     
-    mList->ctrlToolRemove()->setEnabled(false);
-    mList->ctrlToolAddField()->setEnabled(false);
-    mList->ctrlToolRemoveField()->setEnabled(false);
-    mList->ctrlToolInsertField()->setEnabled(false);
-    mList->ctrlToolMoveUp()->setEnabled(false);
-    mList->ctrlToolMoveDown()->setEnabled(false);
-    
-    enableTypeSelection(false);
+    showClean();
 }
 
 void SIDataType::setupSignals(void)
@@ -1318,12 +1294,9 @@ QTreeWidgetItem* SIDataType::createNodeContainer(DataTypeContainer* dataType) co
 
 void SIDataType::updateNodeStructure(QTreeWidgetItem* node, DataTypeStructure* dataType) const
 {
-    node->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherStorm));
+    setNodeText(node, dataType);
     node->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
     node->setData(1, Qt::ItemDataRole::UserRole, 0);
-
-    node->setText(0, dataType->getName());
-    node->setText(1, QString());
     QList<FieldEntry>& fields = dataType->getElements();
     for (FieldEntry& field : fields)
     {
@@ -1331,17 +1304,13 @@ void SIDataType::updateNodeStructure(QTreeWidgetItem* node, DataTypeStructure* d
         updateChildNodeStruct(child, dataType, field);
         node->addChild(child);
     }
-
 }
 
 void SIDataType::updateNodeEnum(QTreeWidgetItem* node, DataTypeEnum* dataType) const
 {
-    node->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherStorm));
+    setNodeText(node, dataType);
     node->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
     node->setData(1, Qt::ItemDataRole::UserRole, 0);
-
-    node->setText(0, dataType->getName());
-    node->setText(1, dataType->getDerived());
     QList<EnumEntry>& fields = dataType->getElements();
     for (EnumEntry& field : fields)
     {
@@ -1353,24 +1322,15 @@ void SIDataType::updateNodeEnum(QTreeWidgetItem* node, DataTypeEnum* dataType) c
 
 void SIDataType::updateNodeImported(QTreeWidgetItem* node, DataTypeImported* dataType) const
 {
-    node->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherStorm));
+    setNodeText(node, dataType);
     node->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
     node->setData(1, Qt::ItemDataRole::UserRole, 0);
-
-    node->setText(0, dataType->getName());
-    node->setText(1, dataType->toString());
 }
 
 void SIDataType::updateNodeContainer(QTreeWidgetItem* node, DataTypeContainer* dataType) const
 {
-    const QString& key = dataType->getKey();
-    const QString& value = dataType->getValue();
-    DataTypeCustom * keyType = mModel.getCustomTypeFromName(key);
-    DataTypeCustom * valueType = mModel.getCustomTypeFromName(value);
-    node->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherStorm));
-    node->setText(0, dataType->getName());
+    setNodeText(node, dataType);
     node->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
-    node->setText(1, dataType->toString());
     node->setData(1, Qt::ItemDataRole::UserRole, 0);
 }
 
@@ -1381,19 +1341,14 @@ void SIDataType::updateChildNodeStruct(QTreeWidgetItem* child, DataTypeStructure
         field.validate(mModel.getDataTypes());
     }
     
-    child->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherSnow));
-    child->setText(0, field.getName());
+    setNodeText(child, &field);
     child->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
-    child->setText(1, field.getType());
     child->setData(1, Qt::ItemDataRole::UserRole, field.getId());
-    child->setText(2, field.getValue());
 }
 
 void SIDataType::updateChildNodeEnum(QTreeWidgetItem* child, DataTypeEnum* dataType, EnumEntry& field) const
 {
-    child->setText(0, field.getName());
-    child->setText(2, field.getValue());
-    child->setIcon(0, QIcon::fromTheme(QIcon::ThemeIcon::WeatherSnow));
+    setNodeText(child, &field);
     child->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(static_cast<DataTypeCustom *>(dataType)));
     child->setData(1, Qt::ItemDataRole::UserRole, field.getId());
 }
@@ -1422,22 +1377,12 @@ void SIDataType::activateFields(bool activate)
 
 void SIDataType::updateContainerNames(QTreeWidgetItem* node, DataTypeContainer* dataType) const
 {
-    Q_ASSERT(node != nullptr);
-    Q_ASSERT(dataType != nullptr);
-    Q_ASSERT(dataType->getCategory() == DataTypeBase::eCategory::Container);
-
-    node->setText(0, dataType->getName());
-    node->setText(1, dataType->toString());
+    setNodeText(node, dataType);
 }
 
 void SIDataType::updateImportNames(QTreeWidgetItem* node, DataTypeImported* dataType) const
 {
-    Q_ASSERT(node != nullptr);
-    Q_ASSERT(dataType != nullptr);
-    Q_ASSERT(dataType->getCategory() == DataTypeBase::eCategory::Imported);
-
-    node->setText(0, dataType->getName());
-    node->setText(1, dataType->toString());
+    setNodeText(node, dataType);
 }
 
 inline ElementBase* SIDataType::getSelectedField(void) const
@@ -1467,15 +1412,24 @@ inline void SIDataType::deleteTreeNode(QTreeWidgetItem* node)
     DataTypeCustom* dataType = node->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
     uint32_t id = node->data(1, Qt::ItemDataRole::UserRole).toUInt();
     QTreeWidgetItem* parent = node->parent();
-    int count = node->childCount();
-    for (int i = count - 1; i >- 0; --i)
+    QList<QTreeWidgetItem*> children {node->takeChildren()};
+    for (auto child : children)
     {
-        QTreeWidgetItem *child = node->child(i);
         node->removeChild(child);
-        Q_ASSERT(child != nullptr);
         delete child;
     }
-
+    
+    if (parent != nullptr)
+    {
+        parent->removeChild(node);
+    }
+    else
+    {
+        int index = mList->ctrlTableList()->indexOfTopLevelItem(node);
+        QTreeWidgetItem * item = mList->ctrlTableList()->takeTopLevelItem(index);
+        Q_ASSERT(item == node);
+    }
+    
     if (id == 0)
     {
         mModel.deleteDataType(dataType);
@@ -1485,10 +1439,47 @@ inline void SIDataType::deleteTreeNode(QTreeWidgetItem* node)
         mModel.deleteDataTypeChild(dataType, id);
     }
     
-    if (parent != nullptr)
-    {
-        parent->removeChild(node);
-    }
-    
     delete node;
 }
+
+inline void SIDataType::setNodeText(QTreeWidgetItem* node, DocumentElem * elem) const
+{
+    Q_ASSERT(node != nullptr);
+    Q_ASSERT(elem != nullptr);
+    
+    if (elem != nullptr)
+    {
+        node->setIcon(0, elem->getIcon(ElementBase::eDisplay::DisplayName));
+        node->setText(0, elem->getString(ElementBase::eDisplay::DisplayName));
+        node->setIcon(1, elem->getIcon(ElementBase::eDisplay::DisplayType));
+        node->setText(1, elem->getString(ElementBase::eDisplay::DisplayType));
+        node->setIcon(2, elem->getIcon(ElementBase::eDisplay::DisplayValue));
+        node->setText(2, elem->getString(ElementBase::eDisplay::DisplayValue));    
+    }
+    else
+    {
+        node->setIcon(0, QIcon::fromTheme("dialog-warning"));
+        node->setText(0, "<invalid>");
+    }
+}
+
+inline void SIDataType::showClean(void)
+{
+    SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, nullptr, false);
+    SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, nullptr, false);
+    
+    mDetails->ctrlName()->clear();
+    showEnumDetails(false);
+    showContainerDetails(false);
+    showImportDetails(false);
+    
+    mList->ctrlToolRemove()->setEnabled(false);
+    mList->ctrlToolAddField()->setEnabled(false);
+    mList->ctrlToolRemoveField()->setEnabled(false);
+    mList->ctrlToolInsertField()->setEnabled(false);
+    mList->ctrlToolMoveUp()->setEnabled(false);
+    mList->ctrlToolMoveDown()->setEnabled(false);
+    
+    enableTypeSelection(false);
+}
+
