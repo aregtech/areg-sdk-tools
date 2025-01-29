@@ -22,36 +22,31 @@
 
 SIMethodRequest::SIMethodRequest(ElementBase* parent /*= nullptr*/)
     : SIMethodBase  (SIMethodBase::eMethodType::MethodRequest, parent)
-    , mRespMethod   (nullptr)
-    , mRespName     ()
+    , mResponse     ()
 {
 }
 
 SIMethodRequest::SIMethodRequest(uint32_t id, const QString& name, const QString& description, ElementBase* parent /*= nullptr*/)
     : SIMethodBase  (id, name, description, eMethodType::MethodRequest, parent)
-    , mRespMethod   (nullptr)
-    , mRespName     ()
+    , mResponse()
 {
 }
 
 SIMethodRequest::SIMethodRequest(uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
     : SIMethodBase  (id, name, QString(), eMethodType::MethodRequest, parent)
-    , mRespMethod   (nullptr)
-    , mRespName     ()
+    , mResponse()
 {
 }
 
 SIMethodRequest::SIMethodRequest(const SIMethodRequest& src)
     : SIMethodBase(src)
-    , mRespMethod (src.mRespMethod)
-    , mRespName   (src.mRespName)
+    , mResponse(src.mResponse)
 {
 }
 
 SIMethodRequest::SIMethodRequest(SIMethodRequest&& src) noexcept
-    : SIMethodBase(std::move(src))
-    , mRespMethod (std::move(src.mRespMethod))
-    , mRespName   (std::move(src.mRespName))
+    : SIMethodBase  (std::move(src))
+    , mResponse     (std::move(src.mResponse))
 {
 }
 
@@ -64,8 +59,7 @@ SIMethodRequest& SIMethodRequest::operator = (const SIMethodRequest& other)
     if (this != &other)
     {
         SIMethodBase::operator = (other);
-        mRespMethod = other.mRespMethod;
-        mRespName   = other.mRespName;
+        mResponse = other.mResponse;
     }
 
     return *this;
@@ -76,8 +70,7 @@ SIMethodRequest& SIMethodRequest::operator = (SIMethodRequest&& other) noexcept
     if (this != &other)
     {
         SIMethodBase::operator = (std::move(other));
-        mRespMethod = std::move(other.mRespMethod);
-        mRespName   = std::move(other.mRespName);
+        mResponse = std::move(other.mResponse);
     }
 
     return *this;
@@ -85,46 +78,28 @@ SIMethodRequest& SIMethodRequest::operator = (SIMethodRequest&& other) noexcept
 
 void SIMethodRequest::normalize(const QList<SIMethodResponse*>& listResponses)
 {
-    if ((mRespName.isEmpty() == false) && (mRespMethod == nullptr))
-    {
-        for (auto it = listResponses.begin(); it != listResponses.end(); ++it)
-        {
-            if ((*it)->getName() == mRespName)
-            {
-                mRespMethod = (*it);
-                break;
-            }
-        }
-    }
+    mResponse.validate(listResponses);
 }
 
 void SIMethodRequest::connectResponse(SIMethodResponse* respMethod)
 {
-    if (mRespMethod != respMethod)
-    {
-        mRespName.clear();
-        mRespMethod = respMethod;
-        if (mRespMethod != nullptr)
-        {
-            mRespName   = respMethod->getName();
-        }
-    }
+    mResponse.setType(respMethod);
 }
 
 const QString& SIMethodRequest::getConectedResponseName(void) const
 {
-    return mRespMethod != nullptr ? mRespMethod->getName() : mRespName;
+    return mResponse.getName();
 }
 
-SIMethodResponse* SIMethodRequest::getConectedResponse(void) const
+const SIMethodResponse* SIMethodRequest::getConectedResponse(void) const
 {
-    return mRespMethod;
+    return mResponse.getType();
 }
 
 void SIMethodRequest::clearResponse(void)
 {
-    mRespName.clear();
-    mRespMethod = nullptr;
+    mResponse.invalidate();
+    mResponse.setName(QString());
 }
 
 bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
@@ -134,7 +109,8 @@ bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
     {
         setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
-        mRespName = attributes.hasAttribute(XmlSI::xmlSIAttributeResponse) ? attributes.value(XmlSI::xmlSIAttributeResponse).toString() : "";
+        QString response = attributes.hasAttribute(XmlSI::xmlSIAttributeResponse) ? attributes.value(XmlSI::xmlSIAttributeResponse).toString() : "";
+        mResponse.setName(response);
         setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
 
         while (xml.readNextStartElement())
@@ -187,9 +163,9 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeMethodType, getType());
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
-    if (mRespName.isEmpty() == false)
+    if (mResponse.isValid() && (mResponse.getName().isEmpty() == false))
     {
-        xml.writeAttribute(XmlSI::xmlSIAttributeResponse, mRespName);
+        xml.writeAttribute(XmlSI::xmlSIAttributeResponse, mResponse.getName());
     }
 
     if (getIsDeprecated())
@@ -225,7 +201,18 @@ QIcon SIMethodRequest::getIcon(ElementBase::eDisplay display) const
     case ElementBase::eDisplay::DisplayName:
         return QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading);
     case ElementBase::eDisplay::DisplayLink:
-        return (getConectedResponseName().isEmpty() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogInformation));
+        if (mResponse.isValid() && (mResponse.getName().isEmpty() == false))
+        {
+            return QIcon();
+        }
+        else if ((mResponse.isValid() == false) && mResponse.getName().isEmpty())
+        {
+            return QIcon();
+        }
+        else
+        {
+            return QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning);
+        }
     default:
         return QIcon();
     }
@@ -238,7 +225,7 @@ QString SIMethodRequest::getString(ElementBase::eDisplay display) const
     case ElementBase::eDisplay::DisplayName:
         return getName();
     case ElementBase::eDisplay::DisplayLink:
-        return getConectedResponseName();
+        return mResponse.getName();
     default:
         return QString();
     }

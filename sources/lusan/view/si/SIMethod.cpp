@@ -105,6 +105,34 @@ void SIMethod::dataTypeCreated(DataTypeCustom* dataType)
 void SIMethod::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
 {
     mParamTypes->dataTypeConverted(oldType, newType);
+    
+    QTreeWidget* table = mList->ctrlTableList();
+    int count = table->topLevelItemCount();
+    for (int i = 0; i < count; ++i)
+    {
+        QTreeWidgetItem* item = table->topLevelItem(i);
+        if (item != nullptr)
+        {
+            SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+            Q_ASSERT(method != nullptr);
+            if (method->isEmpty() == false)
+            {
+                int childCount = item->childCount();
+                for (int j = 0; j < childCount; ++j)
+                {
+                    QTreeWidgetItem *child = item->child(j);
+                    Q_ASSERT(child != nullptr);
+                    uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
+                    MethodParameter* param = static_cast<SIMethodBase*>(method)->findElement(id);
+                    if ((param != nullptr) && (param->getParamType() == oldType))
+                    {
+                        param->setParamType(newType);
+                        setNodeText(child, param);
+                    }
+                }
+            }
+        }
+    }
 }
 
 void SIMethod::dataTypeDeleted(DataTypeCustom* dataType)
@@ -128,16 +156,12 @@ void SIMethod::dataTypeDeleted(DataTypeCustom* dataType)
                 {
                     QTreeWidgetItem *child = item->child(j);
                     Q_ASSERT(child != nullptr);
-                    DataTypeBase* savedType = child->data(2, Qt::ItemDataRole::UserRole).value<DataTypeBase *>();
-                    if (savedType == static_cast<DataTypeBase *>(dataType))
+                    uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
+                    MethodParameter* param = static_cast<SIMethodBase*>(method)->findElement(id);
+                    if ((param != nullptr) && (param->getParamType() == dataType))
                     {
-                        child->setData(2, Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase *>(nullptr));
-                        // child->setIcon(1, QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
-                        child->setText(1, "<invalid>");
-                        uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
-                        MethodParameter* param = method->findElement(id);
-                        Q_ASSERT(param != nullptr);
-                        param->setType(QString());
+                        param->setParamType(nullptr);
+                        setNodeText(child, param);
                     }
                 }
             }
@@ -169,15 +193,12 @@ void SIMethod::dataTypeUpdated(DataTypeCustom* dataType)
                 {
                     QTreeWidgetItem *child = item->child(j);
                     Q_ASSERT(child != nullptr);
-                    DataTypeBase* savedType = child->data(2, Qt::ItemDataRole::UserRole).value<DataTypeBase *>();
-                    if ((savedType == static_cast<DataTypeBase *>(dataType)) && (name != item->text(1)))
+                    uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
+                    MethodParameter* param = static_cast<SIMethodBase*>(method)->findElement(id);
+                    if ((param != nullptr) && (param->getParamType() == dataType))
                     {
-                        child->setText(1, dataType->getName());
-                        uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
-                        MethodParameter* param = method->findElement(id);
-                        Q_ASSERT(param != nullptr);
-                        param->setType(dataType->getName());
-                    }                    
+                        setNodeText(child, param);
+                    }
                 }
             }
         }
@@ -198,9 +219,8 @@ void SIMethod::onNameChanged(const QString& newName)
         return;
     
     method->setName(newName);
-    item->setText(0, newName);
     mReplyModel->methodUpdated(method);
-        
+    setNodeText(item, method);
     if (method->getMethodType() != SIMethodBase::eMethodType::MethodResponse)
         return;
         
@@ -212,15 +232,13 @@ void SIMethod::onNameChanged(const QString& newName)
     for (int i = 0; i < childCount; ++i)
     {
         QTreeWidgetItem* top = table->topLevelItem(i);
-        SIMethodBase * req = top->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>();
-        if (req->getMethodType() != SIMethodBase::eMethodType::MethodRequest)
+        SIMethodBase * entry = top->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>();
+        if (entry->getMethodType() != SIMethodBase::eMethodType::MethodRequest)
             continue;
         
-        int index = list.indexOf(static_cast<SIMethodRequest *>(req));
-        if (index >= 0)
-        {
-            top->setText(3, method->getName());
-        }
+        SIMethodRequest* request = static_cast<SIMethodRequest *>(entry);
+        if (method == static_cast<const SIMethodBase *>(request->getConectedResponse()))
+            setNodeText(top, entry);
     }
 }
 
@@ -238,10 +256,8 @@ void SIMethod::onRequestSelected(bool isSelected)
     SIMethodBase *newMethod = mModel.convertMethod(oldMethod, SIMethodBase::eMethodType::MethodRequest);
     Q_ASSERT(oldMethod != newMethod);
     static_cast<SIMethodRequest*>(newMethod)->connectResponse(nullptr);
-    item->setText(0, newMethod->getName());
-    item->setIcon(0, QIcon());
+    setNodeText(item, newMethod);
     item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(newMethod));
-    item->setText(3, newMethod->getMethodType() == SIMethodBase::eMethodType::MethodRequest ? static_cast<SIMethodRequest*>(newMethod)->getConectedResponseName() : QString());
     item->setData(1, Qt::ItemDataRole::UserRole, 0);
 
     int count = item->childCount();
@@ -281,10 +297,8 @@ void SIMethod::onResponseSelected(bool isSelected)
 
     SIMethodBase* newMethod = mModel.convertMethod(oldMethod, SIMethodBase::eMethodType::MethodResponse);
     Q_ASSERT(oldMethod != newMethod);
-    item->setText(0, newMethod->getName());
-    item->setIcon(0, QIcon());
+    setNodeText(item, newMethod);
     item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(newMethod));
-    item->setText(3, QString());
     item->setData(1, Qt::ItemDataRole::UserRole, 0);
 
     int count = item->childCount();
@@ -315,10 +329,8 @@ void SIMethod::onBroadcastSelected(bool isSelected)
 
     SIMethodBase* newMethod = mModel.convertMethod(oldMethod, SIMethodBase::eMethodType::MethodBroadcast);
     Q_ASSERT(oldMethod != newMethod);
-    item->setText(0, newMethod->getName());
-    item->setIcon(0, QIcon());
+    setNodeText(item, newMethod);
     item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(newMethod));
-    item->setText(3, QString());
     item->setData(1, Qt::ItemDataRole::UserRole, 0);
 
     int count = item->childCount();
@@ -370,6 +382,13 @@ void SIMethod::onDeprecateChanged(const QString& newText)
 
 void SIMethod::onDescriptionChanged(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    SIMethodBase* method = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>() : nullptr;
+    if (method != nullptr)
+    {
+        method->setDescription(mDetails->ctrlDescription()->toPlainText());
+    }
 }
 
 void SIMethod::onConnectedResponseChanged(const QString& newText)
@@ -381,7 +400,7 @@ void SIMethod::onConnectedResponseChanged(const QString& newText)
     {
         SIMethodResponse * response = newText.isEmpty() == false ? mReplyModel->findResponse(newText) : nullptr;
         static_cast<SIMethodRequest *>(method)->connectResponse(response);
-        item->setText(3, newText);
+        setNodeText(item, method);
     }
 }
 
@@ -442,20 +461,14 @@ void SIMethod::onParamAddClicked(void)
         
         blockBasicSignals(true);
         QTreeWidgetItem* item = new QTreeWidgetItem(parent);
-        DataTypeBase* dataType = mModel.getDataTypeData().findDataType(param->getType());
-        Q_ASSERT(dataType != nullptr);
-        item->setText(0, param->getName());
-        item->setIcon(0, QIcon());
+        setNodeText(item, param);
         item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
-        item->setText(1, param->getType());
         item->setData(1, Qt::ItemDataRole::UserRole, param->getId());
-        item->setText(2, param->getValue());
-        item->setData(2, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
         parent->addChild(item);
         cur->setSelected(false);
+        table->setCurrentItem(item);
         item->setSelected(true);
         item->setExpanded(true);
-        table->setCurrentItem(item);
         
         showParamDetails(method, *param);
         blockBasicSignals(false);
@@ -522,8 +535,8 @@ void SIMethod::onParamNameChanged(const QString& newText)
     MethodParameter* param = method->findElement(id);
     Q_ASSERT(param != nullptr);
     
-    param->setName(newText);    
-    item->setText(0, newText);
+    param->setName(newText);
+    setNodeText(item, param);
 }
 
 void SIMethod::onParamTypeChanged(const QString& newText)
@@ -539,10 +552,8 @@ void SIMethod::onParamTypeChanged(const QString& newText)
     Q_ASSERT(param != nullptr);
     DataTypeBase* dataType = mModel.getDataTypeData().findDataType(newText);
     Q_ASSERT(dataType != nullptr);
-    
-    param->setType(newText);    
-    item->setText(1, newText);
-    item->setData(2, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
+    param->setParamType(dataType);
+    setNodeText(item, param);
 }
 
 void SIMethod::onParamDefaultChecked(bool isChecked)
@@ -660,10 +671,8 @@ void SIMethod::blockBasicSignals(bool doBlock)
 
 QTreeWidgetItem* SIMethod::updateMethodNode(QTreeWidgetItem* item, SIMethodBase* method)
 {
-    item->setText(0, method->getName());
-    item->setIcon(0, QIcon());
+    setNodeText(item, method);
     item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
-    item->setText(3, method->getMethodType() == SIMethodBase::eMethodType::MethodRequest ? static_cast<SIMethodRequest*>(method)->getConectedResponseName() : QString());
     item->setData(1, Qt::ItemDataRole::UserRole, 0);
 
     if (method->hasElements())
@@ -672,14 +681,9 @@ QTreeWidgetItem* SIMethod::updateMethodNode(QTreeWidgetItem* item, SIMethodBase*
         for (const MethodParameter& param : params)
         {
             QTreeWidgetItem* paramItem = new QTreeWidgetItem(item);
-            DataTypeBase *dataType = mModel.getDataTypeData().findDataType(param.getType());
-            paramItem->setText(0, param.getName());
-            paramItem->setIcon(0, QIcon());
+            setNodeText(paramItem, &param);
             paramItem->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
-            paramItem->setText(1, param.getType());
             paramItem->setData(1, Qt::ItemDataRole::UserRole, param.getId());
-            paramItem->setText(2, param.getValue());
-            paramItem->setData(2, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
             item->addChild(paramItem);
         }
     }
@@ -818,4 +822,22 @@ bool SIMethod::getCurrentParam(QTreeWidgetItem*& item, SIMethodBase*& method, Me
     }
 
     return false;
+}
+
+void SIMethod::setNodeText(QTreeWidgetItem* node, const ElementBase* elem)
+{
+    if ((node == nullptr) || (elem == nullptr))
+        return;
+
+    node->setIcon(0, elem->getIcon(ElementBase::eDisplay::DisplayName));
+    node->setText(0, elem->getString(ElementBase::eDisplay::DisplayName));
+
+    node->setIcon(1, elem->getIcon(ElementBase::eDisplay::DisplayType));
+    node->setText(1, elem->getString(ElementBase::eDisplay::DisplayType));
+    
+    node->setIcon(2, elem->getIcon(ElementBase::eDisplay::DisplayValue));
+    node->setText(2, elem->getString(ElementBase::eDisplay::DisplayValue));
+    
+    node->setIcon(3, elem->getIcon(ElementBase::eDisplay::DisplayLink));
+    node->setText(3, elem->getString(ElementBase::eDisplay::DisplayLink));
 }

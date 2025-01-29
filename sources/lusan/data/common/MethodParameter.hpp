@@ -143,6 +143,11 @@ public:
      **/
     void setDefault(bool isDefault);
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
@@ -155,6 +160,18 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QIcon getIcon(ElementBase::eDisplay display) const;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    virtual QString getString(ElementBase::eDisplay display) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

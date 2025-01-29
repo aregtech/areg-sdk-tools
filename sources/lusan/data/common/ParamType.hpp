@@ -20,8 +20,6 @@
  ************************************************************************/
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/TETypeWrap.hpp"
-#include <QList>
-#include <QString>
 
 class DataTypeContainer;
 class DataTypeCustom;
@@ -33,6 +31,9 @@ class DataTypeStructure;
 // TypeFinder class declaration
 //////////////////////////////////////////////////////////////////////////
 
+/**
+ * \brief   The class to search an entry in the list
+ **/
 class TypeFinder : public TETypeFind<DataTypeBase, DataTypeCustom>
 {
 public:
@@ -48,6 +49,9 @@ public:
 
 class ParamType : public TETypeWrap<DataTypeBase, DataTypeCustom, TypeFinder>
 {
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     ParamType(void) = default;
     ParamType(const ParamType& src) = default;
@@ -56,6 +60,11 @@ public:
     ParamType(const QString& typeName);
     ParamType(const QString& typeName, const QList<DataTypeCustom*>& customTypes);
     ParamType(DataTypeBase* dataType);
+
+//////////////////////////////////////////////////////////////////////////
+// Operators
+//////////////////////////////////////////////////////////////////////////
+public:
 
     ParamType& operator = (const ParamType& src) = default;
     ParamType& operator = (ParamType&& src) noexcept = default;

@@ -171,3 +171,31 @@ void MethodParameter::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement();
 }
+
+QIcon MethodParameter::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return QIcon::fromTheme(QIcon::ThemeIcon::Battery);
+    case ElementBase::eDisplay::DisplayType:
+        return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+    default:
+        return QIcon();
+    }
+}
+
+QString MethodParameter::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return mParamType.getName();
+    case ElementBase::eDisplay::DisplayValue:
+        return mIsDefault ? mValue : QString();
+    default:
+        return QString();
+    }
+}

@@ -21,6 +21,7 @@
 #include <QScrollArea>
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
+class ElementBase;
 class SIMethodBase;
 class SIMethodDetails;
 class SIMethodList;
@@ -171,6 +172,8 @@ private:
     bool getCurrentMethod(QTreeWidgetItem*& item, SIMethodBase*& method);
 
     bool getCurrentParam(QTreeWidgetItem*& item, SIMethodBase*& method, MethodParameter*& param);
+
+    void setNodeText(QTreeWidgetItem* node, const ElementBase* method);
 
 private:
     SIMethodModel &         mModel;

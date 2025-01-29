@@ -505,7 +505,10 @@ void SIDataType::dataTypeUpdated(DataTypeCustom* dataType)
                 Q_ASSERT(child != nullptr);
                 uint32_t id = child->data(1, Qt::ItemDataRole::UserRole).toUInt();
                 FieldEntry* field = static_cast<DataTypeStructure *>(topType)->findElement(id);
-                setNodeText(child, field);
+                if ((field != nullptr) && (field->getParamType() == dataType))
+                {
+                    setNodeText(child, field);
+                }
             }
         }
         else if (topType->isContainer())
