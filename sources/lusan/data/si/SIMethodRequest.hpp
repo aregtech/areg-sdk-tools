@@ -20,7 +20,9 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodBase.hpp"
+#include "lusan/data/si/SIResponseLink.hpp"
 #include "lusan/common/XmlSI.hpp"
+
 
 /**
  * \class   SIMethodRequest
@@ -135,7 +137,7 @@ public:
      * \brief   Returns the connected response object.
      * \return  The connected response object.
      **/
-    SIMethodResponse* getConectedResponse(void) const;
+    const SIMethodResponse* getConectedResponse(void) const;
 
     /**
      * \brief   Clears the connected response name.
@@ -143,8 +145,7 @@ public:
     void clearResponse(void);
 
 private:
-    SIMethodResponse*   mRespMethod;    //!< The connected response object. If set, has highest priority of information
-    QString             mRespName;      //!< The connected response name. Has lowest priority of information.
+    SIResponseLink mResponse;
 };
 
 #endif // LUSAN_DATA_SI_SIMETHODREQUEST_HPP

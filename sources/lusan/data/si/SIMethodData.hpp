@@ -114,7 +114,7 @@ public:
      * \param   reqId       The ID of the request method.
      * \return  The response method object if found, nullptr otherwise.
      **/
-    SIMethodResponse* findConnectedResponse(uint32_t reqId) const;
+    const SIMethodResponse* findConnectedResponse(uint32_t reqId) const;
 
     /**
      * \brief   Checks if a method exists in the list.

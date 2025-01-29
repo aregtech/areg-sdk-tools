@@ -143,13 +143,13 @@ SIMethodBase* SIMethodData::findMethod(uint32_t id) const
     return (result != nullptr ? *result : nullptr);
 }
 
-SIMethodResponse* SIMethodData::findConnectedResponse(uint32_t reqId) const
+const SIMethodResponse* SIMethodData::findConnectedResponse(uint32_t reqId) const
 {
-    SIMethodBase* method = findMethod(reqId);
+    const SIMethodBase* method = findMethod(reqId);
     if ((method == nullptr) || (method->getMethodType() != SIMethodBase::eMethodType::MethodRequest))
         return nullptr;
     else
-        return static_cast<SIMethodRequest *>(method)->getConectedResponse();
+        return static_cast<const SIMethodRequest *>(method)->getConectedResponse();
 }
 
 bool SIMethodData::hasResponseConnectedRequest(const QString& response) const
@@ -169,7 +169,7 @@ bool SIMethodData::hasResponseConnectedRequest(uint32_t respId) const
 {
     for (SIMethodRequest* request : mRequestMethods)
     {
-        SIMethodResponse* response = request->getConectedResponse();
+        const SIMethodResponse* response = request->getConectedResponse();
         if ((response != nullptr) &&  (response->getId() == respId))
         {
             return true;
