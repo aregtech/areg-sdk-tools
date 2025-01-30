@@ -175,6 +175,8 @@ private:
 
     void setNodeText(QTreeWidgetItem* node, const ElementBase* method);
 
+    void responseDeleted(SIMethodResponse* response);
+
 private:
     SIMethodModel &         mModel;
     SIMethodDetails*        mDetails;
