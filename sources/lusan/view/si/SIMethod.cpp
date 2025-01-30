@@ -429,9 +429,10 @@ void SIMethod::onRemoveClicked(void)
         return;
 
     blockBasicSignals(true);
-    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
     uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
     item = id == 0 ? item : item->parent();
+    Q_ASSERT(item != nullptr);
+    Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
 
     int index = table->indexOfTopLevelItem(item);
     index = index + 1 == table->topLevelItemCount() ? index - 1 : index + 1;
@@ -762,6 +763,7 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
     else
     {
         mDetails->ctrlName()->setText(QString());
+        mDetails->ctrlName()->setEnabled(false);
         mDetails->ctrlRequest()->setChecked(false);
         mDetails->ctrlRequest()->setEnabled(false);
         mDetails->ctrlResponse()->setEnabled(false);
@@ -769,6 +771,9 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
         mDetails->ctrlConnectedResponse()->setEnabled(false);
         mList->ctrlButtonRemove()->setEnabled(false);
         mList->ctrlButtonParamAdd()->setEnabled(false);
+        mList->ctrlButtonParamRemove()->setEnabled(false);
+        mList->ctrlButtonParamInsert()->setEnabled(false);
+        
         mDetails->ctrlConnectedResponse()->setCurrentText(QString());
         mDetails->ctrlDescription()->setPlainText(QString());
         SICommon::enableDeprecated<SIMethodDetails, SIMethodBase>(mDetails, nullptr, false);
@@ -781,6 +786,14 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
     mParams->setVisible(true);
     if (method != nullptr)
     {
+        mParams->ctrlParamName()->setEnabled(true);
+        mParams->ctrlParamType()->setEnabled(true);
+            
+        mList->ctrlButtonRemove()->setEnabled(false);
+        mList->ctrlButtonParamAdd()->setEnabled(true);
+        mList->ctrlButtonParamRemove()->setEnabled(true);
+        mList->ctrlButtonParamInsert()->setEnabled(true);
+        
         mParams->ctrlParamName()->setText(param.getName());
         mParams->ctrlParamType()->setCurrentText(param.getType());
         if (param.hasDefault())
@@ -803,6 +816,11 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
     }
     else
     {
+        mList->ctrlButtonRemove()->setEnabled(false);
+        mList->ctrlButtonParamAdd()->setEnabled(false);
+        mList->ctrlButtonParamRemove()->setEnabled(false);
+        mList->ctrlButtonParamInsert()->setEnabled(false);
+        
         mParams->ctrlParamName()->setText(QString());
         mParams->ctrlParamType()->setCurrentText(QString());
         mParams->ctrlParamDefaultValue()->setText(QString());
