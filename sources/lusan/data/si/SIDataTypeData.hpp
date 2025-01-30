@@ -387,7 +387,11 @@ public:
      **/
     void updateDataType(uint32_t id, const QString& newName);
 
-    void validate(const QList<DataTypeCustom*>& dataTypes);
+    /**
+     * \brief   Validates the data type data.
+     * \param   dataTypes   The list of data types.
+     **/
+    void validate(const SIDataTypeData& dataTypes);
 
 private:
 

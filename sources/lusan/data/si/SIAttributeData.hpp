@@ -29,6 +29,8 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+class SIDataTypeData;
+
 /**
  * \class   SIAttributeData
  * \brief   Manages attribute data for service interfaces.
@@ -67,7 +69,11 @@ public:
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
 
-    void validate(const QList<DataTypeCustom*>& dataTypes);
+    /**
+     * \brief   Validates the attribute data.
+     * \param   dataTypes   The data type data to validate the attributes.
+     **/
+    void validate(const SIDataTypeData& dataTypes);
 };
 
 #endif  // LUSAN_DATA_SI_SIATTRIBUTEDATA_HPP

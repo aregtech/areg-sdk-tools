@@ -147,3 +147,7 @@ void SIOverviewData::writeToXml(QXmlStreamWriter& xml) const
 
     xml.writeEndElement();
 }
+
+void SIOverviewData::validate(const SIDataTypeData& /*dataTypes*/)
+{
+}

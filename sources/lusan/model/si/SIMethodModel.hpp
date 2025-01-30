@@ -54,7 +54,7 @@ public:
      * \param id  The ID of the method to delete.
      * \return  Returns true if the method object was deleted. Otherwise, returns false.
      **/
-    bool deleteMethod(uint32_t id);
+    bool removeMethod(uint32_t id);
 
     /**
      * \brief Deletes a method object from the list by name and type.
@@ -62,7 +62,13 @@ public:
      * \param methodType  The type of the method.
      * \return  Returns true if the method object was deleted. Otherwise, returns false.
      **/
-    bool deleteMethod(const QString& name, SIMethodBase::eMethodType methodType);
+    bool removeMethod(const QString& name, SIMethodBase::eMethodType methodType);
+
+    /**
+     * \brief Deletes a method object from the list.
+     * \param method    The method object to delete.
+     **/
+    void removeMethod(SIMethodBase * method);
 
     /**
      * \brief Finds a method object by ID.

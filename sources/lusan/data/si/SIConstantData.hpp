@@ -74,7 +74,11 @@ public:
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
 
-    void validate(const QList<DataTypeCustom*>& dataTypes);
+    /**
+     * \brief   Validates the constant data.
+     * \param   dataTypes   The data type data to validate the constants.
+     **/
+    void validate(const SIDataTypeData& dataTypes);
 };
 
 #endif  // LUSAN_DATA_SI_SICONSTANTDATA_HPP

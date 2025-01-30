@@ -175,6 +175,8 @@ private:
 
     void setNodeText(QTreeWidgetItem* node, const ElementBase* method);
 
+    void responseDeleted(SIMethodResponse* response);
+
 private:
     SIMethodModel &         mModel;
     SIMethodDetails*        mDetails;
@@ -185,7 +187,7 @@ private:
     ReplyMethodModel*       mReplyModel;
     Ui::SIMethod&           ui;
 
-    uint32_t               mCount;
+    uint32_t                mCount;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIMETHOD_HPP

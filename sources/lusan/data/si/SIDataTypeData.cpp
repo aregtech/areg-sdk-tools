@@ -507,18 +507,19 @@ void SIDataTypeData::updateDataType(uint32_t id, const QString& newName)
     }
 }
 
-void SIDataTypeData::validate(const QList<DataTypeCustom*>& dataTypes)
+void SIDataTypeData::validate(const SIDataTypeData& dataTypes)
 {
+    const QList<DataTypeCustom *>& customTypes = dataTypes.getCustomDataTypes();
     QList<DataTypeCustom*>& list = getElements();
     for (DataTypeCustom* entry : list)
     {
         if (entry->isStructure())
         {
-            static_cast<DataTypeStructure *>(entry)->validate(dataTypes);
+            static_cast<DataTypeStructure *>(entry)->validate(customTypes);
         }
         else if (entry->isContainer())
         {
-            static_cast<DataTypeContainer*>(entry)->validate(dataTypes);
+            static_cast<DataTypeContainer*>(entry)->validate(customTypes);
         }
     }
 }
