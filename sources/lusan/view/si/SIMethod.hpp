@@ -187,7 +187,7 @@ private:
     ReplyMethodModel*       mReplyModel;
     Ui::SIMethod&           ui;
 
-    uint32_t               mCount;
+    uint32_t                mCount;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIMETHOD_HPP

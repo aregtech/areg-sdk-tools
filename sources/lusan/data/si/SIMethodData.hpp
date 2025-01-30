@@ -33,6 +33,8 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+class SIDataTypeData;
+
  /**
   * \class   SIMethodData
   * \brief   Represents the method data of a service interface in the Lusan application.
@@ -254,7 +256,11 @@ public:
      **/
     MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
 
-    void validate(const QList<DataTypeCustom*>& dataTypes);
+    /**
+     * \brief   Validates the method data.
+     * \param   dataTypes   The data type data to validate the methods.
+     **/
+    void validate(const SIDataTypeData& dataTypes);
 
 private:
     /**

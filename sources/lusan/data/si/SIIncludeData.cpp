@@ -68,6 +68,6 @@ void SIIncludeData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
-void SIIncludeData::validate(const QList<DataTypeCustom*>& /*dataTypes*/)
+void SIIncludeData::validate(const SIDataTypeData& /*dataTypes*/)
 {
 }

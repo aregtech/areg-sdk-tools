@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodData.hpp"
+#include "lusan/data/si/SIDataTypeData.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 namespace
@@ -314,12 +315,13 @@ MethodParameter* SIMethodData::addParameter(SIMethodBase* method, const QString&
     return (method != nullptr ? method->addParameter(name, type) : nullptr);
 }
 
-void SIMethodData::validate(const QList<DataTypeCustom*>& dataTypes)
+void SIMethodData::validate(const SIDataTypeData& dataTypes)
 {
+    const QList<DataTypeCustom *>& customTypes = dataTypes.getCustomDataTypes();
     QList<SIMethodBase*>& list = getElements();
     for (SIMethodBase* entry : list)
     {
-        entry->validate(dataTypes);
+        entry->validate(customTypes);
     }
 }
 

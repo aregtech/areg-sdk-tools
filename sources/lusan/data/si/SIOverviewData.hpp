@@ -27,7 +27,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
-class DataTypeCustom;
+class SIDataTypeData;
 
 /**
  * \class   SIOverviewData
@@ -204,7 +204,11 @@ public:
      **/
     void setDeprecateHint(const QString& deprecateHint);
 
-    void validate(const QList<DataTypeCustom*>& dataTypes);
+    /**
+     * \brief   Validates the service interface data.
+     * \param   dataTypes   The data type data to validate the service interface.
+     **/
+    void validate(const SIDataTypeData& dataTypes);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -290,10 +294,6 @@ inline const QString& SIOverviewData::getDeprecateHint() const
 inline void SIOverviewData::setDeprecateHint(const QString& deprecateHint)
 {
     mDeprecateHint = mIsDeprecated ? deprecateHint : ElementBase::EmptyString;
-}
-
-inline void SIOverviewData::validate(const QList<DataTypeCustom*>& /*dataTypes*/)
-{
 }
 
 #endif // LUSAN_DATA_SI_SIOVERVIEWDATA_HPP

@@ -29,7 +29,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
-class DataTypeCustom;
+class SIDataTypeData;
 
  /**
   * \class   SIIncludeData
@@ -70,7 +70,11 @@ public:
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
 
-    void validate(const QList<DataTypeCustom*>& dataTypes);
+    /**
+     * \brief   Validates the include data.
+     * \param   dataTypes   The data type data to validate the includes.
+     **/
+    void validate(const SIDataTypeData& dataTypes);
 };
 
 #endif  // LUSAN_DATA_SI_SIINCLUDEDATA_HPP

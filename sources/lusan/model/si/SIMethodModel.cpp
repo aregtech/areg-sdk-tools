@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/model/si/SIMethodModel.hpp"
+#include "lusan/data/si/SIDataTypeData.hpp"
 
 SIMethodModel::SIMethodModel(SIMethodData& data, SIDataTypeData& dataType)
     : mData     (data)
@@ -30,14 +31,19 @@ SIMethodBase* SIMethodModel::createMethod(const QString& name, SIMethodBase::eMe
     return mData.addMethod(name, methodType);
 }
 
-bool SIMethodModel::deleteMethod(uint32_t id)
+bool SIMethodModel::removeMethod(uint32_t id)
 {
     return mData.removeMethod(id);
 }
 
-bool SIMethodModel::deleteMethod(const QString& name, SIMethodBase::eMethodType methodType)
+bool SIMethodModel::removeMethod(const QString& name, SIMethodBase::eMethodType methodType)
 {
     return mData.removeMethod(name, methodType);
+}
+
+void SIMethodModel::removeMethod(SIMethodBase * method)
+{
+    mData.removeMethod(method);
 }
 
 SIMethodBase* SIMethodModel::findMethod(uint32_t id) const
@@ -96,5 +102,11 @@ SIMethodBase* SIMethodModel::convertMethod(SIMethodBase* method, SIMethodBase::e
 
 MethodParameter* SIMethodModel::addParameter(SIMethodBase* method, const QString& name, const QString& type /*= "bool"*/)
 {
-    return mData.addParameter(method, name, type);
+    MethodParameter* param = mData.addParameter(method, name, type);
+    if (param != nullptr)
+    {
+        param->validate(mDataType.getCustomDataTypes());
+    }
+
+    return param;
 }
