@@ -123,8 +123,16 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    /**
+     * \brief   Normalizes the connected responses, searches the entry in the list.
+     * \param   listResponses   The list of responses to search the connected response.
+     **/
     void normalize(const QList<SIMethodResponse*>& listResponses);
 
+    /**
+     * \brief   Connects the response to the request.
+     * \param   respMethod  The response to connect.
+     **/
     void connectResponse(SIMethodResponse* respMethod);
 
     /**
@@ -140,12 +148,20 @@ public:
     const SIMethodResponse* getConectedResponse(void) const;
 
     /**
+     * \brief   Returns true if the connected response is valid.
+     **/
+    bool hasValidResponse(void) const;
+
+    /**
      * \brief   Clears the connected response name.
      **/
     void clearResponse(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Member variables.
+//////////////////////////////////////////////////////////////////////////
 private:
-    SIResponseLink mResponse;
+    SIResponseLink mResponse;   //!< The connected response object.
 };
 
 #endif // LUSAN_DATA_SI_SIMETHODREQUEST_HPP

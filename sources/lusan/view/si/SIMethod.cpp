@@ -740,19 +740,29 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
         {
         case SIMethodBase::eMethodType::MethodRequest:
             mDetails->ctrlConnectedResponse()->setEnabled(true);
-            mDetails->ctrlConnectedResponse()->setCurrentText(static_cast<SIMethodRequest *>(method)->getConectedResponseName());
             mDetails->ctrlRequest()->setChecked(true);
+            if (static_cast<SIMethodRequest *>(method)->hasValidResponse())
+            {
+                mDetails->ctrlConnectedResponse()->setCurrentText(static_cast<SIMethodRequest *>(method)->getConectedResponseName());
+            }
+            else
+            {
+                mDetails->ctrlConnectedResponse()->setCurrentText(QString());
+            }
             break;
+
         case SIMethodBase::eMethodType::MethodResponse:
             mDetails->ctrlConnectedResponse()->setEnabled(false);
             mDetails->ctrlConnectedResponse()->setCurrentText(QString());
             mDetails->ctrlResponse()->setChecked(true);
             break;
+
         case SIMethodBase::eMethodType::MethodBroadcast:
             mDetails->ctrlConnectedResponse()->setEnabled(false);
             mDetails->ctrlConnectedResponse()->setCurrentText(QString());
             mDetails->ctrlBroadcast()->setChecked(true);
             break;
+
         default:
             break;
         }
