@@ -96,6 +96,11 @@ const SIMethodResponse* SIMethodRequest::getConectedResponse(void) const
     return mResponse.getType();
 }
 
+bool SIMethodRequest::hasValidResponse(void) const
+{
+    return mResponse.isValid();
+}
+
 void SIMethodRequest::clearResponse(void)
 {
     mResponse.invalidate();
