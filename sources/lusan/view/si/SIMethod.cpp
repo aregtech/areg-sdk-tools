@@ -502,6 +502,51 @@ void SIMethod::onParamAddClicked(void)
 
 void SIMethod::onParamRemoveClicked(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    if (item == nullptr)
+        return;
+    
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>();
+    Q_ASSERT(id != 0);
+    Q_ASSERT(method != nullptr);
+    
+    QTreeWidgetItem* parent = item->parent();
+    int index = parent->indexOfChild(item);
+    index = index + 1 == parent->childCount() ? index - 1 : index + 1;
+    QTreeWidgetItem* next = (index >= 0) && (index < parent->childCount()) ? parent->child(index) : parent;
+    
+    
+    blockBasicSignals(true);    
+    item->setSelected(false);
+    parent->removeChild(item);
+    method->removeElement(id);
+    
+    if (next != nullptr)
+    {
+        next->setSelected(true);
+        table->setCurrentItem(next);
+        uint32_t nextId = next->data(1, Qt::ItemDataRole::UserRole).toUInt();
+        SIMethodBase* nextMethod = next->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase *>();
+        if (nextId != 0)
+        {
+            MethodParameter* nextParam = nextMethod->findElement(nextId);
+            Q_ASSERT(nextParam != nullptr);
+            showParamDetails(nextMethod, *nextParam);
+        }
+        else
+        {
+            showMethodDetails(nextMethod);
+        }
+    }
+    else
+    {
+        showMethodDetails(nullptr);
+    }
+    
+    delete item;
+    blockBasicSignals(false);
 }
 
 void SIMethod::onParamInsertClicked(void)
