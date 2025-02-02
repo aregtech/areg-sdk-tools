@@ -34,6 +34,7 @@
  * Dependencies
  ************************************************************************/
 class SIDataTypeData;
+class DataTypeBase;
 
 /**
  * \class   SIConstantData
@@ -94,6 +95,14 @@ public:
      * \return  Valid pointer to the new created constant element. Otherwise, returns nullptr.
      **/
     ConstantEntry* createConstant(const QString& name);
+
+    /**
+     * \brief   Replaces the data of constants in the list of constant entries.
+     * \param   oldDataType     The old data type to replace.
+     * \param   newDataType     The new data type to set.
+     * \return  Returns the list IDs of constant entries, which.
+     **/
+    QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
 };
 
 #endif  // LUSAN_DATA_SI_SICONSTANTDATA_HPP

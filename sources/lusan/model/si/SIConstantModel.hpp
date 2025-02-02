@@ -81,6 +81,14 @@ public:
     void sortConstants(bool ascending);
 
     /**
+     * \brief   Replaces the data of constants in the list of constant entries.
+     * \param   oldDataType     The old data type to replace.
+     * \param   newDataType     The new data type to set.
+     * \return  Returns the list IDs of constant entries, which.
+     **/
+    QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
+
+    /**
      * \brief   Returns the instance of data type data object relevant with the constants.
      **/
     inline SIDataTypeData& getDataTypeData(void);

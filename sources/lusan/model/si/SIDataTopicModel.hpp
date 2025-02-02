@@ -51,9 +51,9 @@ public:
      * \brief   Creates an AttributeEntry and sets it in SIAttributeData.
      * \param   name            The name of the attribute.
      * \param   notification    The notification type of the attribute.
-     * \return  True if the attribute was added, false otherwise.
+     * \return  Valid pointer to the AttributeEntry object. Otherwise, returns nullptr.
      **/
-    uint32_t createAttribute(const QString& name, AttributeEntry::eNotification notification = AttributeEntry::eNotification::NotifyOnChange);
+    AttributeEntry * createAttribute(const QString& name, AttributeEntry::eNotification notification = AttributeEntry::eNotification::NotifyOnChange);
 
     /**
      * \brief   Deletes the attribute by ID.
@@ -82,6 +82,14 @@ public:
     void sortAttributes(bool ascending);
 
     /**
+     * \brief   Replaces the data of attributes in the list of attribute entries.
+     * \param   oldDataType     The old data type to replace.
+     * \param   newDataType     The new data type to set.
+     * \return  Returns the list IDs of attribute entries, which.
+     **/
+    QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
+
+    /**
      * \brief   Returns the instance of data type data object relevant with the attributes.
      **/
     inline SIDataTypeData& getDataTypeData(void);
@@ -90,8 +98,8 @@ public:
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIAttributeData&    mAttributeData; //!< Reference to the SIAttributeData instance.
-    SIDataTypeData&     mDataTypeData;  //!< Reference to the SIDataTypeData instance.
+    SIAttributeData&    mData;      //!< Reference to the SIAttributeData instance.
+    SIDataTypeData&     mDataType;  //!< Reference to the SIDataTypeData instance.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -100,7 +108,7 @@ private:
 
 inline SIDataTypeData& SIDataTopicModel::getDataTypeData(void)
 {
-    return mDataTypeData;
+    return mDataType;
 }
 
 #endif  // LUSAN_MODEL_SI_SIDATATOPICMODEL_HPP

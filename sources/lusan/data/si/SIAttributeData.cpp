@@ -75,3 +75,27 @@ void SIAttributeData::validate(const SIDataTypeData& dataTypes)
         entry.validate(customTypes);
     }
 }
+
+AttributeEntry* SIAttributeData::createAttribute(const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
+{
+    uint32_t id{ getNextId() };
+    AttributeEntry newAttribute(id, name, notification, this);
+    addElement(newAttribute);
+    return findElement(id);
+}
+
+QList<uint32_t> SIAttributeData::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
+{
+    QList<uint32_t> result;
+    QList< AttributeEntry>& list = getElements();
+    for (AttributeEntry& entry : list)
+    {
+        if (entry.getParamType() == oldDataType)
+        {
+            entry.setParamType(newDataType);
+            result.push_back(entry.getId());
+        }
+    }
+
+    return result;
+}

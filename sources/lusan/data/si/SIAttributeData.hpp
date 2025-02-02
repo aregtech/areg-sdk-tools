@@ -30,6 +30,7 @@
 #include <QXmlStreamWriter>
 
 class SIDataTypeData;
+class DataTypeBase;
 
 /**
  * \class   SIAttributeData
@@ -74,6 +75,22 @@ public:
      * \param   dataTypes   The data type data to validate the attributes.
      **/
     void validate(const SIDataTypeData& dataTypes);
+
+    /**
+     * \brief   Creates a AttributeEntry and sets it in SIAttributeData.
+     * \param   name    The name of the new attribute to create.
+     * \param   notification    The notification type of the attribute.
+     * \return  Valid pointer to the new created attribute element. Otherwise, returns nullptr.
+     **/
+    AttributeEntry* createAttribute(const QString& name, AttributeEntry::eNotification notification = AttributeEntry::eNotification::NotifyOnChange);
+
+    /**
+     * \brief   Replaces the data of attributes in the list of attribute entries.
+     * \param   oldDataType     The old data type to replace.
+     * \param   newDataType     The new data type to set.
+     * \return  Returns the list IDs of attribute entries, which.
+     **/
+    QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
 };
 
 #endif  // LUSAN_DATA_SI_SIATTRIBUTEDATA_HPP
