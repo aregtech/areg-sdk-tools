@@ -50,9 +50,9 @@ public:
     /**
      * \brief   Creates a ConstantEntry and sets it in SIConstantData.
      * \param   name            The name of the constant.
-     * \return  True if the constant was added, false otherwise.
+     * \return  Valid pointer to the new created constant element. Otherwise, returns nullptr.
      **/
-    uint32_t createConstant(const QString& name);
+    ConstantEntry* createConstant(const QString& name);
 
     /**
      * \brief   Deletes the constant by ID.
@@ -89,8 +89,8 @@ public:
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIConstantData& mConstantData; //!< Reference to the SIConstantData instance.
-    SIDataTypeData& mDataTypeData; //!< Reference to the SIDataTypeData instance.
+    SIConstantData& mData;      //!< Reference to the SIConstantData instance.
+    SIDataTypeData& mDataType;  //!< Reference to the SIDataTypeData instance.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -99,7 +99,7 @@ private:
 
 inline SIDataTypeData& SIConstantModel::getDataTypeData(void)
 {
-    return mDataTypeData;
+    return mDataType;
 }
 
 #endif  // LUSAN_MODEL_SI_SICONSTANTMODEL_HPP

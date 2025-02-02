@@ -21,14 +21,19 @@
 #include "lusan/common/XmlSI.hpp"
 
 SIConstantData::SIConstantData(ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< ConstantEntry, ElementBase>(parent)
+    : TEDataContainer< ConstantEntry, DocumentElem>(parent)
 {
 }
 
 SIConstantData::SIConstantData(const QList<ConstantEntry>& entries, ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< ConstantEntry, ElementBase>(parent)
+    : TEDataContainer<ConstantEntry, DocumentElem>(parent)
 {
     setElements(entries);
+}
+
+bool SIConstantData::isValid() const
+{
+    return true;
 }
 
 bool SIConstantData::readFromXml(QXmlStreamReader& xml)
@@ -74,3 +79,10 @@ void SIConstantData::validate(const SIDataTypeData& dataTypes)
         entry.validate(customTypes);
     }
 }
+
+ConstantEntry* SIConstantData::createConstant(const QString& name)
+{
+    ConstantEntry entry(getNextId(), name, this);
+    return addElement(std::move(entry), false) ? static_cast<ConstantEntry *>(findElement(entry.getId())) : nullptr;
+}
+    

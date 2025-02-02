@@ -72,6 +72,16 @@ private:
 class SIConstant    : public QScrollArea
                     , public IEDataTypeConsumer
 {
+    /**
+     * \brief   The column indexes of the constant list.
+     **/
+    enum eColumn
+    {
+          ColName   = 0 //!< The column index of the constant name.
+        , ColType   = 1 //!< The column index of the constant type.
+        , ColValue  = 2 //!< The column index of the constant value.
+    };
+
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
@@ -221,11 +231,25 @@ private:
     void cellChanged(int row, int col, const QString& newValue);
 
     /**
+     * \brief   Sets the texts in the table of the constant entry.
+     * \param   row     The row index of the constant.
+     * \param   entry   The constant entry object.
+     **/
+    inline void setTexts(int row, const ConstantEntry& entry);
+
+    /**
+     * \brief   Updates the controls to display the control entry details in the details widget.
+     * \param   entry       The constant entry object. If nullptr, it disables controls and displays empty entry.
+     * \param   updateAll   If true, updates all details. Otherwise, updates only the name, type, and value.
+     **/
+    inline void updateDetails(const ConstantEntry* entry, bool updateAll = false);
+
+    /**
      * \brief   Finds and returns valid pointer to the constant entry in the specified row.
      * \param   row     The row index of the constant entry.
      **/
-    inline ConstantEntry* _findConstant(int row);
-    inline const ConstantEntry* _findConstant(int row) const;
+    inline const ConstantEntry* getConstant(int row) const;
+    inline ConstantEntry* getConstant(int row);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members

@@ -437,6 +437,33 @@ bool DataTypesModel::addDataType(DataTypeCustom* dataType)
     return false;
 }
 
+DataTypeBase* DataTypesModel::findDataType(const QString& name) const
+{
+    for (DataTypeBase* dataType : mDataTypeList)
+    {
+        if (dataType->getName() == name)
+        {
+            return dataType;
+        }
+    }
+
+    return nullptr;
+}
+
+DataTypeBase* DataTypesModel::findDataType(uint32_t id) const
+{
+    for (DataTypeBase* dataType : mDataTypeList)
+    {
+        if (dataType->getId() == id)
+        {
+            return dataType;
+        }
+    }
+
+    return nullptr;
+}
+
+
 bool DataTypesModel::removeField(DataTypeCustom* dataType, uint32_t fieldId)
 {
     if (dataType == nullptr)
