@@ -197,15 +197,39 @@ public:
      **/
     inline bool hasEmptyEntry(void) const;
 
+    /**
+     * \brief   Adds an empty entry to the list. The empty type has no data type.
+     **/
     inline void addEmptyEntry(void);
 
+    /**
+     * \brief   Removes the empty entry from the list.
+     **/
     inline void removeEmptyEntry(void);
+
+    /**
+     * \brief   Returns the data type object by the given name.
+     * \param   name    The name of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
+    DataTypeBase* findDataType(const QString& name) const;
+
+    /**
+     * \brief   Returns the data type object by the given ID.
+     * \param   id  The ID of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
+    DataTypeBase* findDataType(uint32_t id) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls.
 //////////////////////////////////////////////////////////////////////////
 private:
 
+    /**
+     * \brief   Sorts the list of data types.
+     * \param   sortPredefined  If true, sorts predefined entries.
+     **/
     inline void _sort(bool sortPredefined = true);
 
 //////////////////////////////////////////////////////////////////////////

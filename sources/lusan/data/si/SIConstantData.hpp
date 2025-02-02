@@ -22,6 +22,7 @@
 /************************************************************************
  * Include files
  ************************************************************************/
+#include "lusan/data/common/DocumentElem.hpp"
 #include "lusan/data/common/TEDataContainer.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
@@ -38,7 +39,7 @@ class SIDataTypeData;
  * \class   SIConstantData
  * \brief   Manages constant data for service interfaces.
  **/
-class SIConstantData    : public TEDataContainer< ConstantEntry, ElementBase>
+class SIConstantData    : public TEDataContainer<ConstantEntry, DocumentElem>
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -61,24 +62,38 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    
+    /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+    
     /**
      * \brief   Reads constant data from an XML stream.
      * \param   xml         The XML stream reader.
      * \return  True if the constant data was successfully read, false otherwise.
      **/
-    bool readFromXml(QXmlStreamReader& xml);
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes constant data to an XML stream.
      * \param   xml         The XML stream writer.
      **/
-    void writeToXml(QXmlStreamWriter& xml) const;
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Validates the constant data.
      * \param   dataTypes   The data type data to validate the constants.
      **/
     void validate(const SIDataTypeData& dataTypes);
+
+    /**
+     * \brief   Creates a ConstantEntry and sets it in SIConstantData.
+     * \param   name    The name of the new constant to create.
+     * \return  Valid pointer to the new created constant element. Otherwise, returns nullptr.
+     **/
+    ConstantEntry* createConstant(const QString& name);
 };
 
 #endif  // LUSAN_DATA_SI_SICONSTANTDATA_HPP

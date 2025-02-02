@@ -20,39 +20,43 @@
 #include "lusan/model/si/SIConstantModel.hpp"
 
 SIConstantModel::SIConstantModel(SIConstantData& constantData, SIDataTypeData& dataTypeData)
-    : mConstantData(constantData)
-    , mDataTypeData(dataTypeData)
+    : mData(constantData)
+    , mDataType(dataTypeData)
 {
 }
 
-uint32_t SIConstantModel::createConstant(const QString& name)
+ConstantEntry * SIConstantModel::createConstant(const QString& name)
 {
-    uint32_t id = mConstantData.getNextId();
-    ConstantEntry entry(id, name, &mConstantData);
-    return (mConstantData.addElement(std::move(entry), true) ? id : 0);
+    ConstantEntry* result = mData.createConstant(name);
+    if (result != nullptr)
+    {
+        result->validate(mDataType.getCustomDataTypes());
+    }
+    
+    return result;
 }
 
 bool SIConstantModel::deleteConstant(uint32_t id)
 {
-    return mConstantData.removeElement(id);
+    return mData.removeElement(id);
 }
 
 const QList<ConstantEntry>& SIConstantModel::getConstants(void) const
 {
-    return mConstantData.getElements();
+    return mData.getElements();
 }
 
 const ConstantEntry* SIConstantModel::findConstant(uint32_t id) const
 {
-    return mConstantData.findElement(id);
+    return mData.findElement(id);
 }
 
 ConstantEntry* SIConstantModel::findConstant(uint32_t id)
 {
-    return mConstantData.findElement(id);
+    return mData.findElement(id);
 }
 
 void SIConstantModel::sortConstants(bool ascending)
 {
-    mConstantData.sortElementsByName(ascending);
+    mData.sortElementsByName(ascending);
 }

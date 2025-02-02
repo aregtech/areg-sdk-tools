@@ -92,94 +92,66 @@ void SIConstant::dataTypeCreated(DataTypeCustom* dataType)
 
 void SIConstant::dataTypeDeleted(DataTypeCustom* dataType)
 {
+    blockBasicSignals(true);
     mTypeModel->dataTypeDeleted(dataType);
     QTableWidget* table = mList->ctrlTableList();
     int count = table->rowCount();
+    int current = table->currentRow();
     for (int i = 0; i < count; ++ i)
     {
-        QTableWidgetItem * item = table->item(i, 1);
-        DataTypeBase * savedData = item->data(Qt::ItemDataRole::UserRole).value<DataTypeBase *>();
-        if (savedData == static_cast<DataTypeBase *>(dataType))
+        ConstantEntry * entry = getConstant(i);
+        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase *>(dataType))
         {
-            item->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
-            item->setText("<invalid>");
-            item->setData(Qt::ItemDataRole::UserRole,   QVariant::fromValue<DataTypeBase *>(nullptr));
+            entry->setParamType(nullptr);
+            setTexts(i, *entry);
+            if (i == current)
+            {
+                updateDetails(entry, false);
+            }
         }
     }
+    
+    blockBasicSignals(false);
 }
 
 void SIConstant::dataTypeUpdated(DataTypeCustom* dataType)
 {
+    blockBasicSignals(true);
     Q_ASSERT(dataType != nullptr);
-    const QString& name = dataType->getName();
     mTypeModel->dataTypeUpdated(dataType);
     QTableWidget* table = mList->ctrlTableList();
     int count = table->rowCount();
+    int current = table->currentRow();
     for (int i = 0; i < count; ++ i)
     {
-        QTableWidgetItem * item = table->item(i, 1);
-        DataTypeBase * savedData = item->data(Qt::ItemDataRole::UserRole).value<DataTypeBase *>();
-        if ((savedData == static_cast<DataTypeBase *>(dataType)) && (item->text() != name))
+        ConstantEntry * entry = getConstant(i);
+        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase *>(dataType))
         {
-            item->setText(name);
+            setTexts(i, *entry);
+            if (i == current)
+            {
+                updateDetails(entry, false);
+            }
         }
     }
-}
-
-
-inline ConstantEntry* SIConstant::_findConstant(int row)
-{
-    QTableWidget* table = mList->ctrlTableList();
-    if (row < 0 || row > table->rowCount())
-        return nullptr;
-
-    QTableWidgetItem* item = table->item(row, 0);
-    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
-    return mModel.findConstant(id);
-}
-
-inline const ConstantEntry* SIConstant::_findConstant(int row) const
-{
-    QTableWidget* table = mList->ctrlTableList();
-    if (row < 0 || row > table->rowCount())
-        return nullptr;
     
-    QTableWidgetItem* item = table->item(row, 0);
-    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
-    return mModel.findConstant(id);
+    blockBasicSignals(false);
 }
+
 
 void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
 {
+    if (currentRow == previousRow)
+        return;
+    
     blockBasicSignals(true);
-    if (currentRow == -1)
+    QTableWidget * table = mList->ctrlTableList();
+    QTableWidgetItem * col1 = currentRow >= 0 ? table->item(currentRow, static_cast<int>(eColumn::ColType)) : nullptr;
+    const ConstantEntry * entry = getConstant(currentRow);
+    updateDetails(entry, true);
+
+    if (entry != nullptr)
     {
-        mDetails->ctrlName()->setText("");
-        mDetails->ctrlTypes()->setCurrentText("");
-        mDetails->ctrlValue()->setText("");
-        mDetails->ctrlDescription()->setPlainText("");
-
-        SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, nullptr, false);
-
-        mDetails->ctrlName()->setEnabled(false);
-        mDetails->ctrlTypes()->setEnabled(false);
-        mDetails->ctrlValue()->setEnabled(false);
-
-        mList->ctrlButtonMoveUp()->setEnabled(false);
-        mList->ctrlButtonMoveDown()->setEnabled(false);
-        mList->ctrlButtonRemove()->setEnabled(false);
-    }
-    else if (currentRow != previousRow)
-    {
-        const ConstantEntry* entry = _findConstant(currentRow);
-        Q_ASSERT(entry != nullptr);
-        mDetails->ctrlName()->setText(entry->getName());
-        mDetails->ctrlTypes()->setCurrentText(entry->getType());
-        mDetails->ctrlValue()->setText(entry->getValue());
-        mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-
-        SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, entry, true);
-
         if (currentRow == 0)
         {
             mList->ctrlButtonMoveUp()->setEnabled(false);
@@ -198,6 +170,12 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
         
         mList->ctrlButtonRemove()->setEnabled(true);
     }
+    else
+    {
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
+    }
     
     blockBasicSignals(false);
 }
@@ -213,18 +191,13 @@ void SIConstant::onAddClicked(void)
         name =_defName + QString::number(++ mCount);
     } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
     
-    uint32_t id = mModel.createConstant(name);
-    if (id != 0)
+    blockBasicSignals(true);
+    ConstantEntry * entry = mModel.createConstant(name);
+    if (entry != nullptr)
     {
-        blockBasicSignals(true);
-        
         mDetails->ctrlName()->setEnabled(true);
         mDetails->ctrlTypes()->setEnabled(true);
         mDetails->ctrlValue()->setEnabled(true);
-
-        mDetails->ctrlTypes()->setCurrentIndex(0);
-        ConstantEntry * entry = mModel.findConstant(id);
-        entry->setType(mDetails->ctrlTypes()->currentText());
         
         QTableWidgetItem * current = table->currentItem();
         if (current != nullptr)
@@ -233,33 +206,15 @@ void SIConstant::onAddClicked(void)
         }
         
         int row = table->rowCount();
-        table->setRowCount(row + 1);
-        QTableWidgetItem* col0 = new QTableWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::MediaRecord), entry->getName());
-        QTableWidgetItem* col2 = new QTableWidgetItem(entry->getValue());
-        QTableWidgetItem* col1 = new QTableWidgetItem(entry->getType());
-        DataTypeBase* dataType = mModel.getDataTypeData().findDataType(entry->getType());
-        Q_ASSERT(dataType != nullptr);
-        
-        col0->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , entry->getId());
-        col1->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , QVariant::fromValue<DataTypeBase *>(dataType));
-
-        table->setItem(row, 0, col0);
-        table->setItem(row, 1, col1);
-        table->setItem(row, 2, col2);
+        setTexts(-1, *entry);
         table->selectRow(row);
-        table->scrollToItem(col0);
-        
-        mDetails->ctrlName()->setText(entry->getName());
-        mDetails->ctrlTypes()->setCurrentText(entry->getType());
-        mDetails->ctrlValue()->setText(entry->getValue());
-        mDetails->ctrlDescription()->setPlainText(entry->getDescription());
+        table->scrollToBottom();
+        updateDetails(entry, true);
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
-        
-        SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, entry, true);
-
-        blockBasicSignals(false);
     }
+    
+    blockBasicSignals(false);
 }
 
 void SIConstant::onRemoveClicked(void)
@@ -274,14 +229,12 @@ void SIConstant::onNameChanged(const QString& newName)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
-    if (row >= 0)
+    ConstantEntry* entry = getConstant(row);
+    if (entry != nullptr)
     {
         blockBasicSignals(true);
-        ConstantEntry* entry = _findConstant(row);
-        Q_ASSERT(entry != nullptr);
-        QTableWidgetItem* col0 = table->item(row, 0);
         entry->setName(newName);
-        col0->setText(newName);
+        setTexts(row, *entry);
         blockBasicSignals(false);
     }
 }
@@ -290,18 +243,14 @@ void SIConstant::onTypeChanged(const QString& newType)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
-    if (row >= 0)
+    ConstantEntry* entry = getConstant(row);
+    if (entry != nullptr)
     {
         blockBasicSignals(true);
-        ConstantEntry* entry = _findConstant(row);
-        Q_ASSERT(entry != nullptr);
-        QTableWidgetItem* col1 = table->item(row, 1);
-        DataTypeBase * dataType = mModel.getDataTypeData().findDataType(newType);
-        Q_ASSERT(dataType != nullptr);
-        
-        entry->setType(newType);
-        col1->setText(newType);
-        col1->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , QVariant::fromValue<DataTypeBase *>(dataType));
+
+        DataTypeBase* dataType = mTypeModel->findDataType(newType);
+        entry->setParamType(dataType);
+        setTexts(row, *entry);
         blockBasicSignals(false);
     }
 }
@@ -310,13 +259,11 @@ void SIConstant::onValueChanged(const QString& newValue)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
-    if (row >= 0)
+    ConstantEntry* entry = getConstant(row);
+    if (entry != nullptr)
     {
-        ConstantEntry* entry = _findConstant(row);
-        Q_ASSERT(entry != nullptr);
-        QTableWidgetItem* col2 = table->item(row, 2);
         entry->setValue(newValue);
-        col2->setText(newValue);
+        setTexts(row, *entry);
     }
 }
 
@@ -335,7 +282,7 @@ void SIConstant::onDeprectedChecked(bool isChecked)
     int row = table->currentRow();
     if (row >= 0)
     {
-        ConstantEntry* entry = _findConstant(row);
+        ConstantEntry* entry = getConstant(row);
         Q_ASSERT(entry != nullptr);
         SICommon::checkedDeprecated<SIConstantDetails, ConstantEntry>(mDetails, entry, isChecked);
     }
@@ -347,7 +294,7 @@ void SIConstant::onDeprecateHintChanged(const QString& newText)
     int row = table->currentRow();
     if (row >= 0)
     {
-        ConstantEntry* entry = _findConstant(row);
+        ConstantEntry* entry = getConstant(row);
         Q_ASSERT(entry != nullptr);
         SICommon::setDeprecateHint<SIConstantDetails, ConstantEntry>(mDetails, entry, newText);
     }
@@ -359,7 +306,7 @@ void SIConstant::onDescriptionChanged(void)
     int row = table->currentRow();
     if (row >= 0)
     {
-        ConstantEntry* entry = _findConstant(row);
+        ConstantEntry* entry = getConstant(row);
         Q_ASSERT(entry != nullptr);
         entry->setDescription(mDetails->ctrlDescription()->toPlainText());
     }
@@ -367,7 +314,7 @@ void SIConstant::onDescriptionChanged(void)
 
 void SIConstant::cellChanged(int row, int col, const QString& newValue)
 {
-    ConstantEntry* entry = _findConstant(row);
+    ConstantEntry* entry = getConstant(row);
     Q_ASSERT(entry != nullptr);
     
     if (col == 0)
@@ -376,8 +323,9 @@ void SIConstant::cellChanged(int row, int col, const QString& newValue)
         {
             blockBasicSignals(true);
             entry->setName(newValue);
-            mDetails->ctrlName()->setText(newValue);
-            blockBasicSignals(false);            
+            setTexts(row, *entry);
+            updateDetails(entry, false);
+            blockBasicSignals(false);
         }
     }
     else if (col == 1)
@@ -385,13 +333,10 @@ void SIConstant::cellChanged(int row, int col, const QString& newValue)
         if (mDetails->ctrlTypes()->currentText() != newValue)
         {
             blockBasicSignals(true);
-            QTableWidgetItem * col1 = mList->ctrlTableList()->item(row, col);
-            DataTypeBase * dataType = mModel.getDataTypeData().findDataType(newValue);
-            Q_ASSERT(dataType != nullptr);
-            
-            col1->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , QVariant::fromValue<DataTypeBase *>(dataType));
-            entry->setType(newValue);
-            mDetails->ctrlTypes()->setCurrentText(newValue);
+            DataTypeBase* dataType = mTypeModel->findDataType(newValue);
+            entry->setParamType(dataType);
+            setTexts(row, *entry);
+            updateDetails(entry, false);
             blockBasicSignals(false);
         }
     }
@@ -401,7 +346,8 @@ void SIConstant::cellChanged(int row, int col, const QString& newValue)
         {
             blockBasicSignals(true);
             entry->setValue(newValue);
-            mDetails->ctrlValue()->setText(newValue);
+            setTexts(row, *entry);
+            updateDetails(entry, false);
             blockBasicSignals(false);
         }
     }
@@ -413,23 +359,9 @@ void SIConstant::updateData(void)
     const QList<ConstantEntry>& list = mModel.getConstants();
     if (list.isEmpty() == false)
     {
-        table->setRowCount(list.size());
-        int row{0};
         for (const ConstantEntry & entry : list)
         {
-            QTableWidgetItem* col0 = new QTableWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::MediaRecord), entry.getName());
-            QTableWidgetItem* col1 = new QTableWidgetItem(entry.getType());
-            QTableWidgetItem* col2 = new QTableWidgetItem(entry.getValue());
-            DataTypeBase * dataType= mModel.getDataTypeData().findDataType(entry.getType());
-            Q_ASSERT(dataType != nullptr);
-            
-            col0->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , entry.getId());
-            col1->setData(static_cast<int>(Qt::ItemDataRole::UserRole)   , QVariant::fromValue<DataTypeBase *>(dataType));
-            table->setItem(row, 0, col0);
-            table->setItem(row, 1, col1);
-            table->setItem(row, 2, col2);
-            
-            ++row;
+            setTexts(-1, entry);
         }
         
         table->scrollToTop();
@@ -478,4 +410,101 @@ void SIConstant::blockBasicSignals(bool doBlock)
     mDetails->ctrlName()->blockSignals(doBlock);
     mDetails->ctrlTypes()->blockSignals(doBlock);
     mDetails->ctrlValue()->blockSignals(doBlock);
+}
+
+inline void SIConstant::setTexts(int row, const ConstantEntry & entry)
+{
+    QTableWidget * table = mList->ctrlTableList();
+    if (row < 0)
+    {
+        row = table->rowCount();
+        QTableWidgetItem * col0 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayName), entry.getString(ElementBase::eDisplay::DisplayName));
+        QTableWidgetItem * col1 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayType), entry.getString(ElementBase::eDisplay::DisplayType));
+        QTableWidgetItem * col2 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayValue), entry.getString(ElementBase::eDisplay::DisplayValue));
+        col0->setData(Qt::ItemDataRole::UserRole, entry.getId());
+        col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase *>(entry.getParamType()));
+        table->setRowCount(row + 1);
+        table->setItem(row, static_cast<int>(eColumn::ColName), col0);
+        table->setItem(row, static_cast<int>(eColumn::ColType), col1);
+        table->setItem(row, static_cast<int>(eColumn::ColValue), col2);
+    }
+    else
+    {
+        QTableWidgetItem * col0 = table->item(row, static_cast<int>(eColumn::ColName));
+        QTableWidgetItem * col1 = table->item(row, static_cast<int>(eColumn::ColType));
+        QTableWidgetItem * col2 = table->item(row, static_cast<int>(eColumn::ColValue));
+        
+        Q_ASSERT(col0->data(Qt::ItemDataRole::UserRole).toUInt() == entry.getId());
+        col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(entry.getParamType()));
+
+        col0->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayName));
+        col1->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayType));
+        col2->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayValue));
+        
+        col0->setText(entry.getString(ElementBase::eDisplay::DisplayName));
+        col1->setText(entry.getString(ElementBase::eDisplay::DisplayType));
+        col2->setText(entry.getString(ElementBase::eDisplay::DisplayValue));
+    }
+}
+
+inline void SIConstant::updateDetails(const ConstantEntry* entry, bool updateAll /*= false*/)
+{
+    if (entry != nullptr)
+    {
+        mDetails->ctrlName()->setText(entry->getName());
+        mDetails->ctrlValue()->setText(entry->getValue());
+        if (entry->isValid())
+        {
+            mDetails->ctrlTypes()->setCurrentText(entry->getType());
+        }
+        else
+        {
+            mDetails->ctrlTypes()->setCurrentIndex(0);
+        }
+
+        if (updateAll)
+        {
+            mDetails->ctrlDescription()->setPlainText(entry->getDescription());
+            SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, entry, true);
+        }
+    }
+    else
+    {
+        mDetails->ctrlName()->setText("");
+        mDetails->ctrlTypes()->setCurrentText("");
+        mDetails->ctrlValue()->setText("");
+        mDetails->ctrlDescription()->setPlainText("");
+
+        SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, nullptr, false);
+
+        mDetails->ctrlName()->setEnabled(false);
+        mDetails->ctrlTypes()->setEnabled(false);
+        mDetails->ctrlValue()->setEnabled(false);
+
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
+    }
+}
+
+inline const ConstantEntry* SIConstant::getConstant(int row) const
+{
+    QTableWidget* table = mList->ctrlTableList();
+    if ((row < 0) || (row >= table->rowCount()))
+        return nullptr;
+    
+    QTableWidgetItem* col0 = table->item(row, static_cast<int>(eColumn::ColName));
+    uint32_t id = col0->data(Qt::ItemDataRole::UserRole).toUInt();
+    return mModel.findConstant(id);
+}
+
+inline ConstantEntry* SIConstant::getConstant(int row)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    if ((row < 0) || (row >= table->rowCount()))
+        return nullptr;
+    
+    QTableWidgetItem* col0 = table->item(row, static_cast<int>(eColumn::ColName));
+    uint32_t id = col0->data(Qt::ItemDataRole::UserRole).toUInt();
+    return mModel.findConstant(id);
 }

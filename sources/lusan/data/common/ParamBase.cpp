@@ -187,5 +187,5 @@ void ParamBase::setDeprecateHint(const QString& deprecateHint)
 
 bool ParamBase::isValid() const
 {
-    return (getId() != 0) && (mName.isEmpty() == false ) && (mParamType.isValid() == false);
+    return (getId() != 0) && (mName.isEmpty() == false ) && mParamType.isValid();
 }
