@@ -63,6 +63,15 @@ AttributeEntry::AttributeEntry(   uint32_t id
 {
 }
 
+AttributeEntry::AttributeEntry(   uint32_t id
+                                , const QString& name
+                                , eNotification notification    /*= DEFAULT_NOTIFICATION*/
+                                , ElementBase* parent           /*= nullptr*/)
+    : ParamBase(id, name, XmlSI::xmlSIDefaultType, false, QString(), QString(), parent)
+    , mNotification(notification)
+{
+}
+
 AttributeEntry::AttributeEntry(const AttributeEntry& src)
     : ParamBase(src)
     , mNotification(src.mNotification)

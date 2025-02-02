@@ -61,7 +61,7 @@ QToolButton* SIDataTopicList::ctrlButtonMoveDown(void)
     return ui->toolMoveDown;
 }
 
-QTableWidget* SIDataTopicList::ctrlTable(void)
+QTableWidget* SIDataTopicList::ctrlTableList(void)
 {
     return ui->tableTopics;
 }

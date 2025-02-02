@@ -27,39 +27,48 @@
    ************************************************************************/
 
 SIDataTopicModel::SIDataTopicModel(SIAttributeData& attributeData, SIDataTypeData& dataTypeData)
-    : mAttributeData(attributeData)
-    , mDataTypeData(dataTypeData)
+    : mData(attributeData)
+    , mDataType(dataTypeData)
 {
 }
 
-uint32_t SIDataTopicModel::createAttribute(const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
+AttributeEntry * SIDataTopicModel::createAttribute(const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
 {
-    AttributeEntry newAttribute(mAttributeData.getNextId(), name, "bool", notification);
-    mAttributeData.addElement(newAttribute);
-    return newAttribute.getId();
+    AttributeEntry * result = mData.createAttribute(name, notification);
+    if (result != nullptr)
+    {
+        result->validate(mDataType.getCustomDataTypes());
+    }
+
+    return result;
 }
 
 bool SIDataTopicModel::deleteAttribute(uint32_t id)
 {
-    return mAttributeData.removeElement(id);
+    return mData.removeElement(id);
 }
 
 const QList<AttributeEntry>& SIDataTopicModel::getAttributes(void) const
 {
-    return mAttributeData.getElements();
+    return mData.getElements();
 }
 
 const AttributeEntry* SIDataTopicModel::findAttribute(uint32_t id) const
 {
-    return mAttributeData.findElement(id);
+    return mData.findElement(id);
 }
 
 AttributeEntry* SIDataTopicModel::findAttribute(uint32_t id)
 {
-    return mAttributeData.findElement(id);
+    return mData.findElement(id);
 }
 
 void SIDataTopicModel::sortAttributes(bool ascending)
 {
-    mAttributeData.sortElementsByName(ascending);
+    mData.sortElementsByName(ascending);
+}
+
+QList<uint32_t> SIDataTopicModel::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
+{
+    return std::move(mData.replaceDataType(oldDataType, newDataType));
 }

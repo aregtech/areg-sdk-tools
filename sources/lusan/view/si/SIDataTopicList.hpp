@@ -46,7 +46,7 @@ public:
 
     QToolButton* ctrlButtonMoveDown(void);
 
-    QTableWidget* ctrlTable(void);
+    QTableWidget* ctrlTableList(void);
 
 private:
     Ui::SIDataTopicList* ui;

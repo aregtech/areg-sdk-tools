@@ -78,6 +78,7 @@ public:
      * \param   isDeprecated    The deprecated flag of the attribute.
      * \param   description     The description of the attribute.
      * \param   deprecateHint   The deprecation hint of the attribute.
+     * \param   parent          The parent object.
      **/
     AttributeEntry(   uint32_t id
                     , const QString& name
@@ -86,6 +87,18 @@ public:
                     , bool isDeprecated             = false
                     , const QString& description    = ""
                     , const QString& deprecateHint  = ""
+                    , ElementBase* parent           = nullptr);
+
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id              The ID of the attribute.
+     * \param   name            The name of the attribute.
+     * \param   notification    The notification type of the attribute.
+     * \param   parent          The parent object.
+     **/
+    AttributeEntry(   uint32_t id
+                    , const QString& name
+                    , eNotification notification    = DEFAULT_NOTIFICATION
                     , ElementBase* parent           = nullptr);
 
     /**

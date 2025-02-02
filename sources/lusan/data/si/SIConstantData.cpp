@@ -86,3 +86,18 @@ ConstantEntry* SIConstantData::createConstant(const QString& name)
     return addElement(std::move(entry), false) ? static_cast<ConstantEntry *>(findElement(entry.getId())) : nullptr;
 }
     
+QList<uint32_t> SIConstantData::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
+{
+    QList<uint32_t> result;
+    QList< ConstantEntry>& list = getElements();
+    for (ConstantEntry& entry : list)
+    {
+        if (entry.getParamType() == oldDataType)
+        {
+            entry.setParamType(newDataType);
+            result.push_back(entry.getId());
+        }
+    }
+
+    return result;
+}

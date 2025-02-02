@@ -60,3 +60,8 @@ void SIConstantModel::sortConstants(bool ascending)
 {
     mData.sortElementsByName(ascending);
 }
+
+QList<uint32_t> SIConstantModel::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
+{
+    return std::move(mData.replaceDataType(oldDataType, newDataType));
+}

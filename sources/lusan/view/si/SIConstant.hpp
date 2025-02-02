@@ -31,8 +31,6 @@
 namespace Ui {
     class SIConstant;
 }
-    
-class QTableWidgetItem;
 
 class ConstantEntry;
 class DataTypesModel;
@@ -248,8 +246,8 @@ private:
      * \brief   Finds and returns valid pointer to the constant entry in the specified row.
      * \param   row     The row index of the constant entry.
      **/
-    inline const ConstantEntry* getConstant(int row) const;
-    inline ConstantEntry* getConstant(int row);
+    inline const ConstantEntry* findConstant(int row) const;
+    inline ConstantEntry* findConstant(int row);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
