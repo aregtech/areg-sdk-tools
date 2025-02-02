@@ -72,6 +72,7 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
     updateWidgets();    
     updateData();
     setupSignals();
+    updateDetails(nullptr, true);
 }
 
 SIConstant::~SIConstant(void)
@@ -219,6 +220,38 @@ void SIConstant::onAddClicked(void)
 
 void SIConstant::onRemoveClicked(void)
 {
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    ConstantEntry * entry = this->getConstant(row);
+    ConstantEntry * nextEntry{nullptr};
+    if (entry == nullptr)
+        return;
+    
+    blockBasicSignals(true);    
+    int nextRow = row + 1 == table->rowCount() ? row - 1 : row + 1;
+    QTableWidgetItem* next = (nextRow >= 0) && (nextRow < table->rowCount()) ? table->item(nextRow, static_cast<int>(eColumn::ColName)) : nullptr;
+    if (next != nullptr)
+    {
+        nextEntry = getConstant(nextRow);
+        table->setCurrentItem(next);
+        next->setSelected(true);
+    }
+    
+    QTableWidgetItem * col0 = table->item(row, static_cast<int>(eColumn::ColName));
+    QTableWidgetItem * col1 = table->item(row, static_cast<int>(eColumn::ColType));
+    QTableWidgetItem * col2 = table->item(row, static_cast<int>(eColumn::ColValue));
+    col0->setSelected(false);
+    col1->setSelected(false);
+    col2->setSelected(false);
+    
+    updateDetails(nextEntry, true);
+    
+    delete col0;
+    delete col1;
+    delete col2;
+    table->removeRow(row);
+    mModel.deleteConstant(entry->getId());
+    blockBasicSignals(false);
 }
 
 void SIConstant::onInsertClicked(void)
@@ -410,6 +443,9 @@ void SIConstant::blockBasicSignals(bool doBlock)
     mDetails->ctrlName()->blockSignals(doBlock);
     mDetails->ctrlTypes()->blockSignals(doBlock);
     mDetails->ctrlValue()->blockSignals(doBlock);
+    mDetails->ctrlDescription()->blockSignals(doBlock);
+    mDetails->ctrlDeprecated()->blockSignals(doBlock);
+    mDetails->ctrlDeprecateHint()->blockSignals(doBlock);
 }
 
 inline void SIConstant::setTexts(int row, const ConstantEntry & entry)
@@ -461,7 +497,12 @@ inline void SIConstant::updateDetails(const ConstantEntry* entry, bool updateAll
         {
             mDetails->ctrlTypes()->setCurrentIndex(0);
         }
-
+        
+        if (mList->ctrlTableList()->currentRow() >= 0)
+        {
+            mList->ctrlButtonRemove()->setEnabled(true);
+        }
+        
         if (updateAll)
         {
             mDetails->ctrlDescription()->setPlainText(entry->getDescription());
