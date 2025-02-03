@@ -24,16 +24,16 @@
 
 DataTypeContainer::DataTypeContainer(ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::Container, parent)
-    , mContainer( )
-    , mValueType( )
+    , mContainer(DefaultContaier)
+    , mValueType(DefaultValues)
     , mKeyType  ( )
 {
 }
 
 DataTypeContainer::DataTypeContainer(const QString& name, ElementBase* parent /*= nullptr*/)
     : DataTypeCustom(eCategory::Container, 0, name, parent)
-    , mContainer( )
-    , mValueType( )
+    , mContainer(DefaultContaier)
+    , mValueType(DefaultValues)
     , mKeyType  ( )
 {
 }
@@ -166,12 +166,12 @@ bool DataTypeContainer::canHaveKey(void) const
     return result;
 }
 
-QString DataTypeContainer::toString(void) const
+QString DataTypeContainer::toTypeString(void) const
 {
     if (canHaveKey())
-        return getName() + "<" + getKey() + ", " + getValue() + ">";
+        return getContainer() + "<" + getKey() + ", " + getValue() + ">";
     else
-        return getName() + "<" + getValue() + ">";
+        return getContainer() + "<" + getValue() + ">";
 }
 
 QIcon DataTypeContainer::getIcon(ElementBase::eDisplay display) const
@@ -194,7 +194,7 @@ QString DataTypeContainer::getString(ElementBase::eDisplay display) const
     case ElementBase::eDisplay::DisplayName:
         return getName();
     case ElementBase::eDisplay::DisplayType:
-        return toString();
+        return toTypeString();
     default:
         return QString();
     }

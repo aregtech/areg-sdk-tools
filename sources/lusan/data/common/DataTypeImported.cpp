@@ -147,7 +147,7 @@ void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement(); // DataType
 }
 
-QString DataTypeImported::toString(void) const
+QString DataTypeImported::toTypeString(void) const
 {
     return (mNamespace.isEmpty() ? mObject : mNamespace + "::" + mObject);
 }
@@ -172,7 +172,7 @@ QString DataTypeImported::getString(ElementBase::eDisplay display) const
     case ElementBase::eDisplay::DisplayName:
         return getName();
     case ElementBase::eDisplay::DisplayType:
-        return toString();
+        return toTypeString();
     default:
         return QString();
     }

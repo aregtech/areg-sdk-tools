@@ -28,6 +28,10 @@
  **/
 class DataTypeContainer : public DataTypeCustom
 {
+    static constexpr const char * const DefaultContaier {"Array"};  //!< The default basic container type.
+    static constexpr const char * const DefaultKeys     {"bool"};   //!< The default basic container key type.
+    static constexpr const char * const DefaultValues   {"bool"};   //!< The default basic container value type.
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors
 //////////////////////////////////////////////////////////////////////////
@@ -107,41 +111,103 @@ public:
 // Attributes, operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Returns true if the container can have a key.
+     **/
     bool canHaveKey(void) const;
 
+    /**
+     * \brief   Returns the name of basic container type.
+     **/
     inline const QString& getContainer(void) const;
 
+    /**
+     * \brief   Sets the name of basic container type.
+     * \param   valContainer    The name of basic container type.
+     **/
     inline void setContainer(const QString& valContainer);
 
+    /**
+     * \brief   Returns true if the container has a key.
+     **/
     inline bool hasKey(void) const;
 
+    /**
+     * \brief   Returns the name of basic container key type.
+     **/
     inline const QString& getKey(void) const;
 
+    /**
+     * \brief   Sets the name of basic container key type.
+     * \param   key     The name of basic container key type.
+     **/
     inline void setKey(const QString& key);
-    
+
+    /**
+     * \brief   Sets the name of basic container key type.
+     * \param   key         The name of basic container key type.
+     * \param   customTypes The list of custom data types to validate.
+     **/
     inline void setKey(const QString& key, const QList<DataTypeCustom *>& customTypes);
-    
+
+    /**
+     * \brief   Returns the data type of basic container key.
+     **/
     inline DataTypeBase* getKeyDataType(void) const;
-    
+
+    /**
+     * \brief   Sets the data type of basic container key.
+     * \param   dataType    The data type of basic container key.
+     **/
     inline void setKeyDataType(DataTypeBase *dataType);
-    
+
+    /**
+     * \brief   Returns the name of basic container value type.
+     **/
     inline const QString& getValue(void) const;
 
+    /**
+     * \brief   Sets the name of basic container value type.
+     * \param   value   The name of basic container value type.
+     **/
     inline void setValue(const QString& value);
-    
+
+    /**
+     * \brief   Sets the name of basic container value type.
+     * \param   value       The name of basic container value type.
+     * \param   customTypes The list of custom data types to validate.
+     **/
     inline void setValue(const QString& value, const QList<DataTypeCustom*>& customTypes);
 
+    /**
+     * \brief   Returns the data type of basic container value.
+     **/
     inline DataTypeBase* getValueDataType(void) const;
-    
+
+    /**
+     * \brief   Sets the data type of basic container value.
+     * \param   dataType    The data type of basic container value.
+     **/
     inline void setValueDataType(DataTypeBase *dataType);
-    
+
+    /**
+     * \brief   Validates the data type.
+     * \param   customTypes The list of custom data types to validate.
+     * \return  Returns true if the data type validation succeeded.
+     **/
     bool validate(const QList<DataTypeCustom *>& customTypes);
 
+    /**
+     * \brief   Invalidates the data type.
+     **/
     void invalidate(void);
     
 private:
-    
-    QString toString(void) const;
+
+    /**
+     * \brief   Returns the string to display as basic container type.
+     **/
+    QString toTypeString(void) const;
         
 private:
     QString     mContainer; //!< The container type.
@@ -161,6 +227,15 @@ inline const QString& DataTypeContainer::getContainer(void) const
 inline void DataTypeContainer::setContainer(const QString& valContainer)
 {
     mContainer = valContainer;
+    if (canHaveKey())
+    {
+        if (mKeyType.isEmpty())
+            mKeyType = DefaultKeys;
+    }
+    else if (mKeyType.isEmpty() == false)
+    {
+        mKeyType.invalidate();
+    }
 }
 
 inline bool DataTypeContainer::hasKey(void) const

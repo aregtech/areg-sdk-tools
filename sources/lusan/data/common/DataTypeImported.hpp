@@ -107,21 +107,45 @@ public:
 // Attributes, operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    
+
+    /**
+     * \brief   Returns the namespace name of the imported data type.
+     **/
     inline const QString& getNamespace(void) const;
-    
+
+    /**
+     * \brief   Sets the namespace name of the imported data type.
+     * \param   space   The namespace name of the imported data type.
+     **/
     inline void setNamespace(const QString& space);
-    
+
+    /**
+     * \brief   Returns the location of the imported data type.
+     **/
     inline const QString& getLocation(void) const;
-    
+
+    /**
+     * \brief   Sets the location of the imported data type.
+     * \param   location    The location of the imported data type.
+     **/
     inline void setLocation(const QString& location);
-    
+
+    /**
+     * \brief   Returns the object name of the imported data type.
+     **/
     inline const QString& getObject(void) const;
-    
+
+    /**
+     * \brief   Sets the object name of the imported data type.
+     * \param   object  The object name of the imported data type.
+     **/
     inline void setObject(const QString& object);
     
 private:
-    QString toString(void) const;
+    /**
+     * \brief   Returns the string to display as imported type,
+     **/
+    QString toTypeString(void) const;
         
 private:
     QString mNamespace; //!< The namespace of the imported data type.

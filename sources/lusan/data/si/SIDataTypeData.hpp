@@ -314,10 +314,20 @@ public:
      * \return  Returns the data type object if found. Otherwise, returns nullptr.
      **/
     DataTypeBase* findDataType(uint32_t id) const;
-    
+
+    /**
+     * \brief   Searches for a data type by name in the list of custom data type objects.
+     * \param   typeName    The name of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
     DataTypeCustom* findCustomDataType(const QString& typeName) const;
     DataTypeCustom* findCustomDataType(const QString& typeName);
-    
+
+    /**
+     * \brief   Searches for a data type by unique ID in the list of custom data type objects.
+     * \param   typeId  The ID of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
     DataTypeCustom* findCustomDataType(const uint32_t typeId) const;
     DataTypeCustom* findCustomDataType(const uint32_t typeId);
     
@@ -392,6 +402,12 @@ public:
      * \param   dataTypes   The list of data types.
      **/
     void validate(const SIDataTypeData& dataTypes);
+
+    /**
+     * \brief   Normalizes the data type.
+     * \param   dataType    The data type to normalize.
+     **/
+    void normalizeType(DataTypeCustom* dataType) const;
 
 private:
 
