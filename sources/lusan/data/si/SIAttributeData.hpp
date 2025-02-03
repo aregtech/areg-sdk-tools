@@ -22,6 +22,7 @@
 /************************************************************************
  * Include files
  ************************************************************************/
+#include "lusan/data/common/DocumentElem.hpp"
 #include "lusan/data/common/TEDataContainer.hpp"
 
 #include "lusan/data/common/AttributeEntry.hpp"
@@ -36,7 +37,7 @@ class DataTypeBase;
  * \class   SIAttributeData
  * \brief   Manages attribute data for service interfaces.
  **/
-class SIAttributeData   : public TEDataContainer< AttributeEntry, ElementBase >
+class SIAttributeData   : public TEDataContainer< AttributeEntry, DocumentElem >
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -58,17 +59,23 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+
+    /**
      * \brief   Reads attribute data from an XML stream.
      * \param   xml         The XML stream reader.
      * \return  True if the attribute data was successfully read, false otherwise.
      **/
-    bool readFromXml(QXmlStreamReader& xml);
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes attribute data to an XML stream.
      * \param   xml         The XML stream writer.
      **/
-    void writeToXml(QXmlStreamWriter& xml) const;
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Validates the attribute data.

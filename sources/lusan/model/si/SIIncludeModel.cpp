@@ -20,38 +20,37 @@
 #include "lusan/data/si/SIIncludeData.hpp"
 
 SIIncludeModel::SIIncludeModel(SIIncludeData& includeData)
-    : mIncludeData(includeData)
+    : mData(includeData)
 {
 }
 
-uint32_t SIIncludeModel::createInclude(const QString& name)
+IncludeEntry * SIIncludeModel::createInclude(const QString& name)
 {
-    IncludeEntry entry(0, name);
-    return (mIncludeData.addElement(std::move(entry), true) ? entry.getId() : 0);
+    return mData.createInclude(name);
 }
 
 bool SIIncludeModel::deleteInclude(uint32_t id)
 {
-    return mIncludeData.removeElement(id);
+    return mData.removeElement(id);
 }
 
 const QList<IncludeEntry>& SIIncludeModel::getIncludes(void) const
 {
-    return mIncludeData.getElements();
+    return mData.getElements();
 }
 
 const IncludeEntry* SIIncludeModel::findInclude(uint32_t id) const
 {
-    return mIncludeData.findElement(id);
+    return mData.findElement(id);
 }
 
 IncludeEntry* SIIncludeModel::findInclude(uint32_t id)
 {
-    return mIncludeData.findElement(id);
+    return mData.findElement(id);
 }
 
 void SIIncludeModel::sortInclude(bool ascending)
 {
-    mIncludeData.sortElementsByName(ascending);
+    mData.sortElementsByName(ascending);
 }
 

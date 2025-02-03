@@ -170,7 +170,6 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
     
     blockBasicSignals(true);
     QTableWidget * table = mList->ctrlTableList();
-    QTableWidgetItem * col1 = currentRow >= 0 ? table->item(currentRow, static_cast<int>(eColumn::ColType)) : nullptr;
     const ConstantEntry * entry = findConstant(currentRow);
     updateDetails(entry, true);
 
