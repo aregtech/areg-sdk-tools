@@ -211,37 +211,9 @@ void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previo
         return;
 
     blockBasicSignals(true);
-    QTableWidget* table = mList->ctrlTableList();
     const AttributeEntry* entry = findAttribute(currentRow);
     updateDetails(entry, true);
-
-    if (entry != nullptr)
-    {
-        if (currentRow == 0)
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(false);
-            mList->ctrlButtonMoveDown()->setEnabled(true);
-        }
-        else if (currentRow == static_cast<int>(mList->ctrlTableList()->rowCount() - 1))
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(true);
-            mList->ctrlButtonMoveDown()->setEnabled(false);
-        }
-        else
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(true);
-            mList->ctrlButtonMoveDown()->setEnabled(true);
-        }
-
-        mList->ctrlButtonRemove()->setEnabled(true);
-    }
-    else
-    {
-        mList->ctrlButtonMoveUp()->setEnabled(false);
-        mList->ctrlButtonMoveDown()->setEnabled(false);
-        mList->ctrlButtonRemove()->setEnabled(false);
-    }
-
+    updateToolBottons(entry != nullptr ? currentRow : -1, mList->ctrlTableList()->rowCount());
     blockBasicSignals(false);
 }
 
@@ -277,6 +249,7 @@ void SIDataTopic::onAddClicked(void)
         updateDetails(entry, true);
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
+        updateToolBottons(row, row + 1);
     }
 
     blockBasicSignals(false);
@@ -315,12 +288,43 @@ void SIDataTopic::onRemoveClicked(void)
     delete col2;
     table->removeRow(row);
     mModel.deleteAttribute(entry->getId());
+    updateToolBottons(row, mList->ctrlTableList()->rowCount());
     blockBasicSignals(false);
 }
 
 void SIDataTopic::onInsertClicked(void)
 {
     // Implementation for inserting an attribute
+}
+
+void SIDataTopic::onMoveUpClicked(void)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if (row > 0)
+    {
+        blockBasicSignals(true);
+        uint32_t idFirst = table->item(row, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idSecond = table->item(row - 1, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        mModel.swapAttributes(idFirst, idSecond);
+        swapAttributes(row, row - 1);
+        blockBasicSignals(false);
+    }
+}
+
+void SIDataTopic::onMoveDownClicked(void)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if ((row >= 0) && (row < (table->rowCount() - 1)))
+    {
+        blockBasicSignals(true);
+        uint32_t idFirst = table->item(row, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idSecond = table->item(row + 1, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        mModel.swapAttributes(idFirst, idSecond);
+        swapAttributes(row, row + 1);
+        blockBasicSignals(false);
+    }
 }
 
 void SIDataTopic::onNameChanged(const QString& newName)
@@ -495,6 +499,8 @@ void SIDataTopic::setupSignals(void)
     connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIDataTopic::onAddClicked);
     connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIDataTopic::onRemoveClicked);
     connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIDataTopic::onInsertClicked);
+    connect(mList->ctrlButtonMoveUp(), &QToolButton::clicked, this, &SIDataTopic::onMoveUpClicked);
+    connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked, this, &SIDataTopic::onMoveDownClicked);
 
     connect(mDetails->ctrlName(), &QLineEdit::textChanged, this, &SIDataTopic::onNameChanged);
     connect(mDetails->ctrlTypes(), &QComboBox::currentTextChanged, this, &SIDataTopic::onTypeChanged);
@@ -618,4 +624,57 @@ inline const AttributeEntry* SIDataTopic::findAttribute(int row) const
     QTableWidgetItem* item = table->item(row, 0);
     uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
     return mModel.findAttribute(id);
+}
+
+inline void SIDataTopic::swapAttributes(int firstRow, int secondRow)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    Q_ASSERT(firstRow >= 0 && firstRow < table->rowCount());
+    Q_ASSERT(secondRow >= 0 && secondRow < table->rowCount());
+
+    AttributeEntry* first = findAttribute(firstRow);
+    AttributeEntry* second = findAttribute(secondRow);
+
+    Q_ASSERT((first != nullptr) && (second != nullptr));
+    setTexts(firstRow, *first);
+    setTexts(secondRow, *second);
+    table->item(firstRow, 0)->setSelected(false);
+    table->setCurrentItem(table->item(secondRow, 0));
+    table->selectRow(secondRow);
+    updateToolBottons(secondRow, mList->ctrlTableList()->rowCount());
+}
+
+inline void SIDataTopic::updateToolBottons(int row, int rowCount)
+{
+    if ((row >= 0) && (row < rowCount))
+    {
+        if ((row == 0) && (rowCount == 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else if (row == 0)
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+        else if (row == (rowCount - 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+
+        mList->ctrlButtonRemove()->setEnabled(true);
+    }
+    else
+    {
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
+    }
 }

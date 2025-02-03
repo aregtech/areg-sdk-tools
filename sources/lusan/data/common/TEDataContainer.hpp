@@ -302,14 +302,22 @@ public:
     int getElementCount(void) const;
 
     /**
-     * \brief   Swaps 2 elements by given index. It will as well swap the IDs.
+     * \brief   Swaps 2 elements by given index.
+     *          It will keep the element IDs in the list in the same order.
      **/
     void swapElements(int index1, int index2);
 
     /**
-     * \brief   Swaps 2 elements by given values. It will as well swap the IDs.
+     * \brief   Swaps 2 elements by given values.
+     *          It will keep the element IDs in the list in the same order.
      **/
     void swapElements(const Data& elem1, const Data& elem2);
+
+    /**
+     * \brief   Swaps 2 elements by given IDs.
+     *          It will keep the IDs in the list in the same order.
+     **/
+    void swapElements(uint32_t elem1Id, uint32_t elem2Id);
 
     /**
      * \brief   Orders the elements by given list of IDs.
@@ -384,10 +392,22 @@ protected:
      **/
     bool checkUpdated(const Data& element, bool unique) const;
 
+    /**
+     * \brief   Extracts and saves the IDs of the elements in the list.
+     * \param   out_ids     The list to save IDs.
+     **/
     inline void getIds(QList<uint32_t>& out_ids) const;
 
+    /**
+     * \brief   Extracts and saves the IDs of the elements in the list in the sorted way.
+     * \param   out_ids     The list to save IDs.
+     * \param   ascending   If true, sorts the IDs in ascending order.
+     **/
     inline void getIdsSorted(QList<uint32_t>& out_ids, bool ascending) const;
 
+    /**
+     * \brief   Fixes the entries in the list.
+     **/
     inline void fixEntries(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -897,6 +917,17 @@ void TEDataContainer<Data, ElemBase>::swapElements(const Data& elem1, const Data
 {
     int index1 = findIndex(elem1);
     int index2 = findIndex(elem2);
+    if ((index1 >= 0) && (index2 >= 0))
+    {
+        swapElements(index1, index2);
+    }
+}
+
+template<class Data, class ElemBase>
+inline void TEDataContainer<Data, ElemBase>::swapElements(uint32_t elem1Id, uint32_t elem2Id)
+{
+    int index1 = findIndex(elem1Id);
+    int index2 = findIndex(elem2Id);
     if ((index1 >= 0) && (index2 >= 0))
     {
         swapElements(index1, index2);
