@@ -109,34 +109,7 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
     QTableWidgetItem* col0 = currentRow >= 0 ? table->item(currentRow, 0) : nullptr;
     const IncludeEntry* entry = findInclude(currentRow);
     updateDetails(entry, true);
-
-    if (entry != nullptr)
-    {
-        if (currentRow == 0)
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(false);
-            mList->ctrlButtonMoveDown()->setEnabled(true);
-        }
-        else if (currentRow == static_cast<int>(mList->ctrlTableList()->rowCount() - 1))
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(true);
-            mList->ctrlButtonMoveDown()->setEnabled(false);
-        }
-        else
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(true);
-            mList->ctrlButtonMoveDown()->setEnabled(true);
-        }
-
-        mList->ctrlButtonRemove()->setEnabled(true);
-    }
-    else
-    {
-        mList->ctrlButtonMoveUp()->setEnabled(false);
-        mList->ctrlButtonMoveDown()->setEnabled(false);
-        mList->ctrlButtonRemove()->setEnabled(false);
-    }
-
+    updateToolBottons(entry != nullptr ? currentRow : -1, table->rowCount());
     blockBasicSignals(false);
 }
 
@@ -169,6 +142,7 @@ void SIInclude::onAddClicked(void)
         updateDetails(entry, true);
         mDetails->ctrlInclude()->setFocus();
         mDetails->ctrlInclude()->selectAll();
+        updateToolBottons(row, row + 1);
     }
 
     blockBasicSignals(false);
@@ -201,11 +175,42 @@ void SIInclude::onRemoveClicked(void)
     delete col0;
     table->removeRow(row);
     mModel.deleteInclude(entry->getId());
+    updateToolBottons(next != nullptr ? table->indexFromItem(next).row() : -1, mList->ctrlTableList()->rowCount());
     blockBasicSignals(false);
 }
 
 void SIInclude::onInsertClicked(void)
 {
+}
+
+void SIInclude::onMoveUpClicked(void)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if (row > 0)
+    {
+        blockBasicSignals(true);
+        uint32_t idFirst = table->item(row, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idSecond = table->item(row - 1, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        mModel.swapIncludes(idFirst, idSecond);
+        swapIncludes(row, row - 1);
+        blockBasicSignals(false);
+    }
+}
+
+void SIInclude::onMoveDownClicked(void)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if ((row >= 0) && (row < (table->rowCount() - 1)))
+    {
+        blockBasicSignals(true);
+        uint32_t idFirst = table->item(row, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idSecond = table->item(row + 1, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        mModel.swapIncludes(idFirst, idSecond);
+        swapIncludes(row, row + 1);
+        blockBasicSignals(false);
+    }
 }
 
 void SIInclude::onBrowseClicked(void)
@@ -345,46 +350,6 @@ void SIInclude::cellChanged(int row, int col, const QString& newValue)
     }
 }
 
-void SIInclude::_addInclude(int pos)
-{
-    QTableWidget *table = mList->ctrlTableList();
-    QString name;
-    do
-    {
-        name =_defName + QString::number(++ mCount);
-    } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
-    
-    IncludeEntry * entry = mModel.createInclude(name);
-    if (entry != 0)
-    {
-        blockBasicSignals(true);
-
-        mDetails->ctrlInclude()->setText(entry->getName());
-        mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-
-        SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, entry, true);
-        
-        QTableWidgetItem * current = table->currentItem();
-        if (current != nullptr)
-        {
-            current->setSelected(false);
-        }
-        
-        int row = pos == -1 ? table->rowCount() : pos;
-        table->insertRow(row);
-        QTableWidgetItem * item = new QTableWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::DocumentNew), name);
-        item->setData(static_cast<int>(Qt::ItemDataRole::UserRole), entry->getId());
-        table->setItem(row, 0, item);
-        table->selectRow(row);
-        table->scrollToItem(item);
-        
-        mDetails->ctrlInclude()->setFocus();
-        mDetails->ctrlInclude()->selectAll();
-
-        blockBasicSignals(false);
-    }
-}
-
 void SIInclude::updateData(void)
 {
     QTableWidget* table = mList->ctrlTableList();
@@ -419,6 +384,8 @@ void SIInclude::setupSignals(void)
     connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIInclude::onAddClicked);
     connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIInclude::onRemoveClicked);
     connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIInclude::onInsertClicked);
+    connect(mList->ctrlButtonMoveUp(), &QToolButton::clicked, this, &SIInclude::onMoveUpClicked);
+    connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked, this, &SIInclude::onMoveDownClicked);
 
     connect(mDetails->ctrlInclude(), &QLineEdit::textChanged, this, &SIInclude::onIncludeChanged);
     connect(mDetails->ctrlBrowseButton(), &QPushButton::clicked, this, &SIInclude::onBrowseClicked);
@@ -513,4 +480,57 @@ inline const IncludeEntry* SIInclude::findInclude(int row) const
     QTableWidgetItem* item = table->item(row, 0);
     uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
     return mModel.findInclude(id);
+}
+
+inline void SIInclude::swapIncludes(int firstRow, int secondRow)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    Q_ASSERT(firstRow >= 0 && firstRow < table->rowCount());
+    Q_ASSERT(secondRow >= 0 && secondRow < table->rowCount());
+
+    const IncludeEntry* first = findInclude(firstRow);
+    const IncludeEntry* second = findInclude(secondRow);
+
+    Q_ASSERT((first != nullptr) && (second != nullptr));
+    setTexts(firstRow, *first);
+    setTexts(secondRow, *second);
+    table->item(firstRow, 0)->setSelected(false);
+    table->setCurrentItem(table->item(secondRow, 0));
+    table->selectRow(secondRow);
+    updateToolBottons(secondRow, mList->ctrlTableList()->rowCount());
+}
+
+inline void SIInclude::updateToolBottons(int row, int rowCount)
+{
+    if ((row >= 0) && (row < rowCount))
+    {
+        if ((row == 0) && (rowCount == 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else if (row == 0)
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+        else if (row == (rowCount - 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+
+        mList->ctrlButtonRemove()->setEnabled(true);
+    }
+    else
+    {
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
+    }
 }

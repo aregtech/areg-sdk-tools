@@ -53,15 +53,15 @@ public:
     
     /**
      * \brief   Creates a IncludeEntry and sets it in SIIncludeData.
-     * \param   name    The name of the constant.
+     * \param   name    The name of the include.
      * \return  Valid pointer to the new include entry object. Otherwise, returns nullptr.
      **/
     IncludeEntry * createInclude(const QString& name);
 
     /**
-     * \brief   Deletes the constant by ID.
-     * \param   id  The ID of the constant to delete.
-     * \return  True if the constant was deleted, false otherwise.
+     * \brief   Deletes the include by ID.
+     * \param   id  The ID of the include to delete.
+     * \return  True if the include was deleted, false otherwise.
      **/
     bool deleteInclude(uint32_t id);
 
@@ -83,6 +83,22 @@ public:
      * \param   ascending   If true, sorts in ascending order. Otherwise, sorts in descending order.
      **/
     void sortInclude(bool ascending);
+
+    /**
+     * \brief   Swaps the includes by given unique IDs.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   firstId     The unique ID of the first include to swap.
+     * \param   secondId    The unique ID of the second include to swap.
+     **/
+    void swapIncludes(uint32_t firstId, uint32_t secondId);
+
+    /**
+     * \brief   Swaps the includes by given include entries.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   first       The first include entry to swap.
+     * \param   second      The second include entry to swap.
+     **/
+    void swapIncludes(const IncludeEntry& first, const IncludeEntry& second);
 
 //////////////////////////////////////////////////////////////////////////
 // hidden members

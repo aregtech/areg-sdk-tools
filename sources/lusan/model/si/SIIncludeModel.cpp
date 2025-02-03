@@ -54,3 +54,12 @@ void SIIncludeModel::sortInclude(bool ascending)
     mData.sortElementsByName(ascending);
 }
 
+void SIIncludeModel::swapIncludes(uint32_t firstId, uint32_t secondId)
+{
+    mData.swapElements(firstId, secondId);
+}
+
+void SIIncludeModel::swapIncludes(const IncludeEntry& first, const IncludeEntry& second)
+{
+    mData.swapElements(first, second);
+}
