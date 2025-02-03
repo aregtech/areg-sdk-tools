@@ -335,8 +335,8 @@ void SIDataType::onTypeNameChanged(const QString& newName)
         return;
     
     DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
-    setNodeText(item, dataType);
     mModel.updateDataType(dataType, newName);
+    setNodeText(item, dataType);
 }
 
 void SIDataType::onDeprectedChecked(bool isChecked)
@@ -626,6 +626,8 @@ void SIDataType::onContainerObjectChanged(int index)
         mDetails->ctrlContainerKey()->setEnabled(false);
         typeContainer->setKey(QString());
     }
+
+    mModel.normalizeDataType(typeContainer);
     blockBasicSignals(false);
 
     updateContainerNames(current, typeContainer);

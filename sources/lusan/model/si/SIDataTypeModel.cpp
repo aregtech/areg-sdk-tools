@@ -362,6 +362,11 @@ void SIDataTypeModel::updateDataType(uint32_t id, const QString& newName)
     mData.updateDataType(id, newName);
 }
 
+void SIDataTypeModel::normalizeDataType(DataTypeCustom* dataType) const
+{
+    mData.normalizeType(dataType);
+}
+
 DataTypeBase* SIDataTypeModel::getTypeFromName(const QString & typeName)
 {
     return mData.findDataType(typeName);

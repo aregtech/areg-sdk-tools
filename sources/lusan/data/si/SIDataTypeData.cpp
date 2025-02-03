@@ -474,6 +474,7 @@ DataTypeCustom* SIDataTypeData::convertDataType(DataTypeCustom* dataType, DataTy
         addElement(newType, false);
     }
 
+    normalizeType(newType);
     emit signalDataTypeConverted(dataType, newType);
     
     return newType;
@@ -509,18 +510,23 @@ void SIDataTypeData::updateDataType(uint32_t id, const QString& newName)
 
 void SIDataTypeData::validate(const SIDataTypeData& dataTypes)
 {
-    const QList<DataTypeCustom *>& customTypes = dataTypes.getCustomDataTypes();
     QList<DataTypeCustom*>& list = getElements();
     for (DataTypeCustom* entry : list)
     {
-        if (entry->isStructure())
-        {
-            static_cast<DataTypeStructure *>(entry)->validate(customTypes);
-        }
-        else if (entry->isContainer())
-        {
-            static_cast<DataTypeContainer*>(entry)->validate(customTypes);
-        }
+        dataTypes.normalizeType(entry);
+    }
+}
+
+void SIDataTypeData::normalizeType(DataTypeCustom* dataType) const
+{
+    const QList<DataTypeCustom *>& customTypes{ getCustomDataTypes() };
+    if (dataType->isStructure())
+    {
+        static_cast<DataTypeStructure *>(dataType)->validate(customTypes);
+    }
+    else if (dataType->isContainer())
+    {
+        static_cast<DataTypeContainer*>(dataType)->validate(customTypes);
     }
 }
 

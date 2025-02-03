@@ -50,7 +50,7 @@ public:
      * \brief Returns instance of data type data object.
      */
     inline SIDataTypeData& getDataTypeData(void);
-    
+
     /**
      * \brief   Returns the list of basic container data types objects.
      **/
@@ -115,10 +115,20 @@ public:
      **/
     DataTypeCustom* findDataType(uint32_t id);
     const DataTypeCustom* findDataType(uint32_t id) const;
-    
+
+    /**
+     * \brief   Searches for a field type by name in the list of structure data type objects.
+     * \param   typeName    The name of the data type to search in list of fields.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
     const DataTypeBase* findStructFieldType(const DataTypeStructure* dataType, const QString& childName) const;
     DataTypeBase* findStructFieldType(const DataTypeStructure* dataType, const QString& childName);
-    
+
+    /**
+     * \brief   Searches for a field type by ID in the list of structure data type objects.
+     * \param   childId     The ID of the data type to search in list of fields.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
     const DataTypeBase* findStructFieldType(const DataTypeStructure* dataType, uint32_t childId) const;
     DataTypeBase* findStructFieldType(const DataTypeStructure* dataType, uint32_t childId);
 
@@ -285,21 +295,45 @@ public:
      * \param   newName     The new name of the data type.
      **/
     void updateDataType(uint32_t id, const QString& newName);
-    
-    DataTypeBase* getTypeFromName(const QString & typeName);
-    
+
+    /**
+     * \brief   Validates the data type data.
+     * \param   dataTypes   The list of data types.
+     **/
+    void normalizeDataType(DataTypeCustom* dataType) const;
+
+    /**
+     * \brief   Validates the data type name. Searches the data type by name
+     *          and returns valid pointer if found. Otherwise, returns nullptr.
+     * \param   typeNAme    The name of data type to search.
+     * \return  Returns valid pointer if found a data type with specified name.
+     **/
+    DataTypeBase* getTypeFromName(const QString & typeName);    
     const DataTypeBase* getTypeFromName(const QString& typeName) const;
-    
+
+    /**
+     * \brief   Validates the data type ID. Searches the data type by ID
+     *          and returns valid pointer if found. Otherwise, returns nullptr.
+     * \param   typeId  The ID of data type to search.
+     * \return  Returns valid pointer if found a data type with specified ID.
+     **/
     DataTypeBase* getTypeFromId(uint32_t typeId);
-    
     const DataTypeBase* getTypeFromId(uint32_t typeId) const;
-    
+
+    /**
+     * \brief   Searches for a custom data type by name in the list of all data type objects.
+     * \param   typeName    The name of the data type to search.
+     * \return  Returns the custom data type object if found. Otherwise, returns nullptr.
+     **/
     DataTypeCustom* getCustomTypeFromName(const QString & typeName);
-    
     const DataTypeCustom* getCustomTypeFromName(const QString& typeName) const;
-    
+
+    /**
+     * \brief   Searches for a custom data type by unique ID in the list of all data type objects.
+     * \param   typeId  The ID of the data type to search.
+     * \return  Returns the custom data type object if found. Otherwise, returns nullptr.
+     **/
     DataTypeCustom* getCustomTypeFromId(uint32_t typeId);
-    
     const DataTypeCustom* getCustomTypeFromId(uint32_t typeId) const;
     
 //////////////////////////////////////////////////////////////////////////
