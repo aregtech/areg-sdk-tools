@@ -65,3 +65,13 @@ QList<uint32_t> SIConstantModel::replaceDataType(DataTypeBase* oldDataType, Data
 {
     return std::move(mData.replaceDataType(oldDataType, newDataType));
 }
+
+void SIConstantModel::swapConstants(uint32_t firstId, uint32_t secondId)
+{
+    mData.swapElements(firstId, secondId);
+}
+
+void SIConstantModel::swapConstants(const ConstantEntry& first, const ConstantEntry& second)
+{
+    mData.swapElements(first, second);
+}

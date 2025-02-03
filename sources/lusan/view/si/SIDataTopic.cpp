@@ -632,8 +632,8 @@ inline void SIDataTopic::swapAttributes(int firstRow, int secondRow)
     Q_ASSERT(firstRow >= 0 && firstRow < table->rowCount());
     Q_ASSERT(secondRow >= 0 && secondRow < table->rowCount());
 
-    AttributeEntry* first = findAttribute(firstRow);
-    AttributeEntry* second = findAttribute(secondRow);
+    const AttributeEntry* first = findAttribute(firstRow);
+    const AttributeEntry* second = findAttribute(secondRow);
 
     Q_ASSERT((first != nullptr) && (second != nullptr));
     setTexts(firstRow, *first);
