@@ -72,3 +72,13 @@ QList<uint32_t> SIDataTopicModel::replaceDataType(DataTypeBase* oldDataType, Dat
 {
     return std::move(mData.replaceDataType(oldDataType, newDataType));
 }
+
+void SIDataTopicModel::swapAttributes(uint32_t firstId, uint32_t secondId)
+{
+    mData.swapElements(firstId, secondId);
+}
+
+void SIDataTopicModel::swapAttributes(const AttributeEntry& first, const AttributeEntry& second)
+{
+    mData.swapElements(first, second);
+}

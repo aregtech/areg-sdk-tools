@@ -90,6 +90,22 @@ public:
     QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
 
     /**
+     * \brief   Swaps the attributes by given unique IDs.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   firstId     The unique ID of the first attribute to swap.
+     * \param   secondId    The unique ID of the second attribute to swap.
+     **/
+    void swapAttributes(uint32_t firstId, uint32_t secondId);
+
+    /**
+     * \brief   Swaps the attributes by given attribute entries.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   first       The first attribute entry to swap.
+     * \param   second      The second attribute entry to swap.
+     **/
+    void swapAttributes(const AttributeEntry& first, const AttributeEntry& second);
+
+    /**
      * \brief   Returns the instance of data type data object relevant with the attributes.
      **/
     inline SIDataTypeData& getDataTypeData(void);

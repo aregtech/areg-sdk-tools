@@ -199,6 +199,16 @@ protected slots:
      * \brief   Triggered when the insert button is clicked.
      **/
     void onInsertClicked(void);
+
+    /**
+     * \brief   Triggered when the move up button is clicked.
+     **/
+    void onMoveUpClicked(void);
+
+    /**
+     * \brief   Triggered when the move down button is clicked.
+     **/
+    void onMoveDownClicked(void);
     
     /**
      * \brief   Triggered when the move up button is clicked.
@@ -303,6 +313,21 @@ private:
      * \return Pointer to the attribute entry.
      */
     inline const AttributeEntry* findAttribute(int row) const;
+
+    /**
+     * \brief   Swaps the attributes by given row indexes.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   firstRow    The row index of the first attribute to swap.
+     * \param   secondRow   The row index of the second attribute to swap.
+     **/
+    inline void swapAttributes(int firstRow, int secondRow);
+
+    /**
+     * \brief   Updates the tool buttons.
+     * \param   row         The row index of the attribute.
+     * \param   rowCount    The total number of rows in the table.
+     **/
+    inline void updateToolBottons(int row, int rowCount);
     
     //////////////////////////////////////////////////////////////////////////
     // Hidden members
