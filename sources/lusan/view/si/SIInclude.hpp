@@ -67,6 +67,12 @@ class SIInclude : public QScrollArea
 {
     Q_OBJECT
 
+private:
+    /**
+     * \brief   Returns the list of supported file extensions.
+     **/
+    static QStringList getSupportedExtensions(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -119,17 +125,17 @@ protected slots:
      * \brief   Triggered when the include field is changed.
      **/
     void onIncludeChanged(const QString & newText);
-    
+
     /**
      * \brief   Triggered when the description text is changed.
      **/
     void onDescriptionChanged(void);
-    
+
     /**
      * \brief   Triggered when the deprecated check box is clicked.
      **/
     void onDeprecatedChecked(bool isChecked);
-    
+
     /**
      * \brief   Triggered when the deprecation hint field is changed.
      **/
@@ -146,11 +152,6 @@ protected slots:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    
-    /**
-     * \brief   Initializes the SIConstant object.
-     **/
-    void updateWidgets(void);
 
     /**
      * \brief   Initializes the SIInclude object.
@@ -158,38 +159,52 @@ private:
     void updateData(void);
 
     /**
+     * \brief   Initializes the SIConstant object.
+     **/
+    void updateWidgets(void);
+
+    /**
      * \brief   Initializes the signals.
      **/
     void setupSignals(void);
 
     /**
-     * \brief   Returns the list of supported file extensions.
+     * \brief   Blocks the basic signals.
+     * \param   doBlock     If true, blocks the signals, otherwise unblocks.
      **/
-    static QStringList getSupportedExtensions(void);
+    inline void blockBasicSignals(bool doBlock);
+
+    /**
+     * \brief   Triggered when the cell data is changed to update other controls.
+     **/
+    inline void cellChanged(int row, int col, const QString& newValue);
+
+    /**
+     * \brief   Sets the texts in the table of the attribute entry.
+     * \param   row     The row index of the attribute.
+     * \param   entry   The attribute entry object.
+     **/
+    inline void setTexts(int row, const IncludeEntry& entry);
+
+    /**
+     * \brief   Updates the controls to display the control entry details in the details widget.
+     * \param   entry       The attribute entry object. If nullptr, it disables controls and displays empty entry.
+     * \param   updateAll   If true, updates all details. Otherwise, updates only the name, type, and value.
+     **/
+    inline void updateDetails(const IncludeEntry* entry, bool updateAll = false);
 
     /**
      * \brief   Finds and returns valid pointer to the include object entry in the specified row.
      * \param   row     The row index of the include entry.
      **/
-    inline IncludeEntry* _findInclude(int row);    
-    inline const IncludeEntry* _findInclude(int row) const;
+    inline IncludeEntry* findInclude(int row);    
+    inline const IncludeEntry* findInclude(int row) const;
 
     /**
      * \brief   Adds new include entry at the specified row.
      * \param   row     The row index to add new include object
      **/
     inline void _addInclude(int row);
-    
-    /**
-     * \brief   Blocks the basic signals.
-     * \param   doBlock     If true, blocks the signals, otherwise unblocks.
-     **/
-    inline void blockBasicSignals(bool doBlock);
-    
-    /**
-     * \brief   Triggered when the cell data is changed to update other controls.
-     **/
-    inline void cellChanged(int row, int col, const QString& newValue);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members

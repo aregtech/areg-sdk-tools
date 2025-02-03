@@ -21,14 +21,19 @@
 #include "lusan/common/XmlSI.hpp"
 
 SIIncludeData::SIIncludeData(ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< IncludeEntry, ElementBase>(parent)
+    : TEDataContainer< IncludeEntry, DocumentElem>(parent)
 {
 }
 
 SIIncludeData::SIIncludeData(const QList<IncludeEntry>& entries, ElementBase* parent /*= nullptr*/)
-    : TEDataContainer<IncludeEntry, ElementBase>(parent)
+    : TEDataContainer<IncludeEntry, DocumentElem>(parent)
 {
     setElements(entries);
+}
+
+bool SIIncludeData::isValid() const
+{
+    return true;
 }
 
 bool SIIncludeData::readFromXml(QXmlStreamReader& xml)
@@ -70,4 +75,12 @@ void SIIncludeData::writeToXml(QXmlStreamWriter& xml) const
 
 void SIIncludeData::validate(const SIDataTypeData& /*dataTypes*/)
 {
+}
+
+IncludeEntry* SIIncludeData::createInclude(const QString location)
+{
+    uint32_t id{ getNextId() };
+    IncludeEntry newInclude(id, location, this);
+    addElement(newInclude);
+    return findElement(id);
 }

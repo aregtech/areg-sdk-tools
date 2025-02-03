@@ -53,10 +53,10 @@ public:
     
     /**
      * \brief   Creates a IncludeEntry and sets it in SIIncludeData.
-     * \param   name            The name of the constant.
-     * \return  True if the constant was added, false otherwise.
+     * \param   name    The name of the constant.
+     * \return  Valid pointer to the new include entry object. Otherwise, returns nullptr.
      **/
-    uint32_t createInclude(const QString& name);
+    IncludeEntry * createInclude(const QString& name);
 
     /**
      * \brief   Deletes the constant by ID.
@@ -88,7 +88,7 @@ public:
 // hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIIncludeData& mIncludeData;  //!< Reference to the SIIncludeData instance.
+    SIIncludeData& mData;   //!< Reference to the SIIncludeData instance.
 };
 
 #endif // LUSAN_MODEL_SI_SIINCLUDEMODEL_HPP

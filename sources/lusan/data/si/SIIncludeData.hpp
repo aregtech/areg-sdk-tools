@@ -22,9 +22,10 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/data/common/DocumentElem.hpp"
 #include "lusan/data/common/TEDataContainer.hpp"
-#include "lusan/data/common/IncludeEntry.hpp"
 
+#include "lusan/data/common/IncludeEntry.hpp"
 #include <QList>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -35,7 +36,7 @@ class SIDataTypeData;
   * \class   SIIncludeData
   * \brief   Manages include data for service interfaces.
   **/
-class SIIncludeData : public TEDataContainer< IncludeEntry, ElementBase>
+class SIIncludeData : public TEDataContainer< IncludeEntry, DocumentElem >
 {
 //////////////////////////////////////////////////////////////////////////
 // public methods
@@ -58,23 +59,36 @@ public:
 public:
 
     /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+
+    /**
      * \brief   Reads include data from an XML stream.
      * \param   xml         The XML stream reader.
      * \return  True if the include data was successfully read, false otherwise.
      **/
-    bool readFromXml(QXmlStreamReader& xml);
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes include data to an XML stream.
      * \param   xml         The XML stream writer.
      **/
-    void writeToXml(QXmlStreamWriter& xml) const;
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Validates the include data.
      * \param   dataTypes   The data type data to validate the includes.
      **/
     void validate(const SIDataTypeData& dataTypes);
+
+    /**
+     * \brief   Creates an include entry.
+     * \param   location    The file path.
+     * \return  Returns the created include entry.
+     **/
+    IncludeEntry* createInclude(const QString location);
 };
 
 #endif  // LUSAN_DATA_SI_SIINCLUDEDATA_HPP

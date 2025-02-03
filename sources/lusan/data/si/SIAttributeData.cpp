@@ -21,14 +21,19 @@
 #include "lusan/common/XmlSI.hpp"
 
 SIAttributeData::SIAttributeData(ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< AttributeEntry, ElementBase >(parent)
+    : TEDataContainer< AttributeEntry, DocumentElem >(parent)
 {
 }
 
 SIAttributeData::SIAttributeData(const QList<AttributeEntry>& entries, ElementBase* parent /*= nullptr*/)
-    : TEDataContainer< AttributeEntry, ElementBase >(parent)
+    : TEDataContainer< AttributeEntry, DocumentElem >(parent)
 {
     setElements(entries);
+}
+
+bool SIAttributeData::isValid() const
+{
+    return true;
 }
 
 bool SIAttributeData::readFromXml(QXmlStreamReader& xml)

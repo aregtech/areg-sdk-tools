@@ -212,7 +212,6 @@ void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previo
 
     blockBasicSignals(true);
     QTableWidget* table = mList->ctrlTableList();
-    QTableWidgetItem* col1 = currentRow >= 0 ? table->item(currentRow, static_cast<int>(eColumn::ColType)) : nullptr;
     const AttributeEntry* entry = findAttribute(currentRow);
     updateDetails(entry, true);
 
@@ -485,7 +484,6 @@ void SIDataTopic::updateWidgets(void)
     mDetails->ctrlName()->setEnabled(false);
     mDetails->ctrlTypes()->setEnabled(false);
     mDetails->ctrlNotification()->setEnabled(false);
-
 }
 
 void SIDataTopic::setupSignals(void)

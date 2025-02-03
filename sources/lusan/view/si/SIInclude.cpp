@@ -44,6 +44,14 @@ namespace
     const QString _defName("NewInclude");
 }
 
+QStringList SIInclude::getSupportedExtensions(void)
+{
+    QStringList exts{};
+    exts.append(LusanApplication::getExternalFileExtensions());
+    exts.append(LusanApplication::getInternalFileExtensions());
+    return exts;
+}
+
 SIIncludeWidget::SIIncludeWidget(QWidget* parent)
     : QWidget{ parent }
     , ui(new Ui::SIInclude)
@@ -82,6 +90,7 @@ SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
     updateWidgets();
     updateData();
     setupSignals();
+    updateDetails(nullptr, true);
 }
 
 SIInclude::~SIInclude(void)
@@ -90,116 +99,19 @@ SIInclude::~SIInclude(void)
     ui.horizontalLayout->removeWidget(mDetails);
 }
 
-inline IncludeEntry* SIInclude::_findInclude(int row)
-{
-    QTableWidget * table = mList->ctrlTableList();
-    if ((row < 0) || (row >= table->rowCount()))
-        return nullptr;
-    
-    QTableWidgetItem * item = table->item(row, 0);
-    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
-    return mModel.findInclude(id);
-}
-
-inline const IncludeEntry* SIInclude::_findInclude(int row) const
-{
-    QTableWidget * table = mList->ctrlTableList();
-    if ((row < 0) || (row >= table->rowCount()))
-        return nullptr;
-    
-    QTableWidgetItem * item = table->item(row, 0);
-    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
-    return mModel.findInclude(id);
-}
-
-QStringList SIInclude::getSupportedExtensions(void)
-{
-    QStringList exts{};
-    exts.append(LusanApplication::getExternalFileExtensions());
-    exts.append(LusanApplication::getInternalFileExtensions());
-    return exts;
-}
-
-void SIInclude::updateWidgets(void)
-{
-    mTableCell = new TableCell(QList<QAbstractItemModel *>(), QList<int>(), mList->ctrlTableList());
-    mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
-    SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
-}
-
-void SIInclude::updateData(void)
-{
-    QTableWidget * table = mList->ctrlTableList();
-    const QList<IncludeEntry> & entries = mModel.getIncludes();
-    if (entries.isEmpty() == false)
-    {
-        table->setRowCount(entries.size());
-        int row{0};
-        for (const IncludeEntry & entry : entries)
-        {
-            QTableWidgetItem * item = new QTableWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::DocumentNew), entry.getLocation());
-            item->setData(static_cast<int>(Qt::ItemDataRole::UserRole), entry.getId());
-            table->setItem(row ++, 0, item);
-        }
-    }
-}
-
-void SIInclude::setupSignals(void)
-{
-    Q_ASSERT(mDetails != nullptr);
-    Q_ASSERT(mList != nullptr);
-    
-    connect(  mDetails->ctrlInclude()
-            , &QLineEdit::textChanged
-            , this
-            , [this](const QString& text)
-                {
-                    this->mList->ctrlButtonAdd()->setEnabled(text.isEmpty() == false);
-                }
-            );
-    
-    connect(mList->ctrlTableList()      , &QTableWidget::currentCellChanged, this, &SIInclude::onCurCellChanged);
-    connect(mList->ctrlButtonAdd()      , &QToolButton::clicked         , this, &SIInclude::onAddClicked);
-    connect(mList->ctrlButtonRemove()   , &QToolButton::clicked         , this, &SIInclude::onRemoveClicked);
-    connect(mList->ctrlButtonInsert()   , &QToolButton::clicked         , this, &SIInclude::onInsertClicked);
-    connect(mDetails->ctrlBrowseButton(), &QPushButton::clicked         , this, &SIInclude::onBrowseClicked);    
-    connect(mDetails->ctrlInclude()     , &QLineEdit::textChanged       , this, &SIInclude::onIncludeChanged);
-    connect(mDetails->ctrlDescription() , &QPlainTextEdit::textChanged  , this, &SIInclude::onDescriptionChanged);
-    connect(mDetails->ctrlDeprecated()  , &QCheckBox::toggled           , this, &SIInclude::onDeprecatedChecked);
-    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textChanged      , this, &SIInclude::onDeprecateHint);
-    
-    connect(mTableCell, &TableCell::editorDataChanged, this, &SIInclude::onEditorDataChanged);
-}
-
 void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
 {
+    if (currentRow == previousRow)
+        return;
+
     blockBasicSignals(true);
-
     QTableWidget* table = mList->ctrlTableList();
-    if (currentRow == -1)
+    QTableWidgetItem* col0 = currentRow >= 0 ? table->item(currentRow, 0) : nullptr;
+    const IncludeEntry* entry = findInclude(currentRow);
+    updateDetails(entry, true);
+
+    if (entry != nullptr)
     {
-        mDetails->ctrlInclude()->setText("");
-        mDetails->ctrlDescription()->setPlainText("");
-        mDetails->ctrlBrowseButton()->setEnabled(false);
-
-        mList->ctrlButtonMoveUp()->setEnabled(false);
-        mList->ctrlButtonMoveDown()->setEnabled(false);
-        mList->ctrlButtonRemove()->setEnabled(false);
-
-        SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
-    }
-    else if (currentRow != previousRow)
-    {
-        const IncludeEntry * entry = _findInclude(currentRow);
-        Q_ASSERT(entry != nullptr);
-        mDetails->ctrlInclude()->setText(entry->getLocation());
-        mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-        mDetails->ctrlBrowseButton()->setEnabled(true);
-
-        SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, entry, true);
-
-        mList->ctrlButtonRemove()->setEnabled(true);
-
         if (currentRow == 0)
         {
             mList->ctrlButtonMoveUp()->setEnabled(false);
@@ -215,13 +127,14 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
             mList->ctrlButtonMoveUp()->setEnabled(true);
             mList->ctrlButtonMoveDown()->setEnabled(true);
         }
-        
+
         mList->ctrlButtonRemove()->setEnabled(true);
-        
-        QTableWidgetItem * item = table->item(currentRow, currentColumn);
-        mList->ctrlButtonRemove()->setEnabled(true);
-        mList->ctrlButtonMoveDown()->setEnabled(currentRow < (table->rowCount() - 1));
-        mList->ctrlButtonMoveUp()->setEnabled(currentRow != 0);
+    }
+    else
+    {
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
     }
 
     blockBasicSignals(false);
@@ -229,46 +142,80 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
 
 void SIInclude::onAddClicked(void)
 {
-    _addInclude(-1);    
+    static const QString _defName("NewInclude");
+
+    QTableWidget* table = mList->ctrlTableList();
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++mCount);
+    } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
+
+    blockBasicSignals(true);
+    IncludeEntry* entry = mModel.createInclude(name);
+    if (entry != nullptr)
+    {
+        mDetails->ctrlInclude()->setEnabled(true);
+        QTableWidgetItem* current = table->currentItem();
+        if (current != nullptr)
+        {
+            current->setSelected(false);
+        }
+
+        int row = table->rowCount();
+        setTexts(-1, *entry);
+        table->selectRow(row);
+        table->scrollToBottom();
+        updateDetails(entry, true);
+        mDetails->ctrlInclude()->setFocus();
+        mDetails->ctrlInclude()->selectAll();
+    }
+
+    blockBasicSignals(false);
 }
 
 void SIInclude::onRemoveClicked(void)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
-    if (row != -1)
+    IncludeEntry* entry = findInclude(row);
+    IncludeEntry* nextEntry{ nullptr };
+    if (entry == nullptr)
+        return;
+
+    blockBasicSignals(true);
+    int nextRow = row + 1 == table->rowCount() ? row - 1 : row + 1;
+    QTableWidgetItem* next = (nextRow >= 0) && (nextRow < table->rowCount()) ? table->item(nextRow, 0) : nullptr;
+    if (next != nullptr)
     {
-        const IncludeEntry * entry = _findInclude(row);
-        Q_ASSERT(entry != nullptr);
-        mModel.deleteInclude(entry->getId());
-        table->removeRow(row);
-        
-        if (row < table->rowCount())
-        {
-            table->selectRow(row);
-        }
-        else if (table->rowCount() > 0)
-        {
-            table->selectRow(table->rowCount() - 1);
-        }
+        nextEntry = findInclude(nextRow);
+        table->setCurrentItem(next);
+        next->setSelected(true);
     }
+
+    QTableWidgetItem* col0 = table->item(row, 0);
+    col0->setSelected(false);
+
+    updateDetails(nextEntry, true);
+
+    delete col0;
+    table->removeRow(row);
+    mModel.deleteInclude(entry->getId());
+    blockBasicSignals(false);
 }
 
 void SIInclude::onInsertClicked(void)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
-    _addInclude(row);
 }
 
 void SIInclude::onBrowseClicked(void)
 {
-    WorkspaceFileDialog dialog(true
-        , false
-        , LusanApplication::getWorkspaceDirectories()
-        , SIInclude::getSupportedExtensions()
-        , tr("Select Include File")
-        , this);
+    WorkspaceFileDialog dialog(   true
+                                , false
+                                , LusanApplication::getWorkspaceDirectories()
+                                , SIInclude::getSupportedExtensions()
+                                , tr("Select Include File")
+                                , this);
 
     if (mCurUrl.isEmpty() == false)
     {
@@ -298,8 +245,8 @@ void SIInclude::onBrowseClicked(void)
     {
         blockBasicSignals(true);
 
-        QString include = dialog.getSelectedFileRelativePath();
-        mDetails->ctrlInclude()->setText(include);
+        QString location = dialog.getSelectedFileRelativePath();
+        mDetails->ctrlInclude()->setText(location);
         mDetails->ctrlDescription()->setFocus();
         mDetails->ctrlDescription()->selectAll();
 
@@ -307,8 +254,9 @@ void SIInclude::onBrowseClicked(void)
         int row = table->currentRow();
         if (row >= 0)
         {
-            QTableWidgetItem* item = table->item(row, 0);
-            item->setText(include);
+            IncludeEntry* entry = findInclude(row);
+            entry->setLocation(location);
+            setTexts(row, *entry);
         }
         
         mCurUrl = dialog.directoryUrl().path();
@@ -324,16 +272,12 @@ void SIInclude::onIncludeChanged(const QString& newText)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
-    if (row != -1)
+    IncludeEntry* entry = findInclude(row);
+    if (entry != nullptr)
     {
         blockBasicSignals(true);
-
-        IncludeEntry* entry = _findInclude(row);
-        Q_ASSERT(entry != nullptr);
         entry->setLocation(newText);
-        QTableWidgetItem* item = table->item(row, 0);
-        item->setText(newText);
-
+        setTexts(row, *entry);
         blockBasicSignals(false);
     }
 }
@@ -344,7 +288,7 @@ void SIInclude::onDescriptionChanged(void)
     int row = table->currentRow();
     if (row != -1)
     {
-        IncludeEntry* entry = _findInclude(row);
+        IncludeEntry* entry = findInclude(row);
         Q_ASSERT(entry != nullptr);
         entry->setDescription(mDetails->ctrlDescription()->toPlainText());
     }
@@ -354,9 +298,9 @@ void SIInclude::onDeprecatedChecked(bool isChecked)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
-    if (row != -1)
+    if (row >= 0)
     {
-        IncludeEntry* entry = _findInclude(row);
+        IncludeEntry* entry = findInclude(row);
         Q_ASSERT(entry != nullptr);
         SICommon::checkedDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, entry, isChecked);
     }
@@ -368,7 +312,7 @@ void SIInclude::onDeprecateHint(const QString& newText)
     int row = table->currentRow();
     if (row != -1)
     {
-        IncludeEntry* entry = _findInclude(row);
+        IncludeEntry* entry = findInclude(row);
         Q_ASSERT(entry != nullptr);
         SICommon::setDeprecateHint<SIIncludeDetails, IncludeEntry>(mDetails, entry, newText);
     }
@@ -383,6 +327,24 @@ void SIInclude::onEditorDataChanged(const QModelIndex &index, const QString &new
     cellChanged(index.row(), index.column(), newValue);
 }
 
+void SIInclude::cellChanged(int row, int col, const QString& newValue)
+{
+    IncludeEntry* entry = findInclude(row);
+    Q_ASSERT(entry != nullptr);
+
+    if (col == 0)
+    {
+        if (mDetails->ctrlInclude()->text() != newValue)
+        {
+            blockBasicSignals(true);
+            entry->setLocation(newValue);
+            setTexts(row, *entry);
+            updateDetails(entry, false);
+            blockBasicSignals(false);
+        }
+    }
+}
+
 void SIInclude::_addInclude(int pos)
 {
     QTableWidget *table = mList->ctrlTableList();
@@ -392,12 +354,11 @@ void SIInclude::_addInclude(int pos)
         name =_defName + QString::number(++ mCount);
     } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
     
-    uint32_t id = mModel.createInclude(name);
-    if (id != 0)
+    IncludeEntry * entry = mModel.createInclude(name);
+    if (entry != 0)
     {
         blockBasicSignals(true);
 
-        const IncludeEntry * entry = mModel.findInclude(id);
         mDetails->ctrlInclude()->setText(entry->getName());
         mDetails->ctrlDescription()->setPlainText(entry->getDescription());
 
@@ -424,25 +385,132 @@ void SIInclude::_addInclude(int pos)
     }
 }
 
+void SIInclude::updateData(void)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    const QList<IncludeEntry>& list = mModel.getIncludes();
+    if (list.isEmpty() == false)
+    {
+        for (const IncludeEntry& entry : list)
+        {
+            setTexts(-1, entry);
+        }
+
+        table->scrollToTop();
+    }
+}
+
+void SIInclude::updateWidgets(void)
+{
+    mTableCell = new TableCell(QList<QAbstractItemModel*>(), QList<int>(), mList->ctrlTableList());
+    mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
+    SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
+
+    mDetails->ctrlInclude()->setEnabled(false);
+    SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
+}
+
+void SIInclude::setupSignals(void)
+{
+    Q_ASSERT(mDetails != nullptr);
+    Q_ASSERT(mList != nullptr);
+
+    connect(mList->ctrlTableList(), &QTableWidget::currentCellChanged, this, &SIInclude::onCurCellChanged);
+    connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIInclude::onAddClicked);
+    connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIInclude::onRemoveClicked);
+    connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIInclude::onInsertClicked);
+
+    connect(mDetails->ctrlInclude(), &QLineEdit::textChanged, this, &SIInclude::onIncludeChanged);
+    connect(mDetails->ctrlBrowseButton(), &QPushButton::clicked, this, &SIInclude::onBrowseClicked);
+    connect(mDetails->ctrlDeprecated(), &QCheckBox::toggled, this, &SIInclude::onDeprecatedChecked);
+    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textChanged, this, &SIInclude::onDeprecateHint);
+    connect(mDetails->ctrlDescription(), &QPlainTextEdit::textChanged, this, &SIInclude::onDescriptionChanged);
+
+    connect(mTableCell, &TableCell::editorDataChanged, this, &SIInclude::onEditorDataChanged);
+}
+
 void SIInclude::blockBasicSignals(bool doBlock)
 {
     mList->ctrlTableList()->blockSignals(doBlock);
+
     mDetails->ctrlInclude()->blockSignals(doBlock);
+    mDetails->ctrlDescription()->blockSignals(doBlock);
+    mDetails->ctrlDeprecated()->blockSignals(doBlock);
+    mDetails->ctrlDeprecateHint()->blockSignals(doBlock);
 }
 
-void SIInclude::cellChanged(int row, int col, const QString& newValue)
+inline void SIInclude::setTexts(int row, const IncludeEntry& entry)
 {
-    IncludeEntry* entry = _findInclude(row);
-    Q_ASSERT(entry != nullptr);
-
-    if (col == 0)
+    QTableWidget* table = mList->ctrlTableList();
+    if (row < 0)
     {
-        if (mDetails->ctrlInclude()->text() != newValue)
+        row = table->rowCount();
+        QTableWidgetItem* col0 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayName), entry.getString(ElementBase::eDisplay::DisplayName));
+        col0->setData(Qt::ItemDataRole::UserRole, entry.getId());
+        table->setRowCount(row + 1);
+        table->setItem(row, 0, col0);
+    }
+    else
+    {
+        QTableWidgetItem* col0 = table->item(row, 0);
+        Q_ASSERT(col0->data(Qt::ItemDataRole::UserRole).toUInt() == entry.getId());
+
+        col0->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayName));
+        col0->setText(entry.getString(ElementBase::eDisplay::DisplayName));
+    }
+}
+
+inline void SIInclude::updateDetails(const IncludeEntry* entry, bool updateAll /*= false*/)
+{
+    if (entry != nullptr)
+    {
+        mDetails->ctrlInclude()->setText(entry->getName());
+        if (mList->ctrlTableList()->currentRow() >= 0)
         {
-            blockBasicSignals(true);
-            entry->setName(newValue);
-            mDetails->ctrlInclude()->setText(newValue);
-            blockBasicSignals(false);
+            mDetails->ctrlBrowseButton()->setEnabled(true);
+            mList->ctrlButtonRemove()->setEnabled(true);
+        }
+
+        if (updateAll)
+        {
+            mDetails->ctrlDescription()->setPlainText(entry->getDescription());
+            SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, entry, true);
         }
     }
+    else
+    {
+        mDetails->ctrlInclude()->setText("");
+        mDetails->ctrlDescription()->setPlainText("");
+
+        SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
+
+        mDetails->ctrlInclude()->setEnabled(false);
+        mDetails->ctrlBrowseButton()->setEnabled(false);
+
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
+    }
+}
+
+inline IncludeEntry* SIInclude::findInclude(int row)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    if ((row < 0) || (row >= table->rowCount()))
+        return nullptr;
+
+    QTableWidgetItem* item = table->item(row, 0);
+    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
+    return mModel.findInclude(id);
+}
+
+inline const IncludeEntry* SIInclude::findInclude(int row) const
+{
+    QTableWidget* table = mList->ctrlTableList();
+    if ((row < 0) || (row >= table->rowCount()))
+        return nullptr;
+
+    QTableWidgetItem* item = table->item(row, 0);
+    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
+    return mModel.findInclude(id);
 }
