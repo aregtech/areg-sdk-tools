@@ -157,6 +157,16 @@ protected slots:
 
     /**
      * \brief   Triggered when the move up button is clicked.
+     **/
+    void onMoveUpClicked(void);
+
+    /**
+     * \brief   Triggered when the move down button is clicked.
+     **/
+    void onMoveDownClicked(void);
+
+    /**
+     * \brief   Triggered when the move up button is clicked.
      * \param   newName     The new name of the constant object.
      **/
     void onNameChanged(const QString& newName);
@@ -248,6 +258,21 @@ private:
      **/
     inline const ConstantEntry* findConstant(int row) const;
     inline ConstantEntry* findConstant(int row);
+
+    /**
+     * \brief   Swaps the constants by given row indexes.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   firstRow    The row index of the first constant to swap.
+     * \param   secondRow   The row index of the second constant to swap.
+     **/
+    inline void swapConstants(int firstRow, int secondRow);
+
+    /**
+     * \brief   Updates the tool buttons.
+     * \param   row         The row index of the constant.
+     * \param   rowCount    The total number of rows in the table.
+     **/
+    inline void updateToolBottons(int row, int rowCount);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members

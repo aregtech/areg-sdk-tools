@@ -89,6 +89,22 @@ public:
     QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
 
     /**
+     * \brief   Swaps the constants by given unique IDs.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   firstId     The unique ID of the first constant to swap.
+     * \param   secondId    The unique ID of the second constant to swap.
+     **/
+    void swapConstants(uint32_t firstId, uint32_t secondId);
+
+    /**
+     * \brief   Swaps the constants by given constant entries.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   first       The first constant entry to swap.
+     * \param   second      The second constant entry to swap.
+     **/
+    void swapConstants(const ConstantEntry& first, const ConstantEntry& second);
+
+    /**
      * \brief   Returns the instance of data type data object relevant with the constants.
      **/
     inline SIDataTypeData& getDataTypeData(void);

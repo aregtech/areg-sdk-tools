@@ -162,7 +162,6 @@ void SIConstant::dataTypeUpdated(DataTypeCustom* dataType)
     blockBasicSignals(false);
 }
 
-
 void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
 {
     if (currentRow == previousRow)
@@ -172,34 +171,7 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
     QTableWidget * table = mList->ctrlTableList();
     const ConstantEntry * entry = findConstant(currentRow);
     updateDetails(entry, true);
-
-    if (entry != nullptr)
-    {
-        if (currentRow == 0)
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(false);
-            mList->ctrlButtonMoveDown()->setEnabled(true);
-        }
-        else if (currentRow == static_cast<int>(mList->ctrlTableList()->rowCount() - 1))
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(true);
-            mList->ctrlButtonMoveDown()->setEnabled(false);
-        }
-        else
-        {
-            mList->ctrlButtonMoveUp()->setEnabled(true);
-            mList->ctrlButtonMoveDown()->setEnabled(true);
-        }
-        
-        mList->ctrlButtonRemove()->setEnabled(true);
-    }
-    else
-    {
-        mList->ctrlButtonMoveUp()->setEnabled(false);
-        mList->ctrlButtonMoveDown()->setEnabled(false);
-        mList->ctrlButtonRemove()->setEnabled(false);
-    }
-    
+    updateToolBottons(entry != nullptr ? currentRow : -1, table->rowCount());
     blockBasicSignals(false);
 }
 
@@ -235,6 +207,7 @@ void SIConstant::onAddClicked(void)
         updateDetails(entry, true);
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
+        updateToolBottons(row, row + 1);
     }
     
     blockBasicSignals(false);
@@ -273,11 +246,42 @@ void SIConstant::onRemoveClicked(void)
     delete col2;
     table->removeRow(row);
     mModel.deleteConstant(entry->getId());
+    updateToolBottons(row, mList->ctrlTableList()->rowCount());
     blockBasicSignals(false);
 }
 
 void SIConstant::onInsertClicked(void)
 {
+}
+
+void SIConstant::onMoveUpClicked(void)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if (row > 0)
+    {
+        blockBasicSignals(true);
+        uint32_t idFirst = table->item(row, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idSecond = table->item(row - 1, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        mModel.swapConstants(idFirst, idSecond);
+        swapConstants(row, row - 1);
+        blockBasicSignals(false);
+    }
+}
+
+void SIConstant::onMoveDownClicked(void)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    int row = table->currentRow();
+    if ((row >= 0) && (row < (table->rowCount() - 1)))
+    {
+        blockBasicSignals(true);
+        uint32_t idFirst = table->item(row, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idSecond = table->item(row + 1, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        mModel.swapConstants(idFirst, idSecond);
+        swapConstants(row, row + 1);
+        blockBasicSignals(false);
+    }
 }
 
 void SIConstant::onNameChanged(const QString& newName)
@@ -450,9 +454,11 @@ void SIConstant::setupSignals(void)
     connect(mList->ctrlButtonAdd(),    &QToolButton::clicked        , this, &SIConstant::onAddClicked);
     connect(mList->ctrlButtonRemove(), &QToolButton::clicked        , this, &SIConstant::onRemoveClicked);
     connect(mList->ctrlButtonInsert(), &QToolButton::clicked        , this, &SIConstant::onInsertClicked);
+    connect(mList->ctrlButtonMoveUp(), &QToolButton::clicked        , this, &SIConstant::onMoveUpClicked);
+    connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked      , this, &SIConstant::onMoveDownClicked);
 
     connect(mDetails->ctrlName(),      &QLineEdit::textChanged      , this, &SIConstant::onNameChanged);
-    connect(mDetails->ctrlTypes(),     &QComboBox::currentTextChanged, this, &SIConstant::onTypeChanged);
+    connect(mDetails->ctrlTypes(),     &QComboBox::currentTextChanged, this,&SIConstant::onTypeChanged);
     connect(mDetails->ctrlValue(),     &QLineEdit::textChanged      , this, &SIConstant::onValueChanged);
     connect(mDetails->ctrlDeprecated(),&QCheckBox::toggled          , this, &SIConstant::onDeprectedChecked);
     connect(mDetails->ctrlDeprecateHint(),&QLineEdit::textEdited    , this, &SIConstant::onDeprecateHintChanged);
@@ -573,4 +579,57 @@ inline ConstantEntry* SIConstant::findConstant(int row)
     QTableWidgetItem* col0 = table->item(row, static_cast<int>(eColumn::ColName));
     uint32_t id = col0->data(Qt::ItemDataRole::UserRole).toUInt();
     return mModel.findConstant(id);
+}
+
+inline void SIConstant::swapConstants(int firstRow, int secondRow)
+{
+    QTableWidget* table = mList->ctrlTableList();
+    Q_ASSERT(firstRow >= 0 && firstRow < table->rowCount());
+    Q_ASSERT(secondRow >= 0 && secondRow < table->rowCount());
+
+    const ConstantEntry* first = findConstant(firstRow);
+    const ConstantEntry* second = findConstant(secondRow);
+
+    Q_ASSERT((first != nullptr) && (second != nullptr));
+    setTexts(firstRow, *first);
+    setTexts(secondRow, *second);
+    table->item(firstRow, 0)->setSelected(false);
+    table->setCurrentItem(table->item(secondRow, 0));
+    table->selectRow(secondRow);
+    updateToolBottons(secondRow, mList->ctrlTableList()->rowCount());
+}
+
+inline void SIConstant::updateToolBottons(int row, int rowCount)
+{
+    if ((row >= 0) && (row < rowCount))
+    {
+        if ((row == 0) && (rowCount == 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else if (row == 0)
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+        else if (row == (rowCount - 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+
+        mList->ctrlButtonRemove()->setEnabled(true);
+    }
+    else
+    {
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
+        mList->ctrlButtonRemove()->setEnabled(false);
+    }
 }
