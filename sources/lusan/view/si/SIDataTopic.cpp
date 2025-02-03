@@ -288,7 +288,7 @@ void SIDataTopic::onRemoveClicked(void)
     delete col2;
     table->removeRow(row);
     mModel.deleteAttribute(entry->getId());
-    updateToolBottons(row, mList->ctrlTableList()->rowCount());
+    updateToolBottons(next != nullptr ? table->indexFromItem(next).row() : -1, mList->ctrlTableList()->rowCount());
     blockBasicSignals(false);
 }
 

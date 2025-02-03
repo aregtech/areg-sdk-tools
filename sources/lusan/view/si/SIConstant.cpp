@@ -246,7 +246,7 @@ void SIConstant::onRemoveClicked(void)
     delete col2;
     table->removeRow(row);
     mModel.deleteConstant(entry->getId());
-    updateToolBottons(row, mList->ctrlTableList()->rowCount());
+    updateToolBottons(next != nullptr ? table->indexFromItem(next).row() : -1, mList->ctrlTableList()->rowCount());
     blockBasicSignals(false);
 }
 

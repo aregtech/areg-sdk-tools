@@ -117,6 +117,16 @@ protected slots:
     void onInsertClicked(void);
 
     /**
+     * \brief   Triggered when the move up button is clicked.
+     **/
+    void onMoveUpClicked(void);
+
+    /**
+     * \brief   Triggered when the move down button is clicked.
+     **/
+    void onMoveDownClicked(void);
+
+    /**
      * \brief   Triggered when the browse button is clicked.
      **/
     void onBrowseClicked(void);
@@ -159,7 +169,7 @@ private:
     void updateData(void);
 
     /**
-     * \brief   Initializes the SIConstant object.
+     * \brief   Initializes the SIInclude object.
      **/
     void updateWidgets(void);
 
@@ -201,10 +211,19 @@ private:
     inline const IncludeEntry* findInclude(int row) const;
 
     /**
-     * \brief   Adds new include entry at the specified row.
-     * \param   row     The row index to add new include object
+     * \brief   Swaps the includes by given row indexes.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   firstRow    The row index of the first include to swap.
+     * \param   secondRow   The row index of the second include to swap.
      **/
-    inline void _addInclude(int row);
+    inline void swapIncludes(int firstRow, int secondRow);
+
+    /**
+     * \brief   Updates the tool buttons.
+     * \param   row         The row index of the include.
+     * \param   rowCount    The total number of rows in the table.
+     **/
+    inline void updateToolBottons(int row, int rowCount);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
