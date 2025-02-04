@@ -26,6 +26,7 @@
 #include <QList>
 
 class DataTypeCustom;
+class DataTypeEnum;
 class DataTypeStructure;
 class DataTypeContainer;
 class ElementBase;
@@ -335,7 +336,31 @@ public:
      **/
     DataTypeCustom* getCustomTypeFromId(uint32_t typeId);
     const DataTypeCustom* getCustomTypeFromId(uint32_t typeId) const;
-    
+
+    /**
+     * \brief   Swaps the constants by given unique IDs.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   firstId     The unique ID of the first constant to swap.
+     * \param   secondId    The unique ID of the second constant to swap.
+     **/
+    void swapDataTypes(uint32_t firstId, uint32_t secondId);
+
+    /**
+     * \brief   Swaps the constants by given constant entries.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   first       The first constant entry to swap.
+     * \param   second      The second constant entry to swap.
+     **/
+    void swapDataTypes(const DataTypeCustom& first, const DataTypeCustom& second);
+
+    void swapStructureFields(DataTypeStructure& dataType, uint32_t firstId, uint32_t secondId);
+
+    void swapStructureFields(DataTypeStructure& dataType, const FieldEntry& first, const FieldEntry& second);
+
+    void swapEnumFields(DataTypeEnum& dataType, uint32_t firstId, uint32_t secondId);
+
+    void swapEnumFields(DataTypeEnum& dataType, const EnumEntry& first, const EnumEntry& second);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////

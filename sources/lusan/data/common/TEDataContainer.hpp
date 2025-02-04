@@ -905,11 +905,25 @@ int TEDataContainer<Data, ElemBase>::getElementCount(void) const
 template<class Data, class ElemBase>
 void TEDataContainer<Data, ElemBase>::swapElements(int index1, int index2)
 {
+    auto & first = ref{}(mElementList[index1]);
+    auto & second = ref{}(mElementList[index2]);
+    uint32_t id1 = first.getId();
+    uint32_t id2 = second.getId();
+    first.setId(id2);
+    second.setId(id1);
+    
+    Data temp = mElementList[index1];
+    mElementList[index1] = mElementList[index2];
+    mElementList[index2] = temp;
+    
+    
+#if 0    
     Data temp = mElementList[index1];
     mElementList[index1] = mElementList[index2];
     mElementList[index1].setId(temp.getId());
     temp.setId(mElementList[index2].getId());
     mElementList[index2] = temp;
+#endif
 }
 
 template<class Data, class ElemBase>

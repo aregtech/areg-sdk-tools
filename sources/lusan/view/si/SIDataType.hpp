@@ -100,6 +100,16 @@ protected:
     void onRemoveFieldClicked(void);
 
     /**
+     * \brief   Triggered when the move up button is clicked.
+     **/
+    void onMoveUpClicked(void);
+
+    /**
+     * \brief   Triggered when the move down button is clicked.
+     **/
+    void onMoveDownClicked(void);
+
+    /**
      * \brief Triggered when the name is changed.
      * \param newName The new name of the attribute.
      */
@@ -467,6 +477,20 @@ private:
     inline void setNodeText(QTreeWidgetItem* node, DocumentElem * elem) const;
     
     inline void showClean(void);
+
+    inline void moveDataTypeUp(QTreeWidgetItem* node);
+
+    inline void moveDataTypeParamUp(QTreeWidgetItem* node);
+
+    inline void moveDataTypeDown(QTreeWidgetItem* node);
+
+    inline void moveDataTypeParamDown(QTreeWidgetItem* node);
+
+    inline void swapDataTypes(QTreeWidgetItem* node, int row, int moveRow);
+
+    inline void swapDataTypeFields(QTreeWidgetItem* node, QTreeWidgetItem* parent, int row, int moveRow);
+
+    inline void updateToolButtons(int row, int rowCount);
     
     /**
      * \brief   Returns list of basic container data type objects.
