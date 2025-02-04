@@ -257,6 +257,13 @@ public:
     MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
 
     /**
+     * \brief   Removes the parameter from the method by ID.
+     * \param   method  The method object to remove the parameter.
+     * \param   id      The ID of the parameter to remove.
+     **/
+    void removeParameter(SIMethodBase& method, uint32_t id);
+
+    /**
      * \brief   Validates the method data.
      * \param   dataTypes   The data type data to validate the methods.
      **/

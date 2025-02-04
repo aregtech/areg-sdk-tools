@@ -217,7 +217,7 @@ void SIDataType::onAddClicked(void)
     DataTypeCustom* dataType = mModel.createDataType(name, DataTypeBase::eCategory::Structure);
     int pos = table->topLevelItemCount();
     QTreeWidgetItem * item = createNodeStructure(static_cast<DataTypeStructure *>(dataType));
-    table->insertTopLevelItem(pos, item);
+    table->addTopLevelItem(item);
     QTreeWidgetItem * cur = table->currentItem();
     if (cur != nullptr)
     {
@@ -255,8 +255,9 @@ void SIDataType::onAddFieldClicked(void)
     if (field != nullptr)
     {
         blockBasicSignals(true);
-        QTreeWidgetItem* item = new QTreeWidgetItem(parent);
-        
+        QTreeWidgetItem* item = new QTreeWidgetItem();
+
+        int pos = parent->childCount();
         parent->addChild(item);
         if (parent->isExpanded() == false)
         {
@@ -282,7 +283,6 @@ void SIDataType::onAddFieldClicked(void)
             selectedEnumField(nullptr, *static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
         }
 
-        int pos = parent->indexOfChild(item);
         updateToolButtons(pos, parent->childCount());
         blockBasicSignals(false);
     }
@@ -311,7 +311,7 @@ void SIDataType::onRemoveClicked(void)
     if (next != nullptr)
     {
         next->setSelected(true);
-        row = table->indexOfTopLevelItem(item);
+        row = table->indexOfTopLevelItem(next);
         rowCount = table->topLevelItemCount();
     }
     else
@@ -337,7 +337,7 @@ void SIDataType::onRemoveFieldClicked(void)
     item->setSelected(false);
 
     deleteTreeNode(item);
-    int row = 0;
+    int row = -1;
     int rowCount = 0;
     if ((index >= 0) && (index < parent->childCount()))
     {
@@ -1048,12 +1048,12 @@ void SIDataType::updateWidgets(void)
 void SIDataType::setupSignals(void)
 {
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged  , this, &SIDataType::onCurCellChanged);
-    connect(mList->ctrlToolAdd()            , &QToolButton::clicked             , this, &SIDataType::onAddClicked);
-    connect(mList->ctrlToolAddField()       , &QToolButton::clicked             , this, &SIDataType::onAddFieldClicked);
-    connect(mList->ctrlToolRemove()         , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
-    connect(mList->ctrlToolRemoveField()    , &QToolButton::clicked             , this, &SIDataType::onRemoveFieldClicked);
-    connect(mList->ctrlToolMoveUp()         , &QToolButton::clicked             , this, &SIDataType::onMoveUpClicked);
-    connect(mList->ctrlToolMoveDown()       , &QToolButton::clicked             , this, &SIDataType::onMoveDownClicked);
+    connect(mList->ctrlButtonAdd()          , &QToolButton::clicked             , this, &SIDataType::onAddClicked);
+    connect(mList->ctrlButtonAddField()     , &QToolButton::clicked             , this, &SIDataType::onAddFieldClicked);
+    connect(mList->ctrlButtonRemove()       , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
+    connect(mList->ctrlButtonRemoveField()  , &QToolButton::clicked             , this, &SIDataType::onRemoveFieldClicked);
+    connect(mList->ctrlButtonMoveUp()       , &QToolButton::clicked             , this, &SIDataType::onMoveUpClicked);
+    connect(mList->ctrlButtonMoveDown()     , &QToolButton::clicked             , this, &SIDataType::onMoveDownClicked);
 
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged           , this, &SIDataType::onTypeNameChanged);
     connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked            , this, &SIDataType::onStructSelected);
@@ -1139,15 +1139,15 @@ void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* data
 
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
 
-    mList->ctrlToolAdd()->setEnabled(true);
-    mList->ctrlToolRemove()->setEnabled(true);
-    mList->ctrlToolAddField()->setEnabled(true);
-    mList->ctrlToolRemoveField()->setEnabled(false);
-    mList->ctrlToolInsertField()->setEnabled(true);
+    mList->ctrlButtonAdd()->setEnabled(true);
+    mList->ctrlButtonRemove()->setEnabled(true);
+    mList->ctrlButtonAddField()->setEnabled(true);
+    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonInsertField()->setEnabled(true);
 
     int index = mModel.findIndex(dataType->getId());
-    mList->ctrlToolMoveUp()->setEnabled(index > 0);
-    mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
+    mList->ctrlButtonMoveUp()->setEnabled(index > 0);
+    mList->ctrlButtonMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
 void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
@@ -1176,15 +1176,15 @@ void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
     
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
     
-    mList->ctrlToolAdd()->setEnabled(true);
-    mList->ctrlToolRemove()->setEnabled(true);
-    mList->ctrlToolAddField()->setEnabled(true);
-    mList->ctrlToolRemoveField()->setEnabled(false);
-    mList->ctrlToolInsertField()->setEnabled(true);
+    mList->ctrlButtonAdd()->setEnabled(true);
+    mList->ctrlButtonRemove()->setEnabled(true);
+    mList->ctrlButtonAddField()->setEnabled(true);
+    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonInsertField()->setEnabled(true);
     
     int index = mModel.findIndex(dataType->getId());
-    mList->ctrlToolMoveUp()->setEnabled(index > 0);
-    mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
+    mList->ctrlButtonMoveUp()->setEnabled(index > 0);
+    mList->ctrlButtonMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
 void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataType)
@@ -1213,15 +1213,15 @@ void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataT
     mDetails->ctrlImportObject()->setText(dataType->getObject());
     mDetails->ctrlButtonBrowse()->setEnabled(true);
 
-    mList->ctrlToolAdd()->setEnabled(true);
-    mList->ctrlToolRemove()->setEnabled(true);
-    mList->ctrlToolAddField()->setEnabled(false);
-    mList->ctrlToolRemoveField()->setEnabled(false);
-    mList->ctrlToolInsertField()->setEnabled(false);
+    mList->ctrlButtonAdd()->setEnabled(true);
+    mList->ctrlButtonRemove()->setEnabled(true);
+    mList->ctrlButtonAddField()->setEnabled(false);
+    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonInsertField()->setEnabled(false);
     
     int index = mModel.findIndex(dataType->getId());
-    mList->ctrlToolMoveUp()->setEnabled(index > 0);
-    mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
+    mList->ctrlButtonMoveUp()->setEnabled(index > 0);
+    mList->ctrlButtonMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
 void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* dataType)
@@ -1265,15 +1265,15 @@ void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* d
         mDetails->ctrlContainerKey()->setEnabled(false);
     }
 
-    mList->ctrlToolAdd()->setEnabled(true);
-    mList->ctrlToolRemove()->setEnabled(true);
-    mList->ctrlToolAddField()->setEnabled(false);
-    mList->ctrlToolRemoveField()->setEnabled(false);
-    mList->ctrlToolInsertField()->setEnabled(false);
+    mList->ctrlButtonAdd()->setEnabled(true);
+    mList->ctrlButtonRemove()->setEnabled(true);
+    mList->ctrlButtonAddField()->setEnabled(false);
+    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonInsertField()->setEnabled(false);
 
     int index = mModel.findIndex(dataType->getId());
-    mList->ctrlToolMoveUp()->setEnabled(index > 0);
-    mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
+    mList->ctrlButtonMoveUp()->setEnabled(index > 0);
+    mList->ctrlButtonMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
 void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& field, DataTypeStructure* parent)
@@ -1301,15 +1301,15 @@ void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& 
 
     SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, &field, true);
     
-    mList->ctrlToolAdd()->setEnabled(true);
-    mList->ctrlToolRemove()->setEnabled(false);
-    mList->ctrlToolAddField()->setEnabled(true);
-    mList->ctrlToolInsertField()->setEnabled(true);
-    mList->ctrlToolRemoveField()->setEnabled(true);
+    mList->ctrlButtonAdd()->setEnabled(true);
+    mList->ctrlButtonRemove()->setEnabled(false);
+    mList->ctrlButtonAddField()->setEnabled(true);
+    mList->ctrlButtonInsertField()->setEnabled(true);
+    mList->ctrlButtonRemoveField()->setEnabled(true);
     
     int index = parent->findIndex(field.getId());    
-    mList->ctrlToolMoveUp()->setEnabled(index > 0);
-    mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
+    mList->ctrlButtonMoveUp()->setEnabled(index > 0);
+    mList->ctrlButtonMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
 void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& field, DataTypeEnum* parent)
@@ -1335,15 +1335,15 @@ void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& fie
     
     SICommon::enableDeprecated<SIDataTypeFieldDetails, EnumEntry>(mFields, &field, true);
     
-    mList->ctrlToolAdd()->setEnabled(true);
-    mList->ctrlToolRemove()->setEnabled(false);
-    mList->ctrlToolAddField()->setEnabled(true);
-    mList->ctrlToolInsertField()->setEnabled(true);
-    mList->ctrlToolRemoveField()->setEnabled(true);
+    mList->ctrlButtonAdd()->setEnabled(true);
+    mList->ctrlButtonRemove()->setEnabled(false);
+    mList->ctrlButtonAddField()->setEnabled(true);
+    mList->ctrlButtonInsertField()->setEnabled(true);
+    mList->ctrlButtonRemoveField()->setEnabled(true);
     
     int index = parent->findIndex(field.getId());    
-    mList->ctrlToolMoveUp()->setEnabled(index > 0);
-    mList->ctrlToolMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
+    mList->ctrlButtonMoveUp()->setEnabled(index > 0);
+    mList->ctrlButtonMoveDown()->setEnabled((index >= 0) && (index < (mModel.getDataTypeCount() - 1)));
 }
 
 QTreeWidgetItem* SIDataType::createNodeStructure(DataTypeStructure* dataType) const
@@ -1555,12 +1555,12 @@ inline void SIDataType::showClean(void)
     showContainerDetails(false);
     showImportDetails(false);
     
-    mList->ctrlToolRemove()->setEnabled(false);
-    mList->ctrlToolAddField()->setEnabled(false);
-    mList->ctrlToolRemoveField()->setEnabled(false);
-    mList->ctrlToolInsertField()->setEnabled(false);
-    mList->ctrlToolMoveUp()->setEnabled(false);
-    mList->ctrlToolMoveDown()->setEnabled(false);
+    mList->ctrlButtonRemove()->setEnabled(false);
+    mList->ctrlButtonAddField()->setEnabled(false);
+    mList->ctrlButtonRemoveField()->setEnabled(false);
+    mList->ctrlButtonInsertField()->setEnabled(false);
+    mList->ctrlButtonMoveUp()->setEnabled(false);
+    mList->ctrlButtonMoveDown()->setEnabled(false);
     
     enableTypeSelection(false);
 }
@@ -1594,7 +1594,9 @@ inline void SIDataType::moveDataTypeDown(QTreeWidgetItem* node)
     int row = table->indexOfTopLevelItem(node);
     if ((row >= 0) && (row < (table->topLevelItemCount() - 1)))
     {
+        bool isExpanded = node->isExpanded();
         swapDataTypes(node, row, row + 1);
+        node->setExpanded(isExpanded);
     }
 }
 
@@ -1662,31 +1664,28 @@ inline void SIDataType::updateToolButtons(int row, int rowCount)
     {
         if ((row == 0) && (rowCount == 1))
         {
-            mList->ctrlToolMoveUp()->setEnabled(false);
-            mList->ctrlToolMoveDown()->setEnabled(false);
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
         }
         else if (row == 0)
         {
-            mList->ctrlToolMoveUp()->setEnabled(false);
-            mList->ctrlToolMoveDown()->setEnabled(true);
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
         }
         else if (row == (rowCount - 1))
         {
-            mList->ctrlToolMoveUp()->setEnabled(true);
-            mList->ctrlToolMoveDown()->setEnabled(false);
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
         }
         else
         {
-            mList->ctrlToolMoveUp()->setEnabled(true);
-            mList->ctrlToolMoveDown()->setEnabled(true);
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
         }
-
-        // mList->ctrlToolRemove()->setEnabled(true);
     }
     else
     {
-        mList->ctrlToolMoveUp()->setEnabled(false);
-        mList->ctrlToolMoveDown()->setEnabled(false);
-        // mList->ctrlToolRemove()->setEnabled(false);
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
     }
 }

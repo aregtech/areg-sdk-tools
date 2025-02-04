@@ -357,7 +357,7 @@ void SIMethod::onDeprecateChecked(bool isChecked)
     SICommon::checkedDeprecated<SIMethodDetails, SIMethodBase>(mDetails, method, isChecked);
 }
 
-void SIMethod::onDeprecateChanged(const QString& newText)
+void SIMethod::onDeprecateHintChanged(const QString& newText)
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -412,12 +412,14 @@ void SIMethod::onAddClicked(void)
     
     SIMethodBase * newMethod = mModel.createMethod(name, SIMethodBase::eMethodType::MethodRequest);
     Q_ASSERT(newMethod != nullptr);
-    QTreeWidgetItem* item = updateMethodNode(new QTreeWidgetItem(table), newMethod);
+    int pos = table->topLevelItemCount();
+    QTreeWidgetItem* item = updateMethodNode(new QTreeWidgetItem(), newMethod);
     table->addTopLevelItem(item);
     item->setSelected(true);
     table->setCurrentItem(item);
     showMethodDetails(newMethod);
-    blockBasicSignals(false);    
+    updateToolButtons(pos, table->topLevelItemCount());
+    blockBasicSignals(false);
 }
 
 void SIMethod::onRemoveClicked(void)
@@ -450,13 +452,18 @@ void SIMethod::onRemoveClicked(void)
     mModel.removeMethod(method);
     delete item;
 
+    int row = -1;
+    int rowCount = 0;
     if (next != nullptr)
     {
         Q_ASSERT(nextMethod != nullptr);
         next->setSelected(true);
+        row = table->indexOfTopLevelItem(next);
+        rowCount = table->topLevelItemCount();
     }
 
     showMethodDetails(nextMethod);
+    updateToolButtons(row, rowCount);
 
     blockBasicSignals(false);
 }
@@ -483,9 +490,9 @@ void SIMethod::onParamAddClicked(void)
     MethodParameter* param = mModel.addParameter(method, name);
     if (param != nullptr)
     {
-        
         blockBasicSignals(true);
-        QTreeWidgetItem* item = new QTreeWidgetItem(parent);
+        int pos = parent->childCount();
+        QTreeWidgetItem* item = new QTreeWidgetItem();
         setNodeText(item, param);
         item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
         item->setData(1, Qt::ItemDataRole::UserRole, param->getId());
@@ -496,6 +503,7 @@ void SIMethod::onParamAddClicked(void)
         item->setExpanded(true);
         
         showParamDetails(method, *param);
+        updateToolButtons(pos, parent->childCount());
         blockBasicSignals(false);
     }
 }
@@ -514,14 +522,28 @@ void SIMethod::onParamRemoveClicked(void)
     
     QTreeWidgetItem* parent = item->parent();
     int index = parent->indexOfChild(item);
-    index = index + 1 == parent->childCount() ? index - 1 : index + 1;
-    QTreeWidgetItem* next = (index >= 0) && (index < parent->childCount()) ? parent->child(index) : parent;
-    
-    
-    blockBasicSignals(true);    
+    index = index + 1 == parent->childCount() ? index - 1 : index;
+
+    blockBasicSignals(true);
     item->setSelected(false);
     parent->removeChild(item);
     method->removeElement(id);
+
+    QTreeWidgetItem* next = nullptr;
+    int row = -1;
+    int rowCount = 0;
+    if ((index >= 0) && (index < parent->childCount()))
+    {
+        next = parent->child(index);
+        row = index;
+        rowCount = parent->childCount();
+    }
+    else
+    {
+        next = parent;
+        row = table->indexOfTopLevelItem(next);
+        rowCount = table->topLevelItemCount();
+    }
     
     if (next != nullptr)
     {
@@ -546,6 +568,7 @@ void SIMethod::onParamRemoveClicked(void)
     }
     
     delete item;
+    updateToolButtons(row, rowCount);
     blockBasicSignals(false);
 }
 
@@ -555,10 +578,44 @@ void SIMethod::onParamInsertClicked(void)
 
 void SIMethod::onMoveUpClicked(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    if (item == nullptr)
+        return;
+
+    blockBasicSignals(true);
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    if (id == 0)
+    {
+        moveMethodUp(item);
+    }
+    else
+    {
+        moveMethodParamUp(item);
+    }
+
+    blockBasicSignals(false);
 }
 
 void SIMethod::onMoveDownClicked(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    if (item == nullptr)
+        return;
+
+    blockBasicSignals(true);
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    if (id == 0)
+    {
+        moveMethodDown(item);
+    }
+    else
+    {
+        moveMethodParamDown(item);
+    }
+
+    blockBasicSignals(false);
 }
 
 void SIMethod::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous)
@@ -576,9 +633,11 @@ void SIMethod::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previ
     blockBasicSignals(true);
     if (parent == nullptr)
     {
+        QTreeWidget* table = mList->ctrlTableList();
         Q_ASSERT(method != nullptr);
         Q_ASSERT(id == 0);
         showMethodDetails(method);
+        updateToolButtons(table->indexOfTopLevelItem(current), table->topLevelItemCount());
     }
     else
     {
@@ -587,6 +646,7 @@ void SIMethod::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previ
         MethodParameter* param = method->findElement(id);
         Q_ASSERT(param != nullptr);
         showParamDetails(method, *param);
+        updateToolButtons(parent->indexOfChild(current), parent->childCount());
     }
     
     blockBasicSignals(false);
@@ -679,7 +739,7 @@ void SIMethod::updateData(void)
     table->clear();
     for (SIMethodBase* method : list)
     {
-        QTreeWidgetItem* item = updateMethodNode(new QTreeWidgetItem(table), method);
+        QTreeWidgetItem* item = updateMethodNode(new QTreeWidgetItem(), method);
         table->addTopLevelItem(item);
     }
 
@@ -701,10 +761,10 @@ void SIMethod::setupSignals(void)
     connect(mDetails->ctrlResponse()        , &QRadioButton::toggled        , this, &SIMethod::onResponseSelected);
     connect(mDetails->ctrlBroadcast()       , &QRadioButton::toggled        , this, &SIMethod::onBroadcastSelected);
     connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled           , this, &SIMethod::onDeprecateChecked);
-    connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::textEdited        , this, &SIMethod::onDeprecateChanged);
+    connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::textEdited        , this, &SIMethod::onDeprecateHintChanged);
     connect(mDetails->ctrlDescription()     , &QPlainTextEdit::textChanged  , this, &SIMethod::onDescriptionChanged);
     connect(mDetails->ctrlConnectedResponse(), &QComboBox::currentTextChanged, this, &SIMethod::onConnectedResponseChanged);
-    
+
     connect(mList->ctrlButtonAdd()          , &QToolButton::clicked         , this, &SIMethod::onAddClicked);
     connect(mList->ctrlButtonRemove()       , &QToolButton::clicked         , this, &SIMethod::onRemoveClicked);
     connect(mList->ctrlButtonParamAdd()     , &QToolButton::clicked         , this, &SIMethod::onParamAddClicked);
@@ -713,7 +773,7 @@ void SIMethod::setupSignals(void)
     connect(mList->ctrlButtonMoveUp()       , &QToolButton::clicked         , this, &SIMethod::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown()     , &QToolButton::clicked         , this, &SIMethod::onMoveDownClicked);
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged, this, &SIMethod::onCurCellChanged);
-    
+
     connect(mParams->ctrlParamName()        , &QLineEdit::textChanged       , this, &SIMethod::onParamNameChanged);
     connect(mParams->ctrlParamType()        , &QComboBox::currentTextChanged, this, &SIMethod::onParamTypeChanged);
     connect(mParams->ctrlParamHasDefault()  , &QCheckBox::toggled           , this, &SIMethod::onParamDefaultChecked);
@@ -750,7 +810,7 @@ QTreeWidgetItem* SIMethod::updateMethodNode(QTreeWidgetItem* item, SIMethodBase*
         const QList<MethodParameter>& params = method->getElements();
         for (const MethodParameter& param : params)
         {
-            QTreeWidgetItem* paramItem = new QTreeWidgetItem(item);
+            QTreeWidgetItem* paramItem = new QTreeWidgetItem();
             setNodeText(paramItem, &param);
             paramItem->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
             paramItem->setData(1, Qt::ItemDataRole::UserRole, param.getId());
@@ -955,5 +1015,119 @@ void SIMethod::responseDeleted(SIMethodResponse* response)
             static_cast<SIMethodRequest *>(method)->connectResponse(nullptr);
             setNodeText(node, method);
         }
+    }
+}
+
+inline void SIMethod::moveMethodUp(QTreeWidgetItem* node)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(node);
+    if (row > 0)
+    {
+        bool isExpanded = node->isExpanded();
+        swapMethods(node, row, row - 1);
+        node->setExpanded(isExpanded);
+    }
+}
+
+inline void SIMethod::moveMethodParamUp(QTreeWidgetItem* node)
+{
+    QTreeWidgetItem* parent = node->parent();
+    Q_ASSERT(parent != nullptr);
+    int row = parent->indexOfChild(node);
+    if (row > 0)
+    {
+        swapMethodParams(node, parent, row, row - 1);
+    }
+}
+
+inline void SIMethod::moveMethodDown(QTreeWidgetItem* node)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(node);
+    if ((row >= 0) && (row < (table->topLevelItemCount() - 1)))
+    {
+        bool isExpanded = node->isExpanded();
+        swapMethods(node, row, row + 1);
+        node->setExpanded(isExpanded);
+    }
+}
+
+inline void SIMethod::moveMethodParamDown(QTreeWidgetItem* node)
+{
+    QTreeWidgetItem* parent = node->parent();
+    Q_ASSERT(parent != nullptr);
+    int row = parent->indexOfChild(node);
+    if ((row >= 0) && (row < (parent->childCount() - 1)))
+    {
+        swapMethodParams(node, parent, row, row + 1);
+    }
+}
+
+inline void SIMethod::swapMethods(QTreeWidgetItem* node, int row, int moveRow)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* nodeSecond = table->topLevelItem(moveRow);
+    Q_ASSERT(nodeSecond != nullptr);
+    SIMethodBase* first = node->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    SIMethodBase* second = nodeSecond->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    mModel.swapMethods(*first, *second);
+
+    table->takeTopLevelItem(row);
+    table->insertTopLevelItem(moveRow, node);
+    table->setCurrentItem(node);
+    nodeSecond->setSelected(false);
+    node->setSelected(true);
+    updateToolButtons(moveRow, table->topLevelItemCount());
+}
+
+inline void SIMethod::swapMethodParams(QTreeWidgetItem* node, QTreeWidgetItem* parent, int row, int moveRow)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* nodeSecond = parent->child(moveRow);
+    uint32_t firstId = node->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    uint32_t secondId = nodeSecond->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    SIMethodBase* method = parent->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    Q_ASSERT(method != nullptr);
+    mModel.swapMethodParams(*method, firstId, secondId);
+    node->setData(1, Qt::ItemDataRole::UserRole, secondId);
+    nodeSecond->setData(1, Qt::ItemDataRole::UserRole, firstId);
+    parent->takeChild(row);
+    parent->insertChild(moveRow, node);
+    table->setCurrentItem(node);
+    nodeSecond->setSelected(false);
+    node->setSelected(true);
+    updateToolButtons(moveRow, parent->childCount());
+}
+
+inline void SIMethod::updateToolButtons(int row, int rowCount)
+{
+    if ((row >= 0) && (row < rowCount))
+    {
+        if ((row == 0) && (rowCount == 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else if (row == 0)
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(false);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+        else if (row == (rowCount - 1))
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(false);
+        }
+        else
+        {
+            mList->ctrlButtonMoveUp()->setEnabled(true);
+            mList->ctrlButtonMoveDown()->setEnabled(true);
+        }
+    }
+    else
+    {
+        mList->ctrlButtonMoveUp()->setEnabled(false);
+        mList->ctrlButtonMoveDown()->setEnabled(false);
     }
 }

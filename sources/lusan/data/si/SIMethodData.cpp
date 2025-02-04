@@ -315,6 +315,11 @@ MethodParameter* SIMethodData::addParameter(SIMethodBase* method, const QString&
     return (method != nullptr ? method->addParameter(name, type) : nullptr);
 }
 
+void SIMethodData::removeParameter(SIMethodBase& method, uint32_t id)
+{
+    method.removeElement(id);
+}
+
 void SIMethodData::validate(const SIDataTypeData& dataTypes)
 {
     const QList<DataTypeCustom *>& customTypes = dataTypes.getCustomDataTypes();

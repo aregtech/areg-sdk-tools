@@ -37,19 +37,19 @@ public:
 
     QTreeWidget* ctrlTableList(void) const;
 
-    QToolButton* ctrlToolAdd(void) const;
+    QToolButton* ctrlButtonAdd(void) const;
 
-    QToolButton* ctrlToolRemove(void) const;
+    QToolButton* ctrlButtonRemove(void) const;
 
-    QToolButton* ctrlToolMoveUp(void) const;
+    QToolButton* ctrlButtonMoveUp(void) const;
 
-    QToolButton* ctrlToolMoveDown(void) const;
+    QToolButton* ctrlButtonMoveDown(void) const;
 
-    QToolButton* ctrlToolAddField(void) const;
+    QToolButton* ctrlButtonAddField(void) const;
 
-    QToolButton* ctrlToolRemoveField(void) const;
+    QToolButton* ctrlButtonRemoveField(void) const;
 
-    QToolButton* ctrlToolInsertField(void) const;
+    QToolButton* ctrlButtonInsertField(void) const;
 
 private:
     Ui::SIDataTypeList* ui;
