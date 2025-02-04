@@ -41,37 +41,37 @@ QTreeWidget* SIDataTypeList::ctrlTableList(void) const
     return ui->treeTypes;
 }
 
-QToolButton* SIDataTypeList::ctrlToolAdd(void) const
+QToolButton* SIDataTypeList::ctrlButtonAdd(void) const
 {
     return ui->toolAddType;
 }
 
-QToolButton* SIDataTypeList::ctrlToolRemove(void) const
+QToolButton* SIDataTypeList::ctrlButtonRemove(void) const
 {
     return ui->toolDeleteType;
 }
 
-QToolButton* SIDataTypeList::ctrlToolMoveUp(void) const
+QToolButton* SIDataTypeList::ctrlButtonMoveUp(void) const
 {
     return ui->toolMoveUp;
 }
 
-QToolButton* SIDataTypeList::ctrlToolMoveDown(void) const
+QToolButton* SIDataTypeList::ctrlButtonMoveDown(void) const
 {
     return ui->toolMoveDown;
 }
 
-QToolButton* SIDataTypeList::ctrlToolAddField(void) const
+QToolButton* SIDataTypeList::ctrlButtonAddField(void) const
 {
     return ui->toolFieldAdd;
 }
 
-QToolButton* SIDataTypeList::ctrlToolRemoveField(void) const
+QToolButton* SIDataTypeList::ctrlButtonRemoveField(void) const
 {
     return ui->toolFieldDelete;
 }
 
-QToolButton* SIDataTypeList::ctrlToolInsertField(void) const
+QToolButton* SIDataTypeList::ctrlButtonInsertField(void) const
 {
     return ui->toolFieldInsert;
 }

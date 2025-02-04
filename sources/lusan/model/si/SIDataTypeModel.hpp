@@ -353,16 +353,44 @@ public:
      **/
     void swapDataTypes(const DataTypeCustom& first, const DataTypeCustom& second);
 
+    /**
+     * \brief   Swaps the fields of the structure data type by given unique IDs.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   dataType    The structure data type object to swap the fields.
+     * \param   firstId     The unique ID of the first field to swap.
+     * \param   secondId    The unique ID of the second field to swap.
+     **/
     void swapStructureFields(DataTypeStructure& dataType, uint32_t firstId, uint32_t secondId);
 
+    /**
+     * \brief   Swaps the fields of the structure data type by given field entries.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   dataType    The structure data type object to swap the fields.
+     * \param   first       The first field entry to swap.
+     * \param   second      The second field entry to swap.
+     **/
     void swapStructureFields(DataTypeStructure& dataType, const FieldEntry& first, const FieldEntry& second);
 
+    /**
+     * \brief   Swaps the fields of the enumeration data type by given unique IDs.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   dataType    The enumeration data type object to swap the fields.
+     * \param   firstId     The unique ID of the first field to swap.
+     * \param   secondId    The unique ID of the second field to swap.
+     **/
     void swapEnumFields(DataTypeEnum& dataType, uint32_t firstId, uint32_t secondId);
 
+    /**
+     * \brief   Swaps the fields of the enumeration data type by given field entries.
+     *          The swapping will not change the order of IDs, but will swap the data.
+     * \param   dataType    The enumeration data type object to swap the fields.
+     * \param   first       The first field entry to swap.
+     * \param   second      The second field entry to swap.
+     **/
     void swapEnumFields(DataTypeEnum& dataType, const EnumEntry& first, const EnumEntry& second);
 
 //////////////////////////////////////////////////////////////////////////
-// Hidden members
+// Members variables
 //////////////////////////////////////////////////////////////////////////
 private:
     SIDataTypeData& mData; //!< The data object.

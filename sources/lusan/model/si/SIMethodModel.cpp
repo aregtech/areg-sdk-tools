@@ -110,3 +110,29 @@ MethodParameter* SIMethodModel::addParameter(SIMethodBase* method, const QString
 
     return param;
 }
+
+void SIMethodModel::removeMethodParameter(SIMethodBase& method, uint32_t id)
+{
+    mData.removeParameter(method, id);
+}
+
+void SIMethodModel::swapMethods(const SIMethodBase& first, const SIMethodBase& second)
+{
+    mData.swapElements(first.getId(), second.getId());
+}
+
+void SIMethodModel::swapMethods(uint32_t firstId, uint32_t secondId)
+{
+    mData.swapElements(firstId, secondId);
+}
+
+void SIMethodModel::swapMethodParams(SIMethodBase& method, uint32_t firstId, uint32_t secondId)
+{
+    method.swapElements(firstId, secondId);
+}
+
+void SIMethodModel::swapMethodParams(SIMethodBase& method, const MethodParameter& first, const MethodParameter& second)
+{
+    method.swapElements(first, second);
+}
+

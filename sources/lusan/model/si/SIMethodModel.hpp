@@ -34,12 +34,34 @@ class SIDataTypeData;
  */
 class SIMethodModel
 {
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief Constructor with initialization.
      * \param data The method data object.
      */
     SIMethodModel(SIMethodData& data, SIDataTypeData& dataType);
+
+    ~SIMethodModel(void) = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief Returns instance of data type data object.
+     **/
+    inline SIDataTypeData& getDataTypeData(void);
+    inline const SIDataTypeData& getDataTypeData(void) const;
+
+    /**
+     * \brief Returns instance of method data object.
+     **/
+    inline SIMethodData& getMethodData(void);
+    inline const SIMethodData& getMethodData(void) const;
 
     /**
      * \brief Creates a new method object with specified name and type.
@@ -127,22 +149,71 @@ public:
      **/
     QList<SIMethodRequest*> getConnectedRequests(SIMethodResponse* response) const;
 
+    /**
+     * \brief   Converts the method object to new type.
+     * \param   method      The method object to convert.
+     * \param   methodType  The new type of the method.
+     * \return  Returns the pointer to the converted method object.
+     **/
     SIMethodBase* convertMethod(SIMethodBase* method, SIMethodBase::eMethodType methodType);
 
+    /**
+     * \brief   Adds a new parameter to the method.
+     * \param   method  The method object to add a parameter.
+     * \param   name    The name of the parameter.
+     * \param   type    The data type of the parameter.
+     * \return  Returns the pointer to the created parameter object.
+     **/
     MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
-    
-    inline SIDataTypeData& getDataTypeData(void);
-    
-    inline const SIDataTypeData& getDataTypeData(void) const;
 
-    inline SIMethodData& getMethodData(void);
+    /**
+     * \brief   Removes the parameter from the method by ID.
+     * \param   method  The method object to remove the parameter.
+     * \param   id      The ID of the parameter to remove.
+     **/
+    void removeMethodParameter(SIMethodBase& method, uint32_t id);
 
-    inline const SIMethodData& getMethodData(void) const;
+    /**
+     * \brief   Swaps 2 methods in the method list without changing the order of IDs.
+     * \param   first   The first method to swap.
+     * \param   second  The second method to swap.
+     **/
+    void swapMethods(const SIMethodBase& first, const SIMethodBase& second);
 
+    /**
+     * \brief   Swaps 2 methods in the method list without changing the order of IDs.
+     * \param   firstId     The ID of the first method to swap.
+     * \param   secondId    The ID of the second method to swap.
+     **/
+    void swapMethods(uint32_t firstId, uint32_t secondId);
+
+    /**
+     * \brief   Swaps 2 parameters in the method without changing the order of IDs.
+     * \param   method      The method object to swap the parameters.
+     * \param   firstId     The ID of the first parameter to swap.
+     * \param   secondId    The ID of the second parameter to swap.
+     **/
+    void swapMethodParams(SIMethodBase& method, uint32_t firstId, uint32_t secondId);
+
+    /**
+     * \brief   Swaps 2 parameters in the method without changing the order of IDs.
+     * \param   method  The method object to swap the parameters.
+     * \param   first   The first parameter to swap.
+     * \param   second  The second parameter to swap.
+     **/
+    void swapMethodParams(SIMethodBase& method, const MethodParameter& first, const MethodParameter& second);
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
     SIMethodData&   mData;      //!< The method data object.
     SIDataTypeData& mDataType;  //!< The data type data object.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// SIMethodModel class inline methods
+//////////////////////////////////////////////////////////////////////////
 
 inline SIDataTypeData& SIMethodModel::getDataTypeData(void)
 {
