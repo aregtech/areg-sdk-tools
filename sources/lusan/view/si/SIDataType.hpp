@@ -18,10 +18,17 @@
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include <QScrollArea>
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class DataTypeBasicContainer;
 class DataTypeCustom;
 class DataTypeContainer;
@@ -58,16 +65,25 @@ private:
     Ui::SIDataType * ui;
 };
 
+//////////////////////////////////////////////////////////////////////////
+// SIDataType class declaration
+//////////////////////////////////////////////////////////////////////////
 class SIDataType    : public QScrollArea
                     , public IEDataTypeConsumer
 {
     Q_OBJECT
     
+//////////////////////////////////////////////////////////////////////////
+// Constructor / destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     explicit SIDataType(SIDataTypeModel & model, QWidget *parent = nullptr);
 
     virtual ~SIDataType(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Slots
+//////////////////////////////////////////////////////////////////////////
 protected:
     
     /**
@@ -98,6 +114,16 @@ protected:
      * \brief Triggered when the remove field button is clicked.
      */
     void onRemoveFieldClicked(void);
+
+    /**
+     * \brief   Triggered when the move up button is clicked.
+     **/
+    void onMoveUpClicked(void);
+
+    /**
+     * \brief   Triggered when the move down button is clicked.
+     **/
+    void onMoveDownClicked(void);
 
     /**
      * \brief Triggered when the name is changed.
@@ -229,6 +255,9 @@ protected:
      **/
     void onFieldDeprecateHint(const QString& newText);
 
+//////////////////////////////////////////////////////////////////////////
+// Operations and attrivutes
+//////////////////////////////////////////////////////////////////////////
 protected:
 
     /**
@@ -463,10 +492,66 @@ private:
      * \param   node    The tree node to delete.
      **/
     inline void deleteTreeNode(QTreeWidgetItem* node);
-    
+
+    /**
+     * \brief   Sets the texts in the tree node of the data type.
+     * \param   node    The tree node to set the texts.
+     * \param   elem    The data type object.
+     **/
     inline void setNodeText(QTreeWidgetItem* node, DocumentElem * elem) const;
-    
+
+    /**
+     * \brief   Called when no item is selected in the list or the list is empty.
+     **/
     inline void showClean(void);
+
+    /**
+     * \brief   Moves the data type up in the list.
+     * \param   node    The tree node to move up.
+     **/
+    inline void moveDataTypeUp(QTreeWidgetItem* node);
+
+    /**
+     * \brief   Moves the data type parameter up in the list.
+     * \param   node    The tree node to move up.
+     **/
+    inline void moveDataTypeParamUp(QTreeWidgetItem* node);
+
+    /**
+     * \brief   Moves the data type down in the list.
+     * \param   node    The tree node to move down.
+     **/
+    inline void moveDataTypeDown(QTreeWidgetItem* node);
+
+    /**
+     * \brief   Moves the data type parameter down in the list.
+     * \param   node    The tree node to move down.
+     **/
+    inline void moveDataTypeParamDown(QTreeWidgetItem* node);
+
+    /**
+     * \brief   Swaps the data types by given tree nodes.
+     * \param   node    The tree node to swap.
+     * \param   row     The row of selected data type element in the tree table.
+     * \param   moveRow The row index to move.
+     **/
+    inline void swapDataTypes(QTreeWidgetItem* node, int row, int moveRow);
+
+    /**
+     * \brief   Swaps the data type fields by given tree nodes.
+     * \param   node    The tree node to swap.
+     * \param   parent  The parent tree node of the field.
+     * \param   row     The row of selected data type element in the tree table.
+     * \param   moveRow The row index to move.
+     **/
+    inline void swapDataTypeFields(QTreeWidgetItem* node, QTreeWidgetItem* parent, int row, int moveRow);
+
+    /**
+     * \brief   Updates the tool buttons in the tree table.
+     * \param   row         The row index of the selected data type element.
+     * \param   rowCount    The total number of rows in the tree table.
+     **/
+    inline void updateToolButtons(int row, int rowCount);
     
     /**
      * \brief   Returns list of basic container data type objects.

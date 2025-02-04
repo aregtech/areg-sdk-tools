@@ -406,3 +406,33 @@ const DataTypeCustom* SIDataTypeModel::getCustomTypeFromId(uint32_t typeId) cons
 {
     return mData.findCustomDataType(typeId);
 }
+
+void SIDataTypeModel::swapDataTypes(uint32_t firstId, uint32_t secondId)
+{
+    mData.swapElements(firstId, secondId);
+}
+
+void SIDataTypeModel::swapDataTypes(const DataTypeCustom& first, const DataTypeCustom& second)
+{
+    mData.swapElements(first.getId(), second.getId());
+}
+
+void SIDataTypeModel::swapStructureFields(DataTypeStructure& dataType, uint32_t firstId, uint32_t secondId)
+{
+    dataType.swapElements(firstId, secondId);
+}
+
+void SIDataTypeModel::swapStructureFields(DataTypeStructure& dataType, const FieldEntry& first, const FieldEntry& second)
+{
+    dataType.swapElements(first, second);
+}
+
+void SIDataTypeModel::swapEnumFields(DataTypeEnum& dataType, uint32_t firstId, uint32_t secondId)
+{
+    dataType.swapElements(firstId, secondId);
+}
+
+void SIDataTypeModel::swapEnumFields(DataTypeEnum& dataType, const EnumEntry& first, const EnumEntry& second)
+{
+    dataType.swapElements(first, second);
+}
