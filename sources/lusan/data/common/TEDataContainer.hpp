@@ -915,15 +915,6 @@ void TEDataContainer<Data, ElemBase>::swapElements(int index1, int index2)
     Data temp = mElementList[index1];
     mElementList[index1] = mElementList[index2];
     mElementList[index2] = temp;
-    
-    
-#if 0    
-    Data temp = mElementList[index1];
-    mElementList[index1] = mElementList[index2];
-    mElementList[index1].setId(temp.getId());
-    temp.setId(mElementList[index2].getId());
-    mElementList[index2] = temp;
-#endif
 }
 
 template<class Data, class ElemBase>
