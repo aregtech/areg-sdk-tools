@@ -144,7 +144,7 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
 {
     if ((current == nullptr) || (current == previous))
         return;
-    
+
     DataTypeCustom* oldType  = previous != nullptr ? previous->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr;
     DataTypeCustom* dataType = current->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
     uint32_t id = current->data(1, Qt::ItemDataRole::UserRole).toUInt();
@@ -173,6 +173,9 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
         default:
             break;
         }
+
+        QTreeWidget* table = mList->ctrlTableList();
+        updateToolButtons(table->indexOfTopLevelItem(current), table->topLevelItemCount());
     }
     else
     {
@@ -188,6 +191,10 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
         {
             selectedEnumField(oldType, *static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
         }
+
+        QTreeWidgetItem* parent = current->parent();
+        Q_ASSERT(parent != nullptr);
+        updateToolButtons(parent->indexOfChild(current), parent->childCount());
     }
     
     blockBasicSignals(false);
@@ -297,18 +304,22 @@ void SIDataType::onRemoveClicked(void)
     QTreeWidgetItem* next = (index >= 0) && (index < table->topLevelItemCount()) ? table->topLevelItem(index) : nullptr;
     table->setCurrentItem(next);
     item->setSelected(false);
-    
     deleteTreeNode(item);
+
+    int row = -1;
+    int rowCount = 0;
     if (next != nullptr)
     {
         next->setSelected(true);
+        row = table->indexOfTopLevelItem(item);
+        rowCount = table->topLevelItemCount();
     }
     else
     {
         showClean();
     }
 
-    updateToolButtons(index, table->topLevelItemCount());
+    updateToolButtons(row, rowCount);
 }
 
 void SIDataType::onRemoveFieldClicked(void)
@@ -321,17 +332,33 @@ void SIDataType::onRemoveFieldClicked(void)
     Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() != 0);
     QTreeWidgetItem* parent = item->parent();
     int index = parent->indexOfChild(item);
-    index = index + 1 == parent->childCount() ? index - 1 : index + 1;
-    QTreeWidgetItem* next = (index >= 0) && (index < parent->childCount()) ? parent->child(index) : parent;
+    index = index + 1 == parent->childCount() ? index - 1 : index;
+    QTreeWidgetItem* next = nullptr;
     item->setSelected(false);
+
+    deleteTreeNode(item);
+    int row = 0;
+    int rowCount = 0;
+    if ((index >= 0) && (index < parent->childCount()))
+    {
+        next = parent->child(index);
+        row = index;
+        rowCount = parent->childCount();
+    }
+    else
+    {
+        next = parent;
+        row = table->indexOfTopLevelItem(next);
+        rowCount = table->topLevelItemCount();
+    }
+
     if (next != nullptr)
     {
         next->setSelected(true);
         table->setCurrentItem(next);
     }
     
-    deleteTreeNode(item);
-    updateToolButtons(index, parent->childCount());
+    updateToolButtons(row, rowCount);
 }
 
 void SIDataType::onMoveUpClicked(void)
@@ -1493,7 +1520,7 @@ inline void SIDataType::deleteTreeNode(QTreeWidgetItem* node)
     {
         mModel.deleteDataTypeChild(dataType, id);
     }
-    
+
     delete node;
 }
 
@@ -1544,7 +1571,9 @@ inline void SIDataType::moveDataTypeUp(QTreeWidgetItem* node)
     int row = table->indexOfTopLevelItem(node);
     if (row > 0)
     {
+        bool isExpanded = node->isExpanded();
         swapDataTypes(node, row, row - 1);
+        node->setExpanded(isExpanded);
     }
 }
 
@@ -1563,7 +1592,7 @@ inline void SIDataType::moveDataTypeDown(QTreeWidgetItem* node)
 {
     QTreeWidget* table = mList->ctrlTableList();
     int row = table->indexOfTopLevelItem(node);
-    if (row > 0)
+    if ((row >= 0) && (row < (table->topLevelItemCount() - 1)))
     {
         swapDataTypes(node, row, row + 1);
     }
@@ -1574,7 +1603,7 @@ inline void SIDataType::moveDataTypeParamDown(QTreeWidgetItem* node)
     QTreeWidgetItem* parent = node->parent();
     Q_ASSERT(parent != nullptr);
     int row = parent->indexOfChild(node);
-    if (row > 0)
+    if ((row >= 0) && (row < (parent->childCount() - 1)))
     {
         swapDataTypeFields(node, parent, row, row + 1);
     }
@@ -1652,12 +1681,12 @@ inline void SIDataType::updateToolButtons(int row, int rowCount)
             mList->ctrlToolMoveDown()->setEnabled(true);
         }
 
-        mList->ctrlToolRemove()->setEnabled(true);
+        // mList->ctrlToolRemove()->setEnabled(true);
     }
     else
     {
         mList->ctrlToolMoveUp()->setEnabled(false);
         mList->ctrlToolMoveDown()->setEnabled(false);
-        mList->ctrlToolRemove()->setEnabled(false);
+        // mList->ctrlToolRemove()->setEnabled(false);
     }
 }
