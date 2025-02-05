@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SIDataTopicList</class>
- <widget class="QWidget" name="SIDataTopicList">
+ <class>SIAttributeList</class>
+ <widget class="QWidget" name="SIAttributeList">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,7 +17,7 @@
    <item>
     <widget class="QGroupBox" name="groupBoxDetails">
      <property name="title">
-      <string>Data Topic List:</string>
+      <string>Data Attribute List:</string>
      </property>
      <widget class="QWidget" name="widget" native="true">
       <property name="geometry">
@@ -39,7 +39,7 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QToolButton" name="toolAddTopic">
+         <widget class="QToolButton" name="toolAddAttribute">
           <property name="maximumSize">
            <size>
             <width>32</width>
@@ -81,7 +81,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QToolButton" name="toolDeleteTopic">
+         <widget class="QToolButton" name="toolDeleteAttribute">
           <property name="maximumSize">
            <size>
             <width>32</width>
@@ -123,7 +123,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QToolButton" name="toolInsertTopic">
+         <widget class="QToolButton" name="toolInsertAttribute">
           <property name="maximumSize">
            <size>
             <width>32</width>
@@ -272,7 +272,7 @@
         <number>7</number>
        </property>
        <item>
-        <widget class="QTableWidget" name="tableTopics">
+        <widget class="QTableWidget" name="tableAttributes">
          <property name="cursor" stdset="0">
           <cursorShape>PointingHandCursor</cursorShape>
          </property>

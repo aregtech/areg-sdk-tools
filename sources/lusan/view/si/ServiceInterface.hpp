@@ -24,7 +24,7 @@
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 #include "lusan/view/si/SIConstant.hpp"
 #include "lusan/view/si/SIDataType.hpp"
-#include "lusan/view/si/SIDataTopic.hpp"
+#include "lusan/view/si/SIAttribute.hpp"
 #include "lusan/view/si/SIInclude.hpp"
 #include "lusan/view/si/SIMethod.hpp"
 #include "lusan/view/si/SIOverview.hpp"
@@ -58,7 +58,7 @@ public:
     {
           PageOverview      = 0 //!< The overview page
         , PageDataTypes         //!< The data types page
-        , PageAttributes        //!< The data topics page
+        , PageAttributes        //!< The data attributes page
         , PageMethods           //!< The methods page
         , PageConstants         //!< The constants page
         , PageIncludes          //!< The includes page
@@ -150,7 +150,7 @@ private:
     QTabWidget  mTabWidget; //!< The tab widget to display the service interface elements
     SIOverview  mOverview;  //!< The overview widget
     SIDataType  mDataType;  //!< The data type widget
-    SIDataTopic mDataTopic; //!< The data topic widget
+    SIAttribute mAttribute; //!< The data attribute widget
     SIMethod    mMethod;    //!< The method widget
     SIConstant  mConstant;  //!< The constant widget
     SIInclude   mInclude;   //!< The include widget

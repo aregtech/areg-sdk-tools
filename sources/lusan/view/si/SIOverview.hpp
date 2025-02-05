@@ -173,7 +173,7 @@ protected:
      * \brief   The slot is triggered when the link to attributes tabbed page is clicked.
      * \param   checked The flag indicating whether the link is checked or not.
      **/
-    void onLinkTopicsClicked(bool checked);
+    void onLinkAttributesClicked(bool checked);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

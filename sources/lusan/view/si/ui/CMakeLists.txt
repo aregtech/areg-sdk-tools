@@ -1,10 +1,10 @@
 ﻿list(APPEND LUSAN_UI
+    ${LUSAN}/view/si/ui/SIAttribute.ui
+    ${LUSAN}/view/si/ui/SIAttributeDetails.ui
+    ${LUSAN}/view/si/ui/SIAttributeList.ui
     ${LUSAN}/view/si/ui/SIConstant.ui
     ${LUSAN}/view/si/ui/SIConstantDetails.ui
     ${LUSAN}/view/si/ui/SIConstantList.ui
-    ${LUSAN}/view/si/ui/SIDataTopic.ui
-    ${LUSAN}/view/si/ui/SIDataTopicDetails.ui
-    ${LUSAN}/view/si/ui/SIDataTopicList.ui
     ${LUSAN}/view/si/ui/SIDataType.ui
     ${LUSAN}/view/si/ui/SIDataTypeDetails.ui
     ${LUSAN}/view/si/ui/SIDataTypeFieldDetails.ui

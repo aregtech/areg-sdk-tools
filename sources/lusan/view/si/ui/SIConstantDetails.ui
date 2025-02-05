@@ -117,7 +117,7 @@
            <bool>false</bool>
           </property>
           <property name="placeholderText">
-           <string notr="true">Describe topic here</string>
+           <string notr="true">Describe constant here</string>
           </property>
          </widget>
         </item>

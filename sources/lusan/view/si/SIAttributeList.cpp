@@ -10,19 +10,19 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTopicList.hpp
+ *  \file        lusan/view/si/SIAttributeList.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
-#include "lusan/view/si/SIDataTopicList.hpp"
+#include "lusan/view/si/SIAttributeList.hpp"
 #include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTopicList.h"
+#include "ui/ui_SIAttributeList.h"
 
-SIDataTopicList::SIDataTopicList(QWidget* parent)
+SIAttributeList::SIAttributeList(QWidget* parent)
     : QWidget(parent)
-    , ui(new Ui::SIDataTopicList)
+    , ui(new Ui::SIAttributeList)
 {
     QFont font{ this->font() };
     font.setBold(false);
@@ -30,38 +30,38 @@ SIDataTopicList::SIDataTopicList(QWidget* parent)
     font.setPointSize(10);
     this->setFont(font);
     ui->setupUi(this);
-    QTableWidget* table = ui->tableTopics;
+    QTableWidget* table = ui->tableAttributes;
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
 
-QToolButton* SIDataTopicList::ctrlButtonAdd(void)
+QToolButton* SIAttributeList::ctrlButtonAdd(void)
 {
-    return ui->toolAddTopic;
+    return ui->toolAddAttribute;
 }
 
-QToolButton* SIDataTopicList::ctrlButtonRemove(void)
+QToolButton* SIAttributeList::ctrlButtonRemove(void)
 {
-    return ui->toolDeleteTopic;
+    return ui->toolDeleteAttribute;
 }
 
-QToolButton* SIDataTopicList::ctrlButtonInsert(void)
+QToolButton* SIAttributeList::ctrlButtonInsert(void)
 {
-    return ui->toolInsertTopic;
+    return ui->toolInsertAttribute;
 }
 
-QToolButton* SIDataTopicList::ctrlButtonMoveUp(void)
+QToolButton* SIAttributeList::ctrlButtonMoveUp(void)
 {
     return ui->toolMoveUp;
 }
 
-QToolButton* SIDataTopicList::ctrlButtonMoveDown(void)
+QToolButton* SIAttributeList::ctrlButtonMoveDown(void)
 {
     return ui->toolMoveDown;
 }
 
-QTableWidget* SIDataTopicList::ctrlTableList(void)
+QTableWidget* SIAttributeList::ctrlTableList(void)
 {
-    return ui->tableTopics;
+    return ui->tableAttributes;
 }

@@ -15,7 +15,7 @@
  *  \file        lusan/view/si/SIIncludeList.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface, Data Topic section.
+ *  \brief       Lusan application, Service Interface, Data Attribute section.
  *
  ************************************************************************/
 #include <QWidget>

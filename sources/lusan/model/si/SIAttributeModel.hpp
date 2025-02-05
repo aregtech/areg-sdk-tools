@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_MODEL_SI_SIDATATOPICMODEL_HPP
-#define LUSAN_MODEL_SI_SIDATATOPICMODEL_HPP
+﻿#ifndef LUSAN_MODEL_SI_SIATTRIBUTEMODEL_HPP
+#define LUSAN_MODEL_SI_SIATTRIBUTEMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,10 +12,10 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/si/SIDataTopicModel.hpp
+ *  \file        lusan/model/si/SIAttributeModel.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Data Topic Model.
+ *  \brief       Lusan application, Service Interface Data Attribute Model.
  *
  ************************************************************************/
 
@@ -26,10 +26,10 @@
 #include "lusan/data/si/SIDataTypeData.hpp"
 
 /**
- * \class   SIDataTopicModel
- * \brief   Manages the model for service interface data topics.
+ * \class   SIAttributeModel
+ * \brief   Manages the model for service interface data attributes.
  **/
-class SIDataTopicModel
+class SIAttributeModel
 {
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -40,7 +40,7 @@ public:
      * \param   attributeData   The instance of SIAttributeData.
      * \param   dataTypeData    The instance of SIDataTypeData.
      **/
-    SIDataTopicModel(SIAttributeData& attributeData, SIDataTypeData& dataTypeData);
+    SIAttributeModel(SIAttributeData& attributeData, SIDataTypeData& dataTypeData);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -119,12 +119,12 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// SIDataTopicModel class inline function implementation
+// SIAttributeModel class inline function implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline SIDataTypeData& SIDataTopicModel::getDataTypeData(void)
+inline SIDataTypeData& SIAttributeModel::getDataTypeData(void)
 {
     return mDataType;
 }
 
-#endif  // LUSAN_MODEL_SI_SIDATATOPICMODEL_HPP
+#endif  // LUSAN_MODEL_SI_SIATTRIBUTEMODEL_HPP

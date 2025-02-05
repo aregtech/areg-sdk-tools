@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_APPLICATION_SI_SIDATATOPICDETAILS_HPP
-#define LUSAN_APPLICATION_SI_SIDATATOPICDETAILS_HPP
+﻿#ifndef LUSAN_APPLICATION_SI_SIATTRIBUTEDETAILS_HPP
+#define LUSAN_APPLICATION_SI_SIATTRIBUTEDETAILS_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTopicDetails.hpp
+ *  \file        lusan/view/si/SIAttributeDetails.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
@@ -21,7 +21,7 @@
 #include <QWidget>
 
 namespace Ui {
-    class SIDataTopicDetails;
+    class SIAttributeDetails;
 }
 
 class QCheckBox;
@@ -29,12 +29,12 @@ class QComboBox;
 class QLineEdit;
 class QPlainTextEdit;
 
-class SIDataTopicDetails : public QWidget
+class SIAttributeDetails : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit SIDataTopicDetails(QWidget* parent = nullptr);
+    explicit SIAttributeDetails(QWidget* parent = nullptr);
 
     // Getters to access controls
 
@@ -51,7 +51,7 @@ public:
     QLineEdit* ctrlDeprecateHint(void);
 
 private:
-    Ui::SIDataTopicDetails* ui;
+    Ui::SIAttributeDetails* ui;
 };
 
-#endif // LUSAN_APPLICATION_SI_SIDATATOPICDETAILS_HPP
+#endif // LUSAN_APPLICATION_SI_SIATTRIBUTEDETAILS_HPP

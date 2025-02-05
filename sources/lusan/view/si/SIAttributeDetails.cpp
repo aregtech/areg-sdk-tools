@@ -10,19 +10,19 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTopicDetails.hpp
+ *  \file        lusan/view/si/SIAttributeDetails.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
-#include "lusan/view/si/SIDataTopicDetails.hpp"
+#include "lusan/view/si/SIAttributeDetails.hpp"
 #include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTopicDetails.h"
+#include "ui/ui_SIAttributeDetails.h"
 
-SIDataTopicDetails::SIDataTopicDetails(QWidget* parent)
+SIAttributeDetails::SIAttributeDetails(QWidget* parent)
     : QWidget(parent)
-    , ui(new Ui::SIDataTopicDetails)
+    , ui(new Ui::SIAttributeDetails)
 {
     QFont font{ this->font() };
     font.setBold(false);
@@ -34,32 +34,32 @@ SIDataTopicDetails::SIDataTopicDetails(QWidget* parent)
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
 
-QLineEdit* SIDataTopicDetails::ctrlName(void)
+QLineEdit* SIAttributeDetails::ctrlName(void)
 {
     return ui->editName;
 }
 
-QComboBox* SIDataTopicDetails::ctrlTypes(void)
+QComboBox* SIAttributeDetails::ctrlTypes(void)
 {
     return ui->comboTypes;
 }
 
-QComboBox* SIDataTopicDetails::ctrlNotification(void)
+QComboBox* SIAttributeDetails::ctrlNotification(void)
 {
     return ui->comboNotify;
 }
 
-QPlainTextEdit* SIDataTopicDetails::ctrlDescription(void)
+QPlainTextEdit* SIAttributeDetails::ctrlDescription(void)
 {
     return ui->textDescribe;
 }
 
-QCheckBox* SIDataTopicDetails::ctrlDeprecated(void)
+QCheckBox* SIAttributeDetails::ctrlDeprecated(void)
 {
     return ui->checkDeprecated;
 }
 
-QLineEdit* SIDataTopicDetails::ctrlDeprecateHint(void)
+QLineEdit* SIAttributeDetails::ctrlDeprecateHint(void)
 {
     return ui->editDeprecated;
 }

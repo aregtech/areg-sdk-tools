@@ -153,7 +153,7 @@ void SIOverview::onLinkMethodsClicked(bool /*checked*/)
     emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageMethods));
 }
 
-void SIOverview::onLinkTopicsClicked(bool /*checked*/)
+void SIOverview::onLinkAttributesClicked(bool /*checked*/)
 {
     emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageAttributes));
 }
@@ -212,9 +212,9 @@ void SIOverview::setupSignals(void)
     connect(mDetails->ctrlDeprecateHint(),&QLineEdit::textEdited    , this, &SIOverview::onDeprecateHintChanged);
     connect(mDetails->ctrlDescription() , &QPlainTextEdit::textChanged, this, &SIOverview::onDescriptionChanged);
 
-    connect(mLinks->linkConstants() , &QPushButton::clicked , this, &SIOverview::onLinkConstantsClicked);
-    connect(mLinks->linkDataTypes() , &QPushButton::clicked , this, &SIOverview::onLinkDataTypesClicked);
-    connect(mLinks->linkIncludes()  , &QPushButton::clicked , this, &SIOverview::onLinkIncludesClicked);
-    connect(mLinks->linkMethods()   , &QPushButton::clicked , this, &SIOverview::onLinkMethodsClicked);
-    connect(mLinks->linkTopics()    , &QPushButton::clicked , this, &SIOverview::onLinkTopicsClicked);
+    connect(mLinks->linkConstants()     , &QPushButton::clicked     , this, &SIOverview::onLinkConstantsClicked);
+    connect(mLinks->linkDataTypes()     , &QPushButton::clicked     , this, &SIOverview::onLinkDataTypesClicked);
+    connect(mLinks->linkIncludes()      , &QPushButton::clicked     , this, &SIOverview::onLinkIncludesClicked);
+    connect(mLinks->linkMethods()       , &QPushButton::clicked     , this, &SIOverview::onLinkMethodsClicked);
+    connect(mLinks->linkAttributes()    , &QPushButton::clicked     , this, &SIOverview::onLinkAttributesClicked);
 }

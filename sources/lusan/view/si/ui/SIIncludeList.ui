@@ -17,7 +17,7 @@
    <item>
     <widget class="QGroupBox" name="groupBoxDetails">
      <property name="title">
-      <string>Data Topic List:</string>
+      <string>Data Attribute List:</string>
      </property>
      <widget class="QWidget" name="widget" native="true">
       <property name="geometry">

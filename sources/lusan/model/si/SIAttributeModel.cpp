@@ -10,29 +10,29 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/si/SIDataTopicModel.cpp
+ *  \file        lusan/model/si/SIAttributeModel.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Data Topic Model.
+ *  \brief       Lusan application, Service Interface Data Attribute Model.
  *
  ************************************************************************/
 
  /************************************************************************
   * Includes
   ************************************************************************/
-#include "lusan/model/si/SIDataTopicModel.hpp"
+#include "lusan/model/si/SIAttributeModel.hpp"
 
   /************************************************************************
-   * SIDataTopicModel class implementation
+   * SIAttributeModel class implementation
    ************************************************************************/
 
-SIDataTopicModel::SIDataTopicModel(SIAttributeData& attributeData, SIDataTypeData& dataTypeData)
+SIAttributeModel::SIAttributeModel(SIAttributeData& attributeData, SIDataTypeData& dataTypeData)
     : mData(attributeData)
     , mDataType(dataTypeData)
 {
 }
 
-AttributeEntry * SIDataTopicModel::createAttribute(const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
+AttributeEntry * SIAttributeModel::createAttribute(const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
 {
     AttributeEntry * result = mData.createAttribute(name, notification);
     if (result != nullptr)
@@ -43,42 +43,42 @@ AttributeEntry * SIDataTopicModel::createAttribute(const QString& name, Attribut
     return result;
 }
 
-bool SIDataTopicModel::deleteAttribute(uint32_t id)
+bool SIAttributeModel::deleteAttribute(uint32_t id)
 {
     return mData.removeElement(id);
 }
 
-const QList<AttributeEntry>& SIDataTopicModel::getAttributes(void) const
+const QList<AttributeEntry>& SIAttributeModel::getAttributes(void) const
 {
     return mData.getElements();
 }
 
-const AttributeEntry* SIDataTopicModel::findAttribute(uint32_t id) const
+const AttributeEntry* SIAttributeModel::findAttribute(uint32_t id) const
 {
     return mData.findElement(id);
 }
 
-AttributeEntry* SIDataTopicModel::findAttribute(uint32_t id)
+AttributeEntry* SIAttributeModel::findAttribute(uint32_t id)
 {
     return mData.findElement(id);
 }
 
-void SIDataTopicModel::sortAttributes(bool ascending)
+void SIAttributeModel::sortAttributes(bool ascending)
 {
     mData.sortElementsByName(ascending);
 }
 
-QList<uint32_t> SIDataTopicModel::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
+QList<uint32_t> SIAttributeModel::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
 {
     return std::move(mData.replaceDataType(oldDataType, newDataType));
 }
 
-void SIDataTopicModel::swapAttributes(uint32_t firstId, uint32_t secondId)
+void SIAttributeModel::swapAttributes(uint32_t firstId, uint32_t secondId)
 {
     mData.swapElements(firstId, secondId);
 }
 
-void SIDataTopicModel::swapAttributes(const AttributeEntry& first, const AttributeEntry& second)
+void SIAttributeModel::swapAttributes(const AttributeEntry& first, const AttributeEntry& second)
 {
     mData.swapElements(first, second);
 }

@@ -20,12 +20,12 @@
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 
 ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString()*/)
-    : mSIData       (filePath)
-    , mModelOverview(mSIData.getOverviewData())
-    , mModelDataType(mSIData.getDataTypeData())
-    , mModelTopics  (mSIData.getAttributeData() , mSIData.getDataTypeData())
-    , mModelConstant(mSIData.getConstantData()  , mSIData.getDataTypeData())
-    , mModelMethods (mSIData.getMethodData()    , mSIData.getDataTypeData())
-    , mModelInclude (mSIData.getIncludeData())
+    : mSIData           (filePath)
+    , mModelOverview    (mSIData.getOverviewData())
+    , mModelDataType    (mSIData.getDataTypeData())
+    , mModelAttributes  (mSIData.getAttributeData() , mSIData.getDataTypeData())
+    , mModelConstant    (mSIData.getConstantData()  , mSIData.getDataTypeData())
+    , mModelMethods     (mSIData.getMethodData()    , mSIData.getDataTypeData())
+    , mModelInclude     (mSIData.getIncludeData())
 {
 }
