@@ -23,8 +23,8 @@
   * Includes
   ************************************************************************/
 #include "lusan/data/si/ServiceInterfaceData.hpp"
+#include "lusan/model/si/SIAttributeModel.hpp"
 #include "lusan/model/si/SIConstantModel.hpp"
-#include "lusan/model/si/SIDataTopicModel.hpp"
 #include "lusan/model/si/SIDataTypeModel.hpp"
 #include "lusan/model/si/SIIncludeModel.hpp"
 #include "lusan/model/si/SIMethodModel.hpp"
@@ -54,9 +54,9 @@ public:
     inline SIOverviewModel& getOverviewModel(void);
 
     /**
-     * \brief   Returns the data topics model.
+     * \brief   Returns the data attributes model.
      **/
-    inline SIDataTopicModel& getDataTopicModel(void);
+    inline SIAttributeModel& getAttributeModel(void);
 
     /**
      * \brief   Returns the constant model.
@@ -122,13 +122,13 @@ public:
 // Hidden class members
 //////////////////////////////////////////////////////////////////////////
 private:
-    ServiceInterfaceData    mSIData;        //!< The service interface data.
-    SIOverviewModel         mModelOverview; //!< The overview model.
-    SIDataTypeModel         mModelDataType; //!< The data type model.
-    SIDataTopicModel        mModelTopics;   //!< The data topics (attributes) model.
-    SIMethodModel           mModelMethods;  //!< The methods model.
-    SIConstantModel         mModelConstant; //!< The constant model.
-    SIIncludeModel          mModelInclude;  //!< The include model.
+    ServiceInterfaceData    mSIData;            //!< The service interface data.
+    SIOverviewModel         mModelOverview;     //!< The overview model.
+    SIDataTypeModel         mModelDataType;     //!< The data type model.
+    SIAttributeModel        mModelAttributes;   //!< The data attributes model.
+    SIMethodModel           mModelMethods;      //!< The methods model.
+    SIConstantModel         mModelConstant;     //!< The constant model.
+    SIIncludeModel          mModelInclude;      //!< The include model.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -154,9 +154,9 @@ inline SIDataTypeModel& ServiceInterfaceModel::getDataTypeModel(void)
     return mModelDataType;
 }
 
-inline SIDataTopicModel& ServiceInterfaceModel::getDataTopicModel(void)
+inline SIAttributeModel& ServiceInterfaceModel::getAttributeModel(void)
 {
-    return mModelTopics;
+    return mModelAttributes;
 }
 
 inline SIMethodModel& ServiceInterfaceModel::getMethodsModel(void)

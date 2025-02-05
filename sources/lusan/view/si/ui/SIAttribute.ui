@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SIDataTopic</class>
- <widget class="QWidget" name="SIDataTopic">
+ <class>SIAttribute</class>
+ <widget class="QWidget" name="SIAttribute">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -37,7 +37,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Service Interface Data Topic Editor ...</string>
+    <string>Service Interface Data Attribute Editor ...</string>
    </property>
   </widget>
   <widget class="QWidget" name="horizontalLayoutWidget">

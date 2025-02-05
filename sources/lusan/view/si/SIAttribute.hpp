@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_APPLICATION_SI_SIDATATOPIC_HPP
-#define LUSAN_APPLICATION_SI_SIDATATOPIC_HPP
+﻿#ifndef LUSAN_APPLICATION_SI_SIATTRIBUTE_HPP
+#define LUSAN_APPLICATION_SI_SIATTRIBUTE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTopic.hpp
+ *  \file        lusan/view/si/SIAttribute.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
@@ -32,24 +32,24 @@
  * Dependencies
  ************************************************************************/
 namespace Ui {
-class SIDataTopic;
+class SIAttribute;
 }
 
 class DataTypesModel;
-class SIDataTopicDetails;
-class SIDataTopicList;
-class SIDataTopicModel;
+class SIAttributeDetails;
+class SIAttributeList;
+class SIAttributeModel;
 class TableCell;
 
 //////////////////////////////////////////////////////////////////////////
-// SITopicNotifyModel class declaration
+// SIAttributeNotifyModel class declaration
 //////////////////////////////////////////////////////////////////////////
 
 /**
- * \class SITopicNotifyModel
+ * \class SIAttributeNotifyModel
  * \brief Model to manage notification types for attributes.
  */
-class SITopicNotifyModel : public QAbstractListModel
+class SIAttributeNotifyModel    : public QAbstractListModel
 {
     Q_OBJECT
     
@@ -61,7 +61,7 @@ public:
      * \brief Constructor with initialization.
      * \param parent The parent object.
      */
-    SITopicNotifyModel(QObject* parent = nullptr);
+    SIAttributeNotifyModel(QObject* parent = nullptr);
     
     /**
      * \brief Returns the number of rows in the model.
@@ -80,12 +80,12 @@ public:
 };
 
 /**
- * \class SIDataTopicWidget
- * \brief The widget to display the data topic details.
+ * \class SIAttributeWidget
+ * \brief The widget to display the data attribute details.
  */
-class SIDataTopicWidget : public QWidget
+class SIAttributeWidget : public QWidget
 {
-    friend class SIDataTopic;
+    friend class SIAttribute;
     
     Q_OBJECT
     
@@ -94,32 +94,32 @@ public:
      * \brief Constructor with initialization.
      * \param parent The parent widget.
      */
-    explicit SIDataTopicWidget(QWidget* parent);
+    explicit SIAttributeWidget(QWidget* parent);
     
 private:
-    Ui::SIDataTopic* ui; //!< The user interface of the data topic.
+    Ui::SIAttribute* ui; //!< The user interface of the data attribute.
 };
 
 
 //////////////////////////////////////////////////////////////////////////
-// SIDataTopic class declaration
+// SIAttribute class declaration
 //////////////////////////////////////////////////////////////////////////
 
 /**
- * \class SIDataTopic
- * \brief The widget to display the data topic details.
+ * \class SIAttribute
+ * \brief The widget to display the data attribute details.
  */
-class SIDataTopic   : public QScrollArea
+class SIAttribute   : public QScrollArea
                     , public IEDataTypeConsumer
 {
     /**
-     * \brief   The column indexes of the data topic list.
+     * \brief   The column indexes of the data attribute list.
      **/
     enum eColumn
     {
-          ColName   = 0 //!< The column index of the data topic name.
-        , ColType   = 1 //!< The column index of the data topic type.
-        , ColNotify = 2 //!< The column index of the data topic notification.
+          ColName   = 0 //!< The column index of the data attribute name.
+        , ColType   = 1 //!< The column index of the data attribute type.
+        , ColNotify = 2 //!< The column index of the data attribute notification.
     };
     
     Q_OBJECT
@@ -130,15 +130,15 @@ class SIDataTopic   : public QScrollArea
 public:
     /**
      * \brief Constructor with initialization.
-     * \param model The model of the data topic.
+     * \param model The model of the data attribute.
      * \param parent The parent widget.
      */
-    explicit SIDataTopic(SIDataTopicModel & model, QWidget* parent = nullptr);
+    explicit SIAttribute(SIAttributeModel & model, QWidget* parent = nullptr);
     
     /**
      * \brief Destructor.
      */
-    virtual ~SIDataTopic(void);
+    virtual ~SIAttribute(void);
     
 protected:
     
@@ -212,19 +212,19 @@ protected slots:
     
     /**
      * \brief   Triggered when the move up button is clicked.
-     * \param   newName     The new name of the data topic object.
+     * \param   newName     The new name of the data attribute object.
      **/
     void onNameChanged(const QString& newName);
     
     /**
      * \brief   Triggered when the type is changed.
-     * \param   newType The new type of the data topic.
+     * \param   newType The new type of the data attribute.
      **/
     void onTypeChanged(const QString& newType);
     
     /**
      * \brief   Triggered when the notification value is changed.
-     * \param   newValue The new value of the data topic update notification.
+     * \param   newValue The new value of the data attribute update notification.
      */
     void onNotificationChanged(const QString& newValue);
     
@@ -258,7 +258,7 @@ protected slots:
 private:
     
     /**
-     * \brief   Initializes the SIDataTopic object.
+     * \brief   Initializes the SIAttribute object.
      **/
     void updateData(void);
     
@@ -333,15 +333,15 @@ private:
     // Hidden members
     //////////////////////////////////////////////////////////////////////////
 private:
-    SIDataTopicModel&   mModel;     //!< The model of the data topic.
-    SIDataTopicDetails* mDetails;   //!< The details widget of the data topic.
-    SIDataTopicList*    mList;      //!< The list widget of the data topic.
-    SIDataTopicWidget*  mWidget;    //!< The widget of the data topic.
-    Ui::SIDataTopic&    ui;         //!< The user interface of the data topic.
-    DataTypesModel*     mTypeModel; //!< The model of the data types.
-    SITopicNotifyModel* mNotifyModel; //!< The model of the notification types.
-    TableCell*          mTableCell; //!< The table cell object.
-    uint32_t            mCount;     //!< The counter to generate names.
+    SIAttributeModel&       mModel;         //!< The model of the data attribute.
+    SIAttributeDetails*     mDetails;       //!< The details widget of the data attribute.
+    SIAttributeList*        mList;          //!< The list widget of the data attribute.
+    SIAttributeWidget*      mWidget;        //!< The widget of the data attribute.
+    Ui::SIAttribute&        ui;             //!< The user interface of the data attribute.
+    DataTypesModel*         mTypeModel;     //!< The model of the data types.
+    SIAttributeNotifyModel* mNotifyModel;   //!< The model of the notification types.
+    TableCell*              mTableCell;     //!< The table cell object.
+    uint32_t                mCount;         //!< The counter to generate names.
 };
 
-#endif // LUSAN_APPLICATION_SI_SIDATATOPIC_HPP
+#endif // LUSAN_APPLICATION_SI_SIAttribute_HPP

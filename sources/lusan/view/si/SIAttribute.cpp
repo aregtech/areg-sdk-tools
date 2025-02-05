@@ -10,20 +10,20 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTopic.cpp
+ *  \file        lusan/view/si/SIAttribute.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
 
-#include "lusan/view/si/SIDataTopic.hpp"
-#include "ui/ui_SIDataTopic.h"
+#include "lusan/view/si/SIAttribute.hpp"
+#include "ui/ui_SIAttribute.h"
 
 #include "lusan/model/common/DataTypesModel.hpp"
-#include "lusan/model/si/SIDataTopicModel.hpp"
-#include "lusan/view/si/SIDataTopicDetails.hpp"
-#include "lusan/view/si/SIDataTopicList.hpp"
+#include "lusan/model/si/SIAttributeModel.hpp"
+#include "lusan/view/si/SIAttributeDetails.hpp"
+#include "lusan/view/si/SIAttributeList.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
 #include <QCheckBox>
@@ -37,20 +37,20 @@
 #include "lusan/view/si/SICommon.hpp"
 
 //////////////////////////////////////////////////////////////////////////
-// SIDataTopicModel class implementation
+// SIAttributeModel class implementation
 //////////////////////////////////////////////////////////////////////////
 
-SITopicNotifyModel::SITopicNotifyModel(QObject* parent /*= nullptr*/)
+SIAttributeNotifyModel::SIAttributeNotifyModel(QObject* parent /*= nullptr*/)
     : QAbstractListModel(parent)
 {
 }
 
-int SITopicNotifyModel::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
+int SIAttributeNotifyModel::rowCount(const QModelIndex& parent /*= QModelIndex()*/) const
 {
     return 2;
 }
 
-QVariant SITopicNotifyModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
+QVariant SIAttributeNotifyModel::data(const QModelIndex& index, int role /*= Qt::DisplayRole*/) const
 {
     if (!index.isValid())
         return QVariant();
@@ -73,12 +73,12 @@ QVariant SITopicNotifyModel::data(const QModelIndex& index, int role /*= Qt::Dis
 
 
 //////////////////////////////////////////////////////////////////////////
-// SIDataTopicWidget class implementation
+// SIAttributeWidget class implementation
 //////////////////////////////////////////////////////////////////////////
 
-SIDataTopicWidget::SIDataTopicWidget(QWidget* parent)
+SIAttributeWidget::SIAttributeWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui     (new Ui::SIDataTopic)
+    , ui     (new Ui::SIAttribute)
 {
     ui->setupUi(this);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
@@ -86,18 +86,18 @@ SIDataTopicWidget::SIDataTopicWidget(QWidget* parent)
 }
 
 //////////////////////////////////////////////////////////////////////////
-// SIDataTopic class implementation
+// SIAttribute class implementation
 //////////////////////////////////////////////////////////////////////////
 
-SIDataTopic::SIDataTopic(SIDataTopicModel& model, QWidget* parent)
+SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
     : QScrollArea   (parent)
     , mModel        (model)
-    , mDetails      (new SIDataTopicDetails(this))
-    , mList         (new SIDataTopicList(this))
-    , mWidget       (new SIDataTopicWidget(this))
+    , mDetails      (new SIAttributeDetails(this))
+    , mList         (new SIAttributeList(this))
+    , mWidget       (new SIAttributeWidget(this))
     , ui            (*mWidget->ui)
     , mTypeModel    (new DataTypesModel(model.getDataTypeData(), false))
-    , mNotifyModel  (new SITopicNotifyModel(this))
+    , mNotifyModel  (new SIAttributeNotifyModel(this))
     , mTableCell    (nullptr)
     , mCount        (0)
 {
@@ -118,13 +118,13 @@ SIDataTopic::SIDataTopic(SIDataTopicModel& model, QWidget* parent)
     updateDetails(nullptr, true);
 }
 
-SIDataTopic::~SIDataTopic(void)
+SIAttribute::~SIAttribute(void)
 {
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mDetails);
 }
 
-void SIDataTopic::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
+void SIAttribute::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
 {
     blockBasicSignals(true);
     mTypeModel->dataTypeConverted(oldType, newType);
@@ -152,12 +152,12 @@ void SIDataTopic::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* new
     blockBasicSignals(false);
 }
 
-void SIDataTopic::dataTypeCreated(DataTypeCustom* dataType)
+void SIAttribute::dataTypeCreated(DataTypeCustom* dataType)
 {
     mTypeModel->dataTypeCreated(dataType);
 }
 
-void SIDataTopic::dataTypeDeleted(DataTypeCustom* dataType)
+void SIAttribute::dataTypeDeleted(DataTypeCustom* dataType)
 {
     blockBasicSignals(true);
     mTypeModel->dataTypeDeleted(dataType);
@@ -181,7 +181,7 @@ void SIDataTopic::dataTypeDeleted(DataTypeCustom* dataType)
     blockBasicSignals(false);
 }
 
-void SIDataTopic::dataTypeUpdated(DataTypeCustom* dataType)
+void SIAttribute::dataTypeUpdated(DataTypeCustom* dataType)
 {
     blockBasicSignals(true);
     Q_ASSERT(dataType != nullptr);
@@ -205,7 +205,7 @@ void SIDataTopic::dataTypeUpdated(DataTypeCustom* dataType)
     blockBasicSignals(false);
 }
 
-void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
+void SIAttribute::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
 {
     if (currentRow == previousRow)
         return;
@@ -217,7 +217,7 @@ void SIDataTopic::onCurCellChanged(int currentRow, int currentColumn, int previo
     blockBasicSignals(false);
 }
 
-void SIDataTopic::onAddClicked(void)
+void SIAttribute::onAddClicked(void)
 {
     static const QString _defName("NewAttribute");
 
@@ -255,7 +255,7 @@ void SIDataTopic::onAddClicked(void)
     blockBasicSignals(false);
 }
 
-void SIDataTopic::onRemoveClicked(void)
+void SIAttribute::onRemoveClicked(void)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -292,12 +292,12 @@ void SIDataTopic::onRemoveClicked(void)
     blockBasicSignals(false);
 }
 
-void SIDataTopic::onInsertClicked(void)
+void SIAttribute::onInsertClicked(void)
 {
     // Implementation for inserting an attribute
 }
 
-void SIDataTopic::onMoveUpClicked(void)
+void SIAttribute::onMoveUpClicked(void)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -312,7 +312,7 @@ void SIDataTopic::onMoveUpClicked(void)
     }
 }
 
-void SIDataTopic::onMoveDownClicked(void)
+void SIAttribute::onMoveDownClicked(void)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -327,7 +327,7 @@ void SIDataTopic::onMoveDownClicked(void)
     }
 }
 
-void SIDataTopic::onNameChanged(const QString& newName)
+void SIAttribute::onNameChanged(const QString& newName)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -341,7 +341,7 @@ void SIDataTopic::onNameChanged(const QString& newName)
     }
 }
 
-void SIDataTopic::onTypeChanged(const QString& newType)
+void SIAttribute::onTypeChanged(const QString& newType)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -357,7 +357,7 @@ void SIDataTopic::onTypeChanged(const QString& newType)
     }
 }
 
-void SIDataTopic::onNotificationChanged(const QString& newValue)
+void SIAttribute::onNotificationChanged(const QString& newValue)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -371,7 +371,7 @@ void SIDataTopic::onNotificationChanged(const QString& newValue)
     }
 }
 
-void SIDataTopic::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
+void SIAttribute::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
 {
     QTableWidget* table = mList->ctrlTableList();
     if ((index.row() < 0) || (index.row() >= table->rowCount()) || (index.column() < 0))
@@ -380,7 +380,7 @@ void SIDataTopic::onEditorDataChanged(const QModelIndex& index, const QString& n
     cellChanged(index.row(), index.column(), newValue);
 }
 
-void SIDataTopic::onDeprectedChecked(bool isChecked)
+void SIAttribute::onDeprectedChecked(bool isChecked)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -388,11 +388,11 @@ void SIDataTopic::onDeprectedChecked(bool isChecked)
     {
         AttributeEntry* entry = findAttribute(row);
         Q_ASSERT(entry != nullptr);
-        SICommon::checkedDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, entry, isChecked);
+        SICommon::checkedDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, entry, isChecked);
     }
 }
 
-void SIDataTopic::onDeprecateHintChanged(const QString& newText)
+void SIAttribute::onDeprecateHintChanged(const QString& newText)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -400,11 +400,11 @@ void SIDataTopic::onDeprecateHintChanged(const QString& newText)
     {
         AttributeEntry* entry = findAttribute(row);
         Q_ASSERT(entry != nullptr);
-        SICommon::setDeprecateHint<SIDataTopicDetails, AttributeEntry>(mDetails, entry, newText);
+        SICommon::setDeprecateHint<SIAttributeDetails, AttributeEntry>(mDetails, entry, newText);
     }
 }
 
-void SIDataTopic::onDescriptionChanged(void)
+void SIAttribute::onDescriptionChanged(void)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -416,7 +416,7 @@ void SIDataTopic::onDescriptionChanged(void)
     }
 }
 
-void SIDataTopic::cellChanged(int row, int col, const QString& newValue)
+void SIAttribute::cellChanged(int row, int col, const QString& newValue)
 {
     AttributeEntry* entry = findAttribute(row);
     Q_ASSERT(entry != nullptr);
@@ -457,7 +457,7 @@ void SIDataTopic::cellChanged(int row, int col, const QString& newValue)
     }
 }
 
-void SIDataTopic::updateData(void)
+void SIAttribute::updateData(void)
 {
     QTableWidget* table = mList->ctrlTableList();
     const QList<AttributeEntry>& list = mModel.getAttributes();
@@ -472,7 +472,7 @@ void SIDataTopic::updateData(void)
     }
 }
 
-void SIDataTopic::updateWidgets(void)
+void SIAttribute::updateWidgets(void)
 {
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
@@ -483,36 +483,36 @@ void SIDataTopic::updateWidgets(void)
     mList->ctrlTableList()->setItemDelegateForColumn(1, mTableCell);
     mList->ctrlTableList()->setItemDelegateForColumn(2, mTableCell);
 
-    SICommon::enableDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, nullptr, false);
+    SICommon::enableDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, nullptr, false);
 
     mDetails->ctrlName()->setEnabled(false);
     mDetails->ctrlTypes()->setEnabled(false);
     mDetails->ctrlNotification()->setEnabled(false);
 }
 
-void SIDataTopic::setupSignals(void)
+void SIAttribute::setupSignals(void)
 {
     Q_ASSERT(mDetails != nullptr);
     Q_ASSERT(mList != nullptr);
 
-    connect(mList->ctrlTableList(), &QTableWidget::currentCellChanged, this, &SIDataTopic::onCurCellChanged);
-    connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIDataTopic::onAddClicked);
-    connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIDataTopic::onRemoveClicked);
-    connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIDataTopic::onInsertClicked);
-    connect(mList->ctrlButtonMoveUp(), &QToolButton::clicked, this, &SIDataTopic::onMoveUpClicked);
-    connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked, this, &SIDataTopic::onMoveDownClicked);
+    connect(mList->ctrlTableList(), &QTableWidget::currentCellChanged, this, &SIAttribute::onCurCellChanged);
+    connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIAttribute::onAddClicked);
+    connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIAttribute::onRemoveClicked);
+    connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIAttribute::onInsertClicked);
+    connect(mList->ctrlButtonMoveUp(), &QToolButton::clicked, this, &SIAttribute::onMoveUpClicked);
+    connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked, this, &SIAttribute::onMoveDownClicked);
 
-    connect(mDetails->ctrlName(), &QLineEdit::textChanged, this, &SIDataTopic::onNameChanged);
-    connect(mDetails->ctrlTypes(), &QComboBox::currentTextChanged, this, &SIDataTopic::onTypeChanged);
-    connect(mDetails->ctrlNotification(), &QComboBox::currentTextChanged, this, &SIDataTopic::onNotificationChanged);
-    connect(mDetails->ctrlDeprecated(), &QCheckBox::toggled, this, &SIDataTopic::onDeprectedChecked);
-    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textEdited, this, &SIDataTopic::onDeprecateHintChanged);
-    connect(mDetails->ctrlDescription(), &QPlainTextEdit::textChanged, this, &SIDataTopic::onDescriptionChanged);
+    connect(mDetails->ctrlName(), &QLineEdit::textChanged, this, &SIAttribute::onNameChanged);
+    connect(mDetails->ctrlTypes(), &QComboBox::currentTextChanged, this, &SIAttribute::onTypeChanged);
+    connect(mDetails->ctrlNotification(), &QComboBox::currentTextChanged, this, &SIAttribute::onNotificationChanged);
+    connect(mDetails->ctrlDeprecated(), &QCheckBox::toggled, this, &SIAttribute::onDeprectedChecked);
+    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textEdited, this, &SIAttribute::onDeprecateHintChanged);
+    connect(mDetails->ctrlDescription(), &QPlainTextEdit::textChanged, this, &SIAttribute::onDescriptionChanged);
 
-    connect(mTableCell, &TableCell::editorDataChanged, this, &SIDataTopic::onEditorDataChanged);
+    connect(mTableCell, &TableCell::editorDataChanged, this, &SIAttribute::onEditorDataChanged);
 }
 
-void SIDataTopic::blockBasicSignals(bool doBlock)
+void SIAttribute::blockBasicSignals(bool doBlock)
 {
     mList->ctrlTableList()->blockSignals(doBlock);
 
@@ -524,7 +524,7 @@ void SIDataTopic::blockBasicSignals(bool doBlock)
     mDetails->ctrlDeprecateHint()->blockSignals(doBlock);
 }
 
-inline void SIDataTopic::setTexts(int row, const AttributeEntry& entry)
+inline void SIAttribute::setTexts(int row, const AttributeEntry& entry)
 {
     QTableWidget * table = mList->ctrlTableList();
     if (row < 0)
@@ -559,7 +559,7 @@ inline void SIDataTopic::setTexts(int row, const AttributeEntry& entry)
     }
 }
 
-inline void SIDataTopic::updateDetails(const AttributeEntry* entry, bool updateAll /*= false*/)
+inline void SIAttribute::updateDetails(const AttributeEntry* entry, bool updateAll /*= false*/)
 {
     if (entry != nullptr)
     {
@@ -582,7 +582,7 @@ inline void SIDataTopic::updateDetails(const AttributeEntry* entry, bool updateA
         if (updateAll)
         {
             mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-            SICommon::enableDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, entry, true);
+            SICommon::enableDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, entry, true);
         }
     }
     else
@@ -592,7 +592,7 @@ inline void SIDataTopic::updateDetails(const AttributeEntry* entry, bool updateA
         mDetails->ctrlNotification()->setCurrentIndex(0);
         mDetails->ctrlDescription()->setPlainText("");
 
-        SICommon::enableDeprecated<SIDataTopicDetails, AttributeEntry>(mDetails, nullptr, false);
+        SICommon::enableDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, nullptr, false);
 
         mDetails->ctrlName()->setEnabled(false);
         mDetails->ctrlTypes()->setEnabled(false);
@@ -604,7 +604,7 @@ inline void SIDataTopic::updateDetails(const AttributeEntry* entry, bool updateA
     }
 }
 
-inline AttributeEntry* SIDataTopic::findAttribute(int row)
+inline AttributeEntry* SIAttribute::findAttribute(int row)
 {
     QTableWidget* table = mList->ctrlTableList();
     if (row < 0 || row > table->rowCount())
@@ -615,7 +615,7 @@ inline AttributeEntry* SIDataTopic::findAttribute(int row)
     return mModel.findAttribute(id);
 }
 
-inline const AttributeEntry* SIDataTopic::findAttribute(int row) const
+inline const AttributeEntry* SIAttribute::findAttribute(int row) const
 {
     QTableWidget* table = mList->ctrlTableList();
     if (row < 0 || row > table->rowCount())
@@ -626,7 +626,7 @@ inline const AttributeEntry* SIDataTopic::findAttribute(int row) const
     return mModel.findAttribute(id);
 }
 
-inline void SIDataTopic::swapAttributes(int firstRow, int secondRow)
+inline void SIAttribute::swapAttributes(int firstRow, int secondRow)
 {
     QTableWidget* table = mList->ctrlTableList();
     Q_ASSERT(firstRow >= 0 && firstRow < table->rowCount());
@@ -644,7 +644,7 @@ inline void SIDataTopic::swapAttributes(int firstRow, int secondRow)
     updateToolBottons(secondRow, mList->ctrlTableList()->rowCount());
 }
 
-inline void SIDataTopic::updateToolBottons(int row, int rowCount)
+inline void SIAttribute::updateToolBottons(int row, int rowCount)
 {
     if ((row >= 0) && (row < rowCount))
     {

@@ -40,7 +40,7 @@ public:
     /**
      * \brief   Link to the attributes tabbed page.
      **/
-    QPushButton* linkTopics(void) const;
+    QPushButton* linkAttributes(void) const;
 
     /**
      * \brief   Link to the methods tabbed page.

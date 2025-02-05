@@ -39,9 +39,9 @@ QPushButton* SIOverviewLinks::linkDataTypes(void) const
     return ui->linkDataTypes;
 }
 
-QPushButton* SIOverviewLinks::linkTopics(void) const
+QPushButton* SIOverviewLinks::linkAttributes(void) const
 {
-    return ui->linkTopics;
+    return ui->linkAttributes;
 }
 
 QPushButton* SIOverviewLinks::linkMethods(void) const

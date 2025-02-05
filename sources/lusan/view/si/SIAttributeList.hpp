@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_APPLICATION_SI_SIDATATOPICLIST_HPP
-#define LUSAN_APPLICATION_SI_SIDATATOPICLIST_HPP
+﻿#ifndef LUSAN_APPLICATION_SI_SIATTRIBUTELIST_HPP
+#define LUSAN_APPLICATION_SI_SIATTRIBUTELIST_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,27 +12,27 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIDataTopicList.hpp
+ *  \file        lusan/view/si/SIAttributeList.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface, Data Topic section.
+ *  \brief       Lusan application, Service Interface, Data Attribute section.
  *
  ************************************************************************/
 #include <QWidget>
 
 namespace Ui {
-    class SIDataTopicList;
+    class SIAttributeList;
 }
     
 class QToolButton;
 class QTableWidget;
 
-class SIDataTopicList : public QWidget
+class SIAttributeList : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit SIDataTopicList(QWidget* parent = nullptr);
+    explicit SIAttributeList(QWidget* parent = nullptr);
 
     // Getters to access controls
 
@@ -49,7 +49,7 @@ public:
     QTableWidget* ctrlTableList(void);
 
 private:
-    Ui::SIDataTopicList* ui;
+    Ui::SIAttributeList* ui;
 };
 
-#endif // LUSAN_APPLICATION_SI_SIDATATOPICLIST_HPP
+#endif // LUSAN_APPLICATION_SI_SIATTRIBUTELIST_HPP

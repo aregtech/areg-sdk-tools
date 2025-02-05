@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SIDataTopicDetails</class>
- <widget class="QWidget" name="SIDataTopicDetails">
+ <class>SIAttributeDetails</class>
+ <widget class="QWidget" name="SIAttributeDetails">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -63,7 +63,7 @@
            </sizepolicy>
           </property>
           <property name="title">
-           <string>Data Topic Details:</string>
+           <string>Data Attribute Details:</string>
           </property>
           <layout class="QFormLayout" name="formLayout_2">
            <item row="0" column="0">
@@ -128,7 +128,7 @@
            <bool>false</bool>
           </property>
           <property name="placeholderText">
-           <string notr="true">Describe topic here</string>
+           <string notr="true">Describe attribute here</string>
           </property>
          </widget>
         </item>

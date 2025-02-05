@@ -38,16 +38,16 @@ ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWi
     , mTabWidget(this)
     , mOverview (mModel.getOverviewModel()  , this)
     , mDataType (mModel.getDataTypeModel()  , this)
-    , mDataTopic(mModel.getDataTopicModel() , this)
+    , mAttribute(mModel.getAttributeModel() , this)
     , mMethod   (mModel.getMethodsModel()   , this)
     , mConstant (mModel.getConstantsModel() , this)
     , mInclude  (mModel.getIncludesModel()  , this)
 {
     mTabWidget.setTabPosition(QTabWidget::South);
-    // Add the sioverview widget as the first tab
+    // Add the SIOverview widget as the first tab
     mTabWidget.addTab(&mOverview , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Overview"));
     mTabWidget.addTab(&mDataType , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Data Types"));
-    mTabWidget.addTab(&mDataTopic, QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Data Topics"));
+    mTabWidget.addTab(&mAttribute, QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Data Attributes"));
     mTabWidget.addTab(&mMethod   , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Methods"));
     mTabWidget.addTab(&mConstant , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Constants"));
     mTabWidget.addTab(&mInclude  , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Includes"));
@@ -115,7 +115,7 @@ void ServiceInterface::slotDataTypeCreated(DataTypeCustom* dataType)
 {
     static_cast<IEDataTypeConsumer&>(mOverview).dataTypeCreated(dataType);
     static_cast<IEDataTypeConsumer&>(mDataType).dataTypeCreated(dataType);
-    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeCreated(dataType);
+    static_cast<IEDataTypeConsumer&>(mAttribute).dataTypeCreated(dataType);
     static_cast<IEDataTypeConsumer&>(mMethod).dataTypeCreated(dataType);
     static_cast<IEDataTypeConsumer&>(mConstant).dataTypeCreated(dataType);
     static_cast<IEDataTypeConsumer&>(mInclude).dataTypeCreated(dataType);
@@ -125,7 +125,7 @@ void ServiceInterface::slotDataTypeConverted(DataTypeCustom* oldType, DataTypeCu
 {
     static_cast<IEDataTypeConsumer&>(mOverview).dataTypeConverted(oldType, newType);
     static_cast<IEDataTypeConsumer&>(mDataType).dataTypeConverted(oldType, newType);
-    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeConverted(oldType, newType);
+    static_cast<IEDataTypeConsumer&>(mAttribute).dataTypeConverted(oldType, newType);
     static_cast<IEDataTypeConsumer&>(mMethod).dataTypeConverted(oldType, newType);
     static_cast<IEDataTypeConsumer&>(mConstant).dataTypeConverted(oldType, newType);
     static_cast<IEDataTypeConsumer&>(mInclude).dataTypeConverted(oldType, newType);
@@ -135,7 +135,7 @@ void ServiceInterface::slotDataTypeDeleted(DataTypeCustom* dataType)
 {
     static_cast<IEDataTypeConsumer&>(mOverview).dataTypeDeleted(dataType);
     static_cast<IEDataTypeConsumer&>(mDataType).dataTypeDeleted(dataType);
-    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeDeleted(dataType);
+    static_cast<IEDataTypeConsumer&>(mAttribute).dataTypeDeleted(dataType);
     static_cast<IEDataTypeConsumer&>(mMethod).dataTypeDeleted(dataType);
     static_cast<IEDataTypeConsumer&>(mConstant).dataTypeDeleted(dataType);
     static_cast<IEDataTypeConsumer&>(mInclude).dataTypeDeleted(dataType);
@@ -145,7 +145,7 @@ void ServiceInterface::slotDataTypeUpdated(DataTypeCustom* dataType)
 {
     static_cast<IEDataTypeConsumer&>(mOverview).dataTypeUpdated(dataType);
     static_cast<IEDataTypeConsumer&>(mDataType).dataTypeUpdated(dataType);
-    static_cast<IEDataTypeConsumer&>(mDataTopic).dataTypeUpdated(dataType);
+    static_cast<IEDataTypeConsumer&>(mAttribute).dataTypeUpdated(dataType);
     static_cast<IEDataTypeConsumer&>(mMethod).dataTypeUpdated(dataType);
     static_cast<IEDataTypeConsumer&>(mConstant).dataTypeUpdated(dataType);
     static_cast<IEDataTypeConsumer&>(mInclude).dataTypeUpdated(dataType);
