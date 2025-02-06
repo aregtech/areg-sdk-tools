@@ -48,11 +48,19 @@ public:
 public:
 
     /**
-     * \brief   Creates a ConstantEntry and sets it in SIConstantData.
+     * \brief   Creates new ConstantEntry at the end of list of SIConstantData.
      * \param   name            The name of the constant.
      * \return  Valid pointer to the new created constant element. Otherwise, returns nullptr.
      **/
     ConstantEntry* createConstant(const QString& name);
+
+    /**
+     * \brief   Inserts the constant entry in the list of constant entries.
+     * \param   position    The position to insert the constant entry.
+     * \param   name        The name of the constant.
+     * \return  Valid pointer to the new created constant element. Otherwise, returns nullptr.
+     **/
+    ConstantEntry* insertConstant(int position, const QString& name);
 
     /**
      * \brief   Deletes the constant by ID.

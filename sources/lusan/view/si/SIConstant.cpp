@@ -177,14 +177,8 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
 
 void SIConstant::onAddClicked(void)
 {
-    static const QString _defName("NewConstant");
-    
+    QString name(std::move(genName()));
     QTableWidget *table = mList->ctrlTableList();
-    QString name;
-    do
-    {
-        name =_defName + QString::number(++ mCount);
-    } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
     
     blockBasicSignals(true);
     ConstantEntry * entry = mModel.createConstant(name);
@@ -252,6 +246,43 @@ void SIConstant::onRemoveClicked(void)
 
 void SIConstant::onInsertClicked(void)
 {
+    QString name(std::move(genName()));
+    QTableWidget* table = mList->ctrlTableList();
+
+    blockBasicSignals(true);
+    int row = table->currentRow();
+    row = row < 0 ? 0 : row;
+    ConstantEntry* entry = mModel.insertConstant(row, name);
+    if (entry != nullptr)
+    {
+        mDetails->ctrlName()->setEnabled(true);
+        mDetails->ctrlTypes()->setEnabled(true);
+        mDetails->ctrlValue()->setEnabled(true);
+
+        QTableWidgetItem* current = table->currentItem();
+        if (current != nullptr)
+        {
+            current->setSelected(false);
+        }
+
+        setTexts(row, *entry, true);
+        const QList<ConstantEntry>& list = mModel.getConstants();
+        Q_ASSERT(list.size() == table->rowCount());
+        for (int i = row + 1; i < list.size(); ++i)
+        {
+            QTableWidgetItem* col0 = table->item(i, static_cast<int>(eColumn::ColName));
+            col0->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<uint32_t>(list.at(i).getId()));
+        }
+
+        table->selectRow(row);
+        table->showRow(row);
+        updateDetails(entry, true);
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
+        updateToolBottons(row, table->rowCount());
+    }
+
+    blockBasicSignals(false);
 }
 
 void SIConstant::onMoveUpClicked(void)
@@ -479,18 +510,18 @@ void SIConstant::blockBasicSignals(bool doBlock)
     mDetails->ctrlDeprecateHint()->blockSignals(doBlock);
 }
 
-inline void SIConstant::setTexts(int row, const ConstantEntry & entry)
+inline void SIConstant::setTexts(int row, const ConstantEntry & entry, bool insert /*= false*/)
 {
     QTableWidget * table = mList->ctrlTableList();
-    if (row < 0)
+    if ((row < 0) || insert)
     {
-        row = table->rowCount();
+        row = row < 0 ? table->rowCount() : row;
+        table->insertRow(row);
         QTableWidgetItem * col0 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayName), entry.getString(ElementBase::eDisplay::DisplayName));
         QTableWidgetItem * col1 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayType), entry.getString(ElementBase::eDisplay::DisplayType));
         QTableWidgetItem * col2 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayValue), entry.getString(ElementBase::eDisplay::DisplayValue));
         col0->setData(Qt::ItemDataRole::UserRole, entry.getId());
         col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase *>(entry.getParamType()));
-        table->setRowCount(row + 1);
         table->setItem(row, static_cast<int>(eColumn::ColName), col0);
         table->setItem(row, static_cast<int>(eColumn::ColType), col1);
         table->setItem(row, static_cast<int>(eColumn::ColValue), col2);
@@ -632,4 +663,17 @@ inline void SIConstant::updateToolBottons(int row, int rowCount)
         mList->ctrlButtonMoveDown()->setEnabled(false);
         mList->ctrlButtonRemove()->setEnabled(false);
     }
+}
+
+inline QString SIConstant::genName(void)
+{
+    static const QString _defName("NewConstant");
+
+    QTableWidget* table = mList->ctrlTableList();
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++mCount);
+    } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
+    return std::move(name);
 }

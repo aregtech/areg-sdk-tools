@@ -90,7 +90,7 @@ public:
     void validate(const SIDataTypeData& dataTypes);
 
     /**
-     * \brief   Creates a ConstantEntry and sets it in SIConstantData.
+     * \brief   Creates new ConstantEntry at the end of list of SIConstantData.
      * \param   name    The name of the new constant to create.
      * \return  Valid pointer to the new created constant element. Otherwise, returns nullptr.
      **/
@@ -103,6 +103,13 @@ public:
      * \return  Returns the list IDs of constant entries, which.
      **/
     QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
+
+    /**
+     * \brief   Inserts new ConstantEntry at the given position in SIConstantData.
+     * \param   name    The name of the constant.
+     * \return  Valid pointer to the new created constant element. Otherwise, returns nullptr.
+     **/
+    ConstantEntry* insertConstant(int position, const QString& name);
 };
 
 #endif  // LUSAN_DATA_SI_SICONSTANTDATA_HPP

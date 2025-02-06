@@ -50,12 +50,14 @@ public:
      * \brief   Parameterized constructor.
      * \param   src The source element to copy from.
      **/
-    DocumentElem(const DocumentElem & src) = default;
+    DocumentElem(const DocumentElem & src);
+
     /**
      * \brief   Move constructor.
      * \param   src The source element to move from.
      **/
-    DocumentElem(DocumentElem&& src) noexcept = default;
+    DocumentElem(DocumentElem&& src) noexcept;
+
     /**
      * \brief   Destructor.
      **/
@@ -67,13 +69,14 @@ public:
      * \param   src The source element to copy from.
      * \return  Reference to this element.
      **/
-    DocumentElem& operator = (const DocumentElem& src) = default;
+    DocumentElem& operator = (const DocumentElem& src);
+
     /**
      * \brief   Move assignment operator.
      * \param   src The source element to move from.
      * \return  Reference to this element.
      **/
-    DocumentElem& operator = (DocumentElem&& src) noexcept = default;
+    DocumentElem& operator = (DocumentElem&& src) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

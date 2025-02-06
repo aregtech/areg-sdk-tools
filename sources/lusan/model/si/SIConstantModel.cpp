@@ -36,6 +36,17 @@ ConstantEntry * SIConstantModel::createConstant(const QString& name)
     return result;
 }
 
+ConstantEntry* SIConstantModel::insertConstant(int position, const QString& name)
+{
+    ConstantEntry* result = mData.insertConstant(position, name);
+    if (result != nullptr)
+    {
+        result->validate(mDataType.getCustomDataTypes());
+    }
+
+    return result;
+}
+
 bool SIConstantModel::deleteConstant(uint32_t id)
 {
     return mData.removeElement(id);

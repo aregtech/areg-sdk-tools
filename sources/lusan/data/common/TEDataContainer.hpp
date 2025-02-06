@@ -64,8 +64,18 @@ public:
      **/
     TEDataContainer(TEDataContainer&& src) noexcept;
 
+    /**
+     * \brief   Constructor to initialize the list of data elements.
+     * \param   entries The list of data elements to initialize.
+     * \param   parent  The parent element.
+     **/
     TEDataContainer(const QList<Data>& entries, ElementBase* parent);
 
+    /**
+     * \brief   Constructor to initialize the list of data elements.
+     * \param   entries The list of data elements to initialize.
+     * \param   parent  The parent element.
+     **/
     TEDataContainer(QList<Data>&& entries, ElementBase* parent) noexcept;
 
 //////////////////////////////////////////////////////////////////////////
@@ -107,7 +117,6 @@ public:
      * \param   elements  The list of data elements to set.
      **/
     void setElements(const QList<Data>& elements);
-
     void setElements(QList<Data>&& elements) noexcept;
 
     /**
@@ -217,7 +226,7 @@ public:
     /**
      * \brief   Removes all data elements.
      **/
-    void removeAllElements();
+    inline void removeAllElements();
 
     /**
      * \brief   Finds a data element by name.
@@ -240,7 +249,7 @@ public:
      * \param   name    The name of the element to find.
      * \return  The index of the element if found, -1 otherwise.
      **/
-    int findIndex(const Data& field) const;
+    inline int findIndex(const Data& field) const;
 
     /**
      * \brief   Finds the index of a data element by name.
@@ -261,21 +270,21 @@ public:
      * \param   name    The name of the element to check.
      * \return  True if the element exists, false otherwise.
      **/
-    bool hasElement(const QString& name) const;
+    inline bool hasElement(const QString& name) const;
 
     /**
      * \brief   Checks if a data element exists by ID.
      * \param   id  The ID of the element to check.
      * \return  True if the element exists, false otherwise.
      **/
-    bool hasElement(uint32_t id) const;
+    inline bool hasElement(uint32_t id) const;
 
     /**
      * \brief   Checks if a data element exists by name.
      * \param   element The data element to check.
      * \return  True if the element exists, false otherwise.
      **/
-    bool hasElement(const Data& element) const;
+    inline bool hasElement(const Data& element) const;
 
     /**
      * \brief   Sorts the elements by name.
@@ -293,13 +302,13 @@ public:
      * \brief   Checks whether the container has list of elements.
      * \return  True if the container object has elements, false otherwise.
      **/
-    bool hasElements(void) const;
+    inline bool hasElements(void) const;
 
     /**
      * \brief   Returns the number of elements in the container.
      * \return  The number of elements in the container.
      **/
-    int getElementCount(void) const;
+    inline int getElementCount(void) const;
 
     /**
      * \brief   Swaps 2 elements by given index.
@@ -320,51 +329,40 @@ public:
     void swapElements(uint32_t elem1Id, uint32_t elem2Id);
 
     /**
-     * \brief   Orders the elements by given list of IDs.
-     * \param   orderedIds  The list of ordered IDs.
-     * \return  True if the elements are ordered, false otherwise.
-     **/
-    bool orderElements(const QList<uint32_t>& orderedIds);
-
-    /**
-     * \brief   Set the ordered list IDs for elements in container,
-     *          i.e. sets the IDs without changing the content of container.
-     *          The number of entries in the list and in container should be same.
-     *          The IDs in the order list should be unique.
-     * \param   orderedIds  The list of ordered IDs.
-     **/
-    void setOrderedIds(const QList<uint32_t>& orderIds);
-
-    /**
      * \brief   Sorts the elements by the given sorting type.
      * \param   sortingType The sorting type.
      **/
     void sortElements(NELusanCommon::eSortingType sortingType);
 
     /**
+     * \brief   Resets the sorting state to stop sorting.
+     **/
+    inline void noSortElements(void);
+
+    /**
      * \brief   Checks if the elements in the list are sorted.
      **/
-    bool isSorted(void) const;
+    inline bool isSorted(void) const;
 
     /**
      * \brief   Checks if the elements are sorted by ID.
      **/
-    bool isSortedById(void) const;
+    inline bool isSortedById(void) const;
 
     /**
      * \brief   Checks if the elements are sorted by name.
      **/
-    bool isSortedByName(void) const;
+    inline bool isSortedByName(void) const;
 
     /**
      * \brief   Checks if the elements are sorted by ID in ascending order.
      **/
-    bool isSortedByIdAscending(void) const;
+    inline bool isSortedByIdAscending(void) const;
 
     /**
      * \brief   Checks if the elements are sorted by ID in descending order.
      **/
-    bool isSortedByIdDescending(void) const;
+    inline bool isSortedByIdDescending(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Protected methods
@@ -374,8 +372,7 @@ protected:
      * \brief   Checks if the elements are unique.
      * \return  True if the elements are unique, false otherwise.
      **/
-    bool checkUniqueness() const;
-
+    bool checkUniqueness() const;inline 
     /**
      * \brief   Checks if an element is unique.
      * \param   element The element to check.
@@ -390,7 +387,7 @@ protected:
      * \param   unique  If true, ensures the element is unique.
      * \return  True if the element is updated, false otherwise.
      **/
-    bool checkUpdated(const Data& element, bool unique) const;
+    inline bool checkUpdated(const Data& element, bool unique) const;
 
     /**
      * \brief   Extracts and saves the IDs of the elements in the list.
@@ -406,9 +403,23 @@ protected:
     inline void getIdsSorted(QList<uint32_t>& out_ids, bool ascending) const;
 
     /**
+     * \brief   Set the ordered list IDs for elements in container,
+     *          i.e. sets the IDs without changing the content of container.
+     *          The number of entries in the list and in container should be same.
+     *          The IDs in the order list should be unique.
+     * \param   orderedIds  The list of ordered IDs.
+     **/
+    void setOrderedIds(const QList<uint32_t>& orderIds);
+
+    /**
      * \brief   Fixes the entries in the list.
      **/
     inline void fixEntries(void);
+
+    /**
+     * \brief   Reorders the IDs of the elements in the list.
+     **/
+    inline void reorderIds(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -516,7 +527,7 @@ void TEDataContainer<Data, ElemBase>::setElements(const QList<Data>& elements)
 {
     mElementList = elements;
     fixEntries();
-    sortElements(mSorting);
+    reorderIds();
 }
 
 template<class Data, class ElemBase>
@@ -524,7 +535,7 @@ inline void TEDataContainer<Data, ElemBase>::setElements(QList<Data>&& elements)
 {
     mElementList = std::move(elements);
     fixEntries();
-    sortElements(mSorting);
+    reorderIds();
 }
 
 template<class Data, class ElemBase>
@@ -533,7 +544,7 @@ bool TEDataContainer<Data, ElemBase>::addElement(Data&& element, bool unique)
     if (checkUpdated(element, unique))
     {
         mElementList.append(std::move(element));
-        sortElements(mSorting);
+        reorderIds();
         return true;
     }
 
@@ -546,7 +557,7 @@ bool TEDataContainer<Data, ElemBase>::addElement(const Data& element, bool uniqu
     if (checkUpdated(element, unique))
     {
         mElementList.append(element);
-        sortElements(mSorting);
+        reorderIds();
         return true;
     }
 
@@ -568,6 +579,7 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(const Data& oldElement, Dat
         newElement.setParent(temp.getParent());
         newElement.setId(temp.getId());
         temp = std::move(newElement);
+        reorderIds();
         return true;
     }
 
@@ -590,6 +602,7 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(const Data& oldElement, con
         newElem.setParent(oldElem.getParent());
         newElem.setId(oldElem.getId());
         *element = std::move(newElement);
+        reorderIds();
         return true;
     }
 
@@ -608,6 +621,7 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(uint32_t id, Data&& newElem
             newElem.setParent(temp.getParent());
             newElem.setId(temp.getId());
             mElementList[i] = std::move(newElement);
+            reorderIds();
             return true;
         }
     }
@@ -627,6 +641,7 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(uint32_t id, const Data& ne
             newElem.setParent(temp.getParent());
             newElem.setId(temp.getId());
             mElementList[i] = newElement;
+            reorderIds();
             return true;
         }
     }
@@ -646,6 +661,7 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(const QString& name, Data&&
             newElem.setParent(temp.getParent());
             newElem.setId(temp.getId());
             mElementList[i] = newElement;
+            reorderIds();
             return true;
         }
     }
@@ -665,6 +681,7 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(const QString& name, const 
             newElem.setParent(temp.getParent());
             newElem.setId(temp.getId());
             mElementList[i] = newElement;
+            reorderIds();
             return true;
         }
     }
@@ -683,7 +700,7 @@ bool TEDataContainer<Data, ElemBase>::insertElement(int index, Data&& element, b
     if (checkUpdated(element, unique))
     {
         mElementList.insert(index, std::move(element));
-        sortElements(mSorting);
+        reorderIds();
         return true;
     }
 
@@ -701,7 +718,7 @@ bool TEDataContainer<Data, ElemBase>::insertElement(int index, const Data& eleme
     if (checkUpdated(element, unique))
     {
         mElementList.insert(index, element);
-        sortElements(mSorting);
+        reorderIds();
         return true;
     }
 
@@ -751,7 +768,7 @@ bool TEDataContainer<Data, ElemBase>::removeElement(const QString& name, Data* e
 }
 
 template<class Data, class ElemBase>
-void TEDataContainer<Data, ElemBase>::removeAllElements()
+inline void TEDataContainer<Data, ElemBase>::removeAllElements()
 {
     mElementList.clear();
 }
@@ -832,7 +849,7 @@ int TEDataContainer<Data, ElemBase>::findIndex(const QString& name) const
 }
 
 template<class Data, class ElemBase>
-int TEDataContainer<Data, ElemBase>::findIndex(const Data& field) const
+inline int TEDataContainer<Data, ElemBase>::findIndex(const Data& field) const
 {
     return findIndex(field.getId());
 }
@@ -853,19 +870,19 @@ int TEDataContainer<Data, ElemBase>::findIndex(uint32_t id) const
 }
 
 template<class Data, class ElemBase>
-bool TEDataContainer<Data, ElemBase>::hasElement(const QString& name) const
+inline bool TEDataContainer<Data, ElemBase>::hasElement(const QString& name) const
 {
     return findElement(name) != nullptr;
 }
 
 template<class Data, class ElemBase>
-bool TEDataContainer<Data, ElemBase>::hasElement(uint32_t id) const
+inline bool TEDataContainer<Data, ElemBase>::hasElement(uint32_t id) const
 {
     return findElement(id) != nullptr;
 }
 
 template<class Data, class ElemBase>
-bool TEDataContainer<Data, ElemBase>::hasElement(const Data& element) const
+inline bool TEDataContainer<Data, ElemBase>::hasElement(const Data& element) const
 {
     return (element.getId() != 0 ? hasElement(element.getId()) : hasElement(element.getName()));
 }
@@ -891,13 +908,13 @@ inline void TEDataContainer<Data, ElemBase>::sortElementsById(bool ascending)
 }
 
 template<class Data, class ElemBase>
-bool TEDataContainer<Data, ElemBase>::hasElements(void) const
+inline bool TEDataContainer<Data, ElemBase>::hasElements(void) const
 {
     return (mElementList.isEmpty() == false);
 }
 
 template<class Data, class ElemBase>
-int TEDataContainer<Data, ElemBase>::getElementCount(void) const
+inline int TEDataContainer<Data, ElemBase>::getElementCount(void) const
 {
     return static_cast<int>(mElementList.size());
 }
@@ -940,32 +957,6 @@ inline void TEDataContainer<Data, ElemBase>::swapElements(uint32_t elem1Id, uint
 }
 
 template<class Data, class ElemBase>
-bool TEDataContainer<Data, ElemBase>::orderElements(const QList<uint32_t>& orderedIds)
-{
-    if (orderedIds.size() != mElementList.size())
-    {
-        return false;
-    }
-
-    int count = static_cast<int>(mElementList.size());
-    for (int i = 0; i < count; ++i)
-    {
-        uint32_t id = orderedIds[i];
-        int index = findIndex(id);
-        if (index < 0)
-        {
-            return false;
-        }
-        else if (index != i)
-        {
-            swapElements(i, index);
-        }
-    }
-
-    return true;
-}
-
-template<class Data, class ElemBase>
 void TEDataContainer<Data, ElemBase>::setOrderedIds(const QList<uint32_t>& orderedIds)
 {
     if (orderedIds.size() != mElementList.size())
@@ -1004,6 +995,12 @@ inline void TEDataContainer<Data, ElemBase>::sortElements(NELusanCommon::eSortin
         mSorting = sortingType;
         break;
     }
+}
+
+template<class Data, class ElemBase>
+inline void TEDataContainer<Data, ElemBase>::noSortElements(void)
+{
+    mSorting = NELusanCommon::eSortingType::NoSorting;
 }
 
 template<class Data, class ElemBase>
@@ -1081,7 +1078,7 @@ Data* TEDataContainer<Data, ElemBase>::checkElement(const Data& element, bool un
 }
 
 template<class Data, class ElemBase>
-bool TEDataContainer<Data, ElemBase>::checkUpdated(const Data& element, bool unique) const
+inline bool TEDataContainer<Data, ElemBase>::checkUpdated(const Data& element, bool unique) const
 {
     const auto& elem = ref{}(element);
     return (checkElement(element, unique) == nullptr ? (elem.getParent() == this) && (elem.getId() != 0) : false);
@@ -1100,10 +1097,12 @@ inline void TEDataContainer<Data, ElemBase>::getIds(QList<uint32_t>& out_ids) co
 template<class Data, class ElemBase>
 inline void TEDataContainer<Data, ElemBase>::getIdsSorted(QList<uint32_t>& out_ids, bool ascending) const
 {
+    out_ids.resize(mElementList.size());
+    int i{ 0 };
     for (const Data& element : mElementList)
     {
         const auto& elem = ref{}(element);
-        out_ids.append(elem.getId());
+        out_ids[i++] = elem.getId();
     }
 
     std::sort(out_ids.begin(), out_ids.end(), [ascending](uint32_t lhs, uint32_t rhs) -> bool
@@ -1129,6 +1128,17 @@ inline void TEDataContainer<Data, ElemBase>::fixEntries(void)
             temp.setParent(this);
             temp.setId(ElemBase::getParent()->getNextId());
         }
+    }
+}
+
+template<class Data, class ElemBase>
+inline void TEDataContainer<Data, ElemBase>::reorderIds(void)
+{
+    if (mElementList.size() > 1)
+    {
+        QList<uint32_t> ids;
+        getIdsSorted(ids, true);
+        setOrderedIds(ids);
     }
 }
 
