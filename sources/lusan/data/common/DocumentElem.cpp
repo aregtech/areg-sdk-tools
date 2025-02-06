@@ -28,3 +28,25 @@ DocumentElem::DocumentElem(unsigned int id, ElementBase* parent)
     : ElementBase(id, parent)
 {
 }
+
+DocumentElem::DocumentElem(const DocumentElem & src)
+    : ElementBase(static_cast<const ElementBase &>(src))
+{
+}
+
+DocumentElem::DocumentElem(DocumentElem&& src) noexcept
+    : ElementBase(std::move(src))
+{
+}
+
+DocumentElem& DocumentElem::operator = (const DocumentElem& src)
+{
+    ElementBase::operator = (src);
+    return (*this);
+}
+
+DocumentElem& DocumentElem::operator = (DocumentElem&& src) noexcept
+{
+    ElementBase::operator = (std::move(src));
+    return (*this);
+}

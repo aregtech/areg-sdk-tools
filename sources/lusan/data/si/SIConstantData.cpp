@@ -82,8 +82,14 @@ void SIConstantData::validate(const SIDataTypeData& dataTypes)
 
 ConstantEntry* SIConstantData::createConstant(const QString& name)
 {
+    ConstantEntry* result{nullptr};
     ConstantEntry entry(getNextId(), name, this);
-    return addElement(std::move(entry), false) ? static_cast<ConstantEntry *>(findElement(entry.getId())) : nullptr;
+    if (addElement(std::move(entry), false))
+    {
+        result = &mElementList[mElementList.size() - 1];
+    }
+
+    return result;
 }
     
 QList<uint32_t> SIConstantData::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
@@ -97,6 +103,18 @@ QList<uint32_t> SIConstantData::replaceDataType(DataTypeBase* oldDataType, DataT
             entry.setParamType(newDataType);
             result.push_back(entry.getId());
         }
+    }
+
+    return result;
+}
+
+ConstantEntry* SIConstantData::insertConstant(int position, const QString& name)
+{
+    ConstantEntry* result{nullptr};
+    ConstantEntry entry(getNextId(), name, this);
+    if (insertElement(position, std::move(entry), false))
+    {
+        result = &mElementList[position];
     }
 
     return result;
