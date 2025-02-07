@@ -56,6 +56,15 @@ public:
     AttributeEntry * createAttribute(const QString& name, AttributeEntry::eNotification notification = AttributeEntry::eNotification::NotifyOnChange);
 
     /**
+     * \brief   Inserts the data attribute entry in the list of attribute entries.
+     * \param   position    The position to insert the attribute entry.
+     * \param   name        The name of the attribute.
+     * \param   notification    The notification type of the attribute.
+     * \return  Valid pointer to the new created attribute element. Otherwise, returns nullptr.
+     **/
+    AttributeEntry* insertAttribute(int position, const QString& name, AttributeEntry::eNotification notification = AttributeEntry::eNotification::NotifyOnChange);
+
+    /**
      * \brief   Deletes the attribute by ID.
      * \param   id  The ID of the attribute to delete.
      * \return  True if the attribute was deleted, false otherwise.

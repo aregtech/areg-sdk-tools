@@ -219,14 +219,8 @@ void SIAttribute::onCurCellChanged(int currentRow, int currentColumn, int previo
 
 void SIAttribute::onAddClicked(void)
 {
-    static const QString _defName("NewAttribute");
-
+    QString name(std::move(genName()));
     QTableWidget* table = mList->ctrlTableList();
-    QString name;
-    do
-    {
-        name = _defName + QString::number(++mCount);
-    } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
 
     blockBasicSignals(true);
     AttributeEntry * entry = mModel.createAttribute(name);
@@ -294,7 +288,44 @@ void SIAttribute::onRemoveClicked(void)
 
 void SIAttribute::onInsertClicked(void)
 {
-    // Implementation for inserting an attribute
+    QString name(std::move(genName()));
+    QTableWidget* table = mList->ctrlTableList();
+
+    blockBasicSignals(true);
+    int row = table->currentRow();
+    row = row < 0 ? 0 : row;
+    AttributeEntry* entry = mModel.insertAttribute(row, name);
+    if (entry != nullptr)
+    {
+        mDetails->ctrlName()->setEnabled(true);
+        mDetails->ctrlTypes()->setEnabled(true);
+        mDetails->ctrlNotification()->setEnabled(true);
+
+        QTableWidgetItem* current = table->currentItem();
+        if (current != nullptr)
+        {
+            current->setSelected(false);
+        }
+
+        setTexts(row, *entry, true);
+        const QList<AttributeEntry>& list = mModel.getAttributes();
+        int rowCount = table->rowCount();
+        Q_ASSERT(list.size() == rowCount);
+        for (int i = row + 1; i < rowCount; ++i)
+        {
+            QTableWidgetItem* col0 = table->item(i, static_cast<int>(eColumn::ColName));
+            col0->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<uint32_t>(list.at(i).getId()));
+        }
+
+        table->selectRow(row);
+        table->showRow(row);
+        updateDetails(entry, true);
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
+        updateToolBottons(row, table->rowCount());
+    }
+
+    blockBasicSignals(false);
 }
 
 void SIAttribute::onMoveUpClicked(void)
@@ -524,18 +555,18 @@ void SIAttribute::blockBasicSignals(bool doBlock)
     mDetails->ctrlDeprecateHint()->blockSignals(doBlock);
 }
 
-inline void SIAttribute::setTexts(int row, const AttributeEntry& entry)
+inline void SIAttribute::setTexts(int row, const AttributeEntry& entry, bool insert /*= false*/)
 {
-    QTableWidget * table = mList->ctrlTableList();
-    if (row < 0)
+    QTableWidget* table = mList->ctrlTableList();
+    if ((row < 0) || insert)
     {
-        row = table->rowCount();
+        row = row < 0 ? table->rowCount() : row;
+        table->insertRow(row);
         QTableWidgetItem * col0 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayName), entry.getString(ElementBase::eDisplay::DisplayName));
         QTableWidgetItem * col1 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayType), entry.getString(ElementBase::eDisplay::DisplayType));
         QTableWidgetItem * col2 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayValue), entry.getString(ElementBase::eDisplay::DisplayValue));
         col0->setData(Qt::ItemDataRole::UserRole, entry.getId());
         col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase *>(entry.getParamType()));
-        table->setRowCount(row + 1);
         table->setItem(row, static_cast<int>(eColumn::ColName), col0);
         table->setItem(row, static_cast<int>(eColumn::ColType), col1);
         table->setItem(row, static_cast<int>(eColumn::ColNotify), col2);
@@ -677,4 +708,17 @@ inline void SIAttribute::updateToolBottons(int row, int rowCount)
         mList->ctrlButtonMoveDown()->setEnabled(false);
         mList->ctrlButtonRemove()->setEnabled(false);
     }
+}
+
+inline QString SIAttribute::genName(void)
+{
+    static const QString _defName("NewAttribute");
+
+    QTableWidget* table = mList->ctrlTableList();
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++mCount);
+    } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
+    return std::move(name);
 }

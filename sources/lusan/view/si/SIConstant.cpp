@@ -267,8 +267,9 @@ void SIConstant::onInsertClicked(void)
 
         setTexts(row, *entry, true);
         const QList<ConstantEntry>& list = mModel.getConstants();
-        Q_ASSERT(list.size() == table->rowCount());
-        for (int i = row + 1; i < list.size(); ++i)
+        int rowCount = table->rowCount();
+        Q_ASSERT(list.size() == rowCount);
+        for (int i = row + 1; i < rowCount; ++i)
         {
             QTableWidgetItem* col0 = table->item(i, static_cast<int>(eColumn::ColName));
             col0->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<uint32_t>(list.at(i).getId()));

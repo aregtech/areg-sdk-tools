@@ -98,6 +98,13 @@ public:
      * \return  Returns the list IDs of attribute entries, which.
      **/
     QList<uint32_t> replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType);
+
+    /**
+     * \brief   Inserts new AttributeEntry at the given position in SIAttributeData.
+     * \param   name    The name of the data attribute.
+     * \return  Valid pointer to the new created attribute element. Otherwise, returns nullptr.
+     **/
+    AttributeEntry* insertAttribute(int position, const QString& name, AttributeEntry::eNotification notification = AttributeEntry::eNotification::NotifyOnChange);
 };
 
 #endif  // LUSAN_DATA_SI_SIATTRIBUTEDATA_HPP
