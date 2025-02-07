@@ -79,8 +79,24 @@ void SIIncludeData::validate(const SIDataTypeData& /*dataTypes*/)
 
 IncludeEntry* SIIncludeData::createInclude(const QString location)
 {
-    uint32_t id{ getNextId() };
-    IncludeEntry newInclude(id, location, this);
-    addElement(newInclude);
-    return findElement(id);
+    IncludeEntry* result{ nullptr };
+    IncludeEntry entry(getNextId(), location, this);
+    if (addElement(std::move(entry), false))
+    {
+        result = &mElementList[mElementList.size() - 1];
+    }
+
+    return result;
+}
+
+IncludeEntry* SIIncludeData::insertInclude(int position, const QString& location)
+{
+    IncludeEntry* result{ nullptr };
+    IncludeEntry entry(getNextId(), location, this);
+    if (insertElement(position, std::move(entry), false))
+    {
+        result = &mElementList[position];
+    }
+
+    return result;
 }

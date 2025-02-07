@@ -24,9 +24,14 @@ SIIncludeModel::SIIncludeModel(SIIncludeData& includeData)
 {
 }
 
-IncludeEntry * SIIncludeModel::createInclude(const QString& name)
+IncludeEntry * SIIncludeModel::createInclude(const QString& location)
 {
-    return mData.createInclude(name);
+    return mData.createInclude(location);
+}
+
+IncludeEntry* SIIncludeModel::insertInclude(int position, const QString& location)
+{
+    return mData.insertInclude(position, location);
 }
 
 bool SIIncludeModel::deleteInclude(uint32_t id)
