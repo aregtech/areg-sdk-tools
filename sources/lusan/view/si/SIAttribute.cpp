@@ -567,8 +567,8 @@ inline void SIAttribute::setTexts(int row, const AttributeEntry& entry, bool ins
         QTableWidgetItem * col2 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayValue), entry.getString(ElementBase::eDisplay::DisplayValue));
         col0->setData(Qt::ItemDataRole::UserRole, entry.getId());
         col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase *>(entry.getParamType()));
-        table->setItem(row, static_cast<int>(eColumn::ColName), col0);
-        table->setItem(row, static_cast<int>(eColumn::ColType), col1);
+        table->setItem(row, static_cast<int>(eColumn::ColName)  , col0);
+        table->setItem(row, static_cast<int>(eColumn::ColType)  , col1);
         table->setItem(row, static_cast<int>(eColumn::ColNotify), col2);
     }
     else

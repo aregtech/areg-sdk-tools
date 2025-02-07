@@ -348,6 +348,7 @@ private:
     DataTypesModel*         mTypeModel;     //!< The model of the data types.
     SIAttributeNotifyModel* mNotifyModel;   //!< The model of the notification types.
     TableCell*              mTableCell;     //!< The table cell object.
+
     uint32_t                mCount;         //!< The counter to generate names.
 };
 
