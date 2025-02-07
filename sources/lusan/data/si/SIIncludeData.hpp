@@ -85,10 +85,17 @@ public:
 
     /**
      * \brief   Creates an include entry.
-     * \param   location    The file path.
+     * \param   location    The file path included in service interface.
      * \return  Returns the created include entry.
      **/
     IncludeEntry* createInclude(const QString location);
+
+    /**
+     * \brief   Inserts new IncludeEntry at the given position in SIIncludeData.
+     * \param   location    The file path included in service interface.
+     * \return  Valid pointer to the new created include element. Otherwise, returns nullptr.
+     **/
+    IncludeEntry* insertInclude(int position, const QString& location);
 };
 
 #endif  // LUSAN_DATA_SI_SIINCLUDEDATA_HPP

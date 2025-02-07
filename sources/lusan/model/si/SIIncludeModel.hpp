@@ -53,10 +53,18 @@ public:
     
     /**
      * \brief   Creates a IncludeEntry and sets it in SIIncludeData.
-     * \param   name    The name of the include.
+     * \param   location    The file path included in service interface.
      * \return  Valid pointer to the new include entry object. Otherwise, returns nullptr.
      **/
-    IncludeEntry * createInclude(const QString& name);
+    IncludeEntry * createInclude(const QString& location);
+
+    /**
+     * \brief   Inserts the include entry in the list of include entries.
+     * \param   position    The position to insert the include entry.
+     * \param   location    The file path included in service interface.
+     * \return  Valid pointer to the new created include element. Otherwise, returns nullptr.
+     **/
+    IncludeEntry* insertInclude(int position, const QString& location);
 
     /**
      * \brief   Deletes the include by ID.

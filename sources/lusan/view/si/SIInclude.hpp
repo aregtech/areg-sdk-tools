@@ -193,8 +193,10 @@ private:
      * \brief   Sets the texts in the table of the attribute entry.
      * \param   row     The row index of the attribute.
      * \param   entry   The attribute entry object.
+     * \param   insert  If true, inserts new the row. Otherwise, updates the row.
+     *                  If `row` parameter is negative, always inserts new entry at the end of the list.
      **/
-    inline void setTexts(int row, const IncludeEntry& entry);
+    inline void setTexts(int row, const IncludeEntry& entry, bool insert = false);
 
     /**
      * \brief   Updates the controls to display the control entry details in the details widget.
@@ -224,6 +226,11 @@ private:
      * \param   rowCount    The total number of rows in the table.
      **/
     inline void updateToolBottons(int row, int rowCount);
+
+    /**
+     * \brief   Generates new unique name of the constant.
+     **/
+    inline QString genName(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
