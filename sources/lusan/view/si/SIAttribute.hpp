@@ -289,10 +289,11 @@ private:
     /**
      * \brief   Sets the texts in the table of the attribute entry.
      * \param   row     The row index of the attribute.
-     * \param   entry   The attribute entry object.
+     * \param   insert  If true, inserts new the row. Otherwise, updates the row.
+     *                  If `row` parameter is negative, always inserts new entry at the end of the list.
      **/
-    inline void setTexts(int row, const AttributeEntry& entry);
-    
+    inline void setTexts(int row, const AttributeEntry& entry, bool insert = false);
+
     /**
      * \brief   Updates the controls to display the control entry details in the details widget.
      * \param   entry       The attribute entry object. If nullptr, it disables controls and displays empty entry.
@@ -328,10 +329,16 @@ private:
      * \param   rowCount    The total number of rows in the table.
      **/
     inline void updateToolBottons(int row, int rowCount);
+
+    /**
+     * \brief   Generates the name of the attribute.
+     * \return  The generated name of the attribute.
+     **/
+    inline QString genName(void);
     
-    //////////////////////////////////////////////////////////////////////////
-    // Hidden members
-    //////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+// Hidden members
+//////////////////////////////////////////////////////////////////////////
 private:
     SIAttributeModel&       mModel;         //!< The model of the data attribute.
     SIAttributeDetails*     mDetails;       //!< The details widget of the data attribute.
@@ -341,6 +348,7 @@ private:
     DataTypesModel*         mTypeModel;     //!< The model of the data types.
     SIAttributeNotifyModel* mNotifyModel;   //!< The model of the notification types.
     TableCell*              mTableCell;     //!< The table cell object.
+
     uint32_t                mCount;         //!< The counter to generate names.
 };
 

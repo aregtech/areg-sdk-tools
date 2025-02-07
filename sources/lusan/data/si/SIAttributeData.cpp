@@ -83,10 +83,14 @@ void SIAttributeData::validate(const SIDataTypeData& dataTypes)
 
 AttributeEntry* SIAttributeData::createAttribute(const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
 {
-    uint32_t id{ getNextId() };
-    AttributeEntry newAttribute(id, name, notification, this);
-    addElement(newAttribute);
-    return findElement(id);
+    AttributeEntry* result{ nullptr };
+    AttributeEntry entry(getNextId(), name, notification, this);
+    if (addElement(std::move(entry), false))
+    {
+        result = &mElementList[mElementList.size() - 1];
+    }
+
+    return result;
 }
 
 QList<uint32_t> SIAttributeData::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
@@ -100,6 +104,18 @@ QList<uint32_t> SIAttributeData::replaceDataType(DataTypeBase* oldDataType, Data
             entry.setParamType(newDataType);
             result.push_back(entry.getId());
         }
+    }
+
+    return result;
+}
+
+AttributeEntry* SIAttributeData::insertAttribute(int position, const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
+{
+    AttributeEntry* result{ nullptr };
+    AttributeEntry entry(getNextId(), name, notification, this);
+    if (insertElement(position, std::move(entry), false))
+    {
+        result = &mElementList[position];
     }
 
     return result;

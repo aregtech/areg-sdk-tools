@@ -22,10 +22,6 @@
   ************************************************************************/
 #include "lusan/model/si/SIAttributeModel.hpp"
 
-  /************************************************************************
-   * SIAttributeModel class implementation
-   ************************************************************************/
-
 SIAttributeModel::SIAttributeModel(SIAttributeData& attributeData, SIDataTypeData& dataTypeData)
     : mData(attributeData)
     , mDataType(dataTypeData)
@@ -35,6 +31,17 @@ SIAttributeModel::SIAttributeModel(SIAttributeData& attributeData, SIDataTypeDat
 AttributeEntry * SIAttributeModel::createAttribute(const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
 {
     AttributeEntry * result = mData.createAttribute(name, notification);
+    if (result != nullptr)
+    {
+        result->validate(mDataType.getCustomDataTypes());
+    }
+
+    return result;
+}
+
+AttributeEntry* SIAttributeModel::insertAttribute(int position, const QString& name, AttributeEntry::eNotification notification /*= AttributeEntry::eNotification::NotifyOnChange*/)
+{
+    AttributeEntry* result = mData.insertAttribute(position, name, notification);
     if (result != nullptr)
     {
         result->validate(mDataType.getCustomDataTypes());
