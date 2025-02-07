@@ -17,7 +17,7 @@
    <item>
     <widget class="QGroupBox" name="groupBoxDetails">
      <property name="title">
-      <string>Data Type List:</string>
+      <string>Data Types List:</string>
      </property>
      <widget class="QWidget" name="widget" native="true">
       <property name="geometry">
@@ -59,15 +59,14 @@
            <bool>true</bool>
           </property>
           <property name="toolTip">
-           <string>Create and add new data type.</string>
+           <string>Create and add new data type entry</string>
           </property>
           <property name="text">
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Add Data Type</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/entry add</normaloff>:/icons/entry add</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -76,7 +75,7 @@
            </size>
           </property>
           <property name="shortcut">
-           <string>Ctrl+R</string>
+           <string notr="true">Ctrl+A</string>
           </property>
          </widget>
         </item>
@@ -101,15 +100,14 @@
            <bool>true</bool>
           </property>
           <property name="toolTip">
-           <string>Delete active data type.</string>
+           <string>Delete selected data type entry</string>
           </property>
           <property name="text">
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Delete Data Type</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/entry delete</normaloff>:/icons/entry delete</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -118,7 +116,48 @@
            </size>
           </property>
           <property name="shortcut">
-           <string>Ctrl+R</string>
+           <string notr="true">Ctrl+D</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="toolInsertType">
+          <property name="maximumSize">
+           <size>
+            <width>32</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="baseSize">
+           <size>
+            <width>32</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="mouseTracking">
+           <bool>true</bool>
+          </property>
+          <property name="toolTip">
+           <string>Delete selected data type</string>
+          </property>
+          <property name="text">
+           <string>.....</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/entry insert</normaloff>:/icons/entry insert</iconset>
+          </property>
+          <property name="iconSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="shortcut">
+           <string notr="true">Ctrl+T</string>
           </property>
          </widget>
         </item>
@@ -150,7 +189,7 @@
            <bool>true</bool>
           </property>
           <property name="toolTip">
-           <string>Add new field</string>
+           <string>Create and add new field entry</string>
           </property>
           <property name="toolTipDuration">
            <number>-4</number>
@@ -159,9 +198,8 @@
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Add Field</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/field add</normaloff>:/icons/field add</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -170,7 +208,7 @@
            </size>
           </property>
           <property name="shortcut">
-           <string>Ctrl+R</string>
+           <string notr="true">Ctrl+Shift+A</string>
           </property>
           <property name="autoRepeat">
            <bool>true</bool>
@@ -198,15 +236,14 @@
            <bool>true</bool>
           </property>
           <property name="toolTip">
-           <string>Insert new field.</string>
+           <string>Delete selected field entry</string>
           </property>
           <property name="text">
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Delete Field</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/field delete</normaloff>:/icons/field delete</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -215,7 +252,7 @@
            </size>
           </property>
           <property name="shortcut">
-           <string>Ctrl+R</string>
+           <string notr="true">Ctrl+Shift+D</string>
           </property>
          </widget>
         </item>
@@ -240,15 +277,14 @@
            <bool>true</bool>
           </property>
           <property name="toolTip">
-           <string>Remove selected field</string>
+           <string>Create and insert new field entry</string>
           </property>
           <property name="text">
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Insert Field</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/field insert</normaloff>:/icons/field insert</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -257,7 +293,7 @@
            </size>
           </property>
           <property name="shortcut">
-           <string>Ctrl+R</string>
+           <string notr="true">Ctrl+Shift+T</string>
           </property>
          </widget>
         </item>
@@ -295,9 +331,8 @@
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Move Up</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/move up</normaloff>:/icons/move up</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -306,7 +341,7 @@
            </size>
           </property>
           <property name="shortcut">
-           <string>Ctrl+R</string>
+           <string notr="true">Ctrl+Up</string>
           </property>
          </widget>
         </item>
@@ -337,9 +372,8 @@
            <string>.....</string>
           </property>
           <property name="icon">
-           <iconset>
-            <normalon>:/icons/Move Down</normalon>
-           </iconset>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/move down</normaloff>:/icons/move down</iconset>
           </property>
           <property name="iconSize">
            <size>
@@ -348,7 +382,7 @@
            </size>
           </property>
           <property name="shortcut">
-           <string>Ctrl+R</string>
+           <string notr="true">Ctrl+S</string>
           </property>
          </widget>
         </item>
@@ -410,15 +444,30 @@
           <property name="text">
            <string>Name:</string>
           </property>
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
          </column>
          <column>
           <property name="text">
            <string>Data Type:</string>
           </property>
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
          </column>
          <column>
           <property name="text">
            <string>Default Value:</string>
+          </property>
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
           </property>
          </column>
         </widget>
@@ -429,6 +478,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../res/lusan.qrc"/>
+ </resources>
  <connections/>
 </ui>
