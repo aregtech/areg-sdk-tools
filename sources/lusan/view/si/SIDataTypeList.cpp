@@ -46,6 +46,11 @@ QToolButton* SIDataTypeList::ctrlButtonAdd(void) const
     return ui->toolAddType;
 }
 
+QToolButton* SIDataTypeList::ctrlButtonInsert(void) const
+{
+    return ui->toolInsertType;
+}
+
 QToolButton* SIDataTypeList::ctrlButtonRemove(void) const
 {
     return ui->toolDeleteType;

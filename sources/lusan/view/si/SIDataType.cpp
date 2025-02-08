@@ -202,15 +202,9 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
 
 void SIDataType::onAddClicked(void)
 {
-    static const QString _defName("NewDataType");
-
+    QString name(std::move(genName()));
     QTreeWidget* table = mList->ctrlTableList();
-    QString name;
-    do
-    {
-        name = _defName + QString::number(++mCount);
-    } while (mModel.findDataType(name) != nullptr);
-
+    
     blockBasicSignals(true);
     
     DataTypeCustom* oldType  = nullptr;    
@@ -232,25 +226,47 @@ void SIDataType::onAddClicked(void)
     blockBasicSignals(false);
 }
 
+void SIDataType::onInsertClicked(void)
+{
+    QString name(std::move(genName()));
+    QTreeWidget* table = mList->ctrlTableList();
+
+    blockBasicSignals(true);
+    
+    QTreeWidgetItem* cur = table->currentItem();
+    uint32_t id = cur != nullptr ? cur->data(1, Qt::ItemDataRole::UserRole).toUInt() : 0;
+    QTreeWidgetItem* top = id == 0 ? cur : cur->parent();
+    int row = top != nullptr ? table->indexOfTopLevelItem(top) : 0;
+    row = row < 0 ? 0 : row;
+    DataTypeCustom* oldType = nullptr;
+    DataTypeCustom* dataType = mModel.insertDataType(row, name, DataTypeBase::eCategory::Structure);
+    QTreeWidgetItem* item = createNodeStructure(static_cast<DataTypeStructure*>(dataType));
+    table->insertTopLevelItem(row, item);
+    if (cur != nullptr)
+    {
+        oldType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+        cur->setSelected(false);
+    }
+
+    item->setSelected(true);
+    table->setCurrentItem(item);
+    selectedStruct(oldType, static_cast<DataTypeStructure*>(dataType));
+    updateToolButtons(row, table->topLevelItemCount());
+    blockBasicSignals(false);
+}
+
 void SIDataType::onAddFieldClicked(void)
 {
-    static const QString _defName("newField");
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
+    
     Q_ASSERT(cur != nullptr);
     QTreeWidgetItem* parent = cur->parent();
     parent = parent == nullptr ? cur : parent;
     
     DataTypeCustom* dataType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>();
     Q_ASSERT((dataType->getCategory() == DataTypeBase::eCategory::Structure) || (dataType->getCategory() == DataTypeBase::eCategory::Enumeration));
-    
-    uint32_t cnt {0};    
-    QString name;
-    do
-    {
-        name = _defName + QString::number(++cnt);
-    } while (mModel.findChildIndex(dataType, name) != -1);
-
+    QString name(std::move(genName(dataType)));
     ElementBase* field = mModel.ceateDataTypeChild(dataType, name);
     if (field != nullptr)
     {
@@ -284,6 +300,57 @@ void SIDataType::onAddFieldClicked(void)
         }
 
         updateToolButtons(pos, parent->childCount());
+        blockBasicSignals(false);
+    }
+}
+
+void SIDataType::onInsertFieldClicked(void)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* cur = table->currentItem();
+
+    Q_ASSERT(cur != nullptr);
+    QTreeWidgetItem* parent = cur->parent();
+    QTreeWidgetItem* child = parent != nullptr ? cur : nullptr;
+    parent = parent == nullptr ? cur : parent;
+
+    DataTypeCustom* dataType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    Q_ASSERT((dataType->getCategory() == DataTypeBase::eCategory::Structure) || (dataType->getCategory() == DataTypeBase::eCategory::Enumeration));
+    QString name(std::move(genName(dataType)));
+    int row = child != nullptr ? parent->indexOfChild(child) : 0;
+    row = row < 0 ? 0 : row;
+    ElementBase* field = mModel.insertDataTypeChild(row, dataType, name);
+    if (field != nullptr)
+    {
+        blockBasicSignals(true);
+        QTreeWidgetItem* item = new QTreeWidgetItem();
+
+        parent->insertChild(row, item);
+        if (parent->isExpanded() == false)
+        {
+            parent->setExpanded(true);
+        }
+
+        if (cur->isSelected())
+        {
+            cur->setSelected(false);
+        }
+
+        table->setCurrentItem(item);
+        item->setSelected(true);
+
+        if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        {
+            updateChildNodeStruct(item, static_cast<DataTypeStructure*>(dataType), *static_cast<FieldEntry*>(field));
+            selectedStructField(nullptr, *static_cast<FieldEntry*>(field), static_cast<DataTypeStructure*>(dataType));
+        }
+        else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+        {
+            updateChildNodeEnum(item, static_cast<DataTypeEnum*>(dataType), *static_cast<EnumEntry*>(field));
+            selectedEnumField(nullptr, *static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
+        }
+
+        updateToolButtons(row, parent->childCount());
         blockBasicSignals(false);
     }
 }
@@ -1050,6 +1117,8 @@ void SIDataType::setupSignals(void)
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged  , this, &SIDataType::onCurCellChanged);
     connect(mList->ctrlButtonAdd()          , &QToolButton::clicked             , this, &SIDataType::onAddClicked);
     connect(mList->ctrlButtonAddField()     , &QToolButton::clicked             , this, &SIDataType::onAddFieldClicked);
+    connect(mList->ctrlButtonInsert()       , &QToolButton::clicked             , this, &SIDataType::onInsertClicked);
+    connect(mList->ctrlButtonInsertField()  , &QToolButton::clicked             , this, &SIDataType::onInsertFieldClicked);    
     connect(mList->ctrlButtonRemove()       , &QToolButton::clicked             , this, &SIDataType::onRemoveClicked);
     connect(mList->ctrlButtonRemoveField()  , &QToolButton::clicked             , this, &SIDataType::onRemoveFieldClicked);
     connect(mList->ctrlButtonMoveUp()       , &QToolButton::clicked             , this, &SIDataType::onMoveUpClicked);
@@ -1139,11 +1208,10 @@ void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* data
 
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
 
-    mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonRemove()->setEnabled(true);
     mList->ctrlButtonAddField()->setEnabled(true);
+    mList->ctrlButtonInsertField()->setEnabled(true);    
     mList->ctrlButtonRemoveField()->setEnabled(false);
-    mList->ctrlButtonInsertField()->setEnabled(true);
 
     int index = mModel.findIndex(dataType->getId());
     mList->ctrlButtonMoveUp()->setEnabled(index > 0);
@@ -1176,11 +1244,10 @@ void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
     
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
     
-    mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonRemove()->setEnabled(true);
     mList->ctrlButtonAddField()->setEnabled(true);
+    mList->ctrlButtonInsertField()->setEnabled(true);    
     mList->ctrlButtonRemoveField()->setEnabled(false);
-    mList->ctrlButtonInsertField()->setEnabled(true);
     
     int index = mModel.findIndex(dataType->getId());
     mList->ctrlButtonMoveUp()->setEnabled(index > 0);
@@ -1213,11 +1280,10 @@ void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataT
     mDetails->ctrlImportObject()->setText(dataType->getObject());
     mDetails->ctrlButtonBrowse()->setEnabled(true);
 
-    mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonRemove()->setEnabled(true);
     mList->ctrlButtonAddField()->setEnabled(false);
-    mList->ctrlButtonRemoveField()->setEnabled(false);
     mList->ctrlButtonInsertField()->setEnabled(false);
+    mList->ctrlButtonRemoveField()->setEnabled(false);
     
     int index = mModel.findIndex(dataType->getId());
     mList->ctrlButtonMoveUp()->setEnabled(index > 0);
@@ -1265,7 +1331,6 @@ void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* d
         mDetails->ctrlContainerKey()->setEnabled(false);
     }
 
-    mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonRemove()->setEnabled(true);
     mList->ctrlButtonAddField()->setEnabled(false);
     mList->ctrlButtonRemoveField()->setEnabled(false);
@@ -1301,7 +1366,6 @@ void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& 
 
     SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, &field, true);
     
-    mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonRemove()->setEnabled(false);
     mList->ctrlButtonAddField()->setEnabled(true);
     mList->ctrlButtonInsertField()->setEnabled(true);
@@ -1335,7 +1399,6 @@ void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& fie
     
     SICommon::enableDeprecated<SIDataTypeFieldDetails, EnumEntry>(mFields, &field, true);
     
-    mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonRemove()->setEnabled(false);
     mList->ctrlButtonAddField()->setEnabled(true);
     mList->ctrlButtonInsertField()->setEnabled(true);
@@ -1688,4 +1751,33 @@ inline void SIDataType::updateToolButtons(int row, int rowCount)
         mList->ctrlButtonMoveUp()->setEnabled(false);
         mList->ctrlButtonMoveDown()->setEnabled(false);
     }
+}
+
+inline QString SIDataType::genName(void)
+{
+    static const QString _defName("NewDataType");
+
+    QTreeWidget* table = mList->ctrlTableList();
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++mCount);
+    } while (mModel.findDataType(name) != nullptr);
+
+    return name;
+}
+
+inline QString SIDataType::genName(DataTypeCustom* dataType)
+{
+    static const QString _defName("newField");
+
+    Q_ASSERT(dataType != nullptr);
+    uint32_t cnt{ 0 };
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++cnt);
+    } while (mModel.findChildIndex(dataType, name) != -1);
+
+    return name;
 }

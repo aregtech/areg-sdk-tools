@@ -51,6 +51,11 @@ DataTypeCustom* SIDataTypeModel::createDataType(const QString& name, DataTypeBas
     return mData.addCustomDataType(name, category);
 }
 
+DataTypeCustom* SIDataTypeModel::insertDataType(int position, const QString& name, DataTypeBase::eCategory category)
+{
+    return mData.insertCustomDataType(position, name, category);
+}
+
 bool SIDataTypeModel::deleteDataType(uint32_t id)
 {
     return mData.removeCustomDataType(id);
@@ -160,6 +165,25 @@ ElementBase* SIDataTypeModel::ceateDataTypeChild(DataTypeCustom* dataType, const
     else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
     {
         result = static_cast<DataTypeEnum*>(dataType)->addField(name);
+    }
+
+    return result;
+}
+
+ElementBase* SIDataTypeModel::insertDataTypeChild(int position, DataTypeCustom* dataType, const QString& name)
+{
+    ElementBase* result{ nullptr };
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+    {
+        result = static_cast<DataTypeStructure*>(dataType)->insertField(position, name);
+        if (result != nullptr)
+        {
+            static_cast<FieldEntry*>(result)->validate(getCustomDataTypes());
+        }
+    }
+    else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+    {
+        result = static_cast<DataTypeEnum*>(dataType)->insertField(position, name);
     }
 
     return result;

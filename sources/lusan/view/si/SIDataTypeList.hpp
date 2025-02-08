@@ -38,7 +38,9 @@ public:
     QTreeWidget* ctrlTableList(void) const;
 
     QToolButton* ctrlButtonAdd(void) const;
-
+    
+    QToolButton* ctrlButtonInsert(void) const;
+    
     QToolButton* ctrlButtonRemove(void) const;
 
     QToolButton* ctrlButtonMoveUp(void) const;

@@ -148,9 +148,28 @@ void DataTypeEnum::writeToXml(QXmlStreamWriter& xml) const
 
 EnumEntry* DataTypeEnum::addField(const QString& name)
 {
-    uint32_t id{ getNextId() };
-    addElement(std::move(EnumEntry(id, name, "", this)), true);
-    return findElement(id);
+    EnumEntry* result{ nullptr };
+    EnumEntry entry(getNextId(), name, "", this);
+    if (addElement(std::move(entry), true))
+    {
+        Q_ASSERT(mElementList.size() > 0);
+        result = &mElementList[mElementList.size() - 1];
+    }
+
+    return result;
+}
+
+EnumEntry* DataTypeEnum::insertField(int position, const QString& name)
+{
+    EnumEntry* result{ nullptr };
+    EnumEntry entry(getNextId(), name, "", this);
+    if (insertElement(position, std::move(entry), true))
+    {
+        Q_ASSERT(mElementList.size() > position);
+        result = &mElementList[position];
+    }
+
+    return result;
 }
 
 bool DataTypeEnum::isValid() const

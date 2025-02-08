@@ -29,8 +29,15 @@
  **/
 class DataTypeEnum : public TEDataTypeContainer<EnumEntry>
 {
+//////////////////////////////////////////////////////////////////////////
+// Internal constants
+//////////////////////////////////////////////////////////////////////////
+
     static constexpr const char* const  DEFAULT_VALUES  { "default" };
 
+//////////////////////////////////////////////////////////////////////////
+// Constructors / destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Default constructor.
@@ -85,38 +92,60 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
-    
+
     /**
      * \brief   Checks if the parameter is valid.
      * \return  True if the parameter is valid, false otherwise.
      **/
     virtual bool isValid() const override;
-    
+
     /**
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
     virtual QIcon getIcon(ElementBase::eDisplay display) const override;
-    
+
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
     virtual QString getString(ElementBase::eDisplay display) const override;
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Adds a field to the enumeration data type.
+     * \param   name    The unique name of the field to add.
+     * \return  Returns the created field object.
+     **/
     EnumEntry* addField(const QString& name);
+
+    /**
+     * \brief   Inserts a field to the enumeration data type at specified position.
+     * \param   position    The position to insert the field.
+     * \param   name        The unique name of the field to insert.
+     * \return  Returns the created field object.
+     **/
+    EnumEntry* insertField(int position, const QString& name);
     
     inline const QString& getDerived(void) const;
-    
+
+    /**
+     * \brief   Sets the type name of values. The type names can be primitive signed or unsigned integers like 'uint32', 'int16', etc.
+     * \param   derived The type name of values. If name is empty, default is used.
+     **/
     inline void setDerived(const QString& derived);
     
 private:
     QString     mDerived;   //!< The type name of values. If name is empty, default is used.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// DataTypeEnum class inline methods
+//////////////////////////////////////////////////////////////////////////
 
 inline const QString& DataTypeEnum::getDerived(void) const
 {

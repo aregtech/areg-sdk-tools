@@ -117,7 +117,16 @@ public:
      * \return  The created data type object.
      **/
     DataTypeCustom* addCustomDataType(const QString& name, DataTypeBase::eCategory category);
-    
+
+    /**
+     * \brief   Inserts a data type to the list at specified position.
+     * \param   position    The position to insert the data type.
+     * \param   name        The name of the data type.
+     * \param   category    The category of the data type.
+     * \return  The created data type object.
+     **/
+    DataTypeCustom* insertCustomDataType(int position, const QString& name, DataTypeBase::eCategory category);
+
     /**
      * \brief   Removes a data type from the list.
      * \param   entry   The data type to remove.
@@ -295,9 +304,23 @@ public:
      **/
     bool exists(uint32_t id) const;
 
+    /**
+     * \brief   Searches for a data type by name in the list of data type objects.
+     * \tparam  DataType    The type of data type object.
+     * \param   dataTypes   The list of data types.
+     * \param   typeName    The name of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
     template<class DataType>
     inline DataType* findDataType(const QList<DataType*>& dataTypes, const QString& typeName) const;
 
+    /**
+     * \brief   Searches for a data type by ID in the list of data type objects.
+     * \tparam  DataType    The type of data type object.
+     * \param   dataTypes   The list of data types.
+     * \param   id          The ID of the data type to search.
+     * \return  Returns the data type object if found. Otherwise, returns nullptr.
+     **/
     template<class DataType>
     inline DataType* findDataType(const QList<DataType*>& dataTypes, uint32_t id) const;
 
@@ -409,6 +432,9 @@ public:
      **/
     void normalizeType(DataTypeCustom* dataType) const;
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden calls.
+//////////////////////////////////////////////////////////////////////////
 private:
 
     /**
