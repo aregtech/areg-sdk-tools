@@ -29,9 +29,9 @@
  **/
 class DataTypeStructure : public TEDataTypeContainer<FieldEntry>
 {
-
-    static constexpr const char* const  DefName{ "field" };
-
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Default constructor.
@@ -56,6 +56,11 @@ public:
      **/
     DataTypeStructure(DataTypeStructure&& src) noexcept;
 
+//////////////////////////////////////////////////////////////////////////
+// Operators
+//////////////////////////////////////////////////////////////////////////
+public:
+
     /**
      * \brief   Copy assignment operator.
      * \param   other   The other object to copy from.
@@ -69,21 +74,12 @@ public:
      * \return  Reference to this object.
      **/
     DataTypeStructure& operator = (DataTypeStructure&& other) noexcept;
-    
-    FieldEntry* addField(const QString& name);
-    
-    void removeField(const QString& name);
-    
-    void removeField(uint32_t id);
-    
-    DataTypeBase* getFieldType(const QString& name) const;
-    
-    DataTypeBase* getFieldType(uint32_t id) const;
-    
-    bool validate(const QList<DataTypeCustom*>& customTypes);
-    
-    void invalidate(void);
-    
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
@@ -108,7 +104,66 @@ public:
      * \param display   The classification to display.
      */
     virtual QString getString(ElementBase::eDisplay display) const override;
-    
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Adds new fields to the structure object.
+     * \param   name    The unique name of the field to add. By default, new field has type of 'bool'.
+     * \return  If operations succeeds, i.e. the name is unique, returns valid pointer to the new added field.
+     *          Otherwise, returns nullptr.
+     **/
+    FieldEntry* addField(const QString& name);
+
+    /**
+     * \brief   Inserts new fields to the structure object at the given position.
+     * \param   position    The position to add new field.
+     * \param   name        The unique name of the field to add. By default, new field has type of 'bool'.
+     * \return  If operations succeeds, i.e. the name is unique, returns valid pointer to the new added field.
+     *          Otherwise, returns nullptr.
+     **/
+    FieldEntry* insertField(int position, const QString& name);
+
+    /**
+     * \brief   Removes the field from the structure object by given name.
+     * \param   name    The name of the field to remove.
+     **/
+    void removeField(const QString& name);
+
+    /**
+     * \brief   Removes the field from the structure object by given ID.
+     * \param   id  The ID of the field to remove.
+     **/
+    void removeField(uint32_t id);
+
+    /**
+     * \brief   Returns the data type of the field by given name.
+     * \param   name    The name of the field to get data type.
+     * \return  Returns the data type of the field by given name. If field does not exist, returns nullptr.
+     **/
+    DataTypeBase* getFieldType(const QString& name) const;
+
+    /**
+     * \brief   Returns the data type of the field by given ID.
+     * \param   id  The ID of the field to get data type.
+     * \return  Returns the data type of the field by given ID. If field does not exist, returns nullptr.
+     **/
+    DataTypeBase* getFieldType(uint32_t id) const;
+
+    /**
+     * \brief   Validates the structure data type.
+     * \param   customTypes The list of custom data types to validate.
+     * \return  Returns true if the structure is valid, false otherwise.
+     **/
+    bool validate(const QList<DataTypeCustom*>& customTypes);
+
+    /**
+     * \brief   Invalidates the structure data type.
+     **/
+    void invalidate(void);
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPESTRUCTURE_HPP

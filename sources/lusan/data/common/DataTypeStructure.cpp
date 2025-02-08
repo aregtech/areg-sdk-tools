@@ -130,9 +130,28 @@ void DataTypeStructure::writeToXml(QXmlStreamWriter& xml) const
 
 FieldEntry* DataTypeStructure::addField(const QString& name)
 {
-    uint32_t id{ getNextId() };
-    addElement(std::move(FieldEntry(id, name, this)), true);
-    return findElement(id);
+    FieldEntry* result{ nullptr };
+    FieldEntry entry(getNextId(), name, this);
+    if (addElement(std::move(entry), true))
+    {
+        Q_ASSERT(mElementList.size() > 0);
+        result = &mElementList[mElementList.size() - 1];
+    }
+
+    return result;
+}
+
+FieldEntry* DataTypeStructure::insertField(int position, const QString& name)
+{
+    FieldEntry* result{ nullptr };
+    FieldEntry entry(getNextId(), name, this);
+    if (insertElement(position, std::move(entry), true))
+    {
+        Q_ASSERT(mElementList.size() > position);
+        result = &mElementList[position];
+    }
+
+    return result;
 }
 
 void DataTypeStructure::removeField(const QString& name)

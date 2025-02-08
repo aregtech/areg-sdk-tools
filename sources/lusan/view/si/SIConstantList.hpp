@@ -72,7 +72,7 @@ public:
      * \brief   Returns insert button object.
      **/
     QToolButton* ctrlButtonInsert(void);
-
+    
     /**
      * \brief   Returns move up button object.
      **/

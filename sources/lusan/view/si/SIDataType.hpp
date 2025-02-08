@@ -135,10 +135,20 @@ protected:
     void onAddClicked(void);
 
     /**
+     * \brief Triggered when the insert button is clicked.
+     */
+    void onInsertClicked(void);
+    
+    /**
      * \brief Triggered when the add field button is clicked.
      */
     void onAddFieldClicked(void);
 
+    /**
+     * \brief Triggered when the insert field button is clicked.
+     */
+    void onInsertFieldClicked(void);
+    
     /**
      * \brief Triggered when the remove button is clicked.
      */
@@ -555,6 +565,17 @@ private:
      * \param   rowCount    The total number of rows in the tree table.
      **/
     inline void updateToolButtons(int row, int rowCount);
+
+    /**
+     * \brief   Returns generated unique name for the data type.
+     **/
+    inline QString genName(void);
+
+    /**
+     * \brief   Returns generated unique name for the data type field.
+     * \param   dataType    The data type object to generate the field name.
+     **/
+    inline QString genName(DataTypeCustom* dataType);
     
     /**
      * \brief   Returns list of basic container data type objects.
@@ -570,7 +591,6 @@ private:
      * \brief   Returns list of predefined data type objects.
      **/
     static const QList<DataTypeBase *>& _getPredefinedTypes(void);
-
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

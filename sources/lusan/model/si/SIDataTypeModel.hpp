@@ -40,6 +40,9 @@ class SIDataTypeData;
  */
 class SIDataTypeModel
 {
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor.
+//////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief Constructor with initialization.
@@ -47,6 +50,10 @@ public:
      */
     SIDataTypeModel(SIDataTypeData & data);
 
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations.
+//////////////////////////////////////////////////////////////////////////
+public:
     /**
      * \brief Returns instance of data type data object.
      */
@@ -72,12 +79,31 @@ public:
     int getDataTypes(QList<DataTypeBase *> & result, const QList<DataTypeBase::eCategory> & categories, bool makeSorting = false);
 
     /**
+     * \brief   Returns the list of custom data types.
+     **/
+    const QList<DataTypeCustom*>& getDataTypes(void) const;
+
+    /**
+     * \brief   Returns the size of custom data type objects.
+     **/
+    int getDataTypeCount(void) const;
+
+    /**
      * \brief   Creates new data type object with specified name and category.
-     * \param   name        The name of data type.
+     * \param   name        The unique name of data type.
      * \param   category    The category of data type.
      * \return  Returns the pointer to created data type object.
      **/
     DataTypeCustom * createDataType(const QString & name, DataTypeBase::eCategory category);
+
+    /**
+     * \brief   Inserts new data type object with specified name and category at the specified position.
+     * \param   position    The position to insert new data type object.
+     * \param   name        The unique name of data type.
+     * \param   category    The category of data type.
+     * \return  Returns the pointer to created data type object, or nullptr if did not create new entry.
+     **/
+    DataTypeCustom* insertDataType(int position, const QString& name, DataTypeBase::eCategory category);
 
     /**
      * \brief   Deletes data type object from the list by specified ID.
@@ -150,23 +176,21 @@ public:
     void sortById(bool ascending);
 
     /**
-     * \brief   Returns the list of custom data types.
-     **/
-    const QList<DataTypeCustom*>& getDataTypes(void) const;
-
-    /**
-     * \brief   Returns the size of custom data type objects.
-     **/
-    int getDataTypeCount(void) const;
-
-    /**
      * \brief   Creates a new child field in the specified custom data type object.
      * \param   dataType    The custom data type object.
-     * \param   name        The name of the child field of the custom data type.
-     *                      The name should be unique.
+     * \param   name        The unique name of the child field of the custom data type.
      * \return  Returns the pointer to created child data type object.
      **/
     ElementBase* ceateDataTypeChild(DataTypeCustom* dataType, const QString& name);
+
+    /**
+     * \brief   Inserts a new child field in the specified custom data type object at the specified position.
+     * \param   dataType    The custom data type object.
+     * \param   position    The position to insert new child field.
+     * \param   name        The unique name of the child field of the custom data type.
+     * \return  Returns the pointer to created child data type object.
+     **/
+    ElementBase* insertDataTypeChild(int position, DataTypeCustom* dataType, const QString& name);
 
     /**
      * \brief   Deletes the child field from the specified custom data type object.

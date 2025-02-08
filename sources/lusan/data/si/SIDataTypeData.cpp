@@ -456,9 +456,31 @@ DataTypeImported* SIDataTypeData::addImported(const QString& name)
 DataTypeCustom* SIDataTypeData::addCustomDataType(const QString& name, DataTypeBase::eCategory category)
 {
     DataTypeCustom* dataType = _createType(name, this, getNextId(), category);
-    addElement(dataType, false);
-    emit signalDataTypeCreated(dataType);
-    return dataType;
+    if (addElement(dataType, false))
+    {
+        emit signalDataTypeCreated(dataType);
+        return dataType;
+    }
+    else
+    {
+        delete dataType;
+        return nullptr;
+    }
+}
+
+DataTypeCustom* SIDataTypeData::insertCustomDataType(int position, const QString& name, DataTypeBase::eCategory category)
+{
+    DataTypeCustom* dataType = _createType(name, this, getNextId(), category);
+    if (insertElement(position, dataType, false))
+    {
+        emit signalDataTypeCreated(dataType);
+        return dataType;
+    }
+    else
+    {
+        delete dataType;
+        return nullptr;
+    }
 }
 
 DataTypeCustom* SIDataTypeData::convertDataType(DataTypeCustom* dataType, DataTypeBase::eCategory category)

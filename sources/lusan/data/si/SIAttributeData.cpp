@@ -87,6 +87,7 @@ AttributeEntry* SIAttributeData::createAttribute(const QString& name, AttributeE
     AttributeEntry entry(getNextId(), name, notification, this);
     if (addElement(std::move(entry), false))
     {
+        Q_ASSERT(mElementList.size() > 0);
         result = &mElementList[mElementList.size() - 1];
     }
 
