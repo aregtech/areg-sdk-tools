@@ -69,7 +69,7 @@ ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWi
     
     setAttribute(Qt::WA_DeleteOnClose);
 
-    if ((filePath.isEmpty() == false) && openSucceeded())
+    if (filePath.isEmpty() == false)
     {
         mIsUntitled = false;
         setCurrentFile(filePath);

@@ -46,19 +46,17 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
     QFile file(filePath);
     if (file.open(QIODevice::ReadOnly))
     {
+        mFilePath = filePath;
+        QFileInfo info(filePath);
+        QString name = info.baseName();
+        mOverviewData.setName(name);
+        
         QXmlStreamReader xml(&file);
         while (!xml.atEnd() && !xml.hasError())
         {
             if (xml.readNextStartElement())
             {
-                if (readFromXml(xml))
-                {
-                    mFilePath = filePath;
-                    QFileInfo info(filePath);
-                    QString name = info.baseName();
-                    mOverviewData.setName(name);
-                }
-                else
+                if (readFromXml(xml) == false)
                 {
                     xml.raiseError("Invalid XML format");
                 }
