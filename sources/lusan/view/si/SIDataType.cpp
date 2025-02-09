@@ -37,6 +37,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QGroupBox>
+#include <QHeaderView>
 #include <QIcon>
 #include <QLineEdit>
 #include <QPlainTextEdit>
@@ -1102,6 +1103,11 @@ void SIDataType::updateData(void)
 
 void SIDataType::updateWidgets(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    table->header()->setSectionResizeMode(0, QHeaderView::ResizeMode::Interactive);
+    table->header()->setSectionResizeMode(1, QHeaderView::ResizeMode::Interactive);
+    table->header()->setSectionResizeMode(2, QHeaderView::ResizeMode::Stretch);
+    
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
     mValueModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
