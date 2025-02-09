@@ -136,6 +136,16 @@ protected:
     virtual const QString& newDocumentExt(void) const override;
 
     /**
+     * \brief   Returns the default file suffix.
+     **/
+    virtual const QString& fileSuffix(void) const override;
+
+    /**
+     * \brief   Returns the default file filter.
+     **/
+    virtual const QString& fileFilter(void) const override;
+
+    /**
      * \brief   Reads the document from the file.
      * \param   filePath    The path of the file to read.
      * \return  True if the document was successfully read, false otherwise.

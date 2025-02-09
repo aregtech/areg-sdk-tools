@@ -104,6 +104,18 @@ const QString& ServiceInterface::newDocumentExt(void) const
     return _extSI;
 }
 
+const QString& ServiceInterface::fileSuffix(void) const
+{
+    static const QString _suffixSI{ "siml" };
+    return _suffixSI;
+}
+
+const QString& ServiceInterface::fileFilter(void) const
+{
+    static const QString _filterSI{ "Service Interface document (*.siml)\nAll Files (*.*)" };
+    return _filterSI;
+}
+
 bool ServiceInterface::writeToFile(const QString& filePath)
 {
     bool result = mModel.saveToFile(filePath);

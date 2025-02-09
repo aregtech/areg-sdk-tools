@@ -63,6 +63,18 @@ const QString& MdiChild::newDocumentExt(void) const
     return _newExt;
 }
 
+const QString& MdiChild::fileSuffix(void) const
+{
+    static const QString _suffix("");
+    return _suffix;
+}
+
+const QString& MdiChild::fileFilter(void) const
+{
+    static const QString _filter("All Files (*.*)");
+    return _filter;
+}
+
 void MdiChild::newFile()
 {
     mIsUntitled = true;
@@ -102,16 +114,17 @@ bool MdiChild::save()
 
 bool MdiChild::saveAs()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), mCurFile);
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), mCurFile, fileFilter());
     return (fileName.isEmpty() ? false : saveFile(fileName));
 }
 
 bool MdiChild::saveFile(const QString& fileName)
 {
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
+    
     mIsUntitled = writeToFile(fileName);
-    QGuiApplication::restoreOverrideCursor();
     setCurrentFile(fileName);
+    QGuiApplication::restoreOverrideCursor();
     return mIsUntitled;
 }
 
