@@ -67,7 +67,7 @@ SIOverviewData::SIOverviewData(ElementBase* parent /*= nullptr*/)
 }
 
 SIOverviewData::SIOverviewData(uint32_t id, const QString& name, ElementBase* parent)
-    : ElementBase(id, parent)
+    : ElementBase   (id, parent)
     , mName         (name)
     , mVersion      (0, 0, 1)
     , mCategory     (eCategory::InterfacePrivate)

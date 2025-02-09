@@ -145,17 +145,10 @@ bool MdiMainWindow::loadFile(const QString& fileName)
     MdiChild* child = createMdiChild(fileName);
     if (child != nullptr)
     {
-        if (child->openSucceeded())
-        {
-            succeeded = true;
-            child->show();
-            mLastFile = fileName;
-            MdiMainWindow::prependToRecentFiles(fileName);
-        }
-        else
-        {
-            child->close();
-        }
+        succeeded = true;
+        child->show();
+        mLastFile = fileName;
+        MdiMainWindow::prependToRecentFiles(fileName);
     }
 
     return succeeded;
@@ -194,10 +187,9 @@ void MdiMainWindow::onFileNewLog()
 void MdiMainWindow::onFileOpen()
 {
     QFileInfo info(mLastFile);
-    const QString fileName = QFileDialog::getOpenFileName(  this
-                                                          , tr("Open Document")
-                                                          , info.absoluteDir().canonicalPath()
-                                                          , fileFilters());
+    QString dir(info.absoluteDir().canonicalPath());
+    QString filter(fileFilters());
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Document"), dir, filter);
     if (!fileName.isEmpty())
     {
         openFile(fileName);
