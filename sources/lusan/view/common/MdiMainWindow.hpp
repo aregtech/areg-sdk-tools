@@ -80,6 +80,17 @@ public:
      **/
     inline const QString& getWorkspaceRoot(void) const;
 
+    /**
+     * \brief   Returns the last file opened or saved.
+     **/
+    inline const QString getLastFile(void) const;
+
+    /**
+     * \brief   Sets the last file opened or saved.
+     * \param   lastFile    The last file opened or saved.
+     **/
+    inline void setLastFile(const QString& lastFile);
+
 //////////////////////////////////////////////////////////////////////////
 // protected methods
 //////////////////////////////////////////////////////////////////////////
@@ -184,6 +195,12 @@ private slots:
      **/
     ServiceInterface* createServiceInterfaceView(const QString& filePath = QString());
 
+    /**
+     * \brief   Returns the file filter string, which contains the list of supported extensions.
+     *          The string is used to open files supported by lusan application.
+     **/
+    const QString& fileFilters(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -284,11 +301,15 @@ private:
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
-//////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    /// \brief mWorkspaceRoot
+    ///
 private:
     //!< The root directory of the workspace.
     QString     mWorkspaceRoot;
-
+    //!< The current file name.
+    QString         mLastFile;       
+    
     //!< The MDI area for managing sub-windows.
     MdiArea         mMdiArea;
     //!< The navigation dock widget.
@@ -383,6 +404,16 @@ inline const QString& MdiMainWindow::getWorkspaceRoot(void) const
 inline MdiMainWindow& MdiMainWindow::self(void)
 {
     return (*this);
+}
+
+inline const QString MdiMainWindow::getLastFile(void) const
+{
+    return mLastFile;
+}
+
+inline void MdiMainWindow::setLastFile(const QString& lastFile)
+{
+    mLastFile = lastFile;
 }
 
 #endif // LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP

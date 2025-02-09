@@ -102,10 +102,20 @@ public:
     
     void copyAvailable(bool available);
 
+    /**
+     * \brief   Returns the document name.
+     **/
     inline const QString& getDocumentName(void) const;
 
+    /**
+     * \brief   Returns the MDI subwindow.
+     **/
     inline QMdiSubWindow* getMdiSubwindow(void) const;
 
+    /**
+     * \brief   Sets the MDI subwindow.
+     * \param   mdiSubwindow    The MDI subwindow.
+     **/
     inline void setMdiSubwindow(QMdiSubWindow * mdiSubwindow);
 
 //////////////////////////////////////////////////////////////////////////
@@ -134,6 +144,16 @@ protected:
      * \brief   Returns the default extension of new created document.
      **/
     virtual const QString& newDocumentExt(void) const;
+
+    /**
+     * \brief   Returns the default file suffix.
+     **/
+    virtual const QString& fileSuffix(void) const;
+
+    /**
+     * \brief   Returns the default file filter.
+     **/
+    virtual const QString& fileFilter(void) const;
 
     /**
      * \brief   Reads the document from the file.

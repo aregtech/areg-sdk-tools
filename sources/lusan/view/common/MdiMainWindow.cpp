@@ -59,6 +59,7 @@ namespace
 MdiMainWindow::MdiMainWindow()
     : QMainWindow   ( )
     , mWorkspaceRoot( )
+    , mLastFile     ( )
     , mMdiArea      ( this )
     , mNavigation   ( this )
     , mStatusDock   ( nullptr )
@@ -111,6 +112,16 @@ MdiMainWindow::MdiMainWindow()
     setUnifiedTitleAndToolBarOnMac(true);
 }
 
+const QString& MdiMainWindow::fileFilters(void) const
+{
+    static const QString _filter(
+          "Service Interface Document (*.siml)\n"
+          "All Files (*.*)"
+        );
+    
+    return _filter;
+}
+    
 bool MdiMainWindow::openFile(const QString& fileName)
 {
     bool result{ false };
@@ -138,6 +149,7 @@ bool MdiMainWindow::loadFile(const QString& fileName)
         {
             succeeded = true;
             child->show();
+            mLastFile = fileName;
             MdiMainWindow::prependToRecentFiles(fileName);
         }
         else
@@ -181,7 +193,11 @@ void MdiMainWindow::onFileNewLog()
 
 void MdiMainWindow::onFileOpen()
 {
-    const QString fileName = QFileDialog::getOpenFileName(this);
+    QFileInfo info(mLastFile);
+    const QString fileName = QFileDialog::getOpenFileName(  this
+                                                          , tr("Open Document")
+                                                          , info.absoluteDir().canonicalPath()
+                                                          , fileFilters());
     if (!fileName.isEmpty())
     {
         openFile(fileName);
@@ -193,6 +209,7 @@ void MdiMainWindow::onFileSave()
     MdiChild * active = activeMdiChild();
     if ( (active != nullptr) && active->save())
     {
+        mLastFile = active->currentFile();
         statusBar()->showMessage(tr("File saved"), 2000);
     }
 }
