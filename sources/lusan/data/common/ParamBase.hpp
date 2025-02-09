@@ -35,6 +35,9 @@
  **/
 class ParamBase : public DocumentElem
 {
+    
+    static const QString DefaultType;
+    
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -126,8 +129,16 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    /**
+     * \brief   Validates the parameter type object.
+     * \param   customTypes The list of custom data types to validate.
+     * \return  Returns true if the parameter type is valid, false otherwise.
+     **/
     bool validate(const QList<DataTypeCustom*>& customTypes);
-    
+
+    /**
+     * \brief   Invalidates the parameter type object.
+     **/
     void invalidate(void);
 
     /**
@@ -154,15 +165,26 @@ public:
      **/
     void setType(const QString & type);
 
+    /**
+     * \brief   Sets the type of the parameter.
+     * \param   type            The data type name of the parameter.
+     * \param   customTypes     The list of custom data types to validate.
+     **/
     void setType(const QString& type, const QList<DataTypeCustom*>& customTypes);
 
+    /**
+     * \brief   Sets the parameter data type object.
+     * \param   dataType    The data type object to set.
+     **/
     void setParamType(DataTypeBase* dataType);
 
+    /**
+     * \brief   Returns the parameter data type object.
+     **/
     DataTypeBase* getParamType(void) const;
 
     /**
-     * \brief   Gets the deprecated flag of the parameter.
-     * \return  The deprecated flag of the parameter.
+     * \brief   Returns the deprecated flag of the parameter.
      **/
     bool getIsDeprecated() const;
 
@@ -173,8 +195,7 @@ public:
     void setIsDeprecated(bool isDeprecated);
 
     /**
-     * \brief   Gets the description of the parameter.
-     * \return  The description of the parameter.
+     * \brief   Returns the description of the parameter.
      **/
     const QString& getDescription() const;
 
@@ -185,8 +206,7 @@ public:
     void setDescription(const QString& description);
 
     /**
-     * \brief   Gets the deprecation hint of the parameter.
-     * \return  The deprecation hint of the parameter.
+     * \brief   Returns the deprecation hint of the parameter.
      **/
     const QString& getDeprecateHint() const;
 

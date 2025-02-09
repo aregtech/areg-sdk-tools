@@ -102,10 +102,37 @@ void MethodBase::setDescription(const QString& description)
 
 MethodParameter* MethodBase::addParam(const QString& name)
 {
-    uint32_t id{ getNextId() };
+    MethodParameter* result{ nullptr };
     bool isDefault = mElementList.size() > 0 ? mElementList.last().hasDefault() : false;
-    addElement(std::move(MethodParameter(id, name, isDefault, this)), true);
-    return findElement(id);
+    MethodParameter entry(getNextId(), name, isDefault, this);
+    if (addElement(std::move(entry), true))
+    {
+        Q_ASSERT(mElementList.size() > 0);
+        result = &mElementList[mElementList.size() - 1];
+    }
+
+    return result;
+}
+
+MethodParameter* MethodBase::insertParam(int position, const QString& name)
+{
+    MethodParameter* result{ nullptr };
+    if ((position >= 0) && (position <= mElementList.size()))
+    {
+        bool isDefault{ false };
+        if ((position > 0) && (position <= mElementList.size()))
+        {
+            isDefault = mElementList[position - 1].hasDefault();
+        }
+
+        MethodParameter entry(getNextId(), name, isDefault, this);
+        if (insertElement(position, std::move(entry), true))
+        {
+            result = &mElementList[position];
+        }
+    }
+
+    return result;
 }
 
 void MethodBase::removeParam(const QString& name)

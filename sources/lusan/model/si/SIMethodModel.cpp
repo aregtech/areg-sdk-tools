@@ -26,9 +26,14 @@ SIMethodModel::SIMethodModel(SIMethodData& data, SIDataTypeData& dataType)
 {
 }
 
-SIMethodBase* SIMethodModel::createMethod(const QString& name, SIMethodBase::eMethodType methodType)
+SIMethodBase* SIMethodModel::addMethod(const QString& name, SIMethodBase::eMethodType methodType)
 {
     return mData.addMethod(name, methodType);
+}
+
+SIMethodBase* SIMethodModel::insertMethod(int position, const QString& name, SIMethodBase::eMethodType methodType)
+{
+    return mData.insertMethod(position, name, methodType);
 }
 
 bool SIMethodModel::removeMethod(uint32_t id)
@@ -100,9 +105,20 @@ SIMethodBase* SIMethodModel::convertMethod(SIMethodBase* method, SIMethodBase::e
     return mData.convertMethod(method, methodType);
 }
 
-MethodParameter* SIMethodModel::addParameter(SIMethodBase* method, const QString& name, const QString& type /*= "bool"*/)
+MethodParameter* SIMethodModel::addParameter(SIMethodBase* method, const QString& name)
 {
-    MethodParameter* param = mData.addParameter(method, name, type);
+    MethodParameter* param = mData.addParameter(method, name);
+    if (param != nullptr)
+    {
+        param->validate(mDataType.getCustomDataTypes());
+    }
+
+    return param;
+}
+
+MethodParameter* SIMethodModel::insertParameter(SIMethodBase* method, int position, const QString& name)
+{
+    MethodParameter* param = mData.insertParameter(method, position, name);
     if (param != nullptr)
     {
         param->validate(mDataType.getCustomDataTypes());

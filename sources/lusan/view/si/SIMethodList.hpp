@@ -36,6 +36,8 @@ public:
     
     QToolButton * ctrlButtonAdd(void) const;
     
+    QToolButton * ctrlButtonInsert(void) const;
+    
     QToolButton * ctrlButtonRemove(void) const;
     
     QToolButton * ctrlButtonParamAdd(void) const;

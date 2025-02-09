@@ -17,11 +17,14 @@
  *
  ************************************************************************/
 #include "lusan/data/common/ParamBase.hpp"
+#include "lusan/common/XmlSI.hpp"
+
+const QString ParamBase::DefaultType{ XmlSI::xmlSIValueBool };
 
 ParamBase::ParamBase(ElementBase* parent /*= nullptr*/)
     : DocumentElem  (parent)
     , mName         ()
-    , mParamType    ()
+    , mParamType    (ParamBase::DefaultType)
     , mIsDeprecated (false)
     , mDescription  ()
     , mDeprecateHint()
@@ -29,9 +32,9 @@ ParamBase::ParamBase(ElementBase* parent /*= nullptr*/)
 }
 
 ParamBase::ParamBase(uint32_t id, const QString& name, const QString& type, ElementBase* parent /*= nullptr*/)
-    : DocumentElem  (  id, parent)
+    : DocumentElem  (id, parent)
     , mName         (name)
-    , mParamType    (type)
+    , mParamType    (type.isEmpty() ? ParamBase::DefaultType : type)
     , mIsDeprecated (false)
     , mDescription  ()
     , mDeprecateHint()
@@ -41,7 +44,7 @@ ParamBase::ParamBase(uint32_t id, const QString& name, const QString& type, Elem
 ParamBase::ParamBase(uint32_t id, const QString& name, const QString & type, bool isDeprecated, const QString& description, const QString& deprecateHint, ElementBase* parent /*= nullptr*/)
     : DocumentElem  (id, parent)
     , mName         (name)
-    , mParamType    (type)
+    , mParamType    (type.isEmpty() ? ParamBase::DefaultType : type)
     , mIsDeprecated (isDeprecated)
     , mDescription  (description)
     , mDeprecateHint(deprecateHint)
