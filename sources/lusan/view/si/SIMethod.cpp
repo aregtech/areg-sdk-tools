@@ -394,13 +394,8 @@ void SIMethod::onConnectedResponseChanged(const QString& newText)
 
 void SIMethod::onAddClicked(void)
 {
-    static const QString _defName("NewMethod");
     QTreeWidget* table = mList->ctrlTableList();
-    QString name;
-    do
-    {
-        name = _defName + QString::number(++mCount);
-    } while (mModel.findMethod(name, SIMethodBase::eMethodType::MethodRequest) != nullptr);
+    QString name = genName();
 
     blockBasicSignals(true);
     
@@ -410,7 +405,7 @@ void SIMethod::onAddClicked(void)
         cur->setSelected(false);
     }
     
-    SIMethodBase * newMethod = mModel.createMethod(name, SIMethodBase::eMethodType::MethodRequest);
+    SIMethodBase * newMethod = mModel.addMethod(name, SIMethodBase::eMethodType::MethodRequest);
     Q_ASSERT(newMethod != nullptr);
     int pos = table->topLevelItemCount();
     QTreeWidgetItem* item = updateMethodNode(new QTreeWidgetItem(), newMethod);
@@ -418,7 +413,36 @@ void SIMethod::onAddClicked(void)
     item->setSelected(true);
     table->setCurrentItem(item);
     showMethodDetails(newMethod);
-    updateToolButtons(pos, table->topLevelItemCount());
+    updateToolButtons(pos, pos + 1);
+    blockBasicSignals(false);
+}
+
+void SIMethod::onInsertClicked(void)
+{
+    QTreeWidget* table = mList->ctrlTableList();
+    QString name = genName();
+    
+    blockBasicSignals(true);
+    
+    QTreeWidgetItem* cur = table->currentItem();
+    
+    uint32_t id = cur != nullptr ? cur->data(1, Qt::ItemDataRole::UserRole).toUInt() : 0;
+    QTreeWidgetItem* top = id == 0 ? cur : cur->parent();
+    int row = top != nullptr ? table->indexOfTopLevelItem(top) : 0;
+    row = row < 0 ? 0 : row;
+    SIMethodBase * newMethod = mModel.insertMethod(row, name, SIMethodBase::eMethodType::MethodRequest);
+    Q_ASSERT(newMethod != nullptr);
+    QTreeWidgetItem* item = updateMethodNode(new QTreeWidgetItem(), newMethod);
+    table->insertTopLevelItem(row, item);
+    if (cur != nullptr)
+    {
+        cur->setSelected(false);
+    }
+
+    item->setSelected(true);
+    table->setCurrentItem(item);
+    showMethodDetails(newMethod);
+    updateToolButtons(row, table->topLevelItemCount());
     blockBasicSignals(false);
 }
 
@@ -470,7 +494,6 @@ void SIMethod::onRemoveClicked(void)
 
 void SIMethod::onParamAddClicked(void)
 {
-    static const QString _defName("newParam");
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
     Q_ASSERT(cur != nullptr);
@@ -480,12 +503,7 @@ void SIMethod::onParamAddClicked(void)
         return;
 
     SIMethodBase* method = cur->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
-    uint32_t cnt{ 0 };
-    QString name;
-    do
-    {
-        name = _defName + QString::number(++cnt);
-    } while (method->findElement(name) != nullptr);
+    QString name = genName(method);
     
     MethodParameter* param = mModel.addParameter(method, name);
     if (param != nullptr)
@@ -497,13 +515,17 @@ void SIMethod::onParamAddClicked(void)
         item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
         item->setData(1, Qt::ItemDataRole::UserRole, param->getId());
         parent->addChild(item);
+        if (parent->isExpanded() == false)
+        {
+            parent->setExpanded(true);
+        }
         cur->setSelected(false);
         table->setCurrentItem(item);
         item->setSelected(true);
         item->setExpanded(true);
         
         showParamDetails(method, *param);
-        updateToolButtons(pos, parent->childCount());
+        updateToolButtons(pos, pos + 1);
         blockBasicSignals(false);
     }
 }
@@ -574,6 +596,50 @@ void SIMethod::onParamRemoveClicked(void)
 
 void SIMethod::onParamInsertClicked(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* cur = table->currentItem();
+    Q_ASSERT(cur != nullptr);
+    QTreeWidgetItem* parent = cur->parent();
+    QTreeWidgetItem* child = parent != nullptr ? cur : nullptr;
+    parent = parent == nullptr ? cur : parent;
+    if (parent == nullptr)
+        return;
+    
+    SIMethodBase* method = cur->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    QString name = genName(method);
+    int row = child != nullptr ? parent->indexOfChild(child) : 0;
+    row = row < 0 ? 0 : row;
+    MethodParameter* param = mModel.insertParameter(method, row, name);
+    if (param != nullptr)
+    {
+        blockBasicSignals(true);
+        QTreeWidgetItem* item = new QTreeWidgetItem();
+        setNodeText(item, param);
+        item->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(method));
+        item->setData(1, Qt::ItemDataRole::UserRole, param->getId());
+        parent->insertChild(row, item);
+        if (parent->isExpanded() == false)
+        {
+            parent->setExpanded(true);
+        }
+        cur->setSelected(false);
+        table->setCurrentItem(item);
+        item->setSelected(true);
+        
+        const QList<MethodParameter>& list = method->getElements();
+        const int count { parent->childCount() };
+        Q_ASSERT(count == list.size());
+        for (int i = row + 1; i < count; ++i)
+        {
+            QTreeWidgetItem * temp = parent->child(i);
+            Q_ASSERT(temp != nullptr);
+            temp->setData(1, Qt::ItemDataRole::UserRole, list[i].getId());
+        }
+        
+        showParamDetails(method, *param);
+        updateToolButtons(row, count);
+        blockBasicSignals(false);
+    }
 }
 
 void SIMethod::onMoveUpClicked(void)
@@ -751,7 +817,6 @@ void SIMethod::updateWidgets(void)
 {
     
     showMethodDetails(nullptr);
-    mList->ctrlButtonAdd()->setEnabled(true);
 }
 
 void SIMethod::setupSignals(void)
@@ -766,10 +831,11 @@ void SIMethod::setupSignals(void)
     connect(mDetails->ctrlConnectedResponse(), &QComboBox::currentTextChanged, this, &SIMethod::onConnectedResponseChanged);
 
     connect(mList->ctrlButtonAdd()          , &QToolButton::clicked         , this, &SIMethod::onAddClicked);
+    connect(mList->ctrlButtonInsert()       , &QToolButton::clicked         , this, &SIMethod::onInsertClicked);
     connect(mList->ctrlButtonRemove()       , &QToolButton::clicked         , this, &SIMethod::onRemoveClicked);
     connect(mList->ctrlButtonParamAdd()     , &QToolButton::clicked         , this, &SIMethod::onParamAddClicked);
-    connect(mList->ctrlButtonParamRemove()  , &QToolButton::clicked         , this, &SIMethod::onParamRemoveClicked);
     connect(mList->ctrlButtonParamInsert()  , &QToolButton::clicked         , this, &SIMethod::onParamInsertClicked);
+    connect(mList->ctrlButtonParamRemove()  , &QToolButton::clicked         , this, &SIMethod::onParamRemoveClicked);
     connect(mList->ctrlButtonMoveUp()       , &QToolButton::clicked         , this, &SIMethod::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown()     , &QToolButton::clicked         , this, &SIMethod::onMoveDownClicked);
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged, this, &SIMethod::onCurCellChanged);
@@ -834,7 +900,7 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
         mList->ctrlButtonRemove()->setEnabled(true);
         mList->ctrlButtonParamAdd()->setEnabled(true);
         mList->ctrlButtonParamRemove()->setEnabled(false);
-        mList->ctrlButtonParamInsert()->setEnabled(false);
+        mList->ctrlButtonParamInsert()->setEnabled(true);
 
         mDetails->ctrlName()->setText(method->getName());
         mDetails->ctrlDescription()->setPlainText(method->getDescription());
@@ -1130,4 +1196,30 @@ inline void SIMethod::updateToolButtons(int row, int rowCount)
         mList->ctrlButtonMoveUp()->setEnabled(false);
         mList->ctrlButtonMoveDown()->setEnabled(false);
     }
+}
+
+inline QString SIMethod::genName(void)
+{
+    static const QString _defName("NewMethod");
+    QTreeWidget* table = mList->ctrlTableList();
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++mCount);
+    } while (mModel.findMethod(name, SIMethodBase::eMethodType::MethodRequest) != nullptr);
+
+    return name;
+}
+
+inline QString SIMethod::genName(SIMethodBase* method)
+{
+    static const QString _defName("newParam");
+    uint32_t cnt{ 0 };
+    QString name;
+    do
+    {
+        name = _defName + QString::number(++cnt);
+    } while (method->findElement(name) != nullptr);
+
+    return name;
 }

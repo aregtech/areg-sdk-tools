@@ -76,16 +76,36 @@ bool SIMethodData::addMethod(SIMethodBase* method)
     if (method == nullptr || hasMethod(method))
         return false;
 
-    addMethodToList(method);
+    addMethodToList(-1, method);
     return true;
 }
 
 SIMethodBase* SIMethodData::addMethod(const QString& name, SIMethodBase::eMethodType methodType)
 {
-    SIMethodBase* method = createMethod(methodType, name);
+    SIMethodBase* method = findMethod(name, methodType) == nullptr ? createMethod(methodType, name) : nullptr;
     if (method != nullptr)
     {
-        addMethod(method);
+        addMethodToList(-1, method);
+    }
+
+    return method;
+}
+
+bool SIMethodData::insertMethod(int position, SIMethodBase* method)
+{
+    if (method == nullptr || hasMethod(method))
+        return false;
+
+    addMethodToList(position, method);
+    return true;
+}
+
+SIMethodBase* SIMethodData::insertMethod(int position, const QString& name, SIMethodBase::eMethodType methodType)
+{
+    SIMethodBase* method = findMethod(name, methodType) == nullptr ? createMethod(methodType, name) : nullptr;
+    if (method != nullptr)
+    {
+        addMethodToList(position, method);
     }
 
     return method;
@@ -310,9 +330,14 @@ QList<SIMethodRequest*> SIMethodData::getConnectedRequests(SIMethodResponse* res
     return result;
 }
 
-MethodParameter* SIMethodData::addParameter(SIMethodBase* method, const QString& name, const QString& type /*= "bool"*/)
+MethodParameter* SIMethodData::addParameter(SIMethodBase* method, const QString& name)
 {
-    return (method != nullptr ? method->addParameter(name, type) : nullptr);
+    return (method != nullptr ? method->addParam(name) : nullptr);
+}
+
+MethodParameter* SIMethodData::insertParameter(SIMethodBase* method, int position, const QString& name)
+{
+    return (method != nullptr ? method->insertParam(position, name) : nullptr);
 }
 
 void SIMethodData::removeParameter(SIMethodBase& method, uint32_t id)
@@ -335,11 +360,19 @@ SIMethodBase* SIMethodData::createMethod(SIMethodBase::eMethodType methodType, c
     return createMethod(methodType, name, getNextId());
 }
 
-void SIMethodData::addMethodToList(SIMethodBase* method)
+void SIMethodData::addMethodToList(int position, SIMethodBase* method)
 {
     if (method != nullptr)
     {
-        addElement(method, false);
+        if ((position < 0) || (position == mElementList.size()))
+        {
+            addElement(method, false);
+        }
+        else
+        {
+            insertElement(position, method, false);
+        }
+
         switch (method->getMethodType())
         {
         case SIMethodBase::eMethodType::MethodRequest:

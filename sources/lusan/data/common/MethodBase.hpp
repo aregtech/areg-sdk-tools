@@ -129,18 +129,57 @@ public:
      **/
     void setDescription(const QString& description);
 
+    /**
+     * \brief   Adds a new parameter to the method.
+     * \param   name    The unique name of the parameter.
+     * \return  Returns the pointer to the added parameter.
+     **/
     MethodParameter* addParam(const QString& name);
 
+    /**
+     * \brief   Inserts a new parameter to the method at the specified position.
+     * \param   position    The position to insert the parameter.
+     * \param   name        The unique name of the parameter.
+     * \return  Returns the pointer to the added parameter.
+     **/
+    MethodParameter* insertParam(int position, const QString& name);
+
+    /**
+     * \brief   Removes the parameter from the method by name.
+     * \param   name    The name of the parameter to remove.
+     **/
     void removeParam(const QString& name);
 
+    /**
+     * \brief   Removes the parameter from the method by ID.
+     * \param   id  The ID of the parameter to remove.
+     **/
     void removeParam(uint32_t id);
 
+    /**
+     * \brief   Returns the parameter by name.
+     * \param   name    The name of the parameter to return.
+     * \return  Returns the pointer to the parameter by name.
+     **/
     DataTypeBase* getParamType(const QString& name) const;
 
+    /**
+     * \brief   Returns the parameter by ID.
+     * \param   id  The ID of the parameter to return.
+     * \return  Returns the pointer to the parameter by ID.
+     **/
     DataTypeBase* getParamType(uint32_t id) const;
 
+    /**
+     * \brief   Validates the method.
+     * \param   customTypes The list of custom data types to validate.
+     * \return  Returns true if the method is valid, false otherwise.
+     **/
     bool validate(const QList<DataTypeCustom*>& customTypes);
 
+    /**
+     * \brief   Invalidates the method.
+     **/
     void invalidate(void);
 
 //////////////////////////////////////////////////////////////////////////

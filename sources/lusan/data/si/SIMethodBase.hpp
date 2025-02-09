@@ -56,11 +56,29 @@ protected:
      * \brief   Default constructor.
      **/
     SIMethodBase(ElementBase * parent = nullptr);
-    
+
+    /**
+     * \brief   Constructor with initialization.
+     * \param   methodType  The type of the method.
+     * \param   parent      The parent element.
+     **/
     SIMethodBase(eMethodType methodType, ElementBase* parent = nullptr);
 
+    /**
+     * \brief   Constructor with initialization.
+     * \param   methodType  The type of the method.
+     * \param   name        The name of the method.
+     * \param   parent      The parent element.
+     **/
     SIMethodBase(eMethodType methodType, const QString& name, ElementBase* parent = nullptr);
 
+    /**
+     * \brief   Constructor with initialization.
+     * \param   id          The ID of the method.
+     * \param   methodType  The type of the method.
+     * \param   name        The name of the method.
+     * \param   parent      The parent element.
+     **/
     SIMethodBase(uint32_t id, eMethodType methodType, const QString& name, ElementBase* parent = nullptr);
 
     /**
@@ -108,8 +126,18 @@ public:
      **/
     SIMethodBase& operator = (SIMethodBase&& other) noexcept;
 
+    /**
+     * \brief   Checks equality of two method objects.
+     * \param   other   The other method object to compare.
+     * \return  Returns true if two objects are equal.
+     **/
     bool operator == (const SIMethodBase& other) const;
 
+    /**
+     * \brief   Checks inequality of two method objects.
+     * \param   other   The other method object to compare.
+     * \return  Returns true if two objects are not equal.
+     **/
     bool operator != (const SIMethodBase& other) const;
 
 //////////////////////////////////////////////////////////////////////////
@@ -164,18 +192,40 @@ public:
      **/
     const QString& getDeprecateHint(void) const;
 
-    MethodParameter* addParameter(const QString& name, const QString& type = "bool");
-
+    /**
+     * \brief   Checks and returns parameter has default value flag.
+     * \param   paramName   The unique name of the parameter.
+     **/
     bool hasParamDefault(const QString& paramName) const;
 
+    /**
+     * \brief   Checks and returns parameter has default value flag.
+     * \param   paramId     The unique ID of the parameter.
+     **/
     bool hasParamDefault(uint32_t paramId) const;
 
+    /**
+     * \brief   Checks and returns parameter has default value flag.
+     * \param   index   The index of the parameter in the list.
+     **/
     bool hasEntryDefault(int index) const;
 
+    /**
+     * \brief   Checks and returns whether the parameter can have default value flag.
+     * \param   paramName   The unique name of the parameter.
+     **/
     bool canParamHaveDefault(const QString& paramName) const;
 
+    /**
+     * \brief   Checks and returns whether the parameter can have default value flag.
+     * \param   paramId     The unique ID of the parameter.
+     **/
     bool canParamHaveDefault(uint32_t paramId) const;
 
+    /**
+     * \brief   Checks and returns whether the parameter can have default value flag.
+     * \param   index   The index of the parameter in the list.
+     **/
     bool canEntryHaveDefault(int index) const;
 
     /**

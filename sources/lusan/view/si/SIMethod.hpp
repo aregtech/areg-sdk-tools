@@ -165,7 +165,12 @@ protected:
      * \brief   Triggered when the add button is clicked to add new method.
      **/
     void onAddClicked(void);
-
+    
+    /**
+     * \brief   Triggered when the insert button is clicked to insert new method.
+     **/
+    void onInsertClicked(void);
+    
     /**
      * \brief   Triggered when the remove button is clicked to remove selected method.
      **/
@@ -367,6 +372,17 @@ private:
      * \param   rowCount    The total number of rows in the tree table.
      **/
     inline void updateToolButtons(int row, int rowCount);
+
+    /**
+     * \brief   Generates and returns new method name.
+     **/
+    inline QString genName(void);
+
+    /**
+     * \brief   Generates and returns new parameter name of the method.
+     * \param   method  The method object to get name.
+     **/
+    inline QString genName(SIMethodBase * method);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

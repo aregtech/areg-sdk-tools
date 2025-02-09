@@ -41,6 +41,11 @@ QToolButton * SIMethodList::ctrlButtonAdd(void) const
     return ui->toolAddMethod;
 }
 
+QToolButton * SIMethodList::ctrlButtonInsert(void) const
+{
+    return ui->toolInsertMethod;
+}
+
 QToolButton * SIMethodList::ctrlButtonRemove(void) const
 {
     return ui->toolDeleteMethod;

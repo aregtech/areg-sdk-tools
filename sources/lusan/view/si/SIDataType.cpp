@@ -338,19 +338,40 @@ void SIDataType::onInsertFieldClicked(void)
 
         table->setCurrentItem(item);
         item->setSelected(true);
+        const int count {parent->childCount()};
 
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
             updateChildNodeStruct(item, static_cast<DataTypeStructure*>(dataType), *static_cast<FieldEntry*>(field));
             selectedStructField(nullptr, *static_cast<FieldEntry*>(field), static_cast<DataTypeStructure*>(dataType));
+            const QList<FieldEntry>& list = static_cast<DataTypeStructure*>(dataType)->getElements();
+            Q_ASSERT(count == list.size());
+            for (int i = row + 1; row < count; ++i)
+            {
+                QTreeWidgetItem* temp = parent->child(i);
+                Q_ASSERT(temp != nullptr);
+                temp->setData(1, Qt::ItemDataRole::UserRole, list[i].getId());
+            }
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
             updateChildNodeEnum(item, static_cast<DataTypeEnum*>(dataType), *static_cast<EnumEntry*>(field));
             selectedEnumField(nullptr, *static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
+            const QList<EnumEntry>& list = static_cast<DataTypeEnum*>(dataType)->getElements();
+            Q_ASSERT(count == list.size());
+            for (int i = row + 1; row < count; ++i)
+            {
+                QTreeWidgetItem* temp = parent->child(i);
+                Q_ASSERT(temp != nullptr);
+                temp->setData(1, Qt::ItemDataRole::UserRole, list[i].getId());
+            }
+        }
+        else
+        {
+            Q_ASSERT(false); // this should never happen
         }
 
-        updateToolButtons(row, parent->childCount());
+        updateToolButtons(row, count);
         blockBasicSignals(false);
     }
 }

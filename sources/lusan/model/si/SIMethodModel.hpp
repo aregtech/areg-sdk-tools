@@ -69,7 +69,9 @@ public:
      * \param methodType  The type of the method.
      * \return  Returns the pointer to the created method object.
      **/
-    SIMethodBase* createMethod(const QString& name, SIMethodBase::eMethodType methodType);
+    SIMethodBase* addMethod(const QString& name, SIMethodBase::eMethodType methodType);
+
+    SIMethodBase* insertMethod(int position, const QString& name, SIMethodBase::eMethodType methodType);
 
     /**
      * \brief Deletes a method object from the list by specified ID.
@@ -164,7 +166,9 @@ public:
      * \param   type    The data type of the parameter.
      * \return  Returns the pointer to the created parameter object.
      **/
-    MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
+    MethodParameter* addParameter(SIMethodBase* method, const QString& name);
+
+    MethodParameter* insertParameter(SIMethodBase* method, int position, const QString& name);
 
     /**
      * \brief   Removes the parameter from the method by ID.

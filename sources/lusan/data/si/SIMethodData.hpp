@@ -69,11 +69,28 @@ public:
 
     /**
      * \brief   Adds a method object to the list by name and type.
-     * \param   name        The name of the method.
+     * \param   name        The unique name of the method.
      * \param   methodType  The type of the method.
      * \return  The created method object.
      **/
     SIMethodBase* addMethod(const QString& name, SIMethodBase::eMethodType methodType);
+
+    /**
+     * \brief   Inserts a method object to the list.
+     * \param   position    The position to insert the method.
+     * \param   method      The method object to insert.
+     * \return  True if the method was inserted, false otherwise.
+     **/
+    bool insertMethod(int position, SIMethodBase* method);
+
+    /**
+     * \brief   Inserts a method object to the list by name and type.
+     * \param   position    The position to insert the method.
+     * \param   name        The unique name of the method.
+     * \param   methodType  The type of the method.
+     * \return  The created method object.
+     **/
+    SIMethodBase* insertMethod(int position, const QString& name, SIMethodBase::eMethodType methodType);
 
     /**
      * \brief   Removes a method object from the list by name and type.
@@ -250,11 +267,21 @@ public:
      *          The parameters should have unique names in the parameter list of the method.
      * \param   method  The valid pointer to the method object to add new parameter.
      * \param   name    The name of the parameter.
-     * \param   type    The type of the parameter.
      * \return  Returns new parameter object if operation succeeded. Otherwise, returns nullptr.
      *          The parameters should have unique names in the parameter list of the method.
      **/
-    MethodParameter* addParameter(SIMethodBase* method, const QString& name, const QString& type = "bool");
+    MethodParameter* addParameter(SIMethodBase* method, const QString& name);
+
+    /**
+     * \brief   Inserts new parameter to the selected method. Returns new parameter object if operation succeeded.
+     *          The parameters should have unique names in the parameter list of the method.
+     * \param   method      The valid pointer to the method object to add new parameter.
+     * \param   position    The position to insert the parameter.
+     * \param   name        The name of the parameter.
+     * \return  Returns new parameter object if operation succeeded. Otherwise, returns nullptr.
+     *          The parameters should have unique names in the parameter list of the method.
+     **/
+    MethodParameter* insertParameter(SIMethodBase* method, int position, const QString& name);
 
     /**
      * \brief   Removes the parameter from the method by ID.
@@ -272,9 +299,10 @@ public:
 private:
     /**
      * \brief   Adds a method object to the appropriate list.
+     * \param   position    The position to add the element.
      * \param   method      The method object to add.
      **/
-    void addMethodToList(SIMethodBase* method);
+    void addMethodToList(int position, SIMethodBase* method);
 
     /**
      * \brief   Removes a method object from the appropriate list.
