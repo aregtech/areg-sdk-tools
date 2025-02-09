@@ -28,6 +28,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QHeaderView>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QTableWidget>
@@ -111,7 +112,7 @@ SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
-
+    
     updateWidgets();
     updateData();
     setupSignals();
@@ -505,6 +506,11 @@ void SIAttribute::updateData(void)
 
 void SIAttribute::updateWidgets(void)
 {
+    QTableWidget* table = mList->ctrlTableList();
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Interactive);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::Interactive);
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeMode::Stretch);
+    
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
 

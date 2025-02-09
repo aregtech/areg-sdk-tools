@@ -30,6 +30,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QHeaderView>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QTableWidget>
@@ -461,6 +462,11 @@ void SIConstant::updateData(void)
 
 void SIConstant::updateWidgets(void)
 {
+    QTableWidget* table = mList->ctrlTableList();
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Interactive);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::Interactive);
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeMode::Stretch);
+    
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
     

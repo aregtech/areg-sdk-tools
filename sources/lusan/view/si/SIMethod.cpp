@@ -37,6 +37,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QHeaderView>
 #include <QIcon>
 #include <QLineEdit>
 #include <QPlainTextEdit>
@@ -815,6 +816,11 @@ void SIMethod::updateData(void)
 
 void SIMethod::updateWidgets(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    table->header()->setSectionResizeMode(0, QHeaderView::ResizeMode::Interactive);
+    table->header()->setSectionResizeMode(1, QHeaderView::ResizeMode::Interactive);
+    table->header()->setSectionResizeMode(2, QHeaderView::ResizeMode::Interactive);
+    table->header()->setSectionResizeMode(3, QHeaderView::ResizeMode::Stretch);
     
     showMethodDetails(nullptr);
 }
