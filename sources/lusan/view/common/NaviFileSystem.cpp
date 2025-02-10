@@ -41,3 +41,48 @@ NaviFileSystem::NaviFileSystem(const QList<QString> & filters, QWidget* parent /
     this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
     this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 }
+
+QTreeView* NaviFileSystem::ctrlFileSystem(void) const
+{
+    return ui->treeView;
+}
+
+QToolButton* NaviFileSystem::ctrlToolRefresh(void) const
+{
+    return ui->toolRefresh;
+}
+
+QToolButton* NaviFileSystem::ctrlToolShowAll(void) const
+{
+    return ui->toolShowAll;
+}
+
+QToolButton* NaviFileSystem::ctrlToolCollapse(void) const
+{
+    return ui->toolCollapseAll;
+}
+
+QToolButton* NaviFileSystem::ctrlToolExpand(void) const
+{
+    return ui->toolExpandAll;
+}
+
+QToolButton* NaviFileSystem::ctrlToolNewFolder(void) const
+{
+    return ui->toolNewFolder;
+}
+
+QToolButton* NaviFileSystem::ctrlToolNewFile(void) const
+{
+    return ui->toolNewFile;
+}
+
+QToolButton* NaviFileSystem::ctrlToolOpen(void) const
+{
+    return ui->toolOpenSelected;
+}
+
+QToolButton* NaviFileSystem::ctrlToolDelete(void) const
+{
+    return ui->toolDeleteSelected;
+}

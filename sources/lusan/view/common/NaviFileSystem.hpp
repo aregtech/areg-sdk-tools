@@ -46,6 +46,24 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    QTreeView* ctrlFileSystem(void) const;
+
+    QToolButton* ctrlToolRefresh(void) const;
+
+    QToolButton* ctrlToolShowAll(void) const;
+
+    QToolButton* ctrlToolCollapse(void) const;
+
+    QToolButton* ctrlToolExpand(void) const;
+
+    QToolButton* ctrlToolNewFolder(void) const;
+
+    QToolButton* ctrlToolNewFile(void) const;
+
+    QToolButton* ctrlToolOpen(void) const;
+
+    QToolButton* ctrlToolDelete(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
