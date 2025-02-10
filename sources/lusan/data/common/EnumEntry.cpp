@@ -190,7 +190,14 @@ bool EnumEntry::isValid() const
 
 QIcon EnumEntry::getIcon(ElementBase::eDisplay display) const
 {
-    return (display == ElementBase::eDisplay::DisplayName ? QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading) : QIcon());
+    if (display == ElementBase::eDisplay::DisplayName)
+    {
+        return QIcon(QString::fromUtf8(":/icons/data type enum field"));
+    }
+    else
+    {
+        return QIcon();
+    }
 }
 
 QString EnumEntry::getString(ElementBase::eDisplay display) const

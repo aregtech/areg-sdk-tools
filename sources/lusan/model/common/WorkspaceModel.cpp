@@ -28,9 +28,9 @@ WorkspaceModel::WorkspaceModel(OptionsManager &options, QObject* parent)
     , mItems()
 {
     const std::vector<WorkspaceEntry> & workspaces = options.getWorkspaceList();
-    if (workspaces.empty() == false)
+    if (!workspaces.empty())
     {
-        beginInsertRows(QModelIndex(), rowCount(), rowCount());
+        beginInsertRows(QModelIndex(), mItems.size(), mItems.size());
         mItems = workspaces;
         endInsertRows();
     }

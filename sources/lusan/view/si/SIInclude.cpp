@@ -106,7 +106,6 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
 
     blockBasicSignals(true);
     QTableWidget* table = mList->ctrlTableList();
-    QTableWidgetItem* col0 = currentRow >= 0 ? table->item(currentRow, 0) : nullptr;
     const IncludeEntry* entry = findInclude(currentRow);
     updateDetails(entry, true);
     updateToolBottons(entry != nullptr ? currentRow : -1, table->rowCount());

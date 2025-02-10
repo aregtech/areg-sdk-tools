@@ -1050,7 +1050,7 @@ bool SIMethod::getCurrentParam(QTreeWidgetItem*& item, SIMethodBase*& method, Me
         }
     }
 
-    return false;
+    return result;
 }
 
 void SIMethod::setNodeText(QTreeWidgetItem* node, const ElementBase* elem)
@@ -1207,7 +1207,6 @@ inline void SIMethod::updateToolButtons(int row, int rowCount)
 inline QString SIMethod::genName(void)
 {
     static const QString _defName("NewMethod");
-    QTreeWidget* table = mList->ctrlTableList();
     QString name;
     do
     {

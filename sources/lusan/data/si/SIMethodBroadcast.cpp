@@ -153,7 +153,14 @@ void SIMethodBroadcast::writeToXml(QXmlStreamWriter& xml) const
 
 QIcon SIMethodBroadcast::getIcon(ElementBase::eDisplay display) const
 {
-    return (display == ElementBase::eDisplay::DisplayName ? QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading) : QIcon());
+    if (display == ElementBase::eDisplay::DisplayName)
+    {
+        return QIcon(QString::fromUtf8(":/icons/data method broadcast"));
+    }
+    else
+    {
+        return QIcon();
+    }
 }
 
 QString SIMethodBroadcast::getString(ElementBase::eDisplay display) const

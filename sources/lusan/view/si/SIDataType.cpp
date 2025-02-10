@@ -1784,7 +1784,6 @@ inline QString SIDataType::genName(void)
 {
     static const QString _defName("NewDataType");
 
-    QTreeWidget* table = mList->ctrlTableList();
     QString name;
     do
     {

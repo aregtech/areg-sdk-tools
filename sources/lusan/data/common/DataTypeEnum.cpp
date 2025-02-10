@@ -181,7 +181,7 @@ QIcon DataTypeEnum::getIcon(ElementBase::eDisplay display) const
 {
     if (display == ElementBase::eDisplay::DisplayName)
     {
-        return QIcon::fromTheme(QIcon::ThemeIcon::MediaTape);
+        return QIcon(QString::fromUtf8(":/icons/data type enum"));
     }
     else
     {

@@ -326,6 +326,8 @@ private:
     QMenu*          mEditMenu;
     //!< The view menu.
     QMenu*          mViewMenu;
+    QMenu*          mDesignMenu;
+    QMenu*          mDesignMenuSI;
     //!< The window menu.
     QMenu*          mWindowMenu;
     //!< The help menu.
@@ -385,6 +387,7 @@ private:
     QAction*        mFileSeparator;
     //!< Actions for opening recent files.
     QAction*        mActsRecentFiles[MaxRecentFiles];
+    
 };
 
 //////////////////////////////////////////////////////////////////////////
