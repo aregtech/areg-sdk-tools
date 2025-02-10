@@ -200,15 +200,15 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
 }
 
 QIcon SIMethodRequest::getIcon(ElementBase::eDisplay display) const
-{
+{    
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading);
+        return QIcon(QString::fromUtf8(":/icons/data method request"));
     case ElementBase::eDisplay::DisplayLink:
         if (mResponse.isValid() && (mResponse.getName().isEmpty() == false))
         {
-            return QIcon();
+            return QIcon(QString::fromUtf8(":/icons/data method response"));
         }
         else if ((mResponse.isValid() == false) && mResponse.getName().isEmpty())
         {

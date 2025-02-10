@@ -177,7 +177,7 @@ QIcon MethodParameter::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon::fromTheme(QIcon::ThemeIcon::Battery);
+        return QIcon(QString::fromUtf8(":/icons/data method param"));
     case ElementBase::eDisplay::DisplayType:
         return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
     default:

@@ -200,7 +200,7 @@ QIcon DataTypeStructure::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon::fromTheme(QIcon::ThemeIcon::InsertText);
+        return QIcon(QString::fromUtf8(":/icons/data type structure"));
     case ElementBase::eDisplay::DisplayType:
         return (isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
     default:

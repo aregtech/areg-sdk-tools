@@ -179,7 +179,7 @@ QIcon DataTypeContainer::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon::fromTheme(QIcon::ThemeIcon::DocumentRevert);
+        return QIcon(QString::fromUtf8(":/icons/data type container"));
     case ElementBase::eDisplay::DisplayType:
         return (!canHaveKey() || mKeyType.isValid()) && mValueType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning);
     default:

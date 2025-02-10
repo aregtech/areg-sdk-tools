@@ -153,7 +153,14 @@ void SIMethodResponse::writeToXml(QXmlStreamWriter& xml) const
 
 QIcon SIMethodResponse::getIcon(ElementBase::eDisplay display) const
 {
-    return (display == ElementBase::eDisplay::DisplayName ? QIcon::fromTheme(QIcon::ThemeIcon::SyncSynchronizing) : QIcon());
+    if (display == ElementBase::eDisplay::DisplayName)
+    {
+        return QIcon(QString::fromUtf8(":/icons/data method response"));
+    }
+    else
+    {
+        return QIcon();
+    }
 }
 
 QString SIMethodResponse::getString(ElementBase::eDisplay display) const

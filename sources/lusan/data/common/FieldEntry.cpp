@@ -170,7 +170,7 @@ QIcon FieldEntry::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading);
+        return QIcon(QString::fromUtf8(":/icons/data type struct field"));
     case ElementBase::eDisplay::DisplayType:
         return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
     default:
