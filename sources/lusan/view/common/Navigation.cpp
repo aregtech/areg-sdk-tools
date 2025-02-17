@@ -17,8 +17,9 @@
  *
  ************************************************************************/
 #include "lusan/view/common/Navigation.hpp"
+#include "lusan/view/common/MdiMainWindow.hpp"
 
-Navigation::Navigation(QWidget * parent)
+Navigation::Navigation(MdiMainWindow* parent)
     : QDockWidget   (tr("Navigation"), parent)
     , mTabs         (this)
     , mFileSystem   (this)

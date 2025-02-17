@@ -20,23 +20,51 @@
 #include "lusan/view/common/NaviFileSystem.hpp"
 #include "ui/ui_NaviFileSystem.h"
 
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/model/common/FileSystemModel.hpp"
+
+#include <QTreeView>
+#include <QToolButton>
+
 NaviFileSystem::NaviFileSystem(QWidget* parent /*= nullptr*/)
     : QWidget       (parent)
+
+    , mNaviModel    (new FileSystemModel())
+    // , mNaviFilter   (new FileSystemFilter(mNaviModel))
     , mListFilters  ()
     , ui            (new Ui::NaviFileSystem)
 {
     ui->setupUi(this);
-    this->setBaseSize(MIN_WIDTH, MIN_HEIGHT);
-    this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
-    this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
-}
+    
+    QMap<QString, QString> rootPaths;
+    QString root = LusanApplication::getWorkspaceRoot();
+    QString sources = LusanApplication::getWorkspaceSources();
+    QString includes = LusanApplication::getWorkspaceIncludes();
+    QString delivery = LusanApplication::getWOrkspaceDelivery();
 
-NaviFileSystem::NaviFileSystem(const QList<QString> & filters, QWidget* parent /*= nullptr*/)
-    : QWidget       (parent)
-    , mListFilters  (filters)
-    , ui            (new Ui::NaviFileSystem)
-{
-    ui->setupUi(this);
+    Q_ASSERT(root.isEmpty() == false);
+    rootPaths.insert(root, "[Project: " + root + "]");
+    if (sources.isEmpty() == false)
+    {
+        rootPaths.insert(sources, "[Sources: " + sources + "]");
+    }
+
+    if (includes.isEmpty() == false)
+    {
+        rootPaths.insert(includes, "[Includes: " + includes + "]");
+    }
+
+    if (delivery.isEmpty() == false)
+    {
+        rootPaths.insert(delivery, "[Delivery: " + delivery + "]");
+    }
+    
+    ctrlFileSystem()->setModel(mNaviModel);
+    QModelIndex idxRoot = mNaviModel->setRootPaths(rootPaths);
+    ctrlFileSystem()->setRootIndex(idxRoot);
+    ctrlFileSystem()->expand(idxRoot);
+        
+    ctrlFileSystem()->setSortingEnabled(true);
     this->setBaseSize(MIN_WIDTH, MIN_HEIGHT);
     this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
     this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);

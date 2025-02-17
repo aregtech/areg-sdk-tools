@@ -23,6 +23,11 @@
 #include <QString>
 #include <QWidget>
 
+class FileSystemModel;
+class FileSystemFilter;
+class QTreeView;
+class QToolButton;
+
 namespace Ui {
     class NaviFileSystem;
 }
@@ -38,8 +43,6 @@ private:
 //////////////////////////////////////////////////////////////////////////
 public:
     NaviFileSystem(QWidget* parent = nullptr);
-    
-    NaviFileSystem(const QList<QString> & filters, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // public methods
@@ -73,6 +76,8 @@ private:
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
+    FileSystemModel*    mNaviModel;
+    FileSystemFilter*   mNaviFilter;
     QList<QString>      mListFilters;
     Ui::NaviFileSystem* ui;
 };

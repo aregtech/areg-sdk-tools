@@ -55,10 +55,10 @@ int main(int argc, char *argv[])
     
     OptionsManager & opt = LusanApplication::getOptions();
     opt.readOptions();
-    MdiMainWindow w;
     Workspace workspace(opt);
     if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
+        MdiMainWindow w;
         w.setWorkspaceRoot(opt.getActiveWorkspace().getWorkspaceRoot());
         w.showMaximized();  
         w.show();
@@ -66,7 +66,6 @@ int main(int argc, char *argv[])
     }
     else
     {
-        w.hide();
         return 0;
     }
 }

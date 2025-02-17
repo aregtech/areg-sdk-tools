@@ -177,3 +177,55 @@ QStringList LusanApplication::getWorkspaceDirectories(void)
     
     return result;
 }
+
+QString LusanApplication::getWorkspaceRoot(void)
+{
+    if (LusanApplication::theApp != nullptr)
+    {
+        const WorkspaceEntry& workspace = LusanApplication::theApp->mOptions.getActiveWorkspace();
+        return workspace.getWorkspaceRoot();
+    }
+    else
+    {
+        return QString();
+    }
+}
+
+QString LusanApplication::getWorkspaceSources(void)
+{
+    if (LusanApplication::theApp != nullptr)
+    {
+        const WorkspaceEntry& workspace = LusanApplication::theApp->mOptions.getActiveWorkspace();
+        return workspace.getDirSources();
+    }
+    else
+    {
+        return QString();
+    }
+}
+
+QString LusanApplication::getWorkspaceIncludes(void)
+{
+    if (LusanApplication::theApp != nullptr)
+    {
+        const WorkspaceEntry& workspace = LusanApplication::theApp->mOptions.getActiveWorkspace();
+        return workspace.getDirIncludes();
+    }
+    else
+    {
+        return QString();
+    }
+}
+
+QString LusanApplication::getWOrkspaceDelivery(void)
+{
+    if (LusanApplication::theApp != nullptr)
+    {
+        const WorkspaceEntry& workspace = LusanApplication::theApp->mOptions.getActiveWorkspace();
+        return workspace.getDirDelivery();
+    }
+    else
+    {
+        return QString();
+    }
+}
