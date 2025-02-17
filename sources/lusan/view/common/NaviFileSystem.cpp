@@ -20,24 +20,97 @@
 #include "lusan/view/common/NaviFileSystem.hpp"
 #include "ui/ui_NaviFileSystem.h"
 
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/model/common/FileSystemModel.hpp"
+
+#include <QTreeView>
+#include <QToolButton>
+
 NaviFileSystem::NaviFileSystem(QWidget* parent /*= nullptr*/)
     : QWidget       (parent)
+
+    , mNaviModel    (new FileSystemModel())
+    // , mNaviFilter   (new FileSystemFilter(mNaviModel))
     , mListFilters  ()
     , ui            (new Ui::NaviFileSystem)
 {
     ui->setupUi(this);
+    
+    QMap<QString, QString> rootPaths;
+    QString root = LusanApplication::getWorkspaceRoot();
+    QString sources = LusanApplication::getWorkspaceSources();
+    QString includes = LusanApplication::getWorkspaceIncludes();
+    QString delivery = LusanApplication::getWOrkspaceDelivery();
+
+    Q_ASSERT(root.isEmpty() == false);
+    rootPaths.insert(root, "[Project: " + root + "]");
+    if (sources.isEmpty() == false)
+    {
+        rootPaths.insert(sources, "[Sources: " + sources + "]");
+    }
+
+    if (includes.isEmpty() == false)
+    {
+        rootPaths.insert(includes, "[Includes: " + includes + "]");
+    }
+
+    if (delivery.isEmpty() == false)
+    {
+        rootPaths.insert(delivery, "[Delivery: " + delivery + "]");
+    }
+    
+    ctrlFileSystem()->setModel(mNaviModel);
+    QModelIndex idxRoot = mNaviModel->setRootPaths(rootPaths);
+    ctrlFileSystem()->setRootIndex(idxRoot);
+    ctrlFileSystem()->expand(idxRoot);
+        
+    ctrlFileSystem()->setSortingEnabled(true);
     this->setBaseSize(MIN_WIDTH, MIN_HEIGHT);
     this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
     this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 }
 
-NaviFileSystem::NaviFileSystem(const QList<QString> & filters, QWidget* parent /*= nullptr*/)
-    : QWidget       (parent)
-    , mListFilters  (filters)
-    , ui            (new Ui::NaviFileSystem)
+QTreeView* NaviFileSystem::ctrlFileSystem(void) const
 {
-    ui->setupUi(this);
-    this->setBaseSize(MIN_WIDTH, MIN_HEIGHT);
-    this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
-    this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    return ui->treeView;
+}
+
+QToolButton* NaviFileSystem::ctrlToolRefresh(void) const
+{
+    return ui->toolRefresh;
+}
+
+QToolButton* NaviFileSystem::ctrlToolShowAll(void) const
+{
+    return ui->toolShowAll;
+}
+
+QToolButton* NaviFileSystem::ctrlToolCollapse(void) const
+{
+    return ui->toolCollapseAll;
+}
+
+QToolButton* NaviFileSystem::ctrlToolExpand(void) const
+{
+    return ui->toolExpandAll;
+}
+
+QToolButton* NaviFileSystem::ctrlToolNewFolder(void) const
+{
+    return ui->toolNewFolder;
+}
+
+QToolButton* NaviFileSystem::ctrlToolNewFile(void) const
+{
+    return ui->toolNewFile;
+}
+
+QToolButton* NaviFileSystem::ctrlToolOpen(void) const
+{
+    return ui->toolOpenSelected;
+}
+
+QToolButton* NaviFileSystem::ctrlToolDelete(void) const
+{
+    return ui->toolDeleteSelected;
 }

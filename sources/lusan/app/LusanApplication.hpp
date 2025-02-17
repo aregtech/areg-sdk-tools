@@ -94,6 +94,26 @@ public:
      * \return  The list of workspace directories.
      **/
     static QStringList getWorkspaceDirectories(void);
+
+    /**
+     * \brief   Returns the workspace root directory.
+     **/
+    static QString getWorkspaceRoot(void);
+
+    /**
+     * \brief   Returns the workspace sources directory.
+     **/
+    static QString getWorkspaceSources(void);
+
+    /**
+     * \brief   Returns the workspace includes directory.
+     **/
+    static QString getWorkspaceIncludes(void);
+
+    /**
+     * \brief   Returns the workspace delivery directory.
+     **/
+    static QString getWOrkspaceDelivery(void);
     
 private:
     static LusanApplication *   theApp;     //!< The singleton instance of the application.
