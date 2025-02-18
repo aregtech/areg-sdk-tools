@@ -29,7 +29,7 @@
  **/
 class LusanApplication : public QApplication
 {
-private:
+public:
     static const QStringList     ExternalExts;  //!< The list of external file extensions.
     static const QStringList     InternalExts;  //!< The list of internal file extensions.
     

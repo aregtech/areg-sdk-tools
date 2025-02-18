@@ -27,13 +27,15 @@ FileSystemModel::FileSystemModel(QObject * parent /*= nullptr*/)
     : QAbstractItemModel(parent)
     , mRootEntry        ( tr("Workspace") )
     , mWorkspaceDirs    ( )
+    , mFileFilter       ( )
 {
 }
     
-FileSystemModel::FileSystemModel(const QMap<QString, QString> & workspaceEntries, QObject* parent /*= nullptr*/)
+FileSystemModel::FileSystemModel(const QMap<QString, QString> & workspaceEntries, const QStringList& extFilters, QObject* parent /*= nullptr*/)
     : QAbstractItemModel(parent)
     , mRootEntry        ( tr("Workspace") )
     , mWorkspaceDirs    (workspaceEntries)
+    , mFileFilter       ( extFilters )
 {
     for (const QString & dir : mWorkspaceDirs)
     {
@@ -118,11 +120,11 @@ void FileSystemModel::fetchMore(const QModelIndex& parent)
     if (parentEntry->hasValidChildren())
         return;
     
-    QFileInfoList list = parentEntry->fetchData();
+    QFileInfoList list = parentEntry->fetchData(mFileFilter);
     parentEntry->removeDummyEntry();
     for ( const QFileInfo & fi : list)
     {
-        FileSystemEntry * entry = parentEntry->addChild(fi, false);
+        parentEntry->addChild(fi, false);
     }
 }
 
@@ -138,7 +140,7 @@ bool FileSystemModel::canFetchMore(const QModelIndex& parent) const
 QModelIndex FileSystemModel::setRootPaths(const QMap<QString, QString>& paths)
 {
     beginResetModel();
-    mRootEntry.removeAll();
+    mRootEntry.resetEntry();
     mWorkspaceDirs = paths;
     mRootEntry.setWorkspaceDirectories(paths);
     QModelIndex index = createIndex(0, 0, &mRootEntry);
@@ -171,17 +173,11 @@ void FileSystemModel::refresh(const QModelIndex& index)
     
     beginResetModel();
     entry->removeAll();
-    QDir dir(entry->getPath());
-    QFileInfoList list = dir.entryInfoList(QDir::NoDotAndDotDot | QDir::AllEntries | QDir::Hidden, QDir::Name | QDir::DirsFirst | QDir::IgnoreCase);
+    QFileInfoList list = entry->fetchData(mFileFilter);
     for ( const QFileInfo & fi : list)
     {
-        FileSystemEntry * fse = entry->addChild(fi, false);
-        if ((fse != nullptr) && fse->isDir())
-        {
-            fse->addDummyEntry();
-        }
-    }
-    
+        entry->addChild(fi, false);
+    }    
     endResetModel();
 }
 
@@ -195,4 +191,26 @@ QFileInfo FileSystemModel::getFileInfo(const QModelIndex& index) const
         return QFileInfo();
     
     return QFileInfo(entry->getPath());
+}
+
+void FileSystemModel::setFileFilter(const QStringList& filterList)
+{
+    mFileFilter = filterList;
+    if (mRootEntry.hasFetched())
+    {
+        beginResetModel();
+        mRootEntry.resetEntry();
+        endResetModel();
+    }
+}
+
+void FileSystemModel::cleanFilters(void)
+{
+    mFileFilter.clear();
+    if (mRootEntry.hasFetched())
+    {
+        beginResetModel();
+        mRootEntry.resetEntry();
+        endResetModel();
+    }
 }

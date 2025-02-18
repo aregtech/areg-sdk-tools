@@ -194,9 +194,10 @@ public:
     
     /**
      * \brief   Fetches data for the file system entry.
+     * \param   filter  The list of file extension filters.
      * \return  The list of file information.
      **/
-    virtual QFileInfoList fetchData(void) const;
+    virtual QFileInfoList fetchData(const QStringList & filter = QStringList()) const;
     
     /**
      * \brief   Checks if the file system entry has valid children.
@@ -399,6 +400,11 @@ public:
      **/
     inline void removeAll(void);
 
+    /**
+     * \brief   Resets the file system entry.
+     **/
+    inline void resetEntry(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Protected members
 //////////////////////////////////////////////////////////////////////////
@@ -473,9 +479,10 @@ protected:
     
     /**
      * \brief   Fetches data for the root entry.
+     * \param   filter  The list of file extension filters.
      * \return  The list of file information.
      **/
-    virtual QFileInfoList fetchData(void) const override;
+    virtual QFileInfoList fetchData(const QStringList & filter = QStringList()) const override;
     
     /**
      * \brief   Create and returns the child entry. The entry will not be added to the children list.
@@ -745,6 +752,12 @@ inline void FileSystemEntry::removeChild(uint32_t id)
 inline void FileSystemEntry::removeAll(void)
 {
     deleteEntries();
+}
+
+inline void FileSystemEntry::resetEntry(void)
+{
+    deleteEntries();
+    addDummyEntry();
 }
 
 #endif // LUSAN_MODEL_COMMON_FILESYSTEMENTRY_HPP

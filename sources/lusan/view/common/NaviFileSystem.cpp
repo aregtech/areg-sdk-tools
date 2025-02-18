@@ -59,6 +59,10 @@ NaviFileSystem::NaviFileSystem(QWidget* parent /*= nullptr*/)
         rootPaths.insert(delivery, "[Delivery: " + delivery + "]");
     }
     
+    QStringList filters{ LusanApplication::InternalExts };
+    filters.append(LusanApplication::ExternalExts);
+
+    mNaviModel->setFileFilter(filters);
     ctrlFileSystem()->setModel(mNaviModel);
     QModelIndex idxRoot = mNaviModel->setRootPaths(rootPaths);
     ctrlFileSystem()->setRootIndex(idxRoot);

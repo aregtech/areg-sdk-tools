@@ -22,16 +22,24 @@
 
 const QStringList   LusanApplication::ExternalExts
 {
-      "*.h"
-    , "*.c"
-    , "*.hh"
+      "*.c"
     , "*.cc"
-    , "*.hpp"
     , "*.cpp"
-    , "*.inc"
-    , "*.inl"
-    , "*.hxx"
     , "*.cxx"
+    , "*.c++"
+    , "*.cppm"
+    , "*.ixx"
+
+    , "*.h"
+    , "*.h++"
+    , "*.hh"
+    , "*.hpp"
+    , "*.hxx"
+    , "*.inl"
+    , "*.ipp"
+    , "*.tlh"
+    , "*.tli"
+    , "*.inc"
 };
 
 const QStringList   LusanApplication::InternalExts
