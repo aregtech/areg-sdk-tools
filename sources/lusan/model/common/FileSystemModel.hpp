@@ -52,10 +52,11 @@ public:
 
     /**
      * \brief   Constructor with initialization.
-     * \param   workspaceEntries   The map of workspace entries.
-     * \param   parent             The parent object.
+     * \param   workspaceEntries    The map of workspace entries.
+     * \param   extFilters          The list of file extension filters.
+     * \param   parent              The parent object.
      **/
-    explicit FileSystemModel(const QMap<QString, QString> & workspaceEntries, QObject* parent = nullptr);
+    explicit FileSystemModel(const QMap<QString, QString> & workspaceEntries, const QStringList & extFilters, QObject* parent = nullptr);
 
     /**
      * \brief   Destructor.
@@ -81,21 +82,21 @@ public:
      * \param   child   The child index.
      * \return  The parent index.
      **/
-    virtual QModelIndex parent(const QModelIndex& child) const;
+    virtual QModelIndex parent(const QModelIndex& child) const override;
 
     /**
      * \brief   Returns the number of rows under the given parent.
      * \param   parent  The parent index.
      * \return  The number of rows.
      **/
-    virtual int rowCount(const QModelIndex& parent) const;
+    virtual int rowCount(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the number of columns for the children of the given parent.
      * \param   parent  The parent index.
      * \return  The number of columns.
      **/
-    virtual int columnCount(const QModelIndex& parent) const;
+    virtual int columnCount(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the data stored under the given role for the item referred to by the index.
@@ -103,7 +104,7 @@ public:
      * \param   role    The role for which data is requested.
      * \return  The data for the given role and section.
      **/
-    virtual QVariant data(const QModelIndex& index, int role) const;
+    virtual QVariant data(const QModelIndex& index, int role) const override;
 
     /**
      * \brief   Returns the data for the given role and section in the header with the specified orientation.
@@ -112,20 +113,20 @@ public:
      * \param   role        The role for which data is requested.
      * \return  The data for the given role and section.
      **/
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
+    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     /**
      * \brief   Fetches more data for the given parent index.
      * \param   parent  The parent index.
      **/
-    virtual void fetchMore(const QModelIndex& parent);
+    virtual void fetchMore(const QModelIndex& parent) override;
 
     /**
      * \brief   Checks if more data can be fetched for the given parent index.
      * \param   parent  The parent index.
      * \return  True if more data can be fetched, false otherwise.
      **/
-    virtual bool canFetchMore(const QModelIndex& parent) const;
+    virtual bool canFetchMore(const QModelIndex& parent) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -172,12 +173,24 @@ public:
      **/
     QFileInfo getFileInfo(const QModelIndex& index) const;
 
+    /**
+     * \brief   Sets the file filter to display file system data.
+     * \param   filterList  The list of file extension filters.
+     **/
+    void setFileFilter(const QStringList& filterList);
+
+    /**
+     * \brief   Cleans the file filter to display all file system data.
+     **/
+    void cleanFilters(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    FileSystemRootEntry mRootEntry;      //!< The root entry of the file system.
-    WorkspaceEntries    mWorkspaceDirs;  //!< The map of workspace directories.
+    FileSystemRootEntry mRootEntry;     //!< The root entry of the file system.
+    WorkspaceEntries    mWorkspaceDirs; //!< The map of workspace directories.
+    QStringList         mFileFilter;    //!< The filter to set when display file system data.
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -343,12 +343,23 @@ bool FileSystemEntry::hasFetched(void) const
     return ((mChildren.size() != 1) || mChildren[0]->isValid());
 }
 
-QFileInfoList FileSystemEntry::fetchData(void) const
+QFileInfoList FileSystemEntry::fetchData(const QStringList & filter /*= QStringList()*/) const
 {
     if (isDir())
     {
         QDir dir(mFilePath);
-        return std::move(dir.entryInfoList(QDir::NoDotAndDotDot | QDir::AllEntries | QDir::Hidden, QDir::Name | QDir::DirsFirst | QDir::IgnoreCase));
+        if (filter.size() > 0)
+        {
+            QFileInfoList dirs(std::move(dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Dirs, QDir::Name | QDir::IgnoreCase)));
+            QFileInfoList files(std::move(dir.entryInfoList(filter, QDir::NoDotAndDotDot | QDir::Files, QDir::Name | QDir::IgnoreCase)));
+            QFileInfoList result(std::move(dirs));
+            result.append(std::move(files));
+            return std::move(result);
+        }
+        else
+        {
+            return std::move(dir.entryInfoList(  QDir::NoDotAndDotDot | QDir::AllEntries, QDir::Name | QDir::DirsFirst | QDir::IgnoreCase));
+        }
     }
     
     return QFileInfoList();    
@@ -386,7 +397,7 @@ uint32_t FileSystemRootEntry::getNextId(void) const
     return (mParent != nullptr ? mParent->getNextId() : ++ mNextId);
 }
 
-QFileInfoList FileSystemRootEntry::fetchData(void) const
+QFileInfoList FileSystemRootEntry::fetchData(const QStringList & filter /*= QStringList()*/) const
 {
     QFileInfoList result;
     QList<QString> list(mWorkspaceDirs.keys());
