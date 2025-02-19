@@ -214,3 +214,34 @@ void FileSystemModel::cleanFilters(void)
         endResetModel();
     }
 }
+
+bool FileSystemModel::deleteEntry(const QModelIndex & remIndex)
+{
+    bool result{false};
+    
+    QModelIndex topIndex = this->parent(remIndex);
+    FileSystemEntry* entry = static_cast<FileSystemEntry*>(remIndex.internalPointer());
+    FileSystemEntry* parent = static_cast<FileSystemEntry*>(topIndex.internalPointer());
+    if ((entry == nullptr) || (parent == nullptr) || topIndex.isValid() || parent->isRoot() || mWorkspaceDirs.contains(entry->getPath()))
+        return result;
+    
+    QFileInfo fi{entry->getPath()};
+    if (fi.isDir())
+    {
+        QDir dir(entry->getPath());
+        result = dir.removeRecursively();
+    }
+    else
+    {
+        result = fi.dir().remove(entry->getPath());
+    }
+    
+    if (result)
+    {
+        beginRemoveRows(topIndex, remIndex.row(), remIndex.row());
+        parent->removeChild(entry);
+        endRemoveRows();
+    }
+    
+    return result;
+}

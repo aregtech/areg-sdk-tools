@@ -134,7 +134,7 @@
           <string>...</string>
          </property>
          <property name="icon">
-          <iconset theme="folder-open"/>
+          <iconset theme="document-open"/>
          </property>
         </widget>
        </item>

@@ -22,7 +22,7 @@
 Navigation::Navigation(MdiMainWindow* parent)
     : QDockWidget   (tr("Navigation"), parent)
     , mTabs         (this)
-    , mFileSystem   (this)
+    , mFileSystem   (parent, this)
 {
     mTabs.addTab(&mFileSystem, tr("Workspace"));
     mTabs.setTabPosition(QTabWidget::South);

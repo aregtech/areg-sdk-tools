@@ -22,16 +22,17 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/model/common/FileSystemModel.hpp"
+#include "lusan/view/common/MdiMainWindow.hpp"
 
+#include <QMessageBox>
 #include <QTreeView>
 #include <QToolButton>
 
-NaviFileSystem::NaviFileSystem(QWidget* parent /*= nullptr*/)
+NaviFileSystem::NaviFileSystem(MdiMainWindow* mainFrame, QWidget* parent /*= nullptr*/)
     : QWidget       (parent)
-
+    
+    , mMainFrame    (mainFrame)
     , mNaviModel    (new FileSystemModel())
-    // , mNaviFilter   (new FileSystemFilter(mNaviModel))
-    , mListFilters  ()
     , ui            (new Ui::NaviFileSystem)
 {
     ui->setupUi(this);
@@ -72,6 +73,8 @@ NaviFileSystem::NaviFileSystem(QWidget* parent /*= nullptr*/)
     this->setBaseSize(MIN_WIDTH, MIN_HEIGHT);
     this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
     this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    
+    setupSignals();
 }
 
 QTreeView* NaviFileSystem::ctrlFileSystem(void) const
@@ -117,4 +120,137 @@ QToolButton* NaviFileSystem::ctrlToolOpen(void) const
 QToolButton* NaviFileSystem::ctrlToolDelete(void) const
 {
     return ui->toolDeleteSelected;
+}
+
+void NaviFileSystem::onToolRefreshClicked(bool checked)
+{
+    QTreeView * table = ui->treeView;
+    table->collapseAll();
+    table->clearSelection();
+    this->mNaviModel->refresh(table->rootIndex());
+}
+
+void NaviFileSystem::onToolShowAllToggled(bool checked)
+{
+    if (checked)
+    {
+        QTreeView * table = ui->treeView;
+        table->collapseAll();
+        table->clearSelection();
+        mNaviModel->setFileFilter(QStringList());
+        mNaviModel->refresh(table->rootIndex());
+    }
+    else
+    {
+        QTreeView * table = ui->treeView;
+        table->collapseAll();
+        table->clearSelection();
+        QStringList filters{ LusanApplication::InternalExts };
+        filters.append(LusanApplication::ExternalExts);
+        mNaviModel->setFileFilter(filters);
+        mNaviModel->refresh(table->rootIndex());
+    }
+}
+
+void NaviFileSystem::onToolCollapseAllClicked(bool checked)
+{
+    ui->treeView->collapseAll();
+}
+
+
+void NaviFileSystem::onToolExpandAllClicked(bool checked)
+{
+    ui->treeView->expandAll();
+}
+
+void NaviFileSystem::onToolNewFolderClicked(bool checked)
+{
+    
+}
+
+void NaviFileSystem::onToolNewFileClicked(bool checked)
+{
+    
+}
+
+void NaviFileSystem::onToolOpenSelectedClicked(bool checked)
+{
+    QTreeView * table = ui->treeView;
+    QModelIndex index = table->selectionModel()->currentIndex();
+    QFileInfo fi = mNaviModel->getFileInfo(index);
+    QString filePath = fi.isFile() ? fi.filePath() : "";
+    if (filePath.isEmpty())
+    {
+        mMainFrame->openFile(filePath);
+    }
+}
+
+void NaviFileSystem::onToolDeleteSelectedClicked(bool checked)
+{
+    QTreeView * table = ui->treeView;
+    QModelIndex index = table->selectionModel()->currentIndex();
+    QFileInfo fi = mNaviModel->getFileInfo(index);
+    QString filePath = fi.filePath();
+    if (filePath.isEmpty() == false)
+    {
+        int result = QMessageBox::question(   mMainFrame
+                                            , tr("Delete File") + " - Lusan"
+                                            , tr("Are you sure you want to delete ") + (fi.isDir() ? tr("directory") : tr("file")) + "\n" + filePath
+                                            , QMessageBox::StandardButton::Ok | QMessageBox::StandardButton::Cancel
+                                            , QMessageBox::StandardButton::Cancel);
+        if (result == QMessageBox::StandardButton::Ok)
+        {
+            mNaviModel->deleteEntry(index);
+        }
+    }
+}
+
+void NaviFileSystem::onTreeViewCollapsed(const QModelIndex &index)
+{
+}
+
+void NaviFileSystem::onTreeViewExpanded(const QModelIndex &index)
+{
+}
+
+void NaviFileSystem::onTreeViewDoubleClicked(const QModelIndex &index)
+{
+    if (index.isValid() == false)
+        return;
+    
+    QFileInfo fi = mNaviModel->getFileInfo(index);
+    QString filePath = fi.isDir() ? "" : fi.filePath();
+    if (filePath.isEmpty() == false)
+    {
+        mMainFrame->openFile(filePath);
+    }
+}
+
+void NaviFileSystem::onTreeViewCctivated(const QModelIndex &index)
+{
+    
+}
+
+void NaviFileSystem::updateData(void)
+{
+}
+
+void NaviFileSystem::setupWidgets(void)
+{
+}
+
+void NaviFileSystem::setupSignals(void)
+{
+    connect(ui->toolRefresh,        &QToolButton::clicked,      this, &NaviFileSystem::onToolRefreshClicked);
+    connect(ui->toolShowAll,        &QToolButton::toggled,      this, &NaviFileSystem::onToolShowAllToggled);
+    connect(ui->toolCollapseAll,    &QToolButton::clicked,      this, &NaviFileSystem::onToolCollapseAllClicked);
+    connect(ui->toolExpandAll,      &QToolButton::clicked,      this, &NaviFileSystem::onToolExpandAllClicked);
+    connect(ui->toolNewFolder,      &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFolderClicked);
+    connect(ui->toolNewFile,        &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFileClicked);
+    connect(ui->toolOpenSelected,   &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
+    connect(ui->toolDeleteSelected, &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
+    connect(ui->treeView,           &QTreeView::collapsed,      this, &NaviFileSystem::onTreeViewCollapsed);
+    connect(ui->treeView,           &QTreeView::expanded,       this, &NaviFileSystem::onTreeViewExpanded);
+    connect(ui->treeView,           &QTreeView::doubleClicked,  this, &NaviFileSystem::onTreeViewDoubleClicked);
+    connect(ui->treeView,           &QTreeView::activated,      this, &NaviFileSystem::onTreeViewCctivated);
 }

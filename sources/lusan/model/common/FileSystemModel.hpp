@@ -183,6 +183,8 @@ public:
      * \brief   Cleans the file filter to display all file system data.
      **/
     void cleanFilters(void);
+    
+    bool deleteEntry(const QModelIndex & remIndex);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

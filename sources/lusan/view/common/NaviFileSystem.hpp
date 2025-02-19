@@ -25,6 +25,7 @@
 
 class FileSystemModel;
 class FileSystemFilter;
+class MdiMainWindow;
 class QTreeView;
 class QToolButton;
 
@@ -42,7 +43,7 @@ private:
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    NaviFileSystem(QWidget* parent = nullptr);
+    NaviFileSystem(MdiMainWindow* mainFrame, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // public methods
@@ -70,15 +71,44 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
+private slots:
+    void onToolRefreshClicked(bool checked);
+    
+    void onToolShowAllToggled(bool checked);
+    
+    void onToolCollapseAllClicked(bool checked);
+    
+    void onToolExpandAllClicked(bool checked);
+    
+    void onToolNewFolderClicked(bool checked);
+    
+    void onToolNewFileClicked(bool checked);
+    
+    void onToolOpenSelectedClicked(bool checked);
+    
+    void onToolDeleteSelectedClicked(bool checked);
+    
+    void onTreeViewCollapsed(const QModelIndex &index);
+    
+    void onTreeViewExpanded(const QModelIndex &index);
+    
+    void onTreeViewDoubleClicked(const QModelIndex &index);
+    
+    void onTreeViewCctivated(const QModelIndex &index);
+    
 private:
-
+    void updateData(void);
+    
+    void setupWidgets(void);
+    
+    void setupSignals(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
+    MdiMainWindow*      mMainFrame;
     FileSystemModel*    mNaviModel;
-    FileSystemFilter*   mNaviFilter;
-    QList<QString>      mListFilters;
     Ui::NaviFileSystem* ui;
 };
 
