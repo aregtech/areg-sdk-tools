@@ -24,6 +24,7 @@
  ************************************************************************/
 #include "lusan/data/common/AttributeEntry.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
+#include "lusan/view/common/TableCell.hpp"
 
 #include <QAbstractListModel>
 #include <QScrollArea>
@@ -49,7 +50,7 @@ class TableCell;
  * \class SIAttributeNotifyModel
  * \brief Model to manage notification types for attributes.
  */
-class SIAttributeNotifyModel    : public QAbstractListModel
+class SIAttributeNotifyModel    : public    QAbstractListModel
 {
     Q_OBJECT
     
@@ -109,8 +110,9 @@ private:
  * \class SIAttribute
  * \brief The widget to display the data attribute details.
  */
-class SIAttribute   : public QScrollArea
-                    , public IEDataTypeConsumer
+class SIAttribute   : public    QScrollArea
+                    , public    IEDataTypeConsumer
+                    , protected IETableHelper
 {
     /**
      * \brief   The column indexes of the data attribute list.
@@ -170,7 +172,18 @@ protected:
      * \return  Returns true if the data type is updated. Otherwise, returns false.
      **/
     virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
-    
+
+    /**
+     * \brief   Returns the number of columns in the table.
+     **/
+    virtual int getColumnCount(void) const override;
+
+    /**
+     * \brief   Returns the text of the cell.
+     * \param   cell    The index of the cell.
+     **/
+    virtual QString getCellText(const QModelIndex& cell) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////

@@ -25,22 +25,35 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 
-TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QTableWidget* parent)
+TableCell::TableCell(QWidget* parent, IETableHelper * tableHelper)
+    : QStyledItemDelegate(parent)
+    , mModels   ( )
+    , mColumns  ( )
+    , mParent   (parent)
+    , mTable    (tableHelper)
+{
+}
+
+TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper)
     : QStyledItemDelegate(parent)
     , mModels   (models)
     , mColumns  (columns)
     , mParent   (parent)
+    , mTable    (tableHelper)
 {
     Q_ASSERT(models.size() == columns.size());
     for (QAbstractItemModel* model : models)
     {
-        model->setParent(this);
+        if (model != nullptr)
+        {
+            model->setParent(this);
+        }
     }
 }
 
 inline bool TableCell::isValidColumn(int col) const
 {
-    return (col >= 0) && (col < mParent->columnCount());
+    return (col >= 0) && (col < mTable->getColumnCount());
 }
 
 bool TableCell::isComboWidget(int col) const
@@ -108,8 +121,8 @@ void TableCell::setEditorData(QWidget* editor, const QModelIndex& index) const
     }
     else if (isValidColumn(index.column()))
     {
-        QTableWidgetItem * item = mParent->item(index.row(), index.column());
-        qobject_cast<QLineEdit*>(editor)->setText(item != nullptr ? item->text() : "");
+        QString text = mTable->getCellText(index);
+        qobject_cast<QLineEdit*>(editor)->setText(text);
     }
 }
 

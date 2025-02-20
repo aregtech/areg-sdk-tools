@@ -24,6 +24,7 @@
  ************************************************************************/
 #include <QScrollArea>
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
+#include "lusan/view/common/TableCell.hpp"
 
 /************************************************************************
  * Dependencies
@@ -62,8 +63,9 @@ private:
  *          Include section. It displays the list of included files
  *          and allows to add, remove, update, and insert new entries.
  **/
-class SIInclude : public QScrollArea
-                , public IEDataTypeConsumer
+class SIInclude : public    QScrollArea
+                , public    IEDataTypeConsumer
+                , protected IETableHelper
 {
     Q_OBJECT
 
@@ -86,6 +88,22 @@ public:
     explicit SIInclude(SIIncludeModel & model, QWidget* parent = nullptr);
 
     virtual ~SIInclude(void);
+
+//////////////////////////////////////////////////////////////////////////
+// overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    /**
+     * \brief   Returns the number of columns in the table.
+     **/
+    virtual int getColumnCount(void) const override;
+
+    /**
+     * \brief   Returns the text of the cell.
+     * \param   cell    The index of the cell.
+     **/
+    virtual QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

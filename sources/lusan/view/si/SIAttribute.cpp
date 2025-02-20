@@ -24,7 +24,6 @@
 #include "lusan/model/si/SIAttributeModel.hpp"
 #include "lusan/view/si/SIAttributeDetails.hpp"
 #include "lusan/view/si/SIAttributeList.hpp"
-#include "lusan/view/common/TableCell.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -204,6 +203,17 @@ void SIAttribute::dataTypeUpdated(DataTypeCustom* dataType)
     }
 
     blockBasicSignals(false);
+}
+
+int SIAttribute::getColumnCount(void) const
+{
+    return mList->ctrlTableList()->columnCount();
+}
+
+QString SIAttribute::getCellText(const QModelIndex& cell) const
+{
+    QTableWidgetItem* item = mList->ctrlTableList()->item(cell.row(), cell.column());
+    return (item != nullptr ? item->text() : QString());
 }
 
 void SIAttribute::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
@@ -514,7 +524,7 @@ void SIAttribute::updateWidgets(void)
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
 
-    mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel, mNotifyModel}, QList<int>{1, 2}, mList->ctrlTableList());
+    mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel, mNotifyModel}, QList<int>{1, 2}, mList->ctrlTableList(), this);
     mDetails->ctrlTypes()->setModel(mTypeModel);
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
     mList->ctrlTableList()->setItemDelegateForColumn(1, mTableCell);

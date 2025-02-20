@@ -33,6 +33,49 @@ class QAbstractItemModel;
 class QTableWidget;
 
 //////////////////////////////////////////////////////////////////////////
+// IETableHelper class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \brief   The IETableHelper class is an interface to provide the table helper
+ *          to validate the data in the table cell editor.
+ **/
+class IETableHelper
+{
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
+protected:
+    IETableHelper(void) = default;
+    virtual ~IETableHelper(void) = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the number of columns in the table.
+     **/
+    virtual int getColumnCount(void) const = 0;
+
+    /**
+     * \brief   Returns the text of the cell.
+     * \param   cell    The index of the cell.
+     **/
+    virtual QString getCellText(const QModelIndex & cell) const = 0;
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
+private:
+    IETableHelper(const IETableHelper & /*src*/) = delete;
+    IETableHelper(IETableHelper && /*src*/) = delete;
+    IETableHelper& operator = (const IETableHelper & /*src*/) = delete;
+    IETableHelper& operator = (IETableHelper && /*src*/) = delete;
+};
+
+//////////////////////////////////////////////////////////////////////////
 // TableCell class declaration
 //////////////////////////////////////////////////////////////////////////
 
@@ -57,11 +100,19 @@ public:
 
     /**
      * \brief   Constructor with initialization.
+     * \param   parent      The parent table widget.
+     * \param   tableHelper The table helper object to validate the data.
+     **/
+    explicit TableCell(QWidget* parent, IETableHelper * tableHelper);
+
+    /**
+     * \brief   Constructor with initialization.
      * \param   models      The list of models to populate the combo box.
      * \param   columns     The list of columns to create combo box.
      * \param   parent      The parent table widget.
+     * \param   tableHelper The table helper object to validate the data.
      **/
-    explicit TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QTableWidget* parent);
+    explicit TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -143,7 +194,8 @@ private:
 private:
     QList<QAbstractItemModel*>  mModels;    //!< The list of models to populate the combo box.
     QList<int>                  mColumns;   //!< The list of columns to create combo box.
-    QTableWidget *              mParent;    //!< The parent table widget.
+    QWidget *                   mParent;    //!< The parent table widget.
+    IETableHelper*              mTable;     //!< The table helper object to validate the data.
 };
 
 #endif // LUSAN_VIEW_COMMON_TableCell_HPP

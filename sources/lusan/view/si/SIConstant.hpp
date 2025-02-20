@@ -24,6 +24,7 @@
  ************************************************************************/
 #include <QScrollArea>
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
+#include "lusan/view/common/TableCell.hpp"
 
 /************************************************************************
  * Dependencies
@@ -67,8 +68,9 @@ private:
 /**
  * \brief   The widget to display the constant details.
  **/
-class SIConstant    : public QScrollArea
-                    , public IEDataTypeConsumer
+class SIConstant    : public    QScrollArea
+                    , public    IEDataTypeConsumer
+                    , protected IETableHelper
 {
     /**
      * \brief   The column indexes of the constant list.
@@ -125,6 +127,17 @@ protected:
      * \return  Returns true if the data type is updated. Otherwise, returns false.
      **/
     virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
+
+    /**
+     * \brief   Returns the number of columns in the table.
+     **/
+    virtual int getColumnCount(void) const override;
+
+    /**
+     * \brief   Returns the text of the cell.
+     * \param   cell    The index of the cell.
+     **/
+    virtual QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
