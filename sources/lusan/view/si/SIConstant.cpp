@@ -24,7 +24,6 @@
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/model/si/SIConstantModel.hpp"
-#include "lusan/view/common/TableCell.hpp"
 #include "lusan/view/si/SIConstantDetails.hpp"
 #include "lusan/view/si/SIConstantList.hpp"
 
@@ -161,6 +160,17 @@ void SIConstant::dataTypeUpdated(DataTypeCustom* dataType)
     }
     
     blockBasicSignals(false);
+}
+
+int SIConstant::getColumnCount(void) const
+{
+    return mList->ctrlTableList()->columnCount();
+}
+
+QString SIConstant::getCellText(const QModelIndex& cell) const
+{
+    QTableWidgetItem* item = mList->ctrlTableList()->item(cell.row(), cell.column());
+    return (item != nullptr ? item->text() : QString());
 }
 
 void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
@@ -470,7 +480,7 @@ void SIConstant::updateWidgets(void)
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
     
-    mTableCell = new TableCell(QList<QAbstractItemModel *>{mTypeModel}, QList<int>{1}, mList->ctrlTableList());
+    mTableCell = new TableCell(QList<QAbstractItemModel *>{mTypeModel}, QList<int>{1}, mList->ctrlTableList(), this);
     mDetails->ctrlTypes()->setModel(mTypeModel);
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
     mList->ctrlTableList()->setItemDelegateForColumn(1, mTableCell);

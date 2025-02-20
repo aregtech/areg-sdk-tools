@@ -128,6 +128,13 @@ public:
      **/
     virtual bool canFetchMore(const QModelIndex& parent) const override;
 
+    /**
+     * \brief   Returns the flags for the item at the given index.
+     * \param   index   The index of the item.
+     * \return  The flags of the item.
+     **/
+    virtual Qt::ItemFlags flags(const QModelIndex &index) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
@@ -145,7 +152,7 @@ public:
      * \param   paths   The map of root paths.
      * \return  The index of the root item.
      **/
-    QModelIndex setRootPaths(const QMap<QString, QString>& paths);
+    const QModelIndex& setRootPaths(const QMap<QString, QString>& paths);
     
     /**
      * \brief   Returns the root paths of the file system model.
@@ -161,10 +168,9 @@ public:
     QString filePath(const QModelIndex& index);
 
     /**
-     * \brief   Refreshes the data for the given index.
-     * \param   index   The index of the item.
+     * \brief   Resets the model and refreshes the model starting from root entry.
      **/
-    void refresh(const QModelIndex& index);
+    void refresh(void);
     
     /**
      * \brief   Returns the file information for the given index.
@@ -184,6 +190,34 @@ public:
      **/
     void cleanFilters(void);
 
+    /**
+     * \brief   Deletes a file system entry for the given index.
+     * \param   index   The index of the item.
+     * \return  Returns true if the entry is deleted successfully.
+     **/
+    bool deleteEntry(const QModelIndex & index);
+
+    /**
+     * \brief   Returns the root index of the file system model.
+     **/
+    QModelIndex getRootIndex(void) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+
+    /**
+     * \brief   Resets the given entry, removes all children.
+     * \param   entry   The entry to reset.
+     **/
+    void resetEntry(FileSystemEntry * entry);
+
+    /**
+     * \brief   Resets the root entry of the file system.
+     **/
+    void resetRoot(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
@@ -191,6 +225,7 @@ private:
     FileSystemRootEntry mRootEntry;     //!< The root entry of the file system.
     WorkspaceEntries    mWorkspaceDirs; //!< The map of workspace directories.
     QStringList         mFileFilter;    //!< The filter to set when display file system data.
+    QModelIndex         mRootIndex;     //!< The index of the root.
 };
 
 //////////////////////////////////////////////////////////////////////////

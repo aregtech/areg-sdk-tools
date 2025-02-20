@@ -26,7 +26,6 @@
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
 #include "lusan/view/si/SIIncludeDetails.hpp"
 #include "lusan/view/si/SIIncludeList.hpp"
-#include "lusan/view/common/TableCell.hpp"
 
 #include <QCheckBox>
 #include <QHeaderView>
@@ -97,6 +96,17 @@ SIInclude::~SIInclude(void)
 {
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mDetails);
+}
+
+int SIInclude::getColumnCount(void) const
+{
+    return mList->ctrlTableList()->columnCount();
+}
+
+QString SIInclude::getCellText(const QModelIndex& cell) const
+{
+    QTableWidgetItem* item = mList->ctrlTableList()->item(cell.row(), cell.column());
+    return (item != nullptr ? item->text() : QString());
 }
 
 void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
@@ -398,7 +408,7 @@ void SIInclude::updateWidgets(void)
     QTableWidget* table = mList->ctrlTableList();
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Stretch);
     
-    mTableCell = new TableCell(QList<QAbstractItemModel*>(), QList<int>(), mList->ctrlTableList());
+    mTableCell = new TableCell(QList<QAbstractItemModel*>(), QList<int>(), mList->ctrlTableList(), this);
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
     SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
 

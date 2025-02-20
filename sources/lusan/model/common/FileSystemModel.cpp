@@ -28,6 +28,7 @@ FileSystemModel::FileSystemModel(QObject * parent /*= nullptr*/)
     , mRootEntry        ( tr("Workspace") )
     , mWorkspaceDirs    ( )
     , mFileFilter       ( )
+    , mRootIndex        ( )
 {
 }
     
@@ -36,11 +37,17 @@ FileSystemModel::FileSystemModel(const QMap<QString, QString> & workspaceEntries
     , mRootEntry        ( tr("Workspace") )
     , mWorkspaceDirs    (workspaceEntries)
     , mFileFilter       ( extFilters )
+    , mRootIndex        ( )
 {
     for (const QString & dir : mWorkspaceDirs)
     {
         FileSystemEntry* entry = new FileSystemEntry(dir, workspaceEntries[dir], FileSystemEntry::eEntryType::EntryDir, &mRootEntry);
         mRootEntry.addChild(entry);
+    }
+
+    if (mRootEntry.hasValidChildren())
+    {
+        mRootIndex = createIndex(0, 0, &mRootEntry);
     }
 }
 
@@ -55,7 +62,14 @@ QModelIndex FileSystemModel::index(int row, int column, const QModelIndex& paren
 
     const FileSystemEntry* parentEntry = isValidIndex(parent) == false ? &mRootEntry : static_cast<FileSystemEntry*>(parent.internalPointer());
     const FileSystemEntry* childEntry = parentEntry != nullptr ? parentEntry->getChild(row) : nullptr;
-    return (childEntry != nullptr ? createIndex(row, column, childEntry) : QModelIndex());
+    if (childEntry != nullptr)
+    {
+        return (childEntry != &mRootEntry ? createIndex(row, column, childEntry) : mRootIndex);
+    }
+    else
+    {
+        return QModelIndex();
+    }
 }
 
 QModelIndex FileSystemModel::parent(const QModelIndex& child) const
@@ -64,7 +78,14 @@ QModelIndex FileSystemModel::parent(const QModelIndex& child) const
         return QModelIndex();
 
     FileSystemEntry* parentEntry = static_cast<FileSystemEntry*>(child.internalPointer())->getParent();
-    return ((parentEntry != nullptr) && (parentEntry != &mRootEntry) ? createIndex(parentEntry->getRow(), 0, parentEntry) : QModelIndex());
+    if (parentEntry != nullptr)
+    {
+        return (parentEntry != &mRootEntry ? createIndex(parentEntry->getRow(), 0, parentEntry) : mRootIndex);
+    }
+    else
+    {
+        return QModelIndex();
+    }
 }
 
 int FileSystemModel::rowCount(const QModelIndex& parent) const
@@ -137,15 +158,31 @@ bool FileSystemModel::canFetchMore(const QModelIndex& parent) const
     return (parentEntry != nullptr) && (parentEntry->hasFetched() == false);
 }
 
-QModelIndex FileSystemModel::setRootPaths(const QMap<QString, QString>& paths)
+Qt::ItemFlags FileSystemModel::flags(const QModelIndex &index) const
+{
+    Qt::ItemFlags result = QAbstractItemModel::flags(index);
+    QModelIndex idxParent = parent(index);
+
+    if (idxParent.isValid() && (index != mRootIndex) && (idxParent != mRootIndex))
+    {
+        result |= Qt::ItemIsEditable;
+    }
+
+    return result;
+}
+
+const QModelIndex& FileSystemModel::setRootPaths(const QMap<QString, QString>& paths)
 {
     beginResetModel();
     mRootEntry.resetEntry();
     mWorkspaceDirs = paths;
     mRootEntry.setWorkspaceDirectories(paths);
-    QModelIndex index = createIndex(0, 0, &mRootEntry);
+    if (mRootIndex.isValid() == false)
+    {
+        mRootIndex = createIndex(0, 0, &mRootEntry);
+    }
     endResetModel();
-    return index;
+    return mRootIndex;
 }
 
 const QMap<QString, QString>& FileSystemModel::getRootPaths(void) const
@@ -162,22 +199,10 @@ QString FileSystemModel::filePath(const QModelIndex& index)
     return (entry != nullptr ? entry->getPath() : QString());
 }
 
-void FileSystemModel::refresh(const QModelIndex& index)
+void FileSystemModel::refresh(void)
 {
-    if (isValidIndex(index) == false)
-        return;
-    
-    FileSystemEntry* entry = static_cast<FileSystemEntry*>(index.internalPointer());
-    if ((entry == nullptr) || (entry->isDir() == false))
-        return;
-    
     beginResetModel();
-    entry->removeAll();
-    QFileInfoList list = entry->fetchData(mFileFilter);
-    for ( const QFileInfo & fi : list)
-    {
-        entry->addChild(fi, false);
-    }    
+    resetRoot();
     endResetModel();
 }
 
@@ -212,5 +237,57 @@ void FileSystemModel::cleanFilters(void)
         beginResetModel();
         mRootEntry.resetEntry();
         endResetModel();
+    }
+}
+
+QModelIndex FileSystemModel::getRootIndex(void) const
+{
+    return (mRootEntry.hasValidChildren() ? mRootIndex : QModelIndex());
+}
+
+bool FileSystemModel::deleteEntry(const QModelIndex & index)
+{
+    bool result{false};
+    
+    QModelIndex topIndex = this->parent(index);
+    FileSystemEntry* entry = static_cast<FileSystemEntry*>(index.internalPointer());
+    FileSystemEntry* parent = static_cast<FileSystemEntry*>(topIndex.internalPointer());
+    if ((entry == nullptr) || (parent == nullptr) || topIndex.isValid() || parent->isRoot() || mWorkspaceDirs.contains(entry->getPath()))
+        return result;
+    
+    QFileInfo fi{entry->getPath()};
+    if (fi.isDir())
+    {
+        QDir dir(entry->getPath());
+        result = dir.removeRecursively();
+    }
+    else
+    {
+        result = fi.dir().remove(entry->getPath());
+    }
+    
+    if (result)
+    {
+        beginRemoveRows(topIndex, index.row(), index.row());
+        parent->removeChild(entry);
+        endRemoveRows();
+    }
+    
+    return result;
+}
+
+void FileSystemModel::resetRoot(void)
+{
+    resetEntry(&mRootEntry);
+}
+
+void FileSystemModel::resetEntry(FileSystemEntry * entry)
+{
+    entry->resetEntry();
+    entry->removeAll();
+    QFileInfoList list = entry->fetchData(mFileFilter);
+    for ( const QFileInfo & fi : list)
+    {
+        entry->addChild(fi, false);
     }
 }
