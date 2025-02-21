@@ -405,6 +405,12 @@ public:
      **/
     inline void resetEntry(void);
 
+    inline int getChildIndex(FileSystemEntry* child) const;
+
+    inline int getChildIndex(uint32_t childId) const;
+
+    inline int getChildIndex(const QString& filePath) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Protected members
 //////////////////////////////////////////////////////////////////////////
@@ -758,6 +764,33 @@ inline void FileSystemEntry::resetEntry(void)
 {
     deleteEntries();
     addDummyEntry();
+}
+
+inline int FileSystemEntry::getChildIndex(FileSystemEntry* child) const
+{
+    return (child != nullptr ? mChildren.indexOf(child) : -1);
+}
+
+inline int FileSystemEntry::getChildIndex(uint32_t childId) const
+{
+    for (int i = 0; i < mChildren.size(); ++i)
+    {
+        if (mChildren[i]->getId() == childId)
+            return i;
+    }
+
+    return -1;
+}
+
+inline int FileSystemEntry::getChildIndex(const QString& filePath) const
+{
+    for (int i = 0; i < mChildren.size(); ++i)
+    {
+        if (mChildren[i]->getPath() == filePath)
+            return i;
+    }
+
+    return -1;
 }
 
 #endif // LUSAN_MODEL_COMMON_FILESYSTEMENTRY_HPP

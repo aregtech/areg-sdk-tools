@@ -198,6 +198,11 @@ void NaviFileSystem::onToolDeleteSelectedClicked(bool checked)
     }
 }
 
+void NaviFileSystem::onToolNaviRootClicked(bool checked)
+{
+    
+}
+
 void NaviFileSystem::onTreeViewCollapsed(const QModelIndex &index)
 {
 }
@@ -286,6 +291,7 @@ void NaviFileSystem::setupSignals(void)
     connect(ui->toolEditSelected,   &QToolButton::clicked,      this, &NaviFileSystem::onToolEditSelectedClicked);
     connect(ui->toolOpenSelected,   &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
     connect(ui->toolDeleteSelected, &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
+    connect(ui->toolNaviRoot,       &QToolButton::clicked,      this, &NaviFileSystem::onToolNaviRootClicked);
     connect(ui->treeView,           &QTreeView::collapsed,      this, &NaviFileSystem::onTreeViewCollapsed);
     connect(ui->treeView,           &QTreeView::expanded,       this, &NaviFileSystem::onTreeViewExpanded);
     connect(ui->treeView,           &QTreeView::doubleClicked,  this, &NaviFileSystem::onTreeViewDoubleClicked);

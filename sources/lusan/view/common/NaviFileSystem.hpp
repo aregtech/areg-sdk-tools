@@ -171,7 +171,9 @@ private slots:
      * \param   checked     The flag indicating if the tool button is checked.
      **/
     void onToolDeleteSelectedClicked(bool checked);
-
+    
+    void onToolNaviRootClicked(bool checked);
+    
     /**
      * \brief   Triggered when the tree view is collapsed.
      * \param   index   The index of the tree view.
@@ -206,6 +208,7 @@ private slots:
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
+    
 private:
 
     /**

@@ -202,6 +202,12 @@ public:
      **/
     QModelIndex getRootIndex(void) const;
 
+    QModelIndex insertDirectory(const QString& dirName, const QModelIndex& parentIndex);
+
+    QModelIndex insertFile(const QString& fileName, const QModelIndex& parentIndex);
+
+    QModelIndex renameEntry(const QString& newName, const QModelIndex& index);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////

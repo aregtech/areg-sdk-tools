@@ -276,6 +276,87 @@ bool FileSystemModel::deleteEntry(const QModelIndex & index)
     return result;
 }
 
+QModelIndex FileSystemModel::insertDirectory(const QString& dirName, const QModelIndex& parentIndex)
+{
+    if (dirName.isEmpty() || (parentIndex.isValid() == false))
+        return QModelIndex();
+
+    FileSystemEntry* parentEntry = static_cast<FileSystemEntry*>(parentIndex.internalPointer());
+    if (parentEntry == nullptr)
+        return QModelIndex();
+
+    QString path = parentEntry->getPath() + QDir::separator() + dirName;
+    QDir dir(path);
+    if (dir.exists() == false)
+    {
+        if (dir.mkpath(path))
+        {
+            QFileInfo fi(path);
+            beginInsertRows(parentIndex, parentEntry->getChildCount(), parentEntry->getChildCount());
+            FileSystemEntry* entry = parentEntry->addChild(fi, true);
+            endInsertRows();
+            return createIndex(parentEntry-getChildIndex(entry), 0, entry);
+        }
+    }
+
+    return QModelIndex();
+}
+
+QModelIndex FileSystemModel::insertFile(const QString& fileName, const QModelIndex& parentIndex)
+{
+    if (fileName.isEmpty() || !parentIndex.isValid())
+        return QModelIndex();
+
+    FileSystemEntry* parentEntry = static_cast<FileSystemEntry*>(parentIndex.internalPointer());
+    if (parentEntry == nullptr)
+        return QModelIndex();
+
+    QString path = parentEntry->getPath() + QDir::separator() + fileName;
+    QFile file(path);
+    if (!file.exists())
+    {
+        if (file.open(QIODevice::WriteOnly))
+        {
+            file.close();
+            QFileInfo fi(path);
+            beginInsertRows(parentIndex, parentEntry->getChildCount(), parentEntry->getChildCount());
+            FileSystemEntry* entry = parentEntry->addChild(fi, true);
+            endInsertRows();
+            return createIndex(parentEntry->getChildIndex(entry), 0, entry);
+        }
+    }
+
+    return QModelIndex();
+}
+
+QModelIndex FileSystemModel::renameEntry(const QString& newName, const QModelIndex& index)
+{
+    if (newName.isEmpty() || !isValidIndex(index))
+        return QModelIndex();
+
+    FileSystemEntry* entry = static_cast<FileSystemEntry*>(index.internalPointer());
+    if (entry == nullptr || entry->isRoot() || entry->isWorkspaceDir())
+        return QModelIndex();
+
+    QString newPath = entry->getParent()->getPath() + QDir::separator() + newName;
+    QFileInfo fi(newPath);
+
+    if (fi.exists())
+        return QModelIndex();
+
+    QDir dir;
+    if (dir.rename(entry->getPath(), newPath))
+    {
+        entry->setFilePath(newPath);
+        entry->setDisplayName(newName);
+        emit dataChanged(index, index);
+        return index;
+    }
+
+    return QModelIndex();
+}
+
+
 void FileSystemModel::resetRoot(void)
 {
     resetEntry(&mRootEntry);
