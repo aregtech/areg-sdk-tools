@@ -25,21 +25,27 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 
-TableCell::TableCell(QWidget* parent, IETableHelper * tableHelper)
+TableCell::TableCell(QWidget* parent, IETableHelper * tableHelper, bool waitEndEdit)
     : QStyledItemDelegate(parent)
     , mModels   ( )
     , mColumns  ( )
     , mParent   (parent)
     , mTable    (tableHelper)
+    , mWaitEnd  (waitEndEdit)
+    , mNewText  ( )
+    , mSelIndex ( )
 {
 }
 
-TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper)
+TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper, bool waitEndEdit)
     : QStyledItemDelegate(parent)
     , mModels   (models)
     , mColumns  (columns)
     , mParent   (parent)
     , mTable    (tableHelper)
+    , mWaitEnd  (waitEndEdit)
+    , mNewText  ( )
+    , mSelIndex ( )
 {
     Q_ASSERT(models.size() == columns.size());
     for (QAbstractItemModel* model : models)
@@ -91,19 +97,26 @@ QAbstractItemModel* TableCell::columnToModel(int col) const
 QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*option*/, const QModelIndex& index) const
 {
     QAbstractItemModel* model = columnToModel(index.column());
+    mNewText.clear();
+    mSelIndex = QModelIndex();
     if (model != nullptr)
     {
         QComboBox* combo = new QComboBox(parent);
         combo->setModel(model);
         combo->setProperty("index", index);
-        connect(combo, &QComboBox::currentTextChanged, this, &TableCell::onCurrentTextChanged);
+        connect(combo, &QComboBox::currentTextChanged, this, &TableCell::onComboTextChanged);
         return combo;
     }
     else if ( isValidColumn(index.column()) )
     {
         QLineEdit* editor = new QLineEdit(parent);
         editor->setProperty("index", index);
-        connect(editor, &QLineEdit::textChanged, this, &TableCell::onCurrentTextChanged);
+        connect(editor, &QLineEdit::textEdited, this, &TableCell::onEditorTextChanged);
+        if (mWaitEnd)
+        {
+            connect(editor, &QLineEdit::editingFinished, this, &TableCell::onEditorTextChangeFinished);
+        }
+        
         return editor;
     }
 
@@ -138,11 +151,38 @@ void TableCell::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem
     }
 }
 
-void TableCell::onCurrentTextChanged(const QString & newText)
+void TableCell::onComboTextChanged(const QString & newText)
 {
     QWidget *editor = qobject_cast<QWidget *>(sender());
     if (editor != nullptr)
     {
         emit editorDataChanged(editor->property("index").toModelIndex(), newText);
+    }
+}
+
+void TableCell::onEditorTextChanged(const QString & newText)
+{
+    QWidget *editor = qobject_cast<QWidget *>(sender());
+    if (editor != nullptr)
+    {
+        if (mWaitEnd == false)
+        {
+            emit editorDataChanged(editor->property("index").toModelIndex(), newText);
+        }
+        else
+        {
+            mNewText = newText;
+            mSelIndex = editor->property("index").toModelIndex();
+        }
+    }
+}
+
+void TableCell::onEditorTextChangeFinished(void)
+{
+    if (mWaitEnd && mSelIndex.isValid() && (mNewText.isEmpty() == false))
+    {
+        emit editorDataChanged(mSelIndex, mNewText);
+        mSelIndex = QModelIndex();
+        mNewText.clear();
     }
 }

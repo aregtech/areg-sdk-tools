@@ -480,7 +480,7 @@ void SIConstant::updateWidgets(void)
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
     
-    mTableCell = new TableCell(QList<QAbstractItemModel *>{mTypeModel}, QList<int>{1}, mList->ctrlTableList(), this);
+    mTableCell = new TableCell(QList<QAbstractItemModel *>{mTypeModel}, QList<int>{1}, mList->ctrlTableList(), this, false);
     mDetails->ctrlTypes()->setModel(mTypeModel);
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
     mList->ctrlTableList()->setItemDelegateForColumn(1, mTableCell);

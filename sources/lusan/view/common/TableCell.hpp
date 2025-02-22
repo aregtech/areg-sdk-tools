@@ -102,8 +102,11 @@ public:
      * \brief   Constructor with initialization.
      * \param   parent      The parent table widget.
      * \param   tableHelper The table helper object to validate the data.
+     * \param   waitEndEdit If true, waits until editing has been finished then trigger signal.
+     *                      If false, the signal is triggered each time the text is changed.
+     *                      Valid only for the line edit widget. Ignored for combo-box.
      **/
-    explicit TableCell(QWidget* parent, IETableHelper * tableHelper);
+    explicit TableCell(QWidget* parent, IETableHelper * tableHelper, bool waitEndEdit);
 
     /**
      * \brief   Constructor with initialization.
@@ -111,8 +114,11 @@ public:
      * \param   columns     The list of columns to create combo box.
      * \param   parent      The parent table widget.
      * \param   tableHelper The table helper object to validate the data.
+     * \param   waitEndEdit If true, waits until editing has been finished then trigger signal.
+     *                      If false, the signal is triggered each time the text is changed.
+     *                      Valid only for the line edit widget. Ignored for combo-box.
      **/
-    explicit TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper);
+    explicit TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper, bool waitEndEdit);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -163,8 +169,21 @@ private slots:
      * \brief   The slot is triggered when the current text in the combo box is changed.
      * \param   newText     The new text in the combo box.
      **/
-    void onCurrentTextChanged(const QString & newText);
+    void onComboTextChanged(const QString & newText);
 
+    /**
+     * \brief   The slot is triggered when the text in the editor widget is changed.
+     * \param   newText     The new text in the editor widget.
+     **/
+    void onEditorTextChanged(const QString & newText);
+    
+    /**
+     * \brief   The slot is triggered when the text editing in the editor widget is finished.
+     *          This slot is used to handle the event when the user has finished editing the text
+     *          in the editor widget. It validates the new text and updates the model accordingly.
+     **/
+    void onEditorTextChangeFinished(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -196,6 +215,9 @@ private:
     QList<int>                  mColumns;   //!< The list of columns to create combo box.
     QWidget *                   mParent;    //!< The parent table widget.
     IETableHelper*              mTable;     //!< The table helper object to validate the data.
+    bool                        mWaitEnd;   //!< Wait for end of editing. Valid only for line editor, no relevant to combobox.
+    mutable QString             mNewText;   //!< The changed text.
+    mutable QModelIndex         mSelIndex;  //!< The index of selected item.
 };
 
 #endif // LUSAN_VIEW_COMMON_TableCell_HPP
