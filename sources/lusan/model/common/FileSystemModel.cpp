@@ -111,7 +111,7 @@ QVariant FileSystemModel::data(const QModelIndex& index, int role) const
     switch (static_cast<Qt::ItemDataRole>(role))
     {
     case Qt::ItemDataRole::DisplayRole:
-        return entry->getDiplayName();
+        return entry->getDisplayName();
     
     case Qt::ItemDataRole::DecorationRole:
         return entry->getIcon();
@@ -201,10 +201,40 @@ QString FileSystemModel::filePath(const QModelIndex& index)
 
 void FileSystemModel::refresh(void)
 {
-    beginResetModel();
-    resetRoot();
-    endResetModel();
+    refresh(&mRootEntry);
 }
+
+void FileSystemModel::refresh(const QModelIndex & index)
+{
+    FileSystemEntry* entry = static_cast<FileSystemEntry*>(index.internalPointer());
+    refresh(entry);
+}
+
+void FileSystemModel::refresh(FileSystemEntry* entry)
+{
+    if (entry == nullptr)
+        return;
+    
+    if (entry == &mRootEntry)
+    {
+        beginResetModel();
+        resetRoot();
+        endResetModel();
+    }
+    else if (entry->isDir())
+    {
+        resetEntry(entry);
+        int childCount = entry->getChildCount();
+        beginInsertRows(createIndex(entry->getRow(), 0, entry), 0, childCount == 0 ? 0 : childCount - 1);
+        endInsertRows();
+    }
+    else
+    {
+        FileSystemEntry* parent = entry->getParent();
+        refresh(parent);
+    }
+}
+
 
 QFileInfo FileSystemModel::getFileInfo(const QModelIndex& index) const
 {
@@ -252,7 +282,7 @@ bool FileSystemModel::deleteEntry(const QModelIndex & index)
     QModelIndex topIndex = this->parent(index);
     FileSystemEntry* entry = static_cast<FileSystemEntry*>(index.internalPointer());
     FileSystemEntry* parent = static_cast<FileSystemEntry*>(topIndex.internalPointer());
-    if ((entry == nullptr) || (parent == nullptr) || topIndex.isValid() || parent->isRoot() || mWorkspaceDirs.contains(entry->getPath()))
+    if ((entry == nullptr) || (parent == nullptr) || parent->isRoot() || mWorkspaceDirs.contains(entry->getPath()))
         return result;
     
     QFileInfo fi{entry->getPath()};
@@ -282,24 +312,36 @@ QModelIndex FileSystemModel::insertDirectory(const QString& dirName, const QMode
         return QModelIndex();
 
     FileSystemEntry* parentEntry = static_cast<FileSystemEntry*>(parentIndex.internalPointer());
-    if (parentEntry == nullptr)
+    if ((parentEntry == nullptr) || (parentEntry->isRoot()))
         return QModelIndex();
-
+    
+    QModelIndex result;
     QString path = parentEntry->getPath() + QDir::separator() + dirName;
     QDir dir(path);
     if (dir.exists() == false)
     {
         if (dir.mkpath(path))
         {
+            FileSystemEntry* entry{nullptr};
             QFileInfo fi(path);
-            beginInsertRows(parentIndex, parentEntry->getChildCount(), parentEntry->getChildCount());
-            FileSystemEntry* entry = parentEntry->addChild(fi, true);
-            endInsertRows();
-            return createIndex(parentEntry-getChildIndex(entry), 0, entry);
+            if (parentEntry->hasFetched())
+            {
+                beginInsertRows(parentIndex, 0, parentEntry->getChildCount() + 1);
+                entry = parentEntry->addChild(fi, true);
+                endInsertRows();
+            }
+            else
+            {
+                refresh(parentEntry);
+                entry = parentEntry->getChild(fi.filePath());
+                Q_ASSERT(entry != nullptr);
+            }
+            
+            result = createIndex(entry->getRow(), 0, entry);
         }
     }
 
-    return QModelIndex();
+    return result;
 }
 
 QModelIndex FileSystemModel::insertFile(const QString& fileName, const QModelIndex& parentIndex)
@@ -308,21 +350,32 @@ QModelIndex FileSystemModel::insertFile(const QString& fileName, const QModelInd
         return QModelIndex();
 
     FileSystemEntry* parentEntry = static_cast<FileSystemEntry*>(parentIndex.internalPointer());
-    if (parentEntry == nullptr)
+    if ((parentEntry == nullptr) || (parentEntry->isRoot()))
         return QModelIndex();
 
-    QString path = parentEntry->getPath() + QDir::separator() + fileName;
-    QFile file(path);
+    QString newPath = parentEntry->getPath() + QDir::separator() + fileName;
+    QFile file(newPath);
     if (!file.exists())
     {
         if (file.open(QIODevice::WriteOnly))
         {
             file.close();
-            QFileInfo fi(path);
-            beginInsertRows(parentIndex, parentEntry->getChildCount(), parentEntry->getChildCount());
-            FileSystemEntry* entry = parentEntry->addChild(fi, true);
-            endInsertRows();
-            return createIndex(parentEntry->getChildIndex(entry), 0, entry);
+            QFileInfo fi(newPath);
+            FileSystemEntry* entry {nullptr};
+            if (parentEntry->hasFetched())
+            {
+                beginInsertRows(parentIndex, 0, parentEntry->getChildCount());
+                FileSystemEntry* entry = parentEntry->addChild(fi, true);
+                endInsertRows();
+            }
+            else
+            {
+                refresh(parentEntry);
+                entry = parentEntry->getChild(fi.filePath());
+                Q_ASSERT(entry != nullptr);
+            }
+            
+            return createIndex(entry->getRow(), 0, entry);
         }
     }
 
@@ -337,25 +390,61 @@ QModelIndex FileSystemModel::renameEntry(const QString& newName, const QModelInd
     FileSystemEntry* entry = static_cast<FileSystemEntry*>(index.internalPointer());
     if (entry == nullptr || entry->isRoot() || entry->isWorkspaceDir())
         return QModelIndex();
+    
+    FileSystemEntry* parent = entry->getParent();
+    Q_ASSERT(parent != nullptr);
 
-    QString newPath = entry->getParent()->getPath() + QDir::separator() + newName;
+    QString newPath = parent->getPath() + QDir::separator() + newName;
     QFileInfo fi(newPath);
 
     if (fi.exists())
         return QModelIndex();
 
     QDir dir;
-    if (dir.rename(entry->getPath(), newPath))
+    if (dir.rename(entry->getPath(), fi.filePath()))
     {
-        entry->setFilePath(newPath);
-        entry->setDisplayName(newName);
-        emit dataChanged(index, index);
-        return index;
+        beginInsertRows(index.parent(), 0, parent->getChildCount());
+        entry->setFilePath(fi.filePath());
+        parent->refreshChildren(mFileFilter);
+        entry = parent->getChild(fi.filePath());
+        Q_ASSERT(entry != nullptr);
+        int pos = entry->getRow();
+        endInsertRows();
+        return createIndex(pos, 0, entry);
     }
 
     return QModelIndex();
 }
 
+bool FileSystemModel::containsChildEntry(const QModelIndex & parentIndex, const QString& fileName) const
+{
+    const FileSystemEntry * entry = static_cast<const FileSystemEntry *>(parentIndex.constInternalPointer());
+    return (entry != nullptr ? entry->containsEntryName(fileName) : false);
+}
+
+bool FileSystemModel::existsDirectory(const QString & dirPath) const
+{
+    QFileInfo fi(dirPath);
+    return fi.exists();
+}
+
+bool FileSystemModel::existsDirectory(const QModelIndex & parentIndex, const QString & subdirName) const
+{
+    const FileSystemEntry * entry = static_cast<const FileSystemEntry *>(parentIndex.constInternalPointer());
+    return (entry != nullptr) && entry->isValid() && existsDirectory(entry->getPath() + QDir::separator() + subdirName) ;
+}
+
+bool FileSystemModel::existsFile(const QString& filePath) const
+{
+    QFileInfo fi(filePath);
+    return fi.exists();
+}
+
+bool FileSystemModel::existsFile(const QModelIndex & parentIndex, const QString& fileName) const
+{
+    const FileSystemEntry * entry = static_cast<const FileSystemEntry *>(parentIndex.constInternalPointer());
+    return (entry != nullptr) && entry->isValid() && existsFile(entry->getPath() + QDir::separator() + fileName) ;
+}
 
 void FileSystemModel::resetRoot(void)
 {

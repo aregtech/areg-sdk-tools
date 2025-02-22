@@ -171,6 +171,16 @@ public:
      * \brief   Resets the model and refreshes the model starting from root entry.
      **/
     void refresh(void);
+
+    /**
+     * \brief   Resets and refreshes the entries of specified index.
+     **/
+    void refresh(const QModelIndex & index);
+    
+    /**
+     * \brief   Resets and refreshes the entries of specified entry.
+     **/
+    void refresh(FileSystemEntry* entry);
     
     /**
      * \brief   Returns the file information for the given index.
@@ -202,12 +212,69 @@ public:
      **/
     QModelIndex getRootIndex(void) const;
 
+    
+    /**
+     * \brief   Inserts a new directory into the file system model.
+     * \param   dirName     The name of the directory to insert.
+     * \param   parentIndex The index of the parent item where the directory should be inserted.
+     * \return  The index of the newly inserted directory.
+     **/
     QModelIndex insertDirectory(const QString& dirName, const QModelIndex& parentIndex);
 
+    /**
+     * \brief   Inserts a new file into the file system model.
+     * \param   fileName    The name of the file to insert.
+     * \param   parentIndex The index of the parent item where the file should be inserted.
+     * \return  The index of the newly inserted file.
+     **/
     QModelIndex insertFile(const QString& fileName, const QModelIndex& parentIndex);
 
+    /**
+     * \brief   Renames a file system entry.
+     * \param   newName The new name for the file system entry.
+     * \param   index   The index of the entry to rename.
+     * \return  The index of the renamed entry.
+     **/
     QModelIndex renameEntry(const QString& newName, const QModelIndex& index);
 
+    /**
+     * \brief   Checks if the given parent index contains a child entry with the specified file name.
+     * \param   parentIndex The index of the parent item.
+     * \param   fileName    The name of the file to check.
+     * \return  True if the parent index contains a child entry with the specified file name, false otherwise.
+     **/
+    bool containsChildEntry(const QModelIndex & parentIndex, const QString& fileName) const;
+
+    /**
+     * \brief   Checks if a directory exists at the given path.
+     * \param   dirPath     The full path of the directory to check.
+     * \return  True if the directory exists, false otherwise.
+     **/
+    bool existsDirectory(const QString & dirPath) const;
+
+    /**
+     * \brief   Checks if a subdirectory exists within the given parent directory.
+     * \param   parentIndex The index of the parent directory.
+     * \param   subdirName  The name of the subdirectory to check.
+     * \return  True if the subdirectory exists, false otherwise.
+     **/
+    bool existsDirectory(const QModelIndex & parentIndex, const QString & subdirName) const;
+
+    /**
+     * \brief   Checks if a file exists at the given file path.
+     * \param   filePath    The full path of the file to check.
+     * \return  True if the file exists, false otherwise.
+     **/
+    bool existsFile(const QString& filePath) const;
+
+    /**
+     * \brief   Checks if a file exists within the given parent directory.
+     * \param   parentIndex The index of the parent directory.
+     * \param   fileName    The name of the file to check.
+     * \return  True if the file exists, false otherwise.
+     **/
+    bool existsFile(const QModelIndex & parentIndex, const QString& fileName) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////

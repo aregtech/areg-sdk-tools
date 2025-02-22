@@ -23,6 +23,10 @@
 #include <QIcon>
 #include <QFileIconProvider>
 
+ //////////////////////////////////////////////////////////////////////////
+ // FileSystemEntry class implementation
+ //////////////////////////////////////////////////////////////////////////
+
 FileSystemEntry FileSystemEntry::EmptyEntry("..", "..", FileSystemEntry::eEntryType::EntryUnknown, QIcon(), nullptr);
 
 FileSystemEntry::FileSystemEntry(const QString& path, FileSystemEntry* parent)
@@ -251,12 +255,12 @@ FileSystemEntry& FileSystemEntry::operator = (FileSystemEntry&& other) noexcept
 
 bool FileSystemEntry::operator == (const FileSystemEntry& other) const
 {
-    return ((mId == other.mId) || (mFilePath == other.mFilePath));
+    return ((mId == other.mId) || (mFilePath.compare(other.mFilePath, Qt::CaseSensitivity::CaseInsensitive) == 0));
 }
 
 bool FileSystemEntry::operator != (const FileSystemEntry& other) const
 {
-    return ((mId != other.mId) && (mFilePath != other.mFilePath));
+    return ((mId != other.mId) && (mFilePath.compare(other.mFilePath, Qt::CaseSensitivity::CaseInsensitive) != 0));
 }
 
 bool FileSystemEntry::operator < (const FileSystemEntry& other) const
@@ -266,7 +270,7 @@ bool FileSystemEntry::operator < (const FileSystemEntry& other) const
     else if (isFile() && other.isDir())
         return false;
     else
-        return (mFilePath < other.mFilePath);
+        return (mFilePath.compare(other.mFilePath, Qt::CaseSensitivity::CaseInsensitive) < 0);;
 }
 
 bool FileSystemEntry::operator > (const FileSystemEntry& other) const
@@ -276,12 +280,46 @@ bool FileSystemEntry::operator > (const FileSystemEntry& other) const
     else if (isFile() && other.isDir())
         return true;
     else
-        return (mFilePath > other.mFilePath);
+        return (mFilePath.compare(other.mFilePath, Qt::CaseSensitivity::CaseInsensitive) > 0);
 }
 
 uint32_t FileSystemEntry::getNextId(void) const
 {
     return (mParent != nullptr ? mParent->getNextId() : 0);
+}
+
+void FileSystemEntry::setFilePath(const QString& newPath)
+{
+    if (isValid() && (mParent != nullptr) && (mParent->isRoot() == false))
+    {
+        mFilePath = newPath;
+        QFileInfo fi(newPath);
+        mDispName = fi.fileName();
+        if (mDispName.isEmpty())
+        {
+            mDispName = fi.dir().dirName();
+        }
+    }
+}
+
+void FileSystemEntry::setChildFilePath(const QString& oldPath, const QString& newPath)
+{
+    FileSystemEntry* entry = getChild(oldPath);
+    if (entry != nullptr)
+    {
+        entry->setFilePath(newPath);
+    }
+}
+
+bool FileSystemEntry::containsEntryName(const QString& fileName) const
+{
+    for (const FileSystemEntry* entry : mChildren)
+    {
+        if (fileName.compare(entry->getDisplayName(), Qt::CaseSensitivity::CaseInsensitive) == 0)
+            return true;
+    }
+    
+    return false;
 }
 
 void FileSystemEntry::deleteEntries(void)
@@ -377,6 +415,37 @@ bool FileSystemEntry::hasValidChildren(void) const
         return true;
     }
 }
+
+int FileSystemEntry::refreshChildren(const QStringList& filter /*= QStringList()*/)
+{
+    int result{ 0 };
+    QFileInfoList list{ std::move(fetchData(filter)) };
+    removeAll();
+    if (list.size() > 0)
+    {
+        result = list.size();
+        for (const QFileInfo& fi : list)
+        {
+            addChild(fi, false);
+        }
+    }
+    else if (isDir())
+    {
+        addDummyEntry();
+    }
+
+    return result;
+}
+
+void FileSystemEntry::sort(bool ascending)
+{
+    std::sort(mChildren.begin(), mChildren.end(), [ascending](FileSystemEntry* left, FileSystemEntry* right) -> bool
+        {return ascending ? (*left < *right) : (*left > *right); });
+}
+
+//////////////////////////////////////////////////////////////////////////
+// FileSystemRootEntry class implementation
+//////////////////////////////////////////////////////////////////////////
 
 FileSystemRootEntry::FileSystemRootEntry(const QString& name)
     : FileSystemEntry(name, name, FileSystemEntry::eEntryType::EntryRoot, QIcon(), nullptr)

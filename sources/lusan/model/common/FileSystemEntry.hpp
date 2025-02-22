@@ -204,6 +204,20 @@ public:
      * \return  True if the file system entry has valid children, false otherwise.
      **/
     virtual bool hasValidChildren(void) const;
+
+    /**
+     * \brief   Refreshes the children of the file system entry.
+     * \param   filter  The list of file extension filters.
+     * \return  The number of refreshed children.
+     **/
+    virtual int refreshChildren(const QStringList& filter = QStringList());
+
+    /**
+     * \brief   Sorts the child entries. The sorting is done in ascending or descending order.
+     *          The first entries are directories, followed by files.
+     * \param   ascending   Flag, indicating whether the sorting is done ascending or descending.
+     **/
+    virtual void sort(bool ascending);
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -254,7 +268,7 @@ public:
     /**
      * \brief   Returns the display name of the file system entry.
      **/
-    inline const QString& getDiplayName(void) const;
+    inline const QString& getDisplayName(void) const;
     
     /**
      * \brief   Returns the icon of the file system entry.
@@ -405,11 +419,28 @@ public:
      **/
     inline void resetEntry(void);
 
-    inline int getChildIndex(FileSystemEntry* child) const;
+    /**
+     * \brief   Sets the file path, updates the display name, if it is not the root entry
+     *          of workspace entry (child or root).
+     * \param   newPath     The new path to set.
+     */
+    void setFilePath(const QString& newPath);
 
-    inline int getChildIndex(uint32_t childId) const;
+    
+    /**
+     * \brief   Sets the file path of a child entry.
+     * \param   oldPath     The old path of the child entry.
+     * \param   newPath     The new path of the child entry.
+     **/
+    void setChildFilePath(const QString& oldPath, const QString& newPath);
 
-    inline int getChildIndex(const QString& filePath) const;
+    
+    /**
+     * \brief   Checks if the file system entry contains a child with the given file name.
+     * \param   fileName    The name of the file to check.
+     * \return  True if the file system entry contains a child with the given file name, false otherwise.
+     **/
+    bool containsEntryName(const QString& fileName) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -425,7 +456,7 @@ protected:
      * \brief   Deletes all child entries.
      **/
     void deleteEntries(void);
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -596,7 +627,7 @@ inline QString FileSystemEntry::getFileName(void) const
     return (fileName.isEmpty() && fi.isDir() ? fi.dir().dirName() : fileName);
 }
 
-inline const QString& FileSystemEntry::getDiplayName(void) const
+inline const QString& FileSystemEntry::getDisplayName(void) const
 {
     return mDispName;
 }
@@ -764,33 +795,6 @@ inline void FileSystemEntry::resetEntry(void)
 {
     deleteEntries();
     addDummyEntry();
-}
-
-inline int FileSystemEntry::getChildIndex(FileSystemEntry* child) const
-{
-    return (child != nullptr ? mChildren.indexOf(child) : -1);
-}
-
-inline int FileSystemEntry::getChildIndex(uint32_t childId) const
-{
-    for (int i = 0; i < mChildren.size(); ++i)
-    {
-        if (mChildren[i]->getId() == childId)
-            return i;
-    }
-
-    return -1;
-}
-
-inline int FileSystemEntry::getChildIndex(const QString& filePath) const
-{
-    for (int i = 0; i < mChildren.size(); ++i)
-    {
-        if (mChildren[i]->getPath() == filePath)
-            return i;
-    }
-
-    return -1;
 }
 
 #endif // LUSAN_MODEL_COMMON_FILESYSTEMENTRY_HPP

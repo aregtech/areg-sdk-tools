@@ -145,15 +145,43 @@ void NaviFileSystem::onToolCollapseAllClicked(bool checked)
 
 void NaviFileSystem::onToolNewFolderClicked(bool checked)
 {
+    static QString _defName("NewFolder");
     QTreeView* table = ui->treeView;
     QModelIndex index = table->selectionModel()->currentIndex();
-    QFileInfo fi = mNaviModel->getFileInfo(index);
-    QString folderPath = fi.isDir() ? fi.filePath() : fi.dir().path();
+    uint32_t count{ 1 };
+    QString name;
+    do
+    {
+        name = _defName + QString::number(count ++);
+    } while(mNaviModel->existsDirectory(index, name));
+    
+    QModelIndex newIndex = mNaviModel->insertDirectory(name, index);
+    if (newIndex.isValid())
+    {
+        table->setCurrentIndex(newIndex);
+        table->edit(newIndex);
+    }
 }
 
 void NaviFileSystem::onToolNewFileClicked(bool checked)
 {
+    static QString _defName("NewService");
+    static QString _defExt(".siml");
+    QTreeView* table = ui->treeView;
+    QModelIndex index = table->selectionModel()->currentIndex();
+    uint32_t count{ 1 };
+    QString name;
+    do
+    {
+        name = _defName + QString::number(count ++) + _defExt;
+    } while(mNaviModel->existsDirectory(index, name));
     
+    QModelIndex newIndex = mNaviModel->insertFile(name, index);
+    if (newIndex.isValid())
+    {
+        table->setCurrentIndex(newIndex);
+        table->edit(newIndex);
+    }
 }
 
 void NaviFileSystem::onToolOpenSelectedClicked(bool checked)
@@ -186,14 +214,31 @@ void NaviFileSystem::onToolDeleteSelectedClicked(bool checked)
     QString filePath = fi.filePath();
     if (filePath.isEmpty() == false)
     {
+        QModelIndex parent = index.parent();
         int result = QMessageBox::question(   mMainFrame
                                             , tr("Delete File") + " - Lusan"
                                             , tr("Are you sure you want to delete ") + (fi.isDir() ? tr("directory") : tr("file")) + "\n" + filePath
                                             , QMessageBox::StandardButton::Ok | QMessageBox::StandardButton::Cancel
                                             , QMessageBox::StandardButton::Cancel);
-        if (result == QMessageBox::StandardButton::Ok)
+        
+        if ((result == QMessageBox::StandardButton::Ok) && mNaviModel->deleteEntry(index))
         {
-            mNaviModel->deleteEntry(index);
+            Q_ASSERT(parent.isValid());
+            int rowCount = mNaviModel->rowCount(parent);
+            if (rowCount == 0)
+            {
+                index = parent;
+            }
+            else if (index.row() >= rowCount)
+            {
+                index = mNaviModel->index(rowCount - 1, 0, parent);
+            }
+            else
+            {
+                index  = mNaviModel->index(index.row(), 0, parent);
+            }
+            
+            table->setCurrentIndex(index);
         }
     }
 }
@@ -235,7 +280,11 @@ void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString
         return;
 
     QTreeView * table = ui->treeView;
-    // cellChanged(index.row(), index.column(), newValue);
+    QModelIndex newIndex = mNaviModel->renameEntry(newValue, index);
+    if (newIndex.isValid())
+    {
+        table->setCurrentIndex(newIndex);
+    }
 }
 
 void NaviFileSystem::updateData(void)
@@ -277,7 +326,7 @@ void NaviFileSystem::setupWidgets(void)
     ctrlFileSystem()->setSortingEnabled(true);
     ctrlToolShowAll()->setCheckable(true);
 
-    mTableCell = new TableCell(ctrlFileSystem(), this);
+    mTableCell = new TableCell(ctrlFileSystem(), this, true);
     ctrlFileSystem()->setItemDelegateForColumn(0, mTableCell);
 }
 

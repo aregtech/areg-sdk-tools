@@ -1115,7 +1115,7 @@ void SIDataType::updateWidgets(void)
     mKeysModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mKeysModel->updateDataTypeLists();
     
-    // mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel}, QList<int>{1}, mList->ctrlTableList());
+    // mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel}, QList<int>{1}, mList->ctrlTableList(), this, false);
     
     QComboBox* container = mDetails->ctrlContainerObject();
     const QList<DataTypeBasicContainer*>& containers {_getContainerTypes()};
