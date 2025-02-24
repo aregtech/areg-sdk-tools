@@ -225,7 +225,7 @@ QString LusanApplication::getWorkspaceIncludes(void)
     }
 }
 
-QString LusanApplication::getWOrkspaceDelivery(void)
+QString LusanApplication::getWorkspaceDelivery(void)
 {
     if (LusanApplication::theApp != nullptr)
     {

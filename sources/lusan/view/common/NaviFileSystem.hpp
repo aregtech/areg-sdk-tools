@@ -86,6 +86,9 @@ public:
      **/
     QToolButton* ctrlToolCollapse(void) const;
 
+    /**
+     * \brief   Returns the new folder tool button control.
+     **/
     QToolButton* ctrlToolNewFolder(void) const;
 
     /**
@@ -97,6 +100,11 @@ public:
      * \brief   Returns the open tool button control.
      **/
     QToolButton* ctrlToolOpen(void) const;
+
+    /**
+     * \brief   Returns the edit tool button control.
+     **/
+    QToolButton* ctrlToolEdit(void) const;
 
     /**
      * \brief   Returns the delete tool button control.
@@ -175,18 +183,6 @@ private slots:
     void onToolNaviRootClicked(bool checked);
     
     /**
-     * \brief   Triggered when the tree view is collapsed.
-     * \param   index   The index of the tree view.
-     **/
-    void onTreeViewCollapsed(const QModelIndex &index);
-
-    /**
-     * \brief   Triggered when the tree view is expanded.
-     * \param   index   The index of the tree view.
-     **/
-    void onTreeViewExpanded(const QModelIndex &index);
-
-    /**
      * \brief   Triggered when the tree view is double clicked.
      * \param   index   The index of the tree view.
      **/
@@ -198,6 +194,13 @@ private slots:
      **/
     void onTreeViewActivated(const QModelIndex &index);
 
+    /**
+     * \brief   Triggered when the tree view selection is changed.
+     * \param   current     The current index of the tree view.
+     * \param   previous    The previous index of the tree view.
+     **/
+    void onTreeSelectinoRowChanged(const QModelIndex &current, const QModelIndex &previous);
+    
     /**
      * \brief   Triggered when the cell editor data is changed.
      * \param   index       The index of the cell.
@@ -225,6 +228,12 @@ private:
      * \brief   Initializes the signals.
      **/
     void setupSignals(void);
+
+    /**
+     * \brief   Blocks the basic signals.
+     * \param   block   If true, blocks the signals. Otherwise, unblocks the signals.
+     **/
+    void blockBasicSignals(bool block);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden members

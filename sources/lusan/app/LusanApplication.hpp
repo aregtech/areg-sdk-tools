@@ -113,7 +113,7 @@ public:
     /**
      * \brief   Returns the workspace delivery directory.
      **/
-    static QString getWOrkspaceDelivery(void);
+    static QString getWorkspaceDelivery(void);
     
 private:
     static LusanApplication *   theApp;     //!< The singleton instance of the application.
