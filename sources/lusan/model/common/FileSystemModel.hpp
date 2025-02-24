@@ -211,7 +211,6 @@ public:
      * \brief   Returns the root index of the file system model.
      **/
     QModelIndex getRootIndex(void) const;
-
     
     /**
      * \brief   Inserts a new directory into the file system model.
@@ -274,6 +273,97 @@ public:
      * \return  True if the file exists, false otherwise.
      **/
     bool existsFile(const QModelIndex & parentIndex, const QString& fileName) const;
+
+    /**
+     * \brief   Checks if the given index is a file.
+     * \param   index   The index of the item.
+     * \return  True if the index is a file, false otherwise.
+     **/
+    bool isFile(const QModelIndex & index) const;
+
+    /**
+     * \brief   Checks if the given index is a directory.
+     * \param   index   The index of the item.
+     * \return  True if the index is a directory, false otherwise.
+     **/
+    bool isDir(const QModelIndex & index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace entry.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace entry, false otherwise.
+     **/
+    bool isWorkspaceEntry(const QModelIndex & index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace project.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace project, false otherwise.
+     **/
+    bool isWorkspaceProject(const QModelIndex & index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace project subdirectory entry.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace project subdirectory entry, false otherwise.
+     **/
+    bool isWorkspaceProjectSubdirEntry(const QModelIndex& index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace source directory.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace source directory, false otherwise.
+     **/
+    bool isWorkspaceSource(const QModelIndex & index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace source subdirectory entry.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace source subdirectory entry, false otherwise.
+     **/
+    bool isWorkspaceSourceSubdirEntry(const QModelIndex& index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace delivery directory.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace delivery directory, false otherwise.
+     **/
+    bool isWorkspaceDelivery(const QModelIndex & index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace delivery subdirectory entry.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace delivery subdirectory entry, false otherwise.
+     **/
+    bool isWorkspaceDeliverySubdirEntry(const QModelIndex& index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace include directory.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace include directory, false otherwise.
+     **/
+    bool isWorkspaceInclude(const QModelIndex & index) const;
+
+    /**
+     * \brief   Checks if the given index is a workspace include subdirectory entry.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace include subdirectory entry, false otherwise.
+     **/
+    bool isWorkspaceIncludeSubdirEntry(const QModelIndex& index) const;
+
+    /**
+     * \brief   Checks if the given index is a file that can be handled by Lusan application.
+     * \param   index   The index of the item.
+     * \return  True if the index is a file to be handeled by Lusan application, false otherwise.
+     **/
+    bool isLusanFile(const QModelIndex & index) const;
+
+    /**
+     * \brief   Checks if the given index is a root entry.
+     * \param   index   The index of the item.
+     * \return  True if the index is a root entry, false otherwise.
+     **/
+    bool isRoot(const QModelIndex & index) const;
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

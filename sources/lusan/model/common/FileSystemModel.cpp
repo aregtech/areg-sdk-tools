@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/model/common/FileSystemModel.hpp"
+#include "lusan/app/LusanApplication.hpp"
 
 #include <QDir>
 #include <QFileInfo>
@@ -444,6 +445,107 @@ bool FileSystemModel::existsFile(const QModelIndex & parentIndex, const QString&
 {
     const FileSystemEntry * entry = static_cast<const FileSystemEntry *>(parentIndex.constInternalPointer());
     return (entry != nullptr) && entry->isValid() && existsFile(entry->getPath() + QDir::separator() + fileName) ;
+}
+
+bool FileSystemModel::isFile(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    return ((entry != nullptr) && entry->isFile());
+}
+
+bool FileSystemModel::isDir(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    return ((entry != nullptr) && entry->isDir());
+}
+
+bool FileSystemModel::isWorkspaceEntry(const QModelIndex& index) const
+{
+    return (mRootIndex == index) || (index.isValid() && (parent(index) == mRootIndex));
+}
+
+bool FileSystemModel::isWorkspaceProject(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString dir{ LusanApplication::getWorkspaceRoot() };
+    const QString path{ entry != nullptr ? entry->getPath() : "" };
+    return (path.isEmpty() == false) && (path.compare(dir, Qt::CaseSensitivity::CaseInsensitive) == 0);
+}
+
+bool FileSystemModel::isWorkspaceProjectSubdirEntry(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString dir{ LusanApplication::getWorkspaceRoot() };
+    const QString path{ entry != nullptr ? entry->getPath() : "" };
+    return (path.isEmpty() == false) && (dir.isEmpty() == false) && path.startsWith(dir, Qt::CaseSensitivity::CaseInsensitive);
+}
+
+bool FileSystemModel::isWorkspaceSource(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString dir{ LusanApplication::getWorkspaceSources() };
+    const QString path{ entry != nullptr ? entry->getPath() : "" };
+    return (path.isEmpty() == false) && (path.compare(dir, Qt::CaseSensitivity::CaseInsensitive) == 0);
+}
+
+bool FileSystemModel::isWorkspaceSourceSubdirEntry(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString dir{ LusanApplication::getWorkspaceSources() };
+    const QString path{ entry != nullptr ? entry->getPath() : "" };
+    return (path.isEmpty() == false) && (dir.isEmpty() == false) && path.startsWith(dir, Qt::CaseSensitivity::CaseInsensitive);
+}
+
+bool FileSystemModel::isWorkspaceDelivery(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString dir{ LusanApplication::getWorkspaceDelivery() };
+    const QString path{ entry != nullptr ? entry->getPath() : "" };
+    return (path.isEmpty() == false) && (path.compare(dir, Qt::CaseSensitivity::CaseInsensitive) == 0);
+}
+
+bool FileSystemModel::isWorkspaceDeliverySubdirEntry(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString dir{ LusanApplication::getWorkspaceDelivery() };
+    const QString path{ entry != nullptr ? entry->getPath() : "" };
+    return (path.isEmpty() == false) && (dir.isEmpty() == false) && path.startsWith(dir, Qt::CaseSensitivity::CaseInsensitive);
+}
+
+bool FileSystemModel::isWorkspaceInclude(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString dir{ LusanApplication::getWorkspaceIncludes() };
+    const QString path{ entry != nullptr ? entry->getPath() : "" };
+    return (path.isEmpty() == false) && (path.compare(dir, Qt::CaseSensitivity::CaseInsensitive) == 0);
+}
+
+bool FileSystemModel::isWorkspaceIncludeSubdirEntry(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString dir{ LusanApplication::getWorkspaceIncludes() };
+    const QString path{ entry != nullptr ? entry->getPath() : "" };
+    return (path.isEmpty() == false) && (dir.isEmpty() == false) && path.startsWith(dir, Qt::CaseSensitivity::CaseInsensitive);
+}
+
+bool FileSystemModel::isLusanFile(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    if ((entry == nullptr) || entry->isDir())
+        return false;
+
+    for (const QString& ext : LusanApplication::InternalExts)
+    {
+        if (entry->getPath().endsWith(ext, Qt::CaseSensitivity::CaseInsensitive))
+            return true;
+    }
+
+    return false;
+}
+
+bool FileSystemModel::isRoot(const QModelIndex & index) const
+{
+    return (index.isValid() && (index == mRootIndex));
 }
 
 void FileSystemModel::resetRoot(void)
