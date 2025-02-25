@@ -24,6 +24,10 @@
 #include <QFileInfo>
 #include <QIcon>
 
+ //////////////////////////////////////////////////////////////////////////
+ // FileSystemModel class declaration
+ //////////////////////////////////////////////////////////////////////////
+
 FileSystemModel::FileSystemModel(QObject * parent /*= nullptr*/)
     : QAbstractItemModel(parent)
     , mRootEntry        ( tr("Workspace") )
@@ -366,7 +370,7 @@ QModelIndex FileSystemModel::insertFile(const QString& fileName, const QModelInd
             if (parentEntry->hasFetched())
             {
                 beginInsertRows(parentIndex, 0, parentEntry->getChildCount());
-                FileSystemEntry* entry = parentEntry->addChild(fi, true);
+                entry = parentEntry->addChild(fi, true);
                 endInsertRows();
             }
             else
@@ -562,4 +566,24 @@ void FileSystemModel::resetEntry(FileSystemEntry * entry)
     {
         entry->addChild(fi, false);
     }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// GeneralFileSystemModel class implementation
+//////////////////////////////////////////////////////////////////////////
+
+GeneralFileSystemModel::GeneralFileSystemModel(QObject* parent /*= nullptr*/)
+    : QFileSystemModel(parent)
+{
+    setFilter(QDir::Filter::AllEntries | QDir::Filter::AllDirs | QDir::Filter::NoDotAndDotDot);
+}
+
+int GeneralFileSystemModel::columnCount(const QModelIndex& parent) const
+{
+    return 1;
+}
+
+QVariant GeneralFileSystemModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    return QVariant();
 }

@@ -24,6 +24,7 @@
  ************************************************************************/
 #include "lusan/model/common/FileSystemEntry.hpp"
 #include <QAbstractItemModel>
+#include <QFileSystemModel>
 #include <QFileInfo>
 
 /**
@@ -354,7 +355,7 @@ public:
     /**
      * \brief   Checks if the given index is a file that can be handled by Lusan application.
      * \param   index   The index of the item.
-     * \return  True if the index is a file to be handeled by Lusan application, false otherwise.
+     * \return  True if the index is a file to be handled by Lusan application, false otherwise.
      **/
     bool isLusanFile(const QModelIndex & index) const;
 
@@ -389,6 +390,46 @@ private:
     WorkspaceEntries    mWorkspaceDirs; //!< The map of workspace directories.
     QStringList         mFileFilter;    //!< The filter to set when display file system data.
     QModelIndex         mRootIndex;     //!< The index of the root.
+};
+
+//////////////////////////////////////////////////////////////////////////
+// GeneralFileSystemModel class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \class   GeneralFileSystemModel
+ * \brief   General file system model to display file system entries in a QTreeView.
+ **/
+class GeneralFileSystemModel    : public QFileSystemModel
+{
+//////////////////////////////////////////////////////////////////////////
+// Constructors / destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    GeneralFileSystemModel(QObject* parent = nullptr);
+
+    virtual ~GeneralFileSystemModel(void) = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the number of columns for the children of the given parent.
+     * \param   parent  The parent index.
+     * \return  The number of columns.
+     **/
+    virtual int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+
+    /**
+     * \brief   Returns the header data stored under the given role.
+     * \param   section The section.
+     * \param   orientation The orientation.
+     * \param   role        The role for which data is requested.
+     * \return  The header data for the given role and section.
+     **/
+    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////

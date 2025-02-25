@@ -27,8 +27,11 @@
 
 class FileSystemModel;
 class FileSystemFilter;
+class GeneralFileSystemModel;
 class MdiMainWindow;
 class TableCell;
+class QFileInfo;
+class QItemSelection;
 class QTreeView;
 class QToolButton;
 
@@ -234,16 +237,25 @@ private:
      * \param   block   If true, blocks the signals. Otherwise, unblocks the signals.
      **/
     void blockBasicSignals(bool block);
+
+    /**
+     * \brief   Returns the file information for the given index.
+     * \param   index   The index of the item.
+     * \return  The file information.
+     **/
+    QFileInfo getFileInfo(const QModelIndex & index) const;
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
-    MdiMainWindow*      mMainFrame;     //!< The main frame of the application.
-    FileSystemModel*    mNaviModel;     //!< The model of the file system.
-    Ui::NaviFileSystem* ui;             //!< The user interface object.
-    RootPaths           mRootPaths;     //!< The list of root paths.
-    TableCell*          mTableCell;     //!< The table cell object.
+    MdiMainWindow*          mMainFrame;     //!< The main frame of the application.
+    FileSystemModel*        mNaviModel;     //!< The model of the file system.
+    GeneralFileSystemModel* mGenModel;      //!< The general model of the file system.
+    FileSystemFilter*       mFileFilter;    //!< The file filter object.
+    Ui::NaviFileSystem*     ui;             //!< The user interface object.
+    RootPaths               mRootPaths;     //!< The list of root paths.
+    TableCell*              mTableCell;     //!< The table cell object.
 };
 
 #endif  // LUSAN_VIEW_COMMON_NAVIFILESYSTEM_HPP

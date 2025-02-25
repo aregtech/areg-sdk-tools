@@ -20,8 +20,8 @@
 #include "lusan/view/common/NaviFileSystem.hpp"
 #include "ui/ui_NaviFileSystem.h"
 
-
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/model/common/FileSystemFilter.hpp"
 #include "lusan/model/common/FileSystemModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/TableCell.hpp"
@@ -36,6 +36,8 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* mainFrame, QWidget* parent /*= nul
     
     , mMainFrame    (mainFrame)
     , mNaviModel    (new FileSystemModel())
+    , mGenModel     (nullptr)
+    , mFileFilter   (nullptr)
     , ui            (new Ui::NaviFileSystem)
     , mRootPaths    ( )
     , mTableCell    (nullptr)
@@ -102,57 +104,61 @@ int NaviFileSystem::getColumnCount(void) const
 
 QString NaviFileSystem::getCellText(const QModelIndex& cell) const
 {
-    return mNaviModel->getFileInfo(cell).fileName();
+    return (mNaviModel != nullptr ? mNaviModel->getFileInfo(cell).fileName() : QString());
 }
 
 void NaviFileSystem::onToolRefreshClicked(bool checked)
 {
-    QTreeView * table = ui->treeView;
-    table->collapseAll();
-    table->clearSelection();
-    this->mNaviModel->refresh();
-    QModelIndex idxRoot = mNaviModel->getRootIndex();
-    table->setRootIndex(idxRoot);
+    QTreeView * table = ctrlFileSystem();
+    if (mNaviModel != nullptr)
+    {
+        table->collapseAll();
+        table->clearSelection();
+        mNaviModel->refresh();
+        QModelIndex idxRoot = mNaviModel->getRootIndex();
+        table->setRootIndex(idxRoot);
+    }
+    else if (mGenModel != nullptr)
+    {
+        table->collapseAll();
+        table->clearSelection();
+        table->reset();
+    }
 }
 
 void NaviFileSystem::onToolShowAllToggled(bool checked)
 {
-    if (checked)
-    {
-        QTreeView * table = ui->treeView;
-        table->collapseAll();
-        table->clearSelection();
-        mNaviModel->setFileFilter(QStringList());
-        mNaviModel->refresh();
-        QModelIndex idxRoot = mNaviModel->getRootIndex();
-        table->setRootIndex(idxRoot);
-        ctrlToolShowAll()->setChecked(true);
-    }
-    else
-    {
-        QTreeView * table = ui->treeView;
-        table->collapseAll();
-        table->clearSelection();
-        QStringList filters{ LusanApplication::InternalExts };
-        filters.append(LusanApplication::ExternalExts);
-        mNaviModel->setFileFilter(filters);
-        mNaviModel->refresh();
-        QModelIndex idxRoot = mNaviModel->getRootIndex();
-        table->setRootIndex(idxRoot);
-        ctrlToolShowAll()->setChecked(false);
-    }
+    if (mNaviModel == nullptr)
+        return;
+
+    QTreeView * table = ctrlFileSystem();
+    table->collapseAll();
+    table->clearSelection();
+    QStringList filters{ LusanApplication::InternalExts };
+    filters.append(LusanApplication::ExternalExts);
+    mNaviModel->setFileFilter(checked ? QStringList() : filters);
+    mNaviModel->refresh();
+    QModelIndex idxRoot = mNaviModel->getRootIndex();
+    table->setRootIndex(idxRoot);
+    ctrlToolShowAll()->setChecked(checked);
 }
 
 void NaviFileSystem::onToolCollapseAllClicked(bool checked)
 {
-    ui->treeView->collapseAll();
+    ctrlFileSystem()->collapseAll();
 }
 
 void NaviFileSystem::onToolNewFolderClicked(bool checked)
 {
     static QString _defName("NewFolder");
-    QTreeView* table = ui->treeView;
+    if (mNaviModel == nullptr)
+        return;
+
+    QTreeView* table = ctrlFileSystem();
     QModelIndex index = table->selectionModel()->currentIndex();
+    if (mNaviModel->isFile(index))
+        index = mNaviModel->parent(index);
+
     uint32_t count{ 1 };
     QString name;
     do
@@ -172,8 +178,15 @@ void NaviFileSystem::onToolNewFileClicked(bool checked)
 {
     static QString _defName("NewService");
     static QString _defExt(".siml");
-    QTreeView* table = ui->treeView;
-    QModelIndex index = table->selectionModel()->currentIndex();
+
+    if (mNaviModel == nullptr)
+        return;
+
+    QTreeView* table = ctrlFileSystem();
+    QModelIndex index = table->currentIndex();
+    if (mNaviModel->isFile(index))
+        index = mNaviModel->parent(index);
+
     uint32_t count{ 1 };
     QString name;
     do
@@ -191,9 +204,10 @@ void NaviFileSystem::onToolNewFileClicked(bool checked)
 
 void NaviFileSystem::onToolOpenSelectedClicked(bool checked)
 {
-    QTreeView * table = ui->treeView;
+    QTreeView * table = ctrlFileSystem();
     QModelIndex index = table->selectionModel()->currentIndex();
-    QFileInfo fi = mNaviModel->getFileInfo(index);
+    QFileInfo fi (getFileInfo(index));
+
     QString filePath = fi.isFile() ? fi.filePath() : "";
     if (filePath.isEmpty() == false)
     {
@@ -203,7 +217,7 @@ void NaviFileSystem::onToolOpenSelectedClicked(bool checked)
 
 void NaviFileSystem::onToolEditSelectedClicked(bool checked)
 {
-    QTreeView * table = ui->treeView;
+    QTreeView * table = ctrlFileSystem();
     QModelIndex index = table->selectionModel()->currentIndex();
     if (index.isValid())
     {
@@ -213,7 +227,7 @@ void NaviFileSystem::onToolEditSelectedClicked(bool checked)
 
 void NaviFileSystem::onToolDeleteSelectedClicked(bool checked)
 {
-    QTreeView * table = ui->treeView;
+    QTreeView * table = ctrlFileSystem();
     QModelIndex index = table->selectionModel()->currentIndex();
     QFileInfo fi = mNaviModel->getFileInfo(index);
     QString filePath = fi.filePath();
@@ -250,7 +264,44 @@ void NaviFileSystem::onToolDeleteSelectedClicked(bool checked)
 
 void NaviFileSystem::onToolNaviRootClicked(bool checked)
 {
-    
+    if ((checked == true) && (mGenModel == nullptr))
+    {
+        disconnect(ctrlFileSystem()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
+        mGenModel = new GeneralFileSystemModel();
+        mFileFilter = new FileSystemFilter(mGenModel);
+        mGenModel->setReadOnly(true);
+        ctrlFileSystem()->setModel(mFileFilter);
+        ctrlFileSystem()->setSortingEnabled(true);
+        ctrlFileSystem()->reset();
+        // ctrlFileSystem()->update();
+        delete mNaviModel;
+        mNaviModel = nullptr;
+        // QString rootPath = QDir::rootPath();
+        QString rootPath = mGenModel->myComputer().toString();
+        QModelIndex idxRoot = mGenModel->setRootPath(rootPath);
+        ctrlFileSystem()->setRootIndex(mFileFilter->mapFromSource(idxRoot));
+
+        ctrlToolDelete()->setEnabled(false);
+        ctrlToolNewFile()->setEnabled(false);
+        ctrlToolNewFolder()->setEnabled(false);
+        ctrlToolOpen()->setEnabled(true);
+        ctrlToolEdit()->setEnabled(false);
+    }
+    else if ((checked == false) && (mNaviModel == nullptr))
+    {
+        mNaviModel = new FileSystemModel();
+        this->updateData();
+        this->setupWidgets();
+
+        mFileFilter->setSourceModel(nullptr);
+        delete mFileFilter;
+        delete mGenModel;
+
+        mFileFilter = nullptr;
+        mGenModel = nullptr;
+
+        connect(ctrlFileSystem()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
+    }
 }
 
 void NaviFileSystem::onTreeViewDoubleClicked(const QModelIndex &index)
@@ -258,7 +309,7 @@ void NaviFileSystem::onTreeViewDoubleClicked(const QModelIndex &index)
     if (index.isValid() == false)
         return;
 
-    QFileInfo fi = mNaviModel->getFileInfo(index);
+    QFileInfo fi (getFileInfo(index));
     QString filePath = fi.isDir() ? "" : fi.filePath();
     if (filePath.isEmpty() == false)
     {
@@ -283,10 +334,10 @@ void NaviFileSystem::onTreeSelectinoRowChanged(const QModelIndex &current, const
 
 void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
 {
-    if (index.isValid() == false)
+    if ((index.isValid() == false) || (mNaviModel == nullptr))
         return;
 
-    QTreeView * table = ui->treeView;
+    QTreeView * table = ctrlFileSystem();
     QModelIndex newIndex = mNaviModel->renameEntry(newValue, index);
     if (newIndex.isValid())
     {
@@ -301,6 +352,7 @@ void NaviFileSystem::updateData(void)
     QString includes = LusanApplication::getWorkspaceIncludes();
     QString delivery = LusanApplication::getWorkspaceDelivery();
 
+    mRootPaths.clear();
     Q_ASSERT(root.isEmpty() == false);
     mRootPaths.insert(root, "[Project: " + root + "]");
     if (sources.isEmpty() == false)
@@ -354,9 +406,9 @@ void NaviFileSystem::setupSignals(void)
     connect(ui->toolOpenSelected,   &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
     connect(ui->toolDeleteSelected, &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
     connect(ui->toolNaviRoot,       &QToolButton::clicked,      this, &NaviFileSystem::onToolNaviRootClicked);
-    connect(ui->treeView,           &QTreeView::doubleClicked,  this, &NaviFileSystem::onTreeViewDoubleClicked);
-    connect(ui->treeView,           &QTreeView::entered,        this, &NaviFileSystem::onTreeViewActivated);
-    connect(ui->treeView->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeViewActivated);
+    connect(ctrlFileSystem(),       &QTreeView::doubleClicked,  this, &NaviFileSystem::onTreeViewDoubleClicked);
+    connect(ctrlFileSystem(),       &QTreeView::entered,        this, &NaviFileSystem::onTreeViewActivated);
+    connect(ctrlFileSystem()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
 
     connect(mTableCell, &TableCell::editorDataChanged, this, &NaviFileSystem::onEditorDataChanged);
 }
@@ -366,3 +418,17 @@ void NaviFileSystem::blockBasicSignals(bool block)
     ctrlFileSystem()->blockSignals(block);
 }
 
+QFileInfo NaviFileSystem::getFileInfo(const QModelIndex & index) const
+{
+    if (mNaviModel != nullptr)
+    {
+        return mNaviModel->getFileInfo(index);
+    }
+    else
+    {
+        Q_ASSERT(mGenModel != nullptr);
+        Q_ASSERT(mFileFilter != nullptr);
+        QModelIndex src = mFileFilter->mapToSource(index);
+        return mGenModel->fileInfo(src);
+    }
+}
