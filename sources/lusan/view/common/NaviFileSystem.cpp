@@ -156,6 +156,9 @@ void NaviFileSystem::onToolNewFolderClicked(bool checked)
 
     QTreeView* table = ctrlFileSystem();
     QModelIndex index = table->selectionModel()->currentIndex();
+    if (mNaviModel->isFile(index))
+        index = mNaviModel->parent(index);
+
     uint32_t count{ 1 };
     QString name;
     do
@@ -181,6 +184,9 @@ void NaviFileSystem::onToolNewFileClicked(bool checked)
 
     QTreeView* table = ctrlFileSystem();
     QModelIndex index = table->currentIndex();
+    if (mNaviModel->isFile(index))
+        index = mNaviModel->parent(index);
+
     uint32_t count{ 1 };
     QString name;
     do

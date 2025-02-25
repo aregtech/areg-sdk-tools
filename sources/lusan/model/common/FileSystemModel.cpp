@@ -370,7 +370,7 @@ QModelIndex FileSystemModel::insertFile(const QString& fileName, const QModelInd
             if (parentEntry->hasFetched())
             {
                 beginInsertRows(parentIndex, 0, parentEntry->getChildCount());
-                FileSystemEntry* entry = parentEntry->addChild(fi, true);
+                entry = parentEntry->addChild(fi, true);
                 endInsertRows();
             }
             else
