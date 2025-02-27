@@ -38,9 +38,14 @@ class ServiceInterfaceData  : public ElementBase
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
-    static constexpr const char* const XML_FORMAT_VERSION   { "1.1.0" };//!< The XML format version.
-
-    static constexpr const uint32_t     MINIMUM_ID          { 50u };     //!< The invalid ID value.
+    
+public:    
+    static constexpr const char* const  XML_VERRSION_100    { "1.0.0" };            //!< The XML version attribute.
+    static constexpr const char* const  XML_VERRSION_110    { "1.1.0" };            //!< The XML version attribute.
+    static constexpr const char* const  XML_FORMAT_DEFAULT  { XML_VERRSION_110 };   //!< The XML format default version.
+    
+private:
+    static constexpr const uint32_t     MINIMUM_ID          { 50u };                //!< The invalid ID value.
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -142,21 +147,30 @@ public:
      **/
     inline const SIIncludeData& getIncludeData(void) const;
     inline SIIncludeData& getIncludeData(void);
-    
+
+    /**
+     * \brief   Returns true if the file was successfully opened.
+     **/
     inline bool openSucceeded(void) const;
+
+    /**
+     * \brief   Returns the current document version.
+     **/
+    inline const VersionNumber& getCurrentDocumentVersion(void) const;
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     QString         mFilePath;      //!< The file path of the service interface data.
+    VersionNumber   mXmlVersion;    //!< The XML document data version.
     SIOverviewData  mOverviewData;  //!< The overview data.
     SIDataTypeData  mDataTypeData;  //!< The data type data.
     SIAttributeData mAttributeData; //!< The attribute data.
     SIMethodData    mMethodData;    //!< The method data.
     SIConstantData  mConstantData;  //!< The constant data.
     SIIncludeData   mIncludeData;   //!< The include data.
-    bool            mOpenSuccess;   //!< File, indicating if openning file succeeded.
+    bool            mOpenSuccess;   //!< File, indicating if opening file succeeded.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -165,7 +179,7 @@ private:
 
 inline QString ServiceInterfaceData::getFileFormatVersion(void) const
 {
-    return ServiceInterfaceData::XML_FORMAT_VERSION;
+    return ServiceInterfaceData::XML_FORMAT_DEFAULT;
 }
 
 inline const QString& ServiceInterfaceData::getFilePath(void) const
@@ -236,6 +250,11 @@ inline SIIncludeData& ServiceInterfaceData::getIncludeData(void)
 inline bool ServiceInterfaceData::openSucceeded(void) const
 {
     return mOpenSuccess;
+}
+
+inline const VersionNumber& ServiceInterfaceData::getCurrentDocumentVersion(void) const
+{
+    return mXmlVersion;
 }
 
 #endif // LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP

@@ -19,24 +19,25 @@
 
 #include "lusan/data/si/SIOverviewData.hpp"
 #include "lusan/common/XmlSI.hpp"
+#include "lusan/data/si/ServiceInterfaceData.hpp"
 
 SIOverviewData::eCategory SIOverviewData::fromString(const QString& category)
 {
-    if (category == STR_CATEGORY_PRIVATE)
+    if (category.compare(STR_CATEGORY_PRIVATE, Qt::CaseSensitivity::CaseInsensitive) == 0)
     {
         return eCategory::InterfacePrivate;
     }
-    else if (category == STR_CATEGORY_PUBLIC)
+    else if (category.compare(STR_CATEGORY_PUBLIC, Qt::CaseSensitivity::CaseInsensitive) == 0)
     {
         return eCategory::InterfacePublic;
     }
-    else if (category == STR_CATEGORY_INTERNET)
+    else if (category.compare(STR_CATEGORY_INTERNET, Qt::CaseSensitivity::CaseInsensitive) == 0)
     {
         return eCategory::InterfaceInternet;
     }
     else
     {
-        return eCategory::InterfaceUnknown;
+        return eCategory::InterfacePrivate;
     }
 }
 
@@ -51,7 +52,7 @@ const char* SIOverviewData::toString(SIOverviewData::eCategory category)
     case eCategory::InterfaceInternet:
         return STR_CATEGORY_INTERNET;
     default:
-        return STR_CATEGORY_UNKNOWN;
+        return STR_CATEGORY_PRIVATE;
     }
 }
 
@@ -100,13 +101,25 @@ bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
     if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementOverview))
         return false;
 
+    ServiceInterfaceData* siData = static_cast<ServiceInterfaceData*>(getParent());
+    Q_ASSERT(siData != nullptr);
+    const VersionNumber& dataVersion = siData->getCurrentDocumentVersion();
     QXmlStreamAttributes attributes = xml.attributes();
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
     mVersion = attributes.value(XmlSI::xmlSIAttributeVersion).toString();
-    QString categoryStr = attributes.value(XmlSI::xmlSIAttributeCategory).toString();
+    QString categoryStr = attributes.hasAttribute(XmlSI::xmlSIAttributeCategory) ? attributes.value(XmlSI::xmlSIAttributeCategory).toString() : STR_CATEGORY_PRIVATE;
     mCategory = SIOverviewData::fromString(categoryStr);
     setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
+    
+    if (dataVersion != VersionNumber(ServiceInterfaceData::XML_FORMAT_DEFAULT))
+    {
+        if (dataVersion == VersionNumber(ServiceInterfaceData::XML_VERRSION_100))
+        {
+            QString isRemove = attributes.hasAttribute("isRemote") ? attributes.value("isRemote").toString() : "false";
+            mCategory = isRemove.compare("true", Qt::CaseSensitivity::CaseInsensitive) == 0 ? eCategory::InterfacePublic : eCategory::InterfacePrivate;
+        }
+    }
 
     while (xml.readNextStartElement())
     {

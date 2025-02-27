@@ -61,7 +61,7 @@ QCheckBox * SIMethodParamDetails::ctrlParamHasDefaultValue(void) const
 
 QPlainTextEdit * SIMethodParamDetails::ctrlParamDescription(void) const
 {
-    return ui->textDescribe;
+    return ui->textParamDescribe;
 }
 
 QCheckBox * SIMethodParamDetails::ctrlDeprecated(void) const

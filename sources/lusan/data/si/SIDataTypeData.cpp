@@ -27,6 +27,7 @@
 #include "lusan/data/common/DataTypeImported.hpp"
 #include "lusan/data/common/DataTypePrimitive.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/si/ServiceInterfaceData.hpp"
 
 #include <QFile>
 #include <QXmlStreamReader>
@@ -86,12 +87,29 @@ bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
 {
     if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementDataTypeList))
         return false;
-
+    
+    Q_ASSERT(getParent() != nullptr);
+    const VersionNumber& dataVersion = static_cast<ServiceInterfaceData*>(getParent())->getCurrentDocumentVersion();
     while (xml.readNextStartElement())
     {
         if (xml.name() == XmlSI::xmlSIElementDataType)
         {
             QString type = xml.attributes().value(XmlSI::xmlSIAttributeType).toString();
+            if (dataVersion != VersionNumber(ServiceInterfaceData::XML_FORMAT_DEFAULT))
+            {
+                if (dataVersion == VersionNumber(ServiceInterfaceData::XML_VERRSION_100))
+                {
+                    if (type.compare("Enumerate", Qt::CaseSensitivity::CaseInsensitive) == 0)
+                    {
+                        type = "Enumeration";
+                    }
+                    else if (type.compare("DefinedType", Qt::CaseSensitivity::CaseInsensitive) == 0)
+                    {
+                        type = "Container";
+                    }
+                }
+            }
+
             DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(type);
             if (dataType != nullptr)
             {

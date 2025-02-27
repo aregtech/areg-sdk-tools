@@ -120,6 +120,9 @@ bool DataTypeImported::readFromXml(QXmlStreamReader& xml)
         xml.readNext();
     }
 
+    if  (mObject.isEmpty())
+        mObject = getName();
+
     return true;
 }
 
