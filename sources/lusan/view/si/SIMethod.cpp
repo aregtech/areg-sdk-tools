@@ -763,6 +763,17 @@ void SIMethod::onParamDefaultChanged(const QString& newText)
 
 void SIMethod::onParamDescriptionChanged(void)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    SIMethodBase* method = item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>() : nullptr;
+    if (method == nullptr)
+        return;
+    
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    Q_ASSERT(id != 0);
+    MethodParameter * param = method->findElement(id);
+    Q_ASSERT(param != nullptr);
+    param->setDescription(mParams->ctrlParamDescription()->toPlainText());
 }
 
 void SIMethod::onParamDeprecateChecked(bool isChecked)

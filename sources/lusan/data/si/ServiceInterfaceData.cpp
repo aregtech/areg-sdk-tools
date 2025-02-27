@@ -25,6 +25,7 @@
 ServiceInterfaceData::ServiceInterfaceData(const QString& filePath /*= QString()*/)
     : ElementBase   (MINIMUM_ID, nullptr)
     , mFilePath     ( )
+    , mXmlVersion   ( )
     , mOverviewData (this)
     , mDataTypeData (this)
     , mAttributeData(this)
@@ -94,7 +95,7 @@ bool ServiceInterfaceData::writeToFile(const QString& filePath /*= ""*/)
             
             QXmlStreamWriter xml(&file);
             xml.setAutoFormatting(true);
-            xml.writeStartDocument();
+            xml.writeStartDocument("1.0", true);
             writeToXml(xml);
             file.close();
             return true;
@@ -110,10 +111,12 @@ bool ServiceInterfaceData::readFromXml(QXmlStreamReader& xml)
     {
         QXmlStreamAttributes attributes = xml.attributes();
         QString version = attributes.value(XmlSI::xmlSIAttributeFormatVersion).toString();
-        if (VersionNumber(version).isCompatible(VersionNumber(XML_FORMAT_VERSION)) == false)
+        if (VersionNumber(version).isCompatible(VersionNumber(XML_FORMAT_DEFAULT)) == false)
         {
-            return false;
+            version = XML_FORMAT_DEFAULT;
         }
+
+        mXmlVersion = version;
 
         while (xml.readNextStartElement())
         {
@@ -156,7 +159,7 @@ bool ServiceInterfaceData::readFromXml(QXmlStreamReader& xml)
 void ServiceInterfaceData::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementServiceInterface);
-    xml.writeAttribute(XmlSI::xmlSIAttributeFormatVersion, XML_FORMAT_VERSION);
+    xml.writeAttribute(XmlSI::xmlSIAttributeFormatVersion, XML_FORMAT_DEFAULT);
 
     mOverviewData.writeToXml(xml);
     mDataTypeData.writeToXml(xml);
