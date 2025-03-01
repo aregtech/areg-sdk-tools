@@ -19,6 +19,7 @@
 
 #include "lusan/model/si/SIMethodModel.hpp"
 #include "lusan/data/si/SIDataTypeData.hpp"
+#include "lusan/data/common/DataTypePrimitive.hpp"
 
 SIMethodModel::SIMethodModel(SIMethodData& data, SIDataTypeData& dataType)
     : mData     (data)
@@ -111,6 +112,11 @@ MethodParameter* SIMethodModel::addParameter(SIMethodBase* method, const QString
     if (param != nullptr)
     {
         param->validate(mDataType.getCustomDataTypes());
+        DataTypeBase* paramType = param->hasDefault() ? param->getParamType() : nullptr;
+        if ((paramType != nullptr) && paramType->isPrimitive())
+        {
+            param->setValue(static_cast<DataTypePrimitive *>(paramType)->convertValue(QString()));
+        }
     }
 
     return param;
@@ -122,6 +128,11 @@ MethodParameter* SIMethodModel::insertParameter(SIMethodBase* method, int positi
     if (param != nullptr)
     {
         param->validate(mDataType.getCustomDataTypes());
+        DataTypeBase* paramType = param->hasDefault() ? param->getParamType() : nullptr;
+        if ((paramType != nullptr) && paramType->isPrimitive())
+        {
+            param->setValue(static_cast<DataTypePrimitive *>(paramType)->convertValue(QString()));
+        }
     }
 
     return param;

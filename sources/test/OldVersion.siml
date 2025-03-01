@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<ServiceInterface FormatVersion="1.0.0">
+    <Overview ID="1" Name="OldVersion" Version="1.0.0" isRemote="true">
+        <Description/>
+    </Overview>
+    <DataTypeList>
+        <DataType ID="2" Name="SomeStruct" Type="Structure">
+            <FieldList>
+                <Field DataType="int32" ID="3" Name="newField1">
+                    <Value IsDefault="true">0</Value>
+                </Field>
+                <Field DataType="String" ID="4" Name="newField">
+                    <Value IsDefault="true">"Something"</Value>
+                </Field>
+            </FieldList>
+        </DataType>
+        <DataType ID="5" Name="SomeEnum" Type="Enumerate" Values="default">
+            <FieldList>
+                <EnumEntry ID="6" Name="newField1">
+                    <Value>0</Value>
+                </EnumEntry>
+                <EnumEntry ID="7" Name="newField2">
+                    <Value>1</Value>
+                </EnumEntry>
+                <EnumEntry ID="8" Name="newField3">
+                    <Value>2</Value>
+                </EnumEntry>
+                <EnumEntry ID="9" Name="newField4">
+                    <Value>4</Value>
+                </EnumEntry>
+            </FieldList>
+        </DataType>
+        <DataType ID="10" Name="NewStructure" Type="Imported">
+            <Namespace>XmlSI</Namespace>
+            <Location>lusan/common/XmlSI.hpp</Location>
+        </DataType>
+        <DataType ID="11" Name="SomeContainer" Type="DefinedType">
+            <Container>Array</Container>
+            <BaseTypeValue>uint16</BaseTypeValue>
+        </DataType>
+        <DataType ID="12" Name="SomeMap" Type="DefinedType">
+            <Container>Map</Container>
+            <BaseTypeValue>String</BaseTypeValue>
+            <BaseTypeKey>uint32</BaseTypeKey>
+        </DataType>
+    </DataTypeList>
+    <AttributeList>
+        <Attribute DataType="String" ID="13" Name="SomeAttr1" Notify="OnChange"/>
+        <Attribute DataType="SomeStruct" ID="14" Name="SomeAttr2" Notify="Always"/>
+    </AttributeList>
+    <IncludeList>
+        <Location ID="15" Name="framework/areg/base/NECommon.hpp"/>
+    </IncludeList>
+</ServiceInterface>

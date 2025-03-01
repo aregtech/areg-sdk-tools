@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypePrimitive.hpp"
+#include "lusan/common/XmlSI.hpp"
 
  //////////////////////////////////////////////////////////////////////////
  // DataTypePrimitive class implementation
@@ -78,6 +79,11 @@ void DataTypePrimitive::writeToXml(QXmlStreamWriter& xml) const
     // nothing to do
 }
 
+QString DataTypePrimitive::convertValue(const QString& value) const
+{
+    return (value.isEmpty() || (value.compare(XmlSI::xmlSIValueFalse, Qt::CaseSensitivity::CaseInsensitive) == 0) ? XmlSI::xmlSIValueFalse : XmlSI::xmlSIValueTrue);
+}
+
 //////////////////////////////////////////////////////////////////////////
 // DataTypePrimitiveInt class implementation
 //////////////////////////////////////////////////////////////////////////
@@ -120,6 +126,13 @@ DataTypePrimitiveInt& DataTypePrimitiveInt::operator=(DataTypePrimitiveInt&& oth
     }
 
     return *this;
+}
+
+QString DataTypePrimitiveInt::convertValue(const QString& value) const
+{
+    int base = value.startsWith("0x") ? 16 : 10;
+    int64_t val = value.toLongLong(nullptr, base);
+    return QString::number(val, base);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -166,6 +179,13 @@ DataTypePrimitiveUint& DataTypePrimitiveUint::operator=(DataTypePrimitiveUint&& 
     return *this;
 }
 
+QString DataTypePrimitiveUint::convertValue(const QString& value) const
+{
+    int base = value.startsWith("0x") ? 16 : 10;
+    uint64_t val = value.toULongLong(nullptr, base);
+    return QString::number(val, base);
+}
+
 //////////////////////////////////////////////////////////////////////////
 // DataTypePrimitiveFloat class implementation
 //////////////////////////////////////////////////////////////////////////
@@ -208,4 +228,11 @@ DataTypePrimitiveFloat& DataTypePrimitiveFloat::operator=(DataTypePrimitiveFloat
     }
 
     return *this;
+}
+
+QString DataTypePrimitiveFloat::convertValue(const QString& value) const
+{
+    int base = value.startsWith("0x") ? 16 : 10;
+    double val = value.toDouble(nullptr);
+    return QString::number(val);
 }

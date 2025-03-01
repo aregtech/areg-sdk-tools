@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/common/MethodBase.hpp"
+#include "lusan/data/common/DataTypePrimitive.hpp"
 
 MethodBase::MethodBase(ElementBase* parent /*= nullptr*/)
     : TEDataContainer< MethodParameter, DocumentElem >(parent)
@@ -104,7 +105,7 @@ MethodParameter* MethodBase::addParam(const QString& name)
 {
     MethodParameter* result{ nullptr };
     bool isDefault = mElementList.size() > 0 ? mElementList.last().hasDefault() : false;
-    MethodParameter entry(getNextId(), name, isDefault, this);
+    MethodParameter entry(getNextId(), name, isDefault, this);    
     if (addElement(std::move(entry), true))
     {
         Q_ASSERT(mElementList.size() > 0);
@@ -125,7 +126,7 @@ MethodParameter* MethodBase::insertParam(int position, const QString& name)
             isDefault = mElementList[position - 1].hasDefault();
         }
 
-        MethodParameter entry(getNextId(), name, isDefault, this);
+        MethodParameter entry(getNextId(), name, isDefault, this);        
         if (insertElement(position, std::move(entry), true))
         {
             result = &mElementList[position];
@@ -174,4 +175,200 @@ void MethodBase::invalidate(void)
     {
         param.invalidate();
     }
+}
+
+bool MethodBase::hasDefaultValue(uint32_t id) const
+{
+    for (const MethodParameter& param : getElements())
+    {
+        if (param.getId() == id)
+        {
+            return param.hasDefault();
+        }
+    }
+
+    return false;
+}
+
+bool MethodBase::hasDefaultValue(const QString& name) const
+{
+    for (const MethodParameter& param : getElements())
+    {
+        if (param.getName() == name)
+        {
+            return param.hasDefault();
+        }
+    }
+
+    return false;
+}
+
+bool MethodBase::canHaveDefaultValue(uint32_t id) const
+{
+    int pos = findIndex(id);
+    return canHaveDefaultValue(pos);
+}
+
+bool MethodBase::canHaveDefaultValue(const QString& name) const
+{
+    int pos = findIndex(name);
+    return canHaveDefaultValue(pos);
+}
+
+int MethodBase::firsPositionWithDefault(void) const
+{
+    for (int i = 0; i < mElementList.size(); ++i)
+    {
+        if (mElementList[i].hasDefault())
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+bool MethodBase::canSwitchDefaultValue(uint32_t id) const
+{
+    int pos = findIndex(id);
+    int def = firsPositionWithDefault();
+    if (pos >= 0)
+    {
+        return (pos == def) || canHaveDefaultValue(pos);
+    }
+
+    return false;
+}
+
+bool MethodBase::canSwitchDefaultValue(const QString& name) const
+{
+    int pos = findIndex(name);
+    int def = firsPositionWithDefault();
+    if (pos >= 0)
+    {
+        return (pos == def) || canHaveDefaultValue(pos);
+    }
+
+    return false;
+}
+
+bool MethodBase::isLastPositionWithDefault(uint32_t id) const
+{
+    int pos = findIndex(id);
+    int def = firsPositionWithDefault();
+    return (pos >= 0) && (pos == def);
+}
+
+bool MethodBase::isLastPositionWithDefault(const QString& name) const
+{
+    int pos = findIndex(name);
+    int def = firsPositionWithDefault();
+    return (pos >= 0) && (pos == def);
+}
+
+MethodParameter* MethodBase::setDefaultValue(uint32_t id, const QString& newValue)
+{
+    MethodParameter* param = findElement(id);
+    if ((param != nullptr) && (param->hasDefault()))
+    {
+        param->setValue(newValue);
+    }
+
+    return param;
+}
+
+MethodParameter* MethodBase::setDefaultValue(const QString& name, const QString& newValue)
+{
+    MethodParameter* param = findElement(name);
+    if ((param != nullptr) && (param->hasDefault()))
+    {
+        param->setDefault(true);
+        param->setValue(newValue);
+    }
+
+    return param;
+}
+
+MethodParameter* MethodBase::makeValueDefault(uint32_t id, bool makeDefault, const QString& value)
+{
+    MethodParameter* param = findElement(id);
+    if (makeDefault)
+    {
+        if (canHaveDefaultValue(id))
+        {
+            param->setDefault(true);
+            DataTypeBase* dataType = param->getParamType();
+            if ((dataType != nullptr) && (dataType->isPrimitive()))
+            {
+                QString val = static_cast<DataTypePrimitive*>(dataType)->convertValue(value);
+                param->setValue(val);
+            }
+            else
+            {
+                param->setValue(value);
+            }
+        }
+    }
+    else
+    {
+        int def = firsPositionWithDefault();
+        if ((def >= 0) && (param->getId() == mElementList[def].getId()))
+        {
+            param->setDefault(false);
+            param->setValue(QString());
+        }
+    }
+
+    return param;
+}
+
+MethodParameter* MethodBase::makeValueDefault(const QString& name, bool makeDefault, const QString& value)
+{
+    MethodParameter* param = findElement(name);
+    if (makeDefault)
+    {
+        if (canHaveDefaultValue(name))
+        {
+            param->setDefault(true);
+            DataTypeBase* dataType = param->getParamType();
+            if ((dataType != nullptr) && (dataType->isPrimitive()))
+            {
+                QString val = static_cast<DataTypePrimitive*>(dataType)->convertValue(value);
+                param->setValue(val);
+            }
+            else
+            {
+                param->setValue(value);
+            }
+        }
+    }
+    else
+    {
+        int def = firsPositionWithDefault();
+        if ((def >= 0) && (param->getId() == mElementList[def].getId()))
+        {
+            param->setDefault(false);
+            param->setValue(QString());
+        }
+    }
+
+    return param;
+}
+
+bool MethodBase::canHaveDefaultValue(int index) const
+{
+    int def = firsPositionWithDefault();
+    if (index >= 0)
+    {
+        if (def < 0)
+        {
+            return (index == (mElementList.size() - 1));
+        }
+        else
+        {
+            return (index == (def - 1));
+        }
+    }
+
+    return false;
 }

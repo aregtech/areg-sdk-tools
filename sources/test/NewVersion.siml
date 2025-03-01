@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ServiceInterface FormatVersion="1.1.0">
+    <Overview ID="51" Name="NewVersion" Version="1.0.0" Category="Public">
+        <Description></Description>
+    </Overview>
+    <DataTypeList>
+        <DataType ID="52" Name="SomeStruct" Type="Structure">
+            <FieldList>
+                <Field ID="55" Name="newField1" DataType="int32">
+                    <Value>0</Value>
+                    <Description></Description>
+                </Field>
+                <Field ID="56" Name="newField2" DataType="String">
+                    <Value>&quot;Something&quot;</Value>
+                    <Description></Description>
+                </Field>
+            </FieldList>
+        </DataType>
+        <DataType ID="53" Name="SomeEnum" Type="Enumeration" Values="uint32">
+            <Description></Description>
+            <FieldList>
+                <EnumEntry ID="57" Name="newField1">
+                    <Value>0</Value>
+                </EnumEntry>
+                <EnumEntry ID="58" Name="newField2">
+                    <Value>1</Value>
+                </EnumEntry>
+                <EnumEntry ID="59" Name="newField3">
+                    <Value>2</Value>
+                </EnumEntry>
+                <EnumEntry ID="60" Name="newField4">
+                    <Value>4</Value>
+                </EnumEntry>
+            </FieldList>
+        </DataType>
+        <DataType ID="61" Name="SomeImport" Type="Imported">
+            <Namespace>XmlSI</Namespace>
+            <ImportedObject>SomeObject</ImportedObject>
+            <Location>lusan/common/XmlSI.hpp</Location>
+        </DataType>
+        <DataType ID="62" Name="SomeContainer" Type="Container">
+            <Description></Description>
+            <Container>Array</Container>
+            <BaseTypeValue>uint16</BaseTypeValue>
+        </DataType>
+        <DataType ID="63" Name="SomeMap" Type="Container">
+            <Description></Description>
+            <Container>Map</Container>
+            <BaseTypeValue>String</BaseTypeValue>
+            <BaseTypeKey>uint32</BaseTypeKey>
+        </DataType>
+    </DataTypeList>
+    <AttributeList>
+        <Attribute ID="64" Name="SomeAttr1" DataType="String" Notify="OnChange">
+        </Attribute>
+        <Attribute ID="65" Name="SomeAttr2" DataType="SomeStruct" Notify="Always">
+            <Description></Description>
+        </Attribute>
+    </AttributeList>
+    <MethodList/>
+    <ConstantList/>
+    <IncludeList>
+        <Location ID="66" Name="framework\areg\base\NECommon.hpp">
+            <Description></Description>
+        </Location>
+    </IncludeList>
+</ServiceInterface>

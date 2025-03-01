@@ -54,11 +54,6 @@ QLineEdit * SIMethodParamDetails::ctrlParamDefaultValue(void) const
     return ui->editDefaultValue;
 }
 
-QCheckBox * SIMethodParamDetails::ctrlParamHasDefaultValue(void) const
-{
-    return ui->checkDefaultValue;
-}
-
 QPlainTextEdit * SIMethodParamDetails::ctrlParamDescription(void) const
 {
     return ui->textParamDescribe;
