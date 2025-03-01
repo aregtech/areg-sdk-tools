@@ -43,9 +43,7 @@ public:
     QCheckBox* ctrlParamHasDefault(void) const;
     
     QLineEdit * ctrlParamDefaultValue(void) const;
-    
-    QCheckBox * ctrlParamHasDefaultValue(void) const;
-    
+        
     QPlainTextEdit * ctrlParamDescription(void) const;
     
     QCheckBox * ctrlDeprecated(void) const;

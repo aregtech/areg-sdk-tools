@@ -182,6 +182,112 @@ public:
      **/
     void invalidate(void);
 
+    
+    /**
+     * \brief   Checks if the parameter with the given ID has a default value.
+     * \param   id  The ID of the parameter.
+     * \return  True if the parameter has a default value, false otherwise.
+     **/
+    bool hasDefaultValue(uint32_t id) const;
+
+    /**
+     * \brief   Checks if the parameter with the given name has a default value.
+     * \param   name    The name of the parameter.
+     * \return  True if the parameter has a default value, false otherwise.
+     **/
+    bool hasDefaultValue(const QString& name) const;
+
+    /**
+     * \brief   Checks if the parameter with the given ID can have a default value.
+     * \param   id  The ID of the parameter.
+     * \return  True if the parameter can have a default value, false otherwise.
+     **/
+    bool canHaveDefaultValue(uint32_t id) const;
+
+    /**
+     * \brief   Checks if the parameter with the given name can have a default value.
+     * \param   name    The name of the parameter.
+     * \return  True if the parameter can have a default value, false otherwise.
+     **/
+    bool canHaveDefaultValue(const QString& name) const;
+
+    /**
+     * \brief   Gets the first position with a default value.
+     * \return  The first position with a default value.
+     **/
+    int firsPositionWithDefault(void) const;
+
+    /**
+     * \brief   Checks if the parameter with the given ID can switch its default value.
+     * \param   id  The ID of the parameter.
+     * \return  True if the parameter can switch its default value, false otherwise.
+     **/
+    bool canSwitchDefaultValue(uint32_t id) const;
+
+    /**
+     * \brief   Checks if the parameter with the given name can switch its default value.
+     * \param   name    The name of the parameter.
+     * \return  True if the parameter can switch its default value, false otherwise.
+     **/
+    bool canSwitchDefaultValue(const QString& name) const;
+
+    /**
+     * \brief   Checks if the parameter with the given ID is in the last position with a default value.
+     * \param   id  The ID of the parameter.
+     * \return  True if the parameter is in the last position with a default value, false otherwise.
+     **/
+    bool isLastPositionWithDefault(uint32_t id) const;
+
+    /**
+     * \brief   Checks if the parameter with the given name is in the last position with a default value.
+     * \param   name    The name of the parameter.
+     * \return  True if the parameter is in the last position with a default value, false otherwise.
+     **/
+    bool isLastPositionWithDefault(const QString& name) const;
+
+    /**
+     * \brief   Sets the default value for the parameter with the given ID.
+     * \param   id          The ID of the parameter.
+     * \param   newValue    The new default value to set.
+     * \return  Pointer to the updated parameter.
+     **/
+    MethodParameter* setDefaultValue(uint32_t id, const QString & newValue);
+
+    /**
+     * \brief   Sets the default value for the parameter with the given name.
+     * \param   name        The name of the parameter.
+     * \param   newValue    The new default value to set.
+     * \return  Pointer to the updated parameter.
+     **/
+    MethodParameter* setDefaultValue(const QString& name, const QString& newValue);
+
+    /**
+     * \brief   Makes the specified value the default for the parameter with the given ID.
+     * \param   id          The ID of the parameter.
+     * \param   makeDefault Flag indicating whether to make the value default.
+     * \param   value       The value to set as default.
+     * \return  Pointer to the updated parameter.
+     **/
+    MethodParameter* makeValueDefault(uint32_t id, bool makeDefault, const QString& value);
+
+    /**
+     * \brief   Makes the specified value the default for the parameter with the given name.
+     * \param   name        The name of the parameter.
+     * \param   makeDefault Flag indicating whether to make the value default.
+     * \param   value       The value to set as default.
+     * \return  Pointer to the updated parameter.
+     **/
+    MethodParameter* makeValueDefault(const QString& name, bool makeDefault, const QString& value);
+
+    protected:
+
+    /**
+     * \brief   Checks if the parameter at the given index can have a default value.
+     * \param   index   The index of the parameter.
+     * \return  True if the parameter can have a default value, false otherwise.
+     **/
+    bool canHaveDefaultValue(int index) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

@@ -755,10 +755,32 @@ void SIMethod::onParamTypeChanged(const QString& newText)
 
 void SIMethod::onParamDefaultChecked(bool isChecked)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    Q_ASSERT(item != nullptr);
+    SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    Q_ASSERT(method != nullptr);
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    Q_ASSERT(id != 0);
+    MethodParameter* param = method->makeValueDefault(id, isChecked, mParams->ctrlParamDefaultValue()->text());
+    Q_ASSERT(param != nullptr);
+    setNodeText(item, param);
+    showParamDetails(method, *param);
 }
 
 void SIMethod::onParamDefaultChanged(const QString& newText)
 {
+    QTreeWidget* table = mList->ctrlTableList();
+    QTreeWidgetItem* item = table->currentItem();
+    Q_ASSERT(item != nullptr);
+    SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    Q_ASSERT(method != nullptr);
+    uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    Q_ASSERT(id != 0);
+    MethodParameter* param = method->setDefaultValue(id, mParams->ctrlParamDefaultValue()->text());
+    Q_ASSERT(param != nullptr);
+    setNodeText(item, param);
+    showParamDetails(method, *param);
 }
 
 void SIMethod::onParamDescriptionChanged(void)
@@ -876,7 +898,6 @@ void SIMethod::blockBasicSignals(bool doBlock)
     
     mParams->ctrlParamName()->blockSignals(doBlock);
     mParams->ctrlParamType()->blockSignals(doBlock);
-    mParams->ctrlParamHasDefaultValue()->blockSignals(doBlock);
     mParams->ctrlParamDefaultValue()->blockSignals(doBlock);
 
     mList->ctrlTableList()->blockSignals(doBlock);
@@ -996,15 +1017,15 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
         mParams->ctrlParamType()->setCurrentText(param.getType());
         if (param.hasDefault())
         {
-            mParams->ctrlParamHasDefaultValue()->setChecked(true);
+            mParams->ctrlParamHasDefault()->setChecked(true);
             mParams->ctrlParamDefaultValue()->setText(param.getValue());
-            mParams->ctrlParamDefaultValue()->setEnabled(true);
+            mParams->ctrlParamDefaultValue()->setEnabled(method->canSwitchDefaultValue(param.getId()));
         }
         else
         {
-            mParams->ctrlParamHasDefaultValue()->setChecked(false);
+            mParams->ctrlParamHasDefault()->setChecked(false);
             mParams->ctrlParamDefaultValue()->setText(QString());
-            mParams->ctrlParamDefaultValue()->setEnabled(false);
+            mParams->ctrlParamDefaultValue()->setEnabled(method->canSwitchDefaultValue(param.getId()));
         }
         
         mParams->ctrlParamDescription()->setPlainText(param.getDescription());

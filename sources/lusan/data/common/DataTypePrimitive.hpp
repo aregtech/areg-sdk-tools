@@ -101,6 +101,13 @@ public:
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
+    /**
+     * \brief   Converts the value to the string representation.
+     * \param   value   The value to convert.
+     * \return  The string representation of the value.
+     **/
+    virtual QString convertValue(const QString& value) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
@@ -164,6 +171,17 @@ public:
      * \return  Reference to this object.
      **/
     DataTypePrimitiveInt& operator=(DataTypePrimitiveInt&& other) noexcept;
+
+//////////////////////////////////////////////////////////////////////////
+// Override
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Converts the value to the string representation.
+     * \param   value   The value to convert.
+     * \return  The string representation of the value.
+     **/
+    virtual QString convertValue(const QString& value) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -219,6 +237,17 @@ public:
      * \return  Reference to this object.
      **/
     DataTypePrimitiveUint& operator=(DataTypePrimitiveUint&& other) noexcept;
+    
+//////////////////////////////////////////////////////////////////////////
+// Override
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Converts the value to the string representation.
+     * \param   value   The value to convert.
+     * \return  The string representation of the value.
+     **/
+    virtual QString convertValue(const QString& value) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -274,6 +303,18 @@ public:
      * \return  Reference to this object.
      **/
     DataTypePrimitiveFloat& operator=(DataTypePrimitiveFloat&& other) noexcept;
+
+//////////////////////////////////////////////////////////////////////////
+// Override
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Converts the value to the string representation.
+     * \param   value   The value to convert.
+     * \return  The string representation of the value.
+     **/
+    virtual QString convertValue(const QString& value) const override;
+
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPEPRIMITIVE_HPP
