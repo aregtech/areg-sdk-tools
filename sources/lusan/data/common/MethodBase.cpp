@@ -355,6 +355,30 @@ MethodParameter* MethodBase::makeValueDefault(const QString& name, bool makeDefa
     return param;
 }
 
+bool MethodBase::canSwapParamLeft(uint32_t id) const
+{
+    int pos = findIndex(id);
+    return canSwapParamLeft(pos);
+}
+
+bool MethodBase::canSwapParamRight(uint32_t id) const
+{
+    int pos = findIndex(id);
+    return canSwapParamRight(pos);
+}
+
+bool MethodBase::canSwapParamLeft(const QString& name) const
+{
+    int pos = findIndex(name);
+    return canSwapParamLeft(pos);
+}
+
+bool MethodBase::canSwapParamRight(const QString& name) const
+{
+    int pos = findIndex(name);
+    return canSwapParamRight(pos);
+}
+
 bool MethodBase::canHaveDefaultValue(int index) const
 {
     int def = firsPositionWithDefault();
@@ -371,4 +395,38 @@ bool MethodBase::canHaveDefaultValue(int index) const
     }
 
     return false;
+}
+
+bool MethodBase::canSwapParamLeft(int position) const
+{
+    if (position <= 0)
+        return false;
+
+    int def = firsPositionWithDefault();
+    int count = getElementCount();
+    if (def < 0)
+    {
+        return (position < count);
+    }
+    else
+    {
+        return (position < def) || ((position < count) && (position > def));
+    }
+}
+
+bool MethodBase::canSwapParamRight(int position) const
+{
+    int count = getElementCount();
+    if ((position < 0) || (position == (count - 1)))
+        return false;
+
+    int def = firsPositionWithDefault();
+    if (def < 0)
+    {
+        return (position < (count - 1));
+    }
+    else
+    {
+        return (position < (def - 1)) || ((position < (count - 1)) && (position >= def));
+    }
 }
