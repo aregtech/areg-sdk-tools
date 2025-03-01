@@ -180,6 +180,8 @@ QIcon MethodParameter::getIcon(ElementBase::eDisplay display) const
         return QIcon(QString::fromUtf8(":/icons/data method param"));
     case ElementBase::eDisplay::DisplayType:
         return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+    case ElementBase::eDisplay::DisplayValue:
+        return (mIsDefault ? QIcon::fromTheme(QIcon::ThemeIcon::ToolsCheckSpelling) : QIcon());
     default:
         return QIcon();
     }
