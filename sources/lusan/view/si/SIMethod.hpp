@@ -371,8 +371,10 @@ private:
      * \param   row         The row index of the selected data type element.
      * \param   rowCount    The total number of rows in the tree table.
      **/
-    inline void updateToolButtons(int row, int rowCount);
-
+    inline void updateToolButtonsForMethod(int row, int rowCount);
+    
+    inline void updateToolButtonsForParams(SIMethodBase * method, int pos);
+    
     /**
      * \brief   Generates and returns new method name.
      **/

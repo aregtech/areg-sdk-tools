@@ -71,6 +71,13 @@ public:
      **/
     SIMethodBase* addMethod(const QString& name, SIMethodBase::eMethodType methodType);
 
+    /**
+     * \brief Inserts a new method object with specified name and type at the specified position.
+     * \param position    The position to insert the method.
+     * \param name        The name of the method.
+     * \param methodType  The type of the method.
+     * \return  Returns the pointer to the created method object.
+     **/
     SIMethodBase* insertMethod(int position, const QString& name, SIMethodBase::eMethodType methodType);
 
     /**
@@ -163,11 +170,17 @@ public:
      * \brief   Adds a new parameter to the method.
      * \param   method  The method object to add a parameter.
      * \param   name    The name of the parameter.
-     * \param   type    The data type of the parameter.
      * \return  Returns the pointer to the created parameter object.
      **/
     MethodParameter* addParameter(SIMethodBase* method, const QString& name);
 
+    /**
+     * \brief   Inserts a new parameter to the method at the specified position.
+     * \param   method      The method object to add a parameter.
+     * \param   position    The position to insert the parameter.
+     * \param   name        The name of the parameter.
+     * \return  Returns the pointer to the created parameter object.
+     **/
     MethodParameter* insertParameter(SIMethodBase* method, int position, const QString& name);
 
     /**
@@ -206,6 +219,8 @@ public:
      * \param   second  The second parameter to swap.
      **/
     void swapMethodParams(SIMethodBase& method, const MethodParameter& first, const MethodParameter& second);
+
+
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

@@ -182,7 +182,6 @@ public:
      **/
     void invalidate(void);
 
-    
     /**
      * \brief   Checks if the parameter with the given ID has a default value.
      * \param   id  The ID of the parameter.
@@ -279,7 +278,91 @@ public:
      **/
     MethodParameter* makeValueDefault(const QString& name, bool makeDefault, const QString& value);
 
-    protected:
+    /**
+     * \brief   Determines whether the parameter at the specified index can be swapped with the previous parameter.
+     *
+     * \details A parameter can be swapped with the one to its left only if the following conditions are met:
+     *          - The parameter is not in the first position.
+     *          - Swapping must not violate default value constraints. Specifically:
+     *              - If the given parameter has a default value but the previous parameter does not,
+     *                the swap is not allowed.
+     *
+     * \param   id  The unique identifier of the parameter to check.
+     * \return  True if the parameter can be swapped with the previous one; otherwise, false.
+     */
+    bool canSwapParamLeft(uint32_t id) const;
+
+    /**
+     * \brief   Determines whether the parameter at the specified index can be swapped with the next parameter.
+     *
+     * \details A parameter can be swapped with the one to its right only if the following conditions are met:
+     *          - The parameter is not in the last position.
+     *          - Swapping must not violate default value constraints. Specifically:
+     *              - If the given parameter has a default value but the next parameter does not,
+     *                the swap is not allowed.
+     *
+     * \param   id  The unique identifier of the parameter to check.
+     * \return  True if the parameter can be swapped with the next one; otherwise, false.
+     */
+    bool canSwapParamRight(uint32_t id) const;
+
+    /**
+     * \brief   Determines whether the parameter with the specified name can be swapped with the previous parameter.
+     *
+     * \details A parameter can be swapped with the one to its left only if the following conditions are met:
+     *          - The parameter is not in the first position.
+     *          - Swapping must not violate default value constraints. Specifically:
+     *              - If the given parameter has a default value but the previous parameter does not,
+     *                the swap is not allowed.
+     *
+     * \param   name    The name of the parameter to check.
+     * \return  True if the parameter can be swapped with the previous one; otherwise, false.
+     */
+    bool canSwapParamLeft(const QString& name) const;
+
+    /**
+     * \brief   Determines whether the parameter with the specified name can be swapped with the next parameter.
+     *
+     * \details A parameter can be swapped with the one to its right only if the following conditions are met:
+     *          - The parameter is not in the last position.
+     *          - Swapping must not violate default value constraints. Specifically:
+     *              - If the given parameter has a default value but the next parameter does not,
+     *                the swap is not allowed.
+     *
+     * \param   name    The name of the parameter to check.
+     * \return  True if the parameter can be swapped with the next one; otherwise, false.
+     */
+    bool canSwapParamRight(const QString& name) const;
+
+    /**
+     * \brief   Swaps the parameter at the specified position in the parameter list with the previous parameter.
+     *
+     * \details The swap is performed only if the following conditions are met:
+     *          - The parameter is not in the first position.
+     *          - Swapping does not violate default value constraints. Specifically:
+     *              - If the given parameter has a default value but the previous parameter does not,
+     *                the swap is not allowed.
+     *
+     * \param   id  The unique identifier of the parameter to swap.
+     * \return  True if the parameter was successfully swapped with the previous one; otherwise, false.
+     */
+    bool canSwapParamLeft(int position) const;
+
+    /**
+     * \brief   Swaps the parameter at the specified position in the parameter list with the next parameter.
+     *
+     * \details The swap is performed only if the following conditions are met:
+     *          - The parameter is not in the last position.
+     *          - Swapping does not violate default value constraints. Specifically:
+     *              - If the given parameter has a default value but the next parameter does not,
+     *                the swap is not allowed.
+     *
+     * \param   id  The unique identifier of the parameter to swap.
+     * \return  True if the parameter was successfully swapped with the next one; otherwise, false.
+     */
+    bool canSwapParamRight(int position) const;
+
+protected:
 
     /**
      * \brief   Checks if the parameter at the given index can have a default value.
