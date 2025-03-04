@@ -150,12 +150,20 @@ void FieldEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
     xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mParamType.getName());
+    
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
     }
-
-    xml.writeTextElement(XmlSI::xmlSIElementValue, mValue);
+        
+    if (mValue.isEmpty() == false)
+    {
+        xml.writeStartElement(XmlSI::xmlSIElementValue);
+        xml.writeAttribute(XmlSI::xmlSIAttributeIsDefault, XmlSI::xmlSIValueTrue);
+        xml.writeCharacters(mValue);
+        xml.writeEndElement();
+    }
+    
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
     if (getIsDeprecated())
     {

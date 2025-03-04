@@ -39,7 +39,7 @@ QLineEdit * SIMethodParamDetails::ctrlParamName(void) const
     return ui->editParamName;
 }
 
-QComboBox * SIMethodParamDetails::ctrlParamType(void) const
+QComboBox * SIMethodParamDetails::ctrlParamTypes(void) const
 {
     return ui->comboParamType;
 }

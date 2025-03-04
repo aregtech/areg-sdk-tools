@@ -160,6 +160,10 @@ public:
      * \brief   Return the type of method as a string.
      **/
     QString getType(void) const;
+    
+    bool checkMethodType(const QString & methodType) const;
+    
+    bool checkMethodType(const QStringView & methodType) const;
 
     /**
      * \brief   Marks the method as deprecated.

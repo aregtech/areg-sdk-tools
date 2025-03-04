@@ -254,11 +254,13 @@ bool SIMethodData::readFromXml(QXmlStreamReader& xml)
 
 void SIMethodData::writeToXml(QXmlStreamWriter& xml) const
 {
+    const QList<SIMethodBase*>& elements { getElements() };
+    Q_ASSERT(elements.size() == (mBroadcastMethods.size() + mRequestMethods.size() + mResponseMethods.size()));
+    if (elements.size() == 0)
+        return;
+    
     xml.writeStartElement(XmlSI::xmlSIElementMethodList);
-
-    const QList<SIMethodBase*>& allMethods = getElements();
-    Q_ASSERT(allMethods.size() == (mBroadcastMethods.size() + mRequestMethods.size() + mResponseMethods.size()));
-    for (const SIMethodBase* method : allMethods)
+    for (const SIMethodBase* method : elements)
     {
         method->writeToXml(xml);
     }

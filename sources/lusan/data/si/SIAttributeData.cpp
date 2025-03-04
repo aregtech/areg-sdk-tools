@@ -60,9 +60,11 @@ bool SIAttributeData::readFromXml(QXmlStreamReader& xml)
 
 void SIAttributeData::writeToXml(QXmlStreamWriter& xml) const
 {
-    xml.writeStartElement(XmlSI::xmlSIElementAttributeList);
-
     const QList<AttributeEntry>& elements = getElements();
+    if (elements.size() == 0)
+        return;
+    
+    xml.writeStartElement(XmlSI::xmlSIElementAttributeList);
     for (const AttributeEntry& entry : elements)
     {
         entry.writeToXml(xml);

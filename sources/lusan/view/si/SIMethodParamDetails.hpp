@@ -38,7 +38,7 @@ public:
     
     QLineEdit * ctrlParamName(void) const;
     
-    QComboBox * ctrlParamType(void) const;
+    QComboBox * ctrlParamTypes(void) const;
 
     QCheckBox* ctrlParamHasDefault(void) const;
     

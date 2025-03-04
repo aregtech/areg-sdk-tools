@@ -63,8 +63,11 @@ bool SIIncludeData::readFromXml(QXmlStreamReader& xml)
 
 void SIIncludeData::writeToXml(QXmlStreamWriter& xml) const
 {
-    xml.writeStartElement(XmlSI::xmlSIElementIncludeList);
     const QList<IncludeEntry> & elements = getElements();
+    if (elements.size() == 0)
+        return;
+    
+    xml.writeStartElement(XmlSI::xmlSIElementIncludeList);
     for (const IncludeEntry& entry : elements)
     {
         entry.writeToXml(xml);

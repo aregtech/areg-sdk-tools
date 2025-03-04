@@ -71,7 +71,7 @@ SIMethodResponse& SIMethodResponse::operator = (SIMethodResponse&& other) noexce
 bool SIMethodResponse::readFromXml(QXmlStreamReader& xml)
 {
     QXmlStreamAttributes attributes = xml.attributes();
-    if (xml.name() == XmlSI::xmlSIElementMethod && attributes.value(XmlSI::xmlSIAttributeMethodType) == getType())
+    if ((xml.name() == XmlSI::xmlSIElementMethod) && checkMethodType(attributes.value(XmlSI::xmlSIAttributeMethodType)))
     {
         setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
