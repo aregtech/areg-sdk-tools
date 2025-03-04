@@ -856,7 +856,7 @@ void SIMethod::updateData(void)
         table->addTopLevelItem(item);
     }
 
-    mParams->ctrlParamType()->setModel(mParamTypes);
+    mParams->ctrlParamTypes()->setModel(mParamTypes);
     mDetails->ctrlConnectedResponse()->setModel(mReplyModel);
 }
 
@@ -894,7 +894,7 @@ void SIMethod::setupSignals(void)
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged, this, &SIMethod::onCurCellChanged);
 
     connect(mParams->ctrlParamName()        , &QLineEdit::textChanged       , this, &SIMethod::onParamNameChanged);
-    connect(mParams->ctrlParamType()        , &QComboBox::currentTextChanged, this, &SIMethod::onParamTypeChanged);
+    connect(mParams->ctrlParamTypes()        , &QComboBox::currentTextChanged, this, &SIMethod::onParamTypeChanged);
     connect(mParams->ctrlParamHasDefault()  , &QCheckBox::toggled           , this, &SIMethod::onParamDefaultChecked);
     connect(mParams->ctrlParamDefaultValue(), &QLineEdit::textChanged       , this, &SIMethod::onParamDefaultChanged);
     connect(mParams->ctrlParamDescription() , &QPlainTextEdit::textChanged  , this, &SIMethod::onParamDescriptionChanged);
@@ -911,7 +911,7 @@ void SIMethod::blockBasicSignals(bool doBlock)
     mDetails->ctrlConnectedResponse()->blockSignals(doBlock);
     
     mParams->ctrlParamName()->blockSignals(doBlock);
-    mParams->ctrlParamType()->blockSignals(doBlock);
+    mParams->ctrlParamTypes()->blockSignals(doBlock);
     mParams->ctrlParamDefaultValue()->blockSignals(doBlock);
 
     mList->ctrlTableList()->blockSignals(doBlock);
@@ -1020,7 +1020,7 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
     if (method != nullptr)
     {
         mParams->ctrlParamName()->setEnabled(true);
-        mParams->ctrlParamType()->setEnabled(true);
+        mParams->ctrlParamTypes()->setEnabled(true);
             
         mList->ctrlButtonRemove()->setEnabled(false);
         mList->ctrlButtonParamAdd()->setEnabled(true);
@@ -1028,7 +1028,7 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
         mList->ctrlButtonParamInsert()->setEnabled(true);
         
         mParams->ctrlParamName()->setText(param.getName());
-        mParams->ctrlParamType()->setCurrentText(param.getType());
+        mParams->ctrlParamTypes()->setCurrentText(param.getType());
         if (param.hasDefault())
         {
             mParams->ctrlParamHasDefault()->setChecked(true);
@@ -1055,7 +1055,7 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
         mList->ctrlButtonParamInsert()->setEnabled(false);
         
         mParams->ctrlParamName()->setText(QString());
-        mParams->ctrlParamType()->setCurrentText(QString());
+        mParams->ctrlParamTypes()->setCurrentText(QString());
         mParams->ctrlParamDefaultValue()->setText(QString());
         mParams->ctrlParamDescription()->setPlainText(QString());
         SICommon::enableDeprecated<SIMethodParamDetails, MethodParameter>(mParams, nullptr, false);

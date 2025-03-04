@@ -610,6 +610,9 @@ inline void SIAttribute::updateDetails(const AttributeEntry* entry, bool updateA
 {
     if (entry != nullptr)
     {
+        mDetails->ctrlName()->setEnabled(true);
+        mDetails->ctrlTypes()->setEnabled(true);
+        mDetails->ctrlNotification()->setEnabled(true);
         mDetails->ctrlName()->setText(entry->getName());
         mDetails->ctrlNotification()->setCurrentText(AttributeEntry::toString(entry->getNotification()));
         if (entry->isValid())

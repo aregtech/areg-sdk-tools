@@ -133,6 +133,18 @@ QString SIMethodBase::getType(void) const
     return SIMethodBase::toString(mMethodType);
 }
 
+bool SIMethodBase::checkMethodType(const QString & methodType) const
+{
+    QString siMethod {SIMethodBase::toString(mMethodType)};
+    return (methodType.compare(siMethod, Qt::CaseSensitivity::CaseInsensitive) == 0);
+}
+
+bool SIMethodBase::checkMethodType(const QStringView & methodType) const
+{
+    QString siMethod {SIMethodBase::toString(mMethodType)};
+    return (methodType.compare(siMethod, Qt::CaseSensitivity::CaseInsensitive) == 0);
+}
+
 void SIMethodBase::markDeprecated(bool isDeprecated, const QString& hint)
 {
     if (isDeprecated)
@@ -237,15 +249,15 @@ QString SIMethodBase::toString(eMethodType methodType)
 
 SIMethodBase::eMethodType SIMethodBase::fromString(const QString& methodTypeStr)
 {
-    if (methodTypeStr == XmlSI::xmlSIMethodTypeRequest)
+    if (methodTypeStr.compare(XmlSI::xmlSIMethodTypeRequest, Qt::CaseSensitivity::CaseInsensitive) == 0)
     {
         return eMethodType::MethodRequest;
     }
-    else if (methodTypeStr == XmlSI::xmlSIMethodTypeResponse)
+    else if (methodTypeStr.compare(XmlSI::xmlSIMethodTypeResponse, Qt::CaseSensitivity::CaseInsensitive) == 0)
     {
         return eMethodType::MethodResponse;
     }
-    else if (methodTypeStr == XmlSI::xmlSIMethodTypeBroadcast)
+    else if (methodTypeStr.compare(XmlSI::xmlSIMethodTypeBroadcast, Qt::CaseSensitivity::CaseInsensitive) == 0)
     {
         return eMethodType::MethodBroadcast;
     }

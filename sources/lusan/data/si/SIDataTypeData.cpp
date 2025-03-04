@@ -135,9 +135,12 @@ bool SIDataTypeData::readFromXml(QXmlStreamReader& xml)
 
 void SIDataTypeData::writeToXml(QXmlStreamWriter& xml) const
 {
+    const QList<DataTypeCustom*>& elements {getElements()};
+    if (elements.size() == 0)
+        return;
+    
     xml.writeStartElement(XmlSI::xmlSIElementDataTypeList);
-    const QList<DataTypeCustom*>& customDataTypes {getElements()};
-    for (const DataTypeCustom* dataType : customDataTypes)
+    for (const DataTypeCustom* dataType : elements)
     {
         dataType->writeToXml(xml);
     }

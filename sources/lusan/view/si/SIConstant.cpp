@@ -566,6 +566,9 @@ inline void SIConstant::updateDetails(const ConstantEntry* entry, bool updateAll
 {
     if (entry != nullptr)
     {
+        mDetails->ctrlName()->setEnabled(true);
+        mDetails->ctrlTypes()->setEnabled(true);
+        mDetails->ctrlValue()->setEnabled(true);
         mDetails->ctrlName()->setText(entry->getName());
         mDetails->ctrlValue()->setText(entry->getValue());
         if (entry->isValid())

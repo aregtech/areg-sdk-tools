@@ -60,8 +60,11 @@ bool SIConstantData::readFromXml(QXmlStreamReader& xml)
 
 void SIConstantData::writeToXml(QXmlStreamWriter& xml) const
 {
-    xml.writeStartElement(XmlSI::xmlSIElementConstantList);
     const QList<ConstantEntry>& elements = getElements();
+    if (elements.size() == 0)
+        return;
+    
+    xml.writeStartElement(XmlSI::xmlSIElementConstantList);
     for (const ConstantEntry& entry : elements)
     {
         entry.writeToXml(xml);
