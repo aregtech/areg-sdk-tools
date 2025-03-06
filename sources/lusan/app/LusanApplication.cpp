@@ -52,7 +52,7 @@ const QStringList   LusanApplication::InternalExts
 
 LusanApplication *  LusanApplication::theApp{nullptr};
 
-LusanApplication::LusanApplication(int argc, char* argv[])
+LusanApplication::LusanApplication(int& argc, char** argv)
     : QApplication  (argc, argv)
     , mOptions      ( )
 {

@@ -594,6 +594,8 @@ void MdiMainWindow::_createDockWindows()
 {
     addDockWidget(Qt::LeftDockWidgetArea, &mNavigation);
 
+    resizeDocks(QList<QDockWidget *>{&mNavigation}, QList<int>{mNavigation.width() + 10}, Qt::Horizontal);
+
     mStatusDock = new QDockWidget(tr("Status"), this);
     mStatusTabs = new QTabWidget;
     mListView = new QListView;
