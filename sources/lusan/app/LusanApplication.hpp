@@ -39,7 +39,7 @@ public:
      * \param   argc    The number of command-line arguments.
      * \param   argv    The array of command-line arguments.
      **/
-    LusanApplication(int argc, char* argv[]);
+    LusanApplication(int& argc, char** argv);
 
     /**
      * \brief   Destructor.

@@ -27,6 +27,8 @@ Navigation::Navigation(MdiMainWindow* parent)
     mTabs.addTab(&mFileSystem, tr("Workspace"));
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
+
+    initSize();
 }
 
 QWidget* Navigation::getTab(const QString& tabName) const
@@ -58,4 +60,11 @@ bool Navigation::tabExists(const QString& tabName) const
     }
     
     return result;
+}
+
+void Navigation::initSize()
+{
+    resize(QSize { mFileSystem.width() + 10,  mFileSystem.height() });
+
+    setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 }
