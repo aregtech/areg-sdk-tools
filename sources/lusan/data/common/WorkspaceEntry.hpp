@@ -175,6 +175,17 @@ public:
     inline const QString& getDirDelivery(void) const;
 
     /**
+     * \brief   Sets the directory to save logging files.
+     * \param   logs    The path to the directory to save logs.
+     **/
+    inline void setDirLogs(const QString& logs);
+
+    /**
+     * \brief   Gets the directory to save logging files.
+     **/
+    inline const QString& getDirLogs(void) const;
+
+    /**
      * \brief   Gets the ID of the workspace.
      * \return  The ID of the workspace.
      **/
@@ -243,6 +254,7 @@ private:
     QString     mSources;           //!< The sources directory of the workspace.
     QString     mIncludes;          //!< The includes directory of the workspace.
     QString     mDelivery;          //!< The delivery directory of the workspace.
+    QString     mLogFiles;          //!< The location of logging files.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -297,6 +309,16 @@ inline void WorkspaceEntry::setDirDelivery(const QString& delivery)
 inline const QString& WorkspaceEntry::getDirDelivery(void) const
 {
     return mDelivery;
+}
+
+inline void WorkspaceEntry::setDirLogs(const QString& logs)
+{
+    mLogFiles = logs;
+}
+
+inline const QString& WorkspaceEntry::getDirLogs(void) const
+{
+    return mLogFiles;
 }
 
 inline uint32_t WorkspaceEntry::getId(void) const

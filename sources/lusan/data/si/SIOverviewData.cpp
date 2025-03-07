@@ -57,7 +57,7 @@ const char* SIOverviewData::toString(SIOverviewData::eCategory category)
 }
 
 SIOverviewData::SIOverviewData(ElementBase* parent /*= nullptr*/)
-    : ElementBase   (parent)
+    : DocumentElem  (parent)
     , mName         ("NewServiceInterface")
     , mVersion      (0, 0, 1)
     , mCategory     (eCategory::InterfacePrivate)
@@ -68,7 +68,7 @@ SIOverviewData::SIOverviewData(ElementBase* parent /*= nullptr*/)
 }
 
 SIOverviewData::SIOverviewData(uint32_t id, const QString& name, ElementBase* parent)
-    : ElementBase   (id, parent)
+    : DocumentElem  (id, parent)
     , mName         (name)
     , mVersion      (0, 0, 1)
     , mCategory     (eCategory::InterfacePrivate)
@@ -86,7 +86,7 @@ SIOverviewData::SIOverviewData( uint32_t id
                               , bool isDeprecated
                               , const QString& deprecateHint
                               , ElementBase* parent /*= nullptr*/)
-    : ElementBase   (id, parent)
+    : DocumentElem  (id, parent)
     , mName         (name)
     , mVersion      (version)
     , mCategory     (category)
@@ -96,6 +96,11 @@ SIOverviewData::SIOverviewData( uint32_t id
 {
 }
 
+bool SIOverviewData::isValid() const
+{
+    return true;
+}
+    
 bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
 {
     if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementOverview))
@@ -110,8 +115,10 @@ bool SIOverviewData::readFromXml(QXmlStreamReader& xml)
     mVersion = attributes.value(XmlSI::xmlSIAttributeVersion).toString();
     QString categoryStr = attributes.hasAttribute(XmlSI::xmlSIAttributeCategory) ? attributes.value(XmlSI::xmlSIAttributeCategory).toString() : STR_CATEGORY_PRIVATE;
     mCategory = SIOverviewData::fromString(categoryStr);
-    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
     
+    QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
+    setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
+
     if (dataVersion != VersionNumber(ServiceInterfaceData::XML_FORMAT_DEFAULT))
     {
         if (dataVersion == VersionNumber(ServiceInterfaceData::XML_VERRSION_100))
@@ -150,14 +157,10 @@ void SIOverviewData::writeToXml(QXmlStreamWriter& xml) const
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+        writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
     }
 
-    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    if (getIsDeprecated())
-    {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
-    }
-
+    writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
     xml.writeEndElement();
 }
 

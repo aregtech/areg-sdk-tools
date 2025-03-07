@@ -20,7 +20,7 @@
  *
  ************************************************************************/
 
-#include "lusan/common/ElementBase.hpp"
+#include "lusan/data/common/DocumentElem.hpp"
 #include "lusan/common/VersionNumber.hpp"
 
 #include <QString>
@@ -33,7 +33,7 @@ class SIDataTypeData;
  * \class   SIOverviewData
  * \brief   Represents the overview data of a service interface in the Lusan application.
  **/
-class SIOverviewData    : public ElementBase
+class SIOverviewData    : public DocumentElem
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants.
@@ -114,22 +114,34 @@ public:
     virtual ~SIOverviewData(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes and operations
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
+    
+    /**
+     * \brief   Checks if the parameter is valid.
+     * \return  True if the parameter is valid, false otherwise.
+     **/
+    virtual bool isValid() const override;
+    
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    bool readFromXml(QXmlStreamReader& xml);
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    void writeToXml(QXmlStreamWriter& xml) const;
-
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    
     /**
      * \brief   Gets the name of the service interface.
      * \return  The name of the service interface.

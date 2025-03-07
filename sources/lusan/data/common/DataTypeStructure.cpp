@@ -60,7 +60,9 @@ bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
     QXmlStreamAttributes attributes = xml.attributes();
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     setName(attributes.value(XmlSI::xmlSIAttributeName).toString());
-    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
+
+    QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
+    setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
@@ -110,21 +112,22 @@ void DataTypeStructure::writeToXml(QXmlStreamWriter& xml) const
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+        writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
     }
 
-    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    if (getIsDeprecated())
+    writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
+
+    if (getElementCount() > 0)
     {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
+        xml.writeStartElement(XmlSI::xmlSIElementFieldList);
+        for (const FieldEntry& entry : mElementList)
+        {
+            entry.writeToXml(xml);
+        }
+
+        xml.writeEndElement(); // FieldList
     }
 
-    xml.writeStartElement(XmlSI::xmlSIElementFieldList);
-    for (const FieldEntry& entry : mElementList)
-    {
-        entry.writeToXml(xml);
-    }
-
-    xml.writeEndElement(); // FieldList
     xml.writeEndElement(); // DataType
 }
 

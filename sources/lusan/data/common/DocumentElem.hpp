@@ -107,6 +107,17 @@ public:
      * \param   xml     The XML stream writer.
      **/
     virtual void writeToXml(QXmlStreamWriter& xml) const = 0;
+
+protected:
+
+    /**
+     * \brief   Writes the text element to XML stream.
+     * \param   xml             The XML stream writer.
+     * \param   elemName        The name of the element to write.
+     * \param   elemValue       The value of the element to write.
+     * \param   skipIfEmpty     If true, the element is skipped if the value is empty.
+     **/
+    void writeTextElem(QXmlStreamWriter& xml, const char* elemName, const QString elemValue, bool skipIfEmpty) const;
 };
 
 #endif  // LUSAN_DATA_COMMON_DOCUMENTELEM_HPP

@@ -19,6 +19,8 @@
 
 #include "lusan/data/common/DocumentElem.hpp"
 
+#include <QXmlStreamWriter>
+
 DocumentElem::DocumentElem(ElementBase* parent)
     : ElementBase(parent)
 {
@@ -49,4 +51,19 @@ DocumentElem& DocumentElem::operator = (DocumentElem&& src) noexcept
 {
     ElementBase::operator = (std::move(src));
     return (*this);
+}
+
+void DocumentElem::writeTextElem(QXmlStreamWriter& xml, const char* elemName, const QString elemValue, bool skipIfEmpty) const
+{
+    if (elemName == nullptr)
+        return;
+
+    if (elemValue.isEmpty() == false)
+    {
+        xml.writeTextElement(elemName, elemValue);
+    }
+    else if (skipIfEmpty == false)
+    {
+        xml.writeEmptyElement(elemName);
+    }
 }

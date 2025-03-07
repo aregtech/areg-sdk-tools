@@ -237,3 +237,16 @@ QString LusanApplication::getWorkspaceDelivery(void)
         return QString();
     }
 }
+
+QString LusanApplication::getWorkspaceLogs(void)
+{
+    if (LusanApplication::theApp != nullptr)
+    {
+        const WorkspaceEntry& workspace = LusanApplication::theApp->mOptions.getActiveWorkspace();
+        return workspace.getDirLogs();
+    }
+    else
+    {
+        return QString();
+    }
+}

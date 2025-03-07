@@ -104,6 +104,7 @@ namespace NELusanCommon
     constexpr const char * const xmlElementSources          { "Sources" };
     constexpr const char * const xmlElementIncludes         { "Includes" };
     constexpr const char * const xmlElementDelivery         { "Delivery" };
+    constexpr const char * const xmlElementLogs             { "Logs" };
 
     constexpr const char * const xmlElementProject          { "Project" };
 

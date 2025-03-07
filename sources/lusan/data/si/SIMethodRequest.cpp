@@ -116,7 +116,9 @@ bool SIMethodRequest::readFromXml(QXmlStreamReader& xml)
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
         QString response = attributes.hasAttribute(XmlSI::xmlSIAttributeResponse) ? attributes.value(XmlSI::xmlSIAttributeResponse).toString() : "";
         mResponse.setName(response);
-        setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
+
+        QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
+        setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
 
         while (xml.readNextStartElement())
         {
@@ -166,8 +168,8 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementMethod);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
-    xml.writeAttribute(XmlSI::xmlSIAttributeMethodType, getType());
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
+    xml.writeAttribute(XmlSI::xmlSIAttributeMethodType, getType());
     if (mResponse.isValid() && (mResponse.getName().isEmpty() == false))
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeResponse, mResponse.getName());
@@ -176,13 +178,10 @@ void SIMethodRequest::writeToXml(QXmlStreamWriter& xml) const
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+        writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
     }
 
-    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    if (getIsDeprecated())
-    {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
-    }
+    writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
 
     const QList<MethodParameter> & elements = getElements();
     if (elements.isEmpty() == false)
