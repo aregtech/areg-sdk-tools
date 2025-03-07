@@ -114,7 +114,7 @@ bool EnumEntry::readFromXml(QXmlStreamReader& xml)
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementEnumEntry))
     {
-        if (xml.tokenType() != QXmlStreamReader::StartElement)
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
             if (xml.name() == XmlSI::xmlSIElementValue)
             {

@@ -133,7 +133,6 @@ void DataTypeEnum::writeToXml(QXmlStreamWriter& xml) const
         writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
     }
 
-    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
     writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
 
     if (getElementCount() > 0)
