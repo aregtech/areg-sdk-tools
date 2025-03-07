@@ -113,15 +113,17 @@ bool MethodParameter::readFromXml(QXmlStreamReader& xml)
     {
         QXmlStreamAttributes attributes = xml.attributes();
         setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
+        mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
         mParamType  = attributes.value(XmlSI::xmlSIAttributeDataType).toString();
-        mName       = attributes.value(XmlSI::xmlSIAttributeName).toString();
-        setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
+
+        QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
+        setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
 
         while (xml.readNextStartElement())
         {
             if (xml.name() == XmlSI::xmlSIElementValue)
             {
-                mIsDefault  = xml.attributes().value(XmlSI::xmlSIAttributeIsDefault).toString() == XmlSI::xmlSIValueTrue;
+                mIsDefault  = xml.attributes().value(XmlSI::xmlSIAttributeIsDefault).toString().compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive);
                 mValue      = xml.readElementText();
             }
             else if (xml.name() == XmlSI::xmlSIElementDescription)
@@ -148,11 +150,12 @@ void MethodParameter::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementParameter);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
-    xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mParamType.getName());
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
+    xml.writeAttribute(XmlSI::xmlSIAttributeDataType, mParamType.getName());
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+        writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
     }
 
     if (!mValue.isEmpty())
@@ -163,12 +166,7 @@ void MethodParameter::writeToXml(QXmlStreamWriter& xml) const
         xml.writeEndElement();
     }
 
-    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    if (getIsDeprecated())
-    {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
-    }
-
+    writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
     xml.writeEndElement();
 }
 

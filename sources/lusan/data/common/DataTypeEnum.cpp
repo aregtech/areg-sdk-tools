@@ -73,9 +73,12 @@ bool DataTypeEnum::readFromXml(QXmlStreamReader& xml)
     QXmlStreamAttributes attributes = xml.attributes();
     setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
     mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
+
     QString type = attributes.hasAttribute(XmlSI::xmlSIAttributeValues) ? attributes.value(XmlSI::xmlSIAttributeValues).toString() : "";
     mDerived = type == DEFAULT_VALUES ? "" : type;
-    setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
+
+    QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
+    setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
 
     while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
     {
@@ -127,22 +130,24 @@ void DataTypeEnum::writeToXml(QXmlStreamWriter& xml) const
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+        writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
     }
 
     xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    if (getIsDeprecated())
+    writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
+
+    if (getElementCount() > 0)
     {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
+        xml.writeStartElement(XmlSI::xmlSIElementFieldList);
+        const QList<EnumEntry>& elements = getElements();
+        for (const EnumEntry& entry : elements)
+        {
+            entry.writeToXml(xml);
+        }
+
+        xml.writeEndElement(); // FieldList
     }
 
-    xml.writeStartElement(XmlSI::xmlSIElementFieldList);
-    const QList<EnumEntry> & elements = getElements();
-    for (const EnumEntry& entry : elements)
-    {
-        entry.writeToXml(xml);
-    }
-
-    xml.writeEndElement(); // FieldList
     xml.writeEndElement(); // DataType
 }
 

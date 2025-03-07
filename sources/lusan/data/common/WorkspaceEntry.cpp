@@ -29,6 +29,7 @@ WorkspaceEntry::WorkspaceEntry(void)
     , mSources()
     , mIncludes()
     , mDelivery()
+    , mLogFiles()
 {
 }
 
@@ -40,6 +41,7 @@ WorkspaceEntry::WorkspaceEntry(const QString& root, const QString& description, 
     , mSources()
     , mIncludes()
     , mDelivery()
+    , mLogFiles()
 {
 }
 
@@ -51,6 +53,7 @@ WorkspaceEntry::WorkspaceEntry(QXmlStreamReader& xml)
     , mSources()
     , mIncludes()
     , mDelivery()
+    , mLogFiles()
 {
     readFromXml(xml);
 }
@@ -63,6 +66,7 @@ WorkspaceEntry::WorkspaceEntry(const WorkspaceEntry& src)
     , mSources(src.mSources)
     , mIncludes(src.mIncludes)
     , mDelivery(src.mDelivery)
+    , mLogFiles(src.mLogFiles)
 {
 }
 
@@ -74,10 +78,11 @@ WorkspaceEntry::WorkspaceEntry(WorkspaceEntry&& src) noexcept
     , mSources(std::move(src.mSources))
     , mIncludes(std::move(src.mIncludes))
     , mDelivery(std::move(src.mDelivery))
+    , mLogFiles(std::move(src.mLogFiles))
 {
 }
 
-WorkspaceEntry& WorkspaceEntry::operator=(const WorkspaceEntry& src)
+WorkspaceEntry& WorkspaceEntry::operator = (const WorkspaceEntry& src)
 {
     if (this != &src)
     {
@@ -88,11 +93,12 @@ WorkspaceEntry& WorkspaceEntry::operator=(const WorkspaceEntry& src)
         mSources = src.mSources;
         mIncludes = src.mIncludes;
         mDelivery = src.mDelivery;
+        mLogFiles = src.mLogFiles;
     }
     return *this;
 }
 
-WorkspaceEntry& WorkspaceEntry::operator=(WorkspaceEntry&& src) noexcept
+WorkspaceEntry& WorkspaceEntry::operator = (WorkspaceEntry&& src) noexcept
 {
     if (this != &src)
     {
@@ -103,6 +109,7 @@ WorkspaceEntry& WorkspaceEntry::operator=(WorkspaceEntry&& src) noexcept
         mSources = std::move(src.mSources);
         mIncludes = std::move(src.mIncludes);
         mDelivery = std::move(src.mDelivery);
+        mLogFiles = std::move(src.mLogFiles);
     }
     return *this;
 }
@@ -221,6 +228,10 @@ void WorkspaceEntry::_readDirectories(QXmlStreamReader& xml)
             {
                 mDelivery = xml.readElementText();
             }
+            else if (xmlName == NELusanCommon::xmlElementLogs)
+            {
+                mLogFiles = xml.readElementText();
+            }
         }
 
         xml.readNext();
@@ -243,6 +254,7 @@ bool WorkspaceEntry::writeToXml(QXmlStreamWriter& xml) const
                 xml.writeTextElement(NELusanCommon::xmlElementSources, mSources);
                 xml.writeTextElement(NELusanCommon::xmlElementIncludes, mIncludes);
                 xml.writeTextElement(NELusanCommon::xmlElementDelivery, mDelivery);
+                xml.writeTextElement(NELusanCommon::xmlElementLogs, mLogFiles);
             xml.writeEndElement();
         xml.writeEndElement();
     xml.writeEndElement();

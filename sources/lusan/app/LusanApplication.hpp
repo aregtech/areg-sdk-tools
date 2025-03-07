@@ -114,6 +114,11 @@ public:
      * \brief   Returns the workspace delivery directory.
      **/
     static QString getWorkspaceDelivery(void);
+
+    /**
+     * \brief   Returns the directory of workspace to save log files.
+     **/
+    static QString getWorkspaceLogs(void);
     
 private:
     static LusanApplication *   theApp;     //!< The singleton instance of the application.

@@ -73,7 +73,9 @@ bool SIMethodBroadcast::readFromXml(QXmlStreamReader& xml)
     {
         setId(attributes.value(XmlSI::xmlSIAttributeID).toUInt());
         mName = attributes.value(XmlSI::xmlSIAttributeName).toString();
-        setIsDeprecated(attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() == XmlSI::xmlSIValueTrue : false);
+
+        QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
+        setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
 
         while (xml.readNextStartElement())
         {
@@ -123,18 +125,15 @@ void SIMethodBroadcast::writeToXml(QXmlStreamWriter& xml) const
 {
     xml.writeStartElement(XmlSI::xmlSIElementMethod);
     xml.writeAttribute(XmlSI::xmlSIAttributeID, QString::number(getId()));
-    xml.writeAttribute(XmlSI::xmlSIAttributeMethodType, getType());
     xml.writeAttribute(XmlSI::xmlSIAttributeName, mName);
+    xml.writeAttribute(XmlSI::xmlSIAttributeMethodType, getType());
     if (getIsDeprecated())
     {
         xml.writeAttribute(XmlSI::xmlSIAttributeIsDeprecated, XmlSI::xmlSIValueTrue);
+        writeTextElem(xml, XmlSI::xmlSIElementDeprecateHint, getDeprecateHint(), true);
     }
 
-    xml.writeTextElement(XmlSI::xmlSIElementDescription, mDescription);
-    if (getIsDeprecated())
-    {
-        xml.writeTextElement(XmlSI::xmlSIElementDeprecateHint, getDeprecateHint());
-    }
+    writeTextElem(xml, XmlSI::xmlSIElementDescription, mDescription, false);
 
     const QList<MethodParameter> & elements = getElements();
     if (elements.isEmpty() == false)
