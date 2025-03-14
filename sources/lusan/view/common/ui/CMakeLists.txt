@@ -2,4 +2,5 @@
     ${LUSAN}/view/common/ui/NaviFileSystem.ui
     ${LUSAN}/view/common/ui/workspace.ui
     ${LUSAN}/view/common/ui/ProjectDirSettings.ui
+    ${LUSAN}/view/common/ui/ProjectSettings.ui
 )

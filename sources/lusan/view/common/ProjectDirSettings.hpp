@@ -1,14 +1,14 @@
 #ifndef PROJECTDIRSETTINGS_H
 #define PROJECTDIRSETTINGS_H
 
-#include <QDialog>
+#include <QWidget>
 #include <QString>
 
 namespace Ui {
 class projectDirSettingsDlg;
 }
 
-class ProjectDirSettings : public QDialog
+class ProjectDirSettings : public QWidget
 {
     Q_OBJECT
 
@@ -34,7 +34,7 @@ private slots:
     void onLogDirBrowseBtnClicked();
 
 private:
-    void connectSignalHandlers();
+    void connectSignalHandlers() const;
 
     Ui::projectDirSettingsDlg *ui;
 };

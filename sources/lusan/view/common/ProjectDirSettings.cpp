@@ -3,7 +3,7 @@
 #include <QFileDialog>
 
 ProjectDirSettings::ProjectDirSettings(QWidget *parent)
-    : QDialog(parent)
+    : QWidget(parent)
     , ui(new Ui::projectDirSettingsDlg)
 {
     ui->setupUi(this);
@@ -45,7 +45,7 @@ QString ProjectDirSettings::getWorkspaceDescription() const
     return ui->workspaceEdit->toPlainText();
 }
 
-void ProjectDirSettings::connectSignalHandlers()
+void ProjectDirSettings::connectSignalHandlers() const
 {
     connect(ui->rootDirBrowseBtn,       &QPushButton::clicked, this, &ProjectDirSettings::onRootDirBrowseBtnClicked);
     connect(ui->sourceDirBrowseBtn,     &QPushButton::clicked, this, &ProjectDirSettings::onSourceDirBrowseBtnClicked);
