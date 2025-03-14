@@ -32,7 +32,7 @@ set(LUSAN_RES)
 set(LUSAN_UI)
 set(LUSAN_TRANS)
 
-include("${LUSAN_CMAKE_CONFIG}/common.cmake")
+include("${LUSAN_CMAKE_CONFIG}/setup.cmake")
 
 if(NOT ${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     message(FATAL_ERROR "LUSAN: >>> You should use QT version 6 or newer to compile this project")
@@ -47,13 +47,13 @@ list(APPEND PROJECT_SOURCES "${LUSAN_TRANS}" "${LUSAN_RES}" "${LUSAN_UI}" "${LUS
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
 qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES}
 )
-target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets areg::areg areg::areglogger)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
 if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.${APP_NAME})
+  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.aregtech.${APP_NAME})
 endif()
 
 set_target_properties(${APP_NAME} PROPERTIES
