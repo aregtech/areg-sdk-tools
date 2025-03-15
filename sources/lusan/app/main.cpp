@@ -22,6 +22,8 @@
 #include "lusan/view/common/Workspace.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
+#include "areg/appbase/Application.hpp"
+
 #include <QLocale>
 #include <QTranslator>
 #include <QCommonStyle>
@@ -58,6 +60,7 @@ int main(int argc, char *argv[])
     Workspace workspace(opt);
     if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
     {
+        Application::setWorkingDirectory(nullptr);
         MdiMainWindow w;
         w.setWorkspaceRoot(opt.getActiveWorkspace().getWorkspaceRoot());
         w.showMaximized();  
