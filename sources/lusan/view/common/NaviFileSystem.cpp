@@ -21,6 +21,7 @@
 #include "ui/ui_NaviFileSystem.h"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/model/common/FileSystemFilter.hpp"
 #include "lusan/model/common/FileSystemModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
@@ -43,8 +44,8 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* mainFrame, QWidget* parent /*= nul
     , mTableCell    (nullptr)
 {
     ui->setupUi(this);
-    this->setBaseSize(MIN_WIDTH, MIN_HEIGHT);
-    this->setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
+    this->setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    this->setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
     this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 
     updateData();
