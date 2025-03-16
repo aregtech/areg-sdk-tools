@@ -19,12 +19,17 @@
 #include "lusan/view/common/Navigation.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
+QString  Navigation::TabNameFileSystem     {tr("Workspace")};
+QString  Navigation::TabNameLogExplorer    {tr("Log Explorer")};
+
 Navigation::Navigation(MdiMainWindow* parent)
     : QDockWidget   (tr("Navigation"), parent)
     , mTabs         (this)
+    , mLogExplorer  (parent, this)
     , mFileSystem   (parent, this)
 {
-    mTabs.addTab(&mFileSystem, tr("Workspace"));
+    mTabs.addTab(&mFileSystem, Navigation::TabNameFileSystem);
+    mTabs.addTab(&mLogExplorer, Navigation::TabNameLogExplorer);
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
 
@@ -49,22 +54,39 @@ QWidget* Navigation::getTab(const QString& tabName) const
 
 bool Navigation::tabExists(const QString& tabName) const
 {
-    bool result {false};
     int count { mTabs.count()};
     for (int i = 0; i < count; ++i)
     {
-        if ((result = mTabs.tabText(i) == tabName))
+        if (mTabs.tabText(i) == tabName)
         {
-            break;
+            return true;
         }
     }
     
-    return result;
+    return false;
+}
+
+bool Navigation::showTab(const QString& tabName)
+{
+    int count{ mTabs.count() };
+    for (int i = 0; i < count; ++i)
+    {
+        if (mTabs.tabText(i) == tabName)
+        {
+            if (mTabs.isTabVisible(i) == false)
+                mTabs.setTabVisible(i, true);
+            if (mTabs.currentIndex() != i)
+                mTabs.setCurrentIndex(i);
+            
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void Navigation::initSize()
 {
     resize(QSize { mFileSystem.width() + 10,  mFileSystem.height() });
-
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 }

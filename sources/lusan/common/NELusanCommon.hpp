@@ -57,7 +57,15 @@ namespace NELusanCommon
      **/
     extern const QString    OPTIONS;
 
-    // constexpr const QPoint  DescPos {120, 235};
+    /**
+     * \brief   The minimal width of navigation window.
+     **/
+    constexpr const uint32_t  MIN_NAVO_WIDTH    { 280 };
+    
+    /**
+     * \brief   The minimal height of navigation window.
+     **/
+    constexpr const uint32_t  MIN_NAVI_HEIGHT   { 280 };
 
     /**
      * \brief   Gets the options file path.

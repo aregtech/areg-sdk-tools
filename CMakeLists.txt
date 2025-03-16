@@ -46,6 +46,9 @@ list(APPEND PROJECT_SOURCES "${LUSAN_TRANS}" "${LUSAN_RES}" "${LUSAN_UI}" "${LUS
 
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
 qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES}
+    sources/lusan/view/log/ui/CMakeLists.txt
+    sources/lusan/view/log/CMakeLists.txt
+    sources/lusan/view/log/ui/CMakeLists.txt
 )
 target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets areg::areg areg::areglogger)
 

@@ -258,18 +258,38 @@ void MdiMainWindow::onEditPaste()
 
 void MdiMainWindow::onViewNavigator()
 {
+    if (mNavigation.isHidden())
+    {
+        mNavigation.show();
+    }
 }
 
 void MdiMainWindow::onViewWorkspace()
 {
+    if (mNavigation.isHidden())
+    {
+        mNavigation.show();
+    }
+    
+    mNavigation.showTab(Navigation::TabNameFileSystem);
 }
 
 void MdiMainWindow::onViewLogs()
 {
+    if (mNavigation.isHidden())
+    {
+        mNavigation.show();
+    }
+    
+    mNavigation.showTab(Navigation::TabNameLogExplorer);
 }
 
 void MdiMainWindow::onViewStatus()
 {
+    if ((mStatusDock != nullptr) && (mStatusDock->isHidden()))
+    {
+        mStatusDock->show();
+    }
 }
 
 void MdiMainWindow::onHelpAbout()

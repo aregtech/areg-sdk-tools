@@ -54,9 +54,6 @@ class NaviFileSystem    : public    QWidget
 //////////////////////////////////////////////////////////////////////////
 private:
     using RootPaths = QMap<QString, QString>;
-
-    static constexpr uint32_t  MIN_WIDTH{280};
-    static constexpr uint32_t  MIN_HEIGHT{280};
     
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -182,7 +179,11 @@ private slots:
      * \param   checked     The flag indicating if the tool button is checked.
      **/
     void onToolDeleteSelectedClicked(bool checked);
-    
+
+    /**
+     * \brief   Triggered when the root path is clicked.
+     * \param   checked     The flag indicating if the tool button is checked.
+     **/
     void onToolNaviRootClicked(bool checked);
     
     /**
@@ -214,7 +215,6 @@ private slots:
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
-    
 private:
 
     /**
