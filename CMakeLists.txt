@@ -45,11 +45,8 @@ include("${LUSAN_BASE}/CMakeLists.txt")
 list(APPEND PROJECT_SOURCES "${LUSAN_TRANS}" "${LUSAN_RES}" "${LUSAN_UI}" "${LUSAN_HDR}" "${LUSAN_SRC}")
 
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
-qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES}
-    sources/lusan/view/log/ui/CMakeLists.txt
-    sources/lusan/view/log/CMakeLists.txt
-    sources/lusan/view/log/ui/CMakeLists.txt
-)
+qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
+target_compile_definitions(${APP_NAME} PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
 target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets areg::areg areg::areglogger)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
