@@ -19,6 +19,7 @@
 
 #include "lusan/data/log/LogObserver.hpp"
 
+#include "lusan/data/log/LogObserverEvent.hpp"
 #include "areg/base/DateTime.hpp"
 
 LogObserver& LogObserver::getInstance(void)
@@ -162,21 +163,22 @@ void LogObserver::callbackDatabaseConfigured(bool /* isEnabled */, const char* /
 
 void LogObserver::callbackServiceConnected(bool isConnected, const char* address, uint16_t port)
 {
-    LogObserver & _log = LogObserver::getInstance();
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_Connected);
     if (isConnected)
     {
-        _log.mLogConnect.lcAddress = address;
-        _log.mLogConnect.lcPort = port;
+        data << address << port;
     }
     else
     {
-        _log.mLogConnect.lcAddress.clear();
-        _log.mLogConnect.lcPort = NESocket::InvalidPort;
+        data << "" << NESocket::InvalidPort;
     }
+
+    LogObserverEvent::sendEvent(data);
 }
 
 void LogObserver::callbackObserverStarted(bool /* isStarted */)
 {
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_Clear);
     LogObserver & _log = LogObserver::getInstance();
     _log._clear();
 
