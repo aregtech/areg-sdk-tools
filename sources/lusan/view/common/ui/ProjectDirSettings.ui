@@ -35,7 +35,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Project Settings</string>
+    <string>Workspace Lists</string>
    </property>
   </widget>
   <widget class="QWidget" name="layoutWidget">

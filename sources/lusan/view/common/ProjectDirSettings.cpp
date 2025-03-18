@@ -1,5 +1,6 @@
 #include "ProjectDirSettings.hpp"
 #include "ui/ui_ProjectDirSettings.h"
+#include "lusan/app/LusanApplication.hpp"
 #include <QFileDialog>
 
 ProjectDirSettings::ProjectDirSettings(QWidget *parent)
@@ -8,6 +9,7 @@ ProjectDirSettings::ProjectDirSettings(QWidget *parent)
 {
     ui->setupUi(this);
     connectSignalHandlers();
+    initialisePathsWithCurrentWorkspaceData();
 }
 
 ProjectDirSettings::~ProjectDirSettings()
@@ -82,4 +84,16 @@ void ProjectDirSettings::onLogDirBrowseBtnClicked()
 {
     ui->logDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), "", QFileDialog::ShowDirsOnly));
+}
+
+void ProjectDirSettings::initialisePathsWithCurrentWorkspaceData()
+{
+    WorkspaceEntry const currentWorkspace{ LusanApplication::getActiveWorkspace() };
+
+    ui->rootDirEdit->setText(currentWorkspace.getWorkspaceRoot());
+    ui->sourceDirEdit->setText(currentWorkspace.getDirSources());
+    ui->includeDirEdit->setText(currentWorkspace.getDirIncludes());
+    ui->deliveryDirEdit->setText(currentWorkspace.getDirDelivery());
+    ui->logDirEdit->setText(currentWorkspace.getDirLogs());
+    ui->workspaceEdit->setPlainText(currentWorkspace.getWorkspaceDescription());
 }

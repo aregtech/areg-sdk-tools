@@ -1,8 +1,10 @@
 #include "ProjectSettings.hpp"
 #include "ui/ui_ProjectSettings.h"
-#include "ProjectDirSettings.hpp"
+#include "lusan/app/LusanApplication.hpp"
+
 #include <QAbstractItemView>
 #include <QtAssert>
+#include <QAbstractButton>
 
 
 ProjectSettings::ProjectSettings(QWidget *parent)
@@ -24,9 +26,10 @@ void ProjectSettings::setupDialog()
     addSettings();
 
     ui->horizontalLayout->setStretch(0, 1);
-    ui->horizontalLayout->addWidget(&settingsStackedWidget, 4);
+    ui->horizontalLayout->addWidget(settingsStackedWidget, 4);
 
-    settingsStackedWidget.addWidget(new ProjectDirSettings(this));
+    settingsStackedWidget->addWidget(mDirSettings);
+
     ui->settingsList->setModel(&model);
 
     selectSetting(0);
@@ -37,6 +40,8 @@ void ProjectSettings::setupDialog()
 void ProjectSettings::connectSignals() const
 {
     connect(ui->settingsList, &QAbstractItemView::clicked, this, &ProjectSettings::settingsListSelectionChanged);
+
+    connect(ui->buttonBox, &QDialogButtonBox::clicked, this, &ProjectSettings::buttonClicked);
 }
 
 void ProjectSettings::settingsListSelectionChanged(QModelIndex const& index)
@@ -46,9 +51,9 @@ void ProjectSettings::settingsListSelectionChanged(QModelIndex const& index)
 
 void ProjectSettings::selectSetting(int const index)
 {
-    Q_ASSERT(index < settingsStackedWidget.count());
+    Q_ASSERT(index < settingsStackedWidget->count());
 
-    settingsStackedWidget.setCurrentIndex(index);
+    settingsStackedWidget->setCurrentIndex(index);
 }
 
 void ProjectSettings::addSettings()
@@ -56,4 +61,31 @@ void ProjectSettings::addSettings()
     QStringList settingsList;
     settingsList.append(tr("Directories"));
     model.setStringList(settingsList);
+}
+
+void ProjectSettings::buttonClicked(QAbstractButton* button)
+{
+    QDialogButtonBox::ButtonRole const role = ui->buttonBox->buttonRole(button);
+
+    if ((QDialogButtonBox::ButtonRole::AcceptRole != role) &&
+        (QDialogButtonBox::ButtonRole::ApplyRole != role))
+    {
+        return;
+    }
+
+    WorkspaceEntry currentWorkspace;
+
+    currentWorkspace.setWorkspaceRoot(mDirSettings->getRootDirectory());
+    currentWorkspace.setDirSources(mDirSettings->getSourceDirectory());
+    currentWorkspace.setDirIncludes(mDirSettings->getIncludeDirectory());
+    currentWorkspace.setDirDelivery(mDirSettings->getDeliveryDirectory());
+    currentWorkspace.setDirLogs(mDirSettings->getLogDirectory());
+    currentWorkspace.setWorkspaceDescription(mDirSettings->getWorkspaceDescription());
+
+
+    OptionsManager& optionsManager = LusanApplication::getOptions();
+
+    optionsManager.removeWorkspace(currentWorkspace.getKey());
+    optionsManager.addWorkspace(currentWorkspace);
+    optionsManager.writeOptions();
 }

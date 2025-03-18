@@ -1,6 +1,7 @@
 #ifndef PROJECTSETTINGS_H
 #define PROJECTSETTINGS_H
 
+#include "ProjectDirSettings.hpp"
 #include <QDialog>
 #include <QStackedWidget>
 #include <QStringListModel>
@@ -8,6 +9,8 @@
 namespace Ui {
 class ProjectSettingsDlg;
 }
+
+class QAbstractButton;
 
 
 class ProjectSettings : public QDialog
@@ -23,7 +26,7 @@ public:
 
 private slots:
     void settingsListSelectionChanged(QModelIndex const&);
-
+    void buttonClicked(QAbstractButton*);
 private:
     void setupDialog();
     void connectSignals() const;
@@ -31,7 +34,8 @@ private:
     void selectSetting(int index);
 
     Ui::ProjectSettingsDlg *ui;
-    QStackedWidget settingsStackedWidget{this};
+    QStackedWidget* settingsStackedWidget = new QStackedWidget{this};
+    ProjectDirSettings* mDirSettings{new ProjectDirSettings(this)};
     QStringListModel model{this};
 };
 
