@@ -26,16 +26,17 @@ public:
 
 private slots:
     void settingsListSelectionChanged(QModelIndex const&);
-    void buttonClicked(QAbstractButton*);
+    void buttonClicked(QAbstractButton*) const;
+
 private:
     void setupDialog();
     void connectSignals() const;
     void addSettings();
-    void selectSetting(int index);
+    void selectSetting(int index) const;
 
-    Ui::ProjectSettingsDlg *ui;
+    Ui::ProjectSettingsDlg* ui{};
     QStackedWidget* settingsStackedWidget = new QStackedWidget{this};
-    ProjectDirSettings* mDirSettings{new ProjectDirSettings(this)};
+    ProjectDirSettings* mDirSettings = new ProjectDirSettings{this};
     QStringListModel model{this};
 };
 

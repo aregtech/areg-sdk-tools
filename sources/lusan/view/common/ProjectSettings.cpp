@@ -49,7 +49,7 @@ void ProjectSettings::settingsListSelectionChanged(QModelIndex const& index)
     selectSetting(index.row());
 }
 
-void ProjectSettings::selectSetting(int const index)
+void ProjectSettings::selectSetting(int const index) const
 {
     Q_ASSERT(index < settingsStackedWidget->count());
 
@@ -63,7 +63,7 @@ void ProjectSettings::addSettings()
     model.setStringList(settingsList);
 }
 
-void ProjectSettings::buttonClicked(QAbstractButton* button)
+void ProjectSettings::buttonClicked(QAbstractButton* button) const
 {
     QDialogButtonBox::ButtonRole const role = ui->buttonBox->buttonRole(button);
 

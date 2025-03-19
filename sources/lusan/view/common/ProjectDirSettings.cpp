@@ -86,7 +86,7 @@ void ProjectDirSettings::onLogDirBrowseBtnClicked()
         QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
-void ProjectDirSettings::initialisePathsWithCurrentWorkspaceData()
+void ProjectDirSettings::initialisePathsWithCurrentWorkspaceData() const
 {
     WorkspaceEntry const currentWorkspace{ LusanApplication::getActiveWorkspace() };
 

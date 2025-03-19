@@ -35,9 +35,9 @@ private slots:
 
 private:
     void connectSignalHandlers() const;
-    void initialisePathsWithCurrentWorkspaceData();
+    void initialisePathsWithCurrentWorkspaceData() const;
 
-    Ui::projectDirSettingsDlg *ui;
+    Ui::projectDirSettingsDlg* ui{};
 };
 
 #endif // PROJECTDIRSETTINGS_H
