@@ -31,8 +31,12 @@
 #include "areg/logging/NELogging.hpp"
 #include "areglogger/client/LogObserverApi.h"
 
+class DispatcherThread;
+
 class LogObserver
 {
+    friend class LogObserverComp;
+
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
@@ -44,7 +48,7 @@ public:
     // The map of scopes, where the key is the ID of log instance
     using MapScopes     = TEHashMap<ITEM_ID, ListScopes>;
     // The list of log messages
-    using ListLogs      = TELinkedList<NELogging::sLogMessage *>;
+    using ListLogs      = TELinkedList<SharedBuffer>;
 
     /**
      * \brief   The structure to store the IP address and port number of the remote log collector service.
@@ -58,14 +62,17 @@ public:
     };
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes and operation
+// Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
 
-    /**
-     * \brief   Returns the instance of LogObserver object.
-     **/
-    static LogObserver& getInstance(void);
+    LogObserver(void);
+    ~LogObserver(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operation
+//////////////////////////////////////////////////////////////////////////
+public:
 
     /**
      * \brief   Initializes and starts the logging observer.
@@ -188,13 +195,7 @@ public:
      **/
     inline const LogObserver::ListLogs& getLogMessages(void) const;
 
-//////////////////////////////////////////////////////////////////////////
-// Hidden constructor / destructor
-//////////////////////////////////////////////////////////////////////////
-private:
-
-    LogObserver(void);
-    ~LogObserver(void);
+    inline void setLogCollector(const String& address, uint16_t port);
 
 //////////////////////////////////////////////////////////////////////////
 // Callbacks
@@ -276,12 +277,20 @@ private:
 private:
     void _clear(void);
 
+    static DispatcherThread& _logObserverThread(void);
+
 private:
     sLoggerConnect  mLogConnect;    //!< The IP address and the port number of the remote log collector service.
     ListInstances   mLogSources;    //!< The list of the connected instances that make logs.
     MapScopes       mLogScopes;     //!< The map of the scopes registered in the application.
     ListLogs        mLogMessages;   //!< The list of the log messages to write in the log file.
-    sObserverEvents mEvents;        //!< The structure of the callbacks to set when send or receive messages.   
+    sObserverEvents mEvents;        //!< The structure of the callbacks to set when send or receive messages.
+
+private:
+    LogObserver(const LogObserver& /*src*/) = delete;
+    LogObserver(LogObserver&& /*src*/) noexcept = delete;
+    LogObserver& operator = (const LogObserver& /*src*/) = delete;
+    LogObserver& operator = (LogObserver&& /*src*/) noexcept = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -306,6 +315,12 @@ inline const LogObserver::MapScopes& LogObserver::getLogScopes(void) const
 inline const LogObserver::ListLogs& LogObserver::getLogMessages(void) const
 {
     return mLogMessages;
+}
+
+inline void LogObserver::setLogCollector(const String& address, uint16_t port)
+{
+    mLogConnect.lcAddress = address;
+    mLogConnect.lcPort = port;
 }
 
 #endif  // LUSAN_DATA_LOG_LOGOBSERVER_HPP

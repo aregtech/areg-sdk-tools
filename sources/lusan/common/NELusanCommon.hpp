@@ -124,6 +124,9 @@ namespace NELusanCommon
     constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
     constexpr const char * const xmlElementFile             { "File" };
 
+    constexpr const char * const LogobserverThread          { "LogobserverThread" };
+    constexpr const char * const LogobserverModel           { "LogobserverModel" };
+
     enum class eSorting : uint8_t
     {
           SortingAscending      = 1     //!< bits: 0000 0001, Sort elements ascending

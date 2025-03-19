@@ -60,4 +60,189 @@ void LogObserverComp::shutdownServiceIntrface(Component & holder)
 
 void LogObserverComp::processEvent(const LogObserverEventData& data)
 {
+    switch (data.getEvent())
+    {
+    case LogObserverEventData::eLogObserverEvent::CMD_Connected:
+    {
+        String address;
+        uint16_t port;
+        data >> address >> port;
+        mLogObserver.setLogCollector(address, port);
+    }
+    break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_Clear:
+        mLogObserver.loggingClear();
+        break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_ConnecedInst:
+    {
+        const SharedBuffer& buffer = data.getBuffer();
+        uint32_t count = buffer.getSizeUsed() / sizeof(sLogInstance);
+        const sLogInstance* instances = reinterpret_cast<const sLogInstance*>(buffer.getBuffer());
+        connectedInstances(instances, count);
+    }
+    break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_DisconnecedInst:
+    {
+        const SharedBuffer& buffer = data.getBuffer();
+        uint32_t count = buffer.getSizeUsed() / sizeof(ITEM_ID);
+        const ITEM_ID* instances = reinterpret_cast<const ITEM_ID*>(buffer.getBuffer());
+        disconnectedInstances(instances, count);
+    }
+    break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_LogScopes:
+    {
+        ITEM_ID inst{};
+        uint32_t size{};
+        data >> inst >> size;
+        const sLogScope* scopes = reinterpret_cast<const sLogScope*>(data.getBuffer().getBufferAtCurrentPosition());
+        logScopes(inst, scopes, size);
+    }
+    break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_LogMessageEx:
+        logMessageEx(data.getBuffer());
+        break;
+
+    default:
+        break;
+    }
+}
+
+void LogObserverComp::connectedInstances(const sLogInstance* instances, uint32_t count)
+{
+    if (count == 0)
+    {
+        mLogObserver.loggingClear();
+        return;
+    }
+
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        const sLogInstance& inst{ instances[i] };
+        bool contains{ false };
+        for (uint32_t j = 0; j < mLogObserver.mLogSources.getSize(); ++j)
+        {
+            if (mLogObserver.mLogSources[j].liCookie == inst.liCookie)
+            {
+                contains = true;
+                break;
+            }
+        }
+
+        if (contains == false)
+        {
+            NELogging::sLogMessage* log = DEBUG_NEW NELogging::sLogMessage;
+            log->logDataType = NELogging::eLogDataType::LogDataLocal;
+            log->logMsgType = NELogging::eLogMessageType::LogMessageText;
+            log->logMessagePrio = NELogging::eLogPriority::PrioAny;
+            log->logSource = inst.liSource;
+            log->logTarget = NEService::COOKIE_LOCAL;
+            log->logCookie = inst.liCookie;
+            log->logModuleId = 0u;
+            log->logThreadId = 0u;
+            log->logTimestamp = inst.liTimestamp;
+            log->logScopeId = 0u;
+            log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "CONNECTED the x%u instance %s with cookie %llu", inst.liBitness, inst.liName, inst.liCookie));
+            log->logThreadLen = 0;
+            log->logThread[0] = String::EmptyChar;
+            log->logModuleId = 0;
+            log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
+
+            mLogObserver.mLogSources.add(inst);
+            mLogObserver.mLogMessages.pushLast(log);
+
+            ASSERT(mLogObserver.mLogScopes.contains(inst.liCookie) == false);
+            ::logObserverRequestScopes(inst.liCookie);
+        }
+    }
+}
+
+void LogObserverComp::disconnectedInstances(const ITEM_ID* instances, uint32_t count)
+{
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        const ITEM_ID& cookie = instances[i];
+        for (uint32_t j = 0; j < mLogObserver.mLogSources.getSize(); ++j)
+        {
+            const sLogInstance& inst{ mLogObserver.mLogSources[j] };
+            if (inst.liCookie == cookie)
+            {
+                NELogging::sLogMessage* log = DEBUG_NEW NELogging::sLogMessage;
+                log->logDataType = NELogging::eLogDataType::LogDataLocal;
+                log->logMsgType = NELogging::eLogMessageType::LogMessageText;
+                log->logMessagePrio = NELogging::eLogPriority::PrioAny;
+                log->logSource = inst.liSource;
+                log->logTarget = NEService::COOKIE_LOCAL;
+                log->logCookie = inst.liCookie;
+                log->logModuleId = 0u;
+                log->logThreadId = 0u;
+                log->logTimestamp = static_cast<TIME64>(DateTime::getNow());
+                log->logScopeId = 0u;
+                log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "DISCONNECTED the x%u instance %s with cookie %llu", inst.liBitness, inst.liName, inst.liCookie));
+                log->logThreadLen = 0;
+                log->logThread[0] = String::EmptyChar;
+                log->logModuleId = 0;
+                log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
+
+                mLogObserver.mLogSources.removeAt(j, 1);
+                mLogObserver.mLogScopes.removeAt(cookie);
+
+                mLogObserver.mLogMessages.pushLast(log);
+                break;
+            }
+        }
+    }
+}
+
+void LogObserverComp::logScopes(ITEM_ID cookie, const sLogScope* scopes, uint32_t count)
+{
+    for (uint32_t i = 0; i < mLogObserver.mLogSources.getSize(); ++i)
+    {
+        const sLogInstance& inst{ mLogObserver.mLogSources[i] };
+        if (cookie == inst.liCookie)
+        {
+            NELogging::sLogMessage* log = DEBUG_NEW NELogging::sLogMessage;
+            log->logDataType = NELogging::eLogDataType::LogDataLocal;
+            log->logMsgType = NELogging::eLogMessageType::LogMessageText;
+            log->logMessagePrio = NELogging::eLogPriority::PrioAny;
+            log->logSource = inst.liSource;
+            log->logTarget = NEService::COOKIE_LOCAL;
+            log->logCookie = inst.liCookie;
+            log->logModuleId = 0u;
+            log->logThreadId = 0u;
+            log->logTimestamp = static_cast<TIME64>(DateTime::getNow());
+            log->logScopeId = 0u;
+            log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "Registered %u scopes for instance %s with cookie %llu", count, inst.liName, inst.liCookie));
+            log->logThreadLen = 0;
+            log->logThread[0] = String::EmptyChar;
+            log->logModuleId = 0;
+            log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
+            if (mLogObserver.mLogScopes.contains(cookie) == false)
+            {
+                mLogObserver.mLogScopes.setAt(cookie, ListScopes());
+            }
+
+            ListScopes& scopeList{ mLogObserver.mLogScopes.getAt(cookie) };
+            scopeList.resize(count);
+            for (uint32_t j = 0; j < count; ++j)
+            {
+                scopeList[j] = scopes[j];
+            }
+
+            mLogObserver.mLogMessages.pushLast(log);
+            break;
+        }
+    }
+}
+
+void LogObserverComp::logMessageEx(SharedBuffer& message)
+{
+    if (message.isValid())
+    {
+        mLogObserver.mLogMessages.pushLast(message);
+    }
 }

@@ -141,6 +141,14 @@ private:
         return (*this);
     }
 
+    void connectedInstances(const sLogInstance* instances, uint32_t count);
+
+    void disconnectedInstances(const ITEM_ID* instances, uint32_t count);
+
+    void logScopes(ITEM_ID cookie, const sLogScope* scopes, uint32_t count);
+
+    void logMessageEx(SharedBuffer & message);
+
 private:
     LogObserver     mLogObserver;   //!< The log observer object.
 
