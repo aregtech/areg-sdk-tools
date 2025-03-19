@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/view/common/LogExplorer.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
 
 #include <QDockWidget>
@@ -29,6 +30,13 @@ class MdiMainWindow;
 class Navigation : public QDockWidget
 {
 //////////////////////////////////////////////////////////////////////////
+// Constants and types
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    static QString  TabNameFileSystem;
+    static QString  TabNameLogExplorer;
+//////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -38,29 +46,68 @@ public:
 // Actions and attributes
 //////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Returns the tab widget of the navigation.
+     **/
     inline QTabWidget& getTabWidget(void);
 
+    /**
+     * \brief   Returns the file system widget.
+     **/
     inline NaviFileSystem& getFileSystem(void);
 
+    /**
+     * \brief   Returns the live mode log explorer widget.
+     **/
+    inline LogExplorer& getLiveLogs(void);
+
+    /**
+     * \brief   Adds a new tab with the widget to the tab-control.
+     * \param   widget      The widget to add to the tab-control.
+     * \brief   tabName     The name of the tab to add.
+     * \return  The index of the new added tab.
+     **/
     inline int addTab(QWidget& widget, const QString& tabName);
 
+    /**
+     * \brief   Returns the pointer to the widget of the given tab name.
+     *          Returns nullptr if the name does not exist.
+     * \param   tabName     The name of tab to return the widget.
+     * \return  Returns the valid pointer of the Widget of the given tab name.
+     *          Returns nullptr if tab name does not exist.
+     **/
     QWidget* getTab(const QString& tabName) const;
-    
+
+    /**
+     * \brief   Check if the tab with the given name exists.
+     * @param   tabName     The name of the tab to check.
+     * @return  Returns true if the tab with the given name exists. False, otherwise.
+     **/
     bool tabExists(const QString& tabName) const;
+    
+    bool showTab(const QString& tabName);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
+    /**
+     * \brief   Returns the instance of Navigation window.
+     **/
     inline Navigation& self(void);
+
+    /**
+     * \brief   Initializes the size of tab widgets.
+     **/
     void initSize();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QTabWidget      mTabs;
-    NaviFileSystem  mFileSystem;
+    QTabWidget      mTabs;          //!< The tab widget of the navigation.
+    LogExplorer     mLogExplorer;   //!< The log explorer widget.
+    NaviFileSystem  mFileSystem;    //!< The file system widget.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -75,6 +122,11 @@ inline QTabWidget& Navigation::getTabWidget(void)
 inline NaviFileSystem& Navigation::getFileSystem(void)
 {
     return mFileSystem;
+}
+
+inline LogExplorer& Navigation::getLiveLogs(void)
+{
+    return mLogExplorer;
 }
 
 inline int Navigation::addTab(QWidget& widget, const QString& tabName)
