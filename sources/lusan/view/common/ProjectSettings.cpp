@@ -73,7 +73,7 @@ void ProjectSettings::buttonClicked(QAbstractButton* button)
         return;
     }
 
-    WorkspaceEntry currentWorkspace;
+    WorkspaceEntry currentWorkspace{ LusanApplication::getActiveWorkspace() };
 
     currentWorkspace.setWorkspaceRoot(mDirSettings->getRootDirectory());
     currentWorkspace.setDirSources(mDirSettings->getSourceDirectory());
