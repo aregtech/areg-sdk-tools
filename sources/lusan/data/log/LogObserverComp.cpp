@@ -21,6 +21,8 @@
   ************************************************************************/
 #include "lusan/data/log/LogObserverComp.hpp"
 
+#include "areg/appbase/NEApplication.hpp"
+#include "areg/base/DateTime.hpp"
 
 Component * LogObserverComp::CreateComponent(const NERegistry::ComponentEntry & entry, ComponentThread & owner)
 {
@@ -32,12 +34,27 @@ void LogObserverComp::DeleteComponent(Component & compObject, const NERegistry::
     delete (&compObject);
 }
 
+QString LogObserverComp::getConnectedAddress(void) const
+{
+    return mLogObserver.getConectionAddress();
+}
+
+uint32_t LogObserverComp::getConnectedPort(void) const
+{
+    return mLogObserver.getConnectionPort();
+}
+
+bool LogObserverComp::isObserverConnected(void) const
+{
+    return mLogObserver.isLoggingConnected();
+}
+
 LogObserverComp::LogObserverComp(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread, NEMemory::uAlign OPT /* data */)
     : Component ( entry, ownerThread )
     , StubBase  ( self(), NEService::getEmptyInterface() )
     , IELogObserverEventConsumer()
     , mLogObserver()
-
+    , mConfigFile (NEApplication::DEFAULT_CONFIG_FILE)
 {
 }
 
@@ -49,6 +66,8 @@ LogObserverComp::~LogObserverComp(void)
 void LogObserverComp::startupServiceInterface(Component & holder)
 {
     StubBase::startupServiceInterface(holder);
+    mLogObserver.loggingStop();
+    mLogObserver.loggingClear();
 }
 
 void LogObserverComp::shutdownServiceIntrface(Component & holder)
@@ -62,6 +81,26 @@ void LogObserverComp::processEvent(const LogObserverEventData& data)
 {
     switch (data.getEvent())
     {
+    case LogObserverEventData::eLogObserverEvent::CMD_Connect:
+        mLogObserver.loggingStart(mConfigFile);
+        break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_Disconnect:
+        mLogObserver.loggingStop();
+        break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_Pause:
+        mLogObserver.loggingPause();
+        break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_Resume:
+        mLogObserver.loggingResume();
+        break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_QueryInstances:
+        mLogObserver.loggingRequestScopes(NEService::COOKIE_ANY);
+        break;
+
     case LogObserverEventData::eLogObserverEvent::CMD_Connected:
     {
         String address;
@@ -93,19 +132,39 @@ void LogObserverComp::processEvent(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_LogScopes:
+    case LogObserverEventData::eLogObserverEvent::CMD_ScopesRegistered:
     {
         ITEM_ID inst{};
-        uint32_t size{};
-        data >> inst >> size;
+        uint32_t count{};
+        data >> inst >> count;
         const sLogScope* scopes = reinterpret_cast<const sLogScope*>(data.getBuffer().getBufferAtCurrentPosition());
-        logScopes(inst, scopes, size);
+        logScopesRegistered(inst, scopes, count);
+    }
+    break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_ScopesUpdated:
+    {
+        ITEM_ID inst{};
+        uint32_t count{};
+        data >> inst >> count;
+        const sLogScope* scopes = reinterpret_cast<const sLogScope*>(data.getBuffer().getBufferAtCurrentPosition());
+        logScopesUpdated(inst, scopes, count);
     }
     break;
 
     case LogObserverEventData::eLogObserverEvent::CMD_LogMessageEx:
-        logMessageEx(data.getBuffer());
+        logMessageEx(const_cast<SharedBuffer &>(data.getBuffer()));
         break;
+
+    case LogObserverEventData::eLogObserverEvent::CMD_LogPiroirity:
+    {
+        ITEM_ID inst{NEService::COOKIE_ANY};
+        uint32_t count{};
+        data >> inst >> count;
+        const sLogScope* scopes = reinterpret_cast<const sLogScope*>(data.getBuffer().getBufferAtCurrentPosition());
+        mLogObserver.loggingRequestChangeScopePrio(inst, scopes, count);
+    }
+    break;
 
     default:
         break;
@@ -135,7 +194,8 @@ void LogObserverComp::connectedInstances(const sLogInstance* instances, uint32_t
 
         if (contains == false)
         {
-            NELogging::sLogMessage* log = DEBUG_NEW NELogging::sLogMessage;
+            SharedBuffer buf(sizeof(NELogging::sLogMessage), NEMemory::BLOCK_SIZE);
+            NELogging::sLogMessage* log = reinterpret_cast<NELogging::sLogMessage *>(buf.getBuffer());
             log->logDataType = NELogging::eLogDataType::LogDataLocal;
             log->logMsgType = NELogging::eLogMessageType::LogMessageText;
             log->logMessagePrio = NELogging::eLogPriority::PrioAny;
@@ -146,14 +206,14 @@ void LogObserverComp::connectedInstances(const sLogInstance* instances, uint32_t
             log->logThreadId = 0u;
             log->logTimestamp = inst.liTimestamp;
             log->logScopeId = 0u;
-            log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "CONNECTED the x%u instance %s with cookie %llu", inst.liBitness, inst.liName, inst.liCookie));
+            log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "CONNECTED the x%u instance of %s", inst.liBitness, inst.liName, inst.liCookie));
             log->logThreadLen = 0;
             log->logThread[0] = String::EmptyChar;
             log->logModuleId = 0;
             log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
 
             mLogObserver.mLogSources.add(inst);
-            mLogObserver.mLogMessages.pushLast(log);
+            mLogObserver.mLogMessages.pushLast(buf);
 
             ASSERT(mLogObserver.mLogScopes.contains(inst.liCookie) == false);
             ::logObserverRequestScopes(inst.liCookie);
@@ -171,7 +231,8 @@ void LogObserverComp::disconnectedInstances(const ITEM_ID* instances, uint32_t c
             const sLogInstance& inst{ mLogObserver.mLogSources[j] };
             if (inst.liCookie == cookie)
             {
-                NELogging::sLogMessage* log = DEBUG_NEW NELogging::sLogMessage;
+                SharedBuffer buf(sizeof(NELogging::sLogMessage), NEMemory::BLOCK_SIZE);
+                NELogging::sLogMessage* log = reinterpret_cast<NELogging::sLogMessage *>(buf.getBuffer());
                 log->logDataType = NELogging::eLogDataType::LogDataLocal;
                 log->logMsgType = NELogging::eLogMessageType::LogMessageText;
                 log->logMessagePrio = NELogging::eLogPriority::PrioAny;
@@ -182,7 +243,7 @@ void LogObserverComp::disconnectedInstances(const ITEM_ID* instances, uint32_t c
                 log->logThreadId = 0u;
                 log->logTimestamp = static_cast<TIME64>(DateTime::getNow());
                 log->logScopeId = 0u;
-                log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "DISCONNECTED the x%u instance %s with cookie %llu", inst.liBitness, inst.liName, inst.liCookie));
+                log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "DISCONNECTED the x%u instance %s", inst.liBitness, inst.liName, inst.liCookie));
                 log->logThreadLen = 0;
                 log->logThread[0] = String::EmptyChar;
                 log->logModuleId = 0;
@@ -191,21 +252,22 @@ void LogObserverComp::disconnectedInstances(const ITEM_ID* instances, uint32_t c
                 mLogObserver.mLogSources.removeAt(j, 1);
                 mLogObserver.mLogScopes.removeAt(cookie);
 
-                mLogObserver.mLogMessages.pushLast(log);
+                mLogObserver.mLogMessages.pushLast(buf);
                 break;
             }
         }
     }
 }
 
-void LogObserverComp::logScopes(ITEM_ID cookie, const sLogScope* scopes, uint32_t count)
+void LogObserverComp::logScopesRegistered(ITEM_ID target, const sLogScope* scopes, uint32_t count)
 {
     for (uint32_t i = 0; i < mLogObserver.mLogSources.getSize(); ++i)
     {
         const sLogInstance& inst{ mLogObserver.mLogSources[i] };
-        if (cookie == inst.liCookie)
+        if (target == inst.liCookie)
         {
-            NELogging::sLogMessage* log = DEBUG_NEW NELogging::sLogMessage;
+            SharedBuffer buf(sizeof(NELogging::sLogMessage), NEMemory::BLOCK_SIZE);
+            NELogging::sLogMessage* log = reinterpret_cast<NELogging::sLogMessage *>(buf.getBuffer());
             log->logDataType = NELogging::eLogDataType::LogDataLocal;
             log->logMsgType = NELogging::eLogMessageType::LogMessageText;
             log->logMessagePrio = NELogging::eLogPriority::PrioAny;
@@ -216,28 +278,50 @@ void LogObserverComp::logScopes(ITEM_ID cookie, const sLogScope* scopes, uint32_
             log->logThreadId = 0u;
             log->logTimestamp = static_cast<TIME64>(DateTime::getNow());
             log->logScopeId = 0u;
-            log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "Registered %u scopes for instance %s with cookie %llu", count, inst.liName, inst.liCookie));
+            log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "Registered %u scopes of instance %s", count, inst.liName, inst.liCookie));
             log->logThreadLen = 0;
             log->logThread[0] = String::EmptyChar;
             log->logModuleId = 0;
             log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
-            if (mLogObserver.mLogScopes.contains(cookie) == false)
+            if (mLogObserver.mLogScopes.contains(target) == false)
             {
-                mLogObserver.mLogScopes.setAt(cookie, ListScopes());
+                mLogObserver.mLogScopes.setAt(target, LogObserver::ListScopes());
             }
 
-            ListScopes& scopeList{ mLogObserver.mLogScopes.getAt(cookie) };
-            scopeList.resize(count);
+            LogObserver::ListScopes& scopeList{ mLogObserver.mLogScopes.getAt(target) };
+            uint32_t shift = scopeList.getSize();
+            scopeList.resize(shift + count);
             for (uint32_t j = 0; j < count; ++j)
             {
-                scopeList[j] = scopes[j];
+                scopeList[j + shift] = scopes[j];
             }
 
-            mLogObserver.mLogMessages.pushLast(log);
+            mLogObserver.mLogMessages.pushLast(buf);
             break;
         }
     }
 }
+
+void LogObserverComp::logScopesUpdated(ITEM_ID target, const sLogScope* scopes, uint32_t count)
+{
+    if (mLogObserver.mLogScopes.contains(target))
+    {
+        LogObserver::ListScopes& scopeList{ mLogObserver.mLogScopes.getAt(target) };
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            const sLogScope& scope{ scopes[i] };
+            for (uint32_t j = 0; j < scopeList.getSize(); ++j)
+            {
+                if (scopeList[j].lsId == scope.lsId)
+                {
+                    scopeList[j].lsPrio = scope.lsPrio;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 
 void LogObserverComp::logMessageEx(SharedBuffer& message)
 {
@@ -245,4 +329,9 @@ void LogObserverComp::logMessageEx(SharedBuffer& message)
     {
         mLogObserver.mLogMessages.pushLast(message);
     }
+}
+
+void LogObserverComp::requestChangeScopePrio(ITEM_ID target, const sLogScope* scopes, uint32_t count)
+{
+    mLogObserver.loggingRequestChangeScopePrio(target, scopes, count);
 }

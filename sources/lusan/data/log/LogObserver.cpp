@@ -20,7 +20,7 @@
 #include "lusan/data/log/LogObserver.hpp"
 
 #include "lusan/data/log/LogObserverEvent.hpp"
-#include "areg/base/DateTime.hpp"
+#include "lusan/data/log/NELogObserver.hpp"
 #include "areg/component/DispatcherThread.hpp"
 
 void LogObserver::logingStart(void)
@@ -36,6 +36,14 @@ void LogObserver::loggingStart(const QString& dbPath, const QString& address, un
     if (::logObserverInitialize(&mEvents, nullptr))
     {
         ::logObserverConnectLogger(dbPath.isEmpty() ? nullptr : dbPath.toStdString().c_str(), address.isEmpty() ? nullptr : address.toStdString().c_str(), port);
+    }
+}
+
+void LogObserver::loggingStart(const String& configPath)
+{
+    if (::logObserverInitialize(&mEvents, configPath.isEmpty() ? nullptr : configPath.getString()))
+    {
+        ::logObserverConnectLogger(nullptr, nullptr, 0);
     }
 }
 
@@ -137,8 +145,8 @@ LogObserver::LogObserver(void)
     mEvents.evtMessagingFailed      = &LogObserver::callbackMessagingFailed;
     mEvents.evtInstConnected        = &LogObserver::callbackConnectedInstances;
     mEvents.evtInstDisconnected     = &LogObserver::callbackDisconnecteInstances;
-    mEvents.evtLogRegisterScopes    = &LogObserver::callbackLogScopes;
-    mEvents.evtLogUpdatedScopes     = &LogObserver::callbackLogScopes;
+    mEvents.evtLogRegisterScopes    = &LogObserver::callbackLogScopesRegistered;
+    mEvents.evtLogUpdatedScopes     = &LogObserver::callbackLogScopesUpdated;
     mEvents.evtLogMessage           = nullptr;
     mEvents.evtLogMessageEx         = &LogObserver::callbackLogMessageEx;
 }
@@ -186,7 +194,7 @@ void LogObserver::callbackConnectedInstances(const sLogInstance* instances, uint
     LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_ConnecedInst);
     if (count != 0)
     {
-        data.getBuffer().writeData(reinterpret_cast<const unsigned char*>(instances), count * sizeof(sLogInstance));
+        data.getBuffer().write(reinterpret_cast<const unsigned char*>(instances), count * sizeof(sLogInstance));
     }
 
     LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
@@ -197,27 +205,36 @@ void LogObserver::callbackDisconnecteInstances(const ITEM_ID* instances, uint32_
     LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_DisconnecedInst);
     if (count != 0)
     {
-        data.getBuffer().writeData(reinterpret_cast<const unsigned char*>(instances), count * sizeof(ITEM_ID));
+        data.getBuffer().write(reinterpret_cast<const unsigned char*>(instances), count * sizeof(ITEM_ID));
     }
 
     LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
 }
 
-void LogObserver::callbackLogScopes(ITEM_ID cookie, const sLogScope* scopes, uint32_t count)
+void LogObserver::callbackLogScopesRegistered(ITEM_ID cookie, const sLogScope* scopes, uint32_t count)
 {
-    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_LogScopes);
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_ScopesRegistered);
     if (count != 0)
     {
         data.getBuffer().write64Bits(cookie);
         data.getBuffer().write32Bits(count);
-        data.getBuffer().writeData(reinterpret_cast<const unsigned char*>(scopes), count * sizeof(sLogScope));
+        data.getBuffer().write(reinterpret_cast<const unsigned char*>(scopes), count * sizeof(sLogScope));
     }
 
     LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
+}
 
+void LogObserver::callbackLogScopesUpdated(ITEM_ID cookie, const sLogScope* scopes, uint32_t count)
+{
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_ScopesUpdated);
+    if (count != 0)
+    {
+        data.getBuffer().write64Bits(cookie);
+        data.getBuffer().write32Bits(count);
+        data.getBuffer().write(reinterpret_cast<const unsigned char*>(scopes), count * sizeof(sLogScope));
+    }
 
-    LogObserver & _log = LogObserver::getInstance();
-
+    LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
 }
 
 void LogObserver::callbackLogMessageEx(const unsigned char* logBuffer, uint32_t size)
@@ -225,7 +242,7 @@ void LogObserver::callbackLogMessageEx(const unsigned char* logBuffer, uint32_t 
     LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_LogMessageEx);
     if ((size != 0) && (logBuffer != nullptr))
     {
-        data.getBuffer().writeData(logBuffer, size);
+        data.getBuffer().write(logBuffer, size);
     }
 
     LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
@@ -233,7 +250,7 @@ void LogObserver::callbackLogMessageEx(const unsigned char* logBuffer, uint32_t 
 
 DispatcherThread& LogObserver::_logObserverThread(void)
 {
-    return DispatcherThread::getDispatcherThread(NELusanCommon::LogobserverThread);
+    return DispatcherThread::getDispatcherThread(NELogObserver::LogobserverThread);
 }
 
 void LogObserver::_clear(void)

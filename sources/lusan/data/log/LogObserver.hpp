@@ -91,6 +91,7 @@ public:
      * \brief   Initializes and starts the logging observer.
      * \param   configPath  The path of the configuration file.
      **/
+    void loggingStart(const String& configPath);
     void loggingStart(const QString& configPath);
 
     /**
@@ -264,7 +265,15 @@ private:
      * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
      * \param   count   The number of scope entries in the list.
      **/
-    static void callbackLogScopes(ITEM_ID cookie, const sLogScope* scopes, uint32_t count);
+    static void callbackLogScopesRegistered(ITEM_ID cookie, const sLogScope* scopes, uint32_t count);
+
+    /**
+     * \brief   The callback of the event triggered when receive the list of previously registered scopes with new priorities.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
+     * \param   count   The number of scope entries in the list.
+     **/
+    static void callbackLogScopesUpdated(ITEM_ID cookie, const sLogScope* scopes, uint32_t count);
 
     /**
      * \brief   The callback of the event triggered when receive remote message to log.

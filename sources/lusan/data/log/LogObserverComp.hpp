@@ -23,14 +23,12 @@
  ************************************************************************/
 
 #include "lusan/common/NELusanCommon.hpp"
+#include "areg/base/GEGlobal.h"
+
 #include "lusan/data/log/LogObserverEvent.hpp"
 #include "lusan/data/log/LogObserver.hpp"
-
-
-#include "areg/base/GEGlobal.h"
 #include "areg/component/Component.hpp"
 #include "areg/component/StubBase.hpp"
-#include "areg/component/IETimerConsumer.hpp"
 
 //! \brief   An empty servicing component to support multithreading.
 class LogObserverComp       : public    Component
@@ -60,6 +58,31 @@ public:
      * \param   entry   The entry of registry, which describes the component.
      **/
     static void DeleteComponent( Component & compObject, const NERegistry::ComponentEntry & entry );
+
+    QString getConnectedAddress(void) const;
+
+    uint32_t getConnectedPort(void) const;
+
+    bool isObserverConnected(void) const;
+
+signals:
+    void signalLogServiceConnected(const char* address, unsigned short port);
+
+    void signalLogServiceDisconnected(void);
+
+    void signalLogingStarted(void);
+
+    void signalLogingStopped(void);
+
+    void signalConnectedInstances(const sLogInstance* instances, uint32_t count);
+
+    void signalDisconnectedInstances(const ITEM_ID* instances, uint32_t count);
+
+    void signalScopesRegistered(ITEM_ID cookie, const sLogScope* scopes, uint32_t count);
+
+    void signalScopesUpdated(ITEM_ID target, const sLogScope* scopes, uint32_t count);
+
+    void signalLogMessageEx(const sLogMessage * message);
 
 protected:
 
@@ -145,12 +168,17 @@ private:
 
     void disconnectedInstances(const ITEM_ID* instances, uint32_t count);
 
-    void logScopes(ITEM_ID cookie, const sLogScope* scopes, uint32_t count);
+    void logScopesRegistered(ITEM_ID target, const sLogScope* scopes, uint32_t count);
+
+    void logScopesUpdated(ITEM_ID target, const sLogScope* scopes, uint32_t count);
 
     void logMessageEx(SharedBuffer & message);
 
+    void requestChangeScopePrio(ITEM_ID target, const sLogScope* scopes, uint32_t count);
+
 private:
     LogObserver     mLogObserver;   //!< The log observer object.
+    String          mConfigFile;    //!< The path to config file.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

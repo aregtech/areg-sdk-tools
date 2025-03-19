@@ -37,19 +37,19 @@ public:
     enum class eLogObserverEvent : unsigned short
     {
           CMD_Unknown           //!< Invalid event
-        , CMD_Connect           //!< Invalid event
-        , CMD_Disconnect        //!< The log observer is disconnected from the log collector service.
-        , CMD_Pause             //!< The log observer is paused.
-        , CMD_Resume            //!< The log observer is resumed.
-        , CMD_Instances         //!< The list of connected instances is received.
-        , CMD_Scopes            //!< The log observer is stopped.
-        , CMD_Message           //!< The log observer is stopped.
+        , CMD_Connect           //!< Initialize and connect the log observer
+        , CMD_Disconnect        //!< Disconnect log observer.
+        , CMD_Pause             //!< Pause log observer.
+        , CMD_Resume            //!< Resume log observer.
+        , CMD_QueryInstances    //!< Query connection instances
         , CMD_Connected         //!< The log observer is connected to the log collector service.
         , CMD_Clear             //!< The log observer should be cleared.
         , CMD_ConnecedInst      //!< The log observer received connected instances message.
         , CMD_DisconnecedInst   //!< The log observer received disconnected instances message.
-        , CMD_LogScopes         //!< The log observer received log scopes message.
+        , CMD_ScopesRegistered  //!< The log observer received list of registered scopes.
+        , CMD_ScopesUpdated     //!< The log observer received list of updated scopes.
         , CMD_LogMessageEx      //!< The log observer received log message.
+        , CMD_LogPiroirity      //!< Change log priority
     };
 
     DECLARE_STREAMABLE(LogObserverEventData::eLogObserverEvent);
