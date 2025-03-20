@@ -1,4 +1,23 @@
-#include "ProjectSettings.hpp"
+﻿/************************************************************************
+ *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the AREG Framework.
+ *
+ *  Lusan is available as free and open-source software under the MIT License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  with this distribution or contact us at info[at]aregtech.com.
+ *
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \file        lusan/view/common/ProjectSettings.cpp
+ *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \author      Tamas Csillag
+ *  \brief       Lusan application, options dialog.
+ *
+ ************************************************************************/
+
+#include "lusan/view/common/ProjectSettings.hpp"
 #include "ui/ui_ProjectSettings.h"
 #include "lusan/app/LusanApplication.hpp"
 
@@ -9,7 +28,10 @@
 
 ProjectSettings::ProjectSettings(QWidget *parent)
     : QDialog(parent)
-    , ui(new Ui::ProjectSettingsDlg)
+    , ui    (new Ui::ProjectSettingsDlg)
+    , mSettingsStackedWidget(new QStackedWidget( this ))
+    , mDirSettings          (new ProjectDirSettings(this))
+    , mModel                (this)
 {
     ui->setupUi(this);
     setupDialog();
@@ -18,6 +40,8 @@ ProjectSettings::ProjectSettings(QWidget *parent)
 
 ProjectSettings::~ProjectSettings()
 {
+    delete mSettingsStackedWidget;
+    delete mDirSettings;
     delete ui;
 }
 
@@ -26,11 +50,11 @@ void ProjectSettings::setupDialog()
     addSettings();
 
     ui->horizontalLayout->setStretch(0, 1);
-    ui->horizontalLayout->addWidget(settingsStackedWidget, 4);
+    ui->horizontalLayout->addWidget(mSettingsStackedWidget, 4);
 
-    settingsStackedWidget->addWidget(mDirSettings);
+    mSettingsStackedWidget->addWidget(mDirSettings);
 
-    ui->settingsList->setModel(&model);
+    ui->settingsList->setModel(&mModel);
 
     selectSetting(0);
 
@@ -51,16 +75,16 @@ void ProjectSettings::settingsListSelectionChanged(QModelIndex const& index)
 
 void ProjectSettings::selectSetting(int const index) const
 {
-    Q_ASSERT(index < settingsStackedWidget->count());
+    Q_ASSERT(index < mSettingsStackedWidget->count());
 
-    settingsStackedWidget->setCurrentIndex(index);
+    mSettingsStackedWidget->setCurrentIndex(index);
 }
 
 void ProjectSettings::addSettings()
 {
     QStringList settingsList;
     settingsList.append(tr("Directories"));
-    model.setStringList(settingsList);
+    mModel.setStringList(settingsList);
 }
 
 void ProjectSettings::buttonClicked(QAbstractButton* button) const
