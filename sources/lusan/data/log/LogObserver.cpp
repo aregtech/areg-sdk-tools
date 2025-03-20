@@ -19,13 +19,9 @@
 
 #include "lusan/data/log/LogObserver.hpp"
 
-#include "areg/base/DateTime.hpp"
-
-LogObserver& LogObserver::getInstance(void)
-{
-    static LogObserver  _log;
-    return _log;
-}
+#include "lusan/data/log/LogObserverEvent.hpp"
+#include "lusan/data/log/NELogObserver.hpp"
+#include "areg/component/DispatcherThread.hpp"
 
 void LogObserver::logingStart(void)
 {
@@ -40,6 +36,14 @@ void LogObserver::loggingStart(const QString& dbPath, const QString& address, un
     if (::logObserverInitialize(&mEvents, nullptr))
     {
         ::logObserverConnectLogger(dbPath.isEmpty() ? nullptr : dbPath.toStdString().c_str(), address.isEmpty() ? nullptr : address.toStdString().c_str(), port);
+    }
+}
+
+void LogObserver::loggingStart(const String& configPath)
+{
+    if (::logObserverInitialize(&mEvents, configPath.isEmpty() ? nullptr : configPath.getString()))
+    {
+        ::logObserverConnectLogger(nullptr, nullptr, 0);
     }
 }
 
@@ -141,8 +145,8 @@ LogObserver::LogObserver(void)
     mEvents.evtMessagingFailed      = &LogObserver::callbackMessagingFailed;
     mEvents.evtInstConnected        = &LogObserver::callbackConnectedInstances;
     mEvents.evtInstDisconnected     = &LogObserver::callbackDisconnecteInstances;
-    mEvents.evtLogRegisterScopes    = &LogObserver::callbackLogScopes;
-    mEvents.evtLogUpdatedScopes     = &LogObserver::callbackLogScopes;
+    mEvents.evtLogRegisterScopes    = &LogObserver::callbackLogScopesRegistered;
+    mEvents.evtLogUpdatedScopes     = &LogObserver::callbackLogScopesUpdated;
     mEvents.evtLogMessage           = nullptr;
     mEvents.evtLogMessageEx         = &LogObserver::callbackLogMessageEx;
 }
@@ -162,24 +166,23 @@ void LogObserver::callbackDatabaseConfigured(bool /* isEnabled */, const char* /
 
 void LogObserver::callbackServiceConnected(bool isConnected, const char* address, uint16_t port)
 {
-    LogObserver & _log = LogObserver::getInstance();
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_Connected);
     if (isConnected)
     {
-        _log.mLogConnect.lcAddress = address;
-        _log.mLogConnect.lcPort = port;
+        data << address << port;
     }
     else
     {
-        _log.mLogConnect.lcAddress.clear();
-        _log.mLogConnect.lcPort = NESocket::InvalidPort;
+        data << "" << NESocket::InvalidPort;
     }
+
+    LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
 }
 
 void LogObserver::callbackObserverStarted(bool /* isStarted */)
 {
-    LogObserver & _log = LogObserver::getInstance();
-    _log._clear();
-
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_Clear);
+    LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
 }
 
 void LogObserver::callbackMessagingFailed(void)
@@ -188,160 +191,70 @@ void LogObserver::callbackMessagingFailed(void)
 
 void LogObserver::callbackConnectedInstances(const sLogInstance* instances, uint32_t count)
 {
-    LogObserver & _log = LogObserver::getInstance();
-
-    if (count == 0)
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_ConnecedInst);
+    if (count != 0)
     {
-        _log.mLogSources.clear();
-        _log.mLogScopes.clear();
-        return;
+        data.getBuffer().write(reinterpret_cast<const unsigned char*>(instances), count * sizeof(sLogInstance));
     }
 
-    for (uint32_t i = 0; i < count; ++i)
-    {
-        const sLogInstance& inst{ instances[i] };
-        bool contains{ false };
-        for (uint32_t j = 0; j < _log.mLogSources.getSize(); ++j)
-        {
-            if (_log.mLogSources[j].liCookie == inst.liCookie)
-            {
-                contains = true;
-                break;
-            }
-        }
-
-        if (contains == false)
-        {
-            NELogging::sLogMessage * log = DEBUG_NEW NELogging::sLogMessage;
-            log->logDataType = NELogging::eLogDataType::LogDataLocal;
-            log->logMsgType = NELogging::eLogMessageType::LogMessageText;
-            log->logMessagePrio = NELogging::eLogPriority::PrioAny;
-            log->logSource = inst.liSource;
-            log->logTarget = NEService::COOKIE_LOCAL;
-            log->logCookie = inst.liCookie;
-            log->logModuleId = 0u;
-            log->logThreadId = 0u;
-            log->logTimestamp = inst.liTimestamp;
-            log->logScopeId = 0u;
-            log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "CONNECTED the x%u instance %s with cookie %llu", inst.liBitness, inst.liName, inst.liCookie));
-            log->logThreadLen = 0;
-            log->logThread[0] = String::EmptyChar;
-            log->logModuleId = 0;
-            log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
-
-            _log.mLogSources.add(inst);
-            _log.mLogMessages.pushLast(log);
-
-            ASSERT(_log.mLogScopes.contains(inst.liCookie) == false);
-            ::logObserverRequestScopes(inst.liCookie);
-        }
-    }
+    LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
 }
 
 void LogObserver::callbackDisconnecteInstances(const ITEM_ID* instances, uint32_t count)
 {
-    LogObserver & _log = LogObserver::getInstance();
-
-    for (uint32_t i = 0; i < count; ++i)
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_DisconnecedInst);
+    if (count != 0)
     {
-        const ITEM_ID& cookie = instances[i];
-        for (uint32_t j = 0; j < _log.mLogSources.getSize(); ++j)
-        {
-            const sLogInstance& inst{ _log.mLogSources[j] };
-            if (inst.liCookie == cookie)
-            {
-                NELogging::sLogMessage* log = DEBUG_NEW NELogging::sLogMessage;
-                log->logDataType = NELogging::eLogDataType::LogDataLocal;
-                log->logMsgType = NELogging::eLogMessageType::LogMessageText;
-                log->logMessagePrio = NELogging::eLogPriority::PrioAny;
-                log->logSource = inst.liSource;
-                log->logTarget = NEService::COOKIE_LOCAL;
-                log->logCookie = inst.liCookie;
-                log->logModuleId = 0u;
-                log->logThreadId = 0u;
-                log->logTimestamp = static_cast<TIME64>(DateTime::getNow());
-                log->logScopeId = 0u;
-                log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "DISCONNECTED the x%u instance %s with cookie %llu", inst.liBitness, inst.liName, inst.liCookie));
-                log->logThreadLen = 0;
-                log->logThread[0] = String::EmptyChar;
-                log->logModuleId = 0;
-                log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
-
-                _log.mLogSources.removeAt(j, 1);
-                _log.mLogScopes.removeAt(cookie);
-
-                _log.mLogMessages.pushLast(log);
-                break;
-            }
-        }
+        data.getBuffer().write(reinterpret_cast<const unsigned char*>(instances), count * sizeof(ITEM_ID));
     }
+
+    LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
 }
 
-void LogObserver::callbackLogScopes(ITEM_ID cookie, const sLogScope* scopes, uint32_t count)
+void LogObserver::callbackLogScopesRegistered(ITEM_ID cookie, const sLogScope* scopes, uint32_t count)
 {
-    LogObserver & _log = LogObserver::getInstance();
-
-    for (uint32_t i = 0; i < _log.mLogSources.getSize(); ++i)
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_ScopesRegistered);
+    if (count != 0)
     {
-        const sLogInstance& inst{ _log.mLogSources[i] };
-        if (cookie == inst.liCookie)
-        {
-            NELogging::sLogMessage* log = DEBUG_NEW NELogging::sLogMessage;
-            log->logDataType = NELogging::eLogDataType::LogDataLocal;
-            log->logMsgType = NELogging::eLogMessageType::LogMessageText;
-            log->logMessagePrio = NELogging::eLogPriority::PrioAny;
-            log->logSource = inst.liSource;
-            log->logTarget = NEService::COOKIE_LOCAL;
-            log->logCookie = inst.liCookie;
-            log->logModuleId = 0u;
-            log->logThreadId = 0u;
-            log->logTimestamp = static_cast<TIME64>(DateTime::getNow());
-            log->logScopeId = 0u;
-            log->logMessageLen = static_cast<uint32_t>(String::formatString(log->logMessage, NELogging::LOG_MESSAGE_IZE, "Registered %u scopes for instance %s with cookie %llu", count, inst.liName, inst.liCookie));
-            log->logThreadLen = 0;
-            log->logThread[0] = String::EmptyChar;
-            log->logModuleId = 0;
-            log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
-
-            if (_log.mLogScopes.contains(cookie) == false)
-            {
-                _log.mLogScopes.setAt(cookie, ListScopes());
-            }
-
-            ListScopes& scopeList{ _log.mLogScopes.getAt(cookie) };
-            scopeList.resize(count);
-            for (uint32_t j = 0; j < count; ++j)
-            {
-                scopeList[j] = scopes[j];
-            }
-
-            _log.mLogMessages.pushLast(log);
-            break;
-        }
+        data.getBuffer().write64Bits(cookie);
+        data.getBuffer().write32Bits(count);
+        data.getBuffer().write(reinterpret_cast<const unsigned char*>(scopes), count * sizeof(sLogScope));
     }
+
+    LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
+}
+
+void LogObserver::callbackLogScopesUpdated(ITEM_ID cookie, const sLogScope* scopes, uint32_t count)
+{
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_ScopesUpdated);
+    if (count != 0)
+    {
+        data.getBuffer().write64Bits(cookie);
+        data.getBuffer().write32Bits(count);
+        data.getBuffer().write(reinterpret_cast<const unsigned char*>(scopes), count * sizeof(sLogScope));
+    }
+
+    LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
 }
 
 void LogObserver::callbackLogMessageEx(const unsigned char* logBuffer, uint32_t size)
 {
-    LogObserver & _log = LogObserver::getInstance();
-
-    if (logBuffer != nullptr)
+    LogObserverEventData data(LogObserverEventData::eLogObserverEvent::CMD_LogMessageEx);
+    if ((size != 0) && (logBuffer != nullptr))
     {
-        ASSERT(size >= sizeof(NELogging::sLogMessage));
-        NELogging::sLogMessage * log = DEBUG_NEW NELogging::sLogMessage;
-        memcpy(log, logBuffer, sizeof(NELogging::sLogMessage));
-        _log.mLogMessages.pushLast(log);
+        data.getBuffer().write(logBuffer, size);
     }
+
+    LogObserverEvent::sendEvent(data, LogObserver::_logObserverThread());
+}
+
+DispatcherThread& LogObserver::_logObserverThread(void)
+{
+    return DispatcherThread::getDispatcherThread(NELogObserver::LogobserverThread);
 }
 
 void LogObserver::_clear(void)
 {
-    while (mLogMessages.isEmpty() == false)
-    {
-        NELogging::sLogMessage *msg = mLogMessages.popFirst();
-        delete msg;
-    }
-
     mLogConnect.lcAddress.clear();
     mLogConnect.lcPort = NESocket::InvalidPort;
     mLogSources.clear();
