@@ -47,7 +47,7 @@ class ProjectSettings : public QDialog
 public:
     explicit ProjectSettings(QWidget *parent = nullptr);
     virtual ~ProjectSettings(void);
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
@@ -100,7 +100,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    ProjectSettings(const ProjectSettings const& /*src*/) = delete;
+    ProjectSettings(const ProjectSettings & /*src*/) = delete;
     ProjectSettings& operator = (const ProjectSettings & /*src*/) = delete;
     ProjectSettings(ProjectSettings && /*src*/) noexcept = delete;
     ProjectSettings& operator = (ProjectSettings && /*src*/) noexcept = delete;

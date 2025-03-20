@@ -22,6 +22,8 @@
 #include <list>
 #include "lusan/data/common/WorkspaceEntry.hpp"
 
+#include <QObject>
+
 class QXmlStreamReader;
 class QXmlStreamWriter;
 
@@ -29,15 +31,27 @@ class QXmlStreamWriter;
  * \class   OptionsManager
  * \brief   Manages application options, including workspace entries.
  **/
-class OptionsManager
+class OptionsManager    : public QObject
 {
     using Workspaces = std::vector<WorkspaceEntry>;
 
+    Q_OBJECT
 public:
     /**
      * \brief   Constructor.
      **/
     OptionsManager(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Signals
+//////////////////////////////////////////////////////////////////////////
+signals:
+
+    /**
+     * \brief   The signal is triggered when the project directories are changed.
+     * \param   workspace   The workspace entry.
+     **/
+    void signalWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace);
 
 public:
     /**

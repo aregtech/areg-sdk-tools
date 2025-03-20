@@ -18,6 +18,7 @@
  ************************************************************************/
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
+#include "lusan/view/common/ProjectSettings.hpp"
 
 #include <QFileInfo>
 #include <QtWidgets>
@@ -292,6 +293,12 @@ void MdiMainWindow::onViewStatus()
     }
 }
 
+void MdiMainWindow::onToolsOptions(void)
+{
+    ProjectSettings settings(this);
+    settings.exec();
+}
+
 void MdiMainWindow::onHelpAbout()
 {
     QMessageBox::about(this, tr("About Lusan"), tr("The <b>Lusan</b> in under construction."));
@@ -504,23 +511,27 @@ void MdiMainWindow::_createActions()
     QIcon iconNavi;
     iconNavi.addFile(QString::fromUtf8(":/icons/View Navigator Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
     initAction(mActViewNavigator, iconNavi, tr("&Navigator Window"));
-    mActWindowsTile.setStatusTip(tr("View Navigator Window"));
+    mActViewNavigator.setStatusTip(tr("View Navigator Window"));
     connect(&mActViewNavigator, &QAction::triggered, this, &MdiMainWindow::onViewNavigator);
 
     initAction(mActViewWokspace, QIcon(), tr("&Workspace Navigator"));
-    mActWindowsTile.setStatusTip(tr("View Workspace Navigator Window"));
+    mActViewWokspace.setStatusTip(tr("View Workspace Navigator Window"));
     connect(&mActViewWokspace, &QAction::triggered, this, &MdiMainWindow::onViewWorkspace);
 
     initAction(mActViewLogs, QIcon(), tr("&Logs Navigator"));
-    mActWindowsTile.setStatusTip(tr("View Logs Navigator Window"));
+    mActViewLogs.setStatusTip(tr("View Logs Navigator Window"));
     connect(&mActViewLogs, &QAction::triggered, this, &MdiMainWindow::onViewLogs);
     
     QIcon iconStatus;
     iconStatus.addFile(QString::fromUtf8(":/icons/View Status Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
     initAction(mActViewStatus, iconStatus, tr("&Status Window"));
-    mActWindowsTile.setStatusTip(tr("View Status Window"));
+    mActViewStatus.setStatusTip(tr("View Status Window"));
     connect(&mActViewStatus, &QAction::triggered, this, &MdiMainWindow::onViewStatus);
-
+    
+    initAction(mActToolsOptions, QIcon::fromTheme("applications-development"), tr("&Options"));
+    mActToolsOptions.setStatusTip(tr("View Workspace Options"));
+    connect(&mActToolsOptions, &QAction::triggered, this, &MdiMainWindow::onToolsOptions);
+    
     initAction(mActWindowsTile, QIcon(), tr("&Tile"));
     mActWindowsTile.setStatusTip(tr("Tile the windows"));
     connect(&mActWindowsTile, &QAction::triggered, &mMdiArea, &QMdiArea::tileSubWindows);
@@ -575,6 +586,9 @@ void MdiMainWindow::_createMenus()
     mViewMenu->addAction(&mActViewWokspace);
     mViewMenu->addAction(&mActViewLogs);
     mViewMenu->addAction(&mActViewStatus);
+    
+    mToolsMenu = menuBar()->addMenu(tr("&Tools"));
+    mToolsMenu->addAction(&mActToolsOptions);
 
     mWindowMenu = menuBar()->addMenu(tr("&Window"));
     connect(mWindowMenu, &QMenu::aboutToShow, this, &MdiMainWindow::updateWindowMenu);

@@ -41,7 +41,6 @@ ProjectSettings::ProjectSettings(QWidget *parent)
 ProjectSettings::~ProjectSettings()
 {
     delete mSettingsStackedWidget;
-    delete mDirSettings;
     delete ui;
 }
 

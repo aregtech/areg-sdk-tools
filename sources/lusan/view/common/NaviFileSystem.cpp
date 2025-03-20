@@ -352,6 +352,7 @@ void NaviFileSystem::updateData(void)
     QString sources = LusanApplication::getWorkspaceSources();
     QString includes = LusanApplication::getWorkspaceIncludes();
     QString delivery = LusanApplication::getWorkspaceDelivery();
+    QString logs = LusanApplication::getWorkspaceLogs();
 
     mRootPaths.clear();
     Q_ASSERT(root.isEmpty() == false);
@@ -369,6 +370,11 @@ void NaviFileSystem::updateData(void)
     if (delivery.isEmpty() == false)
     {
         mRootPaths.insert(delivery, "[Delivery: " + delivery + "]");
+    }
+
+    if (logs.isEmpty() == false)
+    {
+        mRootPaths.insert(logs, "[Logs: " + logs + "]");
     }
 
     QStringList filters{ LusanApplication::InternalExts };
@@ -412,6 +418,8 @@ void NaviFileSystem::setupSignals(void)
     connect(ctrlFileSystem()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
 
     connect(mTableCell, &TableCell::editorDataChanged, this, &NaviFileSystem::onEditorDataChanged);
+
+    connect(&LusanApplication::getOptions(), &OptionsManager::signalWorkspaceDirectoriesChanged, this, &NaviFileSystem::onWorkspaceDirectoriesChanged);
 }
 
 void NaviFileSystem::blockBasicSignals(bool block)
@@ -433,3 +441,45 @@ QFileInfo NaviFileSystem::getFileInfo(const QModelIndex & index) const
         return mGenModel->fileInfo(src);
     }
 }
+
+void NaviFileSystem::onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace)
+{
+    QString root = workspace.getWorkspaceRoot();
+    QString sources = workspace.getDirSources();
+    QString includes = workspace.getDirIncludes();
+    QString delivery = workspace.getDirDelivery();
+    QString logs = workspace.getDirLogs();
+
+    mRootPaths.clear();
+    Q_ASSERT(root.isEmpty() == false);
+    mRootPaths.insert(root, "[Project: " + root + "]");
+    if (sources.isEmpty() == false)
+    {
+        mRootPaths.insert(sources, "[Sources: " + sources + "]");
+    }
+
+    if (includes.isEmpty() == false)
+    {
+        mRootPaths.insert(includes, "[Includes: " + includes + "]");
+    }
+
+    if (delivery.isEmpty() == false)
+    {
+        mRootPaths.insert(delivery, "[Delivery: " + delivery + "]");
+    }
+
+    if (logs.isEmpty() == false)
+    {
+        mRootPaths.insert(logs, "[Logs: " + logs + "]");
+    }
+
+    if (mNaviModel != nullptr)
+    {
+        QModelIndex idxRoot = mNaviModel->setRootPaths(mRootPaths);
+        ctrlFileSystem()->setRootIndex(idxRoot);
+        ctrlFileSystem()->expand(idxRoot);
+        ctrlFileSystem()->setSortingEnabled(true);
+        ctrlToolShowAll()->setCheckable(true);
+    }
+}
+

@@ -34,6 +34,7 @@ class QFileInfo;
 class QItemSelection;
 class QTreeView;
 class QToolButton;
+class WorkspaceEntry;
 
 namespace Ui {
     class NaviFileSystem;
@@ -244,7 +245,16 @@ private:
      * \return  The file information.
      **/
     QFileInfo getFileInfo(const QModelIndex & index) const;
-    
+
+private slots:
+
+    /**
+     * \brief   Triggered when the workspace directories are changed.
+     * \param   workspace   The workspace entry, which directories have being changed.
+     *                      Normally, it is the directory of the active workspace.
+     **/
+    void onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
