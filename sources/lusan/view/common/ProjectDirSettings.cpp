@@ -17,7 +17,7 @@
  *
  ************************************************************************/
 
-#include "lusan/view/common/ProjectDirSettings.hpp.hpp"
+#include "lusan/view/common/ProjectDirSettings.hpp"
 #include "ui/ui_ProjectDirSettings.h"
 #include "lusan/app/LusanApplication.hpp"
 #include <QFileDialog>
