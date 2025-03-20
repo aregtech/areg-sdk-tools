@@ -12,6 +12,8 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/common/Workspace.cpp
     ${LUSAN}/view/common/WorkspaceFileDialog.cpp
+    ${LUSAN}/view/common/ProjectDirSettings.cpp
+    ${LUSAN}/view/common/ProjectSettings.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -26,4 +28,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/TableCell.hpp
     ${LUSAN}/view/common/Workspace.hpp
     ${LUSAN}/view/common/WorkspaceFileDialog.hpp
+    ${LUSAN}/view/common/ProjectDirSettings.hpp
+    ${LUSAN}/view/common/ProjectSettings.hpp
 )

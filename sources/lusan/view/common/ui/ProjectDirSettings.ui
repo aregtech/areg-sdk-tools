@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>projectDirSettingsDlg</class>
+ <widget class="QWidget" name="projectDirSettingsDlg">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>534</width>
+    <height>402</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <widget class="QLabel" name="projectSettingsLabel">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>20</y>
+     <width>151</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>13</pointsize>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Workspace Lists</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>60</y>
+     <width>491</width>
+     <height>331</height>
+    </rect>
+   </property>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="1" column="3" colspan="2">
+     <widget class="QPushButton" name="sourceDirBrowseBtn">
+      <property name="text">
+       <string>Browse</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="2">
+     <widget class="QLineEdit" name="sourceDirEdit"/>
+    </item>
+    <item row="0" column="2">
+     <widget class="QLineEdit" name="rootDirEdit"/>
+    </item>
+    <item row="3" column="3" colspan="2">
+     <widget class="QPushButton" name="deliveryDirBrowseBtn">
+      <property name="text">
+       <string>Browse</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0" colspan="2">
+     <widget class="QLabel" name="deliveryDirLabel">
+      <property name="text">
+       <string>Project Delivery Directory:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0" colspan="2">
+     <widget class="QLabel" name="sourceDirLabel">
+      <property name="text">
+       <string>Project Source Directory:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="3" colspan="2">
+     <widget class="QPushButton" name="rootDirBrowseBtn">
+      <property name="text">
+       <string>Browse</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="2">
+     <widget class="QLineEdit" name="includeDirEdit"/>
+    </item>
+    <item row="5" column="2" colspan="3">
+     <widget class="QPlainTextEdit" name="workspaceEdit">
+      <property name="plainText">
+       <string>AREG SDK</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" colspan="2">
+     <widget class="QLabel" name="rootDirLabel">
+      <property name="text">
+       <string>Project Root Directory:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="3" colspan="2">
+     <widget class="QPushButton" name="includeDirBrowseBtn">
+      <property name="text">
+       <string>Browse</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0" colspan="2">
+     <widget class="QLabel" name="includeDirLabel">
+      <property name="text">
+       <string>Project Include Directory:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="5" column="0" colspan="2">
+     <widget class="QLabel" name="workspaceDescriptionLabel">
+      <property name="text">
+       <string>Project Workspace Description:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="2">
+     <widget class="QLineEdit" name="deliveryDirEdit"/>
+    </item>
+    <item row="4" column="2">
+     <widget class="QLineEdit" name="logDirEdit"/>
+    </item>
+    <item row="4" column="3" colspan="2">
+     <widget class="QPushButton" name="logDirBrowseBtn">
+      <property name="text">
+       <string>Browse</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0" colspan="2">
+     <widget class="QLabel" name="logDirLabel">
+      <property name="text">
+       <string>Project Log Directory:</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <tabstops>
+  <tabstop>rootDirEdit</tabstop>
+  <tabstop>rootDirBrowseBtn</tabstop>
+  <tabstop>sourceDirEdit</tabstop>
+  <tabstop>sourceDirBrowseBtn</tabstop>
+  <tabstop>includeDirEdit</tabstop>
+  <tabstop>includeDirBrowseBtn</tabstop>
+  <tabstop>deliveryDirEdit</tabstop>
+  <tabstop>deliveryDirBrowseBtn</tabstop>
+  <tabstop>logDirEdit</tabstop>
+  <tabstop>logDirBrowseBtn</tabstop>
+  <tabstop>workspaceEdit</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
