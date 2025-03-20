@@ -70,6 +70,8 @@ void OptionsManager::addWorkspace(const WorkspaceEntry & workspace)
         mWorkspaces.push_back(workspace);
         mWorkspaces[mWorkspaces.size() - 1].setId(++mCurId);
     }
+
+    emit signalWorkspaceDirectoriesChanged(workspace);
 }
 
 WorkspaceEntry OptionsManager::removeWorkspace(uint64_t key)

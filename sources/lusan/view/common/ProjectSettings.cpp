@@ -111,6 +111,4 @@ void ProjectSettings::buttonClicked(QAbstractButton* button) const
     optionsManager.removeWorkspace(currentWorkspace.getKey());
     optionsManager.addWorkspace(currentWorkspace);
     optionsManager.writeOptions();
-    
-    emit signalSettingsChanged(*this);
 }
