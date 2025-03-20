@@ -41,7 +41,6 @@ ProjectSettings::ProjectSettings(QWidget *parent)
 ProjectSettings::~ProjectSettings()
 {
     delete mSettingsStackedWidget;
-    delete mDirSettings;
     delete ui;
 }
 
@@ -112,4 +111,6 @@ void ProjectSettings::buttonClicked(QAbstractButton* button) const
     optionsManager.removeWorkspace(currentWorkspace.getKey());
     optionsManager.addWorkspace(currentWorkspace);
     optionsManager.writeOptions();
+    
+    emit signalSettingsChanged(*this);
 }

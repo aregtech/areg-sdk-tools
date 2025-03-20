@@ -162,6 +162,8 @@ private slots:
     void onViewLogs();
 
     void onViewStatus();
+
+    void onToolsOptions(void);
     
     /**
      * \brief   Slot for showing the about dialog.
@@ -326,8 +328,12 @@ private:
     QMenu*          mEditMenu;
     //!< The view menu.
     QMenu*          mViewMenu;
+    //!< The design top level menu.
     QMenu*          mDesignMenu;
+    //!< The design service interface menu
     QMenu*          mDesignMenuSI;
+    //!< The top level menu "Tools"
+    QMenu*          mToolsMenu;
     //!< The window menu.
     QMenu*          mWindowMenu;
     //!< The help menu.
@@ -340,7 +346,7 @@ private:
     QToolBar*       mViewToolBar;
 
     //!< Action for creating a new SI file.
-    QAction          mActFileNewSI;
+    QAction         mActFileNewSI;
     //!< Action for creating a new log file.
     QAction         mActFileNewLog;
     //!< Action for opening file.
@@ -368,6 +374,9 @@ private:
     QAction         mActViewWokspace;
     QAction         mActViewLogs;
     QAction         mActViewStatus;
+
+    //!< Action for showing the options dialog.
+    QAction         mActToolsOptions;
 
     //!< Action for tiling windows.
     QAction         mActWindowsTile;
