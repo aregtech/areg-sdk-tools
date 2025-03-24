@@ -19,6 +19,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
+#include "lusan/view/log/LogViewer.hpp"
 
 #include <QFileInfo>
 #include <QtWidgets>
@@ -66,6 +67,8 @@ MdiMainWindow::MdiMainWindow()
     , mStatusDock   ( nullptr )
     , mListView     ( nullptr )
     , mStatusTabs   ( nullptr )
+    , mLogViewer    ( nullptr )
+    , mLiveLogWnd   ( nullptr )
     , mFileMenu     (nullptr)
     , mEditMenu     (nullptr)
     , mViewMenu     (nullptr)
@@ -178,11 +181,33 @@ void MdiMainWindow::onFileNewSI()
 
 void MdiMainWindow::onFileNewLog()
 {
-#if 0
-    MdiChild* child = createMdiChild();
-    child->newFile();
-    child->show();
-#endif
+    if (mLogViewer != nullptr)
+    {
+        bool found{false};
+        QList<QMdiSubWindow *> subwindows = mMdiArea.subWindowList();
+        for (QMdiSubWindow * sub : subwindows)
+        {
+            if (sub == mLiveLogWnd)
+            {
+                found = true;
+                break;
+            }
+        }
+        
+        mLogViewer = found ? mLogViewer : nullptr;
+    }
+    
+    if (mLogViewer == nullptr)
+    {
+        mLogViewer = new LogViewer(&mMdiArea);
+        mLiveLogWnd = mMdiArea.addSubWindow(mLogViewer);
+        mLogViewer->setMdiSubwindow(mLiveLogWnd);
+        mMdiArea.showMaximized();
+    }
+    else
+    {
+        mMdiArea.setActiveSubWindow(mLiveLogWnd);
+    }
 }
 
 void MdiMainWindow::onFileOpen()
@@ -441,6 +466,15 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
     connect(child, &ServiceInterface::copyAvailable, &mActEditCut, &QAction::setEnabled);
     connect(child, &ServiceInterface::copyAvailable, &mActEditCopy, &QAction::setEnabled);
     
+    mMdiArea.showMaximized();
+    return child;
+}
+
+LogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QString()*/)
+{
+    LogViewer* child = new LogViewer(&mMdiArea);
+    QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
+    child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();
     return child;
 }

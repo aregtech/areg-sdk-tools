@@ -1,4 +1,4 @@
-#ifndef LUSAN_VIEW_LOG_LOGVIEWER_HPP
+﻿#ifndef LUSAN_VIEW_LOG_LOGVIEWER_HPP
 #define LUSAN_VIEW_LOG_LOGVIEWER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
  *  with this distribution or contact us at info[at]aregtech.com.
  *
- *  \copyright   � 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/view/log/LogViewer.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
@@ -20,14 +20,18 @@
  ************************************************************************/
 
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/view/common/MdiChild.hpp"
 
-#include <QWidget>
+class QHeaderView;
+class QTableView;
+class QWidget;
+class LogViewerModel;
 
 namespace Ui {
     class LogViewer;
 }
 
-class LogViewer : public QWidget
+class LogViewer : public MdiChild
 {
     Q_OBJECT
 
@@ -35,7 +39,16 @@ public:
     explicit LogViewer(QWidget *parent = nullptr);
 
 private:
-    Ui::LogViewer* ui;
+    QTableView* getTable(void);
+    
+    QHeaderView* getHeader(void);
+    
+private:
+
+private:
+    Ui::LogViewer*      ui;
+    LogViewerModel*     mLogModel;
+    QWidget*            mMdiWindow;
 };
 
 #endif // LUSAN_VIEW_LOG_LOGVIEWER_HPP
