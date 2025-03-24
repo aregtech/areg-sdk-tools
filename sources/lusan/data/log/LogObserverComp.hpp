@@ -65,6 +65,10 @@ public:
 
     bool isObserverConnected(void) const;
 
+    LogObserver& getLogObserver(void);
+
+    const sLogMessage* getLogMessage(uint32_t pos) const;
+
 signals:
     void signalLogServiceConnected(const char* address, unsigned short port);
 

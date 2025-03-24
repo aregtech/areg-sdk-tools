@@ -135,7 +135,7 @@ LogObserver::LogObserver(void)
     : mLogConnect   ()
     , mLogSources   ()
     , mLogScopes    ()
-    , mLogMessages  ()
+    , mLogMessages  (DEFAULT_LIST_SIZE)
     , mEvents       ()
 {
     mEvents.evtObserverConfigured   = &LogObserver::callbackObserverConfigured;
