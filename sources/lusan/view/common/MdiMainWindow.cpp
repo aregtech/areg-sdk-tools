@@ -203,6 +203,7 @@ void MdiMainWindow::onFileNewLog()
         mLiveLogWnd = mMdiArea.addSubWindow(mLogViewer);
         mLogViewer->setMdiSubwindow(mLiveLogWnd);
         mMdiArea.showMaximized();
+        mLogViewer->show();
     }
     else
     {
