@@ -99,16 +99,16 @@ QVariant LogViewerModel::headerData(int section, Qt::Orientation orientation, in
         switch (col)
         {
         case eColumn::LogColumnMessage:
-            return QVariant(QSize(50, 10));
+            return QVariant(QSize(200, 28));
         case eColumn::LogColumnPriority:
         case eColumn::LogColumnScopeId:
         case eColumn::LogColumnSourceId:
         case eColumn::LogColumnThreadId:
-            return QVariant(QSize(50, 10));
+            return QVariant(QSize(50, 28));
         case eColumn::LogColumnSource:
         case eColumn::LogColumnThread:
         case eColumn::LogColumnTimestamp:
-            return QVariant(QSize(50, 10));
+            return QVariant(QSize(100, 28));
         
         default:
             break;
