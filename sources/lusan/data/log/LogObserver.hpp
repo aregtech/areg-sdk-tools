@@ -37,6 +37,9 @@ class LogObserver
 {
     friend class LogObserverComp;
 
+    static constexpr uint32_t   DEFAULT_LIST_SIZE       { 5 * 1024 };    //!< The default size of the list
+    static constexpr uint32_t   DEFAULT_BLOCK_SIZE      { 1 * 1024 };    //!< The default block size of the log list
+
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
@@ -48,7 +51,7 @@ public:
     // The map of scopes, where the key is the ID of log instance
     using MapScopes     = TEHashMap<ITEM_ID, ListScopes>;
     // The list of log messages
-    using ListLogs      = TELinkedList<SharedBuffer>;
+    using ListLogs      = TEArrayList<SharedBuffer>;
 
     /**
      * \brief   The structure to store the IP address and port number of the remote log collector service.

@@ -49,6 +49,23 @@ bool LogObserverComp::isObserverConnected(void) const
     return mLogObserver.isLoggingConnected();
 }
 
+LogObserver& LogObserverComp::getLogObserver(void)
+{
+    return mLogObserver;
+}
+
+const sLogMessage* LogObserverComp::getLogMessage(uint32_t pos) const
+{
+    if (pos < mLogObserver.mLogMessages.getSize())
+    {
+        return reinterpret_cast<const sLogMessage*>(mLogObserver.mLogMessages[pos].getBuffer());
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
 LogObserverComp::LogObserverComp(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread, NEMemory::uAlign OPT /* data */)
     : Component ( entry, ownerThread )
     , StubBase  ( self(), NEService::getEmptyInterface() )
@@ -213,7 +230,7 @@ void LogObserverComp::connectedInstances(const sLogInstance* instances, uint32_t
             log->logModuleLen = static_cast<uint32_t>(NEString::copyString(log->logModule, NELogging::LOG_NAMES_SIZE, inst.liName));
 
             mLogObserver.mLogSources.add(inst);
-            mLogObserver.mLogMessages.pushLast(buf);
+            mLogObserver.mLogMessages.add(buf);
 
             ASSERT(mLogObserver.mLogScopes.contains(inst.liCookie) == false);
             ::logObserverRequestScopes(inst.liCookie);
@@ -252,7 +269,7 @@ void LogObserverComp::disconnectedInstances(const ITEM_ID* instances, uint32_t c
                 mLogObserver.mLogSources.removeAt(j, 1);
                 mLogObserver.mLogScopes.removeAt(cookie);
 
-                mLogObserver.mLogMessages.pushLast(buf);
+                mLogObserver.mLogMessages.add(buf);
                 break;
             }
         }
@@ -296,7 +313,7 @@ void LogObserverComp::logScopesRegistered(ITEM_ID target, const sLogScope* scope
                 scopeList[j + shift] = scopes[j];
             }
 
-            mLogObserver.mLogMessages.pushLast(buf);
+            mLogObserver.mLogMessages.add(buf);
             break;
         }
     }
@@ -327,7 +344,7 @@ void LogObserverComp::logMessageEx(SharedBuffer& message)
 {
     if (message.isValid())
     {
-        mLogObserver.mLogMessages.pushLast(message);
+        mLogObserver.mLogMessages.add(message);
     }
 }
 

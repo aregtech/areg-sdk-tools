@@ -31,6 +31,7 @@
  ************************************************************************/
 class MdiChild;
 class ServiceInterface;
+class LogViewer;
 QT_BEGIN_NAMESPACE
 class QDockWidget;
 class QListView;
@@ -196,6 +197,8 @@ private slots:
      * \return  A pointer to the new Service Interface View.
      **/
     ServiceInterface* createServiceInterfaceView(const QString& filePath = QString());
+    
+    LogViewer* createLogViewerView(const QString& filePath = QString());
 
     /**
      * \brief   Returns the file filter string, which contains the list of supported extensions.
@@ -322,6 +325,8 @@ private:
     QListView*      mListView;
     //!< The status tab widget.
     QTabWidget*     mStatusTabs;
+    LogViewer*      mLogViewer;
+    QMdiSubWindow*  mLiveLogWnd;
     //!< The file menu.
     QMenu*          mFileMenu;
     //!< The edit menu.
