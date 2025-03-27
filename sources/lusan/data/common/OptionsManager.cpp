@@ -25,6 +25,7 @@
 #include <QString>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+#include <algorithm>
 
 OptionsManager::OptionsManager(void)
     : mActiveKey    ( 0 )
@@ -70,6 +71,22 @@ void OptionsManager::addWorkspace(const WorkspaceEntry & workspace)
         mWorkspaces.push_back(workspace);
         mWorkspaces[mWorkspaces.size() - 1].setId(++mCurId);
     }
+
+    emit signalWorkspaceDirectoriesChanged(workspace);
+}
+
+void OptionsManager::updateWorkspace(const WorkspaceEntry & workspace)
+{
+    uint32_t const id = workspace.getId();
+
+    auto workspaceIt{
+        std::find_if(std::begin(mWorkspaces), std::end(mWorkspaces),
+            [id](WorkspaceEntry const& w) { return w.getId() == id; }) };
+
+    if (std::end(mWorkspaces) == workspaceIt)
+        return;
+
+    *workspaceIt = workspace;
 
     emit signalWorkspaceDirectoriesChanged(workspace);
 }

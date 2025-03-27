@@ -48,35 +48,8 @@ public:
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Returns the root directory.
-     **/
-    QString getRootDirectory() const;
 
-    /**
-     * \brief   Returns the source directory.
-     **/
-    QString getSourceDirectory() const;
-
-    /**
-     * \brief   Returns the include directory.
-     **/
-    QString getIncludeDirectory() const;
-
-    /**
-     * \brief   Returns the delivery directory.
-     **/
-    QString getDeliveryDirectory() const;
-
-    /**
-     * \brief   Returns the log directory.
-     **/
-    QString getLogDirectory() const;
-
-    /**
-     * \brief   Returns the workspace description.
-     **/
-    QString getWorkspaceDescription() const;
+    void applyChanges() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

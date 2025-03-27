@@ -20,6 +20,7 @@
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "ui/ui_ProjectSettings.h"
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/view/common/WorkspaceManager.hpp"
 
 #include <QAbstractItemView>
 #include <QtAssert>
@@ -32,6 +33,7 @@ ProjectSettings::ProjectSettings(QWidget *parent)
     , mSettingsStackedWidget(new QStackedWidget( this ))
     , mDirSettings          (new ProjectDirSettings(this))
     , mModel                (this)
+    , mWorkspaceManager     (new WorkspaceManager(this))
 {
     ui->setupUi(this);
     setupDialog();
@@ -52,19 +54,19 @@ void ProjectSettings::setupDialog()
     ui->horizontalLayout->addWidget(mSettingsStackedWidget, 4);
 
     mSettingsStackedWidget->addWidget(mDirSettings);
+    mSettingsStackedWidget->addWidget(mWorkspaceManager);
 
     ui->settingsList->setModel(&mModel);
 
-    selectSetting(0);
+    selectPage(0);
 
     setFixedSize(size());
 }
 
 void ProjectSettings::connectSignals() const
 {
-    connect(ui->settingsList, &QAbstractItemView::clicked, this, &ProjectSettings::settingsListSelectionChanged);
-
-    connect(ui->buttonBox, &QDialogButtonBox::clicked, this, &ProjectSettings::buttonClicked);
+    connect(ui->settingsList,   &QAbstractItemView::clicked,    this, &ProjectSettings::settingsListSelectionChanged);
+    connect(ui->buttonBox,      &QDialogButtonBox::clicked,     this, &ProjectSettings::buttonClicked);
 }
 
 void ProjectSettings::settingsListSelectionChanged(QModelIndex const& index)
@@ -83,6 +85,7 @@ void ProjectSettings::addSettings()
 {
     QStringList settingsList;
     settingsList.append(tr("Directories"));
+    settingsList.append(tr("Workspaces"));
     mModel.setStringList(settingsList);
 }
 
@@ -96,19 +99,19 @@ void ProjectSettings::buttonClicked(QAbstractButton* button) const
         return;
     }
 
-    WorkspaceEntry currentWorkspace{ LusanApplication::getActiveWorkspace() };
+    if (mSettingsStackedWidget->currentWidget() == mDirSettings)
+    {
+        mDirSettings->applyChanges();
+    }
+    else if (mSettingsStackedWidget->currentWidget() == mWorkspaceManager)
+    {
+        mWorkspaceManager->applyChanges();
+    }
+}
 
-    currentWorkspace.setWorkspaceRoot(mDirSettings->getRootDirectory());
-    currentWorkspace.setDirSources(mDirSettings->getSourceDirectory());
-    currentWorkspace.setDirIncludes(mDirSettings->getIncludeDirectory());
-    currentWorkspace.setDirDelivery(mDirSettings->getDeliveryDirectory());
-    currentWorkspace.setDirLogs(mDirSettings->getLogDirectory());
-    currentWorkspace.setWorkspaceDescription(mDirSettings->getWorkspaceDescription());
+void ProjectSettings::selectPage(int const index) const
+{
+    selectSetting(index);
 
-
-    OptionsManager& optionsManager = LusanApplication::getOptions();
-
-    optionsManager.removeWorkspace(currentWorkspace.getKey());
-    optionsManager.addWorkspace(currentWorkspace);
-    optionsManager.writeOptions();
+    ui->settingsList->setCurrentIndex(mModel.index(index));
 }

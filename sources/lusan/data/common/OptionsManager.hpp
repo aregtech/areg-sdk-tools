@@ -80,6 +80,8 @@ public:
      **/
     void addWorkspace(const WorkspaceEntry & workspace);
 
+    void updateWorkspace(const WorkspaceEntry & workspace);
+
     /**
      * \brief   Removes a workspace entry by key.
      * \param   key         The key of the workspace to remove.

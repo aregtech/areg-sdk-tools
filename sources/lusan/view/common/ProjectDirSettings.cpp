@@ -36,36 +36,6 @@ ProjectDirSettings::~ProjectDirSettings()
     delete ui;
 }
 
-QString ProjectDirSettings::getRootDirectory() const
-{
-    return ui->rootDirEdit->text();
-}
-
-QString ProjectDirSettings::getSourceDirectory() const
-{
-    return ui->sourceDirEdit->text();
-}
-
-QString ProjectDirSettings::getIncludeDirectory() const
-{
-    return ui->includeDirEdit->text();
-}
-
-QString ProjectDirSettings::getDeliveryDirectory() const
-{
-    return ui->deliveryDirEdit->text();
-}
-
-QString ProjectDirSettings::getLogDirectory() const
-{
-    return ui->logDirEdit->text();
-}
-
-QString ProjectDirSettings::getWorkspaceDescription() const
-{
-    return ui->workspaceEdit->toPlainText();
-}
-
 void ProjectDirSettings::connectSignalHandlers() const
 {
     connect(ui->rootDirBrowseBtn,       &QPushButton::clicked, this, &ProjectDirSettings::onRootDirBrowseBtnClicked);
@@ -115,4 +85,22 @@ void ProjectDirSettings::initialisePathsWithCurrentWorkspaceData() const
     ui->deliveryDirEdit->setText(currentWorkspace.getDirDelivery());
     ui->logDirEdit->setText(currentWorkspace.getDirLogs());
     ui->workspaceEdit->setPlainText(currentWorkspace.getWorkspaceDescription());
+}
+
+void ProjectDirSettings::applyChanges() const
+{
+    WorkspaceEntry currentWorkspace{ LusanApplication::getActiveWorkspace() };
+
+    currentWorkspace.setWorkspaceRoot(ui->rootDirEdit->text());
+    currentWorkspace.setDirSources(ui->sourceDirEdit->text());
+    currentWorkspace.setDirIncludes(ui->includeDirEdit->text());
+    currentWorkspace.setDirDelivery(ui->deliveryDirEdit->text());
+    currentWorkspace.setDirLogs(ui->logDirEdit->text());
+    currentWorkspace.setWorkspaceDescription(ui->workspaceEdit->toPlainText());
+
+
+    OptionsManager& optionsManager = LusanApplication::getOptions();
+
+    optionsManager.updateWorkspace(currentWorkspace);
+    optionsManager.writeOptions();
 }

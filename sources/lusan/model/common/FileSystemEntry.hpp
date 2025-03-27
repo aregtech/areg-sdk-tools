@@ -121,7 +121,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    ~FileSystemEntry();
+    virtual ~FileSystemEntry();
 
 //////////////////////////////////////////////////////////////////////////
 // operators
