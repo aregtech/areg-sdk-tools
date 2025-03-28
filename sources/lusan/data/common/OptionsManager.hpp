@@ -80,7 +80,7 @@ public:
      **/
     void addWorkspace(const WorkspaceEntry & workspace);
 
-    void updateWorkspace(const WorkspaceEntry & workspace);
+    bool updateWorkspace(const WorkspaceEntry & workspace);
 
     /**
      * \brief   Removes a workspace entry by key.

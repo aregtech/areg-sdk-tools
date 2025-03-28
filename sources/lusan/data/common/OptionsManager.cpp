@@ -75,7 +75,7 @@ void OptionsManager::addWorkspace(const WorkspaceEntry & workspace)
     emit signalWorkspaceDirectoriesChanged(workspace);
 }
 
-void OptionsManager::updateWorkspace(const WorkspaceEntry & workspace)
+bool OptionsManager::updateWorkspace(const WorkspaceEntry & workspace)
 {
     uint32_t const id = workspace.getId();
 
@@ -84,11 +84,11 @@ void OptionsManager::updateWorkspace(const WorkspaceEntry & workspace)
             [id](WorkspaceEntry const& w) { return w.getId() == id; }) };
 
     if (std::end(mWorkspaces) == workspaceIt)
-        return;
+        return false;
 
     *workspaceIt = workspace;
 
-    emit signalWorkspaceDirectoriesChanged(workspace);
+    return true;
 }
 
 WorkspaceEntry OptionsManager::removeWorkspace(uint64_t key)
