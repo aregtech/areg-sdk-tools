@@ -27,7 +27,7 @@ void WorkspaceManager::connectSignalHandlers() const
 
 void WorkspaceManager::initialisePathsWithSelectedWorkspaceData(uint32_t const workspaceId) const
 {
-    std::optional<WorkspaceEntry> const workspace{ GetWorkspace(workspaceId) };
+    std::optional<WorkspaceEntry> const workspace{ getWorkspace(workspaceId) };
     if (!workspace) {
         return;
     }
@@ -67,7 +67,6 @@ void WorkspaceManager::handleDeleteButtonClicked()
     if (nullptr == selectedItem) {
         return;
     }
-
 
     uint32_t const selectedWorkspaceId{ selectedItem->text().toUInt() };
 
@@ -126,7 +125,7 @@ void WorkspaceManager::applyChanges()
     }
 
     for (auto const& [id, data] : mModifiedWorkspaces) {
-        std::optional<WorkspaceEntry> workspace{ GetWorkspace(id) };
+        std::optional<WorkspaceEntry> workspace{ getWorkspace(id) };
         if (!workspace) {
             assert(false);
             continue;
@@ -147,7 +146,7 @@ void WorkspaceManager::applyChanges()
     LusanApplication::getOptions().writeOptions();
 }
 
-std::optional<WorkspaceEntry> WorkspaceManager::GetWorkspace(uint32_t const workspaceId)
+std::optional<WorkspaceEntry> WorkspaceManager::getWorkspace(uint32_t const workspaceId)
 {
     std::vector<WorkspaceEntry> const& workspaces { LusanApplication::getOptions().getWorkspaceList() };
 

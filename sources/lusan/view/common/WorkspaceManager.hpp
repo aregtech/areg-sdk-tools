@@ -31,7 +31,7 @@ private slots:
     void handleWorkspaceSelectionChanged() const;
 
 private:
-    static std::optional<WorkspaceEntry> GetWorkspace(uint32_t workspaceId);
+    static std::optional<WorkspaceEntry> getWorkspace(uint32_t workspaceId);
 
     void connectSignalHandlers() const;
     void initialisePathsWithSelectedWorkspaceData(uint32_t workspaceId) const;
