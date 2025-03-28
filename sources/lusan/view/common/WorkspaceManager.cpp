@@ -46,6 +46,8 @@ void WorkspaceManager::populateListOfWorkspaces() const
 
     std::vector<WorkspaceEntry> const& workspaces { LusanApplication::getOptions().getWorkspaceList() };
 
+    ui->listOfWorkspaces->clear();
+
     for (WorkspaceEntry const& workspace : workspaces)
     {
         ui->listOfWorkspaces->addItem(QString{ std::to_string(workspace.getId()).c_str() });
@@ -116,18 +118,22 @@ void WorkspaceManager::applyChanges()
 
     for (auto const& [id, data] : mModifiedWorkspaces)
     {
+        std::optional<WorkspaceEntry> workspace{ GetWorkspace(id) };
+        if (!workspace)
+        {
+            assert(false);
+            continue;
+        }
+
         if (data.hasDeleted)
         {
-            LusanApplication::getOptions().removeWorkspace(id);
+            LusanApplication::getOptions().removeWorkspace(workspace->getKey());
         }
         else if (data.newDescription)
         {
-            if (auto workspace{ GetWorkspace(id) }; workspace)
-            {
-                workspace->setWorkspaceDescription(*data.newDescription);
+            workspace->setWorkspaceDescription(*data.newDescription);
 
-                LusanApplication::getOptions().updateWorkspace(*workspace);
-            }
+            LusanApplication::getOptions().updateWorkspace(*workspace);
         }
     }
 
