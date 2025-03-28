@@ -51,7 +51,7 @@ private:
     using WorkspaceId = uint32_t;
 
     Ui::workspaceManager* ui{};
-    std::unordered_map<WorkspaceId, WorkspaceChangeData> mModifiedWorkspaces{};
+    std::unordered_map<WorkspaceId, WorkspaceChangeData> mModifiedWorkspaces;
 };
 
 #endif // WORKSPACEMANAGER_H
