@@ -37,8 +37,9 @@ private:
     void setupUi() const;
     std::optional<WorkspaceEntry> GetWorkspace(uint32_t workspaceId) const;
     void handleWorkspaceDescChanged();
-    std::optional<uint32_t> getSelectedWorskpaceId() const;
+    std::optional<uint32_t> getSelectedWorkspaceId() const;
     void selectWorkspace(int index) const;
+    void deleteSelectedWorkspaceItem() const;
 
     struct WorkspaceChangeData
     {

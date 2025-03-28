@@ -1,8 +1,7 @@
 #include "WorkspaceManager.hpp"
 #include "ui/ui_WorkspaceManager.h"
 #include "lusan/app/LusanApplication.hpp"
-#include <QFileDialog>
-#include <string>
+#include "lusan/data/common/OptionsManager.hpp"
 #include <algorithm>
 
 WorkspaceManager::WorkspaceManager(QWidget *parent)
@@ -21,9 +20,9 @@ WorkspaceManager::~WorkspaceManager()
 
 void WorkspaceManager::connectSignalHandlers() const
 {
-    connect(ui->deleteButton,       &QPushButton::clicked,              this, &WorkspaceManager::handleDeleteButtonClicked);
-    connect(ui->listOfWorkspaces,   &QListWidget::itemSelectionChanged, this, &WorkspaceManager::handleWorkspaceSelectionChanged);
-    connect(ui->workspaceEdit,      &QPlainTextEdit::textChanged,       this, &WorkspaceManager::handleWorkspaceDescChanged);
+    connect(ui->deleteButton, &QPushButton::clicked, this, &WorkspaceManager::handleDeleteButtonClicked);
+    connect(ui->listOfWorkspaces, &QListWidget::itemSelectionChanged, this, &WorkspaceManager::handleWorkspaceSelectionChanged);
+    connect(ui->workspaceEdit, &QPlainTextEdit::textChanged, this, &WorkspaceManager::handleWorkspaceDescChanged);
 }
 
 void WorkspaceManager::initialisePathsWithSelectedWorkspaceData(uint32_t const workspaceId) const
@@ -50,7 +49,7 @@ void WorkspaceManager::populateListOfWorkspaces() const
 
     for (WorkspaceEntry const& workspace : workspaces)
     {
-        ui->listOfWorkspaces->addItem(QString{ std::to_string(workspace.getId()).c_str() });
+        ui->listOfWorkspaces->addItem(QString::number(workspace.getId()));
 
         if (currentWorkspace.getId() == workspace.getId())
         {
@@ -77,15 +76,21 @@ void WorkspaceManager::handleDeleteButtonClicked()
 
     mModifiedWorkspaces[selectedWorkspaceId] = WorkspaceChangeData{true, {}};
 
+    deleteSelectedWorkspaceItem();
+}
+
+void WorkspaceManager::deleteSelectedWorkspaceItem() const
+{
     disconnect(ui->workspaceEdit, &QPlainTextEdit::textChanged, this, &WorkspaceManager::handleWorkspaceDescChanged);
-    QListWidgetItem * deletedWorkspace = ui->listOfWorkspaces->takeItem(ui->listOfWorkspaces->currentRow());
-    delete deletedWorkspace;
+
+    delete ui->listOfWorkspaces->takeItem(ui->listOfWorkspaces->currentRow());
+
     connect(ui->workspaceEdit, &QPlainTextEdit::textChanged, this, &WorkspaceManager::handleWorkspaceDescChanged);
 }
 
 void WorkspaceManager::handleWorkspaceSelectionChanged() const
 {
-    std::optional<uint32_t> const selectedItemId{ getSelectedWorskpaceId() };
+    std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
     if (!selectedItemId)
         return;
 
@@ -160,14 +165,14 @@ std::optional<WorkspaceEntry> WorkspaceManager::GetWorkspace(uint32_t const work
 
 void WorkspaceManager::handleWorkspaceDescChanged()
 {
-    std::optional<uint32_t> const selectedItemId{ getSelectedWorskpaceId() };
+    std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
     if (!selectedItemId)
         return;
 
     mModifiedWorkspaces[*selectedItemId] = WorkspaceChangeData{false, ui->workspaceEdit->toPlainText()};
 }
 
-std::optional<uint32_t> WorkspaceManager::getSelectedWorskpaceId() const
+std::optional<uint32_t> WorkspaceManager::getSelectedWorkspaceId() const
 {
     QListWidgetItem* selectedItem = ui->listOfWorkspaces->currentItem();
     if (!selectedItem)
