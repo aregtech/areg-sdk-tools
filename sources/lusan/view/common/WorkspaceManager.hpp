@@ -31,11 +31,12 @@ private slots:
     void handleWorkspaceSelectionChanged() const;
 
 private:
+    static std::optional<WorkspaceEntry> GetWorkspace(uint32_t workspaceId);
+
     void connectSignalHandlers() const;
     void initialisePathsWithSelectedWorkspaceData(uint32_t workspaceId) const;
     void populateListOfWorkspaces() const;
     void setupUi() const;
-    std::optional<WorkspaceEntry> GetWorkspace(uint32_t workspaceId) const;
     void handleWorkspaceDescChanged();
     std::optional<uint32_t> getSelectedWorkspaceId() const;
     void selectWorkspace(int index) const;
@@ -50,7 +51,7 @@ private:
     using WorkspaceId = uint32_t;
 
     Ui::workspaceManager* ui{};
-    std::unordered_map<WorkspaceId, WorkspaceChangeData> mModifiedWorkspaces;
+    std::unordered_map<WorkspaceId, WorkspaceChangeData> mModifiedWorkspaces{};
 };
 
 #endif // WORKSPACEMANAGER_H

@@ -28,8 +28,9 @@ void WorkspaceManager::connectSignalHandlers() const
 void WorkspaceManager::initialisePathsWithSelectedWorkspaceData(uint32_t const workspaceId) const
 {
     std::optional<WorkspaceEntry> const workspace{ GetWorkspace(workspaceId) };
-    if (!workspace)
+    if (!workspace) {
         return;
+    }
 
     ui->rootDirEdit->setText(workspace->getWorkspaceRoot());
     ui->sourceDirEdit->setText(workspace->getDirSources());
@@ -47,12 +48,10 @@ void WorkspaceManager::populateListOfWorkspaces() const
 
     ui->listOfWorkspaces->clear();
 
-    for (WorkspaceEntry const& workspace : workspaces)
-    {
+    for (WorkspaceEntry const& workspace : workspaces) {
         ui->listOfWorkspaces->addItem(QString::number(workspace.getId()));
 
-        if (currentWorkspace.getId() == workspace.getId())
-        {
+        if (currentWorkspace.getId() == workspace.getId()) {
             QBrush const grayBrush{ QColor(Qt::gray) };
 
             ui->listOfWorkspaces->item(ui->listOfWorkspaces->count() - 1)->setForeground(grayBrush);
@@ -65,14 +64,16 @@ void WorkspaceManager::populateListOfWorkspaces() const
 void WorkspaceManager::handleDeleteButtonClicked()
 {
     QListWidgetItem* selectedItem = ui->listOfWorkspaces->currentItem();
-    if (!selectedItem)
+    if (nullptr == selectedItem) {
         return;
+    }
 
 
     uint32_t const selectedWorkspaceId{ selectedItem->text().toUInt() };
 
-    if (selectedWorkspaceId == LusanApplication::getActiveWorkspace().getId())
+    if (selectedWorkspaceId == LusanApplication::getActiveWorkspace().getId()) {
         return;
+    }
 
     mModifiedWorkspaces[selectedWorkspaceId] = WorkspaceChangeData{true, {}};
 
@@ -91,8 +92,9 @@ void WorkspaceManager::deleteSelectedWorkspaceItem() const
 void WorkspaceManager::handleWorkspaceSelectionChanged() const
 {
     std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
-    if (!selectedItemId)
+    if (!selectedItemId) {
         return;
+    }
 
     ui->deleteButton->setDisabled(LusanApplication::getActiveWorkspace().getId() == *selectedItemId);
 
@@ -108,8 +110,9 @@ void WorkspaceManager::setupUi() const
 
 void WorkspaceManager::selectWorkspace(int const index) const
 {
-    if (index >= ui->listOfWorkspaces->count())
+    if (index >= ui->listOfWorkspaces->count()) {
         return;
+    }
 
     ui->listOfWorkspaces->setCurrentItem(ui->listOfWorkspaces->item(index));
 
@@ -118,24 +121,21 @@ void WorkspaceManager::selectWorkspace(int const index) const
 
 void WorkspaceManager::applyChanges()
 {
-    if (mModifiedWorkspaces.empty())
+    if (mModifiedWorkspaces.empty()) {
         return;
+    }
 
-    for (auto const& [id, data] : mModifiedWorkspaces)
-    {
+    for (auto const& [id, data] : mModifiedWorkspaces) {
         std::optional<WorkspaceEntry> workspace{ GetWorkspace(id) };
-        if (!workspace)
-        {
+        if (!workspace) {
             assert(false);
             continue;
         }
 
-        if (data.hasDeleted)
-        {
+        if (data.hasDeleted) {
             LusanApplication::getOptions().removeWorkspace(workspace->getKey());
         }
-        else if (data.newDescription)
-        {
+        else if (data.newDescription) {
             workspace->setWorkspaceDescription(*data.newDescription);
 
             LusanApplication::getOptions().updateWorkspace(*workspace);
@@ -147,15 +147,14 @@ void WorkspaceManager::applyChanges()
     LusanApplication::getOptions().writeOptions();
 }
 
-std::optional<WorkspaceEntry> WorkspaceManager::GetWorkspace(uint32_t const workspaceId) const
+std::optional<WorkspaceEntry> WorkspaceManager::GetWorkspace(uint32_t const workspaceId)
 {
     std::vector<WorkspaceEntry> const& workspaces { LusanApplication::getOptions().getWorkspaceList() };
 
     auto workspacesIter{std::find_if(std::begin(workspaces), std::end(workspaces),
             [workspaceId](WorkspaceEntry const& we){ return we.getId() == workspaceId; }) };
 
-    if (std::end(workspaces) == workspacesIter)
-    {
+    if (std::end(workspaces) == workspacesIter) {
         assert(false);
         return {};
     }
@@ -166,8 +165,9 @@ std::optional<WorkspaceEntry> WorkspaceManager::GetWorkspace(uint32_t const work
 void WorkspaceManager::handleWorkspaceDescChanged()
 {
     std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
-    if (!selectedItemId)
+    if (!selectedItemId) {
         return;
+    }
 
     mModifiedWorkspaces[*selectedItemId] = WorkspaceChangeData{false, ui->workspaceEdit->toPlainText()};
 }
@@ -175,8 +175,9 @@ void WorkspaceManager::handleWorkspaceDescChanged()
 std::optional<uint32_t> WorkspaceManager::getSelectedWorkspaceId() const
 {
     QListWidgetItem* selectedItem = ui->listOfWorkspaces->currentItem();
-    if (!selectedItem)
+    if (nullptr == selectedItem) {
         return {};
+    }
 
     return selectedItem->text().toUInt();
 }
