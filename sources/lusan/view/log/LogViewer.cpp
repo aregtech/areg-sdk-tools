@@ -20,8 +20,25 @@
 #include "lusan/view/log/LogViewer.hpp"
 
 #include "ui/ui_LogViewer.h"
-
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/model/log/LogViewerModel.hpp"
+#include "areg/base/File.hpp"
+#include "areglogger/client/LogObserverApi.h"
+
+#include <filesystem>
+
+const QString& LogViewer::fileExtension(void)
+{
+    static const QString _extSI{ "sqlog" };
+    return _extSI;
+}
+
+QString LogViewer::generateFileName(void)
+{
+    String name{ File::normalizePath("log_%time%.sqlog") };
+    return QString(name.getString());
+}
 
 LogViewer::LogViewer(QWidget *parent)
     : MdiChild(parent)
@@ -53,6 +70,24 @@ LogViewer::LogViewer(QWidget *parent)
     setLayout(layout);
     
     setAttribute(Qt::WA_DeleteOnClose);
+}
+
+QString LogViewer::newLogFile(void) const
+{
+    WorkspaceEntry workspace = LusanApplication::getActiveWorkspace();
+    QString result = workspace.getDirLogs();
+    if ( result.isEmpty() == false )
+    {
+        std::filesystem::path fPath(result.toStdString().c_str());
+        fpath /= generateFileName().toStdString().c_str();
+        result = QString(fPath.c_str());
+    }
+    else
+    {
+        result = logObserverGetConfigDatabasePath().getString();
+    }
+
+    return result;
 }
 
 QTableView* LogViewer::getTable(void)

@@ -36,7 +36,19 @@ class LogViewer : public MdiChild
     Q_OBJECT
 
 public:
+    /**
+     * \brief   Returns the file extension of the service interface document.
+     **/
+    static const QString& fileExtension(void);
+
+    static QString generateFileName(void);
+
+public:
     explicit LogViewer(QWidget *parent = nullptr);
+
+public:
+
+    QString newLogFile(void) const;
 
 private:
     QTableView* getTable(void);
