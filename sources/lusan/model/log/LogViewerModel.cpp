@@ -158,11 +158,11 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
             case eColumn::LogColumnSource:
                 return QVariant(QString(logMessage->msgModule));
             case eColumn::LogColumnSourceId:
-                return QVariant(logMessage->msgModuleId);
+                return QVariant((qulonglong)logMessage->msgModuleId);
             case eColumn::LogColumnThread:
                 return QVariant( QString(logMessage->msgThread) );
             case eColumn::LogColumnThreadId:
-                return QVariant(logMessage->msgThreadId);
+                return QVariant((qulonglong)logMessage->msgThreadId);
             case eColumn::LogColumnScopeId:
                 return QVariant(logMessage->msgScopeId);
             case eColumn::LogColumnMessage:

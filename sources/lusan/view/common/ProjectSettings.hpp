@@ -29,6 +29,7 @@ class ProjectSettingsDlg;
 }
 
 class QAbstractButton;
+class WorkspaceManager;
 
 //////////////////////////////////////////////////////////////////////////
 // ProjectSettings class declaration
@@ -87,6 +88,8 @@ private:
      **/
     void selectSetting(int index) const;
 
+    void selectPage(int index) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
@@ -95,6 +98,7 @@ private:
     QStackedWidget*     mSettingsStackedWidget; //!< The stacked widget to show the settings.
     ProjectDirSettings* mDirSettings;           //!< The directory settings.
     QStringListModel    mModel;                 //!< The model of the settings list.
+    WorkspaceManager*   mWorkspaceManager;
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
