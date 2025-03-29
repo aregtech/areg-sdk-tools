@@ -42,13 +42,16 @@ class ProjectDirSettings : public QWidget
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit ProjectDirSettings(QWidget *parent = nullptr);
-    virtual ~ProjectDirSettings() override;
+    virtual ~ProjectDirSettings();
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    /**
+     * \brief   Applies the changes made in the project settings.
+     **/
     void applyChanges() const;
 
 //////////////////////////////////////////////////////////////////////////
@@ -80,8 +83,15 @@ private slots:
 // Hidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
+    /**
+     * \brief   Connects the signal handlers.
+     **/
     void connectSignalHandlers() const;
-    void initialisePathsWithCurrentWorkspaceData() const;
+ 
+    /**
+     * \brief   Initializes the paths with the current workspace data.
+     **/
+    void initializePathsWithCurrentWorkspaceData() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

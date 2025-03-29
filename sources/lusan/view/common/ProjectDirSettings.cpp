@@ -28,7 +28,7 @@ ProjectDirSettings::ProjectDirSettings(QWidget *parent)
 {
     ui->setupUi(this);
     connectSignalHandlers();
-    initialisePathsWithCurrentWorkspaceData();
+    initializePathsWithCurrentWorkspaceData();
 }
 
 ProjectDirSettings::~ProjectDirSettings()
@@ -75,7 +75,7 @@ void ProjectDirSettings::onLogDirBrowseBtnClicked()
         QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
-void ProjectDirSettings::initialisePathsWithCurrentWorkspaceData() const
+void ProjectDirSettings::initializePathsWithCurrentWorkspaceData() const
 {
     WorkspaceEntry const currentWorkspace{ LusanApplication::getActiveWorkspace() };
 

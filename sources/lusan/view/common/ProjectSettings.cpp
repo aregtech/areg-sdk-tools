@@ -52,9 +52,11 @@ void ProjectSettings::setupDialog()
 
     ui->horizontalLayout->setStretch(0, 1);
     ui->horizontalLayout->addWidget(mSettingsStackedWidget, 4);
-
-    mSettingsStackedWidget->addWidget(mDirSettings);
+    
+    // mWorkspaceManager->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
+    // mDirSettings->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
     mSettingsStackedWidget->addWidget(mWorkspaceManager);
+    mSettingsStackedWidget->addWidget(mDirSettings);
 
     ui->settingsList->setModel(&mModel);
 
@@ -84,8 +86,8 @@ void ProjectSettings::selectSetting(int const index) const
 void ProjectSettings::addSettings()
 {
     QStringList settingsList;
-    settingsList.append(tr("Directories"));
     settingsList.append(tr("Workspaces"));
+    settingsList.append(tr("Directories"));
     mModel.setStringList(settingsList);
 }
 

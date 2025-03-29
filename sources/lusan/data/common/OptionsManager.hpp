@@ -80,6 +80,11 @@ public:
      **/
     void addWorkspace(const WorkspaceEntry & workspace);
 
+    /**
+     * \brief   Updates an entry of the workspace.
+     * \param   workspace   The workspace entry to update.
+     * \return  True if the workspace was successfully updated, false otherwise.
+     **/
     bool updateWorkspace(const WorkspaceEntry & workspace);
 
     /**
