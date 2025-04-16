@@ -35,19 +35,19 @@ LogObserverClient::LogObserverClient(void)
 {
 }
 
-void LogObserverClient::onLogObserverConfigured(bool isEnabled, const String& address, uint16_t port)
+void LogObserverClient::onLogObserverConfigured(bool isEnabled, const std::string& address, uint16_t port)
 {
-    emit signalLogObserverConfigured(isEnabled, address.getData(), port);
+    emit signalLogObserverConfigured(isEnabled, address, port);
 }
 
-void LogObserverClient::onLogDbConfigured(bool isEnabled, const String& dbName, const String& dbLocation, const String& dbUser)
+void LogObserverClient::onLogDbConfigured(bool isEnabled, const std::string& dbName, const std::string& dbLocation, const std::string& dbUser)
 {
-    emit signalLogDbConfigured(isEnabled, dbName.getData(), dbLocation.getData(), dbUser.getData());
+    emit signalLogDbConfigured(isEnabled, dbName, dbLocation, dbUser);
 }
 
-void LogObserverClient::onLogServiceConnected(bool isConnected, const String& address, uint16_t port)
+void LogObserverClient::onLogServiceConnected(bool isConnected, const std::string& address, uint16_t port)
 {
-    emit signalLogServiceConnected(isConnected, address.getData(), port);
+    emit signalLogServiceConnected(isConnected, address, port);
 }
 
 void LogObserverClient::onLogObserverStarted(bool isStarted)
@@ -55,9 +55,9 @@ void LogObserverClient::onLogObserverStarted(bool isStarted)
     emit signalLogObserverStarted(isStarted);
 }
 
-void LogObserverClient::onLogDbCreated(const String& dbLocation)
+void LogObserverClient::onLogDbCreated(const std::string& dbLocation)
 {
-    emit signalLogDbCreated(dbLocation.getData());
+    emit signalLogDbCreated(dbLocation);
 }
 
 void LogObserverClient::onLogMessagingFailed(void)
@@ -65,19 +65,19 @@ void LogObserverClient::onLogMessagingFailed(void)
     emit signalLogMessagingFailed();
 }
 
-void LogObserverClient::onLogInstancesConnect(const TEArrayList<NEService::sServiceConnectedInstance>& instances)
+void LogObserverClient::onLogInstancesConnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
 {
-    emit signalLogInstancesConnect(instances.getData());
+    emit signalLogInstancesConnect(instances);
 }
 
-void LogObserverClient::onLogInstancesDisconnect(const TEArrayList<NEService::sServiceConnectedInstance>& instances)
+void LogObserverClient::onLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
 {
-    emit signalLogInstancesDisconnect(instances.getData());
+    emit signalLogInstancesDisconnect(instances);
 }
 
-void LogObserverClient::onLogServiceDisconnected(const NEService::MapInstances& instances)
+void LogObserverClient::onLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance> & instances)
 {
-    emit signalLogServiceDisconnected(instances.getData());
+    emit signalLogServiceDisconnected(instances);
 }
 
 void LogObserverClient::onLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
@@ -92,5 +92,5 @@ void LogObserverClient::onLogUpdateScopes(ITEM_ID cookie, const sLogScope* scope
 
 void LogObserverClient::onLogMessage(const SharedBuffer& logMessage)
 {
-    emit signalLogMessage(reinterpret_cast<const sLogMessage *>(logMessage.getBuffer()));
+    emit signalLogMessage(logMessage);
 }
