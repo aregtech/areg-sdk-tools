@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_COMMON_LOGOBSERVERCLIENT_HPP
-#define LUSAN_COMMON_LOGOBSERVERCLIENT_HPP
+﻿#ifndef LUSAN_COMMON_LOGCOLLECTORCLIENT_HPP
+#define LUSAN_COMMON_LOGCOLLECTORCLIENT_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/common/LogObserverClient.hpp
+ *  \file        lusan/common/LogCollectorClient.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log observer client object.
@@ -27,18 +27,18 @@
 #include <map>
 #include <vector>
 
-class LogObserverClient : public QObject
+class LogCollectorClient : public QObject
                         , public LogObserverBase
 {
     Q_OBJECT
     
 private:
-    LogObserverClient(void);
-    virtual ~LogObserverClient(void) = default;
+    LogCollectorClient(void);
+    virtual ~LogCollectorClient(void) = default;
 
 public:
 
-    static LogObserverClient& getInstance(void);
+    static LogCollectorClient& getInstance(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -227,4 +227,4 @@ protected:
 
 };
 
-#endif  // LUSAN_COMMON_LOGOBSERVERCLIENT_HPP
+#endif  // LUSAN_COMMON_LOGCOLLECTORCLIENT_HPP

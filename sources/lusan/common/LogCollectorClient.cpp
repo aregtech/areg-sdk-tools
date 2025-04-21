@@ -10,87 +10,87 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/common/LogObserverClient.cpp
+ *  \file        lusan/common/LogCollectorClient.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log observer client object.
  *
  ************************************************************************/
-#include "lusan/common/LogObserverClient.hpp"
+#include "lusan/common/LogCollectorClient.hpp"
 #include "areglogger/client/LogObserverApi.h"
 #include "areg/base/SharedBuffer.hpp"
 #include "areg/base/String.hpp"
 #include "areg/base/TEArrayList.hpp"
 #include "areg/base/TEMap.hpp"
 
-LogObserverClient& LogObserverClient::getInstance(void)
+LogCollectorClient& LogCollectorClient::getInstance(void)
 {
-    static LogObserverClient _instance;
+    static LogCollectorClient _instance;
     return _instance;
 }
 
-LogObserverClient::LogObserverClient(void)
+LogCollectorClient::LogCollectorClient(void)
     : QObject           ( )
     , LogObserverBase   ( )
 {
 }
 
-void LogObserverClient::onLogObserverConfigured(bool isEnabled, const std::string& address, uint16_t port)
+void LogCollectorClient::onLogObserverConfigured(bool isEnabled, const std::string& address, uint16_t port)
 {
     emit signalLogObserverConfigured(isEnabled, address, port);
 }
 
-void LogObserverClient::onLogDbConfigured(bool isEnabled, const std::string& dbName, const std::string& dbLocation, const std::string& dbUser)
+void LogCollectorClient::onLogDbConfigured(bool isEnabled, const std::string& dbName, const std::string& dbLocation, const std::string& dbUser)
 {
     emit signalLogDbConfigured(isEnabled, dbName, dbLocation, dbUser);
 }
 
-void LogObserverClient::onLogServiceConnected(bool isConnected, const std::string& address, uint16_t port)
+void LogCollectorClient::onLogServiceConnected(bool isConnected, const std::string& address, uint16_t port)
 {
     emit signalLogServiceConnected(isConnected, address, port);
 }
 
-void LogObserverClient::onLogObserverStarted(bool isStarted)
+void LogCollectorClient::onLogObserverStarted(bool isStarted)
 {
     emit signalLogObserverStarted(isStarted);
 }
 
-void LogObserverClient::onLogDbCreated(const std::string& dbLocation)
+void LogCollectorClient::onLogDbCreated(const std::string& dbLocation)
 {
     emit signalLogDbCreated(dbLocation);
 }
 
-void LogObserverClient::onLogMessagingFailed(void)
+void LogCollectorClient::onLogMessagingFailed(void)
 {
     emit signalLogMessagingFailed();
 }
 
-void LogObserverClient::onLogInstancesConnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
+void LogCollectorClient::onLogInstancesConnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
 {
     emit signalLogInstancesConnect(instances);
 }
 
-void LogObserverClient::onLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
+void LogCollectorClient::onLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
 {
     emit signalLogInstancesDisconnect(instances);
 }
 
-void LogObserverClient::onLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance> & instances)
+void LogCollectorClient::onLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance> & instances)
 {
     emit signalLogServiceDisconnected(instances);
 }
 
-void LogObserverClient::onLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
+void LogCollectorClient::onLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
 {
     emit signalLogRegisterScopes(cookie, scopes, count);
 }
 
-void LogObserverClient::onLogUpdateScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
+void LogCollectorClient::onLogUpdateScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
 {
     emit signalLogUpdateScopes(cookie, scopes, count);
 }
 
-void LogObserverClient::onLogMessage(const SharedBuffer& logMessage)
+void LogCollectorClient::onLogMessage(const SharedBuffer& logMessage)
 {
     emit signalLogMessage(logMessage);
 }
