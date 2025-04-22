@@ -23,7 +23,7 @@
 #include <QStringList>
 #include "lusan/data/common/OptionsManager.hpp"
 
-class LogObserverClient;
+class LogCollectorClient;
 
 /**
  * \class   LusanApplication
@@ -125,7 +125,7 @@ public:
     /**
      * \brief   Returns the instance of the log observer client.
      **/
-    static LogObserverClient& getLogObserverClient(void);
+    static LogCollectorClient& getLogCollectorClient(void);
     
 private:
     static LusanApplication *   theApp;     //!< The singleton instance of the application.

@@ -18,12 +18,12 @@
  ************************************************************************/
 
 #include "lusan/model/log/LogViewerModel.hpp"
-#include "lusan/data/log/LogObserverComp.hpp"
 #include "lusan/data/log/LogObserver.hpp"
-#include "lusan/data/log/NELogObserver.hpp"
 
 #include "areg/base/DateTime.hpp"
+#include "areg/base/SharedBuffer.hpp"
 #include "areg/logging/NELogging.hpp"
+#include "areglogger/client/LogObserverApi.h"
 
 #include <QSize>
 
@@ -59,8 +59,8 @@ const QList<int>& LogViewerModel::getDefaultColumns(void)
 LogViewerModel::LogViewerModel(QObject *parent)
     : QAbstractTableModel(parent)
 
-    , mLogObserver  ( nullptr )
     , mActiveColumns( )
+    , mLogs         ( )
 {
     const QList<int>& list = LogViewerModel::getDefaultColumns();
     for (int col : list)
@@ -124,7 +124,7 @@ int LogViewerModel::rowCount(const QModelIndex &parent) const
     if (parent.isValid())
         return 0;
 
-    return (mLogObserver != nullptr ? mLogObserver->getLogObserver().getLogMessages().getSize() : 0);
+    return static_cast<int>(mLogs.size());
 }
 
 int LogViewerModel::columnCount(const QModelIndex &parent) const
@@ -142,7 +142,10 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
 
     if (role == Qt::ItemDataRole::DisplayRole)
     {
-        const sLogMessage* logMessage = mLogObserver != nullptr ? mLogObserver->getLogMessage(index.row()) : nullptr;
+        int row {index.row()};
+        const SharedBuffer data{mLogs.at(row)};
+        
+        const sLogMessage* logMessage = reinterpret_cast<const sLogMessage *>(data.getBuffer());
         if (logMessage != nullptr)
         {
             eColumn col = static_cast<eColumn>(getDefaultColumns().at(index.column()));
@@ -223,12 +226,10 @@ QString LogViewerModel::getHeaderName(int colIndex) const
 
 bool LogViewerModel::connect(const QString& hostName /*= ""*/, unsigned short portNr /*= 0u*/)
 {
-    mLogObserver = NELogObserver::startLobObserver() ? NELogObserver::getLogObserver() : nullptr;
-    return (mLogObserver != nullptr);
+    return LogObserver::startLobObserver();
 }
 
 void LogViewerModel::disconnect(void)
 {
-    NELogObserver::stopLogObserver();
-    mLogObserver = nullptr;
+    LogObserver::stopLogObserver();
 }

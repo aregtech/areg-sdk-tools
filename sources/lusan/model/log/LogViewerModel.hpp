@@ -24,6 +24,9 @@
  ************************************************************************/
 
 #include <QAbstractTableModel>
+#include <QList>
+
+#include "areg/base/SharedBuffer.hpp"
 
 class LogObserverComp;
 
@@ -76,8 +79,8 @@ public:
     void disconnect(void);
     
 private:
-    LogObserverComp*    mLogObserver;
     QList<eColumn>      mActiveColumns;
+    QList<SharedBuffer> mLogs;
 };
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
