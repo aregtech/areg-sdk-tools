@@ -226,10 +226,9 @@ QString LogViewerModel::getHeaderName(int colIndex) const
 
 bool LogViewerModel::connect(const QString& hostName /*= ""*/, unsigned short portNr /*= 0u*/)
 {
-    return LogObserver::startLobObserver();
+    return false;
 }
 
 void LogViewerModel::disconnect(void)
 {
-    LogObserver::stopLogObserver();
 }
