@@ -39,6 +39,9 @@
 class LogCollectorClient;
 struct sLogScope;
 
+//!< The callback to notify that the service component started.
+typedef void (*FuncLogObserverStarted)();
+
 /**
  * \brief   The log observer component which runs in the multithreading environment.
  *          It is used to support multithreading environment when receives and sends log data from the log collector.
@@ -66,18 +69,18 @@ public:
 // Public static methods
 //////////////////////////////////////////////////////////////////////////
 public:
-
+    
     /**
-     * \brief   Starts the log observer component.
+     * \brief   Creates and starts the log observer component.
      * \return  Returns true if the component is started successfully. Otherwise, returns false.
      **/
-    static bool startLobObserver(void);
+    static bool createLogObserver(FuncLogObserverStarted callbackStarted);
 
     /**
      * \brief   Stops the log observer component.
      *          The function stops the log observer component and unloads the model.
      **/
-    static void stopLogObserver(void);
+    static void releaseLogObserver(void);
 
     /**
      * \brief   Returns the IP-address of connected log collector.
@@ -203,15 +206,15 @@ public:
      **/
     static void DeleteComponent( Component & compObject, const NERegistry::ComponentEntry & entry );
     
+    /**
+     * \brief   Returns the pointer of log observer component if loaded. Otherwise, returns null.
+     **/
+    static LogObserver* getComponent(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Static methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    /**
-     * \brief   Returns the pointer of log observer component if loaded. Otherwise, returns null.
-     **/
-    static LogObserver* _getComponent(void);
-
     /**
      * \brief   Returns instance of the client. The log observer component should be already loaded.
      **/
