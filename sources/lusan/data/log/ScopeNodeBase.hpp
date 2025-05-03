@@ -196,30 +196,99 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
 
+    /**
+     * \brief   Recursively adds a child a node if it does not exist.
+     *          Otherwise, adds a node log priority value.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, it contains the next level of the path separated by '_'.
+     *                      The last node should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The number of nodes added.
+     **/
     virtual int addChildRecursive(QString& scopePath, uint32_t prio);
 
+    /**
+     * \brief   Recursively adds a child a node if it does not exist.
+     *          Otherwise, adds a node log priority value.
+     * \param   nodeNames   The list of node names.
+     *                      On output, it removes the first node name from the list.
+     *                      The last name should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The number of nodes added.
+     **/
     virtual int addChildRecursive(QStringList& nodeNames, uint32_t prio);
 
+    /**
+     * \brief   Adds a single child node if it does not exist.
+     *          Otherwise, adds a node log priority value.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, it contains the next level of the path separated by '_'.
+     *                      The last node should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The number of nodes added.
+     **/
     virtual ScopeNodeBase* addChildNode(QString& scopePath, uint32_t prio);
 
+    /**
+     * \brief   Adds a single child node if it does not exist.
+     *          Otherwise, adds a node log priority value.
+     * \param   nodeNames   The list of node names.
+     *                      On output, it removes the first node name from the list.
+     *                      The last name should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The number of nodes added.
+     **/
     virtual ScopeNodeBase* addChildNode(QStringList& nodeNames, uint32_t prio);
 
+    /**
+     * \brief   Creates a child node. The child node is not added to the parent.
+     *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
+     *          If path is empty, returns nullptr.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, it contains the next level of the path separated by '_'.
+     *                      The last node should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The node object created.
+     **/
     virtual ScopeNodeBase* makeChildNode(QString& scopePath, uint32_t prio);
 
+    /**
+     * \brief   Creates a child node. The child node is not added to the parent.
+     *          Each child node is listed in the `nodeNames`. If the list contains last entry, it is created as a 'leaf'.
+     *          If the passed list empty, returns nullptr.
+     * \param   nodeNames   The list of node names.
+     *                      On output, it removes the first node name from the list.
+     *                      The last name should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The node object created.
+     **/
     virtual ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio);
 
+    /**
+     * \brief   Adds a child node to the parent if the node does not exist.
+     *          Otherwise, it adds in the existing node the log priority of the passed node object.
+     * \param   childNode   The child node to add to the parent.
+     **/
     virtual void addChildNode(ScopeNodeBase* childNode);
 
+    /**
+     * \brief   Creates a list of node names from the passed scope path.
+     *          The path is separated by '_'.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, the `scopePath` is empty.
+     * \return  The list of node names.
+     **/
     virtual QStringList makeNodeNames(const QString& scopePath) const;
 
+    /**
+     * \brief   Creates and returns the path of the node, where each name of the node is separated by `_`.
+     **/
     virtual QString makePath(void) const;
-    
-    virtual QString getPathString(void) const;
 
-//////////////////////////////////////////////////////////////////////////
-// Hidden methods
-//////////////////////////////////////////////////////////////////////////
-protected:
+    /**
+     * \brief   Returns the string used to create the path. Root nodes should return empty string.
+     **/
+    virtual QString getPathString(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -234,6 +303,10 @@ protected:
     //!< The name of the node.
     QString                     mNodeName;
 };
+
+//////////////////////////////////////////////////////////////////////////
+// ScopeNodeBase class inline methods
+//////////////////////////////////////////////////////////////////////////
 
 inline const QString & ScopeNodeBase::getNodeName( void ) const
 {

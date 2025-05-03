@@ -26,6 +26,9 @@
 
 #include <QMap>
 
+/************************************************************************
+ * Declared classes
+ ************************************************************************/
 class ScopeLeaf;
 class ScopeNode;
 class ScopeRoot;
@@ -42,8 +45,19 @@ class ScopeLeaf : public ScopeNodeBase
 // Constructors / destructor
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Crates an empty leaf with no log priority. Sets the parent object.
+     * \param   parent      The parent object to set.
+     **/
     ScopeLeaf( ScopeNode * parent = nullptr );
 
+    /**
+     * \brief   Creates a leaf object and sets initial parameters.
+     * \param   leafName    The name of the leaf.
+     * \param   prio        The log priority to set.
+     * \param   parent      The pointer to the parent node object.
+     **/
     ScopeLeaf(const QString leafName, uint32_t prio = static_cast<unsigned int>(NELogging::eLogPriority::PrioNotset), ScopeNode* parent = nullptr);
 
     /**
@@ -78,10 +92,35 @@ public:
  * ScopeNodeBase override
  ************************************************************************/
 
+    /**
+     * \brief   Creates a child node. The child node is not added to the parent.
+     *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
+     *          If path is empty, returns nullptr.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, it contains the next level of the path separated by '_'.
+     *                      The last node should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The node object created.
+     **/
     virtual ScopeNodeBase* makeChildNode(QString& scopePath, uint32_t prio) override;
 
+    /**
+     * \brief   Creates a child node. The child node is not added to the parent.
+     *          Each child node is listed in the `nodeNames`. If the list contains last entry, it is created as a 'leaf'.
+     *          If the passed list empty, returns nullptr.
+     * \param   nodeNames   The list of node names.
+     *                      On output, it removes the first node name from the list.
+     *                      The last name should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The node object created.
+     **/
     virtual ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio) override;
 
+    /**
+     * \brief   Adds a child node to the parent if the node does not exist.
+     *          Otherwise, it adds in the existing node the log priority of the passed node object.
+     * \param   childNode   The child node to add to the parent.
+     **/
     virtual void addChildNode(ScopeNodeBase* childNode) override;
 };
 
@@ -97,16 +136,29 @@ class ScopeNode : public ScopeNodeBase
 // Internal types
 //////////////////////////////////////////////////////////////////////////
 public:
+    //!< The list of the nodes.
     using NodeList = QMap<QString, ScopeNode *>;
+    //!< The list of leafs.
     using LeafList = QMap<QString, ScopeLeaf *>;
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Crates an empty node with no log priority. Sets the parent object.
+     * \param   parent      The parent object to set.
+     **/
     ScopeNode( ScopeNode * parent = nullptr );
 
-    ScopeNode(const QString nodeName, uint32_t prio = static_cast<unsigned int>(NELogging::eLogPriority::PrioNotset), ScopeNodeBase* parent = nullptr);
+    /**
+     * \brief   Creates a node object and sets initial parameters.
+     * \param   nodeName    The name of the node.
+     * \param   prio        The log priority to set.
+     * \param   parent      The pointer to the parent node object.
+     **/
+    ScopeNode(const QString nodeName, uint32_t prio = static_cast<unsigned int>(NELogging::eLogPriority::PrioNotset), ScopeNode* parent = nullptr);
 
     /**
      * \brief   Creates a node with empty list of child leafs and nodes
@@ -150,10 +202,35 @@ public:
  * ScopeNodeBase override
  ************************************************************************/
 
+    /**
+     * \brief   Creates a child node. The child node is not added to the parent.
+     *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
+     *          If path is empty, returns nullptr.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, it contains the next level of the path separated by '_'.
+     *                      The last node should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The node object created.
+     **/
     virtual ScopeNodeBase* makeChildNode(QString& scopePath, uint32_t prio) override;
 
+    /**
+     * \brief   Creates a child node. The child node is not added to the parent.
+     *          Each child node is listed in the `nodeNames`. If the list contains last entry, it is created as a 'leaf'.
+     *          If the passed list empty, returns nullptr.
+     * \param   nodeNames   The list of node names.
+     *                      On output, it removes the first node name from the list.
+     *                      The last name should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The node object created.
+     **/
     virtual ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio) override;
 
+    /**
+     * \brief   Adds a child node to the parent if the node does not exist.
+     *          Otherwise, it adds in the existing node the log priority of the passed node object.
+     * \param   childNode   The child node to add to the parent.
+     **/
     virtual void addChildNode(ScopeNodeBase* childNode) override;
 
 //////////////////////////////////////////////////////////////////////////
@@ -189,7 +266,7 @@ protected:
 // ScopeRoot class declaration
 //////////////////////////////////////////////////////////////////////////
 /**
- * \brief   The scope node, which has parent, leafs and child nodes.
+ * \brief   The root node, which is a top level of node, has no parent, leafs and child nodes.
  **/
 class ScopeRoot : public ScopeNode
 {
@@ -197,10 +274,23 @@ class ScopeRoot : public ScopeNode
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Default constructor. Creates an empty root node.
+     **/
     ScopeRoot(void);
 
+    /**
+     * \brief   Creates a root node and sets the root ID, which is unique within the system.
+     * \param   rootId  The ID of the root node.
+     **/
     explicit ScopeRoot( ITEM_ID rootId );
 
+    /**
+     * \brief   Create a root node with the given name and ID.
+     * \param   rootId      The ID of the root to set.
+     * @param   rootName    The name of root node to set.
+     */
     ScopeRoot(ITEM_ID rootId, const QString rootName );
 
     /**
@@ -230,11 +320,34 @@ public:
  * ScopeNodeBase override
  ************************************************************************/
     
-    virtual int addChildRecursive(QString& scopePath, uint32_t prio);
+    /**
+     * \brief   Creates a child node. The child node is not added to the parent.
+     *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
+     *          If path is empty, returns nullptr.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, it contains the next level of the path separated by '_'.
+     *                      The last node should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The node object created.
+     **/
+    virtual int addChildRecursive(QString& scopePath, uint32_t prio) override;
     
-    virtual int addChildRecursive(QStringList& nodeNames, uint32_t prio);
+    /**
+     * \brief   Creates a child node. The child node is not added to the parent.
+     *          Each child node is listed in the `nodeNames`. If the list contains last entry, it is created as a 'leaf'.
+     *          If the passed list empty, returns nullptr.
+     * \param   nodeNames   The list of node names.
+     *                      On output, it removes the first node name from the list.
+     *                      The last name should be marked as 'leaf'.
+     * \param   prio        The logging priority to set.
+     * \return  The node object created.
+     **/
+    virtual int addChildRecursive(QStringList& nodeNames, uint32_t prio) override;
     
-    virtual QString getPathString(void) const;
+    /**
+     * \brief   Returns the string used to create the path. Root nodes should return empty string.
+     **/
+    virtual QString getPathString(void) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

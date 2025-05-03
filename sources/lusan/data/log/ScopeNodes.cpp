@@ -79,7 +79,7 @@ ScopeNode::ScopeNode(ScopeNode* parent)
 {
 }
 
-ScopeNode::ScopeNode(const QString nodeName, uint32_t prio, ScopeNodeBase* parent)
+ScopeNode::ScopeNode(const QString nodeName, uint32_t prio, ScopeNode* parent)
     : ScopeNodeBase (ScopeNodeBase::eNode::Node, nodeName, prio, parent)
     , mChildNodes   ( )
     , mChildLeafs   ( )
