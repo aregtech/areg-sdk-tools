@@ -128,6 +128,8 @@ namespace NELusanCommon
 
     constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
     constexpr const char * const xmlElementFile             { "File" };
+    
+    constexpr char const    SCOPE_SEPRATOR                  { '_' };
 
     enum class eSorting : uint8_t
     {

@@ -27,8 +27,8 @@
 #include <map>
 #include <vector>
 
-class LogCollectorClient : public QObject
-                        , public LogObserverBase
+class LogCollectorClient    : public QObject
+                            , public LogObserverBase
 {
     Q_OBJECT
     
