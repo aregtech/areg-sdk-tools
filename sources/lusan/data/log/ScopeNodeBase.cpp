@@ -167,7 +167,21 @@ QString ScopeNodeBase::makePath(void) const
 
 QString ScopeNodeBase::getPathString(void) const
 {
-    return mNodeName;    
+    return mNodeName;
 }
 
-    
+ScopeNodeBase* ScopeNodeBase::findChild(const QString& childName) const
+{
+    return nullptr;
+}
+
+int ScopeNodeBase::getChildPosition(const QString& childName) const
+{
+    return static_cast<int>(NECommon::INVALID_INDEX);
+}
+
+void ScopeNodeBase::addChildPriorityRecursive(QString& nodePath, uint32_t prio)
+{
+    QStringList nameList = nodePath.split()
+}
+

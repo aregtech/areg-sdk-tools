@@ -127,6 +127,9 @@ ScopeNode::~ScopeNode(void)
         Q_ASSERT(node != nullptr);
         delete node;
     }
+
+    mChildLeafs.clear();
+    mChildNodes.clear();
 }
 
 ScopeNode & ScopeNode::operator = ( const ScopeNode & src )
@@ -236,6 +239,12 @@ ScopeRoot::ScopeRoot(void)
 ScopeRoot::ScopeRoot(ITEM_ID rootId)
     : ScopeNode (nullptr)
     , mRootId   (rootId)
+{
+}
+
+ScopeRoot::ScopeRoot(const NEService::sServiceConnectedInstance& instance)
+    : ScopeNode (instance.ciInstance, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
+    , mRootId   (instance.ciSource)
 {
 }
 

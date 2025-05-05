@@ -290,6 +290,18 @@ protected:
      **/
     virtual QString getPathString(void) const;
 
+    virtual ScopeNodeBase* findChild(const QString& childName) const;
+
+    virtual int getChildPosition(const QString& childName) const;
+
+    virtual void addChildPriorityRecursive(QString& nodePath, uint32_t prio);
+
+    virtual void addChildPriorityRecursive(QStringList& pathList, uint32_t prio);
+
+    virtual void removeChildPriorityRecursive(QString& nodePath, uint32_t prio);
+
+    virtual void removeChildPriorityRecursive(QStringList& pathList, uint32_t prio);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

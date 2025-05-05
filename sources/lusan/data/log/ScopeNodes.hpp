@@ -23,6 +23,7 @@
  ************************************************************************/
 #include "lusan/data/log/ScopeNodeBase.hpp"
 #include "areg/base/TESortedLinkedList.hpp"
+#include "areg/component/NEService.hpp"
 
 #include <QMap>
 
@@ -287,6 +288,12 @@ public:
     explicit ScopeRoot( ITEM_ID rootId );
 
     /**
+     * \brief   Creates a root node and sets the unique root ID and root name.
+     * \param   instance    The structure of connected instance, which contains root ID and name.
+     **/
+    explicit ScopeRoot(const NEService::sServiceConnectedInstance& instance);
+
+    /**
      * \brief   Create a root node with the given name and ID.
      * \param   rootId      The ID of the root to set.
      * @param   rootName    The name of root node to set.
@@ -356,12 +363,12 @@ public:
     /**
      * \brief   Returns the ID of the root.
      **/
-    inline ITEM_ID getNodeId( void ) const;
+    inline ITEM_ID getRootId( void ) const;
 
     /**
      * \brief   Sets root ID
      **/
-    inline void setNodeId(const ITEM_ID rootId);
+    inline void setRootId(const ITEM_ID rootId);
 
     /**
      * \brief   Returns the root node name.
@@ -405,12 +412,12 @@ inline unsigned int ScopeNode::childNodeCount(void) const
 // ScopeRoot class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline ITEM_ID ScopeRoot::getNodeId(void) const
+inline ITEM_ID ScopeRoot::getRootId(void) const
 {
     return mRootId;
 }
 
-inline void ScopeRoot::setNodeId(const ITEM_ID rootId)
+inline void ScopeRoot::setRootId(const ITEM_ID rootId)
 {
     mRootId = rootId;
 }
