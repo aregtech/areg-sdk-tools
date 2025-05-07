@@ -19,8 +19,9 @@
 
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "ui/ui_ProjectSettings.h"
-#include "lusan/app/LusanApplication.hpp"
+#include "lusan/view/common/ProjectDirSettings.hpp"
 #include "lusan/view/common/WorkspaceManager.hpp"
+#include "lusan/view/common/LogSettings.hpp"
 
 #include <QAbstractItemView>
 #include <QtAssert>
@@ -31,9 +32,10 @@ ProjectSettings::ProjectSettings(QWidget *parent)
     : QDialog(parent)
     , ui    (new Ui::ProjectSettingsDlg)
     , mSettingsStackedWidget(new QStackedWidget( this ))
-    , mDirSettings          (new ProjectDirSettings(this))
     , mModel                (this)
+    , mDirSettings          (new ProjectDirSettings(this))
     , mWorkspaceManager     (new WorkspaceManager(this))
+    , mLogSettings          (new LogSettings(this))
 {
     ui->setupUi(this);
     setupDialog();
@@ -52,16 +54,9 @@ void ProjectSettings::setupDialog()
 
     ui->horizontalLayout->setStretch(0, 1);
     ui->horizontalLayout->addWidget(mSettingsStackedWidget, 4);
-    
-    // mWorkspaceManager->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
-    // mDirSettings->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
-    mSettingsStackedWidget->addWidget(mWorkspaceManager);
-    mSettingsStackedWidget->addWidget(mDirSettings);
-
     ui->settingsList->setModel(&mModel);
 
     selectPage(0);
-
     setFixedSize(size());
 }
 
@@ -85,9 +80,14 @@ void ProjectSettings::selectSetting(int const index) const
 
 void ProjectSettings::addSettings()
 {
+    mSettingsStackedWidget->addWidget(mWorkspaceManager);
+    mSettingsStackedWidget->addWidget(mDirSettings);
+    mSettingsStackedWidget->addWidget(mLogSettings);
+
     QStringList settingsList;
     settingsList.append(tr("Workspaces"));
     settingsList.append(tr("Directories"));
+    settingsList.append(tr("Log settings"));
     mModel.setStringList(settingsList);
 }
 
@@ -108,6 +108,10 @@ void ProjectSettings::buttonClicked(QAbstractButton* button) const
     else if (mSettingsStackedWidget->currentWidget() == mWorkspaceManager)
     {
         mWorkspaceManager->applyChanges();
+    }
+    else if (mSettingsStackedWidget->currentWidget() == mLogSettings)
+    {
+        mLogSettings->applyChanges();
     }
 }
 
