@@ -16,7 +16,7 @@
 
 namespace
 {
-    char const * const logCollectorConfigFilePath = "./config/lusan.init";
+    char const * const logCollectorConfigFilePath = "./lusan.init";
 }
 
 
@@ -89,7 +89,7 @@ void LogSettings::loadData()
         lgClient.initialize(logCollectorConfigFilePath);
 
         ui->ipAddressEdit->setText(QString::fromStdString(lgClient.getConfigLoggerAddress()));
-        ui->portNumberEdit->setText(QString::fromStdString(std::to_string(lgClient.getLoggerPort())));
+        ui->portNumberEdit->setText(QString::fromStdString(std::to_string(lgClient.getConfigLoggerPort())));
     }
 }
 
@@ -120,8 +120,8 @@ void LogSettings::saveData() const
 
 void LogSettings::testEndpointButtonClicked()
 {
-    ComponentThread ct{"Test"};
-    LogObserver::CreateComponent(NERegistry::ComponentEntry{}, ct);
+    ComponentThread testComponentThread{"Test ComponentThread"};
+    LogObserver::CreateComponent(NERegistry::ComponentEntry{}, testComponentThread);
 
     mIsEndpointWorking = LogObserver::connect(
         ui->ipAddressEdit->text(),
