@@ -14,11 +14,6 @@
 #include <QMessageBox>
 #include <string>
 
-namespace
-{
-    char const * const logCollectorConfigFilePath = "./lusan.init";
-}
-
 
 LogSettings::LogSettings(QWidget *parent)
     : QWidget{parent}
@@ -80,14 +75,14 @@ void LogSettings::loadData()
         ui->logDirEdit->setText(currentWorkspace.getDirLogs());
     }
 
-    {   // Load logfile name
-        // TODO: Implement code once known how to.
-    }
-
-    {   // Load endpoint data
+    {
         LogCollectorClient& lgClient = LogCollectorClient::getInstance();
-        lgClient.initialize(logCollectorConfigFilePath);
+        lgClient.initialize();
 
+        // Load logfile name
+        ui->logfileNameEdit->setText(QString::fromStdString(lgClient.getConfigLoggerDatabaseName()));
+
+        // Load endpoint data
         ui->ipAddressEdit->setText(QString::fromStdString(lgClient.getConfigLoggerAddress()));
         ui->portNumberEdit->setText(QString::fromStdString(std::to_string(lgClient.getConfigLoggerPort())));
     }
@@ -104,14 +99,13 @@ void LogSettings::saveData() const
         optionsManager.writeOptions();
     }
 
-    {   // Save logfile name
-        // TODO: Implement code once known how to.
-    }
-
-    {   // Save endpoint data
+    {
         LogCollectorClient& lgClient = LogCollectorClient::getInstance();
-        lgClient.initialize(logCollectorConfigFilePath);
 
+        // Save logfile name
+        lgClient.setConfigLoggerDatabaseName(ui->logfileNameEdit->text().toStdString());
+
+        // Save endpoint data
         lgClient.setConfigLoggerAddress(ui->ipAddressEdit->text().toStdString());
         lgClient.setConfigLoggerPort(ui->portNumberEdit->text().toUInt());
         lgClient.saveLoggerConfig();
@@ -129,6 +123,8 @@ void LogSettings::testEndpointButtonClicked()
         LogObserver::getInitDatabase());
 
     LogObserver::disconnect();
+    testComponentThread.shutdownThread();
+    testComponentThread.completionWait();
 }
 
 void LogSettings::endpointChanged()
