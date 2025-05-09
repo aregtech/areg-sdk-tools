@@ -19,7 +19,6 @@
  *
  ************************************************************************/
 
-#include "lusan/common/NELusanCommon.hpp"
 #include "areglogger/client/LogObserverBase.hpp"
 
 #include <QObject>

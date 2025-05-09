@@ -113,26 +113,6 @@ public:
     inline void setNodeName(const QString newName);
 
     /**
-     * \brief   Returns the node priority flag.
-     **/
-    inline unsigned int getPriority(void) const;
-
-    /**
-     * \brief   Sets the node priority flag.
-     **/
-    inline void setPriority(unsigned int prio);
-
-    /**
-     * \brief   Adds log priority bits.
-     **/
-    inline void addPriority(unsigned int prio);
-
-    /**
-     * \brief   Adds log priority bits.
-     **/
-    inline void removePriority(unsigned int prio);
-
-    /**
      * \brief   Returns true if the object is the root. The root does not have a parent
      **/
     inline bool isRoot(void) const;
@@ -194,7 +174,27 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
-protected:
+public:
+
+    /**
+     * \brief   Returns the node priority flag.
+     **/
+    virtual unsigned int getPriority(void) const;
+
+    /**
+     * \brief   Sets the node priority flag.
+     **/
+    virtual void setPriority(unsigned int prio);
+
+    /**
+     * \brief   Adds log priority bits.
+     **/
+    virtual void addPriority(unsigned int prio);
+
+    /**
+     * \brief   Adds log priority bits.
+     **/
+    virtual void removePriority(unsigned int prio);
 
     /**
      * \brief   Recursively adds a child a node if it does not exist.
@@ -290,17 +290,91 @@ protected:
      **/
     virtual QString getPathString(void) const;
 
+    /**
+     * \brief   Returns child node object that contains the specified name.
+     *          Returns nullptr if no child with specified name exists.
+     * \param   childName   The name of the child node to find.
+     **/
     virtual ScopeNodeBase* findChild(const QString& childName) const;
 
+    /**
+     * \brief   Returns child node object that contains the specified path.
+     *          Returns nullptr if no child with specified path exists.
+     *          It splits the specified path and searcher for the child in the tree.
+     * \param   childPath   The path of the child node to find.
+     **/
+    virtual ScopeNodeBase* findChildByPath(const QString& childPath) const;
+
+    /**
+     * \brief   Returns the position of the child node in the list of child nodes.
+     *          Returns NECommon::INVALID_INDEX if no child with specified name exists.
+     * \param   childName   The name of the child node to find.
+     **/
     virtual int getChildPosition(const QString& childName) const;
 
+    /**
+     * \brief   Adds the priority recursively to the child nodes.
+     *          On returns, the `nodePath` returns empty string if the complete path was updated.
+     * \param   nodePath    The path to the node. The path is separated by '_'.
+     * \param   prio        The logging priority to set.
+     **/
     virtual void addChildPriorityRecursive(QString& nodePath, uint32_t prio);
 
+    /**
+     * \brief   Adds the priority recursively to the child nodes.
+     *          On returns, the `pathList` returns empty string if the complete path was updated.
+     * \param   pathList    The list of node names.
+     * \param   prio        The logging priority to set.
+     **/
     virtual void addChildPriorityRecursive(QStringList& pathList, uint32_t prio);
 
+    /**
+     * \brief   Removes the priority recursively from the child nodes.
+     *          On returns, the `nodePath` returns empty string if the complete path was updated.
+     * \param   nodePath    The path to the node. The path is separated by '_'.
+     * \param   prio        The logging priority to set.
+     **/
     virtual void removeChildPriorityRecursive(QString& nodePath, uint32_t prio);
 
+    /**
+     * \brief   Removes the priority recursively from the child nodes.
+     *          On returns, the `pathList` returns empty string if the complete path was updated.
+     * \param   pathList    The list of node names.
+     * \param   prio        The logging priority to set.
+     **/
     virtual void removeChildPriorityRecursive(QStringList& pathList, uint32_t prio);
+
+    /**
+     * \brief   Returns true if the current node has other node objects with children.
+     **/
+    virtual bool hasNodes(void) const;
+
+    /**
+     * \brief   Returns true if the current node has leafs.
+     **/
+    virtual bool hasLeafs(void) const;
+
+    /**
+     * \brief   Returns true if the node has a leaf with the specified name.
+     **/
+    virtual bool containsLeaf(const QString& leafName) const;
+
+    /**
+     * \brief   Returns true if the node has a node with the specified name.
+     **/
+    virtual bool containsNode(const QString& nodeName) const;
+
+    /**
+     * \brief   On output, the `children` parameter contains the list of child nodes.
+     * \param   children    The list of child nodes to fill.
+     * \return  The number of child nodes in the list.
+     **/
+    virtual int getChildren(std::vector<ScopeNodeBase*> & children) const;
+
+    /**
+     * \brief   Resets and invalidates the priorities of the node and all child nodes.
+     **/
+    virtual void resetPrioritiesRecursive(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -328,26 +402,6 @@ inline const QString & ScopeNodeBase::getNodeName( void ) const
 inline void ScopeNodeBase::setNodeName( const QString newName )
 {
     mNodeName = newName;
-}
-
-inline unsigned int ScopeNodeBase::getPriority( void ) const
-{
-    return mPrioStates;
-}
-
-inline void ScopeNodeBase::setPriority( unsigned int prio )
-{
-    mPrioStates = prio;
-}
-
-inline void ScopeNodeBase::addPriority( unsigned int prio )
-{
-    mPrioStates |= prio;
-}
-
-inline void ScopeNodeBase::removePriority(unsigned int prio)
-{
-    mPrioStates &= ~prio;
 }
 
 inline bool ScopeNodeBase::isRoot( void ) const

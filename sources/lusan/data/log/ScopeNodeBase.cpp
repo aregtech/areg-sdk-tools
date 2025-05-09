@@ -105,6 +105,26 @@ bool ScopeNodeBase::operator < (const ScopeNodeBase& other) const
     return (mNodeType == other.mNodeType ? (mNodeName < other.mNodeName) : (mNodeType < other.mNodeType));
 }
 
+unsigned int ScopeNodeBase::getPriority( void ) const
+{
+    return mPrioStates;
+}
+
+void ScopeNodeBase::setPriority( unsigned int prio )
+{
+    mPrioStates = prio;
+}
+
+void ScopeNodeBase::addPriority( unsigned int prio )
+{
+    mPrioStates |= prio;
+}
+
+void ScopeNodeBase::removePriority(unsigned int prio)
+{
+    mPrioStates &= ~prio;
+}
+
 int ScopeNodeBase::addChildRecursive(QString& scopePath, uint32_t prio)
 {
     ScopeNodeBase* node = addChildNode(scopePath, prio);
@@ -133,11 +153,13 @@ ScopeNodeBase* ScopeNodeBase::addChildNode(QStringList& nodeNames, uint32_t prio
 
 ScopeNodeBase* ScopeNodeBase::makeChildNode(QString& scopePath, uint32_t prio)
 {
+    ASSERT(scopePath.isEmpty());
     return nullptr;
 }
 
 ScopeNodeBase* ScopeNodeBase::makeChildNode(QStringList& nodeNames, uint32_t prio)
 {
+    Q_ASSERT(nodeNames.isEmpty());
     return nullptr;
 }
 
@@ -175,6 +197,20 @@ ScopeNodeBase* ScopeNodeBase::findChild(const QString& childName) const
     return nullptr;
 }
 
+ScopeNodeBase* ScopeNodeBase::findChildByPath(const QString& childPath) const
+{
+    QStringList nameList = childPath.split(NELusanCommon::SCOPE_SEPRATOR);
+    const ScopeNodeBase* node{ nameList.isEmpty() ? nullptr : this };
+    while ((nameList.isEmpty() == false) && (node != nullptr))
+    {
+        QString nodeName{ nameList.front() };
+        nameList.pop_front();
+        node = node->findChild(nodeName);
+    }
+
+    return const_cast<ScopeNodeBase *>(node);
+}
+
 int ScopeNodeBase::getChildPosition(const QString& childName) const
 {
     return static_cast<int>(NECommon::INVALID_INDEX);
@@ -182,6 +218,80 @@ int ScopeNodeBase::getChildPosition(const QString& childName) const
 
 void ScopeNodeBase::addChildPriorityRecursive(QString& nodePath, uint32_t prio)
 {
-    QStringList nameList = nodePath.split()
+    QStringList nameList = nodePath.split(NELusanCommon::SCOPE_SEPRATOR);
+    addChildPriorityRecursive(nameList, prio);
 }
 
+void ScopeNodeBase::addChildPriorityRecursive(QStringList& pathList, uint32_t prio)
+{
+    if (pathList.isEmpty() == false)
+    {
+        QString nodeName{ pathList.front() };
+        pathList.pop_front();
+        ScopeNodeBase* child = findChild(nodeName);
+        if (child != nullptr)
+        {
+            child->addChildPriorityRecursive(pathList, prio);
+            addPriority(child->getPriority());
+        }
+    }
+    else
+    {
+        setPriority(prio);
+    }
+}
+
+void ScopeNodeBase::removeChildPriorityRecursive(QString& nodePath, uint32_t prio)
+{
+    QStringList nameList = nodePath.split(NELusanCommon::SCOPE_SEPRATOR);
+    removeChildPriorityRecursive(nameList, prio);
+}
+
+void ScopeNodeBase::removeChildPriorityRecursive(QStringList& pathList, uint32_t prio)
+{
+    if (pathList.isEmpty() == false)
+    {
+        QString nodeName{ pathList.front() };
+        pathList.pop_front();
+        ScopeNodeBase* child = findChild(nodeName);
+        if (child != nullptr)
+        {
+            child->addChildPriorityRecursive(pathList, prio);
+            removePriority(prio);
+        }
+    }
+    else
+    {
+        removePriority(prio);
+    }
+}
+
+bool ScopeNodeBase::hasNodes(void) const
+{
+    return false;
+}
+
+bool ScopeNodeBase::hasLeafs(void) const
+{
+    return false;
+}
+
+bool ScopeNodeBase::containsLeaf(const QString& leafName) const
+{
+    return false;
+}
+
+bool ScopeNodeBase::containsNode(const QString& nodeName) const
+{
+    return false;
+}
+
+int ScopeNodeBase::getChildren(std::vector<ScopeNodeBase*>& children) const
+{
+    return 0;
+}
+
+void ScopeNodeBase::resetPrioritiesRecursive(void)
+{
+    mPrioStates = static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid);
+}

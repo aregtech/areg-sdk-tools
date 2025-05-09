@@ -25,7 +25,7 @@
 #include "areg/base/TESortedLinkedList.hpp"
 #include "areg/component/NEService.hpp"
 
-#include <QMap>
+#include <map>
 
 /************************************************************************
  * Declared classes
@@ -94,35 +94,9 @@ public:
  ************************************************************************/
 
     /**
-     * \brief   Creates a child node. The child node is not added to the parent.
-     *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
-     *          If path is empty, returns nullptr.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, it contains the next level of the path separated by '_'.
-     *                      The last node should be marked as 'leaf'.
-     * \param   prio        The logging priority to set.
-     * \return  The node object created.
+     * \brief   Adds log priority bits.
      **/
-    virtual ScopeNodeBase* makeChildNode(QString& scopePath, uint32_t prio) override;
-
-    /**
-     * \brief   Creates a child node. The child node is not added to the parent.
-     *          Each child node is listed in the `nodeNames`. If the list contains last entry, it is created as a 'leaf'.
-     *          If the passed list empty, returns nullptr.
-     * \param   nodeNames   The list of node names.
-     *                      On output, it removes the first node name from the list.
-     *                      The last name should be marked as 'leaf'.
-     * \param   prio        The logging priority to set.
-     * \return  The node object created.
-     **/
-    virtual ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio) override;
-
-    /**
-     * \brief   Adds a child node to the parent if the node does not exist.
-     *          Otherwise, it adds in the existing node the log priority of the passed node object.
-     * \param   childNode   The child node to add to the parent.
-     **/
-    virtual void addChildNode(ScopeNodeBase* childNode) override;
+    virtual void addPriority(unsigned int prio) override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -138,9 +112,9 @@ class ScopeNode : public ScopeNodeBase
 //////////////////////////////////////////////////////////////////////////
 public:
     //!< The list of the nodes.
-    using NodeList = QMap<QString, ScopeNode *>;
+    using NodeList = std::map<QString, ScopeNode *>;
     //!< The list of leafs.
-    using LeafList = QMap<QString, ScopeLeaf *>;
+    using LeafList = std::map<QString, ScopeLeaf *>;
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -233,6 +207,53 @@ public:
      * \param   childNode   The child node to add to the parent.
      **/
     virtual void addChildNode(ScopeNodeBase* childNode) override;
+
+    /**
+     * \brief   Returns child node object that contains the specified name.
+     *          Returns nullptr if no child with specified name exists.
+     * \param   childName   The name of the child node to find.
+     **/
+    virtual ScopeNodeBase* findChild(const QString& childName) const override;
+
+    /**
+     * \brief   Returns the position of the child node in the list of child nodes.
+     *          Returns NECommon::INVALID_INDEX if no child with specified name exists.
+     * \param   childName   The name of the child node to find.
+     **/
+    virtual int getChildPosition(const QString& childName) const override;
+
+    /**
+     * \brief   Returns true if the current node has other node objects with children.
+     **/
+    virtual bool hasNodes(void) const override;
+
+    /**
+     * \brief   Returns true if the current node has leafs.
+     **/
+    virtual bool hasLeafs(void) const override;
+
+    /**
+     * \brief   Returns true if the node has a leaf with the specified name.
+     **/
+    virtual bool containsLeaf(const QString& leafName) const override;
+
+    /**
+     * \brief   Returns true if the node has a node with the specified name.
+     **/
+    virtual bool containsNode(const QString& nodeName) const override;
+
+    /**
+     * \brief   On output, the `children` parameter contains the list of child nodes.
+     * \param   children    The list of child nodes to fill.
+     * \return  The number of child nodes in the list.
+     **/
+    virtual int getChildren(std::vector<ScopeNodeBase*>& children) const override;
+
+    /**
+     * \brief   Resets and invalidates the priorities of the node and all child nodes.
+     **/
+    virtual void resetPrioritiesRecursive(void) override;
+
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
