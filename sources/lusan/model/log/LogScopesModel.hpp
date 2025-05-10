@@ -1,5 +1,5 @@
-#ifndef LUSAN_MODEL_LOG_LogScopesModel_HPP
-#define LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
+#ifndef LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
+#define LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -23,13 +23,27 @@
  * Includes
  ************************************************************************/
 #include <QAbstractItemModel>
+#include <QList>
+#include <QMap>
 
-#include "areg/logging/private/ScopeNodes.hpp"
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class ScopeRoot;
 
+/**
+ * \brief   Log scope model to visualize scopes in the scope navigation windows.
+ **/
 class LogScopesModel : public QAbstractItemModel
 {
     Q_OBJECT
 
+private:
+    using RootList = QList< ScopeRoot *>;
+
+//////////////////////////////////////////////////////////////////////////
+// Constructor, operations
+//////////////////////////////////////////////////////////////////////////
 public:
 
     /**
@@ -37,6 +51,20 @@ public:
      * @param   parent  The pointer to the parent object.
      */
     explicit LogScopesModel(QObject parent = nullptr);
+
+    virtual ~LogScopesModel(void);
+
+    bool initialize(void);
+
+    void release(void);
+
+//////////////////////////////////////////////////////////////////////////
+// QAbstractItemModel overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+/************************************************************************
+ * QAbstractItemModel overrides
+ ************************************************************************/
 
     /**
      * \brief   Returns the index of the item in the model specified by the given row, column and parent index.
@@ -106,6 +134,53 @@ public:
     virtual Qt::ItemFlags flags(const QModelIndex& index) const override;
     
 private:
-    QList<ScopeRoot>    mRootList;
+    /**
+     * \brief   The callback of the event triggered when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void slotLogInstancesConnect(const QList< NEService::sServiceConnectedInstance >& instances);
 
+    /**
+     * \brief   The callback of the event triggered when receive the list of disconnected instances that make logs.
+     * \param   instances   The list of IDs of the disconnected instances.
+     * \param   count       The number of entries in the list.
+     **/
+    void slotLogInstancesDisconnect(const QList< NEService::sServiceConnectedInstance >& instances);
+
+    /**
+     * \brief   The callback of the event triggered when connection with the log collector service is lost.
+     * \param   instances   The list of disconnected instances.
+     **/
+    void slotLogServiceDisconnected(const QMap<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
+
+    /**
+     * \brief   The callback of the event triggered when receive the list of the scopes registered in an application.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
+     **/
+    void slotLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope*>& scopes);
+
+    /**
+     * \brief   The callback of the event triggered when receive the list of previously registered scopes with new priorities.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
+     * \param   count   The number of scope entries in the list.
+     **/
+    void slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>& scopes);
+
+private:
+
+    inline void _clear(void);
+
+    inline bool _exists(ITEM_ID rootId) const;
+
+    inline bool _appendRoot(ScopeRoot* root, bool unique = true);
+
+    inline int _findRoot(ITEM_ID rootId) const;
+
+private:
+    RootList    mRootList;
+    QModelIndex mRootIndex;
 };
+
+#endif  // LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
