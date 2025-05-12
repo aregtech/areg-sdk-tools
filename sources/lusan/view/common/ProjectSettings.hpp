@@ -22,6 +22,7 @@
 #include <QDialog>
 #include <QStackedWidget>
 #include <QStringListModel>
+#include <memory>
 
 namespace Ui {
 class ProjectSettingsDlg;
@@ -95,8 +96,8 @@ private:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::ProjectSettingsDlg* ui;                 //!< The user interface object.
-    QStackedWidget*     mSettingsStackedWidget; //!< The stacked widget to show the settings.
+    std::unique_ptr<Ui::ProjectSettingsDlg> mUi;                 //!< The user interface object.
+    std::unique_ptr<QStackedWidget> mSettingsStackedWidget;      //!< The stacked widget to show the settings.
     QStringListModel    mModel;                 //!< The model of the settings list.
     ProjectDirSettings* mDirSettings;           //!< The directory settings.
     WorkspaceManager*   mWorkspaceManager;

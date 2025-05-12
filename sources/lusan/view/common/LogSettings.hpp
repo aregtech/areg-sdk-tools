@@ -20,8 +20,8 @@
  ************************************************************************/
 
 #include <QWidget>
-#include <memory>
 #include <QValidator>
+#include <memory>
 
 namespace Ui {
 class LogSettingsForm;
@@ -54,7 +54,7 @@ private:
     void loadData();
     void saveData() const;
 
-    Ui::LogSettingsForm* ui;                 //!< The user interface object.
+    std::unique_ptr<Ui::LogSettingsForm> mUi;                 //!< The user interface object.
     std::unique_ptr<QValidator> mIpValidator;
     std::unique_ptr<QValidator> mPortValidator;
     bool mIsEndpointWorking;

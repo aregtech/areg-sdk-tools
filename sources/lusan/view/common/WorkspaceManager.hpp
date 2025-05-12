@@ -23,6 +23,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <optional>
+#include <memory>
 
 namespace Ui {
 class workspaceManager;
@@ -144,7 +145,7 @@ private:
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::workspaceManager* ui{}; //!< The user interface object.
+    std::unique_ptr<Ui::workspaceManager> mUi; //!< The user interface object.
     MapModifiedWorkspaces mModifiedWorkspaces; //!< The map of modified workspaces.
 
 //////////////////////////////////////////////////////////////////////////
