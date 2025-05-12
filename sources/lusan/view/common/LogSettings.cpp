@@ -4,7 +4,6 @@
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/view/common/WorkspaceManager.hpp"
 #include "lusan/data/log/LogObserver.hpp"
-#include "areg/component/ComponentThread.hpp"
 
 #include <QAbstractItemView>
 #include <QtAssert>
@@ -15,12 +14,29 @@
 #include <string>
 
 
+namespace
+{
+    Component* CreateComponent(NERegistry::ComponentEntry const& entry, ComponentThread& thread)
+    {
+        return Component::loadComponent(entry, thread);
+    }
+
+    void DeleteComponent(Component& component, NERegistry::ComponentEntry const& entry)
+    {
+        Component::unloadComponent(component, entry);
+    }
+}
+
+
 LogSettings::LogSettings(QWidget *parent)
     : QWidget{parent}
     , mUi{std::make_unique<Ui::LogSettingsForm>()}
     , mIpValidator{std::make_unique<QRegularExpressionValidator>(QRegularExpression{R"([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})"}, this)}
     , mPortValidator{std::make_unique<QRegularExpressionValidator>(QRegularExpression{"[0-9]{2,5}"}, this)}
-    , mIsEndpointWorking{false}
+    , mIsConnectedToConfiguredEndpoint{false}
+    , mTestComponentThread{"Test ComponentThread"}
+    , mTestComponentEntry{"TestThread", "TestRole", &CreateComponent, &DeleteComponent}
+    , mComponent{LogObserver::CreateComponent(mTestComponentEntry, mTestComponentThread)}
 {
     mUi->setupUi(this);
     setupDialog();
@@ -29,6 +45,11 @@ LogSettings::LogSettings(QWidget *parent)
 
 LogSettings::~LogSettings()
 {
+    if (mIsConnectedToConfiguredEndpoint)
+        LogObserver::disconnect();
+
+    mTestComponentThread.shutdownThread();
+    mTestComponentThread.completionWait();
 }
 
 void LogSettings::setupDialog()
@@ -56,7 +77,7 @@ void LogSettings::logDirBrowseButtonClicked()
 
 void LogSettings::applyChanges()
 {
-    if (!mIsEndpointWorking)
+    if (!mIsConnectedToConfiguredEndpoint)
     {
         QMessageBox::critical(
             this, tr("Error"), tr("The endpoint must be tested and must be working before saving the changes!"));
@@ -113,22 +134,19 @@ void LogSettings::saveData() const
 
 void LogSettings::testEndpointButtonClicked()
 {
-    ComponentThread testComponentThread{"Test ComponentThread"};
-    LogObserver::CreateComponent(NERegistry::ComponentEntry{}, testComponentThread);
-
     LogObserver::connect(
         mUi->ipAddressEdit->text(),
         mUi->portNumberEdit->text().toUInt(),
         LogObserver::getInitDatabase());
 
-    mIsEndpointWorking = LogObserver::isConnected();
-
-    LogObserver::disconnect();
-    testComponentThread.shutdownThread();
-    testComponentThread.completionWait();
+    mIsConnectedToConfiguredEndpoint = LogObserver::isConnected();
 }
 
 void LogSettings::endpointChanged()
 {
-    mIsEndpointWorking = false;
+    if (mIsConnectedToConfiguredEndpoint)
+    {
+        LogObserver::disconnect();
+        mIsConnectedToConfiguredEndpoint = false;
+    }
 }

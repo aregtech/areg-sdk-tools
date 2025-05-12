@@ -19,6 +19,9 @@
  *
  ************************************************************************/
 
+#include "areg/component/ComponentThread.hpp"
+#include "areg/component/NERegistry.hpp"
+
 #include <QWidget>
 #include <QValidator>
 #include <memory>
@@ -26,6 +29,7 @@
 namespace Ui {
 class LogSettingsForm;
 }
+class Component;
 
 
 class LogSettings : public QWidget
@@ -57,7 +61,10 @@ private:
     std::unique_ptr<Ui::LogSettingsForm> mUi;                 //!< The user interface object.
     std::unique_ptr<QValidator> mIpValidator;
     std::unique_ptr<QValidator> mPortValidator;
-    bool mIsEndpointWorking;
+    bool mIsConnectedToConfiguredEndpoint;
+    ComponentThread mTestComponentThread;
+    NERegistry::ComponentEntry mTestComponentEntry;
+    Component* mComponent;
 };
 
 #endif // LUSAN_VIEW_COMMON_LOGSETTINGS_HPP
