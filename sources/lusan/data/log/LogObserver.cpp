@@ -459,14 +459,14 @@ void LogObserver::slotLogInstancesConnect(const std::vector<NEService::sServiceC
 {
     SharedBuffer stream;
     stream << instances;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstConnected), getComponentThread());
+    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstConnected, stream), getComponentThread());
 }
 
 void LogObserver::slotLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
 {
     SharedBuffer stream;
     stream << instances;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstDisconnected), getComponentThread());
+    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstDisconnected, stream), getComponentThread());
 }
 
 void LogObserver::slotLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance>& instances)

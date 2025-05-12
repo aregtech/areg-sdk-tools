@@ -1,4 +1,4 @@
-#ifndef LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
+﻿#ifndef LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
 #define LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
  *  with this distribution or contact us at info[at]aregtech.com.
  *
- *  \copyright   � 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/model/log/LogScopesModel.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
@@ -23,8 +23,12 @@
  * Includes
  ************************************************************************/
 #include <QAbstractItemModel>
+
 #include <QList>
 #include <QMap>
+
+#include "areg/component/NEService.hpp"
+#include "areglogger/client/LogObserverApi.h"
 
 /************************************************************************
  * Dependencies
@@ -50,14 +54,21 @@ public:
      * \brief   Initializes the scope model object.
      * @param   parent  The pointer to the parent object.
      */
-    explicit LogScopesModel(QObject parent = nullptr);
+    LogScopesModel(QObject * parent = nullptr);
 
     virtual ~LogScopesModel(void);
 
     bool initialize(void);
 
     void release(void);
-
+    
+    /**
+     * \brief   Checks if the given index is valid.
+     * \param   index   The index to check.
+     * \return  True if the index is valid, false otherwise.
+     **/
+    inline bool isValidIndex(const QModelIndex& index) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
 //////////////////////////////////////////////////////////////////////////
@@ -182,5 +193,14 @@ private:
     RootList    mRootList;
     QModelIndex mRootIndex;
 };
+
+//////////////////////////////////////////////////////////////////////////
+// LogScopesModel class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool LogScopesModel::isValidIndex(const QModelIndex& index) const
+{
+    return (index.isValid() && (index.row() >= 0) && (index.column() == 0) && (index.model() == this));
+}
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
