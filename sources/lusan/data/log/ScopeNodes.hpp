@@ -156,8 +156,12 @@ protected:
     /**
      * \brief   Protected constructor required by root node.
      **/
-    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio );
-
+    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio, ScopeRoot * parent = nullptr );
+    
+    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, ScopeRoot * parent = nullptr );
+    
+    ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent = nullptr );
+    
 //////////////////////////////////////////////////////////////////////////
 // Assigning operators
 //////////////////////////////////////////////////////////////////////////
@@ -228,7 +232,7 @@ public:
      * \param   pos     The position of the child.
      * \return  Valid pointer of the child node or leaf, if position is valid. Otherwise, returns nullptr.
      **/
-    virtual ScopeNodeBase* getChild(int pos) const override;
+    virtual ScopeNodeBase* getChildAt(int pos) const override;
     
     /**
      * \brief   Returns the total number of children.

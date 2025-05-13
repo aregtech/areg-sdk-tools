@@ -223,7 +223,7 @@ int ScopeNodeBase::getChildPosition(const QString& childName) const
     return static_cast<int>(NECommon::INVALID_INDEX);
 }
 
-ScopeNodeBase* ScopeNodeBase::getChild(int pos) const
+ScopeNodeBase* ScopeNodeBase::getChildAt(int pos) const
 {
     return nullptr;
 }

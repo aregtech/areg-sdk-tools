@@ -125,19 +125,6 @@ public:
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     /**
-     * \brief   Fetches more data for the given parent index.
-     * \param   parent  The parent index.
-     **/
-    virtual void fetchMore(const QModelIndex& parent) override;
-
-    /**
-     * \brief   Checks if more data can be fetched for the given parent index.
-     * \param   parent  The parent index.
-     * \return  True if more data can be fetched, false otherwise.
-     **/
-    virtual bool canFetchMore(const QModelIndex& parent) const override;
-
-    /**
      * \brief   Returns the flags for the item at the given index.
      * \param   index   The index of the item.
      * \return  The flags of the item.

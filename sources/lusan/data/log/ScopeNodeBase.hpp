@@ -327,7 +327,7 @@ public:
      * \param   pos     The position of the child.
      * \return  Valid pointer of the child node or leaf, if position is valid. Otherwise, returns nullptr.
      **/
-    virtual ScopeNodeBase* getChild(int pos) const;
+    virtual ScopeNodeBase* getChildAt(int pos) const;
 
     /**
      * \brief   Returns the total number of children.

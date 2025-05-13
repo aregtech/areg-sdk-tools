@@ -96,8 +96,22 @@ ScopeNode::ScopeNode( ScopeNode && src ) noexcept
 {
 }
 
-ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio )
-    : ScopeNodeBase ( nodeType, name, prio )
+ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio, ScopeRoot * parent /*= nullptr*/ )
+    : ScopeNodeBase ( nodeType, name, prio, parent )
+    , mChildNodes   ( )
+    , mChildLeafs   ( )
+{
+}
+
+ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, ScopeRoot * parent /*= nullptr*/ )
+    : ScopeNodeBase ( nodeType, name, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), parent )
+    , mChildNodes   ( )
+    , mChildLeafs   ( )
+{
+}
+
+ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent /*= nullptr*/ )
+    : ScopeNodeBase ( nodeType, parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
 {
@@ -194,11 +208,15 @@ ScopeNodeBase* ScopeNode::addChildNode(ScopeNodeBase* childNode)
         if (childNode->isNode())
         {
             ScopeNode* existing{ containsNode(childNode->getNodeName()) ? mChildNodes[childNode->getNodeName()] : nullptr };
-            mChildNodes[childNode->getNodeName()] = static_cast<ScopeNode*>(childNode);
             if (existing != nullptr)
             {
-                childNode->addPriority(existing->getPriority());
-                delete existing;
+                existing->addPriority(childNode->getPriority());
+                delete childNode;
+                childNode = existing;
+            }
+            else
+            {
+                mChildNodes[childNode->getNodeName()] = static_cast<ScopeNode*>(childNode);
             }
         }
         else if (childNode->isLeaf())
@@ -273,7 +291,7 @@ int ScopeNode::getChildPosition(const QString& childName) const
     return result;
 }
 
-ScopeNodeBase* ScopeNode::getChild(int pos) const
+ScopeNodeBase* ScopeNode::getChildAt(int pos) const
 {
     ScopeNodeBase* result = nullptr;
     int cntNode = static_cast<int>(mChildNodes.size());
@@ -391,25 +409,25 @@ void ScopeNode::refreshPrioritiesRecursive(void)
 //////////////////////////////////////////////////////////////////////////
 
 ScopeRoot::ScopeRoot(void)
-    : ScopeNode (nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, this)
     , mRootId   (NEService::COOKIE_LOCAL)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId)
-    : ScopeNode (nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, this)
     , mRootId   (rootId)
 {
 }
 
 ScopeRoot::ScopeRoot(const NEService::sServiceConnectedInstance& instance)
-    : ScopeNode (QString(instance.ciInstance.c_str()), static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, QString(instance.ciInstance.c_str()), static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), this)
     , mRootId   (instance.ciCookie)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString rootName)
-    : ScopeNode (rootName, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), this)
     , mRootId   (rootId)
 {
 }

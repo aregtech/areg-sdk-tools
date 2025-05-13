@@ -30,6 +30,7 @@ LogScopesModel::LogScopesModel(QObject* parent)
     , mRootList         ( )
     , mRootIndex        ( )
 {
+    mRootIndex = createIndex(0, 0, nullptr);
 }
 
 LogScopesModel::~LogScopesModel(void)
@@ -71,7 +72,7 @@ QModelIndex LogScopesModel::index(int row, int column, const QModelIndex& parent
     if ((hasIndex(row, column, parent) == false) || (column != 0))
         return QModelIndex();
     
-    if (isValidIndex(parent) == false)
+    if (parent.isValid() == false)
         return mRootIndex;
     
     if (parent == mRootIndex)
@@ -81,24 +82,26 @@ QModelIndex LogScopesModel::index(int row, int column, const QModelIndex& parent
     }
     else
     {
-        const ScopeNode* parentNode = static_cast<const ScopeNode *>(parent.internalPointer());
-        const ScopeNodeBase * child = parentNode->getChild(row);
-        return createIndex(row, column, child);
+        ScopeNodeBase* parentNode = static_cast<ScopeNodeBase*>(parent.internalPointer());
+        Q_ASSERT(parentNode != nullptr);
+        ScopeNodeBase* childNode = parentNode->getChildAt(row);
+        return createIndex(row, column, childNode);
     }
 }
 
 QModelIndex LogScopesModel::parent(const QModelIndex& child) const
 {
-    if (isValidIndex(child) == false)
+    if ((child.isValid() == false) || (child == mRootIndex))
         return QModelIndex();
     
     ScopeNodeBase* childNode = static_cast<ScopeNodeBase *>(child.internalPointer());
-    ScopeNodeBase* parentNode= childNode->getParent();
-    if (parentNode == nullptr)
-    {
+    Q_ASSERT(childNode != nullptr);
+    if (childNode->isRoot())
         return mRootIndex;
-    }
-    else if (parentNode->isRoot())
+    
+    ScopeNodeBase* parentNode= childNode->getParent();
+    Q_ASSERT(parentNode != nullptr);
+    if (parentNode->isRoot())
     {
         int pos = _findRoot(static_cast<ScopeRoot *>(parentNode)->getRootId());
         Q_ASSERT(pos != static_cast<int>(NECommon::INVALID_INDEX));
@@ -106,7 +109,8 @@ QModelIndex LogScopesModel::parent(const QModelIndex& child) const
     }
     else
     {
-        int pos = parentNode->getChildPosition(childNode->getNodeName());
+        ScopeNodeBase* grandParent = parentNode->getParent();
+        int pos = grandParent->getChildPosition(parentNode->getNodeName());
         Q_ASSERT(pos != static_cast<int>(NECommon::INVALID_INDEX));
         return createIndex(pos, 0, parentNode);
     }
@@ -114,24 +118,20 @@ QModelIndex LogScopesModel::parent(const QModelIndex& child) const
 
 int LogScopesModel::rowCount(const QModelIndex& parent) const
 {
-    if ((parent.column() > 0) || (isValidIndex(parent) == false))
-    {
-        return 0;
-    }
-    else if (parent == mRootIndex)
-    {
+    if (parent.isValid() == false)
+        return 1;
+    
+    if (parent == mRootIndex)
         return static_cast<int>(mRootList.size());
-    }
-    else
-    {
-        ScopeNodeBase* parentNode = static_cast<ScopeNodeBase *>(parent.internalPointer());
-        Q_ASSERT(parentNode!= nullptr);
-        return parentNode->getChildCount();
-    }
+    
+    ScopeNodeBase* parentNode = static_cast<ScopeNodeBase*>(parent.internalPointer());
+    Q_ASSERT(parentNode != nullptr);
+    return parentNode->getChildCount();
 }
 
 int LogScopesModel::columnCount(const QModelIndex& parent) const
 {
+    Q_UNUSED(parent);
     return 1;
 }
 
@@ -140,17 +140,30 @@ QVariant LogScopesModel::data(const QModelIndex& index, int role) const
     if (isValidIndex(index) == false)
         return QVariant();
     
-    ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
+    if (index == mRootIndex)
+    {
+        return (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole ? QVariant(QString("root")) : QVariant());
+    }
+    
     switch (static_cast<Qt::ItemDataRole>(role))
     {
     case Qt::ItemDataRole::DisplayRole:
+    {
+        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
         return entry->getNodeName();
+    }
     
     case Qt::ItemDataRole::DecorationRole:
+    {
+        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
         return entry->getIcon();
+    }
     
     case Qt::ItemDataRole::UserRole:
+    {
+        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
         return QVariant::fromValue<ScopeNodeBase *>(entry);
+    }
         
     default:
         return QVariant();
@@ -162,28 +175,15 @@ QVariant LogScopesModel::headerData(int section, Qt::Orientation orientation, in
     return QVariant();
 }
 
-void LogScopesModel::fetchMore(const QModelIndex& parent)
-{
-}
-
-bool LogScopesModel::canFetchMore(const QModelIndex& parent) const
-{
-    if (isValidIndex(parent) == false)
-        return false;
-
-    ScopeNodeBase* parentNode = static_cast<ScopeNodeBase *>(parent.internalPointer());
-    return (parentNode == nullptr) && parentNode->hasChildren();
-}
-
 Qt::ItemFlags LogScopesModel::flags(const QModelIndex& index) const
 {
-    ScopeNodeBase* node = static_cast<ScopeNodeBase *>(index.internalPointer());
-    if ((isValidIndex(index) == false) || (node == nullptr))
+    ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
+    if ((node == nullptr) || (index == mRootIndex))
         return Qt::NoItemFlags;
     else if (node->isLeaf())
         return (Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren);
     else
-        return (Qt::ItemIsSelectable | Qt::ItemIsEnabled);(Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren);
+        return (Qt::ItemIsSelectable | Qt::ItemIsEnabled);
 }
 
 inline void LogScopesModel::_clear(void)
