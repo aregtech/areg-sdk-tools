@@ -19,8 +19,9 @@
 
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "ui/ui_ProjectSettings.h"
-#include "lusan/app/LusanApplication.hpp"
+#include "lusan/view/common/ProjectDirSettings.hpp"
 #include "lusan/view/common/WorkspaceManager.hpp"
+#include "lusan/view/common/LogSettings.hpp"
 
 #include <QAbstractItemView>
 #include <QtAssert>
@@ -29,46 +30,38 @@
 
 ProjectSettings::ProjectSettings(QWidget *parent)
     : QDialog(parent)
-    , ui    (new Ui::ProjectSettingsDlg)
-    , mSettingsStackedWidget(new QStackedWidget( this ))
-    , mDirSettings          (new ProjectDirSettings(this))
+    , mUi(std::make_unique<Ui::ProjectSettingsDlg>())
+    , mSettingsStackedWidget(std::make_unique<QStackedWidget>(this))
     , mModel                (this)
+    , mDirSettings          (new ProjectDirSettings(this))
     , mWorkspaceManager     (new WorkspaceManager(this))
+    , mLogSettings          (new LogSettings(this))
 {
-    ui->setupUi(this);
+    mUi->setupUi(this);
     setupDialog();
     connectSignals();
 }
 
 ProjectSettings::~ProjectSettings()
 {
-    delete mSettingsStackedWidget;
-    delete ui;
 }
 
 void ProjectSettings::setupDialog()
 {
     addSettings();
 
-    ui->horizontalLayout->setStretch(0, 1);
-    ui->horizontalLayout->addWidget(mSettingsStackedWidget, 4);
-    
-    // mWorkspaceManager->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
-    // mDirSettings->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
-    mSettingsStackedWidget->addWidget(mWorkspaceManager);
-    mSettingsStackedWidget->addWidget(mDirSettings);
-
-    ui->settingsList->setModel(&mModel);
+    mUi->horizontalLayout->setStretch(0, 1);
+    mUi->horizontalLayout->addWidget(mSettingsStackedWidget.get(), 4);
+    mUi->settingsList->setModel(&mModel);
 
     selectPage(0);
-
     setFixedSize(size());
 }
 
 void ProjectSettings::connectSignals() const
 {
-    connect(ui->settingsList,   &QAbstractItemView::clicked,    this, &ProjectSettings::settingsListSelectionChanged);
-    connect(ui->buttonBox,      &QDialogButtonBox::clicked,     this, &ProjectSettings::buttonClicked);
+    connect(mUi->settingsList,   &QAbstractItemView::clicked,    this, &ProjectSettings::settingsListSelectionChanged);
+    connect(mUi->buttonBox,      &QDialogButtonBox::clicked,     this, &ProjectSettings::buttonClicked);
 }
 
 void ProjectSettings::settingsListSelectionChanged(QModelIndex const& index)
@@ -85,15 +78,20 @@ void ProjectSettings::selectSetting(int const index) const
 
 void ProjectSettings::addSettings()
 {
+    mSettingsStackedWidget->addWidget(mWorkspaceManager);
+    mSettingsStackedWidget->addWidget(mDirSettings);
+    mSettingsStackedWidget->addWidget(mLogSettings);
+
     QStringList settingsList;
     settingsList.append(tr("Workspaces"));
     settingsList.append(tr("Directories"));
+    settingsList.append(tr("Log settings"));
     mModel.setStringList(settingsList);
 }
 
 void ProjectSettings::buttonClicked(QAbstractButton* button) const
 {
-    QDialogButtonBox::ButtonRole const role = ui->buttonBox->buttonRole(button);
+    QDialogButtonBox::ButtonRole const role = mUi->buttonBox->buttonRole(button);
 
     if ((QDialogButtonBox::ButtonRole::AcceptRole != role) &&
         (QDialogButtonBox::ButtonRole::ApplyRole != role))
@@ -109,11 +107,15 @@ void ProjectSettings::buttonClicked(QAbstractButton* button) const
     {
         mWorkspaceManager->applyChanges();
     }
+    else if (mSettingsStackedWidget->currentWidget() == mLogSettings)
+    {
+        mLogSettings->applyChanges();
+    }
 }
 
 void ProjectSettings::selectPage(int const index) const
 {
     selectSetting(index);
 
-    ui->settingsList->setCurrentIndex(mModel.index(index));
+    mUi->settingsList->setCurrentIndex(mModel.index(index));
 }

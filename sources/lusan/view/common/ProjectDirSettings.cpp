@@ -24,54 +24,53 @@
 
 ProjectDirSettings::ProjectDirSettings(QWidget *parent)
     : QWidget(parent)
-    , ui(new Ui::projectDirSettingsDlg)
+    , mUi(std::make_unique<Ui::projectDirSettingsDlg>())
 {
-    ui->setupUi(this);
+    mUi->setupUi(this);
     connectSignalHandlers();
     initializePathsWithCurrentWorkspaceData();
 }
 
 ProjectDirSettings::~ProjectDirSettings()
 {
-    delete ui;
 }
 
 void ProjectDirSettings::connectSignalHandlers() const
 {
-    connect(ui->rootDirBrowseBtn,       &QPushButton::clicked, this, &ProjectDirSettings::onRootDirBrowseBtnClicked);
-    connect(ui->sourceDirBrowseBtn,     &QPushButton::clicked, this, &ProjectDirSettings::onSourceDirBrowseBtnClicked);
-    connect(ui->includeDirBrowseBtn,    &QPushButton::clicked, this, &ProjectDirSettings::onIncludeDirBrowseBtnClicked);
-    connect(ui->deliveryDirBrowseBtn,   &QPushButton::clicked, this, &ProjectDirSettings::onDeliveryDirBrowseBtnClicked);
-    connect(ui->logDirBrowseBtn,        &QPushButton::clicked, this, &ProjectDirSettings::onLogDirBrowseBtnClicked);
+    connect(mUi->rootDirBrowseBtn,       &QPushButton::clicked, this, &ProjectDirSettings::onRootDirBrowseBtnClicked);
+    connect(mUi->sourceDirBrowseBtn,     &QPushButton::clicked, this, &ProjectDirSettings::onSourceDirBrowseBtnClicked);
+    connect(mUi->includeDirBrowseBtn,    &QPushButton::clicked, this, &ProjectDirSettings::onIncludeDirBrowseBtnClicked);
+    connect(mUi->deliveryDirBrowseBtn,   &QPushButton::clicked, this, &ProjectDirSettings::onDeliveryDirBrowseBtnClicked);
+    connect(mUi->logDirBrowseBtn,        &QPushButton::clicked, this, &ProjectDirSettings::onLogDirBrowseBtnClicked);
 }
 
 void ProjectDirSettings::onRootDirBrowseBtnClicked()
 {
-    ui->rootDirEdit->setText(
+    mUi->rootDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Root Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
 void ProjectDirSettings::onSourceDirBrowseBtnClicked()
 {
-    ui->sourceDirEdit->setText(
+    mUi->sourceDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Source Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
 void ProjectDirSettings::onIncludeDirBrowseBtnClicked()
 {
-    ui->includeDirEdit->setText(
+    mUi->includeDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Include Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
 void ProjectDirSettings::onDeliveryDirBrowseBtnClicked()
 {
-    ui->deliveryDirEdit->setText(
+    mUi->deliveryDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Delivery Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
 void ProjectDirSettings::onLogDirBrowseBtnClicked()
 {
-    ui->logDirEdit->setText(
+    mUi->logDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
@@ -79,24 +78,24 @@ void ProjectDirSettings::initializePathsWithCurrentWorkspaceData() const
 {
     WorkspaceEntry const currentWorkspace{ LusanApplication::getActiveWorkspace() };
 
-    ui->rootDirEdit->setText(currentWorkspace.getWorkspaceRoot());
-    ui->sourceDirEdit->setText(currentWorkspace.getDirSources());
-    ui->includeDirEdit->setText(currentWorkspace.getDirIncludes());
-    ui->deliveryDirEdit->setText(currentWorkspace.getDirDelivery());
-    ui->logDirEdit->setText(currentWorkspace.getDirLogs());
-    ui->workspaceEdit->setPlainText(currentWorkspace.getWorkspaceDescription());
+    mUi->rootDirEdit->setText(currentWorkspace.getWorkspaceRoot());
+    mUi->sourceDirEdit->setText(currentWorkspace.getDirSources());
+    mUi->includeDirEdit->setText(currentWorkspace.getDirIncludes());
+    mUi->deliveryDirEdit->setText(currentWorkspace.getDirDelivery());
+    mUi->logDirEdit->setText(currentWorkspace.getDirLogs());
+    mUi->workspaceEdit->setPlainText(currentWorkspace.getWorkspaceDescription());
 }
 
 void ProjectDirSettings::applyChanges() const
 {
     WorkspaceEntry currentWorkspace{ LusanApplication::getActiveWorkspace() };
 
-    currentWorkspace.setWorkspaceRoot(ui->rootDirEdit->text());
-    currentWorkspace.setDirSources(ui->sourceDirEdit->text());
-    currentWorkspace.setDirIncludes(ui->includeDirEdit->text());
-    currentWorkspace.setDirDelivery(ui->deliveryDirEdit->text());
-    currentWorkspace.setDirLogs(ui->logDirEdit->text());
-    currentWorkspace.setWorkspaceDescription(ui->workspaceEdit->toPlainText());
+    currentWorkspace.setWorkspaceRoot(mUi->rootDirEdit->text());
+    currentWorkspace.setDirSources(mUi->sourceDirEdit->text());
+    currentWorkspace.setDirIncludes(mUi->includeDirEdit->text());
+    currentWorkspace.setDirDelivery(mUi->deliveryDirEdit->text());
+    currentWorkspace.setDirLogs(mUi->logDirEdit->text());
+    currentWorkspace.setWorkspaceDescription(mUi->workspaceEdit->toPlainText());
 
 
     OptionsManager& optionsManager = LusanApplication::getOptions();
