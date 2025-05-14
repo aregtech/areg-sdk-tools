@@ -26,6 +26,7 @@ ScopeNodeBase::ScopeNodeBase(void)
     , mParent       ( nullptr )
     , mPrioStates   ( static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid) )
     , mNodeName     ( )
+    , mIcon         ( )
 {
 }
 
@@ -34,6 +35,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, ScopeNodeBase* paren
     , mParent       ( parent )
     , mPrioStates   ( static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid) )
     , mNodeName     ( )
+    , mIcon         ( nodeType != ScopeNodeBase::eNode::Leaf ? QIcon::fromTheme(QIcon::ThemeIcon::ListAdd) : QIcon())
 {
 }
 
@@ -42,6 +44,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, const QString& nodeN
     , mParent       ( parent )
     , mPrioStates   ( prio )
     , mNodeName     ( nodeName )
+    , mIcon         ( nodeType != ScopeNodeBase::eNode::Leaf ? QIcon::fromTheme(QIcon::ThemeIcon::ListAdd) : QIcon())
 {
 }
 
@@ -50,6 +53,7 @@ ScopeNodeBase::ScopeNodeBase(const ScopeNodeBase& src)
     , mParent       ( src.mParent )
     , mPrioStates   ( src.mPrioStates )
     , mNodeName     ( src.mNodeName )
+    , mIcon         ( src.mIcon)
 {
 }
 
@@ -58,6 +62,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase&& src) noexcept
     , mParent       ( src.mParent )
     , mPrioStates   ( src.mPrioStates )
     , mNodeName     ( std::move(src.mNodeName) )
+    , mIcon         ( std::move(src.mIcon) )
 {
 }
 
@@ -67,7 +72,8 @@ ScopeNodeBase& ScopeNodeBase::operator = (const ScopeNodeBase& src)
     if (this != &src)
     {
         mPrioStates = src.mPrioStates;
-        mNodeName = src.mNodeName;
+        mNodeName   = src.mNodeName;
+        mIcon       = src.mIcon;
     }
 
     return (*this);
@@ -79,7 +85,8 @@ ScopeNodeBase& ScopeNodeBase::operator = (ScopeNodeBase&& src) noexcept
     if (this != &src)
     {
         mPrioStates = src.mPrioStates;
-        mNodeName = std::move(src.mNodeName);
+        mNodeName   = std::move(src.mNodeName);
+        mIcon       = std::move(src.mIcon);
     }
 
     return (*this);
@@ -140,15 +147,19 @@ int ScopeNodeBase::addChildRecursive(QStringList& scopeNodes, uint32_t prio)
 ScopeNodeBase* ScopeNodeBase::addChildNode(QString& scopePath, uint32_t prio)
 {
     ScopeNodeBase* childNode = makeChildNode(scopePath, prio);
-    addChildNode(childNode);
-    return childNode;
+    return addChildNode(childNode);
 }
 
 ScopeNodeBase* ScopeNodeBase::addChildNode(QStringList& nodeNames, uint32_t prio)
 {
     ScopeNodeBase* childNode = makeChildNode(nodeNames, prio);
-    addChildNode(childNode);
-    return childNode;
+    return addChildNode(childNode);
+}
+
+ScopeNodeBase* ScopeNodeBase::addChildNode(ScopeNodeBase* childNode)
+{
+    delete childNode;
+    return nullptr;
 }
 
 ScopeNodeBase* ScopeNodeBase::makeChildNode(QString& scopePath, uint32_t prio)
@@ -161,10 +172,6 @@ ScopeNodeBase* ScopeNodeBase::makeChildNode(QStringList& nodeNames, uint32_t pri
 {
     Q_ASSERT(nodeNames.isEmpty());
     return nullptr;
-}
-
-void ScopeNodeBase::addChildNode(ScopeNodeBase* childNode)
-{
 }
 
 QStringList ScopeNodeBase::makeNodeNames(const QString& scopePath) const
@@ -214,6 +221,26 @@ ScopeNodeBase* ScopeNodeBase::findChildByPath(const QString& childPath) const
 int ScopeNodeBase::getChildPosition(const QString& childName) const
 {
     return static_cast<int>(NECommon::INVALID_INDEX);
+}
+
+ScopeNodeBase* ScopeNodeBase::getChildAt(int pos) const
+{
+    return nullptr;
+}
+
+int ScopeNodeBase::getChildCount(void) const
+{
+    return 0;
+}
+
+int ScopeNodeBase::getChildNodesCount(void) const
+{
+    return 0;
+}
+
+int ScopeNodeBase::getChildLeafsCount(void) const
+{
+    return 0;
 }
 
 void ScopeNodeBase::addChildPriorityRecursive(QString& nodePath, uint32_t prio)
@@ -291,7 +318,12 @@ int ScopeNodeBase::getChildren(std::vector<ScopeNodeBase*>& children) const
     return 0;
 }
 
-void ScopeNodeBase::resetPrioritiesRecursive(void)
+void ScopeNodeBase::resetPrioritiesRecursive(bool skipLeafs)
 {
-    mPrioStates = static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid);
+    if ((skipLeafs == false) || (isLeaf() == false))
+        resetPriority();
+}
+
+void ScopeNodeBase::refreshPrioritiesRecursive(void)
+{
 }

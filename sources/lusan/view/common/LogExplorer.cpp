@@ -21,8 +21,9 @@
 #include "ui/ui_LogExplorer.h"
 
 #include "lusan/common/NELusanCommon.hpp"
-#include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/data/log/LogObserver.hpp"
+#include "lusan/model/log/LogScopesModel.hpp"
+#include "lusan/view/common/MdiMainWindow.hpp"
 
 #include "areg/base/File.hpp"
 #include "areg/base/NESocket.hpp"
@@ -52,6 +53,7 @@ LogExplorer::LogExplorer(MdiMainWindow* mainFrame, QWidget* parent)
     , mActiveLogFile( )
     , mLogLocation  ( )
     , mShouldConnect(false)
+    , mModel        (nullptr)
 {
     _explorer = this;
     
@@ -212,6 +214,8 @@ void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const
     
     if (isEnabled && mShouldConnect)
     {
+        mModel = new LogScopesModel(this);
+        
         std::error_code err;
         std::filesystem::path dbPath(mLogLocation.toStdString());
         dbPath /= mInitLogFile.toStdString();
@@ -224,6 +228,20 @@ void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const
 
 void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address, uint16_t port)
 {
+    if (mModel != nullptr)
+    {
+        if (isConnected)
+        {
+            mModel->initialize();
+            ctrlTable()->setModel(mModel);
+        }
+        else
+        {
+            ctrlTable()->setModel(nullptr);
+            mModel->release();
+        }
+    }
+    
     ctrlConnect()->setChecked(isConnected);
     ctrlConnect()->setIcon(QIcon::fromTheme(isConnected ? QString::fromUtf8("network-wireless") : QString::fromUtf8("network-offline")));
     ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));

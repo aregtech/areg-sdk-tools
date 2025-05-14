@@ -29,6 +29,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class LogScopesModel;
 class MdiMainWindow;
 class QToolButton;
 class QTreeView;
@@ -204,6 +205,7 @@ private:
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
     bool                    mShouldConnect; //!< Flag, indicating to connect to log collector.
+    LogScopesModel*         mModel;         //!< The model of the log scopes.
 };
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP

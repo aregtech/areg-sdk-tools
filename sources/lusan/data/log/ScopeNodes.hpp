@@ -154,10 +154,12 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     /**
-     * \brief   Protected constructor required by root node.
+     * \brief   Protected constructors required by root node.
      **/
-    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio );
-
+    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio, ScopeRoot * parent = nullptr );
+    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, ScopeRoot * parent = nullptr );    
+    ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent = nullptr );
+    
 //////////////////////////////////////////////////////////////////////////
 // Assigning operators
 //////////////////////////////////////////////////////////////////////////
@@ -205,8 +207,9 @@ public:
      * \brief   Adds a child node to the parent if the node does not exist.
      *          Otherwise, it adds in the existing node the log priority of the passed node object.
      * \param   childNode   The child node to add to the parent.
+     * \return  The pointer to the added child node.
      **/
-    virtual void addChildNode(ScopeNodeBase* childNode) override;
+    virtual ScopeNodeBase* addChildNode(ScopeNodeBase* childNode) override;
 
     /**
      * \brief   Returns child node object that contains the specified name.
@@ -221,6 +224,28 @@ public:
      * \param   childName   The name of the child node to find.
      **/
     virtual int getChildPosition(const QString& childName) const override;
+    
+    /**
+     * \brief   Returns the child node at the given position.
+     * \param   pos     The position of the child.
+     * \return  Valid pointer of the child node or leaf, if position is valid. Otherwise, returns nullptr.
+     **/
+    virtual ScopeNodeBase* getChildAt(int pos) const override;
+    
+    /**
+     * \brief   Returns the total number of children.
+     **/
+    virtual int getChildCount(void) const override;
+
+    /**
+     * \brief   Returns the total number of child nodes.
+     **/
+    virtual int getChildNodesCount(void) const override;
+
+    /**
+     * \brief   Returns the total number of child leafs.
+     **/
+    virtual int getChildLeafsCount(void) const override;
 
     /**
      * \brief   Returns true if the current node has other node objects with children.
@@ -248,12 +273,18 @@ public:
      * \return  The number of child nodes in the list.
      **/
     virtual int getChildren(std::vector<ScopeNodeBase*>& children) const override;
-
+    
     /**
      * \brief   Resets and invalidates the priorities of the node and all child nodes.
+     * \param   skipLeafs   If true, skips resetting the priority of the leafs and resets the priority only nodes.
+     *                      Otherwise, it resets the priority of the leafs and nodes.
      **/
-    virtual void resetPrioritiesRecursive(void) override;
+    virtual void resetPrioritiesRecursive(bool skipLeafs) override;
 
+    /**
+     * \brief   Refreshes the priorities by keeping the priority of leafs and refreshing the priorities of the nodes.
+     **/
+    virtual void refreshPrioritiesRecursive(void) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -273,6 +304,21 @@ public:
      * \brief   Returns the total number of children.
      **/
     inline unsigned int childNodeCount( void ) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Protected members
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    /**
+     * \brief   Resets the priority of the nodes.
+     **/
+    inline void resetPrioNodes(void);
+
+    /**
+     * \brief   Resets the priority of the leafs.
+     **/
+    inline void resetPrioLeafs(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -427,6 +473,24 @@ inline const ScopeNode::LeafList& ScopeNode::getLeafs(void) const
 inline unsigned int ScopeNode::childNodeCount(void) const
 {
     return (mChildLeafs.size() + mChildNodes.size());
+}
+
+inline void ScopeNode::resetPrioNodes(void)
+{
+    resetPriority();
+    for (const auto& node : mChildNodes)
+    {
+        node.second->resetPrioNodes();
+    }
+}
+
+inline void ScopeNode::resetPrioLeafs(void)
+{
+    resetPriority();
+    for (const auto& leaf : mChildLeafs)
+    {
+        leaf.second->resetPriority();
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

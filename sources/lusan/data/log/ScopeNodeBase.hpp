@@ -27,7 +27,12 @@
 
 #include <QList>
 #include <QString>
+#include <QIcon>
 
+/**
+ * \brief   ScopeNodeBase is the base class for all scope nodes.
+ * \see     ScopeNode, ScopeLeaf, ScopeRoot
+ **/
 class ScopeNodeBase
 {
 //////////////////////////////////////////////////////////////////////////
@@ -75,7 +80,7 @@ protected:
     ScopeNodeBase(ScopeNodeBase&& src) noexcept;
     
 public:
-    
+
     virtual ~ScopeNodeBase(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
@@ -167,9 +172,44 @@ public:
      **/
     inline bool hasLogScopes(void) const;
 
+    /**
+     * \brief   Returns the pointer to parent node. The root nodes have no parent.
+     **/
     inline ScopeNodeBase* getParent(void) const;
 
+    /**
+     * \brief   Sets the pointer to the parent node. All parents except root should have a parent.
+     * \param   parent  The pointer to the parent object.
+     **/
     inline void setParent(ScopeNodeBase* parent);
+
+    /**
+     * \brief   Resets the priority bits of the node.
+     **/
+    inline void resetPriority(void);
+
+    /**
+     * \brief   Updates priority bits of the parent node.
+     * \param   prio        The priority bits to set.
+     * \param   recursive   If true, the parent node is updated recursively until root node.
+     **/
+    inline void updateParentPrio(uint32_t prio, bool recursive);
+
+    /**
+     * \brief   Returns the icon of the node to display.
+     **/
+    inline QIcon getIcon(void) const;
+
+    /**
+     * \brief   Sets the icon of the node to display.
+     * \param   icon    The icon to set.
+     **/
+    inline void setIcon(const QIcon& icon);
+
+    /**
+     * \brief   Returns true if node has children.
+     **/
+    inline bool hasChildren(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -225,7 +265,7 @@ public:
      *                      On output, it contains the next level of the path separated by '_'.
      *                      The last node should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
-     * \return  The number of nodes added.
+     * \return  The pointer to the added child node.
      **/
     virtual ScopeNodeBase* addChildNode(QString& scopePath, uint32_t prio);
 
@@ -236,9 +276,17 @@ public:
      *                      On output, it removes the first node name from the list.
      *                      The last name should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
-     * \return  The number of nodes added.
+     * \return  The pointer to the added child node.
      **/
     virtual ScopeNodeBase* addChildNode(QStringList& nodeNames, uint32_t prio);
+
+    /**
+     * \brief   Adds a child node to the parent if the node does not exist.
+     *          Otherwise, it adds in the existing node the log priority of the passed node object.
+     * \param   childNode   The child node to add to the parent.
+     * \return  The pointer to the added child node.
+     **/
+    virtual ScopeNodeBase* addChildNode(ScopeNodeBase* childNode);
 
     /**
      * \brief   Creates a child node. The child node is not added to the parent.
@@ -263,13 +311,6 @@ public:
      * \return  The node object created.
      **/
     virtual ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio);
-
-    /**
-     * \brief   Adds a child node to the parent if the node does not exist.
-     *          Otherwise, it adds in the existing node the log priority of the passed node object.
-     * \param   childNode   The child node to add to the parent.
-     **/
-    virtual void addChildNode(ScopeNodeBase* childNode);
 
     /**
      * \brief   Creates a list of node names from the passed scope path.
@@ -311,6 +352,28 @@ public:
      * \param   childName   The name of the child node to find.
      **/
     virtual int getChildPosition(const QString& childName) const;
+    
+    /**
+     * \brief   Returns the child node at the given position.
+     * \param   pos     The position of the child.
+     * \return  Valid pointer of the child node or leaf, if position is valid. Otherwise, returns nullptr.
+     **/
+    virtual ScopeNodeBase* getChildAt(int pos) const;
+
+    /**
+     * \brief   Returns the total number of children.
+     **/
+    virtual int getChildCount(void) const;
+
+    /**
+     * \brief   Returns the total number of child nodes.
+     **/
+    virtual int getChildNodesCount(void) const;
+
+    /**
+     * \brief   Returns the total number of child leafs.
+     **/
+    virtual int getChildLeafsCount(void) const;
 
     /**
      * \brief   Adds the priority recursively to the child nodes.
@@ -373,8 +436,15 @@ public:
 
     /**
      * \brief   Resets and invalidates the priorities of the node and all child nodes.
+     * \param   skipLeafs   If true, skips resetting the priority of the leafs and resets the priority only nodes.
+     *                      Otherwise, it resets the priority of the leafs and nodes.
      **/
-    virtual void resetPrioritiesRecursive(void);
+    virtual void resetPrioritiesRecursive(bool skipLeafs);
+
+    /**
+     * \brief   Refreshes the priorities by keeping the priority of leafs and refreshing the priorities of the nodes.
+     **/
+    virtual void refreshPrioritiesRecursive(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -388,6 +458,8 @@ protected:
     unsigned int                mPrioStates;
     //!< The name of the node.
     QString                     mNodeName;
+    //!< The icon to display.
+    QIcon                       mIcon;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -464,9 +536,41 @@ inline ScopeNodeBase* ScopeNodeBase::getParent(void) const
     return mParent;
 }
 
-void ScopeNodeBase::setParent(ScopeNodeBase* parent)
+inline void ScopeNodeBase::setParent(ScopeNodeBase* parent)
 {
     mParent = parent;
+}
+
+inline void ScopeNodeBase::resetPriority(void)
+{
+    mPrioStates = static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid);
+}
+
+inline void ScopeNodeBase::updateParentPrio(uint32_t prio, bool recursive)
+{
+    if (mParent != nullptr)
+    {
+        mParent->addPriority(prio);
+        if (recursive)
+        {
+            mParent->updateParentPrio(prio, recursive);
+        }
+    }
+}
+
+inline QIcon ScopeNodeBase::getIcon(void) const
+{
+    return mIcon;
+}
+
+inline void ScopeNodeBase::setIcon(const QIcon & icon)
+{
+    mIcon = icon;
+}
+
+inline bool ScopeNodeBase::hasChildren(void) const
+{
+    return (getChildCount() != 0);
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODEBASE_HPP

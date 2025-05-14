@@ -1,4 +1,4 @@
-#ifndef LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
+﻿#ifndef LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
 #define LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
  *  with this distribution or contact us at info[at]aregtech.com.
  *
- *  \copyright   � 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/model/log/LogScopesModel.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
@@ -23,8 +23,12 @@
  * Includes
  ************************************************************************/
 #include <QAbstractItemModel>
+
 #include <QList>
 #include <QMap>
+
+#include "areg/component/NEService.hpp"
+#include "areglogger/client/LogObserverApi.h"
 
 /************************************************************************
  * Dependencies
@@ -50,14 +54,28 @@ public:
      * \brief   Initializes the scope model object.
      * @param   parent  The pointer to the parent object.
      */
-    explicit LogScopesModel(QObject parent = nullptr);
+    LogScopesModel(QObject * parent = nullptr);
 
     virtual ~LogScopesModel(void);
 
+    /**
+     * \brief   Initializes the model, sets the signals to receive messages.
+     * \return  True if the model is initialized, false otherwise.
+     **/
     bool initialize(void);
 
+    /**
+     * \brief   Releases the model, disconnects the signals.
+     **/
     void release(void);
-
+    
+    /**
+     * \brief   Checks if the given index is valid.
+     * \param   index   The index to check.
+     * \return  True if the index is valid, false otherwise.
+     **/
+    inline bool isValidIndex(const QModelIndex& index) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
 //////////////////////////////////////////////////////////////////////////
@@ -114,19 +132,6 @@ public:
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     /**
-     * \brief   Fetches more data for the given parent index.
-     * \param   parent  The parent index.
-     **/
-    virtual void fetchMore(const QModelIndex& parent) override;
-
-    /**
-     * \brief   Checks if more data can be fetched for the given parent index.
-     * \param   parent  The parent index.
-     * \return  True if more data can be fetched, false otherwise.
-     **/
-    virtual bool canFetchMore(const QModelIndex& parent) const override;
-
-    /**
      * \brief   Returns the flags for the item at the given index.
      * \param   index   The index of the item.
      * \return  The flags of the item.
@@ -170,17 +175,48 @@ private:
 
 private:
 
+    /**
+     * \brief   Clears the model and deletes all nodes.
+     **/
     inline void _clear(void);
 
+    /**
+     * \brief   Checks if the root with the given ID exists in the model.
+     * \param   rootId  The ID of the root to check.
+     * \return  True if the root exists, false otherwise.
+     **/
     inline bool _exists(ITEM_ID rootId) const;
 
+    /**
+     * \brief   Appends the root to the model.
+     * \param   root    The root to append.
+     * \param   unique  If true, checks if the root is unique before appending.
+     * \return  True if the root is appended, false otherwise.
+     **/
     inline bool _appendRoot(ScopeRoot* root, bool unique = true);
 
+    /**
+     * \brief   Finds the root with the given ID in the model.
+     * \param   rootId  The ID of the root to find.
+     * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
+     **/
     inline int _findRoot(ITEM_ID rootId) const;
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    RootList    mRootList;
-    QModelIndex mRootIndex;
+    RootList    mRootList;      // The list of root nodes
+    QModelIndex mRootIndex;     // The root index of the model
 };
+
+//////////////////////////////////////////////////////////////////////////
+// LogScopesModel class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool LogScopesModel::isValidIndex(const QModelIndex& index) const
+{
+    return (index.isValid() && (index.row() >= 0) && (index.column() == 0) && (index.model() == this));
+}
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP

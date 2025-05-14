@@ -32,7 +32,6 @@ if (NOT areg_FOUND)
         areg-sdk
         GIT_REPOSITORY https://github.com/aregtech/areg-sdk.git
         GIT_TAG "master"
-        # GIT_TAG "feature/517-export-logging-scope-node-classes"
     )
     message(STATUS "LUSAN: >>> AREG SDK sources are fetched, setting up areg-sdk ...")
     FetchContent_MakeAvailable(areg-sdk)
