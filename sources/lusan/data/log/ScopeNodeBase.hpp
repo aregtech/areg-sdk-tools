@@ -29,6 +29,10 @@
 #include <QString>
 #include <QIcon>
 
+/**
+ * \brief   ScopeNodeBase is the base class for all scope nodes.
+ * \see     ScopeNode, ScopeLeaf, ScopeRoot
+ **/
 class ScopeNodeBase
 {
 //////////////////////////////////////////////////////////////////////////
@@ -76,7 +80,7 @@ protected:
     ScopeNodeBase(ScopeNodeBase&& src) noexcept;
     
 public:
-    
+
     virtual ~ScopeNodeBase(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
@@ -168,16 +172,43 @@ public:
      **/
     inline bool hasLogScopes(void) const;
 
+    /**
+     * \brief   Returns the pointer to parent node. The root nodes have no parent.
+     **/
     inline ScopeNodeBase* getParent(void) const;
 
+    /**
+     * \brief   Sets the pointer to the parent node. All parents except root should have a parent.
+     * \param   parent  The pointer to the parent object.
+     **/
     inline void setParent(ScopeNodeBase* parent);
 
+    /**
+     * \brief   Resets the priority bits of the node.
+     **/
     inline void resetPriority(void);
 
+    /**
+     * \brief   Updates priority bits of the parent node.
+     * \param   prio        The priority bits to set.
+     * \param   recursive   If true, the parent node is updated recursively until root node.
+     **/
     inline void updateParentPrio(uint32_t prio, bool recursive);
 
+    /**
+     * \brief   Returns the icon of the node to display.
+     **/
     inline QIcon getIcon(void) const;
 
+    /**
+     * \brief   Sets the icon of the node to display.
+     * \param   icon    The icon to set.
+     **/
+    inline void setIcon(const QIcon& icon);
+
+    /**
+     * \brief   Returns true if node has children.
+     **/
     inline bool hasChildren(void) const;
 
 //////////////////////////////////////////////////////////////////////////
@@ -427,6 +458,7 @@ protected:
     unsigned int                mPrioStates;
     //!< The name of the node.
     QString                     mNodeName;
+    //!< The icon to display.
     QIcon                       mIcon;
 };
 
@@ -529,6 +561,11 @@ inline void ScopeNodeBase::updateParentPrio(uint32_t prio, bool recursive)
 inline QIcon ScopeNodeBase::getIcon(void) const
 {
     return mIcon;
+}
+
+inline void ScopeNodeBase::setIcon(const QIcon & icon)
+{
+    mIcon = icon;
 }
 
 inline bool ScopeNodeBase::hasChildren(void) const

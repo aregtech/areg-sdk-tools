@@ -142,7 +142,7 @@ QVariant LogScopesModel::data(const QModelIndex& index, int role) const
     
     if (index == mRootIndex)
     {
-        return (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole ? QVariant(QString("root")) : QVariant());
+        return (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole ? QVariant(QString("logs")) : QVariant());
     }
     
     switch (static_cast<Qt::ItemDataRole>(role))
@@ -237,6 +237,9 @@ void LogScopesModel::slotLogInstancesConnect(const QList<NEService::sServiceConn
     mRootIndex = createIndex(0, 0, nullptr);
     for (const NEService::sServiceConnectedInstance& instance : instances)
     {
+        if (instance.ciSource == NEService::eMessageSource::MessageSourceObserver)
+            continue;
+
         ScopeRoot* root = new ScopeRoot(instance);
         if (_appendRoot(root, true))
         {

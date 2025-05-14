@@ -154,12 +154,10 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     /**
-     * \brief   Protected constructor required by root node.
+     * \brief   Protected constructors required by root node.
      **/
     ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio, ScopeRoot * parent = nullptr );
-    
-    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, ScopeRoot * parent = nullptr );
-    
+    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, ScopeRoot * parent = nullptr );    
     ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent = nullptr );
     
 //////////////////////////////////////////////////////////////////////////

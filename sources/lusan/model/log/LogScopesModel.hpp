@@ -58,8 +58,15 @@ public:
 
     virtual ~LogScopesModel(void);
 
+    /**
+     * \brief   Initializes the model, sets the signals to receive messages.
+     * \return  True if the model is initialized, false otherwise.
+     **/
     bool initialize(void);
 
+    /**
+     * \brief   Releases the model, disconnects the signals.
+     **/
     void release(void);
     
     /**
@@ -168,17 +175,39 @@ private:
 
 private:
 
+    /**
+     * \brief   Clears the model and deletes all nodes.
+     **/
     inline void _clear(void);
 
+    /**
+     * \brief   Checks if the root with the given ID exists in the model.
+     * \param   rootId  The ID of the root to check.
+     * \return  True if the root exists, false otherwise.
+     **/
     inline bool _exists(ITEM_ID rootId) const;
 
+    /**
+     * \brief   Appends the root to the model.
+     * \param   root    The root to append.
+     * \param   unique  If true, checks if the root is unique before appending.
+     * \return  True if the root is appended, false otherwise.
+     **/
     inline bool _appendRoot(ScopeRoot* root, bool unique = true);
 
+    /**
+     * \brief   Finds the root with the given ID in the model.
+     * \param   rootId  The ID of the root to find.
+     * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
+     **/
     inline int _findRoot(ITEM_ID rootId) const;
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    RootList    mRootList;
-    QModelIndex mRootIndex;
+    RootList    mRootList;      // The list of root nodes
+    QModelIndex mRootIndex;     // The root index of the model
 };
 
 //////////////////////////////////////////////////////////////////////////
