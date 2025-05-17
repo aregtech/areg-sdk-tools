@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include <QAbstractItemModel>
+#include <QStandardItemModel>
 
 #include <QList>
 #include <QMap>
@@ -34,6 +34,7 @@
  * Dependencies
  ************************************************************************/
 class ScopeRoot;
+class QStandardItem;
 
 /**
  * \brief   Log scope model to visualize scopes in the scope navigation windows.
@@ -206,8 +207,9 @@ private:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    RootList    mRootList;      // The list of root nodes
-    QModelIndex mRootIndex;     // The root index of the model
+    RootList        mRootList;      // The list of root nodes
+    QModelIndex     mRootIndex;     // The root index of the model
+    QStandardItem*  mRootNode;      // The root item.
 };
 
 //////////////////////////////////////////////////////////////////////////

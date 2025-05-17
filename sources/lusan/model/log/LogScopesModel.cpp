@@ -29,8 +29,10 @@ LogScopesModel::LogScopesModel(QObject* parent)
     : QAbstractItemModel( parent )
     , mRootList         ( )
     , mRootIndex        ( )
+    , mRootNode         ( nullptr )
 {
     mRootIndex = createIndex(0, 0, nullptr);
+    // mRootNode = invisibleRootItem();
 }
 
 LogScopesModel::~LogScopesModel(void)

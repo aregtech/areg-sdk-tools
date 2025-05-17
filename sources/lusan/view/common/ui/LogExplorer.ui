@@ -282,6 +282,9 @@
       <property name="editTriggers">
        <set>QAbstractItemView::EditTrigger::EditKeyPressed</set>
       </property>
+      <property name="showDropIndicator" stdset="0">
+       <bool>false</bool>
+      </property>
       <property name="alternatingRowColors">
        <bool>false</bool>
       </property>
@@ -290,6 +293,9 @@
         <width>16</width>
         <height>16</height>
        </size>
+      </property>
+      <property name="rootIsDecorated">
+       <bool>false</bool>
       </property>
       <attribute name="headerVisible">
        <bool>false</bool>
