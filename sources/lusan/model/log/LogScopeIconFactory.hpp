@@ -26,44 +26,25 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include <QIcon>
 
+/************************************************************************
+ * Class LogScopeIconFactory
+ ************************************************************************/
+/**
+ * \brief   The class creates icons for the log scope.
+ **/ 
 class LogScopeIconFactory
 {
 public:
-    enum class eScopeIcon
-    {
-          IconNotset        = 0
-        , IconScope
-        , IconDebug
-        , IconInfo
-        , IconWarn
-        , IconError
-        , IconFatal
-        , IconDebugInfo
-        , IconDebugWarn
-        , IconDebugError
-        , IconDebugFatal
-        , IconInfoWarn
-        , IconInfoError
-        , IconInfoFatal
-        , IconWarnError
-        , IconWarnFatal
-        , IconErrorFatal
-        , IconDebugInfoWarn
-        , IconDebugInfoError
-        , IconDebugInfoFatal
-        , IconDebugWarnError
-        , IconDebugWarnFatal
-        , IconDebugErrorFatal
-        , IconInfoWarnError
-        , IconInfoWarnFatal
-        , IconInfoErrorFatal
-        , IconWarnErrorFatal
-        , IconDebugInfoWarnError
-        , IconAll
-    };
+    
+    //!< Size of the icon in pixels
+    static constexpr int    IconPixels      { 16 };
 
-    static const QIcon& getIcon(LogScopeIconFactory::eScopeIcon& scopeIcon);
-
+    //!< Returns the icon for the log scope priority.
+    //! The priority bits are combination of scope priorities.
+    /**
+     * \brief   Returns the icon for the log scope priority.
+     * \param   scopePrio    The bits of combination of scope priorities.
+     **/
     static QIcon getIcon(uint32_t scopePrio);
 };
 
