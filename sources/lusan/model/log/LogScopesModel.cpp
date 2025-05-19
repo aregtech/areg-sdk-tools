@@ -22,6 +22,8 @@
  ************************************************************************/
 
 #include "lusan/model/log/LogScopesModel.hpp"
+#include "lusan/model/log/LogScopeIconFactory.hpp"
+
 #include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 
@@ -29,8 +31,10 @@ LogScopesModel::LogScopesModel(QObject* parent)
     : QAbstractItemModel( parent )
     , mRootList         ( )
     , mRootIndex        ( )
+    , mRootNode         ( nullptr )
 {
     mRootIndex = createIndex(0, 0, nullptr);
+    // mRootNode = invisibleRootItem();
 }
 
 LogScopesModel::~LogScopesModel(void)
@@ -156,7 +160,8 @@ QVariant LogScopesModel::data(const QModelIndex& index, int role) const
     case Qt::ItemDataRole::DecorationRole:
     {
         ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
-        return entry->getIcon();
+        // return entry->getIcon();
+        return LogScopeIconFactory::getIcon(entry->getPriority());
     }
     
     case Qt::ItemDataRole::UserRole:
