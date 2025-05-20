@@ -158,6 +158,11 @@ bool MdiMainWindow::loadFile(const QString& fileName)
     return succeeded;
 }
 
+void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
+{
+
+}
+
 void MdiMainWindow::closeEvent(QCloseEvent* event)
 {
     mMdiArea.closeAllSubWindows();
