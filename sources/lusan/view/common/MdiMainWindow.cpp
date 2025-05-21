@@ -20,6 +20,7 @@
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/log/LogViewer.hpp"
+#include "lusan/data/log/LogObserver.hpp"
 
 #include <QFileInfo>
 #include <QtWidgets>
@@ -160,7 +161,11 @@ bool MdiMainWindow::loadFile(const QString& fileName)
 
 void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
-
+    LogObserver* log = LogObserver::getComponent();
+    Q_ASSERT(log != nullptr);
+    if (isConected)
+    {
+    }
 }
 
 void MdiMainWindow::closeEvent(QCloseEvent* event)
