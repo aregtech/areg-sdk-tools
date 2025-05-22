@@ -242,9 +242,13 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
         }
     }
     
+    LogObserver* log = LogObserver::getComponent();
+    Q_ASSERT(log != nullptr);
     ctrlConnect()->setChecked(isConnected);
     ctrlConnect()->setIcon(QIcon::fromTheme(isConnected ? QString::fromUtf8("network-wireless") : QString::fromUtf8("network-offline")));
     ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
+    Q_ASSERT(mMainFrame != nullptr);
+    mMainFrame->logCollecttorConnected(isConnected, address, port, log->getActiveDatabase());
 }
 
 void LogExplorer::onLogObserverStarted(bool isStarted)

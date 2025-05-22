@@ -20,11 +20,12 @@
 #include "lusan/view/log/LogViewer.hpp"
 
 #include "ui/ui_LogViewer.h"
-
 #include "lusan/model/log/LogViewerModel.hpp"
 
 LogViewer::LogViewer(QWidget *parent)
-    : MdiChild(parent)
+    : MdiChild      (parent)
+    , IEMdiWindow   (IEMdiWindow::eMdiWindow::MdiLogViewer)
+
     , ui(new Ui::LogViewer)
     , mLogModel(nullptr)
     , mMdiWindow(new QWidget())
@@ -53,6 +54,19 @@ LogViewer::LogViewer(QWidget *parent)
     setLayout(layout);
     
     setAttribute(Qt::WA_DeleteOnClose);
+}
+
+
+void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
+{
+    Q_ASSERT(mLogModel != nullptr);
+    mLogModel->serviceConnected(isConnected, address, port, dbPath);
+}
+
+bool LogViewer::isServiceConnected(void) const
+{
+    Q_ASSERT(mLogModel != nullptr);
+    return mLogModel->isConnected();
 }
 
 QTableView* LogViewer::getTable(void)

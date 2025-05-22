@@ -33,7 +33,9 @@ const QString& ServiceInterface::fileExtension(void)
 uint32_t ServiceInterface::_count{0};
 
 ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWidget *parent /*= nullptr*/)
-    : MdiChild  (parent)
+    : MdiChild      (parent)
+    , IEMdiWindow   (IEMdiWindow::eMdiWindow::MdiServiceInterface)
+
     , mModel    (filePath)
     , mTabWidget(this)
     , mOverview (mModel.getOverviewModel()  , this)
