@@ -166,7 +166,7 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
     if (isConnected)
     {
         QMdiSubWindow * subWindow = mMdiArea.currentSubWindow();
-        if (subWindow != mLiveLogWnd)
+        if ((subWindow != mLiveLogWnd) || (mLiveLogWnd == nullptr))
         {
             onFileNewLog();
             Q_ASSERT(mLogViewer != nullptr);
