@@ -74,13 +74,47 @@ public:
     
     QString getHeaderName(int colIndex) const;
         
-    bool connect(const QString& hostName = "", unsigned short portNr = 0u);
+    bool connectService(const QString& hostName = "", unsigned short portNr = 0u);
     
-    void disconnect(void);
+    void disconnectService(void);
+
+    void serviceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath);
+
+    inline bool isConnected(void) const;
+
+    inline void setDatabasePath(const QString& dbPath);
+
+    inline const QString& getDabasePath(void) const;
     
 private:
+    /**
+     * \brief   The callback of the event triggered when receive message to log.
+     * \param   logMessage  The structure of the message to log.
+     **/
+    void slotLogMessage(const SharedBuffer& logMessage);
+
+private:
+    bool                mIsConnected;
+    QString             mAddress;
+    uint16_t            mPort;
+    QString             mDbPath;
     QList<eColumn>      mActiveColumns;
     QList<SharedBuffer> mLogs;
 };
+
+inline bool LogViewerModel::isConnected(void) const
+{
+    return mIsConnected;
+}
+
+inline void LogViewerModel::setDatabasePath(const QString& dbPath)
+{
+    mDbPath = dbPath;
+}
+
+inline const QString& LogViewerModel::getDabasePath(void) const
+{
+    return mDbPath;
+}
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP

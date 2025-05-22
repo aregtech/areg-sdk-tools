@@ -163,8 +163,28 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
 {
     LogObserver* log = LogObserver::getComponent();
     Q_ASSERT(log != nullptr);
-    if (isConected)
+    if (isConnected)
     {
+        QMdiSubWindow * subWindow = mMdiArea.currentSubWindow();
+        if (subWindow != mLiveLogWnd)
+        {
+            onFileNewLog();
+            Q_ASSERT(mLogViewer != nullptr);
+            if (mLogViewer->isServiceConnected() == false)
+            {
+                mLogViewer->logServiceConnected(true, address, port, dbPath);
+            }
+        }
+    }
+    else if (mLogViewer != nullptr)
+    {
+        if (mLogViewer->isServiceConnected())
+        {
+            mLogViewer->logServiceConnected(false, address, port, dbPath);
+        }
+        
+        mLogViewer = nullptr;
+        mLiveLogWnd = nullptr;
     }
 }
 

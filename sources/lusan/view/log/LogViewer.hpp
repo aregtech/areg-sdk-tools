@@ -21,6 +21,7 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/view/common/IEMdiWindow.hpp"
 
 class QHeaderView;
 class QTableView;
@@ -32,11 +33,16 @@ namespace Ui {
 }
 
 class LogViewer : public MdiChild
+                , public IEMdiWindow
 {
     Q_OBJECT
 
 public:
     explicit LogViewer(QWidget *parent = nullptr);
+    
+    void logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath);
+    
+    bool isServiceConnected(void) const;
 
 private:
     QTableView* getTable(void);

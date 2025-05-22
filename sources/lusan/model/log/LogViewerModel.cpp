@@ -21,9 +21,13 @@
 #include "lusan/data/log/LogObserver.hpp"
 
 #include "areg/base/DateTime.hpp"
+#include "areg/base/NESocket.hpp"
 #include "areg/base/SharedBuffer.hpp"
 #include "areg/logging/NELogging.hpp"
 #include "areglogger/client/LogObserverApi.h"
+
+#include "lusan/common/NELusanCommon.hpp"
+#include "lusan/data/log/LogObserver.hpp"
 
 #include <QSize>
 
@@ -58,6 +62,11 @@ const QList<int>& LogViewerModel::getDefaultColumns(void)
 
 LogViewerModel::LogViewerModel(QObject *parent)
     : QAbstractTableModel(parent)
+
+    , mIsConnected(false)
+    , mAddress()
+    , mPort(NESocket::InvalidPort)
+    , mDbPath()
 
     , mActiveColumns( )
     , mLogs         ( )
@@ -224,11 +233,35 @@ QString LogViewerModel::getHeaderName(int colIndex) const
     }
 }
 
-bool LogViewerModel::connect(const QString& hostName /*= ""*/, unsigned short portNr /*= 0u*/)
+bool LogViewerModel::connectService(const QString& hostName /*= ""*/, unsigned short portNr /*= 0u*/)
 {
     return false;
 }
 
-void LogViewerModel::disconnect(void)
+void LogViewerModel::disconnectService(void)
 {
+}
+
+void LogViewerModel::serviceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
+{
+    mIsConnected = isConnected;
+    mAddress     = address;
+    mPort        = port;
+    mDbPath      = dbPath;
+
+    LogObserver* log = LogObserver::getComponent();
+    Q_ASSERT(log != nullptr);
+    if (isConnected)
+    {
+        connect(log, &LogObserver::signalLogMessage, this, &LogViewerModel::slotLogMessage);
+    }
+    else
+    {
+        disconnect(log, &LogObserver::signalLogMessage, this, &LogViewerModel::slotLogMessage);
+    }
+}
+
+void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
+{
+
 }
