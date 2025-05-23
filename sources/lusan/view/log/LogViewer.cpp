@@ -45,7 +45,10 @@ LogViewer::LogViewer(QWidget *parent)
     view->setCurrentIndex(QModelIndex());
     view->horizontalHeader()->setStretchLastSection(true);
     view->verticalHeader()->hide();
+    view->setAutoScroll(true);
+    view->setVerticalScrollMode(QTableView::ScrollPerItem);
     
+    mLogModel->setLogTable(view);
     view->setModel(mLogModel);
 
     // Set the layout

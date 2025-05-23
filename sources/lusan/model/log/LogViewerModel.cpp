@@ -30,6 +30,7 @@
 #include "lusan/data/log/LogObserver.hpp"
 
 #include <QSize>
+#include <QTableView>
 
 const QStringList& LogViewerModel::getHeaderList(void)
 {
@@ -70,6 +71,7 @@ LogViewerModel::LogViewerModel(QObject *parent)
 
     , mActiveColumns( )
     , mLogs         ( )
+    , mTableView    (nullptr)
 {
     const QList<int>& list = LogViewerModel::getDefaultColumns();
     for (int col : list)
@@ -152,40 +154,42 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
     if (role == Qt::ItemDataRole::DisplayRole)
     {
         int row {index.row()};
+        if (row >= mLogs.size())
+            return QVariant();
+
         const SharedBuffer data{mLogs.at(row)};
-        
-        const sLogMessage* logMessage = reinterpret_cast<const sLogMessage *>(data.getBuffer());
+        const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
         if (logMessage != nullptr)
         {
             eColumn col = static_cast<eColumn>(getDefaultColumns().at(index.column()));
             switch (col)
             {
             case eColumn::LogColumnPriority:
-                return QVariant( QString(NELogging::getString(static_cast<NELogging::eLogPriority>(logMessage->msgPriority))) );
+                return QVariant( QString(NELogging::getString(static_cast<NELogging::eLogPriority>(logMessage->logMessagePrio))) );
             case eColumn::LogColumnTimestamp:
             {
-                DateTime timestamp(logMessage->msgTimestamp);
+                DateTime timestamp(logMessage->logTimestamp);
                 return QVariant( QString(timestamp.formatTime().getString()) );
             }
             case eColumn::LogColumnSource:
-                return QVariant(QString(logMessage->msgModule));
+                return QVariant(QString(logMessage->logModule));
             case eColumn::LogColumnSourceId:
-                return QVariant((qulonglong)logMessage->msgModuleId);
+                return QVariant((qulonglong)logMessage->logModuleId);
             case eColumn::LogColumnThread:
-                return QVariant( QString(logMessage->msgThread) );
+                return QVariant( QString(logMessage->logThread) );
             case eColumn::LogColumnThreadId:
-                return QVariant((qulonglong)logMessage->msgThreadId);
+                return QVariant((qulonglong)logMessage->logThreadId);
             case eColumn::LogColumnScopeId:
-                return QVariant(logMessage->msgScopeId);
+                return QVariant(logMessage->logScopeId);
             case eColumn::LogColumnMessage:
-                return QVariant( QString(logMessage->msgLogText) );
+                return QVariant( QString(logMessage->logMessage) );
             default:
                 break;
             }
         }
     }
 
-    return QVariant(QString());
+    return QVariant();
 }
 
 bool LogViewerModel::insertRows(int row, int count, const QModelIndex &parent)
@@ -263,5 +267,23 @@ void LogViewerModel::serviceConnected(bool isConnected, const QString& address, 
 
 void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
 {
+    if (logMessage.isEmpty() == false)
+    {
+        beginInsertRows(QModelIndex(), static_cast<int>(mLogs.size()), static_cast<int>(mLogs.size()));
+        mLogs.append(logMessage);
+        if (mTableView != nullptr)
+        {
+            QModelIndex curIndex = mTableView->currentIndex();
+            int curRow = curIndex.isValid() ? curIndex.row() : -1;
+            // int curRow = -1;
+            if ((curRow == -1) || ((curRow + 2) == static_cast<int>(mLogs.size())))
+            {
+                mTableView->scrollToBottom();
+                mTableView->setCurrentIndex(index(mLogs.size() - 1, 0));
+                mTableView->scrollTo(index(mLogs.size() - 1, 0));
+            }
+        }
 
+        endInsertRows();
+    }
 }
