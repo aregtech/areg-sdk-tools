@@ -57,6 +57,11 @@ LogViewer::LogViewer(QWidget *parent)
     setLayout(layout);
     
     setAttribute(Qt::WA_DeleteOnClose);
+
+    connect(mLogModel, &LogViewerModel::rowsInserted, this, &LogViewer::onRowsInserted);
+    connect(getTable(), &QTableView::clicked, this, &LogViewer::onRowClicked);
+    
+    getTable()->setAutoScroll(true);
 }
 
 
@@ -70,6 +75,15 @@ bool LogViewer::isServiceConnected(void) const
 {
     Q_ASSERT(mLogModel != nullptr);
     return mLogModel->isConnected();
+}
+
+void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
+{
+}
+
+void LogViewer::onRowClicked(const QModelIndex& index)
+{
+    getTable()->setAutoScroll((index.isValid() == false) || (index.row() > (mLogModel->rowCount() - 2)));
 }
 
 QTableView* LogViewer::getTable(void)

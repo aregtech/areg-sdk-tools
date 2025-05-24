@@ -32,6 +32,19 @@
 #include <QSize>
 #include <QTableView>
 
+const QColor LogViewerModel::LogColors[static_cast<int>(ePrio::PrioTotal)]
+{
+      QColorConstants::Transparent
+    , QColorConstants::Black
+    , QColorConstants::Gray
+    , QColorConstants::DarkGreen
+    , QColorConstants::DarkCyan
+    , QColorConstants::DarkBlue
+    , QColorConstants::DarkRed
+    , QColorConstants::Magenta
+};
+
+
 const QStringList& LogViewerModel::getHeaderList(void)
 {
     static QStringList _headers
@@ -150,13 +163,15 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
         return QVariant();
-
-    if (role == Qt::ItemDataRole::DisplayRole)
+    
+    switch (static_cast<Qt::ItemDataRole>(role))
+    {
+    case Qt::ItemDataRole::DisplayRole:
     {
         int row {index.row()};
         if (row >= mLogs.size())
             return QVariant();
-
+        
         const SharedBuffer data{mLogs.at(row)};
         const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
         if (logMessage != nullptr)
@@ -165,7 +180,7 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
             switch (col)
             {
             case eColumn::LogColumnPriority:
-                return QVariant( QString(NELogging::getString(static_cast<NELogging::eLogPriority>(logMessage->logMessagePrio))) );
+                return QVariant( QString(NELogging::logPrioToString(static_cast<NELogging::eLogPriority>(logMessage->logMessagePrio))) );
             case eColumn::LogColumnTimestamp:
             {
                 DateTime timestamp(logMessage->logTimestamp);
@@ -187,6 +202,88 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
                 break;
             }
         }
+    }
+    break;
+        
+    case Qt::ItemDataRole::DecorationRole:
+    {
+        int row {index.row()};
+        if (row >= mLogs.size())
+            return QVariant();
+        
+        const SharedBuffer data{mLogs.at(row)};
+        const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
+        if ((logMessage != nullptr) && (static_cast<eColumn>(getDefaultColumns().at(index.column())) == eColumn::LogColumnPriority))
+        {
+            switch (logMessage->logMessagePrio)
+            {
+            case NELogging::eLogPriority::PrioScope:
+                if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
+                    return QIcon::fromTheme(QString::fromUtf8("media-seek-forward"));
+                else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
+                    return QIcon::fromTheme(QString::fromUtf8("media-seek-backward"));
+                else
+                    return QIcon::fromTheme(QString::fromUtf8("window-close"));
+            case NELogging::eLogPriority::PrioDebug:
+                return QIcon::fromTheme(QString::fromUtf8("format-justify-left"));
+            case NELogging::eLogPriority::PrioInfo:
+                return QIcon::fromTheme(QString::fromUtf8("dialog-information"));
+            case NELogging::eLogPriority::PrioWarning:
+                return QIcon::fromTheme(QString::fromUtf8("dialog-warning"));
+            case NELogging::eLogPriority::PrioError:
+            case NELogging::eLogPriority::PrioFatal:
+                return QIcon::fromTheme(QString::fromUtf8("dialog-error"));
+            default:
+                return QIcon::fromTheme(QString::fromUtf8("window-close"));
+            }
+        }        
+    }
+    break;
+        
+    case Qt::ItemDataRole::ForegroundRole:
+    {
+        int row {index.row()};
+        if (row >= mLogs.size())
+            return QVariant();
+        
+        const SharedBuffer data{mLogs.at(row)};
+        const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
+        if (logMessage != nullptr)
+        {
+            switch (logMessage->logMessagePrio)
+            {
+            case NELogging::eLogPriority::PrioScope:
+                return QBrush(LogColors[static_cast<int>(PrioScope)]);
+            case NELogging::eLogPriority::PrioDebug:
+                return QBrush(LogColors[static_cast<int>(PrioDebug)]);
+            case NELogging::eLogPriority::PrioInfo:
+                return QBrush(LogColors[static_cast<int>(PrioInfo)]);
+            case NELogging::eLogPriority::PrioWarning:
+                return QBrush(LogColors[static_cast<int>(PrioWarn)]);
+            case NELogging::eLogPriority::PrioError:
+                return QBrush(LogColors[static_cast<int>(PrioError)]);
+            case NELogging::eLogPriority::PrioFatal:
+                return QBrush(LogColors[static_cast<int>(PrioFatal)]);
+            default:
+                return QBrush(LogColors[static_cast<int>(PrioDefault)]);
+            }
+        }
+    }
+    break;
+    
+    case Qt::ItemDataRole::UserRole:
+    {
+        int row {index.row()};
+        if (row >= mLogs.size())
+            return QVariant();
+        
+        const SharedBuffer data{mLogs.at(row)};
+        const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
+        return QVariant::fromValue(logMessage);
+    }
+    
+    default:
+        return QVariant();
     }
 
     return QVariant();
@@ -271,6 +368,7 @@ void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
     {
         beginInsertRows(QModelIndex(), static_cast<int>(mLogs.size()), static_cast<int>(mLogs.size()));
         mLogs.append(logMessage);
+        endInsertRows();
         if (mTableView != nullptr)
         {
             QModelIndex curIndex = mTableView->currentIndex();
@@ -283,7 +381,5 @@ void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
                 mTableView->scrollTo(index(mLogs.size() - 1, 0));
             }
         }
-
-        endInsertRows();
     }
 }
