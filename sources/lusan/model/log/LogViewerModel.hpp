@@ -41,17 +41,36 @@ class LogViewerModel : public QAbstractTableModel
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
 private:
+
+    //!< The index of columns
     enum class eColumn  : int
     {
-          LogColumnPriority     = 0
-        , LogColumnTimestamp
-        , LogColumnSource
-        , LogColumnSourceId
-        , LogColumnThread
-        , LogColumnThreadId
-        , LogColumnScopeId
-        , LogColumnMessage
+          LogColumnPriority     = 0 //!< Log message priority
+        , LogColumnTimestamp        //!< Log message timestamp
+        , LogColumnSource           //!< Log message source name
+        , LogColumnSourceId         //!< Log message source ID
+        , LogColumnThread           //!< Log message thread name
+        , LogColumnThreadId         //!< Log message thread ID
+        , LogColumnScopeId          //!< Log message scope ID
+        , LogColumnMessage          //!< Log message text
     };
+
+    //!< The index of log message priorities. Used to change text color
+    enum ePrio
+    {
+          PrioNothing = 0   //!< No priority, no color
+        , PrioDefault       //!< Default priority, default color
+        , PrioScope         //!< Scope priority, color for scope message
+        , PrioDebug         //!< Debug priority, color for debug message
+        , PrioInfo          //!< Info priority, color for info message
+        , PrioWarn          //!< Warning priority, color for warning message
+        , PrioError         //!< Error priority, color for error message
+        , PrioFatal         //!< Fatal priority, color for fatal message
+        , PrioTotal
+    };
+    
+    //!< The list of colors
+    static const QColor LogColors[static_cast<int>(ePrio::PrioTotal)];
     
 public:
     explicit LogViewerModel(QObject *parent = nullptr);
@@ -135,11 +154,11 @@ public:
      * \brief   Returns the path to the log data database.
      **/
     inline const QString& getDabasePath(void) const;
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
-private:
+private slots:
     /**
      * \brief   The callback of the event triggered when receive message to log.
      * \param   logMessage  The structure of the message to log.
