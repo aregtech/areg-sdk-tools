@@ -103,14 +103,6 @@ public:
      **/
     static QString getInitDatabase(void);
 
-    static QString getConfigDatabaseName(void);
-
-    static QString getConfigDatabaseLocation(void);
-
-    static bool setConfigDatabaseName(const QString& dbName);
-
-    static bool setConfigDatabaseLocation(const QString& dbLocation);
-
     /**
      * \brief   Returns the name of the database, which is set in the initialization file.
      *          The name may contain a mask.
