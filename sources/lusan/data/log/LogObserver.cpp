@@ -140,6 +140,42 @@ QString LogObserver::getInitDatabase(void)
     return QString(LogObserver::getClient().getInitDatabasePath().c_str());
 }
 
+QString LogObserver::getConfigDatabaseName(void)
+{
+    return QString(LogObserver::getClient().getConfigLoggerDatabaseName().c_str());
+}
+
+QString LogObserver::getConfigDatabaseLocation(void)
+{
+    return QString(LogObserver::getClient().getConfigLoggerDatabaseLocation().c_str());
+}
+
+bool LogObserver::setConfigDatabaseName(const QString& dbName)
+{
+    if (LogObserver::getComponent() != nullptr)
+    {
+        LogObserver::getClient().setConfigLoggerDatabaseName(dbName.toStdString());
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool LogObserver::setConfigDatabaseLocation(const QString& dbLocation)
+{
+    if (LogObserver::getComponent() != nullptr)
+    {
+        LogObserver::getClient().setConfigLoggerDatabaseLocation(dbLocation.toStdString());
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 bool LogObserver::isConnected(void)
 {
     return LogObserver::getClient().isConnected();

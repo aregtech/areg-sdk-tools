@@ -62,10 +62,6 @@ public:
      **/
     bool isServiceConnected(void) const;
 
-public:
-
-    QString newLogFile(void) const;
-
 private:
     /**
      * \brief   Returns the pointer to the log table object.

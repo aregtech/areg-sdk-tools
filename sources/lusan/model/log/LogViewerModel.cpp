@@ -23,10 +23,13 @@
 #include "areg/base/DateTime.hpp"
 #include "areg/base/NESocket.hpp"
 #include "areg/base/SharedBuffer.hpp"
+#include "areg/base/File.hpp"
 #include "areg/logging/NELogging.hpp"
 #include "areglogger/client/LogObserverApi.h"
 
+#include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 
 #include <QBrush>
@@ -74,6 +77,53 @@ const QList<int>& LogViewerModel::getDefaultColumns(void)
     };
     
     return _columnIds;
+}
+
+QString LogViewerModel::getFileExtension()
+{
+    static QString _fileExtension = QStringLiteral(".sqlog");
+    return _fileExtension;
+}
+
+QString LogViewerModel::generateFileName(void)
+{
+    QString result{ "log_%time%.sqlog" };
+
+    LogObserver::Component* logObserver = LogObserver::getComponent();
+    if (logObserver != nullptr)
+    {
+        QString fileName = LogObserver::getConfigDatabaseName();
+        if (fileName.isEmpty() == false)
+        {
+            result = fileName;
+        }
+    }
+
+    return QString(File::normalizePath(result.toStdString().c_str()).getString());
+}
+
+QString LogViewerModel::newFileName(void)
+{
+    QString result;
+
+    WorkspaceEntry workspace = LusanApplication::getActiveWorkspace();
+    QString dir = workspace.getDirLogs();
+    if (dir.isEmpty())
+    {
+        dir = LogObserver::getConfigDatabaseLocation();
+    }
+
+    if (dir.isEmpty() == false)
+    {
+        dir = File::normalizePath(dir.toStdString().c_str()).getString();
+        QString fileName = generateFileName();
+
+        std::filesystem::path fPath(dir.toStdString().c_str());
+        fPath /= fileName.toStdString().c_str();
+        result = QString(fPath.c_str());
+    }
+
+    return result;
 }
 
 LogViewerModel::LogViewerModel(QObject *parent)

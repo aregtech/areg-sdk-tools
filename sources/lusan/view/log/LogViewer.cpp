@@ -28,18 +28,6 @@
 
 #include <filesystem>
 
-const QString& LogViewer::fileExtension(void)
-{
-    static const QString _extSI{ "sqlog" };
-    return _extSI;
-}
-
-QString LogViewer::generateFileName(void)
-{
-    String name{ File::normalizePath("log_%time%.sqlog") };
-    return QString(name.getString());
-}
-
 LogViewer::LogViewer(QWidget *parent)
     : MdiChild      (parent)
     , IEMdiWindow   (IEMdiWindow::eMdiWindow::MdiLogViewer)
@@ -106,24 +94,6 @@ void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
             getTable()->selectRow(count - 1);
         }
     }
-}
-
-QString LogViewer::newLogFile(void) const
-{
-    WorkspaceEntry workspace = LusanApplication::getActiveWorkspace();
-    QString result = workspace.getDirLogs();
-    if ( result.isEmpty() == false )
-    {
-        std::filesystem::path fPath(result.toStdString().c_str());
-        fpath /= generateFileName().toStdString().c_str();
-        result = QString(fPath.c_str());
-    }
-    else
-    {
-        result = logObserverGetConfigDatabasePath().getString();
-    }
-
-    return result;
 }
 
 QTableView* LogViewer::getTable(void)
