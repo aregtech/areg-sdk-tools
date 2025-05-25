@@ -29,8 +29,10 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 
+#include <QBrush>
+#include <QColor>
+#include <QIcon>
 #include <QSize>
-#include <QTableView>
 
 const QColor LogViewerModel::LogColors[static_cast<int>(ePrio::PrioTotal)]
 {
@@ -84,7 +86,6 @@ LogViewerModel::LogViewerModel(QObject *parent)
 
     , mActiveColumns( )
     , mLogs         ( )
-    , mTableView    (nullptr)
 {
     const QList<int>& list = LogViewerModel::getDefaultColumns();
     for (int col : list)
@@ -369,17 +370,5 @@ void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
         beginInsertRows(QModelIndex(), static_cast<int>(mLogs.size()), static_cast<int>(mLogs.size()));
         mLogs.append(logMessage);
         endInsertRows();
-        if (mTableView != nullptr)
-        {
-            QModelIndex curIndex = mTableView->currentIndex();
-            int curRow = curIndex.isValid() ? curIndex.row() : -1;
-            // int curRow = -1;
-            if ((curRow == -1) || ((curRow + 2) == static_cast<int>(mLogs.size())))
-            {
-                mTableView->scrollToBottom();
-                mTableView->setCurrentIndex(index(mLogs.size() - 1, 0));
-                mTableView->scrollTo(index(mLogs.size() - 1, 0));
-            }
-        }
     }
 }

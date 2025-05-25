@@ -48,7 +48,6 @@ LogViewer::LogViewer(QWidget *parent)
     view->setAutoScroll(true);
     view->setVerticalScrollMode(QTableView::ScrollPerItem);
     
-    mLogModel->setLogTable(view);
     view->setModel(mLogModel);
 
     // Set the layout
@@ -57,11 +56,10 @@ LogViewer::LogViewer(QWidget *parent)
     setLayout(layout);
     
     setAttribute(Qt::WA_DeleteOnClose);
+    getTable()->setAutoScroll(true);
 
     connect(mLogModel, &LogViewerModel::rowsInserted, this, &LogViewer::onRowsInserted);
-    connect(getTable(), &QTableView::clicked, this, &LogViewer::onRowClicked);
     
-    getTable()->setAutoScroll(true);
 }
 
 
@@ -79,11 +77,17 @@ bool LogViewer::isServiceConnected(void) const
 
 void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
 {
-}
-
-void LogViewer::onRowClicked(const QModelIndex& index)
-{
-    getTable()->setAutoScroll((index.isValid() == false) || (index.row() > (mLogModel->rowCount() - 2)));
+    QModelIndex curIndex = getTable()->currentIndex();
+    int row = curIndex.isValid() ? curIndex.row() : -1;
+    int count = mLogModel->rowCount(parent);
+    if ((row < 0) || (row >= count - 2))
+    {
+        getTable()->scrollToBottom();
+        if (row >= 0)
+        {
+            getTable()->selectRow(count - 1);
+        }
+    }
 }
 
 QTableView* LogViewer::getTable(void)

@@ -75,11 +75,6 @@ private slots:
      **/
     void onRowsInserted(const QModelIndex &parent, int first, int last);
 
-    /**
-     * \brief   Triggered when a row in table is clicked.
-     **/
-    void onRowClicked(const QModelIndex &index);
-
 private:
     Ui::LogViewer*      ui;
     LogViewerModel*     mLogModel;

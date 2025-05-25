@@ -29,7 +29,6 @@
 #include "areg/base/SharedBuffer.hpp"
 
 class LogObserverComp;
-class QTableView;
 
 /**
  * \brief   The model for the log viewer window.
@@ -156,12 +155,6 @@ public:
      **/
     inline const QString& getDabasePath(void) const;
 
-    /**
-     * \brief   Get and set the log table object.
-     **/
-    inline QTableView* getLogTable(void) const;
-    inline void setLogTable(QTableView* tableView);
-    
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -182,7 +175,6 @@ private:
     QString             mDbPath;        //!< The path to the database
     QList<eColumn>      mActiveColumns; //!< The list of active columns
     QList<SharedBuffer> mLogs;          //!< The list of log messages
-    QTableView*         mTableView;     //!< The table view to display log messages
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -202,16 +194,6 @@ inline void LogViewerModel::setDatabasePath(const QString& dbPath)
 inline const QString& LogViewerModel::getDabasePath(void) const
 {
     return mDbPath;
-}
-
-inline QTableView* LogViewerModel::getLogTable(void) const
-{
-    return mTableView;
-}
-
-inline void LogViewerModel::setLogTable(QTableView* tableView)
-{
-    mTableView = tableView;
 }
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
