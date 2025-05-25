@@ -71,7 +71,15 @@ private:
     
     //!< The list of colors
     static const QColor LogColors[static_cast<int>(ePrio::PrioTotal)];
-    
+
+public:
+
+    static QString getFileExtension();
+
+    static QString generateFileName(void);
+
+    static QString newFileName(void);
+
 public:
     explicit LogViewerModel(QObject *parent = nullptr);
 
@@ -154,6 +162,8 @@ public:
      * \brief   Returns the path to the log data database.
      **/
     inline const QString& getDabasePath(void) const;
+
+    QString newLogFile(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots.

@@ -20,7 +20,13 @@
 #include "lusan/view/log/LogViewer.hpp"
 
 #include "ui/ui_LogViewer.h"
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/model/log/LogViewerModel.hpp"
+#include "areg/base/File.hpp"
+#include "areglogger/client/LogObserverApi.h"
+
+#include <filesystem>
 
 LogViewer::LogViewer(QWidget *parent)
     : MdiChild      (parent)

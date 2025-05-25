@@ -103,6 +103,14 @@ public:
      **/
     static QString getInitDatabase(void);
 
+    static QString getConfigDatabaseName(void);
+
+    static QString getConfigDatabaseLocation(void);
+
+    static bool setConfigDatabaseName(const QString& dbName);
+
+    static bool setConfigDatabaseLocation(const QString& dbLocation);
+
     /**
      * \brief   Returns true if log observer is connected to the log collector.
      **/
