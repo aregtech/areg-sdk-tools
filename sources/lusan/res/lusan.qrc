@@ -23,6 +23,9 @@
         <file alias="data type enum field">icons/data_type_enum_field.png</file>
         <file alias="data type struct field">icons/data_type_struct_field.png</file>
         <file alias="data method param">icons/data_method_param.png</file>
+        <file alias="log-offline">icons/ball-blue-32x32.png</file>
+        <file alias="log-live">icons/ball-green-32x32.png</file>
+        <file alias="workspace-explorer">icons/file-explorer-android-32x32.png</file>
     </qresource>
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>

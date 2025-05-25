@@ -21,9 +21,11 @@
 #include "ui/ui_LogExplorer.h"
 
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/model/log/LogScopesModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/log/LogViewer.hpp"
 
 #include "areg/base/File.hpp"
 #include "areg/base/NESocket.hpp"
@@ -143,6 +145,11 @@ QToolButton* LogExplorer::ctrlLogScopes(void)
     return ui->toolScopes;
 }
 
+QToolButton* LogExplorer::ctrlMoveBottom(void)
+{
+    return ui->toolMoveBottom;
+}
+
 QTreeView* LogExplorer::ctrlTable(void)
 {
     return ui->treeView;
@@ -168,7 +175,8 @@ void LogExplorer::setupWidgets(void)
 
 void LogExplorer::setupSignals(void)
 {
-    connect(ctrlConnect()   , &QToolButton::clicked, this, &LogExplorer::onConnectClicked);
+    connect(ctrlConnect()       , &QToolButton::clicked, this, &LogExplorer::onConnectClicked);
+    connect(ctrlMoveBottom()    , &QToolButton::clicked, this, &LogExplorer::onMoveBottomClicked);
 }
 
 void LogExplorer::blockBasicSignals(bool block)
@@ -277,5 +285,15 @@ void LogExplorer::onConnectClicked(bool checked)
         ctrlConnect()->setToolTip(tr("Connect to log collector"));
         
         setupLogSignals(false);
+    }
+}
+
+void LogExplorer::onMoveBottomClicked()
+{
+    MdiMainWindow* wndMain = LusanApplication::getMainWindow();
+    LogViewer * logViewer = wndMain != nullptr ? wndMain->getLiveLogViewer() : nullptr;
+    if (logViewer != nullptr)
+    {
+        logViewer->moveToBottom(true);
     }
 }

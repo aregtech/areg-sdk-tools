@@ -24,6 +24,7 @@
 #include "lusan/data/common/OptionsManager.hpp"
 
 class LogCollectorClient;
+class MdiMainWindow;
 
 /**
  * \class   LusanApplication
@@ -31,10 +32,16 @@ class LogCollectorClient;
  **/
 class LusanApplication : public QApplication
 {
+//////////////////////////////////////////////////////////////////////////
+// Types and constants
+//////////////////////////////////////////////////////////////////////////
 public:
     static const QStringList     ExternalExts;  //!< The list of external file extensions.
     static const QStringList     InternalExts;  //!< The list of internal file extensions.
     
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Constructor.
@@ -48,6 +55,9 @@ public:
      **/
     virtual ~LusanApplication(void);
     
+//////////////////////////////////////////////////////////////////////////
+// Static methods
+//////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Gets the singleton instance of the application.
@@ -127,9 +137,25 @@ public:
      **/
     static LogCollectorClient& getLogCollectorClient(void);
     
+    /**
+     * \brief   Returns the main window of the application.
+     **/
+    static MdiMainWindow* getMainWindow(void);
+    
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    
+    int runApplication(const QString& workspace);
+    
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    static LusanApplication *   theApp;     //!< The singleton instance of the application.
-    OptionsManager              mOptions;   //!< The options manager.
+    static LusanApplication *   theApp;         //!< The singleton instance of the application.
+    MdiMainWindow*              mMainWindow;    //!< Main window;
+    OptionsManager              mOptions;       //!< The options manager.
 };
 
 #endif // LUSAN_APP_LUSANAPPLICATION_HPP

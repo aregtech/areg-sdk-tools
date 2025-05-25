@@ -338,7 +338,7 @@ void MdiMainWindow::onViewLogs()
         mNavigation.show();
     }
     
-    mNavigation.showTab(Navigation::TabNameLogExplorer);
+    mNavigation.showTab(Navigation::TabLiveLogsExplorer);
 }
 
 void MdiMainWindow::onViewStatus()

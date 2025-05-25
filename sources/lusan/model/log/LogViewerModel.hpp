@@ -71,7 +71,33 @@ private:
     
     //!< The list of colors
     static const QColor LogColors[static_cast<int>(ePrio::PrioTotal)];
-    
+
+//////////////////////////////////////////////////////////////////////////
+// Static methods
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the file extension of the logs database.
+     **/
+    static QString getFileExtension();
+
+    /**
+     * \brief   Generates and returns file name of the log database base on the information set in the initialization file.
+     *          Normalizes the file name if it contains a mask, such as "log_%time%.sqlog".
+     **/
+    static QString generateFileName(void);
+
+    /**
+     * \brief   Generates and returns the path to the log database new file.
+     *          The log database location and file name are set in the initialization file.
+     *          Normalizes the file name if it contains a mask, such as "log_%time%.sqlog".
+     **/
+    static QString newFileName(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     explicit LogViewerModel(QObject *parent = nullptr);
 

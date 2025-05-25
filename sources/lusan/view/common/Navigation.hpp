@@ -23,6 +23,8 @@
 #include "lusan/view/common/NaviFileSystem.hpp"
 
 #include <QDockWidget>
+#include <QIcon>
+#include <QSize>
 #include <QTabWidget>
 
 class MdiMainWindow;
@@ -30,12 +32,28 @@ class MdiMainWindow;
 class Navigation : public QDockWidget
 {
 //////////////////////////////////////////////////////////////////////////
-// Constants and types
+// Constants, types and static methods
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    //!< The name of the tab for workspace explorer.
     static QString  TabNameFileSystem;
-    static QString  TabNameLogExplorer;
+    //!< The name of the tab for live logs explorer.
+    static QString  TabLiveLogsExplorer;
+    //!< The name of the tab for offline logs explorer.
+    static QString  TabOfflineLogsExplorer;
+    //<!< The size of icons.
+    static QSize    IconSize;
+
+    //!< Returns the icon for the workspace explorer tab.
+    static QIcon getWorkspaceExplorerIcon(void);
+
+    //!< Returns the icon for the live logs explorer tab.
+    static QIcon getLiveLogIcon(void);
+
+    //!< Returns the icon for the offline logs explorer tab.
+    static QIcon getOfflineLotIcon(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -86,7 +104,7 @@ public:
     bool tabExists(const QString& tabName) const;
     
     bool showTab(const QString& tabName);
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -111,7 +129,7 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// Inline methods
+// Navigation class inline methods
 //////////////////////////////////////////////////////////////////////////
 
 inline QTabWidget& Navigation::getTabWidget(void)

@@ -104,6 +104,34 @@ public:
     static QString getInitDatabase(void);
 
     /**
+     * \brief   Returns the name of the database, which is set in the initialization file.
+     *          The name may contain a mask.
+     **/
+    static QString getConfigDatabaseName(void);
+
+    /**
+     * \brief   Returns the location of the database, which is set in the initialization file.
+     *          The location may contain a mask.
+     **/
+    static QString getConfigDatabaseLocation(void);
+
+    /**
+     * \brief   Sets the name of the database to set in the initialization file.
+     *          The name may contain a mask.
+     * \param   dbName  The name of the database to set in the initialization file.
+     * \return  Returns true if operation succeeds. Otherwise, returns false.
+     **/
+    static bool setConfigDatabaseName(const QString& dbName);
+
+    /**
+     * \brief   Sets the location of the database to set in the initialization file.
+     *          The location may contain a mask.
+     * \param   dbLocation  The relative or absolute path to the database. The path may contain a mask.
+     * \return  Returns true if operation succeeds. Otherwise, returns false.
+     **/
+    static bool setConfigDatabaseLocation(const QString& dbLocation);
+
+    /**
      * \brief   Returns true if log observer is connected to the log collector.
      **/
     static bool isConnected(void);
