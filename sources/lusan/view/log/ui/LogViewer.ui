@@ -83,19 +83,6 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QLabel" name="label">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Live mode logs ...</string>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QWidget" name="widget_3" native="true">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -238,6 +225,19 @@
              </widget>
             </item>
            </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lableTitle">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Live mode logs:</string>
+           </property>
           </widget>
          </item>
         </layout>

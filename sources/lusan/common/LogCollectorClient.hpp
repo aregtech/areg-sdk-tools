@@ -26,11 +26,17 @@
 #include <map>
 #include <vector>
 
+/**
+ * \brief   The log collector client singleton class.
+ **/
 class LogCollectorClient    : public QObject
                             , public LogObserverBase
 {
     Q_OBJECT
     
+//////////////////////////////////////////////////////////////////////////
+// Hidden constructors and destructor.
+//////////////////////////////////////////////////////////////////////////
 private:
     LogCollectorClient(void);
     virtual ~LogCollectorClient(void) = default;
