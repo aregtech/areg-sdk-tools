@@ -58,6 +58,11 @@ namespace NELusanCommon
     extern const QString    OPTIONS;
 
     /**
+     * \brief   The application profile initialization file name.
+     **/
+    extern const QString    INIT_FILE;
+
+    /**
      * \brief   The minimal width of navigation window.
      **/
     constexpr const uint32_t  MIN_NAVO_WIDTH    { 280 };
@@ -123,6 +128,8 @@ namespace NELusanCommon
 
     constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
     constexpr const char * const xmlElementFile             { "File" };
+    
+    constexpr char const    SCOPE_SEPRATOR                  { '_' };
 
     enum class eSorting : uint8_t
     {

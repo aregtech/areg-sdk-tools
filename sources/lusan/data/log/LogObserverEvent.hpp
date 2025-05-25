@@ -37,19 +37,18 @@ public:
     enum class eLogObserverEvent : unsigned short
     {
           CMD_Unknown           //!< Invalid event
-        , CMD_Connect           //!< Initialize and connect the log observer
-        , CMD_Disconnect        //!< Disconnect log observer.
-        , CMD_Pause             //!< Pause log observer.
-        , CMD_Resume            //!< Resume log observer.
-        , CMD_QueryInstances    //!< Query connection instances
-        , CMD_Connected         //!< The log observer is connected to the log collector service.
-        , CMD_Clear             //!< The log observer should be cleared.
-        , CMD_ConnecedInst      //!< The log observer received connected instances message.
-        , CMD_DisconnecedInst   //!< The log observer received disconnected instances message.
+        , CMD_Configured        //!< Initialize and connect the log observer
+        , CMD_DbConfigured      //!< Disconnect log observer.
+        , CMD_Connected         //!< The log observer is connected to the log collector service and ready to operate.
+        , CMD_Started           //!< The log observer is started and can communicate with the log observer.
+        , CMD_DbCreated         //!< The logging database is created by log observer.
+        , CMD_MessageFailed     //!< Logging message failed.
+        , CMD_InstConnected     //!< The log observer received list of connected instances.
+        , CMD_InstDisconnected  //!< The log observer received list of disconnected instances.
+        , CMD_ServiceDisconnect //!< The log observer disconnected service.
         , CMD_ScopesRegistered  //!< The log observer received list of registered scopes.
         , CMD_ScopesUpdated     //!< The log observer received list of updated scopes.
-        , CMD_LogMessageEx      //!< The log observer received log message.
-        , CMD_LogPiroirity      //!< Change log priority
+        , CMD_LogMessage        //!< The log observer received log message.
     };
 
     DECLARE_STREAMABLE(LogObserverEventData::eLogObserverEvent);

@@ -69,6 +69,8 @@ public:
      **/
     bool openFile(const QString& fileName);
 
+    void logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath);
+
     /**
      * \brief   Sets the workspace root directory.
      * \param   workspace    The path to the workspace root.

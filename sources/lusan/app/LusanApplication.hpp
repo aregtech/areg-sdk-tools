@@ -23,6 +23,8 @@
 #include <QStringList>
 #include "lusan/data/common/OptionsManager.hpp"
 
+class LogCollectorClient;
+
 /**
  * \class   LusanApplication
  * \brief   Represents the main application object for managing GUI-related functionality.
@@ -119,6 +121,11 @@ public:
      * \brief   Returns the directory of workspace to save log files.
      **/
     static QString getWorkspaceLogs(void);
+
+    /**
+     * \brief   Returns the instance of the log observer client.
+     **/
+    static LogCollectorClient& getLogCollectorClient(void);
     
 private:
     static LusanApplication *   theApp;     //!< The singleton instance of the application.

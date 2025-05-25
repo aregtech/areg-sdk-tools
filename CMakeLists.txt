@@ -49,6 +49,11 @@ qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
 target_compile_definitions(${APP_NAME} PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
 target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets areg::areg areg::areglogger)
 
+# copying log and router init files to 'bin/config'
+add_custom_command( TARGET ${APP_NAME} POST_BUILD 
+                    COMMAND ${CMAKE_COMMAND} -E copy ${LUSAN_BASE}/lusan/res/lusan.init ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config/lusan.init
+                    VERBATIM)
+
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.

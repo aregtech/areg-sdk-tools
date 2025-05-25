@@ -15,205 +15,380 @@
  *  \file        lusan/data/log/LogObserver.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Log observer data object to get logs on real-time mode.
+ *  \brief       Lusan application, Log observer component with empty service provider.
  *
+ ************************************************************************/
+/************************************************************************
+ * Include files.
  ************************************************************************/
 
 #include "lusan/common/NELusanCommon.hpp"
+#include "areg/base/GEGlobal.h"
 
+#include "lusan/data/log/LogObserverEvent.hpp"
+#include "areg/component/Component.hpp"
+#include "areg/component/StubBase.hpp"
+
+#include <QObject>
 #include <QString>
+#include <QMap>
 
-#include "areg/persist/IEConfigurationListener.hpp"
-#include "areg/base/NESocket.hpp"
-#include "areg/base/TEArrayList.hpp"
-#include "areg/base/TEHashMap.hpp"
-#include "areg/base/TELinkedList.hpp"
-#include "areg/logging/NELogging.hpp"
-#include "areglogger/client/LogObserverApi.h"
+/************************************************************************
+ * Dependencies.
+ ************************************************************************/
+class LogCollectorClient;
+struct sLogScope;
 
-class DispatcherThread;
+//!< The callback to notify that the service component started.
+typedef void (*FuncLogObserverStarted)();
 
-class LogObserver
+/**
+ * \brief   The log observer component which runs in the multithreading environment.
+ *          It is used to support multithreading environment when receives and sends log data from the log collector.
+ **/
+class LogObserver   : public    QObject
+                    , public    Component
+                    , protected StubBase
+                    , protected IELogObserverEventConsumer
 {
-    friend class LogObserverComp;
-
-    static constexpr uint32_t   DEFAULT_LIST_SIZE       { 5 * 1024 };    //!< The default size of the list
-    static constexpr uint32_t   DEFAULT_BLOCK_SIZE      { 1 * 1024 };    //!< The default block size of the log list
+    Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
-// Internal types and constants
-//////////////////////////////////////////////////////////////////////////
-public:
-    // The list of log instances / sources
-    using ListInstances = TEArrayList<sLogInstance>;
-    // The list of log scopes
-    using ListScopes    = TEArrayList<sLogScope>;
-    // The map of scopes, where the key is the ID of log instance
-    using MapScopes     = TEHashMap<ITEM_ID, ListScopes>;
-    // The list of log messages
-    using ListLogs      = TEArrayList<SharedBuffer>;
-
-    /**
-     * \brief   The structure to store the IP address and port number of the remote log collector service.
-     **/
-    struct sLoggerConnect
-    {
-        // The IP address of the remote log collector service
-        String      lcAddress;
-        // The IP port number of the remote log collector service
-        uint16_t    lcPort{ NESocket::InvalidPort };
-    };
-
-//////////////////////////////////////////////////////////////////////////
-// Constructor / Destructor
+// Constants
 //////////////////////////////////////////////////////////////////////////
 public:
 
-    LogObserver(void);
-    ~LogObserver(void);
+    //!< The name of the component thread.
+    static constexpr const char* const LogobserverThread    { "LogObserverThread"   };
+    //!< The name of the model.
+    static constexpr const char* const LogobserverModel     { "LogObserverModel"    };
+    //!< The name of the component.
+    static constexpr const char* const LogObserverComponent { "LogObserverComponent"};
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes and operation
+// Public static methods
 //////////////////////////////////////////////////////////////////////////
 public:
-
+    
     /**
-     * \brief   Initializes and starts the logging observer.
+     * \brief   Creates and starts the log observer component.
+     * \return  Returns true if the component is started successfully. Otherwise, returns false.
      **/
-    void logingStart(void);
+    static bool createLogObserver(FuncLogObserverStarted callbackStarted);
 
     /**
-     * \brief   Initializes and starts the logging observer.
-     * \param   dbPath      The path of the database to log messages.
-     * \param   address     The IP address of the remote log collector service.
-     * \param   port        The IP port number of the remote log collector service.
+     * \brief   Stops the log observer component.
+     *          The function stops the log observer component and unloads the model.
      **/
-    void loggingStart(const QString & dbPath, const QString& address, unsigned short port);
+    static void releaseLogObserver(void);
 
     /**
-     * \brief   Initializes and starts the logging observer.
-     * \param   configPath  The path of the configuration file.
+     * \brief   Returns the IP-address of connected log collector.
      **/
-    void loggingStart(const String& configPath);
-    void loggingStart(const QString& configPath);
+    static QString getConnectedAddress(void);
 
     /**
-     * \brief   Stops the logging observer.
+     * \brief   Returns the port number of connected log collector.
      **/
-    void loggingStop(void);
+    static uint16_t getConnectedPort(void);
 
     /**
-     * \brief   Pauses the logging observer.
+     *\brief    The function returns the path to the database, which is used to log messages.
      **/
-    void loggingPause(void);
+    static QString getActiveDatabase(void);
 
     /**
-     * \brief   Resumes the logging observer.
+     * \brief   Returns the path to the database, which is set in the initialization file.
+     *          The path may contain a mask.
      **/
-    void loggingResume(void);
+    static QString getInitDatabase(void);
 
     /**
-     * \brief   Clears the log messages.
+     * \brief   Returns true if log observer is connected to the log collector.
      **/
-    void loggingClear(void);
+    static bool isConnected(void);
 
     /**
-     * \brief   Requests the list of connected instances.
+     * \brief   Connects to the log collector service.
+     * \param   address     The IP address of the log collector service.
+     * \param   port        The IP port number of the log collector service.
+     * \param   dbLocation  The relative or absolute path to the database. The path may contain a mask.
+     * \return  Returns true if connected successfully. Otherwise, returns false.
      **/
-    void loggingRequestInstances(void);
+    static bool connect(const QString& address, uint16_t port, const QString& dbLocation);
 
     /**
-     * \brief   Requests the list of scopes of the specified connected instance.
+     * \brief   Disconnects from the log collector service. The log observer component remains connected.
+     **/
+    static void disconnect(void);
+
+    /**
+     * \brief   Pauses running log observer component. It stops logging messages, but keeps database active.
+     *          On resume it will continue log messages in the active database.
+     * \return  Returns true if operation succeeds. Otherwise, returns false.
+     **/
+    static bool pause(void);
+
+    /**
+     * \brief   Resumes the log observer component. It starts logging messages in the active database.
+     * \return  Returns true if operation succeeds. Otherwise, returns false.
+     **/
+    static bool resume(void);
+
+    /**
+     * \brief   Stops the log observer component. It stops logging messages and closes the database.
+     *          On next start it will create new database.
+     **/
+    static void stop(void);
+
+    /**
+     * \brief   Restarts stopped log observer component. On start it creates new logging database.
+     * \param   dbLocation  The relative or absolute path to the database. The path may contain a mask.
+     * \return  Returns true if operation succeeds. Otherwise, returns false.
+     **/
+    static bool restart(const QString & dbLocation = QString());
+    
+    /**
+     * \brief   Requests the list of connected instances that make logs.
+     * \return  Returns true if processed with success. Otherwise, returns false.
+     **/
+    static bool requestInstances(void);
+    
+    /**
+     * \brief   Requests the list of registered scopes of the specified connected instance.
      * \param   target  The cookie ID of the target instance to receive the list of registered scopes.
-     *                  If the target is ID_IGNORE (or 0), it receives the list of scopes of all connected instances.
+     *                  If the target is NEService::TARGET_ALL (or 0), it receives the list of scopes of all connected instances.
      *                  Otherwise, should be indicated the valid cookie ID of the connected log instance.
+     * \return  Returns true if processed with success. Otherwise, returns false.
      **/
-    void loggingRequestScopes(ITEM_ID target);
-
+    static bool requestScopes(ITEM_ID target = NEService::TARGET_ALL);
+    
     /**
-     * \brief   Requests to change the priority of the logging message to receive.
-     * \param   target  The cookie ID of the target instance to receive the list of registered scopes.
-     * \param   scopes  The list of the scopes to change the priority.
-     * \param   count   The number of entries in the list.
+     * \brief   Requests to update the priority of the logging message to receive.
+     *          The indicated scopes can be scope group.
+     * \param   target  The valid cookie ID of the target to update the log message priority.
+     *                  This value cannot be NEService::TARGET_ALL (or 0).
+     * \param   scopes  The list of scopes of scope group to update the priority.
+     *                  The scope group should  end with '*'. For example 'areg_base_*'.
+     *                  In this case the ID of the scope can be 0.
+     * \param   count   The number of scope entries in the list.
+     * \return  Returns true if processed with success. Otherwise, returns false.
      **/
-    void loggingRequestChangeScopePrio(ITEM_ID target, const sLogScope* scopes, uint32_t count);
-
+    static bool requestChangeScopePrio(ITEM_ID target, const sLogScope* scopes, uint32_t count);
+    
     /**
-     * \brief   Saves the configuration of the logging.
+     * \brief   Requests to save current configuration of the specified target. This is normally called when update the log priority of the instance,
+     *          so that on next start the application logs message of the scopes and priorities currently set.
      * \param   target  The cookie ID of the target instance to save the configuration.
+     *                  If the target is NEService::TARGET_ALL (or 0), the request is sent to all connected instances.
+     *                  Otherwise, should be indicated the valid cookie ID of the connected log instance.
+     * \return  Returns true if processed with success. Otherwise, returns false.
      **/
-    void loggingSaveConfiguration(ITEM_ID target);
-
+    static bool requestSaveConfig(ITEM_ID target = NEService::TARGET_ALL);
+    
     /**
-     * \brief   Returns true if the logging observer is initialized.
+     * \brief   Saves the configuration of the log observer in the configuration file.
      **/
-    bool isLoggingInitialized(void) const;
-
+    static void saveLoggerConfig(void);
+    
     /**
-     * \brief   Returns true if the logging observer is connected to the remote log collector service.
+     * \brief   Called by system to instantiate the component.
+     * \param   entry   The entry of registry, which describes the component.
+     * \param   owner   The component owning thread.
+     * \return  Returns instantiated component to run in the system
      **/
-    bool isLoggingConnected(void) const;
-
+    static Component * CreateComponent( const NERegistry::ComponentEntry & entry, ComponentThread & owner );
+    
     /**
-     * \brief   Returns true if the logging observer is started.
+     * \brief   Called by system to delete component and free resources.
+     * \param   compObject  The instance of component previously created by CreateComponent method.
+     * \param   entry   The entry of registry, which describes the component.
      **/
-    bool isLoggingStarted(void) const;
-
+    static void DeleteComponent( Component & compObject, const NERegistry::ComponentEntry & entry );
+    
     /**
-     * \brief   Returns true if the logging observer is paused.
+     * \brief   Returns the pointer of log observer component if loaded. Otherwise, returns null.
      **/
-    bool isLoggingEnabled(void) const;
-
-    /**
-     * \brief   Returns the IP address of the remote log collector service.
-     **/
-    bool isLoggingPaused(void) const;
-
-    /**
-     * \brief   Returns the IP address of the remote log collector service.
-     **/
-    QString getConectionAddress(void) const;
-
-    /**
-     * \brief   Returns the IP port of the remote log collector service.
-     **/
-    unsigned short getConnectionPort(void) const;
-
-    /**
-     * \brief   Returns the list of connected instances.
-     **/
-    inline const LogObserver::sLoggerConnect& getLogConnect(void) const;
-
-    /**
-     * \brief   Returns the list of connected instances.
-     **/
-    inline const LogObserver::ListInstances& getLogSources(void) const;
-
-    /**
-     * \brief   Returns the list of connected instances.
-     **/
-    inline const LogObserver::MapScopes& getLogScopes(void) const;
-
-    /**
-     * \brief   Returns the list of connected instances.
-     **/
-    inline const LogObserver::ListLogs& getLogMessages(void) const;
-
-    inline void setLogCollector(const String& address, uint16_t port);
-
+    static LogObserver* getComponent(void);
+    
 //////////////////////////////////////////////////////////////////////////
-// Callbacks
+// Static methods
 //////////////////////////////////////////////////////////////////////////
 private:
     /**
-     * \brief   The callback of the event triggered when initializing and configuring the observer.
-     *          The callback indicates the IP address and port number of the remote log collector
-     *          service set in the configuration file.
-     * \param   isEnabled       Flag, indicating whether the logging service is enabled or not.
-     * \param   address         IP address of the remote log collector service set in the configuration file.
-     * \param   port            IP port number of the remote log collector service set in the configuration file.
+     * \brief   Returns instance of the client. The log observer component should be already loaded.
      **/
-    static void callbackObserverConfigured(bool isEnabled, const char* address, uint16_t port);
+    static LogCollectorClient& getClient(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Signals
+//////////////////////////////////////////////////////////////////////////
+signals:
+
+    /**
+     * \brief   The signal triggered when initializing and configuring the observer.
+     * \param   isEnabled       The flag, indicating whether the logging service is enabled or not.
+     * \param   address         The IP address of the log collector service set in the configuration file.
+     * \param   port            The IP port number of the log collector service set in the configuration file.
+     **/
+    void signalLogObserverConfigured(bool isEnabled, const QString& address, uint16_t port);
+
+    /**
+     * \brief   The signal event triggered when initializing and configuring the observer.
+     * \param   isEnabled       The flag, indicating whether the logging in the database is enabler or not.
+     * \param   dbName          The name of the  supported database.
+     * \param   dbLocation      The relative or absolute path the database. The path may contain a mask.
+     * \param   dbUser          The database user to use when log in. If null or empty, the database may not require the user name.
+     **/
+    void signalLogDbConfigured(bool isEnabled, const QString& dbName, const QString& dbLocation, const QString& dbUser);
+
+    /**
+     * \brief   The signal triggered when the observer connects or disconnects from the log collector service.
+     * \param   isConnected     Flag, indicating whether observer is connected or disconnected.
+     * \param   address         The IP address of the log collector service to connect or disconnect.
+     * \param   port            The IP port number of the log collector service to connect or disconnect.
+     **/
+    void signalLogServiceConnected(bool isConnected, const QString& address, uint16_t port);
+
+    /**
+     * \brief   The signal trigger when starting or pausing the log observer.
+     * \param   isStarted       The flag indicating whether the lob observer is started or paused.
+     **/
+    void signalLogObserverStarted(bool isStarted);
+
+    /**
+     * \brief   The signal triggered when the logging database is created.
+     * \param   dbLocation      The relative or absolute path to the logging database.
+     **/
+    void signalLogDbCreated(const QString& dbLocation);
+
+    /**
+     * \brief   The signal triggered when fails to send or receive message.
+     **/
+    void signalLogMessagingFailed(void);
+
+    /**
+     * \brief   The signal triggered when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void signalLogInstancesConnect(const QList< NEService::sServiceConnectedInstance >& instances);
+
+    /**
+     * \brief   The signal triggered when receive the list of disconnected instances that make logs.
+     * \param   instances   The list of IDs of the disconnected instances.
+     * \param   count       The number of entries in the list.
+     **/
+    void signalLogInstancesDisconnect(const QList< NEService::sServiceConnectedInstance >& instances);
+
+    /**
+     * \brief   The signal triggered when connection with the log collector service is lost.
+     * \param   instances   The list of disconnected instances.
+     **/
+    void signalLogServiceDisconnected(const QMap<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
+
+    /**
+     * \brief   The signal triggered when receive the list of the scopes registered in an application.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
+     **/
+    void signalLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope *>& scopes);
+
+    /**
+     * \brief   The signal triggered when receive the list of previously registered scopes with new priorities.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
+     **/
+    void signalLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope *>& scopes);
+
+    /**
+     * \brief   The signal triggered when receive message to log.
+     * \param   logMessage  The buffer with structure of the message to log.
+     **/
+    void signalLogMessage(const SharedBuffer & logMessage);
+
+protected:
+
+    /**
+     * \brief   Instantiates the component object.
+     * \param   entry   The entry of registry, which describes the component.
+     * \param   ownerThread The instance of component owner thread.
+     * \param   data        The optional component data set in system. Can be empty / no data.
+     **/
+    LogObserver(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread, NEMemory::uAlign OPT data);
+
+    virtual ~LogObserver(void);
+
+/************************************************************************/
+// IELogObserverEventConsumer overrides
+/************************************************************************/
+
+    virtual void processEvent(const LogObserverEventData & data) override;
+
+/************************************************************************/
+// StubBase overrides. Triggered by Component on startup.
+/************************************************************************/
+
+    /**
+     * \brief   This function is triggered by Component when starts up.
+     * \param   holder  The holder component of service interface of Stub.
+     **/
+    virtual void startupServiceInterface( Component & holder ) override;
+
+    /**
+     * \brief   This function is triggered by Component when shuts down.
+     * \param   holder  The holder component of service interface of Stub.
+     **/
+    virtual void shutdownServiceIntrface ( Component & holder ) override;
+
+//////////////////////////////////////////////////////////////////////////
+// These methods must exist, but can have empty body
+//////////////////////////////////////////////////////////////////////////
+protected:
+/************************************************************************/
+// StubBase overrides. Public pure virtual methods
+/************************************************************************/
+
+    /**
+     * \brief   Sends update notification message to all clients.
+     **/
+    virtual void sendNotification(unsigned int /*msgId*/) override;
+
+    /**
+     * \brief   Sends error message to clients.
+     **/
+    virtual void errorRequest(unsigned int /*msgId*/, bool /*msgCancel*/) override;
+
+/************************************************************************/
+// IEStubEventConsumer interface overrides.
+/************************************************************************/
+
+    /**
+     * \brief   Triggered to process service request event.
+     **/
+    virtual void processRequestEvent(ServiceRequestEvent& /*eventElem*/) override;
+
+    /**
+     * \brief   Triggered to process attribute update notification event.
+     **/
+    virtual void processAttributeEvent(ServiceRequestEvent& /*eventElem*/) override;
+
+//////////////////////////////////////////////////////////////////////////
+// slots
+//////////////////////////////////////////////////////////////////////////
+private slots:
+/************************************************************************
+ * LogObserver component slots
+ ************************************************************************/
+
+    /**
+     * \brief   The callback of the event triggered when initializing and configuring the observer.
+     *          The callback indicates the IP address and port number of the log collector service set
+     *          in the configuration file.
+     * \param   isEnabled       The flag, indicating whether the logging service is enabled or not.
+     * \param   address         The null-terminated string of the IP address of the log collector service set in the configuration file.
+     * \param   port            The IP port number of the log collector service set in the configuration file.
+     **/
+    void slotLogObserverConfigured(bool isEnabled, const std::string & address, uint16_t port);
 
     /**
      * \brief   The callback of the event triggered when initializing and configuring the observer.
@@ -222,18 +397,17 @@ private:
      * \param   isEnabled       The flag, indicating whether the logging in the database is enabler or not.
      * \param   dbName          The name of the  supported database.
      * \param   dbLocation      The relative or absolute path the database. The path may contain a mask.
-     * \param   user            The database user to use when log in. If null or empty, the database may not require the user name.
+     * \param   dbUser          The database user to use when log in. If null or empty, the database may not require the user name.
      **/
-    static void callbackDatabaseConfigured(bool isEnabled, const char* dbName, const char* dbLocation, const char* user);
+    void slotLogDbConfigured(bool isEnabled, const std::string & dbName, const std::string & dbLocation, const std::string & dbUser);
 
     /**
-     * \brief   The callback of the event triggered when the observer connects or disconnects
-     *          from the remote log collector service.
+     * \brief   The callback of the event triggered when the observer connects or disconnects from the log collector service.
      * \param   isConnected     Flag, indicating whether observer is connected or disconnected.
-     * \param   address         IP address of the remote log collector service to connect or disconnect.
-     * \param   port            IP port number of the remote log collector service to connect or disconnect.
+     * \param   address         The IP address of the log collector service to connect or disconnect.
+     * \param   port            The IP port number of the log collector service to connect or disconnect.
      **/
-    static void callbackServiceConnected(bool isConnected, const char* address, uint16_t port);
+    void slotLogServiceConnected(bool isConnected, const std::string & address, uint16_t port);
 
     /**
      * \brief   The callback of the event trigger when starting or pausing the log observer.
@@ -241,26 +415,37 @@ private:
      *          If the log observer is stopped (disconnected is called), on start it creates new file.
      * \param   isStarted       The flag indicating whether the lob observer is started or paused.
      **/
-    static void callbackObserverStarted(bool isStarted);
+    void slotLogObserverStarted(bool isStarted);
+
+    /**
+     * \brief   The callback of the event triggered when the logging database is created.
+     * \param   dbLocation      The relative or absolute path to the logging database.
+     **/
+    void slotLogDbCreated(const std::string & dbLocation);
 
     /**
      * \brief   The callback of the event triggered when fails to send or receive message.
      **/
-    static void callbackMessagingFailed(void);
+    void slotLogMessagingFailed(void);
 
     /**
      * \brief   The callback of the event triggered when receive the list of connected instances that make logs.
-     * \param   instances   The pointer to the list of the connected instances.
-     * \param   count       The number of entries in the list.
+     * \param   instances   The list of the connected instances.
      **/
-    static void callbackConnectedInstances(const sLogInstance* instances, uint32_t count);
+    void slotLogInstancesConnect(const std::vector< NEService::sServiceConnectedInstance > & instances);
 
     /**
      * \brief   The callback of the event triggered when receive the list of disconnected instances that make logs.
-     * \param   instances   The pointer to the list of IDs of the disconnected instances.
+     * \param   instances   The list of IDs of the disconnected instances.
      * \param   count       The number of entries in the list.
      **/
-    static void callbackDisconnecteInstances(const ITEM_ID* instances, uint32_t count);
+    void slotLogInstancesDisconnect(const std::vector< NEService::sServiceConnectedInstance > & instances);
+
+    /**
+     * \brief   The callback of the event triggered when connection with the log collector service is lost.
+     * \param   instances   The list of disconnected instances.
+     **/
+    void slotLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
 
     /**
      * \brief   The callback of the event triggered when receive the list of the scopes registered in an application.
@@ -268,7 +453,7 @@ private:
      * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
      * \param   count   The number of scope entries in the list.
      **/
-    static void callbackLogScopesRegistered(ITEM_ID cookie, const sLogScope* scopes, uint32_t count);
+    void slotLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count);
 
     /**
      * \brief   The callback of the event triggered when receive the list of previously registered scopes with new priorities.
@@ -276,63 +461,36 @@ private:
      * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
      * \param   count   The number of scope entries in the list.
      **/
-    static void callbackLogScopesUpdated(ITEM_ID cookie, const sLogScope* scopes, uint32_t count);
+    void slotLogUpdateScopes(ITEM_ID cookie, const sLogScope* scopes, int count);
 
     /**
-     * \brief   The callback of the event triggered when receive remote message to log.
-     *          The buffer indicates to the NELogging::sLogMessage structure.
-     * \param   logBuffer   The pointer to the NELogging::sLogMessage structure to log messages.
-     * \param   size        The size of the buffer with log message.
+     * \brief   The callback of the event triggered when receive message to log.
+     * \param   logMessage  The structure of the message to log.
      **/
-    static void callbackLogMessageEx(const unsigned char* logBuffer, uint32_t size);
+    void slotLogMessage(const SharedBuffer & logMessage);
 
 private:
-    void _clear(void);
-
-    static DispatcherThread& _logObserverThread(void);
+    inline LogObserver& self(void);
 
 private:
-    sLoggerConnect  mLogConnect;    //!< The IP address and the port number of the remote log collector service.
-    ListInstances   mLogSources;    //!< The list of the connected instances that make logs.
-    MapScopes       mLogScopes;     //!< The map of the scopes registered in the application.
-    ListLogs        mLogMessages;   //!< The list of the log messages to write in the log file.
-    sObserverEvents mEvents;        //!< The structure of the callbacks to set when send or receive messages.
+    LogCollectorClient& mLogClient;     //!< Log observer client.
+    String              mConfigFile;    //!< The path to config file.
 
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
 private:
-    LogObserver(const LogObserver& /*src*/) = delete;
-    LogObserver(LogObserver&& /*src*/) noexcept = delete;
-    LogObserver& operator = (const LogObserver& /*src*/) = delete;
-    LogObserver& operator = (LogObserver&& /*src*/) noexcept = delete;
+    LogObserver( void ) = delete;
+    DECLARE_NOCOPY_NOMOVE( LogObserver );
 };
 
 //////////////////////////////////////////////////////////////////////////
-// LogObserver class inline function implementation
+// LogObserver class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const LogObserver::sLoggerConnect& LogObserver::getLogConnect(void) const
+inline LogObserver& LogObserver::self(void)
 {
-    return mLogConnect;
-}
-
-inline const LogObserver::ListInstances& LogObserver::getLogSources(void) const
-{
-    return mLogSources;
-}
-
-inline const LogObserver::MapScopes& LogObserver::getLogScopes(void) const
-{
-    return mLogScopes;
-}
-
-inline const LogObserver::ListLogs& LogObserver::getLogMessages(void) const
-{
-    return mLogMessages;
-}
-
-inline void LogObserver::setLogCollector(const String& address, uint16_t port)
-{
-    mLogConnect.lcAddress = address;
-    mLogConnect.lcPort = port;
+    return (*this);
 }
 
 #endif  // LUSAN_DATA_LOG_LOGOBSERVER_HPP

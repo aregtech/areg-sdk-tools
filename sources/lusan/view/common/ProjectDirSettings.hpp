@@ -42,41 +42,17 @@ class ProjectDirSettings : public QWidget
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit ProjectDirSettings(QWidget *parent = nullptr);
-    virtual ~ProjectDirSettings() override;
+    virtual ~ProjectDirSettings();
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
 public:
-    /**
-     * \brief   Returns the root directory.
-     **/
-    QString getRootDirectory() const;
 
     /**
-     * \brief   Returns the source directory.
+     * \brief   Applies the changes made in the project settings.
      **/
-    QString getSourceDirectory() const;
-
-    /**
-     * \brief   Returns the include directory.
-     **/
-    QString getIncludeDirectory() const;
-
-    /**
-     * \brief   Returns the delivery directory.
-     **/
-    QString getDeliveryDirectory() const;
-
-    /**
-     * \brief   Returns the log directory.
-     **/
-    QString getLogDirectory() const;
-
-    /**
-     * \brief   Returns the workspace description.
-     **/
-    QString getWorkspaceDescription() const;
+    void applyChanges() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -107,8 +83,15 @@ private slots:
 // Hidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
+    /**
+     * \brief   Connects the signal handlers.
+     **/
     void connectSignalHandlers() const;
-    void initialisePathsWithCurrentWorkspaceData() const;
+ 
+    /**
+     * \brief   Initializes the paths with the current workspace data.
+     **/
+    void initializePathsWithCurrentWorkspaceData() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

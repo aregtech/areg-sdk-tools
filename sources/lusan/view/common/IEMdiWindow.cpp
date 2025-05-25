@@ -1,6 +1,4 @@
-﻿#ifndef LUSAN_DATA_LOG_NELOGOBSERVER_HPP
-#define LUSAN_DATA_LOG_NELOGOBSERVER_HPP
-/************************************************************************
+﻿/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -12,31 +10,19 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/data/log/NELogObserver.hpp
+ *  \file        lusan/view/common/IEMdiWindow.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Log observer common namespace.
+ *  \brief       MDI Window type.
  *
  ************************************************************************/
 
 /************************************************************************
- * Include files.
+ * Includes
  ************************************************************************/
-#include "lusan/common/NELusanCommon.hpp"
-#include "lusan/data/log/LogObserverComp.hpp"
+#include "lusan/view/common/IEMdiWindow.hpp"
 
-namespace NELogObserver
+IEMdiWindow::IEMdiWindow(eMdiWindow windowType)
+    : mMdiWindowType(windowType)
 {
-
-    constexpr const char* const LogobserverThread   { "LogObserverThread" };
-    constexpr const char* const LogobserverModel    { "LogObserverModel" };
-    constexpr const char* const LogObserverComponent{ "LogObserverComponent" };
-
-    bool startLobObserver(void);
-
-    void stopLogObserver(void);
-
-    LogObserverComp* getLogObserver(void);
 }
-
-#endif  // LUSAN_DATA_LOG_NELOGOBSERVER_HPP

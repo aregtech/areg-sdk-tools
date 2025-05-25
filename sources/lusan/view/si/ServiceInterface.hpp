@@ -21,6 +21,8 @@
  ************************************************************************/
 
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/view/common/IEMdiWindow.hpp"
+
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 #include "lusan/view/si/SIConstant.hpp"
 #include "lusan/view/si/SIDataType.hpp"
@@ -32,7 +34,8 @@
 
 #include <QTabWidget>
 
-class ServiceInterface : public MdiChild
+class ServiceInterface  : public MdiChild
+                        , public IEMdiWindow
 {
     Q_OBJECT
     

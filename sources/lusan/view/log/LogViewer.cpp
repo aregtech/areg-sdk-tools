@@ -41,7 +41,9 @@ QString LogViewer::generateFileName(void)
 }
 
 LogViewer::LogViewer(QWidget *parent)
-    : MdiChild(parent)
+    : MdiChild      (parent)
+    , IEMdiWindow   (IEMdiWindow::eMdiWindow::MdiLogViewer)
+
     , ui(new Ui::LogViewer)
     , mLogModel(nullptr)
     , mMdiWindow(new QWidget())
@@ -61,6 +63,8 @@ LogViewer::LogViewer(QWidget *parent)
     view->setCurrentIndex(QModelIndex());
     view->horizontalHeader()->setStretchLastSection(true);
     view->verticalHeader()->hide();
+    view->setAutoScroll(true);
+    view->setVerticalScrollMode(QTableView::ScrollPerItem);
     
     view->setModel(mLogModel);
 
@@ -70,6 +74,38 @@ LogViewer::LogViewer(QWidget *parent)
     setLayout(layout);
     
     setAttribute(Qt::WA_DeleteOnClose);
+    getTable()->setAutoScroll(true);
+
+    connect(mLogModel, &LogViewerModel::rowsInserted, this, &LogViewer::onRowsInserted);
+    
+}
+
+
+void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
+{
+    Q_ASSERT(mLogModel != nullptr);
+    mLogModel->serviceConnected(isConnected, address, port, dbPath);
+}
+
+bool LogViewer::isServiceConnected(void) const
+{
+    Q_ASSERT(mLogModel != nullptr);
+    return mLogModel->isConnected();
+}
+
+void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
+{
+    QModelIndex curIndex = getTable()->currentIndex();
+    int row = curIndex.isValid() ? curIndex.row() : -1;
+    int count = mLogModel->rowCount(parent);
+    if ((row < 0) || (row >= count - 2))
+    {
+        getTable()->scrollToBottom();
+        if (row >= 0)
+        {
+            getTable()->selectRow(count - 1);
+        }
+    }
 }
 
 QString LogViewer::newLogFile(void) const

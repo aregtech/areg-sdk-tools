@@ -19,6 +19,7 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
+#include "lusan/common/LogCollectorClient.hpp"
 
 const QStringList   LusanApplication::ExternalExts
 {
@@ -47,7 +48,7 @@ const QStringList   LusanApplication::InternalExts
       "*.siml"
     , "*.dtml"
     , "*.coml"
-    , "*.logs"
+    , "*.sqlog"
 };
 
 LusanApplication *  LusanApplication::theApp{nullptr};
@@ -56,6 +57,7 @@ LusanApplication::LusanApplication(int& argc, char** argv)
     : QApplication  (argc, argv)
     , mOptions      ( )
 {
+    Q_ASSERT(LusanApplication::theApp == nullptr);
     LusanApplication::theApp = this;
 }
 
@@ -249,4 +251,9 @@ QString LusanApplication::getWorkspaceLogs(void)
     {
         return QString();
     }
+}
+
+LogCollectorClient& LusanApplication::getLogCollectorClient(void)
+{
+    return LogCollectorClient::getInstance();
 }

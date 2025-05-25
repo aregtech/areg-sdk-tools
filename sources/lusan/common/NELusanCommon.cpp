@@ -33,6 +33,7 @@ const QString    NELusanCommon::APPLICATION    { "lusan" };
 const QString    NELusanCommon::ORGANIZATION   { "Aregtech" };
 const QString    NELusanCommon::VERSION        { "1.0.0" };
 const QString    NELusanCommon::OPTIONS        { "lusan.opt" };
+const QString    NELusanCommon::INIT_FILE      { "./config/lusan.init" };
 
 
 QString NELusanCommon::getOptionsFile(void)
