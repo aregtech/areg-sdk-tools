@@ -81,6 +81,21 @@ bool LogViewer::isServiceConnected(void) const
     return mLogModel->isConnected();
 }
 
+void LogViewer::moveToBottom(bool lastSelect)
+{
+    QTableView* logs = getTable();
+    Q_ASSERT(logs != nullptr);
+    logs->scrollToBottom();
+    if (lastSelect)
+    {
+        int count = mLogModel->rowCount(QModelIndex());
+        if (count > 0)
+        {
+            logs->selectRow(count - 1);
+        }
+    }
+}
+
 void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
 {
     QModelIndex curIndex = getTable()->currentIndex();

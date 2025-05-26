@@ -94,6 +94,12 @@ public:
      **/
     inline void setLastFile(const QString& lastFile);
 
+    /**
+     * \brief   Returns a pointer to the live log viewer window.
+     *          Returns nullptr if does not receive logs in live mode.
+     **/
+    inline LogViewer* getLiveLogViewer(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // protected methods
 //////////////////////////////////////////////////////////////////////////
@@ -407,7 +413,7 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// Inline methods
+// MdiMainWindow class inline methods
 //////////////////////////////////////////////////////////////////////////
 
 inline void MdiMainWindow::setWorkspaceRoot(const QString& workspace)
@@ -433,6 +439,11 @@ inline const QString MdiMainWindow::getLastFile(void) const
 inline void MdiMainWindow::setLastFile(const QString& lastFile)
 {
     mLastFile = lastFile;
+}
+
+inline LogViewer* MdiMainWindow::getLiveLogViewer(void) const
+{
+    return mLogViewer;
 }
 
 #endif // LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP

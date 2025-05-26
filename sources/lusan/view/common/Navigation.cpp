@@ -19,17 +19,40 @@
 #include "lusan/view/common/Navigation.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
-QString  Navigation::TabNameFileSystem     {tr("Workspace")};
-QString  Navigation::TabNameLogExplorer    {tr("Log Explorer")};
+QString  Navigation::TabNameFileSystem      {tr("Workspace")};
+QString  Navigation::TabLiveLogsExplorer    {tr("Live Logs")};
+QString  Navigation::TabOfflineLogsExplorer {tr("Offline Logs")};
+QSize    Navigation::IconSize               {32, 32};
+
+QIcon Navigation::getWorkspaceExplorerIcon(void)
+{
+    QIcon icon;
+    icon.addFile(QString::fromUtf8(":/icons/workspace-explorer"), Navigation::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
+    return icon;
+}
+
+QIcon Navigation::getLiveLogIcon(void)
+{
+    QIcon icon;
+    icon.addFile(QString::fromUtf8(":/icons/log-live"), Navigation::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
+    return icon;
+}
+
+QIcon Navigation::getOfflineLotIcon(void)
+{
+    QIcon icon;
+    icon.addFile(QString::fromUtf8(":/icons/log-offline"), Navigation::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
+    return icon;
+}
 
 Navigation::Navigation(MdiMainWindow* parent)
     : QDockWidget   (tr("Navigation"), parent)
     , mTabs         (this)
     , mLogExplorer  (parent, this)
     , mFileSystem   (parent, this)
-{
-    mTabs.addTab(&mFileSystem, Navigation::TabNameFileSystem);
-    mTabs.addTab(&mLogExplorer, Navigation::TabNameLogExplorer);
+{    
+    mTabs.addTab(&mFileSystem, Navigation::getWorkspaceExplorerIcon(), Navigation::TabNameFileSystem);
+    mTabs.addTab(&mLogExplorer, Navigation::getLiveLogIcon(), Navigation::TabLiveLogsExplorer);
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
 

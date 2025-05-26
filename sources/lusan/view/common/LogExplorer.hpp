@@ -128,7 +128,10 @@ private:
 
     //!< Returns the control object to enable log scopes of the logs
     QToolButton* ctrlLogScopes(void);
-
+    
+    //!< Returns the control object to move to the bottom of log window.
+    QToolButton* ctrlMoveBottom(void);
+    
     //!< Returns the control object of the log messages
     QTreeView* ctrlTable(void);
 
@@ -195,7 +198,15 @@ private slots:
      * \brief   The slot is triggered when fails to send or receive message.
      **/
     void onConnectClicked(bool checked);
+
+    /**
+     * \brief   The slot is triggered when the move to bottom tool button is clicked.
+     **/
+    void onMoveBottomClicked();
     
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
     MdiMainWindow*          mMainFrame;     //!< The main frame of the application.
     Ui::LogExplorer*        ui;             //!< The user interface object.
