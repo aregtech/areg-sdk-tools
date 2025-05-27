@@ -138,6 +138,11 @@ public:
     inline bool isValid(void) const;
 
     /**
+     * \brief   Returns true if contains a bit indicating `PrioNotset` priority.
+     **/
+    inline bool hasPrioNotset(void) const;
+
+    /**
      * \brief   Returns true if the logging priority has debug priority bit set.
      **/
     inline bool hasPrioDebug(void) const;
@@ -496,7 +501,12 @@ inline bool ScopeNodeBase::isValid( void ) const
     return (mNodeType != ScopeNodeBase::eNode::Invalid);
 }
 
-inline bool ScopeNodeBase::hasPrioDebug( void ) const
+inline bool ScopeNodeBase::hasPrioNotset( void ) const
+{
+    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)) != 0;
+}
+
+inline bool ScopeNodeBase::hasPrioDebug(void) const
 {
     return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug)) != 0;
 }

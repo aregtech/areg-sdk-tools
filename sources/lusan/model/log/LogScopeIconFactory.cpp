@@ -697,3 +697,25 @@ QIcon LogScopeIconFactory::getIcon(uint32_t scopePrio)
         return _mapIcons[prio];
     }
 }
+
+QColor LogScopeIconFactory::getColor(NELogging::eLogPriority logPrio)
+{
+    switch (logPrio)
+    {
+    case NELogging::eLogPriority::PrioFatal:
+        return _colors[static_cast<int>(ColorFatal)];
+    case NELogging::eLogPriority::PrioError:
+        return _colors[static_cast<int>(ColorError)];
+    case NELogging::eLogPriority::PrioWarning:
+        return _colors[static_cast<int>(ColorWarn)];
+    case NELogging::eLogPriority::PrioInfo:
+        return _colors[static_cast<int>(ColorInfo)];
+    case NELogging::eLogPriority::PrioDebug:
+        return _colors[static_cast<int>(ColorDebug)];
+    case NELogging::eLogPriority::PrioScope:
+        return _colors[static_cast<int>(ColorScope)];
+    case NELogging::eLogPriority::PrioNotset:
+    default:
+        return _colors[static_cast<int>(ColotNotSet)];
+    }
+}
