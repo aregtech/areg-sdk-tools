@@ -260,11 +260,11 @@ void LogExplorer::setupLogSignals(bool setup)
     }
     else
     {
-        disconnect(log, &LogObserver::signalLogObserverConfigured  , this, &LogExplorer::onLogObserverConfigured);
-        disconnect(log, &LogObserver::signalLogDbConfigured        , this, &LogExplorer::onLogDbConfigured);
-        disconnect(log, &LogObserver::signalLogServiceConnected    , this, &LogExplorer::onLogServiceConnected);
-        disconnect(log, &LogObserver::signalLogObserverStarted     , this, &LogExplorer::onLogObserverStarted);
-        disconnect(log, &LogObserver::signalLogDbCreated           , this, &LogExplorer::onLogDbCreated);
+        disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &LogExplorer::onLogObserverConfigured);
+        disconnect(log, &LogObserver::signalLogDbConfigured         , this, &LogExplorer::onLogDbConfigured);
+        disconnect(log, &LogObserver::signalLogServiceConnected     , this, &LogExplorer::onLogServiceConnected);
+        disconnect(log, &LogObserver::signalLogObserverStarted      , this, &LogExplorer::onLogObserverStarted);
+        disconnect(log, &LogObserver::signalLogDbCreated            , this, &LogExplorer::onLogDbCreated);
     }
 }
 
@@ -357,8 +357,11 @@ void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const
         dbPath /= mInitLogFile.toStdString();
         QString logPath(std::filesystem::absolute(dbPath, err).c_str());
         LogObserver::connect(mAddress, mPort, logPath);
-
-        connect(mSelModel, &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
+        
+        connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
+        connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
+        connect(mModel      , &LogScopesModel::signalScopesUpdated   , this, &LogExplorer::onScopesUpdated);
+        connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
     }
     
     mShouldConnect = false;
@@ -465,4 +468,49 @@ void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItem
 {
     QModelIndexList list = selected.indexes();
     enableButtons(list.isEmpty() ? QModelIndex() : list.front());
+}
+
+void LogExplorer::onRootUpdated(const QModelIndex & root)
+{
+    if (mModel != nullptr)
+    {
+        QTreeView * navi = ctrlTable();
+        Q_ASSERT(navi != nullptr);
+        if (navi->isExpanded(root) == false)
+        {
+            navi->expand(root);
+        }
+
+        // Ensure all children of root are expanded and visible
+        int rowCount = mModel->rowCount(root);
+        for (int row = 0; row < rowCount; ++row)
+        {
+            QModelIndex child = mModel->index(row, 0, root);
+            if (child.isValid() && !navi->isExpanded(child))
+            {
+                navi->expand(child);
+            }
+        }
+    }
+}
+
+void LogExplorer::onScopesInserted(const QModelIndex & parent)
+{
+    if ((mModel != nullptr) && (parent.isValid()))
+    {
+        QTreeView * navi = ctrlTable();
+        Q_ASSERT(navi != nullptr);
+        if (navi->isExpanded(parent) == false)
+        {
+            navi->expand(parent);
+        }
+    }
+}
+
+void LogExplorer::onScopesUpdated(const QModelIndex & parent)
+{
+    if (parent.isValid())
+    {
+        ctrlTable()->update(parent);
+    }
 }

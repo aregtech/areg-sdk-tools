@@ -34,7 +34,6 @@
  * Dependencies
  ************************************************************************/
 class ScopeRoot;
-class QStandardItem;
 
 /**
  * \brief   Log scope model to visualize scopes in the scope navigation windows.
@@ -76,6 +75,35 @@ public:
      * \return  True if the index is valid, false otherwise.
      **/
     inline bool isValidIndex(const QModelIndex& index) const;
+
+    /**
+     * \brief   Returns root index.
+     **/
+    inline const QModelIndex& getRootIndex(void) const;
+    
+signals:
+
+/************************************************************************
+ * Signals
+ ************************************************************************/
+
+    /**
+     * \brief   Signal emitted when the root of the model is updated.
+     * \param   root    The index of the root that is updated.
+     **/
+    void signalRootUpdated(const QModelIndex& root);
+
+    /**
+     * \brief   Signal emitted when the scopes of an instance are inserted.
+     * \param   parent  The index of the parent instance item where scopes are inserted.
+     **/
+    void signalScopesInserted(const QModelIndex& parent);
+
+    /**
+     * \brief   Signal emitted when the scopes of an instance are updated.
+     * \param   parent  The index of the parent instance item that is updated.
+     **/
+    void signalScopesUpdated(const QModelIndex& parent);
     
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
@@ -220,5 +248,11 @@ inline bool LogScopesModel::isValidIndex(const QModelIndex& index) const
 {
     return (index.isValid() && (index.row() >= 0) && (index.column() == 0) && (index.model() == this));
 }
+
+inline const QModelIndex& LogScopesModel::getRootIndex(void) const
+{
+    return mRootIndex;
+}
+
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP

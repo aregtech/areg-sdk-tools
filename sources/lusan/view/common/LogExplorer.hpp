@@ -25,6 +25,7 @@
 
 #include <QItemSelection>
 #include <QList>
+#include <QModelIndex>
 #include <QString>
 #include <QWidget>
 
@@ -239,6 +240,24 @@ private slots:
 
     // Slot. which triggered when the selection in the log scopes navigation is changed.
     void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+
+    /**
+     * \brief   The signal triggered when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void onRootUpdated(const QModelIndex & root);
+    
+    /**
+     * \brief   Slot triggered when the scopes of an instance are inserted.
+     * \param   parent  The index of the parent instance item where scopes are inserted.
+     **/
+    void onScopesInserted(const QModelIndex & parent);
+    
+    /**
+     * \brief   Slot triggered when the scopes of an instance are updated.
+     * \param   parent  The index of the parent instance item that is updated.
+     **/
+    void onScopesUpdated(const QModelIndex & parent);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
