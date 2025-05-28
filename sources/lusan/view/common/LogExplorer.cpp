@@ -23,11 +23,12 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/log/LogObserver.hpp"
+#include "lusan/model/log/LogScopeIconFactory.hpp"
 #include "lusan/model/log/LogScopesModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/log/LogViewer.hpp"
+#include "lusan/data/log/ScopeNodes.hpp"
 
-#include "areg/base/File.hpp"
 #include "areg/base/NESocket.hpp"
 
 #include <filesystem>
@@ -56,6 +57,7 @@ LogExplorer::LogExplorer(MdiMainWindow* mainFrame, QWidget* parent)
     , mLogLocation  ( )
     , mShouldConnect(false)
     , mModel        (nullptr)
+    , mSelModel     (nullptr)
 {
     _explorer = this;
     
@@ -177,10 +179,71 @@ void LogExplorer::setupSignals(void)
 {
     connect(ctrlConnect()       , &QToolButton::clicked, this, &LogExplorer::onConnectClicked);
     connect(ctrlMoveBottom()    , &QToolButton::clicked, this, &LogExplorer::onMoveBottomClicked);
+    connect(ctrlLogError()      , &QToolButton::clicked, this, &LogExplorer::onPrioErrorClicked);
+    connect(ctrlLogWarning()    , &QToolButton::clicked, this, &LogExplorer::onPrioWarningClicked);
+    connect(ctrlLogInfo()       , &QToolButton::clicked, this, &LogExplorer::onPrioInfoClicked);
+    connect(ctrlLogDebug()      , &QToolButton::clicked, this, &LogExplorer::onPrioDebugClicked);
+    connect(ctrlLogScopes()     , &QToolButton::clicked, this, &LogExplorer::onPrioScopesClicked);
 }
 
 void LogExplorer::blockBasicSignals(bool block)
 {
+}
+
+void LogExplorer::updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected)
+{
+    constexpr int selected{60};
+    constexpr int notSelected{0};
+
+    QToolButton * toolButton{nullptr};
+    QPalette palette;
+    QColor color;
+
+    toolButton = ctrlLogDebug();
+    palette = toolButton->palette();
+    color = LogScopeIconFactory::getColor(NELogging::eLogPriority::PrioDebug);
+    color.setAlpha(dbgSelected ? selected : notSelected);
+    palette.setColor(QPalette::Button, color);
+    toolButton->setPalette(palette);
+    toolButton->setAutoFillBackground(true);
+
+    toolButton = ctrlLogInfo();
+    palette = toolButton->palette();
+    color = LogScopeIconFactory::getColor(NELogging::eLogPriority::PrioInfo);
+    color.setAlpha(infoSelected ? selected : notSelected);
+    palette.setColor(QPalette::Button, color);
+    toolButton->setPalette(palette);
+    toolButton->setAutoFillBackground(true);
+
+    toolButton = ctrlLogWarning();
+    palette = toolButton->palette();
+    color = LogScopeIconFactory::getColor(NELogging::eLogPriority::PrioWarning);
+    color.setAlpha(warnSelected ? selected : notSelected);
+    palette.setColor(QPalette::Button, color);
+    toolButton->setPalette(palette);
+    toolButton->setAutoFillBackground(true);
+
+    toolButton = ctrlLogError();
+    palette = toolButton->palette();
+    color = LogScopeIconFactory::getColor(NELogging::eLogPriority::PrioError);
+    color.setAlpha(errSelected ? selected : notSelected);
+    palette.setColor(QPalette::Button, color);
+    toolButton->setPalette(palette);
+    toolButton->setAutoFillBackground(true);
+
+    toolButton = ctrlLogScopes();
+    palette = toolButton->palette();
+    color = LogScopeIconFactory::getColor(NELogging::eLogPriority::PrioScope);
+    color.setAlpha(scopeSelected ? selected : notSelected);
+    palette.setColor(QPalette::Button, color);
+    toolButton->setPalette(palette);
+    toolButton->setAutoFillBackground(true);
+
+    ctrlLogError()->update();
+    ctrlLogWarning()->update();
+    ctrlLogInfo()->update();
+    ctrlLogDebug()->update();
+    ctrlLogScopes()->update();
 }
 
 void LogExplorer::setupLogSignals(bool setup)
@@ -197,11 +260,75 @@ void LogExplorer::setupLogSignals(bool setup)
     }
     else
     {
-        disconnect(log, &LogObserver::signalLogObserverConfigured  , this, &LogExplorer::onLogObserverConfigured);
-        disconnect(log, &LogObserver::signalLogDbConfigured        , this, &LogExplorer::onLogDbConfigured);
-        disconnect(log, &LogObserver::signalLogServiceConnected    , this, &LogExplorer::onLogServiceConnected);
-        disconnect(log, &LogObserver::signalLogObserverStarted     , this, &LogExplorer::onLogObserverStarted);
-        disconnect(log, &LogObserver::signalLogDbCreated           , this, &LogExplorer::onLogDbCreated);
+        disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &LogExplorer::onLogObserverConfigured);
+        disconnect(log, &LogObserver::signalLogDbConfigured         , this, &LogExplorer::onLogDbConfigured);
+        disconnect(log, &LogObserver::signalLogServiceConnected     , this, &LogExplorer::onLogServiceConnected);
+        disconnect(log, &LogObserver::signalLogObserverStarted      , this, &LogExplorer::onLogObserverStarted);
+        disconnect(log, &LogObserver::signalLogDbCreated            , this, &LogExplorer::onLogDbCreated);
+    }
+}
+
+void LogExplorer::enableButtons(const QModelIndex & selection)
+{
+    ScopeNodeBase * node = selection.isValid() ? mModel->data(selection, Qt::ItemDataRole::UserRole).value<ScopeNodeBase *>() : nullptr;
+    if (node != nullptr)
+    {
+        bool errSelected{false}, warnSelected{false}, infoSelected{false}, dbgSelected{false}, scopeSelected{false};
+
+        ctrlLogError()->setEnabled(true);
+        ctrlLogWarning()->setEnabled(true);
+        ctrlLogInfo()->setEnabled(true);
+        ctrlLogDebug()->setEnabled(true);
+        ctrlLogScopes()->setEnabled(true);
+
+        ctrlLogError()->setChecked(false);
+        ctrlLogWarning()->setChecked(false);
+        ctrlLogInfo()->setChecked(false);
+        ctrlLogDebug()->setChecked(false);
+        ctrlLogScopes()->setChecked(false);
+
+        if (node->isValid() && (node->hasPrioNotset() == false))
+        {
+            if (node->hasPrioDebug())
+            {
+                ctrlLogDebug()->setChecked(true);
+                dbgSelected = true;
+            }
+
+            if (node->hasPrioInfo())
+            {
+                ctrlLogInfo()->setChecked(true);
+                infoSelected = true;
+            }
+
+            if (node->hasPrioWarning())
+            {
+                ctrlLogWarning()->setChecked(true);
+                warnSelected = true;
+            }
+
+            if (node->hasPrioError() || node->hasPrioFatal())
+            {
+                ctrlLogWarning()->setChecked(true);
+                errSelected = true;
+            }
+
+            if (node->hasLogScopes())
+            {
+                ctrlLogScopes()->setChecked(true);
+                scopeSelected = true;
+            }
+        }
+
+        updateColors(errSelected, warnSelected, infoSelected, dbgSelected, scopeSelected);
+    }
+    else
+    {
+        ctrlLogError()->setEnabled(false);
+        ctrlLogWarning()->setEnabled(false);
+        ctrlLogInfo()->setEnabled(false);
+        ctrlLogDebug()->setEnabled(false);
+        ctrlLogScopes()->setEnabled(false);
     }
 }
 
@@ -222,13 +349,19 @@ void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const
     
     if (isEnabled && mShouldConnect)
     {
-        mModel = new LogScopesModel(this);
+        mModel = new LogScopesModel(ctrlTable());
+        mSelModel = new QItemSelectionModel(mModel, ctrlTable());
         
         std::error_code err;
         std::filesystem::path dbPath(mLogLocation.toStdString());
         dbPath /= mInitLogFile.toStdString();
         QString logPath(std::filesystem::absolute(dbPath, err).c_str());
         LogObserver::connect(mAddress, mPort, logPath);
+        
+        connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
+        connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
+        connect(mModel      , &LogScopesModel::signalScopesUpdated   , this, &LogExplorer::onScopesUpdated);
+        connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
     }
     
     mShouldConnect = false;
@@ -238,16 +371,24 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
 {
     if (mModel != nullptr)
     {
+        Q_ASSERT(mSelModel != nullptr);
+
         if (isConnected)
         {
             mModel->initialize();
+            mSelModel->reset();
             ctrlTable()->setModel(mModel);
+            ctrlTable()->setSelectionModel(mSelModel);
         }
         else
         {
+            ctrlTable()->setSelectionModel(nullptr);
             ctrlTable()->setModel(nullptr);
+            mSelModel->reset();
             mModel->release();
         }
+
+        enableButtons(QModelIndex());
     }
     
     LogObserver* log = LogObserver::getComponent();
@@ -295,5 +436,81 @@ void LogExplorer::onMoveBottomClicked()
     if (logViewer != nullptr)
     {
         logViewer->moveToBottom(true);
+    }
+}
+
+void LogExplorer::onPrioErrorClicked(bool checked)
+{
+
+}
+
+void LogExplorer::onPrioWarningClicked(bool checked)
+{
+
+}
+
+void LogExplorer::onPrioInfoClicked(bool checked)
+{
+
+}
+
+void LogExplorer::onPrioDebugClicked(bool checked)
+{
+
+}
+
+void LogExplorer::onPrioScopesClicked(bool checked)
+{
+
+}
+
+void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+    QModelIndexList list = selected.indexes();
+    enableButtons(list.isEmpty() ? QModelIndex() : list.front());
+}
+
+void LogExplorer::onRootUpdated(const QModelIndex & root)
+{
+    if (mModel != nullptr)
+    {
+        QTreeView * navi = ctrlTable();
+        Q_ASSERT(navi != nullptr);
+        if (navi->isExpanded(root) == false)
+        {
+            navi->expand(root);
+        }
+
+        // Ensure all children of root are expanded and visible
+        int rowCount = mModel->rowCount(root);
+        for (int row = 0; row < rowCount; ++row)
+        {
+            QModelIndex child = mModel->index(row, 0, root);
+            if (child.isValid() && !navi->isExpanded(child))
+            {
+                navi->expand(child);
+            }
+        }
+    }
+}
+
+void LogExplorer::onScopesInserted(const QModelIndex & parent)
+{
+    if ((mModel != nullptr) && (parent.isValid()))
+    {
+        QTreeView * navi = ctrlTable();
+        Q_ASSERT(navi != nullptr);
+        if (navi->isExpanded(parent) == false)
+        {
+            navi->expand(parent);
+        }
+    }
+}
+
+void LogExplorer::onScopesUpdated(const QModelIndex & parent)
+{
+    if (parent.isValid())
+    {
+        ctrlTable()->update(parent);
     }
 }

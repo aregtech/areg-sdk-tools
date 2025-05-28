@@ -22,7 +22,10 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+
+#include <QItemSelection>
 #include <QList>
+#include <QModelIndex>
 #include <QString>
 #include <QWidget>
 
@@ -93,7 +96,7 @@ public:
      *                  If `false`, the signals and slots are disconnected.
      **/
     void setupLogSignals(bool setup);
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
@@ -155,6 +158,22 @@ private:
      * \param   block   If true, blocks the signals. Otherwise, unblocks the signals.
      **/
     void blockBasicSignals(bool block);
+
+    /**
+     * \brief   Enables or disables lot priority tool buttons based on selection index.
+     *          It also changes the colors of the buttons depending on the priority.
+     **/
+    void enableButtons(const QModelIndex& selection);
+
+    /**
+     * \brief   Updates the colors of the log priority tool buttons.
+     * \param   errSelected    If true, the error button is checked and the colored.
+     * \param   warnSelected   If true, the warning button is checked and the colored.
+     * \param   infoSelected   If true, the info button is checked and the colored.
+     * \param   dbgSelected    If true, the debug button is checked and the colored.
+     * \param   scopeSelected  If true, the scopes button is checked and the colored.
+     **/
+    void updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected);
     
 private slots:
     /**
@@ -203,7 +222,43 @@ private slots:
      * \brief   The slot is triggered when the move to bottom tool button is clicked.
      **/
     void onMoveBottomClicked();
+
+    // Slot for error log priority tool button
+    void onPrioErrorClicked(bool checked);
+
+    // Slot for warning log priority tool button
+    void onPrioWarningClicked(bool checked);
+
+    // Slot for information log priority tool button
+    void onPrioInfoClicked(bool checked);
+
+    // Slot for debug log priority tool button
+    void onPrioDebugClicked(bool checked);
     
+    // Slot for log scope priority tool button
+    void onPrioScopesClicked(bool checked);
+
+    // Slot. which triggered when the selection in the log scopes navigation is changed.
+    void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+
+    /**
+     * \brief   The signal triggered when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void onRootUpdated(const QModelIndex & root);
+    
+    /**
+     * \brief   Slot triggered when the scopes of an instance are inserted.
+     * \param   parent  The index of the parent instance item where scopes are inserted.
+     **/
+    void onScopesInserted(const QModelIndex & parent);
+    
+    /**
+     * \brief   Slot triggered when the scopes of an instance are updated.
+     * \param   parent  The index of the parent instance item that is updated.
+     **/
+    void onScopesUpdated(const QModelIndex & parent);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -217,6 +272,7 @@ private:
     QString                 mLogLocation;   //!< The location of log files.
     bool                    mShouldConnect; //!< Flag, indicating to connect to log collector.
     LogScopesModel*         mModel;         //!< The model of the log scopes.
+    QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
 };
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP

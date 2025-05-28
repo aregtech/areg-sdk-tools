@@ -34,7 +34,6 @@ LogScopesModel::LogScopesModel(QObject* parent)
     , mRootNode         ( nullptr )
 {
     mRootIndex = createIndex(0, 0, nullptr);
-    // mRootNode = invisibleRootItem();
 }
 
 LogScopesModel::~LogScopesModel(void)
@@ -146,7 +145,7 @@ QVariant LogScopesModel::data(const QModelIndex& index, int role) const
     
     if (index == mRootIndex)
     {
-        return (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole ? QVariant(QString("logs")) : QVariant());
+        return (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole ? QVariant(tr("Live Logs")) : QVariant());
     }
     
     switch (static_cast<Qt::ItemDataRole>(role))
@@ -257,6 +256,7 @@ void LogScopesModel::slotLogInstancesConnect(const QList<NEService::sServiceConn
     }
 
     endResetModel();
+    emit signalRootUpdated(mRootIndex);
 }
 
 void LogScopesModel::slotLogInstancesDisconnect(const QList<NEService::sServiceConnectedInstance>& instances)
@@ -271,6 +271,8 @@ void LogScopesModel::slotLogInstancesDisconnect(const QList<NEService::sServiceC
             endRemoveRows();
         }
     }
+    
+    emit signalRootUpdated(mRootIndex);
 }
 
 void LogScopesModel::slotLogServiceDisconnected(const QMap<ITEM_ID, NEService::sServiceConnectedInstance>& instances)
@@ -285,11 +287,13 @@ void LogScopesModel::slotLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope
     int pos = scopes.isEmpty() == false ? _findRoot(cookie) : static_cast<int>(NECommon::INVALID_INDEX);
     if (pos != static_cast<int>(NECommon::INVALID_INDEX))
     {
-        beginResetModel();
+        int count = static_cast<int>(scopes.size());
+        QModelIndex idxInstance = index(pos, 0, mRootIndex);
+        beginInsertRows(idxInstance, 0, count);
 
         ScopeRoot* root = mRootList[pos];
         Q_ASSERT(root != nullptr);
-        for (int i = 0; i < static_cast<int>(scopes.size()); ++i)
+        for (int i = 0; i < count; ++i)
         {
             const sLogScope* scope = scopes[i];
             Q_ASSERT(scope != nullptr);
@@ -297,7 +301,8 @@ void LogScopesModel::slotLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope
             root->addChildRecursive(scopeName, scope->lsPrio);
         }
 
-        endResetModel();
+        endInsertRows();
+        emit signalScopesInserted(idxInstance);
     }
 }
 
@@ -306,7 +311,7 @@ void LogScopesModel::slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>
     int pos = scopes.isEmpty() == false ? _findRoot(cookie) : static_cast<int>(NECommon::INVALID_INDEX);
     if (pos != static_cast<int>(NECommon::INVALID_INDEX))
     {
-        beginResetModel();
+        int count = static_cast<int>(scopes.size());        
         ScopeRoot* root = mRootList[pos];
         Q_ASSERT(root != nullptr);
         for (int i = 0; i < static_cast<int>(scopes.size()); ++i)
@@ -319,6 +324,7 @@ void LogScopesModel::slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>
         
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
-        endResetModel();
+        
+        emit signalScopesUpdated(index(pos, 0, mRootIndex));
     }
 }

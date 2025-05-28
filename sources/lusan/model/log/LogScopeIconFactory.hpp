@@ -24,6 +24,9 @@
  ************************************************************************/
 
 #include "lusan/common/NELusanCommon.hpp"
+#include "areg/logging/NELogging.hpp"
+
+#include <QColor>
 #include <QIcon>
 
 /************************************************************************
@@ -46,6 +49,12 @@ public:
      * \param   scopePrio    The bits of combination of scope priorities.
      **/
     static QIcon getIcon(uint32_t scopePrio);
+
+    /**
+     * \brief   Returns the color for the log priority.
+     * \param   logPrio      The log priority.
+     **/
+    static QColor getColor(NELogging::eLogPriority logPrio);
 };
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPEICONFACTORY_HPP
