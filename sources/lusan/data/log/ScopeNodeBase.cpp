@@ -117,9 +117,9 @@ unsigned int ScopeNodeBase::getPriority( void ) const
     return mPrioStates;
 }
 
-void ScopeNodeBase::setPriority( unsigned int prio )
+void ScopeNodeBase::setPriority( uint32_t prio)
 {
-    mPrioStates = prio;
+    mPrioStates = (hasLogScopes() ? (prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) : prio);
 }
 
 void ScopeNodeBase::addPriority( unsigned int prio )

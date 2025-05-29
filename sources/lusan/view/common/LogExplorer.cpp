@@ -441,27 +441,87 @@ void LogExplorer::onMoveBottomClicked()
 
 void LogExplorer::onPrioErrorClicked(bool checked)
 {
-
+    QModelIndex current = ctrlTable()->currentIndex();
+    if (current.isValid())
+    {
+        Q_ASSERT(mModel != nullptr);
+        if (checked)
+        {
+            mModel->setLogPriority(current, NELogging::eLogPriority::PrioError);
+        }
+        else
+        {
+            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioError);
+        }
+    }
 }
 
 void LogExplorer::onPrioWarningClicked(bool checked)
 {
-
+    QModelIndex current = ctrlTable()->currentIndex();
+    if (current.isValid())
+    {
+        Q_ASSERT(mModel != nullptr);
+        if (checked)
+        {
+            mModel->setLogPriority(current, NELogging::eLogPriority::PrioWarning);
+        }
+        else
+        {
+            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioWarning);
+        }
+    }
 }
 
 void LogExplorer::onPrioInfoClicked(bool checked)
 {
-
+    QModelIndex current = ctrlTable()->currentIndex();
+    if (current.isValid())
+    {
+        Q_ASSERT(mModel != nullptr);
+        if (checked)
+        {
+            mModel->setLogPriority(current, NELogging::eLogPriority::PrioInfo);
+        }
+        else
+        {
+            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioInfo);
+        }
+    }
 }
 
 void LogExplorer::onPrioDebugClicked(bool checked)
 {
-
+    QModelIndex current = ctrlTable()->currentIndex();
+    if (current.isValid())
+    {
+        Q_ASSERT(mModel != nullptr);
+        if (checked)
+        {
+            mModel->setLogPriority(current, NELogging::eLogPriority::PrioDebug);
+        }
+        else
+        {
+            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioDebug);
+        }
+    }
 }
 
 void LogExplorer::onPrioScopesClicked(bool checked)
 {
-
+    QModelIndex current = ctrlTable()->currentIndex();
+    if (current.isValid())
+    {
+        Q_ASSERT(mModel != nullptr);
+        if (checked)
+        {
+            mModel->addLogPriority(current, NELogging::eLogPriority::PrioScope);
+        }
+        else
+        {
+            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioScope);
+        }
+    }
 }
 
 void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)

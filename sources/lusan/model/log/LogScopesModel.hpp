@@ -28,6 +28,7 @@
 #include <QMap>
 
 #include "areg/component/NEService.hpp"
+#include "areg/logging/NELogging.hpp"
 #include "areglogger/client/LogObserverApi.h"
 
 /************************************************************************
@@ -80,6 +81,12 @@ public:
      * \brief   Returns root index.
      **/
     inline const QModelIndex& getRootIndex(void) const;
+
+    bool setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+
+    bool addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+
+    bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
     
 signals:
 
@@ -253,6 +260,5 @@ inline const QModelIndex& LogScopesModel::getRootIndex(void) const
 {
     return mRootIndex;
 }
-
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP

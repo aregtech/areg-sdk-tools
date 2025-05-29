@@ -54,7 +54,7 @@ ScopeLeaf::ScopeLeaf( ScopeLeaf && src ) noexcept
 
 void ScopeLeaf::addPriority(unsigned int prio)
 {
-    mPrioStates = prio;
+    ScopeNodeBase::setPriority(prio);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -157,6 +157,51 @@ ScopeNode & ScopeNode::operator = ( ScopeNode && src ) noexcept
     }
 
     return (*this);
+}
+
+void ScopeNode::setPriority( uint32_t prio)
+{
+    ScopeNodeBase::setPriority(prio);
+
+    for (auto & child : mChildLeafs)
+    {
+        child.second->setPriority(prio);
+    }
+
+    for (auto & child : mChildNodes)
+    {
+        child.second->setPriority(prio);
+    }
+}
+
+void ScopeNode::addPriority(uint32_t prio)
+{
+    ScopeNodeBase::addPriority(prio);
+
+    for (auto& child : mChildLeafs)
+    {
+        child.second->addPriority(prio);
+    }
+
+    for (auto& child : mChildNodes)
+    {
+        child.second->addPriority(prio);
+    }
+}
+
+void ScopeNode::removePriority(uint32_t prio)
+{
+    ScopeNodeBase::removePriority(prio);
+
+    for (auto& child : mChildLeafs)
+    {
+        child.second->removePriority(prio);
+    }
+
+    for (auto& child : mChildNodes)
+    {
+        child.second->removePriority(prio);
+    }
 }
 
 ScopeNodeBase* ScopeNode::makeChildNode(QString& scopePath, uint32_t prio)
@@ -409,25 +454,25 @@ void ScopeNode::refreshPrioritiesRecursive(void)
 //////////////////////////////////////////////////////////////////////////
 
 ScopeRoot::ScopeRoot(void)
-    : ScopeNode (ScopeNodeBase::eNode::Root, this)
+    : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (NEService::COOKIE_LOCAL)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId)
-    : ScopeNode (ScopeNodeBase::eNode::Root, this)
+    : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (rootId)
 {
 }
 
 ScopeRoot::ScopeRoot(const NEService::sServiceConnectedInstance& instance)
-    : ScopeNode (ScopeNodeBase::eNode::Root, QString(instance.ciInstance.c_str()), static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), this)
+    : ScopeNode (ScopeNodeBase::eNode::Root, QString(instance.ciInstance.c_str()), static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
     , mRootId   (instance.ciCookie)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString rootName)
-    : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), this)
+    : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
     , mRootId   (rootId)
 {
 }
