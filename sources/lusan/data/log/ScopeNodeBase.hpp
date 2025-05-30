@@ -216,6 +216,8 @@ public:
      **/
     inline bool hasChildren(void) const;
 
+    inline ScopeNodeBase* getTreeRoot(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -229,7 +231,7 @@ public:
     /**
      * \brief   Sets the node priority flag.
      **/
-    virtual void setPriority(unsigned int prio);
+    virtual void setPriority(uint32_t prio);
 
     /**
      * \brief   Adds log priority bits.
@@ -581,6 +583,24 @@ inline void ScopeNodeBase::setIcon(const QIcon & icon)
 inline bool ScopeNodeBase::hasChildren(void) const
 {
     return (getChildCount() != 0);
+}
+
+inline ScopeNodeBase* ScopeNodeBase::getTreeRoot(void) const
+{
+    if (isRoot())
+    {
+        Q_ASSERT(mParent == nullptr);
+        return const_cast<ScopeNodeBase*>(this);
+    }
+    else if (mParent != nullptr)
+    {
+        return mParent->getTreeRoot();
+    }
+    else
+    {
+        Q_ASSERT(false && "ScopeNodeBase::getTreeRoot() called on invalid node without parent.");
+        return nullptr;
+    }
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODEBASE_HPP

@@ -180,6 +180,21 @@ public:
  ************************************************************************/
 
     /**
+     * \brief   Sets the node priority flag.
+     **/
+    virtual void setPriority(uint32_t prio) override;
+
+    /**
+     * \brief   Adds log priority bits.
+     **/
+    virtual void addPriority(unsigned int prio) override;
+
+    /**
+     * \brief   Adds log priority bits.
+     **/
+    virtual void removePriority(unsigned int prio) override;
+
+    /**
      * \brief   Creates a child node. The child node is not added to the parent.
      *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
      *          If path is empty, returns nullptr.

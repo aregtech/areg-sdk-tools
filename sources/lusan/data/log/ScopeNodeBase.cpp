@@ -117,9 +117,9 @@ unsigned int ScopeNodeBase::getPriority( void ) const
     return mPrioStates;
 }
 
-void ScopeNodeBase::setPriority( unsigned int prio )
+void ScopeNodeBase::setPriority( uint32_t prio)
 {
-    mPrioStates = prio;
+    mPrioStates = (hasLogScopes() ? (prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) : prio);
 }
 
 void ScopeNodeBase::addPriority( unsigned int prio )
@@ -130,6 +130,10 @@ void ScopeNodeBase::addPriority( unsigned int prio )
 void ScopeNodeBase::removePriority(unsigned int prio)
 {
     mPrioStates &= ~prio;
+    if (static_cast<NELogging::eLogPriority>(mPrioStates) == NELogging::eLogPriority::PrioInvalid)
+    {
+        mPrioStates = static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset);
+    }
 }
 
 int ScopeNodeBase::addChildRecursive(QString& scopePath, uint32_t prio)
@@ -182,15 +186,17 @@ QStringList ScopeNodeBase::makeNodeNames(const QString& scopePath) const
 QString ScopeNodeBase::makePath(void) const
 {
     QString result(mParent != nullptr ? mParent->makePath() : getPathString());
-    if (result.isEmpty() == false)
+    
+    if (isRoot() == false)
     {
-        result += NELusanCommon::SCOPE_SEPRATOR + getPathString();
+        result += getPathString();
     }
-    else if (isRoot() == false)
+    
+    if (isNode())
     {
-        result = getPathString();
+        result += NELusanCommon::SCOPE_SEPRATOR;
     }
-
+    
     return result;
 }
 
