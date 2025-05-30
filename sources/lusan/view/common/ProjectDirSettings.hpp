@@ -21,6 +21,7 @@
 
 #include <QWidget>
 #include <QString>
+#include <memory>
 
 namespace Ui {
 class projectDirSettingsDlg;
@@ -97,7 +98,7 @@ private:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::projectDirSettingsDlg* ui;
+    std::unique_ptr<Ui::projectDirSettingsDlg> mUi;
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
