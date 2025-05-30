@@ -82,12 +82,19 @@ bool LogScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLogPri
 
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
+        
         sLogScope scope;
         scope.lsId = 0;
         scope.lsPrio = node->getPriority();
         QString path = node->makePath();
+        if (node->isLeaf() == false)
+        {
+            path += NELusanCommon::SCOPE_ALL;
+        }
+        
         NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
         LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
+        
         emit dataChanged(index, index, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
     }
 
@@ -102,8 +109,22 @@ bool LogScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPri
     {
         node->addPriority(static_cast<uint32_t>(prio));
         ScopeNodeBase* root = node->getTreeRoot();
+        
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
+        
+        sLogScope scope;
+        scope.lsId = 0;
+        scope.lsPrio = node->getPriority();
+        QString path = node->makePath();
+        if (node->isLeaf() == false)
+        {
+            path += NELusanCommon::SCOPE_ALL;
+        }
+        
+        NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
+        LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
+        
         emit dataChanged(index, index, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
     }
 
@@ -118,8 +139,22 @@ bool LogScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLog
     {
         node->removePriority(static_cast<uint32_t>(prio));
         ScopeNodeBase* root = node->getTreeRoot();
+        
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
+        
+        sLogScope scope;
+        scope.lsId = 0;
+        scope.lsPrio = node->getPriority();
+        QString path = node->makePath();
+        if (node->isLeaf() == false)
+        {
+            path += NELusanCommon::SCOPE_ALL;
+        }
+        
+        NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
+        LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
+        
         emit dataChanged(index, index, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
     }
 
