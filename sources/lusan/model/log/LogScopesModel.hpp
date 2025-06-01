@@ -82,10 +82,34 @@ public:
      **/
     inline const QModelIndex& getRootIndex(void) const;
 
+    /**
+     * \brief   Adds the specified log priority to the log scope at the given index.
+     *          The request to change the log priority is sent to the target module.
+     *          If the specified node has scope priority, it will not be changed.
+     * \param   index   The index of the log scope to change priority.
+     * \param   prio    The new priority to set for the log scope on target.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
     bool setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
 
+    /**
+     * \brief   Adds the specified log priority to the log scope at the given index.
+     *          The request to change the log priority is sent to the target module.
+     *          If the log scope already has this priority, it will not be added again.
+     * \param   index   The index of the log scope to add priority.
+     * \param   prio    The log priority to add to the log scope.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
     bool addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
 
+    /**
+     * \brief   Removes the specified log priority from the log scope at the given index.
+     *          The request to remove the log priority is sent to the target module.
+     *          If the log scope does not have this priority, it will not be removed.
+     * \param   index   The index of the log scope to remove priority.
+     * \param   prio    The log priority to remove from the log scope.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
     bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
     
 signals:
@@ -244,7 +268,6 @@ private:
 private:
     RootList        mRootList;      // The list of root nodes
     QModelIndex     mRootIndex;     // The root index of the model
-    QStandardItem*  mRootNode;      // The root item.
 };
 
 //////////////////////////////////////////////////////////////////////////

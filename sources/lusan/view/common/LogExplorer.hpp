@@ -174,6 +174,12 @@ private:
      * \param   scopeSelected  If true, the scopes button is checked and the colored.
      **/
     void updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected);
+
+    /**
+     * \brief   Updates the expanded of the log scopes model based on the current index.
+     * \param   current    The current index to update expanded.
+     **/
+    void updateExpanded(const QModelIndex& current);
     
 private slots:
     /**
@@ -258,6 +264,8 @@ private slots:
      * \param   parent  The index of the parent instance item that is updated.
      **/
     void onScopesUpdated(const QModelIndex & parent);
+    
+    void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

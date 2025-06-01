@@ -27,7 +27,6 @@
 
 #include <QList>
 #include <QString>
-#include <QIcon>
 
 /**
  * \brief   ScopeNodeBase is the base class for all scope nodes.
@@ -201,21 +200,14 @@ public:
     inline void updateParentPrio(uint32_t prio, bool recursive);
 
     /**
-     * \brief   Returns the icon of the node to display.
-     **/
-    inline QIcon getIcon(void) const;
-
-    /**
-     * \brief   Sets the icon of the node to display.
-     * \param   icon    The icon to set.
-     **/
-    inline void setIcon(const QIcon& icon);
-
-    /**
      * \brief   Returns true if node has children.
      **/
     inline bool hasChildren(void) const;
 
+    /**
+     * \brief   Returns the root of the tree, where this node is located.
+     *          If the node is root, returns itself.
+     **/
     inline ScopeNodeBase* getTreeRoot(void) const;
 
 //////////////////////////////////////////////////////////////////////////
@@ -318,15 +310,6 @@ public:
      * \return  The node object created.
      **/
     virtual ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio);
-
-    /**
-     * \brief   Creates a list of node names from the passed scope path.
-     *          The path is separated by '_'.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, the `scopePath` is empty.
-     * \return  The list of node names.
-     **/
-    virtual QStringList makeNodeNames(const QString& scopePath) const;
 
     /**
      * \brief   Creates and returns the path of the node, where each name of the node is separated by `_`.
@@ -453,6 +436,29 @@ public:
      **/
     virtual void refreshPrioritiesRecursive(void);
 
+    /**
+     * \brief   Returns the list of nodes with log priority. The node should not have NotSet priority flag.
+     **/
+    virtual QList<ScopeNodeBase*> getNodesWithPriority(void) const;
+
+    /**
+     * \brief   Extracts nodes with log priority. The node should not have NotSet priority flag.
+     * \param   list    The list to add nodes with priority.
+     * \return  Returns number of new added nodes.
+     **/
+    virtual int extractNodesWithPriority(QList<ScopeNodeBase*>& list) const;
+    
+    /**
+     * \brief   Creates a list of node names from the passed scope path.
+     *          The path is separated by '_'. If path contains "__", only one
+     *          symbol is removed and the is used as a prefix (or postfix) in the name.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, the `scopePath` is empty.
+     * \param   nodeNames   The list names to create nodes.
+     * \return  The number of names in the list.
+     **/
+    virtual int splitScopePath(QString& scopePath, QStringList& nodeNames) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -465,8 +471,6 @@ protected:
     unsigned int                mPrioStates;
     //!< The name of the node.
     QString                     mNodeName;
-    //!< The icon to display.
-    QIcon                       mIcon;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -562,22 +566,12 @@ inline void ScopeNodeBase::updateParentPrio(uint32_t prio, bool recursive)
 {
     if (mParent != nullptr)
     {
-        mParent->addPriority(prio);
+        mParent->mPrioStates |= prio;
         if (recursive)
         {
             mParent->updateParentPrio(prio, recursive);
         }
     }
-}
-
-inline QIcon ScopeNodeBase::getIcon(void) const
-{
-    return mIcon;
-}
-
-inline void ScopeNodeBase::setIcon(const QIcon & icon)
-{
-    mIcon = icon;
 }
 
 inline bool ScopeNodeBase::hasChildren(void) const
