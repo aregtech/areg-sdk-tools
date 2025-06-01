@@ -532,7 +532,7 @@ void LogExplorer::onPrioScopesClicked(bool checked)
         if (checked)
         {
             ScopeNodeBase* node = static_cast<ScopeNodeBase *>(current.internalPointer());
-            if (node->hasPrioNotset())
+            if (false && node->hasPrioNotset())
             {
                 checked = mModel->setLogPriority(current, NELogging::eLogPriority::PrioScope);
             }
