@@ -54,7 +54,14 @@ ScopeLeaf::ScopeLeaf( ScopeLeaf && src ) noexcept
 
 void ScopeLeaf::addPriority(unsigned int prio)
 {
-    ScopeNodeBase::setPriority(prio);
+    if (prio == static_cast<int>(NELogging::eLogPriority::PrioScope))
+    {
+        mPrioStates |= prio;
+    }
+    else
+    {
+        ScopeNodeBase::setPriority(prio);
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

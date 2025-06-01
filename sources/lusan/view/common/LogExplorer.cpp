@@ -246,6 +246,21 @@ void LogExplorer::updateColors(bool errSelected, bool warnSelected, bool infoSel
     ctrlLogScopes()->update();
 }
 
+void LogExplorer::updateExpanded(const QModelIndex& current)
+{
+    QTreeView* tree = current.isValid() && (mModel != nullptr) ? ctrlTable() : nullptr;
+    if (tree != nullptr)
+    {
+        tree->update(current);
+        int count = tree->isExpanded(current) ? mModel->rowCount(current) : 0;
+        for (int i = 0; i < count; ++ i)
+        {
+            QModelIndex index = mModel->index(i, 0, current);
+            updateExpanded(index);
+        }
+    }
+}
+
 void LogExplorer::setupLogSignals(bool setup)
 {
     LogObserver* log = LogObserver::getComponent();
@@ -360,7 +375,8 @@ void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const
         
         connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
         connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
-        connect(mModel      , &LogScopesModel::signalScopesUpdated   , this, &LogExplorer::onScopesUpdated);
+        connect(mModel      , &LogScopesModel::signalScopesUpdated  , this, &LogExplorer::onScopesUpdated);
+        connect(mModel      , &LogScopesModel::dataChanged          , this, &LogExplorer::onScopesDataChanged);
         connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
     }
     
@@ -515,12 +531,22 @@ void LogExplorer::onPrioScopesClicked(bool checked)
         Q_ASSERT(mModel != nullptr);
         if (checked)
         {
-            mModel->addLogPriority(current, NELogging::eLogPriority::PrioScope);
+            ScopeNodeBase* node = static_cast<ScopeNodeBase *>(current.internalPointer());
+            if (node->hasPrioNotset())
+            {
+                checked = mModel->setLogPriority(current, NELogging::eLogPriority::PrioScope);
+            }
+            else
+            {
+                checked = mModel->addLogPriority(current, NELogging::eLogPriority::PrioScope);
+            }
         }
         else
         {
-            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioScope);
+            checked = mModel->removeLogPriority(current, NELogging::eLogPriority::PrioScope) == false;
         }
+        
+        ctrlLogScopes()->setChecked(checked);
     }
 }
 
@@ -558,6 +584,7 @@ void LogExplorer::onScopesInserted(const QModelIndex & parent)
 {
     if ((mModel != nullptr) && (parent.isValid()))
     {
+        enableButtons(parent);
         QTreeView * navi = ctrlTable();
         Q_ASSERT(navi != nullptr);
         if (navi->isExpanded(parent) == false)
@@ -571,6 +598,17 @@ void LogExplorer::onScopesUpdated(const QModelIndex & parent)
 {
     if (parent.isValid())
     {
+        enableButtons(parent);
         ctrlTable()->update(parent);
+    }
+}
+
+void LogExplorer::onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles /*= QList<int>()*/)
+{
+    if (mSelModel != nullptr)
+    {
+        QModelIndex current = ctrlTable()->currentIndex();        
+        enableButtons(current);
+        updateExpanded(current);
     }
 }

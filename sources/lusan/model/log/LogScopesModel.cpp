@@ -31,7 +31,6 @@ LogScopesModel::LogScopesModel(QObject* parent)
     : QAbstractItemModel( parent )
     , mRootList         ( )
     , mRootIndex        ( )
-    , mRootNode         ( nullptr )
 {
     mRootIndex = createIndex(0, 0, nullptr);
 }
@@ -75,11 +74,12 @@ bool LogScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLogPri
     bool result{ false };
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
     ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
-    if ((root != nullptr) && (node->getPriority() != static_cast<uint32_t>(prio)))
+    if (root == nullptr)
+        return result;
+    
+    if (node->getPriority() != static_cast<uint32_t>(prio))
     {
-        result = true;
         node->setPriority(static_cast<uint32_t>(prio));
-
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         
@@ -93,9 +93,11 @@ bool LogScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLogPri
         }
         
         NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
-        LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
-        
-        emit dataChanged(index, index, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
+        result = LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
+    }
+    else
+    {
+        result = true;
     }
 
     return result;
@@ -105,11 +107,13 @@ bool LogScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPri
 {
     bool result{ false };
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
-    if ((node != nullptr) && ((node->getPriority() & static_cast<uint32_t>(prio)) == 0))
+    ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
+    if (root == nullptr)
+        return result;
+    
+    if ((node->getPriority() & static_cast<uint32_t>(prio)) == 0)
     {
-        node->addPriority(static_cast<uint32_t>(prio));
-        ScopeNodeBase* root = node->getTreeRoot();
-        
+        node->addPriority(static_cast<uint32_t>(prio));        
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         
@@ -123,9 +127,11 @@ bool LogScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPri
         }
         
         NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
-        LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
-        
-        emit dataChanged(index, index, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
+        result = LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
+    }
+    else
+    {
+        result = true;
     }
 
     return result;
@@ -135,11 +141,13 @@ bool LogScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLog
 {
     bool result{ false };
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
-    if ((node != nullptr) && ((node->getPriority() & static_cast<uint32_t>(prio)) != 0))
+    ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
+    if (root == nullptr)
+        return result;
+    
+    if ((node->getPriority() & static_cast<uint32_t>(prio)) != 0)
     {
         node->removePriority(static_cast<uint32_t>(prio));
-        ScopeNodeBase* root = node->getTreeRoot();
-        
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         
@@ -153,9 +161,11 @@ bool LogScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLog
         }
         
         NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
-        LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
-        
-        emit dataChanged(index, index, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
+        result = LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);        
+    }
+    else
+    {
+        result = true;
     }
 
     return result;
@@ -384,6 +394,7 @@ void LogScopesModel::slotLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope
 
         ScopeRoot* root = mRootList[pos];
         Q_ASSERT(root != nullptr);
+        root->resetPrioritiesRecursive(false);
         for (int i = 0; i < count; ++i)
         {
             const sLogScope* scope = scopes[i];
@@ -416,7 +427,6 @@ void LogScopesModel::slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         
-        // emit signalScopesUpdated(index(pos, 0, mRootIndex));
         QModelIndex entry = index(pos, 0, mRootIndex);
         emit dataChanged(entry, entry, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
     }

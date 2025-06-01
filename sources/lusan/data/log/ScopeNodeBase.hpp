@@ -216,6 +216,10 @@ public:
      **/
     inline bool hasChildren(void) const;
 
+    /**
+     * \brief   Returns the root of the tree, where this node is located.
+     *          If the node is root, returns itself.
+     **/
     inline ScopeNodeBase* getTreeRoot(void) const;
 
 //////////////////////////////////////////////////////////////////////////
@@ -562,7 +566,7 @@ inline void ScopeNodeBase::updateParentPrio(uint32_t prio, bool recursive)
 {
     if (mParent != nullptr)
     {
-        mParent->addPriority(prio);
+        mParent->mPrioStates |= prio;
         if (recursive)
         {
             mParent->updateParentPrio(prio, recursive);

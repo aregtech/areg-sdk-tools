@@ -265,13 +265,11 @@ void ScopeNodeBase::addChildPriorityRecursive(QStringList& pathList, uint32_t pr
         if (child != nullptr)
         {
             child->addChildPriorityRecursive(pathList, prio);
-            addPriority(child->getPriority());
+            prio = child->getPriority();
         }
     }
-    else
-    {
-        setPriority(prio);
-    }
+    
+    mPrioStates |= prio;
 }
 
 void ScopeNodeBase::removeChildPriorityRecursive(QString& nodePath, uint32_t prio)

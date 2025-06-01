@@ -79,22 +79,21 @@ namespace
 
     QIcon _createScopeIcon(const QColor& color)
     {
-        QPixmap pixmap(LogScopeIconFactory::IconPixels, LogScopeIconFactory::IconPixels);
-        pixmap.fill(Qt::transparent);
-        QPainter painter(&pixmap);
-        painter.setPen(QPen(color, 2, Qt::SolidLine, Qt::RoundCap));
+        QPixmap pixIcon(LogScopeIconFactory::IconPixels, LogScopeIconFactory::IconPixels);
+        pixIcon.fill(Qt::transparent);
+        QPainter painter(&pixIcon);
+        painter.setRenderHint(QPainter::Antialiasing, true);
         painter.setBrush(Qt::NoBrush);
-        QPolygon polyScope1, polyScope2;
-        polyScope1 << QPoint( IconBegin,  IconBegin) << QPoint(IconEnd, IconEnd);
-        polyScope2 << QPoint(IconEnd,  IconBegin) << QPoint( IconBegin, IconEnd);
-        painter.drawLines(polyScope1);
         
+        // Line from top to bottom
+        painter.setPen(QPen(color, 2, Qt::SolidLine, Qt::RoundCap));
+        painter.drawLine(QPointF(2, 2), QPointF(LogScopeIconFactory::IconPixels - 2, LogScopeIconFactory::IconPixels - 2));
+        // Line from left to right
         painter.setPen(QPen(color, 3, Qt::SolidLine, Qt::RoundCap));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawLines(polyScope2);
+        painter.drawLine(QPointF(2, LogScopeIconFactory::IconPixels - 2), QPointF(LogScopeIconFactory::IconPixels - 2, 2));
         
         painter.end();
-        return QIcon(pixmap);
+        return QIcon(pixIcon);
     }
 
     QIcon _createOneIcon(QColor color, bool setAlpha)
@@ -179,15 +178,15 @@ namespace
     {
         QPixmap pixIcon  = icon.pixmap(LogScopeIconFactory::IconPixels, LogScopeIconFactory::IconPixels);
         QPainter painter(&pixIcon);
-        QPen pen(color);
+        painter.setRenderHint(QPainter::Antialiasing, true);
         painter.setBrush(Qt::NoBrush);
-        QPolygon polyScope1, polyScope2;
-        polyScope1 << QPoint( IconBegin,  IconBegin) << QPoint(IconEnd, IconEnd);
-        polyScope2 << QPoint(IconEnd,  IconBegin) << QPoint( IconBegin, IconEnd);
+        
+        // Line from top to bottom
         painter.setPen(QPen(color, 2, Qt::SolidLine, Qt::RoundCap));
-        painter.drawLines(polyScope1);
+        painter.drawLine(QPointF(2, 2), QPointF(LogScopeIconFactory::IconPixels - 2, LogScopeIconFactory::IconPixels - 2));
+        // Line from left to right
         painter.setPen(QPen(color, 3, Qt::SolidLine, Qt::RoundCap));
-        painter.drawLines(polyScope2);
+        painter.drawLine(QPointF(2, LogScopeIconFactory::IconPixels - 2), QPointF(LogScopeIconFactory::IconPixels - 2, 2));
         
         painter.end();
         return QIcon(pixIcon);
@@ -195,19 +194,22 @@ namespace
 
     QIcon _setScopeRound(const QIcon& icon, QColor color)
     {
-        constexpr int margin {LogScopeIconFactory::IconPixels / 2 };
-        constexpr int shift  { 0 };
+        // constexpr int margin {LogScopeIconFactory::IconPixels / 2 };
+        // constexpr int shift  { 0 };
 
         QPixmap pixmap = icon.pixmap(LogScopeIconFactory::IconPixels, LogScopeIconFactory::IconPixels);
         QPainter painter(&pixmap);
         painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setBrush(Qt::NoBrush);
 
-        // Diagonal from top to bottom
+        // line from top to bottom
         painter.setPen(QPen(color, 2, Qt::SolidLine, Qt::RoundCap));
-        painter.drawLine(QPointF(0, margin + shift), QPointF(LogScopeIconFactory::IconPixels, margin + shift));
-        // Diagonal from left to right
+        painter.drawLine(QPointF(2, 2), QPointF(LogScopeIconFactory::IconPixels - 2, LogScopeIconFactory::IconPixels - 2));
+        // painter.drawLine(QPointF(0, margin + shift), QPointF(LogScopeIconFactory::IconPixels, margin + shift));
+        // line from left to right
         painter.setPen(QPen(color, 3, Qt::SolidLine, Qt::RoundCap));
-        painter.drawLine(QPointF(margin, 0), QPointF(margin, LogScopeIconFactory::IconPixels));
+        painter.drawLine(QPointF(2, LogScopeIconFactory::IconPixels - 2), QPointF(LogScopeIconFactory::IconPixels - 2, 2));
+        // painter.drawLine(QPointF(margin, 0), QPointF(margin, LogScopeIconFactory::IconPixels));
 
         painter.end();
         return QIcon(pixmap);
@@ -310,14 +312,18 @@ namespace
         QIcon scope = _createScopeIcon(_colors[static_cast<int>(ColorScope)]);
         uint32_t prioScope = static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
         _mapIcons[prioScope | SquareBits]    = scope;
-
+        
+        /*
         scope = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(ColotNotSet)]
                                                   , _colors[static_cast<int>(ColotNotSet)]
                                                   , _colors[static_cast<int>(ColotNotSet)]
                                                   , _colors[static_cast<int>(ColotNotSet)]
                                                   , _colors[static_cast<int>(ColorScope)]
                                                   , false);
+        */
+        
         _mapIcons[prioScope] = scope;
+        _mapIcons[prioScope | NoPrio] = scope;
 
         // icon prio fatal
         QIcon fatal = _createOneIcon(_colors[static_cast<int>(ColorFatal)], false);
