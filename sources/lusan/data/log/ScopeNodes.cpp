@@ -54,14 +54,7 @@ ScopeLeaf::ScopeLeaf( ScopeLeaf && src ) noexcept
 
 void ScopeLeaf::addPriority(unsigned int prio)
 {
-    if (prio == static_cast<int>(NELogging::eLogPriority::PrioScope))
-    {
-        mPrioStates |= prio;
-    }
-    else
-    {
-        ScopeNodeBase::setPriority(prio);
-    }
+    ScopeNodeBase::setPriority(prio);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -240,7 +233,7 @@ ScopeNodeBase* ScopeNode::addChildNode(ScopeNodeBase* childNode)
             ScopeNode* existing{ containsNode(childNode->getNodeName()) ? mChildNodes[childNode->getNodeName()] : nullptr };
             if (existing != nullptr)
             {
-                if (existing->isValid() == false)
+                if (existing->hasPrioValid() == false)
                 {
                     existing->mPrioStates = childNode->getPriority();
                 }
@@ -479,6 +472,22 @@ int ScopeNode::extractNodesWithPriority(QList<ScopeNodeBase*>& list) const
         {
             result += node.second->extractNodesWithPriority(list);
         }
+    }
+
+    return result;
+}
+
+int ScopeNode::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const
+{
+    int result{ 0 };
+    for (auto node : mChildNodes)
+    {
+        result += node.second->extractNodesWithPriority(list);
+    }
+
+    for (auto node : mChildLeafs)
+    {
+        result += node.second->extractNodesWithPriority(list);
     }
 
     return result;

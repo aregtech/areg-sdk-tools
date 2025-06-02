@@ -177,6 +177,17 @@ public:
     inline bool hasLogScopes(void) const;
 
     /**
+     * \brief   Returns true if the node has any valid priority bits set.
+     **/
+    inline bool hasPrioValid(void) const;
+
+    /**
+     * \brief   Returns true if the node has multiple priorities.
+     * \param   prioIgnore  The priority bits to ignore.
+     **/
+    inline bool hasMultiPrio(uint32_t prioIgnore) const;
+
+    /**
      * \brief   Returns the pointer to parent node. The root nodes have no parent.
      **/
     inline ScopeNodeBase* getParent(void) const;
@@ -442,11 +453,18 @@ public:
     virtual QList<ScopeNodeBase*> getNodesWithPriority(void) const;
 
     /**
-     * \brief   Extracts nodes with log priority. The node should not have NotSet priority flag.
+     * \brief   Extracts nodes with log priority.
      * \param   list    The list to add nodes with priority.
      * \return  Returns number of new added nodes.
      **/
     virtual int extractNodesWithPriority(QList<ScopeNodeBase*>& list) const;
+
+    /**
+     * \brief   Extracts child nodes with log priority.
+     * \param   list    The list to add nodes with priority.
+     * \return  Returns number of new added nodes.
+     **/
+    virtual int extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const;
     
     /**
      * \brief   Creates a list of node names from the passed scope path.
@@ -545,6 +563,30 @@ inline bool ScopeNodeBase::hasLogsEneabled( void ) const
 inline bool ScopeNodeBase::hasLogScopes( void ) const
 {
     return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) != 0;
+}
+
+inline bool ScopeNodeBase::hasPrioValid( void ) const
+{
+    return (mPrioStates != static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid));
+}
+
+inline bool ScopeNodeBase::hasMultiPrio(uint32_t prioIgnore) const
+{
+    uint32_t prio = mPrioStates & (~prioIgnore);
+    switch (prio)
+    {
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioError):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid):
+        return false;
+        
+    default:
+        return true;
+    }
 }
 
 inline ScopeNodeBase* ScopeNodeBase::getParent(void) const

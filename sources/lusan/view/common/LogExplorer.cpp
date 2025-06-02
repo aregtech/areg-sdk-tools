@@ -261,6 +261,25 @@ void LogExplorer::updateExpanded(const QModelIndex& current)
     }
 }
 
+bool LogExplorer::updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio)
+{
+    bool result{ false };
+    if (node.isValid())
+    {
+        Q_ASSERT(mModel != nullptr);
+        if (addPrio)
+        {
+            result = mModel->addLogPriority(node, prio);
+        }
+        else
+        {
+            result = mModel->removeLogPriority(node, prio);
+        }
+    }
+    
+    return result;
+}
+
 void LogExplorer::setupLogSignals(bool setup)
 {
     LogObserver* log = LogObserver::getComponent();
@@ -324,7 +343,7 @@ void LogExplorer::enableButtons(const QModelIndex & selection)
 
             if (node->hasPrioError() || node->hasPrioFatal())
             {
-                ctrlLogWarning()->setChecked(true);
+                ctrlLogError()->setChecked(true);
                 errSelected = true;
             }
 
@@ -375,7 +394,7 @@ void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const
         
         connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
         connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
-        connect(mModel      , &LogScopesModel::signalScopesUpdated  , this, &LogExplorer::onScopesUpdated);
+        // connect(mModel      , &LogScopesModel::signalScopesUpdated  , this, &LogExplorer::onScopesUpdated);
         connect(mModel      , &LogScopesModel::dataChanged          , this, &LogExplorer::onScopesDataChanged);
         connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
     }
@@ -458,95 +477,50 @@ void LogExplorer::onMoveBottomClicked()
 void LogExplorer::onPrioErrorClicked(bool checked)
 {
     QModelIndex current = ctrlTable()->currentIndex();
-    if (current.isValid())
+    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioError);
+    if (result = false)
     {
-        Q_ASSERT(mModel != nullptr);
-        if (checked)
-        {
-            mModel->setLogPriority(current, NELogging::eLogPriority::PrioError);
-        }
-        else
-        {
-            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioError);
-        }
+        ctrlLogError()->setChecked(!checked);
     }
 }
 
 void LogExplorer::onPrioWarningClicked(bool checked)
 {
     QModelIndex current = ctrlTable()->currentIndex();
-    if (current.isValid())
+    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioWarning);
+    if (result = false)
     {
-        Q_ASSERT(mModel != nullptr);
-        if (checked)
-        {
-            mModel->setLogPriority(current, NELogging::eLogPriority::PrioWarning);
-        }
-        else
-        {
-            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioWarning);
-        }
+        ctrlLogWarning()->setChecked(!checked);
     }
 }
 
 void LogExplorer::onPrioInfoClicked(bool checked)
 {
     QModelIndex current = ctrlTable()->currentIndex();
-    if (current.isValid())
+    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioInfo);
+    if (result = false)
     {
-        Q_ASSERT(mModel != nullptr);
-        if (checked)
-        {
-            mModel->setLogPriority(current, NELogging::eLogPriority::PrioInfo);
-        }
-        else
-        {
-            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioInfo);
-        }
+        ctrlLogInfo()->setChecked(!checked);
     }
 }
 
 void LogExplorer::onPrioDebugClicked(bool checked)
 {
     QModelIndex current = ctrlTable()->currentIndex();
-    if (current.isValid())
+    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioDebug);
+    if (result = false)
     {
-        Q_ASSERT(mModel != nullptr);
-        if (checked)
-        {
-            mModel->setLogPriority(current, NELogging::eLogPriority::PrioDebug);
-        }
-        else
-        {
-            mModel->removeLogPriority(current, NELogging::eLogPriority::PrioDebug);
-        }
+        ctrlLogDebug()->setChecked(!checked);
     }
 }
 
 void LogExplorer::onPrioScopesClicked(bool checked)
 {
     QModelIndex current = ctrlTable()->currentIndex();
-    if (current.isValid())
+    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioScope);
+    if (result = false)
     {
-        Q_ASSERT(mModel != nullptr);
-        if (checked)
-        {
-            ScopeNodeBase* node = static_cast<ScopeNodeBase *>(current.internalPointer());
-            if (false && node->hasPrioNotset())
-            {
-                checked = mModel->setLogPriority(current, NELogging::eLogPriority::PrioScope);
-            }
-            else
-            {
-                checked = mModel->addLogPriority(current, NELogging::eLogPriority::PrioScope);
-            }
-        }
-        else
-        {
-            checked = mModel->removeLogPriority(current, NELogging::eLogPriority::PrioScope) == false;
-        }
-        
-        ctrlLogScopes()->setChecked(checked);
+        ctrlLogScopes()->setChecked(!checked);
     }
 }
 
@@ -607,8 +581,7 @@ void LogExplorer::onScopesDataChanged(const QModelIndex &topLeft, const QModelIn
 {
     if (mSelModel != nullptr)
     {
-        QModelIndex current = ctrlTable()->currentIndex();        
-        enableButtons(current);
-        updateExpanded(current);
+        enableButtons(ctrlTable()->currentIndex());
+        updateExpanded(ctrlTable()->rootIndex());
     }
 }

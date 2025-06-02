@@ -34,6 +34,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class ScopeNodeBase;
 class ScopeRoot;
 
 /**
@@ -261,6 +262,14 @@ private:
      * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
      **/
     inline int _findRoot(ITEM_ID rootId) const;
+
+    /**
+     * \brief   Requests the log priority for the given node.
+     * \param   root    The root of the scope.
+     * \param   node    The node to request priority.
+     * \return  True if succeeded to request the log priority, false otherwise.
+     **/
+    bool _requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

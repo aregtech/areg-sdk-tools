@@ -111,54 +111,13 @@ bool LogScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPri
     if (root == nullptr)
         return result;
     
-    if ((node->getPriority() & static_cast<uint32_t>(prio)) == 0)
+    if (((node->getPriority() & static_cast<uint32_t>(prio)) == 0) || node->hasMultiPrio(static_cast<uint32_t>(prio)))
     {
         node->addPriority(static_cast<uint32_t>(prio));        
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
-
-        QList<ScopeNodeBase*> nodes;
-        int count = node->extractNodesWithPriority(nodes);
-        count += (count == 0) || (nodes[0] != node) ? 1 : 0;
-        sLogScope * scopes = new sLogScope[count];
-        if (scopes != nullptr)
-        {
-            int pos = 0;
-            if (nodes[0] != node)
-            {
-                nodes.push_front(node);
-                sLogScope& scope = scopes[0];
-                scope.lsId = 0;
-                scope.lsPrio = prio;
-                QString path = node->makePath();
-                if (node->isLeaf() == false)
-                {
-                    path += NELusanCommon::SCOPE_ALL;
-                }
-                
-                NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
-                ++ pos;
-            }
-            
-            for ( ; pos < count; ++pos)
-            {
-                ScopeNodeBase* nodeBase = nodes[pos];
-                sLogScope& scope = scopes[pos];
-                scope.lsId = 0;
-                scope.lsPrio = nodeBase->getPriority();
-                Q_ASSERT((nodeBase->hasPrioNotset() == false) || (nodeBase == node));
-                QString path = nodeBase->makePath();
-                if (nodeBase->isLeaf() == false)
-                {
-                    path += NELusanCommon::SCOPE_ALL;
-                }
-
-                NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
-            }
-
-            result = LogObserver::requestChangeScopePrio(static_cast<ScopeRoot*>(root)->getRootId(), scopes, count);
-            delete[] scopes;
-        }
+        
+        result = _requestNodePriority(static_cast<const ScopeRoot &>(*root), *node);
     }
     else
     {
@@ -181,18 +140,7 @@ bool LogScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLog
         node->removePriority(static_cast<uint32_t>(prio));
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
-        
-        sLogScope scope;
-        scope.lsId = 0;
-        scope.lsPrio = node->getPriority();
-        QString path = node->makePath();
-        if (node->isLeaf() == false)
-        {
-            path += NELusanCommon::SCOPE_ALL;
-        }
-        
-        NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
-        result = LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);        
+        result = _requestNodePriority(static_cast<const ScopeRoot &>(*root), *node);
     }
     else
     {
@@ -366,6 +314,54 @@ inline int LogScopesModel::_findRoot(ITEM_ID rootId) const
     return static_cast<int>(NECommon::INVALID_INDEX);
 }
 
+bool LogScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node)
+{
+    bool result{false};
+    QList<ScopeNodeBase*> nodes;
+    int count = node.extractChildNodesWithPriority(nodes);
+    count += count == 0 ? 1 : 0;
+    sLogScope* scopes = new sLogScope[count];
+    if (scopes != nullptr)
+    {
+        int pos = 0;
+        if (nodes.isEmpty())
+        {
+            Q_ASSERT(node.hasPrioNotset());
+            sLogScope& scope = scopes[0];
+            scope.lsId = 0;
+            scope.lsPrio = node.getPriority();
+            QString path = node.makePath();
+            if (node.isLeaf() == false)
+            {
+                path += NELusanCommon::SCOPE_ALL;
+            }
+
+            NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
+            ++pos;
+        }
+
+        for (; pos < count; ++pos)
+        {
+            ScopeNodeBase* nodeBase = nodes[pos];
+            sLogScope& scope = scopes[pos];
+            scope.lsId = 0;
+            scope.lsPrio = nodeBase->getPriority();
+            QString path = nodeBase->makePath();
+            if (nodeBase->isLeaf() == false)
+            {
+                path += NELusanCommon::SCOPE_ALL;
+            }
+
+            NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
+        }
+
+        result = LogObserver::requestChangeScopePrio(root.getRootId(), scopes, count);
+        delete[] scopes;
+    }
+    
+    return result;
+}
+
 void LogScopesModel::slotLogInstancesConnect(const QList<NEService::sServiceConnectedInstance>& instances)
 {
     beginResetModel();
@@ -446,7 +442,8 @@ void LogScopesModel::slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>
     int pos = scopes.isEmpty() == false ? _findRoot(cookie) : static_cast<int>(NECommon::INVALID_INDEX);
     if (pos != static_cast<int>(NECommon::INVALID_INDEX))
     {
-        int count = static_cast<int>(scopes.size());        
+        QModelIndex idxInstance = index(pos, 0, mRootIndex);
+        int count = static_cast<int>(scopes.size());
         ScopeRoot* root = mRootList[pos];
         Q_ASSERT(root != nullptr);
         for (int i = 0; i < static_cast<int>(scopes.size()); ++i)
@@ -461,6 +458,7 @@ void LogScopesModel::slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>
         root->refreshPrioritiesRecursive();
         
         QModelIndex entry = index(pos, 0, mRootIndex);
+        emit signalScopesUpdated(idxInstance);
         emit dataChanged(entry, entry, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
     }
 }
