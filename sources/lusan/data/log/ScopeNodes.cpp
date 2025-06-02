@@ -240,7 +240,7 @@ ScopeNodeBase* ScopeNode::addChildNode(ScopeNodeBase* childNode)
             ScopeNode* existing{ containsNode(childNode->getNodeName()) ? mChildNodes[childNode->getNodeName()] : nullptr };
             if (existing != nullptr)
             {
-                if (existing->isValid() == false)
+                if (existing->hasPrioValid() == false)
                 {
                     existing->mPrioStates = childNode->getPriority();
                 }

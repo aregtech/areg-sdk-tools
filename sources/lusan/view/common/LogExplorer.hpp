@@ -23,6 +23,9 @@
  * Includes
  ************************************************************************/
 
+#include "lusan/view/common/LogExplorer.hpp"
+#include "areg/logging/NELogging.hpp"
+
 #include <QItemSelection>
 #include <QList>
 #include <QModelIndex>
@@ -180,6 +183,8 @@ private:
      * \param   current    The current index to update expanded.
      **/
     void updateExpanded(const QModelIndex& current);
+    
+    bool updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio);
     
 private slots:
     /**

@@ -175,6 +175,10 @@ public:
      * \brief   Returns true if the logging scopes priority bit set.
      **/
     inline bool hasLogScopes(void) const;
+    
+    inline bool hasPrioValid(void) const;
+    
+    inline bool hasMultiPrio(uint32_t prioIgnore) const;
 
     /**
      * \brief   Returns the pointer to parent node. The root nodes have no parent.
@@ -545,6 +549,28 @@ inline bool ScopeNodeBase::hasLogsEneabled( void ) const
 inline bool ScopeNodeBase::hasLogScopes( void ) const
 {
     return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) != 0;
+}
+
+inline bool ScopeNodeBase::hasPrioValid( void ) const
+{
+    return (mPrioStates != static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid));
+}
+
+inline bool ScopeNodeBase::hasMultiPrio(uint32_t prioIgnore) const
+{
+    uint32_t prio = mPrioStates & (~prioIgnore);
+    switch (prio)
+    {
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioError):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal):
+        return false;
+        
+    default:
+        return (prio != 0);
+    }
 }
 
 inline ScopeNodeBase* ScopeNodeBase::getParent(void) const

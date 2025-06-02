@@ -261,6 +261,8 @@ private:
      * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
      **/
     inline int _findRoot(ITEM_ID rootId) const;
+    
+    bool _requestNodePriority(ScopeNodeBase * node);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

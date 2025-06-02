@@ -117,9 +117,9 @@ void ScopeNodeBase::setPriority( uint32_t prio)
 
 void ScopeNodeBase::addPriority( unsigned int prio )
 {
-    if ((isValid() == false) || isLeaf())
+    if ((hasPrioValid() == false) || isLeaf())
     {
-        mPrioStates = prio;
+        ScopeNodeBase::setPriority(prio);
     }
     else
     {
@@ -130,7 +130,7 @@ void ScopeNodeBase::addPriority( unsigned int prio )
 void ScopeNodeBase::removePriority(unsigned int prio)
 {
     mPrioStates &= ~prio;
-    if (isValid() == false)
+    if (hasPrioValid() == false)
     {
         mPrioStates = static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset);
     }
@@ -285,7 +285,14 @@ void ScopeNodeBase::addChildPriorityRecursive(QStringList& pathList, uint32_t pr
         }
     }
     
-    mPrioStates |= prio;
+    if (hasPrioValid() && (isLeaf() == false))
+    {
+        mPrioStates |= prio;
+    }
+    else
+    {
+        ScopeNodeBase::setPriority(prio);
+    }
 }
 
 void ScopeNodeBase::removeChildPriorityRecursive(QString& nodePath, uint32_t prio)
@@ -340,7 +347,7 @@ int ScopeNodeBase::getChildren(std::vector<ScopeNodeBase*>& children) const
 
 void ScopeNodeBase::resetPrioritiesRecursive(bool skipLeafs)
 {
-    if ((skipLeafs == false) || (isLeaf() == false))
+    if ((isLeaf() == false) || (skipLeafs == false))
         resetPriority();
 }
 
@@ -351,7 +358,7 @@ void ScopeNodeBase::refreshPrioritiesRecursive(void)
 QList<ScopeNodeBase*> ScopeNodeBase::getNodesWithPriority(void) const
 {
     QList<ScopeNodeBase*> result;
-    if (isValid() && (hasPrioNotset() == false))
+    if (hasPrioValid() && (hasPrioNotset() == false))
         result.push_back(const_cast<ScopeNodeBase *>(this));
     
     return result;
@@ -360,7 +367,7 @@ QList<ScopeNodeBase*> ScopeNodeBase::getNodesWithPriority(void) const
 int ScopeNodeBase::extractNodesWithPriority(QList<ScopeNodeBase*>& list) const
 {
     int result{ 0 };
-    if (isValid() && (hasPrioNotset() == false))
+    if (hasPrioValid() && (hasMultiPrio(static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)) == false))
     {
         list.push_back(const_cast<ScopeNodeBase *>(this));
         result = 1;
