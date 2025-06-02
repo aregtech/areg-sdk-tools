@@ -39,6 +39,7 @@ class LogScopesModel;
 class MdiMainWindow;
 class QToolButton;
 class QTreeView;
+class QAction;
 
 namespace Ui {
     class LogExplorer;
@@ -52,6 +53,26 @@ namespace Ui {
  **/
 class LogExplorer : public    QWidget
 {
+private:
+    enum eLogPrio
+    {
+          PrioNotset    = 0
+        , PrioScope     = 1
+        , PrioDebug     = 2
+        , PrioInfo      = 3
+        , PrioWarn      = 4
+        , PrioError     = 5
+        , PrioFatal     = 6
+
+        , PrioCount
+    };
+
+    struct sMenuEntry
+    {
+        NELogging::eLogPriority prio;
+        QString                 text;
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -285,6 +306,8 @@ private slots:
      **/
     void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
 
+    void onTreeViewContextMenuRequested(const QPoint& pos);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -299,6 +322,9 @@ private:
     bool                    mShouldConnect; //!< Flag, indicating to connect to log collector.
     LogScopesModel*         mModel;         //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
+    QAction*                mMenuActions[static_cast<int>(eLogPrio::PrioCount)];   //!< The list of menu actions
+
+    static sMenuEntry       mMenuText[static_cast<int>(eLogPrio::PrioCount)];
 };
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP

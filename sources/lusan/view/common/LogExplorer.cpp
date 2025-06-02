@@ -31,6 +31,8 @@
 
 #include "areg/base/NESocket.hpp"
 
+#include <QAction>
+#include <QMenu>
 #include <filesystem>
 
 namespace
@@ -44,6 +46,17 @@ namespace
         }
     }
 }
+
+LogExplorer::sMenuEntry LogExplorer::mMenuText[static_cast<int>(LogExplorer::eLogPrio::PrioCount)]
+{
+      { NELogging::eLogPriority::PrioNotset,  tr("No Logs, Reset Priorities")       }
+    , { NELogging::eLogPriority::PrioDebug,   tr("Show / Hide Log Scopes")          }
+    , { NELogging::eLogPriority::PrioDebug,   tr("Show / Hide Debug Messages")      }
+    , { NELogging::eLogPriority::PrioInfo,    tr("Show / Hide Information Messages")}
+    , { NELogging::eLogPriority::PrioWarning, tr("Show / Hide Warning Messages")    }
+    , { NELogging::eLogPriority::PrioError,   tr("Show / Hide Error Messages")      }
+    , { NELogging::eLogPriority::PrioFatal,   tr("Show / Hide Fatal Error Messages")}
+};
 
 LogExplorer::LogExplorer(MdiMainWindow* mainFrame, QWidget* parent)
     : QWidget       (parent)
@@ -60,6 +73,10 @@ LogExplorer::LogExplorer(MdiMainWindow* mainFrame, QWidget* parent)
     , mSelModel     (nullptr)
 {
     _explorer = this;
+    for (int i = 0; i < static_cast<int>(eLogPrio::PrioCount); ++ i)
+    {
+        mMenuActions[i] = nullptr;
+    }
     
     ui->setupUi(this);
     this->setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
@@ -173,6 +190,8 @@ void LogExplorer::setupWidgets(void)
     ctrlLogInfo()->setEnabled(false);
     ctrlLogDebug()->setEnabled(false);
     ctrlLogScopes()->setEnabled(false);
+
+    ctrlTable()->setContextMenuPolicy(Qt::CustomContextMenu);
 }
 
 void LogExplorer::setupSignals(void)
@@ -184,6 +203,7 @@ void LogExplorer::setupSignals(void)
     connect(ctrlLogInfo()       , &QToolButton::clicked, this, &LogExplorer::onPrioInfoClicked);
     connect(ctrlLogDebug()      , &QToolButton::clicked, this, &LogExplorer::onPrioDebugClicked);
     connect(ctrlLogScopes()     , &QToolButton::clicked, this, &LogExplorer::onPrioScopesClicked);
+    connect(ctrlTable()         , &QWidget::customContextMenuRequested, this, &LogExplorer::onTreeViewContextMenuRequested);
 }
 
 void LogExplorer::blockBasicSignals(bool block)
@@ -583,5 +603,42 @@ void LogExplorer::onScopesDataChanged(const QModelIndex &topLeft, const QModelIn
     {
         enableButtons(ctrlTable()->currentIndex());
         updateExpanded(ctrlTable()->rootIndex());
+    }
+}
+
+void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
+{
+    QModelIndex index = ctrlTable()->indexAt(pos);
+    if (!index.isValid() || !mModel)
+        return;
+
+    // Get current priority of the selected node
+    ScopeNodeBase* node = mModel->data(index, Qt::UserRole).value<ScopeNodeBase*>();
+    uint32_t prio = node != nullptr ? node->getPriority() : -1;
+
+    QMenu menu(this);
+
+    for (int i = 0; i < static_cast<int>(eLogPrio::PrioCount); ++i)
+    {
+        mMenuActions[i] = menu.addAction(LogScopeIconFactory::getIcon(uint32_t(LogExplorer::mMenuText[i].prio)), LogExplorer::mMenuText[i].text);
+        mMenuActions[i]->setCheckable(true);
+        mMenuActions[i]->setChecked((prio & uint32_t(LogExplorer::mMenuText[i].prio)) != 0);
+    }
+
+    QAction* selectedAction = menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
+    if (!selectedAction)
+        return;
+
+    for (int i = 0; i < static_cast<int>(eLogPrio::PrioCount); ++i)
+    {
+        if (selectedAction == mMenuActions[i])
+        {
+            // Toggle the priority bit
+            if (mMenuActions[i]->isChecked())
+                mModel->addLogPriority(index, LogExplorer::mMenuText[i].prio);
+            else
+                mModel->removeLogPriority(index, LogExplorer::mMenuText[i].prio);
+            break;
+        }
     }
 }
