@@ -343,7 +343,7 @@ void LogExplorer::enableButtons(const QModelIndex & selection)
 
             if (node->hasPrioError() || node->hasPrioFatal())
             {
-                ctrlLogWarning()->setChecked(true);
+                ctrlLogError()->setChecked(true);
                 errSelected = true;
             }
 
@@ -394,7 +394,7 @@ void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const
         
         connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
         connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
-        connect(mModel      , &LogScopesModel::signalScopesUpdated  , this, &LogExplorer::onScopesUpdated);
+        // connect(mModel      , &LogScopesModel::signalScopesUpdated  , this, &LogExplorer::onScopesUpdated);
         connect(mModel      , &LogScopesModel::dataChanged          , this, &LogExplorer::onScopesDataChanged);
         connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
     }
@@ -581,8 +581,7 @@ void LogExplorer::onScopesDataChanged(const QModelIndex &topLeft, const QModelIn
 {
     if (mSelModel != nullptr)
     {
-        QModelIndex current = ctrlTable()->currentIndex();        
-        enableButtons(current);
-        updateExpanded(current);
+        enableButtons(ctrlTable()->currentIndex());
+        updateExpanded(ctrlTable()->rootIndex());
     }
 }

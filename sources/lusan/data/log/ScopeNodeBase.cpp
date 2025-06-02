@@ -112,7 +112,22 @@ unsigned int ScopeNodeBase::getPriority( void ) const
 
 void ScopeNodeBase::setPriority( uint32_t prio)
 {
-    mPrioStates = (hasLogScopes() ? (prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) : prio);
+    if ((hasPrioValid() == false) || hasPrioNotset())
+    {
+        mPrioStates = prio;
+    }
+    else if (hasLogScopes())
+    {
+        mPrioStates = prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
+    }
+    else if (prio == static_cast<uint32_t>(NELogging::eLogPriority::PrioScope))
+    {
+        mPrioStates |= prio;
+    }
+    else
+    {
+        mPrioStates = prio;
+    }
 }
 
 void ScopeNodeBase::addPriority( unsigned int prio )
@@ -374,6 +389,11 @@ int ScopeNodeBase::extractNodesWithPriority(QList<ScopeNodeBase*>& list) const
     }
 
     return result;
+}
+
+int ScopeNodeBase::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const
+{
+    return ScopeNodeBase::extractNodesWithPriority(list);
 }
 
 int ScopeNodeBase::splitScopePath(QString& scopePath, QStringList& nodeNames) const

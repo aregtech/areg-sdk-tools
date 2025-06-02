@@ -301,6 +301,13 @@ public:
      **/
     virtual int extractNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
 
+    /**
+     * \brief   Extracts child nodes with log priority.
+     * \param   list    The list to add nodes with priority.
+     * \return  Returns number of new added nodes.
+     **/
+    virtual int extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////

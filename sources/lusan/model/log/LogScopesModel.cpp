@@ -318,7 +318,7 @@ bool LogScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNode
 {
     bool result{false};
     QList<ScopeNodeBase*> nodes;
-    int count = node.extractNodesWithPriority(nodes);
+    int count = node.extractChildNodesWithPriority(nodes);
     count += count == 0 ? 1 : 0;
     sLogScope* scopes = new sLogScope[count];
     if (scopes != nullptr)
@@ -346,7 +346,6 @@ bool LogScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNode
             sLogScope& scope = scopes[pos];
             scope.lsId = 0;
             scope.lsPrio = nodeBase->getPriority();
-            Q_ASSERT(nodeBase->hasPrioNotset() == false);
             QString path = nodeBase->makePath();
             if (nodeBase->isLeaf() == false)
             {
@@ -443,7 +442,8 @@ void LogScopesModel::slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>
     int pos = scopes.isEmpty() == false ? _findRoot(cookie) : static_cast<int>(NECommon::INVALID_INDEX);
     if (pos != static_cast<int>(NECommon::INVALID_INDEX))
     {
-        int count = static_cast<int>(scopes.size());        
+        QModelIndex idxInstance = index(pos, 0, mRootIndex);
+        int count = static_cast<int>(scopes.size());
         ScopeRoot* root = mRootList[pos];
         Q_ASSERT(root != nullptr);
         for (int i = 0; i < static_cast<int>(scopes.size()); ++i)
@@ -458,6 +458,7 @@ void LogScopesModel::slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>
         root->refreshPrioritiesRecursive();
         
         QModelIndex entry = index(pos, 0, mRootIndex);
+        emit signalScopesUpdated(idxInstance);
         emit dataChanged(entry, entry, { Qt::ItemDataRole::DecorationRole, Qt::ItemDataRole::DisplayRole });
     }
 }

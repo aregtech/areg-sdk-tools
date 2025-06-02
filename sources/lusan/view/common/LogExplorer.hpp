@@ -183,7 +183,14 @@ private:
      * \param   current    The current index to update expanded.
      **/
     void updateExpanded(const QModelIndex& current);
-    
+
+    /**
+     * \brief   Updates the priority of the log scope at the given index.
+     * \param   node       The index of the log scope to update priority.
+     * \param   addPrio    If true, adds the priority. Otherwise, removes the priority.
+     * \param   prio       The log priority to set or remove.
+     * \return  Returns true if succeeded the request to update the priority. Otherwise, returns false.
+     **/
     bool updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio);
     
 private slots:
@@ -269,7 +276,13 @@ private slots:
      * \param   parent  The index of the parent instance item that is updated.
      **/
     void onScopesUpdated(const QModelIndex & parent);
-    
+
+    /**
+     * \brief   Slot triggered when the data of scopes are updated.
+     * \param   topLeft     The top-left index of the node, which data is updated.
+     * \param   bottomRight The bottom-right index of the node, which data is updated.
+     * \param   roles       The list of roles, which data is updated. If empty, all roles are updated.
+     **/
     void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
 
 //////////////////////////////////////////////////////////////////////////
