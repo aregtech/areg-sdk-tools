@@ -34,6 +34,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class ScopeNodeBase;
 class ScopeRoot;
 
 /**
@@ -262,7 +263,7 @@ private:
      **/
     inline int _findRoot(ITEM_ID rootId) const;
     
-    bool _requestNodePriority(ScopeNodeBase * node);
+    bool _requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

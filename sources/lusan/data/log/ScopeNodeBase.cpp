@@ -367,7 +367,7 @@ QList<ScopeNodeBase*> ScopeNodeBase::getNodesWithPriority(void) const
 int ScopeNodeBase::extractNodesWithPriority(QList<ScopeNodeBase*>& list) const
 {
     int result{ 0 };
-    if (hasPrioValid() && (hasMultiPrio(static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)) == false))
+    if (hasPrioValid() && (hasMultiPrio(static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) == false))
     {
         list.push_back(const_cast<ScopeNodeBase *>(this));
         result = 1;
