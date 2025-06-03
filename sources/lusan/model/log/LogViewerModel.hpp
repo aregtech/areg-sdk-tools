@@ -25,6 +25,7 @@
 
 #include <QAbstractTableModel>
 #include <QList>
+#include <QMetaObject>
 
 #include "areg/base/SharedBuffer.hpp"
 
@@ -203,6 +204,7 @@ private:
     QString             mDbPath;        //!< The path to the database
     QList<eColumn>      mActiveColumns; //!< The list of active columns
     QList<SharedBuffer> mLogs;          //!< The list of log messages
+    QMetaObject::Connection mConnect;   //!< The connection signal
 };
 
 //////////////////////////////////////////////////////////////////////////

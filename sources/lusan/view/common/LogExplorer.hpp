@@ -23,7 +23,6 @@
  * Includes
  ************************************************************************/
 
-#include "lusan/view/common/LogExplorer.hpp"
 #include "areg/logging/NELogging.hpp"
 
 #include <QItemSelection>
@@ -39,6 +38,7 @@ class LogScopesModel;
 class MdiMainWindow;
 class QToolButton;
 class QTreeView;
+class QAction;
 
 namespace Ui {
     class LogExplorer;
@@ -52,6 +52,22 @@ namespace Ui {
  **/
 class LogExplorer : public    QWidget
 {
+private:
+
+    //!< The priority indexes for the menu entries.
+    enum eLogPrio
+    {
+          PrioNotset    = 0
+        , PrioDebug
+        , PrioInfo
+        , PrioWarn
+        , PrioError
+        , PrioFatal
+        , PrioScope
+
+        , PrioCount
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -62,6 +78,8 @@ public:
      * \param   parent      The parent widget.
      **/
     LogExplorer(MdiMainWindow* mainFrame, QWidget* parent = nullptr);
+
+    virtual ~LogExplorer(void);
 
     /**
      * \brief   Returns the IP-address of the log collector to connect.
@@ -232,6 +250,15 @@ private slots:
     void onLogDbCreated(const QString& dbLocation);
 
     /**
+     * \brief   The slot is triggered when the log observer instance is activated or shutdown.
+     * \param   isStarted       The flag indicating whether the log observer instance is started or stopped.
+     * \param   address         The IP address of the log observer instance.
+     * \param   port            The TCP port number of the log observer instance.
+     * \param   filePath        The file path of the log file, if any. If empty, no file is used.
+     **/
+    void onLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath);
+
+    /**
      * \brief   The slot is triggered when fails to send or receive message.
      **/
     void onConnectClicked(bool checked);
@@ -285,6 +312,12 @@ private slots:
      **/
     void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
 
+    /**
+     * \brief   Slot triggered when the user makes right click on the scope navigation window.
+     * \param   pos     The mouse right click cursor position on scope navigation window.
+     **/
+    void onTreeViewContextMenuRequested(const QPoint& pos);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -296,9 +329,10 @@ private:
     QString                 mInitLogFile;   //!< The initialized log file.
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
-    bool                    mShouldConnect; //!< Flag, indicating to connect to log collector.
     LogScopesModel*         mModel;         //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
+    bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
+    QAction*                mMenuActions[static_cast<int>(eLogPrio::PrioCount)];   //!< The list of menu actions
 };
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP

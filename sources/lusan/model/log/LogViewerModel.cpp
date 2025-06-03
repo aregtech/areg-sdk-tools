@@ -25,7 +25,7 @@
 #include "areg/base/SharedBuffer.hpp"
 #include "areg/base/File.hpp"
 #include "areg/logging/NELogging.hpp"
-#include "areglogger/client/LogObserverApi.h"
+#include "lusan/model/log/LogScopeIconFactory.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/NELusanCommon.hpp"
@@ -136,6 +136,7 @@ LogViewerModel::LogViewerModel(QObject *parent)
 
     , mActiveColumns( )
     , mLogs         ( )
+    , mConnect      ( )
 {
     const QList<int>& list = LogViewerModel::getDefaultColumns();
     for (int col : list)
@@ -270,22 +271,23 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
             {
             case NELogging::eLogPriority::PrioScope:
                 if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
-                    return QIcon::fromTheme(QString::fromUtf8("media-seek-forward"));
+                    return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScopeEnter, true);
                 else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
-                    return QIcon::fromTheme(QString::fromUtf8("media-seek-backward"));
+                    return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScopeExit, true);
                 else
-                    return QIcon::fromTheme(QString::fromUtf8("window-close"));
+                    return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, true);
             case NELogging::eLogPriority::PrioDebug:
-                return QIcon::fromTheme(QString::fromUtf8("format-justify-left"));
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, true);
             case NELogging::eLogPriority::PrioInfo:
-                return QIcon::fromTheme(QString::fromUtf8("dialog-information"));
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, true);
             case NELogging::eLogPriority::PrioWarning:
-                return QIcon::fromTheme(QString::fromUtf8("dialog-warning"));
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, true);
             case NELogging::eLogPriority::PrioError:
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, true);
             case NELogging::eLogPriority::PrioFatal:
-                return QIcon::fromTheme(QString::fromUtf8("dialog-error"));
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioFatal, true);
             default:
-                return QIcon::fromTheme(QString::fromUtf8("window-close"));
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioNotset, false);
             }
         }        
     }
@@ -401,15 +403,12 @@ void LogViewerModel::serviceConnected(bool isConnected, const QString& address, 
     mPort        = port;
     mDbPath      = dbPath;
 
-    LogObserver* log = LogObserver::getComponent();
-    Q_ASSERT(log != nullptr);
+    disconnect(mConnect);
     if (isConnected)
     {
-        connect(log, &LogObserver::signalLogMessage, this, &LogViewerModel::slotLogMessage);
-    }
-    else
-    {
-        disconnect(log, &LogObserver::signalLogMessage, this, &LogViewerModel::slotLogMessage);
+        LogObserver* log = LogObserver::getComponent();
+        Q_ASSERT(log != nullptr);
+        mConnect = connect(log, &LogObserver::signalLogMessage, this, &LogViewerModel::slotLogMessage);
     }
 }
 

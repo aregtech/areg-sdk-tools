@@ -59,11 +59,11 @@ class LogObserver   : public    QObject
 public:
 
     //!< The name of the component thread.
-    static constexpr const char* const LogobserverThread    { "LogObserverThread"   };
+    static constexpr const char* const LogobserverThread    { "LusanLogObserverThread"   };
     //!< The name of the model.
-    static constexpr const char* const LogobserverModel     { "LogObserverModel"    };
+    static constexpr const char* const LogobserverModel     { "LusanLogObserverModel"    };
     //!< The name of the component.
-    static constexpr const char* const LogObserverComponent { "LogObserverComponent"};
+    static constexpr const char* const LogObserverComponent { "LusanLogObserverComponent"};
 
 //////////////////////////////////////////////////////////////////////////
 // Public static methods
@@ -254,7 +254,7 @@ private:
 signals:
 
     /**
-     * \brief   The signal triggered when initializing and configuring the observer.
+     * \brief   The signal is triggered when initializing and configuring the observer.
      * \param   isEnabled       The flag, indicating whether the logging service is enabled or not.
      * \param   address         The IP address of the log collector service set in the configuration file.
      * \param   port            The IP port number of the log collector service set in the configuration file.
@@ -271,7 +271,7 @@ signals:
     void signalLogDbConfigured(bool isEnabled, const QString& dbName, const QString& dbLocation, const QString& dbUser);
 
     /**
-     * \brief   The signal triggered when the observer connects or disconnects from the log collector service.
+     * \brief   The signal is triggered when the observer connects or disconnects from the log collector service.
      * \param   isConnected     Flag, indicating whether observer is connected or disconnected.
      * \param   address         The IP address of the log collector service to connect or disconnect.
      * \param   port            The IP port number of the log collector service to connect or disconnect.
@@ -285,54 +285,63 @@ signals:
     void signalLogObserverStarted(bool isStarted);
 
     /**
-     * \brief   The signal triggered when the logging database is created.
+     * \brief   The signal is triggered when the logging database is created.
      * \param   dbLocation      The relative or absolute path to the logging database.
      **/
     void signalLogDbCreated(const QString& dbLocation);
 
     /**
-     * \brief   The signal triggered when fails to send or receive message.
+     * \brief   The signal is triggered when fails to send or receive message.
      **/
     void signalLogMessagingFailed(void);
 
     /**
-     * \brief   The signal triggered when receive the list of connected instances that make logs.
+     * \brief   The signal is triggered when receive the list of connected instances that make logs.
      * \param   instances   The list of the connected instances.
      **/
     void signalLogInstancesConnect(const QList< NEService::sServiceConnectedInstance >& instances);
 
     /**
-     * \brief   The signal triggered when receive the list of disconnected instances that make logs.
+     * \brief   The signal is triggered when receive the list of disconnected instances that make logs.
      * \param   instances   The list of IDs of the disconnected instances.
      * \param   count       The number of entries in the list.
      **/
     void signalLogInstancesDisconnect(const QList< NEService::sServiceConnectedInstance >& instances);
 
     /**
-     * \brief   The signal triggered when connection with the log collector service is lost.
+     * \brief   The signal is triggered when connection with the log collector service is lost.
      * \param   instances   The list of disconnected instances.
      **/
     void signalLogServiceDisconnected(const QMap<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
 
     /**
-     * \brief   The signal triggered when receive the list of the scopes registered in an application.
+     * \brief   The signal is triggered when receive the list of the scopes registered in an application.
      * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
      * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
      **/
     void signalLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope *>& scopes);
 
     /**
-     * \brief   The signal triggered when receive the list of previously registered scopes with new priorities.
+     * \brief   The signal is triggered when receive the list of previously registered scopes with new priorities.
      * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
      * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
      **/
     void signalLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope *>& scopes);
 
     /**
-     * \brief   The signal triggered when receive message to log.
+     * \brief   The signal is triggered when receive message to log.
      * \param   logMessage  The buffer with structure of the message to log.
      **/
     void signalLogMessage(const SharedBuffer & logMessage);
+
+    /**
+     * \brief   The signal is triggered when the log observer instance is activated or shutdown.
+     * \param   isStarted       The flag indicating whether the log observer instance is started or stopped.
+     * \param   address         The IP address of the log observer instance.
+     * \param   port            The TCP port number of the log observer instance.
+     * \param   filePath        The file path of the log file, if any. If empty, no file is used.
+     **/
+    void signalLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath);
 
 protected:
 
