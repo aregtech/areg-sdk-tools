@@ -161,8 +161,6 @@ bool MdiMainWindow::loadFile(const QString& fileName)
 
 void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
-    LogObserver* log = LogObserver::getComponent();
-    Q_ASSERT(log != nullptr);
     if (isConnected)
     {
         QMdiSubWindow * subWindow = mMdiArea.currentSubWindow();

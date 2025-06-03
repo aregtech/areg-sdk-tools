@@ -55,6 +55,9 @@ bool LogObserver::createLogObserver(FuncLogObserverStarted callbackStarted)
     bool result{ true };
     if (_modelInitialized.exchange(true) == false)
     {
+        Q_ASSERT(Thread::findThreadByName(LogObserver::LogobserverThread) == nullptr);
+        Q_ASSERT(ComponentLoader::isModelLoaded(LogObserver::LogobserverModel) == false);
+
         _observerStart = false;
         _logObserverStarted = callbackStarted;
         result = ComponentLoader::loadComponentModel(LogObserver::LogobserverModel);
@@ -188,6 +191,7 @@ bool LogObserver::connect(const QString& address, uint16_t port, const QString& 
 
 Component * LogObserver::CreateComponent(const NERegistry::ComponentEntry & entry, ComponentThread & owner)
 {
+    Q_ASSERT(_component.load() == nullptr);
     _component.store(DEBUG_NEW LogObserver( entry, owner, entry.getComponentData()));
     return static_cast<Component *>(_component.load());
 }
@@ -255,10 +259,22 @@ void LogObserver::startupServiceInterface(Component & holder)
     {
         mLogClient.initialize(NELusanCommon::INIT_FILE.toStdString());
     }
+
+    QString address{ mLogClient.getLoggerAddress().c_str() };
+    uint16_t port { mLogClient.getLoggerPort() };
+    QString logFile { mLogClient.getActiveDatabasePath().c_str() };
+
+    emit signalLogObserverInstance(true, address, port, logFile);
 }
 
 void LogObserver::shutdownServiceIntrface(Component & holder)
 {
+    QString address{ mLogClient.getLoggerAddress().c_str() };
+    uint16_t port { mLogClient.getLoggerPort() };
+    QString logFile { mLogClient.getActiveDatabasePath().c_str() };
+
+    emit signalLogObserverInstance(false, address, port, logFile);
+
     static_cast<LogObserverBase &>(mLogClient).stop();
     static_cast<LogObserverBase &>(mLogClient).disconnect();
     StubBase::shutdownServiceIntrface(holder);

@@ -38,9 +38,27 @@
 class LogScopeIconFactory
 {
 public:
-    
-    //!< Size of the icon in pixels
+
+    //<! The log icons, which are used in tool buttons and menus.
+    enum class eLogIcons    : uint32_t
+    {
+          PrioInvalid   = static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid)
+        , PrioNotset    = static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)
+        , PrioDebug     = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug)
+        , PrioInfo      = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo)
+        , PrioWarn      = static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning)
+        , PrioError     = static_cast<uint32_t>(NELogging::eLogPriority::PrioError)
+        , PrioFatal     = static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)
+        , PrioScope     = static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)
+        , PrioScopeEnter= static_cast<uint32_t>(NELogging::eLogPriority::PrioScope) | 4
+        , PrioScopeExit = static_cast<uint32_t>(NELogging::eLogPriority::PrioScope) | 8
+    };
+
+    //!< Size of the icon in pixels to display in the scope navigation tree view.
     static constexpr int    IconPixels      { 16 };
+
+    //!< Size of the icon in pixels for toolbuttons and menus.
+    static constexpr int    ButtonPixels    { 42 };
 
     //!< Returns the icon for the log scope priority.
     //! The priority bits are combination of scope priorities.
@@ -48,7 +66,16 @@ public:
      * \brief   Returns the icon for the log scope priority.
      * \param   scopePrio    The bits of combination of scope priorities.
      **/
-    static QIcon getIcon(uint32_t scopePrio);
+    static QIcon getIcon(uint32_t scopePrio, uint32_t pixels = IconPixels);
+
+    /**
+     * \brief   Returns the icon for the log priority to display on toolbuttons and menues.
+     * \param   prio        The priority of the log to display.
+     * \param   active      True if the icon is active, false otherwise.
+     * \param   pixels      The size of the icon in pixels.
+     * \return  The icon for the log priority.
+     **/
+    static QIcon getLogIcon(eLogIcons prio, bool active, uint32_t pixels = ButtonPixels);
 
     /**
      * \brief   Returns the color for the log priority.

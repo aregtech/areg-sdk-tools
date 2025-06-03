@@ -23,7 +23,6 @@
  * Includes
  ************************************************************************/
 
-#include "lusan/view/common/LogExplorer.hpp"
 #include "areg/logging/NELogging.hpp"
 
 #include <QItemSelection>
@@ -54,23 +53,19 @@ namespace Ui {
 class LogExplorer : public    QWidget
 {
 private:
+
+    //!< The priority indexes for the menu entries.
     enum eLogPrio
     {
           PrioNotset    = 0
-        , PrioScope     = 1
-        , PrioDebug     = 2
-        , PrioInfo      = 3
-        , PrioWarn      = 4
-        , PrioError     = 5
-        , PrioFatal     = 6
+        , PrioDebug
+        , PrioInfo
+        , PrioWarn
+        , PrioError
+        , PrioFatal
+        , PrioScope
 
         , PrioCount
-    };
-
-    struct sMenuEntry
-    {
-        NELogging::eLogPriority prio;
-        QString                 text;
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -83,6 +78,8 @@ public:
      * \param   parent      The parent widget.
      **/
     LogExplorer(MdiMainWindow* mainFrame, QWidget* parent = nullptr);
+
+    virtual ~LogExplorer(void);
 
     /**
      * \brief   Returns the IP-address of the log collector to connect.
@@ -252,6 +249,8 @@ private slots:
      **/
     void onLogDbCreated(const QString& dbLocation);
 
+    void onLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath);
+
     /**
      * \brief   The slot is triggered when fails to send or receive message.
      **/
@@ -306,6 +305,10 @@ private slots:
      **/
     void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
 
+    /**
+     * \brief   Slot triggered when the user makes right click on the scope navigation window.
+     * \param   pos     The mouse right click cursor position on scope navigation window.
+     **/
     void onTreeViewContextMenuRequested(const QPoint& pos);
 
 //////////////////////////////////////////////////////////////////////////
@@ -323,8 +326,6 @@ private:
     LogScopesModel*         mModel;         //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     QAction*                mMenuActions[static_cast<int>(eLogPrio::PrioCount)];   //!< The list of menu actions
-
-    static sMenuEntry       mMenuText[static_cast<int>(eLogPrio::PrioCount)];
 };
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP

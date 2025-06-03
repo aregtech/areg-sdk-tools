@@ -59,11 +59,11 @@ class LogObserver   : public    QObject
 public:
 
     //!< The name of the component thread.
-    static constexpr const char* const LogobserverThread    { "LogObserverThread"   };
+    static constexpr const char* const LogobserverThread    { "LusanLogObserverThread"   };
     //!< The name of the model.
-    static constexpr const char* const LogobserverModel     { "LogObserverModel"    };
+    static constexpr const char* const LogobserverModel     { "LusanLogObserverModel"    };
     //!< The name of the component.
-    static constexpr const char* const LogObserverComponent { "LogObserverComponent"};
+    static constexpr const char* const LogObserverComponent { "LusanLogObserverComponent"};
 
 //////////////////////////////////////////////////////////////////////////
 // Public static methods
@@ -333,6 +333,8 @@ signals:
      * \param   logMessage  The buffer with structure of the message to log.
      **/
     void signalLogMessage(const SharedBuffer & logMessage);
+
+    void signalLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath);
 
 protected:
 

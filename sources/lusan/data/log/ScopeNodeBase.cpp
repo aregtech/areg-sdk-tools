@@ -116,7 +116,7 @@ void ScopeNodeBase::setPriority( uint32_t prio)
     {
         mPrioStates = prio;
     }
-    else if (hasLogScopes())
+    else if (hasLogScopes() && (prio != static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)))
     {
         mPrioStates = prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
     }
