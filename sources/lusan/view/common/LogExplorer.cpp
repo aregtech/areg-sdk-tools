@@ -57,9 +57,9 @@ LogExplorer::LogExplorer(MdiMainWindow* mainFrame, QWidget* parent)
     , mInitLogFile  ( )
     , mActiveLogFile( )
     , mLogLocation  ( )
-    , mShouldConnect(false)
     , mModel        (nullptr)
     , mSelModel     (nullptr)
+    , mSignalsActive(false)
 {
     _explorer = this;
     for (int i = 0; i < static_cast<int>(eLogPrio::PrioCount); ++ i)
@@ -200,6 +200,8 @@ void LogExplorer::setupSignals(void)
     connect(ctrlLogDebug()      , &QToolButton::clicked, this, &LogExplorer::onPrioDebugClicked);
     connect(ctrlLogScopes()     , &QToolButton::clicked, this, &LogExplorer::onPrioScopesClicked);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested, this, &LogExplorer::onTreeViewContextMenuRequested);
+    
+    setupLogSignals(true);    
 }
 
 void LogExplorer::blockBasicSignals(bool block)
@@ -258,17 +260,26 @@ bool LogExplorer::updatePriority(const QModelIndex& node, bool addPrio, NELoggin
 void LogExplorer::setupLogSignals(bool setup)
 {
     LogObserver* log = LogObserver::getComponent();
-    Q_ASSERT(log != nullptr);
+    if (log == nullptr)
+    {
+        mSignalsActive = false;
+        return;
+    }
+    
     if (setup)
     {
-        connect(log, &LogObserver::signalLogObserverConfigured  , this, &LogExplorer::onLogObserverConfigured   , Qt::QueuedConnection);
-        connect(log, &LogObserver::signalLogDbConfigured        , this, &LogExplorer::onLogDbConfigured         , Qt::QueuedConnection);
-        connect(log, &LogObserver::signalLogServiceConnected    , this, &LogExplorer::onLogServiceConnected     , Qt::QueuedConnection);
-        connect(log, &LogObserver::signalLogObserverStarted     , this, &LogExplorer::onLogObserverStarted      , Qt::QueuedConnection);
-        connect(log, &LogObserver::signalLogDbCreated           , this, &LogExplorer::onLogDbCreated            , Qt::QueuedConnection);
-        connect(log, &LogObserver::signalLogObserverInstance    , this, &LogExplorer::onLogObserverInstance     , Qt::QueuedConnection);
+        if (mSignalsActive == false)
+        {
+            mSignalsActive = true;
+            connect(log, &LogObserver::signalLogObserverConfigured  , this, &LogExplorer::onLogObserverConfigured   , Qt::QueuedConnection);
+            connect(log, &LogObserver::signalLogDbConfigured        , this, &LogExplorer::onLogDbConfigured         , Qt::QueuedConnection);
+            connect(log, &LogObserver::signalLogServiceConnected    , this, &LogExplorer::onLogServiceConnected     , Qt::QueuedConnection);
+            connect(log, &LogObserver::signalLogObserverStarted     , this, &LogExplorer::onLogObserverStarted      , Qt::QueuedConnection);
+            connect(log, &LogObserver::signalLogDbCreated           , this, &LogExplorer::onLogDbCreated            , Qt::QueuedConnection);
+            connect(log, &LogObserver::signalLogObserverInstance    , this, &LogExplorer::onLogObserverInstance     , Qt::QueuedConnection);
+        }
     }
-    else
+    else if (mSignalsActive)
     {
         disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &LogExplorer::onLogObserverConfigured);
         disconnect(log, &LogObserver::signalLogDbConfigured         , this, &LogExplorer::onLogDbConfigured);
@@ -276,6 +287,7 @@ void LogExplorer::setupLogSignals(bool setup)
         disconnect(log, &LogObserver::signalLogObserverStarted      , this, &LogExplorer::onLogObserverStarted);
         disconnect(log, &LogObserver::signalLogDbCreated            , this, &LogExplorer::onLogDbCreated);
         disconnect(log, &LogObserver::signalLogObserverInstance     , this, &LogExplorer::onLogObserverInstance);
+        mSignalsActive =  false;
     }
 }
 
@@ -357,37 +369,19 @@ void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const
 {
     mInitLogFile    = dbName;
     mLogLocation    = dbLocation;
-    
-    if (isEnabled && mShouldConnect)
-    {
-        mModel = new LogScopesModel(ctrlTable());
-        mSelModel = new QItemSelectionModel(mModel, ctrlTable());
-
-        if (ctrlTable()->model() != mModel)
-        {
-            ctrlTable()->setModel(mModel);
-        }
-
-        if (ctrlTable()->selectionModel() != mSelModel)
-        {
-            ctrlTable()->setSelectionModel(mSelModel);
-        }
-    }
-    
-    mShouldConnect = false;
 }
 
 void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address, uint16_t port)
 {
-    if (isConnected == false)
-    {
-        mSelModel->reset();
-        mModel->release();
-    }
-    else
+    if (isConnected)
     {
         mModel->release();
         mModel->initialize();
+    }
+    else
+    {
+        mSelModel->reset();
+        mModel->release();
     }
 
     enableButtons(QModelIndex());
@@ -407,60 +401,42 @@ void LogExplorer::onLogObserverStarted(bool isStarted)
 void LogExplorer::onLogDbCreated(const QString& dbLocation)
 {
     mActiveLogFile = dbLocation;
+    LogObserver* log = LogObserver::getComponent();
+    Q_ASSERT(log != nullptr);
+    mMainFrame->logCollecttorConnected(true, log->getConnectedAddress(), log->getConnectedPort(), mActiveLogFile);
 }
 
 void LogExplorer::onLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath)
 {
     if (isStarted)
     {
-        if (mModel == nullptr)
-        {
-            mModel = new LogScopesModel(ctrlTable());
-        }
-
         if (mSelModel == nullptr)
         {
+            Q_ASSERT(mModel == nullptr);
+            mModel = new LogScopesModel(ctrlTable());
             mSelModel = new QItemSelectionModel(mModel, ctrlTable());
-        }
-
-        if (ctrlTable()->model() != mModel)
-        {
             ctrlTable()->setModel(mModel);
-        }
-
-        if (ctrlTable()->selectionModel() != mSelModel)
-        {
             ctrlTable()->setSelectionModel(mSelModel);
+            
+            connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
+            connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
+            connect(mModel      , &LogScopesModel::dataChanged          , this, &LogExplorer::onScopesDataChanged);
+            connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);        
         }
-
-        connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
-        connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
-        connect(mModel      , &LogScopesModel::dataChanged          , this, &LogExplorer::onScopesDataChanged);
-        connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
 
         std::error_code err;
         std::filesystem::path dbPath(mLogLocation.toStdString());
         dbPath /= mInitLogFile.toStdString();
         QString logPath(std::filesystem::absolute(dbPath, err).c_str());
         LogObserver::connect(mAddress, mPort, logPath);
-
     }
-    else
-    {
-        disconnect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
-        disconnect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
-        disconnect(mModel      , &LogScopesModel::dataChanged          , this, &LogExplorer::onScopesDataChanged);
-        disconnect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
-
-        mSelModel->reset();
-        mModel->release();
-    }
+    
+    setupLogSignals(isStarted);
+    enableButtons(QModelIndex());
 }
-
 
 void LogExplorer::onConnectClicked(bool checked)
 {
-    mShouldConnect = checked;
     if (checked)
     {
         LogObserver::createLogObserver(&_logObserverStarted);

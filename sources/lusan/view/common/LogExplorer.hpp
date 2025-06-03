@@ -249,6 +249,13 @@ private slots:
      **/
     void onLogDbCreated(const QString& dbLocation);
 
+    /**
+     * \brief   The slot is triggered when the log observer instance is activated or shutdown.
+     * \param   isStarted       The flag indicating whether the log observer instance is started or stopped.
+     * \param   address         The IP address of the log observer instance.
+     * \param   port            The TCP port number of the log observer instance.
+     * \param   filePath        The file path of the log file, if any. If empty, no file is used.
+     **/
     void onLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath);
 
     /**
@@ -322,9 +329,9 @@ private:
     QString                 mInitLogFile;   //!< The initialized log file.
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
-    bool                    mShouldConnect; //!< Flag, indicating to connect to log collector.
     LogScopesModel*         mModel;         //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
+    bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     QAction*                mMenuActions[static_cast<int>(eLogPrio::PrioCount)];   //!< The list of menu actions
 };
 
