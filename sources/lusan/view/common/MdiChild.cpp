@@ -27,10 +27,11 @@
 #include <QTextDocument>
 #include <QDir>
 #include <QFileInfo>
-#include <QEvent>
+#include <QCloseEvent>
 
-MdiChild::MdiChild(QWidget* parent /*= nullptr*/)
-    : QWidget(parent)
+MdiChild::MdiChild(IEMdiWindow::eMdiWindow windowType, QWidget* parent /*= nullptr*/)
+    : QWidget       (parent)
+    , IEMdiWindow   (windowType)
     , mCurFile      ( )
     , mDocName      ( )
     , mIsUntitled   ( true )
@@ -149,6 +150,9 @@ void MdiChild::closeEvent(QCloseEvent* event)
     {
         event->ignore();
     }
+#else
+    emit signalMdiChildClosed(mMdiSubWindow, this);
+    event->accept();
 #endif
 }
 

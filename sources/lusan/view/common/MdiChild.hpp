@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/view/common/IEMdiWindow.hpp"
 #include <QWidget>
 
 class QMdiSubWindow;
@@ -27,7 +28,8 @@ class QMdiSubWindow;
  * \brief   The MdiChild class represents a child window in the MDI interface.
  *          It provides functionalities for file operations and text editing.
  **/
-class MdiChild : public QWidget
+class MdiChild  : public QWidget
+                , public IEMdiWindow
 {
     Q_OBJECT
 
@@ -38,7 +40,7 @@ public:
     /**
      * \brief   Constructor for MdiChild.
      **/
-    MdiChild(QWidget* parent = nullptr);
+    MdiChild(IEMdiWindow::eMdiWindow windowType, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // actions
@@ -127,6 +129,10 @@ public:
      * \brief   Returns the file open operation success flag.
      **/
     virtual bool openSucceeded(void) const;
+
+signals:
+
+    void signalMdiChildClosed(QMdiSubWindow * mdiSubwindow, MdiChild * mdiChild);
     
 protected:
 

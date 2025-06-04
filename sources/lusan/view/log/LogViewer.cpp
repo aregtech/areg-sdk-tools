@@ -29,12 +29,11 @@
 #include <filesystem>
 
 LogViewer::LogViewer(QWidget *parent)
-    : MdiChild      (parent)
-    , IEMdiWindow   (IEMdiWindow::eMdiWindow::MdiLogViewer)
+    : MdiChild      (IEMdiWindow::eMdiWindow::MdiLogViewer, parent)
 
-    , ui(new Ui::LogViewer)
-    , mLogModel(nullptr)
-    , mMdiWindow(new QWidget())
+    , ui            (new Ui::LogViewer)
+    , mLogModel     (nullptr)
+    , mMdiWindow    (new QWidget())
 {
     ui->setupUi(mMdiWindow);
     

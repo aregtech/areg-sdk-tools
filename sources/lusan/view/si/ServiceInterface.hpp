@@ -35,7 +35,6 @@
 #include <QTabWidget>
 
 class ServiceInterface  : public MdiChild
-                        , public IEMdiWindow
 {
     Q_OBJECT
     

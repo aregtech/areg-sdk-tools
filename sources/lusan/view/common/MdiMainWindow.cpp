@@ -109,8 +109,8 @@ MdiMainWindow::MdiMainWindow()
     _createDockWindows();
     _createMdiArea();
     
-    updateWindowMenu();
-    updateMenus();
+    onShowMenuWindow();
+    onSubWindowActivated();
     readSettings();
 
     setWindowTitle(tr("Lusan"));
@@ -388,7 +388,7 @@ void MdiMainWindow::setRecentFilesVisibility(bool visible)
     mFileSeparator->setVisible(visible);
 }
 
-void MdiMainWindow::updateRecentFileActions()
+void MdiMainWindow::onShowMenuRecent()
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
 
@@ -409,7 +409,7 @@ void MdiMainWindow::updateRecentFileActions()
     }
 }
 
-void MdiMainWindow::updateMenus()
+void MdiMainWindow::onSubWindowActivated()
 {
     MdiChild* active = activeMdiChild();    
     bool hasMdiChild = (active != nullptr);
@@ -429,7 +429,7 @@ void MdiMainWindow::updateMenus()
     mActEditCopy.setEnabled(hasSelection);
 }
 
-void MdiMainWindow::updateWindowMenu()
+void MdiMainWindow::onShowMenuWindow()
 {
     mWindowMenu->clear();
     mWindowMenu->addAction(&mActFileClose);
@@ -627,7 +627,7 @@ void MdiMainWindow::_createMenus()
     mFileSeparator = mFileMenu->addSeparator();
 
     QMenu* recentMenu = mFileMenu->addMenu(tr("Recent..."));
-    connect(recentMenu, &QMenu::aboutToShow, this, &MdiMainWindow::updateRecentFileActions);
+    connect(recentMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuRecent);
     mActRecentFilesSubMenu = recentMenu->menuAction();
     for (int i = 0; i < MaxRecentFiles; ++i)
     {
@@ -654,7 +654,7 @@ void MdiMainWindow::_createMenus()
     mToolsMenu->addAction(&mActToolsOptions);
 
     mWindowMenu = menuBar()->addMenu(tr("&Window"));
-    connect(mWindowMenu, &QMenu::aboutToShow, this, &MdiMainWindow::updateWindowMenu);
+    connect(mWindowMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuWindow);
 
     menuBar()->addSeparator();
     mHelpMenu = menuBar()->addMenu(tr("&Help"));
@@ -704,7 +704,7 @@ void MdiMainWindow::_createDockWindows()
 void MdiMainWindow::_createMdiArea()
 {
     setCentralWidget(&mMdiArea);
-    connect(&mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::updateMenus);
+    connect(&mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::onSubWindowActivated);
 }
 
 void MdiMainWindow::readSettings()

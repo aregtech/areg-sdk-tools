@@ -53,6 +53,8 @@ class MdiMainWindow : public QMainWindow
 {
     Q_OBJECT
 
+    using MdiList   = QMap<QString, MdiChild*>;
+
 //////////////////////////////////////////////////////////////////////////
 // Public methods
 //////////////////////////////////////////////////////////////////////////
@@ -99,6 +101,20 @@ public:
      *          Returns nullptr if does not receive logs in live mode.
      **/
     inline LogViewer* getLiveLogViewer(void) const;
+
+    inline MdiChild* getActiveWindow(void) const;
+
+signals:
+
+/************************************************************************
+ * Signals
+ ************************************************************************/
+
+    void signalWindowActivated(MdiChild* child);
+
+    void signalWindowClosed(MdiChild* child);
+
+    void signalWindowCreated(MdiChild* child);
 
 //////////////////////////////////////////////////////////////////////////
 // protected methods
@@ -173,7 +189,7 @@ private slots:
     void onViewStatus();
 
     void onToolsOptions(void);
-    
+
     /**
      * \brief   Slot for showing the about dialog.
      **/
@@ -182,17 +198,19 @@ private slots:
     /**
      * \brief   Updates the recent file actions.
      **/
-    void updateRecentFileActions();
+    void onShowMenuRecent();
 
     /**
      * \brief   Updates the menus.
      **/
-    void updateMenus();
+    void onSubWindowActivated();
 
     /**
      * \brief   Updates the window menu.
      **/
-    void updateWindowMenu();
+    void onShowMenuWindow();
+
+private:
 
     /**
      * \brief   Creates a new MDI child window.
@@ -249,6 +267,8 @@ private:
      * \brief   Creates the MDI area for managing sub-windows.
      **/
     void _createMdiArea();
+
+    void _setupSignals(void);
 
     /**
      * \brief   Reads the settings for the main window.
@@ -314,14 +334,14 @@ private:
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
-    //////////////////////////////////////////////////////////////////////////
-    /// \brief mWorkspaceRoot
-    ///
+//////////////////////////////////////////////////////////////////////////
 private:
     //!< The root directory of the workspace.
-    QString     mWorkspaceRoot;
+    QString         mWorkspaceRoot;
     //!< The current file name.
-    QString         mLastFile;       
+    QString         mLastFile;
+    //!< The list of MDI child windows.
+    MdiList         mMdiList;
     
     //!< The MDI area for managing sub-windows.
     MdiArea         mMdiArea;
@@ -444,6 +464,11 @@ inline void MdiMainWindow::setLastFile(const QString& lastFile)
 inline LogViewer* MdiMainWindow::getLiveLogViewer(void) const
 {
     return mLogViewer;
+}
+
+inline MdiChild* MdiMainWindow::getActiveWindow(void) const
+{
+    return activeMdiChild();
 }
 
 #endif // LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP

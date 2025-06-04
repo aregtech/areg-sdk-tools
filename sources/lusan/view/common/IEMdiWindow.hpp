@@ -52,6 +52,10 @@ public:
      **/
     inline eMdiWindow getMdiWindowType(void) const;
 
+    inline bool isServiceInterfaceWindow(void) const;
+
+    inline bool isLogViewerWindow(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables.
 //////////////////////////////////////////////////////////////////////////
@@ -74,6 +78,16 @@ private:
 inline IEMdiWindow::eMdiWindow IEMdiWindow::getMdiWindowType(void) const
 {
     return mMdiWindowType;
+}
+
+inline bool IEMdiWindow::isServiceInterfaceWindow(void) const
+{
+    return (mMdiWindowType == MdiServiceInterface);
+}
+
+inline bool IEMdiWindow::isLogViewerWindow(void) const
+{
+    return (mMdiWindowType == MdiLogViewer);
 }
 
 #endif // LUSAN_VIEW_COMMON_IEMDIWINDOW_HPP
