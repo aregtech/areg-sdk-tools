@@ -42,6 +42,8 @@ public:
      **/
     MdiChild(IEMdiWindow::eMdiWindow windowType, QWidget* parent = nullptr);
 
+    virtual ~MdiChild(void);
+
 //////////////////////////////////////////////////////////////////////////
 // actions
 //////////////////////////////////////////////////////////////////////////
@@ -132,7 +134,7 @@ public:
 
 signals:
 
-    void signalMdiChildClosed(QMdiSubWindow * mdiSubwindow, MdiChild * mdiChild);
+    void signalMdiChildClosed(MdiChild * mdiChild);
     
 protected:
 

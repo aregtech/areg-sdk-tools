@@ -18,6 +18,8 @@
  ************************************************************************/
 
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/view/common/MdiMainWindow.hpp"
 #include <QFile>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -38,6 +40,13 @@ MdiChild::MdiChild(IEMdiWindow::eMdiWindow windowType, QWidget* parent /*= nullp
     , mMdiSubWindow ( nullptr )
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
+    MdiMainWindow* wndMain = LusanApplication::getMainWindow();
+    connect(wndMain,    &MdiMainWindow::onMdiChildClosed,    this, MdiChild::signalMdiChildClosed);
+}
+
+MdiChild::~MdiChild(void)
+{
+    disconnect(wndMain,    &MdiMainWindow::onMdiChildClosed,    this, MdiChild::signalMdiChildClosed);
 }
 
 bool MdiChild::openSucceeded(void) const
@@ -151,7 +160,7 @@ void MdiChild::closeEvent(QCloseEvent* event)
         event->ignore();
     }
 #else
-    emit signalMdiChildClosed(mMdiSubWindow, this);
+    emit signalMdiChildClosed(this);
     event->accept();
 #endif
 }

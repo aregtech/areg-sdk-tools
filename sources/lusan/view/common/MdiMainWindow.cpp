@@ -472,6 +472,11 @@ void MdiMainWindow::onShowMenuWindow()
     }
 }
 
+void MdiMainWindow::onMdiChildClosed(MdiChild* mdiChild)
+{
+    emit signalWindowClosed(mdiChild);
+}
+
 MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
 {
     QFileInfo info(filePath);

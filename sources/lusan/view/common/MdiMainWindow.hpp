@@ -53,8 +53,6 @@ class MdiMainWindow : public QMainWindow
 {
     Q_OBJECT
 
-    using MdiList   = QMap<QString, MdiChild*>;
-
 //////////////////////////////////////////////////////////////////////////
 // Public methods
 //////////////////////////////////////////////////////////////////////////
@@ -210,6 +208,8 @@ private slots:
      **/
     void onShowMenuWindow();
 
+    void onMdiChildClosed(MdiChild *mdiChild);
+
 private:
 
     /**
@@ -340,8 +340,6 @@ private:
     QString         mWorkspaceRoot;
     //!< The current file name.
     QString         mLastFile;
-    //!< The list of MDI child windows.
-    MdiList         mMdiList;
     
     //!< The MDI area for managing sub-windows.
     MdiArea         mMdiArea;
