@@ -10,19 +10,19 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/IEMdiWindow.cpp
+ *  \file        lusan/view/common/NavigationWindow.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       MDI Window type.
+ *  \brief       The navigation windows elements.
  *
  ************************************************************************/
 
-/************************************************************************
- * Includes
- ************************************************************************/
-#include "lusan/view/common/IEMdiWindow.hpp"
+#include "lusan/view/common/NavigationWindow.hpp"
 
-IEMdiWindow::IEMdiWindow(eMdiWindow windowType)
-    : mMdiWindowType(windowType)
+NavigationWindow::NavigationWindow(eNavigationWindow naviWindow, MdiMainWindow * wndMain, QWidget* parent)
+    : QWidget(parent)
+
+    , mNaviWindowType   (naviWindow)
+    , mMainWindow       (wndMain)
 {
 }

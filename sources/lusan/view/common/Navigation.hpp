@@ -118,11 +118,17 @@ private:
      * \brief   Initializes the size of tab widgets.
      **/
     void initSize();
+
+    /**
+     * \brief   Slot is triggered when the MDI window is activated.
+     **/
+    void onMdiWindowActivated(MdiChild * mdiChild);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
+    MdiMainWindow*  mMainWindow;    //!< Main window
     QTabWidget      mTabs;          //!< The tab widget of the navigation.
     LogExplorer     mLogExplorer;   //!< The log explorer widget.
     NaviFileSystem  mFileSystem;    //!< The file system widget.

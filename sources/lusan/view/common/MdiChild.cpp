@@ -18,6 +18,8 @@
  ************************************************************************/
 
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/view/common/MdiMainWindow.hpp"
 #include <QFile>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -27,16 +29,32 @@
 #include <QTextDocument>
 #include <QDir>
 #include <QFileInfo>
-#include <QEvent>
+#include <QCloseEvent>
 
-MdiChild::MdiChild(QWidget* parent /*= nullptr*/)
-    : QWidget(parent)
+MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWidget* parent /*= nullptr*/)
+    : QWidget       (parent)
+
+    , mMdiWindowType(windowType)
     , mCurFile      ( )
     , mDocName      ( )
     , mIsUntitled   ( true )
     , mMdiSubWindow ( nullptr )
+    , mMainWindow   (wndMain)
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
+
+    Q_ASSERT(wndMain != nullptr);
+    connect(wndMain,    &MdiMainWindow::onMdiChildClosed,    this, &MdiChild::signalMdiChildClosed);
+    connect(wndMain,    &MdiMainWindow::onMdiChildCreated,   this, &MdiChild::signalMdiChildCreated, Qt::QueuedConnection);
+    emit signalMdiChildCreated(this);
+}
+
+MdiChild::~MdiChild(void)
+{
+    MdiMainWindow* wndMain = LusanApplication::getMainWindow();
+    Q_ASSERT(wndMain != nullptr);
+    disconnect(wndMain,    &MdiMainWindow::onMdiChildClosed,    this, &MdiChild::signalMdiChildClosed);
+    disconnect(wndMain,    &MdiMainWindow::onMdiChildCreated,   this, &MdiChild::signalMdiChildCreated);
 }
 
 bool MdiChild::openSucceeded(void) const
@@ -82,7 +100,7 @@ void MdiChild::newFile()
     setWindowTitle(mCurFile + "[*]");
     setWindowModified(true);
 #if 0
-    connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::documentWasModified);
+    connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::onDocumentModified);
 #endif
 }
 
@@ -100,7 +118,7 @@ bool MdiChild::loadFile(const QString& fileName)
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     setPlainText(in.readAll());
     QGuiApplication::restoreOverrideCursor();
-    connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::documentWasModified);
+    connect(document(), &QTextDocument::contentsChanged, this, &MdiChild::onDocumentModified);
 #endif // 0
     
     setCurrentFile(fileName);
@@ -149,10 +167,13 @@ void MdiChild::closeEvent(QCloseEvent* event)
     {
         event->ignore();
     }
+#else
+    emit signalMdiChildClosed(this);
+    event->accept();
 #endif
 }
 
-void MdiChild::documentWasModified()
+void MdiChild::onDocumentModified()
 {
     // setWindowModified(document()->isModified());
 }

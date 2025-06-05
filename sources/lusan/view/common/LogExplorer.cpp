@@ -20,14 +20,17 @@
 #include "lusan/view/common/LogExplorer.hpp"
 #include "ui/ui_LogExplorer.h"
 
-#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/app/LusanApplication.hpp"
+
 #include "lusan/data/log/LogObserver.hpp"
+#include "lusan/data/log/ScopeNodeBase.hpp"
+
 #include "lusan/model/log/LogScopeIconFactory.hpp"
 #include "lusan/model/log/LogScopesModel.hpp"
+
+#include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/log/LogViewer.hpp"
-#include "lusan/data/log/ScopeNodeBase.hpp"
 
 #include "areg/base/NESocket.hpp"
 
@@ -47,10 +50,9 @@ namespace
     }
 }
 
-LogExplorer::LogExplorer(MdiMainWindow* mainFrame, QWidget* parent)
-    : QWidget       (parent)
+LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
+    : NavigationWindow(NavigationWindow::eNavigationWindow::NaviLiveLogs, wndMain, parent)
 
-    , mMainFrame    (mainFrame)
     , ui            (new Ui::LogExplorer)
     , mAddress      ()
     , mPort         (NESocket::InvalidPort)
@@ -188,6 +190,8 @@ void LogExplorer::setupWidgets(void)
     ctrlLogScopes()->setEnabled(false);
 
     ctrlTable()->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    onWindowActivated(mMainWindow->getActiveWindow());
 }
 
 void LogExplorer::setupSignals(void)
@@ -200,7 +204,10 @@ void LogExplorer::setupSignals(void)
     connect(ctrlLogDebug()      , &QToolButton::clicked, this, &LogExplorer::onPrioDebugClicked);
     connect(ctrlLogScopes()     , &QToolButton::clicked, this, &LogExplorer::onPrioScopesClicked);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested, this, &LogExplorer::onTreeViewContextMenuRequested);
-    
+
+    connect(mMainWindow         , &MdiMainWindow::signalWindowActivated , this  , &LogExplorer::onWindowActivated);
+    connect(mMainWindow         , &MdiMainWindow::signalWindowCreated   , this  , &LogExplorer::onWindowCreated);
+
     setupLogSignals(true);    
 }
 
@@ -390,8 +397,8 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     ctrlConnect()->setChecked(isConnected);
     ctrlConnect()->setIcon(QIcon::fromTheme(isConnected ? QString::fromUtf8("network-wireless") : QString::fromUtf8("network-offline")));
     ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
-    Q_ASSERT(mMainFrame != nullptr);
-    mMainFrame->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
+    Q_ASSERT(mMainWindow != nullptr);
+    mMainWindow->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
 }
 
 void LogExplorer::onLogObserverStarted(bool isStarted)
@@ -403,7 +410,7 @@ void LogExplorer::onLogDbCreated(const QString& dbLocation)
     mActiveLogFile = dbLocation;
     LogObserver* log = LogObserver::getComponent();
     Q_ASSERT(log != nullptr);
-    mMainFrame->logCollecttorConnected(true, log->getConnectedAddress(), log->getConnectedPort(), mActiveLogFile);
+    mMainWindow->logCollecttorConnected(true, log->getConnectedAddress(), log->getConnectedPort(), mActiveLogFile);
 }
 
 void LogExplorer::onLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath)
@@ -456,11 +463,11 @@ void LogExplorer::onConnectClicked(bool checked)
 
 void LogExplorer::onMoveBottomClicked()
 {
-    MdiMainWindow* wndMain = LusanApplication::getMainWindow();
-    LogViewer * logViewer = wndMain != nullptr ? wndMain->getLiveLogViewer() : nullptr;
-    if (logViewer != nullptr)
+    Q_ASSERT(mMainWindow != nullptr);
+    MdiChild* wndActive = mMainWindow->getActiveWindow();
+    if ((wndActive != nullptr) && wndActive->isLogViewerWindow())
     {
-        logViewer->moveToBottom(true);
+        qobject_cast<LogViewer*>(wndActive)->moveToBottom(true);
     }
 }
 
@@ -660,5 +667,28 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
     else if (selectedAction == mMenuActions[eLogPrio::PrioScope])
     {
         updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioScope);
+    }
+}
+
+void LogExplorer::onWindowCreated(MdiChild* mdiChild)
+{
+    ctrlMoveBottom()->setEnabled((mdiChild != nullptr) && (mdiChild->isLogViewerWindow()));
+}
+
+void LogExplorer::onWindowActivated(MdiChild* mdiChild)
+{
+    if ((mdiChild != nullptr) && (mdiChild->isLogViewerWindow()))
+    {
+        enableButtons(ctrlTable()->currentIndex());
+        ctrlMoveBottom()->setEnabled(true);
+        if (isActiveWindow() == false)
+        {
+            activateWindow();
+        }
+    }
+    else
+    {
+        enableButtons(QModelIndex());
+        ctrlMoveBottom()->setEnabled(false);
     }
 }

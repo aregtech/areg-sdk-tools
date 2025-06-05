@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 
+#include "lusan/view/common/NavigationWindow.hpp"
 #include "areg/logging/NELogging.hpp"
 
 #include <QItemSelection>
@@ -36,6 +37,7 @@
  ************************************************************************/
 class LogScopesModel;
 class MdiMainWindow;
+class MdiChild;
 class QToolButton;
 class QTreeView;
 class QAction;
@@ -50,7 +52,7 @@ namespace Ui {
 /**
  * \brief   The LogExplorer class is a view of the logging sources and logging scopes.
  **/
-class LogExplorer : public    QWidget
+class LogExplorer : public NavigationWindow
 {
 private:
 
@@ -74,10 +76,10 @@ private:
 public:
     /**
      * \brief   The constructor of the LogExplorer class.
-     * \param   mainFrame   The main frame of the application.
+     * \param   wndMain     The main frame of the application.
      * \param   parent      The parent widget.
      **/
-    LogExplorer(MdiMainWindow* mainFrame, QWidget* parent = nullptr);
+    LogExplorer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
     virtual ~LogExplorer(void);
 
@@ -152,10 +154,10 @@ private:
 
     //!< Returns the control object to enable log scopes of the logs
     QToolButton* ctrlLogScopes(void);
-    
+
     //!< Returns the control object to move to the bottom of log window.
     QToolButton* ctrlMoveBottom(void);
-    
+
     //!< Returns the control object of the log messages
     QTreeView* ctrlTable(void);
 
@@ -163,17 +165,17 @@ private:
      * \brief   Updates the data of the file system.
      **/
     void updateData(void);
-    
+
     /**
      * \brief   Initializes the widgets.
      **/
     void setupWidgets(void);
-    
+
     /**
      * \brief   Initializes the signals.
      **/
     void setupSignals(void);
-    
+
     /**
      * \brief   Blocks the basic signals.
      * \param   block   If true, blocks the signals. Otherwise, unblocks the signals.
@@ -210,7 +212,7 @@ private:
      * \return  Returns true if succeeded the request to update the priority. Otherwise, returns false.
      **/
     bool updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio);
-    
+
 private slots:
     /**
      * \brief   The slot is triggered when initializing and configuring the observer.
@@ -279,7 +281,7 @@ private slots:
 
     // Slot for debug log priority tool button
     void onPrioDebugClicked(bool checked);
-    
+
     // Slot for log scope priority tool button
     void onPrioScopesClicked(bool checked);
 
@@ -291,13 +293,13 @@ private slots:
      * \param   instances   The list of the connected instances.
      **/
     void onRootUpdated(const QModelIndex & root);
-    
+
     /**
      * \brief   Slot triggered when the scopes of an instance are inserted.
      * \param   parent  The index of the parent instance item where scopes are inserted.
      **/
     void onScopesInserted(const QModelIndex & parent);
-    
+
     /**
      * \brief   Slot triggered when the scopes of an instance are updated.
      * \param   parent  The index of the parent instance item that is updated.
@@ -318,11 +320,22 @@ private slots:
      **/
     void onTreeViewContextMenuRequested(const QPoint& pos);
 
+    /**
+     * \brief   The slot is triggered when the application is about to exit.
+     * \param   mdiChild    The MDI child window that is about to be closed.
+     **/
+    void onWindowCreated(MdiChild* mdiChild);
+
+    /**
+     * \brief   The slot is triggered when the MDI child window is activated.
+     * \param   mdiChild    The MDI child window that is activated.
+     **/
+    void onWindowActivated(MdiChild* mdiChild);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    MdiMainWindow*          mMainFrame;     //!< The main frame of the application.
     Ui::LogExplorer*        ui;             //!< The user interface object.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.

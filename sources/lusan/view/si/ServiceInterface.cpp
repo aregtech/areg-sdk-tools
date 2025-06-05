@@ -32,9 +32,8 @@ const QString& ServiceInterface::fileExtension(void)
 
 uint32_t ServiceInterface::_count{0};
 
-ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWidget *parent /*= nullptr*/)
-    : MdiChild      (parent)
-    , IEMdiWindow   (IEMdiWindow::eMdiWindow::MdiServiceInterface)
+ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & filePath /*= QString()*/, QWidget *parent /*= nullptr*/)
+    : MdiChild      (MdiChild::eMdiWindow::MdiServiceInterface, wndMain, parent)
 
     , mModel    (filePath)
     , mTabWidget(this)
@@ -45,14 +44,15 @@ ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWi
     , mConstant (mModel.getConstantsModel() , this)
     , mInclude  (mModel.getIncludesModel()  , this)
 {
+    QIcon tabIcon = QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview);
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the SIOverview widget as the first tab
-    mTabWidget.addTab(&mOverview , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Overview"));
-    mTabWidget.addTab(&mDataType , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Data Types"));
-    mTabWidget.addTab(&mAttribute, QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Data Attributes"));
-    mTabWidget.addTab(&mMethod   , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Methods"));
-    mTabWidget.addTab(&mConstant , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Constants"));
-    mTabWidget.addTab(&mInclude  , QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview), tr("Includes"));
+    mTabWidget.addTab(&mOverview , tabIcon, tr("Overview"));
+    mTabWidget.addTab(&mDataType , tabIcon, tr("Data Types"));
+    mTabWidget.addTab(&mAttribute, tabIcon, tr("Data Attributes"));
+    mTabWidget.addTab(&mMethod   , tabIcon, tr("Methods"));
+    mTabWidget.addTab(&mConstant , tabIcon, tr("Constants"));
+    mTabWidget.addTab(&mInclude  , tabIcon, tr("Includes"));
     mTabWidget.setTabShape(QTabWidget::Triangular);
     mTabWidget.setTabsClosable(false);
     mTabWidget.setMovable(false);
