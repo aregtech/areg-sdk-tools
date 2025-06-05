@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/view/common/NavigationWindow.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
 #include <QList>
@@ -47,7 +48,7 @@ namespace Ui {
  * \brief   The NaviFileSystem class is a view of the workspace related file system.
  *          The class is used to display the file system in the workspace.
  **/
-class NaviFileSystem    : public    QWidget
+class NaviFileSystem    : public    NavigationWindow
                         , protected IETableHelper
 {
 //////////////////////////////////////////////////////////////////////////
@@ -60,7 +61,7 @@ private:
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    NaviFileSystem(MdiMainWindow* mainFrame, QWidget* parent = nullptr);
+    NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // public methods
@@ -259,7 +260,6 @@ private slots:
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
-    MdiMainWindow*          mMainFrame;     //!< The main frame of the application.
     FileSystemModel*        mNaviModel;     //!< The model of the file system.
     GeneralFileSystemModel* mGenModel;      //!< The general model of the file system.
     FileSystemFilter*       mFileFilter;    //!< The file filter object.

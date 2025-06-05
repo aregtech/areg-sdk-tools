@@ -19,9 +19,9 @@
  *
  ************************************************************************/
 
-#include "lusan/view/common/IEMdiWindow.hpp"
 #include <QWidget>
 
+class MdiMainWindow;
 class QMdiSubWindow;
 
 /**
@@ -29,9 +29,20 @@ class QMdiSubWindow;
  *          It provides functionalities for file operations and text editing.
  **/
 class MdiChild  : public QWidget
-                , public IEMdiWindow
 {
     Q_OBJECT
+
+//////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
+public:
+    //! \brief   MDI Window type.
+    enum eMdiWindow
+    {
+          MdiUnknown            = 0 //!< Unknown MDI Window type
+        , MdiServiceInterface       //!< Service Interface MDI Window type
+        , MdiLogViewer              //!< Log Viewer MDI Window type
+    };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -40,12 +51,35 @@ public:
     /**
      * \brief   Constructor for MdiChild.
      **/
-    MdiChild(IEMdiWindow::eMdiWindow windowType, QWidget* parent = nullptr);
+    MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
     virtual ~MdiChild(void);
 
 //////////////////////////////////////////////////////////////////////////
-// actions
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the MDI Window type.
+     * \return  The MDI Window type.
+     **/
+    inline eMdiWindow getMdiWindowType(void) const;
+
+    /**
+     * \brief   Checks if the MDI child is a Service Interface window.
+     * \return  True if it is a Service Interface window, false otherwise.
+     **/
+    inline bool isServiceInterfaceWindow(void) const;
+
+    /**
+     * \brief   Checks if the MDI child is a Log Viewer window.
+     * \return  True if it is a Log Viewer window, false otherwise.
+     **/
+    inline bool isLogViewerWindow(void) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Actions
 //////////////////////////////////////////////////////////////////////////
 public: 
     /**
@@ -134,7 +168,21 @@ public:
 
 signals:
 
+/************************************************************************
+ * Signals
+ ************************************************************************/
+
+    /**
+     * \brief   The signal triggered when the MDI child window is closed.
+     * \param   mdiChild    The MDI child window that is closed.
+     **/
     void signalMdiChildClosed(MdiChild * mdiChild);
+
+    /**
+     * \brief   The signal triggered when the MDI child window is created.
+     * \param   mdiChild    The MDI child window that is created.
+     **/
+    void signalMdiChildCreated(MdiChild * mdiChild);
     
 protected:
 
@@ -200,21 +248,38 @@ private slots:
     /**
      * \brief   Slot called when the document is modified.
      **/
-    void documentWasModified();
+    void onDocumentModified();
 
 //////////////////////////////////////////////////////////////////////////
 // Protected member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    QString         mCurFile;       //!< The current file name.
-    QString         mDocName;       //!< The document name.
-    bool            mIsUntitled;    //!< Indicates whether the file is untitled.
-    QMdiSubWindow*  mMdiSubWindow;  //!< The MDI subwindow.
+    const eMdiWindow    mMdiWindowType; //!< MDI Window type
+    QString             mCurFile;       //!< The current file name.
+    QString             mDocName;       //!< The document name.
+    bool                mIsUntitled;    //!< Indicates whether the file is untitled.
+    QMdiSubWindow*      mMdiSubWindow;  //!< The MDI subwindow.
+    MdiMainWindow*      mMainWindow;    //!< The MDI main window
 };
 
 //////////////////////////////////////////////////////////////////////////
 // MdiChild class inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline MdiChild::eMdiWindow MdiChild::getMdiWindowType(void) const
+{
+    return mMdiWindowType;
+}
+
+inline bool MdiChild::isServiceInterfaceWindow(void) const
+{
+    return (mMdiWindowType == MdiServiceInterface);
+}
+
+inline bool MdiChild::isLogViewerWindow(void) const
+{
+    return (mMdiWindowType == MdiLogViewer);
+}
 
 inline const QString & MdiChild::currentFile(void) const
 {

@@ -32,8 +32,8 @@ const QString& ServiceInterface::fileExtension(void)
 
 uint32_t ServiceInterface::_count{0};
 
-ServiceInterface::ServiceInterface(const QString & filePath /*= QString()*/, QWidget *parent /*= nullptr*/)
-    : MdiChild      (IEMdiWindow::eMdiWindow::MdiServiceInterface, parent)
+ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & filePath /*= QString()*/, QWidget *parent /*= nullptr*/)
+    : MdiChild      (MdiChild::eMdiWindow::MdiServiceInterface, wndMain, parent)
 
     , mModel    (filePath)
     , mTabWidget(this)

@@ -51,6 +51,7 @@ QT_END_NAMESPACE
  **/
 class MdiMainWindow : public QMainWindow
 {
+    friend class MdiChild;
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
@@ -108,10 +109,22 @@ signals:
  * Signals
  ************************************************************************/
 
+    /**
+     * \brief   The signal triggered when the MDI child window is activated.
+     * \param   mdiChild    The MDI child window that is activated.
+     **/
     void signalWindowActivated(MdiChild* child);
 
+    /**
+     * \brief   The signal triggered when the MDI child window is closed.
+     * \param   mdiChild    The MDI child window that is closed.
+     **/
     void signalWindowClosed(MdiChild* child);
 
+    /**
+     * \brief   The signal triggered when the MDI child window is created.
+     * \param   mdiChild    The MDI child window that is created.
+     **/
     void signalWindowCreated(MdiChild* child);
 
 //////////////////////////////////////////////////////////////////////////
@@ -178,14 +191,29 @@ private slots:
      **/
     void onEditPaste();
 
+    /**
+     * \brief   Slot for showing the workspace navigator.
+     **/
     void onViewNavigator();
 
+    /**
+     * \brief   Slot for showing the workspace view.
+     **/
     void onViewWorkspace();
 
+    /**
+     * \brief   Slot for showing the logs view.
+     **/
     void onViewLogs();
 
+    /**
+     * \brief   Slot for showing the status view.
+     **/
     void onViewStatus();
 
+    /**
+     * \brief   Slot for showing the tools options dialog.
+     **/
     void onToolsOptions(void);
 
     /**
@@ -199,16 +227,27 @@ private slots:
     void onShowMenuRecent();
 
     /**
-     * \brief   Updates the menus.
-     **/
-    void onSubWindowActivated();
-
-    /**
      * \brief   Updates the window menu.
      **/
     void onShowMenuWindow();
 
+    /**
+     * \brief   Slot for handling the MDI child window closed event.
+     * \param   mdiChild    The MDI child window that is closed.
+     **/
     void onMdiChildClosed(MdiChild *mdiChild);
+
+    /**
+     * \brief   Slot for handling the MDI child window when it is created.
+     * \param   mdiChild    The MDI child window that is created.
+     **/
+    void onMdiChildCreated(MdiChild *mdiChild);
+
+    /**
+     * \brief   Slot for handling the MDI sub-window when it is activated.
+     * \param   mdiSubWindow    The MDI sub-window that is activated.
+     **/
+    void onSubWindowActivated(QMdiSubWindow* mdiSubWindow);
 
 private:
 
@@ -223,7 +262,12 @@ private:
      * \return  A pointer to the new Service Interface View.
      **/
     ServiceInterface* createServiceInterfaceView(const QString& filePath = QString());
-    
+
+    /**
+     * \brief   Creates a new Log Viewer View.
+     * \param   filePath   The path to the log file to view.
+     * \return  A pointer to the new Log Viewer View.
+     **/
     LogViewer* createLogViewerView(const QString& filePath = QString());
 
     /**

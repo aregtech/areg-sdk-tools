@@ -18,6 +18,8 @@
  ************************************************************************/
 #include "lusan/view/common/Navigation.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/common/MdiChild.hpp"
+
 
 QString  Navigation::TabNameFileSystem      {tr("Workspace")};
 QString  Navigation::TabLiveLogsExplorer    {tr("Live Logs")};
@@ -47,6 +49,8 @@ QIcon Navigation::getOfflineLotIcon(void)
 
 Navigation::Navigation(MdiMainWindow* parent)
     : QDockWidget   (tr("Navigation"), parent)
+
+    , mMainWindow   (parent)
     , mTabs         (this)
     , mLogExplorer  (parent, this)
     , mFileSystem   (parent, this)
@@ -57,6 +61,8 @@ Navigation::Navigation(MdiMainWindow* parent)
     setWidget(&mTabs);
 
     initSize();
+
+    connect(mMainWindow, &MdiMainWindow::signalWindowActivated, this, &Navigation::onMdiWindowActivated);
 }
 
 QWidget* Navigation::getTab(const QString& tabName) const
@@ -112,4 +118,20 @@ void Navigation::initSize()
 {
     resize(QSize { mFileSystem.width() + 10,  mFileSystem.height() });
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+}
+
+void Navigation::onMdiWindowActivated(MdiChild* mdiChild)
+{
+    NavigationWindow* current = qobject_cast<NavigationWindow *>(mTabs.currentWidget());
+    if ((mdiChild != nullptr) && (current != nullptr))
+    {
+        if (mdiChild->isLogViewerWindow() && (current->isNaviLiveLogs() == false))
+        {
+            mTabs.setCurrentWidget(&mLogExplorer);
+        }
+        else if (mdiChild->isServiceInterfaceWindow() && (current->isNaviWorkspace() == false))
+        {
+            mTabs.setCurrentWidget(&mFileSystem);
+        }
+    }
 }

@@ -31,11 +31,10 @@
 #include <QTreeView>
 #include <QToolButton>
 
-NaviFileSystem::NaviFileSystem(MdiMainWindow* mainFrame, QWidget* parent /*= nullptr*/)
-    : QWidget       (parent)
+NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullptr*/)
+    : NavigationWindow(NavigationWindow::eNavigationWindow::NaviWorkspace, wndMain, parent)
     , IETableHelper ()
     
-    , mMainFrame    (mainFrame)
     , mNaviModel    (new FileSystemModel())
     , mGenModel     (nullptr)
     , mFileFilter   (nullptr)
@@ -212,7 +211,7 @@ void NaviFileSystem::onToolOpenSelectedClicked(bool checked)
     QString filePath = fi.isFile() ? fi.filePath() : "";
     if (filePath.isEmpty() == false)
     {
-        mMainFrame->openFile(filePath);
+        mMainWindow->openFile(filePath);
     }
 }
 
@@ -235,7 +234,7 @@ void NaviFileSystem::onToolDeleteSelectedClicked(bool checked)
     if (filePath.isEmpty() == false)
     {
         QModelIndex parent = index.parent();
-        int result = QMessageBox::question(   mMainFrame
+        int result = QMessageBox::question(   mMainWindow
                                             , tr("Delete File") + " - Lusan"
                                             , tr("Are you sure you want to delete ") + (fi.isDir() ? tr("directory") : tr("file")) + "\n" + filePath
                                             , QMessageBox::StandardButton::Ok | QMessageBox::StandardButton::Cancel
@@ -314,7 +313,7 @@ void NaviFileSystem::onTreeViewDoubleClicked(const QModelIndex &index)
     QString filePath = fi.isDir() ? "" : fi.filePath();
     if (filePath.isEmpty() == false)
     {
-        mMainFrame->openFile(filePath);
+        mMainWindow->openFile(filePath);
     }
 }
 

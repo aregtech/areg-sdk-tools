@@ -32,6 +32,7 @@ class MdiMainWindow;
  **/
 class LusanApplication : public QApplication
 {
+    Q_OBJECT
 //////////////////////////////////////////////////////////////////////////
 // Types and constants
 //////////////////////////////////////////////////////////////////////////
@@ -148,7 +149,16 @@ public:
 public:
     
     int runApplication(const QString& workspace);
-    
+
+signals:
+/************************************************************************
+ * Signals
+ ************************************************************************/
+    /**
+     * \brief   Signal emitted when the application is up and running, and ready to operate.
+     **/
+    void signalApplicationRunning(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

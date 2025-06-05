@@ -276,6 +276,7 @@ int LusanApplication::runApplication(const QString& workspace)
     w.setWorkspaceRoot(workspace);
     w.showMaximized();  
     w.show();
+    emit signalApplicationRunning();
     int result = exec();
     mMainWindow = nullptr;
     return result;
