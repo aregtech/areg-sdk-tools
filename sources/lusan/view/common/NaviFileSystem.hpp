@@ -26,6 +26,9 @@
 #include <QString>
 #include <QWidget>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class FileSystemModel;
 class FileSystemFilter;
 class GeneralFileSystemModel;
@@ -61,6 +64,10 @@ private:
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
+    /** \brief   Constructor.
+     * \param   wndMain     The main window of the application.
+     * \param   parent      The parent widget.
+     **/
     NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////

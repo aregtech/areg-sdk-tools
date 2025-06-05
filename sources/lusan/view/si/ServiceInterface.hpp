@@ -30,15 +30,23 @@
 #include "lusan/view/si/SIMethod.hpp"
 #include "lusan/view/si/SIOverview.hpp"
 
-
 #include <QTabWidget>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class MdiMainWindow;
 
+/**
+ * \brief   The ServiceInterface class represents the MDI window for the service interface in the Lusan application.
+ **/
 class ServiceInterface  : public MdiChild
 {
     Q_OBJECT
     
+//////////////////////////////////////////////////////////////////////////
+// Internal constants and types
+//////////////////////////////////////////////////////////////////////////
 private:
     
     static  uint32_t                   _count;

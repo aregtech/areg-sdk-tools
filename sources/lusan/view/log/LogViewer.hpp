@@ -22,6 +22,9 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/MdiChild.hpp"
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class QHeaderView;
 class QTableView;
 class QWidget;
@@ -32,6 +35,9 @@ namespace Ui {
     class LogViewer;
 }
 
+/**
+ * \brief   Log viewer MDI window
+ **/
 class LogViewer : public MdiChild
 {
     Q_OBJECT
@@ -42,11 +48,28 @@ public:
      **/
     static const QString& fileExtension(void);
 
+    /**
+     * \brief   Returns the file name of the log viewer.
+     *          The file name is generated based on the current date and time.
+     **/
     static QString generateFileName(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Constructor
+//////////////////////////////////////////////////////////////////////////
 public:
+
+    /**
+     * \brief   Constructor.
+     * \param   wndMain    The main window of the application.
+     * \param   parent     The parent widget.
+     **/
     explicit LogViewer(MdiMainWindow *wndMain, QWidget *parent = nullptr);
-    
+
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
     /**
      * \brief   Called when lusan application is connected to the logging service.
      * \param   isConnected     Flag, indicating that whether the service is connected or disconnected.
