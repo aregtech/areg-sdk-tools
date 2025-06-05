@@ -20,6 +20,7 @@
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/log/LogViewer.hpp"
+#include "lusan/data/log/LogObserver.hpp"
 
 #include <QFileInfo>
 #include <QtWidgets>
@@ -156,6 +157,33 @@ bool MdiMainWindow::loadFile(const QString& fileName)
     }
 
     return succeeded;
+}
+
+void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
+{
+    if (isConnected)
+    {
+        QMdiSubWindow * subWindow = mMdiArea.currentSubWindow();
+        if ((subWindow != mLiveLogWnd) || (mLiveLogWnd == nullptr))
+        {
+            onFileNewLog();
+            Q_ASSERT(mLogViewer != nullptr);
+            if (mLogViewer->isServiceConnected() == false)
+            {
+                mLogViewer->logServiceConnected(true, address, port, dbPath);
+            }
+        }
+    }
+    else if (mLogViewer != nullptr)
+    {
+        if (mLogViewer->isServiceConnected())
+        {
+            mLogViewer->logServiceConnected(false, address, port, dbPath);
+        }
+        
+        mLogViewer = nullptr;
+        mLiveLogWnd = nullptr;
+    }
 }
 
 void MdiMainWindow::closeEvent(QCloseEvent* event)
@@ -308,7 +336,7 @@ void MdiMainWindow::onViewLogs()
         mNavigation.show();
     }
     
-    mNavigation.showTab(Navigation::TabNameLogExplorer);
+    mNavigation.showTab(Navigation::TabLiveLogsExplorer);
 }
 
 void MdiMainWindow::onViewStatus()

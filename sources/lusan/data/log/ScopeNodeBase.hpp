@@ -28,6 +28,10 @@
 #include <QList>
 #include <QString>
 
+/**
+ * \brief   ScopeNodeBase is the base class for all scope nodes.
+ * \see     ScopeNode, ScopeLeaf, ScopeRoot
+ **/
 class ScopeNodeBase
 {
 //////////////////////////////////////////////////////////////////////////
@@ -75,7 +79,7 @@ protected:
     ScopeNodeBase(ScopeNodeBase&& src) noexcept;
     
 public:
-    
+
     virtual ~ScopeNodeBase(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
@@ -133,6 +137,11 @@ public:
     inline bool isValid(void) const;
 
     /**
+     * \brief   Returns true if contains a bit indicating `PrioNotset` priority.
+     **/
+    inline bool hasPrioNotset(void) const;
+
+    /**
      * \brief   Returns true if the logging priority has debug priority bit set.
      **/
     inline bool hasPrioDebug(void) const;
@@ -167,9 +176,50 @@ public:
      **/
     inline bool hasLogScopes(void) const;
 
+    /**
+     * \brief   Returns true if the node has any valid priority bits set.
+     **/
+    inline bool hasPrioValid(void) const;
+
+    /**
+     * \brief   Returns true if the node has multiple priorities.
+     * \param   prioIgnore  The priority bits to ignore.
+     **/
+    inline bool hasMultiPrio(uint32_t prioIgnore) const;
+
+    /**
+     * \brief   Returns the pointer to parent node. The root nodes have no parent.
+     **/
     inline ScopeNodeBase* getParent(void) const;
 
+    /**
+     * \brief   Sets the pointer to the parent node. All parents except root should have a parent.
+     * \param   parent  The pointer to the parent object.
+     **/
     inline void setParent(ScopeNodeBase* parent);
+
+    /**
+     * \brief   Resets the priority bits of the node.
+     **/
+    inline void resetPriority(void);
+
+    /**
+     * \brief   Updates priority bits of the parent node.
+     * \param   prio        The priority bits to set.
+     * \param   recursive   If true, the parent node is updated recursively until root node.
+     **/
+    inline void updateParentPrio(uint32_t prio, bool recursive);
+
+    /**
+     * \brief   Returns true if node has children.
+     **/
+    inline bool hasChildren(void) const;
+
+    /**
+     * \brief   Returns the root of the tree, where this node is located.
+     *          If the node is root, returns itself.
+     **/
+    inline ScopeNodeBase* getTreeRoot(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -184,7 +234,7 @@ public:
     /**
      * \brief   Sets the node priority flag.
      **/
-    virtual void setPriority(unsigned int prio);
+    virtual void setPriority(uint32_t prio);
 
     /**
      * \brief   Adds log priority bits.
@@ -225,7 +275,7 @@ public:
      *                      On output, it contains the next level of the path separated by '_'.
      *                      The last node should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
-     * \return  The number of nodes added.
+     * \return  The pointer to the added child node.
      **/
     virtual ScopeNodeBase* addChildNode(QString& scopePath, uint32_t prio);
 
@@ -236,9 +286,17 @@ public:
      *                      On output, it removes the first node name from the list.
      *                      The last name should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
-     * \return  The number of nodes added.
+     * \return  The pointer to the added child node.
      **/
     virtual ScopeNodeBase* addChildNode(QStringList& nodeNames, uint32_t prio);
+
+    /**
+     * \brief   Adds a child node to the parent if the node does not exist.
+     *          Otherwise, it adds in the existing node the log priority of the passed node object.
+     * \param   childNode   The child node to add to the parent.
+     * \return  The pointer to the added child node.
+     **/
+    virtual ScopeNodeBase* addChildNode(ScopeNodeBase* childNode);
 
     /**
      * \brief   Creates a child node. The child node is not added to the parent.
@@ -263,22 +321,6 @@ public:
      * \return  The node object created.
      **/
     virtual ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio);
-
-    /**
-     * \brief   Adds a child node to the parent if the node does not exist.
-     *          Otherwise, it adds in the existing node the log priority of the passed node object.
-     * \param   childNode   The child node to add to the parent.
-     **/
-    virtual void addChildNode(ScopeNodeBase* childNode);
-
-    /**
-     * \brief   Creates a list of node names from the passed scope path.
-     *          The path is separated by '_'.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, the `scopePath` is empty.
-     * \return  The list of node names.
-     **/
-    virtual QStringList makeNodeNames(const QString& scopePath) const;
 
     /**
      * \brief   Creates and returns the path of the node, where each name of the node is separated by `_`.
@@ -311,6 +353,28 @@ public:
      * \param   childName   The name of the child node to find.
      **/
     virtual int getChildPosition(const QString& childName) const;
+    
+    /**
+     * \brief   Returns the child node at the given position.
+     * \param   pos     The position of the child.
+     * \return  Valid pointer of the child node or leaf, if position is valid. Otherwise, returns nullptr.
+     **/
+    virtual ScopeNodeBase* getChildAt(int pos) const;
+
+    /**
+     * \brief   Returns the total number of children.
+     **/
+    virtual int getChildCount(void) const;
+
+    /**
+     * \brief   Returns the total number of child nodes.
+     **/
+    virtual int getChildNodesCount(void) const;
+
+    /**
+     * \brief   Returns the total number of child leafs.
+     **/
+    virtual int getChildLeafsCount(void) const;
 
     /**
      * \brief   Adds the priority recursively to the child nodes.
@@ -373,8 +437,45 @@ public:
 
     /**
      * \brief   Resets and invalidates the priorities of the node and all child nodes.
+     * \param   skipLeafs   If true, skips resetting the priority of the leafs and resets the priority only nodes.
+     *                      Otherwise, it resets the priority of the leafs and nodes.
      **/
-    virtual void resetPrioritiesRecursive(void);
+    virtual void resetPrioritiesRecursive(bool skipLeafs);
+
+    /**
+     * \brief   Refreshes the priorities by keeping the priority of leafs and refreshing the priorities of the nodes.
+     **/
+    virtual void refreshPrioritiesRecursive(void);
+
+    /**
+     * \brief   Returns the list of nodes with log priority. The node should not have NotSet priority flag.
+     **/
+    virtual QList<ScopeNodeBase*> getNodesWithPriority(void) const;
+
+    /**
+     * \brief   Extracts nodes with log priority.
+     * \param   list    The list to add nodes with priority.
+     * \return  Returns number of new added nodes.
+     **/
+    virtual int extractNodesWithPriority(QList<ScopeNodeBase*>& list) const;
+
+    /**
+     * \brief   Extracts child nodes with log priority.
+     * \param   list    The list to add nodes with priority.
+     * \return  Returns number of new added nodes.
+     **/
+    virtual int extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const;
+    
+    /**
+     * \brief   Creates a list of node names from the passed scope path.
+     *          The path is separated by '_'. If path contains "__", only one
+     *          symbol is removed and the is used as a prefix (or postfix) in the name.
+     * \param   scopePath   The path to the node. The path is separated by '_'.
+     *                      On output, the `scopePath` is empty.
+     * \param   nodeNames   The list names to create nodes.
+     * \return  The number of names in the list.
+     **/
+    virtual int splitScopePath(QString& scopePath, QStringList& nodeNames) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -424,7 +525,12 @@ inline bool ScopeNodeBase::isValid( void ) const
     return (mNodeType != ScopeNodeBase::eNode::Invalid);
 }
 
-inline bool ScopeNodeBase::hasPrioDebug( void ) const
+inline bool ScopeNodeBase::hasPrioNotset( void ) const
+{
+    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)) != 0;
+}
+
+inline bool ScopeNodeBase::hasPrioDebug(void) const
 {
     return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug)) != 0;
 }
@@ -459,14 +565,78 @@ inline bool ScopeNodeBase::hasLogScopes( void ) const
     return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) != 0;
 }
 
+inline bool ScopeNodeBase::hasPrioValid( void ) const
+{
+    return (mPrioStates != static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid));
+}
+
+inline bool ScopeNodeBase::hasMultiPrio(uint32_t prioIgnore) const
+{
+    uint32_t prio = mPrioStates & (~prioIgnore);
+    switch (prio)
+    {
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioError):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid):
+        return false;
+        
+    default:
+        return true;
+    }
+}
+
 inline ScopeNodeBase* ScopeNodeBase::getParent(void) const
 {
     return mParent;
 }
 
-void ScopeNodeBase::setParent(ScopeNodeBase* parent)
+inline void ScopeNodeBase::setParent(ScopeNodeBase* parent)
 {
     mParent = parent;
+}
+
+inline void ScopeNodeBase::resetPriority(void)
+{
+    mPrioStates = static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid);
+}
+
+inline void ScopeNodeBase::updateParentPrio(uint32_t prio, bool recursive)
+{
+    if (mParent != nullptr)
+    {
+        mParent->mPrioStates |= prio;
+        if (recursive)
+        {
+            mParent->updateParentPrio(prio, recursive);
+        }
+    }
+}
+
+inline bool ScopeNodeBase::hasChildren(void) const
+{
+    return (getChildCount() != 0);
+}
+
+inline ScopeNodeBase* ScopeNodeBase::getTreeRoot(void) const
+{
+    if (isRoot())
+    {
+        Q_ASSERT(mParent == nullptr);
+        return const_cast<ScopeNodeBase*>(this);
+    }
+    else if (mParent != nullptr)
+    {
+        return mParent->getTreeRoot();
+    }
+    else
+    {
+        Q_ASSERT(false && "ScopeNodeBase::getTreeRoot() called on invalid node without parent.");
+        return nullptr;
+    }
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODEBASE_HPP

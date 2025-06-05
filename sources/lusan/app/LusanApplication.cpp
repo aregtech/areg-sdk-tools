@@ -18,8 +18,11 @@
  ************************************************************************/
 
 #include "lusan/app/LusanApplication.hpp"
-#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/common/LogCollectorClient.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
+#include "lusan/view/common/MdiMainWindow.hpp"
+
+#include "areg/appbase/Application.hpp"
 
 const QStringList   LusanApplication::ExternalExts
 {
@@ -55,6 +58,7 @@ LusanApplication *  LusanApplication::theApp{nullptr};
 
 LusanApplication::LusanApplication(int& argc, char** argv)
     : QApplication  (argc, argv)
+    , mMainWindow   (nullptr)
     , mOptions      ( )
 {
     Q_ASSERT(LusanApplication::theApp == nullptr);
@@ -256,4 +260,23 @@ QString LusanApplication::getWorkspaceLogs(void)
 LogCollectorClient& LusanApplication::getLogCollectorClient(void)
 {
     return LogCollectorClient::getInstance();
+}
+
+MdiMainWindow* LusanApplication::getMainWindow(void)
+{
+    return (LusanApplication::theApp != nullptr ? LusanApplication::theApp->mMainWindow : nullptr);
+}
+
+int LusanApplication::runApplication(const QString& workspace)
+{
+    
+    MdiMainWindow w;
+    mMainWindow = &w;
+    
+    w.setWorkspaceRoot(workspace);
+    w.showMaximized();  
+    w.show();
+    int result = exec();
+    mMainWindow = nullptr;
+    return result;
 }

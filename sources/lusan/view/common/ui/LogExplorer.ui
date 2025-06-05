@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>378</width>
+    <width>413</width>
     <height>621</height>
    </rect>
   </property>
@@ -24,7 +24,7 @@
     <rect>
      <x>1</x>
      <y>0</y>
-     <width>377</width>
+     <width>411</width>
      <height>620</height>
     </rect>
    </property>
@@ -271,6 +271,29 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="Line" name="line">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="toolMoveBottom">
+         <property name="toolTip">
+          <string>Move at bottom of logs</string>
+         </property>
+         <property name="whatsThis">
+          <string>Click to move to bottom of the logs</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset theme="emblem-downloads"/>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
@@ -282,14 +305,20 @@
       <property name="editTriggers">
        <set>QAbstractItemView::EditTrigger::EditKeyPressed</set>
       </property>
+      <property name="showDropIndicator" stdset="0">
+       <bool>false</bool>
+      </property>
       <property name="alternatingRowColors">
        <bool>false</bool>
       </property>
       <property name="iconSize">
        <size>
-        <width>16</width>
-        <height>16</height>
+        <width>10</width>
+        <height>10</height>
        </size>
+      </property>
+      <property name="rootIsDecorated">
+       <bool>false</bool>
       </property>
       <attribute name="headerVisible">
        <bool>false</bool>

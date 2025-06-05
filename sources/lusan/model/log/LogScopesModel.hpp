@@ -1,4 +1,4 @@
-#ifndef LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
+﻿#ifndef LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
 #define LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -22,13 +22,19 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include <QAbstractItemModel>
+#include <QStandardItemModel>
+
 #include <QList>
 #include <QMap>
+
+#include "areg/component/NEService.hpp"
+#include "areg/logging/NELogging.hpp"
+#include "areglogger/client/LogObserverApi.h"
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class ScopeNodeBase;
 class ScopeRoot;
 
 /**
@@ -50,14 +56,87 @@ public:
      * \brief   Initializes the scope model object.
      * @param   parent  The pointer to the parent object.
      */
-    explicit LogScopesModel(QObject parent = nullptr);
+    LogScopesModel(QObject * parent = nullptr);
 
     virtual ~LogScopesModel(void);
 
+    /**
+     * \brief   Initializes the model, sets the signals to receive messages.
+     * \return  True if the model is initialized, false otherwise.
+     **/
     bool initialize(void);
 
+    /**
+     * \brief   Releases the model, disconnects the signals.
+     **/
     void release(void);
+    
+    /**
+     * \brief   Checks if the given index is valid.
+     * \param   index   The index to check.
+     * \return  True if the index is valid, false otherwise.
+     **/
+    inline bool isValidIndex(const QModelIndex& index) const;
 
+    /**
+     * \brief   Returns root index.
+     **/
+    inline const QModelIndex& getRootIndex(void) const;
+
+    /**
+     * \brief   Adds the specified log priority to the log scope at the given index.
+     *          The request to change the log priority is sent to the target module.
+     *          If the specified node has scope priority, it will not be changed.
+     * \param   index   The index of the log scope to change priority.
+     * \param   prio    The new priority to set for the log scope on target.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
+    bool setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+
+    /**
+     * \brief   Adds the specified log priority to the log scope at the given index.
+     *          The request to change the log priority is sent to the target module.
+     *          If the log scope already has this priority, it will not be added again.
+     * \param   index   The index of the log scope to add priority.
+     * \param   prio    The log priority to add to the log scope.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
+    bool addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+
+    /**
+     * \brief   Removes the specified log priority from the log scope at the given index.
+     *          The request to remove the log priority is sent to the target module.
+     *          If the log scope does not have this priority, it will not be removed.
+     * \param   index   The index of the log scope to remove priority.
+     * \param   prio    The log priority to remove from the log scope.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
+    bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+    
+signals:
+
+/************************************************************************
+ * Signals
+ ************************************************************************/
+
+    /**
+     * \brief   Signal emitted when the root of the model is updated.
+     * \param   root    The index of the root that is updated.
+     **/
+    void signalRootUpdated(const QModelIndex& root);
+
+    /**
+     * \brief   Signal emitted when the scopes of an instance are inserted.
+     * \param   parent  The index of the parent instance item where scopes are inserted.
+     **/
+    void signalScopesInserted(const QModelIndex& parent);
+
+    /**
+     * \brief   Signal emitted when the scopes of an instance are updated.
+     * \param   parent  The index of the parent instance item that is updated.
+     **/
+    void signalScopesUpdated(const QModelIndex& parent);
+    
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
 //////////////////////////////////////////////////////////////////////////
@@ -114,19 +193,6 @@ public:
     virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     /**
-     * \brief   Fetches more data for the given parent index.
-     * \param   parent  The parent index.
-     **/
-    virtual void fetchMore(const QModelIndex& parent) override;
-
-    /**
-     * \brief   Checks if more data can be fetched for the given parent index.
-     * \param   parent  The parent index.
-     * \return  True if more data can be fetched, false otherwise.
-     **/
-    virtual bool canFetchMore(const QModelIndex& parent) const override;
-
-    /**
      * \brief   Returns the flags for the item at the given index.
      * \param   index   The index of the item.
      * \return  The flags of the item.
@@ -170,17 +236,61 @@ private:
 
 private:
 
+    /**
+     * \brief   Clears the model and deletes all nodes.
+     **/
     inline void _clear(void);
 
+    /**
+     * \brief   Checks if the root with the given ID exists in the model.
+     * \param   rootId  The ID of the root to check.
+     * \return  True if the root exists, false otherwise.
+     **/
     inline bool _exists(ITEM_ID rootId) const;
 
+    /**
+     * \brief   Appends the root to the model.
+     * \param   root    The root to append.
+     * \param   unique  If true, checks if the root is unique before appending.
+     * \return  True if the root is appended, false otherwise.
+     **/
     inline bool _appendRoot(ScopeRoot* root, bool unique = true);
 
+    /**
+     * \brief   Finds the root with the given ID in the model.
+     * \param   rootId  The ID of the root to find.
+     * \return  The position of the root in the list, or NECommon::INVALID_INDEX if not found.
+     **/
     inline int _findRoot(ITEM_ID rootId) const;
 
+    /**
+     * \brief   Requests the log priority for the given node.
+     * \param   root    The root of the scope.
+     * \param   node    The node to request priority.
+     * \return  True if succeeded to request the log priority, false otherwise.
+     **/
+    bool _requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node);
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    RootList    mRootList;
-    QModelIndex mRootIndex;
+    RootList        mRootList;      // The list of root nodes
+    QModelIndex     mRootIndex;     // The root index of the model
 };
+
+//////////////////////////////////////////////////////////////////////////
+// LogScopesModel class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool LogScopesModel::isValidIndex(const QModelIndex& index) const
+{
+    return (index.isValid() && (index.row() >= 0) && (index.column() == 0) && (index.model() == this));
+}
+
+inline const QModelIndex& LogScopesModel::getRootIndex(void) const
+{
+    return mRootIndex;
+}
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPESMODEL_HPP

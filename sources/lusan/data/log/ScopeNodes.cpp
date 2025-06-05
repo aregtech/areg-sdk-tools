@@ -54,7 +54,7 @@ ScopeLeaf::ScopeLeaf( ScopeLeaf && src ) noexcept
 
 void ScopeLeaf::addPriority(unsigned int prio)
 {
-    mPrioStates = prio;
+    ScopeNodeBase::setPriority(prio);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -96,8 +96,22 @@ ScopeNode::ScopeNode( ScopeNode && src ) noexcept
 {
 }
 
-ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio )
-    : ScopeNodeBase ( nodeType, name, prio )
+ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio, ScopeRoot * parent /*= nullptr*/ )
+    : ScopeNodeBase ( nodeType, name, prio, parent )
+    , mChildNodes   ( )
+    , mChildLeafs   ( )
+{
+}
+
+ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, ScopeRoot * parent /*= nullptr*/ )
+    : ScopeNodeBase ( nodeType, name, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), parent )
+    , mChildNodes   ( )
+    , mChildLeafs   ( )
+{
+}
+
+ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent /*= nullptr*/ )
+    : ScopeNodeBase ( nodeType, parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
 {
@@ -145,26 +159,49 @@ ScopeNode & ScopeNode::operator = ( ScopeNode && src ) noexcept
     return (*this);
 }
 
-ScopeNodeBase* ScopeNode::makeChildNode(QString& scopePath, uint32_t prio)
+void ScopeNode::setPriority( uint32_t prio)
 {
-    ScopeNodeBase* result{ nullptr };
-    if (scopePath.isEmpty() == false)
+    ScopeNodeBase::setPriority(prio);
+
+    for (auto & child : mChildLeafs)
     {
-        int pos = scopePath.indexOf(NELusanCommon::SCOPE_SEPRATOR);
-        if (pos >= 0)
-        {
-            QString nodeName = scopePath.first(pos + 1);
-            scopePath = scopePath.mid(pos + 1, -1);
-            result = new ScopeNode(nodeName, prio, this);
-        }
-        else
-        {
-            result = new ScopeLeaf(scopePath, prio, this);
-            scopePath.clear();
-        }
+        child.second->setPriority(prio);
     }
-    
-    return result;
+
+    for (auto & child : mChildNodes)
+    {
+        child.second->setPriority(prio);
+    }
+}
+
+void ScopeNode::addPriority(uint32_t prio)
+{
+    ScopeNodeBase::addPriority(prio);
+
+    for (auto& child : mChildLeafs)
+    {
+        child.second->addPriority(prio);
+    }
+
+    for (auto& child : mChildNodes)
+    {
+        child.second->addPriority(prio);
+    }
+}
+
+void ScopeNode::removePriority(uint32_t prio)
+{
+    ScopeNodeBase::removePriority(prio);
+
+    for (auto& child : mChildLeafs)
+    {
+        child.second->removePriority(prio);
+    }
+
+    for (auto& child : mChildNodes)
+    {
+        child.second->removePriority(prio);
+    }
 }
 
 ScopeNodeBase* ScopeNode::makeChildNode(QStringList& nodeNames, uint32_t prio)
@@ -187,32 +224,49 @@ ScopeNodeBase* ScopeNode::makeChildNode(QStringList& nodeNames, uint32_t prio)
     return result;
 }
 
-void ScopeNode::addChildNode(ScopeNodeBase* childNode)
+ScopeNodeBase* ScopeNode::addChildNode(ScopeNodeBase* childNode)
 {
     if (childNode != nullptr)
     {
         if (childNode->isNode())
         {
-            if (containsNode(childNode->getNodeName()))
+            ScopeNode* existing{ containsNode(childNode->getNodeName()) ? mChildNodes[childNode->getNodeName()] : nullptr };
+            if (existing != nullptr)
             {
-                mChildNodes[childNode->getNodeName()]->addPriority(childNode->getPriority());
+                if (existing->hasPrioValid() == false)
+                {
+                    existing->mPrioStates = childNode->getPriority();
+                }
+                else
+                {
+                    existing->mPrioStates |= childNode->getPriority();
+                }
+                
                 delete childNode;
+                childNode = existing;
             }
             else
             {
-                mChildNodes[childNode->getNodeName()] = static_cast<ScopeNode *>(childNode);
+                mChildNodes[childNode->getNodeName()] = static_cast<ScopeNode*>(childNode);
             }
         }
         else if (childNode->isLeaf())
         {
-            Q_ASSERT(containsLeaf(childNode->getNodeName()) == false);
-            mChildLeafs[childNode->getNodeName()] = static_cast<ScopeLeaf *>(childNode);
+            ScopeLeaf* existing{ containsLeaf(childNode->getNodeName()) ? mChildLeafs[childNode->getNodeName()] : nullptr };
+            mChildLeafs[childNode->getNodeName()] = static_cast<ScopeLeaf*>(childNode);
+            if (existing != nullptr)
+            {
+                delete existing;
+            }
         }
         else
         {
             delete childNode;
+            childNode = nullptr;
         }
     }
+
+    return childNode;
 }
 
 ScopeNodeBase* ScopeNode::findChild(const QString& childName) const
@@ -268,6 +322,51 @@ int ScopeNode::getChildPosition(const QString& childName) const
     return result;
 }
 
+ScopeNodeBase* ScopeNode::getChildAt(int pos) const
+{
+    ScopeNodeBase* result = nullptr;
+    int cntNode = static_cast<int>(mChildNodes.size());
+    int cntLeaf = static_cast<int>(mChildLeafs.size());
+    
+    if ((pos >= 0) && (pos < (cntNode + cntLeaf)))
+    {
+        if (pos < cntNode)
+        {
+            auto it = mChildNodes.begin();
+            for (int i = 0; i < pos; ++i)
+                ++it;
+            Q_ASSERT(it != mChildNodes.end());
+            return it->second;
+        }
+        else
+        {
+            pos -= static_cast<int>(mChildNodes.size());
+            Q_ASSERT(pos >= 0);
+            auto it = mChildLeafs.begin();
+            for (int i = 0; i < pos; ++ i)
+                ++it;
+            return it->second;
+        }
+    }
+    
+    return result;
+}
+
+int ScopeNode::getChildCount(void) const
+{
+    return static_cast<int>(mChildNodes.size() + mChildLeafs.size());
+}
+
+int ScopeNode::getChildNodesCount(void) const
+{
+    return static_cast<int>(mChildNodes.size());
+}
+
+int ScopeNode::getChildLeafsCount(void) const
+{
+    return static_cast<int>(mChildLeafs.size());
+}
+
 bool ScopeNode::hasNodes(void) const
 {
     return (mChildNodes.empty() == false);
@@ -304,18 +403,94 @@ int ScopeNode::getChildren(std::vector<ScopeNodeBase*>& children) const
     return static_cast<int>(children.size());
 }
 
-void ScopeNode::resetPrioritiesRecursive(void)
+void ScopeNode::resetPrioritiesRecursive(bool skipLeafs /*= false*/)
 {
-    ScopeNodeBase::resetPrioritiesRecursive();
+    ScopeNodeBase::resetPrioritiesRecursive(skipLeafs);
     for (const auto & node : mChildNodes)
     {
-        node.second->resetPrioritiesRecursive();
+        node.second->resetPrioritiesRecursive(skipLeafs);
+    }
+    
+    if (skipLeafs == false)
+    {
+        for (const auto & node : mChildLeafs)
+        {
+            node.second->resetPrioritiesRecursive(skipLeafs);
+        }
+    }
+}
+
+void ScopeNode::refreshPrioritiesRecursive(void)
+{
+    for (auto node : mChildNodes)
+    {
+        node.second->refreshPrioritiesRecursive();
     }
 
-    for (const auto & node : mChildLeafs)
+    for (auto leaf : mChildLeafs)
     {
-        node.second->resetPrioritiesRecursive();
+        ScopeNodeBase* node = leaf.second;
+        Q_ASSERT(node != nullptr);
+        node->updateParentPrio(node->getPriority(), true);
     }
+}
+
+QList<ScopeNodeBase*> ScopeNode::getNodesWithPriority(void) const
+{
+    QList<ScopeNodeBase*> result = ScopeNodeBase::getNodesWithPriority();
+    if (result.isEmpty())
+    {
+        for (auto node : mChildNodes)
+        {
+            QList<ScopeNodeBase*> list = node.second->getNodesWithPriority();
+            if (list.isEmpty() == false)
+                result.append(list);
+        }
+        
+        for (auto node : mChildLeafs)
+        {
+            QList<ScopeNodeBase*> list = node.second->getNodesWithPriority();
+            if (list.isEmpty() == false)
+                result.append(list);
+        }
+    }
+    
+    return result;
+}
+
+int ScopeNode::extractNodesWithPriority(QList<ScopeNodeBase*>& list) const
+{
+    int result{ ScopeNodeBase::extractNodesWithPriority(list) };
+    if (result == 0)
+    {
+        for (auto node : mChildNodes)
+        {
+            result += node.second->extractNodesWithPriority(list);
+        }
+
+        for (auto node : mChildLeafs)
+        {
+            result += node.second->extractNodesWithPriority(list);
+        }
+    }
+
+    return result;
+}
+
+int ScopeNode::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const
+{
+    int result{ 0 };
+    for (auto node : mChildNodes)
+    {
+        result += node.second->extractNodesWithPriority(list);
+    }
+
+    for (auto node : mChildLeafs)
+    {
+        result += node.second->extractNodesWithPriority(list);
+    }
+
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -323,25 +498,25 @@ void ScopeNode::resetPrioritiesRecursive(void)
 //////////////////////////////////////////////////////////////////////////
 
 ScopeRoot::ScopeRoot(void)
-    : ScopeNode (nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (NEService::COOKIE_LOCAL)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId)
-    : ScopeNode (nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (rootId)
 {
 }
 
 ScopeRoot::ScopeRoot(const NEService::sServiceConnectedInstance& instance)
-    : ScopeNode (QString(instance.ciInstance.c_str()), static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, QString(instance.ciInstance.c_str()), static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
     , mRootId   (instance.ciCookie)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString rootName)
-    : ScopeNode (rootName, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
     , mRootId   (rootId)
 {
 }
@@ -370,18 +545,6 @@ ScopeRoot& ScopeRoot::operator = (ScopeRoot&& src) noexcept
     ScopeNode::operator = (std::move(static_cast<ScopeNode&&>(src)));
     mRootId = src.mRootId;
     return (*this);
-}
-
-int ScopeRoot::addChildRecursive(QString& scopePath, uint32_t prio)
-{
-    addPriority(prio);
-    return ScopeNode::addChildRecursive(scopePath, prio);
-}
-
-int ScopeRoot::addChildRecursive(QStringList& nodeNames, uint32_t prio)
-{
-    addPriority(prio);
-    return ScopeNode::addChildRecursive(nodeNames, prio);
 }
 
 QString ScopeRoot::getPathString(void) const

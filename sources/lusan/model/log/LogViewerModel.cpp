@@ -21,11 +21,34 @@
 #include "lusan/data/log/LogObserver.hpp"
 
 #include "areg/base/DateTime.hpp"
+#include "areg/base/NESocket.hpp"
 #include "areg/base/SharedBuffer.hpp"
+#include "areg/base/File.hpp"
 #include "areg/logging/NELogging.hpp"
-#include "areglogger/client/LogObserverApi.h"
+#include "lusan/model/log/LogScopeIconFactory.hpp"
 
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELusanCommon.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
+#include "lusan/data/log/LogObserver.hpp"
+
+#include <QBrush>
+#include <QColor>
+#include <QIcon>
 #include <QSize>
+
+const QColor LogViewerModel::LogColors[static_cast<int>(ePrio::PrioTotal)]
+{
+      QColorConstants::Transparent
+    , QColorConstants::Black
+    , QColorConstants::Gray
+    , QColorConstants::DarkGreen
+    , QColorConstants::DarkCyan
+    , QColorConstants::DarkBlue
+    , QColorConstants::DarkRed
+    , QColorConstants::Magenta
+};
+
 
 const QStringList& LogViewerModel::getHeaderList(void)
 {
@@ -56,11 +79,64 @@ const QList<int>& LogViewerModel::getDefaultColumns(void)
     return _columnIds;
 }
 
+QString LogViewerModel::getFileExtension()
+{
+    static QString _fileExtension = QStringLiteral(".sqlog");
+    return _fileExtension;
+}
+
+QString LogViewerModel::generateFileName(void)
+{
+    QString result{ "log_%time%.sqlog" };
+
+    LogObserver::Component* logObserver = LogObserver::getComponent();
+    if (logObserver != nullptr)
+    {
+        QString fileName = LogObserver::getConfigDatabaseName();
+        if (fileName.isEmpty() == false)
+        {
+            result = fileName;
+        }
+    }
+
+    return QString(File::normalizePath(result.toStdString().c_str()).getString());
+}
+
+QString LogViewerModel::newFileName(void)
+{
+    QString result;
+
+    WorkspaceEntry workspace = LusanApplication::getActiveWorkspace();
+    QString dir = workspace.getDirLogs();
+    if (dir.isEmpty())
+    {
+        dir = LogObserver::getConfigDatabaseLocation();
+    }
+
+    if (dir.isEmpty() == false)
+    {
+        dir = File::normalizePath(dir.toStdString().c_str()).getString();
+        QString fileName = generateFileName();
+
+        std::filesystem::path fPath(dir.toStdString().c_str());
+        fPath /= fileName.toStdString().c_str();
+        result = QString(fPath.c_str());
+    }
+
+    return result;
+}
+
 LogViewerModel::LogViewerModel(QObject *parent)
     : QAbstractTableModel(parent)
 
+    , mIsConnected(false)
+    , mAddress()
+    , mPort(NESocket::InvalidPort)
+    , mDbPath()
+
     , mActiveColumns( )
     , mLogs         ( )
+    , mConnect      ( )
 {
     const QList<int>& list = LogViewerModel::getDefaultColumns();
     for (int col : list)
@@ -139,44 +215,131 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
         return QVariant();
-
-    if (role == Qt::ItemDataRole::DisplayRole)
+    
+    switch (static_cast<Qt::ItemDataRole>(role))
+    {
+    case Qt::ItemDataRole::DisplayRole:
     {
         int row {index.row()};
-        const SharedBuffer data{mLogs.at(row)};
+        if (row >= mLogs.size())
+            return QVariant();
         
-        const sLogMessage* logMessage = reinterpret_cast<const sLogMessage *>(data.getBuffer());
+        const SharedBuffer data{mLogs.at(row)};
+        const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
         if (logMessage != nullptr)
         {
             eColumn col = static_cast<eColumn>(getDefaultColumns().at(index.column()));
             switch (col)
             {
             case eColumn::LogColumnPriority:
-                return QVariant( QString(NELogging::getString(static_cast<NELogging::eLogPriority>(logMessage->msgPriority))) );
+                return QVariant( QString(NELogging::logPrioToString(static_cast<NELogging::eLogPriority>(logMessage->logMessagePrio))) );
             case eColumn::LogColumnTimestamp:
             {
-                DateTime timestamp(logMessage->msgTimestamp);
+                DateTime timestamp(logMessage->logTimestamp);
                 return QVariant( QString(timestamp.formatTime().getString()) );
             }
             case eColumn::LogColumnSource:
-                return QVariant(QString(logMessage->msgModule));
+                return QVariant(QString(logMessage->logModule));
             case eColumn::LogColumnSourceId:
-                return QVariant((qulonglong)logMessage->msgModuleId);
+                return QVariant((qulonglong)logMessage->logModuleId);
             case eColumn::LogColumnThread:
-                return QVariant( QString(logMessage->msgThread) );
+                return QVariant( QString(logMessage->logThread) );
             case eColumn::LogColumnThreadId:
-                return QVariant((qulonglong)logMessage->msgThreadId);
+                return QVariant((qulonglong)logMessage->logThreadId);
             case eColumn::LogColumnScopeId:
-                return QVariant(logMessage->msgScopeId);
+                return QVariant(logMessage->logScopeId);
             case eColumn::LogColumnMessage:
-                return QVariant( QString(logMessage->msgLogText) );
+                return QVariant( QString(logMessage->logMessage) );
             default:
                 break;
             }
         }
     }
+    break;
+        
+    case Qt::ItemDataRole::DecorationRole:
+    {
+        int row {index.row()};
+        if (row >= mLogs.size())
+            return QVariant();
+        
+        const SharedBuffer data{mLogs.at(row)};
+        const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
+        if ((logMessage != nullptr) && (static_cast<eColumn>(getDefaultColumns().at(index.column())) == eColumn::LogColumnPriority))
+        {
+            switch (logMessage->logMessagePrio)
+            {
+            case NELogging::eLogPriority::PrioScope:
+                if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
+                    return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScopeEnter, true);
+                else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
+                    return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScopeExit, true);
+                else
+                    return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, true);
+            case NELogging::eLogPriority::PrioDebug:
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, true);
+            case NELogging::eLogPriority::PrioInfo:
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, true);
+            case NELogging::eLogPriority::PrioWarning:
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, true);
+            case NELogging::eLogPriority::PrioError:
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, true);
+            case NELogging::eLogPriority::PrioFatal:
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioFatal, true);
+            default:
+                return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioNotset, false);
+            }
+        }        
+    }
+    break;
+        
+    case Qt::ItemDataRole::ForegroundRole:
+    {
+        int row {index.row()};
+        if (row >= mLogs.size())
+            return QVariant();
+        
+        const SharedBuffer data{mLogs.at(row)};
+        const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
+        if (logMessage != nullptr)
+        {
+            switch (logMessage->logMessagePrio)
+            {
+            case NELogging::eLogPriority::PrioScope:
+                return QBrush(LogColors[static_cast<int>(PrioScope)]);
+            case NELogging::eLogPriority::PrioDebug:
+                return QBrush(LogColors[static_cast<int>(PrioDebug)]);
+            case NELogging::eLogPriority::PrioInfo:
+                return QBrush(LogColors[static_cast<int>(PrioInfo)]);
+            case NELogging::eLogPriority::PrioWarning:
+                return QBrush(LogColors[static_cast<int>(PrioWarn)]);
+            case NELogging::eLogPriority::PrioError:
+                return QBrush(LogColors[static_cast<int>(PrioError)]);
+            case NELogging::eLogPriority::PrioFatal:
+                return QBrush(LogColors[static_cast<int>(PrioFatal)]);
+            default:
+                return QBrush(LogColors[static_cast<int>(PrioDefault)]);
+            }
+        }
+    }
+    break;
+    
+    case Qt::ItemDataRole::UserRole:
+    {
+        int row {index.row()};
+        if (row >= mLogs.size())
+            return QVariant();
+        
+        const SharedBuffer data{mLogs.at(row)};
+        const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
+        return QVariant::fromValue(logMessage);
+    }
+    
+    default:
+        return QVariant();
+    }
 
-    return QVariant(QString());
+    return QVariant();
 }
 
 bool LogViewerModel::insertRows(int row, int count, const QModelIndex &parent)
@@ -224,11 +387,37 @@ QString LogViewerModel::getHeaderName(int colIndex) const
     }
 }
 
-bool LogViewerModel::connect(const QString& hostName /*= ""*/, unsigned short portNr /*= 0u*/)
+bool LogViewerModel::connectService(const QString& hostName /*= ""*/, unsigned short portNr /*= 0u*/)
 {
     return false;
 }
 
-void LogViewerModel::disconnect(void)
+void LogViewerModel::disconnectService(void)
 {
+}
+
+void LogViewerModel::serviceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
+{
+    mIsConnected = isConnected;
+    mAddress     = address;
+    mPort        = port;
+    mDbPath      = dbPath;
+
+    disconnect(mConnect);
+    if (isConnected)
+    {
+        LogObserver* log = LogObserver::getComponent();
+        Q_ASSERT(log != nullptr);
+        mConnect = connect(log, &LogObserver::signalLogMessage, this, &LogViewerModel::slotLogMessage);
+    }
+}
+
+void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
+{
+    if (logMessage.isEmpty() == false)
+    {
+        beginInsertRows(QModelIndex(), static_cast<int>(mLogs.size()), static_cast<int>(mLogs.size()));
+        mLogs.append(logMessage);
+        endInsertRows();
+    }
 }

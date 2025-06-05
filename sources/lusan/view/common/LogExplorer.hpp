@@ -22,16 +22,23 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+
+#include "areg/logging/NELogging.hpp"
+
+#include <QItemSelection>
 #include <QList>
+#include <QModelIndex>
 #include <QString>
 #include <QWidget>
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class LogScopesModel;
 class MdiMainWindow;
 class QToolButton;
 class QTreeView;
+class QAction;
 
 namespace Ui {
     class LogExplorer;
@@ -45,6 +52,22 @@ namespace Ui {
  **/
 class LogExplorer : public    QWidget
 {
+private:
+
+    //!< The priority indexes for the menu entries.
+    enum eLogPrio
+    {
+          PrioNotset    = 0
+        , PrioDebug
+        , PrioInfo
+        , PrioWarn
+        , PrioError
+        , PrioFatal
+        , PrioScope
+
+        , PrioCount
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -55,6 +78,8 @@ public:
      * \param   parent      The parent widget.
      **/
     LogExplorer(MdiMainWindow* mainFrame, QWidget* parent = nullptr);
+
+    virtual ~LogExplorer(void);
 
     /**
      * \brief   Returns the IP-address of the log collector to connect.
@@ -92,7 +117,7 @@ public:
      *                  If `false`, the signals and slots are disconnected.
      **/
     void setupLogSignals(bool setup);
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
@@ -127,7 +152,10 @@ private:
 
     //!< Returns the control object to enable log scopes of the logs
     QToolButton* ctrlLogScopes(void);
-
+    
+    //!< Returns the control object to move to the bottom of log window.
+    QToolButton* ctrlMoveBottom(void);
+    
     //!< Returns the control object of the log messages
     QTreeView* ctrlTable(void);
 
@@ -151,6 +179,37 @@ private:
      * \param   block   If true, blocks the signals. Otherwise, unblocks the signals.
      **/
     void blockBasicSignals(bool block);
+
+    /**
+     * \brief   Enables or disables lot priority tool buttons based on selection index.
+     *          It also changes the colors of the buttons depending on the priority.
+     **/
+    void enableButtons(const QModelIndex& selection);
+
+    /**
+     * \brief   Updates the colors of the log priority tool buttons.
+     * \param   errSelected    If true, the error button is checked and the colored.
+     * \param   warnSelected   If true, the warning button is checked and the colored.
+     * \param   infoSelected   If true, the info button is checked and the colored.
+     * \param   dbgSelected    If true, the debug button is checked and the colored.
+     * \param   scopeSelected  If true, the scopes button is checked and the colored.
+     **/
+    void updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected);
+
+    /**
+     * \brief   Updates the expanded of the log scopes model based on the current index.
+     * \param   current    The current index to update expanded.
+     **/
+    void updateExpanded(const QModelIndex& current);
+
+    /**
+     * \brief   Updates the priority of the log scope at the given index.
+     * \param   node       The index of the log scope to update priority.
+     * \param   addPrio    If true, adds the priority. Otherwise, removes the priority.
+     * \param   prio       The log priority to set or remove.
+     * \return  Returns true if succeeded the request to update the priority. Otherwise, returns false.
+     **/
+    bool updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio);
     
 private slots:
     /**
@@ -191,10 +250,77 @@ private slots:
     void onLogDbCreated(const QString& dbLocation);
 
     /**
+     * \brief   The slot is triggered when the log observer instance is activated or shutdown.
+     * \param   isStarted       The flag indicating whether the log observer instance is started or stopped.
+     * \param   address         The IP address of the log observer instance.
+     * \param   port            The TCP port number of the log observer instance.
+     * \param   filePath        The file path of the log file, if any. If empty, no file is used.
+     **/
+    void onLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath);
+
+    /**
      * \brief   The slot is triggered when fails to send or receive message.
      **/
     void onConnectClicked(bool checked);
+
+    /**
+     * \brief   The slot is triggered when the move to bottom tool button is clicked.
+     **/
+    void onMoveBottomClicked();
+
+    // Slot for error log priority tool button
+    void onPrioErrorClicked(bool checked);
+
+    // Slot for warning log priority tool button
+    void onPrioWarningClicked(bool checked);
+
+    // Slot for information log priority tool button
+    void onPrioInfoClicked(bool checked);
+
+    // Slot for debug log priority tool button
+    void onPrioDebugClicked(bool checked);
     
+    // Slot for log scope priority tool button
+    void onPrioScopesClicked(bool checked);
+
+    // Slot. which triggered when the selection in the log scopes navigation is changed.
+    void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+
+    /**
+     * \brief   The signal triggered when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void onRootUpdated(const QModelIndex & root);
+    
+    /**
+     * \brief   Slot triggered when the scopes of an instance are inserted.
+     * \param   parent  The index of the parent instance item where scopes are inserted.
+     **/
+    void onScopesInserted(const QModelIndex & parent);
+    
+    /**
+     * \brief   Slot triggered when the scopes of an instance are updated.
+     * \param   parent  The index of the parent instance item that is updated.
+     **/
+    void onScopesUpdated(const QModelIndex & parent);
+
+    /**
+     * \brief   Slot triggered when the data of scopes are updated.
+     * \param   topLeft     The top-left index of the node, which data is updated.
+     * \param   bottomRight The bottom-right index of the node, which data is updated.
+     * \param   roles       The list of roles, which data is updated. If empty, all roles are updated.
+     **/
+    void onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles = QList<int>());
+
+    /**
+     * \brief   Slot triggered when the user makes right click on the scope navigation window.
+     * \param   pos     The mouse right click cursor position on scope navigation window.
+     **/
+    void onTreeViewContextMenuRequested(const QPoint& pos);
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
     MdiMainWindow*          mMainFrame;     //!< The main frame of the application.
     Ui::LogExplorer*        ui;             //!< The user interface object.
@@ -203,7 +329,10 @@ private:
     QString                 mInitLogFile;   //!< The initialized log file.
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
-    bool                    mShouldConnect; //!< Flag, indicating to connect to log collector.
+    LogScopesModel*         mModel;         //!< The model of the log scopes.
+    QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
+    bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
+    QAction*                mMenuActions[static_cast<int>(eLogPrio::PrioCount)];   //!< The list of menu actions
 };
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP

@@ -154,10 +154,12 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     /**
-     * \brief   Protected constructor required by root node.
+     * \brief   Protected constructors required by root node.
      **/
-    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio );
-
+    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsigned int prio, ScopeRoot * parent = nullptr );
+    ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, ScopeRoot * parent = nullptr );    
+    ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent = nullptr );
+    
 //////////////////////////////////////////////////////////////////////////
 // Assigning operators
 //////////////////////////////////////////////////////////////////////////
@@ -178,16 +180,19 @@ public:
  ************************************************************************/
 
     /**
-     * \brief   Creates a child node. The child node is not added to the parent.
-     *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
-     *          If path is empty, returns nullptr.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, it contains the next level of the path separated by '_'.
-     *                      The last node should be marked as 'leaf'.
-     * \param   prio        The logging priority to set.
-     * \return  The node object created.
+     * \brief   Sets the node priority flag.
      **/
-    virtual ScopeNodeBase* makeChildNode(QString& scopePath, uint32_t prio) override;
+    virtual void setPriority(uint32_t prio) override;
+
+    /**
+     * \brief   Adds log priority bits.
+     **/
+    virtual void addPriority(unsigned int prio) override;
+
+    /**
+     * \brief   Adds log priority bits.
+     **/
+    virtual void removePriority(unsigned int prio) override;
 
     /**
      * \brief   Creates a child node. The child node is not added to the parent.
@@ -205,8 +210,9 @@ public:
      * \brief   Adds a child node to the parent if the node does not exist.
      *          Otherwise, it adds in the existing node the log priority of the passed node object.
      * \param   childNode   The child node to add to the parent.
+     * \return  The pointer to the added child node.
      **/
-    virtual void addChildNode(ScopeNodeBase* childNode) override;
+    virtual ScopeNodeBase* addChildNode(ScopeNodeBase* childNode) override;
 
     /**
      * \brief   Returns child node object that contains the specified name.
@@ -221,6 +227,28 @@ public:
      * \param   childName   The name of the child node to find.
      **/
     virtual int getChildPosition(const QString& childName) const override;
+    
+    /**
+     * \brief   Returns the child node at the given position.
+     * \param   pos     The position of the child.
+     * \return  Valid pointer of the child node or leaf, if position is valid. Otherwise, returns nullptr.
+     **/
+    virtual ScopeNodeBase* getChildAt(int pos) const override;
+    
+    /**
+     * \brief   Returns the total number of children.
+     **/
+    virtual int getChildCount(void) const override;
+
+    /**
+     * \brief   Returns the total number of child nodes.
+     **/
+    virtual int getChildNodesCount(void) const override;
+
+    /**
+     * \brief   Returns the total number of child leafs.
+     **/
+    virtual int getChildLeafsCount(void) const override;
 
     /**
      * \brief   Returns true if the current node has other node objects with children.
@@ -248,12 +276,37 @@ public:
      * \return  The number of child nodes in the list.
      **/
     virtual int getChildren(std::vector<ScopeNodeBase*>& children) const override;
-
+    
     /**
      * \brief   Resets and invalidates the priorities of the node and all child nodes.
+     * \param   skipLeafs   If true, skips resetting the priority of the leafs and resets the priority only nodes.
+     *                      Otherwise, it resets the priority of the leafs and nodes.
      **/
-    virtual void resetPrioritiesRecursive(void) override;
+    virtual void resetPrioritiesRecursive(bool skipLeafs) override;
 
+    /**
+     * \brief   Refreshes the priorities by keeping the priority of leafs and refreshing the priorities of the nodes.
+     **/
+    virtual void refreshPrioritiesRecursive(void) override;
+
+    /**
+     * \brief   Returns the list of nodes with log priority. The node should not have NotSet priority flag.
+     **/
+    virtual QList<ScopeNodeBase*> getNodesWithPriority(void) const override;
+
+    /**
+     * \brief   Extracts nodes with log priority. The node should not have NotSet priority flag.
+     * \param   list    The list to add nodes with priority.
+     * \return  Returns number of new added nodes.
+     **/
+    virtual int extractNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
+
+    /**
+     * \brief   Extracts child nodes with log priority.
+     * \param   list    The list to add nodes with priority.
+     * \return  Returns number of new added nodes.
+     **/
+    virtual int extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -273,6 +326,21 @@ public:
      * \brief   Returns the total number of children.
      **/
     inline unsigned int childNodeCount( void ) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Protected members
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    /**
+     * \brief   Resets the priority of the nodes.
+     **/
+    inline void resetPrioNodes(void);
+
+    /**
+     * \brief   Resets the priority of the leafs.
+     **/
+    inline void resetPrioLeafs(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -349,30 +417,6 @@ public:
  ************************************************************************/
     
     /**
-     * \brief   Creates a child node. The child node is not added to the parent.
-     *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
-     *          If path is empty, returns nullptr.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, it contains the next level of the path separated by '_'.
-     *                      The last node should be marked as 'leaf'.
-     * \param   prio        The logging priority to set.
-     * \return  The node object created.
-     **/
-    virtual int addChildRecursive(QString& scopePath, uint32_t prio) override;
-    
-    /**
-     * \brief   Creates a child node. The child node is not added to the parent.
-     *          Each child node is listed in the `nodeNames`. If the list contains last entry, it is created as a 'leaf'.
-     *          If the passed list empty, returns nullptr.
-     * \param   nodeNames   The list of node names.
-     *                      On output, it removes the first node name from the list.
-     *                      The last name should be marked as 'leaf'.
-     * \param   prio        The logging priority to set.
-     * \return  The node object created.
-     **/
-    virtual int addChildRecursive(QStringList& nodeNames, uint32_t prio) override;
-    
-    /**
      * \brief   Returns the string used to create the path. Root nodes should return empty string.
      **/
     virtual QString getPathString(void) const override;
@@ -427,6 +471,24 @@ inline const ScopeNode::LeafList& ScopeNode::getLeafs(void) const
 inline unsigned int ScopeNode::childNodeCount(void) const
 {
     return (mChildLeafs.size() + mChildNodes.size());
+}
+
+inline void ScopeNode::resetPrioNodes(void)
+{
+    resetPriority();
+    for (const auto& node : mChildNodes)
+    {
+        node.second->resetPrioNodes();
+    }
+}
+
+inline void ScopeNode::resetPrioLeafs(void)
+{
+    resetPriority();
+    for (const auto& leaf : mChildLeafs)
+    {
+        leaf.second->resetPriority();
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

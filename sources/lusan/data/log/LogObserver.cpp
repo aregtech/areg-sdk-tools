@@ -55,6 +55,9 @@ bool LogObserver::createLogObserver(FuncLogObserverStarted callbackStarted)
     bool result{ true };
     if (_modelInitialized.exchange(true) == false)
     {
+        Q_ASSERT(Thread::findThreadByName(LogObserver::LogobserverThread) == nullptr);
+        Q_ASSERT(ComponentLoader::isModelLoaded(LogObserver::LogobserverModel) == false);
+
         _observerStart = false;
         _logObserverStarted = callbackStarted;
         result = ComponentLoader::loadComponentModel(LogObserver::LogobserverModel);
@@ -140,6 +143,42 @@ QString LogObserver::getInitDatabase(void)
     return QString(LogObserver::getClient().getInitDatabasePath().c_str());
 }
 
+QString LogObserver::getConfigDatabaseName(void)
+{
+    return QString(LogObserver::getClient().getConfigLoggerDatabaseName().c_str());
+}
+
+QString LogObserver::getConfigDatabaseLocation(void)
+{
+    return QString(LogObserver::getClient().getConfigLoggerDatabaseLocation().c_str());
+}
+
+bool LogObserver::setConfigDatabaseName(const QString& dbName)
+{
+    if (LogObserver::getComponent() != nullptr)
+    {
+        LogObserver::getClient().setConfigLoggerDatabaseName(dbName.toStdString());
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool LogObserver::setConfigDatabaseLocation(const QString& dbLocation)
+{
+    if (LogObserver::getComponent() != nullptr)
+    {
+        LogObserver::getClient().setConfigLoggerDatabaseLocation(dbLocation.toStdString());
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 bool LogObserver::isConnected(void)
 {
     return LogObserver::getClient().isConnected();
@@ -152,6 +191,7 @@ bool LogObserver::connect(const QString& address, uint16_t port, const QString& 
 
 Component * LogObserver::CreateComponent(const NERegistry::ComponentEntry & entry, ComponentThread & owner)
 {
+    Q_ASSERT(_component.load() == nullptr);
     _component.store(DEBUG_NEW LogObserver( entry, owner, entry.getComponentData()));
     return static_cast<Component *>(_component.load());
 }
@@ -219,10 +259,22 @@ void LogObserver::startupServiceInterface(Component & holder)
     {
         mLogClient.initialize(NELusanCommon::INIT_FILE.toStdString());
     }
+
+    QString address{ mLogClient.getLoggerAddress().c_str() };
+    uint16_t port { mLogClient.getLoggerPort() };
+    QString logFile { mLogClient.getActiveDatabasePath().c_str() };
+
+    emit signalLogObserverInstance(true, address, port, logFile);
 }
 
 void LogObserver::shutdownServiceIntrface(Component & holder)
 {
+    QString address{ mLogClient.getLoggerAddress().c_str() };
+    uint16_t port { mLogClient.getLoggerPort() };
+    QString logFile { mLogClient.getActiveDatabasePath().c_str() };
+
+    emit signalLogObserverInstance(false, address, port, logFile);
+
     static_cast<LogObserverBase &>(mLogClient).stop();
     static_cast<LogObserverBase &>(mLogClient).disconnect();
     StubBase::shutdownServiceIntrface(holder);
@@ -459,14 +511,14 @@ void LogObserver::slotLogInstancesConnect(const std::vector<NEService::sServiceC
 {
     SharedBuffer stream;
     stream << instances;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstConnected), getComponentThread());
+    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstConnected, stream), getComponentThread());
 }
 
 void LogObserver::slotLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
 {
     SharedBuffer stream;
     stream << instances;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstDisconnected), getComponentThread());
+    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstDisconnected, stream), getComponentThread());
 }
 
 void LogObserver::slotLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance>& instances)

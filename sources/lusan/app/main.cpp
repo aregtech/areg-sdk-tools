@@ -20,7 +20,6 @@
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/view/common/Workspace.hpp"
-#include "lusan/view/common/MdiMainWindow.hpp"
 
 #include "areg/appbase/Application.hpp"
 
@@ -55,20 +54,9 @@ int main(int argc, char *argv[])
         }
     }
     
+    Application::setWorkingDirectory(nullptr);
     OptionsManager & opt = LusanApplication::getOptions();
     opt.readOptions();
     Workspace workspace(opt);
-    if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
-    {
-        Application::setWorkingDirectory(nullptr);
-        MdiMainWindow w;
-        w.setWorkspaceRoot(opt.getActiveWorkspace().getWorkspaceRoot());
-        w.showMaximized();  
-        w.show();
-        return a.exec();
-    }
-    else
-    {
-        return 0;
-    }
+    return (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted) ? a.runApplication(opt.getActiveWorkspace().getWorkspaceRoot()) : 0);
 }
