@@ -16,6 +16,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/ProjectDirSettings.cpp
     ${LUSAN}/view/common/ProjectSettings.cpp
     ${LUSAN}/view/common/WorkspaceManager.cpp
+    ${LUSAN}/view/common/LogSettings.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -34,4 +35,5 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/ProjectDirSettings.hpp
     ${LUSAN}/view/common/ProjectSettings.hpp
     ${LUSAN}/view/common/WorkspaceManager.hpp
+    ${LUSAN}/view/common/LogSettings.hpp
 )
