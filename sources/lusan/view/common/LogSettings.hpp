@@ -19,9 +19,6 @@
  *
  ************************************************************************/
 
-#include "areg/component/ComponentThread.hpp"
-#include "areg/component/NERegistry.hpp"
-
 #include <QWidget>
 #include <QValidator>
 #include <memory>
@@ -62,9 +59,6 @@ private:
     std::unique_ptr<QValidator> mIpValidator;
     std::unique_ptr<QValidator> mPortValidator;
     bool mIsConnectedToConfiguredEndpoint;
-    ComponentThread mTestComponentThread;
-    NERegistry::ComponentEntry mTestComponentEntry;
-    Component* mComponent;
 };
 
 #endif // LUSAN_VIEW_COMMON_LOGSETTINGS_HPP
