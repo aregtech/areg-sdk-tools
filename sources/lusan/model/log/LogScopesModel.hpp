@@ -112,6 +112,8 @@ public:
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
     bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+
+    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const;
     
 signals:
 

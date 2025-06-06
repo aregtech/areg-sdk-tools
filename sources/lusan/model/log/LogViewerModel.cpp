@@ -37,7 +37,7 @@
 #include <QIcon>
 #include <QSize>
 
-const QColor LogViewerModel::LogColors[static_cast<int>(ePrio::PrioTotal)]
+const QColor LogViewerModel::LogColors[static_cast<int>(ePrio::PrioCount)]
 {
       QColorConstants::Transparent
     , QColorConstants::Black
@@ -303,23 +303,7 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
         const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
         if (logMessage != nullptr)
         {
-            switch (logMessage->logMessagePrio)
-            {
-            case NELogging::eLogPriority::PrioScope:
-                return QBrush(LogColors[static_cast<int>(PrioScope)]);
-            case NELogging::eLogPriority::PrioDebug:
-                return QBrush(LogColors[static_cast<int>(PrioDebug)]);
-            case NELogging::eLogPriority::PrioInfo:
-                return QBrush(LogColors[static_cast<int>(PrioInfo)]);
-            case NELogging::eLogPriority::PrioWarning:
-                return QBrush(LogColors[static_cast<int>(PrioWarn)]);
-            case NELogging::eLogPriority::PrioError:
-                return QBrush(LogColors[static_cast<int>(PrioError)]);
-            case NELogging::eLogPriority::PrioFatal:
-                return QBrush(LogColors[static_cast<int>(PrioFatal)]);
-            default:
-                return QBrush(LogColors[static_cast<int>(PrioDefault)]);
-            }
+            return LogScopeIconFactory::getColor(logMessage->logMessagePrio);
         }
     }
     break;

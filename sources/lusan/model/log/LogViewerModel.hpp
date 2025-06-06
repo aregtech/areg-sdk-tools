@@ -67,11 +67,11 @@ private:
         , PrioWarn          //!< Warning priority, color for warning message
         , PrioError         //!< Error priority, color for error message
         , PrioFatal         //!< Fatal priority, color for fatal message
-        , PrioTotal
+        , PrioCount
     };
     
     //!< The list of colors
-    static const QColor LogColors[static_cast<int>(ePrio::PrioTotal)];
+    static const QColor LogColors[static_cast<int>(ePrio::PrioCount)];
 
 //////////////////////////////////////////////////////////////////////////
 // Static methods

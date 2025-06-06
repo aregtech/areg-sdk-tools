@@ -54,6 +54,22 @@ public:
         , PrioScopeExit = static_cast<uint32_t>(NELogging::eLogPriority::PrioScope) | 8
     };
 
+    enum class eLogColor
+    {
+          ColorNotSet   = 0
+        , ColorFatal
+        , ColorError
+        , ColorWarn
+        , ColorInfo
+        , ColorDebug
+        , ColorScope
+        , ColorScopeEnter
+        , ColorScopeExit
+        , ColorWithScope
+
+        , ColorCount
+    };
+
     //!< Size of the icon in pixels to display in the scope navigation tree view.
     static constexpr int    IconPixels      { 16 };
 
@@ -82,6 +98,10 @@ public:
      * \param   logPrio      The log priority.
      **/
     static QColor getColor(NELogging::eLogPriority logPrio);
+
+    static QColor getLogColor(LogScopeIconFactory::eLogColor logColor);
+
+    static QColor getLogColor(const NELogging::sLogMessage & logMessage);
 };
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPEICONFACTORY_HPP

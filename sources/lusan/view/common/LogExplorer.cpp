@@ -64,7 +64,7 @@ LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
     , mSignalsActive(false)
 {
     _explorer = this;
-    for (int i = 0; i < static_cast<int>(eLogPrio::PrioCount); ++ i)
+    for (int i = 0; i < static_cast<int>(eLogActions::PrioCount); ++ i)
     {
         mMenuActions[i] = nullptr;
     }
@@ -203,6 +203,7 @@ void LogExplorer::setupSignals(void)
     connect(ctrlLogInfo()       , &QToolButton::clicked, this, &LogExplorer::onPrioInfoClicked);
     connect(ctrlLogDebug()      , &QToolButton::clicked, this, &LogExplorer::onPrioDebugClicked);
     connect(ctrlLogScopes()     , &QToolButton::clicked, this, &LogExplorer::onPrioScopesClicked);
+    connect(ctrlSaveSettings()  , &QToolButton::clicked, this, &LogExplorer::onSaveSettingsClicked);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested, this, &LogExplorer::onTreeViewContextMenuRequested);
 
     connect(mMainWindow         , &MdiMainWindow::signalWindowActivated , this  , &LogExplorer::onWindowActivated);
@@ -521,6 +522,14 @@ void LogExplorer::onPrioScopesClicked(bool checked)
     }
 }
 
+void LogExplorer::onSaveSettingsClicked(bool checked)
+{
+    if (mModel != nullptr)
+    {
+        mModel->saveLogScopePriority(QModelIndex());
+    }
+}
+
 void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
     QModelIndexList list = selected.indexes();
@@ -608,65 +617,80 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
         hasFatal = node->hasPrioFatal();
     }
 
-    mMenuActions[static_cast<int>(eLogPrio::PrioNotset)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioNotset, false), tr("&Reset Priority"));
-    mMenuActions[static_cast<int>(eLogPrio::PrioNotset)]->setCheckable(false);
+    mMenuActions[static_cast<int>(eLogActions::PrioNotset)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioNotset, false), tr("&Reset Priority"));
+    mMenuActions[static_cast<int>(eLogActions::PrioNotset)]->setCheckable(false);
 
-    mMenuActions[static_cast<int>(eLogPrio::PrioDebug)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, hasDebug), hasDebug ? tr("Hide &Debug messages") : tr("Show &Debug messages"));
-    mMenuActions[static_cast<int>(eLogPrio::PrioDebug)]->setCheckable(true);
-    mMenuActions[static_cast<int>(eLogPrio::PrioDebug)]->setChecked(hasDebug);
+    mMenuActions[static_cast<int>(eLogActions::PrioDebug)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, hasDebug), hasDebug ? tr("Hide &Debug messages") : tr("Show &Debug messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioDebug)]->setCheckable(true);
+    mMenuActions[static_cast<int>(eLogActions::PrioDebug)]->setChecked(hasDebug);
 
-    mMenuActions[static_cast<int>(eLogPrio::PrioInfo)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, hasInfo), hasInfo ? tr("Hide &Info messages") : tr("Show &Info messages"));
-    mMenuActions[static_cast<int>(eLogPrio::PrioInfo)]->setCheckable(true);
-    mMenuActions[static_cast<int>(eLogPrio::PrioInfo)]->setChecked(hasInfo);
+    mMenuActions[static_cast<int>(eLogActions::PrioInfo)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, hasInfo), hasInfo ? tr("Hide &Info messages") : tr("Show &Info messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioInfo)]->setCheckable(true);
+    mMenuActions[static_cast<int>(eLogActions::PrioInfo)]->setChecked(hasInfo);
 
-    mMenuActions[static_cast<int>(eLogPrio::PrioWarn)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, hasWarn), hasWarn ? tr("Hide &Warning messages") : tr("Show &Warning messages"));
-    mMenuActions[static_cast<int>(eLogPrio::PrioWarn)]->setCheckable(true);
-    mMenuActions[static_cast<int>(eLogPrio::PrioWarn)]->setChecked(hasWarn);
+    mMenuActions[static_cast<int>(eLogActions::PrioWarn)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, hasWarn), hasWarn ? tr("Hide &Warning messages") : tr("Show &Warning messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioWarn)]->setCheckable(true);
+    mMenuActions[static_cast<int>(eLogActions::PrioWarn)]->setChecked(hasWarn);
 
-    mMenuActions[static_cast<int>(eLogPrio::PrioError)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, hasError), hasError ? tr("Hide &Error messages") : tr("Show &Error messages"));
-    mMenuActions[static_cast<int>(eLogPrio::PrioError)]->setCheckable(true);
-    mMenuActions[static_cast<int>(eLogPrio::PrioError)]->setChecked(hasError);
+    mMenuActions[static_cast<int>(eLogActions::PrioError)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, hasError), hasError ? tr("Hide &Error messages") : tr("Show &Error messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioError)]->setCheckable(true);
+    mMenuActions[static_cast<int>(eLogActions::PrioError)]->setChecked(hasError);
 
-    mMenuActions[static_cast<int>(eLogPrio::PrioFatal)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioFatal, hasFatal), hasFatal ? tr("Hide &Fatal messages") : tr("Show &Fatal messages"));
-    mMenuActions[static_cast<int>(eLogPrio::PrioFatal)]->setCheckable(true);
-    mMenuActions[static_cast<int>(eLogPrio::PrioFatal)]->setChecked(hasFatal);
+    mMenuActions[static_cast<int>(eLogActions::PrioFatal)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioFatal, hasFatal), hasFatal ? tr("Hide &Fatal messages") : tr("Show &Fatal messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioFatal)]->setCheckable(true);
+    mMenuActions[static_cast<int>(eLogActions::PrioFatal)]->setChecked(hasFatal);
 
-    mMenuActions[static_cast<int>(eLogPrio::PrioScope)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, hasScope), hasScope ? tr("Hide &Scopes") : tr("Show &Scopes"));
-    mMenuActions[static_cast<int>(eLogPrio::PrioScope)]->setCheckable(true);
-    mMenuActions[static_cast<int>(eLogPrio::PrioScope)]->setChecked(hasScope);
+    mMenuActions[static_cast<int>(eLogActions::PrioScope)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, hasScope), hasScope ? tr("Hide &Scopes") : tr("Show &Scopes"));
+    mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setCheckable(true);
+    mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setChecked(hasScope);
+
+    mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave), tr("&Save Selection on Target"));
+    mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)]->setEnabled(LogObserver::isConnected());
+
+    mMenuActions[static_cast<int>(eLogActions::SavePrioAll)] = menu.addAction(tr("Save &All Targets"));
+    mMenuActions[static_cast<int>(eLogActions::SavePrioAll)]->setEnabled(LogObserver::isConnected());
 
 
     QAction* selectedAction = menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
     if (!selectedAction)
         return;
 
-    if (selectedAction == mMenuActions[static_cast<int>(eLogPrio::PrioNotset)])
+    if (selectedAction == mMenuActions[static_cast<int>(eLogActions::PrioNotset)])
     {
         mModel->setLogPriority(index, NELogging::eLogPriority::PrioNotset);
     }
-    else if (selectedAction == mMenuActions[eLogPrio::PrioDebug])
+    else if (selectedAction == mMenuActions[eLogActions::PrioDebug])
     {
         updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioDebug);
     }
-    else if (selectedAction == mMenuActions[eLogPrio::PrioInfo])
+    else if (selectedAction == mMenuActions[eLogActions::PrioInfo])
     {
         updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioInfo);
     }
-    else if (selectedAction == mMenuActions[eLogPrio::PrioWarn])
+    else if (selectedAction == mMenuActions[eLogActions::PrioWarn])
     {
         updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioWarning);
     }
-    else if (selectedAction == mMenuActions[eLogPrio::PrioError])
+    else if (selectedAction == mMenuActions[eLogActions::PrioError])
     {
         updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioError);
     }
-    else if (selectedAction == mMenuActions[eLogPrio::PrioFatal])
+    else if (selectedAction == mMenuActions[eLogActions::PrioFatal])
     {
         updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioFatal);
     }
-    else if (selectedAction == mMenuActions[eLogPrio::PrioScope])
+    else if (selectedAction == mMenuActions[eLogActions::PrioScope])
     {
         updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioScope);
+    }
+    else if (selectedAction == mMenuActions[eLogActions::SavePrioTarget])
+    {
+        Q_ASSERT(mModel != nullptr);
+        mModel->saveLogScopePriority(index);
+    }
+    else if (selectedAction == mMenuActions[eLogActions::SavePrioAll])
+    {
+        mModel->saveLogScopePriority(QModelIndex());
     }
 }
 

@@ -150,6 +150,21 @@ bool LogScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLog
     return result;
 }
 
+bool LogScopesModel::saveLogScopePriority(const QModelIndex& target /*= QModelIndex()*/) const
+{
+    if (target.isValid())
+    {
+        ScopeNodeBase* node = static_cast<ScopeNodeBase *>(target.internalPointer());
+        Q_ASSERT(node != nullptr);
+        ScopeRoot* root = static_cast<ScopeRoot *>(node->getTreeRoot());
+        return LogObserver::requestSaveConfig(root->getRootId());
+    }
+    else
+    {
+        return LogObserver::requestSaveConfig(NEService::COOKIE_ANY);
+    }
+}
+
 QModelIndex LogScopesModel::index(int row, int column, const QModelIndex& parent) const
 {
     if ((hasIndex(row, column, parent) == false) || (column != 0))
