@@ -56,20 +56,20 @@ class LogExplorer : public NavigationWindow
 {
 private:
 
-    //!< The priority indexes for the menu entries.
+    //!< The priority indexes for the context menu entries.
     enum eLogActions
     {
-          PrioNotset    = 0
-        , PrioDebug
-        , PrioInfo
-        , PrioWarn
-        , PrioError
-        , PrioFatal
-        , PrioScope
-        , SavePrioTarget
-        , SavePrioAll
+          PrioNotset    = 0 //!< Reset priorities
+        , PrioDebug         //!< Set debug priority
+        , PrioInfo          //!< Set info priority
+        , PrioWarn          //!< Set warning priority
+        , PrioError         //!< Set error priority
+        , PrioFatal         //!< Set fatal priority
+        , PrioScope         //!< Set scope priority
+        , SavePrioTarget    //!< Save priority settings of the selected target
+        , SavePrioAll       //!< Save priority settings of all targets
 
-        , PrioCount
+        , PrioCount         //!< The number of entries in the menu
     };
 
 //////////////////////////////////////////////////////////////////////////

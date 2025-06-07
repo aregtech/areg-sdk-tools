@@ -113,6 +113,12 @@ public:
      **/
     bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
 
+    /**
+     * \brief   Saves the log scope priority for the given target index.
+     *          If the target index is invalid, it saves the log scope priority for all instances.
+     * \param   target  The target index to save log scope priority. If invalid, saves for root index.
+     * \return  True if succeeded to save log scope priority, false otherwise.
+     **/
     bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const;
     
 signals:

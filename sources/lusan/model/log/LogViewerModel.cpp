@@ -54,21 +54,10 @@ const QStringList& LogViewerModel::getHeaderList(void)
     return _headers;
 }
 
-const QList<int>& LogViewerModel::getHeaderSizes(void)
+const QList<int>& LogViewerModel::getHeaderWidths(void)
 {
-    static QList<int>  _sizes
-    {
-           50
-        , 150
-        , 100
-        , 50
-        , 100
-        , 50
-        , 50
-        , 200
-    };
-    
-    return _sizes;
+    static QList<int>  _widths { 50, 100, 100, 50, 100, 50, 50, 200 };
+    return _widths;
 }
 
 const QList<LogViewerModel::eColumn>& LogViewerModel::getDefaultColumns(void)
@@ -161,9 +150,9 @@ QVariant LogViewerModel::headerData(int section, Qt::Orientation orientation, in
     }
     else if (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::SizeHintRole)
     {
-        const QList<int>& sizes = getHeaderSizes();
+        const QList<int>& widths = getHeaderWidths();
         eColumn col = mActiveColumns.at(section);
-        return (static_cast<int>(col) < static_cast<int>(sizes.size()) ? QVariant(QSize(sizes[static_cast<int>(col)], 28)) : QVariant());
+        return (static_cast<int>(col) < static_cast<int>(widths.size()) ? QVariant(QSize(widths[static_cast<int>(col)], 28)) : QVariant());
     }
     
     return QVariant();

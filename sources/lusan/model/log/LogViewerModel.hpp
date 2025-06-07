@@ -117,8 +117,12 @@ public:
      * \brief   Returns the fixed list of header names.
      **/
     static const QStringList&  getHeaderList(void);
-    
-    static const QList<int>& getHeaderSizes(void);
+
+    /**
+     * \brief   Returns the fixed list of header sizes.
+     *          The sizes are in pixels and correspond to the header names.
+     **/
+    static const QList<int>& getHeaderWidths(void);
     
     /**
      * \brief   Returns the default list of header names.

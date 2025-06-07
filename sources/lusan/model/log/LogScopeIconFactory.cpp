@@ -39,10 +39,8 @@ namespace
         , QColor(Qt::blue)          // LogScopeIconFactory::eLogColor::ColorInfo
         , QColor(Qt::darkGreen)     // LogScopeIconFactory::eLogColor::ColorDebug
         , QColor(96, 96, 96)        // LogScopeIconFactory::eLogColor::ColorScope
-        // , QColor(0, 128, 128)       // LogScopeIconFactory::eLogColor::ColorScopeEnter
-        // , QColor(60, 180, 180)      // LogScopeIconFactory::eLogColor::ColorScopeExit
-        , QColor(72, 72, 72)       // LogScopeIconFactory::eLogColor::ColorScopeEnter
-        , QColor(144, 144, 144)      // LogScopeIconFactory::eLogColor::ColorScopeExit
+        , QColor(72, 72, 72)        // LogScopeIconFactory::eLogColor::ColorScopeEnter
+        , QColor(144, 144, 144)     // LogScopeIconFactory::eLogColor::ColorScopeExit
         , QColor(Qt::white)         // LogScopeIconFactory::eLogColor::ColorWithScope
     };
 
@@ -172,7 +170,7 @@ namespace
         {
             color1.setAlpha(setAlpha && (color1 != NoColor) ? AlphaMixed : AlphaSolid);
             painter.setBrush(color1);
-            painter.drawPie(rect, 45 * 16, 90 * 16);
+            painter.drawPie(rect, 45 * pixels, 90 * pixels);
         }
 
         // Bottom-right (135° to 225°)
@@ -180,7 +178,7 @@ namespace
         {
             color2.setAlpha(setAlpha && (color2 != NoColor) ? AlphaMixed : AlphaSolid);
             painter.setBrush(color2);
-            painter.drawPie(rect, 135 * 16, 90 * 16);
+            painter.drawPie(rect, 135 * pixels, 90 * pixels);
         }
 
         // Bottom-left (225° to 315°)
@@ -188,7 +186,7 @@ namespace
         {
             color3.setAlpha(setAlpha && (color3 != NoColor) ? AlphaMixed : AlphaSolid);
             painter.setBrush(color3);
-            painter.drawPie(rect, 225 * 16, 90 * 16);
+            painter.drawPie(rect, 225 * pixels, 90 * pixels);
         }
 
         // Top-left (315° to 45°)
@@ -196,7 +194,7 @@ namespace
         {
             color4.setAlpha(setAlpha && (color4 != NoColor) ? AlphaMixed : AlphaSolid);
             painter.setBrush(color4);
-            painter.drawPie(rect, 315 * 16, 90 * 16);
+            painter.drawPie(rect, 315 * pixels, 90 * pixels);
         }
 
         painter.end();
@@ -221,7 +219,7 @@ namespace
         {
             color1.setAlpha(setAlpha && (color1 != NoColor) ? AlphaMixed : AlphaSolid);
             painter.setBrush(color1);
-            painter.drawPie(rect, 45 * 16, 90 * 16);
+            painter.drawPie(rect, 45 * pixels, 90 * pixels);
         }
 
         // Bottom-right (135° to 225°)
@@ -229,7 +227,7 @@ namespace
         {
             color2.setAlpha(setAlpha && (color2 != NoColor) ? AlphaMixed : AlphaSolid);
             painter.setBrush(color2);
-            painter.drawPie(rect, 135 * 16, 90 * 16);
+            painter.drawPie(rect, 135 * pixels, 90 * pixels);
         }
 
         // Bottom-left (225° to 315°)
@@ -237,7 +235,7 @@ namespace
         {
             color3.setAlpha(setAlpha && (color3 != NoColor) ? AlphaMixed : AlphaSolid);
             painter.setBrush(color3);
-            painter.drawPie(rect, 225 * 16, 90 * 16);
+            painter.drawPie(rect, 225 * pixels, 90 * pixels);
         }
 
         // Top-left (315° to 45°)
@@ -245,7 +243,7 @@ namespace
         {
             color4.setAlpha(setAlpha && (color4 != NoColor) ? AlphaMixed : AlphaSolid);
             painter.setBrush(color4);
-            painter.drawPie(rect, 315 * 16, 90 * 16);
+            painter.drawPie(rect, 315 * pixels, 90 * pixels);
         }
 
         if (colorDiag != NoColor)
@@ -1007,9 +1005,9 @@ QColor LogScopeIconFactory::getColor(NELogging::eLogPriority logPrio)
     }
 }
 
-QColor LogScopeIconFactory::getLogColor(LogScopeIconFactory::eLogColor logColor)
+QColor LogScopeIconFactory::getLogColor(LogScopeIconFactory::eLogColor logPrio)
 {
-    return _colors[static_cast<int>(logColor)];
+    return _colors[static_cast<int>(logPrio)];
 }
 
 QColor LogScopeIconFactory::getLogColor(const NELogging::sLogMessage & logMessage)
