@@ -54,6 +54,23 @@ public:
         , PrioScopeExit = static_cast<uint32_t>(NELogging::eLogPriority::PrioScope) | 8
     };
 
+    //!< The indexes of log colors, which are used in the log scope tree view and log messages.
+    enum class eLogColor
+    {
+          ColorNotSet   = 0 //!< Not set color, used for invalid log priority
+        , ColorFatal        //!< Fatal log color
+        , ColorError        //!< Error log color
+        , ColorWarn         //!< Warning log color
+        , ColorInfo         //!< Info log color
+        , ColorDebug        //!< Debug log color
+        , ColorScope        //!< Scope log color, used for scope log messages
+        , ColorScopeEnter   //!< Scope enter log color, used for scope enter log messages
+        , ColorScopeExit    //!< Scope exit log color, used for scope exit log messages
+        , ColorWithScope    //!< Scope log color, used for log messages with scope
+
+        , ColorCount        //<!< The number of log colors
+    };
+
     //!< Size of the icon in pixels to display in the scope navigation tree view.
     static constexpr int    IconPixels      { 16 };
 
@@ -82,6 +99,18 @@ public:
      * \param   logPrio      The log priority.
      **/
     static QColor getColor(NELogging::eLogPriority logPrio);
+
+    /**
+     * \brief   Returns the color for the log priority.
+     * \param   logPrio      The log priority.
+     **/
+    static QColor getLogColor(LogScopeIconFactory::eLogColor logPrio);
+
+    /**
+     * \brief   Returns the color for the log message.
+     * \param   logMessage   The log message to get color.
+     **/
+    static QColor getLogColor(const NELogging::sLogMessage & logMessage);
 };
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPEICONFACTORY_HPP

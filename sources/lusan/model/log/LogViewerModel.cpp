@@ -37,43 +37,38 @@
 #include <QIcon>
 #include <QSize>
 
-const QColor LogViewerModel::LogColors[static_cast<int>(ePrio::PrioTotal)]
-{
-      QColorConstants::Transparent
-    , QColorConstants::Black
-    , QColorConstants::Gray
-    , QColorConstants::DarkGreen
-    , QColorConstants::DarkCyan
-    , QColorConstants::DarkBlue
-    , QColorConstants::DarkRed
-    , QColorConstants::Magenta
-};
-
-
 const QStringList& LogViewerModel::getHeaderList(void)
 {
     static QStringList _headers
-        {
-              "Priority"
-            , "Timestamp"
-            , "Source"
-            , "Source ID"
-            , "Thread"
-            , "Thread ID"
-            , "Scope ID"
-            , "Message"
-        };
+    {
+          "Priority"
+        , "Timestamp"
+        , "Source"
+        , "Source ID"
+        , "Thread"
+        , "Thread ID"
+        , "Scope ID"
+        , "Message"
+    };
     
     return _headers;
 }
 
-const QList<int>& LogViewerModel::getDefaultColumns(void)
+const QList<int>& LogViewerModel::getHeaderWidths(void)
 {
-    static QList<int>   _columnIds
+    static QList<int>  _widths { 50, 100, 100, 50, 100, 50, 50, 200 };
+    return _widths;
+}
+
+const QList<LogViewerModel::eColumn>& LogViewerModel::getDefaultColumns(void)
+{
+    static QList<LogViewerModel::eColumn>   _columnIds
     {
-          static_cast<int>(eColumn::LogColumnPriority)
-        , static_cast<int>(eColumn::LogColumnTimestamp)
-        , static_cast<int>(eColumn::LogColumnMessage)
+          eColumn::LogColumnSourceId
+        , eColumn::LogColumnPriority
+        , eColumn::LogColumnScopeId
+        , eColumn::LogColumnTimestamp
+        , eColumn::LogColumnMessage
     };
     
     return _columnIds;
@@ -134,15 +129,10 @@ LogViewerModel::LogViewerModel(QObject *parent)
     , mPort(NESocket::InvalidPort)
     , mDbPath()
 
-    , mActiveColumns( )
+    , mActiveColumns( LogViewerModel::getDefaultColumns() )
     , mLogs         ( )
     , mConnect      ( )
 {
-    const QList<int>& list = LogViewerModel::getDefaultColumns();
-    for (int col : list)
-    {
-        mActiveColumns.append(static_cast<eColumn>(col));
-    }
 }
 
 QVariant LogViewerModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -150,17 +140,6 @@ QVariant LogViewerModel::headerData(int section, Qt::Orientation orientation, in
     if (orientation == Qt::Orientation::Vertical)
         return QVariant();
 
-#if 0
-    if (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::UserRole)
-    {
-        return QVariant( static_cast<int>(mActiveColumns.at(section)));
-    }
-    else
-    {
-        QString header(getHeaderName(section));
-        return QVariant(header);
-    }        
-#else
     if (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole)
     {
         return QVariant(getHeaderName(section));
@@ -171,28 +150,12 @@ QVariant LogViewerModel::headerData(int section, Qt::Orientation orientation, in
     }
     else if (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::SizeHintRole)
     {
+        const QList<int>& widths = getHeaderWidths();
         eColumn col = mActiveColumns.at(section);
-        switch (col)
-        {
-        case eColumn::LogColumnMessage:
-            return QVariant(QSize(200, 28));
-        case eColumn::LogColumnPriority:
-        case eColumn::LogColumnScopeId:
-        case eColumn::LogColumnSourceId:
-        case eColumn::LogColumnThreadId:
-            return QVariant(QSize(50, 28));
-        case eColumn::LogColumnSource:
-        case eColumn::LogColumnThread:
-        case eColumn::LogColumnTimestamp:
-            return QVariant(QSize(100, 28));
-        
-        default:
-            break;
-        }
+        return (static_cast<int>(col) < static_cast<int>(widths.size()) ? QVariant(QSize(widths[static_cast<int>(col)], 28)) : QVariant());
     }
     
     return QVariant();
-#endif
 }
 
 int LogViewerModel::rowCount(const QModelIndex &parent) const
@@ -303,23 +266,7 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
         const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
         if (logMessage != nullptr)
         {
-            switch (logMessage->logMessagePrio)
-            {
-            case NELogging::eLogPriority::PrioScope:
-                return QBrush(LogColors[static_cast<int>(PrioScope)]);
-            case NELogging::eLogPriority::PrioDebug:
-                return QBrush(LogColors[static_cast<int>(PrioDebug)]);
-            case NELogging::eLogPriority::PrioInfo:
-                return QBrush(LogColors[static_cast<int>(PrioInfo)]);
-            case NELogging::eLogPriority::PrioWarning:
-                return QBrush(LogColors[static_cast<int>(PrioWarn)]);
-            case NELogging::eLogPriority::PrioError:
-                return QBrush(LogColors[static_cast<int>(PrioError)]);
-            case NELogging::eLogPriority::PrioFatal:
-                return QBrush(LogColors[static_cast<int>(PrioFatal)]);
-            default:
-                return QBrush(LogColors[static_cast<int>(PrioDefault)]);
-            }
+            return LogScopeIconFactory::getLogColor(*logMessage);
         }
     }
     break;

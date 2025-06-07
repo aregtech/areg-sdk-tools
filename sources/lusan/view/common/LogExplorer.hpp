@@ -56,18 +56,20 @@ class LogExplorer : public NavigationWindow
 {
 private:
 
-    //!< The priority indexes for the menu entries.
-    enum eLogPrio
+    //!< The priority indexes for the context menu entries.
+    enum eLogActions
     {
-          PrioNotset    = 0
-        , PrioDebug
-        , PrioInfo
-        , PrioWarn
-        , PrioError
-        , PrioFatal
-        , PrioScope
+          PrioNotset    = 0 //!< Reset priorities
+        , PrioDebug         //!< Set debug priority
+        , PrioInfo          //!< Set info priority
+        , PrioWarn          //!< Set warning priority
+        , PrioError         //!< Set error priority
+        , PrioFatal         //!< Set fatal priority
+        , PrioScope         //!< Set scope priority
+        , SavePrioTarget    //!< Save priority settings of the selected target
+        , SavePrioAll       //!< Save priority settings of all targets
 
-        , PrioCount
+        , PrioCount         //!< The number of entries in the menu
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -285,6 +287,9 @@ private slots:
     // Slot for log scope priority tool button
     void onPrioScopesClicked(bool checked);
 
+    // Slot for saving log priority changes on the target configuration.
+    void onSaveSettingsClicked(bool checked);
+
     // Slot. which triggered when the selection in the log scopes navigation is changed.
     void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
@@ -345,7 +350,7 @@ private:
     LogScopesModel*         mModel;         //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
-    QAction*                mMenuActions[static_cast<int>(eLogPrio::PrioCount)];   //!< The list of menu actions
+    QAction*                mMenuActions[static_cast<int>(eLogActions::PrioCount)];   //!< The list of menu actions
 };
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP
