@@ -38,9 +38,11 @@ namespace
         , QColor(255, 165, 0)       // LogScopeIconFactory::eLogColor::ColorWarn
         , QColor(Qt::blue)          // LogScopeIconFactory::eLogColor::ColorInfo
         , QColor(Qt::darkGreen)     // LogScopeIconFactory::eLogColor::ColorDebug
-        , QColor(70, 70, 70)        // LogScopeIconFactory::eLogColor::ColorScope
-        , QColor(127,255,0)         // LogScopeIconFactory::eLogColor::ColorScopeEnter
-        , QColor(0, 128, 128)       // LogScopeIconFactory::eLogColor::ColorScopeExit
+        , QColor(96, 96, 96)        // LogScopeIconFactory::eLogColor::ColorScope
+        // , QColor(0, 128, 128)       // LogScopeIconFactory::eLogColor::ColorScopeEnter
+        // , QColor(60, 180, 180)      // LogScopeIconFactory::eLogColor::ColorScopeExit
+        , QColor(72, 72, 72)       // LogScopeIconFactory::eLogColor::ColorScopeEnter
+        , QColor(144, 144, 144)      // LogScopeIconFactory::eLogColor::ColorScopeExit
         , QColor(Qt::white)         // LogScopeIconFactory::eLogColor::ColorWithScope
     };
 
@@ -337,7 +339,7 @@ namespace
             enter = QIcon(pixmap);
         } while (false);
         _logIcons[prio] = enter;
-        _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScope)], enter, pixels);
+        _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScopeEnter)], enter, pixels);
 
         prio = static_cast<int>(LogScopeIconFactory::eLogIcons::PrioScopeExit);
         QIcon exit(QIcon::fromTheme(QString::fromUtf8("go-up")));
@@ -350,7 +352,7 @@ namespace
             exit = QIcon(pixmap);
         } while (false);
         _logIcons[prio] = exit;
-        _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScope)], exit, pixels);
+        _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScopeExit)], exit, pixels);
     }
 
     void _initialize(uint32_t pixels)
@@ -1017,10 +1019,10 @@ QColor LogScopeIconFactory::getLogColor(const NELogging::sLogMessage & logMessag
     case NELogging::eLogPriority::PrioNotset:
         return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorNotSet)];
     case NELogging::eLogPriority::PrioScope:
-        if (logMessage.logMsgType == static_cast<int>(NELogging::eLogMessageType::LogMessageScopeEnter))
+        if (logMessage.logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
             return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScopeEnter)];
-        else if (logMessage.logMsgType == static_cast<int>(NELogging::eLogMessageType::LogMessageScopeExit))
-            return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScopeEnter)];
+        else if (logMessage.logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
+            return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScopeExit)];
         else
             return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScope)];
     case NELogging::eLogPriority::PrioFatal:
@@ -1030,7 +1032,7 @@ QColor LogScopeIconFactory::getLogColor(const NELogging::sLogMessage & logMessag
     case NELogging::eLogPriority::PrioWarning:
         return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorWarn)];
     case NELogging::eLogPriority::PrioInfo:
-        return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorInfo];
+        return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorInfo)];
     case NELogging::eLogPriority::PrioDebug:
         return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorDebug)];
     default:

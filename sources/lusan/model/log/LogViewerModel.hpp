@@ -54,25 +54,10 @@ private:
         , LogColumnThreadId         //!< Log message thread ID
         , LogColumnScopeId          //!< Log message scope ID
         , LogColumnMessage          //!< Log message text
-    };
-
-    //!< The index of log message priorities. Used to change text color
-    enum ePrio
-    {
-          PrioNothing = 0   //!< No priority, no color
-        , PrioDefault       //!< Default priority, default color
-        , PrioScope         //!< Scope priority, color for scope message
-        , PrioDebug         //!< Debug priority, color for debug message
-        , PrioInfo          //!< Info priority, color for info message
-        , PrioWarn          //!< Warning priority, color for warning message
-        , PrioError         //!< Error priority, color for error message
-        , PrioFatal         //!< Fatal priority, color for fatal message
-        , PrioCount
+        
+        , LogColumnCount            //!< Maximum number of columns
     };
     
-    //!< The list of colors
-    static const QColor LogColors[static_cast<int>(ePrio::PrioCount)];
-
 //////////////////////////////////////////////////////////////////////////
 // Static methods
 //////////////////////////////////////////////////////////////////////////
@@ -133,10 +118,12 @@ public:
      **/
     static const QStringList&  getHeaderList(void);
     
+    static const QList<int>& getHeaderSizes(void);
+    
     /**
      * \brief   Returns the default list of header names.
      **/
-    static const QList<int>& getDefaultColumns(void);
+    static const QList<LogViewerModel::eColumn>& getDefaultColumns(void);
 
     /**
      * \brief   Returns the header name of the specified column.
