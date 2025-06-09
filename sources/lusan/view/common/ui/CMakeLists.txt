@@ -1,5 +1,6 @@
 ﻿list(APPEND LUSAN_UI
     ${LUSAN}/view/common/ui/LogExplorer.ui
+    ${LUSAN}/view/common/ui/LogSettings.ui
     ${LUSAN}/view/common/ui/NaviFileSystem.ui
     ${LUSAN}/view/common/ui/ProjectDirSettings.ui
     ${LUSAN}/view/common/ui/ProjectSettings.ui
