@@ -56,7 +56,6 @@ private:
     void saveData() const;
 
     std::unique_ptr<Ui::LogSettingsForm> mUi;                 //!< The user interface object.
-    std::unique_ptr<QValidator> mIpValidator;
     std::unique_ptr<QValidator> mPortValidator;
     bool mIsConnectedToConfiguredEndpoint;
 };

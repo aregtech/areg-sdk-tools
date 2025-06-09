@@ -17,7 +17,6 @@
 LogSettings::LogSettings(QWidget *parent)
     : QWidget{parent}
     , mUi{std::make_unique<Ui::LogSettingsForm>()}
-    , mIpValidator{std::make_unique<QRegularExpressionValidator>(QRegularExpression{R"([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})"}, this)}
     , mPortValidator{std::make_unique<QRegularExpressionValidator>(QRegularExpression{"[0-9]{2,5}"}, this)}
     , mIsConnectedToConfiguredEndpoint{false}
 {
@@ -38,7 +37,6 @@ LogSettings::~LogSettings()
 
 void LogSettings::setupDialog()
 {
-    mUi->ipAddressEdit->setValidator(mIpValidator.get());
     mUi->portNumberEdit->setValidator(mPortValidator.get());
 
     loadData();
