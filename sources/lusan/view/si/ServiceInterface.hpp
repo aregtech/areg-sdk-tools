@@ -21,7 +21,6 @@
  ************************************************************************/
 
 #include "lusan/view/common/MdiChild.hpp"
-#include "lusan/view/common/IEMdiWindow.hpp"
 
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
 #include "lusan/view/si/SIConstant.hpp"
@@ -31,14 +30,23 @@
 #include "lusan/view/si/SIMethod.hpp"
 #include "lusan/view/si/SIOverview.hpp"
 
-
 #include <QTabWidget>
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class MdiMainWindow;
+
+/**
+ * \brief   The ServiceInterface class represents the MDI window for the service interface in the Lusan application.
+ **/
 class ServiceInterface  : public MdiChild
-                        , public IEMdiWindow
 {
     Q_OBJECT
     
+//////////////////////////////////////////////////////////////////////////
+// Internal constants and types
+//////////////////////////////////////////////////////////////////////////
 private:
     
     static  uint32_t                   _count;
@@ -71,7 +79,13 @@ public:
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    ServiceInterface(const QString & filePath = QString(), QWidget *parent = nullptr);
+    /**
+     * \brief   Constructor for ServiceInterface.
+     * \param   wndMain    Pointer to the main MDI window.
+     * \param   filePath   The path of the file to open (optional).
+     * \param   parent     Pointer to the parent widget (optional).
+     **/
+    ServiceInterface(MdiMainWindow *wndMain, const QString & filePath = QString(), QWidget *parent = nullptr);
 
     virtual ~ServiceInterface(void);
 

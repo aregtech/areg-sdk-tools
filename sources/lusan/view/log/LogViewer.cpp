@@ -18,23 +18,16 @@
  ************************************************************************/
 
 #include "lusan/view/log/LogViewer.hpp"
-
 #include "ui/ui_LogViewer.h"
-#include "lusan/app/LusanApplication.hpp"
-#include "lusan/data/common/WorkspaceEntry.hpp"
+
 #include "lusan/model/log/LogViewerModel.hpp"
-#include "areg/base/File.hpp"
-#include "areglogger/client/LogObserverApi.h"
 
-#include <filesystem>
+LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
+    : MdiChild      (MdiChild::eMdiWindow::MdiLogViewer, wndMain, parent)
 
-LogViewer::LogViewer(QWidget *parent)
-    : MdiChild      (parent)
-    , IEMdiWindow   (IEMdiWindow::eMdiWindow::MdiLogViewer)
-
-    , ui(new Ui::LogViewer)
-    , mLogModel(nullptr)
-    , mMdiWindow(new QWidget())
+    , ui            (new Ui::LogViewer)
+    , mLogModel     (nullptr)
+    , mMdiWindow    (new QWidget())
 {
     ui->setupUi(mMdiWindow);
     

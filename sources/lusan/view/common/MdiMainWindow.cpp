@@ -20,7 +20,6 @@
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/log/LogViewer.hpp"
-#include "lusan/data/log/LogObserver.hpp"
 
 #include <QFileInfo>
 #include <QtWidgets>
@@ -109,8 +108,8 @@ MdiMainWindow::MdiMainWindow()
     _createDockWindows();
     _createMdiArea();
     
-    updateWindowMenu();
-    updateMenus();
+    onShowMenuWindow();
+    onSubWindowActivated(nullptr);
     readSettings();
 
     setWindowTitle(tr("Lusan"));
@@ -227,7 +226,7 @@ void MdiMainWindow::onFileNewLog()
     
     if (mLogViewer == nullptr)
     {
-        mLogViewer = new LogViewer(&mMdiArea);
+        mLogViewer = new LogViewer(this, &mMdiArea);
         mLiveLogWnd = mMdiArea.addSubWindow(mLogViewer);
         mLogViewer->setMdiSubwindow(mLiveLogWnd);
         mMdiArea.showMaximized();
@@ -388,7 +387,7 @@ void MdiMainWindow::setRecentFilesVisibility(bool visible)
     mFileSeparator->setVisible(visible);
 }
 
-void MdiMainWindow::updateRecentFileActions()
+void MdiMainWindow::onShowMenuRecent()
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
 
@@ -409,27 +408,7 @@ void MdiMainWindow::updateRecentFileActions()
     }
 }
 
-void MdiMainWindow::updateMenus()
-{
-    MdiChild* active = activeMdiChild();    
-    bool hasMdiChild = (active != nullptr);
-    mActFileSave.setEnabled(hasMdiChild);
-    mActFileSaveAs.setEnabled(hasMdiChild);
-    mActEditPaste.setEnabled(hasMdiChild);
-    mActFileClose.setEnabled(hasMdiChild);
-    mActFileCloseAll.setEnabled(hasMdiChild);
-    mActWindowsTile.setEnabled(hasMdiChild);
-    mActWindowsCascade.setEnabled(hasMdiChild);
-    mActWindowsNext.setEnabled(hasMdiChild);
-    mActWindowsPrev.setEnabled(hasMdiChild);
-    mActWindowMenuSeparator.setVisible(hasMdiChild);
-    
-    bool hasSelection = false;
-    mActEditCut.setEnabled(hasSelection);
-    mActEditCopy.setEnabled(hasSelection);
-}
-
-void MdiMainWindow::updateWindowMenu()
+void MdiMainWindow::onShowMenuWindow()
 {
     mWindowMenu->clear();
     mWindowMenu->addAction(&mActFileClose);
@@ -472,6 +451,38 @@ void MdiMainWindow::updateWindowMenu()
     }
 }
 
+void MdiMainWindow::onMdiChildClosed(MdiChild* mdiChild)
+{
+    emit signalWindowClosed(mdiChild);
+}
+
+void MdiMainWindow::onMdiChildCreated(MdiChild* mdiChild)
+{
+    emit signalWindowCreated(mdiChild);
+}
+
+void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
+{
+    MdiChild * mdiActive = mdiSubWindow != nullptr ? qobject_cast<MdiChild *>(mdiSubWindow->widget()) : nullptr;
+    bool hasMdiChild = (mdiActive != nullptr);
+    mActFileSave.setEnabled(hasMdiChild);
+    mActFileSaveAs.setEnabled(hasMdiChild);
+    mActEditPaste.setEnabled(hasMdiChild);
+    mActFileClose.setEnabled(hasMdiChild);
+    mActFileCloseAll.setEnabled(hasMdiChild);
+    mActWindowsTile.setEnabled(hasMdiChild);
+    mActWindowsCascade.setEnabled(hasMdiChild);
+    mActWindowsNext.setEnabled(hasMdiChild);
+    mActWindowsPrev.setEnabled(hasMdiChild);
+    mActWindowMenuSeparator.setVisible(hasMdiChild);
+
+    bool hasSelection = false;
+    mActEditCut.setEnabled(hasSelection);
+    mActEditCopy.setEnabled(hasSelection);
+
+    emit signalWindowActivated(mdiActive);
+}
+
 MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
 {
     QFileInfo info(filePath);
@@ -488,7 +499,7 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
 
 ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& filePath /*= QString()*/)
 {
-    ServiceInterface* child = new ServiceInterface(filePath, &mMdiArea);
+    ServiceInterface* child = new ServiceInterface(this, filePath, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
 
@@ -501,7 +512,7 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
 
 LogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QString()*/)
 {
-    LogViewer* child = new LogViewer(&mMdiArea);
+    LogViewer* child = new LogViewer(this, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();
@@ -627,7 +638,7 @@ void MdiMainWindow::_createMenus()
     mFileSeparator = mFileMenu->addSeparator();
 
     QMenu* recentMenu = mFileMenu->addMenu(tr("Recent..."));
-    connect(recentMenu, &QMenu::aboutToShow, this, &MdiMainWindow::updateRecentFileActions);
+    connect(recentMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuRecent);
     mActRecentFilesSubMenu = recentMenu->menuAction();
     for (int i = 0; i < MaxRecentFiles; ++i)
     {
@@ -654,7 +665,7 @@ void MdiMainWindow::_createMenus()
     mToolsMenu->addAction(&mActToolsOptions);
 
     mWindowMenu = menuBar()->addMenu(tr("&Window"));
-    connect(mWindowMenu, &QMenu::aboutToShow, this, &MdiMainWindow::updateWindowMenu);
+    connect(mWindowMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuWindow);
 
     menuBar()->addSeparator();
     mHelpMenu = menuBar()->addMenu(tr("&Help"));
@@ -704,7 +715,7 @@ void MdiMainWindow::_createDockWindows()
 void MdiMainWindow::_createMdiArea()
 {
     setCentralWidget(&mMdiArea);
-    connect(&mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::updateMenus);
+    connect(&mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::onSubWindowActivated);
 }
 
 void MdiMainWindow::readSettings()
