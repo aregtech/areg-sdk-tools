@@ -101,6 +101,9 @@ public:
      **/
     inline LogViewer* getLiveLogViewer(void) const;
 
+    /**
+     * \brief   Returns the active MDI child window.
+     **/
     inline MdiChild* getActiveWindow(void) const;
 
 signals:
@@ -126,6 +129,12 @@ signals:
      * \param   mdiChild    The MDI child window that is created.
      **/
     void signalWindowCreated(MdiChild* child);
+
+    void signalOptionsOpening(void);
+
+    void signalOptionsApplied(void);
+
+    void signalOptionsClosed(bool OKpressed);
 
 //////////////////////////////////////////////////////////////////////////
 // protected methods

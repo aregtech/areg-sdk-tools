@@ -72,6 +72,17 @@ private:
         , PrioCount         //!< The number of entries in the menu
     };
 
+    enum eLoggingStates
+    {
+          LoggingUndefined      = 0
+        , LoggingInitialized
+        , LoggingConnected
+        , LoggingStopped
+        , LoggingPaused
+        , LoggingRunning
+        , LoggingDisconnected
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -290,6 +301,8 @@ private slots:
     // Slot for saving log priority changes on the target configuration.
     void onSaveSettingsClicked(bool checked);
 
+    void onOptionsClicked(bool checked);
+
     // Slot. which triggered when the selection in the log scopes navigation is changed.
     void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
@@ -350,6 +363,7 @@ private:
     LogScopesModel*         mModel;         //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
+    eLoggingStates          mState;         //!< The variable to store live logging state.
     QAction*                mMenuActions[static_cast<int>(eLogActions::PrioCount)];   //!< The list of menu actions
 };
 

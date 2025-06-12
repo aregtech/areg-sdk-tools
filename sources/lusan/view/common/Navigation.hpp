@@ -124,6 +124,12 @@ private:
      **/
     void onMdiWindowActivated(MdiChild * mdiChild);
     
+    void onOptionsOpening(void);
+
+    void onOptionsApplied(void);
+
+    void onOptionsClosed(bool pressedOK);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
