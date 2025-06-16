@@ -19,10 +19,13 @@
 
 #include "lusan/view/common/ProjectDirSettings.hpp"
 #include "ui/ui_ProjectDirSettings.h"
+
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/view/common/ProjectSettings.hpp"
+
 #include <QFileDialog>
 
-ProjectDirSettings::ProjectDirSettings(QWidget *parent)
+ProjectDirSettings::ProjectDirSettings(ProjectSettings *parent)
     : QWidget(parent)
     , mUi(std::make_unique<Ui::projectDirSettingsDlg>())
 {

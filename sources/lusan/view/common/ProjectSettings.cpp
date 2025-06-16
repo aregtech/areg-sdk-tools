@@ -22,16 +22,18 @@
 #include "lusan/view/common/ProjectDirSettings.hpp"
 #include "lusan/view/common/WorkspaceManager.hpp"
 #include "lusan/view/common/LogSettings.hpp"
+#include "lusan/view/common/MdiMainWindow.hpp"
 
 #include <QAbstractItemView>
 #include <QtAssert>
 #include <QAbstractButton>
 
 
-ProjectSettings::ProjectSettings(QWidget *parent)
+ProjectSettings::ProjectSettings(MdiMainWindow* parent)
     : QDialog(parent)
     , mUi(std::make_unique<Ui::ProjectSettingsDlg>())
     , mSettingsStackedWidget(std::make_unique<QStackedWidget>(this))
+    , mMainWindow           (parent)
     , mModel                (this)
     , mDirSettings          (new ProjectDirSettings(this))
     , mWorkspaceManager     (new WorkspaceManager(this))
@@ -40,10 +42,22 @@ ProjectSettings::ProjectSettings(QWidget *parent)
     mUi->setupUi(this);
     setupDialog();
     connectSignals();
+
+    Q_ASSERT(mMainWindow != nullptr);
 }
 
 ProjectSettings::~ProjectSettings()
 {
+}
+
+void ProjectSettings::activatePage(eOptionPage page)
+{
+    if (page == eOptionPage::PageUndefined)
+        return;
+    else if (page < eOptionPage::PageCount)
+        selectPage(static_cast<int>(page));
+    else
+        Q_ASSERT_X(false, "Project Settings", "Invalid page index selected!");
 }
 
 void ProjectSettings::setupDialog()
@@ -99,23 +113,16 @@ void ProjectSettings::buttonClicked(QAbstractButton* button) const
         return;
     }
 
-    if (mSettingsStackedWidget->currentWidget() == mDirSettings)
-    {
-        mDirSettings->applyChanges();
-    }
-    else if (mSettingsStackedWidget->currentWidget() == mWorkspaceManager)
-    {
-        mWorkspaceManager->applyChanges();
-    }
-    else if (mSettingsStackedWidget->currentWidget() == mLogSettings)
-    {
-        mLogSettings->applyChanges();
-    }
+    mDirSettings->applyChanges();
+    mWorkspaceManager->applyChanges();
+    mLogSettings->applyChanges();
+
+    if (role == QDialogButtonBox::ButtonRole::ApplyRole)
+        emit mMainWindow->signalOptionsApplied();
 }
 
 void ProjectSettings::selectPage(int const index) const
 {
     selectSetting(index);
-
     mUi->settingsList->setCurrentIndex(mModel.index(index));
 }

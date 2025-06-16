@@ -32,6 +32,7 @@ class QAbstractButton;
 class ProjectDirSettings;
 class LogSettings;
 class WorkspaceManager;
+class MdiMainWindow;
 
 //////////////////////////////////////////////////////////////////////////
 // ProjectSettings class declaration
@@ -43,13 +44,34 @@ class WorkspaceManager;
 class ProjectSettings : public QDialog
 {
     Q_OBJECT
+    
+public:
+    enum class eOptionPage : int
+    {
+          PageUndefined     = -1
+        , PageProjectDirs   = 0
+        , PageWorkspace
+        , PageLogging
+        
+        , PageCount
+    };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit ProjectSettings(QWidget *parent = nullptr);
+    explicit ProjectSettings(MdiMainWindow *parent);
     virtual ~ProjectSettings(void);
+    
+public:
+    
+    inline ProjectDirSettings * getSettingProjectDirs(void);
+    
+    inline WorkspaceManager* getSettingWorkspace(void);
+    
+    inline LogSettings* getSettingLog(void);
+    
+    void activatePage(eOptionPage page);
     
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -96,12 +118,13 @@ private:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    std::unique_ptr<Ui::ProjectSettingsDlg> mUi;                 //!< The user interface object.
-    std::unique_ptr<QStackedWidget> mSettingsStackedWidget;      //!< The stacked widget to show the settings.
-    QStringListModel    mModel;                 //!< The model of the settings list.
-    ProjectDirSettings* mDirSettings;           //!< The directory settings.
-    WorkspaceManager*   mWorkspaceManager;
-    LogSettings*        mLogSettings;
+    std::unique_ptr<Ui::ProjectSettingsDlg> mUi;            //!< The user interface object.
+    std::unique_ptr<QStackedWidget> mSettingsStackedWidget; //!< The stacked widget to show the settings.
+    MdiMainWindow*      mMainWindow;                        //!< The main window of the application.
+    QStringListModel    mModel;                             //!< The model of the settings list.
+    ProjectDirSettings* mDirSettings;                       //!< The directory settings.
+    WorkspaceManager*   mWorkspaceManager;                  //!< The workspace settings.
+    LogSettings*        mLogSettings;                       //!< The log settings.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -112,5 +135,20 @@ private:
     ProjectSettings(ProjectSettings && /*src*/) noexcept = delete;
     ProjectSettings& operator = (ProjectSettings && /*src*/) noexcept = delete;
 };
+
+inline ProjectDirSettings * ProjectSettings::getSettingProjectDirs(void)
+{
+    return mDirSettings;
+}
+
+inline WorkspaceManager * ProjectSettings::getSettingWorkspace(void)
+{
+    return mWorkspaceManager;
+}
+
+inline LogSettings * ProjectSettings::getSettingLog(void)
+{
+    return mLogSettings;
+}
 
 #endif // LUSAN_VIEW_COMMON_PROJECTSETTINGS_HPP

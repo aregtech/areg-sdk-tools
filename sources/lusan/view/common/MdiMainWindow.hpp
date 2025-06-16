@@ -105,6 +105,8 @@ public:
      * \brief   Returns the active MDI child window.
      **/
     inline MdiChild* getActiveWindow(void) const;
+    
+    int showLogSettings(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation);
 
 signals:
 

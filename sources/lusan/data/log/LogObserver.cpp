@@ -257,7 +257,7 @@ void LogObserver::startupServiceInterface(Component & holder)
     
     if (mLogClient.isInitialized() == false)
     {
-        mLogClient.initialize(NELusanCommon::INIT_FILE.toStdString());
+        mLogClient.initialize(mConfigFile.getData());
     }
 
     QString address{ mLogClient.getLoggerAddress().c_str() };

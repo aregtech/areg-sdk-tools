@@ -37,6 +37,7 @@
 #include <QAction>
 #include <QMenu>
 #include <filesystem>
+#include "LogSettings.hpp"
 
 namespace
 {
@@ -544,18 +545,10 @@ void LogExplorer::onOptionsClicked(bool checked)
     LogObserver* log = LogObserver::getComponent();
     QString address = log != nullptr ? log->getConnectedAddress() : mAddress;
     uint16_t port = log != nullptr ? log->getConnectedPort() : mPort;
-    SQtring logFile = log != nullptr ? log-> : mInitLogFile;
-    if (mState == eLoggingStates::LoggingConnected)
-    {
-        if (log != nullptr)
-        {
-            mMainWindow->showLogSettings(log->getConnectedAddress(), log->getConnectedPort(), mInitLogFile, mLogLocation);
-        }
-    }
-    else
-    {
-        mMainWindow->showLogSettings(mAddress, mPort, mInitLogFile, mLogLocation);
-    }
+    QString logFile = log != nullptr ? log->getConfigDatabaseName() : mInitLogFile;
+    QString logLocation = log != nullptr ? log->getConfigDatabaseLocation() : mLogLocation;
+    
+    mMainWindow->showLogSettings(address, port, logFile, logLocation);
 }
 
 void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
