@@ -18,6 +18,15 @@
 #include <QMessageBox>
 #include <string>
 
+const QString   LogSettings::_textNoChanges         { tr("No data changed yet ...") };
+const QString   LogSettings::_textDataChanged       { tr("WARNING: Test the Log Collector Service connection before saving changes ...") };
+const QString   LogSettings::_textTestInProgress    { tr("WAITING: Test connection is in progress, make sure the Log Collector Service is configured and runs ...") };
+const QString   LogSettings::_textTestInterrupted   { tr("WARNING: The Log Collector Service connection data is updated, interrupting ongoing connection ...") };
+const QString   LogSettings::_textServiceConnected  { tr("RESULT: Connected to the Log Collector Service at %1:%2, waiting for messaging ...") };
+const QString   LogSettings::_textTestSucceeded     { tr("SUCCESS: Succeeded the Log Collector Service connection test, currently there are %1 connected log sources instances.") };
+const QString   LogSettings::_textConnectionFailed  { tr("ERROR: Failed to trigger connection to the Log Collector Service, check network connection and retry.") };
+const QString   LogSettings::_textTestFailed        { tr("FAILURE: Failed to connect to the Log Collector Service. Check connection data and try again.") };
+const QString   LogSettings::_textTestCanceled      { tr("WARNING: Connection to the Log Collector Service was interrupted") };
 
 LogSettings::LogSettings(ProjectSettings* parent)
     : QWidget       {parent}
@@ -29,6 +38,8 @@ LogSettings::LogSettings(ProjectSettings* parent)
     , mPort         {NESocket::InvalidPort}
     , mLogFileName  {}
     , mLogLocation  {}
+    , mTestConnect  {}
+    , mTestMessage  {}
 {
     ui->setupUi(this);
     setupDialog();
@@ -89,7 +100,8 @@ void LogSettings::setupDialog()
     textLogFileName()->setText(logFile);
     textIpAddress()->setText(address);
     textPortNumber()->setText(QString::number(port));
-    textConnectionStatus()->setText(tr("No changes yet..."));
+    textConnectionStatus()->setTextColor(QColor(Qt::gray));
+    textConnectionStatus()->setText(_textNoChanges);
     
     setFixedSize(size());
 }
@@ -112,10 +124,11 @@ void LogSettings::applyChanges()
     if (mCanSave == false)
     {
         QMessageBox::critical(this, tr("Error"), tr("The endpoint must be tested and must be working before saving the changes!"));
-        return;
     }
-
-    saveData();
+    else
+    {
+        saveData();
+    }
 }
 
 void LogSettings::setData(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
@@ -162,13 +175,13 @@ void LogSettings::onTestButtonClicked(bool checked)
 {
     if (mTestTriggered)
     {
-        LogCollectorClient& client = LogCollectorClient::getInstance();
-        static_cast<LogObserverBase &>(client).disconnect();
+        disconnect(mTestConnect);
+        disconnect(mTestMessage);
+        LogObserver::disconnect();
         LogObserver::releaseLogObserver();
-        disconnect(&client, &LogCollectorClient::signalLogServiceConnected, this, &LogSettings::onLogServiceConnected);
-        disconnect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &LogSettings::onLogInstancesConnected);
         
-        textConnectionStatus()->setText(tr("Warning: Connection to Log Collector Service was interrupted."));
+        textConnectionStatus()->setTextColor(QColor(Qt::magenta));
+        textConnectionStatus()->setText(_textTestCanceled);
         buttonTestConnection()->setText(tr("&Test"));
         mTestTriggered = false;
         
@@ -183,33 +196,30 @@ void LogSettings::onTestButtonClicked(bool checked)
 
     if (logLocation.isEmpty() || logFileName.isEmpty() || ipAddress.isEmpty() || (portNumber == NESocket::InvalidPort))
     {
-        QMessageBox::critical(this, tr("Error"), tr("Invalid Log Collector Service configuration, fileds cannot be invalid!"));
+        QMessageBox::critical(this, tr("Error"), tr("Invalid Log Collector Service configuration, fields cannot be invalid!"));
         return;
     }
     
-    if (LogObserver::isConnected())
-        LogObserver::disconnect();
-    
+    LogObserver::disconnect();
+    LogObserver::releaseLogObserver();
+
     LogCollectorClient& client = LogCollectorClient::getInstance();
-    if (client.isConnected())
-    {
-        static_cast<LogObserverBase &>(client).disconnect();
-        LogObserver::releaseLogObserver();
-    }
-    
-    connect(&client, &LogCollectorClient::signalLogServiceConnected, this, &LogSettings::onLogServiceConnected);
-    connect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &LogSettings::onLogInstancesConnected);
+    mTestConnect = connect(&client, &LogCollectorClient::signalLogServiceConnected, this, &LogSettings::onLogServiceConnected);
+    mTestMessage = connect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &LogSettings::onLogInstancesConnected);
     
     std::filesystem::path path(logLocation.toStdString());
     if (static_cast<LogObserverBase &>(client).connect(ipAddress.toStdString(), portNumber, path.string()) == false)
     {
-        disconnect(&client, &LogCollectorClient::signalLogServiceConnected, this, &LogSettings::onLogServiceConnected);
-        disconnect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &LogSettings::onLogInstancesConnected);
-        textConnectionStatus()->setText(tr("Error: Failed to trigger Log Collector Service connection. Check network connection!"));
+        disconnect(mTestConnect);
+        disconnect(mTestMessage);
+        textConnectionStatus()->setTextColor(QColor(Qt::darkRed));
+        textConnectionStatus()->setText(_textConnectionFailed);
     }
     else
     {
-        textConnectionStatus()->setText(tr("Waiting: The Log Collector Service connection is in progress..."));
+        mTestTriggered = true;
+        textConnectionStatus()->setTextColor(QColor(Qt::darkBlue));
+        textConnectionStatus()->setText(_textTestInProgress);
         buttonTestConnection()->setText(tr("Stop &Test"));
     }
 }
@@ -218,16 +228,19 @@ void LogSettings::onDataChanged()
 {
     if (mTestTriggered)
     {
-        LogCollectorClient& client = LogCollectorClient::getInstance();
-        static_cast<LogObserverBase &>(client).disconnect();
+        disconnect(mTestConnect);
+        disconnect(mTestMessage);
+
+        LogObserver::disconnect();
         LogObserver::releaseLogObserver();
-        disconnect(&client, &LogCollectorClient::signalLogServiceConnected, this, &LogSettings::onLogServiceConnected);
-        disconnect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &LogSettings::onLogInstancesConnected);
-        textConnectionStatus()->setText(tr("Warning: The connection data is updated, the Log Observer Service connection test is canceled..."));
+
+        textConnectionStatus()->setTextColor(QColor(Qt::magenta));
+        textConnectionStatus()->setText(_textTestInterrupted);
     }
     else
     {
-        textConnectionStatus()->setText(tr("Warning: Test Log Observer Service connection before save configuration"));
+        textConnectionStatus()->setTextColor(QColor(Qt::darkBlue));
+        textConnectionStatus()->setText(_textDataChanged);
     }
     
     buttonTestConnection()->setText(tr("&Test"));
@@ -245,19 +258,23 @@ void LogSettings::onLogServiceConnected(bool isConnected, const std::string& add
     {
         mAddress = address.c_str();
         mPort = port;
-        textConnectionStatus()->setText(tr("Result: Connected to Log Collector Service at %1:%2, waiting for messages...").arg(address.c_str()).arg(port));
+        textConnectionStatus()->setTextColor(QColor(Qt::green));
+        textConnectionStatus()->setText(_textServiceConnected.arg(address.c_str()).arg(port));
         LogCollectorClient::getInstance().requestInstances();
     }
     else
     {
-        LogCollectorClient& client = LogCollectorClient::getInstance();
-        static_cast<LogObserverBase &>(client).disconnect();
+        disconnect(mTestConnect);
+        disconnect(mTestMessage);
+
+        LogObserver::disconnect();
         LogObserver::releaseLogObserver();
-        disconnect(&client, &LogCollectorClient::signalLogServiceConnected, this, &LogSettings::onLogServiceConnected);
-        disconnect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &LogSettings::onLogInstancesConnected);
-        
-        mCanSave = false;
-        textConnectionStatus()->setText(tr("Error: Failed to connect to the Log Collector Service. Check data and network connection."));
+
+        if (mCanSave == false)
+        {
+            textConnectionStatus()->setTextColor(QColor(Qt::darkRed));
+            textConnectionStatus()->setText(_textTestFailed);
+        }
     }
 }
 
@@ -266,15 +283,17 @@ void LogSettings::onLogInstancesConnected(const std::vector< NEService::sService
     if (mTestTriggered == false)
         return;
     
-    LogCollectorClient& client = LogCollectorClient::getInstance();
-    static_cast<LogObserverBase &>(client).disconnect();
+    disconnect(mTestConnect);
+    disconnect(mTestMessage);
+
+    LogObserver::disconnect();
     LogObserver::releaseLogObserver();
-    disconnect(&client, &LogCollectorClient::signalLogServiceConnected, this, &LogSettings::onLogServiceConnected);
-    disconnect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &LogSettings::onLogInstancesConnected);
-    
-    textConnectionStatus()->setText(tr("Success: Succeeded Log Collector Service connection test, currently there are %1 connected log sources instances.").arg(instances.size()));
+
+    textConnectionStatus()->setTextColor(QColor(Qt::darkGreen));
+    textConnectionStatus()->setText(_textTestSucceeded.arg(instances.size()));
     buttonTestConnection()->setText(tr("&Test"));
     mCanSave = true;
+    mTestTriggered = false;
 }
 
 inline QLineEdit* LogSettings::textLogLocation(void) const
@@ -297,7 +316,7 @@ inline QLineEdit* LogSettings::textPortNumber(void) const
     return ui->editLogPort;
 }
 
-inline QLineEdit* LogSettings::textConnectionStatus(void) const
+inline QTextEdit* LogSettings::textConnectionStatus(void) const
 {
     return ui->textConnectStatus;
 }
