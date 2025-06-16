@@ -14,7 +14,7 @@
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/view/common/ProjectSettings.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
- *  \author      Tamas Csillag
+ *  \author      Tamas Csillag, Artak Avetyan
  *  \brief       Lusan application, options dialog.
  *
  ************************************************************************/
