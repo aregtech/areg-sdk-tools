@@ -152,7 +152,7 @@ private:
     //!< Returns the widget for the log location.
     inline QLineEdit* textLogLocation(void) const;
     
-    //!< Returns the widger for the log file name.
+    //!< Returns the widget for the log file name.
     inline QLineEdit* textLogFileName(void) const;
 
     //!< Returns the widget for the IP address or host name input to set the address of the log colletor service.
