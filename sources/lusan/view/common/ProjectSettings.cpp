@@ -118,7 +118,9 @@ void ProjectSettings::buttonClicked(QAbstractButton* button) const
     mLogSettings->applyChanges();
 
     if (role == QDialogButtonBox::ButtonRole::ApplyRole)
+    {
         emit mMainWindow->signalOptionsApplied();
+    }
 }
 
 void ProjectSettings::selectPage(int const index) const

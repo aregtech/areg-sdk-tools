@@ -24,6 +24,9 @@
 #include <QStringListModel>
 #include <memory>
 
+/************************************************************************
+ * Dependencies 
+ ************************************************************************/
 namespace Ui {
 class ProjectSettingsDlg;
 }
@@ -45,15 +48,20 @@ class ProjectSettings : public QDialog
 {
     Q_OBJECT
     
+//////////////////////////////////////////////////////////////////////////
+// Internal constants and types
+//////////////////////////////////////////////////////////////////////////
 public:
+
+    //!< The enumeration of the option pages.
     enum class eOptionPage : int
     {
-          PageUndefined     = -1
-        , PageProjectDirs   = 0
-        , PageWorkspace
-        , PageLogging
+          PageUndefined     = -1//!< Undefined page, used for error checking
+        , PageProjectDirs   = 0 //!< Page for project directories settings
+        , PageWorkspace         //!< Page for workspace settings
+        , PageLogging           //!< Page for logging settings
         
-        , PageCount
+        , PageCount             //!< Total number of pages
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -63,14 +71,30 @@ public:
     explicit ProjectSettings(MdiMainWindow *parent);
     virtual ~ProjectSettings(void);
     
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
 public:
-    
+
+    /**
+     * \brief   Returns the pointer to project settings widget.
+     **/
     inline ProjectDirSettings * getSettingProjectDirs(void);
-    
+
+    /**
+     * \brief   Returns the pointer to workspace settings widget.
+     **/
     inline WorkspaceManager* getSettingWorkspace(void);
-    
+
+    /**
+     * \brief   Returns the pointer to log settings widget.
+     **/
     inline LogSettings* getSettingLog(void);
-    
+
+    /**
+     * \brief   Activates the page in the settings dialog.
+     * \param   page    The page to activate.
+     **/
     void activatePage(eOptionPage page);
     
 //////////////////////////////////////////////////////////////////////////
@@ -135,6 +159,10 @@ private:
     ProjectSettings(ProjectSettings && /*src*/) noexcept = delete;
     ProjectSettings& operator = (ProjectSettings && /*src*/) noexcept = delete;
 };
+
+//////////////////////////////////////////////////////////////////////////
+// ProjectSettings inline methods
+//////////////////////////////////////////////////////////////////////////
 
 inline ProjectDirSettings * ProjectSettings::getSettingProjectDirs(void)
 {

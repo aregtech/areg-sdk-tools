@@ -39,15 +39,12 @@
 #include <filesystem>
 #include "LogSettings.hpp"
 
-namespace
+LogExplorer* _explorer{ nullptr };
+void LogExplorer::_logObserverStarted(void)
 {
-    LogExplorer* _explorer{ nullptr };
-    void _logObserverStarted(void)
+    if (_explorer != nullptr)
     {
-        if (_explorer != nullptr)
-        {
-            _explorer->setupLogSignals(true);
-        }
+        _explorer->setupLogSignals(true);
     }
 }
 
@@ -457,7 +454,7 @@ void LogExplorer::onConnectClicked(bool checked)
     if (checked)
     {
         mState = eLoggingStates::LoggingDisconnected;
-        LogObserver::createLogObserver(&_logObserverStarted);
+        LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
     }
     else
     {

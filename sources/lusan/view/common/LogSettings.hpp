@@ -15,7 +15,7 @@
  *  \file        lusan/view/common/ProjectSettings.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Tamas Csillag, Artak Avetyan
- *  \brief       Lusan application, options dialog.
+ *  \brief       Lusan application, Log Settings page of options dialog.
  *
  ************************************************************************/
 

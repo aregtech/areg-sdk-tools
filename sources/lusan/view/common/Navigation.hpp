@@ -119,15 +119,27 @@ private:
      **/
     void initSize();
 
+private slots:
+
     /**
      * \brief   Slot is triggered when the MDI window is activated.
      **/
     void onMdiWindowActivated(MdiChild * mdiChild);
-    
+
+    /**
+     * \brief   Slot is triggered when options dialog is opened.
+     **/
     void onOptionsOpening(void);
 
+    /**
+     * \brief   Slot is triggered when apply button in options dialog is pressed.
+     **/
     void onOptionsApplied(void);
 
+    /**
+     * \brief   Slot is triggered when options dialog is closed.
+     * \param   pressedOK   If true, OK button was pressed. Otherwise, Cancel button was pressed.
+     **/
     void onOptionsClosed(bool pressedOK);
 
 //////////////////////////////////////////////////////////////////////////

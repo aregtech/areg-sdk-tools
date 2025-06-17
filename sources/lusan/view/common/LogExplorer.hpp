@@ -97,6 +97,11 @@ public:
 
     virtual ~LogExplorer(void);
 
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+
     /**
      * \brief   Returns the IP-address of the log collector to connect.
      **/
@@ -125,14 +130,6 @@ public:
      * @param   port        The TCP port number of the log collector service to connect.
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
-
-    /**
-     * \brief   Connects or disconnects log observer related signals and slots.
-     * \param   setup   The flag, indicating whether the signals and slots are connector or not.
-     *                  If `true`, the signals and slots are connected.
-     *                  If `false`, the signals and slots are disconnected.
-     **/
-    void setupLogSignals(bool setup);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
@@ -227,6 +224,14 @@ private:
      **/
     bool updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio);
 
+    /**
+     * \brief   Connects or disconnects log observer related signals and slots.
+     * \param   setup   The flag, indicating whether the signals and slots are connector or not.
+     *                  If `true`, the signals and slots are connected.
+     *                  If `false`, the signals and slots are disconnected.
+     **/
+    void setupLogSignals(bool setup);
+
 private slots:
     /**
      * \brief   The slot is triggered when initializing and configuring the observer.
@@ -302,6 +307,7 @@ private slots:
     // Slot for saving log priority changes on the target configuration.
     void onSaveSettingsClicked(bool checked);
 
+    // Slot for opening the options dialog.
     void onOptionsClicked(bool checked);
 
     // Slot. which triggered when the selection in the log scopes navigation is changed.
@@ -350,6 +356,13 @@ private slots:
      * \param   mdiChild    The MDI child window that is activated.
      **/
     void onWindowActivated(MdiChild* mdiChild);
+
+//////////////////////////////////////////////////////////////////////////
+// Static methods
+//////////////////////////////////////////////////////////////////////////
+private:
+
+    static void _logObserverStarted(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
