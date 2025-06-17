@@ -75,8 +75,8 @@ void LogObserver::releaseLogObserver(void)
 
 void LogObserver::disconnect(void)
 {
-        static_cast<LogObserverBase &>(LogObserver::getClient()).disconnect();
-    }
+    static_cast<LogObserverBase &>(LogObserver::getClient()).disconnect();
+}
 
 bool LogObserver::pause(void)
 {
@@ -90,8 +90,8 @@ bool LogObserver::resume(void)
 
 void LogObserver::stop(void)
 {
-        LogObserver::getClient().stop();
-    }
+    LogObserver::getClient().stop();
+}
 
 bool LogObserver::restart(const QString& dbLocation)
 {
@@ -120,8 +120,8 @@ bool LogObserver::requestSaveConfig(ITEM_ID target /*= NEService::TARGET_ALL*/)
 
 void LogObserver::saveLoggerConfig(void)
 {
-        LogObserver::getClient().saveLoggerConfig();
-    }
+    LogObserver::getClient().saveLoggerConfig();
+}
 
 QString LogObserver::getConnectedAddress(void)
 {

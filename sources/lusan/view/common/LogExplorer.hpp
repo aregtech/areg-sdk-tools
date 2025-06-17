@@ -72,15 +72,16 @@ private:
         , PrioCount         //!< The number of entries in the menu
     };
 
+    //!< The logging states.
     enum eLoggingStates
     {
-          LoggingUndefined      = 0
-        , LoggingInitialized
-        , LoggingConnected
-        , LoggingStopped
-        , LoggingPaused
-        , LoggingRunning
-        , LoggingDisconnected
+          LoggingUndefined      = 0 //!< Undefined logging state
+        , LoggingInitialized        //!< Logging is initialized, but not connected
+        , LoggingConnected          //!< Logging is connected to the log collector service
+        , LoggingStopped            //!< Logging is stopped, but can be restarted
+        , LoggingPaused             //!< Logging is paused, but can be resumed
+        , LoggingRunning            //!< Logging is running and collecting logs
+        , LoggingDisconnected       //!< Logging is disconnected from the log collector service
     };
 
 //////////////////////////////////////////////////////////////////////////
