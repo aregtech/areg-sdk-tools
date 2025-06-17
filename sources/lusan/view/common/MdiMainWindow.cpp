@@ -19,7 +19,10 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
+#include "lusan/view/common/LogSettings.hpp"
 #include "lusan/view/log/LogViewer.hpp"
+
+#include "areg/base/NESocket.hpp"
 
 #include <QFileInfo>
 #include <QtWidgets>
@@ -183,6 +186,23 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
         mLogViewer = nullptr;
         mLiveLogWnd = nullptr;
     }
+}
+
+int MdiMainWindow::showLogSettings(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
+{
+    ProjectSettings settings(this);
+
+    emit signalOptionsOpening();
+    if ((address.isEmpty() == false) && (port != NESocket::InvalidPort) && (logFile.isEmpty() == false) && (logLocation.isEmpty() == false))
+    {
+        settings.getSettingLog()->setData(address, port, logFile, logLocation);
+    }
+    
+    settings.activatePage(ProjectSettings::eOptionPage::PageLogging);
+    int result = settings.exec();
+    emit signalOptionsClosed(result == static_cast<int>(QDialog::Accepted));
+
+    return result;
 }
 
 void MdiMainWindow::closeEvent(QCloseEvent* event)
@@ -349,7 +369,9 @@ void MdiMainWindow::onViewStatus()
 void MdiMainWindow::onToolsOptions(void)
 {
     ProjectSettings settings(this);
-    settings.exec();
+    emit signalOptionsOpening();
+    int result = settings.exec();
+    emit signalOptionsClosed(result == static_cast<int>(QDialog::Accepted));
 }
 
 void MdiMainWindow::onHelpAbout()

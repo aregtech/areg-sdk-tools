@@ -19,11 +19,14 @@
 
 #include "lusan/view/common/WorkspaceManager.hpp"
 #include "ui/ui_WorkspaceManager.h"
+
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
+#include "lusan/view/common/ProjectSettings.hpp"
+
 #include <algorithm>
 
-WorkspaceManager::WorkspaceManager(QWidget *parent)
+WorkspaceManager::WorkspaceManager(ProjectSettings* parent)
     : QWidget(parent)
     , mUi(std::make_unique<Ui::workspaceManager>())
     , mModifiedWorkspaces()

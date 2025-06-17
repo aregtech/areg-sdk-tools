@@ -37,16 +37,14 @@
 #include <QAction>
 #include <QMenu>
 #include <filesystem>
+#include "LogSettings.hpp"
 
-namespace
+LogExplorer* _explorer{ nullptr };
+void LogExplorer::_logObserverStarted(void)
 {
-    LogExplorer* _explorer{ nullptr };
-    void _logObserverStarted(void)
+    if (_explorer != nullptr)
     {
-        if (_explorer != nullptr)
-        {
-            _explorer->setupLogSignals(true);
-        }
+        _explorer->setupLogSignals(true);
     }
 }
 
@@ -62,6 +60,7 @@ LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
     , mModel        (nullptr)
     , mSelModel     (nullptr)
     , mSignalsActive(false)
+    , mState        (eLoggingStates::LoggingUndefined)
 {
     _explorer = this;
     for (int i = 0; i < static_cast<int>(eLogActions::PrioCount); ++ i)
@@ -204,6 +203,7 @@ void LogExplorer::setupSignals(void)
     connect(ctrlLogDebug()      , &QToolButton::clicked, this, &LogExplorer::onPrioDebugClicked);
     connect(ctrlLogScopes()     , &QToolButton::clicked, this, &LogExplorer::onPrioScopesClicked);
     connect(ctrlSaveSettings()  , &QToolButton::clicked, this, &LogExplorer::onSaveSettingsClicked);
+    connect(ctrlSettings()      , &QToolButton::clicked, this, &LogExplorer::onOptionsClicked);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested, this, &LogExplorer::onTreeViewContextMenuRequested);
 
     connect(mMainWindow         , &MdiMainWindow::signalWindowActivated , this  , &LogExplorer::onWindowActivated);
@@ -369,8 +369,9 @@ void LogExplorer::onLogObserverConfigured(bool isEnabled, const QString& address
     ctrlConnect()->setIcon(QIcon::fromTheme(QString::fromUtf8("network-offline")));
     ctrlConnect()->setToolTip(isEnabled ? tr("Connect to log collector") : tr("Logging is not enabled"));
     
-    mAddress = address;
-    mPort = port;
+    mAddress= address;
+    mPort   = port;
+    mState  = eLoggingStates::LoggingInitialized;
 }
 
 void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const QString& dbLocation, const QString& dbUser)
@@ -383,6 +384,7 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
 {
     if (isConnected)
     {
+        mState = eLoggingStates::LoggingConnected;
         mModel->release();
         mModel->initialize();
     }
@@ -390,6 +392,10 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     {
         mSelModel->reset();
         mModel->release();
+        if (mState == eLoggingStates::LoggingConnected)
+        {
+            mState = eLoggingStates::LoggingDisconnected;
+        }
     }
 
     enableButtons(QModelIndex());
@@ -447,7 +453,8 @@ void LogExplorer::onConnectClicked(bool checked)
 {
     if (checked)
     {
-        LogObserver::createLogObserver(&_logObserverStarted);
+        mState = eLoggingStates::LoggingDisconnected;
+        LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
     }
     else
     {
@@ -528,6 +535,17 @@ void LogExplorer::onSaveSettingsClicked(bool checked)
     {
         mModel->saveLogScopePriority(QModelIndex());
     }
+}
+
+void LogExplorer::onOptionsClicked(bool checked)
+{
+    LogObserver* log = LogObserver::getComponent();
+    QString address = log != nullptr ? log->getConnectedAddress() : mAddress;
+    uint16_t port = log != nullptr ? log->getConnectedPort() : mPort;
+    QString logFile = log != nullptr ? log->getConfigDatabaseName() : mInitLogFile;
+    QString logLocation = log != nullptr ? log->getConfigDatabaseLocation() : mLogLocation;
+    
+    mMainWindow->showLogSettings(address, port, logFile, logLocation);
 }
 
 void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)

@@ -72,6 +72,18 @@ private:
         , PrioCount         //!< The number of entries in the menu
     };
 
+    //!< The logging states.
+    enum eLoggingStates
+    {
+          LoggingUndefined      = 0 //!< Undefined logging state
+        , LoggingInitialized        //!< Logging is initialized, but not connected
+        , LoggingConnected          //!< Logging is connected to the log collector service
+        , LoggingStopped            //!< Logging is stopped, but can be restarted
+        , LoggingPaused             //!< Logging is paused, but can be resumed
+        , LoggingRunning            //!< Logging is running and collecting logs
+        , LoggingDisconnected       //!< Logging is disconnected from the log collector service
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -84,6 +96,11 @@ public:
     LogExplorer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
     virtual ~LogExplorer(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
 
     /**
      * \brief   Returns the IP-address of the log collector to connect.
@@ -113,14 +130,6 @@ public:
      * @param   port        The TCP port number of the log collector service to connect.
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
-
-    /**
-     * \brief   Connects or disconnects log observer related signals and slots.
-     * \param   setup   The flag, indicating whether the signals and slots are connector or not.
-     *                  If `true`, the signals and slots are connected.
-     *                  If `false`, the signals and slots are disconnected.
-     **/
-    void setupLogSignals(bool setup);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
@@ -215,6 +224,14 @@ private:
      **/
     bool updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio);
 
+    /**
+     * \brief   Connects or disconnects log observer related signals and slots.
+     * \param   setup   The flag, indicating whether the signals and slots are connector or not.
+     *                  If `true`, the signals and slots are connected.
+     *                  If `false`, the signals and slots are disconnected.
+     **/
+    void setupLogSignals(bool setup);
+
 private slots:
     /**
      * \brief   The slot is triggered when initializing and configuring the observer.
@@ -290,6 +307,9 @@ private slots:
     // Slot for saving log priority changes on the target configuration.
     void onSaveSettingsClicked(bool checked);
 
+    // Slot for opening the options dialog.
+    void onOptionsClicked(bool checked);
+
     // Slot. which triggered when the selection in the log scopes navigation is changed.
     void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
@@ -338,6 +358,13 @@ private slots:
     void onWindowActivated(MdiChild* mdiChild);
 
 //////////////////////////////////////////////////////////////////////////
+// Static methods
+//////////////////////////////////////////////////////////////////////////
+private:
+
+    static void _logObserverStarted(void);
+
+//////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
@@ -350,6 +377,7 @@ private:
     LogScopesModel*         mModel;         //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
+    eLoggingStates          mState;         //!< The variable to store live logging state.
     QAction*                mMenuActions[static_cast<int>(eLogActions::PrioCount)];   //!< The list of menu actions
 };
 

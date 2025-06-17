@@ -135,3 +135,21 @@ void Navigation::onMdiWindowActivated(MdiChild* mdiChild)
         }
     }
 }
+
+void Navigation::onOptionsOpening(void)
+{
+    mFileSystem.optionOpenning();
+    mLogExplorer.optionOpenning();
+}
+
+void Navigation::onOptionsApplied(void)
+{
+    mFileSystem.optionApplied();
+    mLogExplorer.optionApplied();
+}
+
+void Navigation::onOptionsClosed(bool pressedOK)
+{
+    mFileSystem.optionClosed(pressedOK);
+    mLogExplorer.optionClosed(pressedOK);
+}

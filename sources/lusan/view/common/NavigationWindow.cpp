@@ -26,3 +26,15 @@ NavigationWindow::NavigationWindow(eNavigationWindow naviWindow, MdiMainWindow *
     , mMainWindow       (wndMain)
 {
 }
+
+void NavigationWindow::optionOpenning(void)
+{
+}
+
+void NavigationWindow::optionApplied(void)
+{
+}
+
+void NavigationWindow::optionClosed(bool OKpressed)
+{
+}

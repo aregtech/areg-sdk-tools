@@ -209,9 +209,7 @@ LogObserver* LogObserver::getComponent(void)
 
 LogCollectorClient& LogObserver::getClient(void)
 {
-    LogObserver* comp{ LogObserver::getComponent() };
-    ASSERT(comp != nullptr);
-    return comp->mLogClient;
+    return LogCollectorClient::getInstance();
 }
 
 LogObserver::LogObserver(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread, NEMemory::uAlign OPT /* data */)
@@ -257,7 +255,7 @@ void LogObserver::startupServiceInterface(Component & holder)
     
     if (mLogClient.isInitialized() == false)
     {
-        mLogClient.initialize(NELusanCommon::INIT_FILE.toStdString());
+        mLogClient.initialize(mConfigFile.getData());
     }
 
     QString address{ mLogClient.getLoggerAddress().c_str() };

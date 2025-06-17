@@ -29,6 +29,7 @@ namespace Ui {
 class workspaceManager;
 }
 class WorkspaceEntry;
+class ProjectSettings;
 
 /**
  * \brief   This class is managing the workspace settings.
@@ -60,7 +61,7 @@ private:
 // constructors / destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit WorkspaceManager(QWidget *parent = nullptr);
+    explicit WorkspaceManager(ProjectSettings *parent);
     virtual ~WorkspaceManager();
 
 //////////////////////////////////////////////////////////////////////////

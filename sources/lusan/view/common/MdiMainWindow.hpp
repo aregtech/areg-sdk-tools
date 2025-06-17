@@ -70,6 +70,13 @@ public:
      **/
     bool openFile(const QString& fileName);
 
+    /**
+     * \brief   Call to notify the main window that application is connected to log collector service and is ready to receive log messages.
+     * \param   isConnected   True if connected, false if disconnected.
+     * \param   address       The IP address of the log collector service.
+     * \param   port          The TCP port number of the log collector service.
+     * \param   dbPath        The path to the database file, if any. If empty, no database is used.
+     **/
     void logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath);
 
     /**
@@ -101,8 +108,24 @@ public:
      **/
     inline LogViewer* getLiveLogViewer(void) const;
 
+    /**
+     * \brief   Returns the active MDI child window.
+     **/
     inline MdiChild* getActiveWindow(void) const;
 
+    /**
+     * \brief   Call to show the options dialog with active log setting page.
+     * \param   address        The IP address of the log collector service.
+     * \param   port           The TCP port number of the log collector service.
+     * \param   logFile        The name of the log file.
+     * \param   logLocation    The directory where the log file is stored.
+     * \return  The result of the dialog, 0 if canceled, 1 if OK pressed.
+     **/
+    int showLogSettings(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation);
+
+//////////////////////////////////////////////////////////////////////////
+// Signals
+//////////////////////////////////////////////////////////////////////////
 signals:
 
 /************************************************************************
@@ -126,6 +149,22 @@ signals:
      * \param   mdiChild    The MDI child window that is created.
      **/
     void signalWindowCreated(MdiChild* child);
+
+    /**
+     * \brief   The signal triggered when the options dialog is opened.
+     **/
+    void signalOptionsOpening(void);
+
+    /**
+     * \brief   The signal triggered when the options dialog is applied.
+     **/
+    void signalOptionsApplied(void);
+
+    /**
+     * \brief   The signal triggered when the options dialog is closed.
+     * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
+     **/
+    void signalOptionsClosed(bool OKpressed);
 
 //////////////////////////////////////////////////////////////////////////
 // protected methods
@@ -311,8 +350,6 @@ private:
      * \brief   Creates the MDI area for managing sub-windows.
      **/
     void _createMdiArea();
-
-    void _setupSignals(void);
 
     /**
      * \brief   Reads the settings for the main window.

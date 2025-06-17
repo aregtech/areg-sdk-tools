@@ -24,6 +24,9 @@
 #include <QStringListModel>
 #include <memory>
 
+/************************************************************************
+ * Dependencies 
+ ************************************************************************/
 namespace Ui {
 class ProjectSettingsDlg;
 }
@@ -32,6 +35,7 @@ class QAbstractButton;
 class ProjectDirSettings;
 class LogSettings;
 class WorkspaceManager;
+class MdiMainWindow;
 
 //////////////////////////////////////////////////////////////////////////
 // ProjectSettings class declaration
@@ -43,13 +47,55 @@ class WorkspaceManager;
 class ProjectSettings : public QDialog
 {
     Q_OBJECT
+    
+//////////////////////////////////////////////////////////////////////////
+// Internal constants and types
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    //!< The enumeration of the option pages.
+    enum class eOptionPage : int
+    {
+          PageUndefined     = -1//!< Undefined page, used for error checking
+        , PageProjectDirs   = 0 //!< Page for project directories settings
+        , PageWorkspace         //!< Page for workspace settings
+        , PageLogging           //!< Page for logging settings
+        
+        , PageCount             //!< Total number of pages
+    };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit ProjectSettings(QWidget *parent = nullptr);
+    explicit ProjectSettings(MdiMainWindow *parent);
     virtual ~ProjectSettings(void);
+    
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the pointer to project settings widget.
+     **/
+    inline ProjectDirSettings * getSettingProjectDirs(void);
+
+    /**
+     * \brief   Returns the pointer to workspace settings widget.
+     **/
+    inline WorkspaceManager* getSettingWorkspace(void);
+
+    /**
+     * \brief   Returns the pointer to log settings widget.
+     **/
+    inline LogSettings* getSettingLog(void);
+
+    /**
+     * \brief   Activates the page in the settings dialog.
+     * \param   page    The page to activate.
+     **/
+    void activatePage(eOptionPage page);
     
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -96,12 +142,13 @@ private:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    std::unique_ptr<Ui::ProjectSettingsDlg> mUi;                 //!< The user interface object.
-    std::unique_ptr<QStackedWidget> mSettingsStackedWidget;      //!< The stacked widget to show the settings.
-    QStringListModel    mModel;                 //!< The model of the settings list.
-    ProjectDirSettings* mDirSettings;           //!< The directory settings.
-    WorkspaceManager*   mWorkspaceManager;
-    LogSettings*        mLogSettings;
+    std::unique_ptr<Ui::ProjectSettingsDlg> mUi;            //!< The user interface object.
+    std::unique_ptr<QStackedWidget> mSettingsStackedWidget; //!< The stacked widget to show the settings.
+    MdiMainWindow*      mMainWindow;                        //!< The main window of the application.
+    QStringListModel    mModel;                             //!< The model of the settings list.
+    ProjectDirSettings* mDirSettings;                       //!< The directory settings.
+    WorkspaceManager*   mWorkspaceManager;                  //!< The workspace settings.
+    LogSettings*        mLogSettings;                       //!< The log settings.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -112,5 +159,24 @@ private:
     ProjectSettings(ProjectSettings && /*src*/) noexcept = delete;
     ProjectSettings& operator = (ProjectSettings && /*src*/) noexcept = delete;
 };
+
+//////////////////////////////////////////////////////////////////////////
+// ProjectSettings inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline ProjectDirSettings * ProjectSettings::getSettingProjectDirs(void)
+{
+    return mDirSettings;
+}
+
+inline WorkspaceManager * ProjectSettings::getSettingWorkspace(void)
+{
+    return mWorkspaceManager;
+}
+
+inline LogSettings * ProjectSettings::getSettingLog(void)
+{
+    return mLogSettings;
+}
 
 #endif // LUSAN_VIEW_COMMON_PROJECTSETTINGS_HPP
