@@ -37,7 +37,6 @@
 #include <QAction>
 #include <QMenu>
 #include <filesystem>
-#include "LogSettings.hpp"
 
 LogExplorer* _explorer{ nullptr };
 void LogExplorer::_logObserverStarted(void)
@@ -371,7 +370,7 @@ void LogExplorer::onLogObserverConfigured(bool isEnabled, const QString& address
     
     mAddress= address;
     mPort   = port;
-    mState  = eLoggingStates::LoggingInitialized;
+    mState  = eLoggingStates::LoggingConfigured;
 }
 
 void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const QString& dbLocation, const QString& dbUser)
@@ -392,7 +391,7 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     {
         mSelModel->reset();
         mModel->release();
-        if (isConnected())
+        if (this->isConnected())
         {
             mState = eLoggingStates::LoggingDisconnected;
         }
@@ -546,7 +545,7 @@ void LogExplorer::onOptionsClicked(bool checked)
     QString logFile = log != nullptr ? log->getConfigDatabaseName() : mInitLogFile;
     QString logLocation = log != nullptr ? log->getConfigDatabaseLocation() : mLogLocation;
     
-    mMainWindow->showLogSettings(address, port, logFile, logLocation);
+    mMainWindow->showOptionPageLogging(address, port, logFile, logLocation);
 }
 
 void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)

@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_VIEW_COMMON_LOGSETTINGS_HPP
-#define LUSAN_VIEW_COMMON_LOGSETTINGS_HPP
+﻿#ifndef LUSAN_VIEW_COMMON_OPTIONPAGELOGGING_HPP
+#define LUSAN_VIEW_COMMON_OPTIONPAGELOGGING_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/ProjectSettings.hpp
+ *  \file        lusan/view/common/OptionPageLogging.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Tamas Csillag, Artak Avetyan
  *  \brief       Lusan application, Log Settings page of options dialog.
@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include <QWidget>
+#include "lusan/view/common/OptionPageBase.hpp"
 
 #include "lusan/common/NELusanCommon.hpp"
 #include "areg/component/NEService.hpp"
@@ -34,7 +34,7 @@
   * Dependencies
   ************************************************************************/
 namespace Ui {
-    class LogSettingsForm;
+    class OptionPageLoggingForm;
 }
 class ProjectSettings;
 class QLineEdit;
@@ -44,7 +44,7 @@ class QTextEdit;
 /**
  * \brief   User interface for configuring log settings in the Lusan application.
  **/
-class LogSettings : public QWidget
+class OptionPageLogging : public OptionPageBase
 {
     Q_OBJECT
 
@@ -67,19 +67,30 @@ private:
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit LogSettings(ProjectSettings *parent);
-    explicit LogSettings(ProjectSettings *parent, const QString& address, uint16_t port, const QString &logFile, const QString &logLocation);
-    ~LogSettings() override;
+    explicit OptionPageLogging(ProjectSettings *parent);
+    explicit OptionPageLogging(ProjectSettings *parent, const QString& address, uint16_t port, const QString &logFile, const QString &logLocation);
+    ~OptionPageLogging() override;
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Call when the option should apply the changes.
+     **/
+    virtual void applyChanges(void) override;
+
+    /**
+     * \brief   Call when the option page is closing.
+     * \param   OKpressed   If true, the user pressed OK button, otherwise Cancel button.
+     **/
+    virtual void closingOptions(bool OKpressed) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
 public:
-
-    /**
-     * \brief   Applies the changes made in the log settings.
-     **/
-    void applyChanges();
 
     /**
      * \brief   Sets the log settings data.
@@ -89,8 +100,6 @@ public:
      * \param   logLocation    The directory where the log file is stored.
      **/
     void setData(const QString & address, uint16_t port, const QString & logFile, const QString & logLocation);
-
-    void closingSettings(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -112,6 +121,10 @@ private slots:
      * \brief   Slot triggered when data in the log settings is changed.
      **/
     void onDataChanged();
+
+    void onLogLocationChanged(void);
+
+    void onLogFileNameChanged(void);
 
     /**
      * \brief   Slot triggered when the log service connection status changes.
@@ -176,7 +189,7 @@ private:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    std::unique_ptr<Ui::LogSettingsForm>    ui;             //!< The user interface object.
+    std::unique_ptr<Ui::OptionPageLoggingForm>    ui;             //!< The user interface object.
     QRegularExpressionValidator             mPortValidator; //!< The validator for the port number input.
     bool                                    mTestTriggered; //!< Flag indicating if the test connection is triggered.
     bool                                    mCanSave;       //!< Flag indicating if the settings can be saved.
@@ -191,12 +204,12 @@ private:
 // Forbidden calls.
 //////////////////////////////////////////////////////////////////////////
 private:
-    LogSettings(void) = delete; // Disable default constructor
-    LogSettings(LogSettings const&) = delete;
-    LogSettings& operator= (LogSettings const&) = delete;
-    LogSettings(LogSettings&&) noexcept = delete;
-    LogSettings& operator= (LogSettings&&) noexcept = delete;
+    OptionPageLogging(void) = delete; // Disable default constructor
+    OptionPageLogging(OptionPageLogging const&) = delete;
+    OptionPageLogging& operator= (OptionPageLogging const&) = delete;
+    OptionPageLogging(OptionPageLogging&&) noexcept = delete;
+    OptionPageLogging& operator= (OptionPageLogging&&) noexcept = delete;
 
 };
 
-#endif // LUSAN_VIEW_COMMON_LOGSETTINGS_HPP
+#endif // LUSAN_VIEW_COMMON_OPTIONPAGELOGGING_HPP

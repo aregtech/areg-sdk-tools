@@ -19,7 +19,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
-#include "lusan/view/common/LogSettings.hpp"
+#include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/log/LogViewer.hpp"
 
 #include "areg/base/NESocket.hpp"
@@ -188,7 +188,7 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
     }
 }
 
-int MdiMainWindow::showLogSettings(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
+int MdiMainWindow::showOptionPageLogging(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
 {
     ProjectSettings settings(this);
 

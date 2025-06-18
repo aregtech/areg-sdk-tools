@@ -10,14 +10,14 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/NaviFileSystem.cpp
     ${LUSAN}/view/common/Navigation.cpp
     ${LUSAN}/view/common/NavigationWindow.cpp
+    ${LUSAN}/view/common/OptionPageBase.cpp
+    ${LUSAN}/view/common/OptionPageLogging.cpp
+    ${LUSAN}/view/common/OptionPageProjectDirs.cpp
+    ${LUSAN}/view/common/OptionPageWorkspace.cpp
+    ${LUSAN}/view/common/ProjectSettings.cpp
     ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/common/Workspace.cpp
     ${LUSAN}/view/common/WorkspaceFileDialog.cpp
-    ${LUSAN}/view/common/OptionPageBase.cpp
-    ${LUSAN}/view/common/ProjectDirSettings.cpp
-    ${LUSAN}/view/common/ProjectSettings.cpp
-    ${LUSAN}/view/common/WorkspaceManager.cpp
-    ${LUSAN}/view/common/LogSettings.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -30,12 +30,12 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/NaviFileSystem.hpp
     ${LUSAN}/view/common/Navigation.hpp
     ${LUSAN}/view/common/NavigationWindow.hpp
+    ${LUSAN}/view/common/OptionPageBase.hpp
+    ${LUSAN}/view/common/OptionPageLogging.hpp
+    ${LUSAN}/view/common/OptionPageProjectDirs.hpp
+    ${LUSAN}/view/common/OptionPageWorkspace.hpp
+    ${LUSAN}/view/common/ProjectSettings.hpp
     ${LUSAN}/view/common/TableCell.hpp
     ${LUSAN}/view/common/Workspace.hpp
     ${LUSAN}/view/common/WorkspaceFileDialog.hpp
-    ${LUSAN}/view/common/OptionPageBase.hpp
-    ${LUSAN}/view/common/ProjectDirSettings.hpp
-    ${LUSAN}/view/common/ProjectSettings.hpp
-    ${LUSAN}/view/common/WorkspaceManager.hpp
-    ${LUSAN}/view/common/LogSettings.hpp
 )

@@ -25,6 +25,8 @@
 #include <QWidget>
 #include "areg/base/GEMacros.h"
 
+class ProjectSettings;
+
 class OptionPageBase : public QWidget
 {
 //////////////////////////////////////////////////////////////////////////
@@ -35,11 +37,31 @@ protected:
 
     virtual ~OptionPageBase(void) = default;
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
 public:
 
-    virtual bool applyChanges(void);
+    /**
+     * \brief   Call when the option should apply the changes.
+     **/
+    virtual void applyChanges(void);
 
+    /**
+     * \brief   Call when the option page is closing.
+     * \param   OKpressed   If true, the user pressed OK button, otherwise Cancel button.
+     **/
     virtual void closingOptions(bool OKpressed);
+
+public:
+
+    inline bool isDataModified(void) const;
+
+    inline void setDataModified(bool modified);
+
+private:
+
+    bool    mDataModified;
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -48,5 +70,19 @@ private:
     OptionPageBase(void) = delete;
     DECLARE_NOCOPY_NOMOVE(OptionPageBase);
 };
+
+//////////////////////////////////////////////////////////////////////////
+// OptionPageBase inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool OptionPageBase::isDataModified(void) const
+{
+    return mDataModified;
+}
+
+inline void OptionPageBase::setDataModified(bool modified)
+{
+    mDataModified = modified;
+}
 
 #endif  // LUSAN_VIEW_COMMON_OPTIONPAGEBASE_HPP

@@ -32,9 +32,9 @@ class ProjectSettingsDlg;
 }
 
 class QAbstractButton;
-class ProjectDirSettings;
-class LogSettings;
-class WorkspaceManager;
+class OptionPageProjectDirs;
+class OptionPageLogging;
+class OptionPageWorkspace;
 class MdiMainWindow;
 
 //////////////////////////////////////////////////////////////////////////
@@ -79,17 +79,17 @@ public:
     /**
      * \brief   Returns the pointer to project settings widget.
      **/
-    inline ProjectDirSettings * getSettingProjectDirs(void);
+    inline OptionPageProjectDirs * getSettingProjectDirs(void);
 
     /**
      * \brief   Returns the pointer to workspace settings widget.
      **/
-    inline WorkspaceManager* getSettingWorkspace(void);
+    inline OptionPageWorkspace* getSettingWorkspace(void);
 
     /**
      * \brief   Returns the pointer to log settings widget.
      **/
-    inline LogSettings* getSettingLog(void);
+    inline OptionPageLogging* getSettingLog(void);
 
     /**
      * \brief   Activates the page in the settings dialog.
@@ -146,9 +146,9 @@ private:
     std::unique_ptr<QStackedWidget> mSettingsStackedWidget; //!< The stacked widget to show the settings.
     MdiMainWindow*      mMainWindow;                        //!< The main window of the application.
     QStringListModel    mModel;                             //!< The model of the settings list.
-    ProjectDirSettings* mDirSettings;                       //!< The directory settings.
-    WorkspaceManager*   mWorkspaceManager;                  //!< The workspace settings.
-    LogSettings*        mLogSettings;                       //!< The log settings.
+    OptionPageProjectDirs* mDirSettings;                       //!< The directory settings.
+    OptionPageWorkspace*   mOptionPageWorkspace;                  //!< The workspace settings.
+    OptionPageLogging*        mOptionPageLogging;                       //!< The log settings.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -164,19 +164,19 @@ private:
 // ProjectSettings inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline ProjectDirSettings * ProjectSettings::getSettingProjectDirs(void)
+inline OptionPageProjectDirs * ProjectSettings::getSettingProjectDirs(void)
 {
     return mDirSettings;
 }
 
-inline WorkspaceManager * ProjectSettings::getSettingWorkspace(void)
+inline OptionPageWorkspace * ProjectSettings::getSettingWorkspace(void)
 {
-    return mWorkspaceManager;
+    return mOptionPageWorkspace;
 }
 
-inline LogSettings * ProjectSettings::getSettingLog(void)
+inline OptionPageLogging * ProjectSettings::getSettingLog(void)
 {
-    return mLogSettings;
+    return mOptionPageLogging;
 }
 
 #endif // LUSAN_VIEW_COMMON_PROJECTSETTINGS_HPP

@@ -19,9 +19,9 @@
 
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "ui/ui_ProjectSettings.h"
-#include "lusan/view/common/ProjectDirSettings.hpp"
-#include "lusan/view/common/WorkspaceManager.hpp"
-#include "lusan/view/common/LogSettings.hpp"
+#include "lusan/view/common/OptionPageProjectDirs.hpp"
+#include "lusan/view/common/OptionPageWorkspace.hpp"
+#include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include <QAbstractItemView>
@@ -35,9 +35,9 @@ ProjectSettings::ProjectSettings(MdiMainWindow* parent)
     , mSettingsStackedWidget(std::make_unique<QStackedWidget>(this))
     , mMainWindow           (parent)
     , mModel                (this)
-    , mDirSettings          (new ProjectDirSettings(this))
-    , mWorkspaceManager     (new WorkspaceManager(this))
-    , mLogSettings          (new LogSettings(this))
+    , mDirSettings          (new OptionPageProjectDirs(this))
+    , mOptionPageWorkspace     (new OptionPageWorkspace(this))
+    , mOptionPageLogging          (new OptionPageLogging(this))
 {
     mUi->setupUi(this);
     setupDialog();
@@ -92,9 +92,9 @@ void ProjectSettings::selectSetting(int const index) const
 
 void ProjectSettings::addSettings()
 {
-    mSettingsStackedWidget->addWidget(mWorkspaceManager);
+    mSettingsStackedWidget->addWidget(mOptionPageWorkspace);
     mSettingsStackedWidget->addWidget(mDirSettings);
-    mSettingsStackedWidget->addWidget(mLogSettings);
+    mSettingsStackedWidget->addWidget(mOptionPageLogging);
 
     QStringList settingsList;
     settingsList.append(tr("Workspaces"));
@@ -114,8 +114,8 @@ void ProjectSettings::buttonClicked(QAbstractButton* button) const
     }
 
     mDirSettings->applyChanges();
-    mWorkspaceManager->applyChanges();
-    mLogSettings->applyChanges();
+    mOptionPageWorkspace->applyChanges();
+    mOptionPageLogging->applyChanges();
 
     if (role == QDialogButtonBox::ButtonRole::ApplyRole)
     {

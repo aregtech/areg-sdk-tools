@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_VIEW_COMMON_WORKSPACEMANAGER_HPP
-#define LUSAN_VIEW_COMMON_WORKSPACEMANAGER_HPP
+﻿#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP
+#define LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,13 +12,14 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/WorkspaceManager.hpp
+ *  \file        lusan/view/common/OptionPageWorkspace.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Tamas Csillag
  *  \brief       Lusan application, workspace manager widget.
  *
  ************************************************************************/
-#include <QWidget>
+#include "lusan/view/common/OptionPageBase.hpp"
+
 #include <QString>
 #include <unordered_map>
 #include <cstdint>
@@ -26,7 +27,7 @@
 #include <memory>
 
 namespace Ui {
-class workspaceManager;
+class OptionPageWorkspace;
 }
 class WorkspaceEntry;
 class ProjectSettings;
@@ -34,7 +35,7 @@ class ProjectSettings;
 /**
  * \brief   This class is managing the workspace settings.
  **/
-class WorkspaceManager : public QWidget
+class OptionPageWorkspace : public OptionPageBase
 {
     Q_OBJECT
 
@@ -61,18 +62,24 @@ private:
 // constructors / destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit WorkspaceManager(ProjectSettings *parent);
-    virtual ~WorkspaceManager();
+    explicit OptionPageWorkspace(ProjectSettings *parent);
+    virtual ~OptionPageWorkspace();
 
 //////////////////////////////////////////////////////////////////////////
-// Operations
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
 
     /**
-     * \brief   Applies the changes made in the workspace settings.
+     * \brief   Call when the option should apply the changes.
      **/
-    void applyChanges();
+    virtual void applyChanges(void);
+
+    /**
+     * \brief   Call when the option page is closing.
+     * \param   OKpressed   If true, the user pressed OK button, otherwise Cancel button.
+     **/
+    virtual void closingOptions(bool OKpressed);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -146,15 +153,15 @@ private:
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    std::unique_ptr<Ui::workspaceManager> mUi; //!< The user interface object.
+    std::unique_ptr<Ui::OptionPageWorkspace> mUi; //!< The user interface object.
     MapModifiedWorkspaces mModifiedWorkspaces; //!< The map of modified workspaces.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    WorkspaceManager(WorkspaceManager const&) = delete;
-    WorkspaceManager& operator=(WorkspaceManager const&) = delete;
+    OptionPageWorkspace(OptionPageWorkspace const&) = delete;
+    OptionPageWorkspace& operator=(OptionPageWorkspace const&) = delete;
 };
 
-#endif // LUSAN_VIEW_COMMON_WORKSPACEMANAGER_HPP
+#endif // LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP

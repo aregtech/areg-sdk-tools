@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_VIEW_COMMON_PROJECTDIRSETTINGS_HPP
-#define LUSAN_VIEW_COMMON_PROJECTDIRSETTINGS_HPP
+﻿#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP
+#define LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,31 +12,32 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/ProjectDirSettings.hpp
+ *  \file        lusan/view/common/OptionPageProjectDirs.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Tamas Csillag
  *  \brief       Lusan application, project settings widget.
  *
  ************************************************************************/
 
-#include <QWidget>
+#include "lusan/view/common/OptionPageBase.hpp"
+
 #include <QString>
 #include <memory>
 
 namespace Ui {
-class projectDirSettingsDlg;
+class OptionPageProjectDirsDlg;
 }
 
 class ProjectSettings;
 
 //////////////////////////////////////////////////////////////////////////
-// ProjectDirSettings class declaration
+// OptionPageProjectDirs class declaration
 //////////////////////////////////////////////////////////////////////////
 
 /**
- * \brief   The ProjectDirSettings class is a widget to set the project directory settings.
+ * \brief   The OptionPageProjectDirs class is a widget to set the project directory settings.
  **/
-class ProjectDirSettings : public QWidget
+class OptionPageProjectDirs : public OptionPageBase
 {
     Q_OBJECT
 
@@ -44,18 +45,24 @@ class ProjectDirSettings : public QWidget
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit ProjectDirSettings(ProjectSettings *parent);
-    virtual ~ProjectDirSettings();
+    explicit OptionPageProjectDirs(ProjectSettings *parent);
+    virtual ~OptionPageProjectDirs();
 
 //////////////////////////////////////////////////////////////////////////
-// Operations and attributes
+// Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
 
     /**
-     * \brief   Applies the changes made in the project settings.
+     * \brief   Call when the option should apply the changes.
      **/
-    void applyChanges() const;
+    virtual void applyChanges(void);
+
+    /**
+     * \brief   Call when the option page is closing.
+     * \param   OKpressed   If true, the user pressed OK button, otherwise Cancel button.
+     **/
+    virtual void closingOptions(bool OKpressed);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -100,16 +107,16 @@ private:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    std::unique_ptr<Ui::projectDirSettingsDlg> mUi;
+    std::unique_ptr<Ui::OptionPageProjectDirsDlg> mUi;
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    ProjectDirSettings(const ProjectDirSettings & /*src*/) = delete;
-    ProjectDirSettings& operator = (const ProjectDirSettings & /*src*/) = delete;
-    ProjectDirSettings(ProjectDirSettings && /*src*/) noexcept = delete;
-    ProjectDirSettings& operator = (ProjectDirSettings && /*src*/) noexcept = delete;
+    OptionPageProjectDirs(const OptionPageProjectDirs & /*src*/) = delete;
+    OptionPageProjectDirs& operator = (const OptionPageProjectDirs & /*src*/) = delete;
+    OptionPageProjectDirs(OptionPageProjectDirs && /*src*/) noexcept = delete;
+    OptionPageProjectDirs& operator = (OptionPageProjectDirs && /*src*/) noexcept = delete;
 };
 
-#endif // LUSAN_VIEW_COMMON_PROJECTDIRSETTINGS_HPP
+#endif // LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP

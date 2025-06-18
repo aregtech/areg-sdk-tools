@@ -10,21 +10,21 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/ProjectSettings.cpp
+ *  \file        lusan/view/common/OptionPageLogging.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Tamas Csillag, Artak Avetyan
  *  \brief       Lusan application, implementation of Log Settings page of options dialog.
  *
  ************************************************************************/
 
-#include "lusan/view/common/LogSettings.hpp"
-#include "ui/ui_LogSettings.h"
+#include "lusan/view/common/OptionPageLogging.hpp"
+#include "ui/ui_OptionPageLogging.h"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/LogCollectorClient.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/log/LogObserver.hpp"
-#include "lusan/view/common/WorkspaceManager.hpp"
+#include "lusan/view/common/OptionPageWorkspace.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 
 #include "areg/base/NESocket.hpp"
@@ -37,19 +37,19 @@
 #include <QMessageBox>
 #include <string>
 
-const QString   LogSettings::_textNoChanges         { tr("No data changed yet ...") };
-const QString   LogSettings::_textDataChanged       { tr("WARNING: Test the Log Collector Service connection before saving changes ...") };
-const QString   LogSettings::_textTestInProgress    { tr("WAITING: Test connection is in progress, make sure the Log Collector Service is configured and runs ...") };
-const QString   LogSettings::_textTestInterrupted   { tr("WARNING: The Log Collector Service connection data is updated, interrupting ongoing connection ...") };
-const QString   LogSettings::_textServiceConnected  { tr("RESULT: Connected to the Log Collector Service at %1:%2, waiting for messaging ...") };
-const QString   LogSettings::_textTestSucceeded     { tr("SUCCESS: Succeeded the Log Collector Service connection test, currently there are %1 connected log sources instances.") };
-const QString   LogSettings::_textConnectionFailed  { tr("ERROR: Failed to trigger connection to the Log Collector Service, check network connection and retry.") };
-const QString   LogSettings::_textTestFailed        { tr("FAILURE: Failed to connect to the Log Collector Service. Check connection data and try again.") };
-const QString   LogSettings::_textTestCanceled      { tr("WARNING: Connection to the Log Collector Service was interrupted") };
+const QString   OptionPageLogging::_textNoChanges         { tr("No data changed yet ...") };
+const QString   OptionPageLogging::_textDataChanged       { tr("WARNING: Test the Log Collector Service connection before saving changes ...") };
+const QString   OptionPageLogging::_textTestInProgress    { tr("WAITING: Test connection is in progress, make sure the Log Collector Service is configured and runs ...") };
+const QString   OptionPageLogging::_textTestInterrupted   { tr("WARNING: The Log Collector Service connection data is updated, interrupting ongoing connection ...") };
+const QString   OptionPageLogging::_textServiceConnected  { tr("RESULT: Connected to the Log Collector Service at %1:%2, waiting for messaging ...") };
+const QString   OptionPageLogging::_textTestSucceeded     { tr("SUCCESS: Succeeded the Log Collector Service connection test, currently there are %1 connected log sources instances.") };
+const QString   OptionPageLogging::_textConnectionFailed  { tr("ERROR: Failed to trigger connection to the Log Collector Service, check network connection and retry.") };
+const QString   OptionPageLogging::_textTestFailed        { tr("FAILURE: Failed to connect to the Log Collector Service. Check connection data and try again.") };
+const QString   OptionPageLogging::_textTestCanceled      { tr("WARNING: Connection to the Log Collector Service was interrupted") };
 
-LogSettings::LogSettings(ProjectSettings* parent)
-    : QWidget       {parent}
-    , ui            {std::make_unique<Ui::LogSettingsForm>()}
+OptionPageLogging::OptionPageLogging(ProjectSettings* parent)
+    : OptionPageBase{parent}
+    , ui            {std::make_unique<Ui::OptionPageLoggingForm>()}
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}
     , mTestTriggered{false}
     , mCanSave      {false}
@@ -67,9 +67,9 @@ LogSettings::LogSettings(ProjectSettings* parent)
     setWindowTitle(tr("Log Settings"));
 }
 
-LogSettings::LogSettings(ProjectSettings *parent, const QString& address, uint16_t port, const QString &logFile, const QString &logLocation)
-    : QWidget       {parent}
-    , ui            {std::make_unique<Ui::LogSettingsForm>()}
+OptionPageLogging::OptionPageLogging(ProjectSettings *parent, const QString& address, uint16_t port, const QString &logFile, const QString &logLocation)
+    : OptionPageBase{parent}
+    , ui            {std::make_unique<Ui::OptionPageLoggingForm>()}
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}
     , mTestTriggered{false}
     , mCanSave      {false}
@@ -85,7 +85,7 @@ LogSettings::LogSettings(ProjectSettings *parent, const QString& address, uint16
     setWindowTitle(tr("Log Settings"));
 }
 
-LogSettings::~LogSettings()
+OptionPageLogging::~OptionPageLogging()
 {
     if (mTestTriggered)
     {
@@ -94,7 +94,7 @@ LogSettings::~LogSettings()
     }
 }
 
-void LogSettings::setupDialog()
+void OptionPageLogging::setupDialog()
 {
     LogCollectorClient& client = LogCollectorClient::getInstance();
     if (client.isInitialized() == false)
@@ -125,32 +125,48 @@ void LogSettings::setupDialog()
     setFixedSize(size());
 }
 
-void LogSettings::connectSignals() const
+void OptionPageLogging::connectSignals() const
 {
-    connect(buttonBrowseDirs()      , &QAbstractButton::clicked , this, &LogSettings::onBrowseButtonClicked);
-    connect(buttonTestConnection()  , &QAbstractButton::clicked , this, &LogSettings::onTestButtonClicked);
-    connect(textIpAddress()         , &QLineEdit::textChanged   , this, &LogSettings::onDataChanged);
-    connect(textPortNumber()        , &QLineEdit::textChanged   , this, &LogSettings::onDataChanged);
+    connect(buttonBrowseDirs()      , &QAbstractButton::clicked , this, &OptionPageLogging::onBrowseButtonClicked);
+    connect(buttonTestConnection()  , &QAbstractButton::clicked , this, &OptionPageLogging::onTestButtonClicked);
+    connect(textIpAddress()         , &QLineEdit::textChanged   , this, &OptionPageLogging::onDataChanged);
+    connect(textPortNumber()        , &QLineEdit::textChanged   , this, &OptionPageLogging::onDataChanged);
+    connect(textLogLocation()       , &QLineEdit::textChanged   , this, &OptionPageLogging::onLogLocationChanged);
+    connect(textLogFileName()       , &QLineEdit::textChanged   , this, &OptionPageLogging::onLogFileNameChanged);
 }
 
-void LogSettings::onBrowseButtonClicked()
+void OptionPageLogging::onBrowseButtonClicked()
 {
-    textLogLocation()->setText(QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), textLogLocation()->text(), QFileDialog::ShowDirsOnly));
+    QString oldPath = textLogLocation()->text();
+    QString newPath = QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), oldPath, QFileDialog::ShowDirsOnly);
+    if (newPath != oldPath)
+    {
+        textLogLocation()->setText(newPath);
+        setDataModified(true);
+    }
 }
 
-void LogSettings::applyChanges()
+void OptionPageLogging::applyChanges()
 {
-    if (mCanSave == false)
+    if (isDataModified() && (mCanSave == false))
     {
         QMessageBox::critical(this, tr("Error"), tr("The endpoint must be tested and must be working before saving the changes!"));
     }
     else
     {
         saveData();
+        setDataModified(false);
     }
 }
 
-void LogSettings::setData(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
+void OptionPageLogging::closingOptions(bool /*OKpressed*/)
+{
+    LogObserver::disconnect();
+    LogObserver::releaseLogObserver();
+    setDataModified(false);
+}
+
+void OptionPageLogging::setData(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
 {
     textLogLocation()->setText(logLocation);
     textLogFileName()->setText(logFile);
@@ -160,13 +176,7 @@ void LogSettings::setData(const QString& address, uint16_t port, const QString& 
     update();
 }
 
-void LogSettings::closingSettings(void)
-{
-    LogObserver::disconnect();
-    LogObserver::releaseLogObserver();
-}
-
-void LogSettings::saveData() const
+void OptionPageLogging::saveData() const
 {
     QString logLocation{ textLogLocation()->text() };
     QString logFileName{ textLogFileName()->text() };
@@ -196,7 +206,7 @@ void LogSettings::saveData() const
     lgClient.saveLoggerConfig();
 }
 
-void LogSettings::onTestButtonClicked(bool checked)
+void OptionPageLogging::onTestButtonClicked(bool checked)
 {
     if (mTestTriggered)
     {
@@ -229,8 +239,8 @@ void LogSettings::onTestButtonClicked(bool checked)
     LogObserver::releaseLogObserver();
 
     LogCollectorClient& client = LogCollectorClient::getInstance();
-    mTestConnect = connect(&client, &LogCollectorClient::signalLogServiceConnected, this, &LogSettings::onLogServiceConnected);
-    mTestMessage = connect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &LogSettings::onLogInstancesConnected);
+    mTestConnect = connect(&client, &LogCollectorClient::signalLogServiceConnected, this, &OptionPageLogging::onLogServiceConnected);
+    mTestMessage = connect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &OptionPageLogging::onLogInstancesConnected);
     
     std::filesystem::path path(logLocation.toStdString());
     if (static_cast<LogObserverBase &>(client).connect(ipAddress.toStdString(), portNumber, path.string()) == false)
@@ -249,7 +259,7 @@ void LogSettings::onTestButtonClicked(bool checked)
     }
 }
 
-void LogSettings::onDataChanged()
+void OptionPageLogging::onDataChanged()
 {
     if (mTestTriggered)
     {
@@ -271,10 +281,18 @@ void LogSettings::onDataChanged()
     buttonTestConnection()->setText(tr("&Test"));
     mTestTriggered = false;
     mCanSave = false;
-    
+    setDataModified(true);
 }
 
-void LogSettings::onLogServiceConnected(bool isConnected, const std::string& address, uint16_t port)
+void OptionPageLogging::onLogLocationChanged(void)
+{
+}
+
+void OptionPageLogging::onLogFileNameChanged(void)
+{
+}
+
+void OptionPageLogging::onLogServiceConnected(bool isConnected, const std::string& address, uint16_t port)
 {
     if (mTestTriggered == false)
         return;
@@ -303,7 +321,7 @@ void LogSettings::onLogServiceConnected(bool isConnected, const std::string& add
     }
 }
 
-void LogSettings::onLogInstancesConnected(const std::vector< NEService::sServiceConnectedInstance >& instances)
+void OptionPageLogging::onLogInstancesConnected(const std::vector< NEService::sServiceConnectedInstance >& instances)
 {
     if (mTestTriggered == false)
         return;
@@ -321,37 +339,37 @@ void LogSettings::onLogInstancesConnected(const std::vector< NEService::sService
     mTestTriggered = false;
 }
 
-inline QLineEdit* LogSettings::textLogLocation(void) const
+inline QLineEdit* OptionPageLogging::textLogLocation(void) const
 {
     return ui->editLogLocation;
 }
 
-inline QLineEdit* LogSettings::textLogFileName(void) const
+inline QLineEdit* OptionPageLogging::textLogFileName(void) const
 {
     return ui->editLogFileName;
 }
 
-inline QLineEdit* LogSettings::textIpAddress(void) const
+inline QLineEdit* OptionPageLogging::textIpAddress(void) const
 {
     return ui->editLogAddres;
 }
 
-inline QLineEdit* LogSettings::textPortNumber(void) const
+inline QLineEdit* OptionPageLogging::textPortNumber(void) const
 {
     return ui->editLogPort;
 }
 
-inline QTextEdit* LogSettings::textConnectionStatus(void) const
+inline QTextEdit* OptionPageLogging::textConnectionStatus(void) const
 {
     return ui->textConnectStatus;
 }
 
-inline QPushButton* LogSettings::buttonBrowseDirs(void) const
+inline QPushButton* OptionPageLogging::buttonBrowseDirs(void) const
 {
     return ui->buttonBrowseDirs;
 }
 
-inline QPushButton* LogSettings::buttonTestConnection(void) const
+inline QPushButton* OptionPageLogging::buttonTestConnection(void) const
 {
     return ui->buttonTestConnect;
 }
