@@ -76,7 +76,7 @@ private:
     enum eLoggingStates
     {
           LoggingUndefined      = 0 //!< Undefined logging state
-        , LoggingInitialized        //!< Logging is initialized, but not connected
+        , LoggingConfigured         //!< Logging is initialized, but not connected
         , LoggingConnected          //!< Logging is connected to the log collector service
         , LoggingStopped            //!< Logging is stopped, but can be restarted
         , LoggingPaused             //!< Logging is paused, but can be resumed
@@ -130,6 +130,39 @@ public:
      * @param   port        The TCP port number of the log collector service to connect.
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
+
+    inline bool isConfigured(void) const;
+
+    inline bool isDisconnected(void) const;
+
+    inline bool isConnected(void) const;
+
+    inline bool isRunning(void) const;
+
+    inline bool isPaused(void) const;
+
+    inline bool isStopped(void) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden members
+//////////////////////////////////////////////////////////////////////////
+protected:
+    /**
+     * \brief   This method is called when the options dialog is opened.
+     **/
+    virtual void optionOpenning(void) override;
+
+    /**
+     * \brief   This method is called when the apply button in options dialog is pressed.
+     *          It can be used to apply changes made in the options dialog.
+     **/
+    virtual void optionApplied(void) override;
+
+    /**
+     * \brief   This method is called when the options dialog is closed.
+     * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
+     **/
+    virtual void optionClosed(bool OKpressed) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
@@ -380,5 +413,135 @@ private:
     eLoggingStates          mState;         //!< The variable to store live logging state.
     QAction*                mMenuActions[static_cast<int>(eLogActions::PrioCount)];   //!< The list of menu actions
 };
+
+//////////////////////////////////////////////////////////////////////////
+// LogExplorer inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool LogExplorer::isConfigured(void) const
+{
+    switch (mState)
+    {
+    case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingConnected:
+    case eLoggingStates::LoggingPaused:
+    case eLoggingStates::LoggingRunning:
+    case eLoggingStates::LoggingDisconnected:
+        return true;
+
+    case eLoggingStates::LoggingUndefined:
+    case eLoggingStates::LoggingStopped:
+        return false;
+
+    default:
+        Q_ASSERT(false);
+        return false;
+    }
+}
+
+inline bool LogExplorer::isDisconnected(void) const
+{
+    switch (mState)
+    {
+    case eLoggingStates::LoggingUndefined:
+    case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingDisconnected:
+    case eLoggingStates::LoggingStopped:
+    case eLoggingStates::LoggingPaused:
+        return true;
+
+    case eLoggingStates::LoggingConnected:
+    case eLoggingStates::LoggingRunning:
+        return false;
+
+    default:
+        Q_ASSERT(false);
+        return false;
+    }
+}
+
+inline bool LogExplorer::isConnected(void) const
+{
+    switch (mState)
+    {
+    case eLoggingStates::LoggingConnected:
+    case eLoggingStates::LoggingRunning:
+        return true;
+
+    case eLoggingStates::LoggingUndefined:
+    case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingDisconnected:
+    case eLoggingStates::LoggingStopped:
+    case eLoggingStates::LoggingPaused:
+        return false;
+
+    default:
+        Q_ASSERT(false);
+        return false;
+    }
+}
+
+inline bool LogExplorer::isRunning(void) const
+{
+    switch (mState)
+    {
+    case eLoggingStates::LoggingRunning:
+        return true;
+
+    case eLoggingStates::LoggingUndefined:
+    case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingDisconnected:
+    case eLoggingStates::LoggingStopped:
+    case eLoggingStates::LoggingPaused:
+    case eLoggingStates::LoggingConnected:
+        return false;
+
+    default:
+        Q_ASSERT(false);
+        return false;
+    }
+}
+
+inline bool LogExplorer::isPaused(void) const
+{
+    switch (mState)
+    {
+    case eLoggingStates::LoggingPaused:
+        return true;
+
+    case eLoggingStates::LoggingUndefined:
+    case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingDisconnected:
+    case eLoggingStates::LoggingStopped:
+    case eLoggingStates::LoggingConnected:
+    case eLoggingStates::LoggingRunning:
+        return false;
+
+    default:
+        Q_ASSERT(false);
+        return false;
+    }
+}
+
+inline bool LogExplorer::isStopped(void) const
+{
+    switch (mState)
+    {
+    case eLoggingStates::LoggingStopped:
+        return true;
+
+    case eLoggingStates::LoggingUndefined:
+    case eLoggingStates::LoggingConfigured:
+    case eLoggingStates::LoggingDisconnected:
+    case eLoggingStates::LoggingConnected:
+    case eLoggingStates::LoggingRunning:
+    case eLoggingStates::LoggingPaused:
+        return false;
+
+    default:
+        Q_ASSERT(false);
+        return false;
+    }
+}
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP

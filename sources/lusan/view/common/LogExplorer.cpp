@@ -392,7 +392,7 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     {
         mSelModel->reset();
         mModel->release();
-        if (mState == eLoggingStates::LoggingConnected)
+        if (isConnected())
         {
             mState = eLoggingStates::LoggingDisconnected;
         }
@@ -417,6 +417,7 @@ void LogExplorer::onLogDbCreated(const QString& dbLocation)
     mActiveLogFile = dbLocation;
     LogObserver* log = LogObserver::getComponent();
     Q_ASSERT(log != nullptr);
+    mState = eLoggingStates::LoggingUndefined;
     mMainWindow->logCollecttorConnected(true, log->getConnectedAddress(), log->getConnectedPort(), mActiveLogFile);
 }
 
@@ -453,7 +454,6 @@ void LogExplorer::onConnectClicked(bool checked)
 {
     if (checked)
     {
-        mState = eLoggingStates::LoggingDisconnected;
         LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
     }
     else
@@ -465,6 +465,7 @@ void LogExplorer::onConnectClicked(bool checked)
         ctrlConnect()->setToolTip(tr("Connect to log collector"));
         
         setupLogSignals(false);
+        mState = eLoggingStates::LoggingDisconnected;
         LogObserver::releaseLogObserver();
     }
 }
@@ -558,6 +559,11 @@ void LogExplorer::onRootUpdated(const QModelIndex & root)
 {
     if (mModel != nullptr)
     {
+        if (isConnected())
+        {
+            mState = eLoggingStates::LoggingRunning;
+        }
+
         QTreeView * navi = ctrlTable();
         Q_ASSERT(navi != nullptr);
         if (navi->isExpanded(root) == false)
@@ -608,6 +614,30 @@ void LogExplorer::onScopesDataChanged(const QModelIndex &topLeft, const QModelIn
         enableButtons(ctrlTable()->currentIndex());
         updateExpanded(ctrlTable()->rootIndex());
     }
+}
+
+void LogExplorer::optionOpenning(void)
+{
+    if (isConnected())
+    {
+        setupLogSignals(false);
+        mState = eLoggingStates::LoggingPaused;
+        LogObserver::disconnect();
+        LogObserver::releaseLogObserver();
+    }
+}
+
+void LogExplorer::optionApplied(void)
+{
+    if (isPaused())
+    {
+        mState = eLoggingStates::LoggingStopped;
+    }
+}
+
+void LogExplorer::optionClosed(bool OKpressed)
+{
+    LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
 }
 
 void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)

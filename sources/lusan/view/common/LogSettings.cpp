@@ -160,6 +160,12 @@ void LogSettings::setData(const QString& address, uint16_t port, const QString& 
     update();
 }
 
+void LogSettings::closingSettings(void)
+{
+    LogObserver::disconnect();
+    LogObserver::releaseLogObserver();
+}
+
 void LogSettings::saveData() const
 {
     QString logLocation{ textLogLocation()->text() };
