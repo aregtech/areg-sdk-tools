@@ -31,14 +31,14 @@ FileSystemEntry FileSystemEntry::EmptyEntry("..", "..", FileSystemEntry::eEntryT
 
 FileSystemEntry::FileSystemEntry(const QString& path, FileSystemEntry* parent)
     : mId       (parent != nullptr ? parent->getNextId() : 0)
-    , mFilePath (path)
+    , mFilePath (NELusanCommon::fixPath(path))
     , mDispName ( )
     , mEntryType(EntryUnknown)
     , mChildren ( )
     , mIcon     ( )
     , mParent   (parent)
 {
-    QFileInfo fi(path);
+    QFileInfo fi(mFilePath);
     if (fi.exists())
     {
         mDispName   = fi.fileName();
@@ -70,14 +70,14 @@ FileSystemEntry::FileSystemEntry(const QString& path, FileSystemEntry* parent)
 
 FileSystemEntry::FileSystemEntry(const QString& path, FileSystemEntry::eEntryType entryType, FileSystemEntry* parent)
     : mId       (parent != nullptr ? parent->getNextId() : 0)
-    , mFilePath (path)
+    , mFilePath (NELusanCommon::fixPath(path))
     , mDispName ( )
     , mEntryType(entryType)
     , mChildren ( )
     , mIcon     ( )
     , mParent   (parent)
 {
-    QFileInfo fi(path);
+    QFileInfo fi(mFilePath);
     if (fi.exists())
     {
         mDispName = fi.fileName();
@@ -101,14 +101,14 @@ FileSystemEntry::FileSystemEntry(const QString& path, FileSystemEntry::eEntryTyp
 
 FileSystemEntry::FileSystemEntry(const QString& path, const QString& dispName, FileSystemEntry::eEntryType entryType, FileSystemEntry* parent)
     : mId       (parent != nullptr ? parent->getNextId() : 0)
-    , mFilePath (path)
+    , mFilePath (NELusanCommon::fixPath(path))
     , mDispName (dispName)
     , mEntryType(entryType)
     , mChildren ( )
     , mIcon     ( )
     , mParent   (parent)
 {
-    QFileInfo fi(path);
+    QFileInfo fi(mFilePath);
     if (fi.exists())
     {
         if (dispName.isEmpty())
@@ -128,14 +128,14 @@ FileSystemEntry::FileSystemEntry(const QString& path, const QString& dispName, F
 
 FileSystemEntry::FileSystemEntry(const QString& path, const QString& dispName, FileSystemEntry::eEntryType entryType, const QIcon& icon, FileSystemEntry* parent)
     : mId       (parent != nullptr ? parent->getNextId() : 0)
-    , mFilePath (path)
+    , mFilePath (NELusanCommon::fixPath(path))
     , mDispName (dispName)
     , mEntryType(entryType)
     , mChildren ( )
     , mIcon     (icon)
     , mParent   (parent)
 {
-    QFileInfo fi(path);
+    QFileInfo fi(mFilePath);
     if (fi.exists())
     {
         if (dispName.isEmpty())
@@ -160,7 +160,7 @@ FileSystemEntry::FileSystemEntry(const QString& path, const QString& dispName, F
 
 FileSystemEntry::FileSystemEntry(const QFileInfo & fileInfo, FileSystemEntry* parent)
     : mId       (parent != nullptr ? parent->getNextId() : 0)
-    , mFilePath (fileInfo.absoluteFilePath())
+    , mFilePath (NELusanCommon::fixPath(fileInfo.absoluteFilePath()))
     , mDispName ( )
     , mEntryType( )
     , mChildren ( )
@@ -292,8 +292,8 @@ void FileSystemEntry::setFilePath(const QString& newPath)
 {
     if (isValid() && (mParent != nullptr) && (mParent->isRoot() == false))
     {
-        mFilePath = newPath;
-        QFileInfo fi(newPath);
+        mFilePath = NELusanCommon::fixPath(newPath);
+        QFileInfo fi(mFilePath);
         mDispName = fi.fileName();
         if (mDispName.isEmpty())
         {
@@ -472,7 +472,7 @@ QFileInfoList FileSystemRootEntry::fetchData(const QStringList & filter /*= QStr
     QList<QString> list(mWorkspaceDirs.keys());
     for (const auto & path : list)
     {
-        result.push_back(QFileInfo(path));
+        result.push_back(QFileInfo(NELusanCommon::fixPath(path)));
     }
     
     return std::move(result);
@@ -480,7 +480,7 @@ QFileInfoList FileSystemRootEntry::fetchData(const QStringList & filter /*= QStr
 
 FileSystemEntry* FileSystemRootEntry::createChildEntry(const QString& path) const
 {
-    FileSystemEntry* result = FileSystemEntry::createChildEntry(path);
+    FileSystemEntry* result = FileSystemEntry::createChildEntry(NELusanCommon::fixPath(path));
     if (result != nullptr)
     {
         Q_ASSERT(mWorkspaceDirs.contains(result->getPath()));

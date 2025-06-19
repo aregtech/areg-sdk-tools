@@ -49,32 +49,57 @@ void OptionPageProjectDirs::connectSignalHandlers() const
 
 void OptionPageProjectDirs::onRootDirBrowseBtnClicked()
 {
-    mUi->rootDirEdit->setText(
-        QFileDialog::getExistingDirectory(this, tr("Open Root Directory"), "", QFileDialog::ShowDirsOnly));
+    QString oldDir(NELusanCommon::fixPath(mUi->rootDirEdit->text()));
+    QString newDir(NELusanCommon::fixPath(QFileDialog::getExistingDirectory(this, tr("Open Root Directory"), oldDir, QFileDialog::ShowDirsOnly)));
+    if (oldDir != newDir)
+    {
+        mUi->rootDirEdit->setText(newDir);
+        setDataModified(true);
+    }
 }
 
 void OptionPageProjectDirs::onSourceDirBrowseBtnClicked()
 {
-    mUi->sourceDirEdit->setText(
-        QFileDialog::getExistingDirectory(this, tr("Open Source Directory"), "", QFileDialog::ShowDirsOnly));
+    QString oldDir(NELusanCommon::fixPath(mUi->sourceDirEdit->text()));
+    QString newDir(NELusanCommon::fixPath(QFileDialog::getExistingDirectory(this, tr("Open Source Directory"), oldDir, QFileDialog::ShowDirsOnly)));
+    if (oldDir != newDir)
+    {
+        mUi->sourceDirEdit->setText(newDir);
+        setDataModified(true);
+    }
 }
 
 void OptionPageProjectDirs::onIncludeDirBrowseBtnClicked()
 {
-    mUi->includeDirEdit->setText(
-        QFileDialog::getExistingDirectory(this, tr("Open Include Directory"), "", QFileDialog::ShowDirsOnly));
+    QString oldDir(NELusanCommon::fixPath(mUi->includeDirEdit->text()));
+    QString newDir(NELusanCommon::fixPath(QFileDialog::getExistingDirectory(this, tr("Open Include Directory"), oldDir, QFileDialog::ShowDirsOnly)));
+    if (oldDir != newDir)
+    {
+        mUi->includeDirEdit->setText(newDir);
+        setDataModified(true);
+    }
 }
 
 void OptionPageProjectDirs::onDeliveryDirBrowseBtnClicked()
 {
-    mUi->deliveryDirEdit->setText(
-        QFileDialog::getExistingDirectory(this, tr("Open Delivery Directory"), "", QFileDialog::ShowDirsOnly));
+    QString oldDir(NELusanCommon::fixPath(mUi->deliveryDirEdit->text()));
+    QString newDir(NELusanCommon::fixPath(QFileDialog::getExistingDirectory(this, tr("Open Delivery Directory"), oldDir, QFileDialog::ShowDirsOnly)));
+    if (oldDir != newDir)
+    {
+        mUi->deliveryDirEdit->setText(newDir);
+        setDataModified(true);
+    }
 }
 
 void OptionPageProjectDirs::onLogDirBrowseBtnClicked()
 {
-    mUi->logDirEdit->setText(
-        QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), "", QFileDialog::ShowDirsOnly));
+    QString oldDir(NELusanCommon::fixPath(mUi->logDirEdit->text()));
+    QString newDir(NELusanCommon::fixPath(QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), oldDir, QFileDialog::ShowDirsOnly)));
+    if (oldDir != newDir)
+    {
+        mUi->logDirEdit->setText(newDir);
+        setDataModified(true);
+    }
 }
 
 void OptionPageProjectDirs::initializePathsWithCurrentWorkspaceData() const

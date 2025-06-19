@@ -46,7 +46,7 @@ FileSystemModel::FileSystemModel(const QMap<QString, QString> & workspaceEntries
 {
     for (const QString & dir : mWorkspaceDirs)
     {
-        FileSystemEntry* entry = new FileSystemEntry(dir, workspaceEntries[dir], FileSystemEntry::eEntryType::EntryDir, &mRootEntry);
+        FileSystemEntry* entry = new FileSystemEntry(dir, workspaceEntries[NELusanCommon::fixPath(dir)], FileSystemEntry::eEntryType::EntryDir, &mRootEntry);
         mRootEntry.addChild(entry);
     }
 

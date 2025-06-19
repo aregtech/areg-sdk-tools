@@ -263,7 +263,7 @@ private:
 
 inline void WorkspaceEntry::setWorkspaceRoot(const QString& root)
 {
-    mWorkspaceRoot = root;
+    mWorkspaceRoot = NELusanCommon::fixPath(root);
 }
 
 inline const QString& WorkspaceEntry::getWorkspaceRoot(void) const
@@ -283,7 +283,7 @@ inline const QString& WorkspaceEntry::getWorkspaceDescription(void) const
 
 inline void WorkspaceEntry::setDirSources(const QString& sources)
 {
-    mSources = sources;
+    mSources = NELusanCommon::fixPath(sources);
 }
 
 inline const QString& WorkspaceEntry::getDirSources(void) const
@@ -293,7 +293,7 @@ inline const QString& WorkspaceEntry::getDirSources(void) const
 
 inline void WorkspaceEntry::setDirIncludes(const QString& includes)
 {
-    mIncludes = includes;
+    mIncludes = NELusanCommon::fixPath(includes);
 }
 
 inline const QString& WorkspaceEntry::getDirIncludes(void) const
@@ -303,7 +303,7 @@ inline const QString& WorkspaceEntry::getDirIncludes(void) const
 
 inline void WorkspaceEntry::setDirDelivery(const QString& delivery)
 {
-    mDelivery = delivery;
+    mDelivery = NELusanCommon::fixPath(delivery);
 }
 
 inline const QString& WorkspaceEntry::getDirDelivery(void) const
@@ -313,7 +313,7 @@ inline const QString& WorkspaceEntry::getDirDelivery(void) const
 
 inline void WorkspaceEntry::setDirLogs(const QString& logs)
 {
-    mLogFiles = logs;
+    mLogFiles = NELusanCommon::fixPath(logs);
 }
 
 inline const QString& WorkspaceEntry::getDirLogs(void) const

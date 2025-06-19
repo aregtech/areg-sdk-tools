@@ -26,6 +26,7 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <filesystem>
 
 /**
  * \namespace NELusanCommon
@@ -297,6 +298,15 @@ namespace NELusanCommon
             list.at(index) = two;
             list.at(index + 1) = one;
         }
+    }
+
+    /**
+     * \brief   Fix path to make it absolute and OS-independent.
+     * \param   path    The path to fix.
+     **/
+    inline QString fixPath(const QString& path)
+    {
+        return QString(std::filesystem::absolute(path.toStdString()).string().c_str());
     }
 }
 

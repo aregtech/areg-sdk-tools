@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/common/NELusanCommon.hpp"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QIcon>
