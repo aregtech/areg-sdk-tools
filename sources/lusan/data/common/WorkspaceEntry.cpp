@@ -36,7 +36,7 @@ WorkspaceEntry::WorkspaceEntry(void)
 WorkspaceEntry::WorkspaceEntry(const QString& root, const QString& description, uint32_t id /*= 0*/)
     : mId(id == 0 ? NELusanCommon::getId() : id)
     , mLastAccessed(NELusanCommon::getTimestamp())
-    , mWorkspaceRoot(root)
+    , mWorkspaceRoot(NELusanCommon::fixPath(root))
     , mDescription(description)
     , mSources()
     , mIncludes()
@@ -154,7 +154,7 @@ bool WorkspaceEntry::readFromXml(QXmlStreamReader& xml)
         {
             if (xmlName == NELusanCommon::xmlElementWorspaceRoot)
             {
-                mWorkspaceRoot = xml.readElementText();
+                mWorkspaceRoot = NELusanCommon::fixPath(xml.readElementText());
             }
             else if (xmlName == NELusanCommon::xmlElementDescription)
             {
@@ -218,19 +218,19 @@ void WorkspaceEntry::_readDirectories(QXmlStreamReader& xml)
         {
             if (xmlName == NELusanCommon::xmlElementSources)
             {
-                mSources = xml.readElementText();
+                mSources = NELusanCommon::fixPath(xml.readElementText());
             }
             else if (xmlName == NELusanCommon::xmlElementIncludes)
             {
-                mIncludes = xml.readElementText();
+                mIncludes = NELusanCommon::fixPath(xml.readElementText());
             }
             else if (xmlName == NELusanCommon::xmlElementDelivery)
             {
-                mDelivery = xml.readElementText();
+                mDelivery = NELusanCommon::fixPath(xml.readElementText());
             }
             else if (xmlName == NELusanCommon::xmlElementLogs)
             {
-                mLogFiles = xml.readElementText();
+                mLogFiles = NELusanCommon::fixPath(xml.readElementText());
             }
         }
 

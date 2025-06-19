@@ -106,6 +106,7 @@ void OptionPageLogging::setupDialog()
     if (logLocation.isEmpty())
     {
         logLocation = mLogLocation.isEmpty() ? client.getConfigLoggerDatabaseLocation().c_str() : mLogLocation;
+        logLocation = NELusanCommon::fixPath(logLocation);
     }
     
     QString logFile = mLogFileName.isEmpty() ? client.getConfigLoggerDatabaseName().c_str() : mLogFileName;
@@ -135,8 +136,8 @@ void OptionPageLogging::connectSignals() const
 
 void OptionPageLogging::onBrowseButtonClicked()
 {
-    QString oldPath = textLogLocation()->text();
-    QString newPath = QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), oldPath, QFileDialog::ShowDirsOnly);
+    QString oldPath = NELusanCommon::fixPath(textLogLocation()->text());
+    QString newPath = NELusanCommon::fixPath(QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), oldPath, QFileDialog::ShowDirsOnly));
     if (newPath != oldPath)
     {
         textLogLocation()->setText(newPath);
