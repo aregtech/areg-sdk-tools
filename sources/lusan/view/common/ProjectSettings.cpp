@@ -35,9 +35,9 @@ ProjectSettings::ProjectSettings(MdiMainWindow* parent)
     , mSettingsStackedWidget(std::make_unique<QStackedWidget>(this))
     , mMainWindow           (parent)
     , mModel                (this)
-    , mDirSettings          (new OptionPageProjectDirs(this))
-    , mOptionPageWorkspace     (new OptionPageWorkspace(this))
-    , mOptionPageLogging          (new OptionPageLogging(this))
+    , mOptionProjectDirs    (new OptionPageProjectDirs(this))
+    , mOptionPageWorkspace  (new OptionPageWorkspace(this))
+    , mOptionPageLogging    (new OptionPageLogging(this))
 {
     mUi->setupUi(this);
     setupDialog();
@@ -95,7 +95,7 @@ void ProjectSettings::selectSetting(int const index) const
 void ProjectSettings::addSettings()
 {
     mSettingsStackedWidget->addWidget(mOptionPageWorkspace);
-    mSettingsStackedWidget->addWidget(mDirSettings);
+    mSettingsStackedWidget->addWidget(mOptionProjectDirs);
     mSettingsStackedWidget->addWidget(mOptionPageLogging);
 
     QStringList settingsList;
@@ -110,7 +110,7 @@ void ProjectSettings::onButtonClicked(QAbstractButton* button)
     QDialogButtonBox::ButtonRole const role = mUi->buttonBox->buttonRole(button);
     if (QDialogButtonBox::ButtonRole::ApplyRole == role)
     {
-        mDirSettings->applyChanges();
+        mOptionProjectDirs->applyChanges();
         mOptionPageWorkspace->applyChanges();
         mOptionPageLogging->applyChanges();
         emit mMainWindow->signalOptionsApplied();
@@ -119,18 +119,18 @@ void ProjectSettings::onButtonClicked(QAbstractButton* button)
 
 void ProjectSettings::onAcceptClicked(void)
 {
-    if (mDirSettings->canAcceptOptions() && mOptionPageWorkspace->canAcceptOptions() && mOptionPageLogging->canAcceptOptions())
+    if (mOptionProjectDirs->canAcceptOptions() && mOptionPageWorkspace->canAcceptOptions() && mOptionPageLogging->canAcceptOptions())
     {
-        mDirSettings->applyChanges();
+        mOptionProjectDirs->applyChanges();
         mOptionPageWorkspace->applyChanges();
         mOptionPageLogging->applyChanges();
         accept();
     }
     else        
     {
-        if (mDirSettings->canAcceptOptions() == false)
+        if (mOptionProjectDirs->canAcceptOptions() == false)
         {
-            mDirSettings->warnMessage();
+            mOptionProjectDirs->warnMessage();
         }
         
         if (mOptionPageWorkspace->canAcceptOptions() == false)

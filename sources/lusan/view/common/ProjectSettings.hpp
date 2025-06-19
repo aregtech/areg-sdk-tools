@@ -153,11 +153,11 @@ private:
 private:
     std::unique_ptr<Ui::ProjectSettingsDlg> mUi;            //!< The user interface object.
     std::unique_ptr<QStackedWidget> mSettingsStackedWidget; //!< The stacked widget to show the settings.
-    MdiMainWindow*      mMainWindow;                        //!< The main window of the application.
-    QStringListModel    mModel;                             //!< The model of the settings list.
-    OptionPageProjectDirs* mDirSettings;                       //!< The directory settings.
-    OptionPageWorkspace*   mOptionPageWorkspace;                  //!< The workspace settings.
-    OptionPageLogging*        mOptionPageLogging;                       //!< The log settings.
+    MdiMainWindow*          mMainWindow;                    //!< The main window of the application.
+    QStringListModel        mModel;                         //!< The model of the settings list.
+    OptionPageProjectDirs* mOptionProjectDirs;             //!< The directory settings.
+    OptionPageWorkspace*    mOptionPageWorkspace;           //!< The workspace settings.
+    OptionPageLogging*      mOptionPageLogging;             //!< The log settings.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -172,7 +172,7 @@ private:
 
 inline OptionPageProjectDirs * ProjectSettings::getSettingProjectDirs(void)
 {
-    return mDirSettings;
+    return mOptionProjectDirs;
 }
 
 inline OptionPageWorkspace * ProjectSettings::getSettingWorkspace(void)
