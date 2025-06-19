@@ -131,16 +131,22 @@ public:
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
 
+    //!< Returns true if the logging is configured.
     inline bool isConfigured(void) const;
 
+    //!< Returns true if disconnected from log collector service.
     inline bool isDisconnected(void) const;
 
+    //!< Returns true if connected to log observer service.
     inline bool isConnected(void) const;
 
+    //!< Returns true if connected to log observer service and receives messages.
     inline bool isRunning(void) const;
 
+    //!< Returns true if connection is paused (disconnected) and can be restored.
     inline bool isPaused(void) const;
 
+    //!< Returns true if connection is stopped (paused) and can be restored only when new data is applied.
     inline bool isStopped(void) const;
 
 //////////////////////////////////////////////////////////////////////////
