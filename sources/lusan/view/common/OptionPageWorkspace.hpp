@@ -75,12 +75,6 @@ public:
      **/
     virtual void applyChanges(void);
 
-    /**
-     * \brief   Call when the option page is closing.
-     * \param   OKpressed   If true, the user pressed OK button, otherwise Cancel button.
-     **/
-    virtual void closingOptions(bool OKpressed);
-
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
@@ -160,8 +154,8 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    OptionPageWorkspace(OptionPageWorkspace const&) = delete;
-    OptionPageWorkspace& operator=(OptionPageWorkspace const&) = delete;
+    OptionPageWorkspace(void) = delete;
+    DECLARE_NOCOPY_NOMOVE(OptionPageWorkspace);
 };
 
 #endif // LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP

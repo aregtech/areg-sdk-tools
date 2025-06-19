@@ -22,17 +22,24 @@
 #include "lusan/view/common/ProjectSettings.hpp"
 
 OptionPageBase::OptionPageBase(ProjectSettings* parent)
-    : QWidget   (parent)
-    , mDataModified(false)
+    : QWidget       (parent)
+    , mDataModified (false)
+    , mCanSave      (true)
 {
 }
 
 void OptionPageBase::applyChanges(void)
 {
-    mDataModified = false;
+    mDataModified   = false;
+    mCanSave        = true;
 }
 
 void OptionPageBase::closingOptions(bool /*OKpressed*/)
 {
     mDataModified = false;
+}
+
+void OptionPageBase::warnMessage(void)
+{
+    
 }

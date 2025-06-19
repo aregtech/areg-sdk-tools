@@ -27,6 +27,9 @@
 
 class ProjectSettings;
 
+/**
+ * \brief   The base class of option page in the application settings.
+ **/
 class OptionPageBase : public QWidget
 {
 //////////////////////////////////////////////////////////////////////////
@@ -53,15 +56,48 @@ public:
      **/
     virtual void closingOptions(bool OKpressed);
 
+    /**
+     * \brief   Triggered, letting option page object to display a warning message.
+     **/
+    virtual void warnMessage(void);
+    
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
 public:
 
+    /**
+     * \brief   Returns true if data of the option page is modified.
+     **/
     inline bool isDataModified(void) const;
 
+    /**
+     * \brief   Set data modified flag in the option page.
+     **/
     inline void setDataModified(bool modified);
 
+    /**
+     * \brief   Returns true if the data in option page can be save. False, otherwise.
+     **/
+    inline bool canSave(void) const;
+
+    /**
+     * \brief   Sets saving flag in the option page.
+     **/
+    inline void setCanSave(bool canSave);
+
+    /**
+     * \brief   Returns true if the data in option page can be accepted and the settings dialog can be closed. Otherwise, returns false.
+     **/
+    inline bool canAcceptOptions(void) const;
+    
+//////////////////////////////////////////////////////////////////////////
+// Hidden member variables
+//////////////////////////////////////////////////////////////////////////
 private:
 
-    bool    mDataModified;
+    bool    mDataModified;  //!< Flag, indicating whether the data in option page is modified.
+    bool    mCanSave;       //!< Flag, indicating whether the data in option page can be saved.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -83,6 +119,21 @@ inline bool OptionPageBase::isDataModified(void) const
 inline void OptionPageBase::setDataModified(bool modified)
 {
     mDataModified = modified;
+}
+
+inline bool OptionPageBase::canSave(void) const
+{
+    return mCanSave;
+}
+
+inline void OptionPageBase::setCanSave(bool canSave)
+{
+    mCanSave = canSave;
+}
+
+inline bool OptionPageBase::canAcceptOptions(void) const
+{
+    return mCanSave || (mDataModified == false);
 }
 
 #endif  // LUSAN_VIEW_COMMON_OPTIONPAGEBASE_HPP

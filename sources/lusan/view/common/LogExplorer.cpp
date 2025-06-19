@@ -416,7 +416,6 @@ void LogExplorer::onLogDbCreated(const QString& dbLocation)
     mActiveLogFile = dbLocation;
     LogObserver* log = LogObserver::getComponent();
     Q_ASSERT(log != nullptr);
-    mState = eLoggingStates::LoggingUndefined;
     mMainWindow->logCollecttorConnected(true, log->getConnectedAddress(), log->getConnectedPort(), mActiveLogFile);
 }
 
@@ -636,7 +635,14 @@ void LogExplorer::optionApplied(void)
 
 void LogExplorer::optionClosed(bool OKpressed)
 {
-    LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
+    if (isStopped() || isPaused())
+    {
+        LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
+    }
+    else if (mState != eLoggingStates::LoggingUndefined)
+    {
+        mState = eLoggingStates::LoggingConfigured;
+    }
 }
 
 void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)

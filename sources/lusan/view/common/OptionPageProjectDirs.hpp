@@ -58,12 +58,6 @@ public:
      **/
     virtual void applyChanges(void);
 
-    /**
-     * \brief   Call when the option page is closing.
-     * \param   OKpressed   If true, the user pressed OK button, otherwise Cancel button.
-     **/
-    virtual void closingOptions(bool OKpressed);
-
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
@@ -113,10 +107,8 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    OptionPageProjectDirs(const OptionPageProjectDirs & /*src*/) = delete;
-    OptionPageProjectDirs& operator = (const OptionPageProjectDirs & /*src*/) = delete;
-    OptionPageProjectDirs(OptionPageProjectDirs && /*src*/) noexcept = delete;
-    OptionPageProjectDirs& operator = (OptionPageProjectDirs && /*src*/) noexcept = delete;
+    OptionPageProjectDirs(void) = delete;
+    DECLARE_NOCOPY_NOMOVE(OptionPageProjectDirs);
 };
 
 #endif // LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP

@@ -165,10 +165,8 @@ void OptionPageWorkspace::applyChanges()
 
     mModifiedWorkspaces.clear();
     LusanApplication::getOptions().writeOptions();
-}
-
-void OptionPageWorkspace::closingOptions(bool /*OKpressed*/)
-{
+    
+    OptionPageBase::applyChanges();
 }
 
 std::optional<WorkspaceEntry> OptionPageWorkspace::getWorkspace(uint32_t const workspaceId)

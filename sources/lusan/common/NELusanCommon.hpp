@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "areg/base/GEGlobal.h"
 #include <QList>
 #include <QPoint>
 #include <QString>

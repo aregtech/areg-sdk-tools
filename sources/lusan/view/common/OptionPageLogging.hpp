@@ -86,7 +86,12 @@ public:
      * \param   OKpressed   If true, the user pressed OK button, otherwise Cancel button.
      **/
     virtual void closingOptions(bool OKpressed) override;
-
+    
+    /**
+     * \brief   Triggered, letting option page object to display a warning message.
+     **/
+    virtual void warnMessage(void) override;
+    
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
@@ -122,8 +127,14 @@ private slots:
      **/
     void onDataChanged();
 
+    /**
+     * \brief   Slot, triggered when the log location field is updated.
+     **/
     void onLogLocationChanged(void);
 
+    /**
+     * \brief   Slot, triggered when the log file name field is updated.
+     **/
     void onLogFileNameChanged(void);
 
     /**
@@ -160,6 +171,26 @@ private:
      **/
     void saveData() const;
 
+    /**
+     * \brief   Returns value of log location field.
+     **/
+    inline QString getLogLocation(void) const;
+    
+    /**
+     * \brief   Returns value of log file name field.
+     **/
+    inline QString getLogFileName(void) const;
+    
+    /**
+     * \brief   Returns value of log collector service IP-address field.
+     **/
+    inline QString getServiceAddress(void) const;
+    
+    /**
+     * \brief   Returns value of log collector service port number field.
+     **/
+    inline uint16_t getServicePort(void) const;
+
 /************************************************************************
  * Inline methods
  ************************************************************************/
@@ -192,7 +223,6 @@ private:
     std::unique_ptr<Ui::OptionPageLoggingForm>    ui;             //!< The user interface object.
     QRegularExpressionValidator             mPortValidator; //!< The validator for the port number input.
     bool                                    mTestTriggered; //!< Flag indicating if the test connection is triggered.
-    bool                                    mCanSave;       //!< Flag indicating if the settings can be saved.
     QString                                 mAddress;       //!< The address of the log collector service.
     uint16_t                                mPort;          //!< The port number of the log collector service.
     QString                                 mLogFileName;   //!< The name of the log file.
@@ -205,11 +235,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     OptionPageLogging(void) = delete; // Disable default constructor
-    OptionPageLogging(OptionPageLogging const&) = delete;
-    OptionPageLogging& operator= (OptionPageLogging const&) = delete;
-    OptionPageLogging(OptionPageLogging&&) noexcept = delete;
-    OptionPageLogging& operator= (OptionPageLogging&&) noexcept = delete;
-
+    DECLARE_NOCOPY_NOMOVE(OptionPageLogging);
 };
 
 #endif // LUSAN_VIEW_COMMON_OPTIONPAGELOGGING_HPP

@@ -52,7 +52,6 @@ OptionPageLogging::OptionPageLogging(ProjectSettings* parent)
     , ui            {std::make_unique<Ui::OptionPageLoggingForm>()}
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}
     , mTestTriggered{false}
-    , mCanSave      {false}
     , mAddress      {}
     , mPort         {NESocket::InvalidPort}
     , mLogFileName  {}
@@ -72,7 +71,6 @@ OptionPageLogging::OptionPageLogging(ProjectSettings *parent, const QString& add
     , ui            {std::make_unique<Ui::OptionPageLoggingForm>()}
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}
     , mTestTriggered{false}
-    , mCanSave      {false}
     , mAddress      {address}
     , mPort         {port}
     , mLogFileName  {logFile}
@@ -148,40 +146,58 @@ void OptionPageLogging::onBrowseButtonClicked()
 
 void OptionPageLogging::applyChanges()
 {
-    if (isDataModified() && (mCanSave == false))
+    if (isDataModified() && (canSave() == false))
     {
-        QMessageBox::critical(this, tr("Error"), tr("The endpoint must be tested and must be working before saving the changes!"));
+        warnMessage();
     }
     else
     {
         saveData();
-        setDataModified(false);
+        OptionPageBase::applyChanges();
     }
 }
 
-void OptionPageLogging::closingOptions(bool /*OKpressed*/)
+void OptionPageLogging::closingOptions(bool OKpressed)
 {
     LogObserver::disconnect();
     LogObserver::releaseLogObserver();
-    setDataModified(false);
+    OptionPageBase::closingOptions(OKpressed);
+}
+
+void OptionPageLogging::warnMessage(void)
+{
+    QMessageBox::critical(static_cast<QWidget *>(this), tr("Error"), tr("The endpoint must be tested and must be working before saving the changes!"));
 }
 
 void OptionPageLogging::setData(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
 {
-    textLogLocation()->setText(logLocation);
-    textLogFileName()->setText(logFile);
-    textIpAddress()->setText(address);
-    textPortNumber()->setText(QString::number(port));
+    if (getLogLocation() != logLocation)
+    {
+        textLogLocation()->setText(logLocation);
+    }
 
-    update();
+    if (getLogFileName() != logFile)
+    {
+        textLogFileName()->setText(logFile);
+    }
+
+    if (getServiceAddress() != address)
+    {
+        textIpAddress()->setText(address);
+    }
+
+    if (getServicePort() != port)
+    {
+        textPortNumber()->setText(QString::number(port));
+    }
 }
 
 void OptionPageLogging::saveData() const
 {
-    QString logLocation{ textLogLocation()->text() };
-    QString logFileName{ textLogFileName()->text() };
-    QString ipAddress{ textIpAddress()->text() };
-    uint16_t portNumber{ static_cast<uint16_t>(textPortNumber()->text().toUInt()) };
+    QString logLocation { getLogLocation() };
+    QString logFileName { getLogFileName() };
+    QString ipAddress   { getServiceAddress() };
+    uint16_t portNumber { getServicePort() };
 
     if (logLocation.isEmpty() || logFileName.isEmpty() || ipAddress.isEmpty() || (portNumber == NESocket::InvalidPort))
     {
@@ -206,6 +222,26 @@ void OptionPageLogging::saveData() const
     lgClient.saveLoggerConfig();
 }
 
+inline QString OptionPageLogging::getLogLocation(void) const
+{
+    return textLogLocation()->text();
+}
+
+inline QString OptionPageLogging::getLogFileName(void) const
+{
+    return textLogFileName()->text();
+}
+
+inline QString OptionPageLogging::getServiceAddress(void) const
+{
+    return textIpAddress()->text();
+}
+
+inline uint16_t OptionPageLogging::getServicePort(void) const
+{
+    return static_cast<uint16_t>(textPortNumber()->text().toUInt());
+}
+
 void OptionPageLogging::onTestButtonClicked(bool checked)
 {
     if (mTestTriggered)
@@ -227,7 +263,7 @@ void OptionPageLogging::onTestButtonClicked(bool checked)
     QString logFileName{ textLogFileName()->text() };
     QString ipAddress{ textIpAddress()->text() };
     uint16_t portNumber{ static_cast<uint16_t>(textPortNumber()->text().toUInt()) };
-    mCanSave = false;
+    setCanSave(false);
 
     if (logLocation.isEmpty() || logFileName.isEmpty() || ipAddress.isEmpty() || (portNumber == NESocket::InvalidPort))
     {
@@ -280,7 +316,7 @@ void OptionPageLogging::onDataChanged()
     
     buttonTestConnection()->setText(tr("&Test"));
     mTestTriggered = false;
-    mCanSave = false;
+    setCanSave(false);
     setDataModified(true);
 }
 
@@ -312,8 +348,8 @@ void OptionPageLogging::onLogServiceConnected(bool isConnected, const std::strin
 
         LogObserver::disconnect();
         LogObserver::releaseLogObserver();
-
-        if (mCanSave == false)
+        
+        if (canSave() == false)
         {
             textConnectionStatus()->setTextColor(QColor(Qt::darkRed));
             textConnectionStatus()->setText(_textTestFailed);
@@ -335,7 +371,7 @@ void OptionPageLogging::onLogInstancesConnected(const std::vector< NEService::sS
     textConnectionStatus()->setTextColor(QColor(Qt::darkGreen));
     textConnectionStatus()->setText(_textTestSucceeded.arg(instances.size()));
     buttonTestConnection()->setText(tr("&Test"));
-    mCanSave = true;
+    setCanSave(true);
     mTestTriggered = false;
 }
 

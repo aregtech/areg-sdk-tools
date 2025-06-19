@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/common/NELusanCommon.hpp"
 #include <QDialog>
 #include <QStackedWidget>
 #include <QStringListModel>
@@ -106,13 +107,18 @@ private slots:
      * \brief   Slot triggered when the selection of the settings list changed.
      * \param   index   The index of the selected item.
      **/
-    void settingsListSelectionChanged(QModelIndex const&);
+    void onSettingsListSelectionChanged(QModelIndex const&);
 
     /**
      * \brief   Slot triggered when the user clicked on the button.
      * \param   button  The clicked button.
      **/
-    void buttonClicked(QAbstractButton*) const;
+    void onButtonClicked(QAbstractButton*);
+
+    /**
+     * \brief   Slot, triggered when OK button in the button box is clicked.
+     **/
+    void onAcceptClicked(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
@@ -136,6 +142,9 @@ private:
      **/
     void selectSetting(int index) const;
 
+    /**
+     * \brief   Activates certain option page by given index.
+     **/
     void selectPage(int index) const;
 
 //////////////////////////////////////////////////////////////////////////
@@ -154,10 +163,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    ProjectSettings(const ProjectSettings & /*src*/) = delete;
-    ProjectSettings& operator = (const ProjectSettings & /*src*/) = delete;
-    ProjectSettings(ProjectSettings && /*src*/) noexcept = delete;
-    ProjectSettings& operator = (ProjectSettings && /*src*/) noexcept = delete;
+    DECLARE_NOCOPY_NOMOVE(ProjectSettings);
 };
 
 //////////////////////////////////////////////////////////////////////////

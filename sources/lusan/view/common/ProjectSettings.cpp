@@ -74,11 +74,13 @@ void ProjectSettings::setupDialog()
 
 void ProjectSettings::connectSignals() const
 {
-    connect(mUi->settingsList,   &QAbstractItemView::clicked,    this, &ProjectSettings::settingsListSelectionChanged);
-    connect(mUi->buttonBox,      &QDialogButtonBox::clicked,     this, &ProjectSettings::buttonClicked);
+    connect(mUi->settingsList   , &QAbstractItemView::clicked, this, &ProjectSettings::onSettingsListSelectionChanged);
+    connect(mUi->buttonBox      , &QDialogButtonBox::clicked , this, &ProjectSettings::onButtonClicked);
+    disconnect(mUi->buttonBox   , &QDialogButtonBox::accepted, this, &QDialog::accept); // disable passing to QDialog
+    connect(mUi->buttonBox      , &QDialogButtonBox::accepted, this, &ProjectSettings::onAcceptClicked);
 }
 
-void ProjectSettings::settingsListSelectionChanged(QModelIndex const& index)
+void ProjectSettings::onSettingsListSelectionChanged(QModelIndex const& index)
 {
     selectSetting(index.row());
 }
@@ -103,23 +105,43 @@ void ProjectSettings::addSettings()
     mModel.setStringList(settingsList);
 }
 
-void ProjectSettings::buttonClicked(QAbstractButton* button) const
+void ProjectSettings::onButtonClicked(QAbstractButton* button)
 {
     QDialogButtonBox::ButtonRole const role = mUi->buttonBox->buttonRole(button);
-
-    if ((QDialogButtonBox::ButtonRole::AcceptRole != role) &&
-        (QDialogButtonBox::ButtonRole::ApplyRole != role))
+    if (QDialogButtonBox::ButtonRole::ApplyRole == role)
     {
-        return;
-    }
-
-    mDirSettings->applyChanges();
-    mOptionPageWorkspace->applyChanges();
-    mOptionPageLogging->applyChanges();
-
-    if (role == QDialogButtonBox::ButtonRole::ApplyRole)
-    {
+        mDirSettings->applyChanges();
+        mOptionPageWorkspace->applyChanges();
+        mOptionPageLogging->applyChanges();
         emit mMainWindow->signalOptionsApplied();
+    }
+}
+
+void ProjectSettings::onAcceptClicked(void)
+{
+    if (mDirSettings->canAcceptOptions() && mOptionPageWorkspace->canAcceptOptions() && mOptionPageLogging->canAcceptOptions())
+    {
+        mDirSettings->applyChanges();
+        mOptionPageWorkspace->applyChanges();
+        mOptionPageLogging->applyChanges();
+        accept();
+    }
+    else        
+    {
+        if (mDirSettings->canAcceptOptions() == false)
+        {
+            mDirSettings->warnMessage();
+        }
+        
+        if (mOptionPageWorkspace->canAcceptOptions() == false)
+        {
+            mOptionPageWorkspace->warnMessage();
+        }
+        
+        if (mOptionPageLogging->canAcceptOptions() == false)
+        {
+            mOptionPageLogging->warnMessage();
+        }
     }
 }
 

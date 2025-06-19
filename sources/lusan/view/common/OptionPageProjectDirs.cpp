@@ -105,8 +105,6 @@ void OptionPageProjectDirs::applyChanges()
 
     optionsManager.updateWorkspace(currentWorkspace);
     optionsManager.writeOptions();
-}
-
-void OptionPageProjectDirs::closingOptions(bool /*OKpressed*/)
-{
+    
+    OptionPageBase::applyChanges();
 }
