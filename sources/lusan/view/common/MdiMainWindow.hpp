@@ -121,7 +121,7 @@ public:
      * \param   logLocation    The directory where the log file is stored.
      * \return  The result of the dialog, 0 if canceled, 1 if OK pressed.
      **/
-    int showLogSettings(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation);
+    int showOptionPageLogging(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation);
 
 //////////////////////////////////////////////////////////////////////////
 // Signals

@@ -10,74 +10,74 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/ProjectDirSettings.hpp
+ *  \file        lusan/view/common/OptionPageProjectDirs.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Tamas Csillag
  *  \brief       Lusan application, project settings widget.
  *
  ************************************************************************/
 
-#include "lusan/view/common/ProjectDirSettings.hpp"
-#include "ui/ui_ProjectDirSettings.h"
+#include "lusan/view/common/OptionPageProjectDirs.hpp"
+#include "ui/ui_OptionPageProjectDirs.h"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 
 #include <QFileDialog>
 
-ProjectDirSettings::ProjectDirSettings(ProjectSettings *parent)
-    : QWidget(parent)
-    , mUi(std::make_unique<Ui::projectDirSettingsDlg>())
+OptionPageProjectDirs::OptionPageProjectDirs(ProjectSettings *parent)
+    : OptionPageBase(parent)
+    , mUi           (std::make_unique<Ui::OptionPageProjectDirsDlg>())
 {
     mUi->setupUi(this);
     connectSignalHandlers();
     initializePathsWithCurrentWorkspaceData();
 }
 
-ProjectDirSettings::~ProjectDirSettings()
+OptionPageProjectDirs::~OptionPageProjectDirs()
 {
 }
 
-void ProjectDirSettings::connectSignalHandlers() const
+void OptionPageProjectDirs::connectSignalHandlers() const
 {
-    connect(mUi->rootDirBrowseBtn,       &QPushButton::clicked, this, &ProjectDirSettings::onRootDirBrowseBtnClicked);
-    connect(mUi->sourceDirBrowseBtn,     &QPushButton::clicked, this, &ProjectDirSettings::onSourceDirBrowseBtnClicked);
-    connect(mUi->includeDirBrowseBtn,    &QPushButton::clicked, this, &ProjectDirSettings::onIncludeDirBrowseBtnClicked);
-    connect(mUi->deliveryDirBrowseBtn,   &QPushButton::clicked, this, &ProjectDirSettings::onDeliveryDirBrowseBtnClicked);
-    connect(mUi->logDirBrowseBtn,        &QPushButton::clicked, this, &ProjectDirSettings::onLogDirBrowseBtnClicked);
+    connect(mUi->rootDirBrowseBtn,       &QPushButton::clicked, this, &OptionPageProjectDirs::onRootDirBrowseBtnClicked);
+    connect(mUi->sourceDirBrowseBtn,     &QPushButton::clicked, this, &OptionPageProjectDirs::onSourceDirBrowseBtnClicked);
+    connect(mUi->includeDirBrowseBtn,    &QPushButton::clicked, this, &OptionPageProjectDirs::onIncludeDirBrowseBtnClicked);
+    connect(mUi->deliveryDirBrowseBtn,   &QPushButton::clicked, this, &OptionPageProjectDirs::onDeliveryDirBrowseBtnClicked);
+    connect(mUi->logDirBrowseBtn,        &QPushButton::clicked, this, &OptionPageProjectDirs::onLogDirBrowseBtnClicked);
 }
 
-void ProjectDirSettings::onRootDirBrowseBtnClicked()
+void OptionPageProjectDirs::onRootDirBrowseBtnClicked()
 {
     mUi->rootDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Root Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
-void ProjectDirSettings::onSourceDirBrowseBtnClicked()
+void OptionPageProjectDirs::onSourceDirBrowseBtnClicked()
 {
     mUi->sourceDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Source Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
-void ProjectDirSettings::onIncludeDirBrowseBtnClicked()
+void OptionPageProjectDirs::onIncludeDirBrowseBtnClicked()
 {
     mUi->includeDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Include Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
-void ProjectDirSettings::onDeliveryDirBrowseBtnClicked()
+void OptionPageProjectDirs::onDeliveryDirBrowseBtnClicked()
 {
     mUi->deliveryDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Delivery Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
-void ProjectDirSettings::onLogDirBrowseBtnClicked()
+void OptionPageProjectDirs::onLogDirBrowseBtnClicked()
 {
     mUi->logDirEdit->setText(
         QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), "", QFileDialog::ShowDirsOnly));
 }
 
-void ProjectDirSettings::initializePathsWithCurrentWorkspaceData() const
+void OptionPageProjectDirs::initializePathsWithCurrentWorkspaceData() const
 {
     WorkspaceEntry const currentWorkspace{ LusanApplication::getActiveWorkspace() };
 
@@ -89,7 +89,7 @@ void ProjectDirSettings::initializePathsWithCurrentWorkspaceData() const
     mUi->workspaceEdit->setPlainText(currentWorkspace.getWorkspaceDescription());
 }
 
-void ProjectDirSettings::applyChanges() const
+void OptionPageProjectDirs::applyChanges()
 {
     WorkspaceEntry currentWorkspace{ LusanApplication::getActiveWorkspace() };
 
@@ -105,4 +105,6 @@ void ProjectDirSettings::applyChanges() const
 
     optionsManager.updateWorkspace(currentWorkspace);
     optionsManager.writeOptions();
+    
+    OptionPageBase::applyChanges();
 }

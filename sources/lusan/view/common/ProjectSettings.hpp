@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/common/NELusanCommon.hpp"
 #include <QDialog>
 #include <QStackedWidget>
 #include <QStringListModel>
@@ -32,9 +33,9 @@ class ProjectSettingsDlg;
 }
 
 class QAbstractButton;
-class ProjectDirSettings;
-class LogSettings;
-class WorkspaceManager;
+class OptionPageProjectDirs;
+class OptionPageLogging;
+class OptionPageWorkspace;
 class MdiMainWindow;
 
 //////////////////////////////////////////////////////////////////////////
@@ -79,17 +80,17 @@ public:
     /**
      * \brief   Returns the pointer to project settings widget.
      **/
-    inline ProjectDirSettings * getSettingProjectDirs(void);
+    inline OptionPageProjectDirs * getSettingProjectDirs(void);
 
     /**
      * \brief   Returns the pointer to workspace settings widget.
      **/
-    inline WorkspaceManager* getSettingWorkspace(void);
+    inline OptionPageWorkspace* getSettingWorkspace(void);
 
     /**
      * \brief   Returns the pointer to log settings widget.
      **/
-    inline LogSettings* getSettingLog(void);
+    inline OptionPageLogging* getSettingLog(void);
 
     /**
      * \brief   Activates the page in the settings dialog.
@@ -106,13 +107,18 @@ private slots:
      * \brief   Slot triggered when the selection of the settings list changed.
      * \param   index   The index of the selected item.
      **/
-    void settingsListSelectionChanged(QModelIndex const&);
+    void onSettingsListSelectionChanged(QModelIndex const&);
 
     /**
      * \brief   Slot triggered when the user clicked on the button.
      * \param   button  The clicked button.
      **/
-    void buttonClicked(QAbstractButton*) const;
+    void onButtonClicked(QAbstractButton*);
+
+    /**
+     * \brief   Slot, triggered when OK button in the button box is clicked.
+     **/
+    void onAcceptClicked(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
@@ -136,6 +142,9 @@ private:
      **/
     void selectSetting(int index) const;
 
+    /**
+     * \brief   Activates certain option page by given index.
+     **/
     void selectPage(int index) const;
 
 //////////////////////////////////////////////////////////////////////////
@@ -144,39 +153,36 @@ private:
 private:
     std::unique_ptr<Ui::ProjectSettingsDlg> mUi;            //!< The user interface object.
     std::unique_ptr<QStackedWidget> mSettingsStackedWidget; //!< The stacked widget to show the settings.
-    MdiMainWindow*      mMainWindow;                        //!< The main window of the application.
-    QStringListModel    mModel;                             //!< The model of the settings list.
-    ProjectDirSettings* mDirSettings;                       //!< The directory settings.
-    WorkspaceManager*   mWorkspaceManager;                  //!< The workspace settings.
-    LogSettings*        mLogSettings;                       //!< The log settings.
+    MdiMainWindow*          mMainWindow;                    //!< The main window of the application.
+    QStringListModel        mModel;                         //!< The model of the settings list.
+    OptionPageProjectDirs*  mOptionProjectDirs;             //!< The directory settings.
+    OptionPageWorkspace*    mOptionPageWorkspace;           //!< The workspace settings.
+    OptionPageLogging*      mOptionPageLogging;             //!< The log settings.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    ProjectSettings(const ProjectSettings & /*src*/) = delete;
-    ProjectSettings& operator = (const ProjectSettings & /*src*/) = delete;
-    ProjectSettings(ProjectSettings && /*src*/) noexcept = delete;
-    ProjectSettings& operator = (ProjectSettings && /*src*/) noexcept = delete;
+    DECLARE_NOCOPY_NOMOVE(ProjectSettings);
 };
 
 //////////////////////////////////////////////////////////////////////////
 // ProjectSettings inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline ProjectDirSettings * ProjectSettings::getSettingProjectDirs(void)
+inline OptionPageProjectDirs * ProjectSettings::getSettingProjectDirs(void)
 {
-    return mDirSettings;
+    return mOptionProjectDirs;
 }
 
-inline WorkspaceManager * ProjectSettings::getSettingWorkspace(void)
+inline OptionPageWorkspace * ProjectSettings::getSettingWorkspace(void)
 {
-    return mWorkspaceManager;
+    return mOptionPageWorkspace;
 }
 
-inline LogSettings * ProjectSettings::getSettingLog(void)
+inline OptionPageLogging * ProjectSettings::getSettingLog(void)
 {
-    return mLogSettings;
+    return mOptionPageLogging;
 }
 
 #endif // LUSAN_VIEW_COMMON_PROJECTSETTINGS_HPP

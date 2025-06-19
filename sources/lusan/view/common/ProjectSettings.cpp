@@ -19,9 +19,9 @@
 
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "ui/ui_ProjectSettings.h"
-#include "lusan/view/common/ProjectDirSettings.hpp"
-#include "lusan/view/common/WorkspaceManager.hpp"
-#include "lusan/view/common/LogSettings.hpp"
+#include "lusan/view/common/OptionPageProjectDirs.hpp"
+#include "lusan/view/common/OptionPageWorkspace.hpp"
+#include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include <QAbstractItemView>
@@ -35,9 +35,9 @@ ProjectSettings::ProjectSettings(MdiMainWindow* parent)
     , mSettingsStackedWidget(std::make_unique<QStackedWidget>(this))
     , mMainWindow           (parent)
     , mModel                (this)
-    , mDirSettings          (new ProjectDirSettings(this))
-    , mWorkspaceManager     (new WorkspaceManager(this))
-    , mLogSettings          (new LogSettings(this))
+    , mOptionProjectDirs    (new OptionPageProjectDirs(this))
+    , mOptionPageWorkspace  (new OptionPageWorkspace(this))
+    , mOptionPageLogging    (new OptionPageLogging(this))
 {
     mUi->setupUi(this);
     setupDialog();
@@ -74,11 +74,13 @@ void ProjectSettings::setupDialog()
 
 void ProjectSettings::connectSignals() const
 {
-    connect(mUi->settingsList,   &QAbstractItemView::clicked,    this, &ProjectSettings::settingsListSelectionChanged);
-    connect(mUi->buttonBox,      &QDialogButtonBox::clicked,     this, &ProjectSettings::buttonClicked);
+    connect(mUi->settingsList   , &QAbstractItemView::clicked, this, &ProjectSettings::onSettingsListSelectionChanged);
+    connect(mUi->buttonBox      , &QDialogButtonBox::clicked , this, &ProjectSettings::onButtonClicked);
+    disconnect(mUi->buttonBox   , &QDialogButtonBox::accepted, this, &QDialog::accept); // disable passing to QDialog
+    connect(mUi->buttonBox      , &QDialogButtonBox::accepted, this, &ProjectSettings::onAcceptClicked);
 }
 
-void ProjectSettings::settingsListSelectionChanged(QModelIndex const& index)
+void ProjectSettings::onSettingsListSelectionChanged(QModelIndex const& index)
 {
     selectSetting(index.row());
 }
@@ -92,9 +94,9 @@ void ProjectSettings::selectSetting(int const index) const
 
 void ProjectSettings::addSettings()
 {
-    mSettingsStackedWidget->addWidget(mWorkspaceManager);
-    mSettingsStackedWidget->addWidget(mDirSettings);
-    mSettingsStackedWidget->addWidget(mLogSettings);
+    mSettingsStackedWidget->addWidget(mOptionPageWorkspace);
+    mSettingsStackedWidget->addWidget(mOptionProjectDirs);
+    mSettingsStackedWidget->addWidget(mOptionPageLogging);
 
     QStringList settingsList;
     settingsList.append(tr("Workspaces"));
@@ -103,23 +105,43 @@ void ProjectSettings::addSettings()
     mModel.setStringList(settingsList);
 }
 
-void ProjectSettings::buttonClicked(QAbstractButton* button) const
+void ProjectSettings::onButtonClicked(QAbstractButton* button)
 {
     QDialogButtonBox::ButtonRole const role = mUi->buttonBox->buttonRole(button);
-
-    if ((QDialogButtonBox::ButtonRole::AcceptRole != role) &&
-        (QDialogButtonBox::ButtonRole::ApplyRole != role))
+    if (QDialogButtonBox::ButtonRole::ApplyRole == role)
     {
-        return;
-    }
-
-    mDirSettings->applyChanges();
-    mWorkspaceManager->applyChanges();
-    mLogSettings->applyChanges();
-
-    if (role == QDialogButtonBox::ButtonRole::ApplyRole)
-    {
+        mOptionProjectDirs->applyChanges();
+        mOptionPageWorkspace->applyChanges();
+        mOptionPageLogging->applyChanges();
         emit mMainWindow->signalOptionsApplied();
+    }
+}
+
+void ProjectSettings::onAcceptClicked(void)
+{
+    if (mOptionProjectDirs->canAcceptOptions() && mOptionPageWorkspace->canAcceptOptions() && mOptionPageLogging->canAcceptOptions())
+    {
+        mOptionProjectDirs->applyChanges();
+        mOptionPageWorkspace->applyChanges();
+        mOptionPageLogging->applyChanges();
+        accept();
+    }
+    else        
+    {
+        if (mOptionProjectDirs->canAcceptOptions() == false)
+        {
+            mOptionProjectDirs->warnMessage();
+        }
+        
+        if (mOptionPageWorkspace->canAcceptOptions() == false)
+        {
+            mOptionPageWorkspace->warnMessage();
+        }
+        
+        if (mOptionPageLogging->canAcceptOptions() == false)
+        {
+            mOptionPageLogging->warnMessage();
+        }
     }
 }
 

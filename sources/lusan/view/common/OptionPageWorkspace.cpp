@@ -10,15 +10,15 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/WorkspaceManager.cpp
+ *  \file        lusan/view/common/OptionPageWorkspace.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Tamas Csillag
  *  \brief       Lusan application, workspace manager widget.
  *
  ************************************************************************/
 
-#include "lusan/view/common/WorkspaceManager.hpp"
-#include "ui/ui_WorkspaceManager.h"
+#include "lusan/view/common/OptionPageWorkspace.hpp"
+#include "ui/ui_OptionPageWorkspace.h"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
@@ -26,9 +26,9 @@
 
 #include <algorithm>
 
-WorkspaceManager::WorkspaceManager(ProjectSettings* parent)
-    : QWidget(parent)
-    , mUi(std::make_unique<Ui::workspaceManager>())
+OptionPageWorkspace::OptionPageWorkspace(ProjectSettings* parent)
+    : OptionPageBase(parent)
+    , mUi(std::make_unique<Ui::OptionPageWorkspace>())
     , mModifiedWorkspaces()
 {
     mUi->setupUi(this);
@@ -36,18 +36,18 @@ WorkspaceManager::WorkspaceManager(ProjectSettings* parent)
     connectSignalHandlers();
 }
 
-WorkspaceManager::~WorkspaceManager()
+OptionPageWorkspace::~OptionPageWorkspace()
 {
 }
 
-void WorkspaceManager::connectSignalHandlers() const
+void OptionPageWorkspace::connectSignalHandlers() const
 {
-    connect(mUi->deleteButton    , &QPushButton::clicked             , this, &WorkspaceManager::onDeleteButtonClicked);
-    connect(mUi->listOfWorkspaces, &QListWidget::itemSelectionChanged, this, &WorkspaceManager::onWorkspaceSelectionChanged);
-    connect(mUi->workspaceEdit   , &QPlainTextEdit::textChanged      , this, &WorkspaceManager::onWorkspaceDescChanged);
+    connect(mUi->deleteButton    , &QPushButton::clicked             , this, &OptionPageWorkspace::onDeleteButtonClicked);
+    connect(mUi->listOfWorkspaces, &QListWidget::itemSelectionChanged, this, &OptionPageWorkspace::onWorkspaceSelectionChanged);
+    connect(mUi->workspaceEdit   , &QPlainTextEdit::textChanged      , this, &OptionPageWorkspace::onWorkspaceDescChanged);
 }
 
-void WorkspaceManager::initializePathsWithSelectedWorkspaceData(uint32_t const workspaceId) const
+void OptionPageWorkspace::initializePathsWithSelectedWorkspaceData(uint32_t const workspaceId) const
 {
     std::optional<WorkspaceEntry> const workspace{ getWorkspace(workspaceId) };
     if (!workspace)
@@ -61,7 +61,7 @@ void WorkspaceManager::initializePathsWithSelectedWorkspaceData(uint32_t const w
     mUi->workspaceEdit->setPlainText(workspace->getWorkspaceDescription());
 }
 
-void WorkspaceManager::populateListOfWorkspaces() const
+void OptionPageWorkspace::populateListOfWorkspaces() const
 {
     WorkspaceEntry const currentWorkspace{ LusanApplication::getActiveWorkspace() };
     std::vector<WorkspaceEntry> const& workspaces { LusanApplication::getOptions().getWorkspaceList() };
@@ -90,7 +90,7 @@ void WorkspaceManager::populateListOfWorkspaces() const
     mUi->listOfWorkspaces->sortItems();
 }
 
-void WorkspaceManager::onDeleteButtonClicked()
+void OptionPageWorkspace::onDeleteButtonClicked()
 {
     QListWidgetItem* selectedItem = mUi->listOfWorkspaces->currentItem();
     if (nullptr == selectedItem)
@@ -104,16 +104,16 @@ void WorkspaceManager::onDeleteButtonClicked()
     }
 }
 
-void WorkspaceManager::deleteSelectedWorkspaceItem() const
+void OptionPageWorkspace::deleteSelectedWorkspaceItem() const
 {
-    disconnect(mUi->workspaceEdit, &QPlainTextEdit::textChanged, this, &WorkspaceManager::onWorkspaceDescChanged);
+    disconnect(mUi->workspaceEdit, &QPlainTextEdit::textChanged, this, &OptionPageWorkspace::onWorkspaceDescChanged);
 
     delete mUi->listOfWorkspaces->takeItem(mUi->listOfWorkspaces->currentRow());
 
-    connect(mUi->workspaceEdit, &QPlainTextEdit::textChanged, this, &WorkspaceManager::onWorkspaceDescChanged);
+    connect(mUi->workspaceEdit, &QPlainTextEdit::textChanged, this, &OptionPageWorkspace::onWorkspaceDescChanged);
 }
 
-void WorkspaceManager::onWorkspaceSelectionChanged() const
+void OptionPageWorkspace::onWorkspaceSelectionChanged() const
 {
     std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
     if (!selectedItemId)
@@ -123,13 +123,13 @@ void WorkspaceManager::onWorkspaceSelectionChanged() const
     initializePathsWithSelectedWorkspaceData(*selectedItemId);
 }
 
-void WorkspaceManager::setupUi() const
+void OptionPageWorkspace::setupUi() const
 {
     populateListOfWorkspaces();
     selectWorkspace(0);
 }
 
-void WorkspaceManager::selectWorkspace(int const index) const
+void OptionPageWorkspace::selectWorkspace(int const index) const
 {
     if (index < mUi->listOfWorkspaces->count())
     {
@@ -138,7 +138,7 @@ void WorkspaceManager::selectWorkspace(int const index) const
     }
 }
 
-void WorkspaceManager::applyChanges()
+void OptionPageWorkspace::applyChanges()
 {
     if (mModifiedWorkspaces.empty())
         return;
@@ -165,9 +165,11 @@ void WorkspaceManager::applyChanges()
 
     mModifiedWorkspaces.clear();
     LusanApplication::getOptions().writeOptions();
+    
+    OptionPageBase::applyChanges();
 }
 
-std::optional<WorkspaceEntry> WorkspaceManager::getWorkspace(uint32_t const workspaceId)
+std::optional<WorkspaceEntry> OptionPageWorkspace::getWorkspace(uint32_t const workspaceId)
 {
     std::vector<WorkspaceEntry> const& workspaces { LusanApplication::getOptions().getWorkspaceList() };
 
@@ -185,7 +187,7 @@ std::optional<WorkspaceEntry> WorkspaceManager::getWorkspace(uint32_t const work
     }
 }
 
-void WorkspaceManager::onWorkspaceDescChanged()
+void OptionPageWorkspace::onWorkspaceDescChanged()
 {
     std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
     if (!selectedItemId)
@@ -194,7 +196,7 @@ void WorkspaceManager::onWorkspaceDescChanged()
     mModifiedWorkspaces[*selectedItemId] = WorkspaceChangeData{false, mUi->workspaceEdit->toPlainText()};
 }
 
-std::optional<uint32_t> WorkspaceManager::getSelectedWorkspaceId() const
+std::optional<uint32_t> OptionPageWorkspace::getSelectedWorkspaceId() const
 {
     QListWidgetItem* selectedItem = mUi->listOfWorkspaces->currentItem();
     if (nullptr != selectedItem)

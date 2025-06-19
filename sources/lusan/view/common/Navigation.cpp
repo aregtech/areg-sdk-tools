@@ -62,7 +62,10 @@ Navigation::Navigation(MdiMainWindow* parent)
 
     initSize();
 
-    connect(mMainWindow, &MdiMainWindow::signalWindowActivated, this, &Navigation::onMdiWindowActivated);
+    connect(mMainWindow, &MdiMainWindow::signalWindowActivated  , this, &Navigation::onMdiWindowActivated);
+    connect(mMainWindow, &MdiMainWindow::signalOptionsOpening   , this, &Navigation::onOptionsOpening);
+    connect(mMainWindow, &MdiMainWindow::signalOptionsApplied   , this, &Navigation::onOptionsApplied);
+    connect(mMainWindow, &MdiMainWindow::signalOptionsClosed    , this, &Navigation::onOptionsClosed);
 }
 
 QWidget* Navigation::getTab(const QString& tabName) const

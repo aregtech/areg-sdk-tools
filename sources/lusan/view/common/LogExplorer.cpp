@@ -37,7 +37,6 @@
 #include <QAction>
 #include <QMenu>
 #include <filesystem>
-#include "LogSettings.hpp"
 
 LogExplorer* _explorer{ nullptr };
 void LogExplorer::_logObserverStarted(void)
@@ -371,7 +370,7 @@ void LogExplorer::onLogObserverConfigured(bool isEnabled, const QString& address
     
     mAddress= address;
     mPort   = port;
-    mState  = eLoggingStates::LoggingInitialized;
+    mState  = eLoggingStates::LoggingConfigured;
 }
 
 void LogExplorer::onLogDbConfigured(bool isEnabled, const QString& dbName, const QString& dbLocation, const QString& dbUser)
@@ -392,7 +391,7 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     {
         mSelModel->reset();
         mModel->release();
-        if (mState == eLoggingStates::LoggingConnected)
+        if (this->isConnected())
         {
             mState = eLoggingStates::LoggingDisconnected;
         }
@@ -453,7 +452,6 @@ void LogExplorer::onConnectClicked(bool checked)
 {
     if (checked)
     {
-        mState = eLoggingStates::LoggingDisconnected;
         LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
     }
     else
@@ -465,6 +463,7 @@ void LogExplorer::onConnectClicked(bool checked)
         ctrlConnect()->setToolTip(tr("Connect to log collector"));
         
         setupLogSignals(false);
+        mState = eLoggingStates::LoggingDisconnected;
         LogObserver::releaseLogObserver();
     }
 }
@@ -545,7 +544,7 @@ void LogExplorer::onOptionsClicked(bool checked)
     QString logFile = log != nullptr ? log->getConfigDatabaseName() : mInitLogFile;
     QString logLocation = log != nullptr ? log->getConfigDatabaseLocation() : mLogLocation;
     
-    mMainWindow->showLogSettings(address, port, logFile, logLocation);
+    mMainWindow->showOptionPageLogging(address, port, logFile, logLocation);
 }
 
 void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
@@ -558,6 +557,11 @@ void LogExplorer::onRootUpdated(const QModelIndex & root)
 {
     if (mModel != nullptr)
     {
+        if (isConnected())
+        {
+            mState = eLoggingStates::LoggingRunning;
+        }
+
         QTreeView * navi = ctrlTable();
         Q_ASSERT(navi != nullptr);
         if (navi->isExpanded(root) == false)
@@ -607,6 +611,37 @@ void LogExplorer::onScopesDataChanged(const QModelIndex &topLeft, const QModelIn
     {
         enableButtons(ctrlTable()->currentIndex());
         updateExpanded(ctrlTable()->rootIndex());
+    }
+}
+
+void LogExplorer::optionOpenning(void)
+{
+    if (isConnected())
+    {
+        setupLogSignals(false);
+        mState = eLoggingStates::LoggingPaused;
+        LogObserver::disconnect();
+        LogObserver::releaseLogObserver();
+    }
+}
+
+void LogExplorer::optionApplied(void)
+{
+    if (isPaused())
+    {
+        mState = eLoggingStates::LoggingStopped;
+    }
+}
+
+void LogExplorer::optionClosed(bool OKpressed)
+{
+    if (isStopped() || isPaused())
+    {
+        LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
+    }
+    else if (mState != eLoggingStates::LoggingUndefined)
+    {
+        mState = eLoggingStates::LoggingConfigured;
     }
 }
 
