@@ -131,7 +131,8 @@ LogViewerModel::LogViewerModel(QObject *parent)
 
     , mActiveColumns( LogViewerModel::getDefaultColumns() )
     , mLogs         ( )
-    , mConnect      ( )
+    , mConLogger    ( )
+    , mConLogs      ( )
 {
 }
 
@@ -350,14 +351,27 @@ void LogViewerModel::serviceConnected(bool isConnected, const QString& address, 
     mPort        = port;
     mDbPath      = dbPath;
 
-    disconnect(mConnect);
+    disconnect(mConLogger);
+    disconnect(mConLogs);
     if (isConnected)
     {
         LogObserver* log = LogObserver::getComponent();
         Q_ASSERT(log != nullptr);
-        mConnect = connect(log, &LogObserver::signalLogMessage, this, &LogViewerModel::slotLogMessage);
+        mConLogger = connect(log, &LogObserver::signalLogMessage         , this, &LogViewerModel::slotLogMessage);
+        mConLogs   = connect(log, &LogObserver::signalLogServiceConnected, this, &LogViewerModel::slotLogServiceConnected);
     }
 }
+
+void LogViewerModel::slotLogServiceConnected(bool isConnected, const QString& address, uint16_t port)
+{
+    if (isConnected == false)
+    {
+        mIsConnected = false;
+        disconnect(mConLogger);
+        disconnect(mConLogs);
+    }
+}
+
 
 void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
 {

@@ -36,6 +36,7 @@
  * Dependencies
  ************************************************************************/
 class LogScopesModel;
+class LogViewer;
 class MdiMainWindow;
 class MdiChild;
 class QToolButton;
@@ -126,8 +127,8 @@ public:
 
     /**
      * \brief   Sets the IP-address and the TCP port number of the log collector service to connect.
-     * @param   address     The IP-address of the log collector service to connect.
-     * @param   port        The TCP port number of the log collector service to connect.
+     * \param   address     The IP-address of the log collector service to connect.
+     * \param   port        The TCP port number of the log collector service to connect.
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
 
@@ -148,6 +149,19 @@ public:
 
     //!< Returns true if connection is stopped (paused) and can be restored only when new data is applied.
     inline bool isStopped(void) const;
+
+    /**
+     * \brief   Returns the pointer of associated live logs window.
+     *          Can be nullptr if disconnected or no live logs are available.
+     **/
+    inline LogViewer* getLiveLogs(void) const;
+
+    /**
+     * \brief   Sets the pointer of associated live logs window. 
+     * \param   liveLogs    The pointer to the live logs window.
+     *                      Can be nullptr if no live logs are available.
+     */
+    inline void setLiveLogs(LogViewer* liveLogs);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -417,6 +431,7 @@ private:
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.
+    LogViewer*              mLiveLogs;      //!< The log viewer to show live logs.
     QAction*                mMenuActions[static_cast<int>(eLogActions::PrioCount)];   //!< The list of menu actions
 };
 
@@ -548,6 +563,16 @@ inline bool LogExplorer::isStopped(void) const
         Q_ASSERT(false);
         return false;
     }
+}
+
+inline LogViewer* LogExplorer::getLiveLogs(void) const
+{
+    return mLiveLogs;
+}
+
+inline void LogExplorer::setLiveLogs(LogViewer* liveLogs)
+{
+    mLiveLogs = liveLogs;
 }
 
 #endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP

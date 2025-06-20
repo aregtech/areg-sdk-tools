@@ -180,11 +180,19 @@ public:
 //////////////////////////////////////////////////////////////////////////
 private slots:
     /**
-     * \brief   The callback of the event triggered when receive message to log.
+     * \brief   The slot is triggered when receive message to log.
      * \param   logMessage  The structure of the message to log.
      **/
     void slotLogMessage(const SharedBuffer& logMessage);
-
+    
+    /**
+     * \brief   The slot is triggered when the observer connects or disconnects from the log collector service.
+     * \param   isConnected     Flag, indicating whether observer is connected or disconnected.
+     * \param   address         The IP address of the log collector service to connect or disconnect.
+     * \param   port            The IP port number of the log collector service to connect or disconnect.
+     **/
+    void slotLogServiceConnected(bool isConnected, const QString& address, uint16_t port);
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variable
 //////////////////////////////////////////////////////////////////////////
@@ -195,7 +203,8 @@ private:
     QString             mDbPath;        //!< The path to the database
     QList<eColumn>      mActiveColumns; //!< The list of active columns
     QList<SharedBuffer> mLogs;          //!< The list of log messages
-    QMetaObject::Connection mConnect;   //!< The connection signal
+    QMetaObject::Connection mConLogger; //!< The connection signal
+    QMetaObject::Connection mConLogs;   //!< The connection signal
 };
 
 //////////////////////////////////////////////////////////////////////////
