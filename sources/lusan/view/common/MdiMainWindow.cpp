@@ -163,16 +163,40 @@ bool MdiMainWindow::loadFile(const QString& fileName)
 
 void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
+    LogViewer* liveLogs = mNavigation.getLiveLogs().getLiveLogs();
     if (isConnected)
     {
-        QMdiSubWindow * subWindow = mMdiArea.currentSubWindow();
+        QMdiSubWindow * subWindow = liveLogs != nullptr ? liveLogs->getMdiSubwindow() : mMdiArea.currentSubWindow();
         if ((subWindow != mLiveLogWnd) || (mLiveLogWnd == nullptr))
         {
-            onFileNewLog();
+            if (liveLogs != nullptr)
+            {
+                mLogViewer = liveLogs;
+                mLiveLogWnd= subWindow;
+            }
+            else
+            {
+                onFileNewLog();
+            }
+            
             Q_ASSERT(mLogViewer != nullptr);
+            Q_ASSERT(mLiveLogWnd != nullptr);
+            if (mLogViewer->isServiceConnected() == false)
+            {
+                mNavigation.getLiveLogs().setLiveLogs(mLogViewer);
+                mLogViewer->logServiceConnected(true, address, port, dbPath);
+                mLiveLogWnd->activateWindow();
+            }
+        }
+        else
+        {
+            mLogViewer = liveLogs != nullptr ? liveLogs : mLogViewer;
+            Q_ASSERT(mLogViewer != nullptr);
+            Q_ASSERT(mLiveLogWnd != nullptr);
             if (mLogViewer->isServiceConnected() == false)
             {
                 mLogViewer->logServiceConnected(true, address, port, dbPath);
+                mMdiArea.setActiveSubWindow(mLiveLogWnd);
             }
         }
     }

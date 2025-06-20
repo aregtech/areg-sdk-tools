@@ -60,6 +60,7 @@ LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
     , mSelModel     (nullptr)
     , mSignalsActive(false)
     , mState        (eLoggingStates::LoggingUndefined)
+    , mLiveLogs     (nullptr)
 {
     _explorer = this;
     for (int i = 0; i < static_cast<int>(eLogActions::PrioCount); ++ i)
@@ -391,10 +392,6 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     {
         mSelModel->reset();
         mModel->release();
-        if (this->isConnected())
-        {
-            mState = eLoggingStates::LoggingDisconnected;
-        }
     }
 
     enableButtons(QModelIndex());
@@ -464,6 +461,7 @@ void LogExplorer::onConnectClicked(bool checked)
         
         setupLogSignals(false);
         mState = eLoggingStates::LoggingDisconnected;
+        mLiveLogs = nullptr;
         LogObserver::releaseLogObserver();
     }
 }
