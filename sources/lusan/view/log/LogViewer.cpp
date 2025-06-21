@@ -21,6 +21,7 @@
 #include "ui/ui_LogViewer.h"
 
 #include "lusan/model/log/LogViewerModel.hpp"
+#include <QMdiSubWindow>
 
 LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     : MdiChild      (MdiChild::eMdiWindow::MdiLogViewer, wndMain, parent)
@@ -66,6 +67,30 @@ void LogViewer::logServiceConnected(bool isConnected, const QString& address, ui
 {
     Q_ASSERT(mLogModel != nullptr);
     mLogModel->serviceConnected(isConnected, address, port, dbPath);
+    if (isConnected)
+    {
+        Q_ASSERT(mMdiSubWindow != nullptr);
+        mLogModel->dataReset();
+        mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
+        mMdiSubWindow->setToolTip(tr("Live Log: ") + dbPath);
+        setToolTip(tr("Live Log: ") + dbPath);
+    }
+    else if (mMdiSubWindow != nullptr)
+    {
+        Q_ASSERT(mLogModel->getDabasePath() == dbPath);
+        mMdiSubWindow->setToolTip(tr("Offline Log: ") + mLogModel->getDabasePath());
+    }
+}
+
+void LogViewer::logDatabaseCreated(const QString& dbPath)
+{
+    Q_ASSERT(mLogModel != nullptr);
+    mLogModel->setDatabasePath(dbPath);
+    if (mMdiSubWindow != nullptr)
+    {
+        mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
+        mMdiSubWindow->setToolTip(tr("Live Log: ") + dbPath);
+    }
 }
 
 bool LogViewer::isServiceConnected(void) const
@@ -86,6 +111,22 @@ void LogViewer::moveToBottom(bool lastSelect)
         {
             logs->selectRow(count - 1);
         }
+    }
+}
+
+bool LogViewer::isEmpty(void) const
+{
+    Q_ASSERT(mLogModel != nullptr);
+    return mLogModel->isEmpty();
+}
+
+void LogViewer::detachLiveLog(void)
+{
+    Q_ASSERT(mLogModel != nullptr);
+    if (mMdiSubWindow != nullptr)
+    {
+        mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
+        mMdiSubWindow->setToolTip(tr("Offline Log: ") + mLogModel->getDabasePath());
     }
 }
 

@@ -80,6 +80,12 @@ public:
     void logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath);
 
     /**
+     * \brief   Call to notify the main window that the database is created.
+     * \param   dbPath    The path to the database file.
+     **/
+    void logDatabaseCreated(const QString& dbPath);
+
+    /**
      * \brief   Sets the workspace root directory.
      * \param   workspace    The path to the workspace root.
      **/
@@ -122,7 +128,7 @@ public:
      * \return  The result of the dialog, 0 if canceled, 1 if OK pressed.
      **/
     int showOptionPageLogging(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation);
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Signals
 //////////////////////////////////////////////////////////////////////////
@@ -165,7 +171,7 @@ signals:
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
     void signalOptionsClosed(bool OKpressed);
-
+    
 //////////////////////////////////////////////////////////////////////////
 // protected methods
 //////////////////////////////////////////////////////////////////////////

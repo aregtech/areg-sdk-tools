@@ -28,6 +28,7 @@
 #include <QMetaObject>
 
 #include "areg/base/SharedBuffer.hpp"
+#include "areg/base/File.hpp"
 
 class LogObserverComp;
 
@@ -173,7 +174,31 @@ public:
      **/
     inline const QString& getDabasePath(void) const;
 
-    QString newLogFile(void) const;
+    /**
+     * \brief   Return the file name of the log database to set as a title of the log viewer window.
+     **/
+    inline QString getLogFileName(void) const;
+
+    /**
+     * \brief   Returns the address of the log collector service.
+     **/
+    inline QString getLofServiceAddress(void) const;
+
+    /**
+     * \brief   Returns the port of the log collector service.
+     **/
+    inline uint16_t getLogServicePort(void) const;
+
+    /**
+     * \brief   Resets the data in the model.
+     *          Clears the list of log messages and resets the model.
+     **/
+    inline void dataReset(void);
+
+    /**
+     * \brief   Returns true if the model is empty, i.e. contains no log messages.
+     **/
+    inline bool isEmpty(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots.
@@ -224,6 +249,33 @@ inline void LogViewerModel::setDatabasePath(const QString& dbPath)
 inline const QString& LogViewerModel::getDabasePath(void) const
 {
     return mDbPath;
+}
+
+inline QString LogViewerModel::getLogFileName(void) const
+{
+    return QString(mDbPath.isEmpty() == false ? File::getFileNameWithExtension(mDbPath.toStdString().c_str()).getString() : "");
+}
+
+inline QString LogViewerModel::getLofServiceAddress(void) const
+{
+    return mAddress;
+}
+
+inline uint16_t LogViewerModel::getLogServicePort(void) const
+{
+    return mPort;
+}
+
+inline void LogViewerModel::dataReset(void)
+{
+    beginResetModel();
+    mLogs.clear();
+    endResetModel();
+}
+
+inline bool LogViewerModel::isEmpty(void) const
+{
+    return mLogs.isEmpty();
 }
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP

@@ -80,6 +80,11 @@ public:
     void logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath);
 
     /**
+     * \brief   Called when the log database is created.
+     **/
+    void logDatabaseCreated(const QString& dbPath);
+
+    /**
      * \brief   Returns true if application is connected to the logging service.
      **/
     bool isServiceConnected(void) const;
@@ -89,6 +94,16 @@ public:
      * \param   lastSelect    If true, the last row of logs will be selected after moving to the bottom.
      **/
     void moveToBottom(bool lastSelect);
+
+    /**
+     * \brief   Called to check whether log viewer has log entries.
+     **/
+    bool isEmpty(void) const;
+
+    /**
+     * \brief   Called to detach the log viewer and stop receiving messages.
+     **/
+    void detachLiveLog(void);
 
 private:
     /**
