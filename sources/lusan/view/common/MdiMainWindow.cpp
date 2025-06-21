@@ -166,7 +166,18 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
     LogViewer* liveLogs = mNavigation.getLiveLogs().getLiveLogs();
     if (isConnected)
     {
-        QMdiSubWindow * subWindow = liveLogs != nullptr ? liveLogs->getMdiSubwindow() : mMdiArea.currentSubWindow();
+        QMdiSubWindow* subWindow{nullptr};
+        if ((liveLogs != nullptr) && (liveLogs->isEmpty() == false))
+        {
+            liveLogs = nullptr;
+            mLiveLogWnd = nullptr;
+            mLogViewer = nullptr;
+        }
+        else
+        {
+            subWindow = liveLogs != nullptr ? liveLogs->getMdiSubwindow() : mMdiArea.currentSubWindow();
+        }
+
         if ((subWindow != mLiveLogWnd) || (mLiveLogWnd == nullptr))
         {
             if (liveLogs != nullptr)
@@ -209,6 +220,15 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
         
         mLogViewer = nullptr;
         mLiveLogWnd = nullptr;
+    }
+}
+
+void MdiMainWindow::logDatabaseCreated(const QString& dbPath)
+{
+    LogViewer* liveLogs = mNavigation.getLiveLogs().getLiveLogs();
+    if (liveLogs != nullptr)
+    {
+        liveLogs->logDatabaseCreated(dbPath);
     }
 }
 

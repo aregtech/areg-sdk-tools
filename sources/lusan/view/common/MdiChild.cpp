@@ -46,7 +46,7 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     Q_ASSERT(wndMain != nullptr);
     connect(wndMain,    &MdiMainWindow::onMdiChildClosed,    this, &MdiChild::signalMdiChildClosed);
     connect(wndMain,    &MdiMainWindow::onMdiChildCreated,   this, &MdiChild::signalMdiChildCreated, Qt::QueuedConnection);
-    emit signalMdiChildCreated(this);
+    emit signalMdiChildCreated(this);    
 }
 
 MdiChild::~MdiChild(void)
