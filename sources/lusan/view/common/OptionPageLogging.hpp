@@ -99,12 +99,13 @@ public:
 
     /**
      * \brief   Sets the log settings data.
-     * \param   address        The IP address of the log collector service.
-     * \param   port           The port number of the log collector service.
-     * \param   logFile        The name of the log file.
-     * \param   logLocation    The directory where the log file is stored.
+     * \param   address         The IP address of the log collector service.
+     * \param   hostName        The host name of the log collector service. Can be same as `address`.
+     * \param   port            The port number of the log collector service.
+     * \param   logFile         The name of the log file.
+     * \param   logLocation     The directory where the log file is stored.
      **/
-    void setData(const QString & address, uint16_t port, const QString & logFile, const QString & logLocation);
+    void setData(const QString & address, const QString& hostName, uint16_t port, const QString & logFile, const QString & logLocation);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

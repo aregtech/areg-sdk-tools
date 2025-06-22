@@ -122,12 +122,13 @@ public:
     /**
      * \brief   Call to show the options dialog with active log setting page.
      * \param   address        The IP address of the log collector service.
+     * \param   hostName       The host name of the log collector service. Can be same as `address`.
      * \param   port           The TCP port number of the log collector service.
      * \param   logFile        The name of the log file.
      * \param   logLocation    The directory where the log file is stored.
      * \return  The result of the dialog, 0 if canceled, 1 if OK pressed.
      **/
-    int showOptionPageLogging(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation);
+    int showOptionPageLogging(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals

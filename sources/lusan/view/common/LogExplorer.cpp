@@ -539,12 +539,23 @@ void LogExplorer::onSaveSettingsClicked(bool checked)
 void LogExplorer::onOptionsClicked(bool checked)
 {
     LogObserver* log = LogObserver::getComponent();
-    QString address = log != nullptr ? log->getConnectedAddress() : mAddress;
-    uint16_t port = log != nullptr ? log->getConnectedPort() : mPort;
-    QString logFile = log != nullptr ? log->getConfigDatabaseName() : mInitLogFile;
-    QString logLocation = log != nullptr ? log->getConfigDatabaseLocation() : mLogLocation;
     
-    mMainWindow->showOptionPageLogging(address, port, logFile, logLocation);
+    QString address     {mAddress};
+    QString hostName    {mAddress};
+    uint16_t port       {mPort};
+    QString logFile     {mInitLogFile};
+    QString logLocation {mLogLocation};
+    
+    if (log != nullptr)
+    {
+        address     = log->getConnectedAddress();
+        hostName    = log->getConnectedHostName();
+        port        = log->getConnectedPort();
+        logFile     = log->getConfigDatabaseName();
+        logLocation = log->getConfigDatabaseLocation();
+    }        
+    
+    mMainWindow->showOptionPageLogging(address, hostName, port, logFile, logLocation);
 }
 
 void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)

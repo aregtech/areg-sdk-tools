@@ -232,14 +232,14 @@ void MdiMainWindow::logDatabaseCreated(const QString& dbPath)
     }
 }
 
-int MdiMainWindow::showOptionPageLogging(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
+int MdiMainWindow::showOptionPageLogging(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation)
 {
     ProjectSettings settings(this);
 
     emit signalOptionsOpening();
     if ((address.isEmpty() == false) && (port != NESocket::InvalidPort) && (logFile.isEmpty() == false) && (logLocation.isEmpty() == false))
     {
-        settings.getSettingLog()->setData(address, port, logFile, logLocation);
+        settings.getSettingLog()->setData(address, hostName, port, logFile, logLocation);
     }
     
     settings.activatePage(ProjectSettings::eOptionPage::PageLogging);
