@@ -123,9 +123,19 @@ void LogObserver::saveLoggerConfig(void)
     LogObserver::getClient().saveLoggerConfig();
 }
 
+const NESocket::SocketAddress& LogObserver::getLogServiceAddress(void)
+{
+    return LogObserver::getClient().getLoggerAddress();
+}
+
 QString LogObserver::getConnectedAddress(void)
 {
-    return QString(LogObserver::getClient().getLoggerAddress().c_str());
+    return QString(LogObserver::getClient().getLoggerIpAddress().c_str());
+}
+
+QString LogObserver::getConnectedHostName(void)
+{
+    return QString(LogObserver::getClient().getLoggerHostName().c_str());
 }
 
 uint16_t LogObserver::getConnectedPort(void)
@@ -257,9 +267,9 @@ void LogObserver::startupServiceInterface(Component & holder)
     {
         mLogClient.initialize(mConfigFile.getData());
     }
-
-    QString address{ mLogClient.getLoggerAddress().c_str() };
-    uint16_t port { mLogClient.getLoggerPort() };
+    
+    QString address { mLogClient.getLoggerIpAddress().c_str() };
+    uint16_t port   { mLogClient.getLoggerPort() };
     QString logFile { mLogClient.getActiveDatabasePath().c_str() };
 
     emit signalLogObserverInstance(true, address, port, logFile);
@@ -267,8 +277,8 @@ void LogObserver::startupServiceInterface(Component & holder)
 
 void LogObserver::shutdownServiceIntrface(Component & holder)
 {
-    QString address{ mLogClient.getLoggerAddress().c_str() };
-    uint16_t port { mLogClient.getLoggerPort() };
+    QString address { mLogClient.getLoggerIpAddress().c_str() };
+    uint16_t port   { mLogClient.getLoggerPort() };
     QString logFile { mLogClient.getActiveDatabasePath().c_str() };
 
     emit signalLogObserverInstance(false, address, port, logFile);

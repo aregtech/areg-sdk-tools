@@ -26,6 +26,7 @@
 #include "areg/base/GEGlobal.h"
 
 #include "lusan/data/log/LogObserverEvent.hpp"
+#include "areg/base/NESocket.hpp"
 #include "areg/component/Component.hpp"
 #include "areg/component/StubBase.hpp"
 
@@ -83,9 +84,21 @@ public:
     static void releaseLogObserver(void);
 
     /**
+     * \brief   Returns the `SocketAddress` object of the connected log collector service.
+     **/
+    static const NESocket::SocketAddress& getLogServiceAddress(void);
+
+    /**
      * \brief   Returns the IP-address of connected log collector.
      **/
     static QString getConnectedAddress(void);
+
+    /**
+     * \brief   Returns the host name of connected log collector service.
+     *          If the host name is not set or was not able to resolve,
+     *          returns IP-address of the log collector service.
+     **/
+    static QString getConnectedHostName(void);
 
     /**
      * \brief   Returns the port number of connected log collector.

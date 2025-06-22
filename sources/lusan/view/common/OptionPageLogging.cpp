@@ -170,26 +170,38 @@ void OptionPageLogging::warnMessage(void)
     QMessageBox::critical(static_cast<QWidget *>(this), tr("Error"), tr("The endpoint must be tested and must be working before saving the changes!"));
 }
 
-void OptionPageLogging::setData(const QString& address, uint16_t port, const QString& logFile, const QString& logLocation)
+void OptionPageLogging::setData(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation)
 {
-    if (getLogLocation() != logLocation)
+    QString oldLocation { getLogLocation() };
+    QString oldFileName { getLogFileName() };
+    QString oldAddress  { getServiceAddress() };
+    uint16_t oldPort    { getServicePort() };
+    
+    if (oldLocation != logLocation)
     {
         textLogLocation()->setText(logLocation);
     }
 
-    if (getLogFileName() != logFile)
+    if (oldFileName != logFile)
     {
         textLogFileName()->setText(logFile);
     }
-
-    if (getServiceAddress() != address)
-    {
-        textIpAddress()->setText(address);
-    }
-
-    if (getServicePort() != port)
+    
+    if (oldPort != port)
     {
         textPortNumber()->setText(QString::number(port));
+    }
+    
+    if (NESocket::isIpAddress(oldAddress.toStdString()))
+    {
+        if (oldAddress != address)
+        {
+            textIpAddress()->setText(address);
+        }
+    }
+    else if (oldAddress != hostName)
+    {
+        textIpAddress()->setText(hostName);
     }
 }
 
