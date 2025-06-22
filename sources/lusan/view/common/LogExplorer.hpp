@@ -67,6 +67,8 @@ private:
         , PrioError         //!< Set error priority
         , PrioFatal         //!< Set fatal priority
         , PrioScope         //!< Set scope priority
+        , ExpandSelected    //!< Expands selected node
+        , CollapseSelected  //!< Collapse selected node
         , SavePrioTarget    //!< Save priority settings of the selected target
         , SavePrioAll       //!< Save priority settings of all targets
 
@@ -285,6 +287,16 @@ private:
      **/
     void setupLogSignals(bool setup);
 
+    /**
+     * \brief   Returns true if root entries are collapsed.
+     **/
+    bool areRootsCollapsed(void) const;
+
+    /**
+     * \brief   Collapses the root entries.
+     **/
+    void collapseRoots(void);
+
 private slots:
     /**
      * \brief   The slot is triggered when initializing and configuring the observer.
@@ -363,6 +375,9 @@ private slots:
     // Slot for opening the options dialog.
     void onOptionsClicked(bool checked);
 
+    // Slot for collapsing and expanding nodes.
+    void onCollapseClicked(bool checked);
+
     // Slot. which triggered when the selection in the log scopes navigation is changed.
     void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
@@ -409,6 +424,18 @@ private slots:
      * \param   mdiChild    The MDI child window that is activated.
      **/
     void onWindowActivated(MdiChild* mdiChild);
+
+    /**
+     * \brief   Slot, triggered when a node is expanded.
+     * \param   index   The index of the node that was expanded.
+     **/
+    void onNodeExpanded(const QModelIndex &index);
+
+    /**
+     * \brief   Slot, triggered when a node is collapsed
+     * \param   index   The index of the node
+     **/
+    void onNodeCollapsed(const QModelIndex &index);
 
 //////////////////////////////////////////////////////////////////////////
 // Static methods
