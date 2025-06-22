@@ -161,7 +161,7 @@ bool LogScopesModel::saveLogScopePriority(const QModelIndex& target /*= QModelIn
     }
     else
     {
-        return LogObserver::requestSaveConfig(NEService::COOKIE_ANY);
+        return LogObserver::requestSaveConfig(NEService::TARGET_ALL);
     }
 }
 
@@ -170,13 +170,10 @@ QModelIndex LogScopesModel::index(int row, int column, const QModelIndex& parent
     if ((hasIndex(row, column, parent) == false) || (column != 0))
         return QModelIndex();
     
-    if (parent.isValid() == false)
-        return mRootIndex;
-    
-    if (parent == mRootIndex)
+    if ((parent.isValid() == false) || (parent == mRootIndex))
     {
-        ScopeRoot* root = mRootList[row];
-        return createIndex(row, column, root);
+        ScopeRoot* root = (row >= 0) && (row < static_cast<int>(mRootList.size())) ? mRootList[row] : nullptr;
+        return (root != nullptr ? createIndex(row, column, root) : mRootIndex);
     }
     else
     {
@@ -216,10 +213,7 @@ QModelIndex LogScopesModel::parent(const QModelIndex& child) const
 
 int LogScopesModel::rowCount(const QModelIndex& parent) const
 {
-    if (parent.isValid() == false)
-        return 1;
-    
-    if (parent == mRootIndex)
+    if ((parent.isValid() == false) || (parent == mRootIndex))
         return static_cast<int>(mRootList.size());
     
     ScopeNodeBase* parentNode = static_cast<ScopeNodeBase*>(parent.internalPointer());

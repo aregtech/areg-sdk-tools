@@ -177,7 +177,7 @@ void LogExplorer::updateData(void)
 
 void LogExplorer::setupWidgets(void)
 {
-    ctrlCollapse()->setEnabled(false);
+    ctrlCollapse()->setEnabled(true);
     ctrlConnect()->setEnabled(true);
     ctrlSettings()->setEnabled(true);
     ctrlSaveSettings()->setEnabled(true);
@@ -204,6 +204,9 @@ void LogExplorer::setupSignals(void)
     connect(ctrlLogScopes()     , &QToolButton::clicked, this, &LogExplorer::onPrioScopesClicked);
     connect(ctrlSaveSettings()  , &QToolButton::clicked, this, &LogExplorer::onSaveSettingsClicked);
     connect(ctrlSettings()      , &QToolButton::clicked, this, &LogExplorer::onOptionsClicked);
+    connect(ctrlCollapse()      , &QToolButton::clicked, this, &LogExplorer::onCollapseClicked);
+    connect(ctrlTable()         , &QTreeView::expanded , this, &LogExplorer::onNodeExpanded);
+    connect(ctrlTable()         , &QTreeView::collapsed, this, &LogExplorer::onNodeCollapsed);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested, this, &LogExplorer::onTreeViewContextMenuRequested);
 
     connect(mMainWindow         , &MdiMainWindow::signalWindowActivated , this  , &LogExplorer::onWindowActivated);
@@ -296,6 +299,36 @@ void LogExplorer::setupLogSignals(bool setup)
         disconnect(log, &LogObserver::signalLogDbCreated            , this, &LogExplorer::onLogDbCreated);
         disconnect(log, &LogObserver::signalLogObserverInstance     , this, &LogExplorer::onLogObserverInstance);
         mSignalsActive =  false;
+    }
+}
+
+bool LogExplorer::areRootsCollapsed(void) const
+{
+    bool result{ true };
+    QTreeView* treeView = ui->treeView;
+
+    int rowCount = mModel != nullptr ? mModel->rowCount(mModel->getRootIndex()) : 0; // root items
+    for (int row = 0; row < rowCount; ++row)
+    {
+        QModelIndex index = mModel->index(row, 0, mModel->getRootIndex());
+        if (treeView->isExpanded(index))
+        {
+            result = false;
+            break;
+        }
+    }
+
+    return result;
+}
+
+void LogExplorer::collapseRoots(void)
+{
+    QTreeView* treeView = ctrlTable();
+    int rowCount = mModel != nullptr ? mModel->rowCount(mModel->getRootIndex()) : 0; // root items
+    for (int row = 0; row < rowCount; ++row)
+    {
+        QModelIndex index = mModel->index(row, 0, mModel->getRootIndex());
+        treeView->collapse(index);
     }
 }
 
@@ -558,6 +591,45 @@ void LogExplorer::onOptionsClicked(bool checked)
     mMainWindow->showOptionPageLogging(address, hostName, port, logFile, logLocation);
 }
 
+void LogExplorer::onCollapseClicked(bool checked)
+{
+    if ((mModel == nullptr) || (mModel->rowCount(mModel->getRootIndex()) == 0))
+    {
+        ctrlCollapse()->blockSignals(true);
+        ctrlCollapse()->setChecked(false);        
+        ctrlCollapse()->blockSignals(false);
+        return;
+    }
+    
+    QTreeView * navi = ctrlTable();
+    if (checked)
+    {
+        ctrlCollapse()->blockSignals(true);
+        ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
+        
+        navi->blockSignals(true);
+        // navi->collapseAll();
+        collapseRoots();
+        navi->expand(mModel->getRootIndex());
+        navi->setCurrentIndex(mModel->getRootIndex());
+        navi->blockSignals(false);
+        
+        ctrlCollapse()->blockSignals(false);
+    }
+    else
+    {
+        ctrlCollapse()->blockSignals(true);
+        ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
+        
+        navi->blockSignals(true);
+        navi->expandAll();
+        navi->setCurrentIndex(mModel->getRootIndex());
+        navi->blockSignals(false);
+        
+        ctrlCollapse()->blockSignals(false);
+    }
+}
+
 void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
     QModelIndexList list = selected.indexes();
@@ -707,7 +779,13 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
     mMenuActions[static_cast<int>(eLogActions::PrioScope)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, hasScope), hasScope ? tr("Hide &Scopes") : tr("Show &Scopes"));
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setChecked(hasScope);
-
+    
+    mMenuActions[static_cast<int>(eLogActions::ExpandSelected)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::ListRemove), tr("Expand Selected"));
+    mMenuActions[static_cast<int>(eLogActions::ExpandSelected)]->setEnabled((ctrlTable()->isExpanded(index) == false) && (node->hasChildren()));
+    
+    mMenuActions[static_cast<int>(eLogActions::CollapseSelected)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::ListAdd), tr("Collapse Selected"));
+    mMenuActions[static_cast<int>(eLogActions::CollapseSelected)]->setEnabled(ctrlTable()->isExpanded(index) && node->hasChildren());
+    
     mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave), tr("&Save Selection on Target"));
     mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)]->setEnabled(LogObserver::isConnected());
 
@@ -747,6 +825,14 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
     {
         updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioScope);
     }
+    else if (selectedAction == mMenuActions[eLogActions::ExpandSelected])
+    {
+        ctrlTable()->expand(index);
+    }
+    else if (selectedAction == mMenuActions[eLogActions::CollapseSelected])
+    {
+        ctrlTable()->collapse(index);
+    }
     else if (selectedAction == mMenuActions[eLogActions::SavePrioTarget])
     {
         Q_ASSERT(mModel != nullptr);
@@ -754,7 +840,7 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
     }
     else if (selectedAction == mMenuActions[eLogActions::SavePrioAll])
     {
-        mModel->saveLogScopePriority(QModelIndex());
+        mModel->saveLogScopePriority(mModel != nullptr ? mModel->getRootIndex() : QModelIndex());
     }
 }
 
@@ -778,5 +864,23 @@ void LogExplorer::onWindowActivated(MdiChild* mdiChild)
     {
         enableButtons(QModelIndex());
         ctrlMoveBottom()->setEnabled(false);
+    }
+}
+
+void LogExplorer::onNodeExpanded(const QModelIndex& index)
+{
+    if (areRootsCollapsed() == false)
+    {
+        ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
+        ctrlCollapse()->setChecked(false);
+    }
+}
+
+void LogExplorer::onNodeCollapsed(const QModelIndex& index)
+{
+    if (areRootsCollapsed())
+    {
+        ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
+        ctrlCollapse()->setChecked(true);
     }
 }
