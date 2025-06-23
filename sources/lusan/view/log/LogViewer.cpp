@@ -22,6 +22,7 @@
 
 #include "lusan/model/log/LogViewerModel.hpp"
 #include <QMdiSubWindow>
+#include <QMenu>
 
 LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     : MdiChild      (MdiChild::eMdiWindow::MdiLogViewer, wndMain, parent)
@@ -33,9 +34,12 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     ui->setupUi(mMdiWindow);
     
     mLogModel = new LogViewerModel(this);
-    getHeader()->setVisible(true);
-    getHeader()->show();
-    
+    QHeaderView* header = getHeader();
+    header->setVisible(true);
+    header->show();
+    header->setContextMenuPolicy(Qt::CustomContextMenu);
+    header->setSectionsMovable(true);
+
     QTableView* view = getTable();    
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -47,7 +51,8 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     view->verticalHeader()->hide();
     view->setAutoScroll(true);
     view->setVerticalScrollMode(QTableView::ScrollPerItem);
-    
+    view->setContextMenuPolicy(Qt::CustomContextMenu);
+
     view->setModel(mLogModel);
 
     // Set the layout
@@ -58,8 +63,9 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     setAttribute(Qt::WA_DeleteOnClose);
     getTable()->setAutoScroll(true);
 
-    connect(mLogModel, &LogViewerModel::rowsInserted, this, &LogViewer::onRowsInserted);
-    
+    connect(mLogModel   , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
+    connect(header      , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
+    connect(view        , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
 }
 
 
@@ -145,6 +151,23 @@ void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
     }
 }
 
+void LogViewer::onHeaderContextMenu(const QPoint& pos)
+{
+    QMenu menu(this);
+    QModelIndex idx{getTable()->currentIndex()};
+    populateColumnsMenu(&menu, idx.isValid() ? idx.row() : -1);
+    menu.exec(getHeader()->mapToGlobal(pos));
+}
+
+void LogViewer::onTableContextMenu(const QPoint& pos)
+{
+    QMenu menu(this);
+    QMenu* columnsMenu = menu.addMenu(tr("Columns"));
+    QModelIndex idx{getTable()->currentIndex()};    
+    populateColumnsMenu(&menu, idx.isValid() ? idx.row() : -1);
+    menu.exec(getTable()->viewport()->mapToGlobal(pos));
+}
+
 QTableView* LogViewer::getTable(void)
 {
     return ui->logView;
@@ -153,4 +176,61 @@ QTableView* LogViewer::getTable(void)
 QHeaderView* LogViewer::getHeader(void)
 {
     return ui->logView->horizontalHeader();
+}
+
+void LogViewer::populateColumnsMenu(QMenu* menu, int curRow)
+{
+    // Get current active columns from the model
+    const QList<LogViewerModel::eColumn>& activeCols = mLogModel->getActiveColumns();
+    const QStringList& headers{ LogViewerModel::getHeaderList() };
+
+    for (int i = 0; i < static_cast<int>(headers.size()); ++i)
+    {
+        LogViewerModel::eColumn col = static_cast<LogViewerModel::eColumn>(i);
+        if (col == LogViewerModel::eColumn::LogColumnMessage)
+            continue; // exclude "log message" menu entry.
+        
+        bool isVisible = activeCols.contains(col);
+
+        QAction* action = menu->addAction(headers[i]);
+        action->setCheckable(true);
+        action->setChecked(isVisible);
+        action->setData(i); // Store index for later
+
+        connect(action, &QAction::triggered, this, [this, action, col, isVisible, curRow]() {
+                    if (curRow < 0)
+                        moveToBottom(false);
+                    if (isVisible)
+                        mLogModel->removeColumn(col);
+                    else
+                        mLogModel->addColumn(col);
+                });
+    }
+
+    QAction* actReset = menu->addAction(tr("Reset Columns"));
+    actReset->setCheckable(false);
+    connect(actReset, &QAction::triggered, this, [this, curRow]() {
+                getTable()->scrollToBottom();
+                mLogModel->setActiveColumns(QList<LogViewerModel::eColumn>());
+                resetColumnOrder();
+            });
+}
+
+void LogViewer::resetColumnOrder()
+{
+    // Force the view to update its columns to match the model
+    getTable()->setModel(nullptr);
+    getTable()->setModel(mLogModel);
+
+    QHeaderView* header = getHeader();
+    int columnCount = header->count();
+    // Restore to default order: 0, 1, 2, ..., N-1
+    for (int logical = 0; logical < columnCount; ++logical)
+    {
+        int visual = header->visualIndex(logical);
+        if (visual != logical)
+        {
+            header->moveSection(visual, logical);
+        }
+    }
 }

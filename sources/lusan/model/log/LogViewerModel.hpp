@@ -42,7 +42,7 @@ class LogViewerModel : public QAbstractTableModel
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
-private:
+public:
 
     //!< The index of columns
     enum class eColumn  : int
@@ -200,6 +200,41 @@ public:
      **/
     inline bool isEmpty(void) const;
 
+    /**
+     * \brief   Finds the index of the specified column.
+     * \param   col The column to find.
+     * \return  The index of the column, or -1 if not found.
+     **/
+    inline int findColumn(LogViewerModel::eColumn col) const;
+
+    /**
+     * \brief   Returns the list of active columns.
+     *          The active columns are the ones that are currently visible in the log viewer.
+     **/
+    inline QList<LogViewerModel::eColumn> getActiveColumns(void) const;
+
+    /**
+     * \brief   Adds a column at a given position of active columns list.
+     *          If -1, adds a column before the "Log messages" column.
+     * \param   col     The column to add.
+     * \param   pos     The position of column to add.
+     *                  If -1, adds column before "Log messages" column.
+     **/
+    void addColumn(LogViewerModel::eColumn col, int pos = -1);
+
+    /**
+     * \brief   Removes specified column from the active columns list.
+     * \param   col     The column to remove.
+     **/
+    void removeColumn(LogViewerModel::eColumn col);
+
+    /**
+     * \brief   Sets list of active columns. If empty, it resets the default columns
+     * \param   columns     The list of active columns to set.
+     *                      If empty, resets the columns.
+     **/
+    void setActiveColumns(const QList< LogViewerModel::eColumn>& columns);
+
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -276,6 +311,16 @@ inline void LogViewerModel::dataReset(void)
 inline bool LogViewerModel::isEmpty(void) const
 {
     return mLogs.isEmpty();
+}
+
+inline int LogViewerModel::findColumn(LogViewerModel::eColumn col) const
+{
+    return static_cast<int>(mActiveColumns.indexOf(col));
+}
+
+inline QList<LogViewerModel::eColumn> LogViewerModel::getActiveColumns(void) const
+{
+    return mActiveColumns;
 }
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
