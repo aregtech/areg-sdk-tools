@@ -451,6 +451,7 @@ private:
     QMenu*          mDesignMenu;
     //!< The design service interface menu
     QMenu*          mDesignMenuSI;
+    QMenu*          mLoggingMenu;
     //!< The top level menu "Tools"
     QMenu*          mToolsMenu;
     //!< The window menu.

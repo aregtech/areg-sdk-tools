@@ -69,6 +69,8 @@ private:
         , PrioScope         //!< Set scope priority
         , ExpandSelected    //!< Expands selected node
         , CollapseSelected  //!< Collapse selected node
+        , ExpandAll         //!< Expand all nodes
+        , CollapseAll       //!< Collapse all nodes
         , SavePrioTarget    //!< Save priority settings of the selected target
         , SavePrioAll       //!< Save priority settings of all targets
 
@@ -459,7 +461,7 @@ private:
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.
     LogViewer*              mLiveLogs;      //!< The log viewer to show live logs.
-    QAction*                mMenuActions[static_cast<int>(eLogActions::PrioCount)];   //!< The list of menu actions
+    QList<QAction*>         mMenuActions;   //!< The list of menu actions
 };
 
 //////////////////////////////////////////////////////////////////////////

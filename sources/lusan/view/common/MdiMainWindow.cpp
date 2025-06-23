@@ -75,6 +75,8 @@ MdiMainWindow::MdiMainWindow()
     , mFileMenu     (nullptr)
     , mEditMenu     (nullptr)
     , mViewMenu     (nullptr)
+    , mToolsMenu    (nullptr)
+    , mLoggingMenu  (nullptr)
     , mWindowMenu   (nullptr)
     , mHelpMenu     (nullptr)
     , mFileToolBar  (nullptr)
@@ -667,7 +669,7 @@ void MdiMainWindow::_createActions()
     initAction(mActViewStatus, iconStatus, tr("&Status Window"));
     mActViewStatus.setStatusTip(tr("View Status Window"));
     connect(&mActViewStatus, &QAction::triggered, this, &MdiMainWindow::onViewStatus);
-    
+
     initAction(mActToolsOptions, QIcon::fromTheme("applications-development"), tr("&Options"));
     mActToolsOptions.setStatusTip(tr("View Workspace Options"));
     connect(&mActToolsOptions, &QAction::triggered, this, &MdiMainWindow::onToolsOptions);
@@ -726,7 +728,7 @@ void MdiMainWindow::_createMenus()
     mViewMenu->addAction(&mActViewWokspace);
     mViewMenu->addAction(&mActViewLogs);
     mViewMenu->addAction(&mActViewStatus);
-    
+
     mToolsMenu = menuBar()->addMenu(tr("&Tools"));
     mToolsMenu->addAction(&mActToolsOptions);
 

@@ -61,12 +61,9 @@ LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
     , mSignalsActive(false)
     , mState        (eLoggingStates::LoggingUndefined)
     , mLiveLogs     (nullptr)
+    , mMenuActions  (static_cast<int>(eLogActions::PrioCount))
 {
     _explorer = this;
-    for (int i = 0; i < static_cast<int>(eLogActions::PrioCount); ++ i)
-    {
-        mMenuActions[i] = nullptr;
-    }
     
     ui->setupUi(this);
     this->setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
@@ -606,9 +603,9 @@ void LogExplorer::onCollapseClicked(bool checked)
     {
         ctrlCollapse()->blockSignals(true);
         ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
+        ctrlCollapse()->setChecked(true);
         
         navi->blockSignals(true);
-        // navi->collapseAll();
         collapseRoots();
         navi->expand(mModel->getRootIndex());
         navi->setCurrentIndex(mModel->getRootIndex());
@@ -620,6 +617,7 @@ void LogExplorer::onCollapseClicked(bool checked)
     {
         ctrlCollapse()->blockSignals(true);
         ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
+        ctrlCollapse()->setChecked(false);
         
         navi->blockSignals(true);
         navi->expandAll();
@@ -786,6 +784,12 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
     mMenuActions[static_cast<int>(eLogActions::CollapseSelected)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::ListAdd), tr("Collapse Selected"));
     mMenuActions[static_cast<int>(eLogActions::CollapseSelected)]->setEnabled(ctrlTable()->isExpanded(index) && node->hasChildren());
     
+    mMenuActions[static_cast<int>(eLogActions::ExpandAll)] = menu.addAction(tr("Expand All"));
+    mMenuActions[static_cast<int>(eLogActions::ExpandAll)]->setEnabled(true);
+
+    mMenuActions[static_cast<int>(eLogActions::CollapseAll)] = menu.addAction(tr("Collapse All"));
+    mMenuActions[static_cast<int>(eLogActions::CollapseAll)]->setEnabled(areRootsCollapsed() == false);
+
     mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave), tr("&Save Selection on Target"));
     mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)]->setEnabled(LogObserver::isConnected());
 
@@ -832,6 +836,14 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
     else if (selectedAction == mMenuActions[eLogActions::CollapseSelected])
     {
         ctrlTable()->collapse(index);
+    }
+    else if (selectedAction == mMenuActions[eLogActions::ExpandAll])
+    {
+        onCollapseClicked(true);
+    }
+    else if (selectedAction == mMenuActions[eLogActions::CollapseAll])
+    {
+        onCollapseClicked(false);
     }
     else if (selectedAction == mMenuActions[eLogActions::SavePrioTarget])
     {

@@ -138,7 +138,7 @@ LogViewerModel::LogViewerModel(QObject *parent)
 
 QVariant LogViewerModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if (orientation == Qt::Orientation::Vertical)
+    if ((orientation == Qt::Orientation::Vertical) || (section < 0) || (section >= static_cast<int>(mActiveColumns.size())))
         return QVariant();
 
     if (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole)
@@ -192,7 +192,7 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
         const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
         if (logMessage != nullptr)
         {
-            eColumn col = static_cast<eColumn>(getDefaultColumns().at(index.column()));
+            eColumn col = static_cast<eColumn>(mActiveColumns.at(index.column()));
             switch (col)
             {
             case eColumn::LogColumnPriority:
@@ -229,7 +229,7 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
         
         const SharedBuffer data{mLogs.at(row)};
         const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(data.getBuffer());
-        if ((logMessage != nullptr) && (static_cast<eColumn>(getDefaultColumns().at(index.column())) == eColumn::LogColumnPriority))
+        if ((logMessage != nullptr) && (static_cast<eColumn>(mActiveColumns.at(index.column())) == eColumn::LogColumnPriority))
         {
             switch (logMessage->logMessagePrio)
             {
@@ -360,6 +360,39 @@ void LogViewerModel::serviceConnected(bool isConnected, const QString& address, 
         mConLogger = connect(log, &LogObserver::signalLogMessage         , this, &LogViewerModel::slotLogMessage);
         mConLogs   = connect(log, &LogObserver::signalLogServiceConnected, this, &LogViewerModel::slotLogServiceConnected);
     }
+}
+
+void LogViewerModel::addColumn(LogViewerModel::eColumn col, int pos /*= -1*/)
+{
+    int found = findColumn(col);
+    if (found == -1)
+    {
+        pos = (pos >= 0) && (pos < static_cast<int>(mActiveColumns.size())) ? pos : mActiveColumns.size() - 1;
+        beginInsertColumns(QModelIndex(), pos, pos);
+        mActiveColumns.insert(pos, col);        
+        endInsertColumns();
+    }
+}
+
+void LogViewerModel::removeColumn(LogViewerModel::eColumn col)
+{
+    int found = findColumn(col);
+    if (found >= 0)
+    {
+        Q_ASSERT(found < static_cast<int>(mActiveColumns.size()));
+        beginRemoveColumns(QModelIndex(), found, found);
+        mActiveColumns.remove(found, 1);
+        endRemoveColumns();
+    }
+}
+
+void LogViewerModel::setActiveColumns(const QList<LogViewerModel::eColumn>& columns)
+{
+    const QList<LogViewerModel::eColumn>& cols{columns.empty() ? getDefaultColumns() : columns};
+    
+    beginResetModel();
+    mActiveColumns = cols;
+    endResetModel();
 }
 
 void LogViewerModel::slotLogServiceConnected(bool isConnected, const QString& address, uint16_t port)

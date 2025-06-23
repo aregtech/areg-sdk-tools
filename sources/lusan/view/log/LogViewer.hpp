@@ -105,17 +105,6 @@ public:
      **/
     void detachLiveLog(void);
 
-private:
-    /**
-     * \brief   Returns the pointer to the log table object.
-     **/
-    QTableView* getTable(void);
-
-    /**
-     * \brief   Returns the pointer to the header object.
-     **/
-    QHeaderView* getHeader(void);
-    
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -126,6 +115,37 @@ private slots:
      **/
     void onRowsInserted(const QModelIndex &parent, int first, int last);
 
+    /**
+     * \brief   Slot, triggered when make mouse right click on header.
+     **/
+    void onHeaderContextMenu(const QPoint& pos);
+
+    /**
+     * \brief   Slot, triggered when make mouse right click on table view
+     **/
+    void onTableContextMenu(const QPoint& pos);
+
+private:
+    /**
+     * \brief   Returns the pointer to the log table object.
+     **/
+    QTableView* getTable(void);
+
+    /**
+     * \brief   Returns the pointer to the header object.
+     **/
+    QHeaderView* getHeader(void);
+
+    /**
+     * \brief   Populates menu and sets the action handlers.
+     **/
+    void populateColumnsMenu(QMenu* menu, int curRow);
+    
+    /**
+     * \brief   Resets the order of the columns.
+     **/
+    void resetColumnOrder();
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
