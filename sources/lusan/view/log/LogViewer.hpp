@@ -27,6 +27,8 @@
  ************************************************************************/
 class QHeaderView;
 class QTableView;
+class QToolbutton;
+class QLabel;
 class QWidget;
 class LogViewerModel;
 class MdiMainWindow;
@@ -125,16 +127,38 @@ private slots:
      **/
     void onTableContextMenu(const QPoint& pos);
 
-private:
     /**
-     * \brief   Returns the pointer to the log table object.
+     * \brief   Slot, triggered when Pause toolbutton is clicked.
      **/
-    QTableView* getTable(void);
+    void onPauseClicked(void);
 
     /**
-     * \brief   Returns the pointer to the header object.
+     * \brief   Slot, triggered when Resume toolbutton is clicked.
+     *          It resumes the logging process.
      **/
-    QHeaderView* getHeader(void);
+    void onResumeClicked(void);
+
+private:
+    //!< Returns the pointer to the log table object.
+    QTableView* ctrlTable(void);
+
+    //!< Returns the pointer to the header object.
+    QHeaderView* ctrlHeader(void);
+
+    //!< Returns Pause toolbutton
+    QToolButton* ctrlPause(void);
+
+    //!< Returns Resume toolbutton
+    QToolButton* ctrlResume(void);
+
+    //!< Returns Stop toolbutton
+    QToolButton* ctrlStop(void);
+
+    //!< Returns Restart toolbutton.
+    QToolButton* ctrlRestart(void);
+
+    //!< Returns Logging File name label widget.
+    QLabel* ctrlFile(void);
 
     /**
      * \brief   Populates menu and sets the action handlers.

@@ -228,7 +228,14 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="lableTitle">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Logs:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lableFile">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
              <horstretch>0</horstretch>
@@ -236,7 +243,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Live mode logs:</string>
+            <string/>
            </property>
           </widget>
          </item>
