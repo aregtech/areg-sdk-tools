@@ -395,6 +395,26 @@ void LogViewerModel::setActiveColumns(const QList<LogViewerModel::eColumn>& colu
     endResetModel();
 }
 
+void LogViewerModel::pauseLogging(void)
+{
+    LogObserver::pause();
+}
+
+void LogViewerModel::resumeLogging(void)
+{
+    LogObserver::resume();
+}
+
+void LogViewerModel::stopLogging(void)
+{
+    LogObserver::stop();
+}
+
+void LogViewerModel::restartLogging(const QString& dbName /*= QString()*/)
+{
+    LogObserver::restart(dbName);
+}
+
 void LogViewerModel::slotLogServiceConnected(bool isConnected, const QString& address, uint16_t port)
 {
     if (isConnected == false)

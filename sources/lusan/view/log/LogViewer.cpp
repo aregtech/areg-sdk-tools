@@ -34,13 +34,13 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     ui->setupUi(mMdiWindow);
     
     mLogModel = new LogViewerModel(this);
-    QHeaderView* header = getHeader();
+    QHeaderView* header = ctrlHeader();
     header->setVisible(true);
     header->show();
     header->setContextMenuPolicy(Qt::CustomContextMenu);
     header->setSectionsMovable(true);
 
-    QTableView* view = getTable();    
+    QTableView* view = ctrlTable();    
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setEditTriggers(QAbstractItemView::NoEditTriggers);
     view->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -61,18 +61,24 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     setLayout(layout);
     
     setAttribute(Qt::WA_DeleteOnClose);
-    getTable()->setAutoScroll(true);
+    ctrlTable()->setAutoScroll(true);
+    ctrlPause()->setEnabled(false);
+    ctrlResume()->setEnabled(false);
+    ctrlStop()->setEnabled(false);
+    ctrlRestart()->setEnabled(false);
 
+    connect(ctrlPause() , &QToolButton::clicked                     , this, &LogViewer::onPauseClicked);
+    connect(ctrlResume(), &QToolButton::clicked                     , this, &LogViewer::onResumeClicked);
     connect(mLogModel   , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
     connect(header      , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
     connect(view        , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
 }
 
-
 void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
     Q_ASSERT(mLogModel != nullptr);
     mLogModel->serviceConnected(isConnected, address, port, dbPath);
+    ctrlFile()->setText(dbPath);
     if (isConnected)
     {
         Q_ASSERT(mMdiSubWindow != nullptr);
@@ -80,11 +86,15 @@ void LogViewer::logServiceConnected(bool isConnected, const QString& address, ui
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
         mMdiSubWindow->setToolTip(tr("Live Log: ") + dbPath);
         setToolTip(tr("Live Log: ") + dbPath);
+        ctrlPause()->setEnabled(true);
+        ctrlStop()->setEnabled(true);
     }
     else if (mMdiSubWindow != nullptr)
     {
         Q_ASSERT(mLogModel->getDabasePath() == dbPath);
         mMdiSubWindow->setToolTip(tr("Offline Log: ") + mLogModel->getDabasePath());
+        ctrlPause()->setEnabled(false);
+        ctrlStop()->setEnabled(false);
     }
 }
 
@@ -107,7 +117,7 @@ bool LogViewer::isServiceConnected(void) const
 
 void LogViewer::moveToBottom(bool lastSelect)
 {
-    QTableView* logs = getTable();
+    QTableView* logs = ctrlTable();
     Q_ASSERT(logs != nullptr);
     logs->scrollToBottom();
     if (lastSelect)
@@ -138,15 +148,15 @@ void LogViewer::detachLiveLog(void)
 
 void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
 {
-    QModelIndex curIndex = getTable()->currentIndex();
+    QModelIndex curIndex = ctrlTable()->currentIndex();
     int row = curIndex.isValid() ? curIndex.row() : -1;
     int count = mLogModel->rowCount(parent);
     if ((row < 0) || (row >= count - 2))
     {
-        getTable()->scrollToBottom();
+        ctrlTable()->scrollToBottom();
         if (row >= 0)
         {
-            getTable()->selectRow(count - 1);
+            ctrlTable()->selectRow(count - 1);
         }
     }
 }
@@ -154,28 +164,53 @@ void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
 void LogViewer::onHeaderContextMenu(const QPoint& pos)
 {
     QMenu menu(this);
-    QModelIndex idx{getTable()->currentIndex()};
+    QModelIndex idx{ctrlTable()->currentIndex()};
     populateColumnsMenu(&menu, idx.isValid() ? idx.row() : -1);
-    menu.exec(getHeader()->mapToGlobal(pos));
+    menu.exec(ctrlHeader()->mapToGlobal(pos));
 }
 
 void LogViewer::onTableContextMenu(const QPoint& pos)
 {
     QMenu menu(this);
     QMenu* columnsMenu = menu.addMenu(tr("Columns"));
-    QModelIndex idx{getTable()->currentIndex()};    
+    QModelIndex idx{ctrlTable()->currentIndex()};    
     populateColumnsMenu(&menu, idx.isValid() ? idx.row() : -1);
-    menu.exec(getTable()->viewport()->mapToGlobal(pos));
+    menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
 }
 
-QTableView* LogViewer::getTable(void)
+QTableView* LogViewer::ctrlTable(void)
 {
     return ui->logView;
 }
 
-QHeaderView* LogViewer::getHeader(void)
+QHeaderView* LogViewer::ctrlHeader(void)
 {
     return ui->logView->horizontalHeader();
+}
+
+QToolButton* LogViewer::ctrlPause(void)
+{
+    return ui->toolPause;
+}
+
+QToolButton* LogViewer::ctrlResume(void)
+{
+    return ui->toolContinue;
+}
+
+QToolButton* LogViewer::ctrlStop(void)
+{
+    return ui->toolStop;
+}
+
+QToolButton* LogViewer::ctrlRestart(void)
+{
+    return ui->toolRestart;
+}
+
+QLabel* LogViewer::ctrlFile(void)
+{
+    return ui->lableFile;
 }
 
 void LogViewer::populateColumnsMenu(QMenu* menu, int curRow)
@@ -210,7 +245,7 @@ void LogViewer::populateColumnsMenu(QMenu* menu, int curRow)
     QAction* actReset = menu->addAction(tr("Reset Columns"));
     actReset->setCheckable(false);
     connect(actReset, &QAction::triggered, this, [this, curRow]() {
-                getTable()->scrollToBottom();
+                ctrlTable()->scrollToBottom();
                 mLogModel->setActiveColumns(QList<LogViewerModel::eColumn>());
                 resetColumnOrder();
             });
@@ -219,10 +254,10 @@ void LogViewer::populateColumnsMenu(QMenu* menu, int curRow)
 void LogViewer::resetColumnOrder()
 {
     // Force the view to update its columns to match the model
-    getTable()->setModel(nullptr);
-    getTable()->setModel(mLogModel);
+    ctrlTable()->setModel(nullptr);
+    ctrlTable()->setModel(mLogModel);
 
-    QHeaderView* header = getHeader();
+    QHeaderView* header = ctrlHeader();
     int columnCount = header->count();
     // Restore to default order: 0, 1, 2, ..., N-1
     for (int logical = 0; logical < columnCount; ++logical)
@@ -232,5 +267,29 @@ void LogViewer::resetColumnOrder()
         {
             header->moveSection(visual, logical);
         }
+    }
+}
+
+void LogViewer::onPauseClicked()
+{
+    if (mLogModel != nullptr)
+    {
+        mLogModel->pauseLogging();
+        ctrlPause()->setEnabled(false);
+        ctrlResume()->setEnabled(true);
+        ctrlRestart()->setEnabled(false);
+        ctrlStop()->setEnabled(true);
+    }
+}
+
+void LogViewer::onResumeClicked()
+{
+    if (mLogModel != nullptr)
+    {
+        mLogModel->resumeLogging();
+        ctrlPause()->setEnabled(true);
+        ctrlResume()->setEnabled(false);
+        ctrlRestart()->setEnabled(false);
+        ctrlStop()->setEnabled(true);
     }
 }

@@ -235,6 +235,35 @@ public:
      **/
     void setActiveColumns(const QList< LogViewerModel::eColumn>& columns);
 
+    /**
+     * \brief   Call to pause logging. When logging is paused,
+     *          on resume it continues writing logs in the same database.
+     **/
+    void pauseLogging(void);
+
+    /**
+     * \brief   Call to resume logging. When logging is resumed,
+     *          it continues writing logs in the same database.
+     *          Only paused logging can be resumed.
+     **/
+    void resumeLogging(void);
+
+    /**
+     * \brief   Call to stop logging. When logging is stopped,
+     *          it closes the database and stops writing logs.
+     *          On restart, it creates new database.
+     **/
+    void stopLogging(void);
+
+    /**
+     * \brief   Call to restart logging. When logging is restarted,
+     *          it creates new database.
+     * \param   dbName  The database name to restart logging.
+     *                  If empty string, uses the name set in the configuration file.
+     *                  The name may have a mask, such as "log_%time%.sqlog",
+     **/
+    void restartLogging(const QString & dbName = QString());
+
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
