@@ -75,6 +75,7 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
 
     connect(ctrlPause()     , &QToolButton::clicked                     , this, &LogViewer::onPauseClicked);
     connect(ctrlStop()      , &QToolButton::clicked                     , this, &LogViewer::onStopClicked);
+    connect(ctrlClear()     , &QToolButton::clicked                     , this, &LogViewer::onClearClicked);
     connect(mLogModel       , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
     connect(header          , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
     connect(view            , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
@@ -204,6 +205,11 @@ QToolButton* LogViewer::ctrlPause(void)
 QToolButton* LogViewer::ctrlStop(void)
 {
     return ui->toolStop;
+}
+
+QToolButton* LogViewer::ctrlClear(void)
+{
+    return ui->toolClear;
 }
 
 QLabel* LogViewer::ctrlFile(void)
@@ -361,3 +367,12 @@ void LogViewer::onStopClicked(bool checked)
         ctrlStop()->setEnabled(false);
     }
 }
+
+void LogViewer::onClearClicked(void)
+{
+    if (mLogModel != nullptr)
+    {
+        mLogModel->dataReset();
+    }
+}
+
