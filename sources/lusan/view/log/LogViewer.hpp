@@ -44,6 +44,13 @@ class LogViewer : public MdiChild
 {
     Q_OBJECT
 
+private:
+
+    static const QString    _tooltipPauseLogging;
+    static const QString    _tooltipResumeLogging;
+    static const QString    _tooltipStopLogging;
+    static const QString    _tooltipRestartLogging;
+
 public:
     /**
      * \brief   Returns the file extension of the service interface document.
@@ -128,26 +135,18 @@ private slots:
     void onTableContextMenu(const QPoint& pos);
 
     /**
-     * \brief   Slot, triggered when Pause toolbutton is clicked.
+     * \brief   Slot, triggered when Pause / Resume toolbutton is clicked.
+     * \param   checked     If true, requested to pause. If false, requested to resume.
      **/
-    void onPauseClicked(void);
+    void onPauseClicked(bool checked);
 
     /**
-     * \brief   Slot, triggered when Resume toolbutton is clicked.
-     *          It resumes the logging process.
+     * \brief   Slot, triggered when Stop / Restart toolbutton is clicked.
+     *          When stops, closes log database.
+     *          When restarts, creates new database.
+     * \param   checked     If true, requested to stop. If false, requested to restart logging.
      **/
-    void onResumeClicked(void);
-    
-    /**
-     * \brief   Slot, triggered when Stop toolbutton is clicked.
-     **/
-    void onStopClicked(void);
-    
-    /**
-     * \brief   Slot, triggered when Restart toolbutton is clicked.
-     *          It restarts the logging process in a new database.
-     **/
-    void onRestartClicked(void);
+    void onStopClicked(bool checked);
     
 private:
     //!< Returns the pointer to the log table object.
@@ -156,17 +155,11 @@ private:
     //!< Returns the pointer to the header object.
     QHeaderView* ctrlHeader(void);
 
-    //!< Returns Pause toolbutton
+    //!< Returns Pause / Resume toolbutton
     QToolButton* ctrlPause(void);
 
-    //!< Returns Resume toolbutton
-    QToolButton* ctrlResume(void);
-
-    //!< Returns Stop toolbutton
+    //!< Returns Stop / Restart toolbutton
     QToolButton* ctrlStop(void);
-
-    //!< Returns Restart toolbutton.
-    QToolButton* ctrlRestart(void);
 
     //!< Returns Logging File name label widget.
     QLabel* ctrlFile(void);
@@ -180,6 +173,8 @@ private:
      * \brief   Resets the order of the columns.
      **/
     void resetColumnOrder();
+
+    void updateToolbuttons(bool isPaused, bool isStopped);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables

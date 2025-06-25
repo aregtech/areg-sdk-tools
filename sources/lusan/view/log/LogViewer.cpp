@@ -24,6 +24,11 @@
 #include <QMdiSubWindow>
 #include <QMenu>
 
+const QString   LogViewer::_tooltipPauseLogging(tr("Pause currnet logging"));
+const QString   LogViewer::_tooltipResumeLogging(tr("Resume current logging"));
+const QString   LogViewer::_tooltipStopLogging(tr("Stop current logging"));
+const QString   LogViewer::_tooltipRestartLogging(tr("Restart logging in new database"));
+
 LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     : MdiChild      (MdiChild::eMdiWindow::MdiLogViewer, wndMain, parent)
 
@@ -62,16 +67,14 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     
     setAttribute(Qt::WA_DeleteOnClose);
     ctrlTable()->setAutoScroll(true);
-    ctrlPause()->setEnabled(false);
-    ctrlResume()->setEnabled(false);
-    ctrlStop()->setEnabled(false);
-    ctrlRestart()->setEnabled(false);
     ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
 
+    updateToolbuttons(false, false);
+    ctrlPause()->setEnabled(false);
+    ctrlStop()->setEnabled(false);
+
     connect(ctrlPause()     , &QToolButton::clicked                     , this, &LogViewer::onPauseClicked);
-    connect(ctrlResume()    , &QToolButton::clicked                     , this, &LogViewer::onResumeClicked);
     connect(ctrlStop()      , &QToolButton::clicked                     , this, &LogViewer::onStopClicked);
-    connect(ctrlRestart()   , &QToolButton::clicked                     , this, &LogViewer::onRestartClicked);
     connect(mLogModel       , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
     connect(header          , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
     connect(view            , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
@@ -85,13 +88,16 @@ void LogViewer::logServiceConnected(bool isConnected, const QString& address, ui
     {
         Q_ASSERT(mMdiSubWindow != nullptr);
         ctrlFile()->setText(dbPath);
+        ctrlFile()->setToolTip(dbPath);
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
+        updateToolbuttons(false, false);
         ctrlPause()->setEnabled(true);
         ctrlStop()->setEnabled(true);
     }
     else if (mMdiSubWindow != nullptr)
     {
         Q_ASSERT(mLogModel->getDabasePath() == dbPath);
+        updateToolbuttons(false, false);
         ctrlPause()->setEnabled(false);
         ctrlStop()->setEnabled(false);
     }
@@ -105,6 +111,7 @@ void LogViewer::logDatabaseCreated(const QString& dbPath)
     {
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
         ctrlFile()->setText(dbPath);
+        ctrlFile()->setToolTip(dbPath);
     }
 }
 
@@ -141,6 +148,9 @@ void LogViewer::detachLiveLog(void)
     if (mMdiSubWindow != nullptr)
     {
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
+        updateToolbuttons(false, false);
+        ctrlPause()->setEnabled(false);
+        ctrlStop()->setEnabled(false);
     }
 }
 
@@ -191,19 +201,9 @@ QToolButton* LogViewer::ctrlPause(void)
     return ui->toolPause;
 }
 
-QToolButton* LogViewer::ctrlResume(void)
-{
-    return ui->toolContinue;
-}
-
 QToolButton* LogViewer::ctrlStop(void)
 {
     return ui->toolStop;
-}
-
-QToolButton* LogViewer::ctrlRestart(void)
-{
-    return ui->toolRestart;
 }
 
 QLabel* LogViewer::ctrlFile(void)
@@ -268,50 +268,96 @@ void LogViewer::resetColumnOrder()
     }
 }
 
-void LogViewer::onPauseClicked()
+void LogViewer::updateToolbuttons(bool isPaused, bool isStopped)
 {
-    if (mLogModel != nullptr)
+    ctrlPause()->blockSignals(true);
+    ctrlStop()->blockSignals(true);
+    if (isPaused)
     {
-        mLogModel->pauseLogging();
-        ctrlPause()->setEnabled(false);
-        ctrlResume()->setEnabled(true);
-        ctrlRestart()->setEnabled(false);
-        ctrlStop()->setEnabled(true);
-    }
-}
-
-void LogViewer::onResumeClicked()
-{
-    if (mLogModel != nullptr)
-    {
-        mLogModel->resumeLogging();
         ctrlPause()->setEnabled(true);
-        ctrlResume()->setEnabled(false);
-        ctrlRestart()->setEnabled(false);
+        ctrlPause()->setChecked(true);
+        ctrlPause()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-start")));
+        ctrlPause()->setToolTip(_tooltipResumeLogging);
+
         ctrlStop()->setEnabled(true);
+        ctrlStop()->setChecked(false);
+        ctrlStop()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-stop")));
+        ctrlStop()->setToolTip(_tooltipStopLogging);
     }
+    else
+    {
+        ctrlPause()->setEnabled(true);
+        ctrlPause()->setChecked(false);
+        ctrlPause()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-pause")));
+        ctrlPause()->setToolTip(_tooltipPauseLogging);
+    }
+
+    if (isStopped)
+    {
+        ctrlStop()->setEnabled(true);
+        ctrlStop()->setChecked(true);
+        ctrlStop()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-record")));
+        ctrlStop()->setToolTip(_tooltipRestartLogging);
+
+        ctrlPause()->setEnabled(false);
+        ctrlPause()->setChecked(false);
+        ctrlPause()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-pause")));
+        ctrlPause()->setToolTip(_tooltipPauseLogging);
+    }
+    else
+    {
+        ctrlStop()->setEnabled(true);
+        ctrlStop()->setChecked(false);
+        ctrlStop()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-stop")));
+        ctrlStop()->setToolTip(_tooltipStopLogging);
+    }
+
+    ctrlPause()->blockSignals(false);
+    ctrlStop()->blockSignals(false);
 }
 
-void LogViewer::onStopClicked()
+void LogViewer::onPauseClicked(bool checked)
 {
     if (mLogModel != nullptr)
     {
-        mLogModel->stopLogging();
+        if (checked)
+        {
+            mLogModel->pauseLogging();
+            updateToolbuttons(true, false);
+        }
+        else
+        {
+            mLogModel->resumeLogging();
+            updateToolbuttons(false, false);
+        }
+    }
+    else
+    {
+        updateToolbuttons(false, false);
         ctrlPause()->setEnabled(false);
-        ctrlResume()->setEnabled(false);
-        ctrlRestart()->setEnabled(true);
         ctrlStop()->setEnabled(false);
     }
 }
 
-void LogViewer::onRestartClicked()
+void LogViewer::onStopClicked(bool checked)
 {
     if (mLogModel != nullptr)
     {
-        mLogModel->restartLogging();
-        ctrlPause()->setEnabled(true);
-        ctrlResume()->setEnabled(false);
-        ctrlRestart()->setEnabled(false);
-        ctrlStop()->setEnabled(true);
+        if (checked)
+        {
+            mLogModel->stopLogging();
+            updateToolbuttons(false, true);
+        }
+        else
+        {
+            mLogModel->restartLogging();
+            updateToolbuttons(false, false);
+        }
+    }
+    else
+    {
+        updateToolbuttons(false, false);
+        ctrlPause()->setEnabled(false);
+        ctrlStop()->setEnabled(false);
     }
 }
