@@ -46,10 +46,10 @@ class LogViewer : public MdiChild
 
 private:
 
-    static const QString    _tooltipPauseLogging;
-    static const QString    _tooltipResumeLogging;
-    static const QString    _tooltipStopLogging;
-    static const QString    _tooltipRestartLogging;
+    static const QString    _tooltipPauseLogging;   //!< Tooltip for the Pause logging button.
+    static const QString    _tooltipResumeLogging;  //!< Tooltip for the Resume logging button.
+    static const QString    _tooltipStopLogging;    //!< Tooltip for the Stop logging button.
+    static const QString    _tooltipRestartLogging; //!< Tooltip for the Restart logging button.
 
 public:
     /**
@@ -174,6 +174,11 @@ private:
      **/
     void resetColumnOrder();
 
+    /**
+     * \brief   Updates the toolbuttons based on the current state of logging.
+     * \param   isPaused    If true, logging is paused. Show resume button.
+     * \param   isStopped   If true, logging is stopped. Show restart button.
+     **/
     void updateToolbuttons(bool isPaused, bool isStopped);
     
 //////////////////////////////////////////////////////////////////////////
