@@ -412,7 +412,10 @@ void LogViewerModel::stopLogging(void)
 
 void LogViewerModel::restartLogging(const QString& dbName /*= QString()*/)
 {
+    beginResetModel();
+    mLogs.clear();
     LogObserver::restart(dbName);
+    endResetModel();
 }
 
 void LogViewerModel::slotLogServiceConnected(bool isConnected, const QString& address, uint16_t port)
