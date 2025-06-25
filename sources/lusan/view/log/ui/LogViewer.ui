@@ -130,11 +130,17 @@
                 <height>20</height>
                </size>
               </property>
+              <property name="toolTip">
+               <string>Puase Logging</string>
+              </property>
               <property name="text">
                <string>...</string>
               </property>
               <property name="icon">
                <iconset theme="media-playback-pause"/>
+              </property>
+              <property name="autoRaise">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -157,6 +163,9 @@
               </property>
               <property name="icon">
                <iconset theme="media-playback-start"/>
+              </property>
+              <property name="autoRaise">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -193,6 +202,9 @@
               <property name="icon">
                <iconset theme="media-playback-stop"/>
               </property>
+              <property name="autoRaise">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -214,6 +226,9 @@
               </property>
               <property name="icon">
                <iconset theme="media-record"/>
+              </property>
+              <property name="autoRaise">
+               <bool>true</bool>
               </property>
              </widget>
             </item>

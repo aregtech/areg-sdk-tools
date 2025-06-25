@@ -66,33 +66,32 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     ctrlResume()->setEnabled(false);
     ctrlStop()->setEnabled(false);
     ctrlRestart()->setEnabled(false);
+    ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
 
-    connect(ctrlPause() , &QToolButton::clicked                     , this, &LogViewer::onPauseClicked);
-    connect(ctrlResume(), &QToolButton::clicked                     , this, &LogViewer::onResumeClicked);
-    connect(mLogModel   , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
-    connect(header      , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
-    connect(view        , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
+    connect(ctrlPause()     , &QToolButton::clicked                     , this, &LogViewer::onPauseClicked);
+    connect(ctrlResume()    , &QToolButton::clicked                     , this, &LogViewer::onResumeClicked);
+    connect(ctrlStop()      , &QToolButton::clicked                     , this, &LogViewer::onStopClicked);
+    connect(ctrlRestart()   , &QToolButton::clicked                     , this, &LogViewer::onRestartClicked);
+    connect(mLogModel       , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
+    connect(header          , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
+    connect(view            , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
 }
 
 void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
     Q_ASSERT(mLogModel != nullptr);
     mLogModel->serviceConnected(isConnected, address, port, dbPath);
-    ctrlFile()->setText(dbPath);
     if (isConnected)
     {
         Q_ASSERT(mMdiSubWindow != nullptr);
-        mLogModel->dataReset();
+        ctrlFile()->setText(dbPath);
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
-        mMdiSubWindow->setToolTip(tr("Live Log: ") + dbPath);
-        setToolTip(tr("Live Log: ") + dbPath);
         ctrlPause()->setEnabled(true);
         ctrlStop()->setEnabled(true);
     }
     else if (mMdiSubWindow != nullptr)
     {
         Q_ASSERT(mLogModel->getDabasePath() == dbPath);
-        mMdiSubWindow->setToolTip(tr("Offline Log: ") + mLogModel->getDabasePath());
         ctrlPause()->setEnabled(false);
         ctrlStop()->setEnabled(false);
     }
@@ -105,7 +104,7 @@ void LogViewer::logDatabaseCreated(const QString& dbPath)
     if (mMdiSubWindow != nullptr)
     {
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
-        mMdiSubWindow->setToolTip(tr("Live Log: ") + dbPath);
+        ctrlFile()->setText(dbPath);
     }
 }
 
@@ -142,7 +141,6 @@ void LogViewer::detachLiveLog(void)
     if (mMdiSubWindow != nullptr)
     {
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
-        mMdiSubWindow->setToolTip(tr("Offline Log: ") + mLogModel->getDabasePath());
     }
 }
 
@@ -287,6 +285,30 @@ void LogViewer::onResumeClicked()
     if (mLogModel != nullptr)
     {
         mLogModel->resumeLogging();
+        ctrlPause()->setEnabled(true);
+        ctrlResume()->setEnabled(false);
+        ctrlRestart()->setEnabled(false);
+        ctrlStop()->setEnabled(true);
+    }
+}
+
+void LogViewer::onStopClicked()
+{
+    if (mLogModel != nullptr)
+    {
+        mLogModel->stopLogging();
+        ctrlPause()->setEnabled(false);
+        ctrlResume()->setEnabled(false);
+        ctrlRestart()->setEnabled(true);
+        ctrlStop()->setEnabled(false);
+    }
+}
+
+void LogViewer::onRestartClicked()
+{
+    if (mLogModel != nullptr)
+    {
+        mLogModel->restartLogging();
         ctrlPause()->setEnabled(true);
         ctrlResume()->setEnabled(false);
         ctrlRestart()->setEnabled(false);

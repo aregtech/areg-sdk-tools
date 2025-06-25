@@ -137,7 +137,18 @@ private slots:
      *          It resumes the logging process.
      **/
     void onResumeClicked(void);
-
+    
+    /**
+     * \brief   Slot, triggered when Stop toolbutton is clicked.
+     **/
+    void onStopClicked(void);
+    
+    /**
+     * \brief   Slot, triggered when Restart toolbutton is clicked.
+     *          It restarts the logging process in a new database.
+     **/
+    void onRestartClicked(void);
+    
 private:
     //!< Returns the pointer to the log table object.
     QTableView* ctrlTable(void);

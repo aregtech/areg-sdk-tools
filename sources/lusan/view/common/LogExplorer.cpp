@@ -441,11 +441,11 @@ void LogExplorer::onLogObserverStarted(bool isStarted)
 void LogExplorer::onLogDbCreated(const QString& dbLocation)
 {
     mActiveLogFile = dbLocation;
-#if 0
     LogObserver* log = LogObserver::getComponent();
-    Q_ASSERT(log != nullptr);
-    mMainWindow->logDatabaseCreated(dbLocation);
-#endif
+    if (log != nullptr)
+    {
+        mMainWindow->logDatabaseCreated(dbLocation);
+    }
 }
 
 void LogExplorer::onLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath)
