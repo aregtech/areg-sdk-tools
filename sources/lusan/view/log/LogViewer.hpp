@@ -147,6 +147,12 @@ private slots:
      * \param   checked     If true, requested to stop. If false, requested to restart logging.
      **/
     void onStopClicked(bool checked);
+
+    /**
+     * \brief   Slot, triggered when Clear logging window buggon is clicked.
+     * @return
+     **/
+    void onClearClicked(void);
     
 private:
     //!< Returns the pointer to the log table object.
@@ -160,6 +166,9 @@ private:
 
     //!< Returns Stop / Restart toolbutton
     QToolButton* ctrlStop(void);
+
+    //!< Returns Clear logs toolbutton
+    QToolButton* ctrlClear(void);
 
     //!< Returns Logging File name label widget.
     QLabel* ctrlFile(void);
