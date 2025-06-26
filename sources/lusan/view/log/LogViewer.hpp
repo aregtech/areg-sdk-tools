@@ -125,6 +125,21 @@ private slots:
     void onRowsInserted(const QModelIndex &parent, int first, int last);
 
     /**
+     * \brief   Triggered when new table column is inserted.
+     **/
+    void onColumnsInserted(const QModelIndex &parent, int first, int last);
+
+    /**
+     * \brief   Triggered when a table column is removed.
+     **/
+    void onColumnsRemoved(const QModelIndex &parent, int first, int last);
+
+    /**
+     * \brief   Triggered when table columns are moved inserted from position to another.
+     **/
+    void onColumnsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd, const QModelIndex &destinationParent, int destinationColumn);
+
+    /**
      * \brief   Slot, triggered when make mouse right click on header.
      **/
     void onHeaderContextMenu(const QPoint& pos);

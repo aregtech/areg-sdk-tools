@@ -203,7 +203,7 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
                 return QVariant( QString(timestamp.formatTime().getString()) );
             }
             case eColumn::LogColumnSource:
-                return QVariant(QString(logMessage->logModule));
+                return QVariant(QString(logMessage->logModule) + " (" + QString::number(logMessage->logModuleId) + ")");
             case eColumn::LogColumnSourceId:
                 return QVariant((qulonglong)logMessage->logModuleId);
             case eColumn::LogColumnThread:
