@@ -151,6 +151,8 @@ private slots:
 private:
     void updateButtonGeometry();
 
+    void initializeHeaderTypes(void);
+
     QRect sectionRect(int logicalIndex) const;
 
 private:

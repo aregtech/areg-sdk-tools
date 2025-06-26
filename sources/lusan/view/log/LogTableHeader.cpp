@@ -103,6 +103,9 @@ LogTableHeader::LogTableHeader(LogViewer* viewer, QTableView* parent, LogViewerM
     setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     setHighlightSections(true);
 
+    initializeHeaderTypes();
+    updateButtonGeometry();
+
     connect(this, &QHeaderView::sectionResized, this, &LogTableHeader::updateButtonGeometry);
     connect(this, &QHeaderView::sectionMoved, this, &LogTableHeader::updateButtonGeometry);
 }
@@ -111,18 +114,28 @@ void LogTableHeader::setFilterType(int column, FilterType type)
 {
     if (!mFilters.contains(column))
     {
-        mFilters[column] = sFilterWidget{ new QPushButton(this), type };
-        mFilters[column].button->setText("\u25BC"); // down arrow
-        mFilters[column].button->setFlat(true);
-        mFilters[column].button->setCursor(Qt::PointingHandCursor);
+        if (type != FilterType::None)
+        {
+            mFilters[column] = sFilterWidget{ new QPushButton(this), type };
+            mFilters[column].button->setText("\u25BC"); // down arrow
+            mFilters[column].button->setFlat(true);
+            mFilters[column].button->setCursor(Qt::PointingHandCursor);
 
-        connect(mFilters[column].button, &QPushButton::clicked, [this, column]() {
-            showFilterPopup(column);
+            connect(mFilters[column].button, &QPushButton::clicked, [this, column]() {
+                showFilterPopup(column);
             });
+        }
+    }
+    else if ((mFilters[column].type != FilterType::None) && (type == FilterType::None))
+    {
+        if (mFilters[column].button != nullptr)
+        {
+            delete mFilters[column].button;
+            mFilters[column].button = nullptr;
+        }
     }
 
     mFilters[column].type = type;
-    updateButtonGeometry();
 }
 
 void LogTableHeader::setComboItems(int column, const QStringList& items)
@@ -187,6 +200,36 @@ void LogTableHeader::updateButtonGeometry()
             QPushButton* btn = mFilters[col].button;
             btn->setGeometry(r.right() - 20, 2, 18, height() - 4);
             btn->show();
+        }
+    }
+}
+
+void LogTableHeader::initializeHeaderTypes(void)
+{
+    Q_ASSERT(mModel != nullptr);
+    int cnt = mModel->columnCount();
+    for (int i = 0; i < cnt; ++i)
+    {
+        int data = mModel->headerData(i, Qt::Orientation::Horizontal, Qt::ItemDataRole::UserRole).toInt();
+        switch (static_cast<LogViewerModel::eColumn>(data))
+        {
+        case LogViewerModel::eColumn::LogColumnPriority:
+        case LogViewerModel::eColumn::LogColumnSource:
+        case LogViewerModel::eColumn::LogColumnSourceId:
+        case LogViewerModel::eColumn::LogColumnThread:
+        case LogViewerModel::eColumn::LogColumnThreadId:
+            setFilterType(i, FilterType::ComboFilter);
+            break;
+
+        case LogViewerModel::eColumn::LogColumnScopeId:
+        case LogViewerModel::eColumn::LogColumnMessage:
+            setFilterType(i, FilterType::TextFilter);
+            break;
+
+        case LogViewerModel::eColumn::LogColumnTimestamp:
+        default:
+            setFilterType(i, FilterType::None);
+            break;
         }
     }
 }
