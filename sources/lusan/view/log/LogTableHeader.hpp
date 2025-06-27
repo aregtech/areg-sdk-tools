@@ -74,21 +74,42 @@ protected:
  * Overrides
  ************************************************************************/
 
+    /**
+     * \brief   Triggered when the section is painted.
+     **/
     virtual void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const override;
 
+    /**
+     * \brief   Triggered when the mouse is pressed on the header section.
+     **/
     virtual void mousePressEvent(QMouseEvent* event) override;
 
+/************************************************************************
+ * Hidden methods
+ ************************************************************************/
 private:
 
-    inline void drawingRects(const Rect& rect, Rect & rcButton, Rect & rcText) const;
+    /**
+     * \brief   Calculates the rectangles for drawing button and text in the header section.
+     * \param   rect        The rectangle of the section.
+     * \param   rcButton    The rectangle for the button.
+     * \param   rcText      The rectangle for the text.
+     **/
+    inline void drawingRects(const QRect& rect, QRect & rcButton, QRect & rcText) const;
 
+    /**
+     * \brief   Returns the rectangle of the section based on the logical index.
+     * \param   logicalIndex    The logical index of the section.
+     **/
     inline QRect sectionRect(int logicalIndex) const;
 
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-
-    LogViewerModel*     mModel;
-    LogViewer*          mViewer;
-    QList<LogHeaderItem *> mHeaders;
+    LogViewerModel*     mModel;     //!< The model for the log viewer, handling the data and its representation.
+    LogViewer*          mViewer;    //!< The log viewer object, which this header belongs to.
+    QList<LogHeaderItem*> mHeaders; //!< List of header items, each representing a column in the log viewer.
 };
 
 #endif // LUSAN_VIEW_LOG_LOGTABLEHEADER_HPP

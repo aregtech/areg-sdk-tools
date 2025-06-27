@@ -39,12 +39,24 @@ LogTableHeader::LogTableHeader(LogViewer* viewer, QTableView* parent, LogViewerM
     setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     setHighlightSections(true);
 
-    const QStringList& names = LogViewerModel::getHeaderList();
     int count = mModel->getMaxColumCount();
     for (int i = 0; i < count; ++i)
     {
-        mHeaders.push_back(new LogHeaderObject(*this, i, names[i]));
+        mHeaders.push_back(new LogHeaderItem(*this, i));
     }
+}
+
+inline void LogTableHeader::drawingRects(const QRect& rect, QRect& rcButton, QRect& rcText) const
+{
+    constexpr int marginText    { 4 };
+    constexpr int marginButton  { 2 };
+    constexpr int sizeButton    { 18 };
+
+    // Button rectangle (left side)
+    rcButton = QRect(rect.left() + marginButton, rect.top() + marginButton, sizeButton, rect.height() - marginButton);
+
+    // Text rectangle (right of button, with a small gap)
+    rcText = QRect(rcButton.right() + marginText + marginButton, rect.top() + marginButton, rect.right() - rcButton.right() - marginText, rect.height() - marginButton);
 }
 
 QRect LogTableHeader::sectionRect(int logicalIndex) const
@@ -76,12 +88,9 @@ void LogTableHeader::paintSection(QPainter* painter, const QRect& rect, int logi
     LogViewerModel::eColumn col = mModel->fromIndexToColumn(logicalIndex);
     if (col != LogViewerModel::eColumn::LogColumnInvalid)
     {
-        constexpr int textMargin { 4 };
-        // Button rectangle (left side)
-        QRect rcButton(rect.left() + 2, rect.top() + 2, 18, rect.height() - 2);
-        
-        // Text rectangle (right of button, with a small gap)
-        QRect rcText(rcButton.right() + textMargin + 2, rect.top(), rect.right() - rcButton.right() - textMargin, rect.height());
+        QRect rcButton; // Button rectangle (left side)
+        QRect rcText;   // Text rectangle (right of button, with a small gap)
+        drawingRects(rect, rcButton, rcText);
         
         // Draw button and symbol
         if (mHeaders[static_cast<int>(col)]->canPopupFilter())
@@ -99,9 +108,11 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
 {
     int logical = logicalIndexAt(event->pos());
     QRect rect = sectionRect(logical);
-    QRect buttonRect = QRect(rect.left() + 2, rect.top() + 2, 18, rect.height() - 2);
+    QRect rcButton; // Button rectangle (left side)
+    QRect rcText;   // Text rectangle (right of button, with a small gap)
+    drawingRects(rect, rcButton, rcText);
 
-    if (buttonRect.contains(event->pos()))
+    if (rcButton.contains(event->pos()))
     {
         LogViewerModel::eColumn col = mModel->fromIndexToColumn(logical);
         if ((col != LogViewerModel::eColumn::LogColumnInvalid) && mHeaders[static_cast<int>(col)]->canPopupFilter())
@@ -115,4 +126,3 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
     // Otherwise, allow normal header behavior (resize/move)
     QHeaderView::mousePressEvent(event);
 }
-
