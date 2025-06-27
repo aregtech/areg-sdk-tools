@@ -110,11 +110,13 @@ private:
     QLineEdit* mLineEdit;
 };
 
-
-class LogHeaderItem : public QWidget
+//////////////////////////////////////////////////////////////////////////
+// LogHeaderItem class declaration
+//////////////////////////////////////////////////////////////////////////
+class LogHeaderItem : public QObject
 {
     Q_OBJECT
-    
+
 public:
     enum eType
     {
@@ -125,49 +127,6 @@ public:
 
 public:
     LogHeaderItem(LogTableHeader& header, int logicalIndex, const QString& text);
-    
-signals:
-    
-    void signalComboFilterChanged(int logicalIndex, QStringList checkedItems);
-    
-    void signalTextFilterChanged(int logicalIndex, QString newText);
-    
-private slots:
-
-    void onButtonClicked(void);
-
-private:
-
-    inline int fromColumnToIndex(void) const;
-
-    inline LogViewerModel::eColumn fromIndexToColum(int logicalIndex) const;
-
-private:
-
-    LogViewerModel::eColumn mColumn;    //!< Logical index.
-    eType           mType;
-    LogTableHeader& mHeader;
-    QPushButton*    mPush;
-    QLabel*         mLabel;
-    QHBoxLayout*    mLayout;
-    LogComboFilter* mCombo;
-    LogTextFilter*  mEdit;
-};
-
-class LogHeaderObject : public QObject
-{
-    Q_OBJECT
-
-public:
-    enum eType
-    {
-          None
-        , Combo
-        , Text
-    };
-
-public:
-    LogHeaderObject(LogTableHeader& header, int logicalIndex, const QString& text);
 
     void showFilters(void);
     
@@ -194,7 +153,7 @@ private:
     LogTextFilter*  mEdit;
 };
 
-bool LogHeaderObject::canPopupFilter(void) const
+bool LogHeaderItem::canPopupFilter(void) const
 {
     return (mType != None);    
 }

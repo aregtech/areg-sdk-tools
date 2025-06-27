@@ -103,114 +103,9 @@ QString LogTextFilter::getText() const
     return mLineEdit->text();
 }
 
-LogHeaderItem::LogHeaderItem(LogTableHeader& header, int logicalIndex, const QString & text)
-    : QWidget(&header)
-    , mColumn(static_cast<LogViewerModel::eColumn>(logicalIndex))
-    , mType (None)
-    , mHeader(header)
-    , mPush (nullptr)
-    , mLabel(new QLabel())
-    , mLayout(new QHBoxLayout())
-    , mCombo(nullptr)
-    , mEdit (nullptr)
-{
-    switch (mColumn)
-    {
-    case LogViewerModel::eColumn::LogColumnPriority:
-    case LogViewerModel::eColumn::LogColumnSource:
-    case LogViewerModel::eColumn::LogColumnSourceId:
-    case LogViewerModel::eColumn::LogColumnThread:
-    case LogViewerModel::eColumn::LogColumnThreadId:
-        mType = eType::Combo;
-        mPush = new QPushButton(this);
-        mCombo = new LogComboFilter(&mHeader);
-        connect(mCombo, &LogComboFilter::signalFiltersChanged, this, [this]() {
-                emit signalComboFilterChanged(fromColumnToIndex(), mCombo->getCheckedItems());
-            });
-        break;
-
-    case LogViewerModel::eColumn::LogColumnScopeId:
-    case LogViewerModel::eColumn::LogColumnMessage:
-        mType = eType::Text;
-        mPush = new QPushButton(this);
-        mEdit = new LogTextFilter(&mHeader);
-        connect(mEdit, &LogTextFilter::signalFilterTextChanged, this, [this](const QString& text) {
-                emit signalTextFilterChanged(fromColumnToIndex(), text);
-            });
-        break;
-
-    case LogViewerModel::eColumn::LogColumnTimestamp:
-    default:
-        break;
-    }
-    
-    if (mPush != nullptr)
-    {
-        mPush->resize(18, 18);
-        mPush->setText("\u25BC"); // down arrow
-        mPush->setFlat(true);
-        mPush->setCursor(Qt::PointingHandCursor);
-        mPush->setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Fixed);
-        mLayout->addWidget(mPush);
-        connect(mPush, &QPushButton::clicked, this, &LogHeaderItem::onButtonClicked);
-    }
-
-    mLabel->setText(text);
-    mLabel->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Preferred);
-    mLayout->addWidget(mLabel);
-    mLayout->setContentsMargins(0, 0, 0, 0);
-    mLayout->setSpacing(2);
-    setLayout(mLayout);
-    hide();
-}
-
-inline int LogHeaderItem::fromColumnToIndex(void) const
-{
-    return mHeader.mModel->fromColumnToIndex(mColumn);
-}
-
-inline LogViewerModel::eColumn LogHeaderItem::fromIndexToColum(int logicalIndex) const
-{
-    return mHeader.mModel->fromIndexToColum(logicalIndex);
-}
-
-void LogHeaderItem::onButtonClicked(void)
-{
-    Q_ASSERT(mType != eType::None);
-
-    int index = fromColumnToIndex();
-    int pos = mHeader.sectionViewportPosition(index);
-    int size = mHeader.sectionSize(index);
-    QRect rect(pos, 0, size, height());
-    QPoint pt = mHeader.mapToGlobal(QPoint(rect.left(), height()));
-
-    if (mType == eType::Combo)
-    {
-        Q_ASSERT(mCombo != nullptr);
-        Q_ASSERT(mEdit == nullptr);
-        mCombo->move(pt);
-        mCombo->show();
-    }
-    else if (mType == eType::Text)
-    {
-        Q_ASSERT(mCombo == nullptr);
-        Q_ASSERT(mEdit != nullptr);
-        QSize sz = mEdit->size();
-        sz.setWidth(mHeader.sectionSize(index));
-        mEdit->setMinimumSize(sz);
-        mEdit->move(pt);
-        mEdit->show();
-    }
-    else
-    {
-        Q_ASSERT(mCombo == nullptr);
-        Q_ASSERT(mEdit == nullptr);
-    }
-}
-
 /////////////////////////////////////////////////////////////
 
-LogHeaderObject::LogHeaderObject(LogTableHeader& header, int logicalIndex, const QString& text)
+LogHeaderItem::LogHeaderItem(LogTableHeader& header, int logicalIndex, const QString& text)
     : QObject(&header)
     , mColumn(static_cast<LogViewerModel::eColumn>(logicalIndex))
     , mType(None)
@@ -247,17 +142,17 @@ LogHeaderObject::LogHeaderObject(LogTableHeader& header, int logicalIndex, const
     }
 }
 
-inline int LogHeaderObject::fromColumnToIndex(void) const
+inline int LogHeaderItem::fromColumnToIndex(void) const
 {
     return mHeader.mModel->fromColumnToIndex(mColumn);
 }
 
-inline LogViewerModel::eColumn LogHeaderObject::fromIndexToColum(int logicalIndex) const
+inline LogViewerModel::eColumn LogHeaderItem::fromIndexToColum(int logicalIndex) const
 {
     return mHeader.mModel->fromIndexToColum(logicalIndex);
 }
 
-void LogHeaderObject::showFilters(void)
+void LogHeaderItem::showFilters(void)
 {
     if (mType == eType::None)
         return;
