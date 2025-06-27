@@ -269,7 +269,7 @@ public:
     
     inline int fromColumnToIndex(LogViewerModel::eColumn col) const;
 
-    inline LogViewerModel::eColumn fromIndexToColum(int logicalIndex) const;
+    inline LogViewerModel::eColumn fromIndexToColumn(int logicalIndex) const;
     
 //////////////////////////////////////////////////////////////////////////
 // Slots.
@@ -369,7 +369,7 @@ inline int LogViewerModel::fromColumnToIndex(LogViewerModel::eColumn col) const
     return mActiveColumns.indexOf(col);
 }
 
-inline LogViewerModel::eColumn LogViewerModel::fromIndexToColum(int logicalIndex) const
+inline LogViewerModel::eColumn LogViewerModel::fromIndexToColumn(int logicalIndex) const
 {
     return ((logicalIndex >= 0) && (logicalIndex < static_cast<int>(mActiveColumns.size())) ? mActiveColumns[logicalIndex] : LogViewerModel::eColumn::LogColumnInvalid);
 }

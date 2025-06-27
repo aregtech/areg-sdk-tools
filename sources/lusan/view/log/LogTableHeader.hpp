@@ -40,7 +40,6 @@ class QTableView;
 class LogTableHeader : public QHeaderView
 {
     friend class LogHeaderItem;
-    friend class LogHeaderObject;
 
     Q_OBJECT
 
@@ -52,33 +51,44 @@ public:
     explicit LogTableHeader(LogViewer * viewer, QTableView* parent, LogViewerModel* model, Qt::Orientation orientation = Qt::Horizontal);
 
 signals:
+/************************************************************************
+ * Signals
+ ************************************************************************/
+
+    /**
+     * \brief   The signal is triggered when a combo-box filter is changed.
+     * \param   logicalColumn  The logical column index of the filter.
+     * \param   items           The list of items selected in the combo-box filter.
+     **/
     void signalComboFilterChanged(int logicalColumn, const QStringList& items);
 
+    /**
+     * \brief   The signal is triggered when a text filter is changed.
+     * \param   logicalColumn  The logical column index of the filter.
+     * \param   text           The text entered in the text filter.
+     **/
     void signalTextFilterChanged(int logicalColumn, const QString& text);
 
 protected:
-    virtual void resizeEvent(QResizeEvent* event) override;
+/************************************************************************
+ * Overrides
+ ************************************************************************/
 
     virtual void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const override;
 
     virtual void mousePressEvent(QMouseEvent* event) override;
 
 private:
-    void updateButtonGeometry(void);
-    
-    void hideAll(void);
 
-    void initializeHeaderTypes(void);
+    inline void drawingRects(const Rect& rect, Rect & rcButton, Rect & rcText) const;
 
-    QRect sectionRect(int logicalIndex) const;
+    inline QRect sectionRect(int logicalIndex) const;
 
 private:
 
     LogViewerModel*     mModel;
     LogViewer*          mViewer;
-    // QList<LogHeaderItem *> mHeaders;
-    QList<LogHeaderObject*> mHeaders;
-
+    QList<LogHeaderItem *> mHeaders;
 };
 
 #endif // LUSAN_VIEW_LOG_LOGTABLEHEADER_HPP

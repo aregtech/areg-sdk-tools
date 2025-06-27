@@ -30,8 +30,8 @@
 #include <QVBoxLayout>
 
 LogComboFilter::LogComboFilter(QWidget* parent)
-    : QFrame(parent)
-    , mListWidget(nullptr)
+    : QFrame        (parent)
+    , mListWidget   (nullptr)
 {
     setWindowFlags(Qt::Popup);
     setFrameShape(QFrame::Box);
@@ -105,13 +105,13 @@ QString LogTextFilter::getText() const
 
 /////////////////////////////////////////////////////////////
 
-LogHeaderItem::LogHeaderItem(LogTableHeader& header, int logicalIndex, const QString& text)
+LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     : QObject(&header)
-    , mColumn(static_cast<LogViewerModel::eColumn>(logicalIndex))
-    , mType(None)
+    , mColumn(static_cast<LogViewerModel::eColumn>(index))
+    , mType (None)
     , mHeader(header)
     , mCombo(nullptr)
-    , mEdit(nullptr)
+    , mEdit (nullptr)
 {
     switch (mColumn)
     {
@@ -131,8 +131,8 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int logicalIndex, const QSt
     case LogViewerModel::eColumn::LogColumnMessage:
         mType = eType::Text;
         mEdit = new LogTextFilter(&mHeader);
-        connect(mEdit, &LogTextFilter::signalFilterTextChanged, this, [this](const QString& text) {
-            emit signalTextFilterChanged(fromColumnToIndex(), text);
+        connect(mEdit, &LogTextFilter::signalFilterTextChanged, this, [this](const QString& newText) {
+            emit signalTextFilterChanged(fromColumnToIndex(), newText);
             });
         break;
 
@@ -147,9 +147,9 @@ inline int LogHeaderItem::fromColumnToIndex(void) const
     return mHeader.mModel->fromColumnToIndex(mColumn);
 }
 
-inline LogViewerModel::eColumn LogHeaderItem::fromIndexToColum(int logicalIndex) const
+inline LogViewerModel::eColumn LogHeaderItem::fromIndexToColumn(int logicalIndex) const
 {
-    return mHeader.mModel->fromIndexToColum(logicalIndex);
+    return mHeader.mModel->fromIndexToColumn(logicalIndex);
 }
 
 void LogHeaderItem::showFilters(void)

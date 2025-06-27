@@ -39,62 +39,6 @@ LogTableHeader::LogTableHeader(LogViewer* viewer, QTableView* parent, LogViewerM
     setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     setHighlightSections(true);
 
-    initializeHeaderTypes();
-    // updateButtonGeometry();
-
-    connect(this, &QHeaderView::sectionResized, this, &LogTableHeader::updateButtonGeometry);
-    connect(this, &QHeaderView::sectionMoved, this, &LogTableHeader::updateButtonGeometry);
-}
-
-#if 0
-void LogTableHeader::paintSection(QPainter *painter, const QRect &rect, int logicalIndex) const
-{
-    if (!rect.isValid())
-        return;
-    
-    LogViewerModel::eColumn col = mModel->fromIndexToColum(logicalIndex);
-    Q_ASSERT(col != LogViewerModel::eColumn::LogColumnInvalid);
-    mHeaders[static_cast<int>(col)]->setGeometry(rect);
-    mHeaders[static_cast<int>(col)]->show();
-}
-#endif
-
-void LogTableHeader::resizeEvent(QResizeEvent* event)
-{
-    QHeaderView::resizeEvent(event);
-    // updateButtonGeometry();
-}
-
-void LogTableHeader::updateButtonGeometry()
-{
-#if 0
-    int count = mModel->columnCount();
-    for (int i = 0; i < count; ++i)
-    {
-        LogViewerModel::eColumn col = mModel->fromIndexToColum(i);
-        if (col != LogViewerModel::eColumn::LogColumnInvalid)
-        {
-            LogHeaderItem* item = mHeaders[static_cast<int>(col)];
-            QRect rect = sectionRect(i);
-            mHeaders[static_cast<int>(col)]->setGeometry(rect);
-            mHeaders[static_cast<int>(col)]->show();
-        }
-    }
-#endif
-}
-
-void LogTableHeader::hideAll(void)
-{
-#if 0
-    for (auto* entry : mHeaders)
-    {
-        entry->hide();
-    }
-#endif
-}
-
-void LogTableHeader::initializeHeaderTypes(void)
-{
     const QStringList& names = LogViewerModel::getHeaderList();
     int count = mModel->getMaxColumCount();
     for (int i = 0; i < count; ++i)
@@ -129,7 +73,7 @@ void LogTableHeader::paintSection(QPainter* painter, const QRect& rect, int logi
     
     style()->drawControl(QStyle::CE_Header, &opt, painter, this);
     
-    LogViewerModel::eColumn col = mModel->fromIndexToColum(logicalIndex);
+    LogViewerModel::eColumn col = mModel->fromIndexToColumn(logicalIndex);
     if (col != LogViewerModel::eColumn::LogColumnInvalid)
     {
         constexpr int textMargin { 4 };
@@ -159,7 +103,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
 
     if (buttonRect.contains(event->pos()))
     {
-        LogViewerModel::eColumn col = mModel->fromIndexToColum(logical);
+        LogViewerModel::eColumn col = mModel->fromIndexToColumn(logical);
         if ((col != LogViewerModel::eColumn::LogColumnInvalid) && mHeaders[static_cast<int>(col)]->canPopupFilter())
         {
             // Show filter popup for this column
