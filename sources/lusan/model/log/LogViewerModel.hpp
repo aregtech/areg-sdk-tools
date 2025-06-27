@@ -264,11 +264,22 @@ public:
      *                  The name may have a mask, such as "log_%time%.sqlog",
      **/
     void restartLogging(const QString & dbName = QString());
-    
+
+    /**
+     * \brief   Returns maximum number of columns that is possible to set in the log viewer.
+     **/
     inline int getMaxColumCount(void) const;
-    
+
+    /**
+     * \brief   Converts the column to its index in the active columns list.
+     **/
     inline int fromColumnToIndex(LogViewerModel::eColumn col) const;
 
+    /**
+     * \brief   Converts the index to its column in the active columns list.
+     *          Returns LogColumnInvalid if index is invalid.
+     * \param   logicalIndex  The logical index of the column.
+     **/
     inline LogViewerModel::eColumn fromIndexToColumn(int logicalIndex) const;
     
 //////////////////////////////////////////////////////////////////////////
