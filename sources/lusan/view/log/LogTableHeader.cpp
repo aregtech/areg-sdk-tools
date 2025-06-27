@@ -24,79 +24,15 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QTableView>
 #include <QVBoxLayout>
-
-LogComboFilter::LogComboFilter(QWidget* parent)
-    : QFrame(parent)
-    , mListWidget(nullptr)
-{
-    setWindowFlags(Qt::Popup);
-    setFrameShape(QFrame::Box);
-    mListWidget = new QListWidget(this);
-    mListWidget->setSelectionMode(QAbstractItemView::NoSelection);
-    mListWidget->setFocusPolicy(Qt::NoFocus);
-
-    connect(mListWidget, &QListWidget::itemChanged, this, &LogComboFilter::onItemChanged);
-
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(2, 2, 2, 2);
-    layout->addWidget(mListWidget);
-}
-
-void LogComboFilter::setItems(const QStringList& items)
-{
-    mListWidget->clear();
-    for (const QString& text : items)
-    {
-        QListWidgetItem* item = new QListWidgetItem(text, mListWidget);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(Qt::Unchecked);
-    }
-}
-
-QStringList LogComboFilter::checkedItems() const
-{
-    QStringList checked;
-    for (int i = 0; i < mListWidget->count(); ++i)
-    {
-        QListWidgetItem* item = mListWidget->item(i);
-        if (item->checkState() == Qt::Checked)
-            checked << item->text();
-    }
-
-    return checked;
-}
-
-void LogComboFilter::onItemChanged(QListWidgetItem*)
-{
-    emit filtersChanged();
-}
-
-LogTextFilter::LogTextFilter(QWidget* parent)
-    : QFrame(parent)
-    , mLineEdit(nullptr)
-{
-    setWindowFlags(Qt::Popup);
-    setFrameShape(QFrame::Box);
-    mLineEdit = new QLineEdit(this);
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(2, 2, 2, 2);
-    layout->addWidget(mLineEdit);
-
-    connect(mLineEdit, &QLineEdit::textChanged, this, &LogTextFilter::filterTextChanged);
-}
-
-QString LogTextFilter::text() const
-{
-    return mLineEdit->text();
-}
 
 LogTableHeader::LogTableHeader(LogViewer* viewer, QTableView* parent, LogViewerModel* model, Qt::Orientation orientation /*= Qt::Horizontal*/)
     : QHeaderView   (orientation, parent)
     , mModel        (model)
     , mViewer       (viewer)
-    , mFilters      ( )
+    , mHeaders      ( )
 {
     setSectionsMovable(true);
     setSectionsClickable(true);
@@ -104,142 +40,135 @@ LogTableHeader::LogTableHeader(LogViewer* viewer, QTableView* parent, LogViewerM
     setHighlightSections(true);
 
     initializeHeaderTypes();
-    updateButtonGeometry();
+    // updateButtonGeometry();
 
     connect(this, &QHeaderView::sectionResized, this, &LogTableHeader::updateButtonGeometry);
     connect(this, &QHeaderView::sectionMoved, this, &LogTableHeader::updateButtonGeometry);
 }
 
-void LogTableHeader::setFilterType(int column, FilterType type)
+#if 0
+void LogTableHeader::paintSection(QPainter *painter, const QRect &rect, int logicalIndex) const
 {
-    if (!mFilters.contains(column))
-    {
-        if (type != FilterType::None)
-        {
-            mFilters[column] = sFilterWidget{ new QPushButton(this), type };
-            mFilters[column].button->setText("\u25BC"); // down arrow
-            mFilters[column].button->setFlat(true);
-            mFilters[column].button->setCursor(Qt::PointingHandCursor);
-
-            connect(mFilters[column].button, &QPushButton::clicked, [this, column]() {
-                showFilterPopup(column);
-            });
-        }
-    }
-    else if ((mFilters[column].type != FilterType::None) && (type == FilterType::None))
-    {
-        if (mFilters[column].button != nullptr)
-        {
-            delete mFilters[column].button;
-            mFilters[column].button = nullptr;
-        }
-    }
-
-    mFilters[column].type = type;
-}
-
-void LogTableHeader::setComboItems(int column, const QStringList& items)
-{
-    if (!mFilters.contains(column))
+    if (!rect.isValid())
         return;
-
-    if (!mFilters[column].comboPopup)
-        mFilters[column].comboPopup = new LogComboFilter(this);
-
-    mFilters[column].comboPopup->setItems(items);
-
-    connect(mFilters[column].comboPopup, &LogComboFilter::filtersChanged, [this, column, items]() {
-        emit comboFilterChanged(column, mFilters[column].comboPopup->checkedItems());
-        });
+    
+    LogViewerModel::eColumn col = mModel->fromIndexToColum(logicalIndex);
+    Q_ASSERT(col != LogViewerModel::eColumn::LogColumnInvalid);
+    mHeaders[static_cast<int>(col)]->setGeometry(rect);
+    mHeaders[static_cast<int>(col)]->show();
 }
-
-void LogTableHeader::showFilterPopup(int column)
-{
-    if (!mFilters.contains(column))
-        return;
-
-    QRect rect = sectionRect(column);
-    QPoint pos = mapToGlobal(QPoint(rect.left(), height()));
-
-    if (mFilters[column].type == ComboFilter)
-    {
-        if (!mFilters[column].comboPopup)
-            return;
-        mFilters[column].comboPopup->move(pos);
-        mFilters[column].comboPopup->show();
-    }
-    else if (mFilters[column].type == TextFilter)
-    {
-        if (!mFilters[column].textPopup)
-        {
-            mFilters[column].textPopup = new LogTextFilter(this);
-            connect(mFilters[column].textPopup, &LogTextFilter::filterTextChanged,
-                this, [this, column](const QString& text) {
-                    emit textFilterChanged(column, text);
-                });
-        }
-
-        mFilters[column].textPopup->move(pos);
-        mFilters[column].textPopup->show();
-    }
-}
+#endif
 
 void LogTableHeader::resizeEvent(QResizeEvent* event)
 {
     QHeaderView::resizeEvent(event);
-    updateButtonGeometry();
+    // updateButtonGeometry();
 }
 
 void LogTableHeader::updateButtonGeometry()
 {
-    for (int col = 0; col < count(); ++col)
+#if 0
+    int count = mModel->columnCount();
+    for (int i = 0; i < count; ++i)
     {
-        if (mFilters.contains(col))
+        LogViewerModel::eColumn col = mModel->fromIndexToColum(i);
+        if (col != LogViewerModel::eColumn::LogColumnInvalid)
         {
-            QRect r = sectionRect(col);
-            QPushButton* btn = mFilters[col].button;
-            btn->setGeometry(r.right() - 20, 2, 18, height() - 4);
-            btn->show();
+            LogHeaderItem* item = mHeaders[static_cast<int>(col)];
+            QRect rect = sectionRect(i);
+            mHeaders[static_cast<int>(col)]->setGeometry(rect);
+            mHeaders[static_cast<int>(col)]->show();
         }
     }
+#endif
+}
+
+void LogTableHeader::hideAll(void)
+{
+#if 0
+    for (auto* entry : mHeaders)
+    {
+        entry->hide();
+    }
+#endif
 }
 
 void LogTableHeader::initializeHeaderTypes(void)
 {
-    Q_ASSERT(mModel != nullptr);
-    int cnt = mModel->columnCount();
-    for (int i = 0; i < cnt; ++i)
+    const QStringList& names = LogViewerModel::getHeaderList();
+    int count = mModel->getMaxColumCount();
+    for (int i = 0; i < count; ++i)
     {
-        int data = mModel->headerData(i, Qt::Orientation::Horizontal, Qt::ItemDataRole::UserRole).toInt();
-        switch (static_cast<LogViewerModel::eColumn>(data))
-        {
-        case LogViewerModel::eColumn::LogColumnPriority:
-        case LogViewerModel::eColumn::LogColumnSource:
-        case LogViewerModel::eColumn::LogColumnSourceId:
-        case LogViewerModel::eColumn::LogColumnThread:
-        case LogViewerModel::eColumn::LogColumnThreadId:
-            setFilterType(i, FilterType::ComboFilter);
-            break;
-
-        case LogViewerModel::eColumn::LogColumnScopeId:
-        case LogViewerModel::eColumn::LogColumnMessage:
-            setFilterType(i, FilterType::TextFilter);
-            break;
-
-        case LogViewerModel::eColumn::LogColumnTimestamp:
-        default:
-            setFilterType(i, FilterType::None);
-            break;
-        }
+        mHeaders.push_back(new LogHeaderObject(*this, i, names[i]));
     }
 }
 
 QRect LogTableHeader::sectionRect(int logicalIndex) const
 {
-    int pos = sectionPosition(logicalIndex);
+    // int pos = sectionPosition(logicalIndex);
+    int pos = sectionViewportPosition(logicalIndex);
     int size = sectionSize(logicalIndex);
     if (orientation() == Qt::Horizontal)
         return QRect(pos, 0, size, height());
     else
         return QRect(0, pos, width(), size);
 }
+
+void LogTableHeader::paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const
+{
+    // Draw the background (mimic QHeaderView default)
+    QStyleOptionHeader opt;
+    initStyleOption(&opt);
+    opt.rect = rect;
+    opt.section = logicalIndex;
+    opt.state |= QStyle::State_Raised;
+    if (isSortIndicatorShown() && (sortIndicatorSection() == logicalIndex))
+    {
+        opt.sortIndicator = (sortIndicatorOrder() == Qt::AscendingOrder) ? QStyleOptionHeader::SortUp : QStyleOptionHeader::SortDown;
+    }
+    
+    style()->drawControl(QStyle::CE_Header, &opt, painter, this);
+    
+    LogViewerModel::eColumn col = mModel->fromIndexToColum(logicalIndex);
+    if (col != LogViewerModel::eColumn::LogColumnInvalid)
+    {
+        constexpr int textMargin { 4 };
+        // Button rectangle (left side)
+        QRect rcButton(rect.left() + 2, rect.top() + 2, 18, rect.height() - 2);
+        
+        // Text rectangle (right of button, with a small gap)
+        QRect rcText(rcButton.right() + textMargin + 2, rect.top(), rect.right() - rcButton.right() - textMargin, rect.height());
+        
+        // Draw button and symbol
+        if (mHeaders[static_cast<int>(col)]->canPopupFilter())
+        {
+            // painter->drawRect(rcButton);
+            painter->drawText(rcButton, Qt::AlignCenter, QChar(0x25BC)); // ▼
+        }
+        
+        // Draw header text
+        painter->drawText(rcText, Qt::AlignVCenter | Qt::AlignLeft, mModel->getHeaderName(logicalIndex));
+    }
+}
+
+void LogTableHeader::mousePressEvent(QMouseEvent* event)
+{
+    int logical = logicalIndexAt(event->pos());
+    QRect rect = sectionRect(logical);
+    QRect buttonRect = QRect(rect.left() + 2, rect.top() + 2, 18, rect.height() - 2);
+
+    if (buttonRect.contains(event->pos()))
+    {
+        LogViewerModel::eColumn col = mModel->fromIndexToColum(logical);
+        if ((col != LogViewerModel::eColumn::LogColumnInvalid) && mHeaders[static_cast<int>(col)]->canPopupFilter())
+        {
+            // Show filter popup for this column
+            mHeaders[static_cast<int>(col)]->showFilters();
+            return;
+        }
+    }
+
+    // Otherwise, allow normal header behavior (resize/move)
+    QHeaderView::mousePressEvent(event);
+}
+

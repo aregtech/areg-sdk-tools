@@ -47,7 +47,8 @@ public:
     //!< The index of columns
     enum class eColumn  : int
     {
-          LogColumnPriority     = 0 //!< Log message priority
+          LogColumnInvalid      = -1//!< Invalid column index, used for error checking
+        , LogColumnPriority     = 0 //!< Log message priority
         , LogColumnTimestamp        //!< Log message timestamp
         , LogColumnSource           //!< Log message source name
         , LogColumnSourceId         //!< Log message source ID
@@ -263,7 +264,13 @@ public:
      *                  The name may have a mask, such as "log_%time%.sqlog",
      **/
     void restartLogging(const QString & dbName = QString());
+    
+    inline int getMaxColumCount(void) const;
+    
+    inline int fromColumnToIndex(LogViewerModel::eColumn col) const;
 
+    inline LogViewerModel::eColumn fromIndexToColum(int logicalIndex) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -351,5 +358,21 @@ inline QList<LogViewerModel::eColumn> LogViewerModel::getActiveColumns(void) con
 {
     return mActiveColumns;
 }
+
+inline int LogViewerModel::getMaxColumCount(void) const
+{
+    return static_cast<int>(eColumn::LogColumnCount);
+}
+
+inline int LogViewerModel::fromColumnToIndex(LogViewerModel::eColumn col) const
+{
+    return mActiveColumns.indexOf(col);
+}
+
+inline LogViewerModel::eColumn LogViewerModel::fromIndexToColum(int logicalIndex) const
+{
+    return ((logicalIndex >= 0) && (logicalIndex < static_cast<int>(mActiveColumns.size())) ? mActiveColumns[logicalIndex] : LogViewerModel::eColumn::LogColumnInvalid);
+}
+
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP

@@ -22,13 +22,10 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/view/log/LogHeaderItem.hpp"
 
-#include <QFrame>
 #include <QHeaderView>
-#include <QMap>
-#include <QPushButton>
 
 /************************************************************************
  * Dependencies
@@ -36,95 +33,16 @@
 class LogViewer;
 class LogViewerModel;
 class QTableView;
-class QListWidget;
-class QListWidgetItem;
-class QLineEdit;
-
-//////////////////////////////////////////////////////////////////////////
-// LogComboFilter class declaration
-//////////////////////////////////////////////////////////////////////////
-
-class LogComboFilter : public QFrame
-{
-    Q_OBJECT
-//////////////////////////////////////////////////////////////////////////
-// Attributes and operations
-//////////////////////////////////////////////////////////////////////////
-public:
-    explicit LogComboFilter(QWidget* parent = nullptr);
-
-    void setItems(const QStringList& items);
-
-    QStringList checkedItems() const;
-
-//////////////////////////////////////////////////////////////////////////
-// Signals
-//////////////////////////////////////////////////////////////////////////
-signals:
-    void filtersChanged();
-
-//////////////////////////////////////////////////////////////////////////
-// Slots
-//////////////////////////////////////////////////////////////////////////
-private slots:
-    void onItemChanged(QListWidgetItem* item);
-
-//////////////////////////////////////////////////////////////////////////
-// Member variables.
-//////////////////////////////////////////////////////////////////////////
-private:
-    QListWidget* mListWidget;
-};
-
-//////////////////////////////////////////////////////////////////////////
-// LogTextFilter class declaration
-//////////////////////////////////////////////////////////////////////////
-class LogTextFilter : public QFrame
-{
-    Q_OBJECT
-
-//////////////////////////////////////////////////////////////////////////
-// Attributes and operations
-//////////////////////////////////////////////////////////////////////////
-public:
-    explicit LogTextFilter(QWidget* parent = nullptr);
-
-    QString text() const;
-
-//////////////////////////////////////////////////////////////////////////
-// Signals
-//////////////////////////////////////////////////////////////////////////
-signals:
-    void filterTextChanged(const QString& text);
-
-//////////////////////////////////////////////////////////////////////////
-// Member variables
-//////////////////////////////////////////////////////////////////////////
-private:
-    QLineEdit* mLineEdit;
-};
 
 //////////////////////////////////////////////////////////////////////////
 // LogTableHeader class declaration
 //////////////////////////////////////////////////////////////////////////
 class LogTableHeader : public QHeaderView
 {
+    friend class LogHeaderItem;
+    friend class LogHeaderObject;
+
     Q_OBJECT
-
-//////////////////////////////////////////////////////////////////////////
-// Internal Types and constants
-//////////////////////////////////////////////////////////////////////////
-public:
-    enum FilterType { None, ComboFilter, TextFilter };
-
-private:
-    struct sFilterWidget
-    {
-        QPushButton*    button      { nullptr };
-        FilterType      type        { None };
-        LogComboFilter* comboPopup  { nullptr };
-        LogTextFilter*  textPopup   { nullptr };
-    };
 
 //////////////////////////////////////////////////////////////////////////
 // LogTableHeader attributes and operations
@@ -133,23 +51,22 @@ public:
 
     explicit LogTableHeader(LogViewer * viewer, QTableView* parent, LogViewerModel* model, Qt::Orientation orientation = Qt::Horizontal);
 
-    void setFilterType(int column, FilterType type);
-
-    void setComboItems(int column, const QStringList& items);
-
 signals:
-    void comboFilterChanged(int column, const QStringList& items);
+    void signalComboFilterChanged(int logicalColumn, const QStringList& items);
 
-    void textFilterChanged(int column, const QString& text);
+    void signalTextFilterChanged(int logicalColumn, const QString& text);
 
 protected:
-    void resizeEvent(QResizeEvent* event) override;
+    virtual void resizeEvent(QResizeEvent* event) override;
 
-private slots:
-    void showFilterPopup(int column);
+    virtual void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const override;
+
+    virtual void mousePressEvent(QMouseEvent* event) override;
 
 private:
-    void updateButtonGeometry();
+    void updateButtonGeometry(void);
+    
+    void hideAll(void);
 
     void initializeHeaderTypes(void);
 
@@ -157,9 +74,11 @@ private:
 
 private:
 
-    LogViewerModel*             mModel;
-    LogViewer*                  mViewer;
-    QMap<int, sFilterWidget>    mFilters;
+    LogViewerModel*     mModel;
+    LogViewer*          mViewer;
+    // QList<LogHeaderItem *> mHeaders;
+    QList<LogHeaderObject*> mHeaders;
+
 };
 
 #endif // LUSAN_VIEW_LOG_LOGTABLEHEADER_HPP
