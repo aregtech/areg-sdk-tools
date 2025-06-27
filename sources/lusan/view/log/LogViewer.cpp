@@ -20,6 +20,7 @@
 #include "lusan/view/log/LogViewer.hpp"
 #include "ui/ui_LogViewer.h"
 
+#include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/model/log/LogViewerModel.hpp"
 #include <QMdiSubWindow>
 #include <QMenu>
@@ -37,15 +38,17 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , mMdiWindow    (new QWidget())
 {
     ui->setupUi(mMdiWindow);
-    
     mLogModel = new LogViewerModel(this);
+    
+    QTableView* view = ctrlTable();
+    view->setHorizontalHeader(new LogTableHeader(this, view, mLogModel));
     QHeaderView* header = ctrlHeader();
+    
     header->setVisible(true);
     header->show();
     header->setContextMenuPolicy(Qt::CustomContextMenu);
     header->setSectionsMovable(true);
-
-    QTableView* view = ctrlTable();    
+    
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setEditTriggers(QAbstractItemView::NoEditTriggers);
     view->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -77,6 +80,9 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     connect(ctrlStop()      , &QToolButton::clicked                     , this, &LogViewer::onStopClicked);
     connect(ctrlClear()     , &QToolButton::clicked                     , this, &LogViewer::onClearClicked);
     connect(mLogModel       , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
+    connect(mLogModel       , &LogViewerModel::columnsInserted          , this, &LogViewer::onColumnsInserted);
+    connect(mLogModel       , &LogViewerModel::columnsRemoved           , this, &LogViewer::onColumnsRemoved);
+    connect(mLogModel       , &LogViewerModel::columnsMoved             , this, &LogViewer::onColumnsMoved);
     connect(header          , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
     connect(view            , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
 }
@@ -168,6 +174,18 @@ void LogViewer::onRowsInserted(const QModelIndex& parent, int first, int last)
             ctrlTable()->selectRow(count - 1);
         }
     }
+}
+
+void LogViewer::onColumnsInserted(const QModelIndex& parent, int first, int last)
+{
+}
+
+void LogViewer::onColumnsRemoved(const QModelIndex& parent, int first, int last)
+{
+}
+
+void LogViewer::onColumnsMoved(const QModelIndex& sourceParent, int sourceStart, int sourceEnd, const QModelIndex& destinationParent, int destinationColumn)
+{
 }
 
 void LogViewer::onHeaderContextMenu(const QPoint& pos)

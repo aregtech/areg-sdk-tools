@@ -1,0 +1,231 @@
+﻿#ifndef LUSAN_VIEW_LOG_LOGHEADERITEM_HPP
+#define LUSAN_VIEW_LOG_LOGHEADERITEM_HPP
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the AREG Framework.
+ *
+ *  Lusan is available as free and open-source software under the MIT License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  with this distribution or contact us at info[at]aregtech.com.
+ *
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \file        lusan/view/log/LogHeaderItem.hpp
+ *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, log view table header item.
+ *
+ ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/common/NELusanCommon.hpp"
+#include "lusan/model/log/LogViewerModel.hpp"
+
+#include <QFrame>
+#include <QList>
+
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class LogTableHeader;
+class QHBoxLayout;
+class QPushButton;
+class QLabel;
+class QLineEdit;
+class QListWidget;
+
+/************************************************************************
+ * Implemented classes
+ ************************************************************************/
+
+class LogComboFilter;
+class LogTextFilter;
+class LogHeaderItem;
+
+//////////////////////////////////////////////////////////////////////////
+// LogHeaderItem class declaration
+//////////////////////////////////////////////////////////////////////////
+/**
+ * \brief   Header item, which contains visual elements to visualize by need.
+ **/
+class LogHeaderItem : public QObject
+{
+    Q_OBJECT
+
+private:
+/************************************************************************
+ * Implemented classes
+ ************************************************************************/
+
+    //!< The type of visual object to display
+    enum eType
+    {
+          None  //!< Nothing to display
+        , Combo //!< Display combo-box
+        , Text  //!< Display line-editor
+    };
+
+public:
+    /**
+     * \brief   Initialize the elements
+     * \param   header  The header object
+     * @param   column  The virtual column, based on LogViewerModel
+     * @param   text    The header name to display
+     */
+    LogHeaderItem(LogTableHeader& header, int logicalIndex);
+
+    /**
+     * \brief   Visualize the filter widgets
+     **/
+    void showFilters(void);
+
+    /**
+     * \brief   Returns true if header object can be visualized in the pop-up widget.
+     **/
+    inline bool canPopupFilter(void) const;
+
+signals:
+/************************************************************************
+ * Signals
+ ************************************************************************/
+
+    /**
+     * \brief   Signal, triggered when the selection has been changed in the pop-up combo-box filter
+     * \param   logicalIndex    The logical index of the column.
+     * \param   checkedItems    The list of entries in the filter which are checked.
+     **/
+    void signalComboFilterChanged(int logicalIndex, QStringList checkedItems);
+
+    /**
+     * \brief   Signal, triggered when the text in the pop-up line editor filter has been changed.
+     * \param   logicalIndex    The logical index of the column.
+     * \param   newText         The new text in the filter.
+     **/
+    void signalTextFilterChanged(int logicalIndex, QString newText);
+
+private:
+/************************************************************************
+ * Hidden methods
+ ************************************************************************/
+
+    //!< Returns the logical index of the column.
+    //!< Returns `-1` if the column is not active.
+    inline int fromColumnToIndex(void) const;
+
+    //!< Returns the column from the index.
+    //!< Return LogColumnInvalid value if index is invalid.
+    inline LogViewerModel::eColumn fromIndexToColumn(int logicalIndex) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+
+    LogViewerModel::eColumn mColumn;    //!< The index of the header item.
+    eType           mType;      //!< Type of the header item.
+    LogTableHeader& mHeader;    //!< The header object, which contains this item.
+    LogComboFilter* mCombo;     //!< The combo-box filter, if applicable.
+    LogTextFilter*  mEdit;      //!< The line editor filter, if applicable.
+};
+
+//////////////////////////////////////////////////////////////////////////
+// LogComboFilter class declaration
+//////////////////////////////////////////////////////////////////////////
+/**
+ * \brief   A class to display as a combo-box entries when click on header.
+ **/
+class LogComboFilter : public QFrame
+{
+    Q_OBJECT
+
+private:
+/************************************************************************
+ * Internal types and constants
+ ************************************************************************/
+    //!< Structure is used to filter combo-box entries
+    struct sComboItem
+    {
+        QString text{};         //!< The string in combo-box
+        bool    checked{false}; //!< Flag, indicating whether the element is selected or not
+    };
+    
+public:
+    explicit LogComboFilter(QWidget* parent = nullptr);
+
+    /**
+     * \brief   Updates and sets the items of combo-box
+     * \param   items   The list of entries to set in combo-box
+     **/
+    void setItems(const QStringList& items);
+
+    /**
+     * \brief   Returns list of selected (checked) entries.
+     **/
+    QStringList getCheckedItems() const;
+
+/************************************************************************
+ * Signals
+ ************************************************************************/
+signals:
+    /**
+     * \brief   The signal, which is triggered when an element from combo-box is selected.
+     **/
+    void signalFiltersChanged(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables.
+//////////////////////////////////////////////////////////////////////////
+private:
+    QListWidget*        mListWidget;    //!< The list widget to display as a bombo-box.
+};
+
+//////////////////////////////////////////////////////////////////////////
+// LogTextFilter class declaration
+//////////////////////////////////////////////////////////////////////////
+/**
+ * \brief   A visual element to type a string to search and filter
+ **/
+class LogTextFilter : public QFrame
+{
+    Q_OBJECT
+
+public:
+    explicit LogTextFilter(QWidget* parent = nullptr);
+
+    /**
+     * \brief   Returns types string in the line edit
+     **/
+    QString getText() const;
+
+signals:
+/************************************************************************
+ * Signals
+ ************************************************************************/
+
+    /**
+     * \brief   A signal triggered when user types a text inside editor
+     * \param   text    A new text.
+     */
+    void signalFilterTextChanged(const QString& text);
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    QLineEdit* mLineEdit;   //!< Line edit controller
+};
+
+//////////////////////////////////////////////////////////////////////////
+// Inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool LogHeaderItem::canPopupFilter(void) const
+{
+    return (mType != None);    
+}
+
+#endif  // LUSAN_VIEW_LOG_LOGHEADERITEM_HPP

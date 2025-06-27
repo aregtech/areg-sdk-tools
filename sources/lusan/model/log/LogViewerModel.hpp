@@ -47,7 +47,8 @@ public:
     //!< The index of columns
     enum class eColumn  : int
     {
-          LogColumnPriority     = 0 //!< Log message priority
+          LogColumnInvalid      = -1//!< Invalid column index, used for error checking
+        , LogColumnPriority     = 0 //!< Log message priority
         , LogColumnTimestamp        //!< Log message timestamp
         , LogColumnSource           //!< Log message source name
         , LogColumnSourceId         //!< Log message source ID
@@ -264,6 +265,23 @@ public:
      **/
     void restartLogging(const QString & dbName = QString());
 
+    /**
+     * \brief   Returns maximum number of columns that is possible to set in the log viewer.
+     **/
+    inline int getMaxColumCount(void) const;
+
+    /**
+     * \brief   Converts the column to its index in the active columns list.
+     **/
+    inline int fromColumnToIndex(LogViewerModel::eColumn col) const;
+
+    /**
+     * \brief   Converts the index to its column in the active columns list.
+     *          Returns LogColumnInvalid if index is invalid.
+     * \param   logicalIndex  The logical index of the column.
+     **/
+    inline LogViewerModel::eColumn fromIndexToColumn(int logicalIndex) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -351,5 +369,21 @@ inline QList<LogViewerModel::eColumn> LogViewerModel::getActiveColumns(void) con
 {
     return mActiveColumns;
 }
+
+inline int LogViewerModel::getMaxColumCount(void) const
+{
+    return static_cast<int>(eColumn::LogColumnCount);
+}
+
+inline int LogViewerModel::fromColumnToIndex(LogViewerModel::eColumn col) const
+{
+    return mActiveColumns.indexOf(col);
+}
+
+inline LogViewerModel::eColumn LogViewerModel::fromIndexToColumn(int logicalIndex) const
+{
+    return ((logicalIndex >= 0) && (logicalIndex < static_cast<int>(mActiveColumns.size())) ? mActiveColumns[logicalIndex] : LogViewerModel::eColumn::LogColumnInvalid);
+}
+
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
