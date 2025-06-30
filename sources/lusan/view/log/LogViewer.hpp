@@ -242,9 +242,10 @@ private:
      * \param   searchText      The text to search for.
      * \param   startFromRow    The row to start searching from.
      * \param   caseSensitive   Whether to perform case-sensitive search.
+     * \param   searchColumn    The specific column to search in, or -1 for all columns.
      * \return  The row index of the found match, or -1 if not found.
      **/
-    int performSearch(const QString& searchText, int startFromRow = 0, bool caseSensitive = false);
+    int performSearch(const QString& searchText, int startFromRow = 0, bool caseSensitive = false, int searchColumn = -1);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -256,6 +257,7 @@ private:
     QString             mLastSearchText;//!< Last search text used for searching.
     int                 mLastFoundRow;  //!< Last found row for search navigation.
     bool                mCaseSensitiveSearch; //!< Flag indicating if search should be case-sensitive.
+    int                 mSearchColumn;  //!< Column to search in (-1 for all columns).
 };
 
 #endif // LUSAN_VIEW_LOG_LOGVIEWER_HPP

@@ -27,6 +27,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QKeyEvent>
+#include <QActionGroup>
 
 const QString   LogViewer::_tooltipPauseLogging(tr("Pause currnet logging"));
 const QString   LogViewer::_tooltipResumeLogging(tr("Resume current logging"));
@@ -42,6 +43,7 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , mLastSearchText()
     , mLastFoundRow(-1)
     , mCaseSensitiveSearch(false)
+    , mSearchColumn(-1)
 {
     ui->setupUi(mMdiWindow);
     mLogModel = new LogViewerModel(this);
@@ -409,6 +411,7 @@ void LogViewer::onClearClicked(void)
     // Clear search state when logs are cleared
     mLastSearchText.clear();
     mLastFoundRow = -1;
+    mSearchColumn = -1; // Reset to search all columns
     ctrlSearchText()->clear();
     ctrlSearchText()->setStyleSheet(""); // Reset any background color
 }
@@ -439,7 +442,7 @@ void LogViewer::onSearchClicked(void)
         startRow = mLastFoundRow + 1;
     }
     
-    int foundRow = performSearch(searchText, startRow, mCaseSensitiveSearch);
+    int foundRow = performSearch(searchText, startRow, mCaseSensitiveSearch, mSearchColumn);
     
     if (foundRow != -1)
     {
@@ -461,7 +464,7 @@ void LogViewer::onSearchClicked(void)
         // If not found and we were continuing a search, try from the beginning
         if (startRow > 0)
         {
-            foundRow = performSearch(searchText, 0, mCaseSensitiveSearch);
+            foundRow = performSearch(searchText, 0, mCaseSensitiveSearch, mSearchColumn);
             if (foundRow != -1)
             {
                 mLastSearchText = searchText;
@@ -497,7 +500,7 @@ void LogViewer::onSearchTextChanged(const QString& text)
     }
 }
 
-int LogViewer::performSearch(const QString& searchText, int startFromRow, bool caseSensitive)
+int LogViewer::performSearch(const QString& searchText, int startFromRow, bool caseSensitive, int searchColumn)
 {
     if (mLogModel == nullptr || searchText.isEmpty())
     {
@@ -515,9 +518,12 @@ int LogViewer::performSearch(const QString& searchText, int startFromRow, bool c
     // Search through all rows starting from startFromRow
     for (int row = startFromRow; row < rowCount; ++row)
     {
-        // Check all columns for the search text
-        const int columnCount = mLogModel->columnCount();
-        for (int col = 0; col < columnCount; ++col)
+        // Determine which columns to search
+        int startCol = (searchColumn >= 0) ? searchColumn : 0;
+        int endCol = (searchColumn >= 0) ? searchColumn : (mLogModel->columnCount() - 1);
+        
+        // Check specified columns for the search text
+        for (int col = startCol; col <= endCol; ++col)
         {
             QModelIndex index = mLogModel->index(row, col);
             QString cellText = mLogModel->data(index, Qt::DisplayRole).toString();
@@ -584,12 +590,41 @@ void LogViewer::onSearchTextContextMenu(const QPoint& pos)
     caseSensitiveAction->setCheckable(true);
     caseSensitiveAction->setChecked(mCaseSensitiveSearch);
     
+    menu.addSeparator();
+    
+    // Add search scope submenu
+    QMenu* scopeMenu = menu.addMenu(tr("Search In"));
+    QActionGroup* scopeGroup = new QActionGroup(this);
+    
+    QAction* allColumnsAction = scopeMenu->addAction(tr("All Columns"));
+    allColumnsAction->setCheckable(true);
+    allColumnsAction->setChecked(mSearchColumn == -1);
+    allColumnsAction->setData(-1);
+    scopeGroup->addAction(allColumnsAction);
+    
+    // Add individual column options
+    const QStringList& headers = LogViewerModel::getHeaderList();
+    for (int i = 0; i < headers.size(); ++i)
+    {
+        QAction* colAction = scopeMenu->addAction(headers[i]);
+        colAction->setCheckable(true);
+        colAction->setChecked(mSearchColumn == i);
+        colAction->setData(i);
+        scopeGroup->addAction(colAction);
+    }
+    
     QAction* selectedAction = menu.exec(ctrlSearchText()->mapToGlobal(pos));
     
     if (selectedAction == caseSensitiveAction)
     {
         mCaseSensitiveSearch = caseSensitiveAction->isChecked();
         // Reset search state to re-search with new settings
+        mLastFoundRow = -1;
+    }
+    else if (scopeGroup->actions().contains(selectedAction))
+    {
+        mSearchColumn = selectedAction->data().toInt();
+        // Reset search state to re-search with new column scope
         mLastFoundRow = -1;
     }
 }
