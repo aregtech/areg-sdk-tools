@@ -33,6 +33,7 @@
 #include "areg/logging/NELogging.hpp"
 
 class LogObserverComp;
+class LogViewerFilterProxy;
 
 /**
  * \brief   The model for the log viewer window.
@@ -366,6 +367,8 @@ public:
      *                      If `0` it receives log messages of all scopes.
      **/
     void getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
+
+    inline LogViewerFilterProxy* getFilter(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Slots.
@@ -397,6 +400,7 @@ private:
     QList<SharedBuffer> mLogs;          //!< The list of log messages
     QMetaObject::Connection mConLogger; //!< The connection signal
     QMetaObject::Connection mConLogs;   //!< The connection signal
+    LogViewerFilterProxy*   mFilter;    //!< The log viewer filter
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -470,5 +474,9 @@ inline LogViewerModel::eColumn LogViewerModel::fromIndexToColumn(int logicalInde
     return ((logicalIndex >= 0) && (logicalIndex < static_cast<int>(mActiveColumns.size())) ? mActiveColumns[logicalIndex] : LogViewerModel::eColumn::LogColumnInvalid);
 }
 
+inline LogViewerFilterProxy* LogViewerModel::getFilter(void)
+{
+    return mFilter;
+}
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
