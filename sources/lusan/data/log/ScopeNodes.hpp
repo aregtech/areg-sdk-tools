@@ -420,7 +420,12 @@ public:
      * \brief   Returns the string used to create the path. Root nodes should return empty string.
      **/
     virtual QString getPathString(void) const override;
-
+    
+    /**
+     * \brief   Returns the string to display on screen.
+     **/
+    virtual QString getDisplayName(void) const override;
+    
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////

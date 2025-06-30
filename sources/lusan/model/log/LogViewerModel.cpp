@@ -203,9 +203,9 @@ QVariant LogViewerModel::data(const QModelIndex &index, int role) const
                 return QVariant( QString(timestamp.formatTime().getString()) );
             }
             case eColumn::LogColumnSource:
-                return QVariant(QString(logMessage->logModule) + " (" + QString::number(logMessage->logModuleId) + ")");
+                return QVariant(QString(logMessage->logModule) + " (" + QString::number(logMessage->logCookie) + ")");
             case eColumn::LogColumnSourceId:
-                return QVariant((qulonglong)logMessage->logModuleId);
+                return QVariant((qulonglong)logMessage->logCookie);
             case eColumn::LogColumnThread:
                 return QVariant( QString(logMessage->logThread) );
             case eColumn::LogColumnThreadId:
@@ -437,4 +437,59 @@ void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
         mLogs.append(logMessage);
         endInsertRows();
     }
+}
+
+void LogViewerModel::getLogInstanceNames(std::vector<String>& names)
+{
+    LogObserver::queryLogInstanceNames(names);
+}
+
+void LogViewerModel::getLogInstances(std::vector<ITEM_ID>& ids)
+{
+    LogObserver::queryLogInstances(ids);
+}
+
+void LogViewerModel::getLogThreadNames(std::vector<String>& names)
+{
+    LogObserver::queryLogThreadNames(names);
+}
+
+void LogViewerModel::getLogThreads(std::vector<ITEM_ID>& ids)
+{
+    LogObserver::queryLogThreads(ids);
+}
+
+void LogViewerModel::getPriorityNames(std::vector<String>& names)
+{
+    LogObserver::queryPriorityNames(names);
+}
+
+void LogViewerModel::getLogInstanceInfos(std::vector< NEService::sServiceConnectedInstance>& infos)
+{
+    LogObserver::queryLogInstanceInfos(infos);
+}
+
+void LogViewerModel::getLogInstScopes(std::vector<NELogging::sScopeInfo>& scopes, ITEM_ID instId)
+{
+    LogObserver::queryLogInstScopes(scopes, instId);
+}
+
+void LogViewerModel::getLogMessages(std::vector<SharedBuffer>& messages)
+{
+    LogObserver::queryLogMessages(messages);
+}
+
+void LogViewerModel::getLogInstMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId /*= NEService::COOKIE_ANY*/)
+{
+    LogObserver::queryLogInstMessages(messages, instId);
+}
+
+void LogViewerModel::getLogScopeMessages(std::vector<SharedBuffer>& messages, uint32_t scopeId /*= 0*/)
+{
+    LogObserver::queryLogScopeMessages(messages, scopeId);
+}
+
+void LogViewerModel::getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId)
+{
+    LogObserver::queryLogMessages(messages, instId, scopeId);
 }

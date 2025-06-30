@@ -84,6 +84,21 @@ public:
     void showFilters(void);
 
     /**
+     * \brief   Sets the filter string for line edit filter control.
+     **/
+    void setFilterData(const QString & data);
+
+    /**
+     * \brief   Sets the list of strings in the combo-box filter control
+     **/
+    void setFilterData(const std::vector<String> & data);
+    
+    /**
+     * \brief   Sets the list of integers in the combo-box filter control
+     **/
+    void setFilterData(const std::vector<ITEM_ID> & data);
+
+    /**
      * \brief   Returns true if header object can be visualized in the pop-up widget.
      **/
     inline bool canPopupFilter(void) const;
@@ -161,7 +176,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      **/
     void setItems(const QStringList& items);
-
+    
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
@@ -200,6 +215,11 @@ public:
      * \brief   Returns types string in the line edit
      **/
     QString getText() const;
+
+    /**
+     * \brief   Sets the text in the line edit.
+     **/
+    void setText(const QString & newText);
 
 signals:
 /************************************************************************

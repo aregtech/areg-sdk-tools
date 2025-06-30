@@ -103,6 +103,11 @@ QString LogTextFilter::getText() const
     return mLineEdit->text();
 }
 
+void LogTextFilter::setText(const QString & newText)
+{
+    mLineEdit->setText(newText);
+}
+
 /////////////////////////////////////////////////////////////
 
 LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
@@ -188,3 +193,39 @@ void LogHeaderItem::showFilters(void)
     }
 }
 
+void LogHeaderItem::setFilterData(const QString& data)
+{
+    if (mType == eType::Text && mEdit != nullptr)
+    {
+        mEdit->setText(data);
+    }
+}
+
+void LogHeaderItem::setFilterData(const std::vector<String>& data)
+{
+    if (mType == eType::Combo && mCombo != nullptr)
+    {
+        QStringList items;
+        items.reserve(static_cast<int>(data.size()));
+        for (const auto& entry : data)
+        {
+            items << QString::fromStdString(entry.getData());
+        }
+
+        mCombo->setItems(items);
+    }
+}
+
+void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data)
+{
+    if (mType == eType::Combo && mCombo != nullptr)
+    {
+        QStringList items;
+        for (const auto& entry : data)
+        {
+            items << QString::number(static_cast<uint64_t>(entry));
+        }
+
+        mCombo->setItems(items);
+    }
+}

@@ -428,3 +428,8 @@ int ScopeNodeBase::splitScopePath(QString& scopePath, QStringList& nodeNames) co
     
     return static_cast<int>(nodeNames.size());
 }
+
+QString ScopeNodeBase::getDisplayName(void) const
+{
+    return getNodeName();
+}
