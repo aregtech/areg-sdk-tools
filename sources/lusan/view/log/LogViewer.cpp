@@ -24,6 +24,8 @@
 #include "lusan/model/log/LogViewerModel.hpp"
 #include <QMdiSubWindow>
 #include <QMenu>
+#include <QLineEdit>
+#include <QPushButton>
 
 const QString   LogViewer::_tooltipPauseLogging(tr("Pause currnet logging"));
 const QString   LogViewer::_tooltipResumeLogging(tr("Resume current logging"));
@@ -36,6 +38,8 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , ui            (new Ui::LogViewer)
     , mLogModel     (nullptr)
     , mMdiWindow    (new QWidget())
+    , mLastSearchText()
+    , mLastFoundRow(-1)
 {
     ui->setupUi(mMdiWindow);
     mLogModel = new LogViewerModel(this);
@@ -79,6 +83,8 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     connect(ctrlPause()     , &QToolButton::clicked                     , this, &LogViewer::onPauseClicked);
     connect(ctrlStop()      , &QToolButton::clicked                     , this, &LogViewer::onStopClicked);
     connect(ctrlClear()     , &QToolButton::clicked                     , this, &LogViewer::onClearClicked);
+    connect(ctrlSearchButton(), &QPushButton::clicked                   , this, &LogViewer::onSearchClicked);
+    connect(ctrlSearchText(), &QLineEdit::textChanged                   , this, &LogViewer::onSearchTextChanged);
     connect(mLogModel       , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
     connect(mLogModel       , &LogViewerModel::columnsInserted          , this, &LogViewer::onColumnsInserted);
     connect(mLogModel       , &LogViewerModel::columnsRemoved           , this, &LogViewer::onColumnsRemoved);
@@ -392,5 +398,122 @@ void LogViewer::onClearClicked(void)
     {
         mLogModel->dataReset();
     }
+    
+    // Clear search state when logs are cleared
+    mLastSearchText.clear();
+    mLastFoundRow = -1;
+    ctrlSearchText()->clear();
+}
+
+QLineEdit* LogViewer::ctrlSearchText(void)
+{
+    return ui->textSearch;
+}
+
+QPushButton* LogViewer::ctrlSearchButton(void)
+{
+    return ui->buttonSearch;
+}
+
+void LogViewer::onSearchClicked(void)
+{
+    QString searchText = ctrlSearchText()->text().trimmed();
+    if (searchText.isEmpty())
+    {
+        return;
+    }
+    
+    // If this is a new search term, start from the beginning
+    int startRow = 0;
+    if (searchText == mLastSearchText && mLastFoundRow != -1)
+    {
+        // Continue searching from the next row after the last found match
+        startRow = mLastFoundRow + 1;
+    }
+    
+    int foundRow = performSearch(searchText, startRow, false);
+    
+    if (foundRow != -1)
+    {
+        mLastSearchText = searchText;
+        mLastFoundRow = foundRow;
+        
+        // Select and scroll to the found row
+        QTableView* table = ctrlTable();
+        QModelIndex foundIndex = mLogModel->index(foundRow, 0);
+        table->setCurrentIndex(foundIndex);
+        table->selectRow(foundRow);
+        table->scrollTo(foundIndex, QAbstractItemView::PositionAtCenter);
+    }
+    else
+    {
+        // If not found and we were continuing a search, try from the beginning
+        if (startRow > 0)
+        {
+            foundRow = performSearch(searchText, 0, false);
+            if (foundRow != -1)
+            {
+                mLastSearchText = searchText;
+                mLastFoundRow = foundRow;
+                
+                QTableView* table = ctrlTable();
+                QModelIndex foundIndex = mLogModel->index(foundRow, 0);
+                table->setCurrentIndex(foundIndex);
+                table->selectRow(foundRow);
+                table->scrollTo(foundIndex, QAbstractItemView::PositionAtCenter);
+            }
+        }
+        
+        if (foundRow == -1)
+        {
+            // No match found - could show a message or highlight the search field
+            mLastSearchText = searchText;
+            mLastFoundRow = -1;
+        }
+    }
+}
+
+void LogViewer::onSearchTextChanged(const QString& text)
+{
+    // Reset search state when text changes
+    if (text != mLastSearchText)
+    {
+        mLastFoundRow = -1;
+    }
+}
+
+int LogViewer::performSearch(const QString& searchText, int startFromRow, bool caseSensitive)
+{
+    if (mLogModel == nullptr || searchText.isEmpty())
+    {
+        return -1;
+    }
+    
+    const int rowCount = mLogModel->rowCount();
+    if (startFromRow >= rowCount)
+    {
+        return -1;
+    }
+    
+    Qt::CaseSensitivity sensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    
+    // Search through all rows starting from startFromRow
+    for (int row = startFromRow; row < rowCount; ++row)
+    {
+        // Check all columns for the search text
+        const int columnCount = mLogModel->columnCount();
+        for (int col = 0; col < columnCount; ++col)
+        {
+            QModelIndex index = mLogModel->index(row, col);
+            QString cellText = mLogModel->data(index, Qt::DisplayRole).toString();
+            
+            if (cellText.contains(searchText, sensitivity))
+            {
+                return row;
+            }
+        }
+    }
+    
+    return -1; // Not found
 }
 
