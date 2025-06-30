@@ -22,6 +22,7 @@
 
 #include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/model/log/LogViewerModel.hpp"
+#include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include <QMdiSubWindow>
 #include <QMenu>
 
@@ -41,7 +42,8 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     mLogModel = new LogViewerModel(this);
     
     QTableView* view = ctrlTable();
-    view->setHorizontalHeader(new LogTableHeader(this, view, mLogModel));
+    LogTableHeader* logHeader = new LogTableHeader(this, view, mLogModel);
+    view->setHorizontalHeader(logHeader);
     QHeaderView* header = ctrlHeader();
     
     header->setVisible(true);
@@ -61,7 +63,13 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     view->setVerticalScrollMode(QTableView::ScrollPerItem);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    view->setModel(mLogModel);
+    // Get the filter proxy and set it as the model for the view
+    LogViewerFilterProxy* filterProxy = mLogModel->getFilterProxy();
+    view->setModel(filterProxy);
+
+    // Connect filter signals from LogTableHeader to the filter proxy
+    connect(logHeader, &LogTableHeader::signalComboFilterChanged, filterProxy, &LogViewerFilterProxy::setComboFilter);
+    connect(logHeader, &LogTableHeader::signalTextFilterChanged, filterProxy, &LogViewerFilterProxy::setTextFilter);
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);

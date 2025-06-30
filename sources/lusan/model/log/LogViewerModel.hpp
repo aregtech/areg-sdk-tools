@@ -33,6 +33,7 @@
 #include "areg/logging/NELogging.hpp"
 
 class LogObserverComp;
+class LogViewerFilterProxy;
 
 /**
  * \brief   The model for the log viewer window.
@@ -268,6 +269,13 @@ public:
     void restartLogging(const QString & dbName = QString());
 
     /**
+     * \brief   Returns the filter proxy model for this log viewer model.
+     *          The filter proxy can be used to apply filters to the log data.
+     * \return  Pointer to the filter proxy model.
+     **/
+    LogViewerFilterProxy* getFilterProxy(void) const;
+
+    /**
      * \brief   Returns maximum number of columns that is possible to set in the log viewer.
      **/
     inline int getMaxColumCount(void) const;
@@ -397,6 +405,7 @@ private:
     QList<SharedBuffer> mLogs;          //!< The list of log messages
     QMetaObject::Connection mConLogger; //!< The connection signal
     QMetaObject::Connection mConLogs;   //!< The connection signal
+    mutable LogViewerFilterProxy* mFilterProxy; //!< The filter proxy model for filtering log data
 };
 
 //////////////////////////////////////////////////////////////////////////

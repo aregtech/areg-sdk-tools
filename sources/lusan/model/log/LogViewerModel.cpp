@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/model/log/LogViewerModel.hpp"
+#include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 
 #include "areg/base/DateTime.hpp"
@@ -133,6 +134,7 @@ LogViewerModel::LogViewerModel(QObject *parent)
     , mLogs         ( )
     , mConLogger    ( )
     , mConLogs      ( )
+    , mFilterProxy  ( nullptr )
 {
 }
 
@@ -492,4 +494,14 @@ void LogViewerModel::getLogScopeMessages(std::vector<SharedBuffer>& messages, ui
 void LogViewerModel::getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId)
 {
     LogObserver::queryLogMessages(messages, instId, scopeId);
+}
+
+LogViewerFilterProxy* LogViewerModel::getFilterProxy(void) const
+{
+    if (mFilterProxy == nullptr)
+    {
+        mFilterProxy = new LogViewerFilterProxy(const_cast<LogViewerModel*>(this));
+        mFilterProxy->setSourceModel(const_cast<LogViewerModel*>(this));
+    }
+    return mFilterProxy;
 }
