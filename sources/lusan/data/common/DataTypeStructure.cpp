@@ -54,7 +54,7 @@ DataTypeStructure& DataTypeStructure::operator = (DataTypeStructure&& other) noe
 
 bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
 {
-    if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != XmlSI::xmlSIElementDataType)
+    if (xml.tokenType() != QXmlStreamReader::StartElement || xml.name() != QString::fromUtf8(XmlSI::xmlSIElementDataType))
         return false;
 
     QXmlStreamAttributes attributes = xml.attributes();
@@ -64,7 +64,7 @@ bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
     QString depValue = attributes.hasAttribute(XmlSI::xmlSIAttributeIsDeprecated) ? attributes.value(XmlSI::xmlSIAttributeIsDeprecated).toString() : "";
     setIsDeprecated(depValue.compare(XmlSI::xmlSIValueTrue, Qt::CaseSensitivity::CaseInsensitive) == 0);
 
-    while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementDataType))
+    while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == QString::fromUtf8(XmlSI::xmlSIElementDataType)))
     {
         if (xml.tokenType() != QXmlStreamReader::StartElement)
         {
@@ -72,19 +72,19 @@ bool DataTypeStructure::readFromXml(QXmlStreamReader& xml)
             continue;
         }
 
-        if (xml.name() == XmlSI::xmlSIElementDescription)
+        if (xml.name() == QString::fromUtf8(XmlSI::xmlSIElementDescription))
         {
             mDescription = xml.readElementText();
         }
-        else if (xml.name() == XmlSI::xmlSIElementDeprecateHint)
+        else if (xml.name() == QString::fromUtf8(XmlSI::xmlSIElementDeprecateHint))
         {
             setDeprecateHint(xml.readElementText());
         }
-        else if (xml.name() == XmlSI::xmlSIElementFieldList)
+        else if (xml.name() == QString::fromUtf8(XmlSI::xmlSIElementFieldList))
         {
-            while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementFieldList))
+            while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == QString::fromUtf8(XmlSI::xmlSIElementFieldList)))
             {
-                if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSI::xmlSIElementField)
+                if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == QString::fromUtf8(XmlSI::xmlSIElementField))
                 {
                     FieldEntry entry(this);
                     if (entry.readFromXml(xml))
@@ -205,7 +205,7 @@ QIcon DataTypeStructure::getIcon(ElementBase::eDisplay display) const
     case ElementBase::eDisplay::DisplayName:
         return QIcon(QString::fromUtf8(":/icons/data type structure"));
     case ElementBase::eDisplay::DisplayType:
-        return (isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+        return (isValid() ? QIcon() : QIcon::fromTheme("dialog-warning"));
     default:
         return QIcon();
     }

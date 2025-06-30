@@ -56,6 +56,30 @@ class OfflineLogExplorer : public NavigationWindow
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
+// Private types
+//////////////////////////////////////////////////////////////////////////
+private:
+    //!< The priority indexes for the context menu entries.
+    enum eLogActions
+    {
+          PrioNotset    = 0 //!< Reset priorities
+        , PrioDebug         //!< Set debug priority
+        , PrioInfo          //!< Set info priority
+        , PrioWarn          //!< Set warning priority
+        , PrioError         //!< Set error priority
+        , PrioFatal         //!< Set fatal priority
+        , PrioScope         //!< Set scope priority
+        , ExpandSelected    //!< Expands selected node
+        , CollapseSelected  //!< Collapse selected node
+        , ExpandAll         //!< Expand all nodes
+        , CollapseAll       //!< Collapse all nodes
+        , SavePrioTarget    //!< Save priority settings of the selected target
+        , SavePrioAll       //!< Save priority settings of all targets
+
+        , PrioCount         //!< The number of entries in the menu
+    };
+
+//////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -96,7 +120,7 @@ public:
     /**
      * \brief   Returns true if a database is currently loaded.
      **/
-    inline bool isDatabaseLoaded(void) const;
+    bool isDatabaseLoaded(void) const;
 
     /**
      * \brief   Returns the path of the currently loaded database.
@@ -130,62 +154,57 @@ public:
     /**
      * \brief   Returns pointer to the tree view.
      **/
-    inline QTreeView* ctrlTreeView(void) const;
+    QTreeView* ctrlTreeView(void) const;
 
     /**
      * \brief   Returns pointer to the open database tool button.
      **/
-    inline QToolButton* ctrlOpenDatabase(void) const;
+    QToolButton* ctrlOpenDatabase(void) const;
 
     /**
      * \brief   Returns pointer to the close database tool button.
      **/
-    inline QToolButton* ctrlCloseDatabase(void) const;
+    QToolButton* ctrlCloseDatabase(void) const;
 
     /**
      * \brief   Returns pointer to the collapse/expand tool button.
      **/
-    inline QToolButton* ctrlCollapse(void) const;
+    QToolButton* ctrlCollapse(void) const;
 
     /**
      * \brief   Returns pointer to the reset filters tool button.
      **/
-    inline QToolButton* ctrlResetFilters(void) const;
-
-    /**
-     * \brief   Returns pointer to the move to top tool button.
-     **/
-    inline QToolButton* ctrlMoveTop(void) const;
+    QToolButton* ctrlResetFilters(void) const;
 
     /**
      * \brief   Returns pointer to the move to bottom tool button.
      **/
-    inline QToolButton* ctrlMoveBottom(void) const;
+    QToolButton* ctrlMoveBottom(void) const;
 
     /**
      * \brief   Returns pointer to the priority error tool button.
      **/
-    inline QToolButton* ctrlPrioError(void) const;
+    QToolButton* ctrlPrioError(void) const;
 
     /**
      * \brief   Returns pointer to the priority warning tool button.
      **/
-    inline QToolButton* ctrlPrioWarning(void) const;
+    QToolButton* ctrlPrioWarning(void) const;
 
     /**
      * \brief   Returns pointer to the priority info tool button.
      **/
-    inline QToolButton* ctrlPrioInfo(void) const;
+    QToolButton* ctrlPrioInfo(void) const;
 
     /**
      * \brief   Returns pointer to the priority debug tool button.
      **/
-    inline QToolButton* ctrlPrioDebug(void) const;
+    QToolButton* ctrlPrioDebug(void) const;
 
     /**
      * \brief   Returns pointer to the priority scopes tool button.
      **/
-    inline QToolButton* ctrlPrioScopes(void) const;
+    QToolButton* ctrlPrioScopes(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden operations
@@ -240,11 +259,6 @@ private slots:
      * \brief   Slot for resetting all filters.
      **/
     void onResetFiltersClicked(void);
-
-    /**
-     * \brief   Slot for moving to top.
-     **/
-    void onMoveTopClicked(void);
 
     /**
      * \brief   Slot for moving to bottom.
@@ -305,74 +319,9 @@ private:
 // OfflineLogExplorer inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline bool OfflineLogExplorer::isDatabaseLoaded(void) const
-{
-    return (mDatabase != nullptr) && mDatabase->isOperable();
-}
-
 inline const QString& OfflineLogExplorer::getDatabasePath(void) const
 {
     return mDatabasePath;
-}
-
-inline QTreeView* OfflineLogExplorer::ctrlTreeView(void) const
-{
-    return ui->treeView;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlOpenDatabase(void) const
-{
-    return ui->toolOpenDatabase;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlCloseDatabase(void) const
-{
-    return ui->toolCloseDatabase;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlCollapse(void) const
-{
-    return ui->toolCollapse;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlResetFilters(void) const
-{
-    return ui->toolResetFilters;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlMoveTop(void) const
-{
-    return ui->toolMoveTop;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlMoveBottom(void) const
-{
-    return ui->toolMoveBottom;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlPrioError(void) const
-{
-    return ui->toolError;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlPrioWarning(void) const
-{
-    return ui->toolWarning;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlPrioInfo(void) const
-{
-    return ui->toolInformation;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlPrioDebug(void) const
-{
-    return ui->toolDebug;
-}
-
-inline QToolButton* OfflineLogExplorer::ctrlPrioScopes(void) const
-{
-    return ui->toolScopes;
 }
 
 #endif  // LUSAN_VIEW_COMMON_OFFLINELOGEXPLORER_HPP

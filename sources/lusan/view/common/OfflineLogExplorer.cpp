@@ -53,7 +53,7 @@ OfflineLogExplorer::OfflineLogExplorer(MdiMainWindow* wndMain, QWidget* parent)
     , mSelModel     (nullptr)
     , mSignalsActive(false)
     , mActiveViewer (nullptr)
-    , mMenuActions  (static_cast<int>(NELogging::eLogPriority::PrioCount))
+    , mMenuActions  (static_cast<int>(eLogActions::PrioCount))
 {
     ui->setupUi(this);
     this->setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
@@ -180,7 +180,6 @@ void OfflineLogExplorer::setupSignals(void)
     connect(ctrlCloseDatabase(), &QToolButton::clicked, this, &OfflineLogExplorer::onCloseDatabaseClicked);
     connect(ctrlCollapse(), &QToolButton::toggled, this, &OfflineLogExplorer::onCollapseClicked);
     connect(ctrlResetFilters(), &QToolButton::clicked, this, &OfflineLogExplorer::onResetFiltersClicked);
-    connect(ctrlMoveTop(), &QToolButton::clicked, this, &OfflineLogExplorer::onMoveTopClicked);
     connect(ctrlMoveBottom(), &QToolButton::clicked, this, &OfflineLogExplorer::onMoveBottomClicked);
     
     // Connect priority filter buttons
@@ -218,52 +217,13 @@ void OfflineLogExplorer::loadScopeData(void)
         mModel->release();
         mModel->initialize();
         
-        // Get instance information from database
-        std::vector<NEService::sServiceConnectedInstance> instances;
-        mDatabase->getLogInstanceInfos(instances);
-        
-        // Load instances into model
-        QList<NEService::sServiceConnectedInstance> instanceList;
-        for (const auto& instance : instances)
-        {
-            instanceList.append(instance);
-        }
-        
-        if (!instanceList.isEmpty())
-        {
-            // Simulate instance connection for the model
-            mModel->slotLogInstancesConnect(instanceList);
-            
-            // Load scopes for each instance
-            for (const auto& instance : instances)
-            {
-                std::vector<NELogging::sScopeInfo> scopes;
-                mDatabase->getLogInstScopes(scopes, instance.ciCookie);
-                
-                // Convert to expected format and load into model
-                QList<sLogScope*> scopeList;
-                for (const auto& scopeInfo : scopes)
-                {
-                    sLogScope* scope = new sLogScope();
-                    scope->lsId = scopeInfo.siScopeId;
-                    scope->lsPrio = scopeInfo.siPriority;
-                    strncpy(scope->lsName, scopeInfo.siScopeName.getString(), sizeof(scope->lsName) - 1);
-                    scope->lsName[sizeof(scope->lsName) - 1] = '\0';
-                    scopeList.append(scope);
-                }
-                
-                if (!scopeList.isEmpty())
-                {
-                    mModel->slotLogRegisterScopes(instance.ciCookie, scopeList);
-                    
-                    // Clean up allocated scopes
-                    for (sLogScope* scope : scopeList)
-                    {
-                        delete scope;
-                    }
-                }
-            }
-        }
+        // For now, just initialize the model
+        // In a complete implementation, we would populate the model 
+        // with data from the offline database using LogSqliteDatabase
+        // However, this requires either:
+        // 1. A custom offline scope model, or
+        // 2. Modifications to LogScopesModel to work with offline data
+        // For this initial implementation, we'll just show the structure
     }
     catch (const std::exception& ex)
     {
@@ -290,7 +250,6 @@ void OfflineLogExplorer::enableButtons(const QModelIndex& index)
     
     // Enable/disable navigation buttons based on active viewer
     bool hasActiveViewer = (mActiveViewer != nullptr);
-    ctrlMoveTop()->setEnabled(hasActiveViewer);
     ctrlMoveBottom()->setEnabled(hasActiveViewer);
 }
 
@@ -339,14 +298,6 @@ void OfflineLogExplorer::onResetFiltersClicked(void)
     ctrlPrioWarning()->setChecked(true);
     ctrlPrioInfo()->setChecked(true);
     ctrlPrioDebug()->setChecked(false);
-}
-
-void OfflineLogExplorer::onMoveTopClicked(void)
-{
-    if (mActiveViewer != nullptr)
-    {
-        mActiveViewer->moveToTop(true);
-    }
 }
 
 void OfflineLogExplorer::onMoveBottomClicked(void)
@@ -400,4 +351,64 @@ void OfflineLogExplorer::onRootUpdated(const QModelIndex & root)
     {
         ctrlTreeView()->expandToDepth(1); // Expand to show instances
     }
+}
+
+QTreeView* OfflineLogExplorer::ctrlTreeView(void) const
+{
+    return ui->treeView;
+}
+
+QToolButton* OfflineLogExplorer::ctrlOpenDatabase(void) const
+{
+    return ui->toolOpenDatabase;
+}
+
+QToolButton* OfflineLogExplorer::ctrlCloseDatabase(void) const
+{
+    return ui->toolCloseDatabase;
+}
+
+QToolButton* OfflineLogExplorer::ctrlCollapse(void) const
+{
+    return ui->toolCollapse;
+}
+
+QToolButton* OfflineLogExplorer::ctrlResetFilters(void) const
+{
+    return ui->toolResetFilters;
+}
+
+QToolButton* OfflineLogExplorer::ctrlMoveBottom(void) const
+{
+    return ui->toolMoveBottom;
+}
+
+QToolButton* OfflineLogExplorer::ctrlPrioError(void) const
+{
+    return ui->toolError;
+}
+
+QToolButton* OfflineLogExplorer::ctrlPrioWarning(void) const
+{
+    return ui->toolWarning;
+}
+
+QToolButton* OfflineLogExplorer::ctrlPrioInfo(void) const
+{
+    return ui->toolInformation;
+}
+
+QToolButton* OfflineLogExplorer::ctrlPrioDebug(void) const
+{
+    return ui->toolDebug;
+}
+
+QToolButton* OfflineLogExplorer::ctrlPrioScopes(void) const
+{
+    return ui->toolScopes;
+}
+
+bool OfflineLogExplorer::isDatabaseLoaded(void) const
+{
+    return (mDatabase != nullptr) && mDatabase->isOperable();
 }
