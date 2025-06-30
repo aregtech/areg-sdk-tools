@@ -206,6 +206,7 @@ void LogHeaderItem::setFilterData(const std::vector<String>& data)
     if (mType == eType::Combo && mCombo != nullptr)
     {
         QStringList items;
+        items.reserve(static_cast<int>(data.size()));
         for (const auto& entry : data)
         {
             items << QString::fromStdString(entry.getData());
