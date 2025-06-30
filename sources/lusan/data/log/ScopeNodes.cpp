@@ -551,3 +551,9 @@ QString ScopeRoot::getPathString(void) const
 {
     return QString();
 }
+
+QString ScopeRoot::getDisplayName(void) const
+{
+    QString result {getNodeName() + " (" + QString::number(mRootId) + ")"};
+    return result;
+}

@@ -477,6 +477,11 @@ public:
      **/
     virtual int splitScopePath(QString& scopePath, QStringList& nodeNames) const;
 
+    /**
+     * \brief   Returns the string to display on screen.
+     **/
+    virtual QString getDisplayName(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

@@ -217,6 +217,61 @@ LogObserver* LogObserver::getComponent(void)
     return _component.load();
 }
 
+void LogObserver::queryLogInstanceNames(std::vector<String>& names)
+{
+    LogObserver::getClient().getLogInstanceNames(names);
+}
+
+void LogObserver::queryLogInstances(std::vector<ITEM_ID>& ids)
+{
+    LogObserver::getClient().getLogInstances(ids);
+}
+
+void LogObserver::queryLogThreadNames(std::vector<String>& names)
+{
+    LogObserver::getClient().getLogThreadNames(names);
+}
+
+void LogObserver::queryLogThreads(std::vector<ITEM_ID>& ids)
+{
+    LogObserver::getClient().getLogThreads(ids);
+}
+
+void LogObserver::queryPriorityNames(std::vector<String>& names)
+{
+    LogObserver::getClient().getPriorityNames(names);
+}
+
+void LogObserver::queryLogInstanceInfos(std::vector<NEService::sServiceConnectedInstance>& infos)
+{
+    LogObserver::getClient().getLogInstanceInfos(infos);
+}
+
+void LogObserver::queryLogInstScopes(std::vector<NELogging::sScopeInfo>& scopes, ITEM_ID instId)
+{
+    LogObserver::getClient().getLogInstScopes(scopes, instId);
+}
+
+void LogObserver::queryLogMessages(std::vector<SharedBuffer>& messages)
+{
+    LogObserver::getClient().getLogMessages(messages);
+}
+
+void LogObserver::queryLogInstMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId)
+{
+    LogObserver::getClient().getLogInstMessages(messages, instId);
+}
+
+void LogObserver::queryLogScopeMessages(std::vector<SharedBuffer>& messages, uint32_t scopeId)
+{
+    LogObserver::getClient().getLogScopeMessages(messages, scopeId);
+}
+
+void LogObserver::queryLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId)
+{
+    LogObserver::getClient().getLogMessages(messages, instId, scopeId);
+}
+
 LogCollectorClient& LogObserver::getClient(void)
 {
     return LogCollectorClient::getInstance();

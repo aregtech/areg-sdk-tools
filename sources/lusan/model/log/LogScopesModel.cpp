@@ -242,7 +242,7 @@ QVariant LogScopesModel::data(const QModelIndex& index, int role) const
     case Qt::ItemDataRole::DisplayRole:
     {
         ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
-        return entry->getNodeName();
+        return entry->getDisplayName();
     }
     
     case Qt::ItemDataRole::DecorationRole:

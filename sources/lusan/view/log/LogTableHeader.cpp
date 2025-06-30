@@ -117,6 +117,54 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
         LogViewerModel::eColumn col = mModel->fromIndexToColumn(logical);
         if ((col != LogViewerModel::eColumn::LogColumnInvalid) && mHeaders[static_cast<int>(col)]->canPopupFilter())
         {
+            switch (col)
+            {
+            case LogViewerModel::eColumn::LogColumnPriority:
+            {
+                std::vector<String> names;
+                mModel->getPriorityNames(names);
+                mHeaders[static_cast<int>(col)]->setFilterData(names);
+            }
+            break;
+                
+            case LogViewerModel::eColumn::LogColumnSource:
+            {
+                std::vector<String> names;
+                mModel->getLogInstanceNames(names);
+                mHeaders[static_cast<int>(col)]->setFilterData(names);
+            }
+            break;
+                
+            case LogViewerModel::eColumn::LogColumnSourceId:
+            {
+                std::vector<ITEM_ID> ids;
+                mModel->getLogInstances(ids);
+                mHeaders[static_cast<int>(col)]->setFilterData(ids);
+            }
+            break;
+                
+            case LogViewerModel::eColumn::LogColumnThread:
+            {
+                std::vector<String> names;
+                mModel->getLogThreadNames(names);
+                mHeaders[static_cast<int>(col)]->setFilterData(names);
+            }
+            break;
+                
+            case LogViewerModel::eColumn::LogColumnThreadId:
+            {
+                std::vector<ITEM_ID> ids;
+                mModel->getLogThreads(ids);
+                mHeaders[static_cast<int>(col)]->setFilterData(ids);
+            }
+            break;
+                
+            case LogViewerModel::eColumn::LogColumnScopeId:
+            case LogViewerModel::eColumn::LogColumnMessage:
+            default:
+                break;
+            }
+
             // Show filter popup for this column
             mHeaders[static_cast<int>(col)]->showFilters();
             return;
