@@ -25,6 +25,10 @@
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include <QMdiSubWindow>
 #include <QMenu>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QKeyEvent>
+#include <QActionGroup>
 
 const QString   LogViewer::_tooltipPauseLogging(tr("Pause currnet logging"));
 const QString   LogViewer::_tooltipResumeLogging(tr("Resume current logging"));
@@ -37,6 +41,10 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , ui            (new Ui::LogViewer)
     , mLogModel     (nullptr)
     , mMdiWindow    (new QWidget())
+    , mLastSearchText()
+    , mLastFoundRow(-1)
+    , mCaseSensitiveSearch(false)
+    , mSearchColumn(-1)
 {
     ui->setupUi(mMdiWindow);
     mLogModel = new LogViewerModel(this);
@@ -75,6 +83,9 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     ctrlTable()->setAutoScroll(true);
     ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
 
+    // Setup search field context menu
+    ctrlSearchText()->setContextMenuPolicy(Qt::CustomContextMenu);
+
     updateToolbuttons(false, false);
     ctrlPause()->setEnabled(false);
     ctrlStop()->setEnabled(false);
@@ -82,6 +93,10 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     connect(ctrlPause()     , &QToolButton::clicked                     , this, &LogViewer::onPauseClicked);
     connect(ctrlStop()      , &QToolButton::clicked                     , this, &LogViewer::onStopClicked);
     connect(ctrlClear()     , &QToolButton::clicked                     , this, &LogViewer::onClearClicked);
+    connect(ctrlSearchButton(), &QPushButton::clicked                   , this, &LogViewer::onSearchClicked);
+    connect(ctrlSearchText(), &QLineEdit::textChanged                   , this, &LogViewer::onSearchTextChanged);
+    connect(ctrlSearchText(), &QLineEdit::returnPressed                 , this, &LogViewer::onSearchClicked);
+    connect(ctrlSearchText(), &QLineEdit::customContextMenuRequested    , this, &LogViewer::onSearchTextContextMenu);
     connect(mLogModel       , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
     connect(mLogModel       , &LogViewerModel::columnsInserted          , this, &LogViewer::onColumnsInserted);
     connect(mLogModel       , &LogViewerModel::columnsRemoved           , this, &LogViewer::onColumnsRemoved);
@@ -396,6 +411,226 @@ void LogViewer::onClearClicked(void)
     if (mLogModel != nullptr)
     {
         mLogModel->dataReset();
+    }
+    
+    // Clear search state when logs are cleared
+    mLastSearchText.clear();
+    mLastFoundRow = -1;
+    mSearchColumn = -1; // Reset to search all columns
+    ctrlSearchText()->clear();
+    ctrlSearchText()->setStyleSheet(""); // Reset any background color
+}
+
+QLineEdit* LogViewer::ctrlSearchText(void)
+{
+    return ui->textSearch;
+}
+
+QPushButton* LogViewer::ctrlSearchButton(void)
+{
+    return ui->buttonSearch;
+}
+
+void LogViewer::onSearchClicked(void)
+{
+    QString searchText = ctrlSearchText()->text().trimmed();
+    if (searchText.isEmpty())
+    {
+        return;
+    }
+    
+    // If this is a new search term, start from the beginning
+    int startRow = 0;
+    if (searchText == mLastSearchText && mLastFoundRow != -1)
+    {
+        // Continue searching from the next row after the last found match
+        startRow = mLastFoundRow + 1;
+    }
+    
+    int foundRow = performSearch(searchText, startRow, mCaseSensitiveSearch, mSearchColumn);
+    
+    if (foundRow != -1)
+    {
+        mLastSearchText = searchText;
+        mLastFoundRow = foundRow;
+        
+        // Select and scroll to the found row
+        QTableView* table = ctrlTable();
+        QModelIndex foundIndex = mLogModel->index(foundRow, 0);
+        table->setCurrentIndex(foundIndex);
+        table->selectRow(foundRow);
+        table->scrollTo(foundIndex, QAbstractItemView::PositionAtCenter);
+        
+        // Reset search field background to indicate successful search
+        ctrlSearchText()->setStyleSheet("");
+    }
+    else
+    {
+        // If not found and we were continuing a search, try from the beginning
+        if (startRow > 0)
+        {
+            foundRow = performSearch(searchText, 0, mCaseSensitiveSearch, mSearchColumn);
+            if (foundRow != -1)
+            {
+                mLastSearchText = searchText;
+                mLastFoundRow = foundRow;
+                
+                QTableView* table = ctrlTable();
+                QModelIndex foundIndex = mLogModel->index(foundRow, 0);
+                table->setCurrentIndex(foundIndex);
+                table->selectRow(foundRow);
+                table->scrollTo(foundIndex, QAbstractItemView::PositionAtCenter);
+                
+                // Reset search field background to indicate successful search
+                ctrlSearchText()->setStyleSheet("");
+                return;
+            }
+        }
+        
+        // No match found - highlight search field to indicate no results
+        mLastSearchText = searchText;
+        mLastFoundRow = -1;
+        ctrlSearchText()->setStyleSheet("QLineEdit { background-color: #ffcccc; }");
+    }
+}
+
+void LogViewer::onSearchTextChanged(const QString& text)
+{
+    // Reset search state when text changes
+    if (text != mLastSearchText)
+    {
+        mLastFoundRow = -1;
+        // Reset background color when user starts typing
+        ctrlSearchText()->setStyleSheet("");
+    }
+}
+
+int LogViewer::performSearch(const QString& searchText, int startFromRow, bool caseSensitive, int searchColumn)
+{
+    if (mLogModel == nullptr || searchText.isEmpty())
+    {
+        return -1;
+    }
+    
+    const int rowCount = mLogModel->rowCount();
+    if (startFromRow >= rowCount)
+    {
+        return -1;
+    }
+    
+    Qt::CaseSensitivity sensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    
+    // Search through all rows starting from startFromRow
+    for (int row = startFromRow; row < rowCount; ++row)
+    {
+        // Determine which columns to search
+        int startCol = (searchColumn >= 0) ? searchColumn : 0;
+        int endCol = (searchColumn >= 0) ? searchColumn : (mLogModel->columnCount() - 1);
+        
+        // Check specified columns for the search text
+        for (int col = startCol; col <= endCol; ++col)
+        {
+            QModelIndex index = mLogModel->index(row, col);
+            QString cellText = mLogModel->data(index, Qt::DisplayRole).toString();
+            
+            if (cellText.contains(searchText, sensitivity))
+            {
+                return row;
+            }
+        }
+    }
+    
+    return -1; // Not found
+}
+
+void LogViewer::keyPressEvent(QKeyEvent* event)
+{
+    // Handle keyboard shortcuts for search functionality
+    if (event->key() == Qt::Key_F && (event->modifiers() & Qt::ControlModifier))
+    {
+        // Ctrl+F: Focus on search field
+        ctrlSearchText()->setFocus();
+        ctrlSearchText()->selectAll();
+        event->accept();
+        return;
+    }
+    else if (event->key() == Qt::Key_F3)
+    {
+        // F3: Find next (same as clicking search button)
+        if (!ctrlSearchText()->text().isEmpty())
+        {
+            onSearchClicked();
+        }
+        event->accept();
+        return;
+    }
+    else if (event->key() == Qt::Key_Escape)
+    {
+        // Escape: Clear search field and focus table
+        ctrlSearchText()->clear();
+        ctrlTable()->setFocus();
+        event->accept();
+        return;
+    }
+    
+    // Pass through to parent class
+    MdiChild::keyPressEvent(event);
+}
+
+void LogViewer::onSearchTextContextMenu(const QPoint& pos)
+{
+    QMenu menu(this);
+    
+    // Add standard context menu actions
+    QMenu* standardMenu = ctrlSearchText()->createStandardContextMenu();
+    if (standardMenu != nullptr)
+    {
+        menu.addActions(standardMenu->actions());
+        menu.addSeparator();
+        delete standardMenu;
+    }
+    
+    // Add search-specific options
+    QAction* caseSensitiveAction = menu.addAction(tr("Case Sensitive"));
+    caseSensitiveAction->setCheckable(true);
+    caseSensitiveAction->setChecked(mCaseSensitiveSearch);
+    
+    menu.addSeparator();
+    
+    // Add search scope submenu
+    QMenu* scopeMenu = menu.addMenu(tr("Search In"));
+    QActionGroup* scopeGroup = new QActionGroup(this);
+    
+    QAction* allColumnsAction = scopeMenu->addAction(tr("All Columns"));
+    allColumnsAction->setCheckable(true);
+    allColumnsAction->setChecked(mSearchColumn == -1);
+    allColumnsAction->setData(-1);
+    scopeGroup->addAction(allColumnsAction);
+    
+    // Add individual column options
+    const QStringList& headers = LogViewerModel::getHeaderList();
+    for (int i = 0; i < headers.size(); ++i)
+    {
+        QAction* colAction = scopeMenu->addAction(headers[i]);
+        colAction->setCheckable(true);
+        colAction->setChecked(mSearchColumn == i);
+        colAction->setData(i);
+        scopeGroup->addAction(colAction);
+    }
+    
+    QAction* selectedAction = menu.exec(ctrlSearchText()->mapToGlobal(pos));
+    
+    if (selectedAction == caseSensitiveAction)
+    {
+        mCaseSensitiveSearch = caseSensitiveAction->isChecked();
+        // Reset search state to re-search with new settings
+        mLastFoundRow = -1;
+    }
+    else if (scopeGroup->actions().contains(selectedAction))
+    {
+        mSearchColumn = selectedAction->data().toInt();
+        // Reset search state to re-search with new column scope
+        mLastFoundRow = -1;
     }
 }
 
