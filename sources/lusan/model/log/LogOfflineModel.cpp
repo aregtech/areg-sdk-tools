@@ -33,8 +33,6 @@
 #include <QSize>
 #include <QFileInfo>
 
-using areg::logger::LogSqliteDatabase;
-
 const QStringList& LogOfflineModel::getHeaderList(void)
 {
     static QStringList _headers
@@ -261,8 +259,19 @@ bool LogOfflineModel::openDatabase(const QString& filePath)
             mDbPath = filePath;
             mDbOpen = true;
             
-            // Load initial data
-            dataReset();
+            // Load initial log messages for display
+            beginResetModel();
+            mLogs.clear();
+            
+            std::vector<SharedBuffer> messages;
+            getLogMessages(messages);
+            
+            for (const auto& msg : messages)
+            {
+                mLogs.append(msg);
+            }
+            
+            endResetModel();
             
             return true;
         }

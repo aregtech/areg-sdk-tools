@@ -37,14 +37,8 @@
  ************************************************************************/
 class LogViewerFilterProxy;
 
-// Forward declaration from AREG framework
-namespace areg
-{
-    namespace logger
-    {
-        class LogSqliteDatabase;
-    }
-}
+// Forward declaration from AREG framework  
+class LogSqliteDatabase;
 
 /**
  * \brief   The offline log navigation model for reading log data from local database files.
@@ -356,7 +350,7 @@ private:
 private:
     QString             mDbPath;        //!< The path to the current database file
     bool                mDbOpen;        //!< Flag indicating if database is open
-    areg::logger::LogSqliteDatabase*  mDatabase;      //!< The sqlite database object for offline access
+    LogSqliteDatabase*  mDatabase;      //!< The sqlite database object for offline access
     QList<eColumn>      mActiveColumns; //!< The list of active columns
     QList<SharedBuffer> mLogs;          //!< The list of log messages loaded from database
     LogViewerFilterProxy* mFilter;      //!< The log viewer filter
