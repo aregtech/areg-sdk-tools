@@ -181,6 +181,19 @@ private slots:
      * \param   text    The new text in the search field.
      **/
     void onSearchTextChanged(const QString& text);
+
+    /**
+     * \brief   Slot triggered when user right-clicks on search field.
+     * \param   pos     The position of the context menu.
+     **/
+    void onSearchTextContextMenu(const QPoint& pos);
+
+protected:
+    /**
+     * \brief   Override keyPressEvent to handle search shortcuts.
+     * \param   event   The key press event.
+     **/
+    virtual void keyPressEvent(QKeyEvent* event) override;
     
 private:
     //!< Returns the pointer to the log table object.
@@ -242,6 +255,7 @@ private:
     QWidget*            mMdiWindow;     //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
     QString             mLastSearchText;//!< Last search text used for searching.
     int                 mLastFoundRow;  //!< Last found row for search navigation.
+    bool                mCaseSensitiveSearch; //!< Flag indicating if search should be case-sensitive.
 };
 
 #endif // LUSAN_VIEW_LOG_LOGVIEWER_HPP
