@@ -1,4 +1,5 @@
 ﻿list(APPEND LUSAN_SRC
+    ${LUSAN}/model/log/LogOfflineModel.cpp
     ${LUSAN}/model/log/LogScopeIconFactory.cpp
     ${LUSAN}/model/log/LogScopesModel.cpp
     ${LUSAN}/model/log/LogViewerFilterProxy.cpp
@@ -6,6 +7,7 @@
 )
 
 list(APPEND LUSAN_HDR
+    ${LUSAN}/model/log/LogOfflineModel.hpp
     ${LUSAN}/model/log/LogScopeIconFactory.hpp
     ${LUSAN}/model/log/LogScopesModel.hpp
     ${LUSAN}/model/log/LogViewerFilterProxy.hpp
