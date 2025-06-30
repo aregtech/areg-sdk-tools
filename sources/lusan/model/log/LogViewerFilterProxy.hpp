@@ -27,6 +27,8 @@
 #include <QStringList>
 #include <QMap>
 
+#include "areg/base/GEGlobal.h"
+
 class LogViewerModel;
 
 /**
