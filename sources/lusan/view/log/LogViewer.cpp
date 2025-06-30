@@ -22,6 +22,7 @@
 
 #include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/model/log/LogViewerModel.hpp"
+#include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include <QMdiSubWindow>
 #include <QMenu>
 
@@ -40,6 +41,7 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     ui->setupUi(mMdiWindow);
     mLogModel = new LogViewerModel(this);
     
+    LogViewerFilterProxy* filter = mLogModel->getFilter();
     QTableView* view = ctrlTable();
     view->setHorizontalHeader(new LogTableHeader(this, view, mLogModel));
     QHeaderView* header = ctrlHeader();
@@ -61,7 +63,8 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     view->setVerticalScrollMode(QTableView::ScrollPerItem);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    view->setModel(mLogModel);
+    // view->setModel(mLogModel);
+    view->setModel(filter);
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -85,6 +88,8 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     connect(mLogModel       , &LogViewerModel::columnsMoved             , this, &LogViewer::onColumnsMoved);
     connect(header          , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
     connect(view            , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
+    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , filter, SLOT(setComboFilter(int, QStringList)));
+    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , filter, SLOT(setTextFilter(int, QString)));
 }
 
 void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)

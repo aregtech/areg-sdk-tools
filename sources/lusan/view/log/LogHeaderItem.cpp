@@ -127,8 +127,8 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     case LogViewerModel::eColumn::LogColumnThreadId:
         mType = eType::Combo;
         mCombo = new LogComboFilter(&mHeader);
-        connect(mCombo, &LogComboFilter::signalFiltersChanged, this, [this]() {
-            emit signalComboFilterChanged(fromColumnToIndex(), mCombo->getCheckedItems());
+        connect(mCombo, &LogComboFilter::signalFiltersChanged, &mHeader, [this]() {
+            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), mCombo->getCheckedItems());
             });
         break;
 
@@ -136,8 +136,8 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     case LogViewerModel::eColumn::LogColumnMessage:
         mType = eType::Text;
         mEdit = new LogTextFilter(&mHeader);
-        connect(mEdit, &LogTextFilter::signalFilterTextChanged, this, [this](const QString& newText) {
-            emit signalTextFilterChanged(fromColumnToIndex(), newText);
+        connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText) {
+            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText);
             });
         break;
 

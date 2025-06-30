@@ -26,9 +26,9 @@
 #include "areg/base/File.hpp"
 #include "areg/logging/NELogging.hpp"
 #include "lusan/model/log/LogScopeIconFactory.hpp"
+#include "lusan/model/log/LogViewerFilterProxy.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
-#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 
@@ -133,6 +133,7 @@ LogViewerModel::LogViewerModel(QObject *parent)
     , mLogs         ( )
     , mConLogger    ( )
     , mConLogs      ( )
+    , mFilter       (new LogViewerFilterProxy(this))
 {
 }
 
