@@ -103,25 +103,6 @@ public:
      **/
     inline bool canPopupFilter(void) const;
 
-signals:
-/************************************************************************
- * Signals
- ************************************************************************/
-
-    /**
-     * \brief   Signal, triggered when the selection has been changed in the pop-up combo-box filter
-     * \param   logicalIndex    The logical index of the column.
-     * \param   checkedItems    The list of entries in the filter which are checked.
-     **/
-    void signalComboFilterChanged(int logicalIndex, QStringList checkedItems);
-
-    /**
-     * \brief   Signal, triggered when the text in the pop-up line editor filter has been changed.
-     * \param   logicalIndex    The logical index of the column.
-     * \param   newText         The new text in the filter.
-     **/
-    void signalTextFilterChanged(int logicalIndex, QString newText);
-
 private:
 /************************************************************************
  * Hidden methods

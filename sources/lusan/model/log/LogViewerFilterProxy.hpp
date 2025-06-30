@@ -45,6 +45,9 @@ public:
      **/
     explicit LogViewerFilterProxy(LogViewerModel* model);
 
+//////////////////////////////////////////////////////////////////////////
+// Slots
+//////////////////////////////////////////////////////////////////////////
 public slots:
     /**
      * \brief   Sets combo box filter for a specific column.
@@ -65,6 +68,9 @@ public slots:
      **/
     void clearFilters();
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
 protected:
     /**
      * \brief   Returns true if the given source row should be included in the model.
@@ -74,6 +80,9 @@ protected:
      **/
     bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
 
+//////////////////////////////////////////////////////////////////////////
+// Hidden operations
+//////////////////////////////////////////////////////////////////////////
 private:
     /**
      * \brief   Helper method to check if a row matches the combo filters.
@@ -89,10 +98,20 @@ private:
      **/
     bool matchesTextFilters(int source_row) const;
 
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
     QMap<int, QStringList> mComboFilters;   //!< Map of column index to selected filter items
     QMap<int, QString>     mTextFilters;    //!< Map of column index to filter text
     LogViewerModel*        mLogModel;       //!< Pointer to the log viewer source model
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden call
+//////////////////////////////////////////////////////////////////////////
+private:
+    LogViewerFilterProxy(void) = delete;
+    DECLARE_NOCOPY_NOMOVE(LogViewerFilterProxy);
 };
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERFILTERPROXY_HPP

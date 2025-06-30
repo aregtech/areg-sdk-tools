@@ -88,8 +88,8 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     connect(mLogModel       , &LogViewerModel::columnsMoved             , this, &LogViewer::onColumnsMoved);
     connect(header          , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
     connect(view            , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
-    connect(header          , &LogTableHeader::signalComboFilterChanged , filter, &LogViewerFilterProxy::setComboFilter);
-    connect(header          , &LogTableHeader::signalTextFilterChanged  , filter, &LogViewerFilterProxy::setTextFilter);
+    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , filter, SLOT(setComboFilter(int, QStringList)));
+    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , filter, SLOT(setTextFilter(int, QString)));
 }
 
 void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
