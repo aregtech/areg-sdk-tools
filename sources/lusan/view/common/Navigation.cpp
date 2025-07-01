@@ -19,6 +19,7 @@
 #include "lusan/view/common/Navigation.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/view/log/LogViewer.hpp"
 
 
 QString  Navigation::TabNameFileSystem      {tr("Workspace")};
@@ -50,13 +51,15 @@ QIcon Navigation::getOfflineLotIcon(void)
 Navigation::Navigation(MdiMainWindow* parent)
     : QDockWidget   (tr("Navigation"), parent)
 
-    , mMainWindow   (parent)
-    , mTabs         (this)
-    , mLogExplorer  (parent, this)
-    , mFileSystem   (parent, this)
+    , mMainWindow       (parent)
+    , mTabs             (this)
+    , mLogExplorer      (parent, this)
+    , mOfflineExplorer  (parent, this)
+    , mFileSystem       (parent, this)
 {    
     mTabs.addTab(&mFileSystem, Navigation::getWorkspaceExplorerIcon(), Navigation::TabNameFileSystem);
     mTabs.addTab(&mLogExplorer, Navigation::getLiveLogIcon(), Navigation::TabLiveLogsExplorer);
+    mTabs.addTab(&mOfflineExplorer, Navigation::getOfflineLotIcon(), Navigation::TabOfflineLogsExplorer);
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
 
@@ -128,9 +131,30 @@ void Navigation::onMdiWindowActivated(MdiChild* mdiChild)
     NavigationWindow* current = qobject_cast<NavigationWindow *>(mTabs.currentWidget());
     if ((mdiChild != nullptr) && (current != nullptr))
     {
-        if (mdiChild->isLogViewerWindow() && (current->isNaviLiveLogs() == false))
+        if (mdiChild->isLogViewerWindow())
         {
-            mTabs.setCurrentWidget(&mLogExplorer);
+            LogViewer* logViewer = qobject_cast<LogViewer*>(mdiChild);
+            if (logViewer != nullptr)
+            {
+                if (logViewer->isServiceConnected())
+                {
+                    // Live log viewer - switch to live logs tab
+                    if (!current->isNaviLiveLogs())
+                    {
+                        mTabs.setCurrentWidget(&mLogExplorer);
+                    }
+                }
+                else
+                {
+                    // Offline log viewer - switch to offline logs tab
+                    if (!current->isNaviOfflineLogs())
+                    {
+                        mTabs.setCurrentWidget(&mOfflineExplorer);
+                    }
+                    // Update offline explorer for the active viewer
+                    mOfflineExplorer.updateForActiveViewer(logViewer);
+                }
+            }
         }
         else if (mdiChild->isServiceInterfaceWindow() && (current->isNaviWorkspace() == false))
         {
@@ -143,16 +167,19 @@ void Navigation::onOptionsOpening(void)
 {
     mFileSystem.optionOpenning();
     mLogExplorer.optionOpenning();
+    mOfflineExplorer.optionOpenning();
 }
 
 void Navigation::onOptionsApplied(void)
 {
     mFileSystem.optionApplied();
     mLogExplorer.optionApplied();
+    mOfflineExplorer.optionApplied();
 }
 
 void Navigation::onOptionsClosed(bool pressedOK)
 {
     mFileSystem.optionClosed(pressedOK);
     mLogExplorer.optionClosed(pressedOK);
+    mOfflineExplorer.optionClosed(pressedOK);
 }

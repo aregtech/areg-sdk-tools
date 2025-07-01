@@ -47,7 +47,7 @@
             <pointsize>10</pointsize>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
+            <weight>DemiBold</weight>
            </font>
           </property>
           <property name="cursor">
@@ -95,7 +95,7 @@
             <pointsize>10</pointsize>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
+            <weight>DemiBold</weight>
            </font>
           </property>
           <property name="cursor">
@@ -143,7 +143,7 @@
             <pointsize>10</pointsize>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
+            <weight>DemiBold</weight>
            </font>
           </property>
           <property name="cursor">
@@ -191,7 +191,7 @@
             <pointsize>10</pointsize>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
+            <weight>DemiBold</weight>
            </font>
           </property>
           <property name="cursor">
@@ -239,7 +239,7 @@
             <pointsize>10</pointsize>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
+            <weight>DemiBold</weight>
            </font>
           </property>
           <property name="cursor">

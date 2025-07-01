@@ -20,6 +20,7 @@
  ************************************************************************/
 
 #include "lusan/view/common/LogExplorer.hpp"
+#include "lusan/view/common/OfflineLogExplorer.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
 
 #include <QDockWidget>
@@ -78,6 +79,11 @@ public:
      * \brief   Returns the live mode log explorer widget.
      **/
     inline LogExplorer& getLiveLogs(void);
+
+    /**
+     * \brief   Returns the offline mode log explorer widget.
+     **/
+    inline OfflineLogExplorer& getOfflineLogs(void);
 
     /**
      * \brief   Adds a new tab with the widget to the tab-control.
@@ -146,10 +152,11 @@ private slots:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    MdiMainWindow*  mMainWindow;    //!< Main window
-    QTabWidget      mTabs;          //!< The tab widget of the navigation.
-    LogExplorer     mLogExplorer;   //!< The log explorer widget.
-    NaviFileSystem  mFileSystem;    //!< The file system widget.
+    MdiMainWindow*      mMainWindow;        //!< Main window
+    QTabWidget          mTabs;              //!< The tab widget of the navigation.
+    LogExplorer         mLogExplorer;       //!< The log explorer widget.
+    OfflineLogExplorer  mOfflineExplorer;   //!< The offline log explorer widget.
+    NaviFileSystem      mFileSystem;        //!< The file system widget.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -169,6 +176,11 @@ inline NaviFileSystem& Navigation::getFileSystem(void)
 inline LogExplorer& Navigation::getLiveLogs(void)
 {
     return mLogExplorer;
+}
+
+inline OfflineLogExplorer& Navigation::getOfflineLogs(void)
+{
+    return mOfflineExplorer;
 }
 
 inline int Navigation::addTab(QWidget& widget, const QString& tabName)
