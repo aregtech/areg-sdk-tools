@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>SIOverviewLinks</class>
  <widget class="QWidget" name="SIOverviewLinks">
@@ -44,10 +44,10 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>10</pointsize>
+            <pointsize>11</pointsize>
+            <bold>true</bold>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
            </font>
           </property>
           <property name="cursor">
@@ -56,11 +56,14 @@
           <property name="mouseTracking">
            <bool>true</bool>
           </property>
+          <property name="toolTip">
+           <string>Click to open Interface Data Types page</string>
+          </property>
           <property name="layoutDirection">
            <enum>Qt::LayoutDirection::LeftToRight</enum>
           </property>
           <property name="autoFillBackground">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="styleSheet">
            <string notr="true">body {color: blue;}</string>
@@ -92,10 +95,10 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>10</pointsize>
+            <pointsize>11</pointsize>
+            <bold>true</bold>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
            </font>
           </property>
           <property name="cursor">
@@ -104,17 +107,20 @@
           <property name="mouseTracking">
            <bool>true</bool>
           </property>
+          <property name="toolTip">
+           <string>Click to open Interface Attributes page</string>
+          </property>
           <property name="layoutDirection">
            <enum>Qt::LayoutDirection::LeftToRight</enum>
           </property>
           <property name="autoFillBackground">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="styleSheet">
            <string notr="true">body {color: blue;}</string>
           </property>
           <property name="text">
-           <string>Data Attributes ...</string>
+           <string>Attributes ...</string>
           </property>
           <property name="flat">
            <bool>true</bool>
@@ -140,10 +146,10 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>10</pointsize>
+            <pointsize>11</pointsize>
+            <bold>true</bold>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
            </font>
           </property>
           <property name="cursor">
@@ -152,11 +158,14 @@
           <property name="mouseTracking">
            <bool>true</bool>
           </property>
+          <property name="toolTip">
+           <string>Click to open Interface Method page</string>
+          </property>
           <property name="layoutDirection">
            <enum>Qt::LayoutDirection::LeftToRight</enum>
           </property>
           <property name="autoFillBackground">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="styleSheet">
            <string notr="true">body {color: blue;}</string>
@@ -188,10 +197,10 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>10</pointsize>
+            <pointsize>11</pointsize>
+            <bold>true</bold>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
            </font>
           </property>
           <property name="cursor">
@@ -200,11 +209,14 @@
           <property name="mouseTracking">
            <bool>true</bool>
           </property>
+          <property name="toolTip">
+           <string>Click to open Interface available Constants</string>
+          </property>
           <property name="layoutDirection">
            <enum>Qt::LayoutDirection::LeftToRight</enum>
           </property>
           <property name="autoFillBackground">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="styleSheet">
            <string notr="true">body {color: blue;}</string>
@@ -236,10 +248,10 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>10</pointsize>
+            <pointsize>11</pointsize>
+            <bold>true</bold>
             <underline>true</underline>
             <stylestrategy>PreferDefault</stylestrategy>
-            <fontweight>DemiBold</fontweight>
            </font>
           </property>
           <property name="cursor">
@@ -248,11 +260,14 @@
           <property name="mouseTracking">
            <bool>true</bool>
           </property>
+          <property name="toolTip">
+           <string>Click to open Interface additional Includes</string>
+          </property>
           <property name="layoutDirection">
            <enum>Qt::LayoutDirection::LeftToRight</enum>
           </property>
           <property name="autoFillBackground">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="styleSheet">
            <string notr="true">body {color: blue;}</string>

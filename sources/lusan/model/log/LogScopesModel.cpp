@@ -216,9 +216,9 @@ int LogScopesModel::rowCount(const QModelIndex& parent) const
     if ((parent.isValid() == false) || (parent == mRootIndex))
         return static_cast<int>(mRootList.size());
     
-    ScopeNodeBase* parentNode = static_cast<ScopeNodeBase*>(parent.internalPointer());
-    Q_ASSERT(parentNode != nullptr);
-    return parentNode->getChildCount();
+    ScopeNodeBase* node = static_cast<ScopeNodeBase*>(parent.internalPointer());
+    Q_ASSERT(node != nullptr);
+    return node->getChildCount();
 }
 
 int LogScopesModel::columnCount(const QModelIndex& parent) const
@@ -264,6 +264,11 @@ QVariant LogScopesModel::data(const QModelIndex& index, int role) const
 
 QVariant LogScopesModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
+    if ((orientation == Qt::Horizontal) && (role == Qt::DisplayRole) && (section == 0))
+    {
+        return QString("Live Scopes");
+    }
+
     return QVariant();
 }
 
