@@ -45,7 +45,7 @@ public:
      * \brief   Constructor with parent object.
      * \param   model   The logging data model object.
      **/
-    explicit LogViewerFilterProxy(LogViewerModel* model);
+    explicit LogViewerFilterProxy(QAbstractTableModel* model);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -106,7 +106,7 @@ private:
 private:
     QMap<int, QStringList> mComboFilters;   //!< Map of column index to selected filter items
     QMap<int, QString>     mTextFilters;    //!< Map of column index to filter text
-    LogViewerModel*        mLogModel;       //!< Pointer to the log viewer source model
+    QAbstractTableModel*   mLogModel;       //!< Pointer to the log viewer source model
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call

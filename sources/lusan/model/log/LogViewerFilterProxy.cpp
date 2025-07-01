@@ -21,11 +21,11 @@
 #include "lusan/model/log/LogViewerModel.hpp"
 #include <QModelIndex>
 
-LogViewerFilterProxy::LogViewerFilterProxy(LogViewerModel* model)
-    : QSortFilterProxyModel(model)
-    , mComboFilters()
-    , mTextFilters()
-    , mLogModel(model)
+LogViewerFilterProxy::LogViewerFilterProxy(QAbstractTableModel* model)
+    : QSortFilterProxyModel (model)
+    , mComboFilters         ( )
+    , mTextFilters          ( )
+    , mLogModel             (model)
 {
     setSourceModel(model);
 }
