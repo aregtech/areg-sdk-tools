@@ -26,6 +26,7 @@
 #include "lusan/model/log/LogOfflineModel.hpp"
 
 #include "lusan/data/log/ScopeNodes.hpp"
+#include "areg/base/NECommon.hpp"
 
 #include <QIcon>
 

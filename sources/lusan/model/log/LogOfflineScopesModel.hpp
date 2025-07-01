@@ -28,6 +28,7 @@
 
 #include "areg/component/NEService.hpp"
 #include "areg/logging/NELogging.hpp"
+#include "areg/base/NECommon.hpp"
 
 /************************************************************************
  * Dependencies
