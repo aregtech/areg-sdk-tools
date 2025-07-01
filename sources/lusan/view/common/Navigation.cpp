@@ -50,13 +50,15 @@ QIcon Navigation::getOfflineLotIcon(void)
 Navigation::Navigation(MdiMainWindow* parent)
     : QDockWidget   (tr("Navigation"), parent)
 
-    , mMainWindow   (parent)
-    , mTabs         (this)
-    , mLogExplorer  (parent, this)
-    , mFileSystem   (parent, this)
+    , mMainWindow       (parent)
+    , mTabs             (this)
+    , mLogExplorer      (parent, this)
+    , mLogOfflineExplorer(parent, this)
+    , mFileSystem       (parent, this)
 {    
     mTabs.addTab(&mFileSystem, Navigation::getWorkspaceExplorerIcon(), Navigation::TabNameFileSystem);
     mTabs.addTab(&mLogExplorer, Navigation::getLiveLogIcon(), Navigation::TabLiveLogsExplorer);
+    mTabs.addTab(&mLogOfflineExplorer, Navigation::getOfflineLotIcon(), Navigation::TabOfflineLogsExplorer);
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
 
@@ -128,7 +130,7 @@ void Navigation::onMdiWindowActivated(MdiChild* mdiChild)
     NavigationWindow* current = qobject_cast<NavigationWindow *>(mTabs.currentWidget());
     if ((mdiChild != nullptr) && (current != nullptr))
     {
-        if (mdiChild->isLogViewerWindow() && (current->isNaviLiveLogs() == false))
+        if (mdiChild->isLogViewerWindow() && (current->isNaviLiveLogs() == false) && (current->isNaviOfflineLogs() == false))
         {
             mTabs.setCurrentWidget(&mLogExplorer);
         }
@@ -143,16 +145,19 @@ void Navigation::onOptionsOpening(void)
 {
     mFileSystem.optionOpenning();
     mLogExplorer.optionOpenning();
+    mLogOfflineExplorer.optionOpenning();
 }
 
 void Navigation::onOptionsApplied(void)
 {
     mFileSystem.optionApplied();
     mLogExplorer.optionApplied();
+    mLogOfflineExplorer.optionApplied();
 }
 
 void Navigation::onOptionsClosed(bool pressedOK)
 {
     mFileSystem.optionClosed(pressedOK);
     mLogExplorer.optionClosed(pressedOK);
+    mLogOfflineExplorer.optionClosed(pressedOK);
 }

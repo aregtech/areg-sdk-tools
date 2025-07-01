@@ -4,6 +4,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/DirSelectionDialog.cpp
     ${LUSAN}/view/common/IEDataTypeConsumer.cpp
     ${LUSAN}/view/common/LogExplorer.cpp
+    ${LUSAN}/view/common/LogOfflineExplorer.cpp
     ${LUSAN}/view/common/MdiArea.cpp
     ${LUSAN}/view/common/MdiChild.cpp
     ${LUSAN}/view/common/MdiMainWindow.cpp
@@ -24,6 +25,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/DirSelectionDialog.hpp
     ${LUSAN}/view/common/IEDataTypeConsumer.hpp
     ${LUSAN}/view/common/LogExplorer.hpp
+    ${LUSAN}/view/common/LogOfflineExplorer.hpp
     ${LUSAN}/view/common/MdiArea.hpp
     ${LUSAN}/view/common/MdiChild.hpp
     ${LUSAN}/view/common/MdiMainWindow.hpp
