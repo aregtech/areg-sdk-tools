@@ -21,6 +21,7 @@
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/log/LogViewer.hpp"
+#include "lusan/view/log/LogOfflineViewer.hpp"
 
 #include "areg/base/NESocket.hpp"
 
@@ -125,6 +126,7 @@ const QString& MdiMainWindow::fileFilters(void) const
 {
     static const QString _filter(
           "Service Interface Document (*.siml)\n"
+          "Offline Log Files (*.sqlog)\n"
           "All Files (*.*)"
         );
     
@@ -559,6 +561,10 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
     {
         return createServiceInterfaceView(filePath);
     }
+    else if (ext == LogOfflineViewer::fileExtension())
+    {
+        return createLogOfflineViewerView(filePath);
+    }
     else
     {
         return nullptr;
@@ -581,6 +587,15 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
 LogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QString()*/)
 {
     LogViewer* child = new LogViewer(this, &mMdiArea);
+    QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
+    child->setMdiSubwindow(mdiSub);
+    mMdiArea.showMaximized();
+    return child;
+}
+
+LogOfflineViewer* MdiMainWindow::createLogOfflineViewerView(const QString& filePath)
+{
+    LogOfflineViewer* child = new LogOfflineViewer(this, filePath, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();
