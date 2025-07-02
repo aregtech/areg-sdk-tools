@@ -235,7 +235,7 @@ QString LogOfflineModel::getHeaderName(int colIndex) const
 
 bool LogOfflineModel::openDatabase(const QString& filePath)
 {
-    closeDatabase(); // Close any existing database
+    _closeDatabase(); // Close any existing database
     
     if (filePath.isEmpty())
     {
@@ -250,6 +250,7 @@ bool LogOfflineModel::openDatabase(const QString& filePath)
     
     if (mDatabase.connect(filePath.toStdString()))
     {
+        emit signalDatabaseIsOpened(QString::fromStdString(mDatabase.getDatabasePath().getData()));
         // Load initial log messages for display
         beginResetModel();
         mLogs.clear();
@@ -263,7 +264,7 @@ bool LogOfflineModel::openDatabase(const QString& filePath)
         }
         
         endResetModel();
-        
+        emit signalLogsAvailable();
         return true;
     }
     else
@@ -274,8 +275,8 @@ bool LogOfflineModel::openDatabase(const QString& filePath)
 
 void LogOfflineModel::closeDatabase(void)
 {
-    mDatabase.disconnect();;
-    dataReset();
+    _closeDatabase();
+    emit signalDatabaseIsClosed(QString::fromStdString(mDatabase.getDatabasePath().getData()));
 }
 
 void LogOfflineModel::addColumn(LogOfflineModel::eColumn col, int pos /*= -1*/)
@@ -382,6 +383,12 @@ void LogOfflineModel::getLogMessages(std::vector<SharedBuffer>& messages, ITEM_I
 //////////////////////////////////////////////////////////////////////////
 // Private helper methods
 //////////////////////////////////////////////////////////////////////////
+
+inline void LogOfflineModel::_closeDatabase(void)
+{
+    mDatabase.disconnect();
+    dataReset();
+}
 
 QVariant LogOfflineModel::_getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {

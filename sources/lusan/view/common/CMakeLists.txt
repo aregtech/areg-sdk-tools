@@ -10,6 +10,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/NaviFileSystem.cpp
     ${LUSAN}/view/common/Navigation.cpp
     ${LUSAN}/view/common/NavigationWindow.cpp
+    ${LUSAN}/view/common/OfflineScopesExplorer.cpp
     ${LUSAN}/view/common/OptionPageBase.cpp
     ${LUSAN}/view/common/OptionPageLogging.cpp
     ${LUSAN}/view/common/OptionPageProjectDirs.cpp
@@ -30,6 +31,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/NaviFileSystem.hpp
     ${LUSAN}/view/common/Navigation.hpp
     ${LUSAN}/view/common/NavigationWindow.hpp
+    ${LUSAN}/view/common/OfflineScopesExplorer.hpp
     ${LUSAN}/view/common/OptionPageBase.hpp
     ${LUSAN}/view/common/OptionPageLogging.hpp
     ${LUSAN}/view/common/OptionPageProjectDirs.hpp

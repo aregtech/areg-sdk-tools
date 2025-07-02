@@ -42,6 +42,7 @@ public:
           MdiUnknown            = 0 //!< Unknown MDI Window type
         , MdiServiceInterface       //!< Service Interface MDI Window type
         , MdiLogViewer              //!< Log Viewer MDI Window type
+        , MdiOfflineLogViewer       //!< Offline Log Viewer MDI window type
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -77,6 +78,12 @@ public:
      * \return  True if it is a Log Viewer window, false otherwise.
      **/
     inline bool isLogViewerWindow(void) const;
+
+    /**
+     * \brief   Checks if the MDI child is an Offline Log Viewer window.
+     * \return  True if it is an Offline Log Viewer window, false otherwise.
+     **/
+    inline bool isOfflineLogViewerWindow(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Actions
@@ -279,6 +286,11 @@ inline bool MdiChild::isServiceInterfaceWindow(void) const
 inline bool MdiChild::isLogViewerWindow(void) const
 {
     return (mMdiWindowType == MdiLogViewer);
+}
+
+inline bool MdiChild::isOfflineLogViewerWindow(void) const
+{
+    return (mMdiWindowType == MdiOfflineLogViewer);
 }
 
 inline const QString & MdiChild::currentFile(void) const

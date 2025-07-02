@@ -21,6 +21,7 @@
 
 #include "lusan/view/common/LogExplorer.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
+#include "lusan/view/common/OfflineScopesExplorer.hpp"
 
 #include <QDockWidget>
 #include <QIcon>
@@ -36,14 +37,10 @@ class Navigation : public QDockWidget
 //////////////////////////////////////////////////////////////////////////
 public:
 
-    //!< The name of the tab for workspace explorer.
-    static QString  TabNameFileSystem;
-    //!< The name of the tab for live logs explorer.
-    static QString  TabLiveLogsExplorer;
-    //!< The name of the tab for offline logs explorer.
-    static QString  TabOfflineLogsExplorer;
-    //<!< The size of icons.
-    static QSize    IconSize;
+    static QString  TabNameFileSystem;      //!< The name of the tab for workspace explorer.
+    static QString  TabLiveLogsExplorer;    //!< The name of the tab for live logs explorer.
+    static QString  TabOfflineLogsExplorer; //!< The name of the tab for offline logs explorer.
+    static QSize    IconSize;               //<! The size of icons.
 
     //!< Returns the icon for the workspace explorer tab.
     static QIcon getWorkspaceExplorerIcon(void);
@@ -52,7 +49,7 @@ public:
     static QIcon getLiveLogIcon(void);
 
     //!< Returns the icon for the offline logs explorer tab.
-    static QIcon getOfflineLotIcon(void);
+    static QIcon getOfflineLogIcon(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -80,6 +77,11 @@ public:
     inline LogExplorer& getLiveLogs(void);
 
     /**
+     * \brief   Returns the offline log explorer widget.
+     **/
+    inline OfflineScopesExplorer& getOfflineScopes(void);
+
+    /**
      * \brief   Adds a new tab with the widget to the tab-control.
      * \param   widget      The widget to add to the tab-control.
      * \brief   tabName     The name of the tab to add.
@@ -102,7 +104,11 @@ public:
      * @return  Returns true if the tab with the given name exists. False, otherwise.
      **/
     bool tabExists(const QString& tabName) const;
-    
+
+    /**
+     * \brief   Show tab with specified unique name.
+     * \param   tabName     The unique name of the tab to show.
+     **/
     bool showTab(const QString& tabName);
 
 //////////////////////////////////////////////////////////////////////////
@@ -146,10 +152,11 @@ private slots:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    MdiMainWindow*  mMainWindow;    //!< Main window
-    QTabWidget      mTabs;          //!< The tab widget of the navigation.
-    LogExplorer     mLogExplorer;   //!< The log explorer widget.
-    NaviFileSystem  mFileSystem;    //!< The file system widget.
+    MdiMainWindow*          mMainWindow;    //!< Main window
+    QTabWidget              mTabs;          //!< The tab widget of the navigation.
+    LogExplorer             mLogExplorer;   //!< The log explorer widget.
+    OfflineScopesExplorer   mOfflineScopes; //!< The offline scopes explorer.
+    NaviFileSystem          mFileSystem;    //!< The file system widget.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -169,6 +176,11 @@ inline NaviFileSystem& Navigation::getFileSystem(void)
 inline LogExplorer& Navigation::getLiveLogs(void)
 {
     return mLogExplorer;
+}
+
+inline OfflineScopesExplorer& Navigation::getOfflineScopes(void)
+{
+    return mOfflineScopes;
 }
 
 inline int Navigation::addTab(QWidget& widget, const QString& tabName)

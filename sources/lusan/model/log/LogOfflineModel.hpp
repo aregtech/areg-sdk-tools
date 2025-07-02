@@ -318,9 +318,36 @@ public:
     LogViewerFilterProxy* getFilter(void);
 
 //////////////////////////////////////////////////////////////////////////
+// Signals
+//////////////////////////////////////////////////////////////////////////
+signals:
+
+    /**
+     * \brief   Signal, triggered when succeeded to open log database.
+     * \param   dbPath  The path to the log database file.
+     **/
+    void signalDatabaseIsOpened(const QString& dbPath);
+
+    /**
+     * \brief   Signal, triggered when log database file is closed.
+     * \param   dbPath  The path to the log database file.
+     **/
+    void signalDatabaseIsClosed(const QString& dbPath);
+
+    /**
+     * \brief   Signal, triggered when read the logging data from logging file.
+     **/
+    void signalLogsAvailable(void);
+
+//////////////////////////////////////////////////////////////////////////
 // Private helper methods
 //////////////////////////////////////////////////////////////////////////
 private:
+
+    /**
+     * \brief   Closes currently opened log database file without triggering signal.
+     **/
+    inline void _closeDatabase(void);
 
     /**
      * \brief   Helper to get display data for a log message and column.
