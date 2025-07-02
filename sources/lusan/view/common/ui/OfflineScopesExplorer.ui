@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>offlineScopesExplorer</class>
- <widget class="QWidget" name="offlineScopesExplorer">
+ <class>OfflineScopesExplorer</class>
+ <widget class="QWidget" name="OfflineScopesExplorer">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -113,6 +113,22 @@
          </property>
          <property name="autoRaise">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="toolRefresh">
+         <property name="toolTip">
+          <string>Refresh Navigator</string>
+         </property>
+         <property name="statusTip">
+          <string>Refresh Navigator and reset filters</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset theme="view-refresh"/>
          </property>
         </widget>
        </item>

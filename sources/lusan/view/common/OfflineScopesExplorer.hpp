@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_VIEW_COMMON_OFLINESCOPESEXPLORER_HPP
-#define LUSAN_VIEW_COMMON_OFLINESCOPESEXPLORER_HPP
+﻿#ifndef LUSAN_VIEW_COMMON_OFFLINESCOPESEXPLORER_HPP
+#define LUSAN_VIEW_COMMON_OFFLINESCOPESEXPLORER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/OflineScopesExplorer.hpp
+ *  \file        lusan/view/common/OfflineScopesExplorer.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       The view of the offline log explorer.
@@ -32,6 +32,7 @@
  * Dependencies
  ************************************************************************/
 class LogOfflineModel;
+class LogOfflineScopesModel;
 class MdiMainWindow;
 class QToolButton;
 class QTreeView;
@@ -39,17 +40,17 @@ class QVBoxLayout;
 class QFileDialog;
 
 namespace Ui {
-    class OflineScopesExplorer;
+    class OfflineScopesExplorer;
 }
 
 //////////////////////////////////////////////////////////////////////////
-// OflineScopesExplorer class declaration
+// OfflineScopesExplorer class declaration
 //////////////////////////////////////////////////////////////////////////
 /**
- * \brief   The OflineScopesExplorer class is a view for offline log navigation.
+ * \brief   The OfflineScopesExplorer class is a view for offline log navigation.
  *          It provides functionality to load and browse log database files.
  **/
-class OflineScopesExplorer : public NavigationWindow
+class OfflineScopesExplorer : public NavigationWindow
 {
     Q_OBJECT
 
@@ -58,13 +59,13 @@ class OflineScopesExplorer : public NavigationWindow
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   The constructor of the OflineScopesExplorer class.
+     * \brief   The constructor of the OfflineScopesExplorer class.
      * \param   wndMain     The main frame of the application.
      * \param   parent      The parent widget.
      **/
-    OflineScopesExplorer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
+    OfflineScopesExplorer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~OflineScopesExplorer(void);
+    virtual ~OfflineScopesExplorer(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -93,6 +94,15 @@ public:
      **/
     bool isDatabaseOpen(void) const;
 
+    /**
+     * \brief   Sets the currently active logging model object.
+     *          If model is valid and the logs are read from database, it will automatically update scope data.
+     *          Otherwise, the scope explorer is reset and no scopes are displayed.
+     * \param   model   The offline logging data model to read log data.
+     *                  If null or database is not opened, it resets the scope explorer.
+     **/
+    void setLoggingModel(LogOfflineModel * model);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -119,6 +129,9 @@ public:
 //////////////////////////////////////////////////////////////////////////
 private:
 
+    //!< Returns the control object to expand or collapse entries of scopes.
+    QToolButton* ctrlCollapse(void);
+
     //!< Returns the control object to open database files.
     QToolButton* ctrlOpenDatabase(void);
 
@@ -128,8 +141,32 @@ private:
     //!< Returns the control object to refresh the current database.
     QToolButton* ctrlRefreshDatabase(void);
 
-    //!< Returns the control object of the log database information display
-    QTreeView* ctrlDatabaseInfo(void);
+    //!< Returns the control object to find a string.
+    QToolButton* ctrlFind(void);
+
+    //!< Returns the control object to set error level of the logs
+    QToolButton* ctrlLogError(void);
+
+    //!< Returns the control object to set warning level of the logs
+    QToolButton* ctrlLogWarning(void);
+
+    //!< Returns the control object to set information level of the logs
+    QToolButton* ctrlLogInfo(void);
+
+    //!< Returns the control object to set debug level of the logs
+    QToolButton* ctrlLogDebug(void);
+
+    //!< Returns the control object to enable log scopes of the logs
+    QToolButton* ctrlLogScopes(void);
+
+    //!< Returns the control object to move to the top of log window.
+    QToolButton* ctrlMoveTop(void);
+
+    //!< Returns the control object to move to the bottom of log window.
+    QToolButton* ctrlMoveBottom(void);
+
+    //!< Returns the control object of the log messages
+    QTreeView* ctrlTable(void);
 
     /**
      * \brief   Initializes the widgets.
@@ -171,9 +208,9 @@ private slots:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::OflineScopesExplorer* ui;             //!< The user interface object.
-    LogOfflineModel*        mModel;         //!< The offline log model.
-    QString                 mDatabasePath;  //!< The path to the currently opened database.
+    Ui::OfflineScopesExplorer*  ui;             //!< The user interface object.
+    LogOfflineScopesModel *     mScopesModel;   //!< The offline scopes model
+    LogOfflineModel*            mLogModel;      //!< The offline log model.
 };
 
-#endif  // LUSAN_VIEW_COMMON_OFLINESCOPESEXPLORER_HPP
+#endif  // LUSAN_VIEW_COMMON_OFFLINESCOPESEXPLORER_HPP

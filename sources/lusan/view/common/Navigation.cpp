@@ -40,7 +40,7 @@ QIcon Navigation::getLiveLogIcon(void)
     return icon;
 }
 
-QIcon Navigation::getOfflineLotIcon(void)
+QIcon Navigation::getOfflineLogIcon(void)
 {
     QIcon icon;
     icon.addFile(QString::fromUtf8(":/icons/log-offline"), Navigation::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
@@ -53,10 +53,12 @@ Navigation::Navigation(MdiMainWindow* parent)
     , mMainWindow   (parent)
     , mTabs         (this)
     , mLogExplorer  (parent, this)
+    , mOfflineScopes(parent, this)
     , mFileSystem   (parent, this)
 {    
-    mTabs.addTab(&mFileSystem, Navigation::getWorkspaceExplorerIcon(), Navigation::TabNameFileSystem);
-    mTabs.addTab(&mLogExplorer, Navigation::getLiveLogIcon(), Navigation::TabLiveLogsExplorer);
+    mTabs.addTab(&mFileSystem   , Navigation::getWorkspaceExplorerIcon(), Navigation::TabNameFileSystem);
+    mTabs.addTab(&mLogExplorer  , Navigation::getLiveLogIcon()          , Navigation::TabLiveLogsExplorer);
+    mTabs.addTab(&mOfflineScopes, Navigation::getOfflineLogIcon()       , Navigation::TabOfflineLogsExplorer);
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
 
@@ -132,6 +134,10 @@ void Navigation::onMdiWindowActivated(MdiChild* mdiChild)
         {
             mTabs.setCurrentWidget(&mLogExplorer);
         }
+        else if (mdiChild->isOfflineLogViewerWindow() && (current->isNaviOfflineLogs() == false))
+        {
+            mTabs.setCurrentWidget(&mOfflineScopes);
+        }
         else if (mdiChild->isServiceInterfaceWindow() && (current->isNaviWorkspace() == false))
         {
             mTabs.setCurrentWidget(&mFileSystem);
@@ -143,16 +149,19 @@ void Navigation::onOptionsOpening(void)
 {
     mFileSystem.optionOpenning();
     mLogExplorer.optionOpenning();
+    mOfflineScopes.optionOpenning();
 }
 
 void Navigation::onOptionsApplied(void)
 {
     mFileSystem.optionApplied();
     mLogExplorer.optionApplied();
+    mOfflineScopes.optionApplied();
 }
 
 void Navigation::onOptionsClosed(bool pressedOK)
 {
     mFileSystem.optionClosed(pressedOK);
     mLogExplorer.optionClosed(pressedOK);
+    mOfflineScopes.optionClosed(pressedOK);
 }

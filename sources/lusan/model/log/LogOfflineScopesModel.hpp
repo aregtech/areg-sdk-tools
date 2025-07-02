@@ -210,12 +210,9 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    //!< List of root nodes, each represents an instance
-    RootList            mRootList;
-    //!< The root index of the model
-    QModelIndex         mRootIndex;
-    //!< Reference to offline model for data access
-    LogOfflineModel*    mLogModel;
+    RootList            mRootList;  //!< List of root nodes, each represents an instance
+    QModelIndex         mRootIndex; //!< The root index of the model
+    LogOfflineModel*    mLogModel;  //!< Reference to offline model for data access
 };
 
 //////////////////////////////////////////////////////////////////////////
