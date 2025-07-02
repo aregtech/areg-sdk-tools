@@ -32,6 +32,7 @@
 class MdiChild;
 class ServiceInterface;
 class LogViewer;
+class OfflineLogViwer;
 QT_BEGIN_NAMESPACE
 class QDockWidget;
 class QListView;
@@ -315,6 +316,13 @@ private:
      * \return  A pointer to the new Log Viewer View.
      **/
     LogViewer* createLogViewerView(const QString& filePath = QString());
+
+    /**
+     * \brief   Creates a new Offline Log Viewer View for .sqlog files.
+     * \param   filePath   The path to the .sqlog file to view.
+     * \return  A pointer to the new Offline Log Viewer View.
+     **/
+    OfflineLogViwer* createOfflineLogViewer(const QString& filePath = QString());
 
     /**
      * \brief   Returns the file filter string, which contains the list of supported extensions.

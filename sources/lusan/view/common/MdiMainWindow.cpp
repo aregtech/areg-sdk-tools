@@ -58,7 +58,19 @@ namespace
         
         settings.endArray();
     }
+}
 
+inline static QString MdiMainWindow::_filterServiceFiles(void)
+{
+    return QString{ 
+        "Service Interface Document (*.siml)\n"
+        "All Files (*.*)"
+    }
+}
+
+inline static QString MdiMainWindow::_filterLoggingFiles(void)
+{
+    return QString("Log Database Files (*.sqlog)\nAll Files (*.*)")
 }
 
 MdiMainWindow::MdiMainWindow()
@@ -123,9 +135,12 @@ MdiMainWindow::MdiMainWindow()
 
 const QString& MdiMainWindow::fileFilters(void) const
 {
-    static const QString _filter(
-          "Service Interface Document (*.siml)\n"
-          "All Files (*.*)"
+    static const QString _filter
+        {
+            "Service Interface Document (*.siml)\n"
+            "Log Database Files (*.sqlog)\n"
+            "All Files (*.*)"
+        }
         );
     
     return _filter;
@@ -587,11 +602,30 @@ LogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QStrin
     return child;
 }
 
+OfflineLogViwer MdiMainWindow::createOfflineLogViewer(const QString& filePath)
+{
+    LogOfflineViewer* child = new LogOfflineViewer(this, filePath, &mMdiArea);
+    QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
+    child->setMdiSubwindow(mdiSub);
+    mMdiArea.showMaximized();
+    return child;
+}
+
 inline void MdiMainWindow::initAction(QAction& act, const QIcon& icon, QString txt)
 {
     act.setParent(this);
     act.setText(txt);
     act.setIcon(icon);
+}
+
+inline QString MdiMainWindow::_filterServiceFiles(void)
+{
+    return QString();
+}
+
+inline QString MdiMainWindow::_filterLoggingFiles(void)
+{
+    return QString();
 }
 
 void MdiMainWindow::_createActions()
