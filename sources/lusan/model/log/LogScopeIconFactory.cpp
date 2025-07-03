@@ -42,6 +42,7 @@ namespace
         , QColor(72, 72, 72)        // LogScopeIconFactory::eLogColor::ColorScopeEnter
         , QColor(144, 144, 144)     // LogScopeIconFactory::eLogColor::ColorScopeExit
         , QColor(Qt::white)         // LogScopeIconFactory::eLogColor::ColorWithScope
+        , QColor(Qt::black)
     };
 
     constexpr uint32_t LogActive{ 0x00FF0000u };
@@ -1034,6 +1035,6 @@ QColor LogScopeIconFactory::getLogColor(const NELogging::sLogMessage & logMessag
     case NELogging::eLogPriority::PrioDebug:
         return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorDebug)];
     default:
-        return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorNotSet)];
+        return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorDefault)];
     }
 }

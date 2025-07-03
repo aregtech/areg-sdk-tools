@@ -74,8 +74,8 @@ bool OfflineScopesExplorer::openDatabase(const QString& filePath)
     {
         ctrlTable()->setModel(nullptr);
         ctrlTable()->setModel(mScopesModel);
-        updateControls();
-        showDatabaseInfo();
+        // updateControls();
+        // showDatabaseInfo();
         return true;
     }
     else
@@ -289,6 +289,7 @@ void OfflineScopesExplorer::onRefreshDatabaseClicked(void)
 {
     if (isDatabaseOpen())
     {
-        showDatabaseInfo();
+        mScopesModel->setScopeModel(nullptr);
+        mScopesModel->setScopeModel(mLogModel);
     }
 }

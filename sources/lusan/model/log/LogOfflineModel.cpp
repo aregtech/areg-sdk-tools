@@ -40,8 +40,10 @@ LogOfflineModel::~LogOfflineModel()
 
 void LogOfflineModel::openDatabase(const QString& filePath, bool readOnly)
 {
-    _closeDatabase(); // Close any existing database
-    
+    if (mDatabase.isOperable() && (mLogs.empty() == false) && (mDatabase.getDatabasePath() == filePath))
+        return;
+
+    _closeDatabase(); // Close any existing database    
     if (filePath.isEmpty())
         return;
     

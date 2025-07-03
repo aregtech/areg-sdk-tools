@@ -324,7 +324,7 @@ QVariant LoggingModelBase::_getDisplayData(const NELogging::sLogMessage* logMess
     switch (column)
     {
     case eColumn::LogColumnPriority:
-        return QString::fromStdString(NELogging::logPrioToString(static_cast<NELogging::eLogPriority>(logMessage->logMessagePrio)).getData());
+        return QString::fromStdString(NELogging::logPrioToString(logMessage->logMessagePrio).getData());
 
     case eColumn::LogColumnTimestamp:
         return QString::fromStdString(DateTime(logMessage->logTimestamp).formatTime().getData());

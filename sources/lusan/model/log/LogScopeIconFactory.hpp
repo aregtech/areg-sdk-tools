@@ -67,6 +67,7 @@ public:
         , ColorScopeEnter   //!< Scope enter log color, used for scope enter log messages
         , ColorScopeExit    //!< Scope exit log color, used for scope exit log messages
         , ColorWithScope    //!< Scope log color, used for log messages with scope
+        , ColorDefault      //!< The default color
 
         , ColorCount        //<!< The number of log colors
     };

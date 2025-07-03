@@ -77,6 +77,11 @@ public:
     void release(void);
 
     /**
+     * \brief   Refreshes the model, clearing all data and rebuilding the scope tree.
+     **/
+    void refresh(void);
+
+    /**
      * \brief   Checks if the given index is valid.
      * \param   index   The index to check.
      * \return  True if the index is valid, false otherwise.
