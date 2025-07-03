@@ -48,7 +48,7 @@ void LogExplorer::_logObserverStarted(void)
 }
 
 LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
-    : NavigationWindow(NavigationWindow::eNavigationWindow::NaviLiveLogs, wndMain, parent)
+    : NavigationWindow(static_cast<int>(Navigation::eNaviWindow::NaviLiveLogs), wndMain, parent)
 
     , ui            (new Ui::LogExplorer)
     , mAddress      ()

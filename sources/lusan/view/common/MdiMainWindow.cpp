@@ -17,10 +17,13 @@
  *
  ************************************************************************/
 #include "lusan/view/common/MdiMainWindow.hpp"
+
+#include "lusan/app/LusanApplication.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/log/LogViewer.hpp"
+#include "lusan/view/log/OfflineLogViewer.hpp"
 
 #include "areg/base/NESocket.hpp"
 
@@ -60,17 +63,14 @@ namespace
     }
 }
 
-inline static QString MdiMainWindow::_filterServiceFiles(void)
+inline QString MdiMainWindow::_filterServiceFiles(void)
 {
-    return QString{ 
-        "Service Interface Document (*.siml)\n"
-        "All Files (*.*)"
-    }
+    return QString{"Service Interface Document (*.siml);;All Files (*.*)"};
 }
 
-inline static QString MdiMainWindow::_filterLoggingFiles(void)
+inline QString MdiMainWindow::_filterLoggingFiles(void)
 {
-    return QString("Log Database Files (*.sqlog)\nAll Files (*.*)")
+    return QString{"Log Database Files (*.sqlog);;All Files (*.*)"};
 }
 
 MdiMainWindow::MdiMainWindow()
@@ -135,13 +135,11 @@ MdiMainWindow::MdiMainWindow()
 
 const QString& MdiMainWindow::fileFilters(void) const
 {
-    static const QString _filter
-        {
-            "Service Interface Document (*.siml)\n"
-            "Log Database Files (*.sqlog)\n"
-            "All Files (*.*)"
-        }
-        );
+    static const QString _filter {
+        "Service Interface Document (*.siml)\n"
+        "Log Database Files (*.sqlog)\n"
+        "All Files (*.*)"
+    };
     
     return _filter;
 }
@@ -264,6 +262,12 @@ int MdiMainWindow::showOptionPageLogging(const QString& address, const QString& 
     emit signalOptionsClosed(result == static_cast<int>(QDialog::Accepted));
 
     return result;
+}
+
+QString MdiMainWindow::openLogFile(void)
+{
+    QString filePath = QFileDialog::getOpenFileName(this, tr("Open Log Database"), LusanApplication::getWorkspaceLogs(), _filterLoggingFiles());
+    return (filePath.isEmpty() == false && openFile(filePath) ? filePath : QString(""));
 }
 
 void MdiMainWindow::closeEvent(QCloseEvent* event)
@@ -574,6 +578,10 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
     {
         return createServiceInterfaceView(filePath);
     }
+    else if (ext == OfflineLogViewer::fileExtension())
+    {
+        return createOfflineLogViewer(filePath);
+    }
     else
     {
         return nullptr;
@@ -602,12 +610,14 @@ LogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QStrin
     return child;
 }
 
-OfflineLogViwer MdiMainWindow::createOfflineLogViewer(const QString& filePath)
+OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath)
 {
-    LogOfflineViewer* child = new LogOfflineViewer(this, filePath, &mMdiArea);
+    OfflineLogViewer* child = new OfflineLogViewer(this, filePath, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();
+    mNavigation.showTab(Navigation::TabOfflineLogsExplorer);
+    static_cast<OfflineScopesExplorer *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(child->getLoggingModel());
     return child;
 }
 
@@ -616,16 +626,6 @@ inline void MdiMainWindow::initAction(QAction& act, const QIcon& icon, QString t
     act.setParent(this);
     act.setText(txt);
     act.setIcon(icon);
-}
-
-inline QString MdiMainWindow::_filterServiceFiles(void)
-{
-    return QString();
-}
-
-inline QString MdiMainWindow::_filterLoggingFiles(void)
-{
-    return QString();
 }
 
 void MdiMainWindow::_createActions()

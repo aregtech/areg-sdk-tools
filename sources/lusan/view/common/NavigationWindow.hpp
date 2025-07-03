@@ -28,20 +28,6 @@ class NavigationWindow : public QWidget
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
-// Constants, types and static methods
-//////////////////////////////////////////////////////////////////////////
-public:
-
-    //!< The enumeration of the navigation window types.
-    enum eNavigationWindow
-    {
-          NaviUnknown       = 0 //!< Unknown navigation window type
-        , NaviWorkspace         //!< Workspace navigation window type
-        , NaviLiveLogs          //!< Live logs navigation window type
-        , NaviOfflineLogs       //!< Offline logs navigation window type
-    };
-
-//////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -52,7 +38,7 @@ public:
      * \param   wndMain      Pointer to the main MDI window.
      * \param   parent       Pointer to the parent widget.
      **/
-    NavigationWindow(eNavigationWindow naviWindow, MdiMainWindow* wndMain, QWidget* parent = nullptr);
+    NavigationWindow(int naviWindow, MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
     virtual ~NavigationWindow(void) = default;
 
@@ -77,7 +63,7 @@ public:
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
     virtual void optionClosed(bool OKpressed);
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Attributes
 //////////////////////////////////////////////////////////////////////////
@@ -86,57 +72,42 @@ public:
      * \brief   Returns the type of the navigation window.
      * \return  The type of the navigation window.
      **/
-    inline NavigationWindow::eNavigationWindow getNaviWindowType(void) const;
+    inline int getNaviWindowType(void) const;
 
     /**
      * \brief   Checks if the navigation window is a workspace.
      * \return  True if the navigation window is a workspace, false otherwise.
      **/
-    inline bool isNaviWorkspace(void) const;
+    bool isNaviWorkspace(void) const;
 
     /**
      * \brief   Checks if the navigation window is for live logs.
      * \return  True if the navigation window is for live logs, false otherwise.
      **/
-    inline bool isNaviLiveLogs(void) const;
+    bool isNaviLiveLogs(void) const;
 
     /**
      * \brief   Checks if the navigation window is for offline logs.
      * \return  True if the navigation window is for offline logs, false otherwise.
      **/
-    inline bool isNaviOfflineLogs(void) const;
+    bool isNaviOfflineLogs(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // NavigationWindow class inline methods
 //////////////////////////////////////////////////////////////////////////
 protected:
 
-    const eNavigationWindow mNaviWindowType;    //!< The type of the navigation window
-    MdiMainWindow*          mMainWindow;        //!< Pointer to the main MDI window
+    const int       mNaviWindowType;    //!< The type of the navigation window
+    MdiMainWindow*  mMainWindow;        //!< Pointer to the main MDI window
 };
 
 //////////////////////////////////////////////////////////////////////////
 // NavigationWindow class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline NavigationWindow::eNavigationWindow NavigationWindow::getNaviWindowType(void) const
+inline int NavigationWindow::getNaviWindowType(void) const
 {
     return mNaviWindowType;
-}
-
-inline bool NavigationWindow::isNaviWorkspace(void) const
-{
-    return (mNaviWindowType == eNavigationWindow::NaviWorkspace);
-}
-
-inline bool NavigationWindow::isNaviLiveLogs(void) const
-{
-    return (mNaviWindowType == eNavigationWindow::NaviLiveLogs);
-}
-
-inline bool NavigationWindow::isNaviOfflineLogs(void) const
-{
-    return (mNaviWindowType == eNavigationWindow::NaviOfflineLogs);
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVIGATIONWINDOW_HPP

@@ -50,7 +50,7 @@ bool LogOfflineScopesModel::setScopeModel(LogOfflineModel* model)
     _clear();
     mLogModel = nullptr;
 
-    if ((model == nullptr) || (model->isDatabaseOpen() == false))
+    if ((model == nullptr) || (model->isOperable() == false))
     {
         return false;
     }

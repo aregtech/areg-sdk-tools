@@ -36,14 +36,15 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
 
     , ui            (new Ui::LogViewer)
     , mLogModel     (nullptr)
+    , mFilter       (nullptr)
     , mMdiWindow    (new QWidget())
 {
     ui->setupUi(mMdiWindow);
-    mLogModel = new LogViewerModel(this);
+    mLogModel   = new LogViewerModel(this);
+    mFilter     = new LogViewerFilterProxy(mLogModel);
     
-    LogViewerFilterProxy* filter = mLogModel->getFilter();
     QTableView* view = ctrlTable();
-    view->setHorizontalHeader(new LogTableHeader(this, view, mLogModel));
+    view->setHorizontalHeader(new LogTableHeader(view, mLogModel));
     QHeaderView* header = ctrlHeader();
     
     header->setVisible(true);
@@ -64,7 +65,7 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     view->setContextMenuPolicy(Qt::CustomContextMenu);
 
     // view->setModel(mLogModel);
-    view->setModel(filter);
+    view->setModel(mFilter);
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -88,8 +89,8 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     connect(mLogModel       , &LogViewerModel::columnsMoved             , this, &LogViewer::onColumnsMoved);
     connect(header          , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
     connect(view            , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
-    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , filter, SLOT(setComboFilter(int, QStringList)));
-    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , filter, SLOT(setTextFilter(int, QString)));
+    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter, SLOT(setComboFilter(int, QStringList)));
+    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter, SLOT(setTextFilter(int, QString)));
 }
 
 void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
@@ -118,7 +119,7 @@ void LogViewer::logServiceConnected(bool isConnected, const QString& address, ui
 void LogViewer::logDatabaseCreated(const QString& dbPath)
 {
     Q_ASSERT(mLogModel != nullptr);
-    mLogModel->setDatabasePath(dbPath);
+    mLogModel->openDatabase(dbPath, true);
     if (mMdiSubWindow != nullptr)
     {
         mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
@@ -206,7 +207,7 @@ void LogViewer::onTableContextMenu(const QPoint& pos)
     QMenu menu(this);
     QMenu* columnsMenu = menu.addMenu(tr("Columns"));
     QModelIndex idx{ctrlTable()->currentIndex()};    
-    populateColumnsMenu(&menu, idx.isValid() ? idx.row() : -1);
+    populateColumnsMenu(columnsMenu, idx.isValid() ? idx.row() : -1);
     menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
 }
 

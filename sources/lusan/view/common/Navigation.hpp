@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/view/common/NavigationWindow.hpp"
 #include "lusan/view/common/LogExplorer.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
 #include "lusan/view/common/OfflineScopesExplorer.hpp"
@@ -37,6 +38,15 @@ class Navigation : public QDockWidget
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    //!< The enumeration of the navigation window types.
+    enum eNaviWindow
+    {
+          NaviUnknown       = 0 //!< Unknown navigation window type
+        , NaviWorkspace         //!< Workspace navigation window type
+        , NaviLiveLogs          //!< Live logs navigation window type
+        , NaviOfflineLogs       //!< Offline logs navigation window type
+    };
+
     static QString  TabNameFileSystem;      //!< The name of the tab for workspace explorer.
     static QString  TabLiveLogsExplorer;    //!< The name of the tab for live logs explorer.
     static QString  TabOfflineLogsExplorer; //!< The name of the tab for offline logs explorer.
@@ -50,6 +60,10 @@ public:
 
     //!< Returns the icon for the offline logs explorer tab.
     static QIcon getOfflineLogIcon(void);
+    
+    static const QString& getTabName(Navigation::eNaviWindow navi);
+    
+    static Navigation::eNaviWindow getNaviWindow(const QString & tabName);
     
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -87,7 +101,8 @@ public:
      * \brief   tabName     The name of the tab to add.
      * \return  The index of the new added tab.
      **/
-    inline int addTab(QWidget& widget, const QString& tabName);
+    inline int addTab(NavigationWindow& widget, const QString& tabName);
+    inline int addTab(NavigationWindow& widget, Navigation::eNaviWindow navi);
 
     /**
      * \brief   Returns the pointer to the widget of the given tab name.
@@ -96,7 +111,9 @@ public:
      * \return  Returns the valid pointer of the Widget of the given tab name.
      *          Returns nullptr if tab name does not exist.
      **/
-    QWidget* getTab(const QString& tabName) const;
+    NavigationWindow* getTab(const QString& tabName) const;
+    NavigationWindow* getTab(Navigation::eNaviWindow navi) const;
+    
 
     /**
      * \brief   Check if the tab with the given name exists.
@@ -104,13 +121,15 @@ public:
      * @return  Returns true if the tab with the given name exists. False, otherwise.
      **/
     bool tabExists(const QString& tabName) const;
+    bool tabExists(Navigation::eNaviWindow navi) const;
 
     /**
      * \brief   Show tab with specified unique name.
      * \param   tabName     The unique name of the tab to show.
      **/
     bool showTab(const QString& tabName);
-
+    bool showTab(Navigation::eNaviWindow navi);
+    
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -183,9 +202,14 @@ inline OfflineScopesExplorer& Navigation::getOfflineScopes(void)
     return mOfflineScopes;
 }
 
-inline int Navigation::addTab(QWidget& widget, const QString& tabName)
+inline int Navigation::addTab(NavigationWindow& widget, const QString& tabName)
 {
     return mTabs.addTab(&widget, tabName);
+}
+
+inline int Navigation::addTab(NavigationWindow& widget, Navigation::eNaviWindow navi)
+{
+    return (navi != Navigation::eNaviWindow::NaviUnknown ? addTab(widget, Navigation::getTabName(navi)) : -1);
 }
 
 inline Navigation& Navigation::self(void)

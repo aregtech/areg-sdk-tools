@@ -32,7 +32,7 @@
 class MdiChild;
 class ServiceInterface;
 class LogViewer;
-class OfflineLogViwer;
+class OfflineLogViewer;
 QT_BEGIN_NAMESPACE
 class QDockWidget;
 class QListView;
@@ -54,7 +54,16 @@ class MdiMainWindow : public QMainWindow
 {
     friend class MdiChild;
     Q_OBJECT
-
+    
+//////////////////////////////////////////////////////////////////////////
+// Hidden static methods.
+//////////////////////////////////////////////////////////////////////////
+private:
+    
+    inline static QString _filterServiceFiles(void);
+    
+    inline static QString _filterLoggingFiles(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Public methods
 //////////////////////////////////////////////////////////////////////////
@@ -130,6 +139,8 @@ public:
      * \return  The result of the dialog, 0 if canceled, 1 if OK pressed.
      **/
     int showOptionPageLogging(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation);
+
+    QString openLogFile(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -322,7 +333,7 @@ private:
      * \param   filePath   The path to the .sqlog file to view.
      * \return  A pointer to the new Offline Log Viewer View.
      **/
-    OfflineLogViwer* createOfflineLogViewer(const QString& filePath = QString());
+    OfflineLogViewer* createOfflineLogViewer(const QString& filePath = QString());
 
     /**
      * \brief   Returns the file filter string, which contains the list of supported extensions.

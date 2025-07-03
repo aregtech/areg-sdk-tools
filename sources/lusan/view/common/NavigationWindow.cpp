@@ -18,8 +18,9 @@
  ************************************************************************/
 
 #include "lusan/view/common/NavigationWindow.hpp"
+#include "lusan/view/common/Navigation.hpp"
 
-NavigationWindow::NavigationWindow(eNavigationWindow naviWindow, MdiMainWindow * wndMain, QWidget* parent)
+NavigationWindow::NavigationWindow(int naviWindow, MdiMainWindow * wndMain, QWidget* parent)
     : QWidget(parent)
 
     , mNaviWindowType   (naviWindow)
@@ -37,4 +38,19 @@ void NavigationWindow::optionApplied(void)
 
 void NavigationWindow::optionClosed(bool OKpressed)
 {
+}
+
+bool NavigationWindow::isNaviWorkspace(void) const
+{
+    return (mNaviWindowType == static_cast<int>(Navigation::eNaviWindow::NaviWorkspace));
+}
+
+bool NavigationWindow::isNaviLiveLogs(void) const
+{
+    return (mNaviWindowType == static_cast<int>(Navigation::eNaviWindow::NaviLiveLogs));
+}
+
+bool NavigationWindow::isNaviOfflineLogs(void) const
+{
+    return (mNaviWindowType == static_cast<int>(Navigation::eNaviWindow::NaviOfflineLogs));
 }
