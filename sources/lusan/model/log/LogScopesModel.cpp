@@ -23,6 +23,7 @@
 
 #include "lusan/model/log/LogScopesModel.hpp"
 #include "lusan/model/log/LogScopeIconFactory.hpp"
+#include "lusan/model/log/LogViewerModel.hpp"
 
 #include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/data/log/LogObserver.hpp"
@@ -31,6 +32,7 @@ LogScopesModel::LogScopesModel(QObject* parent)
     : QAbstractItemModel( parent )
     , mRootList         ( )
     , mRootIndex        ( )
+    , mLogViewerModel   (nullptr)
 {
     mRootIndex = createIndex(0, 0, nullptr);
 }
@@ -40,32 +42,34 @@ LogScopesModel::~LogScopesModel(void)
     _clear();
 }
 
-bool LogScopesModel::initialize(void)
+bool LogScopesModel::initialize(LogViewerModel* logViewerModel)
 {
     _clear();
-    LogObserver* log = LogObserver::getComponent();
-    if ((log == nullptr) || (log->isConnected() == false))
+    
+    if (logViewerModel == nullptr)
         return false;
+    
+    mLogViewerModel = logViewerModel;
 
-    connect(log, &LogObserver::signalLogInstancesConnect    , this, &LogScopesModel::slotLogInstancesConnect);
-    connect(log, &LogObserver::signalLogInstancesDisconnect , this, &LogScopesModel::slotLogInstancesDisconnect);
-    connect(log, &LogObserver::signalLogServiceDisconnected , this, &LogScopesModel::slotLogServiceDisconnected);
-    connect(log, &LogObserver::signalLogRegisterScopes      , this, &LogScopesModel::slotLogRegisterScopes);
-    connect(log, &LogObserver::signalLogUpdateScopes        , this, &LogScopesModel::slotLogUpdateScopes);
+    connect(mLogViewerModel, &LogViewerModel::signalLogInstancesConnect    , this, &LogScopesModel::slotLogInstancesConnect);
+    connect(mLogViewerModel, &LogViewerModel::signalLogInstancesDisconnect , this, &LogScopesModel::slotLogInstancesDisconnect);
+    connect(mLogViewerModel, &LogViewerModel::signalLogServiceDisconnected , this, &LogScopesModel::slotLogServiceDisconnected);
+    connect(mLogViewerModel, &LogViewerModel::signalLogRegisterScopes      , this, &LogScopesModel::slotLogRegisterScopes);
+    connect(mLogViewerModel, &LogViewerModel::signalLogUpdateScopes        , this, &LogScopesModel::slotLogUpdateScopes);
     
     return LogObserver::requestInstances();
 }
 
 void LogScopesModel::release(void)
 {
-    LogObserver* log = LogObserver::getComponent();
-    if (log != nullptr)
+    if (mLogViewerModel != nullptr)
     {
-        disconnect(log, &LogObserver::signalLogInstancesConnect     , this, &LogScopesModel::slotLogInstancesConnect);
-        disconnect(log, &LogObserver::signalLogInstancesDisconnect  , this, &LogScopesModel::slotLogInstancesDisconnect);
-        disconnect(log, &LogObserver::signalLogServiceDisconnected  , this, &LogScopesModel::slotLogServiceDisconnected);
-        disconnect(log, &LogObserver::signalLogRegisterScopes       , this, &LogScopesModel::slotLogRegisterScopes);
-        disconnect(log, &LogObserver::signalLogUpdateScopes         , this, &LogScopesModel::slotLogUpdateScopes);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogInstancesConnect     , this, &LogScopesModel::slotLogInstancesConnect);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogInstancesDisconnect  , this, &LogScopesModel::slotLogInstancesDisconnect);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogServiceDisconnected  , this, &LogScopesModel::slotLogServiceDisconnected);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogRegisterScopes       , this, &LogScopesModel::slotLogRegisterScopes);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogUpdateScopes         , this, &LogScopesModel::slotLogUpdateScopes);
+        mLogViewerModel = nullptr;
     }
 }
 

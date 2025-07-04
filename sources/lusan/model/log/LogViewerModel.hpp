@@ -23,6 +23,11 @@
  * Includes
  ************************************************************************/
 #include "lusan/model/log/LoggingModelBase.hpp"
+#include "areg/component/NEService.hpp"
+#include "areglogger/client/LogObserverApi.h"
+
+#include <QList>
+#include <QMap>
 
 /**
  * \brief   The model for the log viewer window.
@@ -127,6 +132,43 @@ public:
     void restartLogging(const QString & dbName = QString());
 
 //////////////////////////////////////////////////////////////////////////
+// Signals.
+//////////////////////////////////////////////////////////////////////////
+signals:
+
+    /**
+     * \brief   Signal emitted when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void signalLogInstancesConnect(const QList< NEService::sServiceConnectedInstance >& instances);
+
+    /**
+     * \brief   Signal emitted when receive the list of disconnected instances that make logs.
+     * \param   instances   The list of IDs of the disconnected instances.
+     **/
+    void signalLogInstancesDisconnect(const QList< NEService::sServiceConnectedInstance >& instances);
+
+    /**
+     * \brief   Signal emitted when connection with the log collector service is lost.
+     * \param   instances   The list of disconnected instances.
+     **/
+    void signalLogServiceDisconnected(const QMap<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
+
+    /**
+     * \brief   Signal emitted when receive the list of the scopes registered in an application.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
+     **/
+    void signalLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope *>& scopes);
+
+    /**
+     * \brief   Signal emitted when receive the list of previously registered scopes with new priorities.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
+     **/
+    void signalLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope *>& scopes);
+
+//////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
 private slots:
@@ -143,6 +185,38 @@ private slots:
      * \param   port            The IP port number of the log collector service to connect or disconnect.
      **/
     void slotLogServiceConnected(bool isConnected, const QString& address, uint16_t port);
+
+    /**
+     * \brief   The slot is triggered when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void slotLogInstancesConnect(const QList< NEService::sServiceConnectedInstance >& instances);
+
+    /**
+     * \brief   The slot is triggered when receive the list of disconnected instances that make logs.
+     * \param   instances   The list of IDs of the disconnected instances.
+     **/
+    void slotLogInstancesDisconnect(const QList< NEService::sServiceConnectedInstance >& instances);
+
+    /**
+     * \brief   The slot is triggered when connection with the log collector service is lost.
+     * \param   instances   The list of disconnected instances.
+     **/
+    void slotLogServiceDisconnected(const QMap<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
+
+    /**
+     * \brief   The slot is triggered when receive the list of the scopes registered in an application.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
+     **/
+    void slotLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope*>& scopes);
+
+    /**
+     * \brief   The slot is triggered when receive the list of previously registered scopes with new priorities.
+     * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
+     * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
+     **/
+    void slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>& scopes);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variable
@@ -151,8 +225,13 @@ private:
     bool                    mIsConnected;   //!< Flag to indicate whether application is connected to log collector service
     QString                 mAddress;       //!< The address of the log collector service
     uint16_t                mPort;          //!< The port of the log collector service
-    QMetaObject::Connection mConLogger;     //!< The connection signal
-    QMetaObject::Connection mConLogs;       //!< The connection signal
+    QMetaObject::Connection mConLogger;     //!< The connection signal for log messages
+    QMetaObject::Connection mConLogs;       //!< The connection signal for service connection
+    QMetaObject::Connection mConInstancesConnect;    //!< The connection signal for instances connect
+    QMetaObject::Connection mConInstancesDisconnect; //!< The connection signal for instances disconnect
+    QMetaObject::Connection mConServiceDisconnected; //!< The connection signal for service disconnected
+    QMetaObject::Connection mConRegisterScopes;      //!< The connection signal for register scopes
+    QMetaObject::Connection mConUpdateScopes;        //!< The connection signal for update scopes
 };
 
 //////////////////////////////////////////////////////////////////////////

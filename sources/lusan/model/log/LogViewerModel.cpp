@@ -74,8 +74,13 @@ LogViewerModel::LogViewerModel(QObject *parent)
     , mIsConnected(false)
     , mAddress()
     , mPort(NESocket::InvalidPort)
-    , mConLogger    ( )
-    , mConLogs      ( )
+    , mConLogger            ( )
+    , mConLogs              ( )
+    , mConInstancesConnect  ( )
+    , mConInstancesDisconnect( )
+    , mConServiceDisconnected( )
+    , mConRegisterScopes    ( )
+    , mConUpdateScopes      ( )
 {
 }
 
@@ -98,12 +103,23 @@ void LogViewerModel::serviceConnected(bool isConnected, const QString& address, 
 
     disconnect(mConLogger);
     disconnect(mConLogs);
+    disconnect(mConInstancesConnect);
+    disconnect(mConInstancesDisconnect);
+    disconnect(mConServiceDisconnected);
+    disconnect(mConRegisterScopes);
+    disconnect(mConUpdateScopes);
+    
     if (isConnected)
     {
         LogObserver* log = LogObserver::getComponent();
         Q_ASSERT(log != nullptr);
-        mConLogger = connect(log, &LogObserver::signalLogMessage         , this, &LogViewerModel::slotLogMessage);
-        mConLogs   = connect(log, &LogObserver::signalLogServiceConnected, this, &LogViewerModel::slotLogServiceConnected);
+        mConLogger             = connect(log, &LogObserver::signalLogMessage         , this, &LogViewerModel::slotLogMessage);
+        mConLogs               = connect(log, &LogObserver::signalLogServiceConnected, this, &LogViewerModel::slotLogServiceConnected);
+        mConInstancesConnect   = connect(log, &LogObserver::signalLogInstancesConnect, this, &LogViewerModel::slotLogInstancesConnect);
+        mConInstancesDisconnect= connect(log, &LogObserver::signalLogInstancesDisconnect, this, &LogViewerModel::slotLogInstancesDisconnect);
+        mConServiceDisconnected= connect(log, &LogObserver::signalLogServiceDisconnected, this, &LogViewerModel::slotLogServiceDisconnected);
+        mConRegisterScopes     = connect(log, &LogObserver::signalLogRegisterScopes, this, &LogViewerModel::slotLogRegisterScopes);
+        mConUpdateScopes       = connect(log, &LogObserver::signalLogUpdateScopes, this, &LogViewerModel::slotLogUpdateScopes);
     }
 }
 
@@ -137,6 +153,11 @@ void LogViewerModel::slotLogServiceConnected(bool isConnected, const QString& ad
         mIsConnected = false;
         disconnect(mConLogger);
         disconnect(mConLogs);
+        disconnect(mConInstancesConnect);
+        disconnect(mConInstancesDisconnect);
+        disconnect(mConServiceDisconnected);
+        disconnect(mConRegisterScopes);
+        disconnect(mConUpdateScopes);
     }
 }
 
@@ -148,4 +169,34 @@ void LogViewerModel::slotLogMessage(const SharedBuffer& logMessage)
         mLogs.push_back(logMessage);
         endInsertRows();
     }
+}
+
+void LogViewerModel::slotLogInstancesConnect(const QList<NEService::sServiceConnectedInstance>& instances)
+{
+    // Forward the signal to any listening objects (like LogScopesModel)
+    emit signalLogInstancesConnect(instances);
+}
+
+void LogViewerModel::slotLogInstancesDisconnect(const QList<NEService::sServiceConnectedInstance>& instances)
+{
+    // Forward the signal to any listening objects (like LogScopesModel)
+    emit signalLogInstancesDisconnect(instances);
+}
+
+void LogViewerModel::slotLogServiceDisconnected(const QMap<ITEM_ID, NEService::sServiceConnectedInstance>& instances)
+{
+    // Forward the signal to any listening objects (like LogScopesModel)
+    emit signalLogServiceDisconnected(instances);
+}
+
+void LogViewerModel::slotLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope*>& scopes)
+{
+    // Forward the signal to any listening objects (like LogScopesModel)
+    emit signalLogRegisterScopes(cookie, scopes);
+}
+
+void LogViewerModel::slotLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope*>& scopes)
+{
+    // Forward the signal to any listening objects (like LogScopesModel)
+    emit signalLogUpdateScopes(cookie, scopes);
 }

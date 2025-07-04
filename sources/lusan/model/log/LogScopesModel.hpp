@@ -36,6 +36,7 @@
  ************************************************************************/
 class ScopeNodeBase;
 class ScopeRoot;
+class LogViewerModel;
 
 /**
  * \brief   Log scope model to visualize scopes in the scope navigation windows.
@@ -61,10 +62,11 @@ public:
     virtual ~LogScopesModel(void);
 
     /**
-     * \brief   Initializes the model, sets the signals to receive messages.
+     * \brief   Initializes the model, sets the signals to receive messages from LogViewerModel.
+     * \param   logViewerModel  The LogViewerModel that will forward scope-related signals.
      * \return  True if the model is initialized, false otherwise.
      **/
-    bool initialize(void);
+    bool initialize(LogViewerModel* logViewerModel);
 
     /**
      * \brief   Releases the model, disconnects the signals.
@@ -283,8 +285,9 @@ private:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    RootList        mRootList;      // The list of root nodes
-    QModelIndex     mRootIndex;     // The root index of the model
+    RootList            mRootList;      // The list of root nodes
+    QModelIndex         mRootIndex;     // The root index of the model
+    LogViewerModel*     mLogViewerModel;// The LogViewerModel that provides scope data
 };
 
 //////////////////////////////////////////////////////////////////////////
