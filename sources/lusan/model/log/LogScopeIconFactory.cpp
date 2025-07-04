@@ -30,19 +30,36 @@
 namespace
 {
 
+    // Foreground / Text colors
     const QColor _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorCount)] =
     {
           QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorNotSet
         , QColor(Qt::darkRed)       // LogScopeIconFactory::eLogColor::ColorFatal
         , QColor(Qt::magenta)       // LogScopeIconFactory::eLogColor::ColorError
         , QColor(255, 165, 0)       // LogScopeIconFactory::eLogColor::ColorWarn
-        , QColor(Qt::blue)          // LogScopeIconFactory::eLogColor::ColorInfo
+        , QColor(0, 71, 171)        // LogScopeIconFactory::eLogColor::ColorInfo
         , QColor(Qt::darkGreen)     // LogScopeIconFactory::eLogColor::ColorDebug
         , QColor(96, 96, 96)        // LogScopeIconFactory::eLogColor::ColorScope
         , QColor(72, 72, 72)        // LogScopeIconFactory::eLogColor::ColorScopeEnter
         , QColor(144, 144, 144)     // LogScopeIconFactory::eLogColor::ColorScopeExit
         , QColor(Qt::white)         // LogScopeIconFactory::eLogColor::ColorWithScope
-        , QColor(Qt::black)
+        , QColor(Qt::black)         // LogScopeIconFactory::eLogColor::ColorDefault
+    };
+    
+    // Background colors
+    const QColor _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorCount)] =
+    {
+          QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorNotSet
+        , QColor(255, 240, 240)     // LogScopeIconFactory::eLogColor::ColorFatal
+        , QColor(255, 233, 251)     // LogScopeIconFactory::eLogColor::ColorError
+        , QColor(242, 252, 255)     // LogScopeIconFactory::eLogColor::ColorWarn
+        , QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorInfo
+        , QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorDebug
+        , QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorScope
+        , QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorScopeEnter
+        , QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorScopeExit
+        , QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorWithScope
+        , QColor(Qt::transparent)   // LogScopeIconFactory::eLogColor::ColorDefault
     };
 
     constexpr uint32_t LogActive{ 0x00FF0000u };
@@ -1036,5 +1053,33 @@ QColor LogScopeIconFactory::getLogColor(const NELogging::sLogMessage & logMessag
         return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorDebug)];
     default:
         return _colors[static_cast<int>(LogScopeIconFactory::eLogColor::ColorDefault)];
+    }
+}
+
+QColor LogScopeIconFactory::getLogBackgroundColor(const NELogging::sLogMessage & logMessage)
+{
+    return LogScopeIconFactory::getLogBackgroundColor(logMessage.logMessagePrio);
+}
+
+QColor LogScopeIconFactory::getLogBackgroundColor(NELogging::eLogPriority logPrio)
+{
+    switch (logPrio)
+    {
+    case NELogging::eLogPriority::PrioNotset:
+        return _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorNotSet)];
+    case NELogging::eLogPriority::PrioScope:
+        return _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorScope)];
+    case NELogging::eLogPriority::PrioFatal:
+        return _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorFatal)];
+    case NELogging::eLogPriority::PrioError:
+        return _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorError)];
+    case NELogging::eLogPriority::PrioWarning:
+        return _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorWarn)];
+    case NELogging::eLogPriority::PrioInfo:
+        return _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorInfo)];
+    case NELogging::eLogPriority::PrioDebug:
+        return _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorDebug)];
+    default:
+        return _colorsBkg[static_cast<int>(LogScopeIconFactory::eLogColor::ColorDefault)];
     }
 }

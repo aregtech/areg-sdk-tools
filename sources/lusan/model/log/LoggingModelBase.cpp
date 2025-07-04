@@ -356,22 +356,7 @@ QVariant LoggingModelBase::_getBackgroundData(const NELogging::sLogMessage* logM
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
-
-    NELogging::eLogPriority prio = static_cast<NELogging::eLogPriority>(logMessage->logMessagePrio);
-    switch (prio)
-    {
-    case NELogging::eLogPriority::PrioFatal:
-        return QBrush(QColor(220, 20, 60));  // Crimson
-
-    case NELogging::eLogPriority::PrioError:
-        return QBrush(QColor(255, 99, 71));  // Tomato
-
-    case NELogging::eLogPriority::PrioWarning:
-        return QBrush(QColor(255, 215, 0));  // Gold
-
-    default:
-        return QVariant();
-    }
+    return QBrush(LogScopeIconFactory::getLogBackgroundColor(*logMessage));
 }
 
 QVariant LoggingModelBase::_getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
