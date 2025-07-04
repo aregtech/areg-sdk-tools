@@ -60,8 +60,10 @@ class MdiMainWindow : public QMainWindow
 //////////////////////////////////////////////////////////////////////////
 private:
     
+    //!< Returns the filters to display when opening service interface files.
     inline static QString _filterServiceFiles(void);
     
+    //!< Returns the filter to display when opening log database files.
     inline static QString _filterLoggingFiles(void);
     
 //////////////////////////////////////////////////////////////////////////
@@ -140,6 +142,9 @@ public:
      **/
     int showOptionPageLogging(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation);
 
+    /**
+     * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
+     **/
     QString openLogFile(void);
     
 //////////////////////////////////////////////////////////////////////////

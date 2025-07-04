@@ -60,9 +60,11 @@ public:
 
     //!< Returns the icon for the offline logs explorer tab.
     static QIcon getOfflineLogIcon(void);
-    
+
+    //!< Returns the tab name of the specified navigation window
     static const QString& getTabName(Navigation::eNaviWindow navi);
     
+    //!< Returns the navigation window type by specified tab name.
     static Navigation::eNaviWindow getNaviWindow(const QString & tabName);
     
 //////////////////////////////////////////////////////////////////////////
