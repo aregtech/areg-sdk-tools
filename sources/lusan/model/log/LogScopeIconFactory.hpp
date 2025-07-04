@@ -112,6 +112,10 @@ public:
      * \param   logMessage   The log message to get color.
      **/
     static QColor getLogColor(const NELogging::sLogMessage & logMessage);
+    
+    static QColor getLogBackgroundColor(const NELogging::sLogMessage & logMessage);
+    
+    static QColor getLogBackgroundColor(NELogging::eLogPriority logPrio);
 };
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPEICONFACTORY_HPP

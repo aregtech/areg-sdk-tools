@@ -87,6 +87,8 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, const QString& filePa
     connect(mLogModel       , &LogOfflineModel::signalDatabaseIsClosed   , this, &OfflineLogViewer::onDatabaseClosed);
     connect(header          , &QHeaderView::customContextMenuRequested   , this, &OfflineLogViewer::onHeaderContextMenu);
     connect(view            , &QTableView::customContextMenuRequested    , this, &OfflineLogViewer::onTableContextMenu);
+    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter, SLOT(setComboFilter(int, QStringList)));
+    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter, SLOT(setTextFilter(int, QString)));
 
     // Try to open the database file
     if (mFilePath.isEmpty() == false)
@@ -110,7 +112,6 @@ void OfflineLogViewer::onHeaderContextMenu(const QPoint& pos)
     QMenu menu(this);
     QModelIndex idx{ctrlTable()->currentIndex()};
     populateColumnsMenu(&menu, idx.isValid() ? idx.row() : -1);
-    
     menu.exec(ctrlHeader()->mapToGlobal(pos));
 }
 
