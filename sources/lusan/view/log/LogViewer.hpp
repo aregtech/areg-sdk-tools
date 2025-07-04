@@ -115,6 +115,12 @@ public:
      **/
     void detachLiveLog(void);
 
+    /**
+     * \brief   Returns the LogViewerModel instance used by this viewer.
+     * \return  Pointer to the LogViewerModel instance.
+     **/
+    LogViewerModel* getLogViewerModel(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////

@@ -23,49 +23,45 @@
 
 #include "lusan/model/log/LogScopesModel.hpp"
 #include "lusan/model/log/LogScopeIconFactory.hpp"
+#include "lusan/model/log/LogViewerModel.hpp"
 
 #include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 
 LogScopesModel::LogScopesModel(QObject* parent)
-    : QAbstractItemModel( parent )
-    , mRootList         ( )
-    , mRootIndex        ( )
+    : LoggingScopesModelBase( parent )
+    , mLogViewerModel   (nullptr)
 {
-    mRootIndex = createIndex(0, 0, nullptr);
 }
 
-LogScopesModel::~LogScopesModel(void)
+bool LogScopesModel::initialize(LogViewerModel* logViewerModel)
 {
     _clear();
-}
-
-bool LogScopesModel::initialize(void)
-{
-    _clear();
-    LogObserver* log = LogObserver::getComponent();
-    if ((log == nullptr) || (log->isConnected() == false))
+    
+    if (logViewerModel == nullptr)
         return false;
+    
+    mLogViewerModel = logViewerModel;
 
-    connect(log, &LogObserver::signalLogInstancesConnect    , this, &LogScopesModel::slotLogInstancesConnect);
-    connect(log, &LogObserver::signalLogInstancesDisconnect , this, &LogScopesModel::slotLogInstancesDisconnect);
-    connect(log, &LogObserver::signalLogServiceDisconnected , this, &LogScopesModel::slotLogServiceDisconnected);
-    connect(log, &LogObserver::signalLogRegisterScopes      , this, &LogScopesModel::slotLogRegisterScopes);
-    connect(log, &LogObserver::signalLogUpdateScopes        , this, &LogScopesModel::slotLogUpdateScopes);
+    connect(mLogViewerModel, &LogViewerModel::signalLogInstancesConnect    , this, &LogScopesModel::slotLogInstancesConnect);
+    connect(mLogViewerModel, &LogViewerModel::signalLogInstancesDisconnect , this, &LogScopesModel::slotLogInstancesDisconnect);
+    connect(mLogViewerModel, &LogViewerModel::signalLogServiceDisconnected , this, &LogScopesModel::slotLogServiceDisconnected);
+    connect(mLogViewerModel, &LogViewerModel::signalLogRegisterScopes      , this, &LogScopesModel::slotLogRegisterScopes);
+    connect(mLogViewerModel, &LogViewerModel::signalLogUpdateScopes        , this, &LogScopesModel::slotLogUpdateScopes);
     
     return LogObserver::requestInstances();
 }
 
 void LogScopesModel::release(void)
 {
-    LogObserver* log = LogObserver::getComponent();
-    if (log != nullptr)
+    if (mLogViewerModel != nullptr)
     {
-        disconnect(log, &LogObserver::signalLogInstancesConnect     , this, &LogScopesModel::slotLogInstancesConnect);
-        disconnect(log, &LogObserver::signalLogInstancesDisconnect  , this, &LogScopesModel::slotLogInstancesDisconnect);
-        disconnect(log, &LogObserver::signalLogServiceDisconnected  , this, &LogScopesModel::slotLogServiceDisconnected);
-        disconnect(log, &LogObserver::signalLogRegisterScopes       , this, &LogScopesModel::slotLogRegisterScopes);
-        disconnect(log, &LogObserver::signalLogUpdateScopes         , this, &LogScopesModel::slotLogUpdateScopes);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogInstancesConnect     , this, &LogScopesModel::slotLogInstancesConnect);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogInstancesDisconnect  , this, &LogScopesModel::slotLogInstancesDisconnect);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogServiceDisconnected  , this, &LogScopesModel::slotLogServiceDisconnected);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogRegisterScopes       , this, &LogScopesModel::slotLogRegisterScopes);
+        disconnect(mLogViewerModel, &LogViewerModel::signalLogUpdateScopes         , this, &LogScopesModel::slotLogUpdateScopes);
+        mLogViewerModel = nullptr;
     }
 }
 
@@ -163,169 +159,6 @@ bool LogScopesModel::saveLogScopePriority(const QModelIndex& target /*= QModelIn
     {
         return LogObserver::requestSaveConfig(NEService::TARGET_ALL);
     }
-}
-
-QModelIndex LogScopesModel::index(int row, int column, const QModelIndex& parent) const
-{
-    if ((hasIndex(row, column, parent) == false) || (column != 0))
-        return QModelIndex();
-    
-    if ((parent.isValid() == false) || (parent == mRootIndex))
-    {
-        ScopeRoot* root = (row >= 0) && (row < static_cast<int>(mRootList.size())) ? mRootList[row] : nullptr;
-        return (root != nullptr ? createIndex(row, column, root) : mRootIndex);
-    }
-    else
-    {
-        ScopeNodeBase* parentNode = static_cast<ScopeNodeBase*>(parent.internalPointer());
-        Q_ASSERT(parentNode != nullptr);
-        ScopeNodeBase* childNode = parentNode->getChildAt(row);
-        return createIndex(row, column, childNode);
-    }
-}
-
-QModelIndex LogScopesModel::parent(const QModelIndex& child) const
-{
-    if ((child.isValid() == false) || (child == mRootIndex))
-        return QModelIndex();
-    
-    ScopeNodeBase* childNode = static_cast<ScopeNodeBase *>(child.internalPointer());
-    Q_ASSERT(childNode != nullptr);
-    if (childNode->isRoot())
-        return mRootIndex;
-    
-    ScopeNodeBase* parentNode= childNode->getParent();
-    Q_ASSERT(parentNode != nullptr);
-    if (parentNode->isRoot())
-    {
-        int pos = _findRoot(static_cast<ScopeRoot *>(parentNode)->getRootId());
-        Q_ASSERT(pos != static_cast<int>(NECommon::INVALID_INDEX));
-        return createIndex(pos, 0, parentNode);
-    }
-    else
-    {
-        ScopeNodeBase* grandParent = parentNode->getParent();
-        int pos = grandParent->getChildPosition(parentNode->getNodeName());
-        Q_ASSERT(pos != static_cast<int>(NECommon::INVALID_INDEX));
-        return createIndex(pos, 0, parentNode);
-    }
-}
-
-int LogScopesModel::rowCount(const QModelIndex& parent) const
-{
-    if ((parent.isValid() == false) || (parent == mRootIndex))
-        return static_cast<int>(mRootList.size());
-    
-    ScopeNodeBase* node = static_cast<ScopeNodeBase*>(parent.internalPointer());
-    Q_ASSERT(node != nullptr);
-    return node->getChildCount();
-}
-
-int LogScopesModel::columnCount(const QModelIndex& parent) const
-{
-    Q_UNUSED(parent);
-    return 1;
-}
-
-QVariant LogScopesModel::data(const QModelIndex& index, int role) const
-{
-    if (isValidIndex(index) == false)
-        return QVariant();
-    
-    if (index == mRootIndex)
-    {
-        return (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole ? QVariant(tr("Live Logs")) : QVariant());
-    }
-    
-    switch (static_cast<Qt::ItemDataRole>(role))
-    {
-    case Qt::ItemDataRole::DisplayRole:
-    {
-        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
-        return entry->getDisplayName();
-    }
-    
-    case Qt::ItemDataRole::DecorationRole:
-    {
-        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
-        return LogScopeIconFactory::getIcon(entry->getPriority());
-    }
-    
-    case Qt::ItemDataRole::UserRole:
-    {
-        ScopeNodeBase* entry{ static_cast<ScopeNodeBase*>(index.internalPointer()) };
-        return QVariant::fromValue<ScopeNodeBase *>(entry);
-    }
-        
-    default:
-        return QVariant();
-    }
-}
-
-QVariant LogScopesModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    if ((orientation == Qt::Horizontal) && (role == Qt::DisplayRole) && (section == 0))
-    {
-        return QString("Live Scopes");
-    }
-
-    return QVariant();
-}
-
-Qt::ItemFlags LogScopesModel::flags(const QModelIndex& index) const
-{
-    ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
-    if ((node == nullptr) || (index == mRootIndex))
-        return Qt::NoItemFlags;
-    else if (node->isLeaf())
-        return (Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemNeverHasChildren);
-    else
-        return (Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-}
-
-inline void LogScopesModel::_clear(void)
-{
-    for (auto root : mRootList)
-    {
-        Q_ASSERT(root != nullptr);
-        delete root;
-    }
-
-    mRootList.clear();
-}
-
-inline bool LogScopesModel::_exists(ITEM_ID rootId) const
-{
-    for (auto root : mRootList)
-    {
-        Q_ASSERT(root != nullptr);
-        if (root->getRootId() == rootId)
-            return true;
-    }
-
-    return false;
-}
-
-inline bool LogScopesModel::_appendRoot(ScopeRoot* root, bool unique /*= true*/)
-{
-    if ((unique == false) || (_exists(root->getRootId()) == false))
-    {
-        mRootList.append(root);
-        return true;
-    }
-
-    return false;
-}
-
-inline int LogScopesModel::_findRoot(ITEM_ID rootId) const
-{
-    for (int i = 0; i < mRootList.size(); ++i)
-    {
-        if (mRootList[i]->getRootId() == rootId)
-            return i;
-    }
-
-    return static_cast<int>(NECommon::INVALID_INDEX);
 }
 
 bool LogScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node)

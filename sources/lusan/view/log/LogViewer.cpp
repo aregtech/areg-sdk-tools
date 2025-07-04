@@ -400,3 +400,8 @@ void LogViewer::onClearClicked(void)
     }
 }
 
+LogViewerModel* LogViewer::getLogViewerModel(void) const
+{
+    return mLogModel;
+}
+

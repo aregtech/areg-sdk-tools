@@ -416,7 +416,18 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     {
         mState = eLoggingStates::LoggingConnected;
         mModel->release();
-        mModel->initialize();
+        
+        // Get the LogViewerModel from the live logs viewer
+        LogViewerModel* logViewerModel = nullptr;
+        if (mLiveLogs != nullptr)
+        {
+            logViewerModel = mLiveLogs->getLogViewerModel();
+        }
+        
+        if (logViewerModel != nullptr)
+        {
+            mModel->initialize(logViewerModel);
+        }
     }
     else
     {
