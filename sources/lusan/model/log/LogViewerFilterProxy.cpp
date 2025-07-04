@@ -69,7 +69,7 @@ bool LogViewerFilterProxy::filterAcceptsRow(int source_row, const QModelIndex& s
 {
     Q_UNUSED(source_parent);
 
-    if (!mLogModel)
+    if (mLogModel == nullptr)
         return true;
 
     // Check if row matches all active filters
@@ -78,7 +78,7 @@ bool LogViewerFilterProxy::filterAcceptsRow(int source_row, const QModelIndex& s
 
 bool LogViewerFilterProxy::matchesComboFilters(int source_row) const
 {
-    if (!mLogModel)
+    if (mLogModel == nullptr)
         return true;
 
     // Check each active combo filter
@@ -118,7 +118,7 @@ bool LogViewerFilterProxy::matchesComboFilters(int source_row) const
 
 bool LogViewerFilterProxy::matchesTextFilters(int source_row) const
 {
-    if (!mLogModel)
+    if (mLogModel == nullptr)
         return true;
 
     // Check each active text filter

@@ -32,6 +32,7 @@
 class MdiChild;
 class ServiceInterface;
 class LogViewer;
+class OfflineLogViewer;
 QT_BEGIN_NAMESPACE
 class QDockWidget;
 class QListView;
@@ -53,7 +54,18 @@ class MdiMainWindow : public QMainWindow
 {
     friend class MdiChild;
     Q_OBJECT
-
+    
+//////////////////////////////////////////////////////////////////////////
+// Hidden static methods.
+//////////////////////////////////////////////////////////////////////////
+private:
+    
+    //!< Returns the filters to display when opening service interface files.
+    inline static QString _filterServiceFiles(void);
+    
+    //!< Returns the filter to display when opening log database files.
+    inline static QString _filterLoggingFiles(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Public methods
 //////////////////////////////////////////////////////////////////////////
@@ -129,6 +141,11 @@ public:
      * \return  The result of the dialog, 0 if canceled, 1 if OK pressed.
      **/
     int showOptionPageLogging(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation);
+
+    /**
+     * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
+     **/
+    QString openLogFile(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -315,6 +332,13 @@ private:
      * \return  A pointer to the new Log Viewer View.
      **/
     LogViewer* createLogViewerView(const QString& filePath = QString());
+
+    /**
+     * \brief   Creates a new Offline Log Viewer View for .sqlog files.
+     * \param   filePath   The path to the .sqlog file to view.
+     * \return  A pointer to the new Offline Log Viewer View.
+     **/
+    OfflineLogViewer* createOfflineLogViewer(const QString& filePath = QString());
 
     /**
      * \brief   Returns the file filter string, which contains the list of supported extensions.

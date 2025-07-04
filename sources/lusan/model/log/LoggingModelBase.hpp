@@ -1,0 +1,416 @@
+﻿#ifndef LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP
+#define LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the AREG Framework.
+ *
+ *  Lusan is available as free and open-source software under the MIT License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  with this distribution or contact us at info[at]aregtech.com.
+ *
+ *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \file        lusan/model/log/LoggingModelBase.hpp
+ *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, Logging model base class.
+ *
+ ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/common/NELusanCommon.hpp"
+
+#include "areg/base/SharedBuffer.hpp"
+#include "areg/base/String.hpp"
+#include "areg/base/File.hpp"
+#include "areg/component/NEService.hpp"
+#include "areg/logging/NELogging.hpp"
+#include "aregextend/db/LogSqliteDatabase.hpp"
+
+#include <QAbstractTableModel>
+#include <QList>
+#include <QString>
+#include <QVariant>
+
+#include <map>
+#include <vector>
+
+
+class LogViewerFilterProxy;
+
+/**
+ * \brief   Base class for log viewer models (live and offline).
+ *          Provides common data and interface for log models.
+ **/
+class LoggingModelBase : public QAbstractTableModel
+{
+    Q_OBJECT
+
+//////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    //!< The index of columns (reusing LoggingModelBase columns for compatibility)
+    enum class eColumn : int
+    {
+          LogColumnInvalid  = -1    //!< Invalid column index, used for error checking
+        , LogColumnPriority = 0     //!< Log message priority
+        , LogColumnTimestamp        //!< Log message timestamp
+        , LogColumnSource           //!< Log message source name
+        , LogColumnSourceId         //!< Log message source ID
+        , LogColumnThread           //!< Log message thread name
+        , LogColumnThreadId         //!< Log message thread ID
+        , LogColumnScopeId          //!< Log message scope ID
+        , LogColumnMessage          //!< Log message text
+
+        , LogColumnCount            //!< Maximum number of columns
+    };
+
+    using   ListColumns     = QList<LoggingModelBase::eColumn>;
+    using   ListLogs        = std::vector<SharedBuffer>;
+    using   ListInstances   = std::vector< NEService::sServiceConnectedInstance>;
+    using   ListScopes      = std::vector< NELogging::sScopeInfo>;
+    using   MapScopes       = std::map<ITEM_ID, ListScopes>;
+
+//////////////////////////////////////////////////////////////////////////
+// Static methods
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the file extension of the logs database.
+     **/
+    static const QString & getFileExtension();
+
+    /**
+     * \brief   Returns the fixed list of header names.
+     **/
+    static const QStringList&  getHeaderList(void);
+
+    /**
+     * \brief   Returns the fixed list of header sizes.
+     *          The sizes are in pixels and correspond to the header names.
+     **/
+    static const QList<int>& getHeaderWidths(void);
+    
+    /**
+     * \brief   Returns the default list of header names.
+     **/
+    static const QList<LoggingModelBase::eColumn>& getDefaultColumns(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    explicit LoggingModelBase(QObject* parent = nullptr);
+    virtual ~LoggingModelBase() = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+    // Header:
+    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+
+    // Basic functionality:
+    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    virtual int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+
+    // Add/Remove data:
+    virtual bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+    virtual bool insertColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
+    virtual bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+    virtual bool removeColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
+
+    virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Operations and attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the header name of the specified column.
+     * \param   colIndex The zero-based index of the column.
+     **/
+    QString getHeaderName(int colIndex) const;
+
+    /**
+     * \brief   Finds the index of the specified column.
+     * \param   col The column to find.
+     * \return  The index of the column, or -1 if not found.
+     **/
+    inline int findColumn(LoggingModelBase::eColumn col) const;
+
+    /**
+     * \brief   Returns the list of active columns.
+     *          The active columns are the ones that are currently visible in the log viewer.
+     **/
+    inline const QList<LoggingModelBase::eColumn> & getActiveColumns() const;
+
+    /**
+     * \brief   Returns maximum number of columns that is possible to set in the log viewer.
+     **/
+    inline int getMaxColumCount(void) const;
+
+    /**
+     * \brief   Returns true if the model is empty, i.e. contains no log messages.
+     **/
+    inline bool isEmpty(void) const;
+
+    /**
+     * \brief   Resets the data in the model.
+     *          Clears the list of log messages and resets the model.
+     **/
+    inline void dataReset(void);
+
+    /**
+     * \brief   Converts the column to its index in the active columns list.
+     **/
+    inline int fromColumnToIndex(LoggingModelBase::eColumn col) const;
+
+    /**
+     * \brief   Converts the index to its column in the active columns list.
+     *          Returns LogColumnInvalid if index is invalid.
+     * \param   logicalIndex  The logical index of the column.
+     **/
+    inline LoggingModelBase::eColumn fromIndexToColumn(int logicalIndex) const;
+
+    /**
+     * \brief   Adds a column at a given position of active columns list.
+     *          If -1, adds a column before the "Log messages" column.
+     * \param   col     The column to add.
+     * \param   pos     The position of column to add.
+     *                  If -1, adds column before "Log messages" column.
+     **/
+    void addColumn(LoggingModelBase::eColumn col, int pos = -1);
+
+    /**
+     * \brief   Removes specified column from the active columns list.
+     * \param   col     The column to remove.
+     **/
+    void removeColumn(LoggingModelBase::eColumn col);
+
+    /**
+     * \brief   Sets list of active columns. If empty, it resets the default columns
+     * \param   columns     The list of active columns to set.
+     *                      If empty, resets the columns.
+     **/
+    void setActiveColumns(const QList< LoggingModelBase::eColumn>& columns);
+
+    /**
+     * \brief   Return the file name of the log database to set as a title of the log viewer window.
+     **/
+    inline QString getLogFileName(void) const;
+
+//////////////////////////////////////////////////////////////////////////
+// LoggingModelBase overrider
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Opens logging database file.
+     * \param   dbPath      The path to the database.
+     * \param   readOnly    If true, the database is opened in read-only mode.
+     **/
+    virtual void openDatabase(const QString& dbPath, bool readOnly);
+
+    /**
+     * \brief   Returns the path to the log data database.
+     **/
+    virtual QString getDabasePath(void) const;
+
+    /**
+     * \brief   Closes the currently opened database.
+     **/
+    virtual void closeDatabase(void);
+    
+    virtual bool isOperable(void) const;
+
+    /**
+     * \brief   Call to query and get list of names of connected instances from log database.
+     * \param   names   On output, contains the list of names of connected instances.
+     **/
+    virtual void getLogInstanceNames(std::vector<String>& names);
+
+    /**
+     * \brief   Call to query and get list of IDs of connected instances from log database
+     * \param   ids     On output, contains the list of IDs of connected instances.
+     **/
+    virtual void getLogInstances(std::vector<ITEM_ID>& ids);
+
+    /**
+     * \brief   Call to query and get list of names of threads of the connected instances from log database.
+     * \param   names   On output, contains the list of all thread names that sent messages.
+     **/
+    virtual void getLogThreadNames(std::vector<String>& names);
+
+    /**
+     * \brief   Call to query and get list of IDs of threads of the connected instances from log database.
+     * \param   ids     On output, contains the list of all thread IDs that sent messages.
+     **/
+    virtual void getLogThreads(std::vector<ITEM_ID>& ids);
+
+    /**
+     * \brief   Call to get the list of log priorities.
+     * \param   names   On output, contains the names of all priorities.
+     **/
+    virtual void getPriorityNames(std::vector<String>& names);
+
+
+    /**
+     * \brief   Call to query and get information of connected instances from log database.
+     *          This query will receive list of all registered instances.
+     * \param   infos   On output, contains the list of information of all registered instances in database.
+     **/
+    virtual void getLogInstanceInfos(std::vector< NEService::sServiceConnectedInstance>& infos);
+
+    /**
+     * \brief   Call to query and get information of log scopes of specified instance from log database.
+     *          This query will receive list of all registered scopes.
+     * \param   scopes  On output, contains the list of all registered scopes in database related with the specified instance ID.
+     * \param   instID  The ID of the instance.
+     **/
+    virtual void getLogInstScopes(std::vector<NELogging::sScopeInfo>& scopes, ITEM_ID instId);
+
+    /**
+     * \brief   Call to get all log messages from log database.
+     * \param   messages   On output, contains the list of all log messages.
+     **/
+    virtual void getLogMessages(std::vector<SharedBuffer>& messages);
+
+    /**
+     * \brief   Call to get log messages of the specified instance from log database.
+     *          If `instId` is `NEService::COOKIE_ANY` it receives the list of all instances
+     *          similar to the call to `getLogMessages()`.
+     * \param   messages    On output, contains the list of log messages of the specified instance.
+     * \param   instId  The ID of the instance to get log messages.
+     *                  If `NEService::COOKIE_ANY` it receives log messages of all instances.
+     **/
+    virtual void getLogInstMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId = NEService::COOKIE_ANY);
+
+    /**
+     * \brief   Call to get log messages of the specified scope from log database.
+     *          If `scopeId` is `0` it receives the list of all scopes
+     *          similar to the call to `getLogMessages()`.
+     * \param   messages    On output, contains the list of log messages of the specified scope.
+     * \param   scopeId     The ID of the scope to get log messages.
+     *                      If `0` it receives log messages of all scopes.
+     **/
+    virtual void getLogScopeMessages(std::vector<SharedBuffer>& messages, uint32_t scopeId = 0);
+
+    /**
+     * \brief   Call to get log messages of the specified instance and log scope ID from log database.
+     *          If `instId` is `NEService::COOKIE_ANY` and `scopeId` is `0`, it receives the list of all logs
+     *          similar to the call to `getLogMessages()`.
+     * \param   messages    On output, contains the list of log messages of the specified instance and scope.
+     * \param   instId      The ID of the instance to get log messages.
+     *                      If `NEService::COOKIE_ANY` it receives log messages of all instances.
+     * \param   scopeId     The ID of the scope to get log messages.
+     *                      If `0` it receives log messages of all scopes.
+     **/
+    void getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
+
+//////////////////////////////////////////////////////////////////////////
+// Helper methods
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    /**
+     * \brief   Closes currently opened log database file without triggering signal.
+     **/
+    inline void _closeDatabase(void);
+
+    /**
+     * \brief   Helper to get display data for a log message and column.
+     **/
+    QVariant _getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+
+    /**
+     * \brief   Helper to get background color data for a log message and column.
+     **/
+    QVariant _getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+
+    /**
+     * \brief   Helper to get foreground color data for a log message and column.
+     **/
+    QVariant _getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+
+    /**
+     * \brief   Helper to get decoration (icon) data for a log message and column.
+     **/
+    QVariant _getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+
+    /**
+     * \brief   Helper to get text alignment data for a column.
+     **/
+    QVariant _getAlignmentData(eColumn column) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+protected:
+    LogSqliteDatabase       mDatabase;      //!< The SQLite database object to read log data
+    ListColumns             mActiveColumns; //!< The list of active columns
+    ListLogs                mLogs;          //!< The list of log messages
+};
+
+//////////////////////////////////////////////////////////////////////////
+// LoggingModelBase class inline methods.
+//////////////////////////////////////////////////////////////////////////
+
+inline int LoggingModelBase::findColumn(LoggingModelBase::eColumn col) const
+{
+    return static_cast<int>(mActiveColumns.indexOf(col));
+}
+
+inline const QList<LoggingModelBase::eColumn>& LoggingModelBase::getActiveColumns() const
+{
+    return mActiveColumns;
+}
+
+inline int LoggingModelBase::getMaxColumCount(void) const
+{
+    return static_cast<int>(eColumn::LogColumnCount);
+}
+
+inline bool LoggingModelBase::isEmpty(void) const
+{
+    return mLogs.empty();
+}
+
+inline void LoggingModelBase::dataReset(void)
+{
+    beginResetModel();
+    mLogs.clear();
+    endResetModel();
+}
+
+inline int LoggingModelBase::fromColumnToIndex(LoggingModelBase::eColumn col) const
+{
+    return mActiveColumns.indexOf(col);
+}
+
+inline LoggingModelBase::eColumn LoggingModelBase::fromIndexToColumn(int logicalIndex) const
+{
+    return ((logicalIndex >= 0) && (logicalIndex < static_cast<int>(mActiveColumns.size())) ? mActiveColumns[logicalIndex] : LoggingModelBase::eColumn::LogColumnInvalid);
+}
+
+inline QString LoggingModelBase::getLogFileName(void) const
+{
+    String dbPath = mDatabase.getDatabasePath();
+    return QString(dbPath.isEmpty() == false ? File::getFileNameWithExtension(dbPath).getString() : "");
+}
+
+inline void LoggingModelBase::_closeDatabase(void)
+{
+    mDatabase.disconnect();
+    dataReset();
+}
+
+#endif // LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP

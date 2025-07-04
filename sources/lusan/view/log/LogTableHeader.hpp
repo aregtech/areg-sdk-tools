@@ -31,7 +31,7 @@
  * Dependencies
  ************************************************************************/
 class LogViewer;
-class LogViewerModel;
+class LoggingModelBase;
 class QTableView;
 
 //////////////////////////////////////////////////////////////////////////
@@ -48,7 +48,7 @@ class LogTableHeader : public QHeaderView
 //////////////////////////////////////////////////////////////////////////
 public:
 
-    explicit LogTableHeader(LogViewer * viewer, QTableView* parent, LogViewerModel* model, Qt::Orientation orientation = Qt::Horizontal);
+    explicit LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::Orientation orientation = Qt::Horizontal);
 
 signals:
 /************************************************************************
@@ -107,9 +107,8 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    LogViewerModel*     mModel;     //!< The model for the log viewer, handling the data and its representation.
-    LogViewer*          mViewer;    //!< The log viewer object, which this header belongs to.
-    QList<LogHeaderItem*> mHeaders; //!< List of header items, each representing a column in the log viewer.
+    LoggingModelBase*       mModel;     //!< The model for the log viewer, handling the data and its representation.
+    QList<LogHeaderItem*>   mHeaders;   //!< List of header items, each representing a column in the log viewer.
 };
 
 #endif // LUSAN_VIEW_LOG_LOGTABLEHEADER_HPP

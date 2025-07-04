@@ -47,6 +47,35 @@ QIcon Navigation::getOfflineLogIcon(void)
     return icon;
 }
 
+const QString& Navigation::getTabName(Navigation::eNaviWindow navi)
+{
+    static QString _empty("");
+    switch (navi)
+    {
+        case Navigation::eNaviWindow::NaviWorkspace:
+            return Navigation::TabNameFileSystem;
+        case Navigation::eNaviWindow::NaviLiveLogs:
+            return Navigation::TabLiveLogsExplorer;
+        case Navigation::eNaviWindow::NaviOfflineLogs:
+            return Navigation::TabOfflineLogsExplorer;
+        default:
+            return _empty;
+    }
+}
+
+Navigation::eNaviWindow Navigation::getNaviWindow(const QString& tabName)
+{
+    if (tabName == Navigation::TabLiveLogsExplorer)
+        return Navigation::eNaviWindow::NaviLiveLogs;
+    else if (tabName == Navigation::TabOfflineLogsExplorer)
+        return Navigation::eNaviWindow::NaviOfflineLogs;
+    else if (tabName == Navigation::TabNameFileSystem)
+        return Navigation::eNaviWindow::NaviWorkspace;
+    else
+        return Navigation::eNaviWindow::NaviUnknown;
+}
+
+
 Navigation::Navigation(MdiMainWindow* parent)
     : QDockWidget   (tr("Navigation"), parent)
 
@@ -70,7 +99,7 @@ Navigation::Navigation(MdiMainWindow* parent)
     connect(mMainWindow, &MdiMainWindow::signalOptionsClosed    , this, &Navigation::onOptionsClosed);
 }
 
-QWidget* Navigation::getTab(const QString& tabName) const
+NavigationWindow* Navigation::getTab(const QString& tabName) const
 {
     QWidget * result {nullptr};
     int count { mTabs.count()};
@@ -83,8 +112,14 @@ QWidget* Navigation::getTab(const QString& tabName) const
         }
     }
     
-    return result;
+    return static_cast<NavigationWindow *>(result);
 }
+
+NavigationWindow* Navigation::getTab(Navigation::eNaviWindow navi) const
+{
+    return getTab(Navigation::getTabName(navi));
+}
+
 
 bool Navigation::tabExists(const QString& tabName) const
 {
@@ -98,6 +133,11 @@ bool Navigation::tabExists(const QString& tabName) const
     }
     
     return false;
+}
+
+bool Navigation::tabExists(Navigation::eNaviWindow navi) const
+{
+    return tabExists(Navigation::getTabName(navi));
 }
 
 bool Navigation::showTab(const QString& tabName)
@@ -117,6 +157,11 @@ bool Navigation::showTab(const QString& tabName)
     }
 
     return false;
+}
+
+bool Navigation::showTab(Navigation::eNaviWindow navi)
+{
+    return showTab(Navigation::getTabName(navi));    
 }
 
 void Navigation::initSize()

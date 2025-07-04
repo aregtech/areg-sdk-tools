@@ -50,8 +50,10 @@ bool LogOfflineScopesModel::setScopeModel(LogOfflineModel* model)
     _clear();
     mLogModel = nullptr;
 
-    if ((model == nullptr) || (model->isDatabaseOpen() == false))
+    if ((model == nullptr) || (model->isOperable() == false))
     {
+        beginResetModel();
+        endResetModel();
         return false;
     }
 
@@ -59,6 +61,12 @@ bool LogOfflineScopesModel::setScopeModel(LogOfflineModel* model)
     _buildScopeTree();
 
     return true;
+}
+
+void LogOfflineScopesModel::refresh(void)
+{
+    beginResetModel();
+    endResetModel();
 }
 
 void LogOfflineScopesModel::release(void)

@@ -33,7 +33,7 @@
 #include <QMessageBox>
 
 OfflineScopesExplorer::OfflineScopesExplorer(MdiMainWindow* wndMain, QWidget* parent)
-    : NavigationWindow(NavigationWindow::eNavigationWindow::NaviOfflineLogs, wndMain, parent)
+    : NavigationWindow(static_cast<int>(Navigation::eNaviWindow::NaviOfflineLogs), wndMain, parent)
 
     , ui            (new Ui::OfflineScopesExplorer)
     , mLogModel     (nullptr)
@@ -69,11 +69,13 @@ bool OfflineScopesExplorer::openDatabase(const QString& filePath)
     }
 
     // Try to open the database
-    if (mLogModel->openDatabase(filePath) && mScopesModel->setScopeModel(mLogModel))
+    mLogModel->openDatabase(filePath, true);
+    if (mLogModel->isOperable() && mScopesModel->setScopeModel(mLogModel))
     {
+        ctrlTable()->setModel(nullptr);
         ctrlTable()->setModel(mScopesModel);
-        updateControls();
-        showDatabaseInfo();
+        // updateControls();
+        // showDatabaseInfo();
         return true;
     }
     else
@@ -86,19 +88,20 @@ bool OfflineScopesExplorer::openDatabase(const QString& filePath)
 void OfflineScopesExplorer::closeDatabase(void)
 {
     mScopesModel->release();
-    updateControls();
-    
+    updateControls();    
+    mLogModel = nullptr;
     // Clear the tree view
     ctrlTable()->setModel(nullptr);
 }
 
 bool OfflineScopesExplorer::isDatabaseOpen(void) const
 {
-    return (mLogModel != nullptr) && mLogModel->isDatabaseOpen();
+    return (mLogModel != nullptr) && mLogModel->isOperable();
 }
 
 void OfflineScopesExplorer::setLoggingModel(LogOfflineModel * model)
 {
+    mLogModel = model;
     mScopesModel->setScopeModel(model);
     updateControls();
 }
@@ -270,10 +273,8 @@ void OfflineScopesExplorer::showDatabaseInfo(void)
 
 void OfflineScopesExplorer::onOpenDatabaseClicked(void)
 {
-    QString filter = QString("Log Database Files (*.%1);;All Files (*.*)").arg(LogOfflineModel::getFileExtension());
-    QString filePath = QFileDialog::getOpenFileName(this, tr("Open Log Database"), LusanApplication::getWorkspaceLogs(), filter);
-
-    if (!filePath.isEmpty())
+    QString filePath = mMainWindow->openLogFile();
+    if (filePath.isEmpty() == false)
     {
         openDatabase(filePath);
     }
@@ -288,6 +289,7 @@ void OfflineScopesExplorer::onRefreshDatabaseClicked(void)
 {
     if (isDatabaseOpen())
     {
-        showDatabaseInfo();
+        mScopesModel->setScopeModel(nullptr);
+        mScopesModel->setScopeModel(mLogModel);
     }
 }

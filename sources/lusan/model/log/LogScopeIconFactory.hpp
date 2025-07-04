@@ -67,6 +67,7 @@ public:
         , ColorScopeEnter   //!< Scope enter log color, used for scope enter log messages
         , ColorScopeExit    //!< Scope exit log color, used for scope exit log messages
         , ColorWithScope    //!< Scope log color, used for log messages with scope
+        , ColorDefault      //!< The default color
 
         , ColorCount        //<!< The number of log colors
     };
@@ -111,6 +112,18 @@ public:
      * \param   logMessage   The log message to get color.
      **/
     static QColor getLogColor(const NELogging::sLogMessage & logMessage);
+
+    /**
+     * \brief   Returns the background color for the log message based on log message priority.
+     * \param   logMessage  The log message with message priority information to get background color.
+     **/
+    static QColor getLogBackgroundColor(const NELogging::sLogMessage & logMessage);
+
+    /**
+     * \brief   Returns the background color for the specified log priority.
+     * \param   logPrio     The log message priority.
+     **/
+    static QColor getLogBackgroundColor(NELogging::eLogPriority logPrio);
 };
 
 #endif  // LUSAN_MODEL_LOG_LOGSCOPEICONFACTORY_HPP

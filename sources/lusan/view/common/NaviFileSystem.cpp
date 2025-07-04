@@ -32,7 +32,7 @@
 #include <QToolButton>
 
 NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullptr*/)
-    : NavigationWindow(NavigationWindow::eNavigationWindow::NaviWorkspace, wndMain, parent)
+    : NavigationWindow(static_cast<int>(Navigation::eNaviWindow::NaviWorkspace), wndMain, parent)
     , IETableHelper ()
     
     , mNaviModel    (new FileSystemModel())

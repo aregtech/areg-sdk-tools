@@ -18,7 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/log/LogTableHeader.hpp"
-#include "lusan/model/log/LogViewerModel.hpp"
+#include "lusan/model/log/LoggingModelBase.hpp"
 
 #include <QComboBox>
 #include <QLineEdit>
@@ -28,10 +28,9 @@
 #include <QTableView>
 #include <QVBoxLayout>
 
-LogTableHeader::LogTableHeader(LogViewer* viewer, QTableView* parent, LogViewerModel* model, Qt::Orientation orientation /*= Qt::Horizontal*/)
+LogTableHeader::LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::Orientation orientation /*= Qt::Horizontal*/)
     : QHeaderView   (orientation, parent)
     , mModel        (model)
-    , mViewer       (viewer)
     , mHeaders      ( )
 {
     setSectionsMovable(true);
