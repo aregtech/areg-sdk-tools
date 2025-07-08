@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
-#define LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
+﻿#ifndef LUSAN_MODEL_LOG_LIVELOGSMODEL_HPP
+#define LUSAN_MODEL_LOG_LIVELOGSMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/log/LogViewerModel.hpp
+ *  \file        lusan/model/log/LiveLogsModel.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log Viewer Model.
@@ -23,11 +23,16 @@
  * Includes
  ************************************************************************/
 #include "lusan/model/log/LoggingModelBase.hpp"
+#include "areg/component/NEService.hpp"
+#include "areglogger/client/LogObserverApi.h"
+
+#include <QList>
+#include <QMap>
 
 /**
  * \brief   The model for the log viewer window.
  **/
-class LogViewerModel : public LoggingModelBase
+class LiveLogsModel : public LoggingModelBase
 {
     Q_OBJECT
     
@@ -53,13 +58,25 @@ public:
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit LogViewerModel(QObject *parent = nullptr);
+    explicit LiveLogsModel(QObject *parent = nullptr);
+    
+    virtual ~LiveLogsModel(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
 public:
-
+    
+    /**
+     * \brief   Setup logging model.
+     **/    
+    virtual void setupModel(void) override;
+    
+    /**
+     * \brief   Release logging model.
+     **/    
+    virtual void releaseModel(void) override;
+    
     /**
      * \brief   Call to start connection to the log collector service.
      * \param   hostName    The host name of the log collector service.
@@ -137,41 +154,52 @@ private slots:
     void slotLogMessage(const SharedBuffer& logMessage);
     
     /**
-     * \brief   The slot is triggered when the observer connects or disconnects from the log collector service.
-     * \param   isConnected     Flag, indicating whether observer is connected or disconnected.
-     * \param   address         The IP address of the log collector service to connect or disconnect.
-     * \param   port            The IP port number of the log collector service to connect or disconnect.
+     * \brief   The slot is triggered when receive the list of disconnected instances that make logs.
+     * \param   instances   The list of IDs of the disconnected instances.
      **/
-    void slotLogServiceConnected(bool isConnected, const QString& address, uint16_t port);
+    void slotLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance >& instances);
+    
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    
+    void _setupSignals(bool doSetup);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variable
 //////////////////////////////////////////////////////////////////////////
 private:
-    bool                    mIsConnected;   //!< Flag to indicate whether application is connected to log collector service
-    QString                 mAddress;       //!< The address of the log collector service
-    uint16_t                mPort;          //!< The port of the log collector service
-    QMetaObject::Connection mConLogger;     //!< The connection signal
-    QMetaObject::Connection mConLogs;       //!< The connection signal
+    bool                    mIsConnected;           //!< Flag to indicate whether application is connected to log collector service
+    QString                 mAddress;               //!< The address of the log collector service
+    uint16_t                mPort;                  //!< The port of the log collector service
+    bool                    mSignalsSetup;          //!< The flag, indicating that the signals were setup
+    QMetaObject::Connection mConLogger;             //!< The connection signal for log messages
+    QMetaObject::Connection mConLogs;               //!< The connection signal for service connection
+    QMetaObject::Connection mConInstancesConnect;   //!< The connection signal for instances connect
+    QMetaObject::Connection mConInstancesDisconnect;//!< The connection signal for instances disconnect
+    QMetaObject::Connection mConServiceDisconnected;//!< The connection signal for service disconnected
+    QMetaObject::Connection mConRegisterScopes;     //!< The connection signal for register scopes
+    QMetaObject::Connection mConUpdateScopes;       //!< The connection signal for update scopes
 };
 
 //////////////////////////////////////////////////////////////////////////
-// LogViewerModel class inline methods.
+// LiveLogsModel class inline methods.
 //////////////////////////////////////////////////////////////////////////
 
-inline bool LogViewerModel::isConnected(void) const
+inline bool LiveLogsModel::isConnected(void) const
 {
     return mIsConnected;
 }
 
-inline QString LogViewerModel::getLofServiceAddress(void) const
+inline QString LiveLogsModel::getLofServiceAddress(void) const
 {
     return mAddress;
 }
 
-inline uint16_t LogViewerModel::getLogServicePort(void) const
+inline uint16_t LiveLogsModel::getLogServicePort(void) const
 {
     return mPort;
 }
 
-#endif // LUSAN_MODEL_LOG_LOGVIEWERMODEL_HPP
+#endif // LUSAN_MODEL_LOG_LiveLogsModel_HPP

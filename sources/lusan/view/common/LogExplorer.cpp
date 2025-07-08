@@ -25,8 +25,9 @@
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/data/log/ScopeNodeBase.hpp"
 
-#include "lusan/model/log/LogScopeIconFactory.hpp"
-#include "lusan/model/log/LogScopesModel.hpp"
+#include "lusan/model/log/LogIconFactory.hpp"
+#include "lusan/model/log/LiveLogsModel.hpp"
+#include "lusan/model/log/LiveScopesModel.hpp"
 
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
@@ -56,7 +57,7 @@ LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
     , mInitLogFile  ( )
     , mActiveLogFile( )
     , mLogLocation  ( )
-    , mModel        (nullptr)
+    , mScopeModel   (nullptr)
     , mSelModel     (nullptr)
     , mSignalsActive(false)
     , mState        (eLoggingStates::LoggingUndefined)
@@ -78,7 +79,6 @@ LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
 LogExplorer::~LogExplorer(void)
 {
     _explorer = nullptr;
-    mModel->release();
     delete ui;
 }
 
@@ -218,11 +218,11 @@ void LogExplorer::blockBasicSignals(bool block)
 
 void LogExplorer::updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected)
 {
-    ctrlLogDebug()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, dbgSelected));
-    ctrlLogInfo()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, infoSelected));
-    ctrlLogWarning()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, warnSelected));
-    ctrlLogError()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, errSelected));
-    ctrlLogScopes()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, scopeSelected));
+    ctrlLogDebug()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, dbgSelected));
+    ctrlLogInfo()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, infoSelected));
+    ctrlLogWarning()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, warnSelected));
+    ctrlLogError()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, errSelected));
+    ctrlLogScopes()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, scopeSelected));
 
     ctrlLogError()->update();
     ctrlLogWarning()->update();
@@ -233,14 +233,14 @@ void LogExplorer::updateColors(bool errSelected, bool warnSelected, bool infoSel
 
 void LogExplorer::updateExpanded(const QModelIndex& current)
 {
-    QTreeView* tree = current.isValid() && (mModel != nullptr) ? ctrlTable() : nullptr;
+    QTreeView* tree = current.isValid() && (mScopeModel != nullptr) ? ctrlTable() : nullptr;
     if (tree != nullptr)
     {
         tree->update(current);
-        int count = tree->isExpanded(current) ? mModel->rowCount(current) : 0;
+        int count = tree->isExpanded(current) ? mScopeModel->rowCount(current) : 0;
         for (int i = 0; i < count; ++ i)
         {
-            QModelIndex index = mModel->index(i, 0, current);
+            QModelIndex index = mScopeModel->index(i, 0, current);
             updateExpanded(index);
         }
     }
@@ -251,14 +251,14 @@ bool LogExplorer::updatePriority(const QModelIndex& node, bool addPrio, NELoggin
     bool result{ false };
     if (node.isValid())
     {
-        Q_ASSERT(mModel != nullptr);
+        Q_ASSERT(mScopeModel != nullptr);
         if (addPrio)
         {
-            result = mModel->addLogPriority(node, prio);
+            result = mScopeModel->addLogPriority(node, prio);
         }
         else
         {
-            result = mModel->removeLogPriority(node, prio);
+            result = mScopeModel->removeLogPriority(node, prio);
         }
     }
     
@@ -285,10 +285,40 @@ void LogExplorer::setupLogSignals(bool setup)
             connect(log, &LogObserver::signalLogObserverStarted     , this, &LogExplorer::onLogObserverStarted      , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogDbCreated           , this, &LogExplorer::onLogDbCreated            , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogObserverInstance    , this, &LogExplorer::onLogObserverInstance     , Qt::QueuedConnection);
+
+            if (mSelModel == nullptr)
+            {
+                Q_ASSERT(mScopeModel == nullptr);
+                Q_ASSERT(mLiveLogs != nullptr);
+                
+                mScopeModel = new LiveScopesModel(ctrlTable());
+                mSelModel = new QItemSelectionModel(mScopeModel, ctrlTable());
+                LiveLogsModel * liveLogs = mLiveLogs->getLiveLogsModel();
+                Q_ASSERT(liveLogs != nullptr);
+                liveLogs->setupModel();
+                
+                // Get the LiveLogsModel from the live logs viewer
+                mScopeModel->setLoggingModel(liveLogs);
+                ctrlTable()->setModel(mScopeModel);
+                ctrlTable()->setSelectionModel(mSelModel);
+
+                connect(mScopeModel , &LiveScopesModel::signalRootUpdated   , this, &LogExplorer::onRootUpdated);
+                connect(mScopeModel , &LiveScopesModel::signalScopesInserted, this, &LogExplorer::onScopesInserted);
+                connect(mScopeModel , &LiveScopesModel::dataChanged         , this, &LogExplorer::onScopesDataChanged);
+                connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
+            }
+            
         }
     }
     else if (mSignalsActive)
     {
+        LiveLogsModel * liveLogs = mLiveLogs != nullptr ? mLiveLogs->getLiveLogsModel() : nullptr;
+        if (liveLogs != nullptr)
+        {
+            liveLogs->releaseModel();
+            mScopeModel->setLoggingModel(nullptr);
+        }
+        
         disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &LogExplorer::onLogObserverConfigured);
         disconnect(log, &LogObserver::signalLogDbConfigured         , this, &LogExplorer::onLogDbConfigured);
         disconnect(log, &LogObserver::signalLogServiceConnected     , this, &LogExplorer::onLogServiceConnected);
@@ -304,10 +334,10 @@ bool LogExplorer::areRootsCollapsed(void) const
     bool result{ true };
     QTreeView* treeView = ui->treeView;
 
-    int rowCount = mModel != nullptr ? mModel->rowCount(mModel->getRootIndex()) : 0; // root items
+    int rowCount = mScopeModel != nullptr ? mScopeModel->rowCount(mScopeModel->getRootIndex()) : 0; // root items
     for (int row = 0; row < rowCount; ++row)
     {
-        QModelIndex index = mModel->index(row, 0, mModel->getRootIndex());
+        QModelIndex index = mScopeModel->index(row, 0, mScopeModel->getRootIndex());
         if (treeView->isExpanded(index))
         {
             result = false;
@@ -321,17 +351,17 @@ bool LogExplorer::areRootsCollapsed(void) const
 void LogExplorer::collapseRoots(void)
 {
     QTreeView* treeView = ctrlTable();
-    int rowCount = mModel != nullptr ? mModel->rowCount(mModel->getRootIndex()) : 0; // root items
+    int rowCount = mScopeModel != nullptr ? mScopeModel->rowCount(mScopeModel->getRootIndex()) : 0; // root items
     for (int row = 0; row < rowCount; ++row)
     {
-        QModelIndex index = mModel->index(row, 0, mModel->getRootIndex());
+        QModelIndex index = mScopeModel->index(row, 0, mScopeModel->getRootIndex());
         treeView->collapse(index);
     }
 }
 
 void LogExplorer::enableButtons(const QModelIndex & selection)
 {
-    ScopeNodeBase * node = selection.isValid() ? mModel->data(selection, Qt::ItemDataRole::UserRole).value<ScopeNodeBase *>() : nullptr;
+    ScopeNodeBase * node = selection.isValid() ? mScopeModel->data(selection, Qt::ItemDataRole::UserRole).value<ScopeNodeBase *>() : nullptr;
     if (node != nullptr)
     {
         bool errSelected{false}, warnSelected{false}, infoSelected{false}, dbgSelected{false}, scopeSelected{false};
@@ -415,13 +445,6 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     if (isConnected)
     {
         mState = eLoggingStates::LoggingConnected;
-        mModel->release();
-        mModel->initialize();
-    }
-    else
-    {
-        mSelModel->reset();
-        mModel->release();
     }
 
     enableButtons(QModelIndex());
@@ -432,6 +455,23 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
     Q_ASSERT(mMainWindow != nullptr);
     mMainWindow->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
+    
+    if ((isConnected == false) && (mScopeModel != nullptr) && (mSelModel != nullptr))
+    {
+        disconnect(mScopeModel  , &LiveScopesModel::signalRootUpdated   , this, &LogExplorer::onRootUpdated);
+        disconnect(mScopeModel  , &LiveScopesModel::signalScopesInserted, this, &LogExplorer::onScopesInserted);
+        disconnect(mScopeModel  , &LiveScopesModel::dataChanged         , this, &LogExplorer::onScopesDataChanged);
+        disconnect(mSelModel    , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
+
+        mSelModel->reset();
+        mScopeModel->setLoggingModel(nullptr);
+        mSignalsActive = false;
+        LiveLogsModel * liveLogs = mLiveLogs != nullptr ? mLiveLogs->getLiveLogsModel() : nullptr;
+        if (liveLogs != nullptr)
+        {
+            liveLogs->releaseModel();
+        }
+    }
 }
 
 void LogExplorer::onLogObserverStarted(bool isStarted)
@@ -452,20 +492,6 @@ void LogExplorer::onLogObserverInstance(bool isStarted, const QString& address, 
 {
     if (isStarted)
     {
-        if (mSelModel == nullptr)
-        {
-            Q_ASSERT(mModel == nullptr);
-            mModel = new LogScopesModel(ctrlTable());
-            mSelModel = new QItemSelectionModel(mModel, ctrlTable());
-            ctrlTable()->setModel(mModel);
-            ctrlTable()->setSelectionModel(mSelModel);
-            
-            connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
-            connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
-            connect(mModel      , &LogScopesModel::dataChanged          , this, &LogExplorer::onScopesDataChanged);
-            connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);        
-        }
-
         std::error_code err;
         std::filesystem::path dbPath(mLogLocation.toStdString());
         dbPath /= mInitLogFile.toStdString();
@@ -481,6 +507,11 @@ void LogExplorer::onConnectClicked(bool checked)
 {
     if (checked)
     {
+        if (mMainWindow != nullptr)
+        {
+            mMainWindow->setupLiveLogging();
+        }
+
         LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
     }
     else
@@ -560,9 +591,9 @@ void LogExplorer::onPrioScopesClicked(bool checked)
 
 void LogExplorer::onSaveSettingsClicked(bool checked)
 {
-    if (mModel != nullptr)
+    if (mScopeModel != nullptr)
     {
-        mModel->saveLogScopePriority(QModelIndex());
+        mScopeModel->saveLogScopePriority(QModelIndex());
     }
 }
 
@@ -590,7 +621,7 @@ void LogExplorer::onOptionsClicked(bool checked)
 
 void LogExplorer::onCollapseClicked(bool checked)
 {
-    if ((mModel == nullptr) || (mModel->rowCount(mModel->getRootIndex()) == 0))
+    if ((mScopeModel == nullptr) || (mScopeModel->rowCount(mScopeModel->getRootIndex()) == 0))
     {
         ctrlCollapse()->blockSignals(true);
         ctrlCollapse()->setChecked(false);        
@@ -607,8 +638,8 @@ void LogExplorer::onCollapseClicked(bool checked)
         
         navi->blockSignals(true);
         collapseRoots();
-        navi->expand(mModel->getRootIndex());
-        navi->setCurrentIndex(mModel->getRootIndex());
+        navi->expand(mScopeModel->getRootIndex());
+        navi->setCurrentIndex(mScopeModel->getRootIndex());
         navi->blockSignals(false);
         
         ctrlCollapse()->blockSignals(false);
@@ -621,7 +652,7 @@ void LogExplorer::onCollapseClicked(bool checked)
         
         navi->blockSignals(true);
         navi->expandAll();
-        navi->setCurrentIndex(mModel->getRootIndex());
+        navi->setCurrentIndex(mScopeModel->getRootIndex());
         navi->blockSignals(false);
         
         ctrlCollapse()->blockSignals(false);
@@ -636,7 +667,7 @@ void LogExplorer::onSelectionChanged(const QItemSelection &selected, const QItem
 
 void LogExplorer::onRootUpdated(const QModelIndex & root)
 {
-    if (mModel != nullptr)
+    if (mScopeModel != nullptr)
     {
         if (isConnected())
         {
@@ -651,10 +682,10 @@ void LogExplorer::onRootUpdated(const QModelIndex & root)
         }
 
         // Ensure all children of root are expanded and visible
-        int rowCount = mModel->rowCount(root);
+        int rowCount = mScopeModel->rowCount(root);
         for (int row = 0; row < rowCount; ++row)
         {
-            QModelIndex child = mModel->index(row, 0, root);
+            QModelIndex child = mScopeModel->index(row, 0, root);
             if (child.isValid() && !navi->isExpanded(child))
             {
                 navi->expand(child);
@@ -665,7 +696,7 @@ void LogExplorer::onRootUpdated(const QModelIndex & root)
 
 void LogExplorer::onScopesInserted(const QModelIndex & parent)
 {
-    if ((mModel != nullptr) && (parent.isValid()))
+    if ((mScopeModel != nullptr) && (parent.isValid()))
     {
         enableButtons(parent);
         QTreeView * navi = ctrlTable();
@@ -729,15 +760,14 @@ void LogExplorer::optionClosed(bool OKpressed)
 void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
 {
     QModelIndex index = ctrlTable()->indexAt(pos);
-    if (!index.isValid() || !mModel)
+    if ((index.isValid() == false) || (mScopeModel == nullptr))
         return;
 
     // Get current priority of the selected node
-    ScopeNodeBase* node = mModel->data(index, Qt::UserRole).value<ScopeNodeBase*>();
+    ScopeNodeBase* node = mScopeModel->data(index, Qt::UserRole).value<ScopeNodeBase*>();
     if ((node == nullptr) || (node->hasPrioValid() == false))
         return;
 
-    uint32_t prio = node->getPriority();
     QMenu menu(this);
     bool hasNotset = node->hasPrioNotset();
     bool hasScope{false}, hasDebug{false}, hasInfo{false}, hasWarn{false}, hasError{false}, hasFatal{false};
@@ -751,30 +781,30 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
         hasFatal = node->hasPrioFatal();
     }
 
-    mMenuActions[static_cast<int>(eLogActions::PrioNotset)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioNotset, false), tr("&Reset Priority"));
+    mMenuActions[static_cast<int>(eLogActions::PrioNotset)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioNotset, false), tr("&Reset Priority"));
     mMenuActions[static_cast<int>(eLogActions::PrioNotset)]->setCheckable(false);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioDebug)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, hasDebug), hasDebug ? tr("Hide &Debug messages") : tr("Show &Debug messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioDebug)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, hasDebug), hasDebug ? tr("Hide &Debug messages") : tr("Show &Debug messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioDebug)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioDebug)]->setChecked(hasDebug);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioInfo)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, hasInfo), hasInfo ? tr("Hide &Info messages") : tr("Show &Info messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioInfo)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, hasInfo), hasInfo ? tr("Hide &Info messages") : tr("Show &Info messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioInfo)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioInfo)]->setChecked(hasInfo);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioWarn)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, hasWarn), hasWarn ? tr("Hide &Warning messages") : tr("Show &Warning messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioWarn)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, hasWarn), hasWarn ? tr("Hide &Warning messages") : tr("Show &Warning messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioWarn)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioWarn)]->setChecked(hasWarn);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioError)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, hasError), hasError ? tr("Hide &Error messages") : tr("Show &Error messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioError)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, hasError), hasError ? tr("Hide &Error messages") : tr("Show &Error messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioError)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioError)]->setChecked(hasError);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioFatal)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioFatal, hasFatal), hasFatal ? tr("Hide &Fatal messages") : tr("Show &Fatal messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioFatal)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioFatal, hasFatal), hasFatal ? tr("Hide &Fatal messages") : tr("Show &Fatal messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioFatal)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioFatal)]->setChecked(hasFatal);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioScope)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, hasScope), hasScope ? tr("Hide &Scopes") : tr("Show &Scopes"));
+    mMenuActions[static_cast<int>(eLogActions::PrioScope)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, hasScope), hasScope ? tr("Hide &Scopes") : tr("Show &Scopes"));
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setChecked(hasScope);
     
@@ -803,7 +833,7 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
 
     if (selectedAction == mMenuActions[static_cast<int>(eLogActions::PrioNotset)])
     {
-        mModel->setLogPriority(index, NELogging::eLogPriority::PrioNotset);
+        mScopeModel->setLogPriority(index, NELogging::eLogPriority::PrioNotset);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioDebug])
     {
@@ -847,12 +877,12 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
     }
     else if (selectedAction == mMenuActions[eLogActions::SavePrioTarget])
     {
-        Q_ASSERT(mModel != nullptr);
-        mModel->saveLogScopePriority(index);
+        Q_ASSERT(mScopeModel != nullptr);
+        mScopeModel->saveLogScopePriority(index);
     }
     else if (selectedAction == mMenuActions[eLogActions::SavePrioAll])
     {
-        mModel->saveLogScopePriority(mModel != nullptr ? mModel->getRootIndex() : QModelIndex());
+        mScopeModel->saveLogScopePriority(mScopeModel != nullptr ? mScopeModel->getRootIndex() : QModelIndex());
     }
 }
 

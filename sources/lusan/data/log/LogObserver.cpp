@@ -386,7 +386,7 @@ void LogObserver::processEvent(const LogObserverEventData& data)
         uint16_t port{ NESocket::InvalidPort };
         std::string address;
         stream >> isEnabled >> address >> port;
-        emit signalLogObserverConfigured(isEnabled, QString(address.c_str()), port);
+        emit signalLogObserverConfigured(isEnabled, QString::fromStdString(address), port);
     }
     break;
 
@@ -397,7 +397,7 @@ void LogObserver::processEvent(const LogObserverEventData& data)
         std::string dbLocation;
         std::string dbUser;
         stream >> isEnabled >> dbName >> dbLocation >> dbUser;
-        emit signalLogDbConfigured(isEnabled, QString(dbName.c_str()), QString(dbLocation.c_str()), QString(dbUser.c_str()));
+        emit signalLogDbConfigured(isEnabled, QString::fromStdString(dbName), QString::fromStdString(dbLocation), QString::fromStdString(dbUser));
 
     }
     break;
@@ -408,7 +408,7 @@ void LogObserver::processEvent(const LogObserverEventData& data)
         std::string address;
         uint16_t port{ NESocket::InvalidPort };
         stream >> isConnected >> address >> port;
-        emit signalLogServiceConnected(isConnected, QString(address.c_str()), port);
+        emit signalLogServiceConnected(isConnected, QString::fromStdString(address), port);
     }
     break;
 
@@ -424,7 +424,7 @@ void LogObserver::processEvent(const LogObserverEventData& data)
     {
         std::string dbLocation;
         stream >> dbLocation;
-        emit signalLogDbCreated(dbLocation.c_str());
+        emit signalLogDbCreated(QString::fromStdString(dbLocation));
     }
     break;
 
@@ -436,14 +436,14 @@ void LogObserver::processEvent(const LogObserverEventData& data)
 
     case LogObserverEventData::eLogObserverEvent::CMD_InstConnected:
     {
-        QList< NEService::sServiceConnectedInstance> instances;
         uint32_t count{ 0 };
-        NEService::sServiceConnectedInstance instance;
         stream >> count;
+
+        std::vector< NEService::sServiceConnectedInstance> instances(count);
         for (uint32_t i = 0; i < count; ++i)
         {
+            NEService::sServiceConnectedInstance& instance = instances[i];
             stream >> instance;
-            instances.append(instance);
         }
 
         emit signalLogInstancesConnect(instances);
@@ -452,14 +452,14 @@ void LogObserver::processEvent(const LogObserverEventData& data)
 
     case LogObserverEventData::eLogObserverEvent::CMD_InstDisconnected:
     {
-        QList< NEService::sServiceConnectedInstance> instances;
         uint32_t count{ 0 };
-        NEService::sServiceConnectedInstance instance;
         stream >> count;
+
+        std::vector< NEService::sServiceConnectedInstance> instances(count);
         for (uint32_t i = 0; i < count; ++i)
         {
+            NEService::sServiceConnectedInstance& instance = instances[i];
             stream >> instance;
-            instances.append(instance);
         }
 
         emit signalLogInstancesDisconnect(instances);
@@ -468,33 +468,25 @@ void LogObserver::processEvent(const LogObserverEventData& data)
 
     case LogObserverEventData::eLogObserverEvent::CMD_ServiceDisconnect:
     {
-        QMap<ITEM_ID, NEService::sServiceConnectedInstance> instances;
-        uint32_t count{ 0 };
-        ITEM_ID instId{ NEService::COOKIE_ANY };
-        NEService::sServiceConnectedInstance instance;
-        stream >> count;
-        for (uint32_t i = 0; i < count; ++i)
-        {
-            stream >> instId >> instance;
-            instances.insert(instId, instance);
-        }
-
-        emit signalLogServiceDisconnected(instances);
+        emit signalLogServiceDisconnected();
     }
     break;
 
     case LogObserverEventData::eLogObserverEvent::CMD_ScopesRegistered:
     {
-        constexpr uint32_t size{ static_cast<uint32_t>(sizeof(sLogScope)) };
-        QList<sLogScope*> scopes;
         ITEM_ID inst{ NEService::COOKIE_ANY };
-        uint32_t count{0};
+        uint32_t count{ 0 };
         stream >> inst >> count;
+
+        std::vector<NELogging::sScopeInfo> scopes(inst);
         for (uint32_t i = 0; i < count; ++i)
         {
-            sLogScope * scope = new sLogScope;
-            stream.read(reinterpret_cast<unsigned char*>(scope), size);
-            scopes.append(scope);
+            sLogScope data{};
+            NELogging::sScopeInfo & scope = scopes[i];
+            stream.read(reinterpret_cast<unsigned char *>(&data), sizeof(sLogScope));
+            scope.scopeId   = data.lsId;
+            scope.scopePrio = data.lsPrio;
+            scope.scopeName = data.lsName;
         }
 
         emit signalLogRegisterScopes(inst, scopes);
@@ -503,16 +495,15 @@ void LogObserver::processEvent(const LogObserverEventData& data)
 
     case LogObserverEventData::eLogObserverEvent::CMD_ScopesUpdated:
     {
-        constexpr uint32_t size{ static_cast<uint32_t>(sizeof(sLogScope)) };
-        QList<sLogScope*> scopes;
         ITEM_ID inst{ NEService::COOKIE_ANY };
         uint32_t count{ 0 };
         stream >> inst >> count;
+
+        std::vector<NELogging::sScopeInfo> scopes(inst);
         for (uint32_t i = 0; i < count; ++i)
         {
-            sLogScope* scope = new sLogScope;
-            stream.read(reinterpret_cast<unsigned char*>(scope), size);
-            scopes.append(scope);
+            NELogging::sScopeInfo& scope = scopes[i];
+            stream >> scope;
         }
 
         emit signalLogUpdateScopes(inst, scopes);
@@ -584,11 +575,9 @@ void LogObserver::slotLogInstancesDisconnect(const std::vector<NEService::sServi
     LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstDisconnected, stream), getComponentThread());
 }
 
-void LogObserver::slotLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance>& instances)
+void LogObserver::slotLogServiceDisconnected(void)
 {
-    SharedBuffer stream;
-    stream << instances;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_ServiceDisconnect, stream), getComponentThread());
+    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_ServiceDisconnect), getComponentThread());
 }
 
 void LogObserver::slotLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count)

@@ -31,8 +31,8 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class LogOfflineModel;
-class LogOfflineScopesModel;
+class OfflineLogsModel;
+class OfflineScopesModel;
 class MdiMainWindow;
 class QToolButton;
 class QTreeView;
@@ -101,7 +101,7 @@ public:
      * \param   model   The offline logging data model to read log data.
      *                  If null or database is not opened, it resets the scope explorer.
      **/
-    void setLoggingModel(LogOfflineModel * model);
+    void setLoggingModel(OfflineLogsModel * model);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -208,9 +208,9 @@ private slots:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::OfflineScopesExplorer*  ui;             //!< The user interface object.
-    LogOfflineScopesModel *     mScopesModel;   //!< The offline scopes model
-    LogOfflineModel*            mLogModel;      //!< The offline log model.
+    Ui::OfflineScopesExplorer*  ui;         //!< The user interface object.
+    OfflineScopesModel *    mScopesModel;   //!< The offline scopes model
+    OfflineLogsModel*       mLogModel;      //!< The offline log model.
 };
 
 #endif  // LUSAN_VIEW_COMMON_OFFLINESCOPESEXPLORER_HPP

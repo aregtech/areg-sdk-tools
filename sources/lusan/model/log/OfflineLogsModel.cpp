@@ -10,15 +10,15 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/log/LogOfflineModel.cpp
+ *  \file        lusan/model/log/OfflineLogsModel.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Offline Log Navigation Model.
  *
  ************************************************************************/
 
-#include "lusan/model/log/LogOfflineModel.hpp"
-#include "lusan/model/log/LogScopeIconFactory.hpp"
+#include "lusan/model/log/OfflineLogsModel.hpp"
+#include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 
 #include "areg/base/DateTime.hpp"
@@ -28,17 +28,17 @@
 
 #include <QFileInfo>
 
-LogOfflineModel::LogOfflineModel(QObject *parent)
-    : LoggingModelBase  (parent)
+OfflineLogsModel::OfflineLogsModel(QObject *parent)
+    : LoggingModelBase(LoggingModelBase::eLogging::LoggingOffline, parent)
 {
 }
 
-LogOfflineModel::~LogOfflineModel()
+OfflineLogsModel::~OfflineLogsModel()
 {
     _closeDatabase();
 }
 
-void LogOfflineModel::openDatabase(const QString& filePath, bool readOnly)
+void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
 {
     if (mDatabase.isOperable() && (mLogs.empty() == false) && (mDatabase.getDatabasePath() == filePath))
         return;
@@ -57,13 +57,13 @@ void LogOfflineModel::openDatabase(const QString& filePath, bool readOnly)
         // Load initial log messages for display
         beginResetModel();
         mLogs.clear();
-        getLogMessages(mLogs);        
+        mDatabase.getLogMessages(mLogs);
         endResetModel();
         emit signalLogsAvailable();
     }
 }
 
-void LogOfflineModel::closeDatabase(void)
+void OfflineLogsModel::closeDatabase(void)
 {
     _closeDatabase();
     emit signalDatabaseIsClosed(QString::fromStdString(mDatabase.getDatabasePath().getData()));

@@ -397,34 +397,34 @@ signals:
      * \brief   The signal is triggered when receive the list of connected instances that make logs.
      * \param   instances   The list of the connected instances.
      **/
-    void signalLogInstancesConnect(const QList< NEService::sServiceConnectedInstance >& instances);
+    void signalLogInstancesConnect(const std::vector<NEService::sServiceConnectedInstance>& instances);
 
     /**
      * \brief   The signal is triggered when receive the list of disconnected instances that make logs.
      * \param   instances   The list of IDs of the disconnected instances.
      * \param   count       The number of entries in the list.
      **/
-    void signalLogInstancesDisconnect(const QList< NEService::sServiceConnectedInstance >& instances);
+    void signalLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances);
 
     /**
      * \brief   The signal is triggered when connection with the log collector service is lost.
      * \param   instances   The list of disconnected instances.
      **/
-    void signalLogServiceDisconnected(const QMap<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
+    void signalLogServiceDisconnected(void);
 
     /**
      * \brief   The signal is triggered when receive the list of the scopes registered in an application.
      * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
      * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
      **/
-    void signalLogRegisterScopes(ITEM_ID cookie, const QList<sLogScope *>& scopes);
+    void signalLogRegisterScopes(ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes);
 
     /**
      * \brief   The signal is triggered when receive the list of previously registered scopes with new priorities.
      * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
      * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
      **/
-    void signalLogUpdateScopes(ITEM_ID cookie, const QList<sLogScope *>& scopes);
+    void signalLogUpdateScopes(ITEM_ID cookie, const std::vector <NELogging::sScopeInfo>& scopes);
 
     /**
      * \brief   The signal is triggered when receive message to log.
@@ -580,7 +580,7 @@ private slots:
      * \brief   The callback of the event triggered when connection with the log collector service is lost.
      * \param   instances   The list of disconnected instances.
      **/
-    void slotLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
+    void slotLogServiceDisconnected(void);
 
     /**
      * \brief   The callback of the event triggered when receive the list of the scopes registered in an application.

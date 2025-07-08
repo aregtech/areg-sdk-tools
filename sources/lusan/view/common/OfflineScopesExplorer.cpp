@@ -20,8 +20,8 @@
 #include "lusan/view/common/OfflineScopesExplorer.hpp"
 #include "ui/ui_OfflineScopesExplorer.h"
 
-#include "lusan/model/log/LogOfflineModel.hpp"
-#include "lusan/model/log/LogOfflineScopesModel.hpp"
+#include "lusan/model/log/OfflineLogsModel.hpp"
+#include "lusan/model/log/OfflineScopesModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/app/LusanApplication.hpp"
 
@@ -37,7 +37,7 @@ OfflineScopesExplorer::OfflineScopesExplorer(MdiMainWindow* wndMain, QWidget* pa
 
     , ui            (new Ui::OfflineScopesExplorer)
     , mLogModel     (nullptr)
-    , mScopesModel  (new LogOfflineScopesModel(this))
+    , mScopesModel  (new OfflineScopesModel(this))
 
 {
     ui->setupUi(this);
@@ -63,15 +63,16 @@ QString OfflineScopesExplorer::getOpenedDatabasePath(void) const
 
 bool OfflineScopesExplorer::openDatabase(const QString& filePath)
 {
-    if (filePath.isEmpty())
+    if (filePath.isEmpty() || (mLogModel == nullptr))
     {
         return false;
     }
 
     // Try to open the database
     mLogModel->openDatabase(filePath, true);
-    if (mLogModel->isOperable() && mScopesModel->setScopeModel(mLogModel))
+    if (mLogModel->isOperable())
     {
+        mScopesModel->setLoggingModel(mLogModel);
         ctrlTable()->setModel(nullptr);
         ctrlTable()->setModel(mScopesModel);
         // updateControls();
@@ -80,6 +81,7 @@ bool OfflineScopesExplorer::openDatabase(const QString& filePath)
     }
     else
     {
+        mScopesModel->setLoggingModel(nullptr);
         QMessageBox::warning(this, tr("Database Error"), tr("Failed to open database file:\n%1").arg(filePath));
         return false;
     }
@@ -87,7 +89,7 @@ bool OfflineScopesExplorer::openDatabase(const QString& filePath)
 
 void OfflineScopesExplorer::closeDatabase(void)
 {
-    mScopesModel->release();
+    mScopesModel->setLoggingModel(nullptr);
     updateControls();    
     mLogModel = nullptr;
     // Clear the tree view
@@ -99,10 +101,10 @@ bool OfflineScopesExplorer::isDatabaseOpen(void) const
     return (mLogModel != nullptr) && mLogModel->isOperable();
 }
 
-void OfflineScopesExplorer::setLoggingModel(LogOfflineModel * model)
+void OfflineScopesExplorer::setLoggingModel(OfflineLogsModel * model)
 {
     mLogModel = model;
-    mScopesModel->setScopeModel(model);
+    mScopesModel->setLoggingModel(model);
     updateControls();
 }
 
@@ -289,7 +291,6 @@ void OfflineScopesExplorer::onRefreshDatabaseClicked(void)
 {
     if (isDatabaseOpen())
     {
-        mScopesModel->setScopeModel(nullptr);
-        mScopesModel->setScopeModel(mLogModel);
+        mScopesModel->setLoggingModel(mLogModel);
     }
 }

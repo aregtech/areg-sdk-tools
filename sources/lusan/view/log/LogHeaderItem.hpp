@@ -23,7 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/common/NELusanCommon.hpp"
-#include "lusan/model/log/LogViewerModel.hpp"
+#include "lusan/model/log/LiveLogsModel.hpp"
 
 #include <QFrame>
 #include <QList>
@@ -73,7 +73,7 @@ public:
     /**
      * \brief   Initialize the elements
      * \param   header  The header object
-     * @param   column  The virtual column, based on LogViewerModel
+     * @param   column  The virtual column, based on LiveLogsModel
      * @param   text    The header name to display
      */
     LogHeaderItem(LogTableHeader& header, int logicalIndex);
@@ -114,14 +114,14 @@ private:
 
     //!< Returns the column from the index.
     //!< Return LogColumnInvalid value if index is invalid.
-    inline LogViewerModel::eColumn fromIndexToColumn(int logicalIndex) const;
+    inline LiveLogsModel::eColumn fromIndexToColumn(int logicalIndex) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
 
-    LogViewerModel::eColumn mColumn;    //!< The index of the header item.
+    LiveLogsModel::eColumn mColumn;    //!< The index of the header item.
     eType           mType;      //!< Type of the header item.
     LogTableHeader& mHeader;    //!< The header object, which contains this item.
     LogComboFilter* mCombo;     //!< The combo-box filter, if applicable.

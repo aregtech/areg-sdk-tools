@@ -146,6 +146,11 @@ public:
      * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
      **/
     QString openLogFile(void);
+
+    /**
+     * \brief   Called to setup live logging models.
+     **/
+    void setupLiveLogging(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -189,6 +194,12 @@ signals:
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
     void signalOptionsClosed(bool OKpressed);
+
+    /**
+     * \brief   The signal triggered when the main window is about to close.
+     *          This signal is used to notify other components that the main window is closing.
+     **/
+    void signalMainwindowClosing(void);
     
 //////////////////////////////////////////////////////////////////////////
 // protected methods
@@ -448,99 +459,67 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    //!< The root directory of the workspace.
-    QString         mWorkspaceRoot;
-    //!< The current file name.
-    QString         mLastFile;
+    QString         mWorkspaceRoot; //!< The root directory of the workspace.
+    QString         mLastFile;      //!< The current file name.
     
-    //!< The MDI area for managing sub-windows.
-    MdiArea         mMdiArea;
-    //!< The navigation dock widget.
-    Navigation      mNavigation;
-    //!< The status dock widget.
-    QDockWidget*    mStatusDock;
-    //!< The list view widget.
-    QListView*      mListView;
-    //!< The status tab widget.
-    QTabWidget*     mStatusTabs;
-    LogViewer*      mLogViewer;
-    QMdiSubWindow*  mLiveLogWnd;
-    //!< The file menu.
-    QMenu*          mFileMenu;
-    //!< The edit menu.
-    QMenu*          mEditMenu;
-    //!< The view menu.
-    QMenu*          mViewMenu;
-    //!< The design top level menu.
-    QMenu*          mDesignMenu;
-    //!< The design service interface menu
-    QMenu*          mDesignMenuSI;
-    QMenu*          mLoggingMenu;
-    //!< The top level menu "Tools"
-    QMenu*          mToolsMenu;
-    //!< The window menu.
-    QMenu*          mWindowMenu;
-    //!< The help menu.
-    QMenu*          mHelpMenu;
-    //!< The file toolbar.
-    QToolBar*       mFileToolBar;
-    //!< The edit toolbar.
-    QToolBar*       mEditToolBar;
-    //!< The view toolbar.
-    QToolBar*       mViewToolBar;
+    MdiArea         mMdiArea;       //!< The MDI area for managing sub-windows.
+    Navigation      mNavigation;    //!< The navigation dock widget.
+    QDockWidget*    mStatusDock;    //!< The status dock widget.
+    QListView*      mListView;      //!< The list view widget.
+    QTabWidget*     mStatusTabs;    //!< The status tab widget.
+    LogViewer*      mLogViewer;     //!< The log viewer for displaying live logs. There should be only one instance of this viewer.
+    QMdiSubWindow*  mLiveLogWnd;    //!< The MDI sub-window for the live log viewer. There should be only one instance of this window.
 
-    //!< Action for creating a new SI file.
+    QMenu*          mFileMenu;      //!< The file menu.
+    QMenu*          mEditMenu;      //!< The edit menu.
+    QMenu*          mViewMenu;      //!< The view menu.
+    QMenu*          mDesignMenu;    //!< The design top level menu.
+    QMenu*          mLoggingMenu;   //!< The logging menu.
+    QMenu*          mToolsMenu;     //!< The top level menu "Tools"
+    QMenu*          mWindowMenu;    //!< The window menu.
+    QMenu*          mHelpMenu;      //!< The help menu.
+
+    QToolBar*       mFileToolBar;   //!< The file toolbar.
+    QToolBar*       mEditToolBar;   //!< The edit toolbar.
+    QToolBar*       mViewToolBar;   //!< The view toolbar.
+
+    //!< Actions for File sub-menus.
     QAction         mActFileNewSI;
-    //!< Action for creating a new log file.
     QAction         mActFileNewLog;
-    //!< Action for opening file.
     QAction         mActFileOpen;
-    //!< Action for saving the current file.
     QAction         mActFileSave;
-    //!< Action for saving the current file with a new name.
     QAction         mActFileSaveAs;
-    //!< Action for closing the current file.
     QAction         mActFileClose;
-    //!< Action for closing all files.
     QAction         mActFileCloseAll;
-    //!< Action for exiting the application.
     QAction         mActFileExit;
+    QAction*        mFileSeparator;
+    QAction*        mActFileRecent;
 
-    //!< Action for cutting text.
+    //!< Actions for Edit sub-menus.
     QAction         mActEditCut;
-    //!< Action for copying text.
     QAction         mActEditCopy;
-    //!< Action for pasting text.
     QAction         mActEditPaste;
 
-    //!< View Workspace Explorer
+    //!< Actions for View sub-menus.
     QAction         mActViewNavigator;
     QAction         mActViewWokspace;
     QAction         mActViewLogs;
     QAction         mActViewStatus;
 
-    //!< Action for showing the options dialog.
+    //!< Actions for Tools sub-menus.
     QAction         mActToolsOptions;
 
-    //!< Action for tiling windows.
+    //!< Actions for Window sub-menus.
     QAction         mActWindowsTile;
-    //!< Action for cascading windows.
     QAction         mActWindowsCascade;
-    //!< Action for switching to the next window.
     QAction         mActWindowsNext;
-    //!< Action for switching to the previous window.
     QAction         mActWindowsPrev;
-    //!< Separator for the window menu.
     QAction         mActWindowMenuSeparator;
-    //!< Action for showing the about dialog.
+
+    //!< Actions for Help sub-menus.
     QAction*        mActHelpAbout;
-    //!< Submenu for recent files.
-    QAction*        mActRecentFilesSubMenu;
-    //!< Separator for the file menu.
-    QAction*        mFileSeparator;
-    //!< Actions for opening recent files.
-    QAction*        mActsRecentFiles[MaxRecentFiles];
-    
+
+    QAction*        mActsRecentFiles[MaxRecentFiles];   //!< Actions for opening recent files.    
 };
 
 //////////////////////////////////////////////////////////////////////////

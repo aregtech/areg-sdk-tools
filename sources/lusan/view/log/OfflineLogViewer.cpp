@@ -21,7 +21,7 @@
 #include "ui/ui_OfflineLogViewer.h"
 
 #include "lusan/view/log/LogTableHeader.hpp"
-#include "lusan/model/log/LogOfflineModel.hpp"
+#include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include <QMdiSubWindow>
 #include <QMenu>
@@ -34,7 +34,7 @@
 
 const QString& OfflineLogViewer::fileExtension(void)
 {
-    return LogOfflineModel::getFileExtension();
+    return OfflineLogsModel::getFileExtension();
 }
 
 OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, const QString& filePath, QWidget *parent)
@@ -47,7 +47,7 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, const QString& filePa
     , mFilePath     (filePath)
 {
     ui->setupUi(mMdiWindow);
-    mLogModel   = new LogOfflineModel(this);
+    mLogModel   = new OfflineLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
     
     QTableView* view = ctrlTable();
@@ -83,8 +83,8 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, const QString& filePa
     ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
 
     // Connect signals
-    connect(mLogModel       , &LogOfflineModel::signalDatabaseIsOpened   , this, &OfflineLogViewer::onDatabaseOpened);
-    connect(mLogModel       , &LogOfflineModel::signalDatabaseIsClosed   , this, &OfflineLogViewer::onDatabaseClosed);
+    connect(mLogModel       , &OfflineLogsModel::signalDatabaseIsOpened   , this, &OfflineLogViewer::onDatabaseOpened);
+    connect(mLogModel       , &OfflineLogsModel::signalDatabaseIsClosed   , this, &OfflineLogViewer::onDatabaseClosed);
     connect(header          , &QHeaderView::customContextMenuRequested   , this, &OfflineLogViewer::onHeaderContextMenu);
     connect(view            , &QTableView::customContextMenuRequested    , this, &OfflineLogViewer::onTableContextMenu);
     connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter, SLOT(setComboFilter(int, QStringList)));
@@ -168,13 +168,13 @@ QLabel* OfflineLogViewer::ctrlFile(void)
 void OfflineLogViewer::populateColumnsMenu(QMenu* menu, int curRow)
 {
     // Get current active columns from the model
-    const QList<LogOfflineModel::eColumn>& activeCols = mLogModel->getActiveColumns();
-    const QStringList& headers{ LogOfflineModel::getHeaderList() };
+    const QList<OfflineLogsModel::eColumn>& activeCols = mLogModel->getActiveColumns();
+    const QStringList& headers{ OfflineLogsModel::getHeaderList() };
 
     // Add actions for each available column
-    for (int i = 0; i < static_cast<int>(LogOfflineModel::eColumn::LogColumnCount); ++i)
+    for (int i = 0; i < static_cast<int>(OfflineLogsModel::eColumn::LogColumnCount); ++i)
     {
-        LogOfflineModel::eColumn col = static_cast<LogOfflineModel::eColumn>(i);
+        OfflineLogsModel::eColumn col = static_cast<OfflineLogsModel::eColumn>(i);
         QString headerName = headers.at(i);
         
         QAction* action = menu->addAction(headerName);
@@ -197,5 +197,5 @@ void OfflineLogViewer::populateColumnsMenu(QMenu* menu, int curRow)
 void OfflineLogViewer::resetColumnOrder()
 {
     // Reset to default column order
-    mLogModel->setActiveColumns(LogOfflineModel::getDefaultColumns());
+    mLogModel->setActiveColumns(OfflineLogsModel::getDefaultColumns());
 }
