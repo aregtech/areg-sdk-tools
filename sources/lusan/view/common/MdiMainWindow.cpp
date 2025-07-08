@@ -19,6 +19,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/data/log/LogObserver.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
@@ -178,63 +179,61 @@ bool MdiMainWindow::loadFile(const QString& fileName)
 
 void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
-    LogViewer* liveLogs = mNavigation.getLiveLogs().getLiveLogs();
-    if (isConnected)
+    if (mLogViewer != nullptr)
     {
-        QMdiSubWindow* subWindow{nullptr};
-        if ((liveLogs != nullptr) && (liveLogs->isEmpty() == false))
+        mLogViewer->logServiceConnected(isConnected, address, port, dbPath);
+        if (isConnected == false)
         {
-            liveLogs = nullptr;
-            mLiveLogWnd = nullptr;
             mLogViewer = nullptr;
-        }
-        else
-        {
-            subWindow = liveLogs != nullptr ? liveLogs->getMdiSubwindow() : mMdiArea.currentSubWindow();
-        }
-
-        if ((subWindow != mLiveLogWnd) || (mLiveLogWnd == nullptr))
-        {
-            if (liveLogs != nullptr)
-            {
-                mLogViewer = liveLogs;
-                mLiveLogWnd= subWindow;
-            }
-            else
-            {
-                onFileNewLog();
-            }
-            
-            Q_ASSERT(mLogViewer != nullptr);
-            Q_ASSERT(mLiveLogWnd != nullptr);
-            if (mLogViewer->isServiceConnected() == false)
-            {
-                mNavigation.getLiveLogs().setLiveLogs(mLogViewer);
-                mLogViewer->logServiceConnected(true, address, port, dbPath);
-                mLiveLogWnd->activateWindow();
-            }
-        }
-        else
-        {
-            mLogViewer = liveLogs != nullptr ? liveLogs : mLogViewer;
-            Q_ASSERT(mLogViewer != nullptr);
-            Q_ASSERT(mLiveLogWnd != nullptr);
-            if (mLogViewer->isServiceConnected() == false)
-            {
-                mLogViewer->logServiceConnected(true, address, port, dbPath);
-                mMdiArea.setActiveSubWindow(mLiveLogWnd);
-            }
+            mLiveLogWnd = nullptr;
         }
     }
-    else if (mLogViewer != nullptr)
+}
+
+void MdiMainWindow::setupLiveLogging(void)
+{
+    LogViewer* liveLogs = mNavigation.getLiveLogs().getLiveLogs();
+    QMdiSubWindow* subWindow{ nullptr };
+    if ((liveLogs != nullptr) && (liveLogs->isEmpty() == false))
     {
-        if (mLogViewer->isServiceConnected())
-        {
-            mLogViewer->logServiceConnected(false, address, port, dbPath);
-        }
-        
-        mLogViewer = nullptr;
+        liveLogs = nullptr;
         mLiveLogWnd = nullptr;
+        mLogViewer = nullptr;
+    }
+    else
+    {
+        subWindow = liveLogs != nullptr ? liveLogs->getMdiSubwindow() : mMdiArea.currentSubWindow();
+    }
+
+    if ((subWindow != mLiveLogWnd) || (mLiveLogWnd == nullptr))
+    {
+        if (liveLogs != nullptr)
+        {
+            mLogViewer = liveLogs;
+            mLiveLogWnd = subWindow;
+        }
+        else
+        {
+            onFileNewLog();
+        }
+
+        Q_ASSERT(mLogViewer != nullptr);
+        Q_ASSERT(mLiveLogWnd != nullptr);
+        if (mLogViewer->isServiceConnected() == false)
+        {
+            mNavigation.getLiveLogs().setLiveLogs(mLogViewer);
+            mLiveLogWnd->activateWindow();
+        }
+    }
+    else
+    {
+        mLogViewer = liveLogs != nullptr ? liveLogs : mLogViewer;
+        Q_ASSERT(mLogViewer != nullptr);
+        Q_ASSERT(mLiveLogWnd != nullptr);
+        if (mLogViewer->isServiceConnected() == false)
+        {
+            mMdiArea.setActiveSubWindow(mLiveLogWnd);
+        }
     }
 }
 
@@ -272,6 +271,7 @@ QString MdiMainWindow::openLogFile(void)
 
 void MdiMainWindow::closeEvent(QCloseEvent* event)
 {
+    emit signalMainwindowClosing();
     mMdiArea.closeAllSubWindows();
     if (mMdiArea.currentSubWindow())
     {

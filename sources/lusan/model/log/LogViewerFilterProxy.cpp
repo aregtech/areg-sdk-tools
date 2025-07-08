@@ -18,7 +18,7 @@
  ************************************************************************/
 
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
-#include "lusan/model/log/LogViewerModel.hpp"
+#include "lusan/model/log/LiveLogsModel.hpp"
 #include <QModelIndex>
 
 LogViewerFilterProxy::LogViewerFilterProxy(QAbstractTableModel* model)

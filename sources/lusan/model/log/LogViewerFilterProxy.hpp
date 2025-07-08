@@ -29,11 +29,11 @@
 
 #include "areg/base/GEGlobal.h"
 
-class LogViewerModel;
+class LiveLogsModel;
 
 /**
  * \brief   Filter proxy model for the log viewer to enable filtering of log messages.
- *          This proxy model filters the LogViewerModel based on user-selected criteria
+ *          This proxy model filters the LiveLogsModel based on user-selected criteria
  *          from the header filters (combo boxes and text filters).
  **/
 class LogViewerFilterProxy : public QSortFilterProxyModel

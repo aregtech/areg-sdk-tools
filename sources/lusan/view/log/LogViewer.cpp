@@ -20,9 +20,12 @@
 #include "lusan/view/log/LogViewer.hpp"
 #include "ui/ui_LogViewer.h"
 
-#include "lusan/view/log/LogTableHeader.hpp"
-#include "lusan/model/log/LogViewerModel.hpp"
+#include "lusan/data/log/LogObserver.hpp"
+#include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
+#include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/log/LogTableHeader.hpp"
+
 #include <QMdiSubWindow>
 #include <QMenu>
 
@@ -40,7 +43,7 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , mMdiWindow    (new QWidget())
 {
     ui->setupUi(mMdiWindow);
-    mLogModel   = new LogViewerModel(this);
+    mLogModel   = new LiveLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
     
     QTableView* view = ctrlTable();
@@ -80,17 +83,22 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     ctrlPause()->setEnabled(false);
     ctrlStop()->setEnabled(false);
 
-    connect(ctrlPause()     , &QToolButton::clicked                     , this, &LogViewer::onPauseClicked);
-    connect(ctrlStop()      , &QToolButton::clicked                     , this, &LogViewer::onStopClicked);
-    connect(ctrlClear()     , &QToolButton::clicked                     , this, &LogViewer::onClearClicked);
-    connect(mLogModel       , &LogViewerModel::rowsInserted             , this, &LogViewer::onRowsInserted);
-    connect(mLogModel       , &LogViewerModel::columnsInserted          , this, &LogViewer::onColumnsInserted);
-    connect(mLogModel       , &LogViewerModel::columnsRemoved           , this, &LogViewer::onColumnsRemoved);
-    connect(mLogModel       , &LogViewerModel::columnsMoved             , this, &LogViewer::onColumnsMoved);
-    connect(header          , &QHeaderView::customContextMenuRequested  , this, &LogViewer::onHeaderContextMenu);
-    connect(view            , &QTableView::customContextMenuRequested   , this, &LogViewer::onTableContextMenu);
-    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter, SLOT(setComboFilter(int, QStringList)));
-    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter, SLOT(setTextFilter(int, QString)));
+    connect(ctrlPause()     , &QToolButton::clicked                     , this      , &LogViewer::onPauseClicked);
+    connect(ctrlStop()      , &QToolButton::clicked                     , this      , &LogViewer::onStopClicked);
+    connect(ctrlClear()     , &QToolButton::clicked                     , this      , &LogViewer::onClearClicked);
+    connect(mLogModel       , &LiveLogsModel::rowsInserted              , this      , &LogViewer::onRowsInserted);
+    connect(mLogModel       , &LiveLogsModel::columnsInserted           , this      , &LogViewer::onColumnsInserted);
+    connect(mLogModel       , &LiveLogsModel::columnsRemoved            , this      , &LogViewer::onColumnsRemoved);
+    connect(mLogModel       , &LiveLogsModel::columnsMoved              , this      , &LogViewer::onColumnsMoved);
+    connect(header          , &QHeaderView::customContextMenuRequested  , this      , &LogViewer::onHeaderContextMenu);
+    connect(view            , &QTableView::customContextMenuRequested   , this      , &LogViewer::onTableContextMenu);
+    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter   , SLOT(setComboFilter(int, QStringList)));
+    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter   , SLOT(setTextFilter(int, QString)));
+    connect(wndMain         , &MdiMainWindow::signalMainwindowClosing   , [this](){
+        if (mLogModel != nullptr)
+            mLogModel->releaseModel();
+        LogObserver::releaseLogObserver();
+    });
 }
 
 void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
@@ -244,13 +252,13 @@ QLabel* LogViewer::ctrlFile(void)
 void LogViewer::populateColumnsMenu(QMenu* menu, int curRow)
 {
     // Get current active columns from the model
-    const QList<LogViewerModel::eColumn>& activeCols = mLogModel->getActiveColumns();
-    const QStringList& headers{ LogViewerModel::getHeaderList() };
+    const QList<LiveLogsModel::eColumn>& activeCols = mLogModel->getActiveColumns();
+    const QStringList& headers{ LiveLogsModel::getHeaderList() };
 
     for (int i = 0; i < static_cast<int>(headers.size()); ++i)
     {
-        LogViewerModel::eColumn col = static_cast<LogViewerModel::eColumn>(i);
-        if (col == LogViewerModel::eColumn::LogColumnMessage)
+        LiveLogsModel::eColumn col = static_cast<LiveLogsModel::eColumn>(i);
+        if (col == LiveLogsModel::eColumn::LogColumnMessage)
             continue; // exclude "log message" menu entry.
         
         bool isVisible = activeCols.contains(col);
@@ -274,7 +282,7 @@ void LogViewer::populateColumnsMenu(QMenu* menu, int curRow)
     actReset->setCheckable(false);
     connect(actReset, &QAction::triggered, this, [this, curRow]() {
                 ctrlTable()->scrollToBottom();
-                mLogModel->setActiveColumns(QList<LogViewerModel::eColumn>());
+                mLogModel->setActiveColumns(QList<LiveLogsModel::eColumn>());
                 resetColumnOrder();
             });
 }
@@ -400,3 +408,7 @@ void LogViewer::onClearClicked(void)
     }
 }
 
+LiveLogsModel* LogViewer::getLiveLogsModel(void) const
+{
+    return mLogModel;
+}

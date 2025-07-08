@@ -29,6 +29,7 @@
 #include "areg/base/File.hpp"
 #include "areg/component/NEService.hpp"
 #include "areg/logging/NELogging.hpp"
+#include "areglogger/client/LogObserverApi.h"
 #include "aregextend/db/LogSqliteDatabase.hpp"
 
 #include <QAbstractTableModel>
@@ -40,6 +41,9 @@
 #include <vector>
 
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
 class LogViewerFilterProxy;
 
 /**
@@ -69,6 +73,15 @@ public:
         , LogColumnMessage          //!< Log message text
 
         , LogColumnCount            //!< Maximum number of columns
+    };
+
+    //!< The logging type, indicating the state of the logging model
+    enum class eLogging : int
+    {
+          LoggingUndefined  = 0 // Undefined logging state
+        , LoggingLive           // Live logging, connected to the log collector service
+        , LoggingOffline        // Offline logging, reading from a database file
+        , LoggingDisconneced    // Logging was live, it is disconnected from the log collector service, but still is connected to the database.
     };
 
     using   ListColumns     = QList<LoggingModelBase::eColumn>;
@@ -107,7 +120,7 @@ public:
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit LoggingModelBase(QObject* parent = nullptr);
+    explicit LoggingModelBase(LoggingModelBase::eLogging logsType, QObject* parent = nullptr);
     virtual ~LoggingModelBase() = default;
 
 //////////////////////////////////////////////////////////////////////////
@@ -208,10 +221,83 @@ public:
      **/
     inline QString getLogFileName(void) const;
 
+    inline QString getLogFilePath(void) const;
+
+    inline void setLoggingType(LoggingModelBase::eLogging logsType);
+
+    inline LoggingModelBase::eLogging getLoggingType(void) const;
+
+    inline bool isLiveLogging(void) const;
+
+    inline bool isOfflineLogging(void) const;
+
+    inline bool isDisconnectedLogging(void) const;
+
+/************************************************************************
+ * Signals
+ ************************************************************************/
+signals:
+
+    void signalLogServiceConnected(void);
+
+    void signalLogServiceDisconnected(void);
+
+    /**
+     * \brief   Signal emitted when one or more instances are available.
+     *          This can be either instances connected to the log collector service in live mode
+     *          of instances read from the log database in offline mode.
+     *          In case of disconnected mode this signal is not triggered.
+     * \param   instances   The list of instances available.
+     **/
+    void signalInstanceAvailable(const std::vector< NEService::sServiceConnectedInstance>& instances);
+
+    /**
+     * \brief   Signal emitted when one or more instances are disconnected.
+     *          This can be instances disconnected from the log collector service in live mode.
+     *          In case of offline or disconnected modes this signal is not triggered.
+     * \param   instances   The list of instances updated.
+     **/
+    void signalInstanceUnavailable(const std::vector<ITEM_ID>& instIds);
+
+    /**
+     * \brief   Signal emitted when scopes of the specified instance are available.
+     *          This can be either scopes received in the live mode 
+     *          or scopes read from the log database in offline mode.
+     *          In case of disconnected mode this signal is not triggered.
+     * \param   instIds     The list of IDs of disconnected instances.
+     **/
+    void signalScopesAvailable(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
+
+    /**
+     * \brief   Signal emitted when scopes of the specified instance are updated.
+     *          This can be scopes received in the live mode.
+     *          In case of offline or disconnected modes this signal is not triggered.
+     * \param   instId      The ID of the instance whose scopes are updated.
+     * \param   scopes      The list of updated scopes.
+     **/
+    void signalScopesUpdated(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
+
+     /**
+      * \brief   Signal emitted when one or more log messages are available.
+      **/
+    void signalLogsAvailable(ITEM_ID instId, const std::vector<SharedBuffer>& logs);
+
 //////////////////////////////////////////////////////////////////////////
 // LoggingModelBase overrider
 //////////////////////////////////////////////////////////////////////////
 public:
+
+    virtual void refresh(void);
+    
+    /**
+     * \brief   Setup logging model.
+     **/    
+    virtual void setupModel(void);
+    
+    /**
+     * \brief   Release logging model.
+     **/    
+    virtual void releaseModel(void);
 
     /**
      * \brief   Opens logging database file.
@@ -229,7 +315,10 @@ public:
      * \brief   Closes the currently opened database.
      **/
     virtual void closeDatabase(void);
-    
+
+    /**
+     * \brief   Returns true if the model is operable, i.e. it can perform operations like querying log messages.
+     **/
     virtual bool isOperable(void) const;
 
     /**
@@ -262,13 +351,12 @@ public:
      **/
     virtual void getPriorityNames(std::vector<String>& names);
 
-
     /**
      * \brief   Call to query and get information of connected instances from log database.
      *          This query will receive list of all registered instances.
      * \param   infos   On output, contains the list of information of all registered instances in database.
      **/
-    virtual void getLogInstanceInfos(std::vector< NEService::sServiceConnectedInstance>& infos);
+    virtual const std::vector<NEService::sServiceConnectedInstance> & getLogInstances(void);
 
     /**
      * \brief   Call to query and get information of log scopes of specified instance from log database.
@@ -276,13 +364,13 @@ public:
      * \param   scopes  On output, contains the list of all registered scopes in database related with the specified instance ID.
      * \param   instID  The ID of the instance.
      **/
-    virtual void getLogInstScopes(std::vector<NELogging::sScopeInfo>& scopes, ITEM_ID instId);
+    virtual const std::vector<NELogging::sScopeInfo>& getLogInstScopes(ITEM_ID instId);
 
     /**
      * \brief   Call to get all log messages from log database.
      * \param   messages   On output, contains the list of all log messages.
      **/
-    virtual void getLogMessages(std::vector<SharedBuffer>& messages);
+    virtual const std::vector<SharedBuffer>& getLogMessages(void);
 
     /**
      * \brief   Call to get log messages of the specified instance from log database.
@@ -314,7 +402,15 @@ public:
      * \param   scopeId     The ID of the scope to get log messages.
      *                      If `0` it receives log messages of all scopes.
      **/
-    void getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
+    virtual void getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
+
+    virtual int findInstanceEntry(ITEM_ID instId);
+
+    virtual const NEService::sServiceConnectedInstance& getInstanceEntry(ITEM_ID instId);
+
+    virtual bool addInstanceEntry(const NEService::sServiceConnectedInstance& instance, bool unique);
+    
+    virtual int removeInstanceEntry(ITEM_ID instId);
 
 //////////////////////////////////////////////////////////////////////////
 // Helper methods
@@ -355,9 +451,12 @@ protected:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
+    eLogging                mLoggingType;   //!< The type of logging, either live or offline
     LogSqliteDatabase       mDatabase;      //!< The SQLite database object to read log data
     ListColumns             mActiveColumns; //!< The list of active columns
     ListLogs                mLogs;          //!< The list of log messages
+    ListInstances           mInstances;     //!< The list of connected instances
+    MapScopes               mScopes;        //!< The map of scopes, where key is instance ID and value is the list of scopes
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -405,6 +504,36 @@ inline QString LoggingModelBase::getLogFileName(void) const
 {
     String dbPath = mDatabase.getDatabasePath();
     return QString(dbPath.isEmpty() == false ? File::getFileNameWithExtension(dbPath).getString() : "");
+}
+
+inline QString LoggingModelBase::getLogFilePath(void) const
+{
+    return QString::fromStdString(mDatabase.getDatabasePath().getData());
+}
+
+inline void LoggingModelBase::setLoggingType(LoggingModelBase::eLogging logsType)
+{
+    mLoggingType = logsType;
+}
+
+inline LoggingModelBase::eLogging LoggingModelBase::getLoggingType(void) const
+{
+    return mLoggingType;
+}
+
+inline bool LoggingModelBase::isLiveLogging(void) const
+{
+    return (mLoggingType == eLogging::LoggingLive);
+}
+
+inline bool LoggingModelBase::isOfflineLogging(void) const
+{
+    return (mLoggingType == eLogging::LoggingOffline);
+}
+
+inline bool LoggingModelBase::isDisconnectedLogging(void) const
+{
+    return (mLoggingType == eLogging::LoggingDisconneced);
 }
 
 inline void LoggingModelBase::_closeDatabase(void)

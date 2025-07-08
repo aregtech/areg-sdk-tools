@@ -22,7 +22,7 @@
  ************************************************************************/
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
-#include "lusan/model/log/LogScopeIconFactory.hpp"
+#include "lusan/model/log/LogIconFactory.hpp"
 
 #include "areg/base/DateTime.hpp"
 
@@ -74,10 +74,14 @@ const QString & LoggingModelBase::getFileExtension()
     return _fileExtension;
 }
 
-LoggingModelBase::LoggingModelBase(QObject* parent)
+LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject* parent)
     : QAbstractTableModel(parent)
+    , mLoggingType  (logsType)
+    , mDatabase     ( )
     , mActiveColumns(getDefaultColumns())
     , mLogs         ( )
+    , mInstances    ( )
+    , mScopes       ( )
 {
 }
 
@@ -161,6 +165,7 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
         return QVariant();
 
     const SharedBuffer& logData = mLogs.at(row);
+    Q_ASSERT(logData.isValid());
     const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(logData.getBuffer());
     if (logMessage == nullptr)
         return QVariant();
@@ -238,6 +243,20 @@ void LoggingModelBase::setActiveColumns(const QList<LoggingModelBase::eColumn>& 
     endResetModel();
 }
 
+void LoggingModelBase::refresh(void)
+{
+    beginResetModel();
+    endResetModel();
+}
+
+void LoggingModelBase::setupModel(void)
+{
+}
+
+void LoggingModelBase::releaseModel(void)
+{
+}
+
 void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
 {
     std::string path(File::normalizePath(dbPath.toStdString().c_str()));
@@ -264,12 +283,34 @@ bool LoggingModelBase::isOperable(void) const
 
 void LoggingModelBase::getLogInstanceNames(std::vector<String>& names)
 {
-    mDatabase.getLogInstanceNames(names);
+    if (isOfflineLogging())
+    {
+        mDatabase.getLogInstanceNames(names);
+    }
+    else
+    {
+        names.clear();
+        for (const auto& instance : mInstances)
+        {
+            names.push_back(instance.ciInstance);
+        }
+    }
 }
 
 void LoggingModelBase::getLogInstances(std::vector<ITEM_ID>& ids)
 {
-    mDatabase.getLogInstances(ids);
+    if (isOfflineLogging())
+    {
+        mDatabase.getLogInstances(ids);
+    }
+    else
+    {
+        ids.clear();
+        for (const auto& instance : mInstances)
+        {
+            ids.push_back(instance.ciCookie);
+        }
+    }
 }
 
 void LoggingModelBase::getLogThreadNames(std::vector<String>& names)
@@ -287,19 +328,35 @@ void LoggingModelBase::getPriorityNames(std::vector<String>& names)
     mDatabase.getPriorityNames(names);
 }
 
-void LoggingModelBase::getLogInstanceInfos(std::vector<NEService::sServiceConnectedInstance>& infos)
+const std::vector< NEService::sServiceConnectedInstance> & LoggingModelBase::getLogInstances(void)
 {
-    mDatabase.getLogInstanceInfos(infos);
+    if (isOfflineLogging() && mInstances.empty())
+    {
+        mDatabase.getLogInstanceInfos(mInstances);
+    }
+
+    return mInstances;
 }
 
-void LoggingModelBase::getLogInstScopes(std::vector<NELogging::sScopeInfo>& scopes, ITEM_ID instId)
+const std::vector<NELogging::sScopeInfo> & LoggingModelBase::getLogInstScopes(ITEM_ID instId)
 {
-    mDatabase.getLogInstScopes(scopes, instId);
+    static std::vector<NELogging::sScopeInfo> _dummy;
+    if (isOfflineLogging() && mScopes.empty())
+    {
+        mDatabase.getLogInstScopes(mScopes[instId], instId);
+    }
+    
+    return (mScopes.find(instId) != mScopes.end() ? mScopes.at(instId) : _dummy); 
 }
 
-void LoggingModelBase::getLogMessages(std::vector<SharedBuffer>& messages)
+const std::vector<SharedBuffer>& LoggingModelBase::getLogMessages()
 {
-    mDatabase.getLogMessages(messages);
+    if (isOfflineLogging() && mLogs.empty())
+    {
+        mDatabase.getLogMessages(mLogs);
+    }
+
+    return mLogs;
 }
 
 void LoggingModelBase::getLogInstMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId /*= NEService::COOKIE_ANY*/)
@@ -315,6 +372,63 @@ void LoggingModelBase::getLogScopeMessages(std::vector<SharedBuffer>& messages, 
 void LoggingModelBase::getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId)
 {
     mDatabase.getLogMessages(messages, instId, scopeId);
+}
+
+int LoggingModelBase::findInstanceEntry(ITEM_ID instId)
+{
+    int result{ NECommon::INVALID_INDEX };
+    const std::vector<NEService::sServiceConnectedInstance> & instances = getLogInstances();
+    for (int i = 0; i < static_cast<int>(instances.size()); ++ i)
+    {
+        if (instances[i].ciCookie == instId)
+        {
+            result = i;
+            break;
+        }
+    }
+
+    return result;
+}
+
+const NEService::sServiceConnectedInstance& LoggingModelBase::getInstanceEntry(ITEM_ID instId)
+{
+    static const NEService::sServiceConnectedInstance _instInvalid;
+    int pos = findInstanceEntry(instId);
+    const std::vector<NEService::sServiceConnectedInstance>& instances = getLogInstances();
+    return (pos != NECommon::INVALID_INDEX ? instances[pos] : _instInvalid);
+}
+
+bool LoggingModelBase::addInstanceEntry(const NEService::sServiceConnectedInstance& instance, bool unique)
+{
+    bool result{ false };
+    int pos = findInstanceEntry(instance.ciCookie);
+    if ((pos == NECommon::INVALID_INDEX) || (unique == false))
+    {
+        mInstances.push_back(instance);
+        result = true;
+    }
+    else
+    {
+        mInstances[pos] = instance;
+    }
+
+    return result;
+}
+
+int LoggingModelBase::removeInstanceEntry(ITEM_ID instId)
+{
+    int result{ NECommon::INVALID_INDEX };
+    for (int i = 0; i < static_cast<int>(mInstances.size()); ++i)
+    {
+        if (mInstances[i].ciCookie == instId)
+        {
+            result = i;
+            mInstances.erase(mInstances.begin() + i);
+            break;
+        }
+    }
+
+    return result;
 }
 
 QVariant LoggingModelBase::_getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
@@ -356,14 +470,14 @@ QVariant LoggingModelBase::_getBackgroundData(const NELogging::sLogMessage* logM
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
-    return QBrush(LogScopeIconFactory::getLogBackgroundColor(*logMessage));
+    return QBrush(LogIconFactory::getLogBackgroundColor(*logMessage));
 }
 
 QVariant LoggingModelBase::_getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
-    return LogScopeIconFactory::getLogColor(*logMessage);
+    return LogIconFactory::getLogColor(*logMessage);
 }
 
 QVariant LoggingModelBase::_getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const
@@ -376,23 +490,23 @@ QVariant LoggingModelBase::_getDecorationData(const NELogging::sLogMessage* logM
     {
     case NELogging::eLogPriority::PrioScope:
         if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
-            return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScopeEnter, true);
+            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeEnter, true);
         else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
-            return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScopeExit, true);
+            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeExit, true);
         else
-            return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, true);
+            return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, true);
     case NELogging::eLogPriority::PrioDebug:
-        return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, true);
+        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, true);
     case NELogging::eLogPriority::PrioInfo:
-        return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, true);
+        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, true);
     case NELogging::eLogPriority::PrioWarning:
-        return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, true);
+        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, true);
     case NELogging::eLogPriority::PrioError:
-        return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, true);
+        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, true);
     case NELogging::eLogPriority::PrioFatal:
-        return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioFatal, true);
+        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioFatal, true);
     default:
-        return LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioNotset, false);
+        return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioNotset, false);
     }
 }
 

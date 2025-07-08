@@ -107,9 +107,8 @@ signals:
 
     /**
      * \brief   The signal triggered when connection with the log collector service is lost.
-     * \param   instances   The list of disconnected instances.
      **/
-    void signalLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance>& instances);
+    void signalLogServiceDisconnected(void);
 
     /**
      * \brief   The signal triggered when receive the list of the scopes registered in an application.
@@ -204,9 +203,8 @@ protected:
 
     /**
      * \brief   The callback of the event triggered when connection with the log collector service is lost.
-     * \param   instances   The list of disconnected instances.
      **/
-    virtual void onLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance>& instances) override;
+    virtual void onLogServiceDisconnected(void) override;
 
     /**
      * \brief   The callback of the event triggered when receive the list of the scopes registered in an application.

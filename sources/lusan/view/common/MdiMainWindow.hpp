@@ -146,6 +146,8 @@ public:
      * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
      **/
     QString openLogFile(void);
+
+    void setupLiveLogging(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -189,6 +191,8 @@ signals:
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
     void signalOptionsClosed(bool OKpressed);
+    
+    void signalMainwindowClosing(void);
     
 //////////////////////////////////////////////////////////////////////////
 // protected methods

@@ -112,7 +112,7 @@ void LogTextFilter::setText(const QString & newText)
 
 LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     : QObject(&header)
-    , mColumn(static_cast<LogViewerModel::eColumn>(index))
+    , mColumn(static_cast<LiveLogsModel::eColumn>(index))
     , mType (None)
     , mHeader(header)
     , mCombo(nullptr)
@@ -120,11 +120,11 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
 {
     switch (mColumn)
     {
-    case LogViewerModel::eColumn::LogColumnPriority:
-    case LogViewerModel::eColumn::LogColumnSource:
-    case LogViewerModel::eColumn::LogColumnSourceId:
-    case LogViewerModel::eColumn::LogColumnThread:
-    case LogViewerModel::eColumn::LogColumnThreadId:
+    case LiveLogsModel::eColumn::LogColumnPriority:
+    case LiveLogsModel::eColumn::LogColumnSource:
+    case LiveLogsModel::eColumn::LogColumnSourceId:
+    case LiveLogsModel::eColumn::LogColumnThread:
+    case LiveLogsModel::eColumn::LogColumnThreadId:
         mType = eType::Combo;
         mCombo = new LogComboFilter(&mHeader);
         connect(mCombo, &LogComboFilter::signalFiltersChanged, &mHeader, [this]() {
@@ -132,8 +132,8 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
             });
         break;
 
-    case LogViewerModel::eColumn::LogColumnScopeId:
-    case LogViewerModel::eColumn::LogColumnMessage:
+    case LiveLogsModel::eColumn::LogColumnScopeId:
+    case LiveLogsModel::eColumn::LogColumnMessage:
         mType = eType::Text;
         mEdit = new LogTextFilter(&mHeader);
         connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText) {
@@ -141,7 +141,7 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
             });
         break;
 
-    case LogViewerModel::eColumn::LogColumnTimestamp:
+    case LiveLogsModel::eColumn::LogColumnTimestamp:
     default:
         break;
     }
@@ -152,7 +152,7 @@ inline int LogHeaderItem::fromColumnToIndex(void) const
     return mHeader.mModel->fromColumnToIndex(mColumn);
 }
 
-inline LogViewerModel::eColumn LogHeaderItem::fromIndexToColumn(int logicalIndex) const
+inline LiveLogsModel::eColumn LogHeaderItem::fromIndexToColumn(int logicalIndex) const
 {
     return mHeader.mModel->fromIndexToColumn(logicalIndex);
 }

@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_MODEL_LOG_LOGSCOPEICONFACTORY_HPP
-#define LUSAN_MODEL_LOG_LOGSCOPEICONFACTORY_HPP
+﻿#ifndef LUSAN_MODEL_LOG_LOGICONFACTORY_HPP
+#define LUSAN_MODEL_LOG_LOGICONFACTORY_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/log/LogScopeIconFactory.hpp
+ *  \file        lusan/model/log/LogIconFactory.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log scopes icons.
@@ -30,12 +30,12 @@
 #include <QIcon>
 
 /************************************************************************
- * Class LogScopeIconFactory
+ * Class LogIconFactory
  ************************************************************************/
 /**
  * \brief   The class creates icons for the log scope.
  **/ 
-class LogScopeIconFactory
+class LogIconFactory
 {
 public:
 
@@ -105,7 +105,7 @@ public:
      * \brief   Returns the color for the log priority.
      * \param   logPrio      The log priority.
      **/
-    static QColor getLogColor(LogScopeIconFactory::eLogColor logPrio);
+    static QColor getLogColor(LogIconFactory::eLogColor logPrio);
 
     /**
      * \brief   Returns the color for the log message.
@@ -126,4 +126,4 @@ public:
     static QColor getLogBackgroundColor(NELogging::eLogPriority logPrio);
 };
 
-#endif  // LUSAN_MODEL_LOG_LOGSCOPEICONFACTORY_HPP
+#endif  // LUSAN_MODEL_LOG_LogIconFactory_HPP

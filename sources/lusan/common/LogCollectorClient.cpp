@@ -75,9 +75,9 @@ void LogCollectorClient::onLogInstancesDisconnect(const std::vector<NEService::s
     emit signalLogInstancesDisconnect(instances);
 }
 
-void LogCollectorClient::onLogServiceDisconnected(const std::map<ITEM_ID, NEService::sServiceConnectedInstance> & instances)
+void LogCollectorClient::onLogServiceDisconnected(void)
 {
-    emit signalLogServiceDisconnected(instances);
+    emit signalLogServiceDisconnected();
 }
 
 void LogCollectorClient::onLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count)

@@ -25,8 +25,9 @@
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/data/log/ScopeNodeBase.hpp"
 
-#include "lusan/model/log/LogScopeIconFactory.hpp"
-#include "lusan/model/log/LogScopesModel.hpp"
+#include "lusan/model/log/LogIconFactory.hpp"
+#include "lusan/model/log/LiveLogsModel.hpp"
+#include "lusan/model/log/LiveScopesModel.hpp"
 
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
@@ -78,7 +79,6 @@ LogExplorer::LogExplorer(MdiMainWindow* wndMain, QWidget* parent)
 LogExplorer::~LogExplorer(void)
 {
     _explorer = nullptr;
-    mModel->release();
     delete ui;
 }
 
@@ -218,11 +218,11 @@ void LogExplorer::blockBasicSignals(bool block)
 
 void LogExplorer::updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected)
 {
-    ctrlLogDebug()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, dbgSelected));
-    ctrlLogInfo()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, infoSelected));
-    ctrlLogWarning()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, warnSelected));
-    ctrlLogError()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, errSelected));
-    ctrlLogScopes()->setIcon(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, scopeSelected));
+    ctrlLogDebug()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, dbgSelected));
+    ctrlLogInfo()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, infoSelected));
+    ctrlLogWarning()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, warnSelected));
+    ctrlLogError()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, errSelected));
+    ctrlLogScopes()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, scopeSelected));
 
     ctrlLogError()->update();
     ctrlLogWarning()->update();
@@ -285,10 +285,40 @@ void LogExplorer::setupLogSignals(bool setup)
             connect(log, &LogObserver::signalLogObserverStarted     , this, &LogExplorer::onLogObserverStarted      , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogDbCreated           , this, &LogExplorer::onLogDbCreated            , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogObserverInstance    , this, &LogExplorer::onLogObserverInstance     , Qt::QueuedConnection);
+
+            if (mSelModel == nullptr)
+            {
+                Q_ASSERT(mModel == nullptr);
+                Q_ASSERT(mLiveLogs != nullptr);
+                
+                mModel = new LiveScopesModel(ctrlTable());
+                mSelModel = new QItemSelectionModel(mModel, ctrlTable());
+                LiveLogsModel * liveLogs = mLiveLogs->getLiveLogsModel();
+                Q_ASSERT(liveLogs != nullptr);
+                liveLogs->setupModel();
+                
+                // Get the LiveLogsModel from the live logs viewer
+                mModel->setLoggingModel(liveLogs);
+                ctrlTable()->setModel(mModel);
+                ctrlTable()->setSelectionModel(mSelModel);
+
+                connect(mModel, &LiveScopesModel::signalRootUpdated, this, &LogExplorer::onRootUpdated);
+                connect(mModel, &LiveScopesModel::signalScopesInserted, this, &LogExplorer::onScopesInserted);
+                connect(mModel, &LiveScopesModel::dataChanged, this, &LogExplorer::onScopesDataChanged);
+                connect(mSelModel, &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
+            }
+            
         }
     }
     else if (mSignalsActive)
     {
+        LiveLogsModel * liveLogs = mLiveLogs != nullptr ? mLiveLogs->getLiveLogsModel() : nullptr;
+        if (liveLogs != nullptr)
+        {
+            liveLogs->releaseModel();
+            mModel->setLoggingModel(nullptr);
+        }
+        
         disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &LogExplorer::onLogObserverConfigured);
         disconnect(log, &LogObserver::signalLogDbConfigured         , this, &LogExplorer::onLogDbConfigured);
         disconnect(log, &LogObserver::signalLogServiceConnected     , this, &LogExplorer::onLogServiceConnected);
@@ -415,13 +445,6 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     if (isConnected)
     {
         mState = eLoggingStates::LoggingConnected;
-        mModel->release();
-        mModel->initialize();
-    }
-    else
-    {
-        mSelModel->reset();
-        mModel->release();
     }
 
     enableButtons(QModelIndex());
@@ -432,6 +455,23 @@ void LogExplorer::onLogServiceConnected(bool isConnected, const QString& address
     ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
     Q_ASSERT(mMainWindow != nullptr);
     mMainWindow->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
+    
+    if ((isConnected == false) && (mModel != nullptr) && (mSelModel != nullptr))
+    {
+        disconnect(mModel   , &LiveScopesModel::signalRootUpdated   , this, &LogExplorer::onRootUpdated);
+        disconnect(mModel   , &LiveScopesModel::signalScopesInserted, this, &LogExplorer::onScopesInserted);
+        disconnect(mModel   , &LiveScopesModel::dataChanged         , this, &LogExplorer::onScopesDataChanged);
+        disconnect(mSelModel, &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);
+
+        mSelModel->reset();
+        mModel->setLoggingModel(nullptr);
+        mSignalsActive = false;
+        LiveLogsModel * liveLogs = mLiveLogs != nullptr ? mLiveLogs->getLiveLogsModel() : nullptr;
+        if (liveLogs != nullptr)
+        {
+            liveLogs->releaseModel();
+        }
+    }
 }
 
 void LogExplorer::onLogObserverStarted(bool isStarted)
@@ -452,20 +492,6 @@ void LogExplorer::onLogObserverInstance(bool isStarted, const QString& address, 
 {
     if (isStarted)
     {
-        if (mSelModel == nullptr)
-        {
-            Q_ASSERT(mModel == nullptr);
-            mModel = new LogScopesModel(ctrlTable());
-            mSelModel = new QItemSelectionModel(mModel, ctrlTable());
-            ctrlTable()->setModel(mModel);
-            ctrlTable()->setSelectionModel(mSelModel);
-            
-            connect(mModel      , &LogScopesModel::signalRootUpdated    , this, &LogExplorer::onRootUpdated);
-            connect(mModel      , &LogScopesModel::signalScopesInserted , this, &LogExplorer::onScopesInserted);
-            connect(mModel      , &LogScopesModel::dataChanged          , this, &LogExplorer::onScopesDataChanged);
-            connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &LogExplorer::onSelectionChanged);        
-        }
-
         std::error_code err;
         std::filesystem::path dbPath(mLogLocation.toStdString());
         dbPath /= mInitLogFile.toStdString();
@@ -481,6 +507,11 @@ void LogExplorer::onConnectClicked(bool checked)
 {
     if (checked)
     {
+        if (mMainWindow != nullptr)
+        {
+            mMainWindow->setupLiveLogging();
+        }
+
         LogObserver::createLogObserver(&LogExplorer::_logObserverStarted);
     }
     else
@@ -751,30 +782,30 @@ void LogExplorer::onTreeViewContextMenuRequested(const QPoint& pos)
         hasFatal = node->hasPrioFatal();
     }
 
-    mMenuActions[static_cast<int>(eLogActions::PrioNotset)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioNotset, false), tr("&Reset Priority"));
+    mMenuActions[static_cast<int>(eLogActions::PrioNotset)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioNotset, false), tr("&Reset Priority"));
     mMenuActions[static_cast<int>(eLogActions::PrioNotset)]->setCheckable(false);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioDebug)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioDebug, hasDebug), hasDebug ? tr("Hide &Debug messages") : tr("Show &Debug messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioDebug)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, hasDebug), hasDebug ? tr("Hide &Debug messages") : tr("Show &Debug messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioDebug)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioDebug)]->setChecked(hasDebug);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioInfo)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioInfo, hasInfo), hasInfo ? tr("Hide &Info messages") : tr("Show &Info messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioInfo)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, hasInfo), hasInfo ? tr("Hide &Info messages") : tr("Show &Info messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioInfo)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioInfo)]->setChecked(hasInfo);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioWarn)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioWarn, hasWarn), hasWarn ? tr("Hide &Warning messages") : tr("Show &Warning messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioWarn)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, hasWarn), hasWarn ? tr("Hide &Warning messages") : tr("Show &Warning messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioWarn)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioWarn)]->setChecked(hasWarn);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioError)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioError, hasError), hasError ? tr("Hide &Error messages") : tr("Show &Error messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioError)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, hasError), hasError ? tr("Hide &Error messages") : tr("Show &Error messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioError)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioError)]->setChecked(hasError);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioFatal)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioFatal, hasFatal), hasFatal ? tr("Hide &Fatal messages") : tr("Show &Fatal messages"));
+    mMenuActions[static_cast<int>(eLogActions::PrioFatal)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioFatal, hasFatal), hasFatal ? tr("Hide &Fatal messages") : tr("Show &Fatal messages"));
     mMenuActions[static_cast<int>(eLogActions::PrioFatal)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioFatal)]->setChecked(hasFatal);
 
-    mMenuActions[static_cast<int>(eLogActions::PrioScope)] = menu.addAction(LogScopeIconFactory::getLogIcon(LogScopeIconFactory::eLogIcons::PrioScope, hasScope), hasScope ? tr("Hide &Scopes") : tr("Show &Scopes"));
+    mMenuActions[static_cast<int>(eLogActions::PrioScope)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, hasScope), hasScope ? tr("Hide &Scopes") : tr("Show &Scopes"));
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setChecked(hasScope);
     

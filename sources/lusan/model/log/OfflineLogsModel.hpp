@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_MODEL_LOG_LOGOFFLINEMODEL_HPP
-#define LUSAN_MODEL_LOG_LOGOFFLINEMODEL_HPP
+﻿#ifndef LUSAN_MODEL_LOG_OFFLINELOGSMODEL_HPP
+#define LUSAN_MODEL_LOG_OFFLINELOGSMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/log/LogOfflineModel.hpp
+ *  \file        lusan/model/log/OfflineLogsModel.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Offline Log Navigation Model.
@@ -29,7 +29,7 @@
  *          This model provides offline access to historical log data stored in database files
  *          using the LogSqliteDatabase class from the AREG Framework.
  **/
-class LogOfflineModel : public LoggingModelBase
+class OfflineLogsModel : public LoggingModelBase
 {
     Q_OBJECT
 
@@ -37,8 +37,8 @@ class LogOfflineModel : public LoggingModelBase
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit LogOfflineModel(QObject* parent = nullptr);
-    virtual ~LogOfflineModel();
+    explicit OfflineLogsModel(QObject* parent = nullptr);
+    virtual ~OfflineLogsModel();
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -81,4 +81,4 @@ signals:
     void signalLogsAvailable(void);
 };
 
-#endif // LUSAN_MODEL_LOG_LOGOFFLINEMODEL_HPP
+#endif // LUSAN_MODEL_LOG_OFFLINELOGSMODEL_HPP
