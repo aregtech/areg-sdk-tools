@@ -350,7 +350,7 @@ void LoggingScopesModelBase::slotScopesUpdated(ITEM_ID instId, const std::vector
         int count = static_cast<int>(scopes.size());
         ScopeRoot* root = mRootList[pos];
         Q_ASSERT(root != nullptr);
-        for (int i = 0; i < static_cast<int>(scopes.size()); ++i)
+        for (int i = 0; i < count; ++i)
         {
             const NELogging::sScopeInfo & scope = scopes[i];
             QString scopeName{ scope.scopeName };

@@ -456,7 +456,7 @@ private:
     QString                 mInitLogFile;   //!< The initialized log file.
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
-    LiveScopesModel*        mModel;         //!< The model of the log scopes.
+    LiveScopesModel*        mScopeModel;    //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.

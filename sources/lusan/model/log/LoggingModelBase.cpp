@@ -175,19 +175,19 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     switch (static_cast<Qt::ItemDataRole>(role))
     {
     case Qt::DisplayRole:
-        return _getDisplayData(logMessage, column);
+        return getDisplayData(logMessage, column);
 
     case Qt::BackgroundRole:
-        return _getBackgroundData(logMessage, column);
+        return getBackgroundData(logMessage, column);
 
     case Qt::ForegroundRole:
-        return _getForegroundData(logMessage, column);
+        return getForegroundData(logMessage, column);
 
     case Qt::DecorationRole:
-        return _getDecorationData(logMessage, column);
+        return getDecorationData(logMessage, column);
 
     case Qt::TextAlignmentRole:
-        return _getAlignmentData(column);
+        return getAlignmentData(column);
 
     case Qt::UserRole:
         return QVariant::fromValue(logMessage);
@@ -431,7 +431,7 @@ int LoggingModelBase::removeInstanceEntry(ITEM_ID instId)
     return result;
 }
 
-QVariant LoggingModelBase::_getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QVariant LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_ASSERT(logMessage != nullptr);
 
@@ -466,21 +466,21 @@ QVariant LoggingModelBase::_getDisplayData(const NELogging::sLogMessage* logMess
     }
 }
 
-QVariant LoggingModelBase::_getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QVariant LoggingModelBase::getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
     return QBrush(LogIconFactory::getLogBackgroundColor(*logMessage));
 }
 
-QVariant LoggingModelBase::_getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QVariant LoggingModelBase::getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
     return LogIconFactory::getLogColor(*logMessage);
 }
 
-QVariant LoggingModelBase::_getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QVariant LoggingModelBase::getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_ASSERT(logMessage != nullptr);
     if (column != eColumn::LogColumnPriority)
@@ -510,7 +510,7 @@ QVariant LoggingModelBase::_getDecorationData(const NELogging::sLogMessage* logM
     }
 }
 
-QVariant LoggingModelBase::_getAlignmentData(eColumn column) const
+QVariant LoggingModelBase::getAlignmentData(eColumn column) const
 {
     switch (column)
     {

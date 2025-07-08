@@ -22,14 +22,11 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/common/NELusanCommon.hpp"
-
 #include "areg/base/SharedBuffer.hpp"
 #include "areg/base/String.hpp"
 #include "areg/base/File.hpp"
 #include "areg/component/NEService.hpp"
 #include "areg/logging/NELogging.hpp"
-#include "areglogger/client/LogObserverApi.h"
 #include "aregextend/db/LogSqliteDatabase.hpp"
 
 #include <QAbstractTableModel>
@@ -221,16 +218,42 @@ public:
      **/
     inline QString getLogFileName(void) const;
 
+    /**
+     * \brief   Returns the full path to the log file.
+     *          If the log file is not set, returns an empty string.
+     **/
     inline QString getLogFilePath(void) const;
 
-    inline void setLoggingType(LoggingModelBase::eLogging logsType);
+    /**
+     * \brief   Marks the logging model as disconnected logging.
+     *          It should be called the live logging is disconnected
+     *          from the log collector service.
+     **/
+    inline void markDisconnected( void );
 
+    /**
+     * \brief   Returns the type of logging.
+     *          It can be either live, offline or disconnected logging.
+     **/
     inline LoggingModelBase::eLogging getLoggingType(void) const;
 
+    /**
+     * \brief   Returns true if logging type is live logging.
+     *          It means that the log collector service is connected to the log collector service.
+     **/
     inline bool isLiveLogging(void) const;
 
+    /**
+     * \brief   Returns true if logging type is offline logging.
+     *          It means that the log database is opened and ready to read.
+     **/
     inline bool isOfflineLogging(void) const;
 
+    /**
+     * \brief   Returns true if logging type is disconnected logging.
+     *          It means that the log collector service was connected, but now it is disconnected.
+     *          The model is still connected to the log database and can read logs from it.
+     **/
     inline bool isDisconnectedLogging(void) const;
 
 /************************************************************************
@@ -238,8 +261,18 @@ public:
  ************************************************************************/
 signals:
 
+    /**
+     * \brief   Signal emitted when connected to the logging service.
+     *          This signal is emitted during live mode.
+     *          Ignore in case of offline or disconnected modes.
+     **/
     void signalLogServiceConnected(void);
 
+    /**
+     * \brief   Signal emitted when disconnected from the logging service.
+     *          This signal is emitted during live mode.
+     *          Ignore in case of offline or disconnected modes.
+     **/
     void signalLogServiceDisconnected(void);
 
     /**
@@ -255,7 +288,7 @@ signals:
      * \brief   Signal emitted when one or more instances are disconnected.
      *          This can be instances disconnected from the log collector service in live mode.
      *          In case of offline or disconnected modes this signal is not triggered.
-     * \param   instances   The list of instances updated.
+     * \param   instIds     The list of IDs of disconnected instances.
      **/
     void signalInstanceUnavailable(const std::vector<ITEM_ID>& instIds);
 
@@ -264,7 +297,8 @@ signals:
      *          This can be either scopes received in the live mode 
      *          or scopes read from the log database in offline mode.
      *          In case of disconnected mode this signal is not triggered.
-     * \param   instIds     The list of IDs of disconnected instances.
+     * \param   instId      The ID of an instance, which scopes are available.
+     * \param   scopes      The list of scopes available for the specified instance.
      **/
     void signalScopesAvailable(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
 
@@ -272,13 +306,15 @@ signals:
      * \brief   Signal emitted when scopes of the specified instance are updated.
      *          This can be scopes received in the live mode.
      *          In case of offline or disconnected modes this signal is not triggered.
-     * \param   instId      The ID of the instance whose scopes are updated.
-     * \param   scopes      The list of updated scopes.
+     * \param   instId      The ID of an instance, which scopes are updated.
+     * \param   scopes      The list of scopes available for the specified instance.
      **/
     void signalScopesUpdated(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
 
      /**
       * \brief   Signal emitted when one or more log messages are available.
+      * \param   instId      The ID of the instance that sent the log messages.
+      * \param   logs        The list of log messages available.
       **/
     void signalLogsAvailable(ITEM_ID instId, const std::vector<SharedBuffer>& logs);
 
@@ -287,6 +323,9 @@ signals:
 //////////////////////////////////////////////////////////////////////////
 public:
 
+    /**
+     * \brief   Resets the model to refresh the view.
+     **/
     virtual void refresh(void);
     
     /**
@@ -404,12 +443,34 @@ public:
      **/
     virtual void getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
 
+    /**
+     * \brief   Find the instance with the given ID and returns valid index if found.
+     *          Otherwise returns NECommon::INVALID_INDEX (-1).
+     * \param   instId  The ID of the instance to find.
+     **/
     virtual int findInstanceEntry(ITEM_ID instId);
 
+    /**
+     * \brief   Returns the instance entry with the given ID.
+     *          If not found, returns instance object with empty and invalid data.
+     * \param   instId  The ID of the instance to get.
+     **/
     virtual const NEService::sServiceConnectedInstance& getInstanceEntry(ITEM_ID instId);
 
+    /**
+     * \brief   Adds an instance entry to the model.
+     *          If `unique` is true, it checks if the instance already exists and does not add it again.
+     * \param   instance   The instance to add.
+     * \param   unique     If true, adds the instance only if it is not already present.
+     * \return  True if the instance was added successfully, false otherwise.
+     **/
     virtual bool addInstanceEntry(const NEService::sServiceConnectedInstance& instance, bool unique);
-    
+
+    /**
+     * \brief   Removes the instance entry with the given ID from the model.
+     * \param   instId  The ID of the instance to remove.
+     * \return  Returns NECommon::INVALID_INDEX if not found, otherwise returns index of removed instance.
+     **/
     virtual int removeInstanceEntry(ITEM_ID instId);
 
 //////////////////////////////////////////////////////////////////////////
@@ -425,27 +486,27 @@ protected:
     /**
      * \brief   Helper to get display data for a log message and column.
      **/
-    QVariant _getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QVariant getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get background color data for a log message and column.
      **/
-    QVariant _getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QVariant getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get foreground color data for a log message and column.
      **/
-    QVariant _getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QVariant getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get decoration (icon) data for a log message and column.
      **/
-    QVariant _getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QVariant getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get text alignment data for a column.
      **/
-    QVariant _getAlignmentData(eColumn column) const;
+    QVariant getAlignmentData(eColumn column) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -511,9 +572,9 @@ inline QString LoggingModelBase::getLogFilePath(void) const
     return QString::fromStdString(mDatabase.getDatabasePath().getData());
 }
 
-inline void LoggingModelBase::setLoggingType(LoggingModelBase::eLogging logsType)
+inline void LoggingModelBase::markDisconnected()
 {
-    mLoggingType = logsType;
+    mLoggingType = LoggingModelBase::eLogging::LoggingDisconneced;
 }
 
 inline LoggingModelBase::eLogging LoggingModelBase::getLoggingType(void) const

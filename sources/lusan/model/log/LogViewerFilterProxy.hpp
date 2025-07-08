@@ -29,7 +29,7 @@
 
 #include "areg/base/GEGlobal.h"
 
-class LiveLogsModel;
+class LoggingModelBase;
 
 /**
  * \brief   Filter proxy model for the log viewer to enable filtering of log messages.
@@ -45,7 +45,7 @@ public:
      * \brief   Constructor with parent object.
      * \param   model   The logging data model object.
      **/
-    explicit LogViewerFilterProxy(QAbstractTableModel* model);
+    explicit LogViewerFilterProxy(LoggingModelBase * model);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -104,9 +104,9 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QMap<int, QStringList> mComboFilters;   //!< Map of column index to selected filter items
-    QMap<int, QString>     mTextFilters;    //!< Map of column index to filter text
-    QAbstractTableModel*   mLogModel;       //!< Pointer to the log viewer source model
+    QMap<int, QStringList>  mComboFilters;   //!< Map of column index to selected filter items
+    QMap<int, QString>      mTextFilters;    //!< Map of column index to filter text
+    LoggingModelBase*       mLogModel;       //!< Pointer to the log viewer source model
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call

@@ -85,13 +85,16 @@ MdiMainWindow::MdiMainWindow()
     , mStatusTabs   ( nullptr )
     , mLogViewer    ( nullptr )
     , mLiveLogWnd   ( nullptr )
+
     , mFileMenu     (nullptr)
     , mEditMenu     (nullptr)
     , mViewMenu     (nullptr)
-    , mToolsMenu    (nullptr)
+    , mDesignMenu   (nullptr)
     , mLoggingMenu  (nullptr)
+    , mToolsMenu    (nullptr)
     , mWindowMenu   (nullptr)
     , mHelpMenu     (nullptr)
+
     , mFileToolBar  (nullptr)
     , mEditToolBar  (nullptr)
     , mViewToolBar  (nullptr)
@@ -103,6 +106,8 @@ MdiMainWindow::MdiMainWindow()
     , mActFileClose (this)
     , mActFileCloseAll(this)
     , mActFileExit  (this)
+    , mFileSeparator(nullptr)
+    , mActFileRecent(nullptr)
     , mActEditCut   (this)
     , mActEditCopy  (this)
     , mActEditPaste (this)
@@ -116,8 +121,6 @@ MdiMainWindow::MdiMainWindow()
     , mActWindowsPrev(this)
     , mActWindowMenuSeparator(this)
     , mActHelpAbout (nullptr)
-    , mActRecentFilesSubMenu(nullptr)
-    , mFileSeparator(nullptr)
 {
     _createActions();
     _createMenus();
@@ -470,7 +473,7 @@ void MdiMainWindow::prependToRecentFiles(const QString& fileName)
 
 void MdiMainWindow::setRecentFilesVisibility(bool visible)
 {
-    mActRecentFilesSubMenu->setVisible(visible);
+    mActFileRecent->setVisible(visible);
     mFileSeparator->setVisible(visible);
 }
 
@@ -637,7 +640,7 @@ void MdiMainWindow::_createActions()
 
     initAction(mActFileNewLog, QIcon::fromTheme(QIcon::ThemeIcon::ContactNew), tr("&Logs"));
     mActFileNewLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_L));
-    mActFileNewLog.setStatusTip(tr("Create a new logs"));
+    mActFileNewLog.setStatusTip(tr("Create a new live logs"));
     connect(&mActFileNewLog, &QAction::triggered, this, &MdiMainWindow::onFileNewLog);
 
     initAction(mActFileOpen, QIcon::fromTheme("document-open", QIcon(":/images/open.png")), tr("&Open..."));
@@ -741,7 +744,7 @@ void MdiMainWindow::_createMenus()
 
     QMenu* recentMenu = mFileMenu->addMenu(tr("Recent..."));
     connect(recentMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuRecent);
-    mActRecentFilesSubMenu = recentMenu->menuAction();
+    mActFileRecent = recentMenu->menuAction();
     for (int i = 0; i < MaxRecentFiles; ++i)
     {
         mActsRecentFiles[i] = recentMenu->addAction(QString(), this, &MdiMainWindow::onFileOpenRecent);

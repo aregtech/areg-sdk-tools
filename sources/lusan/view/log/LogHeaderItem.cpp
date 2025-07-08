@@ -162,12 +162,10 @@ void LogHeaderItem::showFilters(void)
     if (mType == eType::None)
         return;
 
-    int index = fromColumnToIndex();
-    int pos = mHeader.sectionViewportPosition(index);
-    int size = mHeader.sectionSize(index);
-    int height = mHeader.size().height();
-    // QRect rect(pos, 0, size, height());
-    QPoint pt = mHeader.mapToGlobal(QPoint(pos, height));
+    int index   = fromColumnToIndex();
+    int pos     = mHeader.sectionViewportPosition(index);
+    int height  = mHeader.size().height();
+    QPoint pt   = mHeader.mapToGlobal(QPoint(pos, height));
 
     if (mType == eType::Combo)
     {

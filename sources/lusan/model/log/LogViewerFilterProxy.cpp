@@ -18,10 +18,10 @@
  ************************************************************************/
 
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
-#include "lusan/model/log/LiveLogsModel.hpp"
+#include "lusan/model/log/LoggingModelBase.hpp"
 #include <QModelIndex>
 
-LogViewerFilterProxy::LogViewerFilterProxy(QAbstractTableModel* model)
+LogViewerFilterProxy::LogViewerFilterProxy(LoggingModelBase* model)
     : QSortFilterProxyModel (model)
     , mComboFilters         ( )
     , mTextFilters          ( )
@@ -132,13 +132,13 @@ bool LogViewerFilterProxy::matchesTextFilters(int source_row) const
 
         // Get the data for this column and row
         QModelIndex index = mLogModel->index(source_row, column);
-        if (!index.isValid())
+        if (index.isValid() == false)
             continue;
 
         QString cellData = mLogModel->data(index, Qt::DisplayRole).toString();
 
         // Check if the cell data contains the filter text (case-insensitive)
-        if (!cellData.contains(filterText, Qt::CaseInsensitive))
+        if (cellData.contains(filterText, Qt::CaseInsensitive) == false)
             return false;
     }
 

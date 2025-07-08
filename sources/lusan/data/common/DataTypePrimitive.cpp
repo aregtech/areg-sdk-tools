@@ -232,7 +232,6 @@ DataTypePrimitiveFloat& DataTypePrimitiveFloat::operator=(DataTypePrimitiveFloat
 
 QString DataTypePrimitiveFloat::convertValue(const QString& value) const
 {
-    int base = value.startsWith("0x") ? 16 : 10;
     double val = value.toDouble(nullptr);
     return QString::number(val);
 }
