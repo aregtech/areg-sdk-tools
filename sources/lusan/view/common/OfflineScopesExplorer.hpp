@@ -208,9 +208,9 @@ private slots:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::OfflineScopesExplorer*  ui;             //!< The user interface object.
-    OfflineScopesModel *     mScopesModel;   //!< The offline scopes model
-    OfflineLogsModel*            mLogModel;      //!< The offline log model.
+    Ui::OfflineScopesExplorer*  ui;         //!< The user interface object.
+    OfflineScopesModel *    mScopesModel;   //!< The offline scopes model
+    OfflineLogsModel*       mLogModel;      //!< The offline log model.
 };
 
 #endif  // LUSAN_VIEW_COMMON_OFFLINESCOPESEXPLORER_HPP
