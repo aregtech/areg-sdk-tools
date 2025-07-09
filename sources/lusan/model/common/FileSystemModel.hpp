@@ -38,7 +38,7 @@ class FileSystemModel : public QAbstractItemModel
 //////////////////////////////////////////////////////////////////////////
 private:
     using WorkspaceEntries  = QMap<QString, QString>;
-    
+
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
@@ -365,7 +365,14 @@ public:
      * \return  True if the index is a root entry, false otherwise.
      **/
     bool isRoot(const QModelIndex & index) const;
-    
+
+    /**
+     * \brief   Checks if the given index is a workspace entry.
+     * \param   index   The index of the item.
+     * \return  True if the index is a workspace entry, false otherwise.
+     **/
+    bool checkWorkspaceEntry(const QModelIndex& index) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////

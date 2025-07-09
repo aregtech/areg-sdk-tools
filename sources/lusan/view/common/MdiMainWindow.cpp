@@ -620,7 +620,7 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath)
     child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();
     mNavigation.showTab(Navigation::TabOfflineLogsExplorer);
-    static_cast<OfflineScopesExplorer *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(child->getLoggingModel());
+    static_cast<NaviOfflineLogsScopes *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(child->getLoggingModel());
     return child;
 }
 

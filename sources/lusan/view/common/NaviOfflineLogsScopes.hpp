@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_VIEW_COMMON_OFFLINESCOPESEXPLORER_HPP
-#define LUSAN_VIEW_COMMON_OFFLINESCOPESEXPLORER_HPP
+﻿#ifndef LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP
+#define LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/OfflineScopesExplorer.hpp
+ *  \file        lusan/view/common/NaviOfflineLogsScopes.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       The view of the offline log explorer.
@@ -40,17 +40,17 @@ class QVBoxLayout;
 class QFileDialog;
 
 namespace Ui {
-    class OfflineScopesExplorer;
+    class NaviOfflineLogsScopes;
 }
 
 //////////////////////////////////////////////////////////////////////////
-// OfflineScopesExplorer class declaration
+// NaviOfflineLogsScopes class declaration
 //////////////////////////////////////////////////////////////////////////
 /**
- * \brief   The OfflineScopesExplorer class is a view for offline log navigation.
+ * \brief   The NaviOfflineLogsScopes class is a view for offline log navigation.
  *          It provides functionality to load and browse log database files.
  **/
-class OfflineScopesExplorer : public NavigationWindow
+class NaviOfflineLogsScopes : public NavigationWindow
 {
     Q_OBJECT
 
@@ -59,13 +59,13 @@ class OfflineScopesExplorer : public NavigationWindow
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   The constructor of the OfflineScopesExplorer class.
+     * \brief   The constructor of the NaviOfflineLogsScopes class.
      * \param   wndMain     The main frame of the application.
      * \param   parent      The parent widget.
      **/
-    OfflineScopesExplorer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
+    NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~OfflineScopesExplorer(void);
+    virtual ~NaviOfflineLogsScopes(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -208,9 +208,9 @@ private slots:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::OfflineScopesExplorer*  ui;         //!< The user interface object.
+    Ui::NaviOfflineLogsScopes*  ui;         //!< The user interface object.
     OfflineScopesModel *    mScopesModel;   //!< The offline scopes model
     OfflineLogsModel*       mLogModel;      //!< The offline log model.
 };
 
-#endif  // LUSAN_VIEW_COMMON_OFFLINESCOPESEXPLORER_HPP
+#endif  // LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP

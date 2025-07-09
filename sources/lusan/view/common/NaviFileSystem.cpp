@@ -268,14 +268,23 @@ void NaviFileSystem::onToolNaviRootClicked(bool checked)
     {
         disconnect(ctrlFileSystem()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
         mGenModel = new GeneralFileSystemModel();
-        mFileFilter = new FileSystemFilter(mGenModel);
         mGenModel->setReadOnly(true);
+        if (mFileFilter == nullptr)
+        {
+            mFileFilter = new FileSystemFilter(mGenModel, this);
+        }
+        else
+        {
+            mFileFilter->setSourceModel(nullptr);
+        }
+
+        ctrlFileSystem()->setModel(nullptr);
         ctrlFileSystem()->setModel(mFileFilter);
         ctrlFileSystem()->setSortingEnabled(true);
         ctrlFileSystem()->reset();
-        // ctrlFileSystem()->update();
         delete mNaviModel;
         mNaviModel = nullptr;
+
         // QString rootPath = QDir::rootPath();
         QString rootPath = mGenModel->myComputer().toString();
         QModelIndex idxRoot = mGenModel->setRootPath(rootPath);
@@ -290,8 +299,8 @@ void NaviFileSystem::onToolNaviRootClicked(bool checked)
     else if ((checked == false) && (mNaviModel == nullptr))
     {
         mNaviModel = new FileSystemModel();
-        this->updateData();
-        this->setupWidgets();
+        updateData();
+        setupWidgets();
 
         mFileFilter->setSourceModel(nullptr);
         delete mFileFilter;
@@ -347,11 +356,11 @@ void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString
 
 void NaviFileSystem::updateData(void)
 {
-    QString root = LusanApplication::getWorkspaceRoot();
-    QString sources = LusanApplication::getWorkspaceSources();
-    QString includes = LusanApplication::getWorkspaceIncludes();
-    QString delivery = LusanApplication::getWorkspaceDelivery();
-    QString logs = LusanApplication::getWorkspaceLogs();
+    QString root     { LusanApplication::getWorkspaceRoot() };
+    QString sources  { LusanApplication::getWorkspaceSources() };
+    QString includes { LusanApplication::getWorkspaceIncludes() };
+    QString delivery { LusanApplication::getWorkspaceDelivery() };
+    QString logs     { LusanApplication::getWorkspaceLogs() };
 
     mRootPaths.clear();
     Q_ASSERT(root.isEmpty() == false);

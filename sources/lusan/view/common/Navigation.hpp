@@ -20,9 +20,9 @@
  ************************************************************************/
 
 #include "lusan/view/common/NavigationWindow.hpp"
-#include "lusan/view/common/LogExplorer.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
-#include "lusan/view/common/OfflineScopesExplorer.hpp"
+#include "lusan/view/common/NaviLiveLogsScopes.hpp"
+#include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 
 #include <QDockWidget>
 #include <QIcon>
@@ -90,12 +90,12 @@ public:
     /**
      * \brief   Returns the live mode log explorer widget.
      **/
-    inline LogExplorer& getLiveLogs(void);
+    inline NaviLiveLogsScopes& getLiveLogs(void);
 
     /**
      * \brief   Returns the offline log explorer widget.
      **/
-    inline OfflineScopesExplorer& getOfflineScopes(void);
+    inline NaviOfflineLogsScopes& getOfflineScopes(void);
 
     /**
      * \brief   Adds a new tab with the widget to the tab-control.
@@ -175,8 +175,8 @@ private slots:
 private:
     MdiMainWindow*          mMainWindow;    //!< Main window
     QTabWidget              mTabs;          //!< The tab widget of the navigation.
-    LogExplorer             mLogExplorer;   //!< The log explorer widget.
-    OfflineScopesExplorer   mOfflineScopes; //!< The offline scopes explorer.
+    NaviLiveLogsScopes      mLiveScopes;   //!< The log explorer widget.
+    NaviOfflineLogsScopes   mOfflineScopes; //!< The offline scopes explorer.
     NaviFileSystem          mFileSystem;    //!< The file system widget.
 };
 
@@ -194,12 +194,12 @@ inline NaviFileSystem& Navigation::getFileSystem(void)
     return mFileSystem;
 }
 
-inline LogExplorer& Navigation::getLiveLogs(void)
+inline NaviLiveLogsScopes& Navigation::getLiveLogs(void)
 {
-    return mLogExplorer;
+    return mLiveScopes;
 }
 
-inline OfflineScopesExplorer& Navigation::getOfflineScopes(void)
+inline NaviOfflineLogsScopes& Navigation::getOfflineScopes(void)
 {
     return mOfflineScopes;
 }

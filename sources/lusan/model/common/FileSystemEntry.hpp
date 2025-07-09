@@ -488,6 +488,22 @@ private:
  **/
 class FileSystemRootEntry : public FileSystemEntry
 {
+//////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
+private:
+    //!< The list of workspace entries.
+    enum eWorkspaceEntry : int
+    {
+          WorkspaceRoot     = 0 // The root entry of the workspace.
+        , WorkspaceSources      // The sources entry of the workspace.
+        , WorkspaceIncludes     // The includes entry of the workspace.
+        , WorkspaceDelivery     // The delivery entry of the workspace.
+        , WorkspaceLogs         // The logs entry of the workspace.
+
+        , WorkspaceEntryCount   // The count of workspace entries.
+    };
+
 public:
     /**
      * \brief   Constructor with initialization.
@@ -541,7 +557,8 @@ protected:
 private:
     mutable uint32_t        mNextId;        //!< The next ID for the root entry.
     QMap<QString, QString>  mWorkspaceDirs; //!< The list of workspace directories.
-    
+    QList<QString>          mEntries;       //!< The list of entries to display in the file system model.
+
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
