@@ -24,61 +24,61 @@
 WorkspaceEntry::WorkspaceEntry(void)
     : mId(0)
     , mLastAccessed(0)
-    , mWorkspaceRoot()
-    , mDescription()
-    , mSources()
-    , mIncludes()
-    , mDelivery()
-    , mLogFiles()
+    , mWorkspaceRoot("")
+    , mDescription  ("")
+    , mSources      ("")
+    , mIncludes     ("")
+    , mDelivery     ("")
+    , mLogFiles     ("")
 {
 }
 
 WorkspaceEntry::WorkspaceEntry(const QString& root, const QString& description, uint32_t id /*= 0*/)
     : mId(id == 0 ? NELusanCommon::getId() : id)
-    , mLastAccessed(NELusanCommon::getTimestamp())
+    , mLastAccessed (NELusanCommon::getTimestamp())
     , mWorkspaceRoot(NELusanCommon::fixPath(root))
-    , mDescription(description)
-    , mSources()
-    , mIncludes()
-    , mDelivery()
-    , mLogFiles()
+    , mDescription  (description)
+    , mSources      ("")
+    , mIncludes     ("")
+    , mDelivery     ("")
+    , mLogFiles     ("")
 {
 }
 
 WorkspaceEntry::WorkspaceEntry(QXmlStreamReader& xml)
     : mId(0)
-    , mLastAccessed(0)
+    , mLastAccessed (0)
     , mWorkspaceRoot()
-    , mDescription()
-    , mSources()
-    , mIncludes()
-    , mDelivery()
-    , mLogFiles()
+    , mDescription  ()
+    , mSources      ("")
+    , mIncludes     ("")
+    , mDelivery     ("")
+    , mLogFiles     ("")
 {
     readFromXml(xml);
 }
 
 WorkspaceEntry::WorkspaceEntry(const WorkspaceEntry& src)
     : mId(src.mId)
-    , mLastAccessed(src.mLastAccessed)
+    , mLastAccessed (src.mLastAccessed)
     , mWorkspaceRoot(src.mWorkspaceRoot)
-    , mDescription(src.mDescription)
-    , mSources(src.mSources)
-    , mIncludes(src.mIncludes)
-    , mDelivery(src.mDelivery)
-    , mLogFiles(src.mLogFiles)
+    , mDescription  (src.mDescription)
+    , mSources      (src.mSources)
+    , mIncludes     (src.mIncludes)
+    , mDelivery     (src.mDelivery)
+    , mLogFiles     (src.mLogFiles)
 {
 }
 
 WorkspaceEntry::WorkspaceEntry(WorkspaceEntry&& src) noexcept
     : mId(src.mId)
-    , mLastAccessed(src.mLastAccessed)
+    , mLastAccessed (src.mLastAccessed)
     , mWorkspaceRoot(std::move(src.mWorkspaceRoot))
-    , mDescription(std::move(src.mDescription))
-    , mSources(std::move(src.mSources))
-    , mIncludes(std::move(src.mIncludes))
-    , mDelivery(std::move(src.mDelivery))
-    , mLogFiles(std::move(src.mLogFiles))
+    , mDescription  (std::move(src.mDescription))
+    , mSources      (std::move(src.mSources))
+    , mIncludes     (std::move(src.mIncludes))
+    , mDelivery     (std::move(src.mDelivery))
+    , mLogFiles     (std::move(src.mLogFiles))
 {
 }
 
@@ -87,14 +87,15 @@ WorkspaceEntry& WorkspaceEntry::operator = (const WorkspaceEntry& src)
     if (this != &src)
     {
         mId = src.mId;
-        mLastAccessed = src.mLastAccessed;
-        mWorkspaceRoot = src.mWorkspaceRoot;
-        mDescription = src.mDescription;
-        mSources = src.mSources;
-        mIncludes = src.mIncludes;
-        mDelivery = src.mDelivery;
-        mLogFiles = src.mLogFiles;
+        mLastAccessed   = src.mLastAccessed;
+        mWorkspaceRoot  = src.mWorkspaceRoot;
+        mDescription    = src.mDescription;
+        mSources        = src.mSources;
+        mIncludes       = src.mIncludes;
+        mDelivery       = src.mDelivery;
+        mLogFiles       = src.mLogFiles;
     }
+
     return *this;
 }
 
@@ -103,14 +104,15 @@ WorkspaceEntry& WorkspaceEntry::operator = (WorkspaceEntry&& src) noexcept
     if (this != &src)
     {
         mId = src.mId;
-        mLastAccessed = src.mLastAccessed;
-        mWorkspaceRoot = std::move(src.mWorkspaceRoot);
-        mDescription = std::move(src.mDescription);
-        mSources = std::move(src.mSources);
-        mIncludes = std::move(src.mIncludes);
-        mDelivery = std::move(src.mDelivery);
-        mLogFiles = std::move(src.mLogFiles);
+        mLastAccessed   = src.mLastAccessed;
+        mWorkspaceRoot  = std::move(src.mWorkspaceRoot);
+        mDescription    = std::move(src.mDescription);
+        mSources        = std::move(src.mSources);
+        mIncludes       = std::move(src.mIncludes);
+        mDelivery       = std::move(src.mDelivery);
+        mLogFiles       = std::move(src.mLogFiles);
     }
+
     return *this;
 }
 

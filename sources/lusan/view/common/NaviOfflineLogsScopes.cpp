@@ -10,15 +10,15 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/OfflineScopesExplorer.cpp
+ *  \file        lusan/view/common/NaviOfflineLogsScopes.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       The view of the offline log explorer.
  *
  ************************************************************************/
 
-#include "lusan/view/common/OfflineScopesExplorer.hpp"
-#include "ui/ui_OfflineScopesExplorer.h"
+#include "lusan/view/common/NaviOfflineLogsScopes.hpp"
+#include "ui/ui_NaviOfflineLogsScopes.h"
 
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/OfflineScopesModel.hpp"
@@ -32,10 +32,10 @@
 #include <QStandardItem>
 #include <QMessageBox>
 
-OfflineScopesExplorer::OfflineScopesExplorer(MdiMainWindow* wndMain, QWidget* parent)
+NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     : NavigationWindow(static_cast<int>(Navigation::eNaviWindow::NaviOfflineLogs), wndMain, parent)
 
-    , ui            (new Ui::OfflineScopesExplorer)
+    , ui            (new Ui::NaviOfflineLogsScopes)
     , mLogModel     (nullptr)
     , mScopesModel  (new OfflineScopesModel(this))
 
@@ -49,19 +49,19 @@ OfflineScopesExplorer::OfflineScopesExplorer(MdiMainWindow* wndMain, QWidget* pa
     updateControls();
 }
 
-OfflineScopesExplorer::~OfflineScopesExplorer(void)
+NaviOfflineLogsScopes::~NaviOfflineLogsScopes(void)
 {
     ctrlTable()->setModel(nullptr);
     delete mScopesModel;
     delete ui;
 }
 
-QString OfflineScopesExplorer::getOpenedDatabasePath(void) const
+QString NaviOfflineLogsScopes::getOpenedDatabasePath(void) const
 {
     return (mLogModel != nullptr ? mLogModel->getLogFileName() : QString());
 }
 
-bool OfflineScopesExplorer::openDatabase(const QString& filePath)
+bool NaviOfflineLogsScopes::openDatabase(const QString& filePath)
 {
     if (filePath.isEmpty() || (mLogModel == nullptr))
     {
@@ -75,8 +75,6 @@ bool OfflineScopesExplorer::openDatabase(const QString& filePath)
         mScopesModel->setLoggingModel(mLogModel);
         ctrlTable()->setModel(nullptr);
         ctrlTable()->setModel(mScopesModel);
-        // updateControls();
-        // showDatabaseInfo();
         return true;
     }
     else
@@ -87,7 +85,7 @@ bool OfflineScopesExplorer::openDatabase(const QString& filePath)
     }
 }
 
-void OfflineScopesExplorer::closeDatabase(void)
+void NaviOfflineLogsScopes::closeDatabase(void)
 {
     mScopesModel->setLoggingModel(nullptr);
     updateControls();    
@@ -96,98 +94,98 @@ void OfflineScopesExplorer::closeDatabase(void)
     ctrlTable()->setModel(nullptr);
 }
 
-bool OfflineScopesExplorer::isDatabaseOpen(void) const
+bool NaviOfflineLogsScopes::isDatabaseOpen(void) const
 {
     return (mLogModel != nullptr) && mLogModel->isOperable();
 }
 
-void OfflineScopesExplorer::setLoggingModel(OfflineLogsModel * model)
+void NaviOfflineLogsScopes::setLoggingModel(OfflineLogsModel * model)
 {
     mLogModel = model;
     mScopesModel->setLoggingModel(model);
     updateControls();
 }
 
-void OfflineScopesExplorer::optionOpenning(void)
+void NaviOfflineLogsScopes::optionOpenning(void)
 {
     // Called when options dialog is opened
     // No specific actions needed for offline explorer
 }
 
-void OfflineScopesExplorer::optionApplied(void)
+void NaviOfflineLogsScopes::optionApplied(void)
 {
     // Called when apply button is pressed in options dialog
     // No specific actions needed for offline explorer
 }
 
-void OfflineScopesExplorer::optionClosed(bool OKpressed)
+void NaviOfflineLogsScopes::optionClosed(bool OKpressed)
 {
     // Called when options dialog is closed
     // No specific actions needed for offline explorer
     Q_UNUSED(OKpressed);
 }
 
-QToolButton* OfflineScopesExplorer::ctrlOpenDatabase(void)
+QToolButton* NaviOfflineLogsScopes::ctrlOpenDatabase(void)
 {
     return ui->toolDbOpen;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlCloseDatabase(void)
+QToolButton* NaviOfflineLogsScopes::ctrlCloseDatabase(void)
 {
     return ui->toolDbClose;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlRefreshDatabase(void)
+QToolButton* NaviOfflineLogsScopes::ctrlRefreshDatabase(void)
 {
     return ui->toolRefresh;
 }
 
-QTreeView* OfflineScopesExplorer::ctrlTable(void)
+QTreeView* NaviOfflineLogsScopes::ctrlTable(void)
 {
     return ui->treeView;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlFind(void)
+QToolButton* NaviOfflineLogsScopes::ctrlFind(void)
 {
     return ui->toolFind;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlLogError(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogError(void)
 {
     return ui->toolError;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlLogWarning(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogWarning(void)
 {
     return ui->toolWarning;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlLogInfo(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogInfo(void)
 {
     return ui->toolInformation;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlLogDebug(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogDebug(void)
 {
     return ui->toolDebug;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlLogScopes(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogScopes(void)
 {
     return ui->toolScopes;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlMoveTop(void)
+QToolButton* NaviOfflineLogsScopes::ctrlMoveTop(void)
 {
     return ui->toolMoveTop;
 }
 
-QToolButton* OfflineScopesExplorer::ctrlMoveBottom(void)
+QToolButton* NaviOfflineLogsScopes::ctrlMoveBottom(void)
 {
     return ui->toolMoveBottom;
 }
 
-void OfflineScopesExplorer::setupWidgets(void)
+void NaviOfflineLogsScopes::setupWidgets(void)
 {
     // Configure the tree view for database information display
     ctrlTable()->setHeaderHidden(false);
@@ -195,15 +193,15 @@ void OfflineScopesExplorer::setupWidgets(void)
     ctrlTable()->setAlternatingRowColors(true);
 }
 
-void OfflineScopesExplorer::setupSignals(void)
+void NaviOfflineLogsScopes::setupSignals(void)
 {
     // Connect tool button signals
-    connect(ctrlOpenDatabase()      , &QToolButton::clicked, this, &OfflineScopesExplorer::onOpenDatabaseClicked);
-    connect(ctrlCloseDatabase()     , &QToolButton::clicked, this, &OfflineScopesExplorer::onCloseDatabaseClicked);
-    connect(ctrlRefreshDatabase()   , &QToolButton::clicked, this, &OfflineScopesExplorer::onRefreshDatabaseClicked);
+    connect(ctrlOpenDatabase()      , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onOpenDatabaseClicked);
+    connect(ctrlCloseDatabase()     , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onCloseDatabaseClicked);
+    connect(ctrlRefreshDatabase()   , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onRefreshDatabaseClicked);
 }
 
-void OfflineScopesExplorer::updateControls(void)
+void NaviOfflineLogsScopes::updateControls(void)
 {
     bool dbOpen = isDatabaseOpen();
     
@@ -211,7 +209,7 @@ void OfflineScopesExplorer::updateControls(void)
     ctrlRefreshDatabase()->setEnabled(dbOpen);
 }
 
-void OfflineScopesExplorer::showDatabaseInfo(void)
+void NaviOfflineLogsScopes::showDatabaseInfo(void)
 {
     if (!isDatabaseOpen())
     {
@@ -273,7 +271,7 @@ void OfflineScopesExplorer::showDatabaseInfo(void)
     ctrlTable()->expandAll();
 }
 
-void OfflineScopesExplorer::onOpenDatabaseClicked(void)
+void NaviOfflineLogsScopes::onOpenDatabaseClicked(void)
 {
     QString filePath = mMainWindow->openLogFile();
     if (filePath.isEmpty() == false)
@@ -282,12 +280,12 @@ void OfflineScopesExplorer::onOpenDatabaseClicked(void)
     }
 }
 
-void OfflineScopesExplorer::onCloseDatabaseClicked(void)
+void NaviOfflineLogsScopes::onCloseDatabaseClicked(void)
 {
     closeDatabase();
 }
 
-void OfflineScopesExplorer::onRefreshDatabaseClicked(void)
+void NaviOfflineLogsScopes::onRefreshDatabaseClicked(void)
 {
     if (isDatabaseOpen())
     {

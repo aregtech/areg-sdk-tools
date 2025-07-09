@@ -81,12 +81,12 @@ Navigation::Navigation(MdiMainWindow* parent)
 
     , mMainWindow   (parent)
     , mTabs         (this)
-    , mLogExplorer  (parent, this)
+    , mLiveScopes   (parent, this)
     , mOfflineScopes(parent, this)
     , mFileSystem   (parent, this)
 {    
     mTabs.addTab(&mFileSystem   , Navigation::getWorkspaceExplorerIcon(), Navigation::TabNameFileSystem);
-    mTabs.addTab(&mLogExplorer  , Navigation::getLiveLogIcon()          , Navigation::TabLiveLogsExplorer);
+    mTabs.addTab(&mLiveScopes   , Navigation::getLiveLogIcon()          , Navigation::TabLiveLogsExplorer);
     mTabs.addTab(&mOfflineScopes, Navigation::getOfflineLogIcon()       , Navigation::TabOfflineLogsExplorer);
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
@@ -177,7 +177,7 @@ void Navigation::onMdiWindowActivated(MdiChild* mdiChild)
     {
         if (mdiChild->isLogViewerWindow() && (current->isNaviLiveLogs() == false))
         {
-            mTabs.setCurrentWidget(&mLogExplorer);
+            mTabs.setCurrentWidget(&mLiveScopes);
         }
         else if (mdiChild->isOfflineLogViewerWindow() && (current->isNaviOfflineLogs() == false))
         {
@@ -193,20 +193,20 @@ void Navigation::onMdiWindowActivated(MdiChild* mdiChild)
 void Navigation::onOptionsOpening(void)
 {
     mFileSystem.optionOpenning();
-    mLogExplorer.optionOpenning();
+    mLiveScopes.optionOpenning();
     mOfflineScopes.optionOpenning();
 }
 
 void Navigation::onOptionsApplied(void)
 {
     mFileSystem.optionApplied();
-    mLogExplorer.optionApplied();
+    mLiveScopes.optionApplied();
     mOfflineScopes.optionApplied();
 }
 
 void Navigation::onOptionsClosed(bool pressedOK)
 {
     mFileSystem.optionClosed(pressedOK);
-    mLogExplorer.optionClosed(pressedOK);
+    mLiveScopes.optionClosed(pressedOK);
     mOfflineScopes.optionClosed(pressedOK);
 }

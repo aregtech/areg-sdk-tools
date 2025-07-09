@@ -22,7 +22,6 @@
 #include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 
-#include "areg/appbase/Application.hpp"
 
 const QStringList   LusanApplication::ExternalExts
 {

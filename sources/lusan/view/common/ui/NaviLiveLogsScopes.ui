@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>LogExplorer</class>
- <widget class="QWidget" name="LogExplorer">
+ <class>NaviLiveLogsScopes</class>
+ <widget class="QWidget" name="NaviLiveLogsScopes">
   <property name="geometry">
    <rect>
     <x>0</x>

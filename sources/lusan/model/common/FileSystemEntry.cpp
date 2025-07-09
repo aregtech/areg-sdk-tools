@@ -18,6 +18,8 @@
  ************************************************************************/
 
 #include "lusan/model/common/FileSystemEntry.hpp"
+#include "lusan/app/LusanApplication.hpp"
+
 #include <QDir>
 #include <QFileInfo>
 #include <QIcon>
@@ -449,9 +451,15 @@ void FileSystemEntry::sort(bool ascending)
 
 FileSystemRootEntry::FileSystemRootEntry(const QString& name)
     : FileSystemEntry(name, name, FileSystemEntry::eEntryType::EntryRoot, QIcon(), nullptr)
-    , mNextId ( 0 )
+    , mNextId       ( 0 )
     , mWorkspaceDirs( )
+    , mEntries      ( static_cast<int>(eWorkspaceEntry::WorkspaceEntryCount) )
 {
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceRoot)]      = NELusanCommon::fixPath(LusanApplication::getWorkspaceRoot());
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceSources)]   = NELusanCommon::fixPath(LusanApplication::getWorkspaceSources());
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceIncludes)]  = NELusanCommon::fixPath(LusanApplication::getWorkspaceIncludes());
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceDelivery)]  = NELusanCommon::fixPath(LusanApplication::getWorkspaceDelivery());
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceLogs)]      = NELusanCommon::fixPath(LusanApplication::getWorkspaceLogs());
 }
 
 void FileSystemRootEntry::setWorkspaceDirectories(const QMap<QString, QString>& workspaceDirs)
@@ -469,10 +477,12 @@ uint32_t FileSystemRootEntry::getNextId(void) const
 QFileInfoList FileSystemRootEntry::fetchData(const QStringList & filter /*= QStringList()*/) const
 {
     QFileInfoList result;
-    QList<QString> list(mWorkspaceDirs.keys());
-    for (const auto & path : list)
+    for (const auto & entry : mEntries)
     {
-        result.push_back(QFileInfo(NELusanCommon::fixPath(path)));
+        if ((entry.isEmpty() == false) && mWorkspaceDirs.contains(entry))
+        {
+            result.push_back(QFileInfo(NELusanCommon::fixPath(entry)));
+        }
     }
     
     return std::move(result);

@@ -552,6 +552,40 @@ bool FileSystemModel::isRoot(const QModelIndex & index) const
     return (index.isValid() && (index == mRootIndex));
 }
 
+bool FileSystemModel::checkWorkspaceEntry(const QModelIndex& index) const
+{
+    const FileSystemEntry* entry = static_cast<const FileSystemEntry*>(index.constInternalPointer());
+    const QString path      { entry != nullptr ? entry->getPath() : "" };
+    const QString root      { NELusanCommon::fixPath(LusanApplication::getWorkspaceRoot())      };
+    const QString sources   { NELusanCommon::fixPath(LusanApplication::getWorkspaceSources())   };
+    const QString includes  { NELusanCommon::fixPath(LusanApplication::getWorkspaceIncludes())  };
+    const QString delivery  { NELusanCommon::fixPath(LusanApplication::getWorkspaceDelivery())  };
+    const QString logs      { NELusanCommon::fixPath(LusanApplication::getWorkspaceLogs())      };
+
+    if (path.compare(root, Qt::CaseSensitivity::CaseInsensitive) == 0)
+    {
+        return true;
+    }
+    else if (path.compare(sources, Qt::CaseSensitivity::CaseInsensitive) == 0)
+    {
+        return true;
+    }
+    else if (path.compare(includes, Qt::CaseSensitivity::CaseInsensitive) == 0)
+    {
+        return true;
+    }
+    else if (path.compare(delivery, Qt::CaseSensitivity::CaseInsensitive) == 0)
+    {
+        return true;
+    }
+    else if (path.compare(logs, Qt::CaseSensitivity::CaseInsensitive) == 0)
+    {
+        return true;
+    }
+
+    return false;
+}
+
 void FileSystemModel::resetRoot(void)
 {
     resetEntry(&mRootEntry);

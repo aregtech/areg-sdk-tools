@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_VIEW_COMMON_LOGEXPLORER_HPP
-#define LUSAN_VIEW_COMMON_LOGEXPLORER_HPP
+﻿#ifndef LUSAN_VIEW_COMMON_NAVILIVELOGSSCOPES_HPP
+#define LUSAN_VIEW_COMMON_NAVILIVELOGSSCOPES_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/LogExplorer.hpp
+ *  \file        lusan/view/common/NaviLiveLogsScopes.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       The view of the log explorer.
@@ -44,16 +44,16 @@ class QTreeView;
 class QAction;
 
 namespace Ui {
-    class LogExplorer;
+    class NaviLiveLogsScopes;
 }
 
 //////////////////////////////////////////////////////////////////////////
-// LogExplorer class declaration
+// NaviLiveLogsScopes class declaration
 //////////////////////////////////////////////////////////////////////////
 /**
- * \brief   The LogExplorer class is a view of the logging sources and logging scopes.
+ * \brief   The NaviLiveLogsScopes class is a view of the logging sources and logging scopes.
  **/
-class LogExplorer : public NavigationWindow
+class NaviLiveLogsScopes : public NavigationWindow
 {
 private:
 
@@ -94,13 +94,13 @@ private:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   The constructor of the LogExplorer class.
+     * \brief   The constructor of the NaviLiveLogsScopes class.
      * \param   wndMain     The main frame of the application.
      * \param   parent      The parent widget.
      **/
-    LogExplorer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
+    NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~LogExplorer(void);
+    virtual ~NaviLiveLogsScopes(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -450,7 +450,7 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::LogExplorer*        ui;             //!< The user interface object.
+    Ui::NaviLiveLogsScopes*        ui;             //!< The user interface object.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.
@@ -465,10 +465,10 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// LogExplorer inline methods
+// NaviLiveLogsScopes inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline bool LogExplorer::isConfigured(void) const
+inline bool NaviLiveLogsScopes::isConfigured(void) const
 {
     switch (mState)
     {
@@ -489,7 +489,7 @@ inline bool LogExplorer::isConfigured(void) const
     }
 }
 
-inline bool LogExplorer::isDisconnected(void) const
+inline bool NaviLiveLogsScopes::isDisconnected(void) const
 {
     switch (mState)
     {
@@ -510,7 +510,7 @@ inline bool LogExplorer::isDisconnected(void) const
     }
 }
 
-inline bool LogExplorer::isConnected(void) const
+inline bool NaviLiveLogsScopes::isConnected(void) const
 {
     switch (mState)
     {
@@ -531,7 +531,7 @@ inline bool LogExplorer::isConnected(void) const
     }
 }
 
-inline bool LogExplorer::isRunning(void) const
+inline bool NaviLiveLogsScopes::isRunning(void) const
 {
     switch (mState)
     {
@@ -552,7 +552,7 @@ inline bool LogExplorer::isRunning(void) const
     }
 }
 
-inline bool LogExplorer::isPaused(void) const
+inline bool NaviLiveLogsScopes::isPaused(void) const
 {
     switch (mState)
     {
@@ -573,7 +573,7 @@ inline bool LogExplorer::isPaused(void) const
     }
 }
 
-inline bool LogExplorer::isStopped(void) const
+inline bool NaviLiveLogsScopes::isStopped(void) const
 {
     switch (mState)
     {
@@ -594,14 +594,14 @@ inline bool LogExplorer::isStopped(void) const
     }
 }
 
-inline LogViewer* LogExplorer::getLiveLogs(void) const
+inline LogViewer* NaviLiveLogsScopes::getLiveLogs(void) const
 {
     return mLiveLogs;
 }
 
-inline void LogExplorer::setLiveLogs(LogViewer* liveLogs)
+inline void NaviLiveLogsScopes::setLiveLogs(LogViewer* liveLogs)
 {
     mLiveLogs = liveLogs;
 }
 
-#endif  // LUSAN_VIEW_COMMON_LOGEXPLORER_HPP
+#endif  // LUSAN_VIEW_COMMON_NAVILIVELOGSSCOPES_HPP
