@@ -221,6 +221,18 @@ public:
      **/
     inline ScopeNodeBase* getTreeRoot(void) const;
 
+    /**
+     * \brief   Checks and returns true if can add the specified prio to the node.
+     *          The prio can be added to the node if the node or child nodes do not have the specified prio set.
+     **/
+    inline bool canAddPriority(unsigned int prio) const;
+
+    /**
+     * \brief   Checks and returns true if can remove the specified prio from the node.
+     *          The prio can be removed from the node if the node or child nodes have the specified prio set.
+     **/
+    inline bool canRemovePriority(unsigned int prio) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -580,14 +592,16 @@ inline bool ScopeNodeBase::hasMultiPrio(uint32_t prioIgnore) const
     uint32_t prio = mPrioStates & (~prioIgnore);
     switch (prio)
     {
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid):
+        return false;
+
     case static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug):
     case static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo):
     case static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning):
     case static_cast<uint32_t>(NELogging::eLogPriority::PrioError):
     case static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal):
     case static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid):
-        return false;
+        return true;
         
     default:
         return true;
@@ -641,6 +655,42 @@ inline ScopeNodeBase* ScopeNodeBase::getTreeRoot(void) const
     {
         Q_ASSERT(false && "ScopeNodeBase::getTreeRoot() called on invalid node without parent.");
         return nullptr;
+    }
+}
+
+inline bool ScopeNodeBase::canAddPriority(unsigned int prio) const
+{
+    if (hasPrioValid() == false)
+    {
+        return true;
+    }
+    else if ((mPrioStates & prio) == 0)
+    {
+        return true;
+    }
+    else if (hasMultiPrio(prio))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+inline bool ScopeNodeBase::canRemovePriority(unsigned int prio) const
+{
+    if (mPrioStates == static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid))
+    {
+        return false;
+    }
+    else if ((mPrioStates & prio) == 0)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
     }
 }
 

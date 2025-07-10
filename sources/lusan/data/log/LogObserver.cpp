@@ -502,8 +502,12 @@ void LogObserver::processEvent(const LogObserverEventData& data)
         std::vector<NELogging::sScopeInfo> scopes(inst);
         for (uint32_t i = 0; i < count; ++i)
         {
-            NELogging::sScopeInfo& scope = scopes[i];
-            stream >> scope;
+            sLogScope data{};
+            NELogging::sScopeInfo & scope = scopes[i];
+            stream.read(reinterpret_cast<unsigned char *>(&data), sizeof(sLogScope));
+            scope.scopeId   = data.lsId;
+            scope.scopePrio = data.lsPrio;
+            scope.scopeName = data.lsName;
         }
 
         emit signalLogUpdateScopes(inst, scopes);

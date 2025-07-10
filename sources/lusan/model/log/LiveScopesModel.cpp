@@ -84,7 +84,8 @@ bool LiveScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPr
     if (root == nullptr)
         return result;
     
-    if (((node->getPriority() & static_cast<uint32_t>(prio)) == 0) || node->hasMultiPrio(static_cast<uint32_t>(prio)))
+    // if (((node->getPriority() & static_cast<uint32_t>(prio)) == 0) || node->hasMultiPrio(static_cast<uint32_t>(prio)))
+    if (node->canAddPriority(static_cast<uint32_t>(prio)))
     {
         node->addPriority(static_cast<uint32_t>(prio));        
         root->resetPrioritiesRecursive(true);
@@ -108,7 +109,8 @@ bool LiveScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLo
     if (root == nullptr)
         return result;
     
-    if ((node->getPriority() & static_cast<uint32_t>(prio)) != 0)
+    // if ((node->getPriority() & static_cast<uint32_t>(prio)) != 0)
+    if (node->canRemovePriority(static_cast<uint32_t>(prio)))
     {
         node->removePriority(static_cast<uint32_t>(prio));
         root->resetPrioritiesRecursive(true);
@@ -167,7 +169,7 @@ bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNod
         int pos = 0;
         if (nodes.isEmpty())
         {
-            Q_ASSERT(node.hasPrioNotset());
+            // Q_ASSERT(node.hasPrioNotset());
             sLogScope& scope = scopes[0];
             scope.lsId = 0;
             scope.lsPrio = node.getPriority();
@@ -177,7 +179,7 @@ bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNod
                 path += NELusanCommon::SCOPE_ALL;
             }
 
-            NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
+            NEMemory::memCopy(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str(), path.length() + 1);
             ++pos;
         }
 
@@ -193,7 +195,7 @@ bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNod
                 path += NELusanCommon::SCOPE_ALL;
             }
 
-            NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
+            NEMemory::memCopy(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str(), path.length() + 1);
         }
 
         result = LogObserver::requestChangeScopePrio(root.getRootId(), scopes, count);
