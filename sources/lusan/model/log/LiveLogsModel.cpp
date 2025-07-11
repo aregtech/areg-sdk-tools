@@ -163,6 +163,7 @@ void LiveLogsModel::_setupSignals(bool doSetup)
         mConLogger              = connect(log, &LogObserver::signalLogServiceConnected, [this]() {
         });
         mConInstancesConnect    = connect(log, &LogObserver::signalLogInstancesConnect, [this](const std::vector<NEService::sServiceConnectedInstance>& instances) {
+            addInstances(instances, true);
             emit signalInstanceAvailable(instances);
         });
         mConServiceDisconnected = connect(log, &LogObserver::signalLogServiceDisconnected, [this] {
@@ -206,10 +207,12 @@ void LiveLogsModel::slotLogMessage(const SharedBuffer& logMessage)
 
 void LiveLogsModel::slotLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
 {
+    removeInstances(instances);
     std::vector<ITEM_ID> ids(instances.size());
     for (int i = 0; i < static_cast<int>(instances.size()); ++i)
     {
         ids[i] = instances[i].ciCookie;
     }
+
     emit signalInstanceUnavailable(ids);
 }

@@ -370,7 +370,7 @@ public:
      * \brief   Call to query and get list of IDs of connected instances from log database
      * \param   ids     On output, contains the list of IDs of connected instances.
      **/
-    virtual void getLogInstances(std::vector<ITEM_ID>& ids);
+    virtual void getLogInstanceIds(std::vector<ITEM_ID>& ids);
 
     /**
      * \brief   Call to query and get list of names of threads of the connected instances from log database.
@@ -472,6 +472,21 @@ public:
      * \return  Returns NECommon::INVALID_INDEX if not found, otherwise returns index of removed instance.
      **/
     virtual int removeInstanceEntry(ITEM_ID instId);
+
+    /**
+     * \brief   Adds list of instances to the list. Triggered, when instances are connected.
+     * \param   instances   The list of connected instances.
+     * \param   unique      Flag, indicating whether each instance should be unique in the list.
+     * \return  Returns number of instances added to the list.
+     **/
+    virtual int addInstances(const std::vector<NEService::sServiceConnectedInstance>& instances, bool unique);
+
+    /**
+     * \brief   Removes list of instances from the list. Triggered, when instances are disconnected.
+     * \param   instances   The list of disconnected instances.
+     * \return  Returns number of instances removed from the list.
+     **/
+    virtual int removeInstances(const std::vector<NEService::sServiceConnectedInstance>& instances);
 
 //////////////////////////////////////////////////////////////////////////
 // Helper methods
