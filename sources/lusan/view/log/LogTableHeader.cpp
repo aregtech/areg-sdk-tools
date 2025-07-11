@@ -137,7 +137,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             case LiveLogsModel::eColumn::LogColumnSourceId:
             {
                 std::vector<ITEM_ID> ids;
-                mModel->getLogInstances(ids);
+                mModel->getLogInstanceIds(ids);
                 mHeaders[static_cast<int>(col)]->setFilterData(ids);
             }
             break;

@@ -283,33 +283,21 @@ bool LoggingModelBase::isOperable(void) const
 
 void LoggingModelBase::getLogInstanceNames(std::vector<String>& names)
 {
-    if (isOfflineLogging())
+    const std::vector< NEService::sServiceConnectedInstance> & instances{getLogInstances()};
+    names.clear();
+    for (const auto& instance : instances)
     {
-        mDatabase.getLogInstanceNames(names);
-    }
-    else
-    {
-        names.clear();
-        for (const auto& instance : mInstances)
-        {
-            names.push_back(instance.ciInstance);
-        }
+        names.push_back(instance.ciInstance);
     }
 }
 
-void LoggingModelBase::getLogInstances(std::vector<ITEM_ID>& ids)
+void LoggingModelBase::getLogInstanceIds(std::vector<ITEM_ID>& ids)
 {
-    if (isOfflineLogging())
+    const std::vector< NEService::sServiceConnectedInstance> & instances{getLogInstances()};
+    ids.clear();
+    for (const auto& instance : instances)
     {
-        mDatabase.getLogInstances(ids);
-    }
-    else
-    {
-        ids.clear();
-        for (const auto& instance : mInstances)
-        {
-            ids.push_back(instance.ciCookie);
-        }
+        ids.push_back(instance.ciCookie);
     }
 }
 
@@ -426,6 +414,28 @@ int LoggingModelBase::removeInstanceEntry(ITEM_ID instId)
             mInstances.erase(mInstances.begin() + i);
             break;
         }
+    }
+
+    return result;
+}
+
+int LoggingModelBase::addInstances(const std::vector<NEService::sServiceConnectedInstance>& instances, bool unique)
+{
+    int result{ 0 };
+    for (const auto& instance : instances)
+    {
+        result += addInstanceEntry(instance, unique) ? 1 : 0;
+    }
+
+    return result;
+}
+
+int LoggingModelBase::removeInstances(const std::vector<NEService::sServiceConnectedInstance>& instances)
+{
+    int result{ 0 };
+    for (const auto& instance : instances)
+    {
+        result += removeInstanceEntry(instance.ciCookie) != NECommon::INVALID_INDEX ? 1 : 0;
     }
 
     return result;
