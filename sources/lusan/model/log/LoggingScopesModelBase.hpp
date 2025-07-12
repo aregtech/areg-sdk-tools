@@ -112,6 +112,19 @@ signals:
     void signalScopesUpdated(const QModelIndex& parent);
     
 //////////////////////////////////////////////////////////////////////////
+// LoggingScopesModelBase overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+/************************************************************************
+ * LoggingScopesModelBase overrides
+ ************************************************************************/
+
+    /**
+     * \brief   Builds the scopes tree for the model.
+     **/
+    virtual void buildScopes(void);
+    
+//////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
 //////////////////////////////////////////////////////////////////////////
 public:

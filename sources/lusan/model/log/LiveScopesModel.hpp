@@ -130,7 +130,6 @@ private:
      * \return  True if succeeded to request the log priority, false otherwise.
      **/
     bool _requestNodePriority(const ScopeRoot& root, const ScopeNodeBase& node);
-
 };
 
 #endif  // LUSAN_MODEL_LOG_LIVESCOPESMODEL_HPP

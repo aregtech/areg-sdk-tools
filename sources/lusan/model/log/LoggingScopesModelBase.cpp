@@ -55,6 +55,15 @@ void LoggingScopesModelBase::setLoggingModel(LoggingModelBase* model)
 {
     if (model != nullptr)
     {
+        if (mLoggingModel == model)
+            return;
+
+        if (mLoggingModel != nullptr)
+        {
+            // If the model is already set, disconnect from the previous one
+            _setupSignals(false);
+        }
+
         mLoggingModel = model;
         _setupSignals(true);        
         slotLogServiceConnected();
@@ -406,3 +415,20 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
     }
 }
     
+void LoggingScopesModelBase::buildScopes(void)
+{
+    if (mLoggingModel == nullptr)
+        return;
+    
+    beginResetModel();
+    const std::vector<NEService::sServiceConnectedInstance>& instances = mLoggingModel->getLogInstances();
+    slotInstancesAvailable(instances);
+    
+    for (const auto& inst : instances)
+    {
+        const std::vector<NELogging::sScopeInfo> & scopes = mLoggingModel->getLogInstScopes(inst.ciCookie);
+        slotScopesAvailable(inst.ciCookie, scopes);
+    }
+    
+    endResetModel();
+}

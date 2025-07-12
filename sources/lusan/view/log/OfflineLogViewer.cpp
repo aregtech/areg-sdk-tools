@@ -89,22 +89,34 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, const QString& filePa
     connect(view            , &QTableView::customContextMenuRequested    , this, &OfflineLogViewer::onTableContextMenu);
     connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter, SLOT(setComboFilter(int, QStringList)));
     connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter, SLOT(setTextFilter(int, QString)));
-
-    // Try to open the database file
-    if (mFilePath.isEmpty() == false)
-    {
-        mLogModel->openDatabase(mFilePath, true);
-        if (mLogModel->isOperable() == false)
-        {
-            QMessageBox::warning(this, tr("Error"), tr("Failed to open log database file: %1").arg(mFilePath));
-        }
-    }
 }
 
 bool OfflineLogViewer::isDatabaseOpen(void) const
 {
     Q_ASSERT(mLogModel != nullptr);
     return mLogModel->isOperable();
+}
+
+bool OfflineLogViewer::openDatabase(const QString & logPath)
+{
+    bool result{false};
+    const QString & file {logPath.isEmpty() ? mFilePath : logPath};
+    if (file.isEmpty() == false)
+    {
+        mLogModel->openDatabase(file, true);
+        if (mLogModel->isOperable())
+        {
+            mFilePath = file;
+            result = true;
+        }
+        else
+        {
+            QMessageBox::warning(this, tr("Error"), tr("Failed to open log database file: %1").arg(file));
+            mFilePath.clear();
+        }
+    }
+    
+    return result;
 }
 
 void OfflineLogViewer::onHeaderContextMenu(const QPoint& pos)

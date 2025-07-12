@@ -47,6 +47,7 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
     setupWidgets();
     setupSignals();
     updateControls();
+    ctrlTable()->setModel(mScopesModel);
 }
 
 NaviOfflineLogsScopes::~NaviOfflineLogsScopes(void)
@@ -73,8 +74,6 @@ bool NaviOfflineLogsScopes::openDatabase(const QString& filePath)
     if (mLogModel->isOperable())
     {
         mScopesModel->setLoggingModel(mLogModel);
-        ctrlTable()->setModel(nullptr);
-        ctrlTable()->setModel(mScopesModel);
         return true;
     }
     else
@@ -87,11 +86,10 @@ bool NaviOfflineLogsScopes::openDatabase(const QString& filePath)
 
 void NaviOfflineLogsScopes::closeDatabase(void)
 {
+    // Clear the tree view
     mScopesModel->setLoggingModel(nullptr);
     updateControls();    
     mLogModel = nullptr;
-    // Clear the tree view
-    ctrlTable()->setModel(nullptr);
 }
 
 bool NaviOfflineLogsScopes::isDatabaseOpen(void) const
@@ -211,6 +209,7 @@ void NaviOfflineLogsScopes::updateControls(void)
 
 void NaviOfflineLogsScopes::showDatabaseInfo(void)
 {
+    Q_ASSERT(false);
     if (!isDatabaseOpen())
     {
         ctrlTable()->setModel(nullptr);
