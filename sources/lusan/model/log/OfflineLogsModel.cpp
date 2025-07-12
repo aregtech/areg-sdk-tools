@@ -55,11 +55,25 @@ void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
     {
         emit signalDatabaseIsOpened(QString::fromStdString(mDatabase.getDatabasePath().getData()));
         // Load initial log messages for display
+        
+        mInstances.clear();
+        mDatabase.getLogInstanceInfos(mInstances);
+        emit signalInstanceAvailable(mInstances);
+        
+        mScopes.clear();
+        for (const auto & inst : mInstances)
+        {
+            std::vector<NELogging::sScopeInfo> scopes;
+            mDatabase.getLogInstScopes(scopes, inst.ciCookie);
+            mScopes[inst.ciCookie] = scopes;
+            emit signalScopesAvailable(inst.ciCookie, scopes);
+        }
+        
         beginResetModel();
         mLogs.clear();
         mDatabase.getLogMessages(mLogs);
-        endResetModel();
         emit signalLogsAvailable();
+        endResetModel();
     }
 }
 

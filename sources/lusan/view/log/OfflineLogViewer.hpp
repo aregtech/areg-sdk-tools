@@ -71,8 +71,18 @@ public:
      * \brief   Returns true if the offline log database is successfully opened.
      **/
     bool isDatabaseOpen(void) const;
-    
+
+    /**
+     * \brief   Returns the pointer to the logging model used by this viewer.
+     **/
     inline OfflineLogsModel* getLoggingModel(void);
+
+    /**
+     * \brief   Opens the offline log database file.
+     * \param   logPath     The path to the log database file (.sqlog).
+     * \return  Returns true if the database is successfully opened, false otherwise.
+     **/
+    bool openDatabase(const QString & logPath);
     
 //////////////////////////////////////////////////////////////////////////
 // Slots.

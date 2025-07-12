@@ -575,20 +575,19 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
 
 MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
 {
+    MdiChild* result{nullptr};
     QFileInfo info(filePath);
     QString ext{info.suffix()};
     if (ext == ServiceInterface::fileExtension())
     {
-        return createServiceInterfaceView(filePath);
+        result = createServiceInterfaceView(filePath);
     }
     else if (ext == OfflineLogViewer::fileExtension())
     {
-        return createOfflineLogViewer(filePath);
+        result = createOfflineLogViewer(filePath);
     }
-    else
-    {
-        return nullptr;
-    }
+    
+    return result;
 }
 
 ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& filePath /*= QString()*/)
@@ -610,6 +609,7 @@ LogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QStrin
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();
+    mNavigation.showTab(Navigation::eNaviWindow::NaviLiveLogs);
     return child;
 }
 
@@ -619,8 +619,9 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath)
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();
-    mNavigation.showTab(Navigation::TabOfflineLogsExplorer);
+    mNavigation.showTab(Navigation::NaviOfflineLogs);
     static_cast<NaviOfflineLogsScopes *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(child->getLoggingModel());
+    child->openDatabase(QString());
     return child;
 }
 

@@ -43,15 +43,10 @@ OfflineScopesModel::~OfflineScopesModel(void)
 void OfflineScopesModel::setLoggingModel(LoggingModelBase* model)
 {
     LoggingScopesModelBase::setLoggingModel(model);
-
     if ((model == nullptr) || (model->isOperable() == false))
     {
         beginResetModel();
         endResetModel();
-    }
-    else
-    {
-        _buildScopeTree();        
     }
 }
 
