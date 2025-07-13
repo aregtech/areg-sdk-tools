@@ -432,3 +432,35 @@ void LoggingScopesModelBase::buildScopes(void)
     
     endResetModel();
 }
+
+void LoggingScopesModelBase::dataTransfer(LoggingScopesModelBase& scopeModel)
+{
+    beginResetModel();
+    _setupSignals(false);
+    mLoggingModel = scopeModel.mLoggingModel;
+    if (mLoggingModel != nullptr)
+    {
+        if (scopeModel.mLoggingModel != nullptr)
+        {
+            mLoggingModel->dataTransfer(*scopeModel.mLoggingModel);
+        }
+
+        _setupSignals(true);
+        slotLogServiceConnected();
+    }
+    
+    mRootList.clear();
+    mRootList = std::move(scopeModel.mRootList);
+    scopeModel.mRootList.clear();
+    
+    mRootIndex = std::move(scopeModel.mRootIndex);
+    scopeModel.mRootIndex = QModelIndex();
+
+    endResetModel();
+}
+
+void LoggingScopesModelBase::refresh(void)
+{
+    beginResetModel();
+    endResetModel();
+}

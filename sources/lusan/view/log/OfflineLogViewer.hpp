@@ -30,6 +30,7 @@ class QTableView;
 class QLabel;
 class QWidget;
 class OfflineLogsModel;
+class LogViewer;
 class LogViewerFilterProxy;
 class MdiMainWindow;
 
@@ -58,10 +59,17 @@ public:
     /**
      * \brief   Constructor.
      * \param   wndMain    The main window of the application.
-     * \param   filePath   The path to the .sqlog file to open.
      * \param   parent     The parent widget.
      **/
-    explicit OfflineLogViewer(MdiMainWindow *wndMain, const QString& filePath, QWidget *parent = nullptr);
+    explicit OfflineLogViewer(MdiMainWindow *wndMain, QWidget *parent = nullptr);
+
+    /**
+     * \brief   Constructor to use to make a copy of data from the live log viewer.
+     * \param   wndMain    The main window of the application.
+     * \param   liveLogs   The live log viewer object to copy data from.
+     * \param   parent     The parent widget.
+     **/
+    explicit OfflineLogViewer(MdiMainWindow* wndMain, LogViewer & liveLogs, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -137,7 +145,6 @@ private:
     OfflineLogsModel*       mLogModel;  //!< Model for the offline log viewer, handling the data and its representation.
     LogViewerFilterProxy*   mFilter;    //!< The filter object
     QWidget*                mMdiWindow; //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
-    QString                 mFilePath;  //!< Path to the .sqlog file being viewed.
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -40,16 +40,19 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , ui            (new Ui::LogViewer)
     , mLogModel     (nullptr)
     , mFilter       (nullptr)
+    , mTableHeader  (nullptr)
     , mMdiWindow    (new QWidget())
+    , mMainWindow   (wndMain)
 {
     ui->setupUi(mMdiWindow);
+    QTableView* view = ctrlTable();
+
     mLogModel   = new LiveLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
+    mTableHeader= new LogTableHeader(view, mLogModel);
     
-    QTableView* view = ctrlTable();
-    view->setHorizontalHeader(new LogTableHeader(view, mLogModel));
-    QHeaderView* header = ctrlHeader();
-    
+    view->setHorizontalHeader(mTableHeader);
+    QHeaderView* header = ctrlHeader();    
     header->setVisible(true);
     header->show();
     header->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -67,7 +70,6 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     view->setVerticalScrollMode(QTableView::ScrollPerItem);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    // view->setModel(mLogModel);
     view->setModel(mFilter);
 
     // Set the layout
@@ -82,23 +84,19 @@ LogViewer::LogViewer(MdiMainWindow *wndMain, QWidget *parent)
     updateToolbuttons(false, false);
     ctrlPause()->setEnabled(false);
     ctrlStop()->setEnabled(false);
+    setupSignals(true);
+}
 
-    connect(ctrlPause()     , &QToolButton::clicked                     , this      , &LogViewer::onPauseClicked);
-    connect(ctrlStop()      , &QToolButton::clicked                     , this      , &LogViewer::onStopClicked);
-    connect(ctrlClear()     , &QToolButton::clicked                     , this      , &LogViewer::onClearClicked);
-    connect(mLogModel       , &LiveLogsModel::rowsInserted              , this      , &LogViewer::onRowsInserted);
-    connect(mLogModel       , &LiveLogsModel::columnsInserted           , this      , &LogViewer::onColumnsInserted);
-    connect(mLogModel       , &LiveLogsModel::columnsRemoved            , this      , &LogViewer::onColumnsRemoved);
-    connect(mLogModel       , &LiveLogsModel::columnsMoved              , this      , &LogViewer::onColumnsMoved);
-    connect(header          , &QHeaderView::customContextMenuRequested  , this      , &LogViewer::onHeaderContextMenu);
-    connect(view            , &QTableView::customContextMenuRequested   , this      , &LogViewer::onTableContextMenu);
-    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter   , SLOT(setComboFilter(int, QStringList)));
-    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter   , SLOT(setTextFilter(int, QString)));
-    connect(wndMain         , &MdiMainWindow::signalMainwindowClosing   , [this](){
-        if (mLogModel != nullptr)
-            mLogModel->releaseModel();
-        LogObserver::releaseLogObserver();
-    });
+LogViewer::~LogViewer(void)
+{
+    setupSignals(false);
+    ctrlTable()->setModel(nullptr);
+    ctrlTable()->setHorizontalHeader(nullptr);
+    mFilter->setSourceModel(nullptr);
+    delete ui;
+    delete mMdiWindow;
+    delete mFilter;
+    delete mLogModel;
 }
 
 void LogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
@@ -117,7 +115,7 @@ void LogViewer::logServiceConnected(bool isConnected, const QString& address, ui
     }
     else if (mMdiSubWindow != nullptr)
     {
-        Q_ASSERT(mLogModel->getDabasePath() == dbPath);
+        Q_ASSERT(mLogModel->getDatabasePath() == dbPath);
         updateToolbuttons(false, false);
         ctrlPause()->setEnabled(false);
         ctrlStop()->setEnabled(false);
@@ -408,7 +406,66 @@ void LogViewer::onClearClicked(void)
     }
 }
 
+void LogViewer::onMainWindowClosing(void)
+{
+    if (mLogModel != nullptr)
+        mLogModel->releaseModel();
+    
+    LogObserver::releaseLogObserver();
+}
+
 LiveLogsModel* LogViewer::getLiveLogsModel(void) const
 {
     return mLogModel;
+}
+
+QString LogViewer::getDatabasePath(void) const
+{
+    return (mLogModel != nullptr ? mLogModel->getDatabasePath() : QString());
+}
+
+void LogViewer::setupSignals(bool doSetup)
+{
+    QTableView* view        = ctrlTable();
+    QHeaderView* header     = ctrlHeader();
+    MdiMainWindow* wndMain  = mMainWindow;
+
+    if (doSetup)
+    {
+        if (mLogModel != nullptr)
+        {
+            connect(mLogModel, &LiveLogsModel::rowsInserted, this, &LogViewer::onRowsInserted);
+            connect(mLogModel, &LiveLogsModel::columnsInserted, this, &LogViewer::onColumnsInserted);
+            connect(mLogModel, &LiveLogsModel::columnsRemoved, this, &LogViewer::onColumnsRemoved);
+            connect(mLogModel, &LiveLogsModel::columnsMoved, this, &LogViewer::onColumnsMoved);
+        }
+
+        connect(ctrlPause()     , &QToolButton::clicked                     , this      , &LogViewer::onPauseClicked);
+        connect(ctrlStop()      , &QToolButton::clicked                     , this      , &LogViewer::onStopClicked);
+        connect(ctrlClear()     , &QToolButton::clicked                     , this      , &LogViewer::onClearClicked);
+        connect(header          , &QHeaderView::customContextMenuRequested  , this      , &LogViewer::onHeaderContextMenu);
+        connect(view            , &QTableView::customContextMenuRequested   , this      , &LogViewer::onTableContextMenu);
+        connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter   , SLOT(setComboFilter(int, QStringList)));
+        connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter   , SLOT(setTextFilter(int, QString)));
+        connect(wndMain         , &MdiMainWindow::signalMainwindowClosing   , this      , &LogViewer::onMainWindowClosing);
+    }
+    else
+    {
+        if (mLogModel != nullptr)
+        {
+            disconnect(mLogModel, &LiveLogsModel::rowsInserted, this, &LogViewer::onRowsInserted);
+            disconnect(mLogModel, &LiveLogsModel::columnsInserted, this, &LogViewer::onColumnsInserted);
+            disconnect(mLogModel, &LiveLogsModel::columnsRemoved, this, &LogViewer::onColumnsRemoved);
+            disconnect(mLogModel, &LiveLogsModel::columnsMoved, this, &LogViewer::onColumnsMoved);
+        }
+
+        disconnect(ctrlPause()     , &QToolButton::clicked                     , this      , &LogViewer::onPauseClicked);
+        disconnect(ctrlStop()      , &QToolButton::clicked                     , this      , &LogViewer::onStopClicked);
+        disconnect(ctrlClear()     , &QToolButton::clicked                     , this      , &LogViewer::onClearClicked);
+        disconnect(header          , &QHeaderView::customContextMenuRequested  , this      , &LogViewer::onHeaderContextMenu);
+        disconnect(view            , &QTableView::customContextMenuRequested   , this      , &LogViewer::onTableContextMenu);
+        disconnect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter   , SLOT(setComboFilter(int, QStringList)));
+        disconnect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter   , SLOT(setTextFilter(int, QString)));
+        disconnect(wndMain         , &MdiMainWindow::signalMainwindowClosing   , this      , &LogViewer::onMainWindowClosing);
+    }
 }

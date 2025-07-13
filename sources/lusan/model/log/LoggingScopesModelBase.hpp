@@ -72,6 +72,17 @@ public:
      **/
     virtual void setLoggingModel(LoggingModelBase* model);
 
+    /**
+     * \brief   Transfers the data from given model. Copies the list of root elements and builds the scope tree.
+     * \param   scopeModel  The source of data to copy. On output the list of existing data may be empty.
+     **/
+    virtual void dataTransfer(LoggingScopesModelBase& scopeModel);
+    
+    /**
+     * \brief   Refreshes the model, clearing all data and rebuilding the scope tree.
+     **/
+    virtual void refresh(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Common operations
 //////////////////////////////////////////////////////////////////////////
@@ -123,7 +134,7 @@ public:
      * \brief   Builds the scopes tree for the model.
      **/
     virtual void buildScopes(void);
-    
+
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
 //////////////////////////////////////////////////////////////////////////

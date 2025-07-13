@@ -135,7 +135,14 @@ public:
      * \param   port        The TCP port number of the log collector service to connect.
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
-
+    
+    /**
+     * \brief   Sets the pointer of associated live logs window. 
+     * \param   liveLogs    The pointer to the live logs window.
+     *                      Can be nullptr if no live logs are available.
+     */
+    void setLiveLogs(LogViewer* liveLogs);
+    
     //!< Returns true if the logging is configured.
     inline bool isConfigured(void) const;
 
@@ -159,13 +166,6 @@ public:
      *          Can be nullptr if disconnected or no live logs are available.
      **/
     inline LogViewer* getLiveLogs(void) const;
-
-    /**
-     * \brief   Sets the pointer of associated live logs window. 
-     * \param   liveLogs    The pointer to the live logs window.
-     *                      Can be nullptr if no live logs are available.
-     */
-    inline void setLiveLogs(LogViewer* liveLogs);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -597,11 +597,6 @@ inline bool NaviLiveLogsScopes::isStopped(void) const
 inline LogViewer* NaviLiveLogsScopes::getLiveLogs(void) const
 {
     return mLiveLogs;
-}
-
-inline void NaviLiveLogsScopes::setLiveLogs(LogViewer* liveLogs)
-{
-    mLiveLogs = liveLogs;
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVILIVELOGSSCOPES_HPP
