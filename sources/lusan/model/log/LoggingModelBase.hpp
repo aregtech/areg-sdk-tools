@@ -348,7 +348,7 @@ public:
     /**
      * \brief   Returns the path to the log data database.
      **/
-    virtual QString getDabasePath(void) const;
+    virtual QString getDatabasePath(void) const;
 
     /**
      * \brief   Closes the currently opened database.
@@ -487,6 +487,12 @@ public:
      * \return  Returns number of instances removed from the list.
      **/
     virtual int removeInstances(const std::vector<NEService::sServiceConnectedInstance>& instances);
+
+    /**
+     * \brief   Transfers the data from given model. Copies the list of connected instances, scopes and logs.
+     * \param   logModel    The source of data to copy. On output the list of existing data may be empty.
+     **/
+    virtual void dataTransfer(LoggingModelBase& logModel);
 
 //////////////////////////////////////////////////////////////////////////
 // Helper methods

@@ -347,9 +347,10 @@ private:
     /**
      * \brief   Creates a new Offline Log Viewer View for .sqlog files.
      * \param   filePath   The path to the .sqlog file to view.
+     * \param   cloneLive  If true, the data from live log viewer is cloned, otherwise a new instance is created.
      * \return  A pointer to the new Offline Log Viewer View.
      **/
-    OfflineLogViewer* createOfflineLogViewer(const QString& filePath = QString());
+    OfflineLogViewer* createOfflineLogViewer(const QString& filePath = QString(), bool cloneLive = false);
 
     /**
      * \brief   Returns the file filter string, which contains the list of supported extensions.
@@ -374,7 +375,7 @@ private:
     void _createMenus();
 
     /**
-     * \brief   Creates the toolbars for the main window.
+     * \brief   Creates the tool-bars for the main window.
      **/
     void _createToolBars();
 
@@ -417,10 +418,10 @@ private:
     static bool hasRecentFiles();
 
     /**
-     * \brief   Prepends a file to the recent files list.
-     * \param   fileName    The name of the file to prepend.
+     * \brief   Appends a file to the recent files list.
+     * \param   fileName    The name of the file to append.
      **/
-    void prependToRecentFiles(const QString& fileName);
+    void appendToRecentFiles(const QString& fileName);
 
     /**
      * \brief   Sets the visibility of the recent files.

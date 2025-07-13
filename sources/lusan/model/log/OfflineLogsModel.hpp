@@ -40,12 +40,10 @@ public:
     explicit OfflineLogsModel(QObject* parent = nullptr);
     virtual ~OfflineLogsModel();
 
-
 //////////////////////////////////////////////////////////////////////////
 // LoggingModelBase overrider
 //////////////////////////////////////////////////////////////////////////
 public:
-    
     /**
      * \brief   Opens logging database file.
      * \param   dbPath      The path to the database.

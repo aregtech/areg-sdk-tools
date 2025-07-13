@@ -64,11 +64,6 @@ public:
     
     virtual void setLoggingModel(LoggingModelBase* model);
 
-    /**
-     * \brief   Refreshes the model, clearing all data and rebuilding the scope tree.
-     **/
-    void refresh(void);
-
 signals:
 
 /************************************************************************

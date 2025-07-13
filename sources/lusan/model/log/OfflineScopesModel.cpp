@@ -43,17 +43,18 @@ OfflineScopesModel::~OfflineScopesModel(void)
 void OfflineScopesModel::setLoggingModel(LoggingModelBase* model)
 {
     LoggingScopesModelBase::setLoggingModel(model);
-    if ((model == nullptr) || (model->isOperable() == false))
+    if ((model != nullptr) && model->isOperable())
     {
-        beginResetModel();
-        endResetModel();
+        mRootList.clear();
+        const std::vector<NEService::sServiceConnectedInstance>& instances = model->getLogInstances();
+        slotInstancesAvailable(instances);
+        
+        for (const auto& inst : instances)
+        {
+            const std::vector<NELogging::sScopeInfo>& scopes = model->getLogInstScopes(inst.ciCookie);
+            slotScopesAvailable(inst.ciCookie, scopes);
+        }
     }
-}
-
-void OfflineScopesModel::refresh(void)
-{
-    beginResetModel();
-    endResetModel();
 }
 
 //////////////////////////////////////////////////////////////////////////

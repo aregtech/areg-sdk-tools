@@ -21,6 +21,8 @@
 #include "ui/ui_OfflineLogViewer.h"
 
 #include "lusan/view/log/LogTableHeader.hpp"
+#include "lusan/view/log/LogViewer.hpp"
+
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include <QMdiSubWindow>
@@ -37,18 +39,76 @@ const QString& OfflineLogViewer::fileExtension(void)
     return OfflineLogsModel::getFileExtension();
 }
 
-OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, const QString& filePath, QWidget *parent)
+OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     : MdiChild      (MdiChild::eMdiWindow::MdiOfflineLogViewer, wndMain, parent)
 
     , ui            (new Ui::OfflineLogViewer)
     , mLogModel     (nullptr)
     , mFilter       (nullptr)
     , mMdiWindow    (new QWidget())
-    , mFilePath     (filePath)
 {
     ui->setupUi(mMdiWindow);
     mLogModel   = new OfflineLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
+    
+    QTableView* view = ctrlTable();
+    view->setHorizontalHeader(new LogTableHeader(view, mLogModel));
+    QHeaderView* header = ctrlHeader();
+    
+    header->setVisible(true);
+    header->show();
+    header->setContextMenuPolicy(Qt::CustomContextMenu);
+    header->setSectionsMovable(true);
+    
+    view->setSelectionBehavior(QAbstractItemView::SelectRows);
+    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    view->setSelectionMode(QAbstractItemView::SingleSelection);
+    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    view->setShowGrid(false);
+    view->setCurrentIndex(QModelIndex());
+    view->horizontalHeader()->setStretchLastSection(true);
+    view->verticalHeader()->hide();
+    view->setAutoScroll(true);
+    view->setVerticalScrollMode(QTableView::ScrollPerItem);
+    view->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    view->setModel(mFilter);
+
+    // Set the layout
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->addWidget(mMdiWindow);
+    setLayout(layout);
+    
+    setAttribute(Qt::WA_DeleteOnClose);
+    ctrlTable()->setAutoScroll(true);
+    ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
+
+    // Connect signals
+    connect(mLogModel       , &OfflineLogsModel::signalDatabaseIsOpened   , this, &OfflineLogViewer::onDatabaseOpened);
+    connect(mLogModel       , &OfflineLogsModel::signalDatabaseIsClosed   , this, &OfflineLogViewer::onDatabaseClosed);
+    connect(header          , &QHeaderView::customContextMenuRequested   , this, &OfflineLogViewer::onHeaderContextMenu);
+    connect(view            , &QTableView::customContextMenuRequested    , this, &OfflineLogViewer::onTableContextMenu);
+    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter, SLOT(setComboFilter(int, QStringList)));
+    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter, SLOT(setTextFilter(int, QString)));
+}
+
+OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LogViewer& liveLogs, QWidget* parent)
+    : MdiChild      (MdiChild::eMdiWindow::MdiOfflineLogViewer, wndMain, parent)
+
+    , ui            (new Ui::OfflineLogViewer)
+    , mLogModel     (nullptr)
+    , mFilter       (nullptr)
+    , mMdiWindow    (new QWidget())
+{
+    ui->setupUi(mMdiWindow);
+    mLogModel   = new OfflineLogsModel(this);
+    mFilter     = new LogViewerFilterProxy(mLogModel);
+    LiveLogsModel* liveModel = liveLogs.getLiveLogsModel();
+    if (liveModel != nullptr)
+    {
+        mLogModel->dataTransfer(*liveModel);
+        setCurrentFile(mLogModel->getDatabasePath());
+    }
     
     QTableView* view = ctrlTable();
     view->setHorizontalHeader(new LogTableHeader(view, mLogModel));
@@ -100,19 +160,18 @@ bool OfflineLogViewer::isDatabaseOpen(void) const
 bool OfflineLogViewer::openDatabase(const QString & logPath)
 {
     bool result{false};
-    const QString & file {logPath.isEmpty() ? mFilePath : logPath};
-    if (file.isEmpty() == false)
+    mLogModel->closeDatabase();
+    if (logPath.isEmpty() == false)
     {
-        mLogModel->openDatabase(file, true);
+        mLogModel->openDatabase(logPath, true);
         if (mLogModel->isOperable())
         {
-            mFilePath = file;
+            setCurrentFile(mLogModel->getDatabasePath());
             result = true;
         }
         else
         {
-            QMessageBox::warning(this, tr("Error"), tr("Failed to open log database file: %1").arg(file));
-            mFilePath.clear();
+            QMessageBox::warning(this, tr("Error"), tr("Failed to open log database file: %1").arg(logPath));
         }
     }
     

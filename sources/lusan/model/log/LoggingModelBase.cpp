@@ -266,7 +266,7 @@ void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
     }
 }
 
-QString LoggingModelBase::getDabasePath(void) const
+QString LoggingModelBase::getDatabasePath(void) const
 {
     return QString::fromStdString(mDatabase.getDatabasePath().getData());
 }
@@ -439,6 +439,32 @@ int LoggingModelBase::removeInstances(const std::vector<NEService::sServiceConne
     }
 
     return result;
+}
+
+void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
+{
+    mActiveColumns.clear();
+    mActiveColumns = std::move(logModel.mActiveColumns);
+    logModel.mActiveColumns.clear();
+
+    mLogs.clear();
+    mLogs = std::move(logModel.mLogs);
+    logModel.mLogs.clear();
+
+    mInstances.clear();
+    mInstances = std::move(logModel.mInstances);
+    logModel.mInstances.clear();
+
+    mScopes.clear();
+    mScopes = std::move(logModel.mScopes);
+    logModel.mScopes.clear();
+
+    mDatabase.disconnect();
+    if (logModel.mDatabase.isOperable())
+    {
+        mDatabase.connect(logModel.mDatabase.getDatabasePath(), true);
+    }
+    logModel.mDatabase.disconnect();
 }
 
 QVariant LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const

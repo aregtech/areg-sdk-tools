@@ -108,6 +108,16 @@ void NaviLiveLogsScopes::setLogCollectorConnection(const QString& address, uint1
     mPort = port;
 }
 
+void NaviLiveLogsScopes::setLiveLogs(LogViewer* liveLogs)
+{
+    ctrlTable()->setModel(nullptr);
+    mLiveLogs = liveLogs;
+    if (mLiveLogs != nullptr)
+    {
+        ctrlTable()->setModel(mLiveLogs->getLiveLogsModel());
+    }
+}
+
 QToolButton* NaviLiveLogsScopes::ctrlCollapse(void)
 {
     return ui->toolCollapse;
@@ -280,8 +290,8 @@ void NaviLiveLogsScopes::setupLogSignals(bool setup)
         {
             mSignalsActive = true;
             connect(log, &LogObserver::signalLogObserverConfigured  , this, &NaviLiveLogsScopes::onLogObserverConfigured   , Qt::QueuedConnection);
-            connect(log, &LogObserver::signalLogDbConfigured        , this, &NaviLiveLogsScopes::onLogDbConfigured         , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogServiceConnected    , this, &NaviLiveLogsScopes::onLogServiceConnected     , Qt::QueuedConnection);
+            connect(log, &LogObserver::signalLogDbConfigured        , this, &NaviLiveLogsScopes::onLogDbConfigured         , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogObserverStarted     , this, &NaviLiveLogsScopes::onLogObserverStarted      , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogDbCreated           , this, &NaviLiveLogsScopes::onLogDbCreated            , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogObserverInstance    , this, &NaviLiveLogsScopes::onLogObserverInstance     , Qt::QueuedConnection);
@@ -455,7 +465,7 @@ void NaviLiveLogsScopes::onLogServiceConnected(bool isConnected, const QString& 
     ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
     Q_ASSERT(mMainWindow != nullptr);
     mMainWindow->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
-    
+
     if ((isConnected == false) && (mScopeModel != nullptr) && (mSelModel != nullptr))
     {
         disconnect(mScopeModel  , &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
@@ -516,16 +526,35 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
     }
     else
     {
-        LogObserver::disconnect();
+        QString address{ LogObserver::getConnectedAddress() };
+        uint16_t port{ LogObserver::getConnectedPort() };
+        QString logFile{ mActiveLogFile.isEmpty() == false ? mActiveLogFile : LogObserver::getActiveDatabase() };
+
+        setupLogSignals(false);
         
         ctrlConnect()->setChecked(false);
         ctrlConnect()->setIcon(QIcon::fromTheme(QString::fromUtf8("network-offline")));
         ctrlConnect()->setToolTip(tr("Connect to log collector"));
         
-        setupLogSignals(false);
         mState = eLoggingStates::LoggingDisconnected;
-        mLiveLogs = nullptr;
+        LogObserver::disconnect();
         LogObserver::releaseLogObserver();
+
+        mMainWindow->logCollecttorConnected(false, address, port, logFile);
+        ctrlTable()->setModel(nullptr);
+        mScopeModel->setLoggingModel(nullptr);
+        mSelModel->setModel(nullptr);
+
+        disconnect(mScopeModel , &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
+        disconnect(mScopeModel , &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
+        disconnect(mScopeModel , &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
+        disconnect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
+        
+        delete mScopeModel;
+        delete mSelModel;
+        mScopeModel = nullptr;
+        mSelModel = nullptr;
+        mLiveLogs = nullptr;
     }
 }
 

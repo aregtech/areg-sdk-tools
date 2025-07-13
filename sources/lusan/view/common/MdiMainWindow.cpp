@@ -174,7 +174,7 @@ bool MdiMainWindow::loadFile(const QString& fileName)
         succeeded = true;
         child->show();
         mLastFile = fileName;
-        MdiMainWindow::prependToRecentFiles(fileName);
+        MdiMainWindow::appendToRecentFiles(fileName);
     }
 
     return succeeded;
@@ -187,8 +187,26 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
         mLogViewer->logServiceConnected(isConnected, address, port, dbPath);
         if (isConnected == false)
         {
-            mLogViewer = nullptr;
-            mLiveLogWnd = nullptr;
+            // Copy logs to offline log viewer
+            OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
+            mNavigation.showTab(Navigation::eNaviWindow::NaviOfflineLogs);
+            static_cast<NaviLiveLogsScopes *>(mNavigation.getTab(Navigation::eNaviWindow::NaviLiveLogs))->setLiveLogs(nullptr);
+            offlineLog->show();
+
+            // Properly close and delete the live log window and viewer
+            if (mLiveLogWnd != nullptr)
+            {
+                mLiveLogWnd->close();
+                mMdiArea.removeSubWindow(mLiveLogWnd);
+                mLiveLogWnd = nullptr;
+            }
+
+            if (mLogViewer != nullptr)
+            {
+                mLogViewer->close();
+                delete mLogViewer;
+                mLogViewer = nullptr;
+            }
         }
     }
 }
@@ -354,7 +372,7 @@ void MdiMainWindow::onFileSaveAs()
     if ((child != nullptr) && child->saveAs())
     {
         statusBar()->showMessage(tr("File saved"), 2000);
-        MdiMainWindow::prependToRecentFiles(child->currentFile());
+        MdiMainWindow::appendToRecentFiles(child->currentFile());
     }
 }
 
@@ -455,7 +473,7 @@ bool MdiMainWindow::hasRecentFiles()
     return count > 0;
 }
 
-void MdiMainWindow::prependToRecentFiles(const QString& fileName)
+void MdiMainWindow::appendToRecentFiles(const QString& fileName)
 {
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
 
@@ -584,7 +602,7 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
     }
     else if (ext == OfflineLogViewer::fileExtension())
     {
-        result = createOfflineLogViewer(filePath);
+        result = createOfflineLogViewer(filePath, false);
     }
     
     return result;
@@ -613,15 +631,19 @@ LogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QStrin
     return child;
 }
 
-OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath)
+OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath, bool cloneLive)
 {
-    OfflineLogViewer* child = new OfflineLogViewer(this, filePath, &mMdiArea);
+    OfflineLogViewer* child = cloneLive && (mLogViewer != nullptr) ? new OfflineLogViewer(this, *mLogViewer, &mMdiArea) : new OfflineLogViewer(this, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();
     mNavigation.showTab(Navigation::NaviOfflineLogs);
     static_cast<NaviOfflineLogsScopes *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(child->getLoggingModel());
-    child->openDatabase(QString());
+    if (filePath.isEmpty() == false)
+    {
+        child->openDatabase(filePath);
+    }
+
     return child;
 }
 
