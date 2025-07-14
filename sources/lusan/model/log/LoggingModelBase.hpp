@@ -22,12 +22,16 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "areg/base/File.hpp"
 #include "areg/base/SharedBuffer.hpp"
 #include "areg/base/String.hpp"
-#include "areg/base/File.hpp"
+#include "areg/base/SynchObjects.hpp"
+#include "areg/base/Thread.hpp"
+#include "areg/base/IEThreadConsumer.hpp"
 #include "areg/component/NEService.hpp"
 #include "areg/logging/NELogging.hpp"
 #include "aregextend/db/LogSqliteDatabase.hpp"
+#include "aregextend/db/SqliteStatement.hpp"
 
 #include <QAbstractTableModel>
 #include <QList>
@@ -47,7 +51,8 @@ class LogViewerFilterProxy;
  * \brief   Base class for log viewer models (live and offline).
  *          Provides common data and interface for log models.
  **/
-class LoggingModelBase : public QAbstractTableModel
+class LoggingModelBase  : public    QAbstractTableModel
+                        , protected IEThreadConsumer
 {
     Q_OBJECT
 
@@ -494,6 +499,13 @@ public:
      **/
     virtual void dataTransfer(LoggingModelBase& logModel);
 
+    /**
+     * \brief   Reads logs from the database asynchronously in a separate thread.
+     * @param   maxEntries  The maximum number of log entries to read in one loop.
+     *          If -1, reads all available entries.
+     **/
+    virtual void readLogsAsynchronous(int maxEntries = -1);
+
 //////////////////////////////////////////////////////////////////////////
 // Helper methods
 //////////////////////////////////////////////////////////////////////////
@@ -503,6 +515,11 @@ protected:
      * \brief   Closes currently opened log database file without triggering signal.
      **/
     inline void _closeDatabase(void);
+
+    /**
+     * \brief   Quits the worker thread, which reads log messages from database.
+     **/
+    inline void _quitThread(void);
 
     /**
      * \brief   Helper to get display data for a log message and column.
@@ -529,16 +546,42 @@ protected:
      **/
     QVariant getAlignmentData(eColumn column) const;
 
+/************************************************************************/
+// IEThreadConsumer interface overrides
+/************************************************************************/
+protected:
+
+    /**
+     * \brief   This callback function is called from Thread object, when it is 
+     *          running and fully operable. If thread needs run in loop, the loop 
+     *          should be implemented here. When consumer exits this function, 
+     *          the thread will complete work. To restart thread running, 
+     *          createThread() method should be called again.
+     **/
+    virtual void onThreadRuns( void ) override;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+
+    inline LoggingModelBase& self(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    eLogging                mLoggingType;   //!< The type of logging, either live or offline
-    LogSqliteDatabase       mDatabase;      //!< The SQLite database object to read log data
-    ListColumns             mActiveColumns; //!< The list of active columns
-    ListLogs                mLogs;          //!< The list of log messages
-    ListInstances           mInstances;     //!< The list of connected instances
-    MapScopes               mScopes;        //!< The map of scopes, where key is instance ID and value is the list of scopes
+    eLogging                mLoggingType;   //!< The type of logging, either live or offline.
+    LogSqliteDatabase       mDatabase;      //!< The SQLite database object to read log data.
+    SqliteStatement         mStatement;     //!< The SQLite statement to query log data.
+    ListColumns             mActiveColumns; //!< The list of active columns.
+    ListLogs                mLogs;          //!< The list of log messages.
+    ListInstances           mInstances;     //!< The list of connected instances.
+    MapScopes               mScopes;        //!< The map of scopes, where key is instance ID and value is the list of scopes.
+    int                     mLogChunk;      //!< The position in the log messages list to read from.
+    uint32_t                mLogCount;      //!< The position of updated log.
+    Thread                  mReadThread;    //!< The thread to run the model operations.
+    Mutex                   mQuitThread;    //!< The event to notify when data is ready.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -622,6 +665,21 @@ inline void LoggingModelBase::_closeDatabase(void)
 {
     mDatabase.disconnect();
     dataReset();
+}
+
+inline void LoggingModelBase::_quitThread(void)
+{
+    if (mReadThread.isValid())
+    {
+        mQuitThread.lock(NECommon::WAIT_INFINITE);
+        mReadThread.shutdownThread(NECommon::WAIT_INFINITE);
+        mQuitThread.unlock();
+    }
+}
+
+inline LoggingModelBase& LoggingModelBase::self(void)
+{
+    return (*this);
 }
 
 #endif // LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP

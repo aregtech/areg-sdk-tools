@@ -78,10 +78,15 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     : QAbstractTableModel(parent)
     , mLoggingType  (logsType)
     , mDatabase     ( )
+    , mStatement    (mDatabase.getDatabase())
     , mActiveColumns(getDefaultColumns())
     , mLogs         ( )
     , mInstances    ( )
     , mScopes       ( )
+    , mLogChunk     (-1)
+    , mLogCount     (0)
+    , mReadThread   (static_cast<IEThreadConsumer &>(self()), "_LogReadingThread_")
+    , mQuitThread   (false)
 {
 }
 
@@ -110,7 +115,7 @@ QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, 
 
 int LoggingModelBase::rowCount(const QModelIndex& parent) const
 {
-    return (parent.isValid() ? 0 : static_cast<int>(mLogs.size()));
+    return (parent.isValid() ? 0 : mLogCount);
 }
 
 int LoggingModelBase::columnCount(const QModelIndex& parent) const
@@ -158,40 +163,39 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     int row = index.row();
     int col = index.column();
 
-    if ((row < 0) || (row >= static_cast<int>(mLogs.size())))
+    if ((row < 0) || (row >= static_cast<int>(mLogCount)))
         return QVariant();
 
     if ((col < 0) || (col >= static_cast<int>(mActiveColumns.size())))
         return QVariant();
-
-    const SharedBuffer& logData = mLogs.at(row);
+    
+    const SharedBuffer & logData {mLogs[row]};
     Q_ASSERT(logData.isValid());
     const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(logData.getBuffer());
     if (logMessage == nullptr)
         return QVariant();
-
+    
     eColumn column = mActiveColumns.at(col);
-
     switch (static_cast<Qt::ItemDataRole>(role))
     {
     case Qt::DisplayRole:
         return getDisplayData(logMessage, column);
-
+        
     case Qt::BackgroundRole:
         return getBackgroundData(logMessage, column);
-
+        
     case Qt::ForegroundRole:
         return getForegroundData(logMessage, column);
-
+        
     case Qt::DecorationRole:
         return getDecorationData(logMessage, column);
-
+        
     case Qt::TextAlignmentRole:
         return getAlignmentData(column);
-
+        
     case Qt::UserRole:
         return QVariant::fromValue(logMessage);
-
+        
     default:
         return QVariant();
     }
@@ -339,7 +343,7 @@ const std::vector<NELogging::sScopeInfo> & LoggingModelBase::getLogInstScopes(IT
 
 const std::vector<SharedBuffer>& LoggingModelBase::getLogMessages()
 {
-    if (isOfflineLogging() && mLogs.empty())
+    if (isOfflineLogging() && (mLogCount == 0))
     {
         mDatabase.getLogMessages(mLogs);
     }
@@ -449,7 +453,10 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
 
     mLogs.clear();
     mLogs = std::move(logModel.mLogs);
+    mLogChunk = logModel.mLogChunk;
+    mLogCount = logModel.mLogCount;
     logModel.mLogs.clear();
+    logModel.mLogCount = 0;
 
     mInstances.clear();
     mInstances = std::move(logModel.mInstances);
@@ -465,6 +472,17 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
         mDatabase.connect(logModel.mDatabase.getDatabasePath(), true);
     }
     logModel.mDatabase.disconnect();
+}
+
+void LoggingModelBase::readLogsAsynchronous(int maxEntries)
+{
+    _quitThread();
+    beginResetModel();
+    mLogs.clear();
+    mLogCount = 0;
+    endResetModel();
+    mLogChunk = maxEntries;
+    mReadThread.createThread(NECommon::DO_NOT_WAIT);
 }
 
 QVariant LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
@@ -562,4 +580,39 @@ QVariant LoggingModelBase::getAlignmentData(eColumn column) const
     default:
         return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
     }
+}
+
+void LoggingModelBase::onThreadRuns(void)
+{
+    uint32_t    nextStart   { 0 };
+    int         readCount   { 0 };
+    
+    if (mDatabase.setupStatementReadLogs(mStatement, NEService::TARGET_ALL) == false)
+        return;
+
+    uint32_t count = mDatabase.countLogEntries();
+    if (count == 0)
+        return;
+    
+    Q_ASSERT(mLogCount == 0);
+    mLogs.resize(count);
+
+    do
+    {
+        readCount = -1;
+        if (mQuitThread.tryLock() == false)
+            break;
+        
+        mQuitThread.unlock();
+        readCount   = mDatabase.fillLogMessages(mLogs, mStatement, nextStart, mLogChunk);
+        if (readCount != 0)
+        {
+            beginInsertRows(QModelIndex(), static_cast<int>(nextStart), static_cast<int>(nextStart) + readCount - 1);
+            nextStart += static_cast<uint32_t>(readCount);
+            mLogCount = nextStart;
+            endInsertRows();
+        }
+    } while ((readCount > 0) && (readCount == mLogChunk));
+    
+    Q_ASSERT((mLogCount == static_cast<int>(mLogs.size())) || (readCount == -1));
 }
