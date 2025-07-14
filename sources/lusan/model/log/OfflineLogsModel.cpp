@@ -69,11 +69,7 @@ void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
             emit signalScopesAvailable(inst.ciCookie, scopes);
         }
         
-        beginResetModel();
-        mLogs.clear();
-        mDatabase.getLogMessages(mLogs);
-        emit signalLogsAvailable();
-        endResetModel();
+        readLogsAsynchronous(OfflineLogsModel::DEFAULT_LOG_CHUNK);
     }
 }
 
