@@ -22,6 +22,7 @@
 #include <QWidget>
 
 class MdiMainWindow;
+class QAbstractTableModel;
 
 class NavigationWindow : public QWidget
 {
@@ -91,6 +92,8 @@ public:
      * \return  True if the navigation window is for offline logs, false otherwise.
      **/
     bool isNaviOfflineLogs(void) const;
+
+    virtual void resetNavigator(QAbstractTableModel * model);
 
 //////////////////////////////////////////////////////////////////////////
 // NavigationWindow class inline methods

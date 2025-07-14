@@ -103,6 +103,10 @@ public:
      **/
     void setLoggingModel(OfflineLogsModel * model);
 
+    bool isActiveLoggingModel(const OfflineLogsModel & model) const;
+
+    bool resetActive(OfflineLogsModel & model);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////

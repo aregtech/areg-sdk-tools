@@ -261,6 +261,8 @@ public:
      **/
     inline bool isDisconnectedLogging(void) const;
 
+    inline uint32_t getId(void) const;
+
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -582,6 +584,12 @@ protected:
     uint32_t                mLogCount;      //!< The position of updated log.
     Thread                  mReadThread;    //!< The thread to run the model operations.
     Mutex                   mQuitThread;    //!< The event to notify when data is ready.
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden members
+//////////////////////////////////////////////////////////////////////////
+private:
+    const uint32_t          mModelId;       //!< The unique ID of logging model
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -659,6 +667,11 @@ inline bool LoggingModelBase::isOfflineLogging(void) const
 inline bool LoggingModelBase::isDisconnectedLogging(void) const
 {
     return (mLoggingType == eLogging::LoggingDisconneced);
+}
+
+inline uint32_t LoggingModelBase::getId(void) const
+{
+    return mModelId;
 }
 
 inline void LoggingModelBase::_closeDatabase(void)

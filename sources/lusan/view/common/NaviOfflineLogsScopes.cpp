@@ -99,9 +99,25 @@ bool NaviOfflineLogsScopes::isDatabaseOpen(void) const
 
 void NaviOfflineLogsScopes::setLoggingModel(OfflineLogsModel * model)
 {
-    mLogModel = model;
-    mScopesModel->setLoggingModel(model);
-    updateControls();
+    if (mLogModel != model)
+    {
+        mLogModel = model;
+        mScopesModel->setLoggingModel(model);
+        updateControls();
+    }
+}
+
+bool NaviOfflineLogsScopes::isActiveLoggingModel(const OfflineLogsModel & model) const
+{
+    return (mScopesModel != nullptr) && mScopesModel->isSameLogingModel(model);
+}
+
+bool NaviOfflineLogsScopes::resetActive(OfflineLogsModel & model)
+{
+    if (isActiveLoggingModel(model))
+    {
+        setLoggingModel(nullptr);
+    }
 }
 
 void NaviOfflineLogsScopes::optionOpenning(void)
@@ -288,6 +304,7 @@ void NaviOfflineLogsScopes::onRefreshDatabaseClicked(void)
 {
     if (isDatabaseOpen())
     {
+        mScopesModel->setLoggingModel(nullptr);
         mScopesModel->setLoggingModel(mLogModel);
     }
 }

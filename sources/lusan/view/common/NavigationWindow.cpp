@@ -54,3 +54,8 @@ bool NavigationWindow::isNaviOfflineLogs(void) const
 {
     return (mNaviWindowType == static_cast<int>(Navigation::eNaviWindow::NaviOfflineLogs));
 }
+
+void NavigationWindow::resetNavigator(QAbstractTableModel * model)
+{
+
+}

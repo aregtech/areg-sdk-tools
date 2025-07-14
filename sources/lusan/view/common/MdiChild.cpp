@@ -168,9 +168,14 @@ void MdiChild::closeEvent(QCloseEvent* event)
         event->ignore();
     }
 #else
+    onWindowClosing(isActiveWindow());
     emit signalMdiChildClosed(this);
     event->accept();
 #endif
+}
+
+void MdiChild::onWindowClosing(bool /*isActive*/)
+{
 }
 
 void MdiChild::onDocumentModified()

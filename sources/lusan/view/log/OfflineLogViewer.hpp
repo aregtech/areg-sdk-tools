@@ -32,6 +32,7 @@ class QWidget;
 class OfflineLogsModel;
 class LogViewer;
 class LogViewerFilterProxy;
+class LogTableHeader;
 class MdiMainWindow;
 
 namespace Ui {
@@ -91,6 +92,10 @@ public:
      * \return  Returns true if the database is successfully opened, false otherwise.
      **/
     bool openDatabase(const QString & logPath);
+
+protected:
+
+    virtual void onWindowClosing(bool isActive) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Slots.
@@ -136,6 +141,10 @@ private:
      * \brief   Resets the order of the columns.
      **/
     void resetColumnOrder();
+
+    void setupSignals(bool doSetup);
+
+    void setupWidgets(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -145,6 +154,7 @@ private:
     OfflineLogsModel*       mLogModel;  //!< Model for the offline log viewer, handling the data and its representation.
     LogViewerFilterProxy*   mFilter;    //!< The filter object
     QWidget*                mMdiWindow; //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
+    LogTableHeader *        mHeader;
 };
 
 //////////////////////////////////////////////////////////////////////////

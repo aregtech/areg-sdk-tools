@@ -31,6 +31,11 @@
 #include <QIcon>
 #include <QSize>
 
+namespace
+{
+    uint32_t    _idGenerator{0};
+}
+
 const QStringList& LoggingModelBase::getHeaderList(void)
 {
     static QStringList _headers
@@ -87,6 +92,7 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mLogCount     (0)
     , mReadThread   (static_cast<IEThreadConsumer &>(self()), "_LogReadingThread_")
     , mQuitThread   (false)
+    , mModelId      (++_idGenerator)
 {
 }
 

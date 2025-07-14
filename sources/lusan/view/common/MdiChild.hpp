@@ -65,7 +65,7 @@ public:
      * \brief   Returns the MDI Window type.
      * \return  The MDI Window type.
      **/
-    inline eMdiWindow getMdiWindowType(void) const;
+    inline MdiChild::eMdiWindow getMdiWindowType(void) const;
 
     /**
      * \brief   Checks if the MDI child is a Service Interface window.
@@ -230,6 +230,10 @@ protected:
      * \param   event    The close event.
      **/
     virtual void closeEvent(QCloseEvent* event) override;
+
+protected:
+
+    virtual void onWindowClosing(bool isActive);
 
 protected:
     /**

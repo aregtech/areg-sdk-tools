@@ -99,6 +99,8 @@ public:
      **/
     inline const QModelIndex& getRootIndex(void) const;
 
+    inline bool isSameLogingModel(const LoggingModelBase & model) const;
+
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -326,6 +328,11 @@ inline bool LoggingScopesModelBase::isValidIndex(const QModelIndex& index) const
 inline const QModelIndex& LoggingScopesModelBase::getRootIndex(void) const
 {
     return mRootIndex;
+}
+
+inline bool LoggingScopesModelBase::isSameLogingModel(const LoggingModelBase & model) const
+{
+    return static_cast<const LoggingModelBase *>(mLoggingModel) == static_cast<const LoggingModelBase *>(&model);
 }
 
 #endif  // LUSAN_MODEL_LOG_LOGGINGSCOPESMODELBASE_HPP
