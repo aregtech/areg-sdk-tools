@@ -32,6 +32,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class ItemModelBase;
 class LoggingModelBase;
 class ScopeNodeBase;
 class ScopeRoot;
@@ -99,8 +100,10 @@ public:
      **/
     inline const QModelIndex& getRootIndex(void) const;
 
-    inline bool isSameLogingModel(const LoggingModelBase & model) const;
-
+    inline LoggingModelBase* getLoggingModel(void) const;
+    
+    bool isSameLoggingModel(const ItemModelBase & model) const;
+    
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -136,6 +139,10 @@ public:
      * \brief   Builds the scopes tree for the model.
      **/
     virtual void buildScopes(void);
+    
+    virtual void setupModel(void);
+    
+    virtual void releaseModel(void);
 
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
@@ -200,7 +207,7 @@ public:
     virtual Qt::ItemFlags flags(const QModelIndex& index) const override;
     
 //////////////////////////////////////////////////////////////////////////
-// Internal operatoins
+// Internal operations
 //////////////////////////////////////////////////////////////////////////
 protected:
 
@@ -330,9 +337,9 @@ inline const QModelIndex& LoggingScopesModelBase::getRootIndex(void) const
     return mRootIndex;
 }
 
-inline bool LoggingScopesModelBase::isSameLogingModel(const LoggingModelBase & model) const
+inline LoggingModelBase* LoggingScopesModelBase::getLoggingModel(void) const
 {
-    return static_cast<const LoggingModelBase *>(mLoggingModel) == static_cast<const LoggingModelBase *>(&model);
+    return mLoggingModel;
 }
 
 #endif  // LUSAN_MODEL_LOG_LOGGINGSCOPESMODELBASE_HPP

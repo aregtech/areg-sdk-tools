@@ -31,6 +31,7 @@
  ************************************************************************/
 class MdiChild;
 class ServiceInterface;
+class LiveLogsModel;
 class LogViewer;
 class OfflineLogViewer;
 QT_BEGIN_NAMESPACE
@@ -150,7 +151,13 @@ public:
     /**
      * \brief   Called to setup live logging models.
      **/
-    void setupLiveLogging(void);
+    LiveLogsModel* setupLiveLogging(void);
+
+    NaviFileSystem& getNaviFileSystem(void);
+
+    NaviLiveLogsScopes& getNaviLiveScopes(void);
+
+    NaviOfflineLogsScopes& getNaviOfflineScopes(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals

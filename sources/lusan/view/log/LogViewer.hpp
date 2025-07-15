@@ -122,12 +122,16 @@ public:
      * \brief   Returns the LiveLogsModel instance used by this viewer.
      * \return  Pointer to the LiveLogsModel instance.
      **/
-    LiveLogsModel* getLiveLogsModel(void) const;
+    LiveLogsModel* getLoggingModel(void) const;
 
     /**
      * \brief   Returns the database path of the live logs database.
      **/
     QString getDatabasePath(void) const;
+
+protected:
+
+    virtual void onWindowClosing(bool isActive) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots.

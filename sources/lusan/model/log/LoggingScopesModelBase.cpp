@@ -269,6 +269,7 @@ void LoggingScopesModelBase::slotLogServiceConnected(void)
 
 void LoggingScopesModelBase::slotLogServiceDisconnected(void)
 {
+    clearModel(false);
 }
 
 bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<NEService::sServiceConnectedInstance> & instances)
@@ -433,6 +434,25 @@ void LoggingScopesModelBase::buildScopes(void)
     endResetModel();
 }
 
+void LoggingScopesModelBase::setupModel(void)
+{
+    clearModel(false);
+    if (mLoggingModel != nullptr)
+    {
+        mLoggingModel->setupModel();
+    }
+}
+
+void LoggingScopesModelBase::releaseModel(void)
+{
+    clearModel(true);
+    
+    if (mLoggingModel != nullptr)
+    {
+        mLoggingModel->releaseModel();
+    }
+}
+
 void LoggingScopesModelBase::dataTransfer(LoggingScopesModelBase& scopeModel)
 {
     beginResetModel();
@@ -463,4 +483,9 @@ void LoggingScopesModelBase::refresh(void)
 {
     beginResetModel();
     endResetModel();
+}
+
+bool LoggingScopesModelBase::isSameLoggingModel(const ItemModelBase& model) const
+{
+    return (mLoggingModel != nullptr) && (mLoggingModel->getModelId() == model.getModelId());
 }

@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/model/common/ItemModelBase.hpp"
+
 #include "areg/base/File.hpp"
 #include "areg/base/SharedBuffer.hpp"
 #include "areg/base/String.hpp"
@@ -33,7 +35,6 @@
 #include "aregextend/db/LogSqliteDatabase.hpp"
 #include "aregextend/db/SqliteStatement.hpp"
 
-#include <QAbstractTableModel>
 #include <QList>
 #include <QString>
 #include <QVariant>
@@ -51,7 +52,7 @@ class LogViewerFilterProxy;
  * \brief   Base class for log viewer models (live and offline).
  *          Provides common data and interface for log models.
  **/
-class LoggingModelBase  : public    QAbstractTableModel
+class LoggingModelBase  : public    ItemModelBase
                         , protected IEThreadConsumer
 {
     Q_OBJECT
@@ -261,8 +262,6 @@ public:
      **/
     inline bool isDisconnectedLogging(void) const;
 
-    inline uint32_t getId(void) const;
-
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -317,13 +316,6 @@ signals:
      * \param   scopes      The list of scopes available for the specified instance.
      **/
     void signalScopesUpdated(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
-
-     /**
-      * \brief   Signal emitted when one or more log messages are available.
-      * \param   instId      The ID of the instance that sent the log messages.
-      * \param   logs        The list of log messages available.
-      **/
-    void signalLogsAvailable(ITEM_ID instId, const std::vector<SharedBuffer>& logs);
 
 //////////////////////////////////////////////////////////////////////////
 // LoggingModelBase overrider
@@ -584,12 +576,6 @@ protected:
     uint32_t                mLogCount;      //!< The position of updated log.
     Thread                  mReadThread;    //!< The thread to run the model operations.
     Mutex                   mQuitThread;    //!< The event to notify when data is ready.
-
-//////////////////////////////////////////////////////////////////////////
-// Hidden members
-//////////////////////////////////////////////////////////////////////////
-private:
-    const uint32_t          mModelId;       //!< The unique ID of logging model
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -667,11 +653,6 @@ inline bool LoggingModelBase::isOfflineLogging(void) const
 inline bool LoggingModelBase::isDisconnectedLogging(void) const
 {
     return (mLoggingType == eLogging::LoggingDisconneced);
-}
-
-inline uint32_t LoggingModelBase::getId(void) const
-{
-    return mModelId;
 }
 
 inline void LoggingModelBase::_closeDatabase(void)

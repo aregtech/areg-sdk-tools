@@ -90,7 +90,7 @@ public:
     /**
      * \brief   Returns the live mode log explorer widget.
      **/
-    inline NaviLiveLogsScopes& getLiveLogs(void);
+    inline NaviLiveLogsScopes& getLiveScopes(void);
 
     /**
      * \brief   Returns the offline log explorer widget.
@@ -194,7 +194,7 @@ inline NaviFileSystem& Navigation::getFileSystem(void)
     return mFileSystem;
 }
 
-inline NaviLiveLogsScopes& Navigation::getLiveLogs(void)
+inline NaviLiveLogsScopes& Navigation::getLiveScopes(void)
 {
     return mLiveScopes;
 }

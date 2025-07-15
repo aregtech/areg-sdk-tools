@@ -36,7 +36,6 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
     : NavigationWindow(static_cast<int>(Navigation::eNaviWindow::NaviOfflineLogs), wndMain, parent)
 
     , ui            (new Ui::NaviOfflineLogsScopes)
-    , mLogModel     (nullptr)
     , mScopesModel  (new OfflineScopesModel(this))
 
 {
@@ -59,21 +58,23 @@ NaviOfflineLogsScopes::~NaviOfflineLogsScopes(void)
 
 QString NaviOfflineLogsScopes::getOpenedDatabasePath(void) const
 {
-    return (mLogModel != nullptr ? mLogModel->getLogFileName() : QString());
+    LoggingModelBase* logModel{ getLoggingModel() };
+    return (logModel != nullptr ? logModel->getLogFileName() : QString());
 }
 
 bool NaviOfflineLogsScopes::openDatabase(const QString& filePath)
 {
-    if (filePath.isEmpty() || (mLogModel == nullptr))
+    LoggingModelBase* logModel{ getLoggingModel() };
+    if (filePath.isEmpty() || (logModel == nullptr))
     {
         return false;
     }
 
     // Try to open the database
-    mLogModel->openDatabase(filePath, true);
-    if (mLogModel->isOperable())
+    logModel->openDatabase(filePath, true);
+    if (logModel->isOperable())
     {
-        mScopesModel->setLoggingModel(mLogModel);
+        mScopesModel->setLoggingModel(logModel);
         return true;
     }
     else
@@ -89,35 +90,23 @@ void NaviOfflineLogsScopes::closeDatabase(void)
     // Clear the tree view
     mScopesModel->setLoggingModel(nullptr);
     updateControls();    
-    mLogModel = nullptr;
 }
 
 bool NaviOfflineLogsScopes::isDatabaseOpen(void) const
 {
-    return (mLogModel != nullptr) && mLogModel->isOperable();
+    LoggingModelBase* logModel{ getLoggingModel() };
+    return (logModel != nullptr) && logModel->isOperable();
 }
 
 void NaviOfflineLogsScopes::setLoggingModel(OfflineLogsModel * model)
 {
-    if (mLogModel != model)
-    {
-        mLogModel = model;
-        mScopesModel->setLoggingModel(model);
-        updateControls();
-    }
+    mScopesModel->setLoggingModel(model);
+    updateControls();
 }
 
 bool NaviOfflineLogsScopes::isActiveLoggingModel(const OfflineLogsModel & model) const
 {
-    return (mScopesModel != nullptr) && mScopesModel->isSameLogingModel(model);
-}
-
-bool NaviOfflineLogsScopes::resetActive(OfflineLogsModel & model)
-{
-    if (isActiveLoggingModel(model))
-    {
-        setLoggingModel(nullptr);
-    }
+    return (mScopesModel != nullptr) && mScopesModel->isSameLoggingModel(model);
 }
 
 void NaviOfflineLogsScopes::optionOpenning(void)
@@ -199,6 +188,12 @@ QToolButton* NaviOfflineLogsScopes::ctrlMoveBottom(void)
     return ui->toolMoveBottom;
 }
 
+LoggingModelBase* NaviOfflineLogsScopes::getLoggingModel(void) const
+{
+    Q_ASSERT(mScopesModel != nullptr);
+    return mScopesModel->getLoggingModel();
+}
+
 void NaviOfflineLogsScopes::setupWidgets(void)
 {
     // Configure the tree view for database information display
@@ -226,7 +221,9 @@ void NaviOfflineLogsScopes::updateControls(void)
 void NaviOfflineLogsScopes::showDatabaseInfo(void)
 {
     Q_ASSERT(false);
-    if (!isDatabaseOpen())
+    LoggingModelBase* logModel{ getLoggingModel() };
+
+    if ((logModel == nullptr) || (isDatabaseOpen() == false))
     {
         ctrlTable()->setModel(nullptr);
         return;
@@ -238,7 +235,7 @@ void NaviOfflineLogsScopes::showDatabaseInfo(void)
 
     // Add database file path
     QStandardItem* dbPathItem = new QStandardItem(tr("Database File"));
-    dbPathItem->appendRow(new QStandardItem(mLogModel->getLogFileName()));
+    dbPathItem->appendRow(new QStandardItem(logModel->getLogFileName()));
     infoModel->appendRow(dbPathItem);
 
     // Add database status
@@ -247,39 +244,36 @@ void NaviOfflineLogsScopes::showDatabaseInfo(void)
     infoModel->appendRow(statusItem);
 
     // Get some basic information from the model
-    if (mLogModel != nullptr)
+    try
     {
-        try 
+        std::vector<String> instanceNames;
+        logModel->getLogInstanceNames(instanceNames);
+
+        QStandardItem* instancesItem = new QStandardItem(tr("Instances (%1)").arg(instanceNames.size()));
+        for (const auto& name : instanceNames)
         {
-            std::vector<String> instanceNames;
-            mLogModel->getLogInstanceNames(instanceNames);
-            
-            QStandardItem* instancesItem = new QStandardItem(tr("Instances (%1)").arg(instanceNames.size()));
-            for (const auto& name : instanceNames)
-            {
-                instancesItem->appendRow(new QStandardItem(QString::fromStdString(name.getData())));
-            }
-
-            infoModel->appendRow(instancesItem);
-
-            std::vector<String> threadNames;
-            mLogModel->getLogThreadNames(threadNames);
-            
-            QStandardItem* threadsItem = new QStandardItem(tr("Threads (%1)").arg(threadNames.size()));
-            for (const auto& name : threadNames)
-            {
-                threadsItem->appendRow(new QStandardItem(QString::fromStdString(name.getData())));
-            }
-
-            infoModel->appendRow(threadsItem);
+            instancesItem->appendRow(new QStandardItem(QString::fromStdString(name.getData())));
         }
-        catch (...)
+
+        infoModel->appendRow(instancesItem);
+
+        std::vector<String> threadNames;
+        logModel->getLogThreadNames(threadNames);
+
+        QStandardItem* threadsItem = new QStandardItem(tr("Threads (%1)").arg(threadNames.size()));
+        for (const auto& name : threadNames)
         {
-            // If there's an error getting information, just show basic info
-            QStandardItem* errorItem = new QStandardItem(tr("Error"));
-            errorItem->appendRow(new QStandardItem(tr("Could not retrieve database information")));
-            infoModel->appendRow(errorItem);
+            threadsItem->appendRow(new QStandardItem(QString::fromStdString(name.getData())));
         }
+
+        infoModel->appendRow(threadsItem);
+    }
+    catch (...)
+    {
+        // If there's an error getting information, just show basic info
+        QStandardItem* errorItem = new QStandardItem(tr("Error"));
+        errorItem->appendRow(new QStandardItem(tr("Could not retrieve database information")));
+        infoModel->appendRow(errorItem);
     }
 
     ctrlTable()->setModel(infoModel);
@@ -302,9 +296,10 @@ void NaviOfflineLogsScopes::onCloseDatabaseClicked(void)
 
 void NaviOfflineLogsScopes::onRefreshDatabaseClicked(void)
 {
-    if (isDatabaseOpen())
+    LoggingModelBase* logModel{ getLoggingModel() };
+    if ((logModel != nullptr) && isDatabaseOpen())
     {
         mScopesModel->setLoggingModel(nullptr);
-        mScopesModel->setLoggingModel(mLogModel);
+        mScopesModel->setLoggingModel(logModel);
     }
 }

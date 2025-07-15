@@ -31,11 +31,6 @@
 #include <QIcon>
 #include <QSize>
 
-namespace
-{
-    uint32_t    _idGenerator{0};
-}
-
 const QStringList& LoggingModelBase::getHeaderList(void)
 {
     static QStringList _headers
@@ -80,7 +75,7 @@ const QString & LoggingModelBase::getFileExtension()
 }
 
 LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject* parent)
-    : QAbstractTableModel(parent)
+    : ItemModelBase (parent)
     , mLoggingType  (logsType)
     , mDatabase     ( )
     , mStatement    (mDatabase.getDatabase())
@@ -92,7 +87,6 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mLogCount     (0)
     , mReadThread   (static_cast<IEThreadConsumer &>(self()), "_LogReadingThread_")
     , mQuitThread   (false)
-    , mModelId      (++_idGenerator)
 {
 }
 
@@ -121,12 +115,12 @@ QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, 
 
 int LoggingModelBase::rowCount(const QModelIndex& parent) const
 {
-    return (parent.isValid() ? 0 : mLogCount);
+    return mLogCount;
 }
 
 int LoggingModelBase::columnCount(const QModelIndex& parent) const
 {
-    return (parent.isValid() ? 0 : static_cast<int>(mActiveColumns.size()));
+    return static_cast<int>(mActiveColumns.size());
 }
 
 bool LoggingModelBase::insertRows(int row, int count, const QModelIndex& parent)

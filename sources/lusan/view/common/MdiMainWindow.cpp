@@ -190,7 +190,7 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
             // Copy logs to offline log viewer
             OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
             mNavigation.showTab(Navigation::eNaviWindow::NaviOfflineLogs);
-            static_cast<NaviLiveLogsScopes *>(mNavigation.getTab(Navigation::eNaviWindow::NaviLiveLogs))->setLiveLogs(nullptr);
+            mNavigation.getLiveScopes().setLoggingModel(nullptr);
             offlineLog->show();
 
             // Properly close and delete the live log window and viewer
@@ -211,59 +211,46 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
     }
 }
 
-void MdiMainWindow::setupLiveLogging(void)
+LiveLogsModel * MdiMainWindow::setupLiveLogging(void)
 {
-    LogViewer* liveLogs = mNavigation.getLiveLogs().getLiveLogs();
-    QMdiSubWindow* subWindow{ nullptr };
-    if ((liveLogs != nullptr) && (liveLogs->isEmpty() == false))
+    if (mLogViewer == nullptr)
     {
-        liveLogs = nullptr;
-        mLiveLogWnd = nullptr;
-        mLogViewer = nullptr;
-    }
-    else
-    {
-        subWindow = liveLogs != nullptr ? liveLogs->getMdiSubwindow() : mMdiArea.currentSubWindow();
-    }
-
-    if ((subWindow != mLiveLogWnd) || (mLiveLogWnd == nullptr))
-    {
-        if (liveLogs != nullptr)
-        {
-            mLogViewer = liveLogs;
-            mLiveLogWnd = subWindow;
-        }
-        else
-        {
-            onFileNewLog();
-        }
+        onFileNewLog();
 
         Q_ASSERT(mLogViewer != nullptr);
         Q_ASSERT(mLiveLogWnd != nullptr);
-        if (mLogViewer->isServiceConnected() == false)
-        {
-            mNavigation.getLiveLogs().setLiveLogs(mLogViewer);
-            mLiveLogWnd->activateWindow();
-        }
+
+        mLiveLogWnd->activateWindow();
     }
     else
     {
-        mLogViewer = liveLogs != nullptr ? liveLogs : mLogViewer;
-        Q_ASSERT(mLogViewer != nullptr);
         Q_ASSERT(mLiveLogWnd != nullptr);
-        if (mLogViewer->isServiceConnected() == false)
-        {
-            mMdiArea.setActiveSubWindow(mLiveLogWnd);
-        }
+        mMdiArea.setActiveSubWindow(mLiveLogWnd);
     }
+
+    return mLogViewer->getLoggingModel();
+}
+
+NaviFileSystem& MdiMainWindow::getNaviFileSystem(void)
+{
+    return mNavigation.getFileSystem();
+}
+
+NaviLiveLogsScopes& MdiMainWindow::getNaviLiveScopes(void)
+{
+    return mNavigation.getLiveScopes();
+}
+
+NaviOfflineLogsScopes& MdiMainWindow::getNaviOfflineScopes(void)
+{
+    return mNavigation.getOfflineScopes();
 }
 
 void MdiMainWindow::logDatabaseCreated(const QString& dbPath)
 {
-    LogViewer* liveLogs = mNavigation.getLiveLogs().getLiveLogs();
-    if (liveLogs != nullptr)
+    if (mLogViewer != nullptr)
     {
-        liveLogs->logDatabaseCreated(dbPath);
+        mLogViewer->logDatabaseCreated(dbPath);
     }
 }
 

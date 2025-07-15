@@ -36,6 +36,7 @@
  * Dependencies
  ************************************************************************/
 class LiveScopesModel;
+class LiveLogsModel;
 class LogViewer;
 class MdiMainWindow;
 class MdiChild;
@@ -137,11 +138,11 @@ public:
     void setLogCollectorConnection(const QString& address, uint16_t port);
     
     /**
-     * \brief   Sets the pointer of associated live logs window. 
-     * \param   liveLogs    The pointer to the live logs window.
+     * \brief   Sets the pointer of associated live logs model. 
+     * \param   logModel    The pointer to the live logs model.
      *                      Can be nullptr if no live logs are available.
      */
-    void setLiveLogs(LogViewer* liveLogs);
+    void setLoggingModel(LiveLogsModel* logModel);
     
     //!< Returns true if the logging is configured.
     inline bool isConfigured(void) const;
@@ -160,12 +161,6 @@ public:
 
     //!< Returns true if connection is stopped (paused) and can be restored only when new data is applied.
     inline bool isStopped(void) const;
-
-    /**
-     * \brief   Returns the pointer of associated live logs window.
-     *          Can be nullptr if disconnected or no live logs are available.
-     **/
-    inline LogViewer* getLiveLogs(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -456,11 +451,10 @@ private:
     QString                 mInitLogFile;   //!< The initialized log file.
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
-    LiveScopesModel*        mScopeModel;    //!< The model of the log scopes.
+    LiveScopesModel*        mScopesModel;    //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.
-    LogViewer*              mLiveLogs;      //!< The log viewer to show live logs.
     QList<QAction*>         mMenuActions;   //!< The list of menu actions
 };
 
@@ -592,11 +586,6 @@ inline bool NaviLiveLogsScopes::isStopped(void) const
         Q_ASSERT(false);
         return false;
     }
-}
-
-inline LogViewer* NaviLiveLogsScopes::getLiveLogs(void) const
-{
-    return mLiveLogs;
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVILIVELOGSSCOPES_HPP

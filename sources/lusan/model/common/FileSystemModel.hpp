@@ -22,9 +22,10 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/model/common/FileSystemEntry.hpp"
 #include <QAbstractItemModel>
 #include <QFileSystemModel>
+
+#include "lusan/model/common/FileSystemEntry.hpp"
 #include <QFileInfo>
 
 /**
@@ -62,7 +63,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~FileSystemModel();
+    virtual ~FileSystemModel() = default;
     
 //////////////////////////////////////////////////////////////////////////
 // Overrides

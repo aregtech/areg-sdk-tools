@@ -22,7 +22,7 @@
 #include <QWidget>
 
 class MdiMainWindow;
-class QAbstractTableModel;
+class ItemModelBase;
 
 class NavigationWindow : public QWidget
 {
@@ -64,7 +64,7 @@ public:
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
     virtual void optionClosed(bool OKpressed);
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes
 //////////////////////////////////////////////////////////////////////////
@@ -92,8 +92,6 @@ public:
      * \return  True if the navigation window is for offline logs, false otherwise.
      **/
     bool isNaviOfflineLogs(void) const;
-
-    virtual void resetNavigator(QAbstractTableModel * model);
 
 //////////////////////////////////////////////////////////////////////////
 // NavigationWindow class inline methods

@@ -20,6 +20,8 @@
 #include "lusan/view/log/OfflineLogViewer.hpp"
 #include "ui/ui_OfflineLogViewer.h"
 
+#include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
 #include "lusan/view/log/LogViewer.hpp"
 
@@ -70,7 +72,7 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LogViewer& liveLogs, 
     mLogModel   = new OfflineLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
 
-    LiveLogsModel* liveModel = liveLogs.getLiveLogsModel();
+    LiveLogsModel* liveModel = liveLogs.getLoggingModel();
     if (liveModel != nullptr)
     {
         mLogModel->dataTransfer(*liveModel);
@@ -111,9 +113,10 @@ bool OfflineLogViewer::openDatabase(const QString & logPath)
 void OfflineLogViewer::onWindowClosing(bool isActive)
 {
     setupSignals(false);
+    Q_ASSERT(mMainWindow != nullptr);
     if (isActive)
     {
-        mMainWindow->
+        mMainWindow->getNaviOfflineScopes().setLoggingModel(nullptr);
     }
 }
 

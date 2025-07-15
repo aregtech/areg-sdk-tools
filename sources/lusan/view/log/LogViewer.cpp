@@ -24,6 +24,7 @@
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/common/NaviLiveLogsScopes.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
 
 #include <QMdiSubWindow>
@@ -414,7 +415,7 @@ void LogViewer::onMainWindowClosing(void)
     LogObserver::releaseLogObserver();
 }
 
-LiveLogsModel* LogViewer::getLiveLogsModel(void) const
+LiveLogsModel* LogViewer::getLoggingModel(void) const
 {
     return mLogModel;
 }
@@ -422,6 +423,15 @@ LiveLogsModel* LogViewer::getLiveLogsModel(void) const
 QString LogViewer::getDatabasePath(void) const
 {
     return (mLogModel != nullptr ? mLogModel->getDatabasePath() : QString());
+}
+
+void LogViewer::onWindowClosing(bool isActive)
+{
+    Q_UNUSED(isActive);
+    Q_ASSERT(mMainWindow != nullptr);
+    
+    setupSignals(false);
+    mMainWindow->getNaviLiveScopes().setLoggingModel(nullptr);
 }
 
 void LogViewer::setupSignals(bool doSetup)

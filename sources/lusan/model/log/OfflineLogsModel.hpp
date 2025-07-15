@@ -79,10 +79,6 @@ signals:
      **/
     void signalDatabaseIsClosed(const QString& dbPath);
 
-    /**
-     * \brief   Signal, triggered when read the logging data from logging file.
-     **/
-    void signalLogsAvailable(void);
 };
 
 #endif // LUSAN_MODEL_LOG_OFFLINELOGSMODEL_HPP

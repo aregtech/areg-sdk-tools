@@ -31,6 +31,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class LoggingModelBase;
 class OfflineLogsModel;
 class OfflineScopesModel;
 class MdiMainWindow;
@@ -105,8 +106,6 @@ public:
 
     bool isActiveLoggingModel(const OfflineLogsModel & model) const;
 
-    bool resetActive(OfflineLogsModel & model);
-
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -172,6 +171,8 @@ private:
     //!< Returns the control object of the log messages
     QTreeView* ctrlTable(void);
 
+    LoggingModelBase* getLoggingModel(void) const;
+
     /**
      * \brief   Initializes the widgets.
      **/
@@ -212,9 +213,8 @@ private slots:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::NaviOfflineLogsScopes*  ui;         //!< The user interface object.
-    OfflineScopesModel *    mScopesModel;   //!< The offline scopes model
-    OfflineLogsModel*       mLogModel;      //!< The offline log model.
+    Ui::NaviOfflineLogsScopes*  ui;             //!< The user interface object.
+    OfflineScopesModel *        mScopesModel;   //!< The offline scopes model
 };
 
 #endif  // LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP
