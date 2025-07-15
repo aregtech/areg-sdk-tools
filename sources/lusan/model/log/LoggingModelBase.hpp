@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/model/common/ItemModelBase.hpp"
+#include "lusan/model/common/TableModelBase.hpp"
 
 #include "areg/base/File.hpp"
 #include "areg/base/SharedBuffer.hpp"
@@ -53,7 +53,7 @@ class ScopeRoot;
  * \brief   Base class for log viewer models (live and offline).
  *          Provides common data and interface for log models.
  **/
-class LoggingModelBase  : public    ItemModelBase
+class LoggingModelBase  : public    TableModelBase
                         , protected IEThreadConsumer
 {
     Q_OBJECT
@@ -271,6 +271,9 @@ public:
     inline LoggingModelBase::RootList& getRootList(void);
     inline const LoggingModelBase::RootList& getRootList(void) const;
 
+    /**
+     * \brief   Returns the number of root nodes in the list.
+     **/
     inline int rootCount(void) const;
 
 /************************************************************************

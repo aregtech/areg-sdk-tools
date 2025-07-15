@@ -485,8 +485,3 @@ void LoggingScopesModelBase::refresh(void)
     beginResetModel();
     endResetModel();
 }
-
-bool LoggingScopesModelBase::isSameLoggingModel(const ItemModelBase& model) const
-{
-    return (mLoggingModel != nullptr) && (mLoggingModel->getModelId() == model.getModelId());
-}

@@ -10,7 +10,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/common/ItemModelBase.cpp
+ *  \file        lusan/model/common/TableModelBase.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Item model base class.
@@ -20,7 +20,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/model/common/ItemModelBase.hpp"
+#include "lusan/model/common/TableModelBase.hpp"
 
 namespace
 {
@@ -31,7 +31,7 @@ namespace
     }
 }
 
-ItemModelBase::ItemModelBase(QObject* parent /*= nullptr*/)
+TableModelBase::TableModelBase(QObject* parent /*= nullptr*/)
     : QAbstractTableModel(parent)
     , mModelId  (getNextId())
 {

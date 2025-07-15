@@ -32,7 +32,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class ItemModelBase;
+class TableModelBase;
 class LoggingModelBase;
 class ScopeNodeBase;
 class ScopeRoot;
@@ -97,9 +97,10 @@ public:
      **/
     inline const QModelIndex& getRootIndex(void) const;
 
+    /**
+     * \brief   Returns the logging model associated with this scopes model. Returns `nullptr` if not set.
+     **/
     inline LoggingModelBase* getLoggingModel(void) const;
-    
-    bool isSameLoggingModel(const ItemModelBase & model) const;
     
 /************************************************************************
  * Signals

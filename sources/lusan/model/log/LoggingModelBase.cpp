@@ -75,7 +75,7 @@ const QString & LoggingModelBase::getFileExtension()
 }
 
 LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject* parent)
-    : ItemModelBase (parent)
+    : TableModelBase (parent)
     , mLoggingType  (logsType)
     , mDatabase     ( )
     , mStatement    (mDatabase.getDatabase())

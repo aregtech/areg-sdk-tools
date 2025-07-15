@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_MODEL_COMMON_ITEMMODELBASE_HPP
-#define LUSAN_MODEL_COMMON_ITEMMODELBASE_HPP
+﻿#ifndef LUSAN_MODEL_COMMON_TABLEMODELBASE_HPP
+#define LUSAN_MODEL_COMMON_TABLEMODELBASE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/common/ItemModelBase.hpp
+ *  \file        lusan/model/common/TableModelBase.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Item model base class.
@@ -24,7 +24,10 @@
  ************************************************************************/
 #include <QAbstractTableModel>
 
-class ItemModelBase : public QAbstractTableModel
+/**
+ * \brief   The base class for table models in the Lusan application.
+ **/
+class TableModelBase : public QAbstractTableModel
 {
     Q_OBJECT
 
@@ -32,13 +35,16 @@ class ItemModelBase : public QAbstractTableModel
 // Constructors / destructor
 //////////////////////////////////////////////////////////////////////////
 protected:
-    ItemModelBase(QObject* parent = nullptr);
-    virtual ~ItemModelBase(void) = default;
+    TableModelBase(QObject* parent = nullptr);
+    virtual ~TableModelBase(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
 //////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Retrieves the 32-bit unique identifier for the model.
+     **/
     inline uint32_t getModelId(void) const;
 
 //////////////////////////////////////////////////////////////////////////
@@ -49,12 +55,12 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// ItemModelBase inline methods
+// TableModelBase inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline uint32_t ItemModelBase::getModelId(void) const
+inline uint32_t TableModelBase::getModelId(void) const
 {
     return mModelId;
 }
 
-#endif  // LUSAN_MODEL_COMMON_ITEMMODELBASE_HPP
+#endif  // LUSAN_MODEL_COMMON_TABLEMODELBASE_HPP

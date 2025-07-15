@@ -22,8 +22,10 @@
 #include <QWidget>
 
 class MdiMainWindow;
-class ItemModelBase;
 
+/**
+ * \brief   Base class for navigation windows in the Lusan application.
+ **/
 class NavigationWindow : public QWidget
 {
     Q_OBJECT
