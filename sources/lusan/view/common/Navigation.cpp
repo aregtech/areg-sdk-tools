@@ -93,7 +93,6 @@ Navigation::Navigation(MdiMainWindow* parent)
 
     initSize();
 
-    connect(mMainWindow, &MdiMainWindow::signalWindowActivated  , this, &Navigation::onMdiWindowActivated);
     connect(mMainWindow, &MdiMainWindow::signalOptionsOpening   , this, &Navigation::onOptionsOpening);
     connect(mMainWindow, &MdiMainWindow::signalOptionsApplied   , this, &Navigation::onOptionsApplied);
     connect(mMainWindow, &MdiMainWindow::signalOptionsClosed    , this, &Navigation::onOptionsClosed);
@@ -168,26 +167,6 @@ void Navigation::initSize()
 {
     resize(QSize { mFileSystem.width() + 10,  mFileSystem.height() });
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
-}
-
-void Navigation::onMdiWindowActivated(MdiChild* mdiChild)
-{
-    NavigationWindow* current = qobject_cast<NavigationWindow *>(mTabs.currentWidget());
-    if ((mdiChild != nullptr) && (current != nullptr))
-    {
-        if (mdiChild->isLogViewerWindow() && (current->isNaviLiveLogs() == false))
-        {
-            mTabs.setCurrentWidget(&mLiveScopes);
-        }
-        else if (mdiChild->isOfflineLogViewerWindow() && (current->isNaviOfflineLogs() == false))
-        {
-            mTabs.setCurrentWidget(&mOfflineScopes);
-        }
-        else if (mdiChild->isServiceInterfaceWindow() && (current->isNaviWorkspace() == false))
-        {
-            mTabs.setCurrentWidget(&mFileSystem);
-        }
-    }
 }
 
 void Navigation::onOptionsOpening(void)

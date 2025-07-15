@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/model/common/TableModelBase.hpp"
+
 #include "areg/base/File.hpp"
 #include "areg/base/SharedBuffer.hpp"
 #include "areg/base/String.hpp"
@@ -33,7 +35,6 @@
 #include "aregextend/db/LogSqliteDatabase.hpp"
 #include "aregextend/db/SqliteStatement.hpp"
 
-#include <QAbstractTableModel>
 #include <QList>
 #include <QString>
 #include <QVariant>
@@ -46,12 +47,13 @@
  * Dependencies
  ************************************************************************/
 class LogViewerFilterProxy;
+class ScopeRoot;
 
 /**
  * \brief   Base class for log viewer models (live and offline).
  *          Provides common data and interface for log models.
  **/
-class LoggingModelBase  : public    QAbstractTableModel
+class LoggingModelBase  : public    TableModelBase
                         , protected IEThreadConsumer
 {
     Q_OBJECT
@@ -91,6 +93,8 @@ public:
     using   ListInstances   = std::vector< NEService::sServiceConnectedInstance>;
     using   ListScopes      = std::vector< NELogging::sScopeInfo>;
     using   MapScopes       = std::map<ITEM_ID, ListScopes>;
+    using   ListExpanded    = std::vector<QModelIndex>;
+    using   RootList        = std::vector<ScopeRoot*>;
 
 //////////////////////////////////////////////////////////////////////////
 // Static methods
@@ -123,7 +127,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit LoggingModelBase(LoggingModelBase::eLogging logsType, QObject* parent = nullptr);
-    virtual ~LoggingModelBase() = default;
+    virtual ~LoggingModelBase();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -261,6 +265,17 @@ public:
      **/
     inline bool isDisconnectedLogging(void) const;
 
+    /**
+     * \brief   Returns the list of root nodes of scopes.
+     **/
+    inline LoggingModelBase::RootList& getRootList(void);
+    inline const LoggingModelBase::RootList& getRootList(void) const;
+
+    /**
+     * \brief   Returns the number of root nodes in the list.
+     **/
+    inline int rootCount(void) const;
+
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -315,13 +330,6 @@ signals:
      * \param   scopes      The list of scopes available for the specified instance.
      **/
     void signalScopesUpdated(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
-
-     /**
-      * \brief   Signal emitted when one or more log messages are available.
-      * \param   instId      The ID of the instance that sent the log messages.
-      * \param   logs        The list of log messages available.
-      **/
-    void signalLogsAvailable(ITEM_ID instId, const std::vector<SharedBuffer>& logs);
 
 //////////////////////////////////////////////////////////////////////////
 // LoggingModelBase overrider
@@ -565,6 +573,9 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 private:
 
+    //!< Cleans the nodes of root list and deletes them.
+    inline void _cleanNodes(void);
+
     inline LoggingModelBase& self(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -575,6 +586,7 @@ protected:
     LogSqliteDatabase       mDatabase;      //!< The SQLite database object to read log data.
     SqliteStatement         mStatement;     //!< The SQLite statement to query log data.
     ListColumns             mActiveColumns; //!< The list of active columns.
+    RootList                mRootList;      //!< The list of root nodes
     ListLogs                mLogs;          //!< The list of log messages.
     ListInstances           mInstances;     //!< The list of connected instances.
     MapScopes               mScopes;        //!< The map of scopes, where key is instance ID and value is the list of scopes.
@@ -661,6 +673,21 @@ inline bool LoggingModelBase::isDisconnectedLogging(void) const
     return (mLoggingType == eLogging::LoggingDisconneced);
 }
 
+inline LoggingModelBase::RootList& LoggingModelBase::getRootList(void)
+{
+    return mRootList;
+}
+
+inline const LoggingModelBase::RootList& LoggingModelBase::getRootList(void) const
+{
+    return mRootList;
+}
+
+inline int LoggingModelBase::rootCount(void) const
+{
+    return static_cast<int>(mRootList.size());
+}
+
 inline void LoggingModelBase::_closeDatabase(void)
 {
     mDatabase.disconnect();
@@ -680,6 +707,17 @@ inline void LoggingModelBase::_quitThread(void)
 inline LoggingModelBase& LoggingModelBase::self(void)
 {
     return (*this);
+}
+
+inline void LoggingModelBase::_cleanNodes(void)
+{
+    for (ScopeRoot* root : mRootList)
+    {
+        Q_ASSERT(root != nullptr);
+        delete root;
+    }
+
+    mRootList.clear();
 }
 
 #endif // LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP

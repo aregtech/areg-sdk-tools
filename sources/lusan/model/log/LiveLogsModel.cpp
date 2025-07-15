@@ -22,8 +22,6 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
-
-#include "areg/base/DateTime.hpp"
 #include "areg/base/File.hpp"
 
 
@@ -106,7 +104,7 @@ void LiveLogsModel::setupModel(void)
 
 void LiveLogsModel::releaseModel(void)
 {
-    _setupSignals(false);
+    _setupSignals(true);
 }
 
 void LiveLogsModel::serviceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
@@ -195,15 +193,11 @@ void LiveLogsModel::slotLogMessage(const SharedBuffer& logMessage)
 {
     if (logMessage.isEmpty() == false)
     {
-        beginInsertRows(QModelIndex(), static_cast<int>(mLogs.size()), static_cast<int>(mLogs.size()));
+        int count {static_cast<int>(mLogs.size())};
+        beginInsertRows(QModelIndex(), count, count);
         mLogs.push_back(logMessage);
+        ++ mLogCount;
         endInsertRows();
-        
-        const NELogging::sLogMessage* msg{ reinterpret_cast<const NELogging::sLogMessage*>(logMessage.getBuffer()) };
-        Q_ASSERT(msg != nullptr);
-        std::vector<SharedBuffer> list;
-        list.push_back(logMessage);
-        emit signalLogsAvailable(msg->logSource, list);
     }
 }
 

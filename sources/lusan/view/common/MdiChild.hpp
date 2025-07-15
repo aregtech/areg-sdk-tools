@@ -30,6 +30,8 @@ class QMdiSubWindow;
  **/
 class MdiChild  : public QWidget
 {
+    friend class MdiMainWindow;
+
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
@@ -65,7 +67,7 @@ public:
      * \brief   Returns the MDI Window type.
      * \return  The MDI Window type.
      **/
-    inline eMdiWindow getMdiWindowType(void) const;
+    inline MdiChild::eMdiWindow getMdiWindowType(void) const;
 
     /**
      * \brief   Checks if the MDI child is a Service Interface window.
@@ -191,6 +193,9 @@ signals:
      **/
     void signalMdiChildCreated(MdiChild * mdiChild);
     
+/************************************************************************
+ * MdiChild overrides
+ ************************************************************************/
 protected:
 
     /**
@@ -230,6 +235,18 @@ protected:
      * \param   event    The close event.
      **/
     virtual void closeEvent(QCloseEvent* event) override;
+
+    /**
+     * \brief   Called when the MDI child window is closed.
+     * \param   isActive    Indicates whether the window is active or not.
+     **/
+    virtual void onWindowClosing(bool isActive);
+
+    /**
+     * \brief   Called when the MDI child window is activated.
+     *          This method can be overridden to handle window activation events.
+     **/
+    virtual void onWindowActivated(void);
 
 protected:
     /**

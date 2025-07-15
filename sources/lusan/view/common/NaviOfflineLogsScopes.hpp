@@ -31,6 +31,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class LoggingModelBase;
 class OfflineLogsModel;
 class OfflineScopesModel;
 class MdiMainWindow;
@@ -103,6 +104,12 @@ public:
      **/
     void setLoggingModel(OfflineLogsModel * model);
 
+    /**
+     * \brief   Returns the pointer to the offline logging model used by this view.
+     *          If no database is opened, it returns nullptr.
+     **/
+    OfflineLogsModel* getLoggingModel(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -168,6 +175,8 @@ private:
     //!< Returns the control object of the log messages
     QTreeView* ctrlTable(void);
 
+    LoggingModelBase* getLoggingModel(void) const;
+
     /**
      * \brief   Initializes the widgets.
      **/
@@ -204,13 +213,24 @@ private slots:
      **/
     void onRefreshDatabaseClicked(void);
 
+    /**
+     * \brief   The signal triggered when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void onRootUpdated(const QModelIndex & root);
+
+    /**
+     * \brief   Slot triggered when the scopes of an instance are inserted.
+     * \param   parent  The index of the parent instance item where scopes are inserted.
+     **/
+    void onScopesInserted(const QModelIndex & parent);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::NaviOfflineLogsScopes*  ui;         //!< The user interface object.
-    OfflineScopesModel *    mScopesModel;   //!< The offline scopes model
-    OfflineLogsModel*       mLogModel;      //!< The offline log model.
+    Ui::NaviOfflineLogsScopes*  ui;             //!< The user interface object.
+    OfflineScopesModel *        mScopesModel;   //!< The offline scopes model
 };
 
 #endif  // LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP

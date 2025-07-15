@@ -75,7 +75,7 @@ const QString & LoggingModelBase::getFileExtension()
 }
 
 LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject* parent)
-    : QAbstractTableModel(parent)
+    : TableModelBase (parent)
     , mLoggingType  (logsType)
     , mDatabase     ( )
     , mStatement    (mDatabase.getDatabase())
@@ -88,6 +88,11 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mReadThread   (static_cast<IEThreadConsumer &>(self()), "_LogReadingThread_")
     , mQuitThread   (false)
 {
+}
+
+LoggingModelBase::~LoggingModelBase(void)
+{
+    _cleanNodes();
 }
 
 QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, int role) const
@@ -115,12 +120,12 @@ QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, 
 
 int LoggingModelBase::rowCount(const QModelIndex& parent) const
 {
-    return (parent.isValid() ? 0 : mLogCount);
+    return mLogCount;
 }
 
 int LoggingModelBase::columnCount(const QModelIndex& parent) const
 {
-    return (parent.isValid() ? 0 : static_cast<int>(mActiveColumns.size()));
+    return static_cast<int>(mActiveColumns.size());
 }
 
 bool LoggingModelBase::insertRows(int row, int count, const QModelIndex& parent)
@@ -465,6 +470,10 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
     mScopes.clear();
     mScopes = std::move(logModel.mScopes);
     logModel.mScopes.clear();
+
+    _cleanNodes();
+    mRootList = std::move(logModel.mRootList);
+    logModel._cleanNodes();
 
     mDatabase.disconnect();
     if (logModel.mDatabase.isOperable())

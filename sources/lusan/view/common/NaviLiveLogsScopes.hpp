@@ -36,7 +36,8 @@
  * Dependencies
  ************************************************************************/
 class LiveScopesModel;
-class LogViewer;
+class LiveLogsModel;
+class LiveLogViewer;
 class MdiMainWindow;
 class MdiChild;
 class QToolButton;
@@ -137,11 +138,17 @@ public:
     void setLogCollectorConnection(const QString& address, uint16_t port);
     
     /**
-     * \brief   Sets the pointer of associated live logs window. 
-     * \param   liveLogs    The pointer to the live logs window.
+     * \brief   Sets the pointer of associated live logs model. 
+     * \param   logModel    The pointer to the live logs model.
      *                      Can be nullptr if no live logs are available.
      */
-    void setLiveLogs(LogViewer* liveLogs);
+    void setLoggingModel(LiveLogsModel* logModel);
+
+    /**
+     * \brief   Returns the pointer to the live logs model used by live logging scope navigation view.
+     *          If no live logs are available, returns nullptr.
+     **/
+    LiveLogsModel* getLoggingModel(void);
     
     //!< Returns true if the logging is configured.
     inline bool isConfigured(void) const;
@@ -160,12 +167,6 @@ public:
 
     //!< Returns true if connection is stopped (paused) and can be restored only when new data is applied.
     inline bool isStopped(void) const;
-
-    /**
-     * \brief   Returns the pointer of associated live logs window.
-     *          Can be nullptr if disconnected or no live logs are available.
-     **/
-    inline LogViewer* getLiveLogs(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -422,12 +423,6 @@ private slots:
     void onWindowCreated(MdiChild* mdiChild);
 
     /**
-     * \brief   The slot is triggered when the MDI child window is activated.
-     * \param   mdiChild    The MDI child window that is activated.
-     **/
-    void onWindowActivated(MdiChild* mdiChild);
-
-    /**
      * \brief   Slot, triggered when a node is expanded.
      * \param   index   The index of the node that was expanded.
      **/
@@ -443,24 +438,23 @@ private slots:
 // Static methods
 //////////////////////////////////////////////////////////////////////////
 private:
-
+    //!< Callback to get notified that log observer service client has been started.
     static void _logObserverStarted(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::NaviLiveLogsScopes*        ui;             //!< The user interface object.
+    Ui::NaviLiveLogsScopes*        ui;      //!< The user interface object.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
-    LiveScopesModel*        mScopeModel;    //!< The model of the log scopes.
+    LiveScopesModel*        mScopesModel;   //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.
-    LogViewer*              mLiveLogs;      //!< The log viewer to show live logs.
     QList<QAction*>         mMenuActions;   //!< The list of menu actions
 };
 
@@ -592,11 +586,6 @@ inline bool NaviLiveLogsScopes::isStopped(void) const
         Q_ASSERT(false);
         return false;
     }
-}
-
-inline LogViewer* NaviLiveLogsScopes::getLiveLogs(void) const
-{
-    return mLiveLogs;
 }
 
 #endif  // LUSAN_VIEW_COMMON_NAVILIVELOGSSCOPES_HPP

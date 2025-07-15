@@ -20,8 +20,10 @@
 #include "lusan/view/log/OfflineLogViewer.hpp"
 #include "ui/ui_OfflineLogViewer.h"
 
+#include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
-#include "lusan/view/log/LogViewer.hpp"
+#include "lusan/view/log/LiveLogViewer.hpp"
 
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
@@ -46,109 +48,44 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , mLogModel     (nullptr)
     , mFilter       (nullptr)
     , mMdiWindow    (new QWidget())
+    , mHeader       (nullptr)
 {
     ui->setupUi(mMdiWindow);
     mLogModel   = new OfflineLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
     
-    QTableView* view = ctrlTable();
-    view->setHorizontalHeader(new LogTableHeader(view, mLogModel));
-    QHeaderView* header = ctrlHeader();
-    
-    header->setVisible(true);
-    header->show();
-    header->setContextMenuPolicy(Qt::CustomContextMenu);
-    header->setSectionsMovable(true);
-    
-    view->setSelectionBehavior(QAbstractItemView::SelectRows);
-    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    view->setSelectionMode(QAbstractItemView::SingleSelection);
-    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    view->setShowGrid(false);
-    view->setCurrentIndex(QModelIndex());
-    view->horizontalHeader()->setStretchLastSection(true);
-    view->verticalHeader()->hide();
-    view->setAutoScroll(true);
-    view->setVerticalScrollMode(QTableView::ScrollPerItem);
-    view->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    view->setModel(mFilter);
-
-    // Set the layout
-    QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->addWidget(mMdiWindow);
-    setLayout(layout);
-    
-    setAttribute(Qt::WA_DeleteOnClose);
-    ctrlTable()->setAutoScroll(true);
-    ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
-
-    // Connect signals
-    connect(mLogModel       , &OfflineLogsModel::signalDatabaseIsOpened   , this, &OfflineLogViewer::onDatabaseOpened);
-    connect(mLogModel       , &OfflineLogsModel::signalDatabaseIsClosed   , this, &OfflineLogViewer::onDatabaseClosed);
-    connect(header          , &QHeaderView::customContextMenuRequested   , this, &OfflineLogViewer::onHeaderContextMenu);
-    connect(view            , &QTableView::customContextMenuRequested    , this, &OfflineLogViewer::onTableContextMenu);
-    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter, SLOT(setComboFilter(int, QStringList)));
-    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter, SLOT(setTextFilter(int, QString)));
+    setupWidgets();
+    setupSignals(true);
 }
 
-OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LogViewer& liveLogs, QWidget* parent)
+OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer& liveLogs, QWidget* parent)
     : MdiChild      (MdiChild::eMdiWindow::MdiOfflineLogViewer, wndMain, parent)
 
     , ui            (new Ui::OfflineLogViewer)
     , mLogModel     (nullptr)
     , mFilter       (nullptr)
     , mMdiWindow    (new QWidget())
+    , mHeader       (nullptr)
 {
     ui->setupUi(mMdiWindow);
     mLogModel   = new OfflineLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
-    LiveLogsModel* liveModel = liveLogs.getLiveLogsModel();
+
+    LiveLogsModel* liveModel = liveLogs.getLoggingModel();
     if (liveModel != nullptr)
     {
         mLogModel->dataTransfer(*liveModel);
         setCurrentFile(mLogModel->getDatabasePath());
     }
     
-    QTableView* view = ctrlTable();
-    view->setHorizontalHeader(new LogTableHeader(view, mLogModel));
-    QHeaderView* header = ctrlHeader();
-    
-    header->setVisible(true);
-    header->show();
-    header->setContextMenuPolicy(Qt::CustomContextMenu);
-    header->setSectionsMovable(true);
-    
-    view->setSelectionBehavior(QAbstractItemView::SelectRows);
-    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    view->setSelectionMode(QAbstractItemView::SingleSelection);
-    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    view->setShowGrid(false);
-    view->setCurrentIndex(QModelIndex());
-    view->horizontalHeader()->setStretchLastSection(true);
-    view->verticalHeader()->hide();
-    view->setAutoScroll(true);
-    view->setVerticalScrollMode(QTableView::ScrollPerItem);
-    view->setContextMenuPolicy(Qt::CustomContextMenu);
+    setupWidgets();
+    setupSignals(true);
+}
 
-    view->setModel(mFilter);
-
-    // Set the layout
-    QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->addWidget(mMdiWindow);
-    setLayout(layout);
-    
-    setAttribute(Qt::WA_DeleteOnClose);
-    ctrlTable()->setAutoScroll(true);
-    ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
-
-    // Connect signals
-    connect(mLogModel       , &OfflineLogsModel::signalDatabaseIsOpened   , this, &OfflineLogViewer::onDatabaseOpened);
-    connect(mLogModel       , &OfflineLogsModel::signalDatabaseIsClosed   , this, &OfflineLogViewer::onDatabaseClosed);
-    connect(header          , &QHeaderView::customContextMenuRequested   , this, &OfflineLogViewer::onHeaderContextMenu);
-    connect(view            , &QTableView::customContextMenuRequested    , this, &OfflineLogViewer::onTableContextMenu);
-    connect(header, SIGNAL(signalComboFilterChanged(int, QStringList))  , mFilter, SLOT(setComboFilter(int, QStringList)));
-    connect(header, SIGNAL(signalTextFilterChanged(int, QString))       , mFilter, SLOT(setTextFilter(int, QString)));
+OfflineLogViewer::~OfflineLogViewer(void)
+{
+    cleanResources();
 }
 
 bool OfflineLogViewer::isDatabaseOpen(void) const
@@ -176,6 +113,29 @@ bool OfflineLogViewer::openDatabase(const QString & logPath)
     }
     
     return result;
+}
+
+void OfflineLogViewer::onWindowClosing(bool isActive)
+{
+    setupSignals(false);
+    Q_ASSERT(mMainWindow != nullptr);
+    if (isActive)
+    {
+        mMainWindow->getNaviOfflineScopes().setLoggingModel(nullptr);
+        cleanResources();
+    }
+}
+
+void OfflineLogViewer::onWindowActivated(void)
+{
+    Q_ASSERT(mMainWindow != nullptr);
+    if (mMainWindow->getNaviOfflineScopes().getLoggingModel() != mLogModel)
+    {
+        mMainWindow->getNaviOfflineScopes().setLoggingModel(nullptr);
+        mMainWindow->getNaviOfflineScopes().setLoggingModel(mLogModel);
+    }
+
+    mMainWindow->getNaviOfflineScopes().activateWindow();
 }
 
 void OfflineLogViewer::onHeaderContextMenu(const QPoint& pos)
@@ -269,4 +229,104 @@ void OfflineLogViewer::resetColumnOrder()
 {
     // Reset to default column order
     mLogModel->setActiveColumns(OfflineLogsModel::getDefaultColumns());
+}
+
+void OfflineLogViewer::setupSignals(bool doSetup)
+{
+    if (ui == nullptr)
+    {
+        Q_ASSERT(mLogModel == nullptr);
+        Q_ASSERT(mFilter == nullptr);
+        return;
+    }
+
+    QTableView* view = ctrlTable();
+    if (doSetup)
+    {
+        // Connect signals
+        connect(mLogModel, &OfflineLogsModel::signalDatabaseIsOpened, this      , &OfflineLogViewer::onDatabaseOpened);
+        connect(mLogModel, &OfflineLogsModel::signalDatabaseIsClosed, this      , &OfflineLogViewer::onDatabaseClosed);
+        connect(mHeader  , &QHeaderView::customContextMenuRequested , this      , &OfflineLogViewer::onHeaderContextMenu);
+        connect(mHeader  , &LogTableHeader::signalComboFilterChanged, mFilter   , &LogViewerFilterProxy::setComboFilter);
+        connect(mHeader  , &LogTableHeader::signalTextFilterChanged , mFilter   , &LogViewerFilterProxy::setTextFilter);
+        connect(view     , &QTableView::customContextMenuRequested  , this      , &OfflineLogViewer::onTableContextMenu);
+    }
+    else
+    {
+        // Disconnect signals
+        disconnect(mLogModel, &OfflineLogsModel::signalDatabaseIsOpened, this      , &OfflineLogViewer::onDatabaseOpened);
+        disconnect(mLogModel, &OfflineLogsModel::signalDatabaseIsClosed, this      , &OfflineLogViewer::onDatabaseClosed);
+        disconnect(mHeader  , &QHeaderView::customContextMenuRequested , this      , &OfflineLogViewer::onHeaderContextMenu);
+        disconnect(mHeader  , &LogTableHeader::signalComboFilterChanged, mFilter   , &LogViewerFilterProxy::setComboFilter);
+        disconnect(mHeader  , &LogTableHeader::signalTextFilterChanged , mFilter   , &LogViewerFilterProxy::setTextFilter);
+        disconnect(view     , &QTableView::customContextMenuRequested  , this      , &OfflineLogViewer::onTableContextMenu);
+    }
+}
+
+void OfflineLogViewer::setupWidgets(void)
+{
+    QTableView* view = ctrlTable();
+    mHeader = new LogTableHeader(view, mLogModel);
+    view->setHorizontalHeader(mHeader);
+
+    mHeader->setVisible(true);
+    mHeader->show();
+    mHeader->setContextMenuPolicy(Qt::CustomContextMenu);
+    mHeader->setSectionsMovable(true);
+
+    view->setSelectionBehavior(QAbstractItemView::SelectRows);
+    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    view->setSelectionMode(QAbstractItemView::SingleSelection);
+    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    view->setShowGrid(false);
+    view->setCurrentIndex(QModelIndex());
+    view->horizontalHeader()->setStretchLastSection(true);
+    view->verticalHeader()->hide();
+    view->setAutoScroll(true);
+    view->setVerticalScrollMode(QTableView::ScrollPerItem);
+    view->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    view->setModel(mFilter);
+
+    // Set the layout
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->addWidget(mMdiWindow);
+    setLayout(layout);
+
+    setAttribute(Qt::WA_DeleteOnClose);
+    ctrlTable()->setAutoScroll(true);
+    ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
+}
+
+void OfflineLogViewer::cleanResources(void)
+{
+    if (ui == nullptr)
+    {
+        Q_ASSERT(mLogModel == nullptr);
+        Q_ASSERT(mFilter == nullptr);
+        return;
+    }
+
+    Q_ASSERT(mLogModel != nullptr);
+    Q_ASSERT(mFilter != nullptr);
+
+    setupSignals(false);
+
+    QTableView* view = ctrlTable();
+    view->setModel(nullptr);
+    view->setHorizontalHeader(nullptr);
+    mFilter->setSourceModel(nullptr);
+    mLogModel->closeDatabase();
+
+    delete ui;
+    ui = nullptr;
+
+    delete mMdiWindow;
+    mMdiWindow = nullptr;
+
+    delete mFilter;
+    mFilter = nullptr;
+
+    delete mLogModel;
+    mLogModel = nullptr;
 }

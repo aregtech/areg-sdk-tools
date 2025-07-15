@@ -29,7 +29,6 @@
 
 LoggingScopesModelBase::LoggingScopesModelBase(QObject* parent)
     : QAbstractItemModel( parent )
-    , mRootList         ( )
     , mRootIndex        ( )
     , mLoggingModel     ( nullptr )
     
@@ -77,12 +76,14 @@ void LoggingScopesModelBase::setLoggingModel(LoggingModelBase* model)
 
 QModelIndex LoggingScopesModelBase::index(int row, int column, const QModelIndex& parent) const
 {
-    if ((hasIndex(row, column, parent) == false) || (column != 0))
+    if ((hasIndex(row, column, parent) == false) || (column != 0) || (mLoggingModel == nullptr))
         return QModelIndex();
+
+    const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
     
     if ((parent.isValid() == false) || (parent == mRootIndex))
     {
-        ScopeRoot* root = (row >= 0) && (row < static_cast<int>(mRootList.size())) ? mRootList[row] : nullptr;
+        ScopeRoot* root = (row >= 0) && (row < static_cast<int>(roots.size())) ? roots[row] : nullptr;
         return (root != nullptr ? createIndex(row, column, root) : mRootIndex);
     }
     else
@@ -126,7 +127,7 @@ int LoggingScopesModelBase::rowCount(const QModelIndex& parent) const
     if ((parent.isValid() == false) || (parent == mRootIndex))
     {
         // Root level - return number of instances
-        return mRootList.size();
+        return (mLoggingModel != nullptr ? static_cast<int>(mLoggingModel->getRootList().size()) : 0);
     }
     else
     {
@@ -213,28 +214,21 @@ void LoggingScopesModelBase::clearModel(bool notify /*= false*/)
     if (notify)
     {
         beginResetModel();
-    }
-
-    for (auto root : mRootList)
-    {
-        Q_ASSERT(root != nullptr);
-        delete root;
-    }
-
-    mRootList.clear();
-    if (notify)
-    {
         endResetModel();
     }
 }
 
 bool LoggingScopesModelBase::existsRoot(ITEM_ID rootId) const
 {
-    for (auto root : mRootList)
+    if (mLoggingModel != nullptr)
     {
-        Q_ASSERT(root != nullptr);
-        if (root->getRootId() == rootId)
-            return true;
+        LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+        for (auto root : roots)
+        {
+            Q_ASSERT(root != nullptr);
+            if (root->getRootId() == rootId)
+                return true;
+        }
     }
 
     return false;
@@ -242,9 +236,9 @@ bool LoggingScopesModelBase::existsRoot(ITEM_ID rootId) const
 
 bool LoggingScopesModelBase::appendRoot(ScopeRoot* root, bool unique /*= true*/)
 {
-    if ((unique == false) || (existsRoot(root->getRootId()) == false))
+    if ((mLoggingModel != nullptr) && ((unique == false) || (existsRoot(root->getRootId()) == false)))
     {
-        mRootList.append(root);
+        mLoggingModel->getRootList().push_back(root);
         return true;
     }
 
@@ -253,10 +247,14 @@ bool LoggingScopesModelBase::appendRoot(ScopeRoot* root, bool unique /*= true*/)
 
 int LoggingScopesModelBase::findRoot(ITEM_ID rootId) const
 {
-    for (int i = 0; i < mRootList.size(); ++i)
+    if (mLoggingModel != nullptr)
     {
-        if (mRootList[i]->getRootId() == rootId)
-            return i;
+        const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+        for (int i = 0; i < static_cast<int>(roots.size()); ++i)
+        {
+            if (roots[i]->getRootId() == rootId)
+                return i;
+        }
     }
 
     return static_cast<int>(NECommon::INVALID_INDEX);
@@ -269,6 +267,7 @@ void LoggingScopesModelBase::slotLogServiceConnected(void)
 
 void LoggingScopesModelBase::slotLogServiceDisconnected(void)
 {
+    clearModel(false);
 }
 
 bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<NEService::sServiceConnectedInstance> & instances)
@@ -280,8 +279,7 @@ bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<NEService:
         if ((instance.ciSource != NEService::eMessageSource::MessageSourceObserver) && (existsRoot(instance.ciCookie) == false))
         {
             result = true;
-            ScopeRoot* root = new ScopeRoot(instance);
-            mRootList.push_back(root);
+            appendRoot(new ScopeRoot(instance), false);
         }
     }
     
@@ -298,19 +296,24 @@ bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<NEService:
 void LoggingScopesModelBase::slotInstancesUnavailable(const std::vector<ITEM_ID>& instIds)
 {
     bool removed{false};
-    for (auto rootId : instIds)
+
+    if (mLoggingModel != nullptr)
     {
-        for (int i = 0; i < static_cast<int>(mRootList.size()); ++ i)
+        LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+        for (auto rootId : instIds)
         {
-            ScopeRoot* root = mRootList[i];
-            Q_ASSERT(root != nullptr);
-            if (root->getRootId() == rootId)
+            for (int i = 0; i < static_cast<int>(roots.size()); ++i)
             {
-                removed = true;
-                beginRemoveRows(mRootIndex, i, i);
-                mRootList.erase(mRootList.begin() + i);
-                endRemoveRows();
-                break;
+                ScopeRoot* root = roots[i];
+                Q_ASSERT(root != nullptr);
+                if (root->getRootId() == rootId)
+                {
+                    removed = true;
+                    beginRemoveRows(mRootIndex, i, i);
+                    roots.erase(roots.begin() + i);
+                    endRemoveRows();
+                    break;
+                }
             }
         }
     }
@@ -326,12 +329,14 @@ void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vect
     int pos = scopes.empty() == false ? findRoot(instId) : static_cast<int>(NECommon::INVALID_INDEX);
     if (pos != static_cast<int>(NECommon::INVALID_INDEX))
     {
+        Q_ASSERT(mLoggingModel != nullptr);
+        LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
         int count = static_cast<int>(scopes.size());
         QModelIndex idxInstance = index(pos, 0, mRootIndex);
         beginInsertRows(idxInstance, 0, count);
         // beginResetModel();
 
-        ScopeRoot* root = mRootList[pos];
+        ScopeRoot* root = roots[pos];
         Q_ASSERT(root != nullptr);
         root->resetPrioritiesRecursive(false);
         for (int i = 0; i < count; ++i)
@@ -355,9 +360,11 @@ void LoggingScopesModelBase::slotScopesUpdated(ITEM_ID instId, const std::vector
     int pos = scopes.empty() == false ? findRoot(instId) : static_cast<int>(NECommon::INVALID_INDEX);
     if (pos != static_cast<int>(NECommon::INVALID_INDEX))
     {
+        Q_ASSERT(mLoggingModel != nullptr);
+        LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
         QModelIndex idxInstance = index(pos, 0, mRootIndex);
         int count = static_cast<int>(scopes.size());
-        ScopeRoot* root = mRootList[pos];
+        ScopeRoot* root = roots[pos];
         Q_ASSERT(root != nullptr);
         for (int i = 0; i < count; ++i)
         {
@@ -433,6 +440,24 @@ void LoggingScopesModelBase::buildScopes(void)
     endResetModel();
 }
 
+void LoggingScopesModelBase::setupModel(void)
+{
+    clearModel(false);
+    if (mLoggingModel != nullptr)
+    {
+        mLoggingModel->setupModel();
+    }
+}
+
+void LoggingScopesModelBase::releaseModel(void)
+{
+    clearModel(true);
+    if (mLoggingModel != nullptr)
+    {
+        mLoggingModel->releaseModel();
+    }
+}
+
 void LoggingScopesModelBase::dataTransfer(LoggingScopesModelBase& scopeModel)
 {
     beginResetModel();
@@ -448,10 +473,6 @@ void LoggingScopesModelBase::dataTransfer(LoggingScopesModelBase& scopeModel)
         _setupSignals(true);
         slotLogServiceConnected();
     }
-    
-    mRootList.clear();
-    mRootList = std::move(scopeModel.mRootList);
-    scopeModel.mRootList.clear();
     
     mRootIndex = std::move(scopeModel.mRootIndex);
     scopeModel.mRootIndex = QModelIndex();

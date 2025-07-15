@@ -31,7 +31,7 @@
 
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
-#include "lusan/view/log/LogViewer.hpp"
+#include "lusan/view/log/LiveLogViewer.hpp"
 
 #include "areg/base/NESocket.hpp"
 
@@ -57,11 +57,10 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     , mInitLogFile  ( )
     , mActiveLogFile( )
     , mLogLocation  ( )
-    , mScopeModel   (nullptr)
-    , mSelModel     (nullptr)
+    , mScopesModel  (new LiveScopesModel(this))
+    , mSelModel     (new QItemSelectionModel(mScopesModel, this))
     , mSignalsActive(false)
     , mState        (eLoggingStates::LoggingUndefined)
-    , mLiveLogs     (nullptr)
     , mMenuActions  (static_cast<int>(eLogActions::PrioCount))
 {
     _explorer = this;
@@ -108,14 +107,14 @@ void NaviLiveLogsScopes::setLogCollectorConnection(const QString& address, uint1
     mPort = port;
 }
 
-void NaviLiveLogsScopes::setLiveLogs(LogViewer* liveLogs)
+void NaviLiveLogsScopes::setLoggingModel(LiveLogsModel* logModel)
 {
-    ctrlTable()->setModel(nullptr);
-    mLiveLogs = liveLogs;
-    if (mLiveLogs != nullptr)
-    {
-        ctrlTable()->setModel(mLiveLogs->getLiveLogsModel());
-    }
+    mScopesModel->setLoggingModel(logModel);
+}
+
+LiveLogsModel* NaviLiveLogsScopes::getLoggingModel(void)
+{
+    return static_cast<LiveLogsModel *>(mScopesModel->getLoggingModel());
 }
 
 QToolButton* NaviLiveLogsScopes::ctrlCollapse(void)
@@ -194,10 +193,9 @@ void NaviLiveLogsScopes::setupWidgets(void)
     ctrlLogInfo()->setEnabled(false);
     ctrlLogDebug()->setEnabled(false);
     ctrlLogScopes()->setEnabled(false);
-
+    ctrlTable()->setModel(mScopesModel);
+    ctrlTable()->setSelectionModel(mSelModel);
     ctrlTable()->setContextMenuPolicy(Qt::CustomContextMenu);
-
-    onWindowActivated(mMainWindow->getActiveWindow());
 }
 
 void NaviLiveLogsScopes::setupSignals(void)
@@ -214,9 +212,7 @@ void NaviLiveLogsScopes::setupSignals(void)
     connect(ctrlCollapse()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onCollapseClicked);
     connect(ctrlTable()         , &QTreeView::expanded , this, &NaviLiveLogsScopes::onNodeExpanded);
     connect(ctrlTable()         , &QTreeView::collapsed, this, &NaviLiveLogsScopes::onNodeCollapsed);
-    connect(ctrlTable()         , &QWidget::customContextMenuRequested, this, &NaviLiveLogsScopes::onTreeViewContextMenuRequested);
-
-    connect(mMainWindow         , &MdiMainWindow::signalWindowActivated , this  , &NaviLiveLogsScopes::onWindowActivated);
+    connect(ctrlTable()         , &QWidget::customContextMenuRequested  , this  , &NaviLiveLogsScopes::onTreeViewContextMenuRequested);
     connect(mMainWindow         , &MdiMainWindow::signalWindowCreated   , this  , &NaviLiveLogsScopes::onWindowCreated);
 
     setupLogSignals(true);    
@@ -243,14 +239,14 @@ void NaviLiveLogsScopes::updateColors(bool errSelected, bool warnSelected, bool 
 
 void NaviLiveLogsScopes::updateExpanded(const QModelIndex& current)
 {
-    QTreeView* tree = current.isValid() && (mScopeModel != nullptr) ? ctrlTable() : nullptr;
+    QTreeView* tree = current.isValid() && (mScopesModel != nullptr) ? ctrlTable() : nullptr;
     if (tree != nullptr)
     {
         tree->update(current);
-        int count = tree->isExpanded(current) ? mScopeModel->rowCount(current) : 0;
+        int count = tree->isExpanded(current) ? mScopesModel->rowCount(current) : 0;
         for (int i = 0; i < count; ++ i)
         {
-            QModelIndex index = mScopeModel->index(i, 0, current);
+            QModelIndex index = mScopesModel->index(i, 0, current);
             updateExpanded(index);
         }
     }
@@ -261,14 +257,14 @@ bool NaviLiveLogsScopes::updatePriority(const QModelIndex& node, bool addPrio, N
     bool result{ false };
     if (node.isValid())
     {
-        Q_ASSERT(mScopeModel != nullptr);
+        Q_ASSERT(mScopesModel != nullptr);
         if (addPrio)
         {
-            result = mScopeModel->addLogPriority(node, prio);
+            result = mScopesModel->addLogPriority(node, prio);
         }
         else
         {
-            result = mScopeModel->removeLogPriority(node, prio);
+            result = mScopesModel->removeLogPriority(node, prio);
         }
     }
     
@@ -296,45 +292,41 @@ void NaviLiveLogsScopes::setupLogSignals(bool setup)
             connect(log, &LogObserver::signalLogDbCreated           , this, &NaviLiveLogsScopes::onLogDbCreated            , Qt::QueuedConnection);
             connect(log, &LogObserver::signalLogObserverInstance    , this, &NaviLiveLogsScopes::onLogObserverInstance     , Qt::QueuedConnection);
 
-            if (mSelModel == nullptr)
-            {
-                Q_ASSERT(mScopeModel == nullptr);
-                Q_ASSERT(mLiveLogs != nullptr);
-                
-                mScopeModel = new LiveScopesModel(ctrlTable());
-                mSelModel = new QItemSelectionModel(mScopeModel, ctrlTable());
-                LiveLogsModel * liveLogs = mLiveLogs->getLiveLogsModel();
-                Q_ASSERT(liveLogs != nullptr);
-                liveLogs->setupModel();
-                
-                // Get the LiveLogsModel from the live logs viewer
-                mScopeModel->setLoggingModel(liveLogs);
-                ctrlTable()->setModel(mScopeModel);
-                ctrlTable()->setSelectionModel(mSelModel);
+            Q_ASSERT(mScopesModel != nullptr);
+            Q_ASSERT(mSelModel != nullptr);
 
-                connect(mScopeModel , &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
-                connect(mScopeModel , &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
-                connect(mScopeModel , &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
-                connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
-            }
-            
+            connect(mScopesModel, &LiveScopesModel::signalRootUpdated, this, &NaviLiveLogsScopes::onRootUpdated);
+            connect(mScopesModel, &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
+            connect(mScopesModel, &LiveScopesModel::dataChanged, this, &NaviLiveLogsScopes::onScopesDataChanged);
+            connect(mSelModel, &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
         }
     }
     else if (mSignalsActive)
     {
-        LiveLogsModel * liveLogs = mLiveLogs != nullptr ? mLiveLogs->getLiveLogsModel() : nullptr;
-        if (liveLogs != nullptr)
-        {
-            liveLogs->releaseModel();
-            mScopeModel->setLoggingModel(nullptr);
-        }
-        
+        Q_ASSERT(mScopesModel != nullptr);
+        Q_ASSERT(mSelModel != nullptr);
+
+        LoggingModelBase* logModel{ mScopesModel->getLoggingModel() };
+
+        disconnect(mScopesModel  , &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
+        disconnect(mScopesModel  , &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
+        disconnect(mScopesModel  , &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
+        disconnect(mSelModel    , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
+
         disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &NaviLiveLogsScopes::onLogObserverConfigured);
         disconnect(log, &LogObserver::signalLogDbConfigured         , this, &NaviLiveLogsScopes::onLogDbConfigured);
         disconnect(log, &LogObserver::signalLogServiceConnected     , this, &NaviLiveLogsScopes::onLogServiceConnected);
         disconnect(log, &LogObserver::signalLogObserverStarted      , this, &NaviLiveLogsScopes::onLogObserverStarted);
         disconnect(log, &LogObserver::signalLogDbCreated            , this, &NaviLiveLogsScopes::onLogDbCreated);
         disconnect(log, &LogObserver::signalLogObserverInstance     , this, &NaviLiveLogsScopes::onLogObserverInstance);
+
+        if (logModel != nullptr)
+        {
+            logModel->releaseModel();
+            mScopesModel->setLoggingModel(nullptr);
+            enableButtons(QModelIndex());
+        }
+
         mSignalsActive =  false;
     }
 }
@@ -344,10 +336,10 @@ bool NaviLiveLogsScopes::areRootsCollapsed(void) const
     bool result{ true };
     QTreeView* treeView = ui->treeView;
 
-    int rowCount = mScopeModel != nullptr ? mScopeModel->rowCount(mScopeModel->getRootIndex()) : 0; // root items
+    int rowCount = mScopesModel != nullptr ? mScopesModel->rowCount(mScopesModel->getRootIndex()) : 0; // root items
     for (int row = 0; row < rowCount; ++row)
     {
-        QModelIndex index = mScopeModel->index(row, 0, mScopeModel->getRootIndex());
+        QModelIndex index = mScopesModel->index(row, 0, mScopesModel->getRootIndex());
         if (treeView->isExpanded(index))
         {
             result = false;
@@ -361,17 +353,17 @@ bool NaviLiveLogsScopes::areRootsCollapsed(void) const
 void NaviLiveLogsScopes::collapseRoots(void)
 {
     QTreeView* treeView = ctrlTable();
-    int rowCount = mScopeModel != nullptr ? mScopeModel->rowCount(mScopeModel->getRootIndex()) : 0; // root items
+    int rowCount = mScopesModel != nullptr ? mScopesModel->rowCount(mScopesModel->getRootIndex()) : 0; // root items
     for (int row = 0; row < rowCount; ++row)
     {
-        QModelIndex index = mScopeModel->index(row, 0, mScopeModel->getRootIndex());
+        QModelIndex index = mScopesModel->index(row, 0, mScopesModel->getRootIndex());
         treeView->collapse(index);
     }
 }
 
 void NaviLiveLogsScopes::enableButtons(const QModelIndex & selection)
 {
-    ScopeNodeBase * node = selection.isValid() ? mScopeModel->data(selection, Qt::ItemDataRole::UserRole).value<ScopeNodeBase *>() : nullptr;
+    ScopeNodeBase * node = selection.isValid() ? mScopesModel->data(selection, Qt::ItemDataRole::UserRole).value<ScopeNodeBase *>() : nullptr;
     if (node != nullptr)
     {
         bool errSelected{false}, warnSelected{false}, infoSelected{false}, dbgSelected{false}, scopeSelected{false};
@@ -465,23 +457,6 @@ void NaviLiveLogsScopes::onLogServiceConnected(bool isConnected, const QString& 
     ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
     Q_ASSERT(mMainWindow != nullptr);
     mMainWindow->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
-
-    if ((isConnected == false) && (mScopeModel != nullptr) && (mSelModel != nullptr))
-    {
-        disconnect(mScopeModel  , &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
-        disconnect(mScopeModel  , &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
-        disconnect(mScopeModel  , &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
-        disconnect(mSelModel    , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
-
-        mSelModel->reset();
-        mScopeModel->setLoggingModel(nullptr);
-        mSignalsActive = false;
-        LiveLogsModel * liveLogs = mLiveLogs != nullptr ? mLiveLogs->getLiveLogsModel() : nullptr;
-        if (liveLogs != nullptr)
-        {
-            liveLogs->releaseModel();
-        }
-    }
 }
 
 void NaviLiveLogsScopes::onLogObserverStarted(bool isStarted)
@@ -502,11 +477,16 @@ void NaviLiveLogsScopes::onLogObserverInstance(bool isStarted, const QString& ad
 {
     if (isStarted)
     {
+        mScopesModel->setupModel();
         std::error_code err;
         std::filesystem::path dbPath(mLogLocation.toStdString());
         dbPath /= mInitLogFile.toStdString();
         QString logPath(std::filesystem::absolute(dbPath, err).c_str());
         LogObserver::connect(mAddress, mPort, logPath);
+    }
+    else
+    {
+        mScopesModel->releaseModel();
     }
     
     setupLogSignals(isStarted);
@@ -517,11 +497,9 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
 {
     if (checked)
     {
-        if (mMainWindow != nullptr)
-        {
-            mMainWindow->setupLiveLogging();
-        }
-
+        Q_ASSERT(mMainWindow != nullptr);
+        LiveLogsModel* logModel{ mMainWindow->setupLiveLogging() };
+        mScopesModel->setLoggingModel(logModel);
         LogObserver::createLogObserver(&NaviLiveLogsScopes::_logObserverStarted);
     }
     else
@@ -541,21 +519,11 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
         LogObserver::releaseLogObserver();
 
         mMainWindow->logCollecttorConnected(false, address, port, logFile);
-        ctrlTable()->setModel(nullptr);
-        mScopeModel->setLoggingModel(nullptr);
-        mSelModel->setModel(nullptr);
-
-        disconnect(mScopeModel , &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
-        disconnect(mScopeModel , &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
-        disconnect(mScopeModel , &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
-        disconnect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
-        
-        delete mScopeModel;
-        delete mSelModel;
-        mScopeModel = nullptr;
-        mSelModel = nullptr;
-        mLiveLogs = nullptr;
+        mScopesModel->setLoggingModel(nullptr);
+        mScopesModel->releaseModel();
     }
+
+    enableButtons(QModelIndex());
 }
 
 void NaviLiveLogsScopes::onMoveBottomClicked()
@@ -564,7 +532,7 @@ void NaviLiveLogsScopes::onMoveBottomClicked()
     MdiChild* wndActive = mMainWindow->getActiveWindow();
     if ((wndActive != nullptr) && wndActive->isLogViewerWindow())
     {
-        qobject_cast<LogViewer*>(wndActive)->moveToBottom(true);
+        qobject_cast<LiveLogViewer*>(wndActive)->moveToBottom(true);
     }
 }
 
@@ -620,9 +588,9 @@ void NaviLiveLogsScopes::onPrioScopesClicked(bool checked)
 
 void NaviLiveLogsScopes::onSaveSettingsClicked(bool checked)
 {
-    if (mScopeModel != nullptr)
+    if (mScopesModel != nullptr)
     {
-        mScopeModel->saveLogScopePriority(QModelIndex());
+        mScopesModel->saveLogScopePriority(QModelIndex());
     }
 }
 
@@ -650,7 +618,8 @@ void NaviLiveLogsScopes::onOptionsClicked(bool checked)
 
 void NaviLiveLogsScopes::onCollapseClicked(bool checked)
 {
-    if ((mScopeModel == nullptr) || (mScopeModel->rowCount(mScopeModel->getRootIndex()) == 0))
+    Q_ASSERT(mScopesModel != nullptr);
+    if (mScopesModel->rowCount(mScopesModel->getRootIndex()) == 0)
     {
         ctrlCollapse()->blockSignals(true);
         ctrlCollapse()->setChecked(false);        
@@ -667,8 +636,8 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
         
         navi->blockSignals(true);
         collapseRoots();
-        navi->expand(mScopeModel->getRootIndex());
-        navi->setCurrentIndex(mScopeModel->getRootIndex());
+        navi->expand(mScopesModel->getRootIndex());
+        navi->setCurrentIndex(mScopesModel->getRootIndex());
         navi->blockSignals(false);
         
         ctrlCollapse()->blockSignals(false);
@@ -681,7 +650,7 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
         
         navi->blockSignals(true);
         navi->expandAll();
-        navi->setCurrentIndex(mScopeModel->getRootIndex());
+        navi->setCurrentIndex(mScopesModel->getRootIndex());
         navi->blockSignals(false);
         
         ctrlCollapse()->blockSignals(false);
@@ -696,36 +665,35 @@ void NaviLiveLogsScopes::onSelectionChanged(const QItemSelection &selected, cons
 
 void NaviLiveLogsScopes::onRootUpdated(const QModelIndex & root)
 {
-    if (mScopeModel != nullptr)
+    Q_ASSERT(mScopesModel != nullptr);
+    if (isConnected())
     {
-        if (isConnected())
-        {
-            mState = eLoggingStates::LoggingRunning;
-        }
+        mState = eLoggingStates::LoggingRunning;
+    }
 
-        QTreeView * navi = ctrlTable();
-        Q_ASSERT(navi != nullptr);
-        if (navi->isExpanded(root) == false)
-        {
-            navi->expand(root);
-        }
+    QTreeView * navi = ctrlTable();
+    Q_ASSERT(navi != nullptr);
+    if (navi->isExpanded(root) == false)
+    {
+        navi->expand(root);
+    }
 
-        // Ensure all children of root are expanded and visible
-        int rowCount = mScopeModel->rowCount(root);
-        for (int row = 0; row < rowCount; ++row)
+    // Ensure all children of root are expanded and visible
+    int rowCount = mScopesModel->rowCount(root);
+    for (int row = 0; row < rowCount; ++row)
+    {
+        QModelIndex child = mScopesModel->index(row, 0, root);
+        if (child.isValid() && !navi->isExpanded(child))
         {
-            QModelIndex child = mScopeModel->index(row, 0, root);
-            if (child.isValid() && !navi->isExpanded(child))
-            {
-                navi->expand(child);
-            }
+            navi->expand(child);
         }
     }
 }
 
 void NaviLiveLogsScopes::onScopesInserted(const QModelIndex & parent)
 {
-    if ((mScopeModel != nullptr) && (parent.isValid()))
+    Q_ASSERT(mScopesModel != nullptr);
+    if (parent.isValid())
     {
         enableButtons(parent);
         QTreeView * navi = ctrlTable();
@@ -748,11 +716,9 @@ void NaviLiveLogsScopes::onScopesUpdated(const QModelIndex & parent)
 
 void NaviLiveLogsScopes::onScopesDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles /*= QList<int>()*/)
 {
-    if (mSelModel != nullptr)
-    {
-        enableButtons(ctrlTable()->currentIndex());
-        updateExpanded(ctrlTable()->rootIndex());
-    }
+    Q_ASSERT(mSelModel != nullptr);
+    enableButtons(ctrlTable()->currentIndex());
+    updateExpanded(ctrlTable()->rootIndex());
 }
 
 void NaviLiveLogsScopes::optionOpenning(void)
@@ -789,11 +755,13 @@ void NaviLiveLogsScopes::optionClosed(bool OKpressed)
 void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
 {
     QModelIndex index = ctrlTable()->indexAt(pos);
-    if ((index.isValid() == false) || (mScopeModel == nullptr))
+    if (index.isValid() == false)
         return;
 
+    Q_ASSERT(mScopesModel != nullptr);
+
     // Get current priority of the selected node
-    ScopeNodeBase* node = mScopeModel->data(index, Qt::UserRole).value<ScopeNodeBase*>();
+    ScopeNodeBase* node = mScopesModel->data(index, Qt::UserRole).value<ScopeNodeBase*>();
     if ((node == nullptr) || (node->hasPrioValid() == false))
         return;
 
@@ -862,7 +830,7 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
 
     if (selectedAction == mMenuActions[static_cast<int>(eLogActions::PrioNotset)])
     {
-        mScopeModel->setLogPriority(index, NELogging::eLogPriority::PrioNotset);
+        mScopesModel->setLogPriority(index, NELogging::eLogPriority::PrioNotset);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioDebug])
     {
@@ -906,36 +874,18 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     }
     else if (selectedAction == mMenuActions[eLogActions::SavePrioTarget])
     {
-        Q_ASSERT(mScopeModel != nullptr);
-        mScopeModel->saveLogScopePriority(index);
+        Q_ASSERT(mScopesModel != nullptr);
+        mScopesModel->saveLogScopePriority(index);
     }
     else if (selectedAction == mMenuActions[eLogActions::SavePrioAll])
     {
-        mScopeModel->saveLogScopePriority(mScopeModel != nullptr ? mScopeModel->getRootIndex() : QModelIndex());
+        mScopesModel->saveLogScopePriority(mScopesModel != nullptr ? mScopesModel->getRootIndex() : QModelIndex());
     }
 }
 
 void NaviLiveLogsScopes::onWindowCreated(MdiChild* mdiChild)
 {
     ctrlMoveBottom()->setEnabled((mdiChild != nullptr) && (mdiChild->isLogViewerWindow()));
-}
-
-void NaviLiveLogsScopes::onWindowActivated(MdiChild* mdiChild)
-{
-    if ((mdiChild != nullptr) && (mdiChild->isLogViewerWindow()))
-    {
-        enableButtons(ctrlTable()->currentIndex());
-        ctrlMoveBottom()->setEnabled(true);
-        if (isActiveWindow() == false)
-        {
-            activateWindow();
-        }
-    }
-    else
-    {
-        enableButtons(QModelIndex());
-        ctrlMoveBottom()->setEnabled(false);
-    }
 }
 
 void NaviLiveLogsScopes::onNodeExpanded(const QModelIndex& index)

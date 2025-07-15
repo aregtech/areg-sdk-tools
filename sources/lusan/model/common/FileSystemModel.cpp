@@ -56,10 +56,6 @@ FileSystemModel::FileSystemModel(const QMap<QString, QString> & workspaceEntries
     }
 }
 
-FileSystemModel::~FileSystemModel()
-{
-}
-
 QModelIndex FileSystemModel::index(int row, int column, const QModelIndex& parent) const
 {
     if (hasIndex(row, column, parent) == false)

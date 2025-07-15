@@ -90,7 +90,7 @@ public:
     /**
      * \brief   Returns the live mode log explorer widget.
      **/
-    inline NaviLiveLogsScopes& getLiveLogs(void);
+    inline NaviLiveLogsScopes& getLiveScopes(void);
 
     /**
      * \brief   Returns the offline log explorer widget.
@@ -149,11 +149,6 @@ private:
 private slots:
 
     /**
-     * \brief   Slot is triggered when the MDI window is activated.
-     **/
-    void onMdiWindowActivated(MdiChild * mdiChild);
-
-    /**
      * \brief   Slot is triggered when options dialog is opened.
      **/
     void onOptionsOpening(void);
@@ -175,7 +170,7 @@ private slots:
 private:
     MdiMainWindow*          mMainWindow;    //!< Main window
     QTabWidget              mTabs;          //!< The tab widget of the navigation.
-    NaviLiveLogsScopes      mLiveScopes;   //!< The log explorer widget.
+    NaviLiveLogsScopes      mLiveScopes;    //!< The log explorer widget.
     NaviOfflineLogsScopes   mOfflineScopes; //!< The offline scopes explorer.
     NaviFileSystem          mFileSystem;    //!< The file system widget.
 };
@@ -194,7 +189,7 @@ inline NaviFileSystem& Navigation::getFileSystem(void)
     return mFileSystem;
 }
 
-inline NaviLiveLogsScopes& Navigation::getLiveLogs(void)
+inline NaviLiveLogsScopes& Navigation::getLiveScopes(void)
 {
     return mLiveScopes;
 }

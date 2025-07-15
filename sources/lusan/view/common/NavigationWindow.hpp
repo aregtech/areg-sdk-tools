@@ -23,6 +23,9 @@
 
 class MdiMainWindow;
 
+/**
+ * \brief   Base class for navigation windows in the Lusan application.
+ **/
 class NavigationWindow : public QWidget
 {
     Q_OBJECT
@@ -63,7 +66,7 @@ public:
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
     virtual void optionClosed(bool OKpressed);
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes
 //////////////////////////////////////////////////////////////////////////
