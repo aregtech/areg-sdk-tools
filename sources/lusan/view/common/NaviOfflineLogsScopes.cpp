@@ -40,8 +40,8 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
 
 {
     ui->setupUi(this);
-    this->setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    this->setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
 
     setupWidgets();
     setupSignals();
@@ -104,9 +104,9 @@ void NaviOfflineLogsScopes::setLoggingModel(OfflineLogsModel * model)
     updateControls();
 }
 
-bool NaviOfflineLogsScopes::isActiveLoggingModel(const OfflineLogsModel & model) const
+OfflineLogsModel* NaviOfflineLogsScopes::getLoggingModel(void)
 {
-    return (mScopesModel != nullptr) && mScopesModel->isSameLoggingModel(model);
+    return static_cast<OfflineLogsModel *>(mScopesModel->getLoggingModel());
 }
 
 void NaviOfflineLogsScopes::optionOpenning(void)
@@ -208,6 +208,8 @@ void NaviOfflineLogsScopes::setupSignals(void)
     connect(ctrlOpenDatabase()      , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onOpenDatabaseClicked);
     connect(ctrlCloseDatabase()     , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onCloseDatabaseClicked);
     connect(ctrlRefreshDatabase()   , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onRefreshDatabaseClicked);
+    connect(mScopesModel            , &OfflineScopesModel::signalRootUpdated    , this, &NaviOfflineLogsScopes::onRootUpdated);
+    connect(mScopesModel            , &OfflineScopesModel::signalScopesInserted , this, &NaviOfflineLogsScopes::onScopesInserted);
 }
 
 void NaviOfflineLogsScopes::updateControls(void)
@@ -301,5 +303,41 @@ void NaviOfflineLogsScopes::onRefreshDatabaseClicked(void)
     {
         mScopesModel->setLoggingModel(nullptr);
         mScopesModel->setLoggingModel(logModel);
+    }
+}
+
+void NaviOfflineLogsScopes::onRootUpdated(const QModelIndex& root)
+{
+    Q_ASSERT(mScopesModel != nullptr);
+    QTreeView* navi = ctrlTable();
+    Q_ASSERT(navi != nullptr);
+    if (navi->isExpanded(root) == false)
+    {
+        navi->expand(root);
+    }
+
+    // Ensure all children of root are expanded and visible
+    int rowCount = mScopesModel->rowCount(root);
+    for (int row = 0; row < rowCount; ++row)
+    {
+        QModelIndex child = mScopesModel->index(row, 0, root);
+        if (child.isValid() && !navi->isExpanded(child))
+        {
+            navi->expand(child);
+        }
+    }
+}
+
+void NaviOfflineLogsScopes::onScopesInserted(const QModelIndex& parent)
+{
+    Q_ASSERT(mScopesModel != nullptr);
+    if (parent.isValid())
+    {
+        QTreeView* navi = ctrlTable();
+        Q_ASSERT(navi != nullptr);
+        if (navi->isExpanded(parent) == false)
+        {
+            navi->expand(parent);
+        }
     }
 }

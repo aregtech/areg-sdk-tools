@@ -30,7 +30,7 @@ class QTableView;
 class QLabel;
 class QWidget;
 class OfflineLogsModel;
-class LogViewer;
+class LiveLogViewer;
 class LogViewerFilterProxy;
 class LogTableHeader;
 class MdiMainWindow;
@@ -70,7 +70,9 @@ public:
      * \param   liveLogs   The live log viewer object to copy data from.
      * \param   parent     The parent widget.
      **/
-    explicit OfflineLogViewer(MdiMainWindow* wndMain, LogViewer & liveLogs, QWidget* parent = nullptr);
+    explicit OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer & liveLogs, QWidget* parent = nullptr);
+
+    virtual ~OfflineLogViewer(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -93,10 +95,23 @@ public:
      **/
     bool openDatabase(const QString & logPath);
 
+/************************************************************************
+ * MdiChild overrides
+ ************************************************************************/
 protected:
 
+    /**
+     * \brief   Called when the MDI child window is closed.
+     * \param   isActive    Indicates whether the window is active or not.
+     **/
     virtual void onWindowClosing(bool isActive) override;
-    
+
+    /**
+     * \brief   Called when the MDI child window is activated.
+     *          This method can be overridden to handle window activation events.
+     **/
+    virtual void onWindowActivated(void) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -142,9 +157,23 @@ private:
      **/
     void resetColumnOrder();
 
+    /**
+     * \brief   Sets up or clears the offline log viewer signals.
+     * \param   doSetup     If true, sets up the signals. Otherwise, clears the signal.
+     **/
     void setupSignals(bool doSetup);
 
+    /**
+     * \brief   Sets up the widgets of the offline log viewer.
+     *          This method initializes the user interface components.
+     **/
     void setupWidgets(void);
+
+    /**
+     * \brief   Cleans up resources used by the offline log viewer.
+     *          This method is called when the viewer is closed or no longer needed.
+     **/
+    void cleanResources(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -154,7 +183,7 @@ private:
     OfflineLogsModel*       mLogModel;  //!< Model for the offline log viewer, handling the data and its representation.
     LogViewerFilterProxy*   mFilter;    //!< The filter object
     QWidget*                mMdiWindow; //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
-    LogTableHeader *        mHeader;
+    LogTableHeader*         mHeader;    //<!< Log table header object, used for managing the header of the log table.
 };
 
 //////////////////////////////////////////////////////////////////////////

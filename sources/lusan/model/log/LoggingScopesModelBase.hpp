@@ -45,9 +45,6 @@ class LoggingScopesModelBase : public QAbstractItemModel
 {
     Q_OBJECT
 
-protected:
-    using RootList = QList< ScopeRoot*>;
-
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -139,9 +136,15 @@ public:
      * \brief   Builds the scopes tree for the model.
      **/
     virtual void buildScopes(void);
-    
+
+    /**
+     * \brief   Sets up the model.
+     **/
     virtual void setupModel(void);
-    
+
+    /**
+     * \brief   Releases the model.
+     **/
     virtual void releaseModel(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -306,7 +309,6 @@ private:
 // Protected member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    RootList                mRootList;              //!< The list of root nodes
     QModelIndex             mRootIndex;             //!< The root index of the model
     LoggingModelBase*       mLoggingModel;          //!< The logging model associated with this scopes model
     

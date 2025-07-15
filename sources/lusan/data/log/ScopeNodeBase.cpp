@@ -23,6 +23,7 @@
 
 ScopeNodeBase::ScopeNodeBase(void)
     : mNodeType     ( ScopeNodeBase::eNode::Invalid )
+    , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( nullptr )
     , mPrioStates   ( static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid) )
     , mNodeName     ( )
@@ -31,6 +32,7 @@ ScopeNodeBase::ScopeNodeBase(void)
 
 ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, ScopeNodeBase* parent /*= nullptr*/)
     : mNodeType     ( nodeType )
+    , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( parent )
     , mPrioStates   ( static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid) )
     , mNodeName     ( )
@@ -39,6 +41,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, ScopeNodeBase* paren
 
 ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, const QString& nodeName, unsigned int prio, ScopeNodeBase* parent)
     : mNodeType     ( nodeType )
+    , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( parent )
     , mPrioStates   ( prio )
     , mNodeName     ( nodeName )
@@ -47,6 +50,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, const QString& nodeN
 
 ScopeNodeBase::ScopeNodeBase(const ScopeNodeBase& src)
     : mNodeType     ( src.mNodeType )
+    , mNodeState    ( src.mNodeState )
     , mParent       ( src.mParent )
     , mPrioStates   ( src.mPrioStates )
     , mNodeName     ( src.mNodeName )
@@ -55,6 +59,7 @@ ScopeNodeBase::ScopeNodeBase(const ScopeNodeBase& src)
 
 ScopeNodeBase::ScopeNodeBase(ScopeNodeBase&& src) noexcept
     : mNodeType     ( src.mNodeType )
+    , mNodeState    ( src.mNodeState )
     , mParent       ( src.mParent )
     , mPrioStates   ( src.mPrioStates )
     , mNodeName     ( std::move(src.mNodeName) )
@@ -66,6 +71,7 @@ ScopeNodeBase& ScopeNodeBase::operator = (const ScopeNodeBase& src)
     ASSERT(mNodeType == src.mNodeType);
     if (this != &src)
     {
+        mNodeState  = src.mNodeState;
         mPrioStates = src.mPrioStates;
         mNodeName   = src.mNodeName;
     }
@@ -78,6 +84,7 @@ ScopeNodeBase& ScopeNodeBase::operator = (ScopeNodeBase&& src) noexcept
     ASSERT(mNodeType == src.mNodeType);
     if (this != &src)
     {
+        mNodeState  = src.mNodeState;
         mPrioStates = src.mPrioStates;
         mNodeName   = std::move(src.mNodeName);
     }

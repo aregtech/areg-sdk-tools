@@ -37,7 +37,7 @@
  ************************************************************************/
 class LiveScopesModel;
 class LiveLogsModel;
-class LogViewer;
+class LiveLogViewer;
 class MdiMainWindow;
 class MdiChild;
 class QToolButton;
@@ -143,6 +143,12 @@ public:
      *                      Can be nullptr if no live logs are available.
      */
     void setLoggingModel(LiveLogsModel* logModel);
+
+    /**
+     * \brief   Returns the pointer to the live logs model used by live logging scope navigation view.
+     *          If no live logs are available, returns nullptr.
+     **/
+    LiveLogsModel* getLoggingModel(void);
     
     //!< Returns true if the logging is configured.
     inline bool isConfigured(void) const;
@@ -417,12 +423,6 @@ private slots:
     void onWindowCreated(MdiChild* mdiChild);
 
     /**
-     * \brief   The slot is triggered when the MDI child window is activated.
-     * \param   mdiChild    The MDI child window that is activated.
-     **/
-    void onWindowActivated(MdiChild* mdiChild);
-
-    /**
      * \brief   Slot, triggered when a node is expanded.
      * \param   index   The index of the node that was expanded.
      **/
@@ -438,20 +438,20 @@ private slots:
 // Static methods
 //////////////////////////////////////////////////////////////////////////
 private:
-
+    //!< Callback to get notified that log observer service client has been started.
     static void _logObserverStarted(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::NaviLiveLogsScopes*        ui;             //!< The user interface object.
+    Ui::NaviLiveLogsScopes*        ui;      //!< The user interface object.
     QString                 mAddress;       //!< The IP-address of the log collector.
     uint16_t                mPort;          //!< The TCP port of the log collector.
     QString                 mInitLogFile;   //!< The initialized log file.
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
-    LiveScopesModel*        mScopesModel;    //!< The model of the log scopes.
+    LiveScopesModel*        mScopesModel;   //!< The model of the log scopes.
     QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.

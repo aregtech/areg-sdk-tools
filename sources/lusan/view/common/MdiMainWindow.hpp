@@ -32,7 +32,8 @@
 class MdiChild;
 class ServiceInterface;
 class LiveLogsModel;
-class LogViewer;
+class NaviFileSystem;
+class LiveLogViewer;
 class OfflineLogViewer;
 QT_BEGIN_NAMESPACE
 class QDockWidget;
@@ -125,7 +126,7 @@ public:
      * \brief   Returns a pointer to the live log viewer window.
      *          Returns nullptr if does not receive logs in live mode.
      **/
-    inline LogViewer* getLiveLogViewer(void) const;
+    inline LiveLogViewer* getLiveLogViewer(void) const;
 
     /**
      * \brief   Returns the active MDI child window.
@@ -153,10 +154,19 @@ public:
      **/
     LiveLogsModel* setupLiveLogging(void);
 
+    /**
+     * \brief   Returns the File System navigation window.
+     **/
     NaviFileSystem& getNaviFileSystem(void);
 
+    /**
+     * \brief   Returns the Live Logging Scopes Navigation window.
+     **/
     NaviLiveLogsScopes& getNaviLiveScopes(void);
 
+    /**
+     * \brief   Returns the Offline Logging Scopes Navigation window.
+     **/
     NaviOfflineLogsScopes& getNaviOfflineScopes(void);
     
 //////////////////////////////////////////////////////////////////////////
@@ -167,12 +177,6 @@ signals:
 /************************************************************************
  * Signals
  ************************************************************************/
-
-    /**
-     * \brief   The signal triggered when the MDI child window is activated.
-     * \param   mdiChild    The MDI child window that is activated.
-     **/
-    void signalWindowActivated(MdiChild* child);
 
     /**
      * \brief   The signal triggered when the MDI child window is closed.
@@ -349,7 +353,7 @@ private:
      * \param   filePath   The path to the log file to view.
      * \return  A pointer to the new Log Viewer View.
      **/
-    LogViewer* createLogViewerView(const QString& filePath = QString());
+    LiveLogViewer* createLogViewerView(const QString& filePath = QString());
 
     /**
      * \brief   Creates a new Offline Log Viewer View for .sqlog files.
@@ -475,7 +479,7 @@ private:
     QDockWidget*    mStatusDock;    //!< The status dock widget.
     QListView*      mListView;      //!< The list view widget.
     QTabWidget*     mStatusTabs;    //!< The status tab widget.
-    LogViewer*      mLogViewer;     //!< The log viewer for displaying live logs. There should be only one instance of this viewer.
+    LiveLogViewer*  mLogViewer;     //!< The log viewer for displaying live logs. There should be only one instance of this viewer.
     QMdiSubWindow*  mLiveLogWnd;    //!< The MDI sub-window for the live log viewer. There should be only one instance of this window.
 
     QMenu*          mFileMenu;      //!< The file menu.
@@ -559,7 +563,7 @@ inline void MdiMainWindow::setLastFile(const QString& lastFile)
     mLastFile = lastFile;
 }
 
-inline LogViewer* MdiMainWindow::getLiveLogViewer(void) const
+inline LiveLogViewer* MdiMainWindow::getLiveLogViewer(void) const
 {
     return mLogViewer;
 }

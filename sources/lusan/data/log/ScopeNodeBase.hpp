@@ -50,6 +50,15 @@ protected:
         , Root      = 12// The node does not have children, bits: 0000 1100
     };
 
+    /**
+     * \brief   The state of the node. Set when object is created and cannot be changed.
+     **/
+    enum class eNodeState
+    {
+          NodeCollapsed = 0 //!< The node is collapsed, does not show children.
+        , NodeExpanded  = 1 //!< The node is expanded, shows children.
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Protected constructors and destructor
 //////////////////////////////////////////////////////////////////////////
@@ -232,6 +241,22 @@ public:
      *          The prio can be removed from the node if the node or child nodes have the specified prio set.
      **/
     inline bool canRemovePriority(unsigned int prio) const;
+
+    /**
+     * \brief   Sets node state expanded or collapsed.
+     * \param   isExpanded  If true, sets the node state to expanded. Otherwise, sets to collapsed.
+     **/
+    inline void setNodeState(bool isExpanded);
+
+    /**
+     * \brief   Returns the node's expanded or collapsed state.
+     **/
+    inline ScopeNodeBase::eNodeState getNodeState(void) const;
+
+    /**
+     * \brief   Returns true if the node is expanded.
+     **/
+    inline bool isNodeExpanded(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -498,8 +523,10 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    //!< The type of the node. Cannot be changed.
+    //!< The type of the node. Set when object is created and cannot be changed.
     const ScopeNodeBase::eNode  mNodeType;
+    //!< The state of the node.
+    ScopeNodeBase::eNodeState   mNodeState;
     //!< The parent of the node. Can be null if the node is root.   
     ScopeNodeBase*              mParent;
     //!< The priority flags set bitwise.
@@ -692,6 +719,38 @@ inline bool ScopeNodeBase::canRemovePriority(unsigned int prio) const
     {
         return true;
     }
+}
+
+inline void ScopeNodeBase::setNodeState(bool isExpanded)
+{
+    if (isExpanded)
+    {
+        mNodeState = ScopeNodeBase::eNodeState::NodeExpanded;
+        Q_ASSERT((mParent == nullptr) || mParent->isNodeExpanded());
+    }
+    else
+    {
+        mNodeState = ScopeNodeBase::eNodeState::NodeCollapsed;
+        std::vector<ScopeNodeBase*> children;
+        if (getChildren(children) > 0)
+        {
+            for (ScopeNodeBase* child : children)
+            {
+                Q_ASSERT(child != nullptr);
+                child->setNodeState(false);
+            }
+        }
+    }
+}
+
+inline ScopeNodeBase::eNodeState ScopeNodeBase::getNodeState(void) const
+{
+    return mNodeState;
+}
+
+inline bool ScopeNodeBase::isNodeExpanded(void) const
+{
+    return (mNodeState == ScopeNodeBase::eNodeState::NodeExpanded);
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODEBASE_HPP

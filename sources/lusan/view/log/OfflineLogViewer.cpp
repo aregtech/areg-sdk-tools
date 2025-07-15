@@ -23,7 +23,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
-#include "lusan/view/log/LogViewer.hpp"
+#include "lusan/view/log/LiveLogViewer.hpp"
 
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
@@ -59,7 +59,7 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     setupSignals(true);
 }
 
-OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LogViewer& liveLogs, QWidget* parent)
+OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer& liveLogs, QWidget* parent)
     : MdiChild      (MdiChild::eMdiWindow::MdiOfflineLogViewer, wndMain, parent)
 
     , ui            (new Ui::OfflineLogViewer)
@@ -81,6 +81,11 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LogViewer& liveLogs, 
     
     setupWidgets();
     setupSignals(true);
+}
+
+OfflineLogViewer::~OfflineLogViewer(void)
+{
+    cleanResources();
 }
 
 bool OfflineLogViewer::isDatabaseOpen(void) const
@@ -117,7 +122,20 @@ void OfflineLogViewer::onWindowClosing(bool isActive)
     if (isActive)
     {
         mMainWindow->getNaviOfflineScopes().setLoggingModel(nullptr);
+        cleanResources();
     }
+}
+
+void OfflineLogViewer::onWindowActivated(void)
+{
+    Q_ASSERT(mMainWindow != nullptr);
+    if (mMainWindow->getNaviOfflineScopes().getLoggingModel() != mLogModel)
+    {
+        mMainWindow->getNaviOfflineScopes().setLoggingModel(nullptr);
+        mMainWindow->getNaviOfflineScopes().setLoggingModel(mLogModel);
+    }
+
+    mMainWindow->getNaviOfflineScopes().activateWindow();
 }
 
 void OfflineLogViewer::onHeaderContextMenu(const QPoint& pos)
@@ -215,6 +233,13 @@ void OfflineLogViewer::resetColumnOrder()
 
 void OfflineLogViewer::setupSignals(bool doSetup)
 {
+    if (ui == nullptr)
+    {
+        Q_ASSERT(mLogModel == nullptr);
+        Q_ASSERT(mFilter == nullptr);
+        return;
+    }
+
     QTableView* view = ctrlTable();
     if (doSetup)
     {
@@ -271,4 +296,37 @@ void OfflineLogViewer::setupWidgets(void)
     setAttribute(Qt::WA_DeleteOnClose);
     ctrlTable()->setAutoScroll(true);
     ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
+}
+
+void OfflineLogViewer::cleanResources(void)
+{
+    if (ui == nullptr)
+    {
+        Q_ASSERT(mLogModel == nullptr);
+        Q_ASSERT(mFilter == nullptr);
+        return;
+    }
+
+    Q_ASSERT(mLogModel != nullptr);
+    Q_ASSERT(mFilter != nullptr);
+
+    setupSignals(false);
+
+    QTableView* view = ctrlTable();
+    view->setModel(nullptr);
+    view->setHorizontalHeader(nullptr);
+    mFilter->setSourceModel(nullptr);
+    mLogModel->closeDatabase();
+
+    delete ui;
+    ui = nullptr;
+
+    delete mMdiWindow;
+    mMdiWindow = nullptr;
+
+    delete mFilter;
+    mFilter = nullptr;
+
+    delete mLogModel;
+    mLogModel = nullptr;
 }

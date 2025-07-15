@@ -23,7 +23,7 @@
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
-#include "lusan/view/log/LogViewer.hpp"
+#include "lusan/view/log/LiveLogViewer.hpp"
 #include "lusan/view/log/OfflineLogViewer.hpp"
 
 #include "areg/base/NESocket.hpp"
@@ -319,7 +319,7 @@ void MdiMainWindow::onFileNewLog()
     
     if (mLogViewer == nullptr)
     {
-        mLogViewer = new LogViewer(this, &mMdiArea);
+        mLogViewer = new LiveLogViewer(this, &mMdiArea);
         mLiveLogWnd = mMdiArea.addSubWindow(mLogViewer);
         mLogViewer->setMdiSubwindow(mLiveLogWnd);
         mMdiArea.showMaximized();
@@ -595,7 +595,10 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
     mActEditCut.setEnabled(hasSelection);
     mActEditCopy.setEnabled(hasSelection);
 
-    emit signalWindowActivated(mdiActive);
+    if (mdiActive != nullptr)
+    {
+        mdiActive->onWindowActivated();
+    }
 }
 
 MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
@@ -628,9 +631,9 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
     return child;
 }
 
-LogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QString()*/)
+LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QString()*/)
 {
-    LogViewer* child = new LogViewer(this, &mMdiArea);
+    LiveLogViewer* child = new LiveLogViewer(this, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mMdiArea.showMaximized();

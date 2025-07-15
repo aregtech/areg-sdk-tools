@@ -104,7 +104,11 @@ public:
      **/
     void setLoggingModel(OfflineLogsModel * model);
 
-    bool isActiveLoggingModel(const OfflineLogsModel & model) const;
+    /**
+     * \brief   Returns the pointer to the offline logging model used by this view.
+     *          If no database is opened, it returns nullptr.
+     **/
+    OfflineLogsModel* getLoggingModel(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -208,6 +212,18 @@ private slots:
      * \brief   The slot is triggered when the refresh database tool button is clicked.
      **/
     void onRefreshDatabaseClicked(void);
+
+    /**
+     * \brief   The signal triggered when receive the list of connected instances that make logs.
+     * \param   instances   The list of the connected instances.
+     **/
+    void onRootUpdated(const QModelIndex & root);
+
+    /**
+     * \brief   Slot triggered when the scopes of an instance are inserted.
+     * \param   parent  The index of the parent instance item where scopes are inserted.
+     **/
+    void onScopesInserted(const QModelIndex & parent);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

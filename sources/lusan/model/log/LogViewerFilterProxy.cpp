@@ -30,6 +30,12 @@ LogViewerFilterProxy::LogViewerFilterProxy(LoggingModelBase* model)
     setSourceModel(model);
 }
 
+LogViewerFilterProxy::~LogViewerFilterProxy(void)
+{
+    clearFilters();
+    mLogModel = nullptr;
+}
+
 void LogViewerFilterProxy::setComboFilter(int logicalColumn, const QStringList& items)
 {
     if (items.isEmpty())

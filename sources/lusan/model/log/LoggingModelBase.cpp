@@ -90,6 +90,11 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
 {
 }
 
+LoggingModelBase::~LoggingModelBase(void)
+{
+    _cleanNodes();
+}
+
 QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if ((orientation == Qt::Orientation::Vertical) || (section < 0) || (section >= static_cast<int>(mActiveColumns.size())))
@@ -465,6 +470,10 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
     mScopes.clear();
     mScopes = std::move(logModel.mScopes);
     logModel.mScopes.clear();
+
+    _cleanNodes();
+    mRootList = std::move(logModel.mRootList);
+    logModel._cleanNodes();
 
     mDatabase.disconnect();
     if (logModel.mDatabase.isOperable())

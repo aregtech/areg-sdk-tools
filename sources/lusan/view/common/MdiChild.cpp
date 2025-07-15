@@ -178,6 +178,10 @@ void MdiChild::onWindowClosing(bool /*isActive*/)
 {
 }
 
+void MdiChild::onWindowActivated(void)
+{
+}
+
 void MdiChild::onDocumentModified()
 {
     // setWindowModified(document()->isModified());

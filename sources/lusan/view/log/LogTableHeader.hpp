@@ -30,7 +30,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class LogViewer;
+class LiveLogViewer;
 class LoggingModelBase;
 class QTableView;
 
