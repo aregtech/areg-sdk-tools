@@ -182,13 +182,13 @@ signals:
      * \brief   The signal triggered when the MDI child window is closed.
      * \param   mdiChild    The MDI child window that is closed.
      **/
-    void signalWindowClosed(MdiChild* child);
+    void signalMdiWindowClosed(MdiChild* child);
 
     /**
      * \brief   The signal triggered when the MDI child window is created.
      * \param   mdiChild    The MDI child window that is created.
      **/
-    void signalWindowCreated(MdiChild* child);
+    void signalMdiWindowCreated(MdiChild* child);
 
     /**
      * \brief   The signal triggered when the options dialog is opened.
@@ -321,12 +321,6 @@ private slots:
      * \param   mdiChild    The MDI child window that is closed.
      **/
     void onMdiChildClosed(MdiChild *mdiChild);
-
-    /**
-     * \brief   Slot for handling the MDI child window when it is created.
-     * \param   mdiChild    The MDI child window that is created.
-     **/
-    void onMdiChildCreated(MdiChild *mdiChild);
 
     /**
      * \brief   Slot for handling the MDI sub-window when it is activated.

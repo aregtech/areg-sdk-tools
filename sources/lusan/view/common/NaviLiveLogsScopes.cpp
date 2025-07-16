@@ -66,9 +66,9 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     _explorer = this;
     
     ui->setupUi(this);
-    this->setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    this->setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 
     updateData();
     setupWidgets();
@@ -196,6 +196,7 @@ void NaviLiveLogsScopes::setupWidgets(void)
     ctrlTable()->setModel(mScopesModel);
     ctrlTable()->setSelectionModel(mSelModel);
     ctrlTable()->setContextMenuPolicy(Qt::CustomContextMenu);
+    ctrlTable()->setAlternatingRowColors(false);
 }
 
 void NaviLiveLogsScopes::setupSignals(void)
@@ -213,7 +214,7 @@ void NaviLiveLogsScopes::setupSignals(void)
     connect(ctrlTable()         , &QTreeView::expanded , this, &NaviLiveLogsScopes::onNodeExpanded);
     connect(ctrlTable()         , &QTreeView::collapsed, this, &NaviLiveLogsScopes::onNodeCollapsed);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested  , this  , &NaviLiveLogsScopes::onTreeViewContextMenuRequested);
-    connect(mMainWindow         , &MdiMainWindow::signalWindowCreated   , this  , &NaviLiveLogsScopes::onWindowCreated);
+    connect(mMainWindow         , &MdiMainWindow::signalMdiWindowCreated, this  , &NaviLiveLogsScopes::onWindowCreated);
 
     setupLogSignals(true);    
 }
@@ -295,10 +296,10 @@ void NaviLiveLogsScopes::setupLogSignals(bool setup)
             Q_ASSERT(mScopesModel != nullptr);
             Q_ASSERT(mSelModel != nullptr);
 
-            connect(mScopesModel, &LiveScopesModel::signalRootUpdated, this, &NaviLiveLogsScopes::onRootUpdated);
+            connect(mScopesModel, &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
             connect(mScopesModel, &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
-            connect(mScopesModel, &LiveScopesModel::dataChanged, this, &NaviLiveLogsScopes::onScopesDataChanged);
-            connect(mSelModel, &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
+            connect(mScopesModel, &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
+            connect(mSelModel   , &QItemSelectionModel::currentRowChanged,this, &NaviLiveLogsScopes::onRowChanged);
         }
     }
     else if (mSignalsActive)
@@ -311,7 +312,7 @@ void NaviLiveLogsScopes::setupLogSignals(bool setup)
         disconnect(mScopesModel  , &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
         disconnect(mScopesModel  , &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
         disconnect(mScopesModel  , &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
-        disconnect(mSelModel    , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
+        disconnect(mSelModel     , &QItemSelectionModel::currentRowChanged,this, &NaviLiveLogsScopes::onRowChanged);
 
         disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &NaviLiveLogsScopes::onLogObserverConfigured);
         disconnect(log, &LogObserver::signalLogDbConfigured         , this, &NaviLiveLogsScopes::onLogDbConfigured);
@@ -358,6 +359,7 @@ void NaviLiveLogsScopes::collapseRoots(void)
     {
         QModelIndex index = mScopesModel->index(row, 0, mScopesModel->getRootIndex());
         treeView->collapse(index);
+        mScopesModel->nodeCollapsed(index);
     }
 }
 
@@ -637,6 +639,7 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
         navi->blockSignals(true);
         collapseRoots();
         navi->expand(mScopesModel->getRootIndex());
+        mScopesModel->nodeExpanded(mScopesModel->getRootIndex());
         navi->setCurrentIndex(mScopesModel->getRootIndex());
         navi->blockSignals(false);
         
@@ -650,6 +653,7 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
         
         navi->blockSignals(true);
         navi->expandAll();
+        mScopesModel->nodeTreeExpanded(mScopesModel->getRootIndex());
         navi->setCurrentIndex(mScopesModel->getRootIndex());
         navi->blockSignals(false);
         
@@ -657,10 +661,12 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
     }
 }
 
-void NaviLiveLogsScopes::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+void NaviLiveLogsScopes::onRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
-    QModelIndexList list = selected.indexes();
-    enableButtons(list.isEmpty() ? QModelIndex() : list.front());
+    Q_UNUSED(previous);
+    
+    enableButtons(current);
+    mScopesModel->nodeSelected(current);
 }
 
 void NaviLiveLogsScopes::onRootUpdated(const QModelIndex & root)
@@ -676,6 +682,7 @@ void NaviLiveLogsScopes::onRootUpdated(const QModelIndex & root)
     if (navi->isExpanded(root) == false)
     {
         navi->expand(root);
+        mScopesModel->nodeExpanded(root);
     }
 
     // Ensure all children of root are expanded and visible
@@ -686,6 +693,7 @@ void NaviLiveLogsScopes::onRootUpdated(const QModelIndex & root)
         if (child.isValid() && !navi->isExpanded(child))
         {
             navi->expand(child);
+            mScopesModel->nodeExpanded(child);
         }
     }
 }
@@ -701,6 +709,7 @@ void NaviLiveLogsScopes::onScopesInserted(const QModelIndex & parent)
         if (navi->isExpanded(parent) == false)
         {
             navi->expand(parent);
+            mScopesModel->nodeExpanded(parent);
         }
     }
 }
@@ -859,10 +868,12 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     else if (selectedAction == mMenuActions[eLogActions::ExpandSelected])
     {
         ctrlTable()->expand(index);
+        mScopesModel->nodeExpanded(index);
     }
     else if (selectedAction == mMenuActions[eLogActions::CollapseSelected])
     {
         ctrlTable()->collapse(index);
+        mScopesModel->nodeCollapsed(index);
     }
     else if (selectedAction == mMenuActions[eLogActions::ExpandAll])
     {
@@ -895,6 +906,9 @@ void NaviLiveLogsScopes::onNodeExpanded(const QModelIndex& index)
         ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
         ctrlCollapse()->setChecked(false);
     }
+    
+    Q_ASSERT(mScopesModel != nullptr);    
+    mScopesModel->nodeExpanded(index);
 }
 
 void NaviLiveLogsScopes::onNodeCollapsed(const QModelIndex& index)
@@ -904,4 +918,7 @@ void NaviLiveLogsScopes::onNodeCollapsed(const QModelIndex& index)
         ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
         ctrlCollapse()->setChecked(true);
     }
+    
+    Q_ASSERT(mScopesModel != nullptr);    
+    mScopesModel->nodeCollapsed(index);    
 }

@@ -54,7 +54,6 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     mLogModel   = new OfflineLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
     
-
     setupWidgets();
     setupSignals(true);
 }
@@ -81,6 +80,18 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer& liveLo
     
     setupWidgets();
     setupSignals(true);
+    const QModelIndex idxSelected = mLogModel->getSelectedLog();
+    if (idxSelected.isValid())
+    {
+        ctrlTable()->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        ctrlTable()->selectRow(idxSelected.row());
+        ctrlTable()->scrollTo(idxSelected);
+    }
+    else
+    {
+        ctrlTable()->setCurrentIndex(idxSelected);
+        ctrlTable()->scrollToTop();
+    }
 }
 
 OfflineLogViewer::~OfflineLogViewer(void)

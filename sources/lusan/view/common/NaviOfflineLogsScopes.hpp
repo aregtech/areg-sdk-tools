@@ -35,6 +35,7 @@ class LoggingModelBase;
 class OfflineLogsModel;
 class OfflineScopesModel;
 class MdiMainWindow;
+class ScopeNodeBase;
 class QToolButton;
 class QTreeView;
 class QVBoxLayout;
@@ -196,6 +197,19 @@ private:
      * \brief   Shows database information and available log data.
      **/
     void showDatabaseInfo(void);
+
+    /**
+     * \brief   Updates the data of the scope tree, restores the view from the data like expanded and
+     *          selected nodes set in the logging model.
+     **/
+    void restoreView(void);
+
+    /**
+     * \brief   Expands the child nodes of the specified scope tree recursively.
+     * \param   idxNode    The index of the node to expand.
+     * \param   node       The scope node to check and expand child nodes.
+     **/
+    void expandChildNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node);
 
 private slots:
     /**

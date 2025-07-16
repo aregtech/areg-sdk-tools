@@ -548,32 +548,13 @@ void MdiMainWindow::onShowMenuWindow()
 
 void MdiMainWindow::onMdiChildClosed(MdiChild* mdiChild)
 {
-    if (mdiChild != nullptr)
+    if ((mdiChild != nullptr) && (MdiChild::MdiLogViewer == mdiChild->getMdiWindowType()))
     {
-        MdiChild::eMdiWindow wndType{ mdiChild->getMdiWindowType() };
-        MdiChild* active{ getActiveWindow() };
-        if (active == mdiChild)
-        {
-            mMdiArea.setActiveSubWindow(nullptr);
-            if (wndType == MdiChild::MdiServiceInterface)
-            {
-                mLiveLogWnd = nullptr;
-                mLogViewer = nullptr;
-            }
-            else if (wndType == MdiChild::MdiLogViewer || wndType == MdiChild::MdiOfflineLogViewer)
-            {
-                mLogViewer = nullptr;
-                mLiveLogWnd = nullptr;
-            }
-        }
+        mLogViewer = nullptr;
+        mLiveLogWnd = nullptr;
     }
 
-    emit signalWindowClosed(mdiChild);
-}
-
-void MdiMainWindow::onMdiChildCreated(MdiChild* mdiChild)
-{
-    emit signalWindowCreated(mdiChild);
+    emit signalMdiWindowClosed(mdiChild);
 }
 
 void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)

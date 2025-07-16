@@ -80,8 +80,11 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mDatabase     ( )
     , mStatement    (mDatabase.getDatabase())
     , mActiveColumns(getDefaultColumns())
+    , mRootList     ( )
     , mLogs         ( )
     , mInstances    ( )
+    , mSelectedScope( )
+    , mSelectedLog  ( )
     , mScopes       ( )
     , mLogChunk     (-1)
     , mLogCount     (0)
@@ -120,6 +123,7 @@ QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, 
 
 int LoggingModelBase::rowCount(const QModelIndex& parent) const
 {
+    Q_UNUSED(parent);
     return mLogCount;
 }
 
@@ -474,6 +478,12 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
     _cleanNodes();
     mRootList = std::move(logModel.mRootList);
     logModel._cleanNodes();
+
+    mSelectedScope = std::move(logModel.mSelectedScope);
+    logModel.mSelectedScope = QModelIndex();
+
+    mSelectedLog = std::move(logModel.mSelectedLog);
+    logModel.mSelectedLog = QModelIndex();
 
     mDatabase.disconnect();
     if (logModel.mDatabase.isOperable())

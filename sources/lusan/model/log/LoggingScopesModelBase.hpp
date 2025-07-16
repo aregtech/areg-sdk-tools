@@ -57,30 +57,6 @@ public:
 
     virtual ~LoggingScopesModelBase(void);
 
-public:
-
-/************************************************************************
- * LoggingScopesModelBase overrides
- ************************************************************************/
-
-    /**
-     * \brief   Sets the logging model object used to retrieve logging scopes data.
-     * \param   model   The logging model to set. This can be `nullptr` to reset the model.
-     *                  If can be either live logging model or offline logging model.
-     **/
-    virtual void setLoggingModel(LoggingModelBase* model);
-
-    /**
-     * \brief   Transfers the data from given model. Copies the list of root elements and builds the scope tree.
-     * \param   scopeModel  The source of data to copy. On output the list of existing data may be empty.
-     **/
-    virtual void dataTransfer(LoggingScopesModelBase& scopeModel);
-    
-    /**
-     * \brief   Refreshes the model, clearing all data and rebuilding the scope tree.
-     **/
-    virtual void refresh(void);
-
 //////////////////////////////////////////////////////////////////////////
 // Common operations
 //////////////////////////////////////////////////////////////////////////
@@ -101,6 +77,36 @@ public:
      * \brief   Returns the logging model associated with this scopes model. Returns `nullptr` if not set.
      **/
     inline LoggingModelBase* getLoggingModel(void) const;
+
+    /**
+     * \brief   Call to set the index of the expanded scope node.
+     * \param   idxNode     The index of the expanded scope node.
+     **/
+    void nodeExpanded(const QModelIndex& idxNode);
+
+    /**
+     * \brief   Call to set the index of the collapsed scope node.
+     * \param   idxNode     The index of the collapsed scope node.
+     **/
+    void nodeCollapsed(const QModelIndex& idxNode);
+
+    /**
+     * \brief   Call to set the index of the selected scope node.
+     * \param   idxNode     The index of the selected scope node.
+     */
+    void nodeSelected(const QModelIndex& idxNode);
+    
+    /**
+     * \brief   Sets the node and all child nodes tree in the expanded state.
+     * \param   idxNode     The index of the expanded scope node.
+     **/
+    void nodeTreeExpanded(const QModelIndex& idxNode);
+    
+    /**
+     * \brief   Sets the node and all child nodes tree in the collapsed state.
+     * \param   idxNode     The index of the collapsed scope node.
+     **/
+    void nodeTreeCollapsed(const QModelIndex& idxNode);
     
 /************************************************************************
  * Signals
@@ -132,6 +138,24 @@ public:
 /************************************************************************
  * LoggingScopesModelBase overrides
  ************************************************************************/
+
+    /**
+     * \brief   Sets the logging model object used to retrieve logging scopes data.
+     * \param   model   The logging model to set. This can be `nullptr` to reset the model.
+     *                  If can be either live logging model or offline logging model.
+     **/
+    virtual void setLoggingModel(LoggingModelBase* model);
+
+    /**
+     * \brief   Transfers the data from given model. Copies the list of root elements and builds the scope tree.
+     * \param   scopeModel  The source of data to copy. On output the list of existing data may be empty.
+     **/
+    virtual void dataTransfer(LoggingScopesModelBase& scopeModel);
+    
+    /**
+     * \brief   Refreshes the model, clearing all data and rebuilding the scope tree.
+     **/
+    virtual void refresh(void);
 
     /**
      * \brief   Builds the scopes tree for the model.

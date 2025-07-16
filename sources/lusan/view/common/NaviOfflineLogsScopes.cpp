@@ -20,6 +20,7 @@
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 #include "ui/ui_NaviOfflineLogsScopes.h"
 
+#include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/OfflineScopesModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
@@ -47,6 +48,7 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
     setupSignals();
     updateControls();
     ctrlTable()->setModel(mScopesModel);
+    
 }
 
 NaviOfflineLogsScopes::~NaviOfflineLogsScopes(void)
@@ -199,7 +201,7 @@ void NaviOfflineLogsScopes::setupWidgets(void)
     // Configure the tree view for database information display
     ctrlTable()->setHeaderHidden(false);
     ctrlTable()->setRootIsDecorated(true);
-    ctrlTable()->setAlternatingRowColors(true);
+    ctrlTable()->setAlternatingRowColors(false);
 }
 
 void NaviOfflineLogsScopes::setupSignals(void)
@@ -218,6 +220,7 @@ void NaviOfflineLogsScopes::updateControls(void)
     
     ctrlCloseDatabase()->setEnabled(dbOpen);
     ctrlRefreshDatabase()->setEnabled(dbOpen);
+    restoreView();
 }
 
 void NaviOfflineLogsScopes::showDatabaseInfo(void)
@@ -280,6 +283,65 @@ void NaviOfflineLogsScopes::showDatabaseInfo(void)
 
     ctrlTable()->setModel(infoModel);
     ctrlTable()->expandAll();
+}
+
+void NaviOfflineLogsScopes::restoreView(void)
+{
+    Q_ASSERT(mScopesModel != nullptr);
+    LoggingModelBase* logModel{ mScopesModel->getLoggingModel() };
+    if (logModel != nullptr)
+    {
+        const LoggingModelBase::RootList& roots{ logModel->getRootList() };
+        const QModelIndex& idxRoot{ mScopesModel->getRootIndex() };
+        int rootCount{static_cast<int>(roots.size())};
+        QTreeView* navi = ctrlTable();
+        for (int row = 0; row < rootCount; ++row)
+        {
+            const ScopeRoot* root{roots[row]};
+            if (root->isNodeExpanded())
+            {
+                QModelIndex idxNode{ mScopesModel->index(row, 0, idxRoot) };
+                navi->expand(idxNode);
+                expandChildNodesRecursive(idxNode, *root);
+            }
+        }
+        
+        const QModelIndex& idxSelected = logModel->getSelectedScope();
+        if (idxSelected.isValid())
+        {
+            navi->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            navi->scrollTo(idxSelected);
+        }
+        else
+        {
+            navi->setCurrentIndex(logModel->getSelectedScope());
+            navi->scrollToTop();
+        }
+    }
+}
+
+void NaviOfflineLogsScopes::expandChildNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node)
+{
+    if (node.isLeaf() || (idxNode.isValid() == false))
+        return; // No children to expand
+
+    QTreeView* navi = ctrlTable();
+    int rowCount{node.getChildNodesCount()};
+    for (int row = 0; row < rowCount; ++row)
+    {
+        const ScopeNodeBase* child = node.getChildAt(row);
+        Q_ASSERT(child != nullptr);
+        if (child->isNodeExpanded())
+        {
+            QModelIndex idxChild{ mScopesModel->index(row, 0, idxNode) };
+            Q_ASSERT(idxChild.isValid());
+            navi->expand(idxChild);
+            if (child->isNode())
+            {
+                expandChildNodesRecursive(idxChild, *child);
+            }
+        }
+    }
 }
 
 void NaviOfflineLogsScopes::onOpenDatabaseClicked(void)
