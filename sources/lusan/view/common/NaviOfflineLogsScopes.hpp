@@ -35,6 +35,7 @@ class LoggingModelBase;
 class OfflineLogsModel;
 class OfflineScopesModel;
 class MdiMainWindow;
+class ScopeNodeBase;
 class QToolButton;
 class QTreeView;
 class QVBoxLayout;
@@ -199,6 +200,9 @@ private:
     
     void restoreView(void);
 
+    void expandNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node);
+
+
 private slots:
     /**
      * \brief   The slot is triggered when the open database tool button is clicked.
@@ -226,6 +230,8 @@ private slots:
      * \param   parent  The index of the parent instance item where scopes are inserted.
      **/
     void onScopesInserted(const QModelIndex & parent);
+
+    void onScopeNodeActivated(const QModelIndex& root);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

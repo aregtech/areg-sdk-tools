@@ -915,6 +915,6 @@ void NaviLiveLogsScopes::onNodeCollapsed(const QModelIndex& index)
 
 void NaviLiveLogsScopes::onNodeActivated(const QModelIndex &idxNode)
 {
-    Q_ASSERT(mScopesModel != nullptr);    
-    mScopesModel->nodeSelected(index);
+    Q_ASSERT(mScopesModel != nullptr);
+    mScopesModel->nodeSelected(idxNode);
 }
