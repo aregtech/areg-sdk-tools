@@ -78,12 +78,36 @@ public:
      **/
     inline LoggingModelBase* getLoggingModel(void) const;
 
+    /**
+     * \brief   Call to set the index of the expanded scope node.
+     * \param   idxNode     The index of the expanded scope node.
+     **/
     void nodeExpanded(const QModelIndex& idxNode);
 
+    /**
+     * \brief   Call to set the index of the collapsed scope node.
+     * \param   idxNode     The index of the collapsed scope node.
+     **/
     void nodeCollapsed(const QModelIndex& idxNode);
 
+    /**
+     * \brief   Call to set the index of the selected scope node.
+     * \param   idxNode     The index of the selected scope node.
+     */
     void nodeSelected(const QModelIndex& idxNode);
-
+    
+    /**
+     * \brief   Sets the node and all child nodes tree in the expanded state.
+     * \param   idxNode     The index of the expanded scope node.
+     **/
+    void nodeTreeExpanded(const QModelIndex& idxNode);
+    
+    /**
+     * \brief   Sets the node and all child nodes tree in the collapsed state.
+     * \param   idxNode     The index of the collapsed scope node.
+     **/
+    void nodeTreeCollapsed(const QModelIndex& idxNode);
+    
 /************************************************************************
  * Signals
  ************************************************************************/

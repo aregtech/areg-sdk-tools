@@ -52,19 +52,43 @@ LoggingScopesModelBase::~LoggingScopesModelBase(void)
 
 void LoggingScopesModelBase::nodeExpanded(const QModelIndex& idxNode)
 {
-    ScopeNodeBase* node = (mLoggingModel != nullptr) && idxNode.isValid() ? static_cast<ScopeNodeBase*>(idxNode.internalPointer()) : nullptr;
-    if (node != nullptr)
+    if (mLoggingModel != nullptr)
     {
-        node->setNodeState(true);
+        ScopeNodeBase* node = idxNode.isValid() ? static_cast<ScopeNodeBase*>(idxNode.internalPointer()) : nullptr;
+        if (node != nullptr)
+        {
+            node->setNodeState(true);
+        }
+        else if (idxNode == mRootIndex)
+        {
+            LoggingModelBase::RootList & roots = mLoggingModel->getRootList();
+            for (auto root : roots)
+            {
+                Q_ASSERT(root != nullptr);
+                root->setNodeState(true);
+            }
+        }
     }
 }
 
 void LoggingScopesModelBase::nodeCollapsed(const QModelIndex& idxNode)
 {
-    ScopeNodeBase* node = (mLoggingModel != nullptr) && idxNode.isValid() ? static_cast<ScopeNodeBase*>(idxNode.internalPointer()) : nullptr;
-    if (node != nullptr)
+    if (mLoggingModel != nullptr)
     {
-        node->setNodeState(false);
+        ScopeNodeBase* node = idxNode.isValid() ? static_cast<ScopeNodeBase*>(idxNode.internalPointer()) : nullptr;
+        if (node != nullptr)
+        {
+            node->setNodeState(false);
+        }
+        else if ((idxNode == mRootIndex))
+        {
+            LoggingModelBase::RootList & roots = mLoggingModel->getRootList();
+            for (auto root : roots)
+            {
+                Q_ASSERT(root != nullptr);
+                root->setNodeState(false);
+            }
+        }
     }
 }
 
@@ -73,6 +97,48 @@ void LoggingScopesModelBase::nodeSelected(const QModelIndex& idxNode)
     if (mLoggingModel != nullptr)
     {
         mLoggingModel->setSelectedScope(idxNode);
+    }
+}
+
+void LoggingScopesModelBase::nodeTreeExpanded(const QModelIndex& idxNode)
+{
+    if (mLoggingModel != nullptr)
+    {
+        ScopeNodeBase* node = idxNode.isValid() ? static_cast<ScopeNodeBase*>(idxNode.internalPointer()) : nullptr;
+        if (node != nullptr)
+        {
+            node->setNodeTreeExpanded();
+        }
+        else if ((idxNode == mRootIndex))
+        {
+            LoggingModelBase::RootList & roots = mLoggingModel->getRootList();
+            for (auto root : roots)
+            {
+                Q_ASSERT(root != nullptr);
+                root->setNodeTreeExpanded();
+            }
+        }
+    }
+}
+
+void LoggingScopesModelBase::nodeTreeCollapsed(const QModelIndex& idxNode)
+{
+    if (mLoggingModel != nullptr)
+    {
+        ScopeNodeBase* node = idxNode.isValid() ? static_cast<ScopeNodeBase*>(idxNode.internalPointer()) : nullptr;
+        if (node != nullptr)
+        {
+            node->setNodeTreeCollapsed();
+        }
+        else if ((idxNode == mRootIndex))
+        {
+            LoggingModelBase::RootList & roots = mLoggingModel->getRootList();
+            for (auto root : roots)
+            {
+                Q_ASSERT(root != nullptr);
+                root->setNodeTreeCollapsed();
+            }
+        }
     }
 }
 

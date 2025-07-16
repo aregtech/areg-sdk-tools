@@ -210,7 +210,6 @@ void NaviOfflineLogsScopes::setupSignals(void)
     connect(ctrlOpenDatabase()      , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onOpenDatabaseClicked);
     connect(ctrlCloseDatabase()     , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onCloseDatabaseClicked);
     connect(ctrlRefreshDatabase()   , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onRefreshDatabaseClicked);
-    connect(ctrlTable()             , &QTreeView::activated, this, &NaviOfflineLogsScopes::onScopeNodeActivated);
     connect(mScopesModel            , &OfflineScopesModel::signalRootUpdated    , this, &NaviOfflineLogsScopes::onRootUpdated);
     connect(mScopesModel            , &OfflineScopesModel::signalScopesInserted , this, &NaviOfflineLogsScopes::onScopesInserted);
 }
@@ -303,7 +302,7 @@ void NaviOfflineLogsScopes::restoreView(void)
             {
                 QModelIndex idxNode{ mScopesModel->index(row, 0, idxRoot) };
                 navi->expand(idxNode);
-                expandNodesRecursive(idxNode, *root);
+                expandChildNodesRecursive(idxNode, *root);
             }
         }
         
@@ -321,7 +320,7 @@ void NaviOfflineLogsScopes::restoreView(void)
     }
 }
 
-void NaviOfflineLogsScopes::expandNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node)
+void NaviOfflineLogsScopes::expandChildNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node)
 {
     if (node.isLeaf() || (idxNode.isValid() == false))
         return; // No children to expand
@@ -339,7 +338,7 @@ void NaviOfflineLogsScopes::expandNodesRecursive(const QModelIndex& idxNode, con
             navi->expand(idxChild);
             if (child->isNode())
             {
-                expandNodesRecursive(idxChild, *child);
+                expandChildNodesRecursive(idxChild, *child);
             }
         }
     }
@@ -367,11 +366,6 @@ void NaviOfflineLogsScopes::onRefreshDatabaseClicked(void)
         mScopesModel->setLoggingModel(nullptr);
         mScopesModel->setLoggingModel(logModel);
     }
-}
-
-void NaviOfflineLogsScopes::onScopeNodeActivated(const QModelIndex& root)
-{
-
 }
 
 void NaviOfflineLogsScopes::onRootUpdated(const QModelIndex& root)

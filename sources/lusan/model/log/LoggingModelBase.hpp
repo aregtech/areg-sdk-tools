@@ -276,14 +276,28 @@ public:
      **/
     inline int rootCount(void) const;
 
+    /**
+     * \brief   Returns the index of the currently selected scope node.
+     **/
     inline const QModelIndex& getSelectedScope(void) const;
 
+    /**
+     * \brief   Sets the index of the currently selected scope node.
+     * \param   idxScope   The index of the selected scope node to set.
+     **/
     inline void setSelectedScope(const QModelIndex& idxScope);
 
+    /**
+     * \brief   Returns the index of the currently selected log message.
+     **/
     inline const QModelIndex& getSelectedLog(void) const;
 
+    /**
+     * \brief   Sets the index of the currently selected log message.
+     * \param   idxLog     The index of the selected log message to set.
+     **/
     inline void setSelectedLog(const QModelIndex& idxLog);
-
+    
 /************************************************************************
  * Signals
  ************************************************************************/

@@ -257,6 +257,16 @@ public:
      * \brief   Returns true if the node is expanded.
      **/
     inline bool isNodeExpanded(void) const;
+    
+    /**
+     * \brief   Sets the node and all child nodes tree in the expanded state.
+     **/
+    inline void setNodeTreeExpanded(void);
+    
+    /**
+     * \brief   Sets the node and all child nodes tree in the collapsed state.
+     **/
+    inline void setNodeTreeCollapsed(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -751,6 +761,34 @@ inline ScopeNodeBase::eNodeState ScopeNodeBase::getNodeState(void) const
 inline bool ScopeNodeBase::isNodeExpanded(void) const
 {
     return (mNodeState == ScopeNodeBase::eNodeState::NodeExpanded);
+}
+
+inline void ScopeNodeBase::setNodeTreeExpanded(void)
+{
+    mNodeState = ScopeNodeBase::eNodeState::NodeExpanded;
+    std::vector<ScopeNodeBase*> children;
+    if (getChildren(children) > 0)
+    {
+        for (ScopeNodeBase* child : children)
+        {
+            Q_ASSERT(child != nullptr);
+            child->setNodeTreeExpanded();
+        }
+    }
+}
+
+inline void ScopeNodeBase::setNodeTreeCollapsed(void)
+{
+    mNodeState = ScopeNodeBase::eNodeState::NodeCollapsed;
+    std::vector<ScopeNodeBase*> children;
+    if (getChildren(children) > 0)
+    {
+        for (ScopeNodeBase* child : children)
+        {
+            Q_ASSERT(child != nullptr);
+            child->setNodeTreeCollapsed();
+        }
+    }
 }
 
 #endif  // LUSAN_DATA_LOG_SCOPENODEBASE_HPP

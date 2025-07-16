@@ -237,7 +237,8 @@ protected:
     virtual void closeEvent(QCloseEvent* event) override;
 
     /**
-     * \brief   Called when the MDI child window is closed.
+     * \brief   Called when the MDI child window is closing.
+     *          This method can be overridden to handle window closing events.
      * \param   isActive    Indicates whether the window is active or not.
      **/
     virtual void onWindowClosing(bool isActive);
@@ -247,7 +248,11 @@ protected:
      *          This method can be overridden to handle window activation events.
      **/
     virtual void onWindowActivated(void);
-    
+
+    /**
+     * \brief   Called when the MDI child window is created.
+     *          This method can be overridden to handle window creation events.
+     **/
     virtual void onWindowCreated(void);
 
 protected:

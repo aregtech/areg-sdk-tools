@@ -197,11 +197,19 @@ private:
      * \brief   Shows database information and available log data.
      **/
     void showDatabaseInfo(void);
-    
+
+    /**
+     * \brief   Updates the data of the scope tree, restores the view from the data like expanded and
+     *          selected nodes set in the logging model.
+     **/
     void restoreView(void);
 
-    void expandNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node);
-
+    /**
+     * \brief   Expands the child nodes of the specified scope tree recursively.
+     * \param   idxNode    The index of the node to expand.
+     * \param   node       The scope node to check and expand child nodes.
+     **/
+    void expandChildNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node);
 
 private slots:
     /**
@@ -230,8 +238,6 @@ private slots:
      * \param   parent  The index of the parent instance item where scopes are inserted.
      **/
     void onScopesInserted(const QModelIndex & parent);
-
-    void onScopeNodeActivated(const QModelIndex& root);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

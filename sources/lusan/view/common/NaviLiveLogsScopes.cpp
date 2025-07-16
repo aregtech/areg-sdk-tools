@@ -359,6 +359,7 @@ void NaviLiveLogsScopes::collapseRoots(void)
     {
         QModelIndex index = mScopesModel->index(row, 0, mScopesModel->getRootIndex());
         treeView->collapse(index);
+        mScopesModel->nodeCollapsed(index);
     }
 }
 
@@ -638,6 +639,7 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
         navi->blockSignals(true);
         collapseRoots();
         navi->expand(mScopesModel->getRootIndex());
+        mScopesModel->nodeExpanded(mScopesModel->getRootIndex());
         navi->setCurrentIndex(mScopesModel->getRootIndex());
         navi->blockSignals(false);
         
@@ -651,6 +653,7 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
         
         navi->blockSignals(true);
         navi->expandAll();
+        mScopesModel->nodeTreeExpanded(mScopesModel->getRootIndex());
         navi->setCurrentIndex(mScopesModel->getRootIndex());
         navi->blockSignals(false);
         
@@ -679,6 +682,7 @@ void NaviLiveLogsScopes::onRootUpdated(const QModelIndex & root)
     if (navi->isExpanded(root) == false)
     {
         navi->expand(root);
+        mScopesModel->nodeExpanded(root);
     }
 
     // Ensure all children of root are expanded and visible
@@ -689,6 +693,7 @@ void NaviLiveLogsScopes::onRootUpdated(const QModelIndex & root)
         if (child.isValid() && !navi->isExpanded(child))
         {
             navi->expand(child);
+            mScopesModel->nodeExpanded(child);
         }
     }
 }
@@ -704,6 +709,7 @@ void NaviLiveLogsScopes::onScopesInserted(const QModelIndex & parent)
         if (navi->isExpanded(parent) == false)
         {
             navi->expand(parent);
+            mScopesModel->nodeExpanded(parent);
         }
     }
 }
@@ -862,10 +868,12 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     else if (selectedAction == mMenuActions[eLogActions::ExpandSelected])
     {
         ctrlTable()->expand(index);
+        mScopesModel->nodeExpanded(index);
     }
     else if (selectedAction == mMenuActions[eLogActions::CollapseSelected])
     {
         ctrlTable()->collapse(index);
+        mScopesModel->nodeCollapsed(index);
     }
     else if (selectedAction == mMenuActions[eLogActions::ExpandAll])
     {
