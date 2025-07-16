@@ -191,7 +191,7 @@ signals:
      * \brief   The signal triggered when the MDI child window is created.
      * \param   mdiChild    The MDI child window that is created.
      **/
-    void signalMdiChildCreated(MdiChild * mdiChild);
+    void signalMdiChildCreating(MdiChild * mdiChild);
     
 /************************************************************************
  * MdiChild overrides
@@ -247,6 +247,8 @@ protected:
      *          This method can be overridden to handle window activation events.
      **/
     virtual void onWindowActivated(void);
+    
+    virtual void onWindowCreated(void);
 
 protected:
     /**

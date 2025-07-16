@@ -50,6 +50,34 @@ LoggingScopesModelBase::~LoggingScopesModelBase(void)
     mLoggingModel = nullptr;
 }
 
+void LoggingScopesModelBase::nodeExpanded(const QModelIndex& idxNode)
+{
+    if ((mLoggingModel != nullptr) && idxNode.isValid())
+    {
+        ScopeNodeBase* node = static_cast<ScopeNodeBase*>(idxNode.internalPointer());
+        Q_ASSERT(node != nullptr);
+        node->setNodeState(true);
+    }
+}
+
+void LoggingScopesModelBase::nodeCollapsed(const QModelIndex& idxNode)
+{
+    if ((mLoggingModel != nullptr) && idxNode.isValid())
+    {
+        ScopeNodeBase* node = static_cast<ScopeNodeBase*>(idxNode.internalPointer());
+        Q_ASSERT(node != nullptr);
+        node->setNodeState(false);
+    }
+}
+
+void LoggingScopesModelBase::nodeSelected(const QModelIndex& idxNode)
+{
+    if (mLoggingModel != nullptr)
+    {
+        mLoggingModel->setSelectedScope(idxNode);
+    }
+}
+
 void LoggingScopesModelBase::setLoggingModel(LoggingModelBase* model)
 {
     if (model != nullptr)

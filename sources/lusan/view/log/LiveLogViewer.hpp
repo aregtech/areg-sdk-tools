@@ -180,6 +180,8 @@ private slots:
      * \brief   Slot, triggered when make mouse right click on table view
      **/
     void onTableContextMenu(const QPoint& pos);
+    
+    void onLogActivated(const QModelIndex& idxLog);
 
     /**
      * \brief   Slot, triggered when Pause / Resume toolbutton is clicked.

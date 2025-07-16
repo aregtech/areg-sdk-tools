@@ -212,8 +212,9 @@ void NaviLiveLogsScopes::setupSignals(void)
     connect(ctrlCollapse()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onCollapseClicked);
     connect(ctrlTable()         , &QTreeView::expanded , this, &NaviLiveLogsScopes::onNodeExpanded);
     connect(ctrlTable()         , &QTreeView::collapsed, this, &NaviLiveLogsScopes::onNodeCollapsed);
+    connect(ctrlTable()         , &QTreeView::activated, this, &NaviLiveLogsScopes::onNodeActivated);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested  , this  , &NaviLiveLogsScopes::onTreeViewContextMenuRequested);
-    connect(mMainWindow         , &MdiMainWindow::signalWindowCreated   , this  , &NaviLiveLogsScopes::onWindowCreated);
+    connect(mMainWindow         , &MdiMainWindow::signalMdiWindowCreated, this  , &NaviLiveLogsScopes::onWindowCreated);
 
     setupLogSignals(true);    
 }
@@ -295,10 +296,10 @@ void NaviLiveLogsScopes::setupLogSignals(bool setup)
             Q_ASSERT(mScopesModel != nullptr);
             Q_ASSERT(mSelModel != nullptr);
 
-            connect(mScopesModel, &LiveScopesModel::signalRootUpdated, this, &NaviLiveLogsScopes::onRootUpdated);
+            connect(mScopesModel, &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
             connect(mScopesModel, &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
-            connect(mScopesModel, &LiveScopesModel::dataChanged, this, &NaviLiveLogsScopes::onScopesDataChanged);
-            connect(mSelModel, &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
+            connect(mScopesModel, &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
+            connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
         }
     }
     else if (mSignalsActive)
@@ -895,6 +896,9 @@ void NaviLiveLogsScopes::onNodeExpanded(const QModelIndex& index)
         ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
         ctrlCollapse()->setChecked(false);
     }
+    
+    Q_ASSERT(mScopesModel != nullptr);    
+    mScopesModel->nodeExpanded(index);
 }
 
 void NaviLiveLogsScopes::onNodeCollapsed(const QModelIndex& index)
@@ -904,4 +908,13 @@ void NaviLiveLogsScopes::onNodeCollapsed(const QModelIndex& index)
         ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
         ctrlCollapse()->setChecked(true);
     }
+    
+    Q_ASSERT(mScopesModel != nullptr);    
+    mScopesModel->nodeCollapsed(index);    
+}
+
+void NaviLiveLogsScopes::onNodeActivated(const QModelIndex &idxNode)
+{
+    Q_ASSERT(mScopesModel != nullptr);    
+    mScopesModel->nodeSelected(index);
 }

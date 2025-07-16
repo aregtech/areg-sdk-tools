@@ -210,6 +210,14 @@ void LiveLogViewer::onTableContextMenu(const QPoint& pos)
     menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
 }
 
+void LiveLogViewer::onLogActivated(const QModelIndex& idxLog)
+{
+    if (mLogModel != nullptr)
+    {
+        mLogModel->setSelectedLog(idxLog);
+    }
+}
+
 QTableView* LiveLogViewer::ctrlTable(void)
 {
     return ui->logView;
@@ -456,16 +464,17 @@ void LiveLogViewer::setupSignals(bool doSetup)
     {
         if (mLogModel != nullptr)
         {
-            connect(mLogModel, &LiveLogsModel::rowsInserted, this, &LiveLogViewer::onRowsInserted);
-            connect(mLogModel, &LiveLogsModel::columnsInserted, this, &LiveLogViewer::onColumnsInserted);
-            connect(mLogModel, &LiveLogsModel::columnsRemoved, this, &LiveLogViewer::onColumnsRemoved);
-            connect(mLogModel, &LiveLogsModel::columnsMoved, this, &LiveLogViewer::onColumnsMoved);
+            connect(mLogModel, &LiveLogsModel::rowsInserted     , this, &LiveLogViewer::onRowsInserted);
+            connect(mLogModel, &LiveLogsModel::columnsInserted  , this, &LiveLogViewer::onColumnsInserted);
+            connect(mLogModel, &LiveLogsModel::columnsRemoved   , this, &LiveLogViewer::onColumnsRemoved);
+            connect(mLogModel, &LiveLogsModel::columnsMoved     , this, &LiveLogViewer::onColumnsMoved);
         }
 
         connect(ctrlPause() , &QToolButton::clicked                         , this      , &LiveLogViewer::onPauseClicked);
         connect(ctrlStop()  , &QToolButton::clicked                         , this      , &LiveLogViewer::onStopClicked);
         connect(ctrlClear() , &QToolButton::clicked                         , this      , &LiveLogViewer::onClearClicked);
         connect(view        , &QTableView::customContextMenuRequested       , this      , &LiveLogViewer::onTableContextMenu);
+        connect(view        , &QTableView::activated                        , this      , &LiveLogViewer::onLogActivated);
         connect(mHeader     , &LogTableHeader::customContextMenuRequested   , this      , &LiveLogViewer::onHeaderContextMenu);
         connect(mHeader     , &LogTableHeader::signalComboFilterChanged     , mFilter   , &LogViewerFilterProxy::setComboFilter);
         connect(mHeader     , &LogTableHeader::signalTextFilterChanged      , mFilter   , &LogViewerFilterProxy::setTextFilter);

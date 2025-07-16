@@ -42,19 +42,14 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     , mMainWindow   (wndMain)
 {
     setAttribute(Qt::WA_DeleteOnClose, true);
-
     Q_ASSERT(wndMain != nullptr);
-    connect(wndMain,    &MdiMainWindow::onMdiChildClosed,    this, &MdiChild::signalMdiChildClosed);
-    connect(wndMain,    &MdiMainWindow::onMdiChildCreated,   this, &MdiChild::signalMdiChildCreated, Qt::QueuedConnection);
-    emit signalMdiChildCreated(this);    
+    emit wndMain->signalMdiWindowCreated(this);
 }
 
 MdiChild::~MdiChild(void)
 {
     MdiMainWindow* wndMain = LusanApplication::getMainWindow();
     Q_ASSERT(wndMain != nullptr);
-    disconnect(wndMain,    &MdiMainWindow::onMdiChildClosed,    this, &MdiChild::signalMdiChildClosed);
-    disconnect(wndMain,    &MdiMainWindow::onMdiChildCreated,   this, &MdiChild::signalMdiChildCreated);
 }
 
 bool MdiChild::openSucceeded(void) const
@@ -180,6 +175,11 @@ void MdiChild::onWindowClosing(bool /*isActive*/)
 
 void MdiChild::onWindowActivated(void)
 {
+}
+
+void MdiChild::onWindowCreated(void)
+{
+    
 }
 
 void MdiChild::onDocumentModified()

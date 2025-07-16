@@ -47,6 +47,7 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
     setupSignals();
     updateControls();
     ctrlTable()->setModel(mScopesModel);
+    
 }
 
 NaviOfflineLogsScopes::~NaviOfflineLogsScopes(void)

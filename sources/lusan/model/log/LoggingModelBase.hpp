@@ -276,6 +276,14 @@ public:
      **/
     inline int rootCount(void) const;
 
+    inline const QModelIndex& getSelectedScope(void) const;
+
+    inline void setSelectedScope(const QModelIndex& idxScope);
+
+    inline const QModelIndex& getSelectedLog(void) const;
+
+    inline void setSelectedLog(const QModelIndex& idxLog);
+
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -589,6 +597,8 @@ protected:
     RootList                mRootList;      //!< The list of root nodes
     ListLogs                mLogs;          //!< The list of log messages.
     ListInstances           mInstances;     //!< The list of connected instances.
+    QModelIndex             mSelectedScope; //!< The selected node of the tree;
+    QModelIndex             mSelectedLog;   //!< The selected entry of the log;
     MapScopes               mScopes;        //!< The map of scopes, where key is instance ID and value is the list of scopes.
     int                     mLogChunk;      //!< The position in the log messages list to read from.
     uint32_t                mLogCount;      //!< The position of updated log.
@@ -686,6 +696,26 @@ inline const LoggingModelBase::RootList& LoggingModelBase::getRootList(void) con
 inline int LoggingModelBase::rootCount(void) const
 {
     return static_cast<int>(mRootList.size());
+}
+
+inline const QModelIndex& LoggingModelBase::getSelectedScope(void) const
+{
+    return  mSelectedScope;
+}
+
+inline void LoggingModelBase::setSelectedScope(const QModelIndex& idxScope)
+{
+    mSelectedScope = idxScope;
+}
+
+inline const QModelIndex& LoggingModelBase::getSelectedLog(void) const
+{
+    return mSelectedLog;
+}
+
+inline void LoggingModelBase::setSelectedLog(const QModelIndex& idxLog)
+{
+    mSelectedLog = idxLog;
 }
 
 inline void LoggingModelBase::_closeDatabase(void)

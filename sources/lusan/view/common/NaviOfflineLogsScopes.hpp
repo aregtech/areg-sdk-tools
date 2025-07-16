@@ -196,6 +196,8 @@ private:
      * \brief   Shows database information and available log data.
      **/
     void showDatabaseInfo(void);
+    
+    void restoreView(void);
 
 private slots:
     /**

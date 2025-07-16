@@ -571,11 +571,6 @@ void MdiMainWindow::onMdiChildClosed(MdiChild* mdiChild)
     emit signalWindowClosed(mdiChild);
 }
 
-void MdiMainWindow::onMdiChildCreated(MdiChild* mdiChild)
-{
-    emit signalWindowCreated(mdiChild);
-}
-
 void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
 {
     MdiChild * mdiActive = mdiSubWindow != nullptr ? qobject_cast<MdiChild *>(mdiSubWindow->widget()) : nullptr;

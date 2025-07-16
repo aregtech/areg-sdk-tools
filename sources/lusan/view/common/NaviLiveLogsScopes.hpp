@@ -380,7 +380,7 @@ private slots:
 
     // Slot for collapsing and expanding nodes.
     void onCollapseClicked(bool checked);
-
+    
     // Slot. which triggered when the selection in the log scopes navigation is changed.
     void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 
@@ -433,7 +433,9 @@ private slots:
      * \param   index   The index of the node
      **/
     void onNodeCollapsed(const QModelIndex &index);
-
+    
+    void onNodeActivated(const QModelIndex &idxNode);
+    
 //////////////////////////////////////////////////////////////////////////
 // Static methods
 //////////////////////////////////////////////////////////////////////////
