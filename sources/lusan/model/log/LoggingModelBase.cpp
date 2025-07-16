@@ -123,6 +123,7 @@ QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, 
 
 int LoggingModelBase::rowCount(const QModelIndex& parent) const
 {
+    Q_UNUSED(parent);
     return mLogCount;
 }
 

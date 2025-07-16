@@ -66,9 +66,9 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     _explorer = this;
     
     ui->setupUi(this);
-    this->setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    this->setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 
     updateData();
     setupWidgets();
@@ -196,6 +196,7 @@ void NaviLiveLogsScopes::setupWidgets(void)
     ctrlTable()->setModel(mScopesModel);
     ctrlTable()->setSelectionModel(mSelModel);
     ctrlTable()->setContextMenuPolicy(Qt::CustomContextMenu);
+    ctrlTable()->setAlternatingRowColors(false);
 }
 
 void NaviLiveLogsScopes::setupSignals(void)
@@ -212,7 +213,6 @@ void NaviLiveLogsScopes::setupSignals(void)
     connect(ctrlCollapse()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onCollapseClicked);
     connect(ctrlTable()         , &QTreeView::expanded , this, &NaviLiveLogsScopes::onNodeExpanded);
     connect(ctrlTable()         , &QTreeView::collapsed, this, &NaviLiveLogsScopes::onNodeCollapsed);
-    connect(ctrlTable()         , &QTreeView::activated, this, &NaviLiveLogsScopes::onNodeActivated);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested  , this  , &NaviLiveLogsScopes::onTreeViewContextMenuRequested);
     connect(mMainWindow         , &MdiMainWindow::signalMdiWindowCreated, this  , &NaviLiveLogsScopes::onWindowCreated);
 
@@ -299,7 +299,7 @@ void NaviLiveLogsScopes::setupLogSignals(bool setup)
             connect(mScopesModel, &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
             connect(mScopesModel, &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
             connect(mScopesModel, &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
-            connect(mSelModel   , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
+            connect(mSelModel   , &QItemSelectionModel::currentRowChanged,this, &NaviLiveLogsScopes::onRowChanged);
         }
     }
     else if (mSignalsActive)
@@ -312,7 +312,7 @@ void NaviLiveLogsScopes::setupLogSignals(bool setup)
         disconnect(mScopesModel  , &LiveScopesModel::signalRootUpdated   , this, &NaviLiveLogsScopes::onRootUpdated);
         disconnect(mScopesModel  , &LiveScopesModel::signalScopesInserted, this, &NaviLiveLogsScopes::onScopesInserted);
         disconnect(mScopesModel  , &LiveScopesModel::dataChanged         , this, &NaviLiveLogsScopes::onScopesDataChanged);
-        disconnect(mSelModel    , &QItemSelectionModel::selectionChanged, this, &NaviLiveLogsScopes::onSelectionChanged);
+        disconnect(mSelModel     , &QItemSelectionModel::currentRowChanged,this, &NaviLiveLogsScopes::onRowChanged);
 
         disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &NaviLiveLogsScopes::onLogObserverConfigured);
         disconnect(log, &LogObserver::signalLogDbConfigured         , this, &NaviLiveLogsScopes::onLogDbConfigured);
@@ -658,10 +658,12 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
     }
 }
 
-void NaviLiveLogsScopes::onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+void NaviLiveLogsScopes::onRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
-    QModelIndexList list = selected.indexes();
-    enableButtons(list.isEmpty() ? QModelIndex() : list.front());
+    Q_UNUSED(previous);
+    
+    enableButtons(current);
+    mScopesModel->nodeSelected(current);
 }
 
 void NaviLiveLogsScopes::onRootUpdated(const QModelIndex & root)
@@ -911,10 +913,4 @@ void NaviLiveLogsScopes::onNodeCollapsed(const QModelIndex& index)
     
     Q_ASSERT(mScopesModel != nullptr);    
     mScopesModel->nodeCollapsed(index);    
-}
-
-void NaviLiveLogsScopes::onNodeActivated(const QModelIndex &idxNode)
-{
-    Q_ASSERT(mScopesModel != nullptr);
-    mScopesModel->nodeSelected(idxNode);
 }

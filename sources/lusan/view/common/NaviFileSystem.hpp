@@ -78,7 +78,7 @@ public:
     /**
      * \brief   Returns the file system tree view control.
      **/
-    QTreeView* ctrlFileSystem(void) const;
+    QTreeView* ctrlTable(void) const;
 
     /**
      * \brief   Returns the refresh tool button control.

@@ -201,7 +201,7 @@ void NaviOfflineLogsScopes::setupWidgets(void)
     // Configure the tree view for database information display
     ctrlTable()->setHeaderHidden(false);
     ctrlTable()->setRootIsDecorated(true);
-    ctrlTable()->setAlternatingRowColors(true);
+    ctrlTable()->setAlternatingRowColors(false);
 }
 
 void NaviOfflineLogsScopes::setupSignals(void)
@@ -306,8 +306,18 @@ void NaviOfflineLogsScopes::restoreView(void)
                 expandNodesRecursive(idxNode, *root);
             }
         }
-
-        navi->setCurrentIndex(logModel->getSelectedScope());
+        
+        const QModelIndex& idxSelected = logModel->getSelectedScope();
+        if (idxSelected.isValid())
+        {
+            navi->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            navi->scrollTo(idxSelected);
+        }
+        else
+        {
+            navi->setCurrentIndex(logModel->getSelectedScope());
+            navi->scrollToTop();
+        }
     }
 }
 

@@ -43,16 +43,16 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullp
     , mTableCell    (nullptr)
 {
     ui->setupUi(this);
-    this->setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    this->setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    this->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 
     updateData();
     setupWidgets();    
     setupSignals();
 }
 
-QTreeView* NaviFileSystem::ctrlFileSystem(void) const
+QTreeView* NaviFileSystem::ctrlTable(void) const
 {
     return ui->treeView;
 }
@@ -109,7 +109,7 @@ QString NaviFileSystem::getCellText(const QModelIndex& cell) const
 
 void NaviFileSystem::onToolRefreshClicked(bool checked)
 {
-    QTreeView * table = ctrlFileSystem();
+    QTreeView * table = ctrlTable();
     if (mNaviModel != nullptr)
     {
         table->collapseAll();
@@ -131,7 +131,7 @@ void NaviFileSystem::onToolShowAllToggled(bool checked)
     if (mNaviModel == nullptr)
         return;
 
-    QTreeView * table = ctrlFileSystem();
+    QTreeView * table = ctrlTable();
     table->collapseAll();
     table->clearSelection();
     QStringList filters{ LusanApplication::InternalExts };
@@ -145,7 +145,7 @@ void NaviFileSystem::onToolShowAllToggled(bool checked)
 
 void NaviFileSystem::onToolCollapseAllClicked(bool checked)
 {
-    ctrlFileSystem()->collapseAll();
+    ctrlTable()->collapseAll();
 }
 
 void NaviFileSystem::onToolNewFolderClicked(bool checked)
@@ -154,7 +154,7 @@ void NaviFileSystem::onToolNewFolderClicked(bool checked)
     if (mNaviModel == nullptr)
         return;
 
-    QTreeView* table = ctrlFileSystem();
+    QTreeView* table = ctrlTable();
     QModelIndex index = table->selectionModel()->currentIndex();
     if (mNaviModel->isFile(index))
         index = mNaviModel->parent(index);
@@ -182,7 +182,7 @@ void NaviFileSystem::onToolNewFileClicked(bool checked)
     if (mNaviModel == nullptr)
         return;
 
-    QTreeView* table = ctrlFileSystem();
+    QTreeView* table = ctrlTable();
     QModelIndex index = table->currentIndex();
     if (mNaviModel->isFile(index))
         index = mNaviModel->parent(index);
@@ -204,7 +204,7 @@ void NaviFileSystem::onToolNewFileClicked(bool checked)
 
 void NaviFileSystem::onToolOpenSelectedClicked(bool checked)
 {
-    QTreeView * table = ctrlFileSystem();
+    QTreeView * table = ctrlTable();
     QModelIndex index = table->selectionModel()->currentIndex();
     QFileInfo fi (getFileInfo(index));
 
@@ -217,7 +217,7 @@ void NaviFileSystem::onToolOpenSelectedClicked(bool checked)
 
 void NaviFileSystem::onToolEditSelectedClicked(bool checked)
 {
-    QTreeView * table = ctrlFileSystem();
+    QTreeView * table = ctrlTable();
     QModelIndex index = table->selectionModel()->currentIndex();
     if (index.isValid())
     {
@@ -227,7 +227,7 @@ void NaviFileSystem::onToolEditSelectedClicked(bool checked)
 
 void NaviFileSystem::onToolDeleteSelectedClicked(bool checked)
 {
-    QTreeView * table = ctrlFileSystem();
+    QTreeView * table = ctrlTable();
     QModelIndex index = table->selectionModel()->currentIndex();
     QFileInfo fi = mNaviModel->getFileInfo(index);
     QString filePath = fi.filePath();
@@ -266,7 +266,7 @@ void NaviFileSystem::onToolNaviRootClicked(bool checked)
 {
     if ((checked == true) && (mGenModel == nullptr))
     {
-        disconnect(ctrlFileSystem()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
+        disconnect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
         mGenModel = new GeneralFileSystemModel();
         mGenModel->setReadOnly(true);
         if (mFileFilter == nullptr)
@@ -278,17 +278,17 @@ void NaviFileSystem::onToolNaviRootClicked(bool checked)
             mFileFilter->setSourceModel(nullptr);
         }
 
-        ctrlFileSystem()->setModel(nullptr);
-        ctrlFileSystem()->setModel(mFileFilter);
-        ctrlFileSystem()->setSortingEnabled(true);
-        ctrlFileSystem()->reset();
+        ctrlTable()->setModel(nullptr);
+        ctrlTable()->setModel(mFileFilter);
+        ctrlTable()->setSortingEnabled(true);
+        ctrlTable()->reset();
         delete mNaviModel;
         mNaviModel = nullptr;
 
         // QString rootPath = QDir::rootPath();
         QString rootPath = mGenModel->myComputer().toString();
         QModelIndex idxRoot = mGenModel->setRootPath(rootPath);
-        ctrlFileSystem()->setRootIndex(mFileFilter->mapFromSource(idxRoot));
+        ctrlTable()->setRootIndex(mFileFilter->mapFromSource(idxRoot));
 
         ctrlToolDelete()->setEnabled(false);
         ctrlToolNewFile()->setEnabled(false);
@@ -309,7 +309,7 @@ void NaviFileSystem::onToolNaviRootClicked(bool checked)
         mFileFilter = nullptr;
         mGenModel = nullptr;
 
-        connect(ctrlFileSystem()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
+        connect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
     }
 }
 
@@ -346,7 +346,7 @@ void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString
     if ((index.isValid() == false) || (mNaviModel == nullptr))
         return;
 
-    QTreeView * table = ctrlFileSystem();
+    QTreeView * table = ctrlTable();
     QModelIndex newIndex = mNaviModel->renameEntry(newValue, index);
     if (newIndex.isValid())
     {
@@ -393,16 +393,17 @@ void NaviFileSystem::updateData(void)
 
 void NaviFileSystem::setupWidgets(void)
 {
-    ctrlFileSystem()->setModel(mNaviModel);
     QModelIndex idxRoot = mNaviModel->setRootPaths(mRootPaths);
-    ctrlFileSystem()->setRootIndex(idxRoot);
-    ctrlFileSystem()->expand(idxRoot);
-    ctrlFileSystem()->setSortingEnabled(true);
+    mTableCell = new TableCell(ctrlTable(), this, true);
+    ctrlTable()->setModel(mNaviModel);
+    ctrlTable()->setRootIndex(idxRoot);
+    ctrlTable()->expand(idxRoot);
+    ctrlTable()->setSortingEnabled(true);
+    ctrlTable()->setAlternatingRowColors(false);
+    ctrlTable()->setContextMenuPolicy(Qt::CustomContextMenu);
+    ctrlTable()->setItemDelegateForColumn(0, mTableCell);
+    
     ctrlToolShowAll()->setCheckable(true);
-    
-    mTableCell = new TableCell(ctrlFileSystem(), this, true);
-    ctrlFileSystem()->setItemDelegateForColumn(0, mTableCell);
-    
     ctrlToolDelete()->setEnabled(false);
     ctrlToolNewFile()->setEnabled(false);
     ctrlToolNewFolder()->setEnabled(false);
@@ -412,18 +413,18 @@ void NaviFileSystem::setupWidgets(void)
 
 void NaviFileSystem::setupSignals(void)
 {
-    connect(ui->toolRefresh,        &QToolButton::clicked,      this, &NaviFileSystem::onToolRefreshClicked);
-    connect(ui->toolShowAll,        &QToolButton::toggled,      this, &NaviFileSystem::onToolShowAllToggled);
-    connect(ui->toolCollapseAll,    &QToolButton::clicked,      this, &NaviFileSystem::onToolCollapseAllClicked);
-    connect(ui->toolNewFolder,      &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFolderClicked);
-    connect(ui->toolNewFile,        &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFileClicked);
-    connect(ui->toolEditSelected,   &QToolButton::clicked,      this, &NaviFileSystem::onToolEditSelectedClicked);
-    connect(ui->toolOpenSelected,   &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
-    connect(ui->toolDeleteSelected, &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
-    connect(ui->toolNaviRoot,       &QToolButton::clicked,      this, &NaviFileSystem::onToolNaviRootClicked);
-    connect(ctrlFileSystem(),       &QTreeView::doubleClicked,  this, &NaviFileSystem::onTreeViewDoubleClicked);
-    connect(ctrlFileSystem(),       &QTreeView::entered,        this, &NaviFileSystem::onTreeViewActivated);
-    connect(ctrlFileSystem()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
+    connect(ui->toolRefresh         , &QToolButton::clicked,      this, &NaviFileSystem::onToolRefreshClicked);
+    connect(ui->toolShowAll         , &QToolButton::toggled,      this, &NaviFileSystem::onToolShowAllToggled);
+    connect(ui->toolCollapseAll     , &QToolButton::clicked,      this, &NaviFileSystem::onToolCollapseAllClicked);
+    connect(ui->toolNewFolder       , &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFolderClicked);
+    connect(ui->toolNewFile         , &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFileClicked);
+    connect(ui->toolEditSelected    , &QToolButton::clicked,      this, &NaviFileSystem::onToolEditSelectedClicked);
+    connect(ui->toolOpenSelected    , &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
+    connect(ui->toolDeleteSelected  , &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
+    connect(ui->toolNaviRoot        , &QToolButton::clicked,      this, &NaviFileSystem::onToolNaviRootClicked);
+    connect(ctrlTable()             , &QTreeView::doubleClicked,  this, &NaviFileSystem::onTreeViewDoubleClicked);
+    connect(ctrlTable()             , &QTreeView::entered,        this, &NaviFileSystem::onTreeViewActivated);
+    connect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
 
     connect(mTableCell, &TableCell::editorDataChanged, this, &NaviFileSystem::onEditorDataChanged);
 
@@ -432,7 +433,7 @@ void NaviFileSystem::setupSignals(void)
 
 void NaviFileSystem::blockBasicSignals(bool block)
 {
-    ctrlFileSystem()->blockSignals(block);
+    ctrlTable()->blockSignals(block);
 }
 
 QFileInfo NaviFileSystem::getFileInfo(const QModelIndex & index) const
@@ -484,9 +485,9 @@ void NaviFileSystem::onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspa
     if (mNaviModel != nullptr)
     {
         QModelIndex idxRoot = mNaviModel->setRootPaths(mRootPaths);
-        ctrlFileSystem()->setRootIndex(idxRoot);
-        ctrlFileSystem()->expand(idxRoot);
-        ctrlFileSystem()->setSortingEnabled(true);
+        ctrlTable()->setRootIndex(idxRoot);
+        ctrlTable()->expand(idxRoot);
+        ctrlTable()->setSortingEnabled(true);
         ctrlToolShowAll()->setCheckable(true);
     }
 }

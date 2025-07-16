@@ -28,6 +28,7 @@
 class QHeaderView;
 class QTableView;
 class QToolbutton;
+class QItemSelection;
 class QLabel;
 class QWidget;
 class LiveLogsModel;
@@ -181,7 +182,10 @@ private slots:
      **/
     void onTableContextMenu(const QPoint& pos);
     
-    void onLogActivated(const QModelIndex& idxLog);
+    /**
+     * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.
+     **/
+    void onRowChanged(const QModelIndex &current, const QModelIndex &previous);
 
     /**
      * \brief   Slot, triggered when Pause / Resume toolbutton is clicked.
@@ -198,8 +202,7 @@ private slots:
     void onStopClicked(bool checked);
 
     /**
-     * \brief   Slot, triggered when Clear logging window buggon is clicked.
-     * @return
+     * \brief   Slot, triggered when Clear logging window button is clicked.
      **/
     void onClearClicked(void);
 
@@ -239,7 +242,7 @@ private:
     void resetColumnOrder();
 
     /**
-     * \brief   Updates the toolbuttons based on the current state of logging.
+     * \brief   Updates the tool-buttons based on the current state of logging.
      * \param   isPaused    If true, logging is paused. Show resume button.
      * \param   isStopped   If true, logging is stopped. Show restart button.
      **/

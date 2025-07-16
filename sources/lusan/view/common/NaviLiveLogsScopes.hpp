@@ -382,7 +382,7 @@ private slots:
     void onCollapseClicked(bool checked);
     
     // Slot. which triggered when the selection in the log scopes navigation is changed.
-    void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+    void onRowChanged(const QModelIndex &current, const QModelIndex &previous);
 
     /**
      * \brief   The signal triggered when receive the list of connected instances that make logs.
@@ -433,8 +433,6 @@ private slots:
      * \param   index   The index of the node
      **/
     void onNodeCollapsed(const QModelIndex &index);
-    
-    void onNodeActivated(const QModelIndex &idxNode);
     
 //////////////////////////////////////////////////////////////////////////
 // Static methods
