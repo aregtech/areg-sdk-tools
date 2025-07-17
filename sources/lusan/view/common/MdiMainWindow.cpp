@@ -321,6 +321,7 @@ void MdiMainWindow::onFileNewLog()
     {
         mLogViewer = new LiveLogViewer(this, &mMdiArea);
         mLiveLogWnd = mMdiArea.addSubWindow(mLogViewer);
+        mLiveLogWnd->setWindowIcon(Navigation::getLiveLogIcon());
         mLogViewer->setMdiSubwindow(mLiveLogWnd);
         mMdiArea.showMaximized();
         mLogViewer->show();
@@ -604,6 +605,7 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
     ServiceInterface* child = new ServiceInterface(this, filePath, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
+    mdiSub->setWindowIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview));
 
     connect(child, &ServiceInterface::copyAvailable, &mActEditCut, &QAction::setEnabled);
     connect(child, &ServiceInterface::copyAvailable, &mActEditCopy, &QAction::setEnabled);
@@ -617,6 +619,7 @@ LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QS
     LiveLogViewer* child = new LiveLogViewer(this, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
+    mdiSub->setWindowIcon(Navigation::getLiveLogIcon());
     mMdiArea.showMaximized();
     mNavigation.showTab(Navigation::eNaviWindow::NaviLiveLogs);
     return child;
@@ -627,6 +630,7 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     OfflineLogViewer* child = cloneLive && (mLogViewer != nullptr) ? new OfflineLogViewer(this, *mLogViewer, &mMdiArea) : new OfflineLogViewer(this, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
+    mdiSub->setWindowIcon(Navigation::getOfflineLogIcon());
     mMdiArea.showMaximized();
     mNavigation.showTab(Navigation::NaviOfflineLogs);
     static_cast<NaviOfflineLogsScopes *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(child->getLoggingModel());
