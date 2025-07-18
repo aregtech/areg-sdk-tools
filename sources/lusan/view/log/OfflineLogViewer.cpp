@@ -207,6 +207,31 @@ QLabel* OfflineLogViewer::ctrlFile(void)
     return ui->lableFile;
 }
 
+QLineEdit* OfflineLogViewer::ctrlSearchText(void)
+{
+    return ui->textSearcb;
+}
+
+QToolButton* OfflineLogViewer::ctrlButtonSearch(void)
+{
+    return ui->btnSearch;
+}
+
+QToolButton* OfflineLogViewer::ctrlButtonCaseSensitive(void)
+{
+    return ui->btnMatchCase;
+}
+
+QToolButton* OfflineLogViewer::ctrlButtonWholeWords(void)
+{
+    return ui->btnMatchWord;
+}
+
+QToolButton* OfflineLogViewer::ctrlSearchDirection(void)
+{
+    return ui->btnSearchDirection;
+}
+
 void OfflineLogViewer::populateColumnsMenu(QMenu* menu, int curRow)
 {
     // Get current active columns from the model

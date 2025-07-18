@@ -147,6 +147,16 @@ private:
     //!< Returns Logging File name label widget.
     QLabel* ctrlFile(void);
 
+    QLineEdit* ctrlSearchText(void);
+
+    QToolButton* ctrlButtonSearch(void);
+
+    QToolButton* ctrlButtonCaseSensitive(void);
+
+    QToolButton* ctrlButtonWholeWords(void);
+
+    QToolButton* ctrlSearchDirection(void);
+
     /**
      * \brief   Populates menu and sets the action handlers.
      **/
@@ -183,7 +193,12 @@ private:
     OfflineLogsModel*       mLogModel;  //!< Model for the offline log viewer, handling the data and its representation.
     LogViewerFilterProxy*   mFilter;    //!< The filter object
     QWidget*                mMdiWindow; //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
-    LogTableHeader*         mHeader;    //<!< Log table header object, used for managing the header of the log table.
+    LogTableHeader*         mHeader;    //!< Log table header object, used for managing the header of the log table.
+    QString                 mSearchText;//!< The text to search
+    int32_t                 mRowFound;  //!< The row where the text found
+    int32_t                 mColFound;  //!< The column where the text found
+    int32_t                 mPosStart;  //!< The position where the text found
+    int32_t                 mPosEnd;    //!< The position where the text found
 };
 
 //////////////////////////////////////////////////////////////////////////

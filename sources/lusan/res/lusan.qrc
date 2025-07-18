@@ -26,6 +26,8 @@
         <file alias="log-offline">icons/ball-blue-32x32.png</file>
         <file alias="log-live">icons/ball-green-32x32.png</file>
         <file alias="workspace-explorer">icons/file-explorer-android-32x32.png</file>
+        <file alias="search-match-case">icons/match-case.svg</file>
+        <file alias="search-match-word">icons/match-word.svg</file>
     </qresource>
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>
