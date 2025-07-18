@@ -40,6 +40,8 @@ SearchLineEdit::SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButt
             switch (entry)
             {
             case SearchLineEdit::eToolButton::ToolButtonSearch:
+            {
+
                 mButtonFlags |= static_cast<uint32_t>(entry);
                 mButtons.push_back(entry);
                 mBtnSearch = new QToolButton(this);
@@ -51,23 +53,55 @@ SearchLineEdit::SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButt
                 mBtnSearch->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
                 mBtnSearch->setShortcut(QString::fromUtf8("Ctrl+F"));
                 connect(mBtnSearch, &QToolButton::toggled, [](bool checked) { emit signalButtonSearchClicked(checked); });
-                break;
+            }
+            break;
                 
             case SearchLineEdit::eToolButton::ToolButtonMatchCase:
+            {
                 mButtonFlags |= static_cast<uint32_t>(entry);
                 mButtons.push_back(entry);
                 mBtnMatchCase = new QToolButton(this);
-                mBtnMatchCase->setObjectName("buttonSearch");
+                mBtnMatchCase->setObjectName("buttonMatchCase");
                 mBtnMatchCase->setMinimumSize(buttonSize);
                 mBtnMatchCase->setMaximumSize(buttonSize);
                 mBtnMatchCase->setAutoFillBackground(true);
-                mBtnMatchCase->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
-                mBtnMatchCase->setShortcut(QString::fromUtf8("Ctrl+F"));
-                connect(mBtnMatchCase, &QToolButton::toggled, [](bool checked) { emit signalButtonSearchMatchCaseClicked(checked); });
-                break;
-                
+                mBtnMatchCase->setIcon(QIcon(QString::fromUtf8(":/icons/search-match-case")));
+                mBtnMatchCase->setShortcut(QString::fromUtf8("Ctrl+C"));
+                connect(mBtnMatchCase, &QToolButton::toggled, [](bool checked) { emit signalButtonSearchMatchWordClicked(checked); });
             }
-                )
+            break;
+                
+            case SearchLineEdit::eToolButton::ToolButtonMatchWord:
+            {
+                mButtonFlags |= static_cast<uint32_t>(entry);
+                mButtons.push_back(entry);
+                mBtnMatchWord = new QToolButton(this);
+                mBtnMatchWord->setObjectName("buttonMatchWord");
+                mBtnMatchWord->setMinimumSize(buttonSize);
+                mBtnMatchWord->setMaximumSize(buttonSize);
+                mBtnMatchWord->setAutoFillBackground(true);
+                mBtnMatchWord->setIcon(QIcon(QString::fromUtf8(":/icons/search-match-word")));
+                mBtnMatchWord->setShortcut(QString::fromUtf8("Ctrl+W"));
+                connect(mBtnMatchWord, &QToolButton::toggled, [](bool checked) { emit signalButtonSearchMatchCaseClicked(checked); });
+            }
+            break;
+
+            case SearchLineEdit::eToolButton::ToolButtonBackward:
+            {
+                mButtonFlags |= static_cast<uint32_t>(entry);
+                mButtons.push_back(entry);
+                mBtnBackward = new QToolButton(this);
+                mBtnBackward->setObjectName("buttonSearchBackward");
+                mBtnBackward->setMinimumSize(buttonSize);
+                mBtnBackward->setMaximumSize(buttonSize);
+                mBtnBackward->setAutoFillBackground(true);
+                mBtnBackward->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoUp));
+                mBtnBackward->setShortcut(QString::fromUtf8("Shift+F3"));
+                connect(mBtnBackward, &QToolButton::toggled, [](bool checked) {
+                    emit signalButtonSearchMatchCaseClicked(checked); });
+            }
+            break;
+            }
         }
 
     // Create tool buttons
