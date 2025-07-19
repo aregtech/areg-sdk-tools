@@ -22,8 +22,9 @@
 
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
-#include "lusan/view/log/LogTableHeader.hpp"
+#include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
+#include "lusan/view/log/LogTableHeader.hpp"
 
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
@@ -50,7 +51,14 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , mMdiWindow    (new QWidget())
     , mHeader       (nullptr)
 {
+    QList<SearchLineEdit::eToolButton> tools;
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonSearch);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchCase);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchWord);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
     ui->setupUi(mMdiWindow);
+    ctrlSearchText()->initialize(tools, QSize(20, 20));
+
     mLogModel   = new OfflineLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
     
@@ -207,29 +215,34 @@ QLabel* OfflineLogViewer::ctrlFile(void)
     return ui->lableFile;
 }
 
-QLineEdit* OfflineLogViewer::ctrlSearchText(void)
+SearchLineEdit* OfflineLogViewer::ctrlSearchText(void)
 {
-    return ui->textSearcb;
+    return ui->textSearch;
 }
 
 QToolButton* OfflineLogViewer::ctrlButtonSearch(void)
 {
-    return ui->btnSearch;
+    return ui->textSearch->buttonSearch();
 }
 
 QToolButton* OfflineLogViewer::ctrlButtonCaseSensitive(void)
 {
-    return ui->btnMatchCase;
+    return ui->textSearch->buttonMatchCase();
 }
 
 QToolButton* OfflineLogViewer::ctrlButtonWholeWords(void)
 {
-    return ui->btnMatchWord;
+    return ui->textSearch->buttonMatchWord();
 }
 
-QToolButton* OfflineLogViewer::ctrlSearchDirection(void)
+QToolButton* OfflineLogViewer::ctrlSearchWildcard(void)
 {
-    return ui->btnSearchDirection;
+    return ui->textSearch->buttonWildCard();
+}
+
+QToolButton* OfflineLogViewer::ctrlSearchBackward(void)
+{
+    return ui->textSearch->buttonSearchBackward();
 }
 
 void OfflineLogViewer::populateColumnsMenu(QMenu* menu, int curRow)
