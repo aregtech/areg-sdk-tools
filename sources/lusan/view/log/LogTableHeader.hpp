@@ -65,9 +65,12 @@ signals:
     /**
      * \brief   The signal is triggered when a text filter is changed.
      * \param   logicalColumn  The logical column index of the filter.
-     * \param   text           The text entered in the text filter.
+     * \param   text                The text entered in the text filter.
+     * \param   isCaseSensitive     True if the text filter is case-sensitive.
+     * \param   isWholeWord         True if the text filter is for whole words only.
+     * \param   isWildCard          True if the text filter is a wildcard search.
      **/
-    void signalTextFilterChanged(int logicalColumn, const QString& text);
+    void signalTextFilterChanged(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
 
 protected:
 /************************************************************************

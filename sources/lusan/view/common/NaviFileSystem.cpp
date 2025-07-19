@@ -43,6 +43,8 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullp
     , mTableCell    (nullptr)
 {
     ui->setupUi(this);
+    ctrlToolShowAll()->setStyleSheet(NELusanCommon::getStyleToolbutton());
+    ctrlToolNaviRoot()->setStyleSheet(NELusanCommon::getStyleToolbutton());
     setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
     setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
@@ -65,6 +67,11 @@ QToolButton* NaviFileSystem::ctrlToolRefresh(void) const
 QToolButton* NaviFileSystem::ctrlToolShowAll(void) const
 {
     return ui->toolShowAll;
+}
+
+QToolButton* NaviFileSystem::ctrlToolNaviRoot(void) const
+{
+    return ui->toolNaviRoot;
 }
 
 QToolButton* NaviFileSystem::ctrlToolCollapse(void) const
@@ -413,15 +420,15 @@ void NaviFileSystem::setupWidgets(void)
 
 void NaviFileSystem::setupSignals(void)
 {
-    connect(ui->toolRefresh         , &QToolButton::clicked,      this, &NaviFileSystem::onToolRefreshClicked);
-    connect(ui->toolShowAll         , &QToolButton::toggled,      this, &NaviFileSystem::onToolShowAllToggled);
-    connect(ui->toolCollapseAll     , &QToolButton::clicked,      this, &NaviFileSystem::onToolCollapseAllClicked);
-    connect(ui->toolNewFolder       , &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFolderClicked);
-    connect(ui->toolNewFile         , &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFileClicked);
-    connect(ui->toolEditSelected    , &QToolButton::clicked,      this, &NaviFileSystem::onToolEditSelectedClicked);
-    connect(ui->toolOpenSelected    , &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
-    connect(ui->toolDeleteSelected  , &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
-    connect(ui->toolNaviRoot        , &QToolButton::clicked,      this, &NaviFileSystem::onToolNaviRootClicked);
+    connect(ctrlToolRefresh()       , &QToolButton::clicked,      this, &NaviFileSystem::onToolRefreshClicked);
+    connect(ctrlToolShowAll()       , &QToolButton::toggled,      this, &NaviFileSystem::onToolShowAllToggled);
+    connect(ctrlToolCollapse()      , &QToolButton::clicked,      this, &NaviFileSystem::onToolCollapseAllClicked);
+    connect(ctrlToolNewFolder()     , &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFolderClicked);
+    connect(ctrlToolNewFile()       , &QToolButton::clicked,      this, &NaviFileSystem::onToolNewFileClicked);
+    connect(ctrlToolEdit()          , &QToolButton::clicked,      this, &NaviFileSystem::onToolEditSelectedClicked);
+    connect(ctrlToolOpen()          , &QToolButton::clicked,      this, &NaviFileSystem::onToolOpenSelectedClicked);
+    connect(ctrlToolDelete()        , &QToolButton::clicked,      this, &NaviFileSystem::onToolDeleteSelectedClicked);
+    connect(ctrlToolNaviRoot()      , &QToolButton::clicked,      this, &NaviFileSystem::onToolNaviRootClicked);
     connect(ctrlTable()             , &QTreeView::doubleClicked,  this, &NaviFileSystem::onTreeViewDoubleClicked);
     connect(ctrlTable()             , &QTreeView::entered,        this, &NaviFileSystem::onTreeViewActivated);
     connect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);

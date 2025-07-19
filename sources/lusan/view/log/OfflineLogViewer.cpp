@@ -50,7 +50,14 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , mMdiWindow    (new QWidget())
     , mHeader       (nullptr)
 {
+    QList<SearchLineEdit::eToolButton> tools;
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonSearch);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchCase);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchWord);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
     ui->setupUi(mMdiWindow);
+    ctrlSearchText()->initialize(tools, QSize(20, 20));
+
     mLogModel   = new OfflineLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
     
@@ -205,6 +212,36 @@ QHeaderView* OfflineLogViewer::ctrlHeader(void)
 QLabel* OfflineLogViewer::ctrlFile(void)
 {
     return ui->lableFile;
+}
+
+SearchLineEdit* OfflineLogViewer::ctrlSearchText(void)
+{
+    return ui->textSearch;
+}
+
+QToolButton* OfflineLogViewer::ctrlButtonSearch(void)
+{
+    return ui->textSearch->buttonSearch();
+}
+
+QToolButton* OfflineLogViewer::ctrlButtonCaseSensitive(void)
+{
+    return ui->textSearch->buttonMatchCase();
+}
+
+QToolButton* OfflineLogViewer::ctrlButtonWholeWords(void)
+{
+    return ui->textSearch->buttonMatchWord();
+}
+
+QToolButton* OfflineLogViewer::ctrlSearchWildcard(void)
+{
+    return ui->textSearch->buttonWildCard();
+}
+
+QToolButton* OfflineLogViewer::ctrlSearchBackward(void)
+{
+    return ui->textSearch->buttonSearchBackward();
 }
 
 void OfflineLogViewer::populateColumnsMenu(QMenu* menu, int curRow)

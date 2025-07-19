@@ -57,3 +57,9 @@ uint64_t NELusanCommon::getTimestamp(void)
 {
     return static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch());
 }
+
+const QString& NELusanCommon::getStyleToolbutton(void)
+{
+    static const QString& _style(QString::fromUtf8(NELusanCommon::StyleToolbuttonChecked.data(), NELusanCommon::StyleToolbuttonChecked.length()));
+    return _style;
+}

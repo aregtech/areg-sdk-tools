@@ -39,6 +39,16 @@ class LoggingModelBase;
 class LogViewerFilterProxy : public QSortFilterProxyModel
 {
     Q_OBJECT
+    
+private:
+    
+    struct sStringFilter
+    {
+        QString text            {};
+        bool    isCaseSensitive {false};
+        bool    isWholeWord     {false};
+        bool    isWildCard      {false};
+    };
 
 public:
     /**
@@ -65,7 +75,7 @@ public slots:
      * \param   logicalColumn   The logical column index to filter.
      * \param   text           The text to filter by.
      **/
-    void setTextFilter(int logicalColumn, const QString& text);
+    void setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
 
     /**
      * \brief   Clears all filters.
@@ -101,14 +111,16 @@ private:
      * \return  True if the row matches all text filters.
      **/
     bool matchesTextFilters(int source_row) const;
+    
+    bool wildcardMatch(const QString& text, const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QMap<int, QStringList>  mComboFilters;   //!< Map of column index to selected filter items
-    QMap<int, QString>      mTextFilters;    //!< Map of column index to filter text
-    LoggingModelBase*       mLogModel;       //!< Pointer to the log viewer source model
+    QMap<int, QStringList>      mComboFilters;   //!< Map of column index to selected filter items
+    QMap<int, sStringFilter>    mTextFilters;    //!< Map of column index to filter text
+    LoggingModelBase*           mLogModel;       //!< Pointer to the log viewer source model
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call

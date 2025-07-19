@@ -145,7 +145,7 @@
                  <number>0</number>
                 </property>
                 <item>
-                 <widget class="QLineEdit" name="textSearch">
+                 <widget class="SearchLineEdit" name="textSearch">
                   <property name="toolTip">
                    <string>Search a phrase</string>
                   </property>

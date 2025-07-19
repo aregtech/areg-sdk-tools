@@ -41,6 +41,7 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
 
 {
     ui->setupUi(this);
+    ctrlCollapse()->setStyleSheet(NELusanCommon::getStyleToolbutton());
     setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
     setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
 
@@ -128,6 +129,11 @@ void NaviOfflineLogsScopes::optionClosed(bool OKpressed)
     // Called when options dialog is closed
     // No specific actions needed for offline explorer
     Q_UNUSED(OKpressed);
+}
+
+QToolButton* NaviOfflineLogsScopes::ctrlCollapse(void)
+{
+    return ui->toolCollapse;
 }
 
 QToolButton* NaviOfflineLogsScopes::ctrlOpenDatabase(void)

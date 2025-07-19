@@ -66,6 +66,8 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     _explorer = this;
     
     ui->setupUi(this);
+    ctrlConnect()->setStyleSheet(NELusanCommon::getStyleToolbutton());
+    ctrlCollapse()->setStyleSheet(NELusanCommon::getStyleToolbutton());
     setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
     setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
     setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
