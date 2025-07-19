@@ -16,6 +16,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/OptionPageProjectDirs.cpp
     ${LUSAN}/view/common/OptionPageWorkspace.cpp
     ${LUSAN}/view/common/ProjectSettings.cpp
+    ${LUSAN}/view/common/SearchLineEdit.cpp
     ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/common/Workspace.cpp
     ${LUSAN}/view/common/WorkspaceFileDialog.cpp
@@ -37,6 +38,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/OptionPageProjectDirs.hpp
     ${LUSAN}/view/common/OptionPageWorkspace.hpp
     ${LUSAN}/view/common/ProjectSettings.hpp
+    ${LUSAN}/view/common/SearchLineEdit.hpp
     ${LUSAN}/view/common/TableCell.hpp
     ${LUSAN}/view/common/Workspace.hpp
     ${LUSAN}/view/common/WorkspaceFileDialog.hpp

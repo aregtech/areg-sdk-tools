@@ -20,6 +20,7 @@
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include <QModelIndex>
+#include <QRegularExpression>
 
 LogViewerFilterProxy::LogViewerFilterProxy(LoggingModelBase* model)
     : QSortFilterProxyModel (model)
@@ -50,7 +51,7 @@ void LogViewerFilterProxy::setComboFilter(int logicalColumn, const QStringList& 
     invalidateFilter();
 }
 
-void LogViewerFilterProxy::setTextFilter(int logicalColumn, const QString& text)
+void LogViewerFilterProxy::setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard)
 {
     if (text.isEmpty())
     {
@@ -58,7 +59,7 @@ void LogViewerFilterProxy::setTextFilter(int logicalColumn, const QString& text)
     }
     else
     {
-        mTextFilters[logicalColumn] = text;
+        mTextFilters[logicalColumn] = sStringFilter{text, isCaseSensitive, isWholeWord, isWildCard};
     }
 
     invalidateFilter();
@@ -131,9 +132,9 @@ bool LogViewerFilterProxy::matchesTextFilters(int source_row) const
     for (auto it = mTextFilters.constBegin(); it != mTextFilters.constEnd(); ++it)
     {
         int column = it.key();
-        const QString& filterText = it.value();
+        const sStringFilter& filterText = it.value();
 
-        if (filterText.isEmpty())
+        if (filterText.text.isEmpty())
             continue;
 
         // Get the data for this column and row
@@ -144,9 +145,36 @@ bool LogViewerFilterProxy::matchesTextFilters(int source_row) const
         QString cellData = mLogModel->data(index, Qt::DisplayRole).toString();
 
         // Check if the cell data contains the filter text (case-insensitive)
-        if (cellData.contains(filterText, Qt::CaseInsensitive) == false)
+        if (filterText.isWildCard || filterText.isWholeWord)
+        {
+            if (wildcardMatch(cellData, filterText.text, filterText.isCaseSensitive, filterText.isWholeWord) == false)
+                return false;
+        }
+        else if (cellData.contains(filterText.text, filterText.isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive) == false)
+        {
             return false;
+        }
     }
 
     return true;
+}
+
+bool LogViewerFilterProxy::wildcardMatch(const QString& text, const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord) const
+{
+    // Escape regex special characters except * and ?
+    QString regexPattern = QRegularExpression::escape(wildcardPattern);
+    regexPattern.replace("\\*", ".*");
+    regexPattern.replace("\\?", ".");
+
+    // For whole word, use word boundaries, but treat '_' as a word boundary as well
+    if (isWholeWord)
+    {
+        // Custom boundaries: start of string or non-word char (including '_'), and end of string or non-word char (including '_')
+        // \b does not treat '_' as a boundary, so we use lookarounds
+        regexPattern = QStringLiteral("(?:(?<=^)|(?<=[^\\w]|_))") + regexPattern + QStringLiteral("(?:(?=$)|(?=[^\\w]|_))");
+    }
+
+    QRegularExpression::PatternOptions options = isCaseSensitive ? QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption;
+    QRegularExpression re(regexPattern, options);
+    return text.contains(re);
 }

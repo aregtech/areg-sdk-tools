@@ -27,6 +27,7 @@
  ************************************************************************/
 class QHeaderView;
 class QTableView;
+class QToolButton;
 class QLabel;
 class QWidget;
 class OfflineLogsModel;
@@ -34,6 +35,7 @@ class LiveLogViewer;
 class LogViewerFilterProxy;
 class LogTableHeader;
 class MdiMainWindow;
+class SearchLineEdit;
 
 namespace Ui {
     class OfflineLogViewer;
@@ -146,6 +148,24 @@ private:
 
     //!< Returns Logging File name label widget.
     QLabel* ctrlFile(void);
+
+    //!< Returns the pointer to the search line edit control.
+    SearchLineEdit* ctrlSearchText(void);
+
+    //!< Returns the pointer to the search next button of the search line edit control.
+    QToolButton* ctrlButtonSearch(void);
+
+    //!< Returns the pointer to the search case sensitive button of the search line edit control.
+    QToolButton* ctrlButtonCaseSensitive(void);
+
+    //!< Returns the pointer to the search match word button of the search line edit control.
+    QToolButton* ctrlButtonWholeWords(void);
+
+    //!< Returns the pointer to the search wild card button of the search line edit control.
+    QToolButton* ctrlSearchWildcard(void);
+
+    //!< Returns the pointer to the search backward button of the search line edit control.
+    QToolButton* ctrlSearchBackward(void);
 
     /**
      * \brief   Populates menu and sets the action handlers.

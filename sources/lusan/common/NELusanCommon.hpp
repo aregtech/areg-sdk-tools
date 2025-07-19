@@ -98,6 +98,16 @@ namespace NELusanCommon
      * \return  The current timestamp.
      **/
     uint64_t getTimestamp(void);
+
+    /**
+     * \brief   Stylesheet for QToolButton when it is checked.
+     **/
+    constexpr std::string_view  StyleToolbuttonChecked      {"QToolButton::checked{background-color: rgba(163, 183, 204, 80); border-radius: 6px; border: none;}"};
+    
+    /**
+     * \brief   Returns QToolButton stylesheet when it is checked.
+     **/
+    const QString& getStyleToolbutton(void);
     
     /**
      * \brief   XML workspace version.

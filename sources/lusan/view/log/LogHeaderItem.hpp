@@ -190,7 +190,13 @@ class LogTextFilter : public QFrame
     Q_OBJECT
 
 public:
-    explicit LogTextFilter(QWidget* parent = nullptr);
+    /**
+     * \brief   Creates the simple or extended text filter object.
+     *          The extended text filter is an instance of SearchLineEdit and contains additional tool-buttons
+     * \param   isExtended  If true, the text filter is extended and contains additional tool-buttons for match case, match word, wild card, and backward search.
+     * \param   parent  The parent widget of the text filter.
+     **/
+    explicit LogTextFilter(bool isExtended, QWidget* parent = nullptr);
 
     /**
      * \brief   Returns types string in the line edit
@@ -211,7 +217,19 @@ signals:
      * \brief   A signal triggered when user types a text inside editor
      * \param   text    A new text.
      */
-    void signalFilterTextChanged(const QString& text);
+    void signalFilterTextChanged(const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWidlCard);
+    
+private slots:
+/************************************************************************
+ * Slots
+ ************************************************************************/
+
+    /**
+     * \brief   Slot triggered when the tool-button is checked or unchecked.
+     *          The slot emits signalFilterTextChanged with the current text and flags.
+     * \param   checked     Is set true if tool-button is checked, false otherwise.
+     **/
+    void slotToolbuttonChecked(bool checked);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

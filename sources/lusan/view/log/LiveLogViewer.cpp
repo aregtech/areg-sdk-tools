@@ -20,12 +20,14 @@
 #include "lusan/view/log/LiveLogViewer.hpp"
 #include "ui/ui_LiveLogViewer.h"
 
+#include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/common/NaviLiveLogsScopes.hpp"
+#include "lusan/view/common/SearchLineEdit.hpp"
+#include "lusan/view/log/LogTableHeader.hpp"
+
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
-#include "lusan/view/common/MdiMainWindow.hpp"
-#include "lusan/view/common/NaviLiveLogsScopes.hpp"
-#include "lusan/view/log/LogTableHeader.hpp"
 
 #include <QMdiSubWindow>
 #include <QMenu>
@@ -44,9 +46,15 @@ LiveLogViewer::LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     , mMdiWindow    (new QWidget())
     , mHeader       (nullptr)
 {
+    QList<SearchLineEdit::eToolButton> tools;
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonSearch);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchCase);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchWord);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
     ui->setupUi(mMdiWindow);
+    ctrlSearchText()->initialize(tools, QSize(20, 20));
+    
     QTableView* view = ctrlTable();
-
     mLogModel   = new LiveLogsModel(this);
     mFilter     = new LogViewerFilterProxy(mLogModel);
     mHeader     = new LogTableHeader(view, mLogModel);
@@ -246,6 +254,36 @@ QToolButton* LiveLogViewer::ctrlClear(void)
 QLabel* LiveLogViewer::ctrlFile(void)
 {
     return ui->lableFile;
+}
+
+SearchLineEdit* LiveLogViewer::ctrlSearchText(void)
+{
+    return ui->textSearch;
+}
+
+QToolButton* LiveLogViewer::ctrlButtonSearch(void)
+{
+    return ui->textSearch->buttonSearch();
+}
+
+QToolButton* LiveLogViewer::ctrlButtonCaseSensitive(void)
+{
+    return ui->textSearch->buttonMatchCase();
+}
+
+QToolButton* LiveLogViewer::ctrlButtonWholeWords(void)
+{
+    return ui->textSearch->buttonMatchWord();
+}
+
+QToolButton* LiveLogViewer::ctrlSearchWildcard(void)
+{
+    return ui->textSearch->buttonWildCard();
+}
+
+QToolButton* LiveLogViewer::ctrlSearchBackward(void)
+{
+    return ui->textSearch->buttonSearchBackward();
 }
 
 void LiveLogViewer::populateColumnsMenu(QMenu* menu, int curRow)

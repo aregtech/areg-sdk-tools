@@ -89,6 +89,11 @@ public:
      * \brief   Returns the show all tool button control.
      **/
     QToolButton* ctrlToolShowAll(void) const;
+    
+    /**
+     * \brief   Returns the navigate from root (machine) tool button control.
+     **/
+    QToolButton* ctrlToolNaviRoot(void) const;
 
     /**
      * \brief   Returns the collapse all tool button control.

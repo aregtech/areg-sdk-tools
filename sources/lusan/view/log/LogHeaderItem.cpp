@@ -18,6 +18,7 @@
  ************************************************************************/
 #include "lusan/view/log/LogHeaderItem.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
+#include "lusan/view/common/SearchLineEdit.hpp"
 
 #include <QComboBox>
 #include <QHBoxLayout>
@@ -82,20 +83,34 @@ QStringList LogComboFilter::getCheckedItems() const
     return checked;
 }
 
-LogTextFilter::LogTextFilter(QWidget* parent)
+LogTextFilter::LogTextFilter(bool isExtended, QWidget* parent)
     : QFrame(parent)
     , mLineEdit(nullptr)
 {
     setWindowFlags(Qt::Popup);
     setFrameShape(QFrame::Box);
-    mLineEdit = new QLineEdit(this);
+    if (isExtended)
+    {
+        mLineEdit = new SearchLineEdit(QList<SearchLineEdit::eToolButton>{SearchLineEdit::eToolButton::ToolButtonMatchCase, SearchLineEdit::eToolButton::ToolButtonMatchWord, SearchLineEdit::eToolButton::ToolButtonWildCard}, QSize(20, 20), this);
+        connect(static_cast<SearchLineEdit *>(mLineEdit), &SearchLineEdit::signalFilterText, [this](const QString & text, bool isCaseSensitive, bool isWholeWord, bool isWildCard){
+            emit signalFilterTextChanged(text, isCaseSensitive, isWholeWord, isWildCard);
+        });
+        connect(static_cast<SearchLineEdit*>(mLineEdit), &SearchLineEdit::signalButtonSearchMatchCaseClicked, this, &LogTextFilter::slotToolbuttonChecked);
+        connect(static_cast<SearchLineEdit*>(mLineEdit), &SearchLineEdit::signalButtonSearchMatchWordClicked, this, &LogTextFilter::slotToolbuttonChecked);
+        connect(static_cast<SearchLineEdit*>(mLineEdit), &SearchLineEdit::signalButtonSearchWildCardClicked , this, &LogTextFilter::slotToolbuttonChecked);
+    }
+    else
+    {
+        mLineEdit = new QLineEdit(this);
+        connect(mLineEdit, &QLineEdit::textChanged, this, [this](const QString & text){
+            emit signalFilterTextChanged(text, false, false, false);
+        });
+    }
+    
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(2, 2, 2, 2);
     layout->addWidget(mLineEdit);
     
-    connect(mLineEdit, &QLineEdit::textChanged, this, [this](const QString & text){
-        emit signalFilterTextChanged(text);
-    });
 }
 
 QString LogTextFilter::getText() const
@@ -108,6 +123,18 @@ void LogTextFilter::setText(const QString & newText)
     mLineEdit->setText(newText);
 }
 
+void LogTextFilter::slotToolbuttonChecked(bool checked)
+{
+    SearchLineEdit* srch = static_cast<SearchLineEdit*>(mLineEdit);
+    QString textFilter{ srch != nullptr ? srch->text() : QString() };
+    if (textFilter.isEmpty())
+        return;
+
+    emit signalFilterTextChanged(textFilter, srch->isMatchCaseChecked(), srch->isMatchWordChecked(), srch->isWildCardChecked());
+}
+
+/////////////////////////////////////////////////////////////
+// LogHeaderItem class implementation
 /////////////////////////////////////////////////////////////
 
 LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
@@ -133,11 +160,18 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
         break;
 
     case LiveLogsModel::eColumn::LogColumnScopeId:
+        mType = eType::Text;
+        mEdit = new LogTextFilter(false, &mHeader);
+        connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
+            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText, isCaseSensitive, isWholeWord, isWildCard);
+        });
+        break;
+        
     case LiveLogsModel::eColumn::LogColumnMessage:
         mType = eType::Text;
-        mEdit = new LogTextFilter(&mHeader);
-        connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText) {
-            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText);
+        mEdit = new LogTextFilter(true, &mHeader);
+        connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
+            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText, isCaseSensitive, isWholeWord, isWildCard);
             });
         break;
 

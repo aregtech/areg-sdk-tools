@@ -172,16 +172,15 @@ QModelIndex LoggingScopesModelBase::index(int row, int column, const QModelIndex
         return QModelIndex();
 
     const LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
+    ScopeNodeBase* parentNode = parent.isValid() ? static_cast<ScopeNodeBase*>(parent.internalPointer()) : nullptr;
     
-    if ((parent.isValid() == false) || (parent == mRootIndex))
+    if (parentNode == nullptr)
     {
         ScopeRoot* root = (row >= 0) && (row < static_cast<int>(roots.size())) ? roots[row] : nullptr;
         return (root != nullptr ? createIndex(row, column, root) : mRootIndex);
     }
     else
     {
-        ScopeNodeBase* parentNode = static_cast<ScopeNodeBase*>(parent.internalPointer());
-        Q_ASSERT(parentNode != nullptr);
         ScopeNodeBase* childNode = parentNode->getChildAt(row);
         return (childNode != nullptr ? createIndex(row, column, childNode) : QModelIndex());
     }
@@ -216,7 +215,8 @@ QModelIndex LoggingScopesModelBase::parent(const QModelIndex& child) const
 
 int LoggingScopesModelBase::rowCount(const QModelIndex& parent) const
 {
-    if ((parent.isValid() == false) || (parent == mRootIndex))
+    ScopeNodeBase* node = parent.isValid() ? static_cast<ScopeNodeBase*>(parent.internalPointer()) : nullptr;
+    if (node == nullptr)
     {
         // Root level - return number of instances
         return (mLoggingModel != nullptr ? static_cast<int>(mLoggingModel->getRootList().size()) : 0);
@@ -224,8 +224,6 @@ int LoggingScopesModelBase::rowCount(const QModelIndex& parent) const
     else
     {
         // Child level - get from the node
-        ScopeNodeBase* node = static_cast<ScopeNodeBase*>(parent.internalPointer());
-        Q_ASSERT(node != nullptr);
         return node->getChildCount();
     }
 }
