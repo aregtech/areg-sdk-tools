@@ -53,8 +53,6 @@ public:
 // Constructors
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SearchLineEdit(const QList<SearchLineEdit::eToolButton> & addButtons, QSize buttonSize = QSize(16, 16), QWidget* parent = nullptr);
-
     /**
      * \brief   Creates search line edit object with integrated tool-buttons.
      *          The type of tool-buttons to add is specified in the \p addButtons parameter.
