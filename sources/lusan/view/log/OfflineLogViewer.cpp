@@ -22,8 +22,9 @@
 
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
-#include "lusan/view/log/LogTableHeader.hpp"
+#include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
+#include "lusan/view/log/LogTableHeader.hpp"
 
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"

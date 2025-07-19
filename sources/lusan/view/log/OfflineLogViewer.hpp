@@ -27,6 +27,7 @@
  ************************************************************************/
 class QHeaderView;
 class QTableView;
+class QToolButton;
 class QLabel;
 class QWidget;
 class OfflineLogsModel;
