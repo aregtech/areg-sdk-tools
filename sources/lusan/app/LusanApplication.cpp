@@ -268,7 +268,6 @@ MdiMainWindow* LusanApplication::getMainWindow(void)
 
 int LusanApplication::runApplication(const QString& workspace)
 {
-    
     MdiMainWindow w;
     mMainWindow = &w;
     

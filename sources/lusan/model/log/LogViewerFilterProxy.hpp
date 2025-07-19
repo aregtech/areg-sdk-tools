@@ -39,6 +39,20 @@ class LoggingModelBase;
 class LogViewerFilterProxy : public QSortFilterProxyModel
 {
     Q_OBJECT
+    
+//////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
+private:
+
+    //!< Structure to hold text filter parameters
+    struct sStringFilter
+    {
+        QString text            {};         //!< The text to filter by
+        bool    isCaseSensitive {false};    //!< Indicates if the filter is case-sensitive
+        bool    isWholeWord     {false};    //!< Indicates if the filter matches whole words only
+        bool    isWildCard      {false};    //!< Indicates if the filter uses wildcards
+    };
 
 public:
     /**
@@ -65,7 +79,7 @@ public slots:
      * \param   logicalColumn   The logical column index to filter.
      * \param   text           The text to filter by.
      **/
-    void setTextFilter(int logicalColumn, const QString& text);
+    void setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
 
     /**
      * \brief   Clears all filters.
@@ -102,13 +116,23 @@ private:
      **/
     bool matchesTextFilters(int source_row) const;
 
+    /**
+     * \brief   Helper method to perform wildcard matching.
+     * \param   text            The text to match against the wildcard pattern.
+     * \param   wildcardPattern The wildcard pattern to match against.
+     * \param   isCaseSensitive Flag indicating if the match is case-sensitive.
+     * \param   isWholeWord     Flag indicating if the match is for whole words only.
+     * \return  True if the text matches the wildcard pattern, false otherwise.
+     **/
+    bool wildcardMatch(const QString& text, const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    QMap<int, QStringList>  mComboFilters;   //!< Map of column index to selected filter items
-    QMap<int, QString>      mTextFilters;    //!< Map of column index to filter text
-    LoggingModelBase*       mLogModel;       //!< Pointer to the log viewer source model
+    QMap<int, QStringList>      mComboFilters;   //!< Map of column index to selected filter items
+    QMap<int, sStringFilter>    mTextFilters;    //!< Map of column index to filter text
+    LoggingModelBase*           mLogModel;       //!< Pointer to the log viewer source model
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call

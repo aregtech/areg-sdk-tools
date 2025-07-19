@@ -247,12 +247,18 @@
                  <number>0</number>
                 </property>
                 <item>
-                 <widget class="QLineEdit" name="textSearch">
+                 <widget class="SearchLineEdit" name="textSearch">
                   <property name="toolTip">
                    <string>Search a phrase</string>
                   </property>
+                  <property name="dragEnabled">
+                   <bool>true</bool>
+                  </property>
                   <property name="placeholderText">
                    <string>search a phrase in logs</string>
+                  </property>
+                  <property name="clearButtonEnabled">
+                   <bool>true</bool>
                   </property>
                  </widget>
                 </item>
@@ -396,6 +402,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SearchLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>lusan/view/common/SearchLineEdit.hpp</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
