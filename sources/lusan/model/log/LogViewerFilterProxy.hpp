@@ -40,14 +40,18 @@ class LogViewerFilterProxy : public QSortFilterProxyModel
 {
     Q_OBJECT
     
+//////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
 private:
-    
+
+    //!< Structure to hold text filter parameters
     struct sStringFilter
     {
-        QString text            {};
-        bool    isCaseSensitive {false};
-        bool    isWholeWord     {false};
-        bool    isWildCard      {false};
+        QString text            {};         //!< The text to filter by
+        bool    isCaseSensitive {false};    //!< Indicates if the filter is case-sensitive
+        bool    isWholeWord     {false};    //!< Indicates if the filter matches whole words only
+        bool    isWildCard      {false};    //!< Indicates if the filter uses wildcards
     };
 
 public:
@@ -111,7 +115,15 @@ private:
      * \return  True if the row matches all text filters.
      **/
     bool matchesTextFilters(int source_row) const;
-    
+
+    /**
+     * \brief   Helper method to perform wildcard matching.
+     * \param   text            The text to match against the wildcard pattern.
+     * \param   wildcardPattern The wildcard pattern to match against.
+     * \param   isCaseSensitive Flag indicating if the match is case-sensitive.
+     * \param   isWholeWord     Flag indicating if the match is for whole words only.
+     * \return  True if the text matches the wildcard pattern, false otherwise.
+     **/
     bool wildcardMatch(const QString& text, const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord) const;
 
 //////////////////////////////////////////////////////////////////////////
