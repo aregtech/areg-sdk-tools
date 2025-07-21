@@ -50,6 +50,16 @@ public:
 
     explicit LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::Orientation orientation = Qt::Horizontal);
 
+//////////////////////////////////////////////////////////////////////////
+// LogTableHeader attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Resets filter data of all columns.
+     **/
+    void resetFilters(void);
+
 signals:
 /************************************************************************
  * Signals

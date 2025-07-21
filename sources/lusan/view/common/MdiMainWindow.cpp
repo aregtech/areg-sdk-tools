@@ -20,6 +20,8 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/log/LogObserver.hpp"
+#include "lusan/model/log/LiveLogsModel.hpp"
+#include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
@@ -228,7 +230,7 @@ LiveLogsModel * MdiMainWindow::setupLiveLogging(void)
         mMdiArea.setActiveSubWindow(mLiveLogWnd);
     }
 
-    return mLogViewer->getLoggingModel();
+    return static_cast<LiveLogsModel *>(mLogViewer->getLoggingModel());
 }
 
 NaviFileSystem& MdiMainWindow::getNaviFileSystem(void)
@@ -633,7 +635,8 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     mdiSub->setWindowIcon(Navigation::getOfflineLogIcon());
     mMdiArea.showMaximized();
     mNavigation.showTab(Navigation::NaviOfflineLogs);
-    static_cast<NaviOfflineLogsScopes *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(child->getLoggingModel());
+    OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());
+    static_cast<NaviOfflineLogsScopes *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(logModel);
     if (filePath.isEmpty() == false)
     {
         child->openDatabase(filePath);

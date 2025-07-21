@@ -45,6 +45,14 @@ LogTableHeader::LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::
     }
 }
 
+void LogTableHeader::resetFilters(void)
+{
+    for (LogHeaderItem* item : mHeaders)
+    {
+        item->resetFilter();
+    }
+}
+
 inline void LogTableHeader::drawingRects(const QRect& rect, QRect& rcButton, QRect& rcText) const
 {
     constexpr int marginText    { 4 };

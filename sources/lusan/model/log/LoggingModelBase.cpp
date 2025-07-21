@@ -504,7 +504,7 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     mReadThread.createThread(NECommon::DO_NOT_WAIT);
 }
 
-QVariant LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QString LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_ASSERT(logMessage != nullptr);
 
@@ -517,7 +517,7 @@ QVariant LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessa
         return QString::fromStdString(DateTime(logMessage->logTimestamp).formatTime().getData());
 
     case eColumn::LogColumnSource:
-        return QVariant(QString(logMessage->logModule) + " (" + QString::number(logMessage->logCookie) + ")");
+        return QString(logMessage->logModule) + " (" + QString::number(logMessage->logCookie) + ")";
 
     case eColumn::LogColumnSourceId:
         return QString::number(logMessage->logCookie);
@@ -535,29 +535,29 @@ QVariant LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessa
         return QString(logMessage->logMessage);
 
     default:
-        return QVariant();
+        return QString();
     }
 }
 
-QVariant LoggingModelBase::getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QBrush LoggingModelBase::getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
     return QBrush(LogIconFactory::getLogBackgroundColor(*logMessage));
 }
 
-QVariant LoggingModelBase::getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QColor LoggingModelBase::getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
     return LogIconFactory::getLogColor(*logMessage);
 }
 
-QVariant LoggingModelBase::getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QIcon LoggingModelBase::getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_ASSERT(logMessage != nullptr);
     if (column != eColumn::LogColumnPriority)
-        return QVariant();
+        return QIcon();
 
     switch (logMessage->logMessagePrio)
     {
@@ -583,7 +583,7 @@ QVariant LoggingModelBase::getDecorationData(const NELogging::sLogMessage* logMe
     }
 }
 
-QVariant LoggingModelBase::getAlignmentData(eColumn column) const
+int LoggingModelBase::getAlignmentData(eColumn column) const
 {
     switch (column)
     {

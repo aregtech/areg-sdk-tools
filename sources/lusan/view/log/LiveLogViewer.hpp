@@ -20,22 +20,15 @@
  ************************************************************************/
 
 #include "lusan/common/NELusanCommon.hpp"
-#include "lusan/view/common/MdiChild.hpp"
+#include "lusan/view/log/LogViewerBase.hpp"
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class QHeaderView;
-class QTableView;
 class QToolButton;
-class QItemSelection;
 class QLabel;
 class QWidget;
-class LiveLogsModel;
-class LogViewerFilterProxy;
 class MdiMainWindow;
-class LogTableHeader;
-class SearchLineEdit;
 
 namespace Ui {
     class LiveLogViewer;
@@ -44,7 +37,7 @@ namespace Ui {
 /**
  * \brief   Log viewer MDI window
  **/
-class LiveLogViewer : public MdiChild
+class LiveLogViewer : public LogViewerBase
 {
     Q_OBJECT
 
@@ -105,12 +98,6 @@ public:
     bool isServiceConnected(void) const;
 
     /**
-     * \brief   Called to move to the bottom of the logs.
-     * \param   lastSelect    If true, the last row of logs will be selected after moving to the bottom.
-     **/
-    void moveToBottom(bool lastSelect);
-
-    /**
      * \brief   Called to check whether log viewer has log entries.
      **/
     bool isEmpty(void) const;
@@ -119,12 +106,6 @@ public:
      * \brief   Called to detach the log viewer and stop receiving messages.
      **/
     void detachLiveLog(void);
-
-    /**
-     * \brief   Returns the LiveLogsModel instance used by this viewer.
-     * \return  Pointer to the LiveLogsModel instance.
-     **/
-    LiveLogsModel* getLoggingModel(void) const;
 
     /**
      * \brief   Returns the database path of the live logs database.
@@ -143,11 +124,10 @@ protected:
     virtual void onWindowClosing(bool isActive) override;
 
     /**
-     * \brief   Called when the MDI child window is activated.
-     *          This method can be overridden to handle window activation events.
+     * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.
      **/
-    virtual void onWindowActivated(void) override;
-
+    virtual void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous) override;
+    
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -157,36 +137,6 @@ private slots:
      * \brief   Triggered when new entry is inserted in the table
      **/
     void onRowsInserted(const QModelIndex &parent, int first, int last);
-
-    /**
-     * \brief   Triggered when new table column is inserted.
-     **/
-    void onColumnsInserted(const QModelIndex &parent, int first, int last);
-
-    /**
-     * \brief   Triggered when a table column is removed.
-     **/
-    void onColumnsRemoved(const QModelIndex &parent, int first, int last);
-
-    /**
-     * \brief   Triggered when table columns are moved inserted from position to another.
-     **/
-    void onColumnsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd, const QModelIndex &destinationParent, int destinationColumn);
-
-    /**
-     * \brief   Slot, triggered when make mouse right click on header.
-     **/
-    void onHeaderContextMenu(const QPoint& pos);
-
-    /**
-     * \brief   Slot, triggered when make mouse right click on table view
-     **/
-    void onTableContextMenu(const QPoint& pos);
-    
-    /**
-     * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.
-     **/
-    void onRowChanged(const QModelIndex &current, const QModelIndex &previous);
 
     /**
      * \brief   Slot, triggered when Pause / Resume toolbutton is clicked.
@@ -207,19 +157,7 @@ private slots:
      **/
     void onClearClicked(void);
 
-    /**
-     * \brief   Slot, triggered when the main window is closing.
-     *          It is used to close the log database and release resources.
-     **/
-    void onMainWindowClosing(void);
-    
 private:
-    //!< Returns the pointer to the log table object.
-    QTableView* ctrlTable(void);
-
-    //!< Returns the pointer to the header object.
-    QHeaderView* ctrlHeader(void);
-
     //!< Returns Pause / Resume toolbutton
     QToolButton* ctrlPause(void);
 
@@ -231,30 +169,7 @@ private:
 
     //!< Returns Logging File name label widget.
     QLabel* ctrlFile(void);
-    
-    //!< Returns the pointer to the search line edit control.
-    SearchLineEdit* ctrlSearchText(void);
-    
-    //!< Returns the pointer to the search next button of the search line edit control.
-    QToolButton* ctrlButtonSearch(void);
-    
-    //!< Returns the pointer to the search case sensitive button of the search line edit control.
-    QToolButton* ctrlButtonCaseSensitive(void);
-    
-    //!< Returns the pointer to the search match word button of the search line edit control.
-    QToolButton* ctrlButtonWholeWords(void);
-    
-    //!< Returns the pointer to the search wild card button of the search line edit control.
-    QToolButton* ctrlSearchWildcard(void);
-    
-    //!< Returns the pointer to the search backward button of the search line edit control.
-    QToolButton* ctrlSearchBackward(void);
-    
-    /**
-     * \brief   Populates menu and sets the action handlers.
-     **/
-    void populateColumnsMenu(QMenu* menu, int curRow);
-    
+        
     /**
      * \brief   Resets the order of the columns.
      **/
@@ -284,10 +199,6 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     Ui::LiveLogViewer*      ui;             //!< User interface object, generated by Qt Designer.
-    LiveLogsModel*          mLogModel;      //!< Model for the log viewer, handling the data and its representation.
-    LogViewerFilterProxy *  mFilter;        //!< The filter for log viewer.
-    QWidget*                mMdiWindow;     //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
-    LogTableHeader*         mHeader;        //!< Log table header object.
 };
 
 #endif // LUSAN_VIEW_LOG_LIVELOGVIEWER_HPP

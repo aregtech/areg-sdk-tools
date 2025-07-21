@@ -53,7 +53,6 @@ public:
 // Constructors
 //////////////////////////////////////////////////////////////////////////
 public:
-
     /**
      * \brief   Creates search line edit object with integrated tool-buttons.
      *          The type of tool-buttons to add is specified in the \p addButtons parameter.
@@ -188,6 +187,12 @@ protected:
      * \brief   QLineEdit event triggered when the search line edit is resized.
      **/
     virtual void resizeEvent(QResizeEvent *event) override;
+
+    /**
+     * \brief   Override keyPressEvent to handle search shortcuts.
+     * \param   event   The key press event.
+     **/
+    virtual void keyPressEvent(QKeyEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

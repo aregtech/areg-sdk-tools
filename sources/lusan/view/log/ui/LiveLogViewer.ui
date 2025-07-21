@@ -262,19 +262,6 @@
                   </property>
                  </widget>
                 </item>
-                <item>
-                 <widget class="QPushButton" name="buttonSearch">
-                  <property name="toolTip">
-                   <string>Search a prhase in logs</string>
-                  </property>
-                  <property name="text">
-                   <string>Search</string>
-                  </property>
-                  <property name="icon">
-                   <iconset theme="QIcon::ThemeIcon::EditFind"/>
-                  </property>
-                 </widget>
-                </item>
                </layout>
               </widget>
              </item>

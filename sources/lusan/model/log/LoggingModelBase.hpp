@@ -297,7 +297,17 @@ public:
      * \param   idxLog     The index of the selected log message to set.
      **/
     inline void setSelectedLog(const QModelIndex& idxLog);
-    
+
+    /**
+     * \brief   Returns the logging message structure of specified row.
+     **/
+    inline const NELogging::sLogMessage* getLogData(int row) const;
+
+    /**
+     * \brief   Return the logging message entry of specified row and column.
+     **/
+    inline QString getLogEntry(int row, int col) const;
+
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -554,27 +564,27 @@ protected:
     /**
      * \brief   Helper to get display data for a log message and column.
      **/
-    QVariant getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QString getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get background color data for a log message and column.
      **/
-    QVariant getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QBrush getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get foreground color data for a log message and column.
      **/
-    QVariant getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QColor getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get decoration (icon) data for a log message and column.
      **/
-    QVariant getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QIcon getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get text alignment data for a column.
      **/
-    QVariant getAlignmentData(eColumn column) const;
+    int getAlignmentData(eColumn column) const;
 
 /************************************************************************/
 // IEThreadConsumer interface overrides
@@ -730,6 +740,16 @@ inline const QModelIndex& LoggingModelBase::getSelectedLog(void) const
 inline void LoggingModelBase::setSelectedLog(const QModelIndex& idxLog)
 {
     mSelectedLog = idxLog;
+}
+
+inline const NELogging::sLogMessage* LoggingModelBase::getLogData(int row) const
+{
+    return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? reinterpret_cast<const NELogging::sLogMessage*>(mLogs[row].getBuffer()) : nullptr);
+}
+
+inline QString LoggingModelBase::getLogEntry(int row, int col) const
+{
+    return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? getDisplayData(reinterpret_cast<const NELogging::sLogMessage*>(mLogs[row].getBuffer()), static_cast<eColumn>(col)) : QString());
 }
 
 inline void LoggingModelBase::_closeDatabase(void)

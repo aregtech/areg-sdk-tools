@@ -22,64 +22,41 @@
 
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
-#include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
 
 #include "lusan/model/log/OfflineLogsModel.hpp"
+#include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
-#include <QMdiSubWindow>
-#include <QMenu>
+
 #include <QFileInfo>
-#include <QMessageBox>
-#include <QVBoxLayout>
-#include <QHeaderView>
 #include <QTableView>
 #include <QLabel>
-
-const QString& OfflineLogViewer::fileExtension(void)
-{
-    return OfflineLogsModel::getFileExtension();
-}
+#include <QMdiSubWindow>
 
 OfflineLogViewer::OfflineLogViewer(MdiMainWindow *wndMain, QWidget *parent)
-    : MdiChild      (MdiChild::eMdiWindow::MdiOfflineLogViewer, wndMain, parent)
-
+    : LogViewerBase (MdiChild::eMdiWindow::MdiOfflineLogViewer, nullptr, wndMain, parent)
     , ui            (new Ui::OfflineLogViewer)
-    , mLogModel     (nullptr)
-    , mFilter       (nullptr)
-    , mMdiWindow    (new QWidget())
-    , mHeader       (nullptr)
 {
-    QList<SearchLineEdit::eToolButton> tools;
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonSearch);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchCase);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchWord);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
     ui->setupUi(mMdiWindow);
-    ctrlSearchText()->initialize(tools, QSize(20, 20));
-
     mLogModel   = new OfflineLogsModel(this);
-    mFilter     = new LogViewerFilterProxy(mLogModel);
+    mLogTable   = ui->logView;
+    mLogSearch  = ui->textSearch;
     
     setupWidgets();
     setupSignals(true);
 }
 
 OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer& liveLogs, QWidget* parent)
-    : MdiChild      (MdiChild::eMdiWindow::MdiOfflineLogViewer, wndMain, parent)
-
+    : LogViewerBase (MdiChild::eMdiWindow::MdiOfflineLogViewer, nullptr, wndMain, parent)
     , ui            (new Ui::OfflineLogViewer)
-    , mLogModel     (nullptr)
-    , mFilter       (nullptr)
-    , mMdiWindow    (new QWidget())
-    , mHeader       (nullptr)
 {
     ui->setupUi(mMdiWindow);
     mLogModel   = new OfflineLogsModel(this);
-    mFilter     = new LogViewerFilterProxy(mLogModel);
+    mLogTable   = ui->logView;
+    mLogSearch  = ui->textSearch;
 
-    LiveLogsModel* liveModel = liveLogs.getLoggingModel();
+    LoggingModelBase* liveModel = liveLogs.getLoggingModel();
     if (liveModel != nullptr)
     {
         mLogModel->dataTransfer(*liveModel);
@@ -87,13 +64,13 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer& liveLo
     }
     
     setupWidgets();
+    ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
+
     setupSignals(true);
     const QModelIndex idxSelected = mLogModel->getSelectedLog();
     if (idxSelected.isValid())
     {
-        ctrlTable()->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-        ctrlTable()->selectRow(idxSelected.row());
-        ctrlTable()->scrollTo(idxSelected);
+        moveToRow(idxSelected.row(), true);
     }
     else
     {
@@ -107,42 +84,16 @@ OfflineLogViewer::~OfflineLogViewer(void)
     cleanResources();
 }
 
-bool OfflineLogViewer::isDatabaseOpen(void) const
-{
-    Q_ASSERT(mLogModel != nullptr);
-    return mLogModel->isOperable();
-}
-
-bool OfflineLogViewer::openDatabase(const QString & logPath)
-{
-    bool result{false};
-    mLogModel->closeDatabase();
-    if (logPath.isEmpty() == false)
-    {
-        mLogModel->openDatabase(logPath, true);
-        if (mLogModel->isOperable())
-        {
-            setCurrentFile(mLogModel->getDatabasePath());
-            result = true;
-        }
-        else
-        {
-            QMessageBox::warning(this, tr("Error"), tr("Failed to open log database file: %1").arg(logPath));
-        }
-    }
-    
-    return result;
-}
-
 void OfflineLogViewer::onWindowClosing(bool isActive)
 {
-    setupSignals(false);
     Q_ASSERT(mMainWindow != nullptr);
+    setupSignals(false);
     if (isActive)
     {
         mMainWindow->getNaviOfflineScopes().setLoggingModel(nullptr);
-        cleanResources();
     }
+    
+    cleanResources();
 }
 
 void OfflineLogViewer::onWindowActivated(void)
@@ -151,27 +102,10 @@ void OfflineLogViewer::onWindowActivated(void)
     if (mMainWindow->getNaviOfflineScopes().getLoggingModel() != mLogModel)
     {
         mMainWindow->getNaviOfflineScopes().setLoggingModel(nullptr);
-        mMainWindow->getNaviOfflineScopes().setLoggingModel(mLogModel);
+        mMainWindow->getNaviOfflineScopes().setLoggingModel(static_cast<OfflineLogsModel *>(mLogModel));
     }
 
     mMainWindow->getNaviOfflineScopes().activateWindow();
-}
-
-void OfflineLogViewer::onHeaderContextMenu(const QPoint& pos)
-{
-    QMenu menu(this);
-    QModelIndex idx{ctrlTable()->currentIndex()};
-    populateColumnsMenu(&menu, idx.isValid() ? idx.row() : -1);
-    menu.exec(ctrlHeader()->mapToGlobal(pos));
-}
-
-void OfflineLogViewer::onTableContextMenu(const QPoint& pos)
-{
-    QMenu menu(this);
-    QMenu* columnsMenu = menu.addMenu(tr("Columns"));
-    QModelIndex idx{ctrlTable()->currentIndex()};    
-    populateColumnsMenu(columnsMenu, idx.isValid() ? idx.row() : -1);
-    menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
 }
 
 void OfflineLogViewer::onDatabaseOpened(const QString& dbPath)
@@ -200,151 +134,28 @@ void OfflineLogViewer::onDatabaseClosed(const QString& dbPath)
     }
 }
 
-QTableView* OfflineLogViewer::ctrlTable(void)
-{
-    return ui->logView;
-}
-
-QHeaderView* OfflineLogViewer::ctrlHeader(void)
-{
-    return ui->logView->horizontalHeader();
-}
-
 QLabel* OfflineLogViewer::ctrlFile(void)
 {
     return ui->lableFile;
 }
 
-SearchLineEdit* OfflineLogViewer::ctrlSearchText(void)
-{
-    return ui->textSearch;
-}
-
-QToolButton* OfflineLogViewer::ctrlButtonSearch(void)
-{
-    return ui->textSearch->buttonSearch();
-}
-
-QToolButton* OfflineLogViewer::ctrlButtonCaseSensitive(void)
-{
-    return ui->textSearch->buttonMatchCase();
-}
-
-QToolButton* OfflineLogViewer::ctrlButtonWholeWords(void)
-{
-    return ui->textSearch->buttonMatchWord();
-}
-
-QToolButton* OfflineLogViewer::ctrlSearchWildcard(void)
-{
-    return ui->textSearch->buttonWildCard();
-}
-
-QToolButton* OfflineLogViewer::ctrlSearchBackward(void)
-{
-    return ui->textSearch->buttonSearchBackward();
-}
-
-void OfflineLogViewer::populateColumnsMenu(QMenu* menu, int curRow)
-{
-    // Get current active columns from the model
-    const QList<OfflineLogsModel::eColumn>& activeCols = mLogModel->getActiveColumns();
-    const QStringList& headers{ OfflineLogsModel::getHeaderList() };
-
-    // Add actions for each available column
-    for (int i = 0; i < static_cast<int>(OfflineLogsModel::eColumn::LogColumnCount); ++i)
-    {
-        OfflineLogsModel::eColumn col = static_cast<OfflineLogsModel::eColumn>(i);
-        QString headerName = headers.at(i);
-        
-        QAction* action = menu->addAction(headerName);
-        action->setCheckable(true);
-        action->setChecked(activeCols.contains(col));
-        
-        connect(action, &QAction::triggered, [this, col, action](){
-            if (action->isChecked())
-            {
-                mLogModel->addColumn(col);
-            }
-            else
-            {
-                mLogModel->removeColumn(col);
-            }
-        });
-    }
-}
-
-void OfflineLogViewer::resetColumnOrder()
-{
-    // Reset to default column order
-    mLogModel->setActiveColumns(OfflineLogsModel::getDefaultColumns());
-}
-
 void OfflineLogViewer::setupSignals(bool doSetup)
 {
-    if (ui == nullptr)
-    {
-        Q_ASSERT(mLogModel == nullptr);
-        Q_ASSERT(mFilter == nullptr);
-        return;
-    }
-
-    QTableView* view = ctrlTable();
+    Q_ASSERT(mLogModel != nullptr);
+    
+    OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(mLogModel);
     if (doSetup)
     {
         // Connect signals
-        connect(mLogModel, &OfflineLogsModel::signalDatabaseIsOpened, this      , &OfflineLogViewer::onDatabaseOpened);
-        connect(mLogModel, &OfflineLogsModel::signalDatabaseIsClosed, this      , &OfflineLogViewer::onDatabaseClosed);
-        connect(mHeader  , &QHeaderView::customContextMenuRequested , this      , &OfflineLogViewer::onHeaderContextMenu);
-        connect(mHeader  , &LogTableHeader::signalComboFilterChanged, mFilter   , &LogViewerFilterProxy::setComboFilter);
-        connect(mHeader  , &LogTableHeader::signalTextFilterChanged , mFilter   , &LogViewerFilterProxy::setTextFilter);
-        connect(view     , &QTableView::customContextMenuRequested  , this      , &OfflineLogViewer::onTableContextMenu);
+        connect(logModel, &OfflineLogsModel::signalDatabaseIsOpened, this      , &OfflineLogViewer::onDatabaseOpened);
+        connect(logModel, &OfflineLogsModel::signalDatabaseIsClosed, this      , &OfflineLogViewer::onDatabaseClosed);
     }
     else
     {
         // Disconnect signals
-        disconnect(mLogModel, &OfflineLogsModel::signalDatabaseIsOpened, this      , &OfflineLogViewer::onDatabaseOpened);
-        disconnect(mLogModel, &OfflineLogsModel::signalDatabaseIsClosed, this      , &OfflineLogViewer::onDatabaseClosed);
-        disconnect(mHeader  , &QHeaderView::customContextMenuRequested , this      , &OfflineLogViewer::onHeaderContextMenu);
-        disconnect(mHeader  , &LogTableHeader::signalComboFilterChanged, mFilter   , &LogViewerFilterProxy::setComboFilter);
-        disconnect(mHeader  , &LogTableHeader::signalTextFilterChanged , mFilter   , &LogViewerFilterProxy::setTextFilter);
-        disconnect(view     , &QTableView::customContextMenuRequested  , this      , &OfflineLogViewer::onTableContextMenu);
+        disconnect(logModel, &OfflineLogsModel::signalDatabaseIsOpened, this      , &OfflineLogViewer::onDatabaseOpened);
+        disconnect(logModel, &OfflineLogsModel::signalDatabaseIsClosed, this      , &OfflineLogViewer::onDatabaseClosed);
     }
-}
-
-void OfflineLogViewer::setupWidgets(void)
-{
-    QTableView* view = ctrlTable();
-    mHeader = new LogTableHeader(view, mLogModel);
-    view->setHorizontalHeader(mHeader);
-
-    mHeader->setVisible(true);
-    mHeader->show();
-    mHeader->setContextMenuPolicy(Qt::CustomContextMenu);
-    mHeader->setSectionsMovable(true);
-
-    view->setSelectionBehavior(QAbstractItemView::SelectRows);
-    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    view->setSelectionMode(QAbstractItemView::SingleSelection);
-    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    view->setShowGrid(false);
-    view->setCurrentIndex(QModelIndex());
-    view->horizontalHeader()->setStretchLastSection(true);
-    view->verticalHeader()->hide();
-    view->setAutoScroll(true);
-    view->setVerticalScrollMode(QTableView::ScrollPerItem);
-    view->setContextMenuPolicy(Qt::CustomContextMenu);
-
-    view->setModel(mFilter);
-
-    // Set the layout
-    QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->addWidget(mMdiWindow);
-    setLayout(layout);
-
-    setAttribute(Qt::WA_DeleteOnClose);
-    ctrlTable()->setAutoScroll(true);
-    ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
 }
 
 void OfflineLogViewer::cleanResources(void)
@@ -365,6 +176,7 @@ void OfflineLogViewer::cleanResources(void)
     view->setModel(nullptr);
     view->setHorizontalHeader(nullptr);
     mFilter->setSourceModel(nullptr);
+    mSearch.setLogModel(nullptr);
     mLogModel->closeDatabase();
 
     delete ui;

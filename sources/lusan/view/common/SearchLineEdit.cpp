@@ -22,6 +22,7 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QKeyEvent>
 #include <QWidget>
 
 SearchLineEdit::SearchLineEdit(const QList<SearchLineEdit::eToolButton>& addButtons, QSize buttonSize, QWidget* parent)
@@ -227,4 +228,35 @@ void SearchLineEdit::resizeEvent(QResizeEvent *event)
     {
         mToolButtons->move(rect().right() - mToolButtons->width(), 0);
     }
+}
+
+void SearchLineEdit::keyPressEvent(QKeyEvent* event)
+{
+    // Handle keyboard shortcuts for search functionality
+    if (event->key() == Qt::Key_F && (event->modifiers() & Qt::ControlModifier))
+    {
+        // Ctrl+F: Focus on search field
+        setFocus();
+        selectAll();
+        event->accept();
+        return;
+    }
+    else if ((event->key() == Qt::Key_F3) || (event->key() == Qt::Key_Return))
+    {
+        // F3: Find next (same as clicking search button)
+        emit signalButtonSearchClicked(true);
+        emit signalSearchText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
+        setFocus();
+        event->accept();
+        return;
+    }
+    else if (event->key() == Qt::Key_Escape)
+    {
+        // Escape: Clear search field and focus table
+        clear();
+        event->accept();
+    }
+
+    // Pass through to parent class
+    QLineEdit::keyPressEvent(event);
 }
