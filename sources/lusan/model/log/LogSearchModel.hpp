@@ -33,6 +33,11 @@
  ************************************************************************/
 class LoggingModelBase;
 
+/**
+ * \brief   LogSearchModel class provides functionality to search for text in log messages.
+ *          It can search in both live and offline logging models.
+ *          The search can be case-sensitive, whole word only, and can use wildcards.
+ **/
 class LogSearchModel    : public QObject
 {
 //////////////////////////////////////////////////////////////////////////
@@ -64,6 +69,8 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     LogSearchModel(LoggingModelBase* logModel = nullptr);
+
+    virtual ~LogSearchModel(void) = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
