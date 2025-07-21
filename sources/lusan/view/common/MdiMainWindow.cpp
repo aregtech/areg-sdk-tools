@@ -608,6 +608,14 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview));
+    mdiSub->setWindowModified(true);
+    mdiSub->setWindowFilePath(filePath);
+    mdiSub->setToolTip(filePath);
+    if (filePath.isEmpty() == false)
+    {
+        std::string stdFilePath{filePath.toStdString()};
+        mdiSub->setWindowTitle(QString::fromStdString(File::getFileNameWithExtension(stdFilePath.c_str()).getData()));
+    }
 
     connect(child, &ServiceInterface::copyAvailable, &mActEditCut, &QAction::setEnabled);
     connect(child, &ServiceInterface::copyAvailable, &mActEditCopy, &QAction::setEnabled);
@@ -622,6 +630,13 @@ LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QS
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(Navigation::getLiveLogIcon());
+    mdiSub->setWindowFilePath(filePath);
+    mdiSub->setToolTip(filePath);
+    if (filePath.isEmpty() == false)
+    {
+        std::string stdFilePath{filePath.toStdString()};
+        mdiSub->setWindowTitle(QString::fromStdString(File::getFileNameWithExtension(stdFilePath.c_str()).getData()));
+    }
     mMdiArea.showMaximized();
     mNavigation.showTab(Navigation::eNaviWindow::NaviLiveLogs);
     return child;
@@ -633,6 +648,13 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(Navigation::getOfflineLogIcon());
+    mdiSub->setWindowFilePath(filePath);
+    if (filePath.isEmpty() == false)
+    {
+        std::string stdFilePath{filePath.toStdString()};
+        mdiSub->setWindowTitle(QString::fromStdString(File::getFileNameWithExtension(stdFilePath.c_str()).getData()));
+    }
+
     mMdiArea.showMaximized();
     mNavigation.showTab(Navigation::NaviOfflineLogs);
     OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());
