@@ -31,7 +31,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class LoggingModelBase;
+class QAbstractItemModel;
 
 /**
  * \brief   LogSearchModel class provides functionality to search for text in log messages.
@@ -68,7 +68,7 @@ public:
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    LogSearchModel(LoggingModelBase* logModel = nullptr);
+    LogSearchModel(QAbstractItemModel* logModel = nullptr);
 
     virtual ~LogSearchModel(void) = default;
 
@@ -81,14 +81,14 @@ public:
      * \brief   Returns the logging model used for searching.
      *          It can be either live or offline logging model.
      **/
-    inline LoggingModelBase* getLogModel(void) const;
+    inline QAbstractItemModel* getLogModel(void) const;
 
     /**
      * \brief   Sets the logging model to use for searching.
      *          It can be either live or offline logging model.
      * \param   logModel    The logging model to set.
      **/
-    inline void setLogModel(LoggingModelBase* lodModel);
+    inline void setLogModel(QAbstractItemModel* lodModel);
 
     /**
      * \brief   Checks if the end of the log has been reached.
@@ -215,7 +215,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
 
-    LoggingModelBase*   mLogModel;      //!< Pointer to the logging model used for searching
+    QAbstractItemModel* mLogModel;      //!< Pointer to the logging model used for searching
     QString             mSearchPhrase;  //!< The search phrase to find in the log messages
     QString             mCurrentText;   //!< The current text being searched in the log messages
     bool                mIsMatchCase;   //!< Flag indicating if the search is case-sensitive
@@ -239,12 +239,12 @@ private:
 // LogSearchModel inline methods implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline LoggingModelBase* LogSearchModel::getLogModel(void) const
+inline QAbstractItemModel* LogSearchModel::getLogModel(void) const
 {
     return mLogModel;
 }
 
-inline void LogSearchModel::setLogModel(LoggingModelBase* logModel)
+inline void LogSearchModel::setLogModel(QAbstractItemModel* logModel)
 {
     mLogModel = logModel;
 }

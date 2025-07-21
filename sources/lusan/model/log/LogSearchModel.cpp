@@ -21,8 +21,9 @@
 #include "lusan/model/log/LoggingModelBase.hpp"
 
 #include <QRegularExpression>
+#include <QAbstractItemModel>
 
-LogSearchModel::LogSearchModel(LoggingModelBase* logModel)
+LogSearchModel::LogSearchModel(QAbstractItemModel* logModel)
     : QObject       ( )
     , mLogModel     (logModel)
     , mSearchPhrase ( )
@@ -109,21 +110,28 @@ LogSearchModel::sFoundPos LogSearchModel::nextSearch(uint32_t lastFound)
     
     do
     {
-        const NELogging::sLogMessage* log{ mLogModel->getLogData(startAt) };
-        if (log == nullptr)
-            return result;
-        
-        mCurrentText = QString::fromUtf8(log->logMessage);
-        if (wildcardMatch(mCurrentText, regex, posStart, posEnd))
+        bool found{false};
+        if (mLogModel->hasIndex(startAt, 0))
         {
-            mRowFound       = startAt;
-            doSearch        = false;
-            result.colFound = static_cast<int>(LoggingModelBase::eColumn::LogColumnMessage);
-            result.posEnd   = mPosEnd;
-            result.posStart = mPosStart;
-            result.rowFound = mRowFound;
+            QModelIndex index = mLogModel->index(startAt, 0);
+            const NELogging::sLogMessage* log{ mLogModel->data(index, static_cast<int>(Qt::ItemDataRole::UserRole)).value<const NELogging::sLogMessage*>() };
+            if (log == nullptr)
+                return result;
+
+            mCurrentText = QString::fromUtf8(log->logMessage);
+            if (wildcardMatch(mCurrentText, regex, posStart, posEnd))
+            {
+                mRowFound       = startAt;
+                doSearch        = false;
+                result.colFound = 0;
+                result.posEnd   = mPosEnd;
+                result.posStart = mPosStart;
+                result.rowFound = mRowFound;
+                found = true;
+            }
         }
-        else
+
+        if (found == false)
         {
             mCurrentText.clear();
             uint32_t rowCount = static_cast<uint32_t>(mLogModel->rowCount(QModelIndex()));
