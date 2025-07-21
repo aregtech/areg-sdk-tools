@@ -188,6 +188,12 @@ protected:
      **/
     virtual void resizeEvent(QResizeEvent *event) override;
 
+    /**
+     * \brief   Override keyPressEvent to handle search shortcuts.
+     * \param   event   The key press event.
+     **/
+    virtual void keyPressEvent(QKeyEvent* event) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

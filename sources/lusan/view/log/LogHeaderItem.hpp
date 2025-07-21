@@ -103,6 +103,11 @@ public:
      **/
     inline bool canPopupFilter(void) const;
 
+    /**
+     * \brief   Resets filter data.
+     **/
+    void resetFilter(void);
+
 private:
 /************************************************************************
  * Hidden methods
@@ -163,6 +168,11 @@ public:
      **/
     QStringList getCheckedItems() const;
 
+    /**
+     * \brief   Clears filter data.
+     **/
+    void clearFilter(void);
+
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -207,6 +217,11 @@ public:
      * \brief   Sets the text in the line edit.
      **/
     void setText(const QString & newText);
+
+    /**
+     * \brief   Clears filter data.
+     **/
+    void clearFilter(void);
 
 signals:
 /************************************************************************

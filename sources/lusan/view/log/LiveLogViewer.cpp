@@ -22,76 +22,35 @@
 
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
-#include "lusan/view/common/SearchLineEdit.hpp"
-#include "lusan/view/log/LogTableHeader.hpp"
-
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 
+#include <QTableView>
+#include <QLabel>
 #include <QMdiSubWindow>
-#include <QMenu>
 
-const QString   LiveLogViewer::_tooltipPauseLogging(tr("Pause currnet logging"));
-const QString   LiveLogViewer::_tooltipResumeLogging(tr("Resume current logging"));
-const QString   LiveLogViewer::_tooltipStopLogging(tr("Stop current logging"));
-const QString   LiveLogViewer::_tooltipRestartLogging(tr("Restart logging in new database"));
+const QString   LiveLogViewer::_tooltipPauseLogging     (tr("Pause current logging"));
+const QString   LiveLogViewer::_tooltipResumeLogging    (tr("Resume current logging"));
+const QString   LiveLogViewer::_tooltipStopLogging      (tr("Stop current logging"));
+const QString   LiveLogViewer::_tooltipRestartLogging   (tr("Restart logging in new database"));
 
 LiveLogViewer::LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent)
-    : MdiChild      (MdiChild::eMdiWindow::MdiLogViewer, wndMain, parent)
-
+    : LogViewerBase (MdiChild::eMdiWindow::MdiLogViewer, nullptr, wndMain, parent)
     , ui            (new Ui::LiveLogViewer)
-    , mLogModel     (nullptr)
-    , mFilter       (nullptr)
-    , mMdiWindow    (new QWidget())
-    , mHeader       (nullptr)
 {
-    QList<SearchLineEdit::eToolButton> tools;
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonSearch);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchCase);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchWord);
-    tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
     ui->setupUi(mMdiWindow);
-    ctrlSearchText()->initialize(tools, QSize(20, 20));
-    
-    QTableView* view = ctrlTable();
     mLogModel   = new LiveLogsModel(this);
-    mFilter     = new LogViewerFilterProxy(mLogModel);
-    mHeader     = new LogTableHeader(view, mLogModel);
+    mLogTable   = ui->logView;
+    mLogSearch  = ui->textSearch;
     
-    view->setHorizontalHeader(mHeader);
-    QHeaderView* header = ctrlHeader();    
-    header->setVisible(true);
-    header->show();
-    header->setContextMenuPolicy(Qt::CustomContextMenu);
-    header->setSectionsMovable(true);
+    setupWidgets();
     
-    view->setSelectionBehavior(QAbstractItemView::SelectRows);
-    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    view->setSelectionMode(QAbstractItemView::SingleSelection);
-    view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    view->setShowGrid(false);
-    view->setCurrentIndex(QModelIndex());
-    view->horizontalHeader()->setStretchLastSection(true);
-    view->verticalHeader()->hide();
-    view->setAutoScroll(true);
-    view->setVerticalScrollMode(QTableView::ScrollPerItem);
-    view->setContextMenuPolicy(Qt::CustomContextMenu);
-
-    view->setModel(mFilter);
-
-    // Set the layout
-    QVBoxLayout *layout = new QVBoxLayout(this);
-    layout->addWidget(mMdiWindow);
-    setLayout(layout);
-    
-    setAttribute(Qt::WA_DeleteOnClose);
-    ctrlTable()->setAutoScroll(true);
     ctrlFile()->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
-
     updateToolbuttons(false, false);
     ctrlPause()->setEnabled(false);
     ctrlStop()->setEnabled(false);
+
     setupSignals(true);
 }
 
@@ -103,20 +62,22 @@ LiveLogViewer::~LiveLogViewer(void)
 void LiveLogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
     Q_ASSERT(mLogModel != nullptr);
-    mLogModel->serviceConnected(isConnected, address, port, dbPath);
+    LiveLogsModel* logModel = static_cast<LiveLogsModel*>(mLogModel);
+
+    logModel->serviceConnected(isConnected, address, port, dbPath);
     if (isConnected)
     {
         Q_ASSERT(mMdiSubWindow != nullptr);
         ctrlFile()->setText(dbPath);
         ctrlFile()->setToolTip(dbPath);
-        mMdiSubWindow->setWindowTitle(mLogModel->getLogFileName());
+        mMdiSubWindow->setWindowTitle(logModel->getLogFileName());
         updateToolbuttons(false, false);
         ctrlPause()->setEnabled(true);
         ctrlStop()->setEnabled(true);
     }
     else if (mMdiSubWindow != nullptr)
     {
-        Q_ASSERT(mLogModel->getDatabasePath() == dbPath);
+        Q_ASSERT(logModel->getDatabasePath() == dbPath);
         updateToolbuttons(false, false);
         ctrlPause()->setEnabled(false);
         ctrlStop()->setEnabled(false);
@@ -138,22 +99,7 @@ void LiveLogViewer::logDatabaseCreated(const QString& dbPath)
 bool LiveLogViewer::isServiceConnected(void) const
 {
     Q_ASSERT(mLogModel != nullptr);
-    return mLogModel->isConnected();
-}
-
-void LiveLogViewer::moveToBottom(bool lastSelect)
-{
-    QTableView* logs = ctrlTable();
-    Q_ASSERT(logs != nullptr);
-    logs->scrollToBottom();
-    if (lastSelect)
-    {
-        int count = mLogModel->rowCount(QModelIndex());
-        if (count > 0)
-        {
-            logs->selectRow(count - 1);
-        }
-    }
+    return static_cast<LiveLogsModel *>(mLogModel)->isConnected();
 }
 
 bool LiveLogViewer::isEmpty(void) const
@@ -189,51 +135,12 @@ void LiveLogViewer::onRowsInserted(const QModelIndex& parent, int first, int las
     }
 }
 
-void LiveLogViewer::onColumnsInserted(const QModelIndex& parent, int first, int last)
-{
-}
-
-void LiveLogViewer::onColumnsRemoved(const QModelIndex& parent, int first, int last)
-{
-}
-
-void LiveLogViewer::onColumnsMoved(const QModelIndex& sourceParent, int sourceStart, int sourceEnd, const QModelIndex& destinationParent, int destinationColumn)
-{
-}
-
-void LiveLogViewer::onHeaderContextMenu(const QPoint& pos)
-{
-    QMenu menu(this);
-    QModelIndex idx{ctrlTable()->currentIndex()};
-    populateColumnsMenu(&menu, idx.isValid() ? idx.row() : -1);
-    menu.exec(ctrlHeader()->mapToGlobal(pos));
-}
-
-void LiveLogViewer::onTableContextMenu(const QPoint& pos)
-{
-    QMenu menu(this);
-    QMenu* columnsMenu = menu.addMenu(tr("Columns"));
-    QModelIndex idx{ctrlTable()->currentIndex()};    
-    populateColumnsMenu(columnsMenu, idx.isValid() ? idx.row() : -1);
-    menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
-}
-
-void LiveLogViewer::onRowChanged(const QModelIndex &current, const QModelIndex &previous)
+void LiveLogViewer::onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
     Q_UNUSED(previous);
     
     Q_ASSERT(mLogModel != nullptr);
     mLogModel->setSelectedLog(current);
-}
-
-QTableView* LiveLogViewer::ctrlTable(void)
-{
-    return ui->logView;
-}
-
-QHeaderView* LiveLogViewer::ctrlHeader(void)
-{
-    return ui->logView->horizontalHeader();
 }
 
 QToolButton* LiveLogViewer::ctrlPause(void)
@@ -254,93 +161,6 @@ QToolButton* LiveLogViewer::ctrlClear(void)
 QLabel* LiveLogViewer::ctrlFile(void)
 {
     return ui->lableFile;
-}
-
-SearchLineEdit* LiveLogViewer::ctrlSearchText(void)
-{
-    return ui->textSearch;
-}
-
-QToolButton* LiveLogViewer::ctrlButtonSearch(void)
-{
-    return ui->textSearch->buttonSearch();
-}
-
-QToolButton* LiveLogViewer::ctrlButtonCaseSensitive(void)
-{
-    return ui->textSearch->buttonMatchCase();
-}
-
-QToolButton* LiveLogViewer::ctrlButtonWholeWords(void)
-{
-    return ui->textSearch->buttonMatchWord();
-}
-
-QToolButton* LiveLogViewer::ctrlSearchWildcard(void)
-{
-    return ui->textSearch->buttonWildCard();
-}
-
-QToolButton* LiveLogViewer::ctrlSearchBackward(void)
-{
-    return ui->textSearch->buttonSearchBackward();
-}
-
-void LiveLogViewer::populateColumnsMenu(QMenu* menu, int curRow)
-{
-    // Get current active columns from the model
-    const QList<LiveLogsModel::eColumn>& activeCols = mLogModel->getActiveColumns();
-    const QStringList& headers{ LiveLogsModel::getHeaderList() };
-
-    for (int i = 0; i < static_cast<int>(headers.size()); ++i)
-    {
-        LiveLogsModel::eColumn col = static_cast<LiveLogsModel::eColumn>(i);
-        if (col == LiveLogsModel::eColumn::LogColumnMessage)
-            continue; // exclude "log message" menu entry.
-        
-        bool isVisible = activeCols.contains(col);
-
-        QAction* action = menu->addAction(headers[i]);
-        action->setCheckable(true);
-        action->setChecked(isVisible);
-        action->setData(i); // Store index for later
-
-        connect(action, &QAction::triggered, this, [this, action, col, isVisible, curRow]() {
-                    if (curRow < 0)
-                        moveToBottom(false);
-                    if (isVisible)
-                        mLogModel->removeColumn(col);
-                    else
-                        mLogModel->addColumn(col);
-                });
-    }
-
-    QAction* actReset = menu->addAction(tr("Reset Columns"));
-    actReset->setCheckable(false);
-    connect(actReset, &QAction::triggered, this, [this, curRow]() {
-                ctrlTable()->scrollToBottom();
-                mLogModel->setActiveColumns(QList<LiveLogsModel::eColumn>());
-                resetColumnOrder();
-            });
-}
-
-void LiveLogViewer::resetColumnOrder()
-{
-    // Force the view to update its columns to match the model
-    ctrlTable()->setModel(nullptr);
-    ctrlTable()->setModel(mLogModel);
-
-    QHeaderView* header = ctrlHeader();
-    int columnCount = header->count();
-    // Restore to default order: 0, 1, 2, ..., N-1
-    for (int logical = 0; logical < columnCount; ++logical)
-    {
-        int visual = header->visualIndex(logical);
-        if (visual != logical)
-        {
-            header->moveSection(visual, logical);
-        }
-    }
 }
 
 void LiveLogViewer::updateToolbuttons(bool isPaused, bool isStopped)
@@ -393,77 +213,46 @@ void LiveLogViewer::updateToolbuttons(bool isPaused, bool isStopped)
 
 void LiveLogViewer::onPauseClicked(bool checked)
 {
-    if (mLogModel != nullptr)
+    Q_ASSERT(mLogModel != nullptr);
+    LiveLogsModel  * logModel = static_cast<LiveLogsModel *>(mLogModel);
+    if (checked)
     {
-        if (checked)
-        {
-            mLogModel->pauseLogging();
-            updateToolbuttons(true, false);
-        }
-        else
-        {
-            mLogModel->resumeLogging();
-            updateToolbuttons(false, false);
-        }
+        logModel->pauseLogging();
+        updateToolbuttons(true, false);
     }
     else
     {
+        logModel->resumeLogging();
         updateToolbuttons(false, false);
-        ctrlPause()->setEnabled(false);
-        ctrlStop()->setEnabled(false);
     }
 }
 
 void LiveLogViewer::onStopClicked(bool checked)
 {
-    if (mLogModel != nullptr)
+    Q_ASSERT(mLogModel != nullptr);
+    LiveLogsModel  * logModel = static_cast<LiveLogsModel *>(mLogModel);
+    if (checked)
     {
-        if (checked)
-        {
-            mLogModel->stopLogging();
-            updateToolbuttons(false, true);
-        }
-        else
-        {
-            mLogModel->restartLogging();
-            updateToolbuttons(false, false);
-        }
+        logModel->stopLogging();
+        updateToolbuttons(false, true);
     }
     else
     {
+        logModel->restartLogging();
         updateToolbuttons(false, false);
-        ctrlPause()->setEnabled(false);
-        ctrlStop()->setEnabled(false);
     }
 }
 
 void LiveLogViewer::onClearClicked(void)
 {
-    if (mLogModel != nullptr)
-    {
-        mLogModel->dataReset();
-    }
-}
-
-void LiveLogViewer::onMainWindowClosing(void)
-{
-    setupSignals(false);
-    if (mLogModel != nullptr)
-    {
-        mMainWindow->getNaviLiveScopes().setLoggingModel(nullptr);
-    }
-
-    cleanResources();
-}
-
-LiveLogsModel* LiveLogViewer::getLoggingModel(void) const
-{
-    return mLogModel;
+    Q_ASSERT(mLogModel != nullptr);
+    mLogModel->dataReset();
 }
 
 QString LiveLogViewer::getDatabasePath(void) const
 {
-    return (mLogModel != nullptr ? mLogModel->getDatabasePath() : QString());
+    Q_ASSERT(mLogModel != nullptr);
+    return mLogModel->getDatabasePath();
 }
 
 void LiveLogViewer::onWindowClosing(bool isActive)
@@ -471,73 +260,30 @@ void LiveLogViewer::onWindowClosing(bool isActive)
     Q_UNUSED(isActive);
     Q_ASSERT(mMainWindow != nullptr);
     
-    setupSignals(false);
+    mMainWindow->getNaviLiveScopes().setLoggingModel(nullptr);
     if (mLogModel != nullptr)
     {
-        mMainWindow->getNaviLiveScopes().setLoggingModel(nullptr);
+        setupSignals(false);
+        cleanResources();
     }
-
-    cleanResources();
-}
-
-void LiveLogViewer::onWindowActivated(void)
-{
-    Q_ASSERT(mMainWindow != nullptr);
-    mMainWindow->getNaviLiveScopes().activateWindow();
 }
 
 void LiveLogViewer::setupSignals(bool doSetup)
 {
-    if (ui == nullptr)
-    {
-        Q_ASSERT(mLogModel == nullptr);
-        Q_ASSERT(mFilter == nullptr);
-        return;
-    }
-
-    QTableView* view        = ctrlTable();
-    QItemSelectionModel* sel= view->selectionModel();
-    MdiMainWindow* wndMain  = mMainWindow;
-    Q_ASSERT(sel != nullptr);
-
+    Q_ASSERT(mLogModel != nullptr);
     if (doSetup)
     {
-        if (mLogModel != nullptr)
-        {
-            connect(mLogModel, &LiveLogsModel::rowsInserted     , this, &LiveLogViewer::onRowsInserted);
-            connect(mLogModel, &LiveLogsModel::columnsInserted  , this, &LiveLogViewer::onColumnsInserted);
-            connect(mLogModel, &LiveLogsModel::columnsRemoved   , this, &LiveLogViewer::onColumnsRemoved);
-            connect(mLogModel, &LiveLogsModel::columnsMoved     , this, &LiveLogViewer::onColumnsMoved);
-        }
-
-        connect(ctrlPause() , &QToolButton::clicked                         , this      , &LiveLogViewer::onPauseClicked);
-        connect(ctrlStop()  , &QToolButton::clicked                         , this      , &LiveLogViewer::onStopClicked);
-        connect(ctrlClear() , &QToolButton::clicked                         , this      , &LiveLogViewer::onClearClicked);
-        connect(view        , &QTableView::customContextMenuRequested       , this      , &LiveLogViewer::onTableContextMenu);
-        connect(sel         , &QItemSelectionModel::currentRowChanged        , this     , &LiveLogViewer::onRowChanged);
-        connect(mHeader     , &LogTableHeader::customContextMenuRequested   , this      , &LiveLogViewer::onHeaderContextMenu);
-        connect(mHeader     , &LogTableHeader::signalComboFilterChanged     , mFilter   , &LogViewerFilterProxy::setComboFilter);
-        connect(mHeader     , &LogTableHeader::signalTextFilterChanged      , mFilter   , &LogViewerFilterProxy::setTextFilter);
-        connect(wndMain     , &MdiMainWindow::signalMainwindowClosing       , this      , &LiveLogViewer::onMainWindowClosing);
+        connect(mLogModel       , &LoggingModelBase::rowsInserted, this,&LiveLogViewer::onRowsInserted);
+        connect(ctrlPause()     , &QToolButton::clicked         , this, &LiveLogViewer::onPauseClicked);
+        connect(ctrlStop()      , &QToolButton::clicked         , this, &LiveLogViewer::onStopClicked);
+        connect(ctrlClear()     , &QToolButton::clicked         , this, &LiveLogViewer::onClearClicked);
     }
     else
     {
-        if (mLogModel != nullptr)
-        {
-            disconnect(mLogModel, &LiveLogsModel::rowsInserted, this, &LiveLogViewer::onRowsInserted);
-            disconnect(mLogModel, &LiveLogsModel::columnsInserted, this, &LiveLogViewer::onColumnsInserted);
-            disconnect(mLogModel, &LiveLogsModel::columnsRemoved, this, &LiveLogViewer::onColumnsRemoved);
-            disconnect(mLogModel, &LiveLogsModel::columnsMoved, this, &LiveLogViewer::onColumnsMoved);
-        }
-
-        disconnect(ctrlPause()  , &QToolButton::clicked                         , this      , &LiveLogViewer::onPauseClicked);
-        disconnect(ctrlStop()   , &QToolButton::clicked                         , this      , &LiveLogViewer::onStopClicked);
-        disconnect(ctrlClear()  , &QToolButton::clicked                         , this      , &LiveLogViewer::onClearClicked);
-        disconnect(view         , &QTableView::customContextMenuRequested       , this      , &LiveLogViewer::onTableContextMenu);
-        disconnect(mHeader      , &LogTableHeader::customContextMenuRequested   , this      , &LiveLogViewer::onHeaderContextMenu);
-        disconnect(mHeader      , &LogTableHeader::signalComboFilterChanged     , mFilter   , &LogViewerFilterProxy::setComboFilter);
-        disconnect(mHeader      , &LogTableHeader::signalTextFilterChanged      , mFilter   , &LogViewerFilterProxy::setTextFilter);
-        disconnect(wndMain      , &MdiMainWindow::signalMainwindowClosing       , this      , &LiveLogViewer::onMainWindowClosing);
+        disconnect(mLogModel    , &LoggingModelBase::rowsInserted, this,&LiveLogViewer::onRowsInserted);
+        disconnect(ctrlPause()  , &QToolButton::clicked         , this, &LiveLogViewer::onPauseClicked);
+        disconnect(ctrlStop()   , &QToolButton::clicked         , this, &LiveLogViewer::onStopClicked);
+        disconnect(ctrlClear()  , &QToolButton::clicked         , this, &LiveLogViewer::onClearClicked);
     }
 }
 
@@ -560,17 +306,18 @@ void LiveLogViewer::cleanResources(void)
     view->setModel(nullptr);
     view->setHorizontalHeader(nullptr);
     mFilter->setSourceModel(nullptr);
+    mSearch.setLogModel(nullptr);
     mLogModel->closeDatabase();
 
     delete ui;
     ui = nullptr;
-
+    
     delete mMdiWindow;
     mMdiWindow = nullptr;
-
+    
     delete mFilter;
     mFilter = nullptr;
-
+    
     delete mLogModel;
     mLogModel = nullptr;
 }

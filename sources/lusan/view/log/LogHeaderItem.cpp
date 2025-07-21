@@ -83,6 +83,19 @@ QStringList LogComboFilter::getCheckedItems() const
     return checked;
 }
 
+void LogComboFilter::clearFilter(void)
+{
+    for (int i = 0; i < mListWidget->count(); ++i)
+    {
+        QListWidgetItem* item = mListWidget->item(i);
+        item->setCheckState(Qt::CheckState::Unchecked);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// LogTextFilter class implementation.
+//////////////////////////////////////////////////////////////////////////
+
 LogTextFilter::LogTextFilter(bool isExtended, QWidget* parent)
     : QFrame(parent)
     , mLineEdit(nullptr)
@@ -131,6 +144,11 @@ void LogTextFilter::slotToolbuttonChecked(bool checked)
         return;
 
     emit signalFilterTextChanged(textFilter, srch->isMatchCaseChecked(), srch->isMatchWordChecked(), srch->isWildCardChecked());
+}
+
+void LogTextFilter::clearFilter(void)
+{
+    mLineEdit->setText(QString());
 }
 
 /////////////////////////////////////////////////////////////
@@ -260,4 +278,12 @@ void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data)
 
         mCombo->setItems(items);
     }
+}
+
+void LogHeaderItem::resetFilter(void)
+{
+    if (mType == eType::Text && mEdit != nullptr)
+        mEdit->clearFilter();
+    else if (mType == eType::Combo && mCombo != nullptr)
+        mCombo->clearFilter();
 }
