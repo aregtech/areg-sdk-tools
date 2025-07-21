@@ -22,7 +22,7 @@
   <property name="autoFillBackground">
    <bool>true</bool>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QHBoxLayout" name="horizontalLayout_6">
    <property name="spacing">
     <number>3</number>
    </property>
@@ -160,7 +160,7 @@
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset theme="media-playback-pause"/>
+                <iconset theme="QIcon::ThemeIcon::MediaPlaybackPause"/>
                </property>
                <property name="checkable">
                 <bool>true</bool>
@@ -191,7 +191,7 @@
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset theme="media-playback-stop"/>
+                <iconset theme="QIcon::ThemeIcon::MediaPlaybackStop"/>
                </property>
                <property name="checkable">
                 <bool>true</bool>
@@ -217,7 +217,7 @@
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset theme="edit-clear"/>
+                <iconset theme="QIcon::ThemeIcon::EditClear"/>
                </property>
               </widget>
              </item>
@@ -256,9 +256,6 @@
                   </property>
                   <property name="placeholderText">
                    <string>search a phrase in logs</string>
-                  </property>
-                  <property name="clearButtonEnabled">
-                   <bool>true</bool>
                   </property>
                  </widget>
                 </item>
@@ -350,6 +347,12 @@
      </item>
      <item>
       <widget class="QTableView" name="logView">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="sizeAdjustPolicy">
         <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
        </property>
