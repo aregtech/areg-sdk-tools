@@ -216,6 +216,25 @@ private:
      **/
     QRegularExpression createRegex(void);
 
+    /**
+     * \brief   Checks if the text matches the search phrase as a simple string.
+     * \param   text        The text to match against the search phrase.
+     * \param   posStart    The start position in the text to begin matching.
+     * \param   posEnd      The end position in the text to stop matching.
+     * \return  Returns true if the text matches the search phrase, false otherwise.
+     **/
+    bool stringMatch(const QString& text, int posStart, int posEnd);
+
+    /**
+     * \brief   Searches for the start position of the search phrase in the text.
+     *          It returns the position where the search phrase starts.
+     * \param   text        The text to search in.
+     * \param   posStart    The start position in the text to begin searching.
+     * \param   posEnd      The end position in the text to stop searching.
+     * \return  Returns the start position of the search phrase, or InvalidPos if not found.
+     **/
+    int positionStartSearch(const QString& text, int posStart, int posEnd) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
