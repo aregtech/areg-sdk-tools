@@ -53,6 +53,21 @@ void LogTableHeader::resetFilters(void)
     }
 }
 
+int LogTableHeader::getColumnIndex(LoggingModelBase::eColumn column) const
+{
+    return (mModel != nullptr ? mModel->fromColumnToIndex(column) : -1);
+}
+
+LoggingModelBase::eColumn LogTableHeader::getColumn(int logicalIndex) const
+{
+    return (mModel != nullptr ? mModel->fromIndexToColumn(logicalIndex) : LoggingModelBase::eColumn::LogColumnInvalid);
+}
+
+LogHeaderItem* LogTableHeader::getHeaderItem(int logicalIndex) const
+{
+    return ((logicalIndex >= 0) && (logicalIndex < static_cast<int>(mHeaders.size())) ? mHeaders[logicalIndex] : nullptr);
+}
+
 inline void LogTableHeader::drawingRects(const QRect& rect, QRect& rcButton, QRect& rcText) const
 {
     constexpr int marginText    { 4 };
@@ -92,8 +107,8 @@ void LogTableHeader::paintSection(QPainter* painter, const QRect& rect, int logi
     
     style()->drawControl(QStyle::CE_Header, &opt, painter, this);
     
-    LiveLogsModel::eColumn col = mModel->fromIndexToColumn(logicalIndex);
-    if (col != LiveLogsModel::eColumn::LogColumnInvalid)
+    LoggingModelBase::eColumn col = mModel->fromIndexToColumn(logicalIndex);
+    if (col != LoggingModelBase::eColumn::LogColumnInvalid)
     {
         QRect rcButton; // Button rectangle (left side)
         QRect rcText;   // Text rectangle (right of button, with a small gap)
@@ -121,12 +136,12 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
 
     if (rcButton.contains(event->pos()))
     {
-        LiveLogsModel::eColumn col = mModel->fromIndexToColumn(logical);
-        if ((col != LiveLogsModel::eColumn::LogColumnInvalid) && mHeaders[static_cast<int>(col)]->canPopupFilter())
+        LoggingModelBase::eColumn col = mModel->fromIndexToColumn(logical);
+        if ((col != LoggingModelBase::eColumn::LogColumnInvalid) && mHeaders[static_cast<int>(col)]->canPopupFilter())
         {
             switch (col)
             {
-            case LiveLogsModel::eColumn::LogColumnPriority:
+            case LoggingModelBase::eColumn::LogColumnPriority:
             {
                 std::vector<String> names;
                 mModel->getPriorityNames(names);
@@ -134,7 +149,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             }
             break;
                 
-            case LiveLogsModel::eColumn::LogColumnSource:
+            case LoggingModelBase::eColumn::LogColumnSource:
             {
                 std::vector<String> names;
                 mModel->getLogInstanceNames(names);
@@ -142,7 +157,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             }
             break;
                 
-            case LiveLogsModel::eColumn::LogColumnSourceId:
+            case LoggingModelBase::eColumn::LogColumnSourceId:
             {
                 std::vector<ITEM_ID> ids;
                 mModel->getLogInstanceIds(ids);
@@ -150,7 +165,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             }
             break;
                 
-            case LiveLogsModel::eColumn::LogColumnThread:
+            case LoggingModelBase::eColumn::LogColumnThread:
             {
                 std::vector<String> names;
                 mModel->getLogThreadNames(names);
@@ -158,7 +173,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             }
             break;
                 
-            case LiveLogsModel::eColumn::LogColumnThreadId:
+            case LoggingModelBase::eColumn::LogColumnThreadId:
             {
                 std::vector<ITEM_ID> ids;
                 mModel->getLogThreads(ids);
@@ -166,8 +181,8 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             }
             break;
                 
-            case LiveLogsModel::eColumn::LogColumnScopeId:
-            case LiveLogsModel::eColumn::LogColumnMessage:
+            case LoggingModelBase::eColumn::LogColumnScopeId:
+            case LoggingModelBase::eColumn::LogColumnMessage:
             default:
                 break;
             }

@@ -24,6 +24,7 @@
 
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
+#include "lusan/view/log/LogTextHighlight.hpp"
 
 #include <QVBoxLayout>
 #include <QKeyEvent>
@@ -51,6 +52,7 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     , mHeader   (nullptr)
     , mSearch   (nullptr)
     , mFoundPos ()
+    , mHighlight(nullptr)
 {
 }
 
@@ -158,6 +160,14 @@ void LogViewerBase::setupWidgets(void)
     mLogTable->setVerticalScrollMode(QTableView::ScrollPerItem);
     mLogTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
+    // In LogViewerBase constructor or setupWidgets()
+    int index = mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage);
+    if (index >= 0)
+    {
+        mHighlight = new LogTextHighlight(mLogTable);
+        mLogTable->setItemDelegateForColumn(index, mHighlight);
+    }
+
     // Set the layout
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(mMdiWindow);
@@ -221,6 +231,12 @@ void LogViewerBase::onSearchClicked(bool newSearch)
     {
         mLogSearch->setStyleSheet(QString::fromUtf8("QLineEdit { background-color: #ffcccc; }"));
         mLogSearch->update();
+    }
+
+    if (mHighlight)
+    {
+        mHighlight->setFoundPos(mFoundPos);
+        mLogTable->viewport()->update();
     }
 }
 
