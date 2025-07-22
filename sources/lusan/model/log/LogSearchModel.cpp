@@ -119,7 +119,8 @@ LogSearchModel::sFoundPos LogSearchModel::nextSearch(uint32_t lastFound)
                 return result;
 
             mCurrentText = QString::fromUtf8(log->logMessage);
-            if (wildcardMatch(mCurrentText, regex, posStart, posEnd))
+            found = mIsWildcard || mIsMatchWord ? wildcardMatch(mCurrentText, regex, posStart, posEnd) : stringMatch(mCurrentText, posStart, posEnd);
+            if (found)
             {
                 mRowFound       = startAt;
                 doSearch        = false;
@@ -127,7 +128,6 @@ LogSearchModel::sFoundPos LogSearchModel::nextSearch(uint32_t lastFound)
                 result.posEnd   = mPosEnd;
                 result.posStart = mPosStart;
                 result.rowFound = mRowFound;
-                found = true;
             }
         }
 
@@ -160,71 +160,41 @@ LogSearchModel::sFoundPos LogSearchModel::nextSearch(uint32_t lastFound)
 
 bool LogSearchModel::wildcardMatch(const QString& text, const QRegularExpression & regex, int posStart, int posEnd)
 {
-    if (text.isEmpty())
-        return false;
-    
-    int searchStart = 0;
+    int searchStart = text.isEmpty() == false ? positionStartSearch(text, posStart, posEnd) : -1;
     int foundStart = -1;
     int foundEnd = -1;
     
-    if (mIsBackward == false)
+    if (searchStart >= 0)
     {
-        if (posEnd == static_cast<int32_t>(InvalidPos))
+        if (mIsBackward == false)
         {
-            searchStart = 0;
-        }
-        else if (posEnd + 1 < text.length())
-        {
-            searchStart = mPosEnd + 1;
-        }
-        else
-        {
-            mPosStart = static_cast<int32_t>(InvalidPos);
-            mPosEnd = static_cast<int32_t>(InvalidPos);
-            return false;
-        }
-        
-        // Forward search
-        QRegularExpressionMatchIterator it = regex.globalMatch(text, searchStart);
-        if (it.hasNext())
-        {
-            QRegularExpressionMatch match = it.next();
-            foundStart = match.capturedStart();
-            foundEnd = match.capturedEnd();
-        }
-    }
-    else
-    {
-        if (posStart == static_cast<int32_t>(InvalidPos))
-        {
-            searchStart = text.length() - 1;
-        }
-        else if (posStart >= 0)
-        {
-            searchStart = posStart - 1;
-        }
-        else
-        {
-            mPosStart = static_cast<int32_t>(InvalidPos);
-            mPosEnd = static_cast<int32_t>(InvalidPos);
-            return false;
-        }
-        
-        // Backward search: find all matches up to searchStart, pick the last one before searchStart
-        QRegularExpressionMatchIterator it = regex.globalMatch(text);
-        while (it.hasNext())
-        {
-            QRegularExpressionMatch match = it.next();
-            int s = match.capturedStart();
-            int e = match.capturedEnd();
-            if (e <= searchStart)
+            // Forward search
+            QRegularExpressionMatchIterator it = regex.globalMatch(text, searchStart);
+            if (it.hasNext())
             {
-                foundStart = s;
-                foundEnd = e;
+                QRegularExpressionMatch match = it.next();
+                foundStart = match.capturedStart();
+                foundEnd = match.capturedEnd();
             }
-            else
+        }
+        else
+        {
+            // Backward search: find all matches up to searchStart, pick the last one before searchStart
+            QRegularExpressionMatchIterator it = regex.globalMatch(text);
+            while (it.hasNext())
             {
-                break;
+                QRegularExpressionMatch match = it.next();
+                int s = match.capturedStart();
+                int e = match.capturedEnd();
+                if (e <= searchStart)
+                {
+                    foundStart = s;
+                    foundEnd = e;
+                }
+                else
+                {
+                    break;
+                }
             }
         }
     }
@@ -262,8 +232,64 @@ QRegularExpression LogSearchModel::createRegex(void)
     return QRegularExpression(regexPattern, options);
 }
 
-
 bool LogSearchModel::wildcardMatch(const QString& text, int posStart, int posEnd)
 {
     return wildcardMatch(text, createRegex(), posStart, posEnd);
+}
+
+bool LogSearchModel::stringMatch(const QString& text, int posStart, int posEnd)
+{
+    int searchStart = text.isEmpty() == false ? positionStartSearch(text, posStart, posEnd) : -1;
+    int foundStart = -1;
+    int foundEnd = -1;
+
+    if (searchStart >= 0)
+    {
+        foundStart = mIsBackward == false
+                        ? text.indexOf(mSearchPhrase, searchStart, mIsMatchCase ? Qt::CaseSensitivity::CaseSensitive : Qt::CaseSensitivity::CaseInsensitive)
+                        : text.lastIndexOf(mSearchPhrase, searchStart, mIsMatchCase ? Qt::CaseSensitivity::CaseSensitive : Qt::CaseSensitivity::CaseInsensitive);
+        foundEnd = foundStart >= 0 ? foundStart + static_cast<int>(mSearchPhrase.length()) : -1;
+    }
+
+    if (foundStart != -1 && foundEnd != -1)
+    {
+        mPosStart = foundStart;
+        mPosEnd   = foundEnd;
+        return true;
+    }
+    else
+    {
+        mPosStart = static_cast<int32_t>(InvalidPos);
+        mPosEnd   = static_cast<int32_t>(InvalidPos);
+        return false;
+    }
+}
+
+int LogSearchModel::positionStartSearch(const QString& text, int posStart, int posEnd) const
+{
+    int searchStart = -1;
+    if (mIsBackward == false)
+    {
+        if (posEnd == static_cast<int32_t>(InvalidPos))
+        {
+            searchStart = 0;
+        }
+        else if (posEnd + 1 < text.length())
+        {
+            searchStart = mPosEnd + 1;
+        }
+    }
+    else
+    {
+        if (posStart == static_cast<int32_t>(InvalidPos))
+        {
+            searchStart = text.length() - 1;
+        }
+        else if (posStart >= 0)
+        {
+            searchStart = posStart - 1;
+        }
+    }
+
+    return searchStart;
 }
