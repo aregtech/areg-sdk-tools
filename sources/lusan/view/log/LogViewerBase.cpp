@@ -131,13 +131,14 @@ void LogViewerBase::setupWidgets(void)
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonSearch);
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchCase);
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonMatchWord);
+    tools.push_back(SearchLineEdit::eToolButton::ToolButtonWildCard);
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
     mLogSearch->initialize(tools, QSize(20, 20));
 
-    mSearch.setLogModel(mLogModel);
     mFilter = new LogViewerFilterProxy(mLogModel);
     mHeader = new LogTableHeader(mLogTable, mLogModel);
     QShortcut* shortcutSearch = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this);
+    mSearch.setLogModel(mFilter);
 
     mLogTable->setHorizontalHeader(mHeader);
     mHeader->setVisible(true);
@@ -167,11 +168,15 @@ void LogViewerBase::setupWidgets(void)
     mLogTable->setAutoScroll(true);
     
     QItemSelectionModel* selection= mLogTable->selectionModel();
-    connect(mHeader     , &LogTableHeader::signalComboFilterChanged     , mFilter, &LogViewerFilterProxy::setComboFilter);
-    connect(mHeader     , &LogTableHeader::signalTextFilterChanged      , mFilter, &LogViewerFilterProxy::setTextFilter);
-    
+    connect(mHeader     , &LogTableHeader::signalComboFilterChanged
+            , [this](int logicalColumn, const QStringList& items){
+                mSearch.resetSearch(); mFilter->setComboFilter(logicalColumn, items);
+            });
+    connect(mHeader     , &LogTableHeader::signalTextFilterChanged
+            , [this](int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
+                mSearch.resetSearch(); mFilter->setTextFilter(logicalColumn, text, isCaseSensitive, isWholeWord, isWildCard);
+            });
     connect(mHeader     , &LogTableHeader::customContextMenuRequested   , [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
-    connect(mMainWindow , &MdiMainWindow::signalMainwindowClosing       , [this]() {onMainWindowClosing();});
     connect(mLogTable   , &QTableView::clicked                          , [this](const QModelIndex &index){onMouseButtonClicked(index);});
     connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , [this]() {mLogSearch->setStyleSheet(""); mSearch.resetSearch();});
     connect(mLogSearch  , &SearchLineEdit::signalSearchText
@@ -352,10 +357,6 @@ void LogViewerBase::onTableContextMenu(const QPoint& pos)
     QModelIndex idx{ ctrlTable()->currentIndex() };
     _populateColumnsMenu(columnsMenu, idx.isValid() ? idx.row() : -1);
     menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
-}
-
-void LogViewerBase::onMainWindowClosing(void)
-{
 }
 
 void LogViewerBase::onMouseButtonClicked(const QModelIndex& index)

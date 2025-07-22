@@ -90,6 +90,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnSearch->setShortcut(QString::fromUtf8("Ctrl+F, F3, Alt+F"));
                 mBtnSearch->setToolTip(tr("Find text (Ctrl + F, F3, Alt + F)"));
                 mBtnSearch->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
+                mBtnSearch->setAutoRaise(true);
                 connect(mBtnSearch, &QToolButton::toggled, [this](bool checked) {
                         emit signalButtonSearchClicked(checked);
                         emit signalSearchText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
@@ -116,6 +117,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnMatchCase->setToolTip(tr("Find text exact match (Ctrl + C)"));
                 mBtnMatchCase->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
                 mBtnMatchCase->setStyleSheet(NELusanCommon::getStyleToolbutton());
+                mBtnMatchCase->setAutoRaise(true);
                 layout->addWidget(mBtnMatchCase, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
                 connect(mBtnMatchCase, &QToolButton::toggled, [this](bool checked) {
                         emit signalButtonSearchMatchWordClicked(checked);
@@ -141,6 +143,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnMatchWord->setToolTip(tr("Find text exact match (Ctrl + W)"));
                 mBtnMatchWord->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
                 mBtnMatchWord->setStyleSheet(NELusanCommon::getStyleToolbutton());
+                mBtnMatchWord->setAutoRaise(true);
                 layout->addWidget(mBtnMatchWord, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
                 connect(mBtnMatchWord, &QToolButton::toggled, [this](bool checked) {
                         emit signalButtonSearchMatchCaseClicked(checked);
@@ -166,6 +169,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnWildCard->setToolTip(tr("Search with wild-card (Ctrl + R)"));
                 mBtnWildCard->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
                 mBtnWildCard->setStyleSheet(NELusanCommon::getStyleToolbutton());
+                mBtnWildCard->setAutoRaise(true);
                 layout->addWidget(mBtnWildCard, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
                 connect(mBtnWildCard, &QToolButton::toggled, [this](bool checked) {
                         emit signalButtonSearchWildCardClicked(checked);
@@ -191,6 +195,8 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnBackward->setToolTip(tr("Search text backward (Schift+F3)"));
                 mBtnBackward->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
                 mBtnBackward->setStyleSheet(NELusanCommon::getStyleToolbutton());
+                mBtnBackward->setAutoRaise(true);
+                mBtnBackward->setArrowType(Qt::ArrowType::UpArrow);
                 layout->addWidget(mBtnBackward, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
                 connect(mBtnBackward, &QToolButton::toggled, [this](bool checked) {
                         emit signalButtonSearchMatchCaseClicked(checked);

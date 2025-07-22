@@ -145,12 +145,6 @@ protected:
     virtual void onTableContextMenu(const QPoint& pos);
 
     /**
-     * \brief   Slot, triggered when the main window is closing.
-     *          This method can be overridden to handle window closing events.
-     **/
-    virtual void onMainWindowClosing(void);
-
-    /**
      * \brief   Slot, triggered when the search tool-button is clicked.
      * \param   newSearch   It indicates a new search; otherwise, it continues the previous search.
      **/
