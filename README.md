@@ -2,7 +2,7 @@
 
 ## Introduction
 
-[AREG](https://github.com/aregtech/areg-sdk) is an interface-centric communication engine. The AREG SDK consists of communication engine and the multiple tools. Since AREG engine is interface-centric, i.e. it works with predefined interfaces, there is a need to craete GUI tool do desing at least interface and servicing components. This project is a GUI tool to desing ad visualize service interface files used by code generator to create source codes based on technology provided by AREG engine.
+[AREG](https://github.com/aregtech/areg-sdk) is an interface-centric communication engine. The AREG SDK consists of communication engine and the multiple tools. Since AREG engine is interface-centric, i.e. it works with predefined interfaces, there is a need to craete GUI tool do desing at least interface and servicing components. This project is a GUI tool to desing ad visualize service interface files used by code generator to create source codes based on technology provided by AREG engine. It also collects the logs from multiple instances in the live real-time mode. It opens and displays logging files for further anlyzes. The logging have filters and searching features. To be albe to use logging, the applications should be build using `areg` library. The `logcollector` process should start as a service or console application and the `lusan.init` file should be configured to connect to log collector.
 
 ## How to clone
 
@@ -26,8 +26,8 @@ $ git clone https://github.com/aregtech/areg-sdk-tools.git .
 2. QtCreator 15 or newer;
 3. CMake 3.20 or newer;
 4. One of compilers:
-   - GCC or CLang compilers under Linux
-   - mingw GCC, mingw LLVM or MSVC compilers under Windows.
+   - GCC or CLang compilers under Linux.
+   - MSVC compilers under Windows.
 
 To build the software, you'd need Qt6.8 and the QtCreator IDE. Open `areg-sdk-tool` in the QtCreator => select Kit Configuration => run CMake => build application.
 
@@ -38,7 +38,7 @@ To build the software, you'd need Qt6.8 and the QtCreator IDE. Open `areg-sdk-to
 
 This UI Tool for AREG SDK includes following applications:
 1. Service Interface designer;
-2. Log viewer.
+2. Multiple instance log viewer and log analyzer with filters.
 
 > [!IMPORTANT]
-> 💡 This project is under development and not ready yet for the use. Currently it is actively modified to create a `Service Interface` document. Welcome to join the project. Pick up any unassigned ticket you'd like to fix. Write a short message to assign the ticket to you. Since the application is very specific and designed for the `areg-sdk`, you'd have many questions. Feel free to ask any question.
+> 💡 This project is under development, some features may be incomplete or contain bugs. Currently it is possible to make `Service Interface` document design, live real-time and offline multiple instance logging with filtering by priorities. If you find a bug or have better idea for the features, please create a ticket. Welcome to join the project. You may as well pick up any unassigned ticket you'd like to fix. Write a short message in the ticket before working on it. Feel free to ask questions.
