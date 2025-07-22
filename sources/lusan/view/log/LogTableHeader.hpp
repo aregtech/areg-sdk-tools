@@ -60,8 +60,14 @@ public:
      **/
     void resetFilters(void);
 
+    /**
+     * \brief   Returns the logical index of the column.
+     **/
     int getColumnIndex(LoggingModelBase::eColumn column) const;
 
+    /**
+     * \brief   Returns the column set by specified logical index.
+     **/
     LoggingModelBase::eColumn getColumn(int logicalIndex) const;
 
     /**
