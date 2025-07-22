@@ -207,6 +207,11 @@ private:
      **/
     void _populateColumnsMenu(QMenu* menu, int curRow);
 
+    /**
+     * \brief   Resets the search result in the log viewer.
+     **/
+    void _resetSearchResult(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables.
 //////////////////////////////////////////////////////////////////////////

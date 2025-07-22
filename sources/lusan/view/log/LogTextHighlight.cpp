@@ -19,15 +19,15 @@
 
 #include "lusan/view/log/LogTextHighlight.hpp"
 
-LogTextHighlight::LogTextHighlight(QObject* parent /*= nullptr*/)
-    : QStyledItemDelegate(parent)
-    , mFoundPos()
-{
-}
+#include <QPainter>
+#include <QTextLayout>
+#include <QTextLine>
+#include <QList>
 
-void LogTextHighlight::setFoundPos(const LogSearchModel::sFoundPos& foundPos)
+LogTextHighlight::LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QObject* parent /*= nullptr*/)
+    : QStyledItemDelegate(parent)
+    , mFoundPos(foundPos)
 {
-    mFoundPos = foundPos;
 }
 
 void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const

@@ -19,25 +19,48 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include <QStyledItemDelegate>
-
 #include "lusan/model/log/LogSearchModel.hpp"
-#include <QPainter>
-#include <QTextLayout>
-#include <QTextLine>
-#include <QList>
+#include "areg/base/GEGlobal.h"
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class QPainter;
+class QStyleOptionViewItem;
+class QModelIndex;
+
+/**
+ * \brief   LogTextHighlight class is a custom item delegate that highlights the search results in the log viewer.
+ **/
 class LogTextHighlight : public QStyledItemDelegate
 {
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
-    LogTextHighlight(QObject* parent = nullptr);
+    LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QObject* parent = nullptr);
+    virtual ~LogTextHighlight(void) = default;
 
-    void setFoundPos(const LogSearchModel::sFoundPos& foundPos);
-
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
     virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
-    LogSearchModel::sFoundPos mFoundPos;
+    const LogSearchModel::sFoundPos& mFoundPos;
+
+//////////////////////////////////////////////////////////////////////////
+// Forbidden calls
+//////////////////////////////////////////////////////////////////////////
+    DECLARE_NOCOPY_NOMOVE(LogTextHighlight);
 };
 
 #endif  // LUSAN_VIEW_LOG_LOGTEXTHIGHLIGHT_HPP
