@@ -24,6 +24,7 @@
 
 #include "lusan/model/log/LogViewerFilterProxy.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
+#include "lusan/view/log/LogTextHighlight.hpp"
 
 #include <QVBoxLayout>
 #include <QKeyEvent>
@@ -51,6 +52,7 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     , mHeader   (nullptr)
     , mSearch   (nullptr)
     , mFoundPos ()
+    , mHighlight(nullptr)
 {
 }
 
@@ -158,6 +160,14 @@ void LogViewerBase::setupWidgets(void)
     mLogTable->setVerticalScrollMode(QTableView::ScrollPerItem);
     mLogTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
+    // In LogViewerBase constructor or setupWidgets()
+    int index = mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage);
+    if (index >= 0)
+    {
+        mHighlight = new LogTextHighlight(mFoundPos, mLogTable);
+        mLogTable->setItemDelegateForColumn(index, mHighlight);
+    }
+
     // Set the layout
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(mMdiWindow);
@@ -170,12 +180,10 @@ void LogViewerBase::setupWidgets(void)
     QItemSelectionModel* selection= mLogTable->selectionModel();
     connect(mHeader     , &LogTableHeader::signalComboFilterChanged
             , [this](int logicalColumn, const QStringList& items){
-                mSearch.resetSearch(); mFilter->setComboFilter(logicalColumn, items);
-            });
+                _resetSearchResult(); mFilter->setComboFilter(logicalColumn, items);});
     connect(mHeader     , &LogTableHeader::signalTextFilterChanged
             , [this](int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
-                mSearch.resetSearch(); mFilter->setTextFilter(logicalColumn, text, isCaseSensitive, isWholeWord, isWildCard);
-            });
+                _resetSearchResult(); mFilter->setTextFilter(logicalColumn, text, isCaseSensitive, isWholeWord, isWildCard);});
     connect(mHeader     , &LogTableHeader::customContextMenuRequested   , [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
     connect(mLogTable   , &QTableView::clicked                          , [this](const QModelIndex &index){onMouseButtonClicked(index);});
     connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , [this]() {mLogSearch->setStyleSheet(""); mSearch.resetSearch();});
@@ -192,7 +200,10 @@ void LogViewerBase::onSearchClicked(bool newSearch)
     Q_ASSERT(mLogSearch != nullptr);
     QString searchPhrase = mLogSearch->text();
     if (searchPhrase.isEmpty())
+    {
+        _resetSearchResult();
         return;
+    }
     
     if (newSearch || (mSearch.isValidPosition(mFoundPos) == false))
     {
@@ -221,6 +232,11 @@ void LogViewerBase::onSearchClicked(bool newSearch)
     {
         mLogSearch->setStyleSheet(QString::fromUtf8("QLineEdit { background-color: #ffcccc; }"));
         mLogSearch->update();
+    }
+
+    if (mHighlight)
+    {
+        mLogTable->viewport()->update();
     }
 }
 
@@ -421,4 +437,11 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
             mLogModel->setActiveColumns(QList<LiveLogsModel::eColumn>());
             resetColumnOrder();
         });
+}
+
+void LogViewerBase::_resetSearchResult(void)
+{
+    mFoundPos = LogSearchModel::sFoundPos{};
+    mSearch.resetSearch();
+    mLogTable->viewport()->update();
 }

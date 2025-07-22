@@ -60,6 +60,23 @@ public:
      **/
     void resetFilters(void);
 
+    /**
+     * \brief   Returns the logical index of the column.
+     **/
+    int getColumnIndex(LoggingModelBase::eColumn column) const;
+
+    /**
+     * \brief   Returns the column set by specified logical index.
+     **/
+    LoggingModelBase::eColumn getColumn(int logicalIndex) const;
+
+    /**
+     * \brief   Returns the header item for the specified logical index.
+     * \param   logicalIndex  The logical index of the header item.
+     * \return  The header item for the specified logical index.
+     **/
+    LogHeaderItem* getHeaderItem(int logicalIndex) const;
+
 signals:
 /************************************************************************
  * Signals

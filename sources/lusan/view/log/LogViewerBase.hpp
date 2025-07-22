@@ -29,6 +29,7 @@ class LoggingModelBase;
 class LogTableHeader;
 class LogViewerFilterProxy;
 class SearchLineEdit;
+class LogTextHighlight;
 
 class QHeaderView;
 class QModelIndex;
@@ -206,6 +207,11 @@ private:
      **/
     void _populateColumnsMenu(QMenu* menu, int curRow);
 
+    /**
+     * \brief   Resets the search result in the log viewer.
+     **/
+    void _resetSearchResult(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables.
 //////////////////////////////////////////////////////////////////////////
@@ -218,6 +224,7 @@ protected:
     LogTableHeader*             mHeader;    //!< Log table header object, used for managing the header of the log table.
     LogSearchModel              mSearch;    //!< The search model, used for searching logs in the log viewer.
     LogSearchModel::sFoundPos   mFoundPos;  //!< The found position of the search in the log viewer.
+    LogTextHighlight*           mHighlight; //!< The text highlight object, used for highlighting the search results in the log viewer.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls.

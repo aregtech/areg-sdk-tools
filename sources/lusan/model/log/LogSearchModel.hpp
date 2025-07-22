@@ -139,6 +139,12 @@ public:
     inline bool canSearchNext(void) const;
 
     /**
+     * \brief   Returns true if the search has found a match.
+     *          It is used to indicate whether the search was successful or not.
+     **/
+    inline bool hasFound(void) const;
+
+    /**
      * \brief   Returns true if specified position is valid.
      **/
     bool isValidPosition(uint32_t pos) const;
@@ -287,6 +293,11 @@ inline const QString& LogSearchModel::getSearchPhrase(void) const
 inline bool LogSearchModel::canSearchNext(void) const
 {
     return (mSearchPhrase.isEmpty() == false) && isValidPosition(mRowBegin) && isValidPosition(mRowFound);
+}
+
+inline bool LogSearchModel::hasFound(void) const
+{
+    return (mRowFound != InvalidPos) && (mRowFound != ReachedEnd);
 }
 
 #endif  // LUSAN_MODEL_LOG_LOGSEARCHMODEL_HPP
