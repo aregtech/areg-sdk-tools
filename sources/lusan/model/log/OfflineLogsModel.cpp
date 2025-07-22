@@ -13,7 +13,7 @@
  *  \file        lusan/model/log/OfflineLogsModel.cpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Offline Log Navigation Model.
+ *  \brief       Lusan application, Offline Log NavigationDock Model.
  *
  ************************************************************************/
 

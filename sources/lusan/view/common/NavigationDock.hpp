@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_VIEW_COMMON_NAVIGATION_HPP
-#define LUSAN_VIEW_COMMON_NAVIGATION_HPP
+﻿#ifndef LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP
+#define LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/Navigation.hpp
+ *  \file        lusan/view/common/NavigationDock.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       The navigation docking widget of lusan.
@@ -28,10 +28,11 @@
 #include <QIcon>
 #include <QSize>
 #include <QTabWidget>
+#include "OutputDock.hpp"
 
 class MdiMainWindow;
 
-class Navigation : public QDockWidget
+class NavigationDock : public QDockWidget
 {
 //////////////////////////////////////////////////////////////////////////
 // Constants, types and static methods
@@ -62,16 +63,16 @@ public:
     static QIcon getOfflineLogIcon(void);
 
     //!< Returns the tab name of the specified navigation window
-    static const QString& getTabName(Navigation::eNaviWindow navi);
+    static const QString& getTabName(NavigationDock::eNaviWindow navi);
     
     //!< Returns the navigation window type by specified tab name.
-    static Navigation::eNaviWindow getNaviWindow(const QString & tabName);
+    static NavigationDock::eNaviWindow getNaviWindow(const QString & tabName);
     
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    Navigation(MdiMainWindow* parent);
+    NavigationDock(MdiMainWindow* parent);
     
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes
@@ -104,7 +105,7 @@ public:
      * \return  The index of the new added tab.
      **/
     inline int addTab(NavigationWindow& widget, const QString& tabName);
-    inline int addTab(NavigationWindow& widget, Navigation::eNaviWindow navi);
+    inline int addTab(NavigationWindow& widget, NavigationDock::eNaviWindow navi);
 
     /**
      * \brief   Returns the pointer to the widget of the given tab name.
@@ -114,7 +115,7 @@ public:
      *          Returns nullptr if tab name does not exist.
      **/
     NavigationWindow* getTab(const QString& tabName) const;
-    NavigationWindow* getTab(Navigation::eNaviWindow navi) const;
+    NavigationWindow* getTab(NavigationDock::eNaviWindow navi) const;
     
 
     /**
@@ -123,23 +124,23 @@ public:
      * @return  Returns true if the tab with the given name exists. False, otherwise.
      **/
     bool tabExists(const QString& tabName) const;
-    bool tabExists(Navigation::eNaviWindow navi) const;
+    bool tabExists(NavigationDock::eNaviWindow navi) const;
 
     /**
      * \brief   Show tab with specified unique name.
      * \param   tabName     The unique name of the tab to show.
      **/
     bool showTab(const QString& tabName);
-    bool showTab(Navigation::eNaviWindow navi);
+    bool showTab(NavigationDock::eNaviWindow navi);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
     /**
-     * \brief   Returns the instance of Navigation window.
+     * \brief   Returns the instance of NavigationDock window.
      **/
-    inline Navigation& self(void);
+    inline NavigationDock& self(void);
 
     /**
      * \brief   Initializes the size of tab widgets.
@@ -176,42 +177,42 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
-// Navigation class inline methods
+// NavigationDock class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QTabWidget& Navigation::getTabWidget(void)
+inline QTabWidget& NavigationDock::getTabWidget(void)
 {
     return mTabs;
 }
 
-inline NaviFileSystem& Navigation::getFileSystem(void)
+inline NaviFileSystem& NavigationDock::getFileSystem(void)
 {
     return mFileSystem;
 }
 
-inline NaviLiveLogsScopes& Navigation::getLiveScopes(void)
+inline NaviLiveLogsScopes& NavigationDock::getLiveScopes(void)
 {
     return mLiveScopes;
 }
 
-inline NaviOfflineLogsScopes& Navigation::getOfflineScopes(void)
+inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes(void)
 {
     return mOfflineScopes;
 }
 
-inline int Navigation::addTab(NavigationWindow& widget, const QString& tabName)
+inline int NavigationDock::addTab(NavigationWindow& widget, const QString& tabName)
 {
     return mTabs.addTab(&widget, tabName);
 }
 
-inline int Navigation::addTab(NavigationWindow& widget, Navigation::eNaviWindow navi)
+inline int NavigationDock::addTab(NavigationWindow& widget, NavigationDock::eNaviWindow navi)
 {
-    return (navi != Navigation::eNaviWindow::NaviUnknown ? addTab(widget, Navigation::getTabName(navi)) : -1);
+    return (navi != NavigationDock::eNaviWindow::NaviUnknown ? addTab(widget, NavigationDock::getTabName(navi)) : -1);
 }
 
-inline Navigation& Navigation::self(void)
+inline NavigationDock& NavigationDock::self(void)
 {
     return (*this);
 }
 
-#endif  // LUSAN_VIEW_COMMON_NAVIGATION_HPP
+#endif  // LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP

@@ -34,7 +34,7 @@
 #include <QMessageBox>
 
 NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
-    : NavigationWindow(static_cast<int>(Navigation::eNaviWindow::NaviOfflineLogs), wndMain, parent)
+    : NavigationWindow(static_cast<int>(NavigationDock::eNaviWindow::NaviOfflineLogs), wndMain, parent)
 
     , ui            (new Ui::NaviOfflineLogsScopes)
     , mScopesModel  (new OfflineScopesModel(this))

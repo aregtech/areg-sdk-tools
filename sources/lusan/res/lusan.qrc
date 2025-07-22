@@ -8,7 +8,7 @@
         <file alias="move down">icons/move_down.png</file>
         <file alias="move up">icons/move_up.png</file>
         <file alias="View Navigator Window">icons/view_navigation.png</file>
-        <file alias="View Status Window">icons/view_status.png</file>
+        <file alias="View Output Window">icons/view_status.png</file>
         <file alias="Sort Items">icons/sort.png</file>
         <file alias="Edit Item">icons/edit.png</file>
         <file alias="Update Item">icons/update.png</file>
