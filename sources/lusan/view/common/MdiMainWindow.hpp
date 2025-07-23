@@ -161,12 +161,12 @@ public:
     NaviFileSystem& getNaviFileSystem(void);
 
     /**
-     * \brief   Returns the Live Logging Scopes NavigationDock window.
+     * \brief   Returns the Live Logging Scopes Navigation window.
      **/
     NaviLiveLogsScopes& getNaviLiveScopes(void);
 
     /**
-     * \brief   Returns the Offline Logging Scopes NavigationDock window.
+     * \brief   Returns the Offline Logging Scopes Navigation window.
      **/
     NaviOfflineLogsScopes& getNaviOfflineScopes(void);
     
