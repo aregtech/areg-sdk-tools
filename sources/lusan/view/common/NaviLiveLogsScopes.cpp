@@ -49,7 +49,7 @@ void NaviLiveLogsScopes::_logObserverStarted(void)
 }
 
 NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
-    : NavigationWindow(static_cast<int>(Navigation::eNaviWindow::NaviLiveLogs), wndMain, parent)
+    : NavigationWindow(static_cast<int>(NavigationDock::eNaviWindow::NaviLiveLogs), wndMain, parent)
 
     , ui            (new Ui::NaviLiveLogsScopes)
     , mAddress      ()

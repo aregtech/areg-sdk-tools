@@ -81,10 +81,8 @@ MdiMainWindow::MdiMainWindow()
     , mWorkspaceRoot( )
     , mLastFile     ( )
     , mMdiArea      ( this )
-    , mNavigation   ( this )
-    , mStatusDock   ( nullptr )
-    , mListView     ( nullptr )
-    , mStatusTabs   ( nullptr )
+    , mNaviDock     ( this )
+    , mOutputDock   ( this )
     , mLogViewer    ( nullptr )
     , mLiveLogWnd   ( nullptr )
 
@@ -116,7 +114,7 @@ MdiMainWindow::MdiMainWindow()
     , mActViewNavigator(this)
     , mActViewWokspace(this)
     , mActViewLogs  (this)
-    , mActViewStatus(this)
+    , mActViewOutput(this)
     , mActWindowsTile(this)
     , mActWindowsCascade(this)
     , mActWindowsNext(this)
@@ -191,8 +189,8 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
         {
             // Copy logs to offline log viewer
             OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
-            mNavigation.showTab(Navigation::eNaviWindow::NaviOfflineLogs);
-            mNavigation.getLiveScopes().setLoggingModel(nullptr);
+            mNaviDock.showTab(NavigationDock::eNaviWindow::NaviOfflineLogs);
+            mNaviDock.getLiveScopes().setLoggingModel(nullptr);
             offlineLog->show();
 
             // Properly close and delete the live log window and viewer
@@ -235,17 +233,17 @@ LiveLogsModel * MdiMainWindow::setupLiveLogging(void)
 
 NaviFileSystem& MdiMainWindow::getNaviFileSystem(void)
 {
-    return mNavigation.getFileSystem();
+    return mNaviDock.getFileSystem();
 }
 
 NaviLiveLogsScopes& MdiMainWindow::getNaviLiveScopes(void)
 {
-    return mNavigation.getLiveScopes();
+    return mNaviDock.getLiveScopes();
 }
 
 NaviOfflineLogsScopes& MdiMainWindow::getNaviOfflineScopes(void)
 {
-    return mNavigation.getOfflineScopes();
+    return mNaviDock.getOfflineScopes();
 }
 
 void MdiMainWindow::logDatabaseCreated(const QString& dbPath)
@@ -323,7 +321,7 @@ void MdiMainWindow::onFileNewLog()
     {
         mLogViewer = new LiveLogViewer(this, &mMdiArea);
         mLiveLogWnd = mMdiArea.addSubWindow(mLogViewer);
-        mLiveLogWnd->setWindowIcon(Navigation::getLiveLogIcon());
+        mLiveLogWnd->setWindowIcon(NavigationDock::getLiveLogIcon());
         mLogViewer->setMdiSubwindow(mLiveLogWnd);
         mMdiArea.showMaximized();
         mLogViewer->show();
@@ -403,42 +401,6 @@ void MdiMainWindow::onEditPaste()
     if (active != nullptr)
     {
         active->paste();
-    }
-}
-
-void MdiMainWindow::onViewNavigator()
-{
-    if (mNavigation.isHidden())
-    {
-        mNavigation.show();
-    }
-}
-
-void MdiMainWindow::onViewWorkspace()
-{
-    if (mNavigation.isHidden())
-    {
-        mNavigation.show();
-    }
-    
-    mNavigation.showTab(Navigation::TabNameFileSystem);
-}
-
-void MdiMainWindow::onViewLogs()
-{
-    if (mNavigation.isHidden())
-    {
-        mNavigation.show();
-    }
-    
-    mNavigation.showTab(Navigation::TabLiveLogsExplorer);
-}
-
-void MdiMainWindow::onViewStatus()
-{
-    if ((mStatusDock != nullptr) && (mStatusDock->isHidden()))
-    {
-        mStatusDock->show();
     }
 }
 
@@ -629,7 +591,7 @@ LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QS
     LiveLogViewer* child = new LiveLogViewer(this, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
-    mdiSub->setWindowIcon(Navigation::getLiveLogIcon());
+    mdiSub->setWindowIcon(NavigationDock::getLiveLogIcon());
     mdiSub->setWindowFilePath(filePath);
     mdiSub->setToolTip(filePath);
     if (filePath.isEmpty() == false)
@@ -638,7 +600,7 @@ LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QS
         mdiSub->setWindowTitle(QString::fromStdString(File::getFileNameWithExtension(stdFilePath.c_str()).getData()));
     }
     mMdiArea.showMaximized();
-    mNavigation.showTab(Navigation::eNaviWindow::NaviLiveLogs);
+    mNaviDock.showTab(NavigationDock::eNaviWindow::NaviLiveLogs);
     return child;
 }
 
@@ -647,7 +609,7 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     OfflineLogViewer* child = cloneLive && (mLogViewer != nullptr) ? new OfflineLogViewer(this, *mLogViewer, &mMdiArea) : new OfflineLogViewer(this, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
-    mdiSub->setWindowIcon(Navigation::getOfflineLogIcon());
+    mdiSub->setWindowIcon(NavigationDock::getOfflineLogIcon());
     mdiSub->setWindowFilePath(filePath);
     if (filePath.isEmpty() == false)
     {
@@ -656,9 +618,9 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     }
 
     mMdiArea.showMaximized();
-    mNavigation.showTab(Navigation::NaviOfflineLogs);
+    mNaviDock.showTab(NavigationDock::NaviOfflineLogs);
     OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());
-    static_cast<NaviOfflineLogsScopes *>(mNavigation.getTab(Navigation::TabOfflineLogsExplorer))->setLoggingModel(logModel);
+    static_cast<NaviOfflineLogsScopes *>(mNaviDock.getTab(NavigationDock::TabOfflineLogsExplorer))->setLoggingModel(logModel);
     if (filePath.isEmpty() == false)
     {
         child->openDatabase(filePath);
@@ -734,21 +696,32 @@ void MdiMainWindow::_createActions()
     iconNavi.addFile(QString::fromUtf8(":/icons/View Navigator Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
     initAction(mActViewNavigator, iconNavi, tr("&Navigator Window"));
     mActViewNavigator.setStatusTip(tr("View Navigator Window"));
-    connect(&mActViewNavigator, &QAction::triggered, this, &MdiMainWindow::onViewNavigator);
+    connect(&mActViewNavigator, &QAction::triggered, [this](){
+        if (mNaviDock.isHidden()) mNaviDock.show();
+    });
 
     initAction(mActViewWokspace, QIcon(), tr("&Workspace Navigator"));
     mActViewWokspace.setStatusTip(tr("View Workspace Navigator Window"));
-    connect(&mActViewWokspace, &QAction::triggered, this, &MdiMainWindow::onViewWorkspace);
+    connect(&mActViewWokspace, &QAction::triggered, [this]() {
+        if (mNaviDock.isHidden()) mNaviDock.show();
+        mNaviDock.showTab(NavigationDock::TabNameFileSystem);
+    });
 
     initAction(mActViewLogs, QIcon(), tr("&Logs Navigator"));
     mActViewLogs.setStatusTip(tr("View Logs Navigator Window"));
-    connect(&mActViewLogs, &QAction::triggered, this, &MdiMainWindow::onViewLogs);
+    connect(&mActViewLogs, &QAction::triggered, [this] () {
+        if (mNaviDock.isHidden()) mNaviDock.show();
+        mNaviDock.showTab(NavigationDock::TabLiveLogsExplorer);
+        if (mLiveLogWnd != nullptr) mLiveLogWnd->activateWindow();
+    });
     
-    QIcon iconStatus;
-    iconStatus.addFile(QString::fromUtf8(":/icons/View Status Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
-    initAction(mActViewStatus, iconStatus, tr("&Status Window"));
-    mActViewStatus.setStatusTip(tr("View Status Window"));
-    connect(&mActViewStatus, &QAction::triggered, this, &MdiMainWindow::onViewStatus);
+    QIcon iconOutput;
+    iconOutput.addFile(QString::fromUtf8(":/icons/View Output Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    initAction(mActViewOutput, iconOutput, tr("&Output Window"));
+    mActViewOutput.setStatusTip(tr("View Output Window"));
+    connect(&mActViewOutput, &QAction::triggered, [this](){
+        if (mOutputDock.isHidden()) mOutputDock.show();
+    });
 
     initAction(mActToolsOptions, QIcon::fromTheme("applications-development"), tr("&Options"));
     mActToolsOptions.setStatusTip(tr("View Workspace Options"));
@@ -807,7 +780,7 @@ void MdiMainWindow::_createMenus()
     mViewMenu->addAction(&mActViewNavigator);
     mViewMenu->addAction(&mActViewWokspace);
     mViewMenu->addAction(&mActViewLogs);
-    mViewMenu->addAction(&mActViewStatus);
+    mViewMenu->addAction(&mActViewOutput);
 
     mToolsMenu = menuBar()->addMenu(tr("&Tools"));
     mToolsMenu->addAction(&mActToolsOptions);
@@ -838,7 +811,7 @@ void MdiMainWindow::_createToolBars()
     
     mViewToolBar = addToolBar(tr("View"));
     mViewToolBar->addAction(&mActViewNavigator);
-    mViewToolBar->addAction(&mActViewStatus);
+    mViewToolBar->addAction(&mActViewOutput);
 }
 
 void MdiMainWindow::_createStatusBar()
@@ -848,16 +821,9 @@ void MdiMainWindow::_createStatusBar()
 
 void MdiMainWindow::_createDockWindows()
 {
-    addDockWidget(Qt::LeftDockWidgetArea, &mNavigation);
-
-    resizeDocks(QList<QDockWidget *>{&mNavigation}, QList<int>{mNavigation.width() + 10}, Qt::Horizontal);
-
-    mStatusDock = new QDockWidget(tr("Status"), this);
-    mStatusTabs = new QTabWidget;
-    mListView = new QListView;
-    mStatusTabs->addTab(mListView, tr("Output"));
-    mStatusDock->setWidget(mStatusTabs);
-    addDockWidget(Qt::BottomDockWidgetArea, mStatusDock);
+    addDockWidget(Qt::BottomDockWidgetArea, &mOutputDock);
+    addDockWidget(Qt::LeftDockWidgetArea, &mNaviDock);
+    resizeDocks(QList<QDockWidget*>{&mNaviDock}, QList<int>{mNaviDock.width() + 10}, Qt::Horizontal);
 }
 
 void MdiMainWindow::_createMdiArea()

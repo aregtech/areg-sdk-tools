@@ -7,7 +7,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/MdiChild.cpp
     ${LUSAN}/view/common/MdiMainWindow.cpp
     ${LUSAN}/view/common/NaviFileSystem.cpp
-    ${LUSAN}/view/common/Navigation.cpp
+    ${LUSAN}/view/common/NavigationDock.cpp
     ${LUSAN}/view/common/NavigationWindow.cpp
     ${LUSAN}/view/common/NaviLiveLogsScopes.cpp
     ${LUSAN}/view/common/NaviOfflineLogsScopes.cpp
@@ -15,6 +15,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/OptionPageLogging.cpp
     ${LUSAN}/view/common/OptionPageProjectDirs.cpp
     ${LUSAN}/view/common/OptionPageWorkspace.cpp
+    ${LUSAN}/view/common/OutputDock.cpp
     ${LUSAN}/view/common/ProjectSettings.cpp
     ${LUSAN}/view/common/SearchLineEdit.cpp
     ${LUSAN}/view/common/TableCell.cpp
@@ -29,7 +30,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/MdiChild.hpp
     ${LUSAN}/view/common/MdiMainWindow.hpp
     ${LUSAN}/view/common/NaviFileSystem.hpp
-    ${LUSAN}/view/common/Navigation.hpp
+    ${LUSAN}/view/common/NavigationDock.hpp
     ${LUSAN}/view/common/NavigationWindow.hpp
     ${LUSAN}/view/common/NaviLiveLogsScopes.hpp
     ${LUSAN}/view/common/NaviOfflineLogsScopes.hpp
@@ -37,6 +38,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/OptionPageLogging.hpp
     ${LUSAN}/view/common/OptionPageProjectDirs.hpp
     ${LUSAN}/view/common/OptionPageWorkspace.hpp
+    ${LUSAN}/view/common/OutputDock.hpp
     ${LUSAN}/view/common/ProjectSettings.hpp
     ${LUSAN}/view/common/SearchLineEdit.hpp
     ${LUSAN}/view/common/TableCell.hpp

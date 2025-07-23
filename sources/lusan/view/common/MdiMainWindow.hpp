@@ -24,7 +24,8 @@
 
 #include "lusan/view/common/MdiArea.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
-#include "lusan/view/common/Navigation.hpp"
+#include "lusan/view/common/NavigationDock.hpp"
+#include "lusan/view/common/OutputDock.hpp"
 
 /************************************************************************
  * Dependencies
@@ -277,26 +278,6 @@ private slots:
     void onEditPaste();
 
     /**
-     * \brief   Slot for showing the workspace navigator.
-     **/
-    void onViewNavigator();
-
-    /**
-     * \brief   Slot for showing the workspace view.
-     **/
-    void onViewWorkspace();
-
-    /**
-     * \brief   Slot for showing the logs view.
-     **/
-    void onViewLogs();
-
-    /**
-     * \brief   Slot for showing the status view.
-     **/
-    void onViewStatus();
-
-    /**
      * \brief   Slot for showing the tools options dialog.
      **/
     void onToolsOptions(void);
@@ -469,10 +450,8 @@ private:
     QString         mLastFile;      //!< The current file name.
     
     MdiArea         mMdiArea;       //!< The MDI area for managing sub-windows.
-    Navigation      mNavigation;    //!< The navigation dock widget.
-    QDockWidget*    mStatusDock;    //!< The status dock widget.
-    QListView*      mListView;      //!< The list view widget.
-    QTabWidget*     mStatusTabs;    //!< The status tab widget.
+    NavigationDock  mNaviDock;      //!< The navigation dock widget.
+    OutputDock      mOutputDock;    //!< The output dock widget.
     LiveLogViewer*  mLogViewer;     //!< The log viewer for displaying live logs. There should be only one instance of this viewer.
     QMdiSubWindow*  mLiveLogWnd;    //!< The MDI sub-window for the live log viewer. There should be only one instance of this window.
 
@@ -510,7 +489,7 @@ private:
     QAction         mActViewNavigator;
     QAction         mActViewWokspace;
     QAction         mActViewLogs;
-    QAction         mActViewStatus;
+    QAction         mActViewOutput;
 
     //!< Actions for Tools sub-menus.
     QAction         mActToolsOptions;
