@@ -21,7 +21,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/model/log/LoggingModelBase.hpp"
-#include "lusan/model/log/LogViewerFilterProxy.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
 
 #include "areg/base/DateTime.hpp"

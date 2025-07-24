@@ -27,7 +27,7 @@
 
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
-#include "lusan/model/log/LogViewerFilterProxy.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 
 #include <QFileInfo>
 #include <QTableView>

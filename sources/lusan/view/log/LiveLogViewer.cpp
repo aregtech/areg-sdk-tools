@@ -24,7 +24,7 @@
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
-#include "lusan/model/log/LogViewerFilterProxy.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 
 #include <QTableView>
 #include <QLabel>

@@ -22,7 +22,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
 
-#include "lusan/model/log/LogViewerFilterProxy.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/view/log/LogTextHighlight.hpp"
 
@@ -137,7 +137,7 @@ void LogViewerBase::setupWidgets(void)
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
     mLogSearch->initialize(tools, QSize(20, 20));
 
-    mFilter = new LogViewerFilterProxy(mLogModel);
+    mFilter = new LogViewerFilter(mLogModel);
     mHeader = new LogTableHeader(mLogTable, mLogModel);
     QShortcut* shortcutSearch = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this);
     mSearch.setLogModel(mFilter);

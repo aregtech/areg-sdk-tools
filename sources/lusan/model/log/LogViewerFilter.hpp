@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_MODEL_LOG_LOGVIEWERFILTERPROXY_HPP
-#define LUSAN_MODEL_LOG_LOGVIEWERFILTERPROXY_HPP
+﻿#ifndef LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP
+#define LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/log/LogViewerFilterProxy.hpp
+ *  \file        lusan/model/log/LogViewerFilter.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log Viewer Filter Proxy Model.
@@ -36,7 +36,7 @@ class LoggingModelBase;
  *          This proxy model filters the LiveLogsModel based on user-selected criteria
  *          from the header filters (combo boxes and text filters).
  **/
-class LogViewerFilterProxy : public QSortFilterProxyModel
+class LogViewerFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
     
@@ -59,9 +59,9 @@ public:
      * \brief   Constructor with parent object.
      * \param   model   The logging data model object.
      **/
-    explicit LogViewerFilterProxy(LoggingModelBase * model);
+    explicit LogViewerFilter(LoggingModelBase* model);
 
-    virtual ~LogViewerFilterProxy(void);
+    virtual ~LogViewerFilter(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -72,19 +72,40 @@ public slots:
      * \param   logicalColumn   The logical column index to filter.
      * \param   items          The list of selected items to filter by.
      **/
-    void setComboFilter(int logicalColumn, const QStringList& items);
+    virtual void setComboFilter(int logicalColumn, const QStringList& items);
 
     /**
      * \brief   Sets text filter for a specific column.
      * \param   logicalColumn   The logical column index to filter.
      * \param   text           The text to filter by.
      **/
-    void setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
+    virtual void setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
 
     /**
      * \brief   Clears all filters.
      **/
-    void clearFilters();
+    virtual void clearFilters();
+
+
+    inline void setScopeFilter(uint32_t scopeId);
+
+    inline void setScopeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds);
+
+    void setScopeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds, uint32_t prioMask);
+
+    inline void addScopeFilter(uint32_t scopeId);
+
+    inline void addScopeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds);
+
+    void addScopeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds, uint32_t prioMask);
+
+    inline void removeScoepeFilter(uint32_t scopeId);
+
+    inline void removeScoepeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds);
+
+    inline void removeScoepeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds, uint32_t prioMask);
+
+    inline void cleanScopeFilters(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -98,10 +119,6 @@ protected:
      **/
     bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
 
-//////////////////////////////////////////////////////////////////////////
-// Hidden operations
-//////////////////////////////////////////////////////////////////////////
-private:
     /**
      * \brief   Helper method to check if a row matches the combo filters.
      * \param   source_row  The row index in the source model.
@@ -126,20 +143,48 @@ private:
      **/
     bool wildcardMatch(const QString& text, const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord) const;
 
+    void setScopeFilter(int logicalColumn, const ScopeFilter& scopeFilters);
+
+    void addScopeFilter(int logicalColumn, const ScopeFilter& scopeFilters);
+
+    void removeScopeFilter(int logicalColumn, const ScopeFilter& scopeFilters);
+
+    inline void clearFilter(sScopeFilter& filter);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
-private:
-    QMap<int, QStringList>      mComboFilters;   //!< Map of column index to selected filter items
-    QMap<int, sStringFilter>    mTextFilters;    //!< Map of column index to filter text
-    LoggingModelBase*           mLogModel;       //!< Pointer to the log viewer source model
+protected:
+    QMap<int, QStringList>      mComboFilters;  //!< Map of column index to selected filter items
+    QMap<int, sStringFilter>    mTextFilters;   //!< Map of column index to filter text
+    LoggingModelBase*           mLogModel;      //!< Pointer to the log viewer source model
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call
 //////////////////////////////////////////////////////////////////////////
 private:
-    LogViewerFilterProxy(void) = delete;
-    DECLARE_NOCOPY_NOMOVE(LogViewerFilterProxy);
+    LogViewerFilter(void) = delete;
+    DECLARE_NOCOPY_NOMOVE(LogViewerFilter);
 };
 
-#endif // LUSAN_MODEL_LOG_LOGVIEWERFILTERPROXY_HPP
+inline void LogViewerFilter::setScopeFilter(uint32_t scopeId)
+{
+    setScopeFilter(scopeId, 0, std::vector<uint32_t>());
+}
+
+inline void LogViewerFilter::setScopeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds)
+{
+    setScopeFilter(scopeId, moduleId, sessionIds, 0);
+}
+
+inline void LogViewerFilter::addScopeFilter(uint32_t scopeId)
+{
+    addScopeFilter(scopeId, 0, std::vector<uint32_t>());
+}
+
+inline void LogViewerFilter::addScopeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds)
+{
+    addScopeFilter(scopeId, moduleId, sessionIds, 0);
+}
+
+#endif // LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP

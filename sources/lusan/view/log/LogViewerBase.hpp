@@ -27,7 +27,7 @@
  ************************************************************************/
 class LoggingModelBase;
 class LogTableHeader;
-class LogViewerFilterProxy;
+class LogViewerFilter;
 class SearchLineEdit;
 class LogTextHighlight;
 
@@ -217,7 +217,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 protected:
     LoggingModelBase*           mLogModel;  //!< The logging model used by the log viewer, which provides the data for the log table.
-    LogViewerFilterProxy*       mFilter;    //!< The filter object
+    LogViewerFilter*       mFilter;    //!< The filter object
     QTableView*                 mLogTable;  //!< The table view widget that displays the logs in the log viewer.
     SearchLineEdit*             mLogSearch; //!< The search line edit control, used for searching logs in the log viewer.
     QWidget*                    mMdiWindow; //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
