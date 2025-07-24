@@ -51,9 +51,16 @@ OutputDock::eOutputDock OutputDock::getOutputDock(const QString& tabName)
 
 OutputDock::OutputDock(MdiMainWindow* parent)
     : QDockWidget   (QString(tr("Output")), parent)
+    , mScopeOutput  (parent, this)
     , mMainWindow   (parent)
     , mTabs         (this)
 {
+    mTabs.addTab(&mScopeOutput, QIcon(), tr("Scopes Analyzes"));
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
+}
+
+OutputDock::~OutputDock(void)
+{
+    mTabs.removeTab(0);
 }

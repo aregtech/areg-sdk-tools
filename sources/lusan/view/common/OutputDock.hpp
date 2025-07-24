@@ -25,6 +25,8 @@
 #include <QDockWidget>
 #include "areg/base/GEGlobal.h"
 
+#include "lusan/view/log/ScopeOutputViewer.hpp"
+
 #include <QIcon>
 #include <QSize>
 #include <QTabWidget>
@@ -74,6 +76,8 @@ public:
 public:
 
     OutputDock(MdiMainWindow* parent);
+    
+    virtual ~OutputDock(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes
@@ -88,6 +92,7 @@ public:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
+    ScopeOutputViewer       mScopeOutput;
     MdiMainWindow*          mMainWindow;    //!< Main window
     QTabWidget              mTabs;          //!< The tab widget of the output windows.
 

@@ -7,6 +7,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/log/LogTextHighlight.cpp
     ${LUSAN}/view/log/LogViewerBase.cpp
     ${LUSAN}/view/log/OfflineLogViewer.cpp
+    ${LUSAN}/view/log/ScopeOutputViewer.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -16,4 +17,5 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/log/LogTextHighlight.hpp
     ${LUSAN}/view/log/LogViewerBase.hpp
     ${LUSAN}/view/log/OfflineLogViewer.hpp
+    ${LUSAN}/view/log/ScopeOutputViewer.hpp
 )
