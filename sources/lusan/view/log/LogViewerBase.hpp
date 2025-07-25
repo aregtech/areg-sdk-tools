@@ -112,7 +112,7 @@ public:
      * \param   select  If true, the specified row of logs will be selected after moving to the specified row.
      **/
     void moveToRow(int row, bool select);
-    
+
 /************************************************************************
  * Overrides
  ************************************************************************/
@@ -156,6 +156,8 @@ protected:
      * \param   index   The index of the cell that was clicked.
      **/
     virtual void onMouseButtonClicked(const QModelIndex& index);
+    
+    virtual void onMouseDoubleClicked(const QModelIndex& index);
     
     /**
      * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.

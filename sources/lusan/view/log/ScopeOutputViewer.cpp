@@ -21,12 +21,63 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/OutputDock.hpp"
+#include "lusan/model/log/ScopeLogViewerFilter.hpp"
 
 ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     : OutputWindow  (static_cast<int>(OutputDock::eOutputDock::OutputLogging), wndMain, parent)
     , ui            (new Ui::ScopeOutputViewer)
+    , mFilter       (new ScopeLogViewerFilter())
+    , mLogModel     (nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    ui->setupUi(this);    
+    ctrlTable()->setModel(nullptr);
+}
+
+ScopeOutputViewer::~ScopeOutputViewer(void)
+{
+    ctrlTable()->setModel(nullptr);
+    if (mFilter != nullptr)
+    {
+        mFilter->setSourceModel(nullptr);
+        delete mFilter;
+        mFilter = nullptr;
+    }
+    
+    delete ui;
+    ui = nullptr;
+}
+
+void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, uint32_t scopeId, uint32_t sessionId, ITEM_ID instance)
+{
+    if (mFilter == nullptr)
+    {
+        ctrlTable()->setModel(nullptr);
+        ctrlTable()->update();
+        return;
+    }
+
+    mLogModel = logModel;
+    mFilter->setScopeFilter(logModel, scopeId, std::vector<uint32_t>{sessionId}, std::vector<ITEM_ID>{instance}, 0);
+    if (ctrlTable()->model() == nullptr)
+        ctrlTable()->setModel(mFilter);
+}
+
+void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, const QModelIndex& index)
+{
+    if (mFilter == nullptr)
+    {
+        ctrlTable()->setModel(nullptr);
+        ctrlTable()->update();
+        return;
+    }
+    
+    mLogModel = logModel;
+    mFilter->setScopeFilter(logModel, index);
+    if (ctrlTable()->model() == nullptr)
+        ctrlTable()->setModel(mFilter);
+}
+
+inline QTableView* ScopeOutputViewer::ctrlTable(void) const
+{
+    return ui->logTable;
 }

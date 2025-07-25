@@ -246,6 +246,11 @@ NaviOfflineLogsScopes& MdiMainWindow::getNaviOfflineScopes(void)
     return mNaviDock.getOfflineScopes();
 }
 
+ScopeOutputViewer& MdiMainWindow::getOutputScopeLogs(void)
+{
+    return mOutputDock.getScopeLogsView();
+}
+
 void MdiMainWindow::logDatabaseCreated(const QString& dbPath)
 {
     if (mLogViewer != nullptr)
@@ -821,9 +826,11 @@ void MdiMainWindow::_createStatusBar()
 
 void MdiMainWindow::_createDockWindows()
 {
-    addDockWidget(Qt::BottomDockWidgetArea, &mOutputDock);
-    addDockWidget(Qt::LeftDockWidgetArea, &mNaviDock);
-    resizeDocks(QList<QDockWidget*>{&mNaviDock}, QList<int>{mNaviDock.width() + 10}, Qt::Horizontal);
+    mNaviDock.setAllowedAreas(Qt::LeftDockWidgetArea);
+    addDockWidget(Qt::LeftDockWidgetArea    , &mNaviDock,  Qt::Orientation::Vertical);
+    
+    mOutputDock.setAllowedAreas(Qt::BottomDockWidgetArea);
+    addDockWidget(Qt::BottomDockWidgetArea  , &mOutputDock);
 }
 
 void MdiMainWindow::_createMdiArea()

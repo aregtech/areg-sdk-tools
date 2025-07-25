@@ -67,12 +67,22 @@ namespace NELusanCommon
     /**
      * \brief   The minimal width of navigation window.
      **/
-    constexpr const uint32_t  MIN_NAVO_WIDTH    { 280 };
+    constexpr const uint32_t  MIN_NAVI_WIDTH    { 280 };
     
     /**
      * \brief   The minimal height of navigation window.
      **/
     constexpr const uint32_t  MIN_NAVI_HEIGHT   { 280 };
+
+    /**
+     * \brief   The minimal height of output window.
+     **/
+    constexpr const uint32_t  MIN_OUTPUT_HEIGHT { 80  };
+
+    /**
+     * \brief   The minimal width of output window.
+     **/
+    constexpr const uint32_t  MIN_OUTPUT_WIDTH  { 320 };
 
     /**
      * \brief   Gets the options file path.

@@ -36,6 +36,8 @@ class LiveLogsModel;
 class NaviFileSystem;
 class LiveLogViewer;
 class OfflineLogViewer;
+class ScopeOutputViewer;
+
 QT_BEGIN_NAMESPACE
 class QDockWidget;
 class QListView;
@@ -169,6 +171,8 @@ public:
      * \brief   Returns the Offline Logging Scopes Navigation window.
      **/
     NaviOfflineLogsScopes& getNaviOfflineScopes(void);
+    
+    ScopeOutputViewer& getOutputScopeLogs(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals

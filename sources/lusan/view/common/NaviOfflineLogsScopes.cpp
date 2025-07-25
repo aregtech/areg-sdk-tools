@@ -42,8 +42,8 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
 {
     ui->setupUi(this);
     ctrlCollapse()->setStyleSheet(NELusanCommon::getStyleToolbutton());
-    setBaseSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    setMinimumSize(NELusanCommon::MIN_NAVO_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setBaseSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
+    setMinimumSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
 
     setupWidgets();
     setupSignals();

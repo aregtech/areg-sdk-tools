@@ -87,14 +87,22 @@ public:
      * \brief   Returns the tab widget of the navigation.
      **/
     inline QTabWidget& getTabWidget(void);
-
+    
+    inline ScopeOutputViewer& getScopeLogsView(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    ScopeOutputViewer       mScopeOutput;
+    void initSize(void);
+    
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
     MdiMainWindow*          mMainWindow;    //!< Main window
     QTabWidget              mTabs;          //!< The tab widget of the output windows.
+    ScopeOutputViewer       mScopeOutput;
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -102,5 +110,15 @@ private:
 private:
     DECLARE_NOCOPY_NOMOVE(OutputDock);
 };
+
+inline QTabWidget& OutputDock::getTabWidget(void)
+{
+    return mTabs;
+}
+
+inline ScopeOutputViewer& OutputDock::getScopeLogsView(void)
+{
+    return mScopeOutput;
+}
 
 #endif  // LUSAN_VIEW_COMMON_OUTPUTDOCK_HPP

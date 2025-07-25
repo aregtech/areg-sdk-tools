@@ -50,17 +50,30 @@ OutputDock::eOutputDock OutputDock::getOutputDock(const QString& tabName)
 }
 
 OutputDock::OutputDock(MdiMainWindow* parent)
-    : QDockWidget   (QString(tr("Output")), parent)
-    , mScopeOutput  (parent, this)
+    : QDockWidget   (tr("Output"), parent)
     , mMainWindow   (parent)
     , mTabs         (this)
+    , mScopeOutput  (parent, this)
 {
     mTabs.addTab(&mScopeOutput, QIcon(), tr("Scopes Analyzes"));
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
+    
+    initSize();
 }
 
 OutputDock::~OutputDock(void)
 {
     mTabs.removeTab(0);
+    mTabs.setParent(nullptr);    
+}
+
+void OutputDock::initSize(void)
+{
+    QSize szSO{mScopeOutput.size()};
+    int maxWidth = szSO.width();
+    int maxHeight= szSO.height();
+    
+    resize(QSize { maxWidth,  maxHeight });
+    setSizePolicy(QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Fixed);
 }

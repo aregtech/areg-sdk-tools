@@ -165,8 +165,14 @@ bool NavigationDock::showTab(NavigationDock::eNaviWindow navi)
 
 void NavigationDock::initSize()
 {
-    resize(QSize { mFileSystem.width() + 10,  mFileSystem.height() });
-    setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
+    QSize szFS{mFileSystem.width()      ,  mFileSystem.height()};
+    QSize szLL{mLiveScopes.width()      , mLiveScopes.height()};
+    QSize szOL{mOfflineScopes.width()   , mOfflineScopes.height()};
+    int maxWidth    = std::max(szFS.width() , std::max(szLL.width() , szOL.width() ));
+    int maxHeight   = std::max(szFS.height(), std::max(szLL.height(), szOL.height()));
+    
+    resize(QSize { maxWidth - 100,  maxHeight + 100 });
+    setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Expanding);
 }
 
 void NavigationDock::onOptionsOpening(void)

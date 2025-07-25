@@ -166,7 +166,7 @@ bool LoggingModelBase::removeColumns(int column, int count, const QModelIndex& p
 
 QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
 {
-    if (!index.isValid())
+    if ((index.isValid() == false) || mLogs.empty())
         return QVariant();
 
     int row = index.row();

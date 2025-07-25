@@ -25,7 +25,6 @@ LogViewerFilter::LogViewerFilter(LoggingModelBase* model)
     : QSortFilterProxyModel (model)
     , mComboFilters         ( )
     , mTextFilters          ( )
-    , mLogModel             (model)
 {
     setSourceModel(model);
 }
@@ -33,8 +32,7 @@ LogViewerFilter::LogViewerFilter(LoggingModelBase* model)
 LogViewerFilter::~LogViewerFilter(void)
 {
     setSourceModel(nullptr);
-    clearFilters();
-    mLogModel = nullptr;
+    _clearData();
 }
 
 void LogViewerFilter::setComboFilter(int logicalColumn, const QStringList& items)
@@ -67,8 +65,7 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const QString& text, bool
 
 void LogViewerFilter::clearFilters()
 {
-    mComboFilters.clear();
-    mTextFilters.clear();
+    _clearData();
     invalidateFilter();
 }
 
@@ -76,7 +73,7 @@ bool LogViewerFilter::filterAcceptsRow(int source_row, const QModelIndex& source
 {
     Q_UNUSED(source_parent);
 
-    if (mLogModel == nullptr)
+    if (sourceModel() == nullptr)
         return true;
 
     // Check if row matches all active filters
@@ -85,7 +82,7 @@ bool LogViewerFilter::filterAcceptsRow(int source_row, const QModelIndex& source
 
 bool LogViewerFilter::matchesComboFilters(int source_row) const
 {
-    if (mLogModel == nullptr)
+    if (sourceModel() == nullptr)
         return true;
 
     // Check each active combo filter
@@ -98,11 +95,11 @@ bool LogViewerFilter::matchesComboFilters(int source_row) const
             continue;
 
         // Get the data for this column and row
-        QModelIndex index = mLogModel->index(source_row, column);
+        QModelIndex index = sourceModel()->index(source_row, column);
         if (index.isValid() == false)
             continue;
 
-        QString cellData = mLogModel->data(index, Qt::DisplayRole).toString();
+        QString cellData = sourceModel()->data(index, Qt::DisplayRole).toString();
         // Check if the cell data matches any of the selected filter items
         bool matches = false;
         for (const QString& filterItem : filterItems)
@@ -124,7 +121,7 @@ bool LogViewerFilter::matchesComboFilters(int source_row) const
 
 bool LogViewerFilter::matchesTextFilters(int source_row) const
 {
-    if (mLogModel == nullptr)
+    if (sourceModel() == nullptr)
         return true;
 
     // Check each active text filter
@@ -137,11 +134,11 @@ bool LogViewerFilter::matchesTextFilters(int source_row) const
             continue;
 
         // Get the data for this column and row
-        QModelIndex index = mLogModel->index(source_row, column);
+        QModelIndex index = sourceModel()->index(source_row, column);
         if (index.isValid() == false)
             continue;
 
-        QString cellData = mLogModel->data(index, Qt::DisplayRole).toString();
+        QString cellData = sourceModel()->data(index, Qt::DisplayRole).toString();
 
         // Check if the cell data contains the filter text (case-insensitive)
         if (filterText.isWildCard || filterText.isWholeWord)
@@ -178,52 +175,8 @@ bool LogViewerFilter::wildcardMatch(const QString& text, const QString& wildcard
     return text.contains(re);
 }
 
-inline void LogViewerFilter::clearFilter(sScopeFilter& filter)
+inline void LogViewerFilter::_clearData(void)
 {
-    filter.sessionIds.clear();
-    filter.prioMask = 0;
-    filter.moduleId = 0;
-    filter.filterMask = static_cast<uint32_t>(eScopeMask::NothingValid);
-}
-
-void LogViewerFilter::setScopeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds, uint32_t prioMask)
-{
-    sScopeFilter& filter = mScopeFilter[scopeId];
-    filter.sessionIds   = sessionIds;
-    filter.moduleId     = moduleId;
-    filter.prioMask     = prioMask;
-    filter.filterMask   = static_cast<uint32_t>(eScopeMask::NothingValid);
-
-    if (moduleId != 0)
-    {
-        filter.filterMask |= static_cast<uint32_t>(eScopeMask::ModuleValid);
-    }
-
-    if (sessionIds.empty() == false)
-    {
-        filter.filterMask |= static_cast<uint32_t>(eScopeMask::SessionValid);
-    }
-
-    if (prioMask != 0)
-    {
-        filter.filterMask |= static_cast<uint32_t>(eScopeMask::PrioValid);
-    }
-}
-
-void LogViewerFilter::addScopeFilter(uint32_t scopeId, uint32_t moduleId, const std::vector<uint32_t>& sessionIds, uint32_t prioMask)
-{
-    sScopeFilter& filter = mScopeFilter[scopeId];
-
-
-    if (sessionIds.empty() == false)
-    {
-        filter.filterMask |= static_cast<uint32_t>(eScopeMask::SessionValid);
-        for (const auto& sessionId : sessionIds)
-        {
-            if (std::find(filter.sessionIds.begin(), filter.sessionIds.end(), sessionId) == filter.sessionIds.end())
-            {
-                filter.sessionIds.push_back(sessionId);
-            }
-        }
-    }
+    mComboFilters.clear();
+    mTextFilters.clear();
 }
