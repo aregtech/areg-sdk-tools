@@ -45,9 +45,6 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullp
     ui->setupUi(this);
     ctrlToolShowAll()->setStyleSheet(NELusanCommon::getStyleToolbutton());
     ctrlToolNaviRoot()->setStyleSheet(NELusanCommon::getStyleToolbutton());
-    // setBaseSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    // setMinimumSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
-    // setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
 
     updateData();
     setupWidgets();    

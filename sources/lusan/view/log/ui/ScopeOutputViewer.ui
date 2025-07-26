@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -281,7 +281,7 @@
    <item>
     <widget class="QTableView" name="logTable">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -290,7 +290,7 @@
       <string>Scope Output Window</string>
      </property>
      <property name="sizeAdjustPolicy">
-      <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
+      <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContentsOnFirstShow</enum>
      </property>
      <property name="editTriggers">
       <set>QAbstractItemView::EditTrigger::EditKeyPressed</set>

@@ -87,6 +87,8 @@ OfflineLogViewer::~OfflineLogViewer(void)
 void OfflineLogViewer::onWindowClosing(bool isActive)
 {
     Q_ASSERT(mMainWindow != nullptr);
+
+    LogViewerBase::onWindowClosing(isActive);
     setupSignals(false);
     if (isActive)
     {

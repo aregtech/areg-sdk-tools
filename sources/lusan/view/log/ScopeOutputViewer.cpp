@@ -20,8 +20,9 @@
 #include "ui/ui_ScopeOutputViewer.h"
 
 #include "lusan/common/NELusanCommon.hpp"
-#include "lusan/view/common/OutputDock.hpp"
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
+#include "lusan/view/common/OutputDock.hpp"
+#include "lusan/view/log/LogViewerBase.hpp"
 
 ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     : OutputWindow  (static_cast<int>(OutputDock::eOutputDock::OutputLogging), wndMain, parent)
@@ -31,6 +32,7 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
 {
     ui->setupUi(this);    
     ctrlTable()->setModel(nullptr);
+    connect(ctrlTable(), &QTableView::doubleClicked, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
 }
 
 ScopeOutputViewer::~ScopeOutputViewer(void)
@@ -47,19 +49,39 @@ ScopeOutputViewer::~ScopeOutputViewer(void)
     ui = nullptr;
 }
 
+bool ScopeOutputViewer::releaseWindow(MdiChild& mdiChild)
+{
+    bool result = OutputWindow::releaseWindow(mdiChild);
+    if (result)
+    {
+        if (mFilter != nullptr)
+        {
+            mFilter->setScopeFilter(nullptr, 0, std::vector<uint32_t>{ }, std::vector<ITEM_ID>{}, 0);
+        }
+
+        mLogModel = nullptr;
+        ctrlTable()->setModel(nullptr);
+        updateLogTable();
+    }
+
+    return result;
+}
+
 void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, uint32_t scopeId, uint32_t sessionId, ITEM_ID instance)
 {
     if (mFilter == nullptr)
     {
         ctrlTable()->setModel(nullptr);
-        ctrlTable()->update();
-        return;
     }
-
-    mLogModel = logModel;
-    mFilter->setScopeFilter(logModel, scopeId, std::vector<uint32_t>{sessionId}, std::vector<ITEM_ID>{instance}, 0);
-    if (ctrlTable()->model() == nullptr)
-        ctrlTable()->setModel(mFilter);
+    else
+    {
+        mLogModel = logModel;
+        mFilter->setScopeFilter(logModel, scopeId, std::vector<uint32_t>{sessionId}, std::vector<ITEM_ID>{instance}, 0);
+        if (ctrlTable()->model() == nullptr)
+            ctrlTable()->setModel(logModel == nullptr ? nullptr : mFilter);
+    }
+    
+    updateLogTable();
 }
 
 void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, const QModelIndex& index)
@@ -67,17 +89,40 @@ void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, const QModelInde
     if (mFilter == nullptr)
     {
         ctrlTable()->setModel(nullptr);
-        ctrlTable()->update();
-        return;
+    }
+    else
+    {
+        mLogModel = logModel;
+        mFilter->setScopeFilter(logModel, index);
+        if (ctrlTable()->model() == nullptr)
+            ctrlTable()->setModel(logModel == nullptr ? nullptr : mFilter);
     }
     
-    mLogModel = logModel;
-    mFilter->setScopeFilter(logModel, index);
-    if (ctrlTable()->model() == nullptr)
-        ctrlTable()->setModel(mFilter);
+    updateLogTable();
+}
+
+inline void ScopeOutputViewer::onMouseDoubleClicked(const QModelIndex& index)
+{
+    QTableView *logTable = (index.isValid() && (mMdiChild != nullptr)) ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
+    if ((logTable != nullptr) && (mFilter != nullptr))
+    {
+        QModelIndex srcIndex = mFilter->mapToSource(index);
+        logTable->selectionModel()->setCurrentIndex(srcIndex, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        logTable->selectRow(srcIndex.row());
+        logTable->scrollTo(srcIndex);
+    }
 }
 
 inline QTableView* ScopeOutputViewer::ctrlTable(void) const
 {
     return ui->logTable;
+}
+
+inline void ScopeOutputViewer::updateLogTable(void)
+{
+    QTableView *logTable = mMdiChild != nullptr ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
+    if (logTable != nullptr)
+    {
+        logTable->viewport()->update();
+    }
 }

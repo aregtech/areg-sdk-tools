@@ -69,22 +69,34 @@ void LogViewerFilter::clearFilters()
     invalidateFilter();
 }
 
-bool LogViewerFilter::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
+bool LogViewerFilter::filterExactMatch(const QModelIndex& index) const
 {
-    Q_UNUSED(source_parent);
+    eMatchType comboMatch = matchesComboFilters(index);
+    eMatchType textMatch = matchesTextFilters(index);
 
-    if (sourceModel() == nullptr)
-        return true;
-
-    // Check if row matches all active filters
-    return matchesComboFilters(source_row) && matchesTextFilters(source_row);
+    return  ((comboMatch != eMatchType::NoMatch)    && (textMatch != eMatchType::NoMatch)) &&
+            ((comboMatch == eMatchType::ExactMatch) || (textMatch == eMatchType::ExactMatch));
 }
 
-bool LogViewerFilter::matchesComboFilters(int source_row) const
+bool LogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
 {
-    if (sourceModel() == nullptr)
-        return true;
+    QModelIndex index = sourceModel() != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
 
+    // Check if row matches all active filters
+    return  (matchesComboFilters(index) != eMatchType::NoMatch) && 
+            (matchesTextFilters(index)  != eMatchType::NoMatch);
+}
+
+LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelIndex& index) const
+{
+    eMatchType matchType = eMatchType::PartialMatch;
+    if (index.isValid() == false)
+        return eMatchType::NoMatch;
+
+    if (sourceModel() == nullptr)
+        return matchType;
+    
+    int row = index.row();    
     // Check each active combo filter
     for (auto it = mComboFilters.constBegin(); it != mComboFilters.constEnd(); ++it)
     {
@@ -95,35 +107,41 @@ bool LogViewerFilter::matchesComboFilters(int source_row) const
             continue;
 
         // Get the data for this column and row
-        QModelIndex index = sourceModel()->index(source_row, column);
-        if (index.isValid() == false)
+        QModelIndex idxCol = sourceModel()->index(row, column);
+        if (idxCol.isValid() == false)
             continue;
 
-        QString cellData = sourceModel()->data(index, Qt::DisplayRole).toString();
+        QString cellData = sourceModel()->data(idxCol, Qt::DisplayRole).toString();
         // Check if the cell data matches any of the selected filter items
         bool matches = false;
         for (const QString& filterItem : filterItems)
         {
             if (cellData == filterItem)
             {
-                matches = true;
+                matches     = true;
+                matchType   = eMatchType::ExactMatch;
                 break;
             }
         }
 
         // If this column doesn't match, the row is filtered out
         if (!matches)
-            return false;
+            return eMatchType::NoMatch;
     }
 
-    return true;
+    return matchType;
 }
 
-bool LogViewerFilter::matchesTextFilters(int source_row) const
+LogViewerFilter::eMatchType LogViewerFilter::matchesTextFilters(const QModelIndex& index) const
 {
+    eMatchType matchType = eMatchType::PartialMatch;
+    if (index.isValid() == false)
+        return eMatchType::NoMatch;
+    
     if (sourceModel() == nullptr)
-        return true;
-
+        return matchType;
+    
+    const int row{ index.row() };
     // Check each active text filter
     for (auto it = mTextFilters.constBegin(); it != mTextFilters.constEnd(); ++it)
     {
@@ -134,25 +152,31 @@ bool LogViewerFilter::matchesTextFilters(int source_row) const
             continue;
 
         // Get the data for this column and row
-        QModelIndex index = sourceModel()->index(source_row, column);
-        if (index.isValid() == false)
+        QModelIndex idxCol = sourceModel()->index(row, column);
+        if (idxCol.isValid() == false)
             continue;
 
-        QString cellData = sourceModel()->data(index, Qt::DisplayRole).toString();
+        QString cellData = sourceModel()->data(idxCol, Qt::DisplayRole).toString();
 
         // Check if the cell data contains the filter text (case-insensitive)
         if (filterText.isWildCard || filterText.isWholeWord)
         {
             if (wildcardMatch(cellData, filterText.text, filterText.isCaseSensitive, filterText.isWholeWord) == false)
-                return false;
+                return eMatchType::NoMatch;
+
+            matchType = eMatchType::ExactMatch;
         }
         else if (cellData.contains(filterText.text, filterText.isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive) == false)
         {
-            return false;
+            return eMatchType::NoMatch;
+        }
+        else
+        {
+            matchType = eMatchType::ExactMatch;
         }
     }
 
-    return true;
+    return matchType;
 }
 
 bool LogViewerFilter::wildcardMatch(const QString& text, const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord) const

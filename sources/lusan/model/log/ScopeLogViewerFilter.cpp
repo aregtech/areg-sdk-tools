@@ -70,41 +70,73 @@ void ScopeLogViewerFilter::setScopeFilter(LoggingModelBase * model, uint32_t sco
     invalidateFilter();
 }
 
+void ScopeLogViewerFilter::setSourceModel(QAbstractItemModel *sourceModel)
+{
+    if (sourceModel != nullptr)
+    {
+        static_cast<LoggingModelBase *>(sourceModel)->setScopeFiler(this);
+    }
+    else if (this->sourceModel() != nullptr)
+    {
+        static_cast<LoggingModelBase *>(this->sourceModel())->setScopeFiler(nullptr);
+    }
+    
+    LogViewerFilter::setSourceModel(sourceModel);
+}
+
 void ScopeLogViewerFilter::clearFilters(void)
 {
     _clearData();
     LogViewerFilter::clearFilters();
 }
 
-bool ScopeLogViewerFilter::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const
+bool ScopeLogViewerFilter::filterExactMatch(const QModelIndex& index) const
 {
-    return (sourceModel() == nullptr) ||
-           (matchesScopeFilter(source_row, source_parent) && LogViewerFilter::filterAcceptsRow(source_row, source_parent));
+    return (matchesScopeFilter(index) == eMatchType::ExactMatch);
 }
 
-bool ScopeLogViewerFilter::matchesScopeFilter(int source_row, const QModelIndex& source_parent) const
+bool ScopeLogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
 {
-    if (mScopeId == 0)
-        return true; // No scope filter applied
+    QModelIndex index = sourceModel() != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
+    return ((matchesScopeFilter(index) != eMatchType::NoMatch) && LogViewerFilter::filterAcceptsRow(row, parent));
+}
 
-    QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
-    if (!index.isValid())
-        return false;
+LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QModelIndex& index) const
+{
+    eMatchType matchType = eMatchType::PartialMatch;
+    if ((mScopeId == 0) || (sourceModel() == nullptr))
+        return matchType; // No scope filter applied
+    else if (index.isValid() == false)
+        return eMatchType::NoMatch;
 
     const NELogging::sLogMessage* logMessage = index.data(Qt::ItemDataRole::UserRole).value<const NELogging::sLogMessage*>();
     if (logMessage == nullptr)
-        return false;
+        return eMatchType::NoMatch;
 
     if (logMessage->logScopeId != mScopeId)
-        return false;
+        return eMatchType::NoMatch;
     
-    if ((mSessionIds.empty() == false) && (std::find(mSessionIds.begin(), mSessionIds.end(), logMessage->logSessionId) == mSessionIds.end()))
-        return false;
+    if (mSessionIds.empty() == false)
+    {
+        if (std::find(mSessionIds.begin(), mSessionIds.end(), logMessage->logSessionId) == mSessionIds.end())
+        {
+            return eMatchType::NoMatch;
+        }
+
+        matchType = eMatchType::ExactMatch;
+    }
+
+    if (mInstanceIds.empty() == false)
+    {
+        if (std::find(mInstanceIds.begin(), mInstanceIds.end(), logMessage->logCookie) == mInstanceIds.end())
+        {
+            return eMatchType::NoMatch;
+        }
+
+        matchType = eMatchType::ExactMatch;
+    }
     
-    if ((mInstanceIds.empty() == false) && (std::find(mInstanceIds.begin(), mInstanceIds.end(), logMessage->logCookie) == mInstanceIds.end()))
-        return false;
-    
-    return (mPriorities == 0) || ((mPriorities & static_cast<uint32_t>(logMessage->logMessagePrio)) != 0);
+    return ((mPriorities == 0) || ((mPriorities & static_cast<uint32_t>(logMessage->logMessagePrio)) != 0) ? matchType : eMatchType::NoMatch);
 }
 
 inline void ScopeLogViewerFilter::_clearData(void)

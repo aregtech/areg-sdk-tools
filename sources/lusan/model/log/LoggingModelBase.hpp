@@ -47,6 +47,7 @@
  * Dependencies
  ************************************************************************/
 class LogViewerFilter;
+class ScopeLogViewerFilter;
 class ScopeRoot;
 
 /**
@@ -307,6 +308,11 @@ public:
      * \brief   Return the logging message entry of specified row and column.
      **/
     inline QString getLogEntry(int row, int col) const;
+
+    /**
+     * \brief   Sets the scope logs filter object can be nullptr if the scope logs are not filtered.
+     **/
+    inline void setScopeFiler(ScopeLogViewerFilter* filter);
 
 /************************************************************************
  * Signals
@@ -628,6 +634,7 @@ protected:
     uint32_t                mLogCount;      //!< The position of updated log.
     Thread                  mReadThread;    //!< The thread to run the model operations.
     Mutex                   mQuitThread;    //!< The event to notify when data is ready.
+    ScopeLogViewerFilter*   mScopeFilter;   //<!< The filter for scope logs, can be nullptr.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -750,6 +757,11 @@ inline const NELogging::sLogMessage* LoggingModelBase::getLogData(int row) const
 inline QString LoggingModelBase::getLogEntry(int row, int col) const
 {
     return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? getDisplayData(reinterpret_cast<const NELogging::sLogMessage*>(mLogs[row].getBuffer()), static_cast<eColumn>(col)) : QString());
+}
+
+inline void LoggingModelBase::setScopeFiler(ScopeLogViewerFilter* filter)
+{
+    mScopeFilter = filter;
 }
 
 inline void LoggingModelBase::_closeDatabase(void)

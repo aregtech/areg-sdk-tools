@@ -21,6 +21,7 @@
 
 #include <QWidget>
 
+class MdiChild;
 class MdiMainWindow;
 
 /**
@@ -66,6 +67,22 @@ public:
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
     virtual void optionClosed(bool OKpressed);
+    
+    /**
+     * \brief   Binds the output window with MDI child window.
+     *          There can be only one MDI window bound with output window.
+     * \param   mdiChild    The MDI child window to bind.
+     **/    
+    virtual void bindWindow(MdiChild& mdiChild);
+    
+    /**
+     * \brief   Releases the MDI window previously bind with the output window and returns true if succeeded to release.
+     *          Nothing happens if the window was not bound, and the return value is false.
+     *          There can be only one MDI window bound with output window.
+     * \param   mdiChild    The MDI child window to release
+     * \return  Returns true if succeeded to release the window and returns false if the window is not bound.
+     **/   
+    virtual bool releaseWindow(MdiChild& mdiChild);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -80,7 +97,7 @@ public:
      * \brief   Returns true if output window is for scopes logs output.
      **/
     bool isScopesOutputWindow(void) const;
-
+    
 //////////////////////////////////////////////////////////////////////////
 // OutputWindow class inline methods
 //////////////////////////////////////////////////////////////////////////
@@ -88,6 +105,7 @@ protected:
 
     const int       mOutWindowType; //!< The type of the output window
     MdiMainWindow*  mMainWindow;    //!< Pointer to the main MDI window
+    MdiChild*       mMdiChild;      //!< Pointer to the MDI child window
 };
 
 //////////////////////////////////////////////////////////////////////////

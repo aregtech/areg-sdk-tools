@@ -25,6 +25,7 @@ OutputWindow::OutputWindow(int outWindow, MdiMainWindow * wndMain, QWidget* pare
 
     , mOutWindowType    (outWindow)
     , mMainWindow       (wndMain)
+    , mMdiChild         (nullptr)
 {
 }
 
@@ -43,4 +44,20 @@ void OutputWindow::optionClosed(bool OKpressed)
 bool OutputWindow::isScopesOutputWindow(void) const
 {
     return (mOutWindowType == static_cast<int>(OutputDock::eOutputDock::OutputLogging));
+}
+
+void OutputWindow::bindWindow(MdiChild& mdiChild)
+{
+    mMdiChild = &mdiChild;
+}
+
+bool OutputWindow::releaseWindow(MdiChild& mdiChild)
+{
+    if (mMdiChild == &mdiChild)
+    {
+        mMdiChild = nullptr;
+        return true;
+    }
+    
+    return false;
 }

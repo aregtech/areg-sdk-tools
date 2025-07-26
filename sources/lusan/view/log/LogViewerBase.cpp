@@ -200,6 +200,13 @@ void LogViewerBase::setupWidgets(void)
             , [this]() {ctrlSearchText()->setFocus(); ctrlSearchText()->selectAll();});
 }
 
+void LogViewerBase::onWindowClosing(bool isActive)
+{
+    Q_UNUSED(isActive);
+    ScopeOutputViewer& viewScope = mMainWindow->getOutputScopeLogs();
+    viewScope.releaseWindow(*this);
+}
+
 void LogViewerBase::onSearchClicked(bool newSearch)
 {
     Q_ASSERT(mLogSearch != nullptr);
@@ -398,6 +405,7 @@ void LogViewerBase::onMouseDoubleClicked(const QModelIndex& index)
     if (mMainWindow != nullptr)
     {
         ScopeOutputViewer & viewScope = mMainWindow->getOutputScopeLogs();
+        viewScope.bindWindow(*this);
         viewScope.setupFilter(mLogModel, index);
     }
 }

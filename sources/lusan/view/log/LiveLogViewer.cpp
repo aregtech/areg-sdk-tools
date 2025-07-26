@@ -257,9 +257,9 @@ QString LiveLogViewer::getDatabasePath(void) const
 
 void LiveLogViewer::onWindowClosing(bool isActive)
 {
-    Q_UNUSED(isActive);
     Q_ASSERT(mMainWindow != nullptr);
     
+    LogViewerBase::onWindowClosing(isActive);
     mMainWindow->getNaviLiveScopes().setLoggingModel(nullptr);
     if (mLogModel != nullptr)
     {

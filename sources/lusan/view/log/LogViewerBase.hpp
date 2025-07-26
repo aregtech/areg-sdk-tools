@@ -81,6 +81,8 @@ public:
      * \brief   Returns the logging model used by the log viewer.
      **/
     inline LoggingModelBase* getLoggingModel(void) const;
+    
+    inline QTableView* getLoggingTable(void) const;
 
     /**
      * \brief   Returns true if the offline log database is successfully opened.
@@ -130,6 +132,13 @@ protected:
      **/
     virtual void setupWidgets(void);
     
+    /**
+     * \brief   Called when the MDI child window is closing.
+     *          This method can be overridden to handle window closing events.
+     * \param   isActive    Indicates whether the window is active or not.
+     **/
+    virtual void onWindowClosing(bool isActive) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -219,7 +228,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 protected:
     LoggingModelBase*           mLogModel;  //!< The logging model used by the log viewer, which provides the data for the log table.
-    LogViewerFilter*       mFilter;    //!< The filter object
+    LogViewerFilter*            mFilter;    //!< The filter object
     QTableView*                 mLogTable;  //!< The table view widget that displays the logs in the log viewer.
     SearchLineEdit*             mLogSearch; //!< The search line edit control, used for searching logs in the log viewer.
     QWidget*                    mMdiWindow; //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
@@ -242,6 +251,11 @@ private:
 inline LoggingModelBase* LogViewerBase::getLoggingModel(void) const
 {
     return mLogModel;
+}
+
+inline QTableView* LogViewerBase::getLoggingTable(void) const
+{
+    return mLogTable;
 }
 
 #endif  // LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP

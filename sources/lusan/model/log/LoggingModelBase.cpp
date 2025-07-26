@@ -23,6 +23,7 @@
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
+#include "lusan/model/log/ScopeLogViewerFilter.hpp"
 
 #include "areg/base/DateTime.hpp"
 
@@ -90,6 +91,7 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mLogCount     (0)
     , mReadThread   (static_cast<IEThreadConsumer &>(self()), "_LogReadingThread_")
     , mQuitThread   (false)
+    , mScopeFilter  (nullptr)
 {
 }
 
@@ -197,7 +199,10 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
         return getForegroundData(logMessage, column);
         
     case Qt::DecorationRole:
-        return getDecorationData(logMessage, column);
+    {
+        static const QIcon _iconSelect(QString::fromUtf8(":/icons/right-arrow"));
+        return (column == eColumn::LogColumnSourceId) && (mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index) ? _iconSelect : getDecorationData(logMessage, column);
+    }
         
     case Qt::TextAlignmentRole:
         return getAlignmentData(column);
