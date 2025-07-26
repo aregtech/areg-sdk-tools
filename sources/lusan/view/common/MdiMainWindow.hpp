@@ -171,7 +171,10 @@ public:
      * \brief   Returns the Offline Logging Scopes Navigation window.
      **/
     NaviOfflineLogsScopes& getNaviOfflineScopes(void);
-    
+
+    /**
+     * \brief   Returns the Output Window for scopes logs.
+     **/
     ScopeOutputViewer& getOutputScopeLogs(void);
     
 //////////////////////////////////////////////////////////////////////////

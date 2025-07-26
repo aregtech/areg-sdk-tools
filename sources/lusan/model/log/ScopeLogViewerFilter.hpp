@@ -24,6 +24,10 @@
  ************************************************************************/
 #include "lusan/model/log/LogViewerFilter.hpp"
 
+/**
+ * \brief   The scope logs filter proxy model to filter logging messages by scope ID, session IDs and log priority.
+ *          The log messages are displayed in the Log Viewer ot output window for further analyzes.
+ **/
 class ScopeLogViewerFilter  : public LogViewerFilter
 {
 //////////////////////////////////////////////////////////////////////////

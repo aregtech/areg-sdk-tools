@@ -87,13 +87,18 @@ public:
      * \brief   Returns the tab widget of the navigation.
      **/
     inline QTabWidget& getTabWidget(void);
-    
+
+    /**
+     * \brief   Returns the scope output viewer.
+     **/
     inline ScopeOutputViewer& getScopeLogsView(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
+
+    //!< Initializes the size of the output dock.
     void initSize(void);
     
 //////////////////////////////////////////////////////////////////////////
@@ -102,7 +107,7 @@ private:
 private:
     MdiMainWindow*          mMainWindow;    //!< Main window
     QTabWidget              mTabs;          //!< The tab widget of the output windows.
-    ScopeOutputViewer       mScopeOutput;
+    ScopeOutputViewer       mScopeOutput;   //<!< The scope output viewer for displaying logs from scopes.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -110,6 +115,10 @@ private:
 private:
     DECLARE_NOCOPY_NOMOVE(OutputDock);
 };
+
+//////////////////////////////////////////////////////////////////////////
+// OutputDock class inline methods
+//////////////////////////////////////////////////////////////////////////
 
 inline QTabWidget& OutputDock::getTabWidget(void)
 {

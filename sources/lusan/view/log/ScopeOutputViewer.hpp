@@ -19,22 +19,33 @@
  *
  ************************************************************************/
 
+/************************************************************************
+ * Includes
+ ************************************************************************/
 #include "lusan/view/common/OutputWindow.hpp"
 #include "areg/component/NEService.hpp"
 
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+
 class ScopeLogViewerFilter;
 class LoggingModelBase;
-
 class QTableView;
-
 namespace Ui {
     class ScopeOutputViewer;
 }
 
+/**
+ * \brief   The scope logs viewer object to display on output window and analyze selected group of logs.
+ **/
 class ScopeOutputViewer : public OutputWindow
 {
     Q_OBJECT
 
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
 public:
     ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
     virtual ~ScopeOutputViewer(void);

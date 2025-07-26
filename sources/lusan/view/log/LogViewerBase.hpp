@@ -81,7 +81,10 @@ public:
      * \brief   Returns the logging model used by the log viewer.
      **/
     inline LoggingModelBase* getLoggingModel(void) const;
-    
+
+    /**
+     * \brief   Returns the logging table object.
+     **/
     inline QTableView* getLoggingTable(void) const;
 
     /**
@@ -165,7 +168,11 @@ protected:
      * \param   index   The index of the cell that was clicked.
      **/
     virtual void onMouseButtonClicked(const QModelIndex& index);
-    
+
+    /**
+     * \brief   Slot, triggered when mouse button is double clicked on the log table.
+     * \param   index   The index of the cell that was double clicked.
+     **/
     virtual void onMouseDoubleClicked(const QModelIndex& index);
     
     /**
