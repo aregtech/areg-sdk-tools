@@ -21,8 +21,9 @@
 #include "lusan/view/common/SearchLineEdit.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
+#include "lusan/view/log/ScopeOutputViewer.hpp"
 
-#include "lusan/model/log/LogViewerFilterProxy.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/view/log/LogTextHighlight.hpp"
 
@@ -137,7 +138,7 @@ void LogViewerBase::setupWidgets(void)
     tools.push_back(SearchLineEdit::eToolButton::ToolButtonBackward);
     mLogSearch->initialize(tools, QSize(20, 20));
 
-    mFilter = new LogViewerFilterProxy(mLogModel);
+    mFilter = new LogViewerFilter(mLogModel);
     mHeader = new LogTableHeader(mLogTable, mLogModel);
     QShortcut* shortcutSearch = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this);
     mSearch.setLogModel(mFilter);
@@ -185,14 +186,25 @@ void LogViewerBase::setupWidgets(void)
             , [this](int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
                 _resetSearchResult(); mFilter->setTextFilter(logicalColumn, text, isCaseSensitive, isWholeWord, isWildCard);});
     connect(mHeader     , &LogTableHeader::customContextMenuRequested   , [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
+    
     connect(mLogTable   , &QTableView::clicked                          , [this](const QModelIndex &index){onMouseButtonClicked(index);});
+    connect(mLogTable   , &QTableView::doubleClicked                    , [this](const QModelIndex &index){onMouseDoubleClicked(index);});
+    
     connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , [this]() {mLogSearch->setStyleSheet(""); mSearch.resetSearch();});
     connect(mLogSearch  , &SearchLineEdit::signalSearchText
             , [this](const QString& /*text*/, bool /*isMatchCase*/, bool /*isWholeWord*/, bool /*isWildCard*/, bool /*isBackward*/) {onSearchClicked(mSearch.canSearchNext() == false);});
+    
     connect(selection   , &QItemSelectionModel::currentRowChanged       
             , [this](const QModelIndex &current, const QModelIndex &previous){onCurrentRowChanged(current, previous);});
     connect(shortcutSearch, &QShortcut::activated, this
             , [this]() {ctrlSearchText()->setFocus(); ctrlSearchText()->selectAll();});
+}
+
+void LogViewerBase::onWindowClosing(bool isActive)
+{
+    Q_UNUSED(isActive);
+    ScopeOutputViewer& viewScope = mMainWindow->getOutputScopeLogs();
+    viewScope.releaseWindow(*this);
 }
 
 void LogViewerBase::onSearchClicked(bool newSearch)
@@ -380,6 +392,21 @@ void LogViewerBase::onMouseButtonClicked(const QModelIndex& index)
     if (index.row() != mFoundPos.rowFound)
     {
         mSearch.resetSearch();
+    }
+}
+
+void LogViewerBase::onMouseDoubleClicked(const QModelIndex& index)
+{
+    if (index.row() != mFoundPos.rowFound)
+    {
+        mSearch.resetSearch();
+    }
+    
+    if (mMainWindow != nullptr)
+    {
+        ScopeOutputViewer & viewScope = mMainWindow->getOutputScopeLogs();
+        viewScope.bindWindow(*this);
+        viewScope.setupFilter(mLogModel, index);
     }
 }
 

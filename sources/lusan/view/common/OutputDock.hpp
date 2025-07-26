@@ -25,6 +25,8 @@
 #include <QDockWidget>
 #include "areg/base/GEGlobal.h"
 
+#include "lusan/view/log/ScopeOutputViewer.hpp"
+
 #include <QIcon>
 #include <QSize>
 #include <QTabWidget>
@@ -74,6 +76,8 @@ public:
 public:
 
     OutputDock(MdiMainWindow* parent);
+    
+    virtual ~OutputDock(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes
@@ -84,12 +88,26 @@ public:
      **/
     inline QTabWidget& getTabWidget(void);
 
+    /**
+     * \brief   Returns the scope output viewer.
+     **/
+    inline ScopeOutputViewer& getScopeLogsView(void);
+    
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+
+    //!< Initializes the size of the output dock.
+    void initSize(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     MdiMainWindow*          mMainWindow;    //!< Main window
     QTabWidget              mTabs;          //!< The tab widget of the output windows.
+    ScopeOutputViewer       mScopeOutput;   //<!< The scope output viewer for displaying logs from scopes.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -97,5 +115,19 @@ private:
 private:
     DECLARE_NOCOPY_NOMOVE(OutputDock);
 };
+
+//////////////////////////////////////////////////////////////////////////
+// OutputDock class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline QTabWidget& OutputDock::getTabWidget(void)
+{
+    return mTabs;
+}
+
+inline ScopeOutputViewer& OutputDock::getScopeLogsView(void)
+{
+    return mScopeOutput;
+}
 
 #endif  // LUSAN_VIEW_COMMON_OUTPUTDOCK_HPP

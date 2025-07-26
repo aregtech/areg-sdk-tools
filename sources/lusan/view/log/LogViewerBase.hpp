@@ -27,7 +27,7 @@
  ************************************************************************/
 class LoggingModelBase;
 class LogTableHeader;
-class LogViewerFilterProxy;
+class LogViewerFilter;
 class SearchLineEdit;
 class LogTextHighlight;
 
@@ -83,6 +83,11 @@ public:
     inline LoggingModelBase* getLoggingModel(void) const;
 
     /**
+     * \brief   Returns the logging table object.
+     **/
+    inline QTableView* getLoggingTable(void) const;
+
+    /**
      * \brief   Returns true if the offline log database is successfully opened.
      **/
     bool isDatabaseOpen(void) const;
@@ -112,7 +117,7 @@ public:
      * \param   select  If true, the specified row of logs will be selected after moving to the specified row.
      **/
     void moveToRow(int row, bool select);
-    
+
 /************************************************************************
  * Overrides
  ************************************************************************/
@@ -130,6 +135,13 @@ protected:
      **/
     virtual void setupWidgets(void);
     
+    /**
+     * \brief   Called when the MDI child window is closing.
+     *          This method can be overridden to handle window closing events.
+     * \param   isActive    Indicates whether the window is active or not.
+     **/
+    virtual void onWindowClosing(bool isActive) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////
@@ -156,6 +168,12 @@ protected:
      * \param   index   The index of the cell that was clicked.
      **/
     virtual void onMouseButtonClicked(const QModelIndex& index);
+
+    /**
+     * \brief   Slot, triggered when mouse button is double clicked on the log table.
+     * \param   index   The index of the cell that was double clicked.
+     **/
+    virtual void onMouseDoubleClicked(const QModelIndex& index);
     
     /**
      * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.
@@ -217,7 +235,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 protected:
     LoggingModelBase*           mLogModel;  //!< The logging model used by the log viewer, which provides the data for the log table.
-    LogViewerFilterProxy*       mFilter;    //!< The filter object
+    LogViewerFilter*            mFilter;    //!< The filter object
     QTableView*                 mLogTable;  //!< The table view widget that displays the logs in the log viewer.
     SearchLineEdit*             mLogSearch; //!< The search line edit control, used for searching logs in the log viewer.
     QWidget*                    mMdiWindow; //!< MDI window widget, used for displaying the log viewer in a multi-document interface.
@@ -240,6 +258,11 @@ private:
 inline LoggingModelBase* LogViewerBase::getLoggingModel(void) const
 {
     return mLogModel;
+}
+
+inline QTableView* LogViewerBase::getLoggingTable(void) const
+{
+    return mLogTable;
 }
 
 #endif  // LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP

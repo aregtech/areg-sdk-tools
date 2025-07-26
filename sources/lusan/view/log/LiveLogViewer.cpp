@@ -24,7 +24,7 @@
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
-#include "lusan/model/log/LogViewerFilterProxy.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 
 #include <QTableView>
 #include <QLabel>
@@ -257,9 +257,9 @@ QString LiveLogViewer::getDatabasePath(void) const
 
 void LiveLogViewer::onWindowClosing(bool isActive)
 {
-    Q_UNUSED(isActive);
     Q_ASSERT(mMainWindow != nullptr);
     
+    LogViewerBase::onWindowClosing(isActive);
     mMainWindow->getNaviLiveScopes().setLoggingModel(nullptr);
     if (mLogModel != nullptr)
     {

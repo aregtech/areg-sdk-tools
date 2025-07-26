@@ -27,7 +27,7 @@
 
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
-#include "lusan/model/log/LogViewerFilterProxy.hpp"
+#include "lusan/model/log/LogViewerFilter.hpp"
 
 #include <QFileInfo>
 #include <QTableView>
@@ -87,6 +87,8 @@ OfflineLogViewer::~OfflineLogViewer(void)
 void OfflineLogViewer::onWindowClosing(bool isActive)
 {
     Q_ASSERT(mMainWindow != nullptr);
+
+    LogViewerBase::onWindowClosing(isActive);
     setupSignals(false);
     if (isActive)
     {

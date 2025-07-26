@@ -1,5 +1,5 @@
-﻿#ifndef LUSAN_MODEL_LOG_LOGVIEWERFILTERPROXY_HPP
-#define LUSAN_MODEL_LOG_LOGVIEWERFILTERPROXY_HPP
+﻿#ifndef LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP
+#define LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,7 +12,7 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/model/log/LogViewerFilterProxy.hpp
+ *  \file        lusan/model/log/LogViewerFilter.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log Viewer Filter Proxy Model.
@@ -36,7 +36,7 @@ class LoggingModelBase;
  *          This proxy model filters the LiveLogsModel based on user-selected criteria
  *          from the header filters (combo boxes and text filters).
  **/
-class LogViewerFilterProxy : public QSortFilterProxyModel
+class LogViewerFilter : public QSortFilterProxyModel
 {
     Q_OBJECT
     
@@ -54,14 +54,29 @@ private:
         bool    isWildCard      {false};    //!< Indicates if the filter uses wildcards
     };
 
+protected:
+
+    /**
+     * \brief   The type of match for the filter.
+     *          NoMatch - no match found,
+     *          PartialMatch - partial match found,
+     *          ExactMatch - exact match found.
+     **/
+    enum eMatchType : int
+    {
+          NoMatch       = 0 //!< Has not match of filters
+        , PartialMatch  = 1 //!< Has partial match of filters
+        , ExactMatch    = 2 //!< Has exact match of filters
+    };
+
 public:
     /**
      * \brief   Constructor with parent object.
      * \param   model   The logging data model object.
      **/
-    explicit LogViewerFilterProxy(LoggingModelBase * model);
+    explicit LogViewerFilter(LoggingModelBase* model = nullptr);
 
-    virtual ~LogViewerFilterProxy(void);
+    virtual ~LogViewerFilter(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -84,37 +99,47 @@ public slots:
     /**
      * \brief   Clears all filters.
      **/
-    void clearFilters();
-
+    virtual void clearFilters(void);
+    
+    /**
+     * \brief   Returns true if the given source row has exact match of the filters.
+     *          The method returns false if source model is not set or there are no filters.
+     *          The method returns true if filters passed and at least one hat exact match.
+     * \param   row      The row index in the source model.
+     * \param   parent   The parent index in the source model.
+     * \return  True if the row has exact match of the filter.
+     **/
+    virtual bool filterExactMatch(const QModelIndex& index) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
     /**
      * \brief   Returns true if the given source row should be included in the model.
-     * \param   source_row      The row index in the source model.
-     * \param   source_parent   The parent index in the source model.
+     * \param   row      The row index in the source model.
+     * \param   parent   The parent index in the source model.
      * \return  True if the row should be included, false otherwise.
      **/
-    bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
+    virtual bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 
 //////////////////////////////////////////////////////////////////////////
-// Hidden operations
+// Operations
 //////////////////////////////////////////////////////////////////////////
-private:
+protected:
     /**
      * \brief   Helper method to check if a row matches the combo filters.
-     * \param   source_row  The row index in the source model.
+     * \param   row         The row index in the source model.
      * \return  True if the row matches all combo filters.
      **/
-    bool matchesComboFilters(int source_row) const;
+    LogViewerFilter::eMatchType matchesComboFilters(const QModelIndex& index) const;
 
     /**
      * \brief   Helper method to check if a row matches the text filters.
-     * \param   source_row  The row index in the source model.
+     * \param   row  The row index in the source model.
      * \return  True if the row matches all text filters.
      **/
-    bool matchesTextFilters(int source_row) const;
+    LogViewerFilter::eMatchType matchesTextFilters(const QModelIndex& index) const;
 
     /**
      * \brief   Helper method to perform wildcard matching.
@@ -125,21 +150,25 @@ private:
      * \return  True if the text matches the wildcard pattern, false otherwise.
      **/
     bool wildcardMatch(const QString& text, const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord) const;
+    
+private:
+
+    //!< Clear filter data/
+    inline void _clearData(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
-private:
-    QMap<int, QStringList>      mComboFilters;   //!< Map of column index to selected filter items
-    QMap<int, sStringFilter>    mTextFilters;    //!< Map of column index to filter text
-    LoggingModelBase*           mLogModel;       //!< Pointer to the log viewer source model
+protected:
+    QMap<int, QStringList>      mComboFilters;  //!< Map of column index to selected filter items
+    QMap<int, sStringFilter>    mTextFilters;   //!< Map of column index to filter text
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call
 //////////////////////////////////////////////////////////////////////////
 private:
-    LogViewerFilterProxy(void) = delete;
-    DECLARE_NOCOPY_NOMOVE(LogViewerFilterProxy);
+    LogViewerFilter(void) = delete;
+    DECLARE_NOCOPY_NOMOVE(LogViewerFilter);
 };
 
-#endif // LUSAN_MODEL_LOG_LOGVIEWERFILTERPROXY_HPP
+#endif // LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP
