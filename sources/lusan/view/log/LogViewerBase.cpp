@@ -92,7 +92,6 @@ bool LogViewerBase::openDatabase(const QString& logPath)
 void LogViewerBase::keyPressEvent(QKeyEvent* event)
 {
     // Handle keyboard shortcuts for search functionality
-    QKeyCombination combi = event->keyCombination();
     // Check for Ctrl+F combination
     if ((event->key() == Qt::Key_F) && ((event->modifiers() & Qt::Modifier::CTRL) != 0))
     {
@@ -389,7 +388,7 @@ void LogViewerBase::onTableContextMenu(const QPoint& pos)
 
 void LogViewerBase::onMouseButtonClicked(const QModelIndex& index)
 {
-    if (index.row() != mFoundPos.rowFound)
+    if (index.row() != static_cast<int>(mFoundPos.rowFound))
     {
         mSearch.resetSearch();
     }
@@ -397,7 +396,7 @@ void LogViewerBase::onMouseButtonClicked(const QModelIndex& index)
 
 void LogViewerBase::onMouseDoubleClicked(const QModelIndex& index)
 {
-    if (index.row() != mFoundPos.rowFound)
+    if (index.row() != static_cast<int>(mFoundPos.rowFound))
     {
         mSearch.resetSearch();
     }

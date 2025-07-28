@@ -179,7 +179,6 @@ void SIMethod::dataTypeUpdated(DataTypeCustom* dataType)
     mParamTypes->dataTypeUpdated(dataType);
     QTreeWidget* table = mList->ctrlTableList();
     int count = table->topLevelItemCount();
-    const QString& name  = dataType->getName();
     for (int i = 0; i < count; ++i)
     {
         QTreeWidgetItem* item = table->topLevelItem(i);

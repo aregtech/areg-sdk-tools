@@ -28,15 +28,15 @@ LogSearchModel::LogSearchModel(QAbstractItemModel* logModel)
     , mLogModel     (logModel)
     , mSearchPhrase ( )
     , mCurrentText  ( )
+    , mIsMatchCase  (false)
+    , mIsMatchWord  (false)
+    , mIsWildcard   (false)
+    , mIsBackward   (false)
     , mRowBegin     (InvalidPos)
     , mRowFound     (InvalidPos)
     , mColFound     (static_cast<int>(InvalidPos))
     , mPosStart     (static_cast<int>(InvalidPos))
     , mPosEnd       (static_cast<int>(InvalidPos))
-    , mIsMatchCase  (false)
-    , mIsMatchWord  (false)
-    , mIsWildcard   (false)
-    , mIsBackward   (false)
 {
 }
 
@@ -80,8 +80,6 @@ void LogSearchModel::resetSearch(void)
 
 LogSearchModel::sFoundPos LogSearchModel::startSearch(const QString& searchPhrase, uint32_t startAt, bool isMatchCase, bool isMatchWord, bool isWildcard, bool isBackward)
 {
-    LogSearchModel::sFoundPos result{};
-    
     resetSearch();
     if (searchPhrase.isEmpty() || (mLogModel == nullptr))
         return LogSearchModel::sFoundPos{};

@@ -533,6 +533,10 @@ ScopeRoot::ScopeRoot(ScopeRoot&& src) noexcept
 {
 }
 
+ScopeRoot::~ScopeRoot(void)
+{
+}
+
 ScopeRoot& ScopeRoot::operator = (const ScopeRoot& src)
 {
     ScopeNode::operator = (static_cast<const ScopeNode&>(src));

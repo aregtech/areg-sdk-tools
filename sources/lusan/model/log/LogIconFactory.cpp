@@ -77,7 +77,7 @@ namespace
     constexpr int32_t  AlphaSolid   { 255 };
     constexpr int32_t  AlphaMixed   { 75 };
 
-    QIcon _createRoundFourIcon(QColor color1, QColor color2, QColor color3, QColor color4, bool setAlpha, uint32_t pixels);
+    // QIcon _createRoundFourIcon(QColor color1, QColor color2, QColor color3, QColor color4, bool setAlpha, uint32_t pixels);
 
     QIcon _createNotSetIcon(uint32_t pixels)
     {
@@ -111,7 +111,8 @@ namespace
         painter.end();
         return QIcon(pixIcon);
     }
-
+    
+#if 0    
     QIcon _createOneIcon(QColor color, bool setAlpha, uint32_t pixels)
     {
         return _createRoundFourIcon(color, color, color, color, setAlpha, pixels);
@@ -145,7 +146,8 @@ namespace
         painter.end();
         return QIcon(pixIcon);
     }
-
+#endif
+    
     QIcon _setScopeRound(const QIcon& icon, QColor color, uint32_t pixels)
     {
         // constexpr int margin {LogIconFactory::IconPixels / 2 };
@@ -169,7 +171,8 @@ namespace
         painter.end();
         return QIcon(pixmap);
     }
-
+    
+#if 0
     QIcon _createRoundFourIcon(QColor color1, QColor color2, QColor color3, QColor color4, bool setAlpha, uint32_t pixels)
     {
         pixels = pixels == 0 ? LogIconFactory::IconPixels : pixels;
@@ -218,7 +221,8 @@ namespace
         painter.end();
         return QIcon(pixmap);
     }
-
+#endif
+    
     QIcon _createRoundFourIconWithDiagonals(QColor color1, QColor color2, QColor color3, QColor color4, QColor colorDiag, bool setAlpha, uint32_t pixels)
     {
         pixels = pixels == 0 ? LogIconFactory::IconPixels : pixels;

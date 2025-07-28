@@ -203,7 +203,7 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
 
 void SIDataType::onAddClicked(void)
 {
-    QString name(std::move(genName()));
+    QString name(genName());
     QTreeWidget* table = mList->ctrlTableList();
     
     blockBasicSignals(true);
@@ -229,7 +229,7 @@ void SIDataType::onAddClicked(void)
 
 void SIDataType::onInsertClicked(void)
 {
-    QString name(std::move(genName()));
+    QString name(genName());
     QTreeWidget* table = mList->ctrlTableList();
 
     blockBasicSignals(true);
@@ -267,7 +267,7 @@ void SIDataType::onAddFieldClicked(void)
     
     DataTypeCustom* dataType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>();
     Q_ASSERT((dataType->getCategory() == DataTypeBase::eCategory::Structure) || (dataType->getCategory() == DataTypeBase::eCategory::Enumeration));
-    QString name(std::move(genName(dataType)));
+    QString name(genName(dataType));
     ElementBase* field = mModel.ceateDataTypeChild(dataType, name);
     if (field != nullptr)
     {
@@ -317,7 +317,7 @@ void SIDataType::onInsertFieldClicked(void)
 
     DataTypeCustom* dataType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
     Q_ASSERT((dataType->getCategory() == DataTypeBase::eCategory::Structure) || (dataType->getCategory() == DataTypeBase::eCategory::Enumeration));
-    QString name(std::move(genName(dataType)));
+    QString name(genName(dataType));
     int row = child != nullptr ? parent->indexOfChild(child) : 0;
     row = row < 0 ? 0 : row;
     ElementBase* field = mModel.insertDataTypeChild(row, dataType, name);

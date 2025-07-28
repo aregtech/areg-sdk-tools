@@ -77,7 +77,7 @@ void SIAttributeModel::sortAttributes(bool ascending)
 
 QList<uint32_t> SIAttributeModel::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
 {
-    return std::move(mData.replaceDataType(oldDataType, newDataType));
+    return mData.replaceDataType(oldDataType, newDataType);
 }
 
 void SIAttributeModel::swapAttributes(uint32_t firstId, uint32_t secondId)

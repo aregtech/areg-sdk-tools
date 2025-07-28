@@ -785,15 +785,4 @@ inline LoggingModelBase& LoggingModelBase::self(void)
     return (*this);
 }
 
-inline void LoggingModelBase::_cleanNodes(void)
-{
-    for (ScopeRoot* root : mRootList)
-    {
-        Q_ASSERT(root != nullptr);
-        delete root;
-    }
-
-    mRootList.clear();
-}
-
 #endif // LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP

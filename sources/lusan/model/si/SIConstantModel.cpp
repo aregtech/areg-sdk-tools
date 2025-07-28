@@ -77,7 +77,7 @@ void SIConstantModel::sortConstants(bool ascending)
 
 QList<uint32_t> SIConstantModel::replaceDataType(DataTypeBase* oldDataType, DataTypeBase* newDataType)
 {
-    return std::move(mData.replaceDataType(oldDataType, newDataType));
+    return mData.replaceDataType(oldDataType, newDataType);
 }
 
 void SIConstantModel::swapConstants(uint32_t firstId, uint32_t secondId)

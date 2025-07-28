@@ -214,7 +214,22 @@ namespace NELusanCommon
         T& operator()(T* entry) { return (*entry); };
         const T& operator() (const T* entry) { return (*entry); };
     };
-
+    
+    template<typename T>
+    struct get_ptr
+    {
+        T* operator()(T& entry) { return &entry; };
+        const T* operator() (const T& entry) { return &entry; };
+    };
+    
+    
+    template<typename T>
+    struct get_ptr<T*>
+    {
+        T* operator()(T* entry) { return entry; };
+        const T* operator() (const T* entry) { return entry; };
+    };
+    
     template <class Type, class Iter>
     void sortByName(Iter first, Iter last, bool ascending)
     {

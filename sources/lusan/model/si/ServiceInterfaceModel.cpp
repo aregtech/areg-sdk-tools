@@ -24,8 +24,8 @@ ServiceInterfaceModel::ServiceInterfaceModel(const QString& filePath /*= QString
     , mModelOverview    (mSIData.getOverviewData())
     , mModelDataType    (mSIData.getDataTypeData())
     , mModelAttributes  (mSIData.getAttributeData() , mSIData.getDataTypeData())
-    , mModelConstant    (mSIData.getConstantData()  , mSIData.getDataTypeData())
     , mModelMethods     (mSIData.getMethodData()    , mSIData.getDataTypeData())
+    , mModelConstant    (mSIData.getConstantData()  , mSIData.getDataTypeData())
     , mModelInclude     (mSIData.getIncludeData())
 {
 }

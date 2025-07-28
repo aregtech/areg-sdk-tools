@@ -34,7 +34,7 @@
 template<class Data, class ElemBase>
 class TEDataContainer : public ElemBase
 {
-    using ref = NELusanCommon::get_ref<Data>;
+    using ref = NELusanCommon::get_ref<Data>;    using ptr = NELusanCommon::get_ptr<Data>;
 //////////////////////////////////////////////////////////////////////////
 // Constructors
 //////////////////////////////////////////////////////////////////////////
@@ -575,10 +575,10 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(const Data& oldElement, Dat
     Data* element{ checkElement(oldElement, unique) };
     if (element != nullptr)
     {
-        auto& temp = ref{ }(*element);
-        newElement.setParent(temp.getParent());
-        newElement.setId(temp.getId());
-        temp = std::move(newElement);
+        auto* temp = ptr{ }(*element);
+        newElement.setParent(temp->getParent());
+        newElement.setId(temp->getId());
+        *temp = std::move(newElement);
         reorderIds();
         return true;
     }
@@ -597,11 +597,11 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(const Data& oldElement, con
     Data* element{ checkElement(oldElement, unique) };
     if (element != nullptr)
     {
-        auto& oldElem = ref{ }(*element);
-        const auto& newElem = ref{}(newElement);
-        newElem.setParent(oldElem.getParent());
-        newElem.setId(oldElem.getId());
-        *element = std::move(newElement);
+        auto* oldElem = ptr{ }(*element);
+        const auto* newElem = ptr{}(newElement);
+        newElem->setParent(oldElem->getParent());
+        newElem->setId(oldElem->getId());
+        *element = newElement;
         reorderIds();
         return true;
     }
@@ -614,12 +614,12 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(uint32_t id, Data&& newElem
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        auto& temp = ref{ }(mElementList[i]);
-        if (temp.getId() == id)
+        auto* temp = ptr{ }(mElementList[i]);
+        if (temp->getId() == id)
         {
-            auto& newElem = ref{}(newElement);
-            newElem.setParent(temp.getParent());
-            newElem.setId(temp.getId());
+            auto* newElem = ptr{}(newElement);
+            newElem->setParent(temp->getParent());
+            newElem->setId(temp->getId());
             mElementList[i] = std::move(newElement);
             reorderIds();
             return true;
@@ -634,12 +634,12 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(uint32_t id, const Data& ne
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        auto& temp = ref{ }(mElementList[i]);
-        if (temp.getId() == id)
+        auto* temp = ptr{ }(mElementList[i]);
+        if (temp->getId() == id)
         {
-            auto& newElem = ref{}(newElement);
-            newElem.setParent(temp.getParent());
-            newElem.setId(temp.getId());
+            auto* newElem = ptr{}(newElement);
+            newElem->setParent(temp->getParent());
+            newElem->setId(temp->getId());
             mElementList[i] = newElement;
             reorderIds();
             return true;
@@ -654,13 +654,13 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(const QString& name, Data&&
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        auto& temp = ref{ }(mElementList[i]);
-        if (temp.getName() == name)
+        auto* temp = ptr{ }(mElementList[i]);
+        if (temp->getName() == name)
         {
-            auto& newElem = ref{}(newElement);
-            newElem.setParent(temp.getParent());
-            newElem.setId(temp.getId());
-            mElementList[i] = newElement;
+            auto* newElem = ptr{}(newElement);
+            newElem->setParent(temp->getParent());
+            newElem->setId(temp->getId());
+            mElementList[i] = std::move(newElement);
             reorderIds();
             return true;
         }
@@ -674,12 +674,12 @@ bool TEDataContainer<Data, ElemBase>::replaceElement(const QString& name, const 
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        auto& temp = ref{ }(mElementList[i]);
-        if (temp.getName() == name)
+        auto* temp = ptr{ }(mElementList[i]);
+        if (temp->getName() == name)
         {
-            auto& newElem = ref{}(newElement);
-            newElem.setParent(temp.getParent());
-            newElem.setId(temp.getId());
+            auto* newElem = ptr{}(newElement);
+            newElem->setParent(temp->getParent());
+            newElem->setId(temp->getId());
             mElementList[i] = newElement;
             reorderIds();
             return true;
@@ -730,8 +730,8 @@ bool TEDataContainer<Data, ElemBase>::removeElement(uint32_t id, Data* elemRemov
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        const auto& elem = ref{}(mElementList[i]);
-        if (elem.getId() == id)
+        const auto* elem = ptr{}(mElementList[i]);
+        if (elem->getId() == id)
         {
             if (elemRemoved != nullptr)
             {
@@ -751,8 +751,8 @@ bool TEDataContainer<Data, ElemBase>::removeElement(const QString& name, Data* e
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        const auto& elem = ref{}(mElementList[i]);
-        if (elem.getName() == name)
+        const auto* elem = ptr{}(mElementList[i]);
+        if (elem->getName() == name)
         {
             if (elemRemoved != nullptr)
             {
@@ -778,8 +778,8 @@ Data* TEDataContainer<Data, ElemBase>::findElement(const QString& uniqueName) co
 {
     for (const Data& element : mElementList)
     {
-        const auto& elem = ref{}(element);
-        if (elem.getName() == uniqueName)
+        const auto* elem = ptr{}(element);
+        if (elem->getName() == uniqueName)
         {
             return const_cast<Data *>(&element);
         }
@@ -793,8 +793,8 @@ Data* TEDataContainer<Data, ElemBase>::findElement(const QString& uniqueName)
 {
     for (Data& element : mElementList)
     {
-        auto& elem = ref{}(element);
-        if (elem.getName() == uniqueName)
+        auto* elem = ptr{}(element);
+        if (elem->getName() == uniqueName)
         {
             return static_cast<Data *>(&element);
         }
@@ -808,8 +808,8 @@ Data* TEDataContainer<Data, ElemBase>::findElement(uint32_t id) const
 {
     for (const Data& element : mElementList)
     {
-        const auto& elem = ref{}(element);
-        if (elem.getId() == id)
+        const auto* elem = ptr{}(element);
+        if (elem->getId() == id)
         {
             return const_cast<Data *>(&element);
         }
@@ -823,8 +823,8 @@ Data* TEDataContainer<Data, ElemBase>::findElement(uint32_t id)
 {
     for (Data& element : mElementList)
     {
-        auto& elem = ref{}(element);
-        if (elem.getId() == id)
+        auto* elem = ptr{}(element);
+        if (elem->getId() == id)
         {
             return static_cast<Data *>(&element);
         }
@@ -838,8 +838,8 @@ int TEDataContainer<Data, ElemBase>::findIndex(const QString& name) const
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        const auto& elem = ref{}(mElementList[i]);
-        if (elem.getName() == name)
+        const auto* elem = ptr{}(mElementList[i]);
+        if (elem->getName() == name)
         {
             return i;
         }
@@ -859,8 +859,8 @@ int TEDataContainer<Data, ElemBase>::findIndex(uint32_t id) const
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        const auto& elem = ref{}(mElementList[i]);
-        if (elem.getId() == id)
+        const auto* elem = ptr{}(mElementList[i]);
+        if (elem->getId() == id)
         {
             return i;
         }
@@ -922,14 +922,14 @@ inline int TEDataContainer<Data, ElemBase>::getElementCount(void) const
 template<class Data, class ElemBase>
 void TEDataContainer<Data, ElemBase>::swapElements(int index1, int index2)
 {
-    auto & first = ref{}(mElementList[index1]);
-    auto & second = ref{}(mElementList[index2]);
-    uint32_t id1 = first.getId();
-    uint32_t id2 = second.getId();
-    first.setId(id2);
-    second.setId(id1);
+    auto * first = ptr{}(mElementList[index1]);
+    auto * second = ptr{}(mElementList[index2]);
+    uint32_t id1 = first->getId();
+    uint32_t id2 = second->getId();
+    first->setId(id2);
+    second->setId(id1);
     
-    Data temp = mElementList[index1];
+    Data temp{ std::move(mElementList[index1]) };
     mElementList[index1] = mElementList[index2];
     mElementList[index2] = temp;
 }
@@ -965,8 +965,8 @@ void TEDataContainer<Data, ElemBase>::setOrderedIds(const QList<uint32_t>& order
     int count = static_cast<int>(mElementList.size());
     for (int i = 0; i < count; ++i)
     {
-        auto& temp = ref{ }(mElementList[i]);
-        temp.setId(orderedIds[i]);
+        auto* temp = ptr{ }(mElementList[i]);
+        temp->setId(orderedIds[i]);
     }
 }
 
@@ -1038,12 +1038,12 @@ bool TEDataContainer<Data, ElemBase>::checkUniqueness() const
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {
-        const auto& elem = ref{}(mElementList[i]);
-        const QString& name{ elem.getName() };
+        const auto* elem = ptr{}(mElementList[i]);
+        const QString& name{ elem->getName() };
         for (int j = i + 1; j < mElementList.size(); ++j)
         {
-            const auto& temp = ref{}(mElementList[j]);
-            if (name == temp.getName())
+            const auto* temp = ptr{}(mElementList[j]);
+            if (name == temp->getName())
             {
                 return false;
             }
@@ -1058,20 +1058,20 @@ Data* TEDataContainer<Data, ElemBase>::checkElement(const Data& element, bool un
 {
     Data* found{ nullptr };
 
-    auto& elem = ref{}(element);
-    if (elem.getParent() != this)
+    auto* elem = ptr{}(element);
+    if (elem->getParent() != this)
     {
-        elem.setParent(this);
-        elem.setId(ElemBase::getNextId());
+        elem->setParent(this);
+        elem->setId(ElemBase::getNextId());
     }
 
-    if (elem.getId() != 0)
+    if (elem->getId() != 0)
     {
-        found = findElement(elem.getId());
+        found = findElement(elem->getId());
     }
     else if (unique)
     {
-        found = findElement(elem.getName());
+        found = findElement(elem->getName());
     }
 
     return found;
@@ -1080,8 +1080,8 @@ Data* TEDataContainer<Data, ElemBase>::checkElement(const Data& element, bool un
 template<class Data, class ElemBase>
 inline bool TEDataContainer<Data, ElemBase>::checkUpdated(const Data& element, bool unique) const
 {
-    const auto& elem = ref{}(element);
-    return (checkElement(element, unique) == nullptr ? (elem.getParent() == this) && (elem.getId() != 0) : false);
+    const auto* elem = ptr{}(element);
+    return (checkElement(element, unique) == nullptr ? (elem->getParent() == this) && (elem->getId() != 0) : false);
 }
 
 template<class Data, class ElemBase>
@@ -1089,8 +1089,8 @@ inline void TEDataContainer<Data, ElemBase>::getIds(QList<uint32_t>& out_ids) co
 {
     for (const Data& element : mElementList)
     {
-        const auto& elem = ref{}(element);
-        out_ids.append(elem.getId());
+        const auto* elem = ptr{}(element);
+        out_ids.append(elem->getId());
     }
 }
 
@@ -1101,8 +1101,8 @@ inline void TEDataContainer<Data, ElemBase>::getIdsSorted(QList<uint32_t>& out_i
     int i{ 0 };
     for (const Data& element : mElementList)
     {
-        const auto& elem = ref{}(element);
-        out_ids[i++] = elem.getId();
+        const auto* elem = ptr{}(element);
+        out_ids[i++] = elem->getId();
     }
 
     std::sort(out_ids.begin(), out_ids.end(), [ascending](uint32_t lhs, uint32_t rhs) -> bool
@@ -1122,11 +1122,11 @@ inline void TEDataContainer<Data, ElemBase>::fixEntries(void)
 {
     for (Data& entry : mElementList)
     {
-        auto& temp = ref{ }(entry);
-        if (temp.getParent() != this)
+        auto* temp = ptr{ }(entry);
+        if (temp->getParent() != this)
         {
-            temp.setParent(this);
-            temp.setId(ElemBase::getParent()->getNextId());
+            temp->setParent(this);
+            temp->setId(ElemBase::getParent()->getNextId());
         }
     }
 }
