@@ -20,6 +20,7 @@
 #include "lusan/common/NELusanCommon.hpp"
 
 #include <QDateTime>
+#include <QFileInfo>
 #include <QStandardPaths>
 
 const QStringList NELusanCommon::FILTERS
@@ -62,4 +63,14 @@ const QString& NELusanCommon::getStyleToolbutton(void)
 {
     static const QString& _style(QString::fromUtf8(NELusanCommon::StyleToolbuttonChecked.data(), NELusanCommon::StyleToolbuttonChecked.length()));
     return _style;
+}
+
+QString NELusanCommon::fixPath(const QString& path)
+{
+    if (path.isEmpty())
+        return path;
+    
+    QString filePath{ QString::fromStdString(std::filesystem::absolute(path.toStdString()).string()) };
+    QFileInfo fi(filePath);
+    return fi.absoluteFilePath();
 }

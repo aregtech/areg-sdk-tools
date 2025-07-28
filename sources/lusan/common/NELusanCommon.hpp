@@ -324,10 +324,7 @@ namespace NELusanCommon
      * \brief   Fix path to make it absolute and OS-independent.
      * \param   path    The path to fix.
      **/
-    inline QString fixPath(const QString& path)
-    {
-        return QString(std::filesystem::absolute(path.toStdString()).string().c_str());
-    }
+    QString fixPath(const QString& path);
 }
 
 #endif  // LUSAN_COMMON_NELUSANCOMMON_HPP

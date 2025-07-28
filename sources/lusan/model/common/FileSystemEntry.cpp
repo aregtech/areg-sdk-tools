@@ -493,9 +493,10 @@ FileSystemEntry* FileSystemRootEntry::createChildEntry(const QString& path) cons
     FileSystemEntry* result = FileSystemEntry::createChildEntry(NELusanCommon::fixPath(path));
     if (result != nullptr)
     {
-        Q_ASSERT(mWorkspaceDirs.contains(result->getPath()));
+        QString filePath = NELusanCommon::fixPath(result->getPath());
+        Q_ASSERT(mWorkspaceDirs.contains(filePath));
         result->mEntryType = FileSystemEntry::eEntryType::EntryWorkspace;
-        result->mDispName = mWorkspaceDirs[result->getPath()];
+        result->mDispName = mWorkspaceDirs[filePath];
     }
     
     return result;
@@ -506,9 +507,10 @@ FileSystemEntry* FileSystemRootEntry::createChildEntry(const QFileInfo& fileInfo
     FileSystemEntry* result = FileSystemEntry::createChildEntry(fileInfo);
     if (result != nullptr)
     {
-        Q_ASSERT(mWorkspaceDirs.contains(result->getPath()));
+        QString filePath = NELusanCommon::fixPath(result->getPath());
+        Q_ASSERT(mWorkspaceDirs.contains(filePath));
         result->mEntryType = FileSystemEntry::eEntryType::EntryWorkspace;
-        result->mDispName = mWorkspaceDirs[result->getPath()];
+        result->mDispName = mWorkspaceDirs[filePath];
     }
     
     return result;

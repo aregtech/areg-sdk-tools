@@ -360,11 +360,11 @@ void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString
 
 void NaviFileSystem::updateData(void)
 {
-    QString root     { LusanApplication::getWorkspaceRoot() };
-    QString sources  { LusanApplication::getWorkspaceSources() };
-    QString includes { LusanApplication::getWorkspaceIncludes() };
-    QString delivery { LusanApplication::getWorkspaceDelivery() };
-    QString logs     { LusanApplication::getWorkspaceLogs() };
+    QString root     { NELusanCommon::fixPath(LusanApplication::getWorkspaceRoot())     };
+    QString sources  { NELusanCommon::fixPath(LusanApplication::getWorkspaceSources())  };
+    QString includes { NELusanCommon::fixPath(LusanApplication::getWorkspaceIncludes()) };
+    QString delivery { NELusanCommon::fixPath(LusanApplication::getWorkspaceDelivery()) };
+    QString logs     { NELusanCommon::fixPath(LusanApplication::getWorkspaceLogs())     };
 
     mRootPaths.clear();
     Q_ASSERT(root.isEmpty() == false);
@@ -457,11 +457,11 @@ QFileInfo NaviFileSystem::getFileInfo(const QModelIndex & index) const
 
 void NaviFileSystem::onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace)
 {
-    QString root = workspace.getWorkspaceRoot();
-    QString sources = workspace.getDirSources();
-    QString includes = workspace.getDirIncludes();
-    QString delivery = workspace.getDirDelivery();
-    QString logs = workspace.getDirLogs();
+    QString root    { NELusanCommon::fixPath(workspace.getWorkspaceRoot())  };
+    QString sources { NELusanCommon::fixPath(workspace.getDirSources())     };
+    QString includes{ NELusanCommon::fixPath(workspace.getDirIncludes())    };
+    QString delivery{ NELusanCommon::fixPath(workspace.getDirDelivery())    };
+    QString logs    { NELusanCommon::fixPath(workspace.getDirLogs())        };
 
     mRootPaths.clear();
     Q_ASSERT(root.isEmpty() == false);
