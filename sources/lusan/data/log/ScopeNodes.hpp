@@ -395,7 +395,7 @@ public:
     ScopeRoot( const ScopeRoot & src );
     ScopeRoot( ScopeRoot && src ) noexcept;
     
-    virtual ~ScopeRoot( void );
+    virtual ~ScopeRoot( void ) = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Assigning operators
