@@ -124,7 +124,7 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
 
 void SIInclude::onAddClicked(void)
 {
-    QString location(std::move(genName()));
+    QString location(genName());
     QTableWidget* table = mList->ctrlTableList();
     
     blockBasicSignals(true);
@@ -184,7 +184,7 @@ void SIInclude::onRemoveClicked(void)
 
 void SIInclude::onInsertClicked(void)
 {
-    QString location(std::move(genName()));
+    QString location(genName());
     QTableWidget* table = mList->ctrlTableList();
 
     blockBasicSignals(true);
@@ -586,5 +586,6 @@ inline QString SIInclude::genName(void)
     {
         name = _defName + QString::number(++mCount);
     } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
-    return std::move(name);
+    
+    return name;
 }

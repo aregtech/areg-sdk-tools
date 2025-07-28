@@ -21,10 +21,11 @@
  * Includes
  ************************************************************************/
 #include "lusan/model/log/LoggingModelBase.hpp"
+
+#include "lusan/data/log/ScopeNodes.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
-
 #include "areg/base/DateTime.hpp"
 
 #include <QBrush>
@@ -606,6 +607,17 @@ int LoggingModelBase::getAlignmentData(eColumn column) const
     }
 }
 
+inline void LoggingModelBase::_cleanNodes(void)
+{
+    for (ScopeRoot* root : mRootList)
+    {
+        Q_ASSERT(root != nullptr);
+        delete root;
+    }
+    
+    mRootList.clear();
+}
+
 void LoggingModelBase::onThreadRuns(void)
 {
     uint32_t    nextStart   { 0 };
@@ -638,5 +650,5 @@ void LoggingModelBase::onThreadRuns(void)
         }
     } while ((readCount > 0) && (readCount == mLogChunk));
     
-    Q_ASSERT((mLogCount == static_cast<int>(mLogs.size())) || (readCount == -1));
+    Q_ASSERT((mLogCount == static_cast<uint32_t>(mLogs.size())) || (readCount == -1));
 }

@@ -214,7 +214,22 @@ namespace NELusanCommon
         T& operator()(T* entry) { return (*entry); };
         const T& operator() (const T* entry) { return (*entry); };
     };
-
+    
+    template<typename T>
+    struct get_ptr
+    {
+        T* operator()(T& entry) { return &entry; };
+        const T* operator() (const T& entry) { return &entry; };
+    };
+    
+    
+    template<typename T>
+    struct get_ptr<T*>
+    {
+        T* operator()(T* entry) { return entry; };
+        const T* operator() (const T* entry) { return entry; };
+    };
+    
     template <class Type, class Iter>
     void sortByName(Iter first, Iter last, bool ascending)
     {
@@ -324,10 +339,7 @@ namespace NELusanCommon
      * \brief   Fix path to make it absolute and OS-independent.
      * \param   path    The path to fix.
      **/
-    inline QString fixPath(const QString& path)
-    {
-        return QString(std::filesystem::absolute(path.toStdString()).string().c_str());
-    }
+    QString fixPath(const QString& path);
 }
 
 #endif  // LUSAN_COMMON_NELUSANCOMMON_HPP

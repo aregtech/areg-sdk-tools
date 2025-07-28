@@ -188,7 +188,7 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
 
 void SIConstant::onAddClicked(void)
 {
-    QString name(std::move(genName()));
+    QString name(genName());
     QTableWidget *table = mList->ctrlTableList();
     
     blockBasicSignals(true);
@@ -257,7 +257,7 @@ void SIConstant::onRemoveClicked(void)
 
 void SIConstant::onInsertClicked(void)
 {
-    QString name(std::move(genName()));
+    QString name(genName());
     QTableWidget* table = mList->ctrlTableList();
 
     blockBasicSignals(true);
@@ -695,5 +695,6 @@ inline QString SIConstant::genName(void)
     {
         name = _defName + QString::number(++mCount);
     } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
-    return std::move(name);
+    
+    return name;
 }

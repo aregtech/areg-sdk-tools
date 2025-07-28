@@ -195,9 +195,9 @@ FileSystemEntry::FileSystemEntry(const QFileInfo & fileInfo, FileSystemEntry* pa
 
 FileSystemEntry::FileSystemEntry(const FileSystemEntry& src)
     : mId       (src.mId)
-    , mChildren (src.mChildren)
     , mFilePath (src.mFilePath)
     , mEntryType(src.mEntryType)
+    , mChildren (src.mChildren)
     , mIcon     (src.mIcon)
     , mParent   (nullptr)
 {
@@ -205,9 +205,9 @@ FileSystemEntry::FileSystemEntry(const FileSystemEntry& src)
 
 FileSystemEntry::FileSystemEntry(FileSystemEntry&& src) noexcept
     : mId       (src.mId)
-    , mChildren (std::move(src.mChildren))
     , mFilePath (std::move(src.mFilePath))
     , mEntryType(src.mEntryType)
+    , mChildren (std::move(src.mChildren))
     , mIcon     (std::move(src.mIcon))
     , mParent   (src.mParent)
 {
@@ -390,15 +390,15 @@ QFileInfoList FileSystemEntry::fetchData(const QStringList & filter /*= QStringL
         QDir dir(mFilePath);
         if (filter.size() > 0)
         {
-            QFileInfoList dirs(std::move(dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Dirs, QDir::Name | QDir::IgnoreCase)));
-            QFileInfoList files(std::move(dir.entryInfoList(filter, QDir::NoDotAndDotDot | QDir::Files, QDir::Name | QDir::IgnoreCase)));
-            QFileInfoList result(std::move(dirs));
-            result.append(std::move(files));
-            return std::move(result);
+            QFileInfoList dirs(dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Dirs, QDir::Name | QDir::IgnoreCase));
+            QFileInfoList files(dir.entryInfoList(filter, QDir::NoDotAndDotDot | QDir::Files, QDir::Name | QDir::IgnoreCase));
+            QFileInfoList result(dirs);
+            result.append(files);
+            return result;
         }
         else
         {
-            return std::move(dir.entryInfoList(  QDir::NoDotAndDotDot | QDir::AllEntries, QDir::Name | QDir::DirsFirst | QDir::IgnoreCase));
+            return dir.entryInfoList(  QDir::NoDotAndDotDot | QDir::AllEntries, QDir::Name | QDir::DirsFirst | QDir::IgnoreCase);
         }
     }
     
@@ -421,7 +421,7 @@ bool FileSystemEntry::hasValidChildren(void) const
 int FileSystemEntry::refreshChildren(const QStringList& filter /*= QStringList()*/)
 {
     int result{ 0 };
-    QFileInfoList list{ std::move(fetchData(filter)) };
+    QFileInfoList list{ fetchData(filter) };
     removeAll();
     if (list.size() > 0)
     {
@@ -485,7 +485,7 @@ QFileInfoList FileSystemRootEntry::fetchData(const QStringList & filter /*= QStr
         }
     }
     
-    return std::move(result);
+    return result;
 }
 
 FileSystemEntry* FileSystemRootEntry::createChildEntry(const QString& path) const
@@ -493,9 +493,10 @@ FileSystemEntry* FileSystemRootEntry::createChildEntry(const QString& path) cons
     FileSystemEntry* result = FileSystemEntry::createChildEntry(NELusanCommon::fixPath(path));
     if (result != nullptr)
     {
-        Q_ASSERT(mWorkspaceDirs.contains(result->getPath()));
+        QString filePath = NELusanCommon::fixPath(result->getPath());
+        Q_ASSERT(mWorkspaceDirs.contains(filePath));
         result->mEntryType = FileSystemEntry::eEntryType::EntryWorkspace;
-        result->mDispName = mWorkspaceDirs[result->getPath()];
+        result->mDispName = mWorkspaceDirs[filePath];
     }
     
     return result;
@@ -506,9 +507,10 @@ FileSystemEntry* FileSystemRootEntry::createChildEntry(const QFileInfo& fileInfo
     FileSystemEntry* result = FileSystemEntry::createChildEntry(fileInfo);
     if (result != nullptr)
     {
-        Q_ASSERT(mWorkspaceDirs.contains(result->getPath()));
+        QString filePath = NELusanCommon::fixPath(result->getPath());
+        Q_ASSERT(mWorkspaceDirs.contains(filePath));
         result->mEntryType = FileSystemEntry::eEntryType::EntryWorkspace;
-        result->mDispName = mWorkspaceDirs[result->getPath()];
+        result->mDispName = mWorkspaceDirs[filePath];
     }
     
     return result;

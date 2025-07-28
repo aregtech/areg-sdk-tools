@@ -230,7 +230,7 @@ void SIAttribute::onCurCellChanged(int currentRow, int currentColumn, int previo
 
 void SIAttribute::onAddClicked(void)
 {
-    QString name(std::move(genName()));
+    QString name(genName());
     QTableWidget* table = mList->ctrlTableList();
 
     blockBasicSignals(true);
@@ -299,7 +299,7 @@ void SIAttribute::onRemoveClicked(void)
 
 void SIAttribute::onInsertClicked(void)
 {
-    QString name(std::move(genName()));
+    QString name(genName());
     QTableWidget* table = mList->ctrlTableList();
 
     blockBasicSignals(true);
@@ -739,5 +739,6 @@ inline QString SIAttribute::genName(void)
     {
         name = _defName + QString::number(++mCount);
     } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
-    return std::move(name);
+    
+    return name;
 }
