@@ -593,6 +593,11 @@ protected:
      **/
     int getAlignmentData(eColumn column) const;
 
+    /**
+     * \brief   Call to clean logs and set the number of actual initialized logs objects to 0. 
+     **/
+    inline void cleanLogs(void);
+
 /************************************************************************/
 // IEThreadConsumer interface overrides
 /************************************************************************/
@@ -665,7 +670,7 @@ inline bool LoggingModelBase::isEmpty(void) const
 inline void LoggingModelBase::dataReset(void)
 {
     beginResetModel();
-    mLogs.clear();
+    cleanLogs();
     endResetModel();
 }
 
@@ -779,6 +784,12 @@ inline void LoggingModelBase::_quitThread(void)
         mReadThread.shutdownThread(NECommon::WAIT_INFINITE);
         mQuitThread.unlock();
     }
+}
+
+inline void LoggingModelBase::cleanLogs(void)
+{
+    mLogCount = 0;
+    mLogs.clear();
 }
 
 inline LoggingModelBase& LoggingModelBase::self(void)

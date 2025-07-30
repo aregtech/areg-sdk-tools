@@ -467,12 +467,12 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
     mActiveColumns = std::move(logModel.mActiveColumns);
     logModel.mActiveColumns.clear();
 
-    mLogs.clear();
+    cleanLogs();
     mLogs = std::move(logModel.mLogs);
     mLogChunk = logModel.mLogChunk;
     mLogCount = logModel.mLogCount;
-    logModel.mLogs.clear();
     logModel.mLogCount = 0;
+    logModel.mLogs.clear();
 
     mInstances.clear();
     mInstances = std::move(logModel.mInstances);
@@ -504,8 +504,7 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
 {
     _quitThread();
     beginResetModel();
-    mLogs.clear();
-    mLogCount = 0;
+    cleanLogs();
     endResetModel();
     mLogChunk = maxEntries;
     mReadThread.createThread(NECommon::DO_NOT_WAIT);
