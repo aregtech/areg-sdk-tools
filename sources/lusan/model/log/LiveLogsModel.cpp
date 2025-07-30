@@ -139,7 +139,7 @@ void LiveLogsModel::stopLogging(void)
 void LiveLogsModel::restartLogging(const QString& dbName /*= QString()*/)
 {
     beginResetModel();
-    mLogs.clear();
+    cleanLogs();
     LogObserver::restart(dbName);
     endResetModel();
 }
