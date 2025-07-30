@@ -70,6 +70,7 @@ public:
           LogColumnInvalid  = -1    //!< Invalid column index, used for error checking
         , LogColumnPriority = 0     //!< Log message priority
         , LogColumnTimestamp        //!< Log message timestamp
+        , LogColumnTimeReceived     //!< Log message time received logs
         , LogColumnSource           //!< Log message source name
         , LogColumnSourceId         //!< Log message source ID
         , LogColumnThread           //!< Log message thread name

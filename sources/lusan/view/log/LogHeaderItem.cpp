@@ -194,6 +194,7 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
         break;
 
     case LiveLogsModel::eColumn::LogColumnTimestamp:
+    case LiveLogsModel::eColumn::LogColumnTimeReceived:
     default:
         break;
     }
