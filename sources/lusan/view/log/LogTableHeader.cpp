@@ -183,6 +183,8 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
                 
             case LoggingModelBase::eColumn::LogColumnScopeId:
             case LoggingModelBase::eColumn::LogColumnMessage:
+            case LoggingModelBase::eColumn::LogColumnTimestamp:
+            case LoggingModelBase::eColumn::LogColumnTimeReceived:
             default:
                 break;
             }

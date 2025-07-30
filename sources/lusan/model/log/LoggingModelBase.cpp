@@ -37,14 +37,15 @@ const QStringList& LoggingModelBase::getHeaderList(void)
 {
     static QStringList _headers
     {
-          "Priority"
-        , "Timestamp"
-        , "Source"
-        , "Source ID"
-        , "Thread"
-        , "Thread ID"
-        , "Scope ID"
-        , "Message"
+          tr("Priority")
+        , tr("Time Created")
+        , tr("Time Received")
+        , tr("Source")
+        , tr("Source ID")
+        , tr("Thread")
+        , tr("Thread ID")
+        , tr("Scope ID")
+        , tr("Message")
     };
 
     return _headers;
@@ -522,6 +523,9 @@ QString LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessag
     case eColumn::LogColumnTimestamp:
         return QString::fromStdString(DateTime(logMessage->logTimestamp).formatTime().getData());
 
+    case eColumn::LogColumnTimeReceived:
+        return QString::fromStdString(DateTime(logMessage->logReceived).formatTime().getData());
+
     case eColumn::LogColumnSource:
         return QString(logMessage->logModule) + " (" + QString::number(logMessage->logCookie) + ")";
 
@@ -600,6 +604,7 @@ int LoggingModelBase::getAlignmentData(eColumn column) const
         return static_cast<int>(Qt::AlignCenter | Qt::AlignVCenter);
 
     case eColumn::LogColumnTimestamp:
+    case eColumn::LogColumnTimeReceived:
         return static_cast<int>(Qt::AlignLeft | Qt::AlignVCenter);
 
     default:
