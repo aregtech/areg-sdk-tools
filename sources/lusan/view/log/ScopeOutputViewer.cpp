@@ -19,7 +19,6 @@
 #include "lusan/view/log/ScopeOutputViewer.hpp"
 #include "ui/ui_ScopeOutputViewer.h"
 
-#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
 #include "lusan/view/common/OutputDock.hpp"
 #include "lusan/view/log/LogViewerBase.hpp"
@@ -32,7 +31,10 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
 {
     ui->setupUi(this);    
     ctrlTable()->setModel(nullptr);
-    connect(ctrlTable(), &QTableView::doubleClicked, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
+    connect(ctrlTable()     , &QTableView::doubleClicked, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
+    connect(ctrlCheckScope(), &QCheckBox::toggled       , [this](bool checked) {onScopeChecked(checked);});
+
+    updateControls();
 }
 
 ScopeOutputViewer::~ScopeOutputViewer(void)
@@ -56,7 +58,7 @@ bool ScopeOutputViewer::releaseWindow(MdiChild& mdiChild)
     {
         if (mFilter != nullptr)
         {
-            mFilter->setScopeFilter(nullptr, 0, std::vector<uint32_t>{ }, std::vector<ITEM_ID>{}, 0);
+            mFilter->setScopeFilter(nullptr, 0, 0, 0, 0);
         }
 
         mLogModel = nullptr;
@@ -76,7 +78,7 @@ void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, uint32_t scopeId
     else
     {
         mLogModel = logModel;
-        mFilter->setScopeFilter(logModel, scopeId, std::vector<uint32_t>{sessionId}, std::vector<ITEM_ID>{instance}, 0);
+        mFilter->setScopeFilter(logModel, scopeId, sessionId, 0, instance);
         if (ctrlTable()->model() == nullptr)
             ctrlTable()->setModel(logModel == nullptr ? nullptr : mFilter);
     }
@@ -113,9 +115,20 @@ inline void ScopeOutputViewer::onMouseDoubleClicked(const QModelIndex& index)
     }
 }
 
+void ScopeOutputViewer::onScopeChecked(bool checked)
+{
+    if (mFilter != nullptr)
+        mFilter->ignoreSession(checked);
+}
+
 inline QTableView* ScopeOutputViewer::ctrlTable(void) const
 {
     return ui->logTable;
+}
+
+inline QCheckBox* ScopeOutputViewer::ctrlCheckScope(void) const
+{
+    return ui->checkScopes;
 }
 
 inline void ScopeOutputViewer::updateLogTable(void)
@@ -125,4 +138,15 @@ inline void ScopeOutputViewer::updateLogTable(void)
     {
         logTable->viewport()->update();
     }
+
+    ctrlCheckScope()->setChecked(false);
+    updateControls();
+}
+
+inline void ScopeOutputViewer::updateControls(void)
+{
+    QItemSelectionModel *select = ctrlTable()->selectionModel();
+    bool hasElems{(mFilter != nullptr) && (mFilter->rowCount() != 0)};
+    bool hasSelected{(select != nullptr) && (select->hasSelection()) };
+    ctrlCheckScope()->setEnabled(hasElems);
 }

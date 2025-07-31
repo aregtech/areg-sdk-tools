@@ -25,10 +25,17 @@
 
 ScopeLogViewerFilter::ScopeLogViewerFilter(uint32_t scopeId /*= 0u*/, LoggingModelBase* model /*= nullptr*/)
     : LogViewerFilter(model)
-    , mScopeId       (scopeId)
-    , mPriorities    (0)
-    , mSessionIds    ( )
-    , mInstanceIds   ( )
+
+    , mSelScopeData     ( )
+    , mScopeData        ( )
+    , mSelSessionData   ( )
+    , mSessionData      ( )
+    , mSelThreadData    ( )
+    , mThreadData       ( )
+    , mSelInstanceData  ( )
+    , mInstanceData     ( )
+    , mSelPriorityData  ( )
+    , mPriorityData     ( )
 {
 }
 
@@ -40,34 +47,40 @@ ScopeLogViewerFilter::~ScopeLogViewerFilter(void)
 void ScopeLogViewerFilter::setScopeFilter(LoggingModelBase *model, const QModelIndex& index)
 {
     const NELogging::sLogMessage* logMessage = index.data(Qt::ItemDataRole::UserRole).value<const NELogging::sLogMessage *>();
-    if (logMessage != nullptr)
+    if ((logMessage != nullptr) && (model != nullptr))
     {
-        std::vector<uint32_t> sessionIds;
-        sessionIds.push_back(logMessage->logSessionId);
-        std::vector<ITEM_ID> instances;
-        instances.push_back(logMessage->logCookie);
-        setScopeFilter(model, logMessage->logScopeId, sessionIds, instances, 0);
+        setScopeFilter(model, logMessage->logScopeId, logMessage->logSessionId, logMessage->logThreadId, logMessage->logCookie);
     }
     else
     {
-        setScopeFilter(nullptr, 0, std::vector<uint32_t>(), std::vector<ITEM_ID>(), 0);
+        setScopeFilter(nullptr, 0u, 0u, 0u, 0u);
     }
 }
 
-void ScopeLogViewerFilter::setScopeFilter(LoggingModelBase * model, uint32_t scopeId, const std::vector<uint32_t>& sessionids, const std::vector<ITEM_ID>& instances, uint32_t priorities)
+void ScopeLogViewerFilter::setScopeFilter(LoggingModelBase* model, uint32_t scopeId, uint32_t sessionId, ITEM_ID threadId, ITEM_ID instanceId)
 {
     setSourceModel(nullptr);
     clearFilters();
-    mScopeId       = scopeId;
-    mSessionIds    = sessionids;
-    mInstanceIds   = instances;
-    mPriorities    = priorities;
-    
-    if (std::find(mInstanceIds.begin(), mInstanceIds.end(), NEService::COOKIE_ANY) != mInstanceIds.end())
-        mInstanceIds.clear();
-    
-    setSourceModel(model);
-    invalidateFilter();
+
+    if (model != nullptr)
+    {
+        mSelScopeData.data = scopeId;
+        mSelScopeData.isSet = true;
+        mScopeData = mSelScopeData;
+
+        mSelSessionData.data = sessionId;
+        mSelSessionData.isSet = true;
+        mSessionData = mSelSessionData;
+
+        mSelThreadData.data = threadId;
+        mSelThreadData.isSet = true;
+        mThreadData = mSelThreadData;
+
+        mSelInstanceData.data = instanceId;
+        mSelInstanceData.isSet = true;
+        mInstanceData = mSelInstanceData;
+        setSourceModel(model);
+    }
 }
 
 void ScopeLogViewerFilter::setSourceModel(QAbstractItemModel *sourceModel)
@@ -103,9 +116,8 @@ bool ScopeLogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) 
 
 LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QModelIndex& index) const
 {
-    eMatchType matchType = eMatchType::PartialMatch;
-    if ((mScopeId == 0) || (sourceModel() == nullptr))
-        return matchType; // No scope filter applied
+    if ((mSelScopeData.valid() == false) || (sourceModel() == nullptr))
+        return eMatchType::PartialMatch; // No scope filter applied
     else if (index.isValid() == false)
         return eMatchType::NoMatch;
 
@@ -113,35 +125,62 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
     if (logMessage == nullptr)
         return eMatchType::NoMatch;
 
-    if (logMessage->logScopeId != mScopeId)
+    if ((logMessage->logScopeId != mScopeData.value()) && mScopeData.valid())
+        return eMatchType::NoMatch;
+    else if ((logMessage->logScopeId == 0) && (mScopeData.valid() == false))
+        return eMatchType::NoMatch;
+    else if ((logMessage->logScopeId != mSelScopeData.value()) && (mScopeData.valid() == false))
         return eMatchType::NoMatch;
     
-    if (mSessionIds.empty() == false)
+    if ((logMessage->logThreadId != mThreadData.value()) && mThreadData.valid())
+        return eMatchType::NoMatch;
+    else if ((logMessage->logThreadId == 0) && (mThreadData.valid() == false))
+        return eMatchType::NoMatch;
+    else if (logMessage->logThreadId != mSelThreadData.value())
+        return eMatchType::PartialOutput;
+
+    if ((logMessage->logCookie != mInstanceData.value()) && mInstanceData.valid())
+        return eMatchType::NoMatch;
+    else if ((logMessage->logCookie <= NEService::COOKIE_ANY) && (mInstanceData.valid() == false))
+        return eMatchType::NoMatch;
+    else if (logMessage->logCookie != mSelInstanceData.value())
+        return eMatchType::PartialOutput;
+
+    if ((logMessage->logSessionId != mSessionData.value()) && mSessionData.valid())
+        return eMatchType::NoMatch;
+    else if (logMessage->logSessionId != mSelSessionData.value())
+        return eMatchType::PartialOutput;
+
+    return eMatchType::ExactMatch;
+}
+
+void ScopeLogViewerFilter::ignoreSession(bool doIgnore)
+{
+    if (sourceModel() == nullptr)
+        return;
+
+    if (doIgnore && mSessionData.valid())
     {
-        if (std::find(mSessionIds.begin(), mSessionIds.end(), logMessage->logSessionId) == mSessionIds.end())
-        {
-            return eMatchType::NoMatch;
-        }
-
-        matchType = eMatchType::ExactMatch;
+        mSessionData.clear();
+        invalidateFilter();
     }
-
-    if (mInstanceIds.empty() == false)
+    else if ((doIgnore == false) && (mSessionData.valid() == false))
     {
-        if (std::find(mInstanceIds.begin(), mInstanceIds.end(), logMessage->logCookie) == mInstanceIds.end())
-        {
-            return eMatchType::NoMatch;
-        }
-
-        matchType = eMatchType::ExactMatch;
+        mSessionData = mSelSessionData;
+        invalidateFilter();
     }
-    
-    return ((mPriorities == 0) || ((mPriorities & static_cast<uint32_t>(logMessage->logMessagePrio)) != 0) ? matchType : eMatchType::NoMatch);
 }
 
 inline void ScopeLogViewerFilter::_clearData(void)
 {
-    mSessionIds.clear();
-    mInstanceIds.clear();
-    mPriorities = 0u;
+    mSelScopeData.clear();
+    mScopeData.clear();
+    mSelSessionData.clear();
+    mSessionData.clear();
+    mSelThreadData.clear();
+    mThreadData.clear();
+    mSelInstanceData.clear();
+    mInstanceData.clear();
+    mSelPriorityData.clear();
+    mPriorityData.clear();
 }
