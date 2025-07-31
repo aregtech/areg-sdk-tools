@@ -31,6 +31,7 @@
 
 class ScopeLogViewerFilter;
 class LoggingModelBase;
+class QCheckBox;
 class QTableView;
 namespace Ui {
     class ScopeOutputViewer;
@@ -87,7 +88,15 @@ public:
      * \param   index       The index in the source model to filter.
      **/
     void setupFilter(LoggingModelBase* logModel, const QModelIndex& index);
-    
+
+//////////////////////////////////////////////////////////////////////////
+// Slots
+//////////////////////////////////////////////////////////////////////////
+private slots:
+
+    //!< Triggered when the user clicks on "show all logs of the scope" check box.
+    void onScopeChecked(bool checked);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
 //////////////////////////////////////////////////////////////////////////
@@ -99,8 +108,14 @@ private:
     //!< Returns the pointer to the table view control.
     inline QTableView* ctrlTable(void) const;
 
+    //!< Returns the pointer to the "show all logs of the scope" check box control.
+    inline QCheckBox* ctrlCheckScope(void) const;
+
     //!< Updates the viewport of the log table.
     inline void updateLogTable(void);
+
+    //!< Updates the controls, enabling or disabling them based on the current state.
+    inline void updateControls(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

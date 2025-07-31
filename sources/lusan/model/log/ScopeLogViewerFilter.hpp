@@ -33,10 +33,29 @@ class ScopeLogViewerFilter  : public LogViewerFilter
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
-public:
-    using   Sessions    = std::vector<uint32_t>;
-    using   Instances   = std::vector<ITEM_ID>;
-    using   Priorities  = uint32_t;
+private:
+
+    //!< Structure to hold data for filtering
+    template <typename T>
+    struct sTData
+    {
+        T           data    { 0u };     //!< The data to filter
+        bool        isSet   { false };  //!< True if the data is set, false otherwise
+
+        inline sTData(void) : data(0u), isSet(false) {}
+        inline sTData(const T& value) : data(value), isSet(true) {}
+        inline operator const T& ( ) const  { return data; }
+        inline operator bool ( ) const      { return isSet; }
+        inline void     clear(void)         { data = 0u; isSet = false; }
+        inline bool     valid() const       { return isSet; }
+        inline const T& value(void) const   { return data; }
+    };
+
+    using   SessionData = sTData<uint32_t>;
+    using   ScopeData   = sTData<uint32_t>;
+    using   ThreadData  = sTData<ITEM_ID>;
+    using   InstanceData= sTData<ITEM_ID>;
+    using   PriorityData= sTData<uint32_t>;
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor / destructor
@@ -61,11 +80,11 @@ public:
      * \brief   Sets the scope filter data for the model.
      * \param   model       The pointer to the logging source model to filter.
      * \param   scopeId     The ID of the scope to filter, pass 0 if there is no scope ID is set.
-     * \param   sessionIds  The list of session IDs to filter.
-     * \param   instances   The list of instance IDs to filter.
-     * \param   priorities  The priority bits to filter log messages.
+     * \param   sessionId   The session ID to filter.
+     * \param   threadId    The thread ID to filter.
+     * \param   instanceId  The instance ID to filter.
      **/
-    void setScopeFilter(LoggingModelBase * model, uint32_t scopeId, const std::vector<uint32_t>& sessionIds, const std::vector<ITEM_ID>& instances, uint32_t priorities);
+    void setScopeFilter(LoggingModelBase * model, uint32_t scopeId, uint32_t sessionId, ITEM_ID threadId, ITEM_ID instanceId);
 
     /**
      * \brief   Sets the scope filter data for the model.
@@ -73,6 +92,14 @@ public:
      * \param   index       The index in the source model to filter.
      **/
     void setScopeFilter(LoggingModelBase *model, const QModelIndex& index);
+
+    /**
+     * \brief   Sets the flag to ignore session ID in the filter.
+     *          If true, the session ID is ignored in the filter.
+     *          If false, the session ID is considered in the filter.
+     * \param   doIgnore    True to ignore session ID, false to consider it.
+     **/
+    void ignoreSession(bool doIgnore);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -132,10 +159,16 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    uint32_t    mScopeId;       //!< The scope ID for this filter
-    Priorities  mPriorities;    //!< Priority bits to filter log messages
-    Sessions    mSessionIds;    //!< List of session IDs to filter
-    Instances   mInstanceIds;   //!< List of instance IDs to filter
+    ScopeData       mSelScopeData;      //<! The selected scope data to filter
+    ScopeData       mScopeData;         //<! The scope data to filter
+    SessionData     mSelSessionData;    //<! The selected session data to filter
+    SessionData     mSessionData;       //<! The session data to filter
+    ThreadData      mSelThreadData;     //<! The selected thread data to filter
+    ThreadData      mThreadData;        //<! The thread data to filter
+    InstanceData    mSelInstanceData;   //!< The selected instance data to filter
+    InstanceData    mInstanceData;      //!< The instance data to filter
+    PriorityData    mSelPriorityData;   //!< The selected priority data to filter
+    PriorityData    mPriorityData;      //!< The priority data to filter
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

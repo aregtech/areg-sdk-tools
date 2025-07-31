@@ -66,7 +66,8 @@ protected:
     {
           NoMatch       = 0 //!< Has not match of filters
         , PartialMatch  = 1 //!< Has partial match of filters
-        , ExactMatch    = 2 //!< Has exact match of filters
+        , PartialOutput = 2 //!< Has partial match of filters to output, but not exact
+        , ExactMatch    = 4 //!< Has exact match of filters
     };
 
 public:
