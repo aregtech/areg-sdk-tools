@@ -130,14 +130,20 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
     else if ((logMessage->logScopeId == 0) && (mScopeData.valid() == false))
         return eMatchType::NoMatch;
     else if ((logMessage->logScopeId != mSelScopeData.value()) && (mScopeData.valid() == false))
-        return eMatchType::NoMatch;
-    
+    {
+        if (mThreadData.valid() && mInstanceData.valid() && mSessionData.valid())
+            return eMatchType::NoMatch;
+    }
+
     if ((logMessage->logThreadId != mThreadData.value()) && mThreadData.valid())
         return eMatchType::NoMatch;
     else if ((logMessage->logThreadId == 0) && (mThreadData.valid() == false))
         return eMatchType::NoMatch;
-    else if (logMessage->logThreadId != mSelThreadData.value())
-        return eMatchType::PartialOutput;
+    else if ((logMessage->logThreadId != mSelThreadData.value()) && (mThreadData.valid() == false))
+    {
+        if (mInstanceData.valid() && mSessionData.valid())
+            return eMatchType::NoMatch;
+    }
 
     if ((logMessage->logCookie != mInstanceData.value()) && mInstanceData.valid())
         return eMatchType::NoMatch;
@@ -154,22 +160,50 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
     return eMatchType::ExactMatch;
 }
 
-void ScopeLogViewerFilter::ignoreSession(bool doIgnore)
+void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilter)
 {
-    if (sourceModel() == nullptr)
-        return;
-
-    if (doIgnore && mSessionData.valid())
+    switch (dataFilter)
     {
-        mSessionData.clear();
-        invalidateFilter();
-    }
-    else if ((doIgnore == false) && (mSessionData.valid() == false))
-    {
+    case ScopeLogViewerFilter::eDataFilter::FilterSession:
         mSessionData = mSelSessionData;
-        invalidateFilter();
+        mScopeData   = mSelScopeData;
+        mThreadData  = mSelThreadData;
+        mInstanceData= mSelInstanceData;
+        break;
+
+    case ScopeLogViewerFilter::eDataFilter::FilterScope:
+        mSessionData.clear();
+        mScopeData   = mSelScopeData;
+        mThreadData  = mSelThreadData;
+        mInstanceData= mSelInstanceData;
+        break;
+
+    case ScopeLogViewerFilter::eDataFilter::FilterThread:
+        mSessionData.clear();
+        mScopeData.clear();
+        mThreadData  = mSelThreadData;
+        mInstanceData= mSelInstanceData;
+        break;
+
+    case ScopeLogViewerFilter::eDataFilter::FilterProcess:
+        mSessionData.clear();
+        mScopeData.clear();
+        mThreadData.clear();
+        mInstanceData= mSelInstanceData;
+        break;
+
+    case ScopeLogViewerFilter::eDataFilter::NoFilter:
+    default:
+        mSessionData.clear();
+        mScopeData.clear();
+        mThreadData.clear();
+        mInstanceData.clear();
+        break;
     }
+
+    invalidateFilter();
 }
+
 
 inline void ScopeLogViewerFilter::_clearData(void)
 {

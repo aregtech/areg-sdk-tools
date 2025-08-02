@@ -31,8 +31,11 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
 {
     ui->setupUi(this);    
     ctrlTable()->setModel(nullptr);
-    connect(ctrlTable()     , &QTableView::doubleClicked, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
-    connect(ctrlCheckScope(), &QCheckBox::toggled       , [this](bool checked) {onScopeChecked(checked);});
+    connect(ctrlTable()         , &QTableView::doubleClicked, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
+    connect(ctrlRadioSession()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(eRadioType::RadioSession);});
+    connect(ctrlRadioScope()    , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(eRadioType::RadioScope);});
+    connect(ctrlRadioThread()   , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(eRadioType::RadioThread);});
+    connect(ctrlRadioProcess()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(eRadioType::RadioProcess);});
 
     updateControls();
 }
@@ -82,7 +85,7 @@ void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, uint32_t scopeId
         if (ctrlTable()->model() == nullptr)
             ctrlTable()->setModel(logModel == nullptr ? nullptr : mFilter);
     }
-    
+
     updateLogTable();
 }
 
@@ -115,10 +118,34 @@ inline void ScopeOutputViewer::onMouseDoubleClicked(const QModelIndex& index)
     }
 }
 
-void ScopeOutputViewer::onScopeChecked(bool checked)
+void ScopeOutputViewer::onRadioChecked(eRadioType radio)
 {
-    if (mFilter != nullptr)
-        mFilter->ignoreSession(checked);
+    if (mFilter == nullptr)
+        return;
+
+    switch (radio)
+    {
+    case eRadioType::RadioSession:
+        mFilter->filterData(ScopeLogViewerFilter::eDataFilter::FilterSession);
+        break;
+
+    case eRadioType::RadioScope:
+        mFilter->filterData(ScopeLogViewerFilter::eDataFilter::FilterScope);
+        break;
+
+    case eRadioType::RadioThread:
+        mFilter->filterData(ScopeLogViewerFilter::eDataFilter::FilterThread);
+        break;
+
+    case eRadioType::RadioProcess:
+        mFilter->filterData(ScopeLogViewerFilter::eDataFilter::FilterProcess);
+        break;
+
+    case eRadioType::RadioNone:
+    default:
+        mFilter->filterData(ScopeLogViewerFilter::eDataFilter::NoFilter);
+        break;
+    }
 }
 
 inline QTableView* ScopeOutputViewer::ctrlTable(void) const
@@ -126,9 +153,24 @@ inline QTableView* ScopeOutputViewer::ctrlTable(void) const
     return ui->logTable;
 }
 
-inline QCheckBox* ScopeOutputViewer::ctrlCheckScope(void) const
+inline QRadioButton* ScopeOutputViewer::ctrlRadioSession(void) const
 {
-    return ui->checkScopes;
+    return ui->radioSession;
+}
+
+inline QRadioButton* ScopeOutputViewer::ctrlRadioScope(void) const
+{
+    return ui->radioScope;
+}
+
+inline QRadioButton* ScopeOutputViewer::ctrlRadioThread(void) const
+{
+    return ui->radioThread;
+}
+
+inline QRadioButton* ScopeOutputViewer::ctrlRadioProcess(void) const
+{
+    return ui->radioProcess;
 }
 
 inline void ScopeOutputViewer::updateLogTable(void)
@@ -139,7 +181,6 @@ inline void ScopeOutputViewer::updateLogTable(void)
         logTable->viewport()->update();
     }
 
-    ctrlCheckScope()->setChecked(false);
     updateControls();
 }
 
@@ -147,6 +188,29 @@ inline void ScopeOutputViewer::updateControls(void)
 {
     QItemSelectionModel *select = ctrlTable()->selectionModel();
     bool hasElems{(mFilter != nullptr) && (mFilter->rowCount() != 0)};
-    bool hasSelected{(select != nullptr) && (select->hasSelection()) };
-    ctrlCheckScope()->setEnabled(hasElems);
+    // bool hasSelected{(select != nullptr) && (select->hasSelection()) };
+
+    blockSignals(true);
+    if (hasElems)
+    {
+        ctrlRadioSession()->setChecked(true);
+
+        ctrlRadioSession()->setEnabled(true);
+        ctrlRadioScope()->setEnabled(true);
+        ctrlRadioThread()->setEnabled(true);
+        ctrlRadioProcess()->setEnabled(true);
+    }
+    else
+    {
+        ctrlRadioSession()->setChecked(false);
+        ctrlRadioScope()->setChecked(false);
+        ctrlRadioThread()->setChecked(false);
+        ctrlRadioProcess()->setChecked(false);
+
+        ctrlRadioSession()->setEnabled(false);
+        ctrlRadioScope()->setEnabled(false);
+        ctrlRadioThread()->setEnabled(false);
+        ctrlRadioProcess()->setEnabled(false);
+    }
+
 }
