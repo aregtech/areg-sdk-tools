@@ -32,6 +32,7 @@
 class ScopeLogViewerFilter;
 class LoggingModelBase;
 class QCheckBox;
+class QRadioButton;
 class QTableView;
 namespace Ui {
     class ScopeOutputViewer;
@@ -44,6 +45,18 @@ class ScopeOutputViewer : public OutputWindow
 {
     Q_OBJECT
 
+//////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
+private:
+    enum eRadioType
+    {
+          RadioNone     = -1
+        , RadioSession  = 0
+        , RadioScope    = 1
+        , RadioThread   = 2
+        , RadioProcess  = 3
+    };
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -94,22 +107,27 @@ public:
 //////////////////////////////////////////////////////////////////////////
 private slots:
 
-    //!< Triggered when the user clicks on "show all logs of the scope" check box.
-    void onScopeChecked(bool checked);
+    //!< Triggered when the user double-clicks on a log entry in the table view.
+    inline void onMouseDoubleClicked(const QModelIndex& index);
+
+    void onRadioChecked(eRadioType radio);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
 
-    //!< Triggered when the user double-clicks on a log entry in the table view.
-    inline void onMouseDoubleClicked(const QModelIndex& index);
-    
     //!< Returns the pointer to the table view control.
     inline QTableView* ctrlTable(void) const;
 
+    inline QRadioButton* ctrlRadioSession(void) const;
+
     //!< Returns the pointer to the "show all logs of the scope" check box control.
-    inline QCheckBox* ctrlCheckScope(void) const;
+    inline QRadioButton* ctrlRadioScope(void) const;
+
+    inline QRadioButton* ctrlRadioThread(void) const;
+
+    inline QRadioButton* ctrlRadioProcess(void) const;
 
     //!< Updates the viewport of the log table.
     inline void updateLogTable(void);

@@ -57,6 +57,20 @@ private:
     using   InstanceData= sTData<ITEM_ID>;
     using   PriorityData= sTData<uint32_t>;
 
+public:
+
+    /**
+     * \brief   Filtering data type.
+     **/
+    enum eDataFilter
+    {
+          NoFilter          = -1    //!< No filter should apply
+        , FilterSession     = 0     //!< Filter logs by session, default filter
+        , FilterScope       = 1     //!< Filter logs by scope
+        , FilterThread      = 2     //!< Filter logs by thread
+        , FilterProcess     = 3     //!< Filter logs by process
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / destructor
 //////////////////////////////////////////////////////////////////////////
@@ -94,12 +108,10 @@ public:
     void setScopeFilter(LoggingModelBase *model, const QModelIndex& index);
 
     /**
-     * \brief   Sets the flag to ignore session ID in the filter.
-     *          If true, the session ID is ignored in the filter.
-     *          If false, the session ID is considered in the filter.
-     * \param   doIgnore    True to ignore session ID, false to consider it.
+     * \brief   Sets or resets the filters by data.
+     * \param   dataFilter  The data to filter.
      **/
-    void ignoreSession(bool doIgnore);
+    void filterData(ScopeLogViewerFilter::eDataFilter dataFilter);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
