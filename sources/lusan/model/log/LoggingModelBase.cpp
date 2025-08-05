@@ -606,6 +606,7 @@ int LoggingModelBase::getAlignmentData(eColumn column) const
     case eColumn::LogColumnSourceId:
     case eColumn::LogColumnThreadId:
     case eColumn::LogColumnScopeId:
+    case eColumn::LogColumnTimeDuration:
         return static_cast<int>(Qt::AlignCenter | Qt::AlignVCenter);
 
     case eColumn::LogColumnTimestamp:

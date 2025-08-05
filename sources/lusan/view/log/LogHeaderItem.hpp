@@ -173,6 +173,11 @@ public:
      **/
     void clearFilter(void);
 
+    /**
+     * \brief   Shows the filter widget and set focus on the list widget.
+     **/
+    void showFilter(void);
+
 /************************************************************************
  * Signals
  ************************************************************************/
@@ -222,6 +227,11 @@ public:
      * \brief   Clears filter data.
      **/
     void clearFilter(void);
+
+    /**
+     * \brief   Shows the filter widget and set focus on the line edit widget.
+     **/
+    void showFilter(void);
 
 signals:
 /************************************************************************

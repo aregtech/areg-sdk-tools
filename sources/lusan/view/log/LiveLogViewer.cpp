@@ -124,7 +124,7 @@ void LiveLogViewer::onRowsInserted(const QModelIndex& parent, int first, int las
 {
     const QModelIndex & idxSelected = mLogModel->getSelectedLog();
     int row = idxSelected.isValid() ? idxSelected.row() : -1;
-    int count = mLogModel->rowCount(parent);
+    int count = mFilter->rowCount(parent);
     if ((row < 0) || (row >= count - 2))
     {
         ctrlTable()->scrollToBottom();

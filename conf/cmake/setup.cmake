@@ -31,8 +31,7 @@ if (NOT areg_FOUND)
     FetchContent_Declare(
         areg-sdk
         GIT_REPOSITORY https://github.com/aregtech/areg-sdk.git
-        # GIT_TAG "master"
-        GIT_TAG "feature/563-adapt-duration-in-the-logging"
+        GIT_TAG "master"
     )
     message(STATUS "LUSAN: >>> AREG SDK sources are fetched, setting up areg-sdk ...")
     FetchContent_MakeAvailable(areg-sdk)

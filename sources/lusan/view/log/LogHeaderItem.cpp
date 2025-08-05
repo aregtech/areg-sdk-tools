@@ -92,6 +92,13 @@ void LogComboFilter::clearFilter(void)
     }
 }
 
+void LogComboFilter::showFilter(void)
+{
+    mListWidget->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
+    mListWidget->activateWindow();
+    show();
+}
+
 //////////////////////////////////////////////////////////////////////////
 // LogTextFilter class implementation.
 //////////////////////////////////////////////////////////////////////////
@@ -123,7 +130,6 @@ LogTextFilter::LogTextFilter(bool isExtended, QWidget* parent)
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(2, 2, 2, 2);
     layout->addWidget(mLineEdit);
-    
 }
 
 QString LogTextFilter::getText() const
@@ -149,6 +155,18 @@ void LogTextFilter::slotToolbuttonChecked(bool checked)
 void LogTextFilter::clearFilter(void)
 {
     mLineEdit->setText(QString());
+}
+
+void LogTextFilter::showFilter(void)
+{
+    if (mLineEdit == nullptr)
+        return;
+
+    if (mLineEdit->text().isEmpty() == false)
+        mLineEdit->selectAll();
+    mLineEdit->activateWindow();
+    mLineEdit->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
+    show();
 }
 
 /////////////////////////////////////////////////////////////
@@ -233,7 +251,10 @@ void LogHeaderItem::showFilters(void)
         Q_ASSERT(mCombo != nullptr);
         Q_ASSERT(mEdit == nullptr);
         mCombo->move(pt);
-        mCombo->show();
+        mCombo->showFilter();
+        // mCombo->activateWindow();
+        // mCombo->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
+        // mCombo->show();
     }
     else if (mType == eType::Text)
     {
@@ -243,7 +264,10 @@ void LogHeaderItem::showFilters(void)
         sz.setWidth(mHeader.sectionSize(index));
         mEdit->setMinimumSize(sz);
         mEdit->move(pt);
-        mEdit->show();
+        mEdit->showFilter();
+        // mEdit->show();
+        // mEdit->activateWindow();
+        // mEdit->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
     }
     else
     {

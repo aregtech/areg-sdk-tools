@@ -180,10 +180,14 @@ void LogViewerBase::setupWidgets(void)
     QItemSelectionModel* selection= mLogTable->selectionModel();
     connect(mHeader     , &LogTableHeader::signalComboFilterChanged
             , [this](int logicalColumn, const QStringList& items){
-                _resetSearchResult(); mFilter->setComboFilter(logicalColumn, items);});
+                _resetSearchResult();
+                mFilter->setComboFilter(logicalColumn, items);
+            });
     connect(mHeader     , &LogTableHeader::signalTextFilterChanged
             , [this](int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
-                _resetSearchResult(); mFilter->setTextFilter(logicalColumn, text, isCaseSensitive, isWholeWord, isWildCard);});
+                _resetSearchResult();
+                mFilter->setTextFilter(logicalColumn, text, isCaseSensitive, isWholeWord, isWildCard);
+            });
     connect(mHeader     , &LogTableHeader::customContextMenuRequested   , [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
     
     connect(mLogTable   , &QTableView::clicked                          , [this](const QModelIndex &index){onMouseButtonClicked(index);});
@@ -191,7 +195,9 @@ void LogViewerBase::setupWidgets(void)
     
     connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , [this]() {mLogSearch->setStyleSheet(""); mSearch.resetSearch();});
     connect(mLogSearch  , &SearchLineEdit::signalSearchText
-            , [this](const QString& /*text*/, bool /*isMatchCase*/, bool /*isWholeWord*/, bool /*isWildCard*/, bool /*isBackward*/) {onSearchClicked(mSearch.canSearchNext() == false);});
+            , [this](const QString& /*text*/, bool /*isMatchCase*/, bool /*isWholeWord*/, bool /*isWildCard*/, bool /*isBackward*/) {
+                onSearchClicked(mSearch.canSearchNext() == false);
+            });
     
     connect(selection   , &QItemSelectionModel::currentRowChanged       
             , [this](const QModelIndex &current, const QModelIndex &previous){onCurrentRowChanged(current, previous);});
@@ -297,14 +303,14 @@ void LogViewerBase::moveToBottom(bool select)
     mLogTable->scrollToBottom();
     if (select)
     {
-        int count = mLogModel->rowCount(QModelIndex());
+        int count = mFilter->rowCount(QModelIndex());
         if (count > 0)
         {
-            QModelIndex idxSelected = mLogModel->index(count - 1, 0, QModelIndex());
+            QModelIndex idxSelected = mFilter->index(count - 1, 0, QModelIndex());
 
             mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            mLogTable->selectRow(idxSelected.row());
-            mLogTable->setCurrentIndex(idxSelected);
+            mLogTable->selectRow(count - 1);
+            mLogModel->selectBottom();
         }
     }
 }
@@ -315,31 +321,31 @@ void LogViewerBase::moveToTop(bool select)
     mLogTable->scrollToTop();
     if (select)
     {
-        int count = mLogModel->rowCount(QModelIndex());
+        int count = mFilter->rowCount(QModelIndex());
         if (count > 0)
         {
-            QModelIndex idxSelected = mLogModel->index(0, 0, QModelIndex());
+            QModelIndex idxSelected = mFilter->index(0, 0, QModelIndex());
 
             mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            mLogTable->selectRow(idxSelected.row());
-            mLogTable->setCurrentIndex(idxSelected);
+            mLogTable->selectRow(0);
+            mLogModel->selectTop();
         }
     }
 }
 
 void LogViewerBase::moveToRow(int row, bool select)
 {
-    int count = mLogModel->rowCount(QModelIndex());
+    int count = mFilter->rowCount(QModelIndex());
     Q_ASSERT(mLogTable != nullptr);
     if ((row >= 0) && (count > 0) && (row < count))
     {
-        QModelIndex idxSelected = mLogModel->index(row, 0, QModelIndex());
+        QModelIndex idxSelected = mFilter->index(row, 0, QModelIndex());
         mLogTable->scrollTo(idxSelected);
         if (select)
         {
             mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
             mLogTable->selectRow(idxSelected.row());
-            // mLogTable->setCurrentIndex(idxSelected);
+            mLogModel->setSelectedLog(idxSelected);
         }
     }
 }
@@ -353,20 +359,16 @@ void LogViewerBase::resetColumnOrder()
     mLogTable->setModel(nullptr);
     mLogModel->setActiveColumns(LoggingModelBase::getDefaultColumns());
     mHeader->resetFilters();
-    mLogTable->setModel(mLogModel);
+    mLogTable->setModel(mFilter);
+}
 
-#if 0
-    int columnCount = mHeader->count();
-    // Restore to default order: 0, 1, 2, ..., N-1
-    for (int logical = 0; logical < columnCount; ++logical)
-    {
-        int visual = mHeader->visualIndex(logical);
-        if (visual != logical)
-        {
-            mHeader->moveSection(visual, logical);
-        }
-    }
-#endif
+void LogViewerBase::resetFilters(void)
+{
+    Q_ASSERT(mLogTable != nullptr);
+    Q_ASSERT(mHeader != nullptr);
+    mLogTable->setModel(nullptr);
+    mHeader->resetFilters();
+    mLogTable->setModel(mFilter);
 }
 
 void LogViewerBase::onHeaderContextMenu(const QPoint& pos)
@@ -433,6 +435,14 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
     const QList<LoggingModelBase::eColumn>& activeCols = mLogModel->getActiveColumns();
     const QStringList& headers{ LoggingModelBase::getHeaderList() };
 
+    QAction* actResetFilters = menu->addAction(tr("Reset Filters"));
+    actResetFilters->setCheckable(false);
+    connect(actResetFilters, &QAction::triggered, this, [this, curRow]() {
+            resetFilters();
+            ctrlTable()->viewport()->update();
+            moveToBottom(true);
+        });
+
     // Add actions for each available column
     for (int i = 0; i < static_cast<int>(LoggingModelBase::eColumn::LogColumnCount); ++i)
     {
@@ -456,12 +466,13 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
             });
     }
 
-    QAction* actReset = menu->addAction(tr("Reset Columns"));
-    actReset->setCheckable(false);
-    connect(actReset, &QAction::triggered, this, [this, curRow]() {
-            mLogTable->scrollToBottom();
+    QAction* actResetColumns = menu->addAction(tr("Reset Columns"));
+    actResetColumns->setCheckable(false);
+    connect(actResetColumns, &QAction::triggered, this, [this, curRow]() {
             mLogModel->setActiveColumns(QList<LoggingModelBase::eColumn>());
             resetColumnOrder();
+            ctrlTable()->viewport()->update();
+            moveToBottom(true);
         });
 }
 

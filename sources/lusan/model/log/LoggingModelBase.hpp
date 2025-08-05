@@ -301,6 +301,10 @@ public:
      **/
     inline void setSelectedLog(const QModelIndex& idxLog);
 
+    inline void selectBottom(void);
+
+    inline void selectTop(void);
+
     /**
      * \brief   Returns the logging message structure of specified row.
      **/
@@ -754,6 +758,18 @@ inline const QModelIndex& LoggingModelBase::getSelectedLog(void) const
 inline void LoggingModelBase::setSelectedLog(const QModelIndex& idxLog)
 {
     mSelectedLog = idxLog;
+}
+
+inline void LoggingModelBase::selectBottom(void)
+{
+    int rows = rowCount();
+    mSelectedLog = rows > 0 ? index(rows - 1, 0) : QModelIndex();
+}
+
+inline void LoggingModelBase::selectTop(void)
+{
+    int rows = rowCount();
+    mSelectedLog = rows > 0 ? index(0, 0) : QModelIndex();
 }
 
 inline const NELogging::sLogMessage* LoggingModelBase::getLogData(int row) const

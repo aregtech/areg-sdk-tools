@@ -133,7 +133,7 @@
        </size>
       </property>
       <property name="text">
-       <string>Scope Duration (ms):</string>
+       <string>Scope Duration (µs):</string>
       </property>
      </widget>
      <widget class="QWidget" name="widget_2" native="true">
