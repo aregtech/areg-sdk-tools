@@ -106,7 +106,7 @@ void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, const QModelInde
     updateLogTable();
 }
 
-inline void ScopeOutputViewer::onMouseDoubleClicked(const QModelIndex& index)
+void ScopeOutputViewer::onMouseDoubleClicked(const QModelIndex& index)
 {
     QTableView *logTable = (index.isValid() && (mMdiChild != nullptr)) ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
     if ((logTable != nullptr) && (mFilter != nullptr))
@@ -186,8 +186,8 @@ inline void ScopeOutputViewer::updateLogTable(void)
 
 inline void ScopeOutputViewer::updateControls(void)
 {
-    QItemSelectionModel *select = ctrlTable()->selectionModel();
     bool hasElems{(mFilter != nullptr) && (mFilter->rowCount() != 0)};
+    // QItemSelectionModel *select = ctrlTable()->selectionModel();
     // bool hasSelected{(select != nullptr) && (select->hasSelection()) };
 
     blockSignals(true);

@@ -40,6 +40,7 @@ const QStringList& LoggingModelBase::getHeaderList(void)
           tr("Priority")
         , tr("Time Created")
         , tr("Time Received")
+        , tr("Duration, µs")
         , tr("Source")
         , tr("Source ID")
         , tr("Thread")
@@ -106,23 +107,25 @@ QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, 
 {
     if ((orientation == Qt::Orientation::Vertical) || (section < 0) || (section >= static_cast<int>(mActiveColumns.size())))
         return QVariant();
-
-    if (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::DisplayRole)
+    
+    switch (static_cast<Qt::ItemDataRole>(role))
     {
+    case Qt::ItemDataRole::DisplayRole:
         return QVariant(getHeaderName(section));
-    }
-    else if (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::UserRole)
-    {
+        
+    case Qt::ItemDataRole::UserRole:
         return QVariant(static_cast<int>(mActiveColumns.at(section)));
-    }
-    else if (static_cast<Qt::ItemDataRole>(role) == Qt::ItemDataRole::SizeHintRole)
+    
+    case Qt::ItemDataRole::SizeHintRole:
     {
         const QList<int>& widths = getHeaderWidths();
         eColumn col = mActiveColumns.at(section);
         return (static_cast<int>(col) < static_cast<int>(widths.size()) ? QVariant(QSize(widths[static_cast<int>(col)], 28)) : QVariant());
     }
-
-    return QVariant();
+    
+    default:
+        return QVariant();
+    }
 }
 
 int LoggingModelBase::rowCount(const QModelIndex& parent) const
@@ -524,7 +527,10 @@ QString LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessag
 
     case eColumn::LogColumnTimeReceived:
         return QString::fromStdString(DateTime(logMessage->logReceived).formatTime().getData());
-
+    
+    case eColumn::LogColumnTimeDuration:
+        return QString::number(logMessage->logDuration);
+        
     case eColumn::LogColumnSource:
         return QString(logMessage->logModule) + " (" + QString::number(logMessage->logCookie) + ")";
 

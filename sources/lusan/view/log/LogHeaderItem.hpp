@@ -119,14 +119,14 @@ private:
 
     //!< Returns the column from the index.
     //!< Return LogColumnInvalid value if index is invalid.
-    inline LiveLogsModel::eColumn fromIndexToColumn(int logicalIndex) const;
+    inline LoggingModelBase::eColumn fromIndexToColumn(int logicalIndex) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
 
-    LiveLogsModel::eColumn mColumn;    //!< The index of the header item.
+    LoggingModelBase::eColumn mColumn;  //!< The index of the header item.
     eType           mType;      //!< Type of the header item.
     LogTableHeader& mHeader;    //!< The header object, which contains this item.
     LogComboFilter* mCombo;     //!< The combo-box filter, if applicable.

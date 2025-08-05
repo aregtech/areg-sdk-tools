@@ -460,7 +460,7 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
     actReset->setCheckable(false);
     connect(actReset, &QAction::triggered, this, [this, curRow]() {
             mLogTable->scrollToBottom();
-            mLogModel->setActiveColumns(QList<LiveLogsModel::eColumn>());
+            mLogModel->setActiveColumns(QList<LoggingModelBase::eColumn>());
             resetColumnOrder();
         });
 }

@@ -108,7 +108,7 @@ public:
 private slots:
 
     //!< Triggered when the user double-clicks on a log entry in the table view.
-    inline void onMouseDoubleClicked(const QModelIndex& index);
+    void onMouseDoubleClicked(const QModelIndex& index);
 
     void onRadioChecked(eRadioType radio);
 

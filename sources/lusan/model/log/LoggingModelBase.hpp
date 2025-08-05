@@ -71,6 +71,7 @@ public:
         , LogColumnPriority = 0     //!< Log message priority
         , LogColumnTimestamp        //!< Log message timestamp
         , LogColumnTimeReceived     //!< Log message time received logs
+        , LogColumnTimeDuration     //!< Duration in milliseconds since scope message is acticated
         , LogColumnSource           //!< Log message source name
         , LogColumnSourceId         //!< Log message source ID
         , LogColumnThread           //!< Log message thread name

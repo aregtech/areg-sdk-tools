@@ -92,8 +92,9 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelInd
     eMatchType matchType = eMatchType::PartialMatch;
     if (index.isValid() == false)
         return eMatchType::NoMatch;
-
-    if (sourceModel() == nullptr)
+    
+    QAbstractItemModel* model = sourceModel();
+    if (model == nullptr)
         return matchType;
     
     int row = index.row();    
@@ -105,28 +106,38 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelInd
 
         if (filterItems.isEmpty())
             continue;
-
+        
         // Get the data for this column and row
-        QModelIndex idxCol = sourceModel()->index(row, column);
+        QModelIndex idxCol = model->index(row, column);
         if (idxCol.isValid() == false)
             continue;
-
-        QString cellData = sourceModel()->data(idxCol, Qt::DisplayRole).toString();
-        // Check if the cell data matches any of the selected filter items
-        bool matches = false;
-        for (const QString& filterItem : filterItems)
+        
+        if (model->headerData(column, Qt::Orientation::Horizontal, static_cast<int>(Qt::ItemDataRole::UserRole)).toInt() == static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeDuration))
         {
-            if (cellData == filterItem)
-            {
-                matches     = true;
-                matchType   = eMatchType::ExactMatch;
-                break;
-            }
+            uint32_t rowDuration = model->data(idxCol, Qt::DisplayRole).toUInt();
+            uint32_t filDuration = filterItems.size() == 0 ? filterItems[0].toUInt() : 0u;
+            if  (rowDuration < filDuration)
+                return eMatchType::NoMatch;
         }
-
-        // If this column doesn't match, the row is filtered out
-        if (!matches)
-            return eMatchType::NoMatch;
+        else
+        {
+            QString cellData = model->data(idxCol, Qt::DisplayRole).toString();
+            // Check if the cell data matches any of the selected filter items
+            bool matches = false;
+            for (const QString& filterItem : filterItems)
+            {
+                if (cellData == filterItem)
+                {
+                    matches     = true;
+                    matchType   = eMatchType::ExactMatch;
+                    break;
+                }
+            }
+            
+            // If this column doesn't match, the row is filtered out
+            if (!matches)
+                return eMatchType::NoMatch;
+        }
     }
 
     return matchType;
@@ -155,9 +166,9 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesTextFilters(const QModelInde
         QModelIndex idxCol = sourceModel()->index(row, column);
         if (idxCol.isValid() == false)
             continue;
-
+        
         QString cellData = sourceModel()->data(idxCol, Qt::DisplayRole).toString();
-
+        
         // Check if the cell data contains the filter text (case-insensitive)
         if (filterText.isWildCard || filterText.isWholeWord)
         {

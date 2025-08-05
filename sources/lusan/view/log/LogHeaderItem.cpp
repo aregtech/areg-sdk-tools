@@ -157,7 +157,7 @@ void LogTextFilter::clearFilter(void)
 
 LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     : QObject(&header)
-    , mColumn(static_cast<LiveLogsModel::eColumn>(index))
+    , mColumn(static_cast<LoggingModelBase::eColumn>(index))
     , mType (None)
     , mHeader(header)
     , mCombo(nullptr)
@@ -165,11 +165,11 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
 {
     switch (mColumn)
     {
-    case LiveLogsModel::eColumn::LogColumnPriority:
-    case LiveLogsModel::eColumn::LogColumnSource:
-    case LiveLogsModel::eColumn::LogColumnSourceId:
-    case LiveLogsModel::eColumn::LogColumnThread:
-    case LiveLogsModel::eColumn::LogColumnThreadId:
+    case LoggingModelBase::eColumn::LogColumnPriority:
+    case LoggingModelBase::eColumn::LogColumnSource:
+    case LoggingModelBase::eColumn::LogColumnSourceId:
+    case LoggingModelBase::eColumn::LogColumnThread:
+    case LoggingModelBase::eColumn::LogColumnThreadId:
         mType = eType::Combo;
         mCombo = new LogComboFilter(&mHeader);
         connect(mCombo, &LogComboFilter::signalFiltersChanged, &mHeader, [this]() {
@@ -177,7 +177,7 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
             });
         break;
 
-    case LiveLogsModel::eColumn::LogColumnScopeId:
+    case LoggingModelBase::eColumn::LogColumnScopeId:
         mType = eType::Text;
         mEdit = new LogTextFilter(false, &mHeader);
         connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
@@ -185,16 +185,24 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
         });
         break;
         
-    case LiveLogsModel::eColumn::LogColumnMessage:
+    case LoggingModelBase::eColumn::LogColumnMessage:
         mType = eType::Text;
         mEdit = new LogTextFilter(true, &mHeader);
         connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
             emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText, isCaseSensitive, isWholeWord, isWildCard);
             });
         break;
-
-    case LiveLogsModel::eColumn::LogColumnTimestamp:
-    case LiveLogsModel::eColumn::LogColumnTimeReceived:
+        
+    case LoggingModelBase::eColumn::LogColumnTimeDuration:
+        mType = eType::Text;
+        mEdit = new LogTextFilter(false, &mHeader);
+        connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText, bool /* isCaseSensitive */, bool /* isWholeWord */, bool /* isWildCard */) {
+            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText, false, false, false);
+        });
+        break;
+        
+    case LoggingModelBase::eColumn::LogColumnTimestamp:
+    case LoggingModelBase::eColumn::LogColumnTimeReceived:
     default:
         break;
     }
@@ -205,7 +213,7 @@ inline int LogHeaderItem::fromColumnToIndex(void) const
     return mHeader.mModel->fromColumnToIndex(mColumn);
 }
 
-inline LiveLogsModel::eColumn LogHeaderItem::fromIndexToColumn(int logicalIndex) const
+inline LoggingModelBase::eColumn LogHeaderItem::fromIndexToColumn(int logicalIndex) const
 {
     return mHeader.mModel->fromIndexToColumn(logicalIndex);
 }
