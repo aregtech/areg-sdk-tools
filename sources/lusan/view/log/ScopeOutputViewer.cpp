@@ -162,19 +162,15 @@ void ScopeOutputViewer::onRadioChecked(bool checked, eRadioType radio)
 
 void ScopeOutputViewer::onFilterChanged(const QModelIndex & indexStart, const QModelIndex& indexEnd)
 {
-    ctrlDuration()->setInputMask(QString());
     ctrlDuration()->setText(QString("N/A"));
     if (indexEnd.isValid())
     {
         const NELogging::sLogMessage * log = mLogModel != nullptr ? mLogModel->data(indexEnd, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>() : nullptr;
         if (log != nullptr)
         {
-            ctrlDuration()->setInputMask(tr("999 999 999 999"));
             ctrlDuration()->setText(QString::number(log->logDuration));
         }
     }
-
-    ctrlDuration()->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
 }
 
 inline QTableView* ScopeOutputViewer::ctrlTable(void) const
