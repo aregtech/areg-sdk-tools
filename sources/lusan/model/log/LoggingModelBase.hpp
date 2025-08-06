@@ -71,6 +71,7 @@ public:
         , LogColumnPriority = 0     //!< Log message priority
         , LogColumnTimestamp        //!< Log message timestamp
         , LogColumnTimeReceived     //!< Log message time received logs
+        , LogColumnTimeDuration     //!< Duration in milliseconds since scope message is activated
         , LogColumnSource           //!< Log message source name
         , LogColumnSourceId         //!< Log message source ID
         , LogColumnThread           //!< Log message thread name
@@ -299,6 +300,16 @@ public:
      * \param   idxLog     The index of the selected log message to set.
      **/
     inline void setSelectedLog(const QModelIndex& idxLog);
+
+    /**
+     * \brief   Selects the bottom log message in the model.
+     **/
+    inline void selectBottom(void);
+
+    /**
+     * \brief   Selects the top log message in the model.
+     **/
+    inline void selectTop(void);
 
     /**
      * \brief   Returns the logging message structure of specified row.
@@ -753,6 +764,18 @@ inline const QModelIndex& LoggingModelBase::getSelectedLog(void) const
 inline void LoggingModelBase::setSelectedLog(const QModelIndex& idxLog)
 {
     mSelectedLog = idxLog;
+}
+
+inline void LoggingModelBase::selectBottom(void)
+{
+    int rows = rowCount();
+    mSelectedLog = rows > 0 ? index(rows - 1, 0) : QModelIndex();
+}
+
+inline void LoggingModelBase::selectTop(void)
+{
+    int rows = rowCount();
+    mSelectedLog = rows > 0 ? index(0, 0) : QModelIndex();
 }
 
 inline const NELogging::sLogMessage* LoggingModelBase::getLogData(int row) const

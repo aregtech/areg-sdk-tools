@@ -49,13 +49,15 @@ class ScopeOutputViewer : public OutputWindow
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
 private:
+    //!< The radio buttons to select the type of logs to filter and display.
     enum eRadioType
     {
-          RadioNone     = -1
-        , RadioSession  = 0
-        , RadioScope    = 1
-        , RadioThread   = 2
-        , RadioProcess  = 3
+          RadioNone     =-1 //!< No radio button selected
+        , RadioSession  = 0 //!< Radio button to filter logs by session
+        , RadioSublogs  = 1 //!< Radio button to filter logs by sublogs (logs from nested methods call) of the thread
+        , RadioScope    = 2 //!< Radio button to filter logs by scope
+        , RadioThread   = 3 //!< Radio button to filter logs by thread
+        , RadioProcess  = 4 //!< Radio button to filter logs by process
     };
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -108,9 +110,14 @@ public:
 private slots:
 
     //!< Triggered when the user double-clicks on a log entry in the table view.
-    inline void onMouseDoubleClicked(const QModelIndex& index);
+    void onMouseDoubleClicked(const QModelIndex& index);
 
-    void onRadioChecked(eRadioType radio);
+    /**
+     * \brief   Triggered when the user clicks on a radio button to select the type of logs to filter and display.
+     * \param   checked     True if the radio button is checked, false otherwise.
+     * \param   radio       The type of radio button that was clicked.
+     **/
+    void onRadioChecked(bool checked, eRadioType radio);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
@@ -120,13 +127,19 @@ private:
     //!< Returns the pointer to the table view control.
     inline QTableView* ctrlTable(void) const;
 
+    //!< Returns the pointer to the "show logs of the session" radio button control.
     inline QRadioButton* ctrlRadioSession(void) const;
+
+    //!< Returns the pointer to the "show the session logs and sublogs of the nested methods calls" radio button control.
+    inline QRadioButton* ctrlRadioSublogs(void) const;
 
     //!< Returns the pointer to the "show all logs of the scope" check box control.
     inline QRadioButton* ctrlRadioScope(void) const;
 
+    //!< Returns the pointer to the "show all logs of the thread" radio button control.
     inline QRadioButton* ctrlRadioThread(void) const;
 
+    //!< Returns the pointer to the "show all logs of the process" radio button control.
     inline QRadioButton* ctrlRadioProcess(void) const;
 
     //!< Updates the viewport of the log table.

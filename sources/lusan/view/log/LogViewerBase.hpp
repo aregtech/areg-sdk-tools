@@ -181,6 +181,18 @@ protected:
     virtual void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous);
     
 //////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+protected:
+    //!< Resets the order of the columns in the log viewer.
+    void resetColumnOrder(void);
+
+    /**
+     * \brief   Resets filters.
+     **/
+    void resetFilters(void);
+
+//////////////////////////////////////////////////////////////////////////
 // attributes
 //////////////////////////////////////////////////////////////////////////
 protected:
@@ -208,9 +220,6 @@ protected:
 
     //!< Returns the pointer to the search backward button of the search line edit control.
     QToolButton* ctrlSearchBackward(void);
-
-    //!< Resets the order of the columns in the log viewer.
-    void resetColumnOrder(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

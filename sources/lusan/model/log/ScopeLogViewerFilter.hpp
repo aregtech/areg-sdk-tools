@@ -66,9 +66,10 @@ public:
     {
           NoFilter          = -1    //!< No filter should apply
         , FilterSession     = 0     //!< Filter logs by session, default filter
-        , FilterScope       = 1     //!< Filter logs by scope
-        , FilterThread      = 2     //!< Filter logs by thread
-        , FilterProcess     = 3     //!< Filter logs by process
+        , FilterSublogs     = 1     //!< Filter session logs and sublogs of the thread
+        , FilterScope       = 2     //!< Filter logs by scope
+        , FilterThread      = 3     //!< Filter logs by thread
+        , FilterProcess     = 4     //!< Filter logs by process
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -124,12 +125,12 @@ public:
      * \param   sourceModel The pointer to the source model to filter.
      **/
     virtual void setSourceModel(QAbstractItemModel *sourceModel) override;
-    
+
     /**
      * \brief   Clears all filters.
      **/
     virtual void clearFilters(void) override;
-    
+
     /**
      * \brief   Returns true if the given source row has exact match of the filters.
      *          The method returns false if source model is not set or there are no filters.
@@ -181,6 +182,9 @@ private:
     InstanceData    mInstanceData;      //!< The instance data to filter
     PriorityData    mSelPriorityData;   //!< The selected priority data to filter
     PriorityData    mPriorityData;      //!< The priority data to filter
+    eDataFilter     mActiveFilter;      //!< Active filter type
+    mutable QModelIndex mIndexStart;    //!< The first selected index of filtered data
+    mutable QModelIndex mIndexEnd;      //<!< The last selected index of filtered data
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
