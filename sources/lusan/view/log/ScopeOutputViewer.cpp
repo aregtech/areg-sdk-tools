@@ -20,8 +20,11 @@
 #include "ui/ui_ScopeOutputViewer.h"
 
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
+#include "lusan/model/log/LoggingModelBase.hpp"
 #include "lusan/view/common/OutputDock.hpp"
 #include "lusan/view/log/LogViewerBase.hpp"
+
+#include "areg/logging/NELogging.hpp"
 
 ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     : OutputWindow  (static_cast<int>(OutputDock::eOutputDock::OutputLogging), wndMain, parent)
@@ -37,6 +40,10 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     connect(ctrlRadioScope()    , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioScope);});
     connect(ctrlRadioThread()   , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioThread);});
     connect(ctrlRadioProcess()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioProcess);});
+    connect(mFilter, &ScopeLogViewerFilter::signalFilterSelected
+            , [this](const QModelIndex& start, const QModelIndex& end) {
+                onFilterChanged(start, end);
+    });
 
     updateControls();
 }
@@ -153,6 +160,23 @@ void ScopeOutputViewer::onRadioChecked(bool checked, eRadioType radio)
     }
 }
 
+void ScopeOutputViewer::onFilterChanged(const QModelIndex & indexStart, const QModelIndex& indexEnd)
+{
+    ctrlDuration()->setInputMask(QString());
+    ctrlDuration()->setText(QString("N/A"));
+    if (indexEnd.isValid())
+    {
+        const NELogging::sLogMessage * log = mLogModel != nullptr ? mLogModel->data(indexEnd, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>() : nullptr;
+        if (log != nullptr)
+        {
+            ctrlDuration()->setInputMask(tr("999 999 999 999"));
+            ctrlDuration()->setText(QString::number(log->logDuration));
+        }
+    }
+
+    ctrlDuration()->setAlignment(Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
+}
+
 inline QTableView* ScopeOutputViewer::ctrlTable(void) const
 {
     return ui->logTable;
@@ -183,6 +207,11 @@ inline QRadioButton* ScopeOutputViewer::ctrlRadioProcess(void) const
     return ui->radioProcess;
 }
 
+inline QLineEdit* ScopeOutputViewer::ctrlDuration(void) const
+{
+    return ui->editDuration;
+}
+
 inline void ScopeOutputViewer::updateLogTable(void)
 {
     QTableView *logTable = mMdiChild != nullptr ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
@@ -197,15 +226,13 @@ inline void ScopeOutputViewer::updateLogTable(void)
 inline void ScopeOutputViewer::updateControls(void)
 {
     bool hasElems{(mFilter != nullptr) && (mFilter->rowCount() != 0)};
-    // QItemSelectionModel *select = ctrlTable()->selectionModel();
-    // bool hasSelected{(select != nullptr) && (select->hasSelection()) };
-
     blockSignals(true);
     if (hasElems)
     {
         ctrlRadioSession()->setChecked(true);
 
         ctrlRadioSession()->setEnabled(true);
+        ctrlRadioSublogs()->setEnabled(true);
         ctrlRadioScope()->setEnabled(true);
         ctrlRadioThread()->setEnabled(true);
         ctrlRadioProcess()->setEnabled(true);
@@ -213,14 +240,18 @@ inline void ScopeOutputViewer::updateControls(void)
     else
     {
         ctrlRadioSession()->setChecked(false);
+        ctrlRadioSublogs()->setChecked(false);
         ctrlRadioScope()->setChecked(false);
         ctrlRadioThread()->setChecked(false);
         ctrlRadioProcess()->setChecked(false);
 
         ctrlRadioSession()->setEnabled(false);
+        ctrlRadioSublogs()->setEnabled(false);
         ctrlRadioScope()->setEnabled(false);
         ctrlRadioThread()->setEnabled(false);
         ctrlRadioProcess()->setEnabled(false);
     }
 
+    ctrlDuration()->setText(QString("N/A"));
+    blockSignals(false);
 }

@@ -58,9 +58,9 @@
      <widget class="QLineEdit" name="editDuration">
       <property name="geometry">
        <rect>
-        <x>157</x>
+        <x>182</x>
         <y>1</y>
-        <width>80</width>
+        <width>68</width>
         <height>20</height>
        </rect>
       </property>
@@ -72,21 +72,30 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>80</width>
+        <width>68</width>
         <height>20</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
-        <width>80</width>
+        <width>68</width>
         <height>20</height>
        </size>
+      </property>
+      <property name="text">
+       <string>N/A</string>
       </property>
       <property name="maxLength">
        <number>64</number>
       </property>
+      <property name="frame">
+       <bool>false</bool>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+      </property>
       <property name="dragEnabled">
-       <bool>true</bool>
+       <bool>false</bool>
       </property>
       <property name="readOnly">
        <bool>true</bool>
@@ -110,7 +119,7 @@
        <rect>
         <x>10</x>
         <y>0</y>
-        <width>142</width>
+        <width>174</width>
         <height>20</height>
        </rect>
       </property>
@@ -122,18 +131,18 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>142</width>
+        <width>174</width>
         <height>20</height>
        </size>
       </property>
       <property name="maximumSize">
        <size>
-        <width>104</width>
+        <width>174</width>
         <height>20</height>
        </size>
       </property>
       <property name="text">
-       <string>Scope Duration (µs):</string>
+       <string>Scope Duration (microseconds):</string>
       </property>
      </widget>
      <widget class="QWidget" name="widget_2" native="true">
