@@ -56,6 +56,14 @@ private:
     using   ThreadData  = sTData<ITEM_ID>;
     using   InstanceData= sTData<ITEM_ID>;
     using   PriorityData= sTData<uint32_t>;
+    
+    enum eMatchFilter : uint32_t
+    {
+          NoMatching    = 0
+        , MatchEnter    = 1
+        , MatchMessage  = 2
+        , MatchExit     = 4
+    };
 
 public:
 
@@ -66,9 +74,10 @@ public:
     {
           NoFilter          = -1    //!< No filter should apply
         , FilterSession     = 0     //!< Filter logs by session, default filter
-        , FilterScope       = 1     //!< Filter logs by scope
-        , FilterThread      = 2     //!< Filter logs by thread
-        , FilterProcess     = 3     //!< Filter logs by process
+        , FilterSublogs     = 1     //!< Filter session logs and sublogs of the thread
+        , FilterScope       = 2     //!< Filter logs by scope
+        , FilterThread      = 3     //!< Filter logs by thread
+        , FilterProcess     = 4     //!< Filter logs by process
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -166,6 +175,14 @@ private:
      *          The method resets scope ID, session IDs, instance IDs, and priority bits.
      **/
     inline void _clearData(void);
+    
+    inline bool hasFilterMatch(void) const;
+    
+    inline bool hasEnterMatch(void) const;
+    
+    inline bool hasMessageMatch(void) const;
+    
+    inline bool hasExitMatch(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -181,6 +198,10 @@ private:
     InstanceData    mInstanceData;      //!< The instance data to filter
     PriorityData    mSelPriorityData;   //!< The selected priority data to filter
     PriorityData    mPriorityData;      //!< The priority data to filter
+    eDataFilter     mActiveFilter;      //!< Active filter type
+    mutable uint32_t mMatchFilter;       //!< Flag, indicating the matches of selected logs
+    mutable QModelIndex mIndexStart;
+    mutable QModelIndex mIndexEnd;
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

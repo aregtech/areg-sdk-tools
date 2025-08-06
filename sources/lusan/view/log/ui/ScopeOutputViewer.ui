@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>840</width>
+    <width>988</width>
     <height>140</height>
    </rect>
   </property>
@@ -255,8 +255,8 @@
        <rect>
         <x>410</x>
         <y>0</y>
-        <width>421</width>
-        <height>24</height>
+        <width>568</width>
+        <height>26</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -291,6 +291,13 @@
            <widget class="QRadioButton" name="radioSession">
             <property name="text">
              <string>Session Logs</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioSublogs">
+            <property name="text">
+             <string>Session Sublogs</string>
             </property>
            </widget>
           </item>

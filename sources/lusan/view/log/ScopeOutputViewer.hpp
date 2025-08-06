@@ -53,9 +53,10 @@ private:
     {
           RadioNone     = -1
         , RadioSession  = 0
-        , RadioScope    = 1
-        , RadioThread   = 2
-        , RadioProcess  = 3
+        , RadioSublogs  = 1
+        , RadioScope    = 2
+        , RadioThread   = 3
+        , RadioProcess  = 4
     };
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -110,7 +111,7 @@ private slots:
     //!< Triggered when the user double-clicks on a log entry in the table view.
     void onMouseDoubleClicked(const QModelIndex& index);
 
-    void onRadioChecked(eRadioType radio);
+    void onRadioChecked(bool checked, eRadioType radio);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
@@ -121,6 +122,8 @@ private:
     inline QTableView* ctrlTable(void) const;
 
     inline QRadioButton* ctrlRadioSession(void) const;
+    
+    inline QRadioButton* ctrlRadioSublogs(void) const;
 
     //!< Returns the pointer to the "show all logs of the scope" check box control.
     inline QRadioButton* ctrlRadioScope(void) const;

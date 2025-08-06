@@ -32,10 +32,11 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     ui->setupUi(this);    
     ctrlTable()->setModel(nullptr);
     connect(ctrlTable()         , &QTableView::doubleClicked, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
-    connect(ctrlRadioSession()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(eRadioType::RadioSession);});
-    connect(ctrlRadioScope()    , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(eRadioType::RadioScope);});
-    connect(ctrlRadioThread()   , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(eRadioType::RadioThread);});
-    connect(ctrlRadioProcess()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(eRadioType::RadioProcess);});
+    connect(ctrlRadioSession()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioSession);});
+    connect(ctrlRadioSublogs()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioSublogs);});
+    connect(ctrlRadioScope()    , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioScope);});
+    connect(ctrlRadioThread()   , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioThread);});
+    connect(ctrlRadioProcess()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioProcess);});
 
     updateControls();
 }
@@ -118,15 +119,19 @@ void ScopeOutputViewer::onMouseDoubleClicked(const QModelIndex& index)
     }
 }
 
-void ScopeOutputViewer::onRadioChecked(eRadioType radio)
+void ScopeOutputViewer::onRadioChecked(bool checked, eRadioType radio)
 {
-    if (mFilter == nullptr)
+    if ((mFilter == nullptr) || (checked == false))
         return;
 
     switch (radio)
     {
     case eRadioType::RadioSession:
         mFilter->filterData(ScopeLogViewerFilter::eDataFilter::FilterSession);
+        break;
+    
+    case eRadioType::RadioSublogs:
+        mFilter->filterData(ScopeLogViewerFilter::eDataFilter::FilterSublogs);
         break;
 
     case eRadioType::RadioScope:
@@ -156,6 +161,11 @@ inline QTableView* ScopeOutputViewer::ctrlTable(void) const
 inline QRadioButton* ScopeOutputViewer::ctrlRadioSession(void) const
 {
     return ui->radioSession;
+}
+
+inline QRadioButton* ScopeOutputViewer::ctrlRadioSublogs(void) const
+{
+    return ui->radioSublogs;
 }
 
 inline QRadioButton* ScopeOutputViewer::ctrlRadioScope(void) const
