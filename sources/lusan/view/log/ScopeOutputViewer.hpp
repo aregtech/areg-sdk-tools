@@ -32,6 +32,7 @@
 class ScopeLogViewerFilter;
 class LoggingModelBase;
 class QCheckBox;
+class QLineEdit;
 class QRadioButton;
 class QTableView;
 namespace Ui {
@@ -119,9 +120,20 @@ private slots:
      **/
     void onRadioChecked(bool checked, eRadioType radio);
 
+    //<!< Triggered when the filter scope selection indexes are changed, updates the log table view.
+    void onFilterChanged(const QModelIndex & indexStart, const QModelIndex& indexEnd);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
 //////////////////////////////////////////////////////////////////////////
+private:
+
+    //!< Updates the viewport of the log table.
+    inline void updateLogTable(void);
+
+    //!< Updates the controls, enabling or disabling them based on the current state.
+    inline void updateControls(void);
+
 private:
 
     //!< Returns the pointer to the table view control.
@@ -142,11 +154,7 @@ private:
     //!< Returns the pointer to the "show all logs of the process" radio button control.
     inline QRadioButton* ctrlRadioProcess(void) const;
 
-    //!< Updates the viewport of the log table.
-    inline void updateLogTable(void);
-
-    //!< Updates the controls, enabling or disabling them based on the current state.
-    inline void updateControls(void);
+    inline QLineEdit* ctrlDuration(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

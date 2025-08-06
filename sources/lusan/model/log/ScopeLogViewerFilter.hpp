@@ -30,6 +30,8 @@
  **/
 class ScopeLogViewerFilter  : public LogViewerFilter
 {
+    Q_OBJECT
+
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
@@ -114,6 +116,16 @@ public:
      **/
     void filterData(ScopeLogViewerFilter::eDataFilter dataFilter);
 
+    /**
+     * \brief   Returns the starting index of the logs of the selected session.
+     **/
+    inline const QModelIndex& getIndexStart(void) const;
+
+    /**
+     * \brief   Returns the last index of the logs of the selected session.
+     **/
+    inline const QModelIndex& getIndexEnd(void) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -140,6 +152,18 @@ public:
      * \return  True if the row has exact match of the filter.
      **/
     virtual bool filterExactMatch(const QModelIndex & index) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+signals:
+
+    /**
+     * \brief   Signal emitted when the filter selects the range of filtered session log.
+     * \param   indexStart  The index of the start of the filter range.
+     * \param   indexEnd    The index of the end of the filter range.
+     **/
+    void signalFilterSelected(const QModelIndex& indexStart, const QModelIndex& indexEnd) const;
 
 protected:
     /**
@@ -192,5 +216,19 @@ private:
 private:
     DECLARE_NOCOPY_NOMOVE(ScopeLogViewerFilter);
 };
+
+//////////////////////////////////////////////////////////////////////////
+// ScopeLogViewerFilter inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline const QModelIndex& ScopeLogViewerFilter::getIndexStart(void) const
+{
+    return mIndexStart;
+}
+
+inline const QModelIndex& ScopeLogViewerFilter::getIndexEnd(void) const
+{
+    return mIndexEnd;
+}
 
 #endif  // LUSAN_MODEL_LOG_SCOPELOGVIEWERFILTER_HPP
