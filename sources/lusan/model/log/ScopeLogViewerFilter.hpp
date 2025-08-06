@@ -56,7 +56,7 @@ private:
     using   ThreadData  = sTData<ITEM_ID>;
     using   InstanceData= sTData<ITEM_ID>;
     using   PriorityData= sTData<uint32_t>;
-    
+
 public:
 
     /**
@@ -125,12 +125,12 @@ public:
      * \param   sourceModel The pointer to the source model to filter.
      **/
     virtual void setSourceModel(QAbstractItemModel *sourceModel) override;
-    
+
     /**
      * \brief   Clears all filters.
      **/
     virtual void clearFilters(void) override;
-    
+
     /**
      * \brief   Returns true if the given source row has exact match of the filters.
      *          The method returns false if source model is not set or there are no filters.
@@ -167,7 +167,7 @@ private:
      *          The method resets scope ID, session IDs, instance IDs, and priority bits.
      **/
     inline void _clearData(void);
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -183,8 +183,8 @@ private:
     PriorityData    mSelPriorityData;   //!< The selected priority data to filter
     PriorityData    mPriorityData;      //!< The priority data to filter
     eDataFilter     mActiveFilter;      //!< Active filter type
-    mutable QModelIndex mIndexStart;
-    mutable QModelIndex mIndexEnd;
+    mutable QModelIndex mIndexStart;    //!< The first selected index of filtered data
+    mutable QModelIndex mIndexEnd;      //<!< The last selected index of filtered data
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

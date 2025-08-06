@@ -71,7 +71,7 @@ public:
         , LogColumnPriority = 0     //!< Log message priority
         , LogColumnTimestamp        //!< Log message timestamp
         , LogColumnTimeReceived     //!< Log message time received logs
-        , LogColumnTimeDuration     //!< Duration in milliseconds since scope message is acticated
+        , LogColumnTimeDuration     //!< Duration in milliseconds since scope message is activated
         , LogColumnSource           //!< Log message source name
         , LogColumnSourceId         //!< Log message source ID
         , LogColumnThread           //!< Log message thread name
@@ -301,8 +301,14 @@ public:
      **/
     inline void setSelectedLog(const QModelIndex& idxLog);
 
+    /**
+     * \brief   Selects the bottom log message in the model.
+     **/
     inline void selectBottom(void);
 
+    /**
+     * \brief   Selects the top log message in the model.
+     **/
     inline void selectTop(void);
 
     /**
