@@ -168,7 +168,8 @@ void ScopeOutputViewer::onFilterChanged(const QModelIndex & indexStart, const QM
         const NELogging::sLogMessage * log = mLogModel != nullptr ? mLogModel->data(indexEnd, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>() : nullptr;
         if (log != nullptr)
         {
-            ctrlDuration()->setText(QString::number(log->logDuration));
+            float duration = static_cast<float>(static_cast<double>(log->logDuration) / 1000.0f);
+            ctrlDuration()->setText(QString::number(duration));
         }
     }
 }
