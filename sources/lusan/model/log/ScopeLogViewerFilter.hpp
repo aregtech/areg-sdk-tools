@@ -57,14 +57,6 @@ private:
     using   InstanceData= sTData<ITEM_ID>;
     using   PriorityData= sTData<uint32_t>;
     
-    enum eMatchFilter : uint32_t
-    {
-          NoMatching    = 0
-        , MatchEnter    = 1
-        , MatchMessage  = 2
-        , MatchExit     = 4
-    };
-
 public:
 
     /**
@@ -176,14 +168,6 @@ private:
      **/
     inline void _clearData(void);
     
-    inline bool hasFilterMatch(void) const;
-    
-    inline bool hasEnterMatch(void) const;
-    
-    inline bool hasMessageMatch(void) const;
-    
-    inline bool hasExitMatch(void) const;
-
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -199,7 +183,6 @@ private:
     PriorityData    mSelPriorityData;   //!< The selected priority data to filter
     PriorityData    mPriorityData;      //!< The priority data to filter
     eDataFilter     mActiveFilter;      //!< Active filter type
-    mutable uint32_t mMatchFilter;       //!< Flag, indicating the matches of selected logs
     mutable QModelIndex mIndexStart;
     mutable QModelIndex mIndexEnd;
 

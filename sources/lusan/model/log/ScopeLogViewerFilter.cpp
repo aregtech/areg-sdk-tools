@@ -37,7 +37,6 @@ ScopeLogViewerFilter::ScopeLogViewerFilter(uint32_t scopeId /*= 0u*/, LoggingMod
     , mSelPriorityData  ( )
     , mPriorityData     ( )
     , mActiveFilter     (eDataFilter::NoFilter)
-    , mMatchFilter      (static_cast<uint32_t>(eMatchFilter::NoMatching))
     , mIndexStart       ( )
     , mIndexEnd         ( )
 {
@@ -85,7 +84,6 @@ void ScopeLogViewerFilter::setScopeFilter(LoggingModelBase* model, uint32_t scop
         mInstanceData = mSelInstanceData;
         
         mActiveFilter = eDataFilter::FilterSession;
-        mMatchFilter  = static_cast<uint32_t>(eMatchFilter::NoMatching);
         mIndexStart = QModelIndex();
         mIndexEnd   = QModelIndex();
         setSourceModel(model);
@@ -119,9 +117,6 @@ bool ScopeLogViewerFilter::filterExactMatch(const QModelIndex& index) const
 
 bool ScopeLogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
 {
-    if (row == 0)
-        mMatchFilter  = static_cast<uint32_t>(eMatchFilter::NoMatching);
-        
     QModelIndex index = sourceModel() != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
     return ((matchesScopeFilter(index) != eMatchType::NoMatch) && LogViewerFilter::filterAcceptsRow(row, parent));
 }
@@ -137,24 +132,12 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
     if (logMessage == nullptr)
         return eMatchType::NoMatch;
     
-    if ((logMessage->logScopeId == 0) && (mScopeData.valid() == false))
-    {
+    if ((logMessage->logCookie != mInstanceData.value()) && mInstanceData.valid())
         return eMatchType::NoMatch;
-    }
-    else if ((mActiveFilter != eDataFilter::FilterSublogs) || (mIndexStart.isValid() && mIndexEnd.isValid()))
-    {
-        if ((logMessage->logScopeId != mScopeData.value()) && mScopeData.valid())
-        {
-            return eMatchType::NoMatch;
-        }
-        else if ((logMessage->logScopeId != mSelScopeData.value()) && (mScopeData.valid() == false))
-        {
-            if (mThreadData.valid() && mInstanceData.valid() && mSessionData.valid())
-                return eMatchType::NoMatch;
-            
-            return eMatchType::PartialOutput;
-        }
-    }
+    else if ((logMessage->logCookie <= NEService::COOKIE_ANY) && (mInstanceData.valid() == false))
+        return eMatchType::NoMatch;
+    else if (logMessage->logCookie != mSelInstanceData.value())
+        return eMatchType::PartialOutput;
 
     if ((logMessage->logThreadId != mThreadData.value()) && mThreadData.valid())
         return eMatchType::NoMatch;
@@ -166,19 +149,34 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
             return eMatchType::NoMatch;
     }
 
-    if ((logMessage->logCookie != mInstanceData.value()) && mInstanceData.valid())
+    if ((logMessage->logScopeId != mScopeData.value()) && mScopeData.valid())
+    {
+        if (mActiveFilter == eDataFilter::FilterSublogs)
+        {
+            if ((mIndexStart.isValid() && (mIndexEnd.isValid() == false)) || ((mIndexStart.row() < index.row()) && (index.row() < mIndexEnd.row())))
+                return eMatchType::PartialOutput;
+        }
+
         return eMatchType::NoMatch;
-    else if ((logMessage->logCookie <= NEService::COOKIE_ANY) && (mInstanceData.valid() == false))
+    }
+    else if ((logMessage->logScopeId == 0) && (mScopeData.valid() == false))
+    {
         return eMatchType::NoMatch;
-    else if (logMessage->logCookie != mSelInstanceData.value())
+    }
+    else if ((logMessage->logScopeId != mSelScopeData.value()) && (mScopeData.valid() == false))
+    {
+        if (mThreadData.valid() && mInstanceData.valid() && mSessionData.valid())
+            return eMatchType::NoMatch;
+
         return eMatchType::PartialOutput;
+    }
 
     if ((logMessage->logSessionId != mSessionData.value()) && mSessionData.valid())
     {
         if (mActiveFilter == eDataFilter::FilterSublogs)
         {
             Q_ASSERT(logMessage->logThreadId == mThreadData.value());
-            if (mIndexStart.isValid() && (mIndexEnd.isValid() == false))
+            if ((mIndexStart.isValid() && (mIndexEnd.isValid() == false)) || ((mIndexStart.row() < index.row()) && (index.row() < mIndexEnd.row())))
                 return eMatchType::PartialOutput;
         }
         
@@ -188,25 +186,20 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
     {
         return eMatchType::PartialOutput;
     }
-    
+
+    Q_ASSERT(logMessage->logSessionId == mSelSessionData.value());
     if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
     {
-        mMatchFilter |= static_cast<uint32_t>(eMatchFilter::MatchEnter);
         mIndexStart = index;
-        mIndexEnd   = QModelIndex();
     }
     else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageText)
     {
-        mMatchFilter |= static_cast<uint32_t>(eMatchFilter::MatchMessage);
         if (mIndexStart.isValid() == false)
             mIndexStart = index;
-        
-        mIndexEnd   = QModelIndex();
     }
     else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
     {
         mIndexEnd = index;
-        mMatchFilter |= static_cast<uint32_t>(eMatchFilter::MatchExit);
     }
         
     return eMatchType::ExactMatch;
@@ -214,7 +207,6 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
 
 void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilter)
 {
-    mMatchFilter= static_cast<uint32_t>(eMatchFilter::NoMatching);
     mIndexStart = QModelIndex();
     mIndexEnd   = QModelIndex();
     QAbstractItemModel* model = sourceModel();
@@ -227,7 +219,6 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
         mThreadData  = mSelThreadData;
         mInstanceData= mSelInstanceData;
         mActiveFilter= ScopeLogViewerFilter::eDataFilter::FilterSession;
-        invalidateFilter();
         break;
         
     case ScopeLogViewerFilter::eDataFilter::FilterSublogs:
@@ -236,8 +227,6 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
         mThreadData  = mSelThreadData;
         mInstanceData= mSelInstanceData;
         mActiveFilter= ScopeLogViewerFilter::eDataFilter::FilterSublogs;
-        setSourceModel(nullptr);
-        setSourceModel(model);
         break;
         
     case ScopeLogViewerFilter::eDataFilter::FilterScope:
@@ -246,8 +235,6 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
         mThreadData  = mSelThreadData;
         mInstanceData= mSelInstanceData;
         mActiveFilter= ScopeLogViewerFilter::eDataFilter::FilterScope;
-        setSourceModel(nullptr);
-        setSourceModel(model);
         break;
 
     case ScopeLogViewerFilter::eDataFilter::FilterThread:
@@ -256,8 +243,6 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
         mThreadData  = mSelThreadData;
         mInstanceData= mSelInstanceData;
         mActiveFilter= ScopeLogViewerFilter::eDataFilter::FilterThread;
-        setSourceModel(nullptr);
-        setSourceModel(model);
         break;
 
     case ScopeLogViewerFilter::eDataFilter::FilterProcess:
@@ -266,8 +251,6 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
         mThreadData.clear();
         mInstanceData= mSelInstanceData;
         mActiveFilter= ScopeLogViewerFilter::eDataFilter::FilterProcess;
-        setSourceModel(nullptr);
-        setSourceModel(model);
         break;
 
     case ScopeLogViewerFilter::eDataFilter::NoFilter:
@@ -277,10 +260,10 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
         mThreadData.clear();
         mInstanceData.clear();
         mActiveFilter= ScopeLogViewerFilter::eDataFilter::NoFilter;
-        setSourceModel(nullptr);
-        setSourceModel(model);
         break;
     }
+
+    invalidateFilter();
 }
 
 inline void ScopeLogViewerFilter::_clearData(void)
@@ -297,27 +280,6 @@ inline void ScopeLogViewerFilter::_clearData(void)
     mPriorityData.clear();
     
     mActiveFilter = eDataFilter::NoFilter;
-    mMatchFilter  = static_cast<uint32_t>(eMatchFilter::NoMatching);
     mIndexStart = QModelIndex();
     mIndexEnd   = QModelIndex();
-}
-
-inline bool ScopeLogViewerFilter::hasFilterMatch(void) const
-{
-    return (mMatchFilter != static_cast<uint32_t>(eMatchFilter::NoMatching));
-}
-
-inline bool ScopeLogViewerFilter::hasEnterMatch(void) const
-{
-    return ((mMatchFilter & static_cast<uint32_t>(eMatchFilter::MatchEnter)) != 0);
-}
-
-inline bool ScopeLogViewerFilter::hasMessageMatch(void) const
-{
-    return ((mMatchFilter & static_cast<uint32_t>(eMatchFilter::MatchMessage)) != 0);
-}
-
-inline bool ScopeLogViewerFilter::hasExitMatch(void) const
-{
-    return ((mMatchFilter & static_cast<uint32_t>(eMatchFilter::MatchExit)) != 0);
 }
