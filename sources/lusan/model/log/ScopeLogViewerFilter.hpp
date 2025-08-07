@@ -119,12 +119,12 @@ public:
     /**
      * \brief   Returns the starting index of the logs of the selected session.
      **/
-    inline const QModelIndex& getIndexStart(void) const;
+    inline QModelIndex getIndexStart(bool asSource) const;
 
     /**
      * \brief   Returns the last index of the logs of the selected session.
      **/
-    inline const QModelIndex& getIndexEnd(void) const;
+    inline QModelIndex getIndexEnd(bool asSource) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -221,14 +221,14 @@ private:
 // ScopeLogViewerFilter inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QModelIndex& ScopeLogViewerFilter::getIndexStart(void) const
+inline QModelIndex ScopeLogViewerFilter::getIndexStart(bool asSource) const
 {
-    return mIndexStart;
+    return (asSource || (mIndexStart.isValid() == false) ? mIndexStart : mapFromSource(mIndexStart));
 }
 
-inline const QModelIndex& ScopeLogViewerFilter::getIndexEnd(void) const
+inline QModelIndex ScopeLogViewerFilter::getIndexEnd(bool asSource) const
 {
-    return mIndexEnd;
+    return (asSource || (mIndexEnd.isValid() == false) ? mIndexEnd : mapFromSource(mIndexEnd));
 }
 
 #endif  // LUSAN_MODEL_LOG_SCOPELOGVIEWERFILTER_HPP

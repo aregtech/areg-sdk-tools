@@ -174,7 +174,13 @@
         <number>0</number>
        </property>
        <item row="0" column="3">
-        <widget class="QToolButton" name="toolScopeBegin">
+        <widget class="QToolButton" name="toolScopeEnd">
+         <property name="toolTip">
+          <string>Move to the end of active scope</string>
+         </property>
+         <property name="whatsThis">
+          <string>Move to the end of active scope</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -190,7 +196,13 @@
         </widget>
        </item>
        <item row="0" column="4">
-        <widget class="QToolButton" name="toolScopeEnd">
+        <widget class="QToolButton" name="toolScopeBegin">
+         <property name="toolTip">
+          <string>Move to the begin of active scope</string>
+         </property>
+         <property name="whatsThis">
+          <string>Move to the begin of active scope</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -233,6 +245,12 @@
        </item>
        <item row="0" column="5">
         <widget class="QToolButton" name="toolLogShow">
+         <property name="toolTip">
+          <string>Show selected log in the Log View window</string>
+         </property>
+         <property name="whatsThis">
+          <string>Show selected log in the Log View window</string>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
