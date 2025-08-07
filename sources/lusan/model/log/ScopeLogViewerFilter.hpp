@@ -118,13 +118,45 @@ public:
 
     /**
      * \brief   Returns the starting index of the logs of the selected session.
+     * \param   asSource    If true, the returned index is based on the source model.
+     *                      Otherwise, based on filter index.
      **/
     inline QModelIndex getIndexStart(bool asSource) const;
 
     /**
      * \brief   Returns the last index of the logs of the selected session.
+     * \param   asSource    If true, the returned index is based on the source model.
+     *                      Otherwise, based on filter index.
      **/
     inline QModelIndex getIndexEnd(bool asSource) const;
+
+    /**
+     * \brief   Returns the next index of the scope log in the output window.
+     *          If the scope message is not available, it tracks the scope ID change
+     *          and returns the index of the next log message in output window.
+     * \param   startAt The index to start searching next message.
+     *                  If the index is invalid and the output window has entries,
+     *                  it returns the index of the first entry.
+     *                  If the index is the last scope message entry, the returned value is invalid.
+     * \param   asSource    If true, the returned index is based on the source model.
+     *                      Otherwise, based on filter index.
+     * \return  Returns the index of the next scope message in output window.
+     **/
+    QModelIndex getIndexNextScope(const QModelIndex& startAt, bool asSource) const;
+
+    /**
+     * \brief   Returns the previous index of the scope log in the output window.
+     *          If the scope message is not available, it tracks the scope ID change
+     *          and returns the index of the previous log message in output window
+     * \param   startAt The index to start searching previous message.
+     *                  If the index is invalid and the output window has entries,
+     *                  it returns the index of the last entry.
+     *                  If the index is the first scope message entry, the returned value is invalid.
+     * \param   asSource    If true, the returned index is based on the source model.
+     *                      Otherwise, based on filter index.
+     * \return  Returns the index of the previous scope message in output window.
+     **/
+    QModelIndex getIndexPrevScope(const QModelIndex& startAt, bool asSource) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -207,8 +239,8 @@ private:
     PriorityData    mSelPriorityData;   //!< The selected priority data to filter
     PriorityData    mPriorityData;      //!< The priority data to filter
     eDataFilter     mActiveFilter;      //!< Active filter type
-    mutable QModelIndex mIndexStart;    //!< The first selected index of filtered data
-    mutable QModelIndex mIndexEnd;      //<!< The last selected index of filtered data
+    mutable QModelIndex mIndexStart;    //!< The first selected index of filtered data, index is based on the source model
+    mutable QModelIndex mIndexEnd;      //<! The last selected index of filtered data, index is based on the source model
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

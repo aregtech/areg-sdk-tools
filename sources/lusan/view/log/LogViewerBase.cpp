@@ -308,7 +308,8 @@ void LogViewerBase::moveToBottom(bool select)
         {
             QModelIndex idxSelected = mFilter->index(count - 1, 0, QModelIndex());
 
-            mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+            mLogTable->selectionModel()->select(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
             mLogTable->selectRow(count - 1);
             mLogModel->selectBottom();
         }
@@ -326,7 +327,8 @@ void LogViewerBase::moveToTop(bool select)
         {
             QModelIndex idxSelected = mFilter->index(0, 0, QModelIndex());
 
-            mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+            mLogTable->selectionModel()->select(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
             mLogTable->selectRow(0);
             mLogModel->selectTop();
         }
@@ -343,7 +345,8 @@ void LogViewerBase::moveToRow(int row, bool select)
         mLogTable->scrollTo(idxSelected);
         if (select)
         {
-            mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            mLogTable->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+            mLogTable->selectionModel()->select(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
             mLogTable->selectRow(idxSelected.row());
             mLogModel->setSelectedLog(idxSelected);
         }
@@ -525,7 +528,8 @@ inline bool LogViewerBase::_selectSourceLog(const QModelIndex& source)
 inline void LogViewerBase::_selectTargetLog(const QModelIndex& target)
 {
     Q_ASSERT(target.isValid());
-    mLogTable->selectionModel()->setCurrentIndex(target, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    mLogTable->selectionModel()->setCurrentIndex(target, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+    mLogTable->selectionModel()->select(target, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
     mLogTable->selectRow(target.row());
     mLogTable->scrollTo(target);
 }

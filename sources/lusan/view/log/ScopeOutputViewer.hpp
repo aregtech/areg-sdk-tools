@@ -121,6 +121,26 @@ private slots:
     //<!< Triggered when the filter scope selection indexes are changed, updates the log table view.
     void onFilterChanged(const QModelIndex & indexStart, const QModelIndex& indexEnd);
 
+    /**
+     * \brief   Shows and select the log in the log view of specified entry in the output window.
+     * \param   idxTarget   The index of entry in the  output window
+     **/
+    inline void onShowLog(const QModelIndex& idxTarget);
+
+    /**
+     * \brief   Shows the log of the next nearest scope of the currently selected log row in output window.
+     *          If the currently selected row is invalid, it selects the first log entry in the output window.
+     *          If the currently selected row is the last scope message entry, moves to the end and does nothing.
+     **/
+    inline void onShowNextLog(void);
+
+    /**
+     * \brief   Shows the log of the previous nearest scope of the currently selected log row in output window.
+     *          If the currently selected row is invalid, it selects the last log entry in the output window.
+     *          If the currently selected row is the first scope message entry, moves to the start and does nothing.
+     **/
+    inline void onShowPrevLog(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
 //////////////////////////////////////////////////////////////////////////
@@ -131,12 +151,6 @@ private:
 
     //!< Updates the controls, enabling or disabling them based on the current state.
     inline void updateControls(void);
-
-    /**
-     * \brief   Shows and select the log in the log view of specified entry in the output window.
-     * \param   idxTarget   The index of entry in the  output window
-     **/
-    inline void showLog(const QModelIndex& idxTarget);
 
     //!< Returns the index of the selected element of the logs in the output window.
     //!< No log is selected if return value is invalid.
@@ -168,9 +182,17 @@ private:
     //!< The tool button to show the logs of the selected entry in the log view window.
     inline QToolButton* ctrlLogShow(void) const;
 
+    //!< The tool button to show the first log of the activated scope in the output window.
     inline QToolButton* ctrlScopeBegin(void) const;
 
+    //!< The tool button to show the last log of the activated scope in the output window.
     inline QToolButton* ctrlScopeEnd(void) const;
+
+    //!< The tool button to show the log of the next scope in the output window.
+    inline QToolButton* ctrlScopeNext(void) const;
+
+    //!< The tool button to show the log of the previous scope in the output window.
+    inline QToolButton* ctrlScopePrev(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

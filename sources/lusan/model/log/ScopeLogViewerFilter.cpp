@@ -87,6 +87,75 @@ void ScopeLogViewerFilter::setScopeFilter(LoggingModelBase* model, uint32_t scop
     }
 }
 
+QModelIndex ScopeLogViewerFilter::getIndexNextScope(const QModelIndex& startAt, bool asSource) const
+{
+    QAbstractItemModel* model = sourceModel();
+    int count = model != nullptr ? rowCount() : 0;
+    if (count == 0)
+        return QModelIndex();
+
+    if (startAt.isValid() == false)
+    {
+        QModelIndex idx = index(0, 0);
+        return (asSource ? mapToSource(idx) : idx);
+    }
+
+    QModelIndex idxTarget;
+    idxTarget = asSource ? mapFromSource(startAt) : startAt;
+    int row = idxTarget.row();
+    if (row >= (count - 1))
+        return QModelIndex();
+
+    const NELogging::sLogMessage* log = data(idxTarget, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
+    uint32_t scopeId = log->logScopeId;
+    for ( row += 1; row < count; ++ row)
+    {
+        QModelIndex idx = index(row, 0);
+        log = data(idx, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
+        if (log->logScopeId != scopeId)
+        {
+            return (asSource ? mapToSource(idx) : idx);
+        }
+    }
+
+    return QModelIndex();
+}
+
+QModelIndex ScopeLogViewerFilter::getIndexPrevScope(const QModelIndex& startAt, bool asSource) const
+{
+    QAbstractItemModel* model = sourceModel();
+    int count = model != nullptr ? rowCount() : 0;
+    if (count == 0)
+        return QModelIndex();
+
+    if (startAt.isValid() == false)
+    {
+        QModelIndex idx = index(0, count - 1);
+        return (asSource ? mapToSource(idx) : idx);
+    }
+
+    QModelIndex idxTarget;
+    idxTarget = asSource ? mapFromSource(startAt) : startAt;
+    int row = idxTarget.row();
+    if (row == 0)
+        return QModelIndex();
+
+    const NELogging::sLogMessage* log = data(idxTarget, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
+    uint32_t scopeId = log->logScopeId;
+    for ( row -= 1; row >= 0; -- row)
+    {
+        QModelIndex idx = index(row, 0);
+        log = data(idx, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
+        if (log->logScopeId != scopeId)
+        {
+            idxTarget = (asSource ? mapToSource(idx) : idx);
+            break;
+        }
+    }
+
+    return idxTarget;
+}
+
 void ScopeLogViewerFilter::setSourceModel(QAbstractItemModel *sourceModel)
 {
     if (sourceModel != nullptr)
