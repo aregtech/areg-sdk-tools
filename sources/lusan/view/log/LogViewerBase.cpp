@@ -46,7 +46,7 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     : MdiChild(windowType, wndMain, parent)
 
     , mLogModel (logModel)
-    , mFilter   ( )
+    , mFilter   (nullptr)
     , mLogTable (nullptr)
     , mLogSearch(nullptr)
     , mMdiWindow(new QWidget())
@@ -350,6 +350,27 @@ void LogViewerBase::moveToRow(int row, bool select)
     }
 }
 
+void LogViewerBase::selectSourceElement(const QModelIndex & index)
+{
+    if (index.isValid() && (mFilter != nullptr) && (mLogModel != nullptr))
+    {
+        Q_ASSERT(mFilter != nullptr);
+        if (_selectSourceLog(index) == false)
+        {
+            QMessageBox box(  QMessageBox::Question
+                            , tr("Clear Filters?")
+                            , tr("The log entry is not visible and cannot be select due to active filters.\nDo you want to clean filters and select the log?")
+                            , QMessageBox::Yes | QMessageBox::No
+                            , this);
+            if (box.exec() == static_cast<int>(QMessageBox::Yes))
+            {
+                resetFilters();
+                _selectSourceLog(index);
+            }
+        }
+    }
+}
+
 void LogViewerBase::resetColumnOrder()
 {
     Q_ASSERT(mLogTable != nullptr);
@@ -415,7 +436,7 @@ void LogViewerBase::onCurrentRowChanged(const QModelIndex &current, const QModel
 {
 }
 
-void LogViewerBase::_clearResources(void)
+inline void LogViewerBase::_clearResources(void)
 {
     mSearch.setLogModel(nullptr);
 
@@ -476,9 +497,35 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
         });
 }
 
-void LogViewerBase::_resetSearchResult(void)
+inline void LogViewerBase::_resetSearchResult(void)
 {
     mFoundPos = LogSearchModel::sFoundPos{};
     mSearch.resetSearch();
     mLogTable->viewport()->update();
+}
+
+inline bool LogViewerBase::_selectSourceLog(const QModelIndex& source)
+{
+    bool result {false};
+    Q_ASSERT(source.isValid());
+    if (mFilter != nullptr)
+    {
+        QModelIndex target = mFilter->mapFromSource(source);
+        if (target.isValid())
+        {
+            _selectTargetLog(target);
+            mLogModel->setSelectedLog(source);
+            result = true;
+        }
+    }
+    
+    return result;
+}
+
+inline void LogViewerBase::_selectTargetLog(const QModelIndex& target)
+{
+    Q_ASSERT(target.isValid());
+    mLogTable->selectionModel()->setCurrentIndex(target, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    mLogTable->selectRow(target.row());
+    mLogTable->scrollTo(target);
 }

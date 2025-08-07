@@ -34,12 +34,14 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
 {
     ui->setupUi(this);    
     ctrlTable()->setModel(nullptr);
-    connect(ctrlTable()         , &QTableView::doubleClicked, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
-    connect(ctrlRadioSession()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioSession);});
-    connect(ctrlRadioSublogs()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioSublogs);});
-    connect(ctrlRadioScope()    , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioScope);});
-    connect(ctrlRadioThread()   , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioThread);});
-    connect(ctrlRadioProcess()  , &QRadioButton::toggled    , [this](bool checked) {onRadioChecked(checked, eRadioType::RadioProcess);});
+    connect(ctrlLogShow()       , &QToolButton::clicked     , [this]()              { showLog(getSelectedIndex());  });
+    connect(ctrlTable()         , &QTableView::doubleClicked, [this](const QModelIndex& index)  {showLog(index);    });
+    connect(ctrlTable()         , &QTableView::clicked      , [this](const QModelIndex& index)  {ctrlLogShow()->setEnabled(index.isValid());});
+    connect(ctrlRadioSession()  , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioSession);});
+    connect(ctrlRadioSublogs()  , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioSublogs);});
+    connect(ctrlRadioScope()    , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioScope);  });
+    connect(ctrlRadioThread()   , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioThread); });
+    connect(ctrlRadioProcess()  , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioProcess);});
     connect(mFilter, &ScopeLogViewerFilter::signalFilterSelected
             , [this](const QModelIndex& start, const QModelIndex& end) {
                 onFilterChanged(start, end);
@@ -112,18 +114,6 @@ void ScopeOutputViewer::setupFilter(LoggingModelBase* logModel, const QModelInde
     }
     
     updateLogTable();
-}
-
-void ScopeOutputViewer::onMouseDoubleClicked(const QModelIndex& index)
-{
-    QTableView *logTable = (index.isValid() && (mMdiChild != nullptr)) ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
-    if ((logTable != nullptr) && (mFilter != nullptr))
-    {
-        QModelIndex srcIndex = mFilter->mapToSource(index);
-        logTable->selectionModel()->setCurrentIndex(srcIndex, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-        logTable->selectRow(srcIndex.row());
-        logTable->scrollTo(srcIndex);
-    }
 }
 
 void ScopeOutputViewer::onRadioChecked(bool checked, eRadioType radio)
@@ -209,6 +199,11 @@ inline QLineEdit* ScopeOutputViewer::ctrlDuration(void) const
     return ui->editDuration;
 }
 
+inline QToolButton* ScopeOutputViewer::ctrlLogShow(void) const
+{
+    return ui->toolLogShow;
+}
+
 inline void ScopeOutputViewer::updateLogTable(void)
 {
     QTableView *logTable = mMdiChild != nullptr ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
@@ -250,5 +245,20 @@ inline void ScopeOutputViewer::updateControls(void)
     }
 
     ctrlDuration()->setText(QString("N/A"));
+    ctrlLogShow()->setEnabled(getSelectedIndex().isValid());
     blockSignals(false);
+}
+
+inline void ScopeOutputViewer::showLog(const QModelIndex& index)
+{
+    if ((mMdiChild != nullptr) && (mFilter != nullptr))
+    {
+        QModelIndex srcIndex = mFilter->mapToSource(index);
+        static_cast<LogViewerBase*>(mMdiChild)->selectSourceElement(srcIndex);
+    }
+}
+
+inline QModelIndex ScopeOutputViewer::getSelectedIndex(void) const
+{
+    return ctrlTable()->selectionModel()->currentIndex();
 }

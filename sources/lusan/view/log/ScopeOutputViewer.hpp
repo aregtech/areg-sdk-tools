@@ -35,6 +35,7 @@ class QCheckBox;
 class QLineEdit;
 class QRadioButton;
 class QTableView;
+class QToolButton;
 namespace Ui {
     class ScopeOutputViewer;
 }
@@ -110,9 +111,6 @@ public:
 //////////////////////////////////////////////////////////////////////////
 private slots:
 
-    //!< Triggered when the user double-clicks on a log entry in the table view.
-    void onMouseDoubleClicked(const QModelIndex& index);
-
     /**
      * \brief   Triggered when the user clicks on a radio button to select the type of logs to filter and display.
      * \param   checked     True if the radio button is checked, false otherwise.
@@ -134,6 +132,16 @@ private:
     //!< Updates the controls, enabling or disabling them based on the current state.
     inline void updateControls(void);
 
+    /**
+     * \brief   Shows and select the log in the log view of specified entry in the output window.
+     * \param   index   The index of entry in the  output window
+     **/
+    inline void showLog(const QModelIndex& index);
+
+    //!< Returns the index of the selected element of the logs in the output window.
+    //!< No log is selected if return value is invalid.
+    inline QModelIndex getSelectedIndex(void) const;
+
 private:
 
     //!< Returns the pointer to the table view control.
@@ -153,8 +161,12 @@ private:
 
     //!< Returns the pointer to the "show all logs of the process" radio button control.
     inline QRadioButton* ctrlRadioProcess(void) const;
-
+    
+    //!< The read-only edit control to display scope run duration since scope message has been activated.
     inline QLineEdit* ctrlDuration(void) const;
+
+    //!< The tool button to show the logs of the selected entry in the log view window.
+    inline QToolButton* ctrlLogShow(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
