@@ -134,9 +134,9 @@ private:
 
     /**
      * \brief   Shows and select the log in the log view of specified entry in the output window.
-     * \param   index   The index of entry in the  output window
+     * \param   idxTarget   The index of entry in the  output window
      **/
-    inline void showLog(const QModelIndex& index);
+    inline void showLog(const QModelIndex& idxTarget);
 
     //!< Returns the index of the selected element of the logs in the output window.
     //!< No log is selected if return value is invalid.
@@ -167,6 +167,10 @@ private:
 
     //!< The tool button to show the logs of the selected entry in the log view window.
     inline QToolButton* ctrlLogShow(void) const;
+
+    inline QToolButton* ctrlScopeBegin(void) const;
+
+    inline QToolButton* ctrlScopeEnd(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
