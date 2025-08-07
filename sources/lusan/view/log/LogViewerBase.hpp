@@ -118,6 +118,12 @@ public:
      **/
     void moveToRow(int row, bool select);
 
+    /**
+     * \brief   Selects the entry with the sources index in the log viewer.
+     * \param   index   The entry to select. The index should be valid and must be mapped to the source model.
+     */
+    void selectSourceElement(const QModelIndex & index);
+
 /************************************************************************
  * Overrides
  ************************************************************************/
@@ -227,7 +233,7 @@ protected:
 private:
 
     //!< Clears the resources used by the log viewer.
-    void _clearResources(void);
+    inline void _clearResources(void);
 
     /**
      * \brief   Populates menu and sets the action handlers.
@@ -237,7 +243,21 @@ private:
     /**
      * \brief   Resets the search result in the log viewer.
      **/
-    void _resetSearchResult(void);
+    inline void _resetSearchResult(void);
+
+    /**
+     * \brief   Selects the source log entry based on the source index.
+     * \param   source  The source index of the log entry to select.
+     * \return  Returns true if the selection was successful, false otherwise.
+     *          If returns false, the log entry with the specified source index is not visible in the log view window.
+     **/
+    inline bool _selectSourceLog(const QModelIndex& source);
+
+    /**
+     * \brief   Selects the target log entry based on the target index.
+     * \param   target  The target index of the log entry to select.
+     **/
+    inline void _selectTargetLog(const QModelIndex& target);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables.
