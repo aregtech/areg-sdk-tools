@@ -315,7 +315,8 @@ void NaviOfflineLogsScopes::restoreView(void)
         const QModelIndex& idxSelected = logModel->getSelectedScope();
         if (idxSelected.isValid())
         {
-            navi->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            navi->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+            navi->selectionModel()->select(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
             navi->scrollTo(idxSelected);
         }
         else

@@ -34,11 +34,13 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
 {
     ui->setupUi(this);    
     ctrlTable()->setModel(nullptr);
-    connect(ctrlLogShow()       , &QToolButton::clicked     , [this]()              { showLog(getSelectedIndex());              });
-    connect(ctrlScopeBegin()    , &QToolButton::clicked     , [this]()              { showLog(mFilter->getIndexStart(false));   });
-    connect(ctrlScopeEnd()      , &QToolButton::clicked     , [this]()              { showLog(mFilter->getIndexEnd(false));     });
+    connect(ctrlLogShow()       , &QToolButton::clicked     , [this]()              { onShowLog(getSelectedIndex());              });
+    connect(ctrlScopeBegin()    , &QToolButton::clicked     , [this]()              { onShowLog(mFilter->getIndexStart(false));   });
+    connect(ctrlScopeEnd()      , &QToolButton::clicked     , [this]()              { onShowLog(mFilter->getIndexEnd(false));     });
+    connect(ctrlScopeNext()     , &QToolButton::clicked     , [this]()              { onShowNextLog();                            });
+    connect(ctrlScopePrev()     , &QToolButton::clicked     , [this]()              { onShowPrevLog();                            });
 
-    connect(ctrlTable()         , &QTableView::doubleClicked, [this](const QModelIndex& index)  {showLog(index);    });
+    connect(ctrlTable()         , &QTableView::doubleClicked, [this](const QModelIndex& index)  {onShowLog(index);    });
     connect(ctrlTable()         , &QTableView::clicked      , [this](const QModelIndex& index)  {ctrlLogShow()->setEnabled(index.isValid());});
     connect(ctrlRadioSession()  , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioSession);});
     connect(ctrlRadioSublogs()  , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioSublogs);});
@@ -217,6 +219,16 @@ inline QToolButton* ScopeOutputViewer::ctrlScopeEnd(void) const
     return ui->toolScopeEnd;
 }
 
+inline QToolButton* ScopeOutputViewer::ctrlScopeNext(void) const
+{
+    return ui->toolScopeNext;
+}
+
+inline QToolButton* ScopeOutputViewer::ctrlScopePrev(void) const
+{
+    return ui->toolScopePrev;
+}
+
 inline void ScopeOutputViewer::updateLogTable(void)
 {
     QTableView *logTable = mMdiChild != nullptr ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
@@ -230,18 +242,13 @@ inline void ScopeOutputViewer::updateLogTable(void)
 
 inline void ScopeOutputViewer::updateControls(void)
 {
-    bool hasElems{(mFilter != nullptr) && (mFilter->rowCount() != 0)};
+    int count{ mFilter != nullptr ? mFilter->rowCount() : 0 };
+    bool hasElems{count != 0};
     blockSignals(true);
     
     if (hasElems)
     {
         ctrlRadioSession()->setChecked(true);
-
-        ctrlRadioSession()->setEnabled(true);
-        ctrlRadioSublogs()->setEnabled(true);
-        ctrlRadioScope()->setEnabled(true);
-        ctrlRadioThread()->setEnabled(true);
-        ctrlRadioProcess()->setEnabled(true);
     }
     else
     {
@@ -251,29 +258,35 @@ inline void ScopeOutputViewer::updateControls(void)
         ctrlRadioThread()->setChecked(false);
         ctrlRadioProcess()->setChecked(false);
 
-        ctrlRadioSession()->setEnabled(false);
-        ctrlRadioSublogs()->setEnabled(false);
-        ctrlRadioScope()->setEnabled(false);
-        ctrlRadioThread()->setEnabled(false);
-        ctrlRadioProcess()->setEnabled(false);
     }
 
+    ctrlRadioSession()->setEnabled(hasElems);
+    ctrlRadioSublogs()->setEnabled(hasElems);
+    ctrlRadioScope()->setEnabled(hasElems);
+    ctrlRadioThread()->setEnabled(hasElems);
+    ctrlRadioProcess()->setEnabled(hasElems);
+
+    QModelIndex selIndex = getSelectedIndex();
+
     ctrlDuration()->setText(QString("N/A"));
-    ctrlLogShow()->setEnabled(getSelectedIndex().isValid());
+    ctrlLogShow()->setEnabled(selIndex.isValid());
     ctrlScopeBegin()->setEnabled(mFilter->getIndexStart(true).isValid());
     ctrlScopeEnd()->setEnabled(mFilter->getIndexEnd(true).isValid());
+    ctrlScopeNext()->setEnabled(hasElems && ((selIndex.isValid() == false) || (selIndex.row() < (count - 1))));
+    ctrlScopePrev()->setEnabled(hasElems && ((selIndex.isValid() == false) || (selIndex.row() > 0)));
     
     blockSignals(false);
 }
 
-inline void ScopeOutputViewer::showLog(const QModelIndex& idxTarget)
+inline void ScopeOutputViewer::onShowLog(const QModelIndex& idxTarget)
 {
     if ((mMdiChild != nullptr) && (mFilter != nullptr))
     {
         if (idxTarget.isValid())
         {
             QTableView* table = ctrlTable();
-            table->selectionModel()->setCurrentIndex(idxTarget, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            table->selectionModel()->setCurrentIndex(idxTarget, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
+            table->selectionModel()->select(idxTarget, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
             table->selectRow(idxTarget.row());
             table->scrollTo(idxTarget);
             
@@ -281,6 +294,20 @@ inline void ScopeOutputViewer::showLog(const QModelIndex& idxTarget)
             static_cast<LogViewerBase*>(mMdiChild)->selectSourceElement(srcIndex);
         }
     }
+}
+
+inline void ScopeOutputViewer::onShowNextLog(void)
+{
+    QModelIndex idxTarget = getSelectedIndex();
+    idxTarget = mFilter->getIndexNextScope(idxTarget, false);
+    onShowLog(idxTarget.isValid() ? idxTarget : mFilter->index(mFilter->rowCount() - 1, 0));
+}
+
+inline void ScopeOutputViewer::onShowPrevLog(void)
+{
+    QModelIndex idxTarget = getSelectedIndex();
+    idxTarget = mFilter->getIndexPrevScope(idxTarget, false);
+    onShowLog(idxTarget.isValid() ? idxTarget : mFilter->index(0, 0));
 }
 
 inline QModelIndex ScopeOutputViewer::getSelectedIndex(void) const
