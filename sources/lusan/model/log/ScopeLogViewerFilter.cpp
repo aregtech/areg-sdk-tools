@@ -107,12 +107,15 @@ QModelIndex ScopeLogViewerFilter::getIndexNextScope(const QModelIndex& startAt, 
         return QModelIndex();
 
     const NELogging::sLogMessage* log = data(idxTarget, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
-    uint32_t scopeId = log->logScopeId;
+    uint32_t scopeId    = log->logScopeId;
+    uint32_t sessionId  = log->logSessionId;
+    uint32_t moduleId   = log->logCookie;
+    
     for ( row += 1; row < count; ++ row)
     {
         QModelIndex idx = index(row, 0);
         log = data(idx, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
-        if (log->logScopeId != scopeId)
+        if ((log->logScopeId != scopeId) || (log->logSessionId != sessionId) || (log->logCookie != moduleId))
         {
             return (asSource ? mapToSource(idx) : idx);
         }
@@ -142,18 +145,20 @@ QModelIndex ScopeLogViewerFilter::getIndexPrevScope(const QModelIndex& startAt, 
 
     const NELogging::sLogMessage* log = data(idxTarget, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
     uint32_t scopeId = log->logScopeId;
+    uint32_t sessionId  = log->logSessionId;
+    uint32_t moduleId   = log->logCookie;
+    
     for ( row -= 1; row >= 0; -- row)
     {
         QModelIndex idx = index(row, 0);
         log = data(idx, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
-        if (log->logScopeId != scopeId)
+        if ((log->logScopeId != scopeId) || (log->logSessionId != sessionId) || (log->logCookie != moduleId))
         {
-            idxTarget = (asSource ? mapToSource(idx) : idx);
-            break;
+            return (asSource ? mapToSource(idx) : idx);
         }
     }
-
-    return idxTarget;
+    
+    return QModelIndex();
 }
 
 void ScopeLogViewerFilter::setSourceModel(QAbstractItemModel *sourceModel)

@@ -34,6 +34,8 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
 {
     ui->setupUi(this);    
     ctrlTable()->setModel(nullptr);
+    QItemSelectionModel *selModel = ctrlTable()->selectionModel();
+    Q_ASSERT(selModel != nullptr);
     connect(ctrlLogShow()       , &QToolButton::clicked     , [this]()              { onShowLog(getSelectedIndex());              });
     connect(ctrlScopeBegin()    , &QToolButton::clicked     , [this]()              { onShowLog(mFilter->getIndexStart(false));   });
     connect(ctrlScopeEnd()      , &QToolButton::clicked     , [this]()              { onShowLog(mFilter->getIndexEnd(false));     });
@@ -51,8 +53,12 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
             , [this](const QModelIndex& start, const QModelIndex& end) {
                 onFilterChanged(start, end);
     });
+    connect(selModel            , &QItemSelectionModel::currentRowChanged
+            , [this](const QModelIndex &current, const QModelIndex &previous){
+                updateToolbuttons(mFilter->rowCount(), current);
+    });
 
-    updateControls();
+    updateControls(true);
 }
 
 ScopeOutputViewer::~ScopeOutputViewer(void)
@@ -237,45 +243,55 @@ inline void ScopeOutputViewer::updateLogTable(void)
         logTable->viewport()->update();
     }
 
-    updateControls();
+    updateControls(true);
 }
 
-inline void ScopeOutputViewer::updateControls(void)
+inline void ScopeOutputViewer::updateControls(bool selectSession)
 {
     int count{ mFilter != nullptr ? mFilter->rowCount() : 0 };
-    bool hasElems{count != 0};
+    bool hasEntries{count != 0};
     blockSignals(true);
     
-    if (hasElems)
-    {
-        ctrlRadioSession()->setChecked(true);
-    }
-    else
+    if (hasEntries == false)
     {
         ctrlRadioSession()->setChecked(false);
         ctrlRadioSublogs()->setChecked(false);
         ctrlRadioScope()->setChecked(false);
         ctrlRadioThread()->setChecked(false);
         ctrlRadioProcess()->setChecked(false);
-
+    }
+    else if (selectSession)
+    {
+        ctrlRadioSession()->setChecked(true);
     }
 
-    ctrlRadioSession()->setEnabled(hasElems);
-    ctrlRadioSublogs()->setEnabled(hasElems);
-    ctrlRadioScope()->setEnabled(hasElems);
-    ctrlRadioThread()->setEnabled(hasElems);
-    ctrlRadioProcess()->setEnabled(hasElems);
+    ctrlRadioSession()->setEnabled(hasEntries);
+    ctrlRadioSublogs()->setEnabled(hasEntries);
+    ctrlRadioScope()->setEnabled(hasEntries);
+    ctrlRadioThread()->setEnabled(hasEntries);
+    ctrlRadioProcess()->setEnabled(hasEntries);
 
-    QModelIndex selIndex = getSelectedIndex();
-
-    ctrlDuration()->setText(QString("N/A"));
-    ctrlLogShow()->setEnabled(selIndex.isValid());
-    ctrlScopeBegin()->setEnabled(mFilter->getIndexStart(true).isValid());
-    ctrlScopeEnd()->setEnabled(mFilter->getIndexEnd(true).isValid());
-    ctrlScopeNext()->setEnabled(hasElems && ((selIndex.isValid() == false) || (selIndex.row() < (count - 1))));
-    ctrlScopePrev()->setEnabled(hasElems && ((selIndex.isValid() == false) || (selIndex.row() > 0)));
+    updateToolbuttons(count, getSelectedIndex());
     
     blockSignals(false);
+}
+
+inline void ScopeOutputViewer::updateToolbuttons(int rowCount, const QModelIndex& selIndex)
+{
+    if (selIndex.isValid() == false)
+    {
+        ctrlDuration()->setText(QString("N/A"));
+    }
+    
+    bool hasEntries(rowCount != 0);
+    QModelIndex start = mFilter->getIndexStart(true);
+    QModelIndex end = mFilter->getIndexEnd(true);
+    
+    ctrlLogShow()->setEnabled(selIndex.isValid());
+    ctrlScopeBegin()->setEnabled(start.isValid() && (selIndex != start));
+    ctrlScopeEnd()->setEnabled(end.isValid() && (selIndex != end));
+    ctrlScopeNext()->setEnabled(hasEntries && ((selIndex.isValid() == false) || (selIndex.row() < (rowCount - 1))));
+    ctrlScopePrev()->setEnabled(hasEntries && ((selIndex.isValid() == false) || (selIndex.row() > 0)));
 }
 
 inline void ScopeOutputViewer::onShowLog(const QModelIndex& idxTarget)
@@ -284,6 +300,7 @@ inline void ScopeOutputViewer::onShowLog(const QModelIndex& idxTarget)
     {
         if (idxTarget.isValid())
         {
+            blockSignals(true);
             QTableView* table = ctrlTable();
             table->selectionModel()->setCurrentIndex(idxTarget, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
             table->selectionModel()->select(idxTarget, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
@@ -292,6 +309,8 @@ inline void ScopeOutputViewer::onShowLog(const QModelIndex& idxTarget)
             
             QModelIndex srcIndex = mFilter->mapToSource(idxTarget);
             static_cast<LogViewerBase*>(mMdiChild)->selectSourceElement(srcIndex);
+            updateToolbuttons(mFilter->rowCount(), idxTarget);
+            blockSignals(false);
         }
     }
 }

@@ -149,8 +149,18 @@ private:
     //!< Updates the viewport of the log table.
     inline void updateLogTable(void);
 
-    //!< Updates the controls, enabling or disabling them based on the current state.
-    inline void updateControls(void);
+    /**
+     * \brief   Updates the controls, enabling or disabling them based on the current state.
+     * \param   selectSession   If true and output window has logs, the select log session will be selected.
+     */
+    inline void updateControls(bool selectSession);
+    
+    /**
+     * \brief   Updates the enable state of the tool-buttons.
+     * \param   rowCount    The number of log rows in the output window
+     * \param   selIndex    The index of currently selected row.
+     **/
+    inline void updateToolbuttons(int rowCount, const QModelIndex& selIndex);
 
     //!< Returns the index of the selected element of the logs in the output window.
     //!< No log is selected if return value is invalid.
@@ -164,7 +174,7 @@ private:
     //!< Returns the pointer to the "show logs of the session" radio button control.
     inline QRadioButton* ctrlRadioSession(void) const;
 
-    //!< Returns the pointer to the "show the session logs and sublogs of the nested methods calls" radio button control.
+    //!< Returns the pointer to the "show the session logs and sub-logs of the nested methods calls" radio button control.
     inline QRadioButton* ctrlRadioSublogs(void) const;
 
     //!< Returns the pointer to the "show all logs of the scope" check box control.
