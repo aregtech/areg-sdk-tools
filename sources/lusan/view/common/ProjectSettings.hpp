@@ -28,15 +28,15 @@
 /************************************************************************
  * Dependencies 
  ************************************************************************/
-namespace Ui {
-class ProjectSettingsDlg;
-}
-
 class QAbstractButton;
 class OptionPageProjectDirs;
 class OptionPageLogging;
 class OptionPageWorkspace;
 class MdiMainWindow;
+
+namespace Ui {
+    class ProjectSettingsDlg;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // ProjectSettings class declaration

@@ -20,6 +20,7 @@
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/view/common/Workspace.hpp"
+#include "lusan/view/common/WorkspaceSetupDialog.hpp"
 
 #include "areg/appbase/Application.hpp"
 
@@ -58,5 +59,19 @@ int main(int argc, char *argv[])
     OptionsManager & opt = LusanApplication::getOptions();
     opt.readOptions();
     Workspace workspace(opt);
-    return (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted) ? a.runApplication(opt.getActiveWorkspace().getWorkspaceRoot()) : 0);
+    if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
+    {
+        if (workspace.hasNewWorkspaceEntry())
+        {
+            WorkspaceSetupDialog setup;
+            if (setup.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
+                setup.applyDirectories();
+        }
+
+        return a.runApplication(opt.getActiveWorkspace().getWorkspaceRoot());
+    }
+    else
+    {
+        return 0;
+    }
 }

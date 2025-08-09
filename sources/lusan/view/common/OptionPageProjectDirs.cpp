@@ -21,11 +21,11 @@
 #include "ui/ui_OptionPageProjectDirs.h"
 
 #include "lusan/app/LusanApplication.hpp"
-#include "lusan/view/common/ProjectSettings.hpp"
 
+#include <QDialog>
 #include <QFileDialog>
 
-OptionPageProjectDirs::OptionPageProjectDirs(ProjectSettings *parent)
+OptionPageProjectDirs::OptionPageProjectDirs(QDialog *parent)
     : OptionPageBase(parent)
     , mUi           (std::make_unique<Ui::OptionPageProjectDirsDlg>())
 {

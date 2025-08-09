@@ -19,9 +19,10 @@
  ************************************************************************/
 
 #include "lusan/view/common/OptionPageBase.hpp"
-#include "lusan/view/common/ProjectSettings.hpp"
 
-OptionPageBase::OptionPageBase(ProjectSettings* parent)
+#include <QDialog>
+
+OptionPageBase::OptionPageBase(QDialog* parent)
     : QWidget       (parent)
     , mDataModified (false)
     , mCanSave      (true)

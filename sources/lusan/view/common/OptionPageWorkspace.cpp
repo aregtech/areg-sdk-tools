@@ -22,11 +22,11 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
-#include "lusan/view/common/ProjectSettings.hpp"
 
+#include <QDialog>
 #include <algorithm>
 
-OptionPageWorkspace::OptionPageWorkspace(ProjectSettings* parent)
+OptionPageWorkspace::OptionPageWorkspace(QDialog* parent)
     : OptionPageBase(parent)
     , mUi(std::make_unique<Ui::OptionPageWorkspace>())
     , mModifiedWorkspaces()
