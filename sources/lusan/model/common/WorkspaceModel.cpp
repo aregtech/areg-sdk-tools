@@ -25,12 +25,13 @@ const WorkspaceEntry WorkspaceModel::InvalidWorkspace{};
 
 WorkspaceModel::WorkspaceModel(OptionsManager &options, QObject* parent)
     : QAbstractListModel(parent)
-    , mItems()
+    , mItems    ()
+    , mNewItem  (WorkspaceModel::InvalidWorkspace)
 {
     const std::vector<WorkspaceEntry> & workspaces = options.getWorkspaceList();
     if (!workspaces.empty())
     {
-        beginInsertRows(QModelIndex(), mItems.size(), mItems.size());
+        beginInsertRows(QModelIndex(), 0, mItems.size());
         mItems = workspaces;
         endInsertRows();
     }
@@ -52,6 +53,7 @@ void WorkspaceModel::addWorkspaceEntry(const WorkspaceEntry& item)
     else
     {
         mItems.push_back(item);
+        mNewItem = item;
     }
     
     std::sort(mItems.begin(), mItems.end(), std::greater<WorkspaceEntry>());
@@ -74,6 +76,7 @@ WorkspaceEntry WorkspaceModel::addWorkspaceEntry(const QString& root, const QStr
     else
     {
         mItems.push_back(result);
+        mNewItem = result;
     }
     
     std::sort(mItems.begin(), mItems.end(), std::greater<WorkspaceEntry>());
@@ -93,6 +96,21 @@ const WorkspaceEntry & WorkspaceModel::findWorkspaceEntry(const QString& root) c
     }
     
     return WorkspaceModel::InvalidWorkspace;
+}
+
+void WorkspaceModel::removeWorkspaceEntry(const QString& root)
+{
+    int index = find(root);
+    if (index >= 0)
+    {
+        beginRemoveRows(QModelIndex(), index, index);
+        mItems.erase(mItems.begin() + index);
+        if (mNewItem.getWorkspaceRoot() == root)
+        {
+            mNewItem = WorkspaceModel::InvalidWorkspace;
+        }
+        endRemoveRows();
+    }
 }
 
 int WorkspaceModel::find(const QString& root) const
@@ -170,8 +188,8 @@ QVariant WorkspaceModel::data(const QModelIndex& index, int role) const
 QHash<int, QByteArray> WorkspaceModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
-    roles[Qt::DisplayRole] = "display";
-    roles[Qt::EditRole] = "edit";
+    roles[Qt::DisplayRole]          = "display";
+    roles[Qt::EditRole]             = "edit";
     roles[Qt::InitialSortOrderRole] = "sort";
     return roles;
 }

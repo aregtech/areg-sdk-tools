@@ -19,7 +19,6 @@
 
 #include "lusan/view/common/Workspace.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
-#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/app/LusanApplication.hpp"
 
 #include "ui/ui_workspace.h"
@@ -47,12 +46,12 @@ Workspace::Workspace(OptionsManager& options, QWidget * parent /*= nullptr*/)
         mWorkspace->comboboxWorkspacePath->setCurrentIndex(0);
     }
 
-    connect(mWorkspace->buttonBoxOkCancel, &QDialogButtonBox::accepted, this, &Workspace::onAccept);
-    connect(mWorkspace->buttonBoxOkCancel, &QDialogButtonBox::rejected, this, &Workspace::onReject);
-    connect(mWorkspace->buttonBrowse, &QPushButton::clicked, this, &Workspace::onBrowseClicked);
-    connect(mWorkspace->comboboxWorkspacePath, &QComboBox::currentTextChanged, this, &Workspace::onWorskpacePathChanged);
-    connect(mWorkspace->comboboxWorkspacePath, &QComboBox::editTextChanged, this, &Workspace::onWorskpacePathChanged);
-    connect(mWorkspace->comboboxWorkspacePath, &QComboBox::activated, this, &Workspace::onWorskpaceIndexChanged);
+    connect(mWorkspace->buttonBoxOkCancel       , &QDialogButtonBox::accepted, this, &Workspace::onAccept);
+    connect(mWorkspace->buttonBoxOkCancel       , &QDialogButtonBox::rejected, this, &Workspace::onReject);
+    connect(mWorkspace->buttonBrowse            , &QPushButton::clicked, this, &Workspace::onBrowseClicked);
+    connect(mWorkspace->comboboxWorkspacePath   , &QComboBox::currentTextChanged, this, &Workspace::onWorskpacePathChanged);
+    connect(mWorkspace->comboboxWorkspacePath   , &QComboBox::editTextChanged, this, &Workspace::onWorskpacePathChanged);
+    connect(mWorkspace->comboboxWorkspacePath   , &QComboBox::activated, this, &Workspace::onWorskpaceIndexChanged);
     connect(&mModel, &QAbstractItemModel::dataChanged, this, &Workspace::onPathSelectionChanged);
     
     QString text {mWorkspace->comboboxWorkspacePath->currentText()};
@@ -72,6 +71,14 @@ void Workspace::onAccept(void)
 {
     QString path { mWorkspace->comboboxWorkspacePath->currentText() };
     QString describe { mWorkspace->editWorkspaceDescription->toPlainText() };
+
+    if (mModel.hasNewWorkspace() && (mModel.getNewWorkspace().getWorkspaceRoot() != path))
+    {
+        QString removeEntry{ mModel.getNewWorkspace().getWorkspaceRoot() };
+        mModel.removeWorkspaceEntry(removeEntry);
+        Q_ASSERT(mModel.hasNewWorkspace() == false);
+    }
+
     mOptions.addWorkspace(path, describe);
     mOptions.writeOptions();
     done(static_cast<int>(QDialog::DialogCode::Accepted));

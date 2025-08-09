@@ -36,7 +36,7 @@
 namespace Ui {
     class OptionPageLoggingForm;
 }
-class ProjectSettings;
+class QDialog;
 class QLineEdit;
 class QPushButton;
 class QTextEdit;
@@ -67,8 +67,8 @@ private:
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit OptionPageLogging(ProjectSettings *parent);
-    explicit OptionPageLogging(ProjectSettings *parent, const QString& address, uint16_t port, const QString &logFile, const QString &logLocation);
+    explicit OptionPageLogging(QDialog *parent);
+    explicit OptionPageLogging(QDialog *parent, const QString& address, uint16_t port, const QString &logFile, const QString &logLocation);
     ~OptionPageLogging() override;
 
 //////////////////////////////////////////////////////////////////////////

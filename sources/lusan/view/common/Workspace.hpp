@@ -20,6 +20,7 @@
  ************************************************************************/
 #include <QDialog>
 #include "lusan/model/common/WorkspaceModel.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
 
 namespace Ui {
 class DialogWorkspace;
@@ -49,6 +50,11 @@ public:
      * \brief   Destructor.
      **/
     virtual ~Workspace(void);
+
+    /**
+     * \brief   Returns true if the workspace has new entry.
+     **/
+    inline bool hasNewWorkspaceEntry(void) const;
     
 protected slots:
     /**
@@ -87,10 +93,21 @@ protected slots:
      **/
     void onPathSelectionChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles);
     
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
 private:
     OptionsManager &        mOptions;       //!< The options manager.
     Ui::DialogWorkspace *   mWorkspace;     //!< The UI dialog for workspace setup.
     WorkspaceModel          mModel;         //!< The model for workspace entries.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// Workspace inline functions implementation
+//////////////////////////////////////////////////////////////////////////
+inline bool Workspace::hasNewWorkspaceEntry(void) const
+{
+    return mModel.hasNewWorkspace();
+}
 
 #endif // LUSAN_VIEW_COMMON_WORKSPACE_HPP

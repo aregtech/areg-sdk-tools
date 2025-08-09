@@ -7,4 +7,5 @@
     ${LUSAN}/view/common/ui/OptionPageWorkspace.ui
     ${LUSAN}/view/common/ui/ProjectSettings.ui
     ${LUSAN}/view/common/ui/workspace.ui
+    ${LUSAN}/view/common/ui/WorkspaceSetupDialog.ui
 )

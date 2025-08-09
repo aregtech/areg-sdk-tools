@@ -25,13 +25,13 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/view/common/OptionPageWorkspace.hpp"
-#include "lusan/view/common/ProjectSettings.hpp"
 
 #include "areg/base/NESocket.hpp"
 
 #include <QAbstractItemView>
 #include <QtAssert>
 #include <QAbstractButton>
+#include <QDialog>
 #include <QFileDialog>
 #include <QString>
 #include <QMessageBox>
@@ -47,7 +47,7 @@ const QString   OptionPageLogging::_textConnectionFailed  { tr("ERROR: Failed to
 const QString   OptionPageLogging::_textTestFailed        { tr("FAILURE: Failed to connect to the Log Collector Service. Check connection data and try again.") };
 const QString   OptionPageLogging::_textTestCanceled      { tr("WARNING: Connection to the Log Collector Service was interrupted") };
 
-OptionPageLogging::OptionPageLogging(ProjectSettings* parent)
+OptionPageLogging::OptionPageLogging(QDialog* parent)
     : OptionPageBase{parent}
     , ui            {std::make_unique<Ui::OptionPageLoggingForm>()}
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}
@@ -66,7 +66,7 @@ OptionPageLogging::OptionPageLogging(ProjectSettings* parent)
     setWindowTitle(tr("Log Settings"));
 }
 
-OptionPageLogging::OptionPageLogging(ProjectSettings *parent, const QString& address, uint16_t port, const QString &logFile, const QString &logLocation)
+OptionPageLogging::OptionPageLogging(QDialog *parent, const QString& address, uint16_t port, const QString &logFile, const QString &logLocation)
     : OptionPageBase{parent}
     , ui            {std::make_unique<Ui::OptionPageLoggingForm>()}
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}

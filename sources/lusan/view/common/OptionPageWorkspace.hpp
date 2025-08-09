@@ -30,7 +30,7 @@ namespace Ui {
 class OptionPageWorkspace;
 }
 class WorkspaceEntry;
-class ProjectSettings;
+class QDialog;
 
 /**
  * \brief   This class is managing the workspace settings.
@@ -62,7 +62,7 @@ private:
 // constructors / destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit OptionPageWorkspace(ProjectSettings *parent);
+    explicit OptionPageWorkspace(QDialog *parent);
     virtual ~OptionPageWorkspace();
 
 //////////////////////////////////////////////////////////////////////////

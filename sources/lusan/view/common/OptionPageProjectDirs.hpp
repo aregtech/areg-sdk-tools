@@ -28,7 +28,7 @@ namespace Ui {
 class OptionPageProjectDirsDlg;
 }
 
-class ProjectSettings;
+class QDialog;
 
 //////////////////////////////////////////////////////////////////////////
 // OptionPageProjectDirs class declaration
@@ -45,7 +45,7 @@ class OptionPageProjectDirs : public OptionPageBase
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit OptionPageProjectDirs(ProjectSettings *parent);
+    explicit OptionPageProjectDirs(QDialog *parent);
     virtual ~OptionPageProjectDirs();
 
 //////////////////////////////////////////////////////////////////////////

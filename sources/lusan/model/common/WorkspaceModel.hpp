@@ -69,7 +69,13 @@ public:
      * \return  The found workspace entry.
      **/
     const WorkspaceEntry & findWorkspaceEntry(const QString& root) const;
-    
+
+    /**
+     * \brief   Removes the entry with specified unique workspace directory.
+     * \param   root    The root directory of the workspace
+     **/
+    void removeWorkspaceEntry(const QString& root);
+
     /**
      * \brief   Finds the index of a workspace entry by root directory.
      * \param   root    The root directory of the workspace.
@@ -131,9 +137,21 @@ public:
      * \return  The updated last accessed timestamp.
      **/
     uint64_t activate(const QString & root);
-    
+
+    /**
+     * \brief   Returns true if the workspace has new entry.
+     **/
+    inline bool hasNewWorkspace(void) const;
+
+    /**
+     * \brief   Returns the directory of the new workspace entry.
+     *          Returns empty string if there is no new workspace entry.
+     **/
+    inline const WorkspaceEntry& getNewWorkspace(void) const;
+        
 private:
-    std::vector<WorkspaceEntry> mItems;  //!< The list of workspace items.
+    std::vector<WorkspaceEntry> mItems;     //!< The list of workspace items.
+    WorkspaceEntry              mNewItem;   //!< The new workspace item;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -143,6 +161,16 @@ private:
 inline const std::vector<WorkspaceEntry>& WorkspaceModel::getEntries(void) const
 {
     return mItems;
+}
+
+inline bool WorkspaceModel::hasNewWorkspace(void) const
+{
+    return mNewItem.isValid();
+}
+
+inline const WorkspaceEntry& WorkspaceModel::getNewWorkspace(void) const
+{
+    return mNewItem;
 }
 
 #endif  // LUSAN_MODEL_COMMON_WORKSPACEMODEL_HPP

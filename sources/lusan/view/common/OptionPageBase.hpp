@@ -25,7 +25,7 @@
 #include <QWidget>
 #include "areg/base/GEMacros.h"
 
-class ProjectSettings;
+class QDialog;
 
 /**
  * \brief   The base class of option page in the application settings.
@@ -36,7 +36,7 @@ class OptionPageBase : public QWidget
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 protected:
-    OptionPageBase(ProjectSettings* parent);
+    OptionPageBase(QDialog* parent);
 
     virtual ~OptionPageBase(void) = default;
 
