@@ -20,6 +20,8 @@
 #include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
+#include "areg/base/NECommon.hpp"
+
 #include <QDir>
 #include <QFile>
 #include <QString>
@@ -29,6 +31,7 @@
 
 OptionsManager::OptionsManager(void)
     : mActiveKey    ( 0 )
+    , mDefWorkspace ( 0 )
     , mWorkspaces   ( )
     , mCurId        ( 0 )
 {
@@ -242,6 +245,11 @@ void OptionsManager::writeOptions(void)
         xml.writeAttribute(NELusanCommon::xmlAttributeVersion, NELusanCommon::xmlWorkspaceVersion);
             xml.writeStartElement(NELusanCommon::xmlElementOption);
                 xml.writeStartElement(NELusanCommon::xmlElementWorkspaceList);
+                if (hasDefaultWorkspace())
+                {
+                    xml.writeAttribute(NELusanCommon::xmlAttributeDefault, QString::number(mDefWorkspace));
+                }
+                
                 for (const auto& entry : mWorkspaces)
                 {
                     entry.writeToXml(xml);
@@ -252,6 +260,76 @@ void OptionsManager::writeOptions(void)
     xml.writeEndDocument();
 
     file.close();
+}
+
+bool OptionsManager::hasDefaultWorkspace(void) const
+{
+    return ((mDefWorkspace != 0) && _existWorkspaceId(mDefWorkspace));
+}
+
+bool OptionsManager::isDefaultWorkspace(uint64_t workspaceId) const
+{
+    return ((mDefWorkspace == workspaceId) && hasDefaultWorkspace());
+}
+
+bool OptionsManager::isDefaultWorkspace(const QString& workspaceRoot) const
+{
+    return (workspaceRoot.isEmpty() == false) && (workspaceRoot == getDefaultWorkspaceRoot());
+}
+
+uint64_t OptionsManager::getDefaultWorkspaceId(void) const
+{
+    return getDefaultWorkspace().getId();
+}
+
+const QString& OptionsManager::getDefaultWorkspaceRoot(void) const
+{
+    return getDefaultWorkspace().getWorkspaceRoot();
+}
+
+const WorkspaceEntry& OptionsManager::getDefaultWorkspace(void) const
+{
+    return (mDefWorkspace != 0 ? _findWorkspace(mDefWorkspace) : WorkspaceEntry::InvalidWorkspace);
+}
+
+uint64_t OptionsManager::activateDefaultWorkspace(void)
+{
+    uint32_t id     = mDefWorkspace;
+    mActiveKey      = 0u;
+    mDefWorkspace   = 0u;
+    for (auto& entry : mWorkspaces)
+    {
+        if (entry.getId() == id)
+        {
+            mDefWorkspace   = id;
+            mActiveKey      = entry.activate();
+            break;
+        }
+    }
+    
+    return mActiveKey;
+}
+
+bool OptionsManager::setDefaultWorkspace(uint64_t defWorkspaceId)
+{
+    mDefWorkspace = 0;
+    if ((defWorkspaceId != 0) && _existWorkspaceId(defWorkspaceId))
+        mDefWorkspace = defWorkspaceId;
+    
+    return (mDefWorkspace != 0u);
+}
+
+bool OptionsManager::setDefaultWorkspace(const QString defWorkspaceRoot)
+{
+    mDefWorkspace = 0;
+    if (defWorkspaceRoot.isEmpty())
+        return false;
+
+    const WorkspaceEntry& workspace = _findWorkspace(defWorkspaceRoot);
+    if (workspace.isValid())
+        mDefWorkspace = workspace.getId();
+    
+    return (mDefWorkspace != 0u);
 }
 
 void OptionsManager::_readOptionList(QXmlStreamReader& xml)
@@ -311,11 +389,16 @@ void OptionsManager::_readOption(QXmlStreamReader& xml)
 void OptionsManager::_readWorkspaceList(QXmlStreamReader& xml)
 {
     mWorkspaces.clear();
+    mDefWorkspace = 0u;
+    mActiveKey = 0u;
+    mCurId = 0u;
     
     QXmlStreamReader::TokenType tokenType{xml.tokenType()};
     QStringView xmlName {xml.name()};
     if (xmlName == NELusanCommon::xmlElementWorkspaceList)
     {
+        QXmlStreamAttributes attrs = xml.attributes();
+        mDefWorkspace = attrs.hasAttribute(NELusanCommon::xmlAttributeDefault) ? attrs.value(NELusanCommon::xmlAttributeDefault).toUInt() : 0;
         xml.readNext();
         tokenType = xml.tokenType();
         xmlName = xml.name();
@@ -345,17 +428,41 @@ void OptionsManager::_readWorkspaceList(QXmlStreamReader& xml)
     _sort();
 }
 
-WorkspaceEntry OptionsManager::_findWorkspace(const QString& root) const
+const WorkspaceEntry& OptionsManager::_findWorkspace(const QString& root) const
 {
-    WorkspaceEntry result{};
     for (const auto& entry : mWorkspaces)
     {
         if (entry.getWorkspaceRoot() == root)
         {
-            result = entry;
-            break;
+            return entry;
         }
     }
 
-    return result;
+    return WorkspaceEntry::InvalidWorkspace;
+}
+
+const WorkspaceEntry& OptionsManager::_findWorkspace(uint64_t id) const
+{
+    for (const auto& entry : mWorkspaces)
+    {
+        if (entry.getId() == id)
+        {
+            return entry;
+        }
+    }
+
+    return WorkspaceEntry::InvalidWorkspace;
+}
+
+inline bool OptionsManager::_existWorkspaceId(uint64_t workspaceId) const
+{
+    for (const auto& entry : mWorkspaces)
+    {
+        if (entry.getId() == workspaceId)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }

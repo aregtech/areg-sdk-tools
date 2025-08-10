@@ -19,14 +19,14 @@
 
 #include "lusan/model/common/WorkspaceModel.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
+#include "areg/base/NECommon.hpp"
 #include <algorithm>
-
-const WorkspaceEntry WorkspaceModel::InvalidWorkspace{};
 
 WorkspaceModel::WorkspaceModel(OptionsManager &options, QObject* parent)
     : QAbstractListModel(parent)
-    , mItems    ()
-    , mNewItem  (WorkspaceModel::InvalidWorkspace)
+    , mItems        ( )
+    , mNewItem      (WorkspaceEntry::InvalidWorkspace)
+    , mDefWorkspace (options.getDefaultWorkspaceId())
 {
     const std::vector<WorkspaceEntry> & workspaces = options.getWorkspaceList();
     if (!workspaces.empty())
@@ -57,6 +57,7 @@ void WorkspaceModel::addWorkspaceEntry(const WorkspaceEntry& item)
     }
     
     std::sort(mItems.begin(), mItems.end(), std::greater<WorkspaceEntry>());
+    mDefWorkspace = 0;
     endInsertRows();
 }
 
@@ -80,6 +81,7 @@ WorkspaceEntry WorkspaceModel::addWorkspaceEntry(const QString& root, const QStr
     }
     
     std::sort(mItems.begin(), mItems.end(), std::greater<WorkspaceEntry>());
+    mDefWorkspace = 0;
     endInsertRows();
     
     return result;    
@@ -95,7 +97,7 @@ const WorkspaceEntry & WorkspaceModel::findWorkspaceEntry(const QString& root) c
         }
     }
     
-    return WorkspaceModel::InvalidWorkspace;
+    return WorkspaceEntry::InvalidWorkspace;
 }
 
 void WorkspaceModel::removeWorkspaceEntry(const QString& root)
@@ -104,45 +106,43 @@ void WorkspaceModel::removeWorkspaceEntry(const QString& root)
     if (index >= 0)
     {
         beginRemoveRows(QModelIndex(), index, index);
-        mItems.erase(mItems.begin() + index);
+        if (mItems[index].getId() == mDefWorkspace)
+            mDefWorkspace = 0u;
+
         if (mNewItem.getWorkspaceRoot() == root)
-        {
-            mNewItem = WorkspaceModel::InvalidWorkspace;
-        }
+            mNewItem = WorkspaceEntry::InvalidWorkspace;
+
+        mItems.erase(mItems.begin() + index);
         endRemoveRows();
     }
 }
 
 int WorkspaceModel::find(const QString& root) const
 {
-    int result{0};
-    for (const auto& entry : mItems)
+    if (root.isEmpty() == false)
     {
-        if (entry.getWorkspaceRoot() == root)
+        for (int i = 0; i < static_cast<int>(mItems.size()); ++ i)
         {
-            break;
+            if (mItems[i].getWorkspaceRoot() == root)
+                return i;
         }
-        
-        ++result;
     }
     
-    return (mItems.size() > static_cast<uint32_t>(result) ? result : -1);
+    return static_cast<int>(NECommon::INVALID_INDEX);
 }
 
 int WorkspaceModel::find(const uint64_t key) const
 {
-    int result{0};
-    for (const auto& entry : mItems)
+    if (key != 0u)
     {
-        if (entry.getKey() == key)
+        for (int i = 0; i < static_cast<int>(mItems.size()); ++ i)
         {
-            break;
+            if (mItems[i].getKey() == key)
+                return i;
         }
-        
-        ++result;
     }
     
-    return (mItems.size() > static_cast<uint32_t>(result) ? result : -1);
+    return static_cast<int>(NECommon::INVALID_INDEX);
 }
 
 int WorkspaceModel::rowCount(const QModelIndex& parent) const
@@ -196,7 +196,7 @@ QHash<int, QByteArray> WorkspaceModel::roleNames() const
 
 const WorkspaceEntry& WorkspaceModel::getData(uint32_t row) const
 {
-    return (row < mItems.size() ? mItems[row] : WorkspaceModel::InvalidWorkspace);
+    return (row < mItems.size() ? mItems[row] : WorkspaceEntry::InvalidWorkspace);
 }
 
 uint64_t WorkspaceModel::activate(uint32_t row)
@@ -209,3 +209,64 @@ uint64_t WorkspaceModel::activate(const QString& root)
     int index = find(root);
     return (index >= 0 ? activate(static_cast<uint32_t>(index)) : 0);
 }
+
+bool WorkspaceModel::isDefaultWorkspace(const QString& root) const
+{
+    int index = find(root);
+    return ((index >= 0) && (mItems[index].getId() == mDefWorkspace));
+}
+
+bool WorkspaceModel::isDefaultWorkspace(uint32_t row) const
+{
+    return ((row < mItems.size()) && (mItems[row].getId() == mDefWorkspace) && (mDefWorkspace != 0));
+}
+
+bool WorkspaceModel::hasDefaultWorkspace(void) const
+{
+    return (mDefWorkspace != 0) && (_findById(mDefWorkspace) != static_cast<int>(NECommon::INVALID_INDEX));
+}
+
+uint64_t WorkspaceModel::activateDefaultWorkspace(void)
+{
+    uint64_t result{ 0u };
+    int index = (mDefWorkspace != 0 ? _findById(mDefWorkspace) : static_cast<int>(NECommon::INVALID_INDEX));
+    if (index != static_cast<int>(NECommon::INVALID_INDEX))
+    {
+        result = mItems[index].activate();
+    }
+
+    return result;
+}
+
+const WorkspaceEntry& WorkspaceModel::getDefaultWorkspace(void) const
+{
+    int index = (mDefWorkspace != 0 ? _findById(mDefWorkspace) : static_cast<int>(NECommon::INVALID_INDEX));
+    return (index != static_cast<int>(NECommon::INVALID_INDEX) ? mItems[index] : WorkspaceEntry::InvalidWorkspace);
+}
+
+bool WorkspaceModel::setDefaultWorkspace(const QString & root)
+{
+    mDefWorkspace = 0;
+    int index = find(root);
+    if (index >= 0)
+    {
+        mDefWorkspace = mItems[index].getId();
+    }
+    
+    return (mDefWorkspace != 0);
+}
+
+inline int WorkspaceModel::_findById(uint32_t id) const
+{
+    if (id == 0)
+        return NECommon::INVALID_INDEX;
+
+    for (int i = 0; i < static_cast<int>(mItems.size()); ++i)
+    {
+        if (mItems[i].getId() == id)
+            return i;
+    }
+
+    return NECommon::INVALID_INDEX;
+}
+

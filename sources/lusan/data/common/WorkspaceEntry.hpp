@@ -31,6 +31,15 @@ class QXmlStreamWriter;
  **/
 class WorkspaceEntry
 {
+////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+////////////////////////////////////////////////////////////////////////
+public:
+    static const WorkspaceEntry InvalidWorkspace;
+
+////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Default constructor.
@@ -63,27 +72,30 @@ public:
      **/
     WorkspaceEntry(WorkspaceEntry&& src) noexcept;
 
+////////////////////////////////////////////////////////////////////////
+// Operators
+////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Copy assignment operator.
      * \param   src         The source workspace model to copy from.
      * \return  Reference to the assigned workspace model.
      **/
-    WorkspaceEntry& operator=(const WorkspaceEntry& src);
+    WorkspaceEntry& operator = (const WorkspaceEntry& src);
 
     /**
      * \brief   Move assignment operator.
      * \param   src         The source workspace model to move from.
      * \return  Reference to the assigned workspace model.
      **/
-    WorkspaceEntry& operator=(WorkspaceEntry&& src) noexcept;
+    WorkspaceEntry& operator = (WorkspaceEntry&& src) noexcept;
 
     /**
      * \brief   Equality operator.
      * \param   other       The other workspace model to compare with.
      * \return  True if the models are equal, false otherwise.
      **/
-    bool operator==(const WorkspaceEntry& other) const;
+    bool operator == (const WorkspaceEntry& other) const;
 
     /**
      * \brief   Greater than operator.
@@ -99,6 +111,9 @@ public:
      **/
     bool operator < (const WorkspaceEntry& other) const;
 
+////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Reads the workspace data from an XML stream.
@@ -221,6 +236,9 @@ public:
      **/
     inline bool isValid(void) const;
 
+////////////////////////////////////////////////////////////////////////
+// Hidden methods
+////////////////////////////////////////////////////////////////////////
 private:
     /**
      * \brief   Reads the settings from an XML stream.
@@ -246,6 +264,9 @@ private:
      **/
     void _writeSettings(QXmlStreamWriter& xml);
 
+////////////////////////////////////////////////////////////////////////
+// Member variables
+////////////////////////////////////////////////////////////////////////
 private:
     uint32_t    mId;                //!< The ID of the workspace.
     uint64_t    mLastAccessed;      //!< The last accessed timestamp of the workspace.

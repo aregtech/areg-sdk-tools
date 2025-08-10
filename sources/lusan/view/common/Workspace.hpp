@@ -93,6 +93,12 @@ protected slots:
      **/
     void onPathSelectionChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QList<int> &roles);
     
+    /**
+     * \brief   Triggered when default workspace check-box is checked or unchecked.
+     * \param   checked     True is checked. False, otherwise.
+     **/
+    void onDefaultChecked(bool checked);
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

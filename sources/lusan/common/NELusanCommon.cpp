@@ -50,7 +50,7 @@ QString NELusanCommon::getUserProfileFile(const QString& fileName)
 uint32_t NELusanCommon::getId(void)
 {
     static uint32_t _id = 0;
-    return ++_id;
+    return (++_id != 0 ? _id : ++_id);
 }
 
 

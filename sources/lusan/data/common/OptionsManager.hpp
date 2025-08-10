@@ -134,6 +134,62 @@ public:
      **/
     void writeOptions(void);
 
+    /**
+     * \brief   Returns true if there is a default workspace set.
+     **/
+    bool hasDefaultWorkspace(void) const;
+
+    /**
+     * \brief   Checks if the workspace ID is the default workspace.
+     * \param   workspaceId The workspace ID to check.
+     * \return  True if the workspace ID is the default workspace, false otherwise.
+     **/
+    bool isDefaultWorkspace(uint64_t workspaceId) const;
+
+    /**
+     * \brief   Checks if the workspace root is the default workspace.
+     * \param   workspaceRoot   The workspace root to check.
+     * \return  True if the workspace root is the default workspace, false otherwise.
+     **/
+    bool isDefaultWorkspace(const QString& workspaceRoot) const;
+
+    /**
+     * \brief   Returns the default workspace ID. Returns 0 if no default workspace is set.
+     **/
+    uint64_t getDefaultWorkspaceId(void) const;
+
+    /**
+     * \brief   Returns the default workspace root directory. Returns an empty string if no default workspace is set.
+     **/
+    const QString& getDefaultWorkspaceRoot(void) const;
+
+    /**
+     * \brief   Returns the default workspace entry. Returns an invalid workspace entry if no default workspace is set.
+     **/
+    const WorkspaceEntry & getDefaultWorkspace(void) const;
+
+    /**
+     * \brief   Activates the default workspace entry, if there is any, and returns the activation key.
+     *          Returns 0 if no default workspace entry is set.
+     **/
+    uint64_t activateDefaultWorkspace(void);
+
+    /**
+     * \brief   Sets the default workspace by ID.
+     * \param   defWorkspaceId  The ID of the default workspace to set.
+     *                          Unsets the default workspace if the ID is 0 or does not exist.
+     * \return  True if the default workspace was successfully set, false otherwise.
+     **/
+    bool setDefaultWorkspace(uint64_t defWorkspaceId);
+
+    /**
+     * \brief   Sets the default workspace by root directory.
+     * \param   defWorkspaceRoot The root directory of the default workspace to set.
+     *                           Unsets the default workspace if the root is empty or does not exist.
+     * \return  True if the default workspace was successfully set, false otherwise.
+     **/
+    bool setDefaultWorkspace(const QString defWorkspaceRoot);
+
 private:
     /**
      * \brief   Reads the option list from an XML stream.
@@ -158,15 +214,30 @@ private:
      * \param   root        The root directory of the workspace.
      * \return  The found workspace entry.
      **/
-    WorkspaceEntry _findWorkspace(const QString& root) const;
-    
+    const WorkspaceEntry& _findWorkspace(const QString& root) const;
+
+    /**
+     * \brief   Finds a workspace by ID.
+     * \param   id          The ID of the workspace.
+     * \return  The found workspace entry.
+     **/
+    const WorkspaceEntry& _findWorkspace(uint64_t id) const;
+
     /**
      * \brief   Sorts the workspace entries.
      **/
     inline void _sort();
 
+    /**
+     * \brief   Checks if a workspace ID exists in the list.
+     * \param   workspaceId The workspace ID to check.
+     * \return  True if the workspace ID exists, false otherwise.
+     **/
+    inline bool _existWorkspaceId(uint64_t workspaceId) const;
+
 private:
     uint64_t    mActiveKey;     //!< The active workspace key.
+    uint32_t    mDefWorkspace;  //!< The ID of default workspace.
     Workspaces  mWorkspaces;    //!< The list of workspace entries.
     uint32_t    mCurId;         //!< The current workspace ID.
 };
