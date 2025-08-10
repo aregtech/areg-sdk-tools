@@ -33,9 +33,6 @@ class WorkspaceModel : public QAbstractListModel
 {
     Q_OBJECT
     
-private:
-    static const WorkspaceEntry InvalidWorkspace;
-    
 public:
     /**
      * \brief   Constructor.
@@ -148,14 +145,67 @@ public:
      *          Returns empty string if there is no new workspace entry.
      **/
     inline const WorkspaceEntry& getNewWorkspace(void) const;
+
+    /**
+     * \brief   Checks if the workspace root is the default workspace.
+     * \param   root    The workspace root to check.
+     * \return  True if the workspace root is the default workspace, false otherwise.
+     **/
+    bool isDefaultWorkspace(const QString& root) const;
+
+    /**
+     * \brief   Checks if the workspace entry row is the default workspace.
+     * \param   row     The workspace entry in the row to check.
+     * \return  True if the workspace entry row is the default workspace, false otherwise.
+     **/
+    bool isDefaultWorkspace(uint32_t row) const;
+
+    /**
+     * \brief   Returns true if there is a default workspace set.
+     **/
+    bool hasDefaultWorkspace(void) const;
+
+    /**
+     * \brief   Activates the default workspace entry, if there is any, and returns the activation key.
+     *          Returns 0 if no default workspace entry is set.
+     **/
+    uint64_t activateDefaultWorkspace(void);
+
+    /**
+     * \brief   Returns the default workspace entry. Returns an invalid workspace entry if no default workspace is set.
+     **/
+    const WorkspaceEntry& getDefaultWorkspace(void) const;
+    
+    /**
+     * \brief   Sets the default workspace by root directory.
+     * \param   root    The root directory of the default workspace to set.
+     *                  Unsets the default workspace if the root is empty or does not exist.
+     * \return  True if the default workspace was successfully set, false otherwise.
+     **/
+    bool setDefaultWorkspace(const QString & root);
         
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
 private:
-    std::vector<WorkspaceEntry> mItems;     //!< The list of workspace items.
-    WorkspaceEntry              mNewItem;   //!< The new workspace item;
+    /**
+     * \brief   Finds a workspace entry by ID.
+     * \param   id  The ID of the workspace.
+     * \return  Returns valid index if the workspace entry found. Otherwise, returns -1.
+     **/
+    inline int _findById(uint32_t id) const;
+    
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    std::vector<WorkspaceEntry> mItems;         //!< The list of workspace items.
+    WorkspaceEntry              mNewItem;       //!< The new workspace item;
+    uint32_t                    mDefWorkspace;  //!< The default workspace ID;
 };
 
 //////////////////////////////////////////////////////////////////////////
-// Inline methods
+// WorkspaceModel inline methods
 //////////////////////////////////////////////////////////////////////////
 
 inline const std::vector<WorkspaceEntry>& WorkspaceModel::getEntries(void) const

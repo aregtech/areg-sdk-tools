@@ -95,6 +95,12 @@ private slots:
      **/
     void onWorkspaceDescChanged();
 
+    /**
+     * \brief   Triggered when default workspace check-box is checked or unchecked.
+     * \param   checked     True is checked. False, otherwise.
+     **/
+    void onDefaultChecked(bool checked);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
 //////////////////////////////////////////////////////////////////////////

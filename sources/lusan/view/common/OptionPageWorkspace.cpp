@@ -45,6 +45,7 @@ void OptionPageWorkspace::connectSignalHandlers() const
     connect(mUi->deleteButton    , &QPushButton::clicked             , this, &OptionPageWorkspace::onDeleteButtonClicked);
     connect(mUi->listOfWorkspaces, &QListWidget::itemSelectionChanged, this, &OptionPageWorkspace::onWorkspaceSelectionChanged);
     connect(mUi->workspaceEdit   , &QPlainTextEdit::textChanged      , this, &OptionPageWorkspace::onWorkspaceDescChanged);
+    connect(mUi->checkDefault    , &QCheckBox::clicked               , this, &OptionPageWorkspace::onDefaultChecked);
 }
 
 void OptionPageWorkspace::initializePathsWithSelectedWorkspaceData(uint32_t const workspaceId) const
@@ -52,7 +53,10 @@ void OptionPageWorkspace::initializePathsWithSelectedWorkspaceData(uint32_t cons
     std::optional<WorkspaceEntry> const workspace{ getWorkspace(workspaceId) };
     if (!workspace)
         return;
-
+    
+    bool isDefault = LusanApplication::getOptions().isDefaultWorkspace(workspace->getId());
+    mUi->checkDefault->setEnabled(true);
+    mUi->checkDefault->setChecked(isDefault);
     mUi->rootDirEdit->setText(workspace->getWorkspaceRoot());
     mUi->sourceDirEdit->setText(workspace->getDirSources());
     mUi->includeDirEdit->setText(workspace->getDirIncludes());
@@ -99,6 +103,12 @@ void OptionPageWorkspace::onDeleteButtonClicked()
     uint32_t const selectedWorkspaceId{ selectedItem->data(Qt::ItemDataRole::UserRole).toUInt() };
     if (selectedWorkspaceId != LusanApplication::getActiveWorkspace().getId())
     {
+        if ( LusanApplication::getOptions().isDefaultWorkspace(selectedWorkspaceId) )
+        {
+            LusanApplication::getOptions().setDefaultWorkspace(static_cast<uint32_t>(0));
+            mUi->checkDefault->setChecked(false);
+        }
+        
         mModifiedWorkspaces[selectedWorkspaceId] = WorkspaceChangeData{ true, {} };
         deleteSelectedWorkspaceItem();
     }
@@ -194,6 +204,23 @@ void OptionPageWorkspace::onWorkspaceDescChanged()
         return;
 
     mModifiedWorkspaces[*selectedItemId] = WorkspaceChangeData{false, mUi->workspaceEdit->toPlainText()};
+}
+
+void OptionPageWorkspace::onDefaultChecked(bool checked)
+{
+    OptionsManager& opt { LusanApplication::getOptions() };
+    std::optional<uint32_t> const selectedItemId{ getSelectedWorkspaceId() };
+    if (!selectedItemId)
+        return;
+    
+    if (checked == false)
+    {
+        opt.setDefaultWorkspace(static_cast<uint32_t>(0u));
+    }
+    else
+    {
+        mUi->checkDefault->setChecked(opt.setDefaultWorkspace(*selectedItemId));
+    }
 }
 
 std::optional<uint32_t> OptionPageWorkspace::getSelectedWorkspaceId() const

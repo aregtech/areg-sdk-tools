@@ -21,6 +21,8 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+const WorkspaceEntry WorkspaceEntry::InvalidWorkspace{};
+
 WorkspaceEntry::WorkspaceEntry(void)
     : mId(0)
     , mLastAccessed(0)

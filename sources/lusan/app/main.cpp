@@ -58,20 +58,26 @@ int main(int argc, char *argv[])
     Application::setWorkingDirectory(nullptr);
     OptionsManager & opt = LusanApplication::getOptions();
     opt.readOptions();
-    Workspace workspace(opt);
-    if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
+    if (opt.hasDefaultWorkspace())
     {
-        if (workspace.hasNewWorkspaceEntry())
-        {
-            WorkspaceSetupDialog setup;
-            if (setup.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
-                setup.applyDirectories();
-        }
-
-        return a.runApplication(opt.getActiveWorkspace().getWorkspaceRoot());
+        opt.activateDefaultWorkspace();
+        return a.runApplication(opt.getDefaultWorkspaceRoot());
     }
     else
     {
-        return 0;
+        Workspace workspace(opt);
+        if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
+        {
+            if (workspace.hasNewWorkspaceEntry())
+            {
+                WorkspaceSetupDialog setup;
+                if (setup.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
+                    setup.applyDirectories();
+            }
+
+            return a.runApplication(opt.getActiveWorkspace().getWorkspaceRoot());
+        }
     }
+
+    return 0;
 }

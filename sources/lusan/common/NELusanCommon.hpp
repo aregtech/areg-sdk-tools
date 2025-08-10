@@ -142,7 +142,8 @@ namespace NELusanCommon
     constexpr const char * const xmlElementLogs             { "Logs" };
 
     constexpr const char * const xmlElementProject          { "Project" };
-
+    
+    constexpr const char * const xmlAttributeDefault        { "hasDefault" };
     constexpr const char * const xmlAttributeLastAccessed   { "Accessed" };
     constexpr const char * const xmlAttributeId             { "id" };
     constexpr const char * const xmlAttributeName           { "Name" };
