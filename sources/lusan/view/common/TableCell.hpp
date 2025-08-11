@@ -159,7 +159,7 @@ signals:
      * \param   index       The index of the table cell.
      * \param   newValue    The new value of the table cell.
      **/
-    void editorDataChanged(const QModelIndex &index, const QString &newValue) const;
+    void signalEditorDataChanged(const QModelIndex &index, const QString &newValue);
     
 //////////////////////////////////////////////////////////////////////////
 // Slots

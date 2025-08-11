@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>545</width>
-    <height>389</height>
+    <height>296</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -22,9 +22,9 @@
   <widget class="QLabel" name="loggingSettingsLabel">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>10</x>
      <y>10</y>
-     <width>511</width>
+     <width>531</width>
      <height>24</height>
     </rect>
    </property>
@@ -43,25 +43,47 @@
    <property name="text">
     <string>Logging Settings</string>
    </property>
+   <property name="alignment">
+    <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+   </property>
   </widget>
   <widget class="QWidget" name="gridLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>20</x>
+     <x>10</x>
      <y>40</y>
-     <width>501</width>
-     <height>331</height>
+     <width>531</width>
+     <height>211</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout" columnstretch="1,0,0,0,0">
     <property name="sizeConstraint">
      <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
     </property>
+    <property name="horizontalSpacing">
+     <number>3</number>
+    </property>
+    <property name="verticalSpacing">
+     <number>7</number>
+    </property>
     <item row="1" column="1" colspan="3">
-     <widget class="QLineEdit" name="editLogLocation"/>
+     <widget class="QLineEdit" name="editLogLocation">
+      <property name="toolTip">
+       <string>Set the location of log files</string>
+      </property>
+      <property name="whatsThis">
+       <string>Set the location of log files</string>
+      </property>
+      <property name="placeholderText">
+       <string>Set the location of log files</string>
+      </property>
+     </widget>
     </item>
     <item row="3" column="4">
      <widget class="QPushButton" name="buttonTestConnect">
+      <property name="toolTip">
+       <string>Test logcollector connection</string>
+      </property>
       <property name="text">
        <string>&amp;Test</string>
       </property>
@@ -113,6 +135,15 @@
         <height>16777215</height>
        </size>
       </property>
+      <property name="toolTip">
+       <string>Set TCP port number of logcollector, like 8282</string>
+      </property>
+      <property name="whatsThis">
+       <string>TCP port number of log collector</string>
+      </property>
+      <property name="placeholderText">
+       <string>8282</string>
+      </property>
      </widget>
     </item>
     <item row="4" column="0">
@@ -136,6 +167,12 @@
     </item>
     <item row="1" column="4">
      <widget class="QPushButton" name="buttonBrowseDirs">
+      <property name="toolTip">
+       <string>Browse log file location</string>
+      </property>
+      <property name="whatsThis">
+       <string>Click to select the log file location</string>
+      </property>
       <property name="text">
        <string>&amp;Browse</string>
       </property>
@@ -161,10 +198,30 @@
      </widget>
     </item>
     <item row="3" column="1" colspan="2">
-     <widget class="QLineEdit" name="editLogAddres"/>
+     <widget class="QLineEdit" name="editLogAddres">
+      <property name="toolTip">
+       <string>Set IP-address of the logcollector</string>
+      </property>
+      <property name="whatsThis">
+       <string>Set IP-address of the logcollector</string>
+      </property>
+      <property name="placeholderText">
+       <string>IP-address of the logcollector</string>
+      </property>
+     </widget>
     </item>
     <item row="2" column="1" colspan="3">
-     <widget class="QLineEdit" name="editLogFileName"/>
+     <widget class="QLineEdit" name="editLogFileName">
+      <property name="toolTip">
+       <string>Set log file names, can have mask like &quot;log_%time%.sqlog&quot;</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+      </property>
+      <property name="placeholderText">
+       <string>Set the log file name with mask like log_%time%</string>
+      </property>
+     </widget>
     </item>
     <item row="4" column="1" colspan="3">
      <widget class="QTextEdit" name="textConnectStatus">
@@ -179,6 +236,12 @@
         <width>16777215</width>
         <height>80</height>
        </size>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+      <property name="placeholderText">
+       <string>Logcollector connection test status</string>
       </property>
      </widget>
     </item>

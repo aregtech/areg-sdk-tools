@@ -147,8 +147,6 @@ public:
     void zoomIn(int range = 1);
     void zoomOut(int range = 1);
     
-    void copyAvailable(bool available);
-
     /**
      * \brief   Returns the document name.
      **/

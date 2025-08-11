@@ -36,24 +36,24 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     ctrlTable()->setModel(nullptr);
     QItemSelectionModel *selModel = ctrlTable()->selectionModel();
     Q_ASSERT(selModel != nullptr);
-    connect(ctrlLogShow()       , &QToolButton::clicked     , [this]()              { onShowLog(getSelectedIndex());              });
-    connect(ctrlScopeBegin()    , &QToolButton::clicked     , [this]()              { onShowLog(mFilter->getIndexStart(false));   });
-    connect(ctrlScopeEnd()      , &QToolButton::clicked     , [this]()              { onShowLog(mFilter->getIndexEnd(false));     });
-    connect(ctrlScopeNext()     , &QToolButton::clicked     , [this]()              { onShowNextLog();                            });
-    connect(ctrlScopePrev()     , &QToolButton::clicked     , [this]()              { onShowPrevLog();                            });
+    connect(ctrlLogShow()       , &QToolButton::clicked     , this, [this]()              { onShowLog(getSelectedIndex());              });
+    connect(ctrlScopeBegin()    , &QToolButton::clicked     , this, [this]()              { onShowLog(mFilter->getIndexStart(false));   });
+    connect(ctrlScopeEnd()      , &QToolButton::clicked     , this, [this]()              { onShowLog(mFilter->getIndexEnd(false));     });
+    connect(ctrlScopeNext()     , &QToolButton::clicked     , this, [this]()              { onShowNextLog();                            });
+    connect(ctrlScopePrev()     , &QToolButton::clicked     , this, [this]()              { onShowPrevLog();                            });
 
-    connect(ctrlTable()         , &QTableView::doubleClicked, [this](const QModelIndex& index)  {onShowLog(index);    });
-    connect(ctrlTable()         , &QTableView::clicked      , [this](const QModelIndex& index)  {ctrlLogShow()->setEnabled(index.isValid());});
-    connect(ctrlRadioSession()  , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioSession);});
-    connect(ctrlRadioSublogs()  , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioSublogs);});
-    connect(ctrlRadioScope()    , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioScope);  });
-    connect(ctrlRadioThread()   , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioThread); });
-    connect(ctrlRadioProcess()  , &QRadioButton::toggled    , [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioProcess);});
-    connect(mFilter, &ScopeLogViewerFilter::signalFilterSelected
+    connect(ctrlTable()         , &QTableView::doubleClicked, this, [this](const QModelIndex& index)  {onShowLog(index);    });
+    connect(ctrlTable()         , &QTableView::clicked      , this, [this](const QModelIndex& index)  {ctrlLogShow()->setEnabled(index.isValid());});
+    connect(ctrlRadioSession()  , &QRadioButton::toggled    , this, [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioSession);});
+    connect(ctrlRadioSublogs()  , &QRadioButton::toggled    , this, [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioSublogs);});
+    connect(ctrlRadioScope()    , &QRadioButton::toggled    , this, [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioScope);  });
+    connect(ctrlRadioThread()   , &QRadioButton::toggled    , this, [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioThread); });
+    connect(ctrlRadioProcess()  , &QRadioButton::toggled    , this, [this](bool checked)  { onRadioChecked(checked, eRadioType::RadioProcess);});
+    connect(mFilter, &ScopeLogViewerFilter::signalFilterSelected, this
             , [this](const QModelIndex& start, const QModelIndex& end) {
                 onFilterChanged(start, end);
     });
-    connect(selModel            , &QItemSelectionModel::currentRowChanged
+    connect(selModel            , &QItemSelectionModel::currentRowChanged, this
             , [this](const QModelIndex &current, const QModelIndex &previous){
                 updateToolbuttons(mFilter->rowCount(), current);
     });

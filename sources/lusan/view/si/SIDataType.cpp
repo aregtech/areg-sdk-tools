@@ -1174,8 +1174,6 @@ void SIDataType::setupSignals(void)
     connect(mFields->ctrlDescription()      , &QPlainTextEdit::textChanged      , this, &SIDataType::onFieldDescriptionChanged);
     connect(mFields->ctrlDeprecated()       , &QCheckBox::toggled               , this, &SIDataType::onFieldDeprecatedChecked);
     connect(mFields->ctrlDeprecateHint()    , &QLineEdit::textChanged           , this, &SIDataType::onFieldDeprecateHint);
-
-    // connect(mTableCell                , &TableCell::editorDataChanged,this, &SIConstant::onEditorDataChanged);
 }
 
 void SIDataType::blockBasicSignals(bool doBlock)

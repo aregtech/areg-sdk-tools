@@ -156,7 +156,7 @@ void TableCell::onComboTextChanged(const QString & newText)
     QWidget *editor = qobject_cast<QWidget *>(sender());
     if (editor != nullptr)
     {
-        emit editorDataChanged(editor->property("index").toModelIndex(), newText);
+        emit signalEditorDataChanged(editor->property("index").toModelIndex(), newText);
     }
 }
 
@@ -167,7 +167,7 @@ void TableCell::onEditorTextChanged(const QString & newText)
     {
         if (mWaitEnd == false)
         {
-            emit editorDataChanged(editor->property("index").toModelIndex(), newText);
+            emit signalEditorDataChanged(editor->property("index").toModelIndex(), newText);
         }
         else
         {
@@ -181,7 +181,7 @@ void TableCell::onEditorTextChangeFinished(void)
 {
     if (mWaitEnd && mSelIndex.isValid() && (mNewText.isEmpty() == false))
     {
-        emit editorDataChanged(mSelIndex, mNewText);
+        emit signalEditorDataChanged(mSelIndex, mNewText);
         mSelIndex = QModelIndex();
         mNewText.clear();
     }

@@ -264,7 +264,7 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
         mIndexStart = index;
         if (mIndexEnd.isValid() == false)
         {
-            emit signalFilterSelected(mIndexStart, mIndexEnd);
+            emit const_cast<ScopeLogViewerFilter *>(this)->signalFilterSelected(mIndexStart, mIndexEnd);
         }
     }
     else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageText)
@@ -274,14 +274,14 @@ LogViewerFilter::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QMode
             mIndexStart = index;
             if (mIndexEnd.isValid() == false)
             {
-                emit signalFilterSelected(mIndexStart, mIndexEnd);
+                emit const_cast<ScopeLogViewerFilter *>(this)->signalFilterSelected(mIndexStart, mIndexEnd);
             }
         }
     }
     else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
     {
         mIndexEnd = index;
-        emit signalFilterSelected(mIndexStart, mIndexEnd);
+        emit const_cast<ScopeLogViewerFilter *>(this)->signalFilterSelected(mIndexStart, mIndexEnd);
     }
         
     return eMatchType::ExactMatch;
@@ -291,7 +291,6 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
 {
     mIndexStart = QModelIndex();
     mIndexEnd   = QModelIndex();
-    QAbstractItemModel* model = sourceModel();
     
     switch (dataFilter)
     {

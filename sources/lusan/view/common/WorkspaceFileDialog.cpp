@@ -94,7 +94,7 @@ void WorkspaceFileDialog::setRootDirectories(const QStringList& roots)
         setDirectoryUrl(urls.at(0));
     }
     
-    history().clear();
+    setHistory(QStringList());
 }
 
 void WorkspaceFileDialog::setFileFilters(const QStringList& filters)
@@ -125,7 +125,8 @@ void WorkspaceFileDialog::setFileFilters(const QStringList& filters)
 
 QString WorkspaceFileDialog::getSelectedFileRelativePath(void) const
 {
-    QString result = selectedFiles().first();
+    QStringList selected{ selectedFiles() };
+    QString result = selected.first();
     QDir rootDir(directoryUrl().path());
     
     if (result.startsWith(rootDir.absolutePath()))
@@ -149,10 +150,11 @@ QString WorkspaceFileDialog::getSelectedFileRelativePath(void) const
 
 QString WorkspaceFileDialog::getSelectedFilePath(void) const
 {
-    return selectedFiles().first();
+    QStringList selected{ selectedFiles() };
+    return selected.first();
 }
 
 void WorkspaceFileDialog::clearHistory()
 {
-    history().clear();
+    setHistory(QStringList());
 }

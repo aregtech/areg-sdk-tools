@@ -22,8 +22,6 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/common/NELusanCommon.hpp"
-
 #include <QDir>
 #include <QFileInfo>
 #include <QIcon>
@@ -593,10 +591,10 @@ inline const FileSystemEntry* FileSystemEntry::getChild(int index) const
 
 inline FileSystemEntry* FileSystemEntry::getChild(const QString& path)
 {
-    for (auto entry : mChildren )
+    for (ChildEntries::const_iterator entry = mChildren.constBegin(); entry != mChildren.constEnd(); ++entry )
     {
-        if (entry->getPath() == path)
-            return entry;
+        if ((*entry)->getPath() == path)
+            return (*entry);
     }
     
     return nullptr;
@@ -604,10 +602,10 @@ inline FileSystemEntry* FileSystemEntry::getChild(const QString& path)
 
 inline const FileSystemEntry* FileSystemEntry::getChild(const QString& path) const
 {
-    for (const auto entry : mChildren )
+    for (ChildEntries::const_iterator entry = mChildren.constBegin(); entry != mChildren.constEnd(); ++entry )
     {
-        if (entry->getPath() == path)
-            return entry;
+        if ((*entry)->getPath() == path)
+            return (*entry);
     }
     
     return nullptr;
@@ -615,10 +613,10 @@ inline const FileSystemEntry* FileSystemEntry::getChild(const QString& path) con
 
 inline FileSystemEntry* FileSystemEntry::getChild(uint32_t id)
 {
-    for (auto entry : mChildren )
+    for (ChildEntries::const_iterator entry = mChildren.constBegin(); entry != mChildren.constEnd(); ++entry )
     {
-        if (entry->getId() == id)
-            return entry;
+        if ((*entry)->getId() == id)
+            return (*entry);
     }
     
     return nullptr;
@@ -626,10 +624,10 @@ inline FileSystemEntry* FileSystemEntry::getChild(uint32_t id)
 
 inline const FileSystemEntry* FileSystemEntry::getChild(uint32_t id) const
 {
-    for (const auto entry : mChildren )
+    for (ChildEntries::const_iterator entry = mChildren.constBegin(); entry != mChildren.constEnd(); ++entry )
     {
-        if (entry->getId() == id)
-            return entry;
+        if ((*entry)->getId() == id)
+            return (*entry);
     }
     
     return nullptr;

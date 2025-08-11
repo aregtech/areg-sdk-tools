@@ -44,6 +44,6 @@ void OptionPageBase::warnMessage(void)
 {
 }
 
-void OptionPageBase::updateWorkspaceDirectories(const sWorkspaceDir & sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs)
+void OptionPageBase::updateWorkspaceDirectories(const sWorkspaceDir & /*sources*/, const sWorkspaceDir& /*includes*/, const sWorkspaceDir& /*delivery*/, const sWorkspaceDir& /*logs*/)
 {
 }

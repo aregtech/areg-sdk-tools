@@ -244,9 +244,9 @@ bool SIMethodData::readFromXml(QXmlStreamReader& xml)
         }
     }
 
-    for (SIMethodRequest* req : mRequestMethods)
+    for (QList<SIMethodRequest*>::iterator req = mRequestMethods.begin(); req != mRequestMethods.end(); ++req)
     {
-        req->normalize(mResponseMethods);
+        (*req)->normalize(mResponseMethods);
     }
 
     return true;

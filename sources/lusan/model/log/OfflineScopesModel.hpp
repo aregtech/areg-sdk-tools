@@ -64,18 +64,6 @@ public:
     
     virtual void setLoggingModel(LoggingModelBase* model);
 
-signals:
-
-/************************************************************************
- * Signals
- ************************************************************************/
-
-     /**
-      * \brief   Signal emitted when the root of the model is updated.
-      * \param   root    The index of the root that is updated.
-      **/
-    void signalRootUpdated(const QModelIndex& root);
-
 private:
 
     /**

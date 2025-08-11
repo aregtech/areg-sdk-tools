@@ -41,7 +41,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Workspace Manager</string>
+    <string>List of Setup Workspaces</string>
    </property>
   </widget>
   <widget class="QWidget" name="layoutWidget">
@@ -73,8 +73,14 @@
     </item>
     <item row="4" column="2">
      <widget class="QLineEdit" name="deliveryDirEdit">
+      <property name="toolTip">
+       <string>The thirdparty delivery directory path of the selected workspace</string>
+      </property>
       <property name="readOnly">
        <bool>true</bool>
+      </property>
+      <property name="placeholderText">
+       <string>The thirdparty delivery directory path is empty</string>
       </property>
      </widget>
     </item>
@@ -90,6 +96,9 @@
       <property name="enabled">
        <bool>true</bool>
       </property>
+      <property name="toolTip">
+       <string>Set currently active workspace as defalt</string>
+      </property>
       <property name="text">
        <string/>
       </property>
@@ -104,6 +113,12 @@
     </item>
     <item row="0" column="2">
      <widget class="QLineEdit" name="rootDirEdit">
+      <property name="toolTip">
+       <string>Root directory of the selected workspace</string>
+      </property>
+      <property name="whatsThis">
+       <string>The root directory of the workspace</string>
+      </property>
       <property name="layoutDirection">
        <enum>Qt::LayoutDirection::LeftToRight</enum>
       </property>
@@ -124,8 +139,14 @@
     </item>
     <item row="5" column="2">
      <widget class="QLineEdit" name="logDirEdit">
+      <property name="toolTip">
+       <string>The log files directory path of the selected workspace</string>
+      </property>
       <property name="readOnly">
        <bool>true</bool>
+      </property>
+      <property name="placeholderText">
+       <string>The logs directory path is empty</string>
       </property>
      </widget>
     </item>
@@ -148,8 +169,14 @@
     </item>
     <item row="3" column="2">
      <widget class="QLineEdit" name="includeDirEdit">
+      <property name="toolTip">
+       <string>The include files directory path of the selected workspace</string>
+      </property>
       <property name="readOnly">
        <bool>true</bool>
+      </property>
+      <property name="placeholderText">
+       <string>The include directory path is empty</string>
       </property>
      </widget>
     </item>
@@ -162,11 +189,17 @@
     </item>
     <item row="2" column="2">
      <widget class="QLineEdit" name="sourceDirEdit">
+      <property name="toolTip">
+       <string>The source codes directory path of the selected workspace</string>
+      </property>
       <property name="layoutDirection">
        <enum>Qt::LayoutDirection::LeftToRight</enum>
       </property>
       <property name="readOnly">
        <bool>true</bool>
+      </property>
+      <property name="placeholderText">
+       <string>The source codes directory path is empty</string>
       </property>
      </widget>
     </item>
@@ -180,6 +213,12 @@
      <width>151</width>
      <height>331</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>List of workspaces</string>
+   </property>
+   <property name="editTriggers">
+    <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
    </property>
    <property name="iconSize">
     <size>
@@ -196,6 +235,9 @@
      <width>80</width>
      <height>25</height>
     </rect>
+   </property>
+   <property name="toolTip">
+    <string>Delete currently selected not active workspace settings.</string>
    </property>
    <property name="text">
     <string>Delete</string>

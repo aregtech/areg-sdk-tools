@@ -44,9 +44,9 @@ FileSystemModel::FileSystemModel(const QMap<QString, QString> & workspaceEntries
     , mFileFilter       ( extFilters )
     , mRootIndex        ( )
 {
-    for (const QString & dir : mWorkspaceDirs)
+    for (WorkspaceEntries::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
     {
-        FileSystemEntry* entry = new FileSystemEntry(dir, workspaceEntries[NELusanCommon::fixPath(dir)], FileSystemEntry::eEntryType::EntryDir, &mRootEntry);
+        FileSystemEntry* entry = new FileSystemEntry(*dir, workspaceEntries[NELusanCommon::fixPath(*dir)], FileSystemEntry::eEntryType::EntryDir, &mRootEntry);
         mRootEntry.addChild(entry);
     }
 
@@ -144,9 +144,9 @@ void FileSystemModel::fetchMore(const QModelIndex& parent)
     
     QFileInfoList list = parentEntry->fetchData(mFileFilter);
     parentEntry->removeDummyEntry();
-    for ( const QFileInfo & fi : list)
+    for ( QFileInfoList::const_iterator fi = list.constBegin(); fi != list.constEnd(); ++fi)
     {
-        parentEntry->addChild(fi, false);
+        parentEntry->addChild(*fi, false);
     }
 }
 
@@ -613,9 +613,9 @@ void FileSystemModel::resetEntry(FileSystemEntry * entry)
     entry->resetEntry();
     entry->removeAll();
     QFileInfoList list = entry->fetchData(mFileFilter);
-    for ( const QFileInfo & fi : list)
+    for ( QFileInfoList::const_iterator fi = list.constBegin(); fi != list.constEnd(); ++fi)
     {
-        entry->addChild(fi, false);
+        entry->addChild(*fi, false);
     }
 }
 

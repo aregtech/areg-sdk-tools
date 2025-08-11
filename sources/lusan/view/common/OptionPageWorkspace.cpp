@@ -44,7 +44,7 @@ OptionPageWorkspace::~OptionPageWorkspace()
 {
 }
 
-void OptionPageWorkspace::connectSignalHandlers() const
+void OptionPageWorkspace::connectSignalHandlers()
 {
     connect(mUi->deleteButton    , &QPushButton::clicked             , this, &OptionPageWorkspace::onDeleteButtonClicked);
     connect(mUi->listOfWorkspaces, &QListWidget::itemSelectionChanged, this, &OptionPageWorkspace::onWorkspaceSelectionChanged);

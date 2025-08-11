@@ -195,7 +195,7 @@ signals:
      * \param   indexStart  The index of the start of the filter range.
      * \param   indexEnd    The index of the end of the filter range.
      **/
-    void signalFilterSelected(const QModelIndex& indexStart, const QModelIndex& indexEnd) const;
+    void signalFilterSelected(const QModelIndex& indexStart, const QModelIndex& indexEnd);
 
 protected:
     /**

@@ -386,9 +386,9 @@ void DataTypesModel::updateDataTypeLists(void)
     mDataTypeList.clear();
     mCountPredef = 0;
     mDataTypeData.getDataType(mDataTypeList, mExcludeList, true);
-    for (const DataTypeBase* dataType : mDataTypeList)
+    for (QList<DataTypeBase*>::const_iterator dataType = mDataTypeList.constBegin(); dataType != mDataTypeList.constEnd(); ++dataType)
     {
-        if (dataType->isPredefined())
+        if ((*dataType)->isPredefined())
         {
             ++mCountPredef;
         }

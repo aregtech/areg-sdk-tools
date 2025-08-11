@@ -178,30 +178,30 @@ void LogViewerBase::setupWidgets(void)
     mLogTable->setAutoScroll(true);
     
     QItemSelectionModel* selection= mLogTable->selectionModel();
-    connect(mHeader     , &LogTableHeader::signalComboFilterChanged
+    connect(mHeader     , &LogTableHeader::signalComboFilterChanged, this
             , [this](int logicalColumn, const QStringList& items){
                 _resetSearchResult();
                 mFilter->setComboFilter(logicalColumn, items);
             });
-    connect(mHeader     , &LogTableHeader::signalTextFilterChanged
+    connect(mHeader     , &LogTableHeader::signalTextFilterChanged, this
             , [this](int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
                 _resetSearchResult();
                 mFilter->setTextFilter(logicalColumn, text, isCaseSensitive, isWholeWord, isWildCard);
             });
-    connect(mHeader     , &LogTableHeader::customContextMenuRequested   , [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
+    connect(mHeader     , &LogTableHeader::customContextMenuRequested   , this, [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
     
-    connect(mLogTable   , &QTableView::clicked                          , [this](const QModelIndex &index){onMouseButtonClicked(index);});
-    connect(mLogTable   , &QTableView::doubleClicked                    , [this](const QModelIndex &index){onMouseDoubleClicked(index);});
+    connect(mLogTable   , &QTableView::clicked                          , this, [this](const QModelIndex &index){onMouseButtonClicked(index);});
+    connect(mLogTable   , &QTableView::doubleClicked                    , this, [this](const QModelIndex &index){onMouseDoubleClicked(index);});
     
-    connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , [this]() {mLogSearch->setStyleSheet(""); mSearch.resetSearch();});
-    connect(mLogSearch  , &SearchLineEdit::signalSearchText
+    connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , this, [this]() {mLogSearch->setStyleSheet(""); mSearch.resetSearch();});
+    connect(mLogSearch  , &SearchLineEdit::signalSearchText             , this
             , [this](const QString& /*text*/, bool /*isMatchCase*/, bool /*isWholeWord*/, bool /*isWildCard*/, bool /*isBackward*/) {
                 onSearchClicked(mSearch.canSearchNext() == false);
             });
     
-    connect(selection   , &QItemSelectionModel::currentRowChanged       
+    connect(selection   , &QItemSelectionModel::currentRowChanged       , this
             , [this](const QModelIndex &current, const QModelIndex &previous){onCurrentRowChanged(current, previous);});
-    connect(shortcutSearch, &QShortcut::activated, this
+    connect(shortcutSearch, &QShortcut::activated                       , this
             , [this]() {ctrlSearchText()->setFocus(); ctrlSearchText()->selectAll();});
 }
 
@@ -480,7 +480,7 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
         action->setChecked(isVisible);
         action->setData(i); // Store index for later
 
-        connect(action, &QAction::triggered, [this, curRow, action](bool /*checked*/) {
+        connect(action, &QAction::triggered, this, [this, curRow, action](bool /*checked*/) {
                 if (curRow < 0)
                     moveToBottom(false);
                 if (action->isChecked())

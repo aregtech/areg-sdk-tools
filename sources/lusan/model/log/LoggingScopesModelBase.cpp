@@ -369,7 +369,9 @@ bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<NEService:
         if ((instance.ciSource != NEService::eMessageSource::MessageSourceObserver) && (existsRoot(instance.ciCookie) == false))
         {
             result = true;
-            appendRoot(new ScopeRoot(instance), false);
+            ScopeRoot* root = new ScopeRoot(instance);
+            if (appendRoot(root, false) == false)
+                delete root;
         }
     }
     
@@ -480,22 +482,22 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
             return;
         
         mSignalsSetup = true;
-        mConSvcConnected = connect(mLoggingModel, &LoggingModelBase::signalLogServiceConnected, [this]() {
+        mConSvcConnected = connect(mLoggingModel, &LoggingModelBase::signalLogServiceConnected      , this, [this]() {
             this->slotLogServiceConnected();
         });
-        mConSvcDisconnected = connect(mLoggingModel, &LoggingModelBase::signalLogServiceDisconnected, [this]() {
+        mConSvcDisconnected = connect(mLoggingModel, &LoggingModelBase::signalLogServiceDisconnected, this, [this]() {
             this->slotLogServiceDisconnected();
         });
-        mConInstAvailable = connect(mLoggingModel, &LoggingModelBase::signalInstanceAvailable, [this](const std::vector<NEService::sServiceConnectedInstance>& instances) {
+        mConInstAvailable = connect(mLoggingModel, &LoggingModelBase::signalInstanceAvailable       , this, [this](const std::vector<NEService::sServiceConnectedInstance>& instances) {
             this->slotInstancesAvailable(instances);
         });
-        mConInstUnavailable = connect(mLoggingModel, &LoggingModelBase::signalInstanceUnavailable, [this](const std::vector<ITEM_ID>& instIds) {
+        mConInstUnavailable = connect(mLoggingModel, &LoggingModelBase::signalInstanceUnavailable   , this, [this](const std::vector<ITEM_ID>& instIds) {
             this->slotInstancesUnavailable(instIds);
         });
-        mConScopesAvailable = connect(mLoggingModel, &LoggingModelBase::signalScopesAvailable, [this](ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes) {
+        mConScopesAvailable = connect(mLoggingModel, &LoggingModelBase::signalScopesAvailable       , this, [this](ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes) {
             this->slotScopesAvailable(instId, scopes);
         });
-        mConScopesUnavailable = connect(mLoggingModel, &LoggingModelBase::signalScopesUpdated, [this](ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes) {
+        mConScopesUnavailable = connect(mLoggingModel, &LoggingModelBase::signalScopesUpdated       , this, [this](ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes) {
             this->slotScopesUpdated(instId, scopes);
         });
     }
