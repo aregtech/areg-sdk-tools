@@ -111,6 +111,16 @@ QString NaviFileSystem::getCellText(const QModelIndex& cell) const
     return (mNaviModel != nullptr ? mNaviModel->getFileInfo(cell).fileName() : QString());
 }
 
+void NaviFileSystem::optionApplied(void)
+{
+    NavigationWindow::optionApplied();
+}
+
+void NaviFileSystem::optionClosed(bool OKpressed)
+{
+    NavigationWindow::optionClosed(OKpressed);
+}
+
 void NaviFileSystem::onToolRefreshClicked(bool checked)
 {
     QTreeView * table = ctrlTable();
@@ -360,38 +370,9 @@ void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString
 
 void NaviFileSystem::updateData(void)
 {
-    QString root     { NELusanCommon::fixPath(LusanApplication::getWorkspaceRoot())     };
-    QString sources  { NELusanCommon::fixPath(LusanApplication::getWorkspaceSources())  };
-    QString includes { NELusanCommon::fixPath(LusanApplication::getWorkspaceIncludes()) };
-    QString delivery { NELusanCommon::fixPath(LusanApplication::getWorkspaceDelivery()) };
-    QString logs     { NELusanCommon::fixPath(LusanApplication::getWorkspaceLogs())     };
-
-    mRootPaths.clear();
-    Q_ASSERT(root.isEmpty() == false);
-    mRootPaths.insert(root, "[Project: " + root + "]");
-    if (sources.isEmpty() == false)
-    {
-        mRootPaths.insert(sources, "[Sources: " + sources + "]");
-    }
-
-    if (includes.isEmpty() == false)
-    {
-        mRootPaths.insert(includes, "[Includes: " + includes + "]");
-    }
-
-    if (delivery.isEmpty() == false)
-    {
-        mRootPaths.insert(delivery, "[Delivery: " + delivery + "]");
-    }
-
-    if (logs.isEmpty() == false)
-    {
-        mRootPaths.insert(logs, "[Logs: " + logs + "]");
-    }
-
+    mRootPaths = setupRootPaths(LusanApplication::getOptions().getActiveWorkspace());
     QStringList filters{ LusanApplication::InternalExts };
     filters.append(LusanApplication::ExternalExts);
-
     mNaviModel->setFileFilter(filters);
 }
 
@@ -455,44 +436,59 @@ QFileInfo NaviFileSystem::getFileInfo(const QModelIndex & index) const
     }
 }
 
-void NaviFileSystem::onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace)
+NaviFileSystem::RootPaths NaviFileSystem::setupRootPaths(const WorkspaceEntry& workspace)
 {
-    QString root    { NELusanCommon::fixPath(workspace.getWorkspaceRoot())  };
-    QString sources { NELusanCommon::fixPath(workspace.getDirSources())     };
-    QString includes{ NELusanCommon::fixPath(workspace.getDirIncludes())    };
-    QString delivery{ NELusanCommon::fixPath(workspace.getDirDelivery())    };
-    QString logs    { NELusanCommon::fixPath(workspace.getDirLogs())        };
+    RootPaths result;
+    
+    QString root{ NELusanCommon::fixPath(workspace.getWorkspaceRoot()) };
+    QString sources{ NELusanCommon::fixPath(workspace.getDirSources()) };
+    QString includes{ NELusanCommon::fixPath(workspace.getDirIncludes()) };
+    QString delivery{ NELusanCommon::fixPath(workspace.getDirDelivery()) };
+    QString logs{ NELusanCommon::fixPath(workspace.getDirLogs()) };
 
-    mRootPaths.clear();
     Q_ASSERT(root.isEmpty() == false);
-    mRootPaths.insert(root, "[Project: " + root + "]");
+    result.insert(root, "[Project: " + root + "]");
     if (sources.isEmpty() == false)
     {
-        mRootPaths.insert(sources, "[Sources: " + sources + "]");
+        result.insert(sources, "[Sources: " + sources + "]");
     }
 
     if (includes.isEmpty() == false)
     {
-        mRootPaths.insert(includes, "[Includes: " + includes + "]");
+        result.insert(includes, "[Includes: " + includes + "]");
     }
 
     if (delivery.isEmpty() == false)
     {
-        mRootPaths.insert(delivery, "[Delivery: " + delivery + "]");
+        result.insert(delivery, "[Delivery: " + delivery + "]");
     }
 
     if (logs.isEmpty() == false)
     {
-        mRootPaths.insert(logs, "[Logs: " + logs + "]");
+        result.insert(logs, "[Logs: " + logs + "]");
     }
+    
+    return result;
+}
 
-    if (mNaviModel != nullptr)
+void NaviFileSystem::onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace, bool isActiveWorkspace)
+{
+    if (isActiveWorkspace == false)
+        return;
+    
+    RootPaths paths = setupRootPaths(workspace);
+    if ((mNaviModel != nullptr) && mNaviModel->updateRootPaths(paths))
     {
-        QModelIndex idxRoot = mNaviModel->setRootPaths(mRootPaths);
-        ctrlTable()->setRootIndex(idxRoot);
-        ctrlTable()->expand(idxRoot);
-        ctrlTable()->setSortingEnabled(true);
+        mRootPaths = paths;
+        QTreeView* table = ctrlTable();
+        table->collapseAll();
+        table->clearSelection();
+        mNaviModel->refresh();
+        QModelIndex idxRoot = mNaviModel->getRootIndex();
+        table->setRootIndex(idxRoot);
+        table->setRootIndex(idxRoot);
+        table->expand(idxRoot);
+        table->setSortingEnabled(true);
         ctrlToolShowAll()->setCheckable(true);
     }
 }
-

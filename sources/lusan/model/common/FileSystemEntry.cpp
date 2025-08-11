@@ -469,6 +469,16 @@ void FileSystemRootEntry::setWorkspaceDirectories(const QMap<QString, QString>& 
     addDummyEntry();
 }
 
+void FileSystemRootEntry::updateWorkspaceDirectories(const QMap<QString, QString>& workspaceDirs)
+{
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceRoot)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceRoot());
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceSources)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceSources());
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceIncludes)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceIncludes());
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceDelivery)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceDelivery());
+    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceLogs)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceLogs());
+    setWorkspaceDirectories(workspaceDirs);
+}
+
 uint32_t FileSystemRootEntry::getNextId(void) const
 {
     return (mParent != nullptr ? mParent->getNextId() : ++ mNextId);

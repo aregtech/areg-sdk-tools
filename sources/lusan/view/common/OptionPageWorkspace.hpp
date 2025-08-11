@@ -31,6 +31,7 @@ class OptionPageWorkspace;
 }
 class WorkspaceEntry;
 class QDialog;
+class QLineEdit;
 
 /**
  * \brief   This class is managing the workspace settings.
@@ -74,7 +75,16 @@ public:
      * \brief   Call when the option should apply the changes.
      **/
     virtual void applyChanges(void);
-
+    
+    /**
+     * \brief   Called when the workspace directories in option pages are updated.
+     * \param   sources    The sources directory.
+     * \param   includes   The includes directory.
+     * \param   delivery   The delivery directory.
+     * \param   logs       The logs directory.
+     **/
+    virtual void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
+    
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
@@ -126,12 +136,12 @@ private:
     /**
      * \brief   Populates the list of workspaces.
      **/
-    void populateListOfWorkspaces() const;
+    void populateListOfWorkspaces();
 
     /**
      * \brief   Sets up the user interface.
      **/
-    void setupUi() const;
+    void setupUi();
 
     /**
      * \brief   Returns the selected workspace ID.
@@ -147,14 +157,32 @@ private:
      * \brief   Deletes the selected workspace item.
      **/
     void deleteSelectedWorkspaceItem() const;
+    
+    //!< Returns root path edit object
+    inline QLineEdit* ctrlRoot(void) const;
 
+    //!< Returns sources path edit object
+    inline QLineEdit* ctrlSources(void) const;
+
+    //!< Returns includes path edit object
+    inline QLineEdit* ctrlIncludes(void) const;
+
+    //!< Returns delivery path edit object
+    inline QLineEdit* ctrlDelivery(void) const;
+
+    //!< Returns logs path edit object
+    inline QLineEdit* ctrlLogs(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    std::unique_ptr<Ui::OptionPageWorkspace> mUi; //!< The user interface object.
-    MapModifiedWorkspaces mModifiedWorkspaces; //!< The map of modified workspaces.
+    std::unique_ptr<Ui::OptionPageWorkspace>    mUi;                    //!< The user interface object.
+    MapModifiedWorkspaces                       mModifiedWorkspaces;    //!< The map of modified workspaces.
+    QString                                     mSources;               //!< The sources directory of active workspace.
+    QString                                     mIncludes;              //!< The includes directory of active workspace.
+    QString                                     mDelivery;              //!< The delivery directory of active workspace.
+    QString                                     mLogs;                  //!< The logs directory of active workspace.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

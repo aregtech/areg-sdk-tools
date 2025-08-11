@@ -27,9 +27,13 @@
 #include <algorithm>
 
 OptionPageWorkspace::OptionPageWorkspace(QDialog* parent)
-    : OptionPageBase(parent)
-    , mUi(std::make_unique<Ui::OptionPageWorkspace>())
-    , mModifiedWorkspaces()
+    : OptionPageBase        (parent)
+    , mUi                   (std::make_unique<Ui::OptionPageWorkspace>())
+    , mModifiedWorkspaces   ( )
+    , mSources              ( )
+    , mIncludes             ( )
+    , mDelivery             ( )
+    , mLogs                 ( )
 {
     mUi->setupUi(this);
     setupUi();
@@ -54,21 +58,66 @@ void OptionPageWorkspace::initializePathsWithSelectedWorkspaceData(uint32_t cons
     if (!workspace)
         return;
     
-    bool isDefault = LusanApplication::getOptions().isDefaultWorkspace(workspace->getId());
+    OptionsManager& opt { LusanApplication::getOptions() };
+    bool isDefault = opt.isDefaultWorkspace(workspace->getId());
     mUi->checkDefault->setEnabled(true);
     mUi->checkDefault->setChecked(isDefault);
-    mUi->rootDirEdit->setText(workspace->getWorkspaceRoot());
-    mUi->sourceDirEdit->setText(workspace->getDirSources());
-    mUi->includeDirEdit->setText(workspace->getDirIncludes());
-    mUi->deliveryDirEdit->setText(workspace->getDirDelivery());
-    mUi->logDirEdit->setText(workspace->getDirLogs());
     mUi->workspaceEdit->setPlainText(workspace->getWorkspaceDescription());
+    
+    ctrlRoot()->setText(workspace->getWorkspaceRoot());
+    if (opt.isActiveWorkspace(workspace->getId()))
+    {
+        ctrlSources()->setText(mSources);
+        ctrlIncludes()->setText(mIncludes);
+        ctrlDelivery()->setText(mDelivery);
+        ctrlLogs()->setText(mLogs);
+    }
+    else
+    {
+        ctrlSources()->setText(workspace->getDirSources());
+        ctrlIncludes()->setText(workspace->getDirIncludes());
+        ctrlDelivery()->setText(workspace->getDirDelivery());
+        ctrlLogs()->setText(workspace->getDirLogs());
+    }
 }
 
-void OptionPageWorkspace::populateListOfWorkspaces() const
+void OptionPageWorkspace::updateWorkspaceDirectories(  const sWorkspaceDir& sources
+                                                     , const sWorkspaceDir& includes
+                                                     , const sWorkspaceDir& delivery
+                                                     , const sWorkspaceDir& logs)
+{
+    if (sources.isValid)
+        mSources = sources.location;
+    if (includes.isValid)
+        mIncludes = includes.location;
+    if (delivery.isValid)
+        mDelivery = delivery.location;
+    if (logs.isValid)
+        mLogs = logs.location;
+    
+    QListWidgetItem* selectedItem = mUi->listOfWorkspaces->currentItem();
+    if (nullptr == selectedItem)
+        return;
+    
+    uint32_t const selectedWorkspaceId{ selectedItem->data(Qt::ItemDataRole::UserRole).toUInt() };
+    if (LusanApplication::getOptions().isActiveWorkspace(selectedWorkspaceId))
+    {
+        ctrlSources()->setText(mSources);
+        ctrlIncludes()->setText(mIncludes);
+        ctrlDelivery()->setText(mDelivery);
+        ctrlLogs()->setText(mLogs);
+    }
+}
+
+void OptionPageWorkspace::populateListOfWorkspaces()
 {
     WorkspaceEntry const currentWorkspace{ LusanApplication::getActiveWorkspace() };
     std::vector<WorkspaceEntry> const& workspaces { LusanApplication::getOptions().getWorkspaceList() };
+    
+    mSources = currentWorkspace.getDirSources();
+    mIncludes = currentWorkspace.getDirIncludes();
+    mDelivery = currentWorkspace.getDirDelivery();
+    mLogs = currentWorkspace.getDirLogs();
     
     QListWidget* list = mUi->listOfWorkspaces;
     list->clear();
@@ -101,7 +150,7 @@ void OptionPageWorkspace::onDeleteButtonClicked()
         return;
 
     uint32_t const selectedWorkspaceId{ selectedItem->data(Qt::ItemDataRole::UserRole).toUInt() };
-    if (selectedWorkspaceId != LusanApplication::getActiveWorkspace().getId())
+    if (LusanApplication::getOptions().isActiveWorkspace(selectedWorkspaceId))
     {
         if ( LusanApplication::getOptions().isDefaultWorkspace(selectedWorkspaceId) )
         {
@@ -133,7 +182,7 @@ void OptionPageWorkspace::onWorkspaceSelectionChanged() const
     initializePathsWithSelectedWorkspaceData(*selectedItemId);
 }
 
-void OptionPageWorkspace::setupUi() const
+void OptionPageWorkspace::setupUi()
 {
     populateListOfWorkspaces();
     selectWorkspace(0);
@@ -234,4 +283,29 @@ std::optional<uint32_t> OptionPageWorkspace::getSelectedWorkspaceId() const
     {
         return std::nullopt;
     }
+}
+
+inline QLineEdit* OptionPageWorkspace::ctrlRoot(void) const
+{
+    return mUi->rootDirEdit;
+}
+
+inline QLineEdit* OptionPageWorkspace::ctrlSources(void) const
+{
+    return mUi->sourceDirEdit;
+}
+
+inline QLineEdit* OptionPageWorkspace::ctrlIncludes(void) const
+{
+    return mUi->includeDirEdit;
+}
+
+inline QLineEdit* OptionPageWorkspace::ctrlDelivery(void) const
+{
+    return mUi->deliveryDirEdit;
+}
+
+inline QLineEdit* OptionPageWorkspace::ctrlLogs(void) const
+{
+    return mUi->logDirEdit;
 }

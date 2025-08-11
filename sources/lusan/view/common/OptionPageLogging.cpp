@@ -130,15 +130,22 @@ void OptionPageLogging::connectSignals() const
     connect(buttonTestConnection()  , &QAbstractButton::clicked , this, &OptionPageLogging::onTestButtonClicked);
     connect(textIpAddress()         , &QLineEdit::textChanged   , this, &OptionPageLogging::onDataChanged);
     connect(textPortNumber()        , &QLineEdit::textChanged   , this, &OptionPageLogging::onDataChanged);
-    connect(textLogLocation()       , &QLineEdit::textChanged   , this, &OptionPageLogging::onLogLocationChanged);
     connect(textLogFileName()       , &QLineEdit::textChanged   , this, &OptionPageLogging::onLogFileNameChanged);
+    
+    connect(textLogLocation()       , &QLineEdit::textChanged   , [this]() {
+        QString logLocation = textLogLocation()->text();
+        emit signalWorkspaceLocationsChanged(  sWorkspaceDir{}
+                                             , sWorkspaceDir{}
+                                             , sWorkspaceDir{}
+                                             , sWorkspaceDir{true, textLogLocation()->text()});
+    });
 }
 
 void OptionPageLogging::onBrowseButtonClicked()
 {
     QString oldPath = NELusanCommon::fixPath(textLogLocation()->text());
     QString newPath = NELusanCommon::fixPath(QFileDialog::getExistingDirectory(this, tr("Open Log Directory"), oldPath, QFileDialog::ShowDirsOnly));
-    if (newPath != oldPath)
+    if ((newPath.isEmpty() == false) && (newPath != oldPath))
     {
         textLogLocation()->setText(newPath);
         setDataModified(true);
@@ -202,6 +209,19 @@ void OptionPageLogging::setData(const QString& address, const QString& hostName,
     else if (oldAddress != hostName)
     {
         textIpAddress()->setText(hostName);
+    }
+}
+
+void OptionPageLogging::updateWorkspaceDirectories( const sWorkspaceDir& sources
+                                                  , const sWorkspaceDir& includes
+                                                  , const sWorkspaceDir& delivery
+                                                  , const sWorkspaceDir& logs)
+{
+    if (logs.isValid && (textLogLocation()->text() != logs.location))
+    {
+        textLogLocation()->blockSignals(true);
+        textLogLocation()->setText(logs.location);
+        textLogLocation()->blockSignals(false);
     }
 }
 

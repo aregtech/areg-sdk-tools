@@ -155,6 +155,13 @@ public:
      * \return  The index of the root item.
      **/
     const QModelIndex& setRootPaths(const QMap<QString, QString>& paths);
+
+    /**
+     * \brief   Updates the root paths of the file system model.
+     * \param   paths   The map of root paths to update.
+     * \return  True if the root paths are updated successfully, false if update ignored.
+     **/
+    bool updateRootPaths(const QMap<QString, QString>& paths);
     
     /**
      * \brief   Returns the root paths of the file system model.

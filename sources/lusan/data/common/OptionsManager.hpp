@@ -49,9 +49,10 @@ signals:
 
     /**
      * \brief   The signal is triggered when the project directories are changed.
-     * \param   workspace   The workspace entry.
+     * \param   workspace           The workspace entry.
+     * \param   isActiveWorkspace   Indicates if the workspace is the active one.
      **/
-    void signalWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace);
+    void signalWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace, bool isActiveWorkspace);
 
 public:
     /**
@@ -189,6 +190,11 @@ public:
      * \return  True if the default workspace was successfully set, false otherwise.
      **/
     bool setDefaultWorkspace(const QString defWorkspaceRoot);
+
+    /**
+     * \brief   Checks if the given ID is the ID of active workspace.
+     **/
+    bool isActiveWorkspace(uint32_t id) const;
 
 private:
     /**

@@ -29,6 +29,7 @@ class OptionPageProjectDirsDlg;
 }
 
 class QDialog;
+class QLineEdit;
 
 //////////////////////////////////////////////////////////////////////////
 // OptionPageProjectDirs class declaration
@@ -57,15 +58,20 @@ public:
      * \brief   Call when the option should apply the changes.
      **/
     virtual void applyChanges(void);
-
+    
+    /**
+     * \brief   Called when the workspace directories in option pages are updated.
+     * \param   sources    The sources directory.
+     * \param   includes   The includes directory.
+     * \param   delivery   The delivery directory.
+     * \param   logs       The logs directory.
+     **/
+    virtual void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
+    
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
 private slots:
-    /**
-     * \brief   Slot triggered when the root directory browse button is clicked.
-     **/
-    void onRootDirBrowseBtnClicked();
     /**
      * \brief   Slot triggered when the source directory browse button is clicked.
      **/
@@ -97,6 +103,21 @@ private:
      **/
     void initializePathsWithCurrentWorkspaceData() const;
 
+    //!< Returns root path edit object
+    inline QLineEdit* ctrlRoot(void) const;
+    
+    //!< Returns sources path edit object
+    inline QLineEdit* ctrlSources(void) const;
+    
+    //!< Returns includes path edit object
+    inline QLineEdit* ctrlIncludes(void) const;
+    
+    //!< Returns delivery path edit object
+    inline QLineEdit* ctrlDelivery(void) const;
+    
+    //!< Returns logs path edit object
+    inline QLineEdit* ctrlLogs(void) const;
+    
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////

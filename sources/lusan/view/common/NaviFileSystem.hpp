@@ -71,61 +71,6 @@ public:
     NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
-// public methods
-//////////////////////////////////////////////////////////////////////////
-public:
-
-    /**
-     * \brief   Returns the file system tree view control.
-     **/
-    QTreeView* ctrlTable(void) const;
-
-    /**
-     * \brief   Returns the refresh tool button control.
-     **/
-    QToolButton* ctrlToolRefresh(void) const;
-
-    /**
-     * \brief   Returns the show all tool button control.
-     **/
-    QToolButton* ctrlToolShowAll(void) const;
-    
-    /**
-     * \brief   Returns the navigate from root (machine) tool button control.
-     **/
-    QToolButton* ctrlToolNaviRoot(void) const;
-
-    /**
-     * \brief   Returns the collapse all tool button control.
-     **/
-    QToolButton* ctrlToolCollapse(void) const;
-
-    /**
-     * \brief   Returns the new folder tool button control.
-     **/
-    QToolButton* ctrlToolNewFolder(void) const;
-
-    /**
-     * \brief   Returns the new file tool button control.
-     **/
-    QToolButton* ctrlToolNewFile(void) const;
-
-    /**
-     * \brief   Returns the open tool button control.
-     **/
-    QToolButton* ctrlToolOpen(void) const;
-
-    /**
-     * \brief   Returns the edit tool button control.
-     **/
-    QToolButton* ctrlToolEdit(void) const;
-
-    /**
-     * \brief   Returns the delete tool button control.
-     **/
-    QToolButton* ctrlToolDelete(void) const;
-
-//////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
@@ -140,6 +85,18 @@ protected:
      * \param   cell    The index of the cell.
      **/
     virtual QString getCellText(const QModelIndex& cell) const override;
+
+    /**
+     * \brief   This method is called when the apply button in options dialog is pressed.
+     *          It can be used to apply changes made in the options dialog.
+     **/
+    virtual void optionApplied(void) override;
+
+    /**
+     * \brief   This method is called when the options dialog is closed.
+     * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
+     **/
+    virtual void optionClosed(bool OKpressed) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -232,6 +189,56 @@ private slots:
 private:
 
     /**
+     * \brief   Returns the file system tree view control.
+     **/
+    QTreeView* ctrlTable(void) const;
+
+    /**
+     * \brief   Returns the refresh tool button control.
+     **/
+    QToolButton* ctrlToolRefresh(void) const;
+
+    /**
+     * \brief   Returns the show all tool button control.
+     **/
+    QToolButton* ctrlToolShowAll(void) const;
+
+    /**
+     * \brief   Returns the navigate from root (machine) tool button control.
+     **/
+    QToolButton* ctrlToolNaviRoot(void) const;
+
+    /**
+     * \brief   Returns the collapse all tool button control.
+     **/
+    QToolButton* ctrlToolCollapse(void) const;
+
+    /**
+     * \brief   Returns the new folder tool button control.
+     **/
+    QToolButton* ctrlToolNewFolder(void) const;
+
+    /**
+     * \brief   Returns the new file tool button control.
+     **/
+    QToolButton* ctrlToolNewFile(void) const;
+
+    /**
+     * \brief   Returns the open tool button control.
+     **/
+    QToolButton* ctrlToolOpen(void) const;
+
+    /**
+     * \brief   Returns the edit tool button control.
+     **/
+    QToolButton* ctrlToolEdit(void) const;
+
+    /**
+     * \brief   Returns the delete tool button control.
+     **/
+    QToolButton* ctrlToolDelete(void) const;
+
+    /**
      * \brief   Updates the data of the file system.
      **/
     void updateData(void);
@@ -259,14 +266,22 @@ private:
      **/
     QFileInfo getFileInfo(const QModelIndex & index) const;
 
+    /**
+     * \brief   Sets the root paths for the file system model.
+     * \param   workspace   The workspace entry object that contains information of paths.
+     * \return  The map of root paths.
+     **/
+    RootPaths setupRootPaths(const WorkspaceEntry& workspace);
+
 private slots:
 
     /**
      * \brief   Triggered when the workspace directories are changed.
-     * \param   workspace   The workspace entry, which directories have being changed.
-     *                      Normally, it is the directory of the active workspace.
+     * \param   workspace           The workspace entry, which directories have being changed.
+     *                              Normally, it is the directory of the active workspace.
+     * \param   isActiveWorkspace   The flag indicating whether the given workspace is currently active or not.
      **/
-    void onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace);
+    void onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspace, bool isActiveWorkspace);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members

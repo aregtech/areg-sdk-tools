@@ -62,7 +62,7 @@ private:
     static const QString    _textConnectionFailed;  //!< Status text indicating that the connection trigger to the log collector service failed.
     static const QString    _textTestFailed;        //!< Status text indicating that the log collector service connection test failed.
     static const QString    _textTestCanceled;      //!< Status text indicating that the connection to the log collector service was canceled.
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -106,7 +106,16 @@ public:
      * \param   logLocation     The directory where the log file is stored.
      **/
     void setData(const QString & address, const QString& hostName, uint16_t port, const QString & logFile, const QString & logLocation);
-
+    
+    /**
+     * \brief   Called when the workspace directories in option pages are updated.
+     * \param   sources    The sources directory.
+     * \param   includes   The includes directory.
+     * \param   delivery   The delivery directory.
+     * \param   logs       The logs directory.
+     **/
+    virtual void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
+    
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////

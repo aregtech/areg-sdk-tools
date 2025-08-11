@@ -56,26 +56,21 @@ WorkspaceEntry OptionsManager::addWorkspace(const QString& root, const QString& 
 
 void OptionsManager::addWorkspace(const WorkspaceEntry & workspace)
 {
-    bool found{false};
-    for (auto& entry : mWorkspaces)
-    {
-        if (entry.getWorkspaceRoot() == workspace.getWorkspaceRoot())
-        {
-            uint32_t id = entry.getId();
-            entry = workspace;
-            entry.setId(id);
-            found = true;
-            break;
-        }
-    }
-    
-    if (found == false)
+    auto workspaceIt{
+                     std::find_if(std::begin(mWorkspaces), std::end(mWorkspaces),
+                                  [workspace](WorkspaceEntry const& w) { return w.getId() == workspace.getId(); }) };
+    if (std::end(mWorkspaces) == workspaceIt)
     {
         mWorkspaces.push_back(workspace);
         mWorkspaces[mWorkspaces.size() - 1].setId(++mCurId);
+        workspaceIt = mWorkspaces.begin() + (mWorkspaces.size() - 1);
     }
-
-    emit signalWorkspaceDirectoriesChanged(workspace);
+    else
+    {
+        *workspaceIt = workspace;
+    }
+    
+    emit signalWorkspaceDirectoriesChanged(*workspaceIt, workspaceIt->getKey() == mActiveKey);
 }
 
 bool OptionsManager::updateWorkspace(const WorkspaceEntry & workspace)
@@ -90,6 +85,7 @@ bool OptionsManager::updateWorkspace(const WorkspaceEntry & workspace)
         return false;
 
     *workspaceIt = workspace;
+    emit signalWorkspaceDirectoriesChanged(*workspaceIt, workspaceIt->getKey() == mActiveKey);
 
     return true;
 }
@@ -330,6 +326,24 @@ bool OptionsManager::setDefaultWorkspace(const QString defWorkspaceRoot)
         mDefWorkspace = workspace.getId();
     
     return (mDefWorkspace != 0u);
+}
+
+bool OptionsManager::isActiveWorkspace(uint32_t id) const
+{
+    bool result{ false };
+    if (mActiveKey == 0)
+        return result;
+    
+    for (const auto & entry : mWorkspaces)
+    {
+        if (entry.getKey() == mActiveKey)
+        {
+            result = (entry.getId() == id);
+            break;
+        }
+    }
+    
+    return result;
 }
 
 void OptionsManager::_readOptionList(QXmlStreamReader& xml)
