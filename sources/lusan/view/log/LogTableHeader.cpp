@@ -47,9 +47,9 @@ LogTableHeader::LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::
 
 void LogTableHeader::resetFilters(void)
 {
-    for (LogHeaderItem* item : mHeaders)
+    for (QList<LogHeaderItem*>::const_iterator item = mHeaders.constBegin(); item != mHeaders.constEnd(); ++item)
     {
-        item->resetFilter();
+        (*item)->resetFilter();
     }
 }
 

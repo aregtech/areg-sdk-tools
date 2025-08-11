@@ -292,8 +292,3 @@ void MdiChild::zoomOut(int range)
     font.setPointSize(font.pointSize() - range);
     setFont(font);
 }
-
-void MdiChild::copyAvailable(bool available)
-{
-    
-}

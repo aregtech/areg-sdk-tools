@@ -79,12 +79,12 @@ void ProjectSettings::connectSignals() const
     disconnect(mUi->buttonBox   , &QDialogButtonBox::accepted, this, &QDialog::accept); // disable passing to QDialog
     connect(mUi->buttonBox      , &QDialogButtonBox::accepted, this, &ProjectSettings::onAcceptClicked);
     
-    connect(mOptionProjectDirs  , &OptionPageProjectDirs::signalWorkspaceLocationsChanged
+    connect(mOptionProjectDirs  , &OptionPageProjectDirs::signalWorkspaceLocationsChanged, this
             , [this](const OptionPageBase::sWorkspaceDir & sources, const OptionPageBase::sWorkspaceDir& includes, const OptionPageBase::sWorkspaceDir& delivery, const OptionPageBase::sWorkspaceDir& logs) {
                 static_cast<OptionPageBase *>(mOptionPageLogging  )->updateWorkspaceDirectories(sources, includes, delivery, logs);
                 static_cast<OptionPageBase *>(mOptionPageWorkspace)->updateWorkspaceDirectories(sources, includes, delivery, logs);
     });
-    connect(mOptionPageLogging  , &OptionPageLogging::signalWorkspaceLocationsChanged
+    connect(mOptionPageLogging  , &OptionPageLogging::signalWorkspaceLocationsChanged, this
             , [this](const OptionPageBase::sWorkspaceDir & sources, const OptionPageBase::sWorkspaceDir& includes, const OptionPageBase::sWorkspaceDir& delivery, const OptionPageBase::sWorkspaceDir& logs) {
                 static_cast<OptionPageBase *>(mOptionProjectDirs  )->updateWorkspaceDirectories(sources, includes, delivery, logs);
                 static_cast<OptionPageBase *>(mOptionPageWorkspace)->updateWorkspaceDirectories(sources, includes, delivery, logs);

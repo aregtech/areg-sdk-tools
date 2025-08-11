@@ -57,7 +57,7 @@ public:
     /**
      * \brief   Call when the option should apply the changes.
      **/
-    virtual void applyChanges(void);
+    virtual void applyChanges(void) override;
     
     /**
      * \brief   Called when the workspace directories in option pages are updated.
@@ -96,7 +96,7 @@ private:
     /**
      * \brief   Connects the signal handlers.
      **/
-    void connectSignalHandlers() const;
+    void connectSignalHandlers();
  
     /**
      * \brief   Initializes the paths with the current workspace data.

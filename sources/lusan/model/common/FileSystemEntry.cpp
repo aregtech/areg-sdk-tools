@@ -333,9 +333,9 @@ void FileSystemEntry::deleteEntries(void)
     }
     else
     {
-        for (FileSystemEntry * entry : mChildren)
+        for (ChildEntries::const_iterator entry = mChildren.constBegin(); entry != mChildren.constEnd(); ++entry)
         {
-            delete entry;
+            delete (*entry);
         }
     }
     

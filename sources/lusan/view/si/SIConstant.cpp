@@ -512,7 +512,7 @@ void SIConstant::setupSignals(void)
     connect(mDetails->ctrlDeprecateHint(),&QLineEdit::textEdited    , this, &SIConstant::onDeprecateHintChanged);
     connect(mDetails->ctrlDescription(),&QPlainTextEdit::textChanged, this, &SIConstant::onDescriptionChanged);
 
-    connect(mTableCell                , &TableCell::editorDataChanged,this, &SIConstant::onEditorDataChanged);
+    connect(mTableCell                , &TableCell::signalEditorDataChanged,this, &SIConstant::onEditorDataChanged);
 }
 
 void SIConstant::blockBasicSignals(bool doBlock)

@@ -556,7 +556,7 @@ void SIAttribute::setupSignals(void)
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textEdited, this, &SIAttribute::onDeprecateHintChanged);
     connect(mDetails->ctrlDescription(), &QPlainTextEdit::textChanged, this, &SIAttribute::onDescriptionChanged);
 
-    connect(mTableCell, &TableCell::editorDataChanged, this, &SIAttribute::onEditorDataChanged);
+    connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SIAttribute::onEditorDataChanged);
 }
 
 void SIAttribute::blockBasicSignals(bool doBlock)

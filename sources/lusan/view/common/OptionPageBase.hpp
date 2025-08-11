@@ -125,7 +125,10 @@ signals:
      * \param   delivery   The delivery directory.
      * \param   logs       The logs directory.
      **/
-    void signalWorkspaceLocationsChanged(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) const;
+    void signalWorkspaceLocationsChanged( const OptionPageBase::sWorkspaceDir& sources
+                                        , const OptionPageBase::sWorkspaceDir& includes
+                                        , const OptionPageBase::sWorkspaceDir& delivery
+                                        , const OptionPageBase::sWorkspaceDir& logs);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

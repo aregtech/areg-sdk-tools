@@ -19,7 +19,6 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
-#include "lusan/data/log/LogObserver.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
@@ -30,8 +29,20 @@
 
 #include "areg/base/NESocket.hpp"
 
+#include <QAction>
+#include <QCloseEvent>
+#include <QDir>
+#include <QFile>
+#include <QFileDialog>
 #include <QFileInfo>
-#include <QtWidgets>
+#include <QMdiSubWindow>
+#include <QMenu>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QSettings>
+#include <QStatusBar>
+#include <QStatusBar>
+#include <QToolBar>
 
 namespace
 {
@@ -310,9 +321,9 @@ void MdiMainWindow::onFileNewLog()
     {
         bool found{false};
         QList<QMdiSubWindow *> subwindows = mMdiArea.subWindowList();
-        for (QMdiSubWindow * sub : subwindows)
+        for (QList<QMdiSubWindow *>::const_iterator sub = subwindows.constBegin(); sub != subwindows.constEnd(); ++sub)
         {
-            if (sub == mLiveLogWnd)
+            if ((*sub) == mLiveLogWnd)
             {
                 found = true;
                 break;
@@ -584,9 +595,6 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
         mdiSub->setWindowTitle(QString::fromStdString(File::getFileNameWithExtension(stdFilePath.c_str()).getData()));
     }
 
-    connect(child, &ServiceInterface::copyAvailable, &mActEditCut, &QAction::setEnabled);
-    connect(child, &ServiceInterface::copyAvailable, &mActEditCopy, &QAction::setEnabled);
-    
     mMdiArea.showMaximized();
     return child;
 }
@@ -701,20 +709,20 @@ void MdiMainWindow::_createActions()
     iconNavi.addFile(QString::fromUtf8(":/icons/View Navigator Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
     initAction(mActViewNavigator, iconNavi, tr("&Navigator Window"));
     mActViewNavigator.setStatusTip(tr("View Navigator Window"));
-    connect(&mActViewNavigator, &QAction::triggered, [this](){
+    connect(&mActViewNavigator, &QAction::triggered, this, [this](){
         if (mNaviDock.isHidden()) mNaviDock.show();
     });
 
     initAction(mActViewWokspace, QIcon(), tr("&Workspace Navigator"));
     mActViewWokspace.setStatusTip(tr("View Workspace Navigator Window"));
-    connect(&mActViewWokspace, &QAction::triggered, [this]() {
+    connect(&mActViewWokspace, &QAction::triggered, this, [this]() {
         if (mNaviDock.isHidden()) mNaviDock.show();
         mNaviDock.showTab(NavigationDock::TabNameFileSystem);
     });
 
     initAction(mActViewLogs, QIcon(), tr("&Logs Navigator"));
     mActViewLogs.setStatusTip(tr("View Logs Navigator Window"));
-    connect(&mActViewLogs, &QAction::triggered, [this] () {
+    connect(&mActViewLogs, &QAction::triggered, this, [this] () {
         if (mNaviDock.isHidden()) mNaviDock.show();
         mNaviDock.showTab(NavigationDock::TabLiveLogsExplorer);
         if (mLiveLogWnd != nullptr) mLiveLogWnd->activateWindow();
@@ -724,7 +732,7 @@ void MdiMainWindow::_createActions()
     iconOutput.addFile(QString::fromUtf8(":/icons/View Output Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
     initAction(mActViewOutput, iconOutput, tr("&Output Window"));
     mActViewOutput.setStatusTip(tr("View Output Window"));
-    connect(&mActViewOutput, &QAction::triggered, [this](){
+    connect(&mActViewOutput, &QAction::triggered, this, [this](){
         if (mOutputDock.isHidden()) mOutputDock.show();
     });
 

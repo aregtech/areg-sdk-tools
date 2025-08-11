@@ -24,7 +24,6 @@
  ************************************************************************/
 #include "lusan/view/common/OptionPageBase.hpp"
 
-#include "lusan/common/NELusanCommon.hpp"
 #include "areg/component/NEService.hpp"
 
 #include <QValidator>
@@ -174,7 +173,7 @@ private:
     /**
      * \brief   Connects the signals and slots for the log settings.
      **/
-    void connectSignals() const;
+    void connectSignals();
 
     /**
      * \brief   Saves the log settings data.

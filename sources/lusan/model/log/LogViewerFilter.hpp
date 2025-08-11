@@ -97,11 +97,15 @@ public slots:
      **/
     void setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
 
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
     /**
      * \brief   Clears all filters.
      **/
     virtual void clearFilters(void);
-    
+
     /**
      * \brief   Returns true if the given source row has exact match of the filters.
      *          The method returns false if source model is not set or there are no filters.
@@ -111,11 +115,7 @@ public slots:
      * \return  True if the row has exact match of the filter.
      **/
     virtual bool filterExactMatch(const QModelIndex& index) const;
-    
-//////////////////////////////////////////////////////////////////////////
-// Overrides
-//////////////////////////////////////////////////////////////////////////
-protected:
+
     /**
      * \brief   Returns true if the given source row should be included in the model.
      * \param   row      The row index in the source model.

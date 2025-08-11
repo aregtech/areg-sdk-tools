@@ -158,20 +158,20 @@ void LiveLogsModel::_setupSignals(bool doSetup)
         mConLogs                = connect(log, &LogObserver::signalLogMessage            , this, &LiveLogsModel::slotLogMessage);
         mConInstancesDisconnect = connect(log, &LogObserver::signalLogInstancesDisconnect, this, &LiveLogsModel::slotLogInstancesDisconnect);
         
-        mConLogger              = connect(log, &LogObserver::signalLogServiceConnected, [this]() {
+        mConLogger              = connect(log, &LogObserver::signalLogServiceConnected   , this, [this]() {
         });
-        mConInstancesConnect    = connect(log, &LogObserver::signalLogInstancesConnect, [this](const std::vector<NEService::sServiceConnectedInstance>& instances) {
+        mConInstancesConnect    = connect(log, &LogObserver::signalLogInstancesConnect   , this, [this](const std::vector<NEService::sServiceConnectedInstance>& instances) {
             addInstances(instances, true);
             emit signalInstanceAvailable(instances);
         });
-        mConServiceDisconnected = connect(log, &LogObserver::signalLogServiceDisconnected, [this] {
+        mConServiceDisconnected = connect(log, &LogObserver::signalLogServiceDisconnected, this, [this] {
             emit signalLogServiceDisconnected();
         });
-        mConRegisterScopes      = connect(log, &LogObserver::signalLogRegisterScopes, [this](ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes) {
+        mConRegisterScopes      = connect(log, &LogObserver::signalLogRegisterScopes     , this, [this](ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes) {
             mScopes[cookie] = scopes;
             emit signalScopesAvailable(cookie, scopes);
         });
-        mConUpdateScopes        = connect(log, &LogObserver::signalLogUpdateScopes, [this](ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes) {
+        mConUpdateScopes        = connect(log, &LogObserver::signalLogUpdateScopes       , this, [this](ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes) {
             mScopes[cookie] = scopes;
             emit signalScopesUpdated(cookie, scopes);
         });

@@ -91,7 +91,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnSearch->setToolTip(tr("Find text (Ctrl + F, F3, Alt + F)"));
                 mBtnSearch->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
                 mBtnSearch->setAutoRaise(true);
-                connect(mBtnSearch, &QToolButton::toggled, [this](bool checked) {
+                connect(mBtnSearch, &QToolButton::toggled, this, [this](bool checked) {
                         emit signalButtonSearchClicked(checked);
                         emit signalSearchText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
                         setFocus();
@@ -119,7 +119,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnMatchCase->setStyleSheet(NELusanCommon::getStyleToolbutton());
                 mBtnMatchCase->setAutoRaise(true);
                 layout->addWidget(mBtnMatchCase, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-                connect(mBtnMatchCase, &QToolButton::toggled, [this](bool checked) {
+                connect(mBtnMatchCase, &QToolButton::toggled, this, [this](bool checked) {
                         emit signalButtonSearchMatchWordClicked(checked);
                         setFocus();
                     });
@@ -145,7 +145,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnMatchWord->setStyleSheet(NELusanCommon::getStyleToolbutton());
                 mBtnMatchWord->setAutoRaise(true);
                 layout->addWidget(mBtnMatchWord, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-                connect(mBtnMatchWord, &QToolButton::toggled, [this](bool checked) {
+                connect(mBtnMatchWord, &QToolButton::toggled, this, [this](bool checked) {
                         emit signalButtonSearchMatchCaseClicked(checked);
                         setFocus();
                     });
@@ -171,7 +171,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnWildCard->setStyleSheet(NELusanCommon::getStyleToolbutton());
                 mBtnWildCard->setAutoRaise(true);
                 layout->addWidget(mBtnWildCard, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-                connect(mBtnWildCard, &QToolButton::toggled, [this](bool checked) {
+                connect(mBtnWildCard, &QToolButton::toggled, this, [this](bool checked) {
                         emit signalButtonSearchWildCardClicked(checked);
                         setFocus();
                     });
@@ -198,7 +198,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnBackward->setAutoRaise(true);
                 mBtnBackward->setArrowType(Qt::ArrowType::UpArrow);
                 layout->addWidget(mBtnBackward, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
-                connect(mBtnBackward, &QToolButton::toggled, [this](bool checked) {
+                connect(mBtnBackward, &QToolButton::toggled, this, [this](bool checked) {
                         emit signalButtonSearchMatchCaseClicked(checked);
                         setFocus();
                     });

@@ -38,32 +38,32 @@ OptionPageProjectDirs::~OptionPageProjectDirs()
 {
 }
 
-void OptionPageProjectDirs::connectSignalHandlers() const
+void OptionPageProjectDirs::connectSignalHandlers()
 {
     connect(mUi->sourceDirBrowseBtn     , &QPushButton::clicked, this, &OptionPageProjectDirs::onSourceDirBrowseBtnClicked);
     connect(mUi->includeDirBrowseBtn    , &QPushButton::clicked, this, &OptionPageProjectDirs::onIncludeDirBrowseBtnClicked);
     connect(mUi->deliveryDirBrowseBtn   , &QPushButton::clicked, this, &OptionPageProjectDirs::onDeliveryDirBrowseBtnClicked);
     connect(mUi->logDirBrowseBtn        , &QPushButton::clicked, this, &OptionPageProjectDirs::onLogDirBrowseBtnClicked);
     
-    connect(ctrlSources()               , &QLineEdit::textChanged   ,[this](){
+    connect(ctrlSources()               , &QLineEdit::textChanged   , this, [this](){
         emit signalWorkspaceLocationsChanged( sWorkspaceDir{true, ctrlSources()->text()}
                                             , sWorkspaceDir{true, ctrlIncludes()->text()}
                                             , sWorkspaceDir{true, ctrlDelivery()->text()}
                                             , sWorkspaceDir{true, ctrlLogs()->text()});        
     });
-    connect(ctrlIncludes()            , &QLineEdit::textChanged   ,[this](){
+    connect(ctrlIncludes()            , &QLineEdit::textChanged   , this, [this](){
         emit signalWorkspaceLocationsChanged( sWorkspaceDir{true, ctrlSources()->text()}
                                             , sWorkspaceDir{true, ctrlIncludes()->text()}
                                             , sWorkspaceDir{true, ctrlDelivery()->text()}
                                             , sWorkspaceDir{true, ctrlLogs()->text()});        
     });
-    connect(ctrlDelivery()            , &QLineEdit::textChanged   ,[this](){
+    connect(ctrlDelivery()            , &QLineEdit::textChanged   , this, [this](){
         emit signalWorkspaceLocationsChanged( sWorkspaceDir{true, ctrlSources()->text()}
                                             , sWorkspaceDir{true, ctrlIncludes()->text()}
                                             , sWorkspaceDir{true, ctrlDelivery()->text()}
                                             , sWorkspaceDir{true, ctrlLogs()->text()});        
     });
-    connect(ctrlLogs()                  , &QLineEdit::textChanged   ,[this](){
+    connect(ctrlLogs()                  , &QLineEdit::textChanged   , this, [this](){
         emit signalWorkspaceLocationsChanged( sWorkspaceDir{true, ctrlSources()->text()}
                                             , sWorkspaceDir{true, ctrlIncludes()->text()}
                                             , sWorkspaceDir{true, ctrlDelivery()->text()}
@@ -145,9 +145,9 @@ void OptionPageProjectDirs::applyChanges()
     OptionPageBase::applyChanges();
 }
 
-void OptionPageProjectDirs::updateWorkspaceDirectories( const sWorkspaceDir& sources
-                                                      , const sWorkspaceDir& includes
-                                                      , const sWorkspaceDir& delivery
+void OptionPageProjectDirs::updateWorkspaceDirectories( const sWorkspaceDir& /*sources*/
+                                                      , const sWorkspaceDir& /*includes*/
+                                                      , const sWorkspaceDir& /*delivery*/
                                                       , const sWorkspaceDir& logs)
 {
     if (logs.isValid && (ctrlLogs()->text() != logs.location))

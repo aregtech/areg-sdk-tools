@@ -124,7 +124,7 @@ void OptionPageLogging::setupDialog()
     setFixedSize(size());
 }
 
-void OptionPageLogging::connectSignals() const
+void OptionPageLogging::connectSignals()
 {
     connect(buttonBrowseDirs()      , &QAbstractButton::clicked , this, &OptionPageLogging::onBrowseButtonClicked);
     connect(buttonTestConnection()  , &QAbstractButton::clicked , this, &OptionPageLogging::onTestButtonClicked);
@@ -132,8 +132,7 @@ void OptionPageLogging::connectSignals() const
     connect(textPortNumber()        , &QLineEdit::textChanged   , this, &OptionPageLogging::onDataChanged);
     connect(textLogFileName()       , &QLineEdit::textChanged   , this, &OptionPageLogging::onLogFileNameChanged);
     
-    connect(textLogLocation()       , &QLineEdit::textChanged   , [this]() {
-        QString logLocation = textLogLocation()->text();
+    connect(textLogLocation()       , &QLineEdit::textChanged   , this, [this]() {
         emit signalWorkspaceLocationsChanged(  sWorkspaceDir{}
                                              , sWorkspaceDir{}
                                              , sWorkspaceDir{}
@@ -212,9 +211,9 @@ void OptionPageLogging::setData(const QString& address, const QString& hostName,
     }
 }
 
-void OptionPageLogging::updateWorkspaceDirectories( const sWorkspaceDir& sources
-                                                  , const sWorkspaceDir& includes
-                                                  , const sWorkspaceDir& delivery
+void OptionPageLogging::updateWorkspaceDirectories( const sWorkspaceDir& /*sources*/
+                                                  , const sWorkspaceDir& /*includes*/
+                                                  , const sWorkspaceDir& /*delivery*/
                                                   , const sWorkspaceDir& logs)
 {
     if (logs.isValid && (textLogLocation()->text() != logs.location))

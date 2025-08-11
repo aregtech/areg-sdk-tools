@@ -112,7 +112,7 @@ LogTextFilter::LogTextFilter(bool isExtended, QWidget* parent)
     if (isExtended)
     {
         mLineEdit = new SearchLineEdit(QList<SearchLineEdit::eToolButton>{SearchLineEdit::eToolButton::ToolButtonMatchCase, SearchLineEdit::eToolButton::ToolButtonMatchWord, SearchLineEdit::eToolButton::ToolButtonWildCard}, QSize(20, 20), this);
-        connect(static_cast<SearchLineEdit *>(mLineEdit), &SearchLineEdit::signalFilterText, [this](const QString & text, bool isCaseSensitive, bool isWholeWord, bool isWildCard){
+        connect(static_cast<SearchLineEdit *>(mLineEdit), &SearchLineEdit::signalFilterText, this, [this](const QString & text, bool isCaseSensitive, bool isWholeWord, bool isWildCard){
             emit signalFilterTextChanged(text, isCaseSensitive, isWholeWord, isWildCard);
         });
         connect(static_cast<SearchLineEdit*>(mLineEdit), &SearchLineEdit::signalButtonSearchMatchCaseClicked, this, &LogTextFilter::slotToolbuttonChecked);
@@ -145,11 +145,14 @@ void LogTextFilter::setText(const QString & newText)
 void LogTextFilter::slotToolbuttonChecked(bool checked)
 {
     SearchLineEdit* srch = static_cast<SearchLineEdit*>(mLineEdit);
-    QString textFilter{ srch != nullptr ? srch->text() : QString() };
-    if (textFilter.isEmpty())
-        return;
-
-    emit signalFilterTextChanged(textFilter, srch->isMatchCaseChecked(), srch->isMatchWordChecked(), srch->isWildCardChecked());
+    if (srch != nullptr)
+    {
+        QString textFilter{ srch->text()};
+        if (textFilter.isEmpty() == false)
+        {
+            emit signalFilterTextChanged(textFilter, srch->isMatchCaseChecked(), srch->isMatchWordChecked(), srch->isWildCardChecked());
+        }
+    }
 }
 
 void LogTextFilter::clearFilter(void)

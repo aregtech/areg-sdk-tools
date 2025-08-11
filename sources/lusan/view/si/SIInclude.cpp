@@ -434,7 +434,7 @@ void SIInclude::setupSignals(void)
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::textChanged, this, &SIInclude::onDeprecateHint);
     connect(mDetails->ctrlDescription(), &QPlainTextEdit::textChanged, this, &SIInclude::onDescriptionChanged);
 
-    connect(mTableCell, &TableCell::editorDataChanged, this, &SIInclude::onEditorDataChanged);
+    connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SIInclude::onEditorDataChanged);
 }
 
 void SIInclude::blockBasicSignals(bool doBlock)

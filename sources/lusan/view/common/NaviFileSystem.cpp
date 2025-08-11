@@ -411,7 +411,7 @@ void NaviFileSystem::setupSignals(void)
     connect(ctrlTable()             , &QTreeView::entered,        this, &NaviFileSystem::onTreeViewActivated);
     connect(ctrlTable()->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &NaviFileSystem::onTreeSelectinoRowChanged);
 
-    connect(mTableCell, &TableCell::editorDataChanged, this, &NaviFileSystem::onEditorDataChanged);
+    connect(mTableCell, &TableCell::signalEditorDataChanged, this, &NaviFileSystem::onEditorDataChanged);
 
     connect(&LusanApplication::getOptions(), &OptionsManager::signalWorkspaceDirectoriesChanged, this, &NaviFileSystem::onWorkspaceDirectoriesChanged);
 }

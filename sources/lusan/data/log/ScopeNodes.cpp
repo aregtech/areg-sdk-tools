@@ -119,13 +119,13 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent /*= null
 
 ScopeNode::~ScopeNode(void)
 {
-    for (auto node : mChildLeafs )
+    for (const auto& node : mChildLeafs )
     {
         Q_ASSERT(node.second != nullptr);
         delete node.second;
     }
     
-    for (auto node : mChildNodes)
+    for (const auto& node : mChildNodes)
     {
         Q_ASSERT(node.second != nullptr);
         delete node.second;
@@ -422,12 +422,12 @@ void ScopeNode::resetPrioritiesRecursive(bool skipLeafs /*= false*/)
 
 void ScopeNode::refreshPrioritiesRecursive(void)
 {
-    for (auto node : mChildNodes)
+    for (const auto& node : mChildNodes)
     {
         node.second->refreshPrioritiesRecursive();
     }
 
-    for (auto leaf : mChildLeafs)
+    for (const auto& leaf : mChildLeafs)
     {
         ScopeNodeBase* node = leaf.second;
         Q_ASSERT(node != nullptr);
@@ -440,14 +440,14 @@ QList<ScopeNodeBase*> ScopeNode::getNodesWithPriority(void) const
     QList<ScopeNodeBase*> result = ScopeNodeBase::getNodesWithPriority();
     if (result.isEmpty())
     {
-        for (auto node : mChildNodes)
+        for (const auto& node : mChildNodes)
         {
             QList<ScopeNodeBase*> list = node.second->getNodesWithPriority();
             if (list.isEmpty() == false)
                 result.append(list);
         }
         
-        for (auto node : mChildLeafs)
+        for (const auto& node : mChildLeafs)
         {
             QList<ScopeNodeBase*> list = node.second->getNodesWithPriority();
             if (list.isEmpty() == false)
@@ -463,12 +463,12 @@ int ScopeNode::extractNodesWithPriority(QList<ScopeNodeBase*>& list) const
     int result{ ScopeNodeBase::extractNodesWithPriority(list) };
     if (result == 0)
     {
-        for (auto node : mChildNodes)
+        for (const auto& node : mChildNodes)
         {
             result += node.second->extractNodesWithPriority(list);
         }
 
-        for (auto node : mChildLeafs)
+        for (const auto& node : mChildLeafs)
         {
             result += node.second->extractNodesWithPriority(list);
         }
@@ -480,12 +480,12 @@ int ScopeNode::extractNodesWithPriority(QList<ScopeNodeBase*>& list) const
 int ScopeNode::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const
 {
     int result{ 0 };
-    for (auto node : mChildNodes)
+    for (const auto& node : mChildNodes)
     {
         result += node.second->extractNodesWithPriority(list);
     }
 
-    for (auto node : mChildLeafs)
+    for (const auto& node : mChildLeafs)
     {
         result += node.second->extractNodesWithPriority(list);
     }
