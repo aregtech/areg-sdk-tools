@@ -177,21 +177,21 @@ void NavigationDock::initSize()
 
 void NavigationDock::onOptionsOpening(void)
 {
-    mFileSystem.optionOpenning();
-    mLiveScopes.optionOpenning();
-    mOfflineScopes.optionOpenning();
+    static_cast<NavigationWindow &>(mFileSystem).optionOpenning();
+    static_cast<NavigationWindow &>(mLiveScopes).optionOpenning();
+    static_cast<NavigationWindow &>(mOfflineScopes).optionOpenning();
 }
 
 void NavigationDock::onOptionsApplied(void)
 {
-    mFileSystem.optionApplied();
-    mLiveScopes.optionApplied();
-    mOfflineScopes.optionApplied();
+    static_cast<NavigationWindow &>(mFileSystem).optionApplied();
+    static_cast<NavigationWindow &>(mLiveScopes).optionApplied();
+    static_cast<NavigationWindow &>(mOfflineScopes).optionApplied();
 }
 
 void NavigationDock::onOptionsClosed(bool pressedOK)
 {
-    mFileSystem.optionClosed(pressedOK);
-    mLiveScopes.optionClosed(pressedOK);
-    mOfflineScopes.optionClosed(pressedOK);
+    static_cast<NavigationWindow &>(mFileSystem).optionClosed(pressedOK);
+    static_cast<NavigationWindow &>(mLiveScopes).optionClosed(pressedOK);
+    static_cast<NavigationWindow &>(mOfflineScopes).optionClosed(pressedOK);
 }

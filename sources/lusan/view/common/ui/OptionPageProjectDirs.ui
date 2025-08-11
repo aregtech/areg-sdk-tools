@@ -66,10 +66,20 @@
       <property name="placeholderText">
        <string>Set project sources</string>
       </property>
+      <property name="clearButtonEnabled">
+       <bool>false</bool>
+      </property>
      </widget>
     </item>
     <item row="0" column="2">
-     <widget class="QLineEdit" name="rootDirEdit"/>
+     <widget class="QLineEdit" name="rootDirEdit">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
     <item row="3" column="3" colspan="2">
      <widget class="QPushButton" name="deliveryDirBrowseBtn">
@@ -92,17 +102,13 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="3" colspan="2">
-     <widget class="QPushButton" name="rootDirBrowseBtn">
-      <property name="text">
-       <string>Browse</string>
-      </property>
-     </widget>
-    </item>
     <item row="2" column="2">
      <widget class="QLineEdit" name="includeDirEdit">
       <property name="placeholderText">
        <string>Set additional includes</string>
+      </property>
+      <property name="clearButtonEnabled">
+       <bool>false</bool>
       </property>
      </widget>
     </item>
@@ -180,7 +186,6 @@
  </widget>
  <tabstops>
   <tabstop>rootDirEdit</tabstop>
-  <tabstop>rootDirBrowseBtn</tabstop>
   <tabstop>sourceDirEdit</tabstop>
   <tabstop>sourceDirBrowseBtn</tabstop>
   <tabstop>includeDirEdit</tabstop>

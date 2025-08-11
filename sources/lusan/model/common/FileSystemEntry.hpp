@@ -521,6 +521,12 @@ public:
      * \param   workspaceDirs   The list of workspace directories that contains file path and display name pair.
      **/
     void setWorkspaceDirectories(const QMap<QString, QString>& workspaceDirs);
+
+    /**
+     * \brief   Updates the workspace directories for the root entry.
+     * \param   workspaceDirs   The list of workspace directories that contains file path and display name pair.
+     **/
+    void updateWorkspaceDirectories(const QMap<QString, QString>& workspaceDirs);
     
 //////////////////////////////////////////////////////////////////////////
 // Overrides

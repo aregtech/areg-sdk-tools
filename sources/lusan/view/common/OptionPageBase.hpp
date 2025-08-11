@@ -32,6 +32,19 @@ class QDialog;
  **/
 class OptionPageBase : public QWidget
 {
+    Q_OBJECT
+    
+//////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
+public:
+    //!< Directory path data
+    struct sWorkspaceDir
+    {
+        bool    isValid {false};    //!< True, if parameter is valid. False, otherwise
+        QString location{ };        //!< The path of directory
+    };
+        
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -60,6 +73,15 @@ public:
      * \brief   Triggered, letting option page object to display a warning message.
      **/
     virtual void warnMessage(void);
+
+    /**
+     * \brief   Called when the workspace directories in option pages are updated.
+     * \param   sources    The sources directory.
+     * \param   includes   The includes directory.
+     * \param   delivery   The delivery directory.
+     * \param   logs       The logs directory.
+     **/
+    virtual void updateWorkspaceDirectories(const sWorkspaceDir & sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs);
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -90,6 +112,20 @@ public:
      * \brief   Returns true if the data in option page can be accepted and the settings dialog can be closed. Otherwise, returns false.
      **/
     inline bool canAcceptOptions(void) const;
+    
+//////////////////////////////////////////////////////////////////////////
+// Signals
+//////////////////////////////////////////////////////////////////////////
+signals:
+
+    /**
+     * \brief   The signal is triggered when the workspace locations are changed.
+     * \param   sources    The sources directory.
+     * \param   includes   The includes directory.
+     * \param   delivery   The delivery directory.
+     * \param   logs       The logs directory.
+     **/
+    void signalWorkspaceLocationsChanged(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) const;
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

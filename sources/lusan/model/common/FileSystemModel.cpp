@@ -186,6 +186,27 @@ const QModelIndex& FileSystemModel::setRootPaths(const QMap<QString, QString>& p
     return mRootIndex;
 }
 
+bool FileSystemModel::updateRootPaths(const QMap<QString, QString>& paths)
+{
+    bool result { false };
+    if (mWorkspaceDirs != paths)
+    {
+        beginResetModel();
+        mRootEntry.resetEntry();
+        mWorkspaceDirs = paths;
+        mRootEntry.updateWorkspaceDirectories(paths);
+        if (mRootIndex.isValid() == false)
+        {
+            mRootIndex = createIndex(0, 0, &mRootEntry);
+        }
+        
+        result = true;
+        endResetModel();
+    }
+
+    return result;
+}
+
 const QMap<QString, QString>& FileSystemModel::getRootPaths(void) const
 {
     return mWorkspaceDirs;
