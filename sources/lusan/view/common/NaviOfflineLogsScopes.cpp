@@ -218,6 +218,7 @@ void NaviOfflineLogsScopes::setupSignals(void)
     connect(ctrlRefreshDatabase()   , &QToolButton::clicked, this, &NaviOfflineLogsScopes::onRefreshDatabaseClicked);
     connect(mScopesModel            , &OfflineScopesModel::signalRootUpdated    , this, &NaviOfflineLogsScopes::onRootUpdated);
     connect(mScopesModel            , &OfflineScopesModel::signalScopesInserted , this, &NaviOfflineLogsScopes::onScopesInserted);
+    connect(mMainWindow             , &MdiMainWindow::signalOpenOfflineLog      , this, [this](){onOpenDatabaseClicked();});
 }
 
 void NaviOfflineLogsScopes::updateControls(void)

@@ -19,8 +19,10 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/LogCollectorClient.hpp"
-#include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/common/Workspace.hpp"
+#include "lusan/data/common/WorkspaceEntry.hpp"
+#include "lusan/view/common/WorkspaceSetupDialog.hpp"
 
 
 const QStringList   LusanApplication::ExternalExts
@@ -56,9 +58,11 @@ const QStringList   LusanApplication::InternalExts
 LusanApplication *  LusanApplication::theApp{nullptr};
 
 LusanApplication::LusanApplication(int& argc, char** argv)
-    : QApplication  (argc, argv)
-    , mMainWindow   (nullptr)
-    , mOptions      ( )
+    : QApplication      (argc, argv)
+    , mMainWindow       (nullptr)
+    , mOptions          ( )
+    , mIsRestarting     (false)
+    , mDefaultEnabled   (true)
 {
     Q_ASSERT(LusanApplication::theApp == nullptr);
     LusanApplication::theApp = this;
@@ -266,16 +270,82 @@ MdiMainWindow* LusanApplication::getMainWindow(void)
     return (LusanApplication::theApp != nullptr ? LusanApplication::theApp->mMainWindow : nullptr);
 }
 
-int LusanApplication::runApplication(const QString& workspace)
+void LusanApplication::newWorkspace(void)
 {
+    LusanApplication& theApp{LusanApplication::getApplication()};
+    
+    theApp.mIsRestarting = true;
+    theApp.mDefaultEnabled = false;
+    if (theApp.mMainWindow != nullptr)
+    {
+        theApp.mMainWindow->close();
+        theApp.mMainWindow = nullptr;
+    }
+}
+
+WorkspaceEntry LusanApplication::startupWorkspace(bool enableDefault)
+{
+    if (enableDefault == false)
+    {
+        mOptions.setDefaultWorkspace(0);
+    }
+    
+    if (mOptions.hasDefaultWorkspace())
+    {
+        mOptions.activateDefaultWorkspace();
+        return mOptions.getDefaultWorkspace();
+    }
+    else
+    {
+        Workspace workspace(mOptions);
+        if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
+        {
+            if (workspace.hasNewWorkspaceEntry())
+            {
+                WorkspaceSetupDialog setup;
+                if (setup.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
+                    setup.applyDirectories();
+            }
+
+            return mOptions.getActiveWorkspace();
+        }
+    }
+
+    return WorkspaceEntry::InvalidWorkspace;
+}
+
+int LusanApplication::startupMainWindow(const WorkspaceEntry& curWorkspace)
+{
+    Q_ASSERT(curWorkspace.isValid());
+
     MdiMainWindow w;
     mMainWindow = &w;
-    
-    w.setWorkspaceRoot(workspace);
-    w.showMaximized();  
+
+    w.setWorkspaceRoot(curWorkspace.getWorkspaceRoot());
+    w.showMaximized();
     w.show();
     emit signalApplicationRunning();
     int result = exec();
     mMainWindow = nullptr;
+    return result;
+}
+
+int LusanApplication::runApplication()
+{
+    int result{ 0 };
+    mOptions.readOptions();
+
+    do
+    {
+        mIsRestarting = false;
+        WorkspaceEntry workspace = startupWorkspace(mDefaultEnabled);
+        mDefaultEnabled = true;
+        if (workspace.isValid() == false)
+            break; // No workspace selected, exit application
+
+        result = startupMainWindow(workspace);
+
+    } while (mIsRestarting);
+
     return result;
 }

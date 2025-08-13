@@ -219,6 +219,16 @@ signals:
      *          This signal is used to notify other components that the main window is closing.
      **/
     void signalMainwindowClosing(void);
+
+    /**
+     * \brief   The signal triggered when a new live log file is created.
+     **/
+    void signalNewLiveLog(void);
+
+    /**
+     * \brief   The signal triggered when to open offline log file.
+     **/
+    void signalOpenOfflineLog(void);
     
 //////////////////////////////////////////////////////////////////////////
 // protected methods
@@ -242,7 +252,7 @@ private slots:
     /**
      * \brief   Slot for creating a new log file.
      **/
-    void onFileNewLog(void);
+    void onFileNewLiveLog(void);
 
     /**
      * \brief   Slot for saving the current file.
@@ -476,8 +486,10 @@ private:
     QToolBar*       mViewToolBar;   //!< The view toolbar.
 
     //!< Actions for File sub-menus.
+    QAction         mActNewWorkspace;
     QAction         mActFileNewSI;
     QAction         mActFileNewLog;
+    QAction         mActFileOfflineLog;
     QAction         mActFileOpen;
     QAction         mActFileSave;
     QAction         mActFileSaveAs;

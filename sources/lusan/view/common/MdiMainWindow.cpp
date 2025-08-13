@@ -109,8 +109,10 @@ MdiMainWindow::MdiMainWindow()
     , mFileToolBar  (nullptr)
     , mEditToolBar  (nullptr)
     , mViewToolBar  (nullptr)
+    , mActNewWorkspace(this)
     , mActFileNewSI (this)
     , mActFileNewLog(this)
+    , mActFileOfflineLog(this)
     , mActFileOpen  (this)
     , mActFileSave  (this)
     , mActFileSaveAs(this)
@@ -226,7 +228,7 @@ LiveLogsModel * MdiMainWindow::setupLiveLogging(void)
 {
     if (mLogViewer == nullptr)
     {
-        onFileNewLog();
+        onFileNewLiveLog();
 
         Q_ASSERT(mLogViewer != nullptr);
         Q_ASSERT(mLiveLogWnd != nullptr);
@@ -315,7 +317,7 @@ void MdiMainWindow::onFileNewSI()
     child->show();
 }
 
-void MdiMainWindow::onFileNewLog()
+void MdiMainWindow::onFileNewLiveLog()
 {
     if (mLogViewer != nullptr)
     {
@@ -651,16 +653,26 @@ inline void MdiMainWindow::initAction(QAction& act, const QIcon& icon, QString t
 
 void MdiMainWindow::_createActions()
 {
-    initAction(mActFileNewSI, QIcon::fromTheme(QIcon::ThemeIcon::AppointmentNew), tr("Service &Interface"));
+    initAction(mActNewWorkspace, QIcon(), tr("New &Workspace"));
+    mActNewWorkspace.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_W));
+    mActFileNewSI.setStatusTip(tr("Create a new workspace, restarts application"));
+    connect(&mActNewWorkspace, &QAction::triggered, this, [this](){LusanApplication::newWorkspace();});
+    
+    initAction(mActFileNewSI, QIcon::fromTheme(QIcon::ThemeIcon::AppointmentNew), tr("New Service &Interface"));
     mActFileNewSI.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_I));
     mActFileNewSI.setStatusTip(tr("Create a new service interface file"));
     connect(&mActFileNewSI, &QAction::triggered, this, &MdiMainWindow::onFileNewSI);
 
-    initAction(mActFileNewLog, QIcon::fromTheme(QIcon::ThemeIcon::ContactNew), tr("&Logs"));
+    initAction(mActFileNewLog, QIcon::fromTheme(QIcon::ThemeIcon::NetworkWireless), tr("&Live Logs"));
     mActFileNewLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_L));
     mActFileNewLog.setStatusTip(tr("Create a new live logs"));
-    connect(&mActFileNewLog, &QAction::triggered, this, &MdiMainWindow::onFileNewLog);
-
+    connect(&mActFileNewLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviLiveLogs); signalNewLiveLog();});
+    
+    initAction(mActFileOfflineLog, QIcon::fromTheme(QIcon::ThemeIcon::ContactNew), tr("O&ffline Logs"));
+    mActFileOfflineLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_F));
+    mActFileOfflineLog.setStatusTip(tr("Open offline logs"));
+    connect(&mActFileOfflineLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviOfflineLogs); signalOpenOfflineLog();});
+    
     initAction(mActFileOpen, QIcon::fromTheme("document-open", QIcon(":/images/open.png")), tr("&Open..."));
     mActFileOpen.setShortcuts(QKeySequence::Open);
     mActFileOpen.setStatusTip(tr("Open an existing file"));
@@ -764,8 +776,10 @@ void MdiMainWindow::_createActions()
 void MdiMainWindow::_createMenus()
 {
     mFileMenu = menuBar()->addMenu(tr("&File"));
+    mFileMenu->addAction(&mActNewWorkspace);
     mFileMenu->addAction(&mActFileNewSI);
     mFileMenu->addAction(&mActFileNewLog);
+    mFileMenu->addAction(&mActFileOfflineLog);
     mFileMenu->addAction(&mActFileOpen);
     mFileMenu->addAction(&mActFileSave);
     mFileMenu->addAction(&mActFileSaveAs);
@@ -812,6 +826,7 @@ void MdiMainWindow::_createToolBars()
     mFileToolBar = addToolBar(tr("File"));
     mFileToolBar->addAction(&mActFileNewSI);
     mFileToolBar->addAction(&mActFileNewLog);
+    mFileToolBar->addAction(&mActFileOfflineLog);
     mFileToolBar->addAction(&mActFileOpen);
     mFileToolBar->addAction(&mActFileSave);
     mFileToolBar->addSeparator();

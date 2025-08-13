@@ -61,9 +61,10 @@ LiveLogViewer::~LiveLogViewer(void)
 
 void LiveLogViewer::logServiceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
 {
-    Q_ASSERT(mLogModel != nullptr);
+    if (mLogModel == nullptr)
+        return;
+    
     LiveLogsModel* logModel = static_cast<LiveLogsModel*>(mLogModel);
-
     logModel->serviceConnected(isConnected, address, port, dbPath);
     if (isConnected)
     {
