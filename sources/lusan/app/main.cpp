@@ -18,10 +18,6 @@
  ************************************************************************/
 
 #include "lusan/app/LusanApplication.hpp"
-#include "lusan/data/common/OptionsManager.hpp"
-#include "lusan/view/common/Workspace.hpp"
-#include "lusan/view/common/WorkspaceSetupDialog.hpp"
-
 #include "areg/appbase/Application.hpp"
 
 #include <QLocale>
@@ -42,7 +38,8 @@ int main(int argc, char *argv[])
     LusanApplication::setOrganizationName(_organization);
     LusanApplication::setApplicationName(_application);
     LusanApplication::setApplicationVersion(_version);
-    
+    Application::setWorkingDirectory(nullptr);
+
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages)
@@ -55,29 +52,5 @@ int main(int argc, char *argv[])
         }
     }
     
-    Application::setWorkingDirectory(nullptr);
-    OptionsManager & opt = LusanApplication::getOptions();
-    opt.readOptions();
-    if (opt.hasDefaultWorkspace())
-    {
-        opt.activateDefaultWorkspace();
-        return a.runApplication(opt.getDefaultWorkspaceRoot());
-    }
-    else
-    {
-        Workspace workspace(opt);
-        if (workspace.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
-        {
-            if (workspace.hasNewWorkspaceEntry())
-            {
-                WorkspaceSetupDialog setup;
-                if (setup.exec() == static_cast<int>(QDialog::DialogCode::Accepted))
-                    setup.applyDirectories();
-            }
-
-            return a.runApplication(opt.getActiveWorkspace().getWorkspaceRoot());
-        }
-    }
-
-    return 0;
+    return a.runApplication();
 }

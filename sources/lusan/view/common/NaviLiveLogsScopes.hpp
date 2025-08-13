@@ -325,7 +325,7 @@ private slots:
      * \param   port            The IP port number of the log collector service to connect or disconnect.
      **/
     void onLogServiceConnected(bool isConnected, const QString& address, uint16_t port);
-
+    
     /**
      * \brief   The slot is trigger when starting or pausing the log observer.
      * \param   isStarted       The flag indicating whether the lob observer is started or paused.

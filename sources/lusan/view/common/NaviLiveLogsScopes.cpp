@@ -214,6 +214,7 @@ void NaviLiveLogsScopes::setupSignals(void)
     connect(ctrlTable()         , &QTreeView::collapsed, this, &NaviLiveLogsScopes::onNodeCollapsed);
     connect(ctrlTable()         , &QWidget::customContextMenuRequested  , this  , &NaviLiveLogsScopes::onTreeViewContextMenuRequested);
     connect(mMainWindow         , &MdiMainWindow::signalMdiWindowCreated, this  , &NaviLiveLogsScopes::onWindowCreated);
+    connect(mMainWindow         , &MdiMainWindow::signalNewLiveLog      , this  , [this](){onConnectClicked(true);});
 
     setupLogSignals(true);    
 }
@@ -316,6 +317,7 @@ void NaviLiveLogsScopes::setupLogSignals(bool setup)
         disconnect(log, &LogObserver::signalLogObserverConfigured   , this, &NaviLiveLogsScopes::onLogObserverConfigured);
         disconnect(log, &LogObserver::signalLogDbConfigured         , this, &NaviLiveLogsScopes::onLogDbConfigured);
         disconnect(log, &LogObserver::signalLogServiceConnected     , this, &NaviLiveLogsScopes::onLogServiceConnected);
+        
         disconnect(log, &LogObserver::signalLogObserverStarted      , this, &NaviLiveLogsScopes::onLogObserverStarted);
         disconnect(log, &LogObserver::signalLogDbCreated            , this, &NaviLiveLogsScopes::onLogDbCreated);
         disconnect(log, &LogObserver::signalLogObserverInstance     , this, &NaviLiveLogsScopes::onLogObserverInstance);
@@ -462,6 +464,10 @@ void NaviLiveLogsScopes::onLogServiceConnected(bool isConnected, const QString& 
 
 void NaviLiveLogsScopes::onLogObserverStarted(bool isStarted)
 {
+    if (isStarted == false)
+    {
+        onConnectClicked(false);
+    }
 }
 
 void NaviLiveLogsScopes::onLogDbCreated(const QString& dbLocation)
@@ -484,24 +490,27 @@ void NaviLiveLogsScopes::onLogObserverInstance(bool isStarted, const QString& ad
         dbPath /= mInitLogFile.toStdString();
         QString logPath(std::filesystem::absolute(dbPath, err).c_str());
         LogObserver::connect(mAddress, mPort, logPath);
+        setupLogSignals(true);
+        enableButtons(QModelIndex());
     }
     else
     {
-        mScopesModel->releaseModel();
+        onConnectClicked(false);
     }
-    
-    setupLogSignals(isStarted);
-    enableButtons(QModelIndex());
 }
 
 void NaviLiveLogsScopes::onConnectClicked(bool checked)
 {
     if (checked)
     {
-        Q_ASSERT(mMainWindow != nullptr);
-        LiveLogsModel* logModel{ mMainWindow->setupLiveLogging() };
-        mScopesModel->setLoggingModel(logModel);
-        LogObserver::createLogObserver(&NaviLiveLogsScopes::_logObserverStarted);
+        ctrlConnect()->setChecked(true);
+        if (LogObserver::isConnected() == false)
+        {
+            Q_ASSERT(mMainWindow != nullptr);
+            LiveLogsModel* logModel{ mMainWindow->setupLiveLogging() };
+            mScopesModel->setLoggingModel(logModel);
+            LogObserver::createLogObserver(&NaviLiveLogsScopes::_logObserverStarted);
+        }
     }
     else
     {

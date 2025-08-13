@@ -142,13 +142,22 @@ public:
      * \brief   Returns the main window of the application.
      **/
     static MdiMainWindow* getMainWindow(void);
+
+    /**
+     * \brief   Call to restart the application by creating new workspace
+     **/
+    static void newWorkspace(void);
     
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    
-    int runApplication(const QString& workspace);
+
+    /**
+     * \brief   Starts the application and initializes the main window.
+     * \return  The exit code of the application.
+     **/
+    int runApplication(void);
 
 signals:
 /************************************************************************
@@ -159,6 +168,22 @@ signals:
      **/
     void signalApplicationRunning(void);
 
+private:
+
+    /**
+     * \brief   Starts the workspace setup dialog to select or create a workspace.
+     * \param   enableDefault  Flag to indicate if it is enabled to start by default workspace.
+     * \return  The selected or created WorkspaceEntry.
+     **/
+    WorkspaceEntry startupWorkspace(bool enableDefault);
+
+    /**
+     * \brief   Starts the main window with the current workspace.
+     * \param   curWorkspace   The current workspace entry to be used.
+     * \return  The exit code of the application.
+     **/
+    int startupMainWindow(const WorkspaceEntry & curWorkspace);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -166,6 +191,8 @@ private:
     static LusanApplication *   theApp;         //!< The singleton instance of the application.
     MdiMainWindow*              mMainWindow;    //!< Main window;
     OptionsManager              mOptions;       //!< The options manager.
+    bool                        mIsRestarting;  //!< Flag to indicate if the application is restarting.      
+    bool                        mDefaultEnabled;//!< Flag to indicate if the default workspace is enabled.
 };
 
 #endif // LUSAN_APP_LUSANAPPLICATION_HPP
