@@ -1,4 +1,6 @@
 ﻿list(APPEND LUSAN_SRC
+    ${LUSAN}/data/log/LogFilterBase.cpp
+    ${LUSAN}/data/log/LogFilters.cpp
     ${LUSAN}/data/log/LogObserver.cpp
     ${LUSAN}/data/log/LogObserverEvent.cpp
     ${LUSAN}/data/log/ScopeNodeBase.cpp
@@ -6,6 +8,8 @@
 )
 
 list(APPEND LUSAN_HDR
+    ${LUSAN}/data/log/LogFilterBase.hpp
+    ${LUSAN}/data/log/LogFilters.hpp
     ${LUSAN}/data/log/LogObserver.hpp
     ${LUSAN}/data/log/LogObserverEvent.hpp
     ${LUSAN}/data/log/ScopeNodeBase.hpp

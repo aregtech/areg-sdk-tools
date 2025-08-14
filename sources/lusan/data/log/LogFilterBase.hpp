@@ -48,7 +48,7 @@ public:
         , FilterSession         = 0x09u //!< Filter by session
     };
 
-    enum eFilterMatch
+    enum eMatchResult
     {
           NoMatch           = 0 //!< Unknown filter match
         , MatchExact        = 1 //!< Exact match
@@ -142,9 +142,12 @@ public:
 
     struct sFilterData
     {
-        QString data  {       };//!< The filter data as a string
-        bool    active{ false };//!< Flag indicating if the data is active
+        QString     data  {       };//!< The filter data as a string
+        uint64_t    value { 0     };//!< The filter digital value  
+        bool        active{ false };//!< Flag indicating if the data is active
     };
+
+    using FilterList = QList<sFilterData>;
 
 protected:
 ////////////////////////////////////////////////////////////////////////
@@ -153,7 +156,7 @@ protected:
     /**
      * \brief   Default constructor.
      **/
-    LogFilterBase(eFilterType filter, eFilterData data, const sFieldFilter& fields);
+    LogFilterBase(eFilterType filter);
 
     /**
      * \brief   Destructor.
@@ -170,12 +173,11 @@ public:
      * \param   logMessage  The log message to check.
      * \return  True if the log message passes the filter, false otherwise.
      **/
-    virtual LogFilterBase::eFilterMatch isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const = 0;
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const = 0;
 
-    /**
-     * \brief   Returns the filter data as a list of strings.
-     **/
-    virtual QList<sFilterData> filterData(void) const = 0;
+    virtual QList<LogFilterBase::sFilterData> filterList(void) const = 0;
+
+    virtual QString filterData(void) const = 0;
 
     /**
      * \brief   Sets the filtering data.
@@ -193,8 +195,8 @@ public:
     virtual void setData(const QStringList& data) = 0;
 
     virtual void activateFilter(const QString& filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx) = 0;
-
-    virtual void activateFilter(const QStringList& filter) = 0;
+    
+    virtual void activateFilters(const QStringList& filters) = 0;
 
     virtual void deactivateFilter(void) = 0;
 
@@ -205,26 +207,12 @@ public:
 
     inline LogFilterBase::eFilterType filterType(void) const;
 
-    inline LogFilterBase::eFilterData filterData(void) const;
-
-    inline uint16_t fieldIndex(void) const;
-
-    inline uint16_t fieldMask(void) const;
-    
-    inline uint16_t fieldReset(void) const;
-    
-    inline uint16_t fieldChecked(void) const;
-    
-    inline uint16_t fieldMatch(void) const;
-
 ////////////////////////////////////////////////////////////////////////
 // Member variables
 ////////////////////////////////////////////////////////////////////////
 protected:
 
     const eFilterType   mFilterType; //!< The type of the filter
-    const eFilterData   mFilterData; //!< The type of data used in the filter
-    const sFieldFilter  mFilterField;//!< The field filter structure containing field index, mask, reset, checked and match values
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -234,36 +222,6 @@ protected:
 inline LogFilterBase::eFilterType LogFilterBase::filterType(void) const
 {
     return mFilterType;
-}
-
-inline LogFilterBase::eFilterData LogFilterBase::filterData(void) const
-{
-    return mFilterData;
-}
-
-inline uint16_t LogFilterBase::fieldIndex(void) const
-{
-    return mFilterField.field;
-}
-
-inline uint16_t LogFilterBase::fieldMask(void) const
-{
-    return mFilterField.mask;
-}
-
-inline uint16_t LogFilterBase::fieldReset(void) const
-{
-    return mFilterField.reset;
-}
-
-inline uint16_t LogFilterBase::fieldChecked(void) const
-{
-    return mFilterField.checked;
-}
-
-inline uint16_t LogFilterBase::fieldMatch(void) const
-{
-    return mFilterField.match;
 }
 
 #endif  // LUSAN_DATA_LOG_LOGFILTERBASE_HPP

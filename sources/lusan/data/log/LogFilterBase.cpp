@@ -21,9 +21,7 @@
  ************************************************************************/
 #include "lusan/data/log/LogFilterBase.hpp"
 
-LogFilterBase::LogFilterBase(eFilterType filter, eFilterData data, const sFieldFilter& fields)
+LogFilterBase::LogFilterBase(LogFilterBase::eFilterType filter)
     : mFilterType   (filter)
-    , mFilterData   (data)
-    , mFilterField  (fields)
 {
 }
