@@ -175,9 +175,11 @@ public:
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const = 0;
 
-    virtual QList<LogFilterBase::sFilterData> filterList(void) const = 0;
+    virtual void deactivateFilter(void) = 0;
 
-    virtual QString filterData(void) const = 0;
+    // virtual QList<LogFilterBase::sFilterData> filterList(void) const = 0;
+
+    // virtual QString filterData(void) const = 0;
 
     /**
      * \brief   Sets the filtering data.
@@ -186,19 +188,18 @@ public:
      * \param   isWholeWord     Flag indicating whether the filter is for whole words only. Ignored for digits.
      * \param   isRegEx         Flag indicating whether the filter is a regular expression. Ignored for digits.
      **/
-    virtual void setData(const QString& data, bool isCaseSensitive, bool isWholeWord, bool isRegEx) = 0;
+    // virtual void setData(const QString& data, bool isCaseSensitive, bool isWholeWord, bool isRegEx) = 0;
 
     /**
      * \brief   Sets the filtering data as a list.
      * \param   data    The list of strings to set for filtering. It can be a list of strings, enumeration.
      **/
-    virtual void setData(const QStringList& data) = 0;
+    // virtual void setData(const QStringList& data) = 0;
 
-    virtual void activateFilter(const QString& filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx) = 0;
+    // virtual void activateFilter(const QString& filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx) = 0;
     
-    virtual void activateFilters(const QStringList& filters) = 0;
+    // virtual void activateFilters(const QStringList& filters) = 0;
 
-    virtual void deactivateFilter(void) = 0;
 
 ////////////////////////////////////////////////////////////////////////
 // Attributes and operations

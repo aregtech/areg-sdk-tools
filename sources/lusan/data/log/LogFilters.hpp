@@ -22,16 +22,22 @@
  * Include files.
  ************************************************************************/
 #include "lusan/data/log/LogFilterBase.hpp"
+#include "areg/component/NEService.hpp"
+#include <QPair>
 
-class LogFilterPriority : public LogFilterBase
+////////////////////////////////////////////////////////////////////////
+// LogFilterPriorities  class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterPriorities : public LogFilterBase
 {
 ////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 ////////////////////////////////////////////////////////////////////////
 public:
-    LogFilterPriority(void);
+    LogFilterPriorities(void);
 
-    virtual ~LogFilterPriority(void) = default;
+    virtual ~LogFilterPriorities(void) = default;
 
 ////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -45,24 +51,165 @@ public:
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
 
-    virtual QList<LogFilterBase::sFilterData> filterList(void) const override;
-
-    virtual QString filterData(void) const override;
-
-    virtual void activateFilters(const QStringList& filters) override;
-    
-    virtual void activateFilter(const QString& filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx) override;
-    
     virtual void deactivateFilter(void) override;
+
+////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+////////////////////////////////////////////////////////////////////////
+public:
+
+    const QList<LogFilterBase::sFilterData>& getFilterList(void) const;
+
+    void activateFilters(const QStringList& filters);
     
 private:
     uint16_t    mFilterMask;
     FilterList  mFilterList;
 };
 
-class LogFilterTimeCreated : public LogFilterBase
+////////////////////////////////////////////////////////////////////////
+// LogFilterScopes  class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterScopes : public LogFilterBase
 {
-    
+    using   ListScopes = std::vector< NELogging::sScopeInfo>;
+    using   MapScopes = std::map<ITEM_ID, ListScopes>;
+
+public:
+        LogFilterScopes(void);
+        virtual ~LogFilterScopes(void) = default;
+
+public:
+    /**
+     * \brief   Checks whether the log message passes the filter.
+     * \param   logMessage  The log message to check.
+     * \return  True if the log message passes the filter, false otherwise.
+     **/
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
+
+    virtual void deactivateFilter(void) override;
+
+public:
+    void setData(ITEM_ID instId, const ListScopes& scopes);
+
+    void removeData(ITEM_ID instId);
+
+    void activateFilters(ITEM_ID instId, const QList<uint32_t>& scopes);
+
+    void activateFilters(ITEM_ID instId, const std::vector<std::pair<uint32_t, uint32_t>>& scopes);
+
+    const std::map<ITEM_ID, std::vector<NELogging::sScopeInfo>>& getFilterList(void) const;
+
+private:
+    MapScopes   mScopes;
+    MapScopes   mFilters;
+};
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterInstances  class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterInstances : public LogFilterBase
+{
+public:
+    LogFilterInstances(void);
+    virtual ~LogFilterInstances(void) = default;
+
+public:
+    /**
+     * \brief   Checks whether the log message passes the filter.
+     * \param   logMessage  The log message to check.
+     * \return  True if the log message passes the filter, false otherwise.
+     **/
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
+
+    virtual void deactivateFilter(void) override;
+
+public:
+    void setData(const std::vector< NEService::sServiceConnectedInstance> & instances);
+
+    void setData(const NEService::sServiceConnectedInstance& instance);
+
+    void setData(ITEM_ID instId, const QString & instName);
+
+    void removeData(ITEM_ID instId);
+
+    void activateFilters(const QList<ITEM_ID> & instId);
+
+    const QList<LogFilterBase::sFilterData> & getFilterList(void) const;
+
+private:
+    QList<sFilterData>  mInstances;
+    QList<ITEM_ID>      mFilters;
+};
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterTimestamp class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterTimestamp : public LogFilterBase
+{
+protected:
+    LogFilterTimestamp(bool isTimeCreate);
+    virtual ~LogFilterTimestamp(void) = default;
+
+public:
+    /**
+     * \brief   Checks whether the log message passes the filter.
+     * \param   logMessage  The log message to check.
+     * \return  True if the log message passes the filter, false otherwise.
+     **/
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override = 0;
+
+    virtual void deactivateFilter(void) override;
+
+public:
+    void activateFilters(TIME64 minTime, TIME64 maxTime);
+
+    QPair<QString, QString> getFilterList(void) const;
+
+protected:
+    TIME64  mMinTime;
+    TIME64  mMaxTime;
+};
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterTimeCreated class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterTimeCreated : public LogFilterTimestamp
+{
+public:
+    LogFilterTimeCreated(void);
+    virtual ~LogFilterTimeCreated(void) = default;
+
+public:
+    /**
+     * \brief   Checks whether the log message passes the filter.
+     * \param   logMessage  The log message to check.
+     * \return  True if the log message passes the filter, false otherwise.
+     **/
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
+};
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterTimeReceived class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterTimeReceived : public LogFilterTimestamp
+{
+public:
+    LogFilterTimeReceived(void);
+    virtual ~LogFilterTimeReceived(void) = default;
+
+public:
+    /**
+     * \brief   Checks whether the log message passes the filter.
+     * \param   logMessage  The log message to check.
+     * \return  True if the log message passes the filter, false otherwise.
+     **/
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
 };
 
 #endif  // LUSAN_DATA_LOG_LOGFILTERS_HPP
