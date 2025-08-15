@@ -308,3 +308,133 @@ LogFilterBase::eMatchResult LogFilterTimeReceived::isLogMessageAccepted(const NE
 {
     return (mMinTime <= logMessage.logReceived) && (logMessage.logReceived <= mMaxTime) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
 }
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterDuration class declaration
+////////////////////////////////////////////////////////////////////////
+
+LogFilterDuration::LogFilterDuration(void)
+    : LogFilterBase(LogFilterBase::eFilterType::FilterDuration)
+    , mDuration ( 0 )
+{
+}
+
+LogFilterBase::eMatchResult LogFilterDuration::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
+{
+    return (mDuration <= logMessage.logDuration) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+}
+
+void LogFilterDuration::deactivateFilter(void)
+{
+    mDuration = 0;
+}
+
+void LogFilterDuration::activateFilter(uint32_t duration)
+{
+    mDuration = duration;
+}
+
+void LogFilterDuration::activateFilter(const QString& duration)
+{
+    mDuration = duration.toUInt();
+}
+
+QString LogFilterDuration::getFilter(void) const
+{
+    return QString::number(mDuration);
+}
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterThread class implementation
+////////////////////////////////////////////////////////////////////////
+
+LogFilterThread::LogFilterThread(void)
+    : LogFilterBase(LogFilterBase::eFilterType::FilterThread)
+    , mThreads  ( )
+    , mFilters  ( )
+{
+}
+
+LogFilterBase::eMatchResult LogFilterThread::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
+{
+    if (mFilters.empty())
+        return LogFilterBase::eMatchResult::MatchExact; // filter is not set, accept all
+
+    for (const auto& thread : mFilters)
+    {
+        if (thread.value == static_cast<uint64_t>(logMessage.logThreadId))
+            return LogFilterBase::eMatchResult::MatchExact; // found a matching thread, accept
+    }
+
+    return LogFilterBase::eMatchResult::NoMatch; // no matching thread found, reject
+}
+
+void LogFilterThread::deactivateFilter(void)
+{
+    mFilters.clear();
+}
+
+void LogFilterThread::setData(ITEM_ID source, ITEM_ID threadId, const QString& threadName)
+{
+    ListThreads& threads = mThreads[source];
+    for (const auto& thread : threads)
+    {
+        if (thread.value == static_cast<uint64_t>(threadId))
+            return; // already exists, no need to add
+    }
+
+    threads.push_back(LogFilterBase::sFilterData{ threadName, threadId, false });
+}
+
+void LogFilterThread::setData(const NELogging::sLogMessage& logMessage)
+{
+    ListThreads& threads = mThreads[logMessage.logCookie];
+    for (const auto& thread : threads)
+    {
+        if (thread.value == static_cast<uint64_t>(logMessage.logThreadId))
+            return; // already exists, no need to add
+    }
+
+    threads.push_back(LogFilterBase::sFilterData{ logMessage.logThread, logMessage.logThreadId, false });
+}
+
+void LogFilterThread::activateFilter(const QList<QString>& threadNames)
+{
+    mFilters.clear();
+    for (auto& thread : mThreads)
+    {
+        ListThreads& listThreads = thread;
+        for (auto& data : listThreads)
+        {
+            data.active = false;
+            if (threadNames.indexOf(data.data) >= 0)
+            {
+                data.active = true;
+                mFilters.push_back(data);
+            }
+        }
+    }
+}
+
+void LogFilterThread::activateFilter(const QList<ITEM_ID>& threadIds)
+{
+    mFilters.clear();
+    for (auto& thread : mThreads)
+    {
+        ListThreads& listThreads = thread;
+        for (auto& data : listThreads)
+        {
+            data.active = false;
+            if (threadIds.indexOf(static_cast<uint64_t>(data.value)) >= 0)
+            {
+                data.active = true;
+                mFilters.push_back(data);
+            }
+        }
+    }
+}
+
+QMap<ITEM_ID, QList<LogFilterBase::sFilterData>> LogFilterThread::getFilterNames(void) const
+{
+    return mThreads;
+}

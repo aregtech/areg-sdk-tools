@@ -23,6 +23,9 @@
  ************************************************************************/
 #include "lusan/data/log/LogFilterBase.hpp"
 #include "areg/component/NEService.hpp"
+
+#include <QList>
+#include <QMap>
 #include <QPair>
 
 ////////////////////////////////////////////////////////////////////////
@@ -210,6 +213,78 @@ public:
      * \return  True if the log message passes the filter, false otherwise.
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
+};
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterDuration class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterDuration : public LogFilterBase
+{
+public:
+    LogFilterDuration(void);
+    virtual ~LogFilterDuration(void) = default;
+
+public:
+    /**
+     * \brief   Checks whether the log message passes the filter.
+     * \param   logMessage  The log message to check.
+     * \return  True if the log message passes the filter, false otherwise.
+     **/
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
+
+    virtual void deactivateFilter(void) override;
+
+public:
+    void activateFilter(uint32_t duration);
+
+    void activateFilter(const QString& duration);
+
+    QString getFilter(void) const;
+
+private:
+    uint32_t    mDuration; //!< The duration in milliseconds
+};
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterThread class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterThread : public LogFilterBase
+{
+    using   ListThreads = QList<LogFilterBase::sFilterData>;
+    using   MapThreads  = QMap<ITEM_ID, ListThreads>;
+
+public:
+    LogFilterThread(void);
+    virtual ~LogFilterThread(void) = default;
+
+public:
+    /**
+     * \brief   Checks whether the log message passes the filter.
+     * \param   logMessage  The log message to check.
+     * \return  True if the log message passes the filter, false otherwise.
+     **/
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
+
+    virtual void deactivateFilter(void) override;
+
+public:
+
+    void setData(ITEM_ID source, ITEM_ID threadId, const QString& threadName);
+
+    void setData(const NELogging::sLogMessage& logMessage);
+
+    void activateFilter(const QList<QString>& threadNames);
+
+    void activateFilter(const QList<ITEM_ID>& threadIds);
+
+    QMap<ITEM_ID, QList<LogFilterBase::sFilterData>> getFilterNames(void) const;
+
+private:
+    MapThreads  mThreads; //!< Map of thread IDs to thread names
+    ListThreads mFilters; //!< Map of active thread IDs to thread names
+
 };
 
 #endif  // LUSAN_DATA_LOG_LOGFILTERS_HPP
