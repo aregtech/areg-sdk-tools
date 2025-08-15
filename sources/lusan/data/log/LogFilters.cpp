@@ -438,3 +438,140 @@ QMap<ITEM_ID, QList<LogFilterBase::sFilterData>> LogFilterThread::getFilterNames
 {
     return mThreads;
 }
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterText class declaration
+////////////////////////////////////////////////////////////////////////
+
+LogFilterText::LogFilterText(void)
+    : LogFilterBase(LogFilterBase::eFilterType::FilterMessage)
+    , mFilter   ( )
+    , mRegEx    ( )
+{
+}
+
+LogFilterBase::eMatchResult LogFilterText::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
+{
+    const char* msg = logMessage.logMessage;
+    if (mFilter.data.empty())
+    {
+        return LogFilterBase::eMatchResult::MatchExact; // no filter set, accept all
+    }
+    else if (mFilter.isRegEx)
+    {
+        return (containsWildCard(QString::fromUtf8(msg)) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+    }
+    else if (mFilter.isWholeWord)
+    {
+        return (containsWord(msg) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+    }
+    else if (mFilter.isSensitive)
+    {
+        return (containsExact(msg) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+    }
+    else
+    {
+        return (containsInsensitive(msg) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+    }
+}
+
+void LogFilterText::deactivateFilter(void)
+{
+    mRegEx = QRegularExpression();
+    mFilter.data.clear();
+    mFilter.isRegEx = false;
+    mFilter.isSensitive = false;
+    mFilter.isWholeWord = false;
+}
+
+void LogFilterText::activateFilter(const QString& filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx)
+{
+    mRegEx = QRegularExpression();
+    mFilter.data = filter.toStdString();
+    mFilter.isRegEx = isRegEx;
+    mFilter.isSensitive = isCaseSensitive;
+    mFilter.isWholeWord = isWholeWord;
+    if (isRegEx)
+    {
+        // Escape regex special characters except * and ?
+        QString regexPattern = QRegularExpression::escape(filter);
+        regexPattern.replace("\\*", ".*");
+        regexPattern.replace("\\?", ".");
+
+        // For whole word, use word boundaries, but treat '_' as a word boundary as well
+        if (isWholeWord)
+        {
+            // Custom boundaries: start of string or non-word char (including '_'), and end of string or non-word char (including '_')
+            // \b does not treat '_' as a boundary, so we use lookarounds
+            regexPattern = QStringLiteral("(?:(?<=^)|(?<=[^\\w]|_))") + regexPattern + QStringLiteral("(?:(?=$)|(?=[^\\w]|_))");
+        }
+
+        QRegularExpression::PatternOptions options = isCaseSensitive ? QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption;
+        mRegEx = QRegularExpression(regexPattern, options);
+    }
+}
+
+inline int LogFilterText::containsExact(const char* str) const
+{
+    Q_ASSERT((mFilter.data.empty() == false) && (str != nullptr));
+
+    const char* phrase= mFilter.data.c_str();
+    const char* found = strstr(str, phrase);
+    return (found != nullptr ? static_cast<int>(found - str) : -1);
+}
+
+inline int LogFilterText::containsInsensitive(const char* str) const
+{
+    Q_ASSERT((mFilter.data.empty() == false) && (str != nullptr));
+
+    const char* phrase  = mFilter.data.c_str();
+    const char* s_start = str;
+    const char* p_start = phrase;
+    while (*s_start && *p_start)
+    {
+        if ((*s_start == *p_start) || (tolower(*s_start) == tolower(*p_start)))
+        {
+            ++s_start;
+            ++p_start;
+        }
+        else
+        {
+            s_start = ++str; // reset to the next character in str
+            p_start = phrase; // reset to the start of phrase
+        }
+    }
+
+    return (*p_start == '\0' ? static_cast<int>(str - s_start) : -1);
+}
+
+int LogFilterText::containsWord(const char* str) const
+{
+    Q_ASSERT((mFilter.data.empty() == false) && (str != nullptr));
+
+    int result = -1;
+    const int phraseLen = static_cast<int>(mFilter.data.length());
+    bool isCaseSensitive = mFilter.isSensitive;
+
+    do
+    {
+        result = isCaseSensitive ? containsExact(str) : containsInsensitive(str);
+        if (result < 0)
+            break;
+
+        // Check for word boundaries
+        if ((result == 0 || !isalnum(str[result - 1])) && (str[result + phraseLen] == '\0' || !isalnum(str[result + phraseLen])))
+            return result;
+
+        str += result + 1; // Move to the next character after the found phrase
+    } while (*str != '\0');
+
+    return -1; // No whole word match found
+}
+
+inline int LogFilterText::containsWildCard(const QString& text) const
+{
+    Q_ASSERT((mFilter.data.empty() == false) && (text.isEmpty() == false) && (mRegEx.isValid()));
+
+    return text.indexOf(mRegEx);
+}
+

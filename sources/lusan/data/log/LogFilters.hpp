@@ -27,6 +27,7 @@
 #include <QList>
 #include <QMap>
 #include <QPair>
+#include <QRegularExpression>
 
 ////////////////////////////////////////////////////////////////////////
 // LogFilterPriorities  class declaration
@@ -284,7 +285,56 @@ public:
 private:
     MapThreads  mThreads; //!< Map of thread IDs to thread names
     ListThreads mFilters; //!< Map of active thread IDs to thread names
+};
 
+////////////////////////////////////////////////////////////////////////
+// LogFilterText class declaration
+////////////////////////////////////////////////////////////////////////
+
+class LogFilterText : public LogFilterBase
+{
+public:
+    struct sFilterData
+    {
+        std::string data        {       };  //!< The filter data as a string
+        bool        isSensitive { false };  //!< Flag indicating if the filter is case sensitive
+        bool        isWholeWord { false };  //!< Flag indicating if the filter is for whole words only
+        bool        isRegEx     { false };  //!< Flag indicating if the filter is a regular expression
+    };
+
+public:
+    LogFilterText(void);
+    virtual ~LogFilterText(void) = default;
+
+public:
+    /**
+     * \brief   Checks whether the log message passes the filter.
+     * \param   logMessage  The log message to check.
+     * \return  True if the log message passes the filter, false otherwise.
+     **/
+    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
+
+    virtual void deactivateFilter(void) override;
+
+public:
+
+    void activateFilter(const QString & filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx);
+
+    const sFilterData & getFilter(void) const;
+
+private:
+
+    inline int containsExact(const char* str) const;
+
+    inline int containsInsensitive(const char * str) const;
+
+    inline int containsWord(const char* str) const;
+
+    inline int containsWildCard(const QString & text) const;
+
+private:
+    sFilterData         mFilter;//!< The filter data
+    QRegularExpression  mRegEx; //<!< Regular expression for the filter, if applicable
 };
 
 #endif  // LUSAN_DATA_LOG_LOGFILTERS_HPP
