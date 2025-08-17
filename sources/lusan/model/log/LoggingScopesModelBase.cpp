@@ -426,8 +426,8 @@ void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vect
         int count = static_cast<int>(scopes.size());
         QModelIndex idxInstance = index(pos, 0, mRootIndex);
         beginInsertRows(idxInstance, 0, count);
-        // beginResetModel();
 
+        mLoggingModel->addScopeList(instId, scopes);
         ScopeRoot* root = roots[pos];
         Q_ASSERT(root != nullptr);
         root->resetPrioritiesRecursive(false);
@@ -442,7 +442,6 @@ void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vect
         root->refreshPrioritiesRecursive();
 
         endInsertRows();
-        // endResetModel();
         emit signalScopesInserted(idxInstance);
     }
 }
@@ -456,6 +455,7 @@ void LoggingScopesModelBase::slotScopesUpdated(ITEM_ID instId, const std::vector
         LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
         QModelIndex idxInstance = index(pos, 0, mRootIndex);
         int count = static_cast<int>(scopes.size());
+        mLoggingModel->updateScopeList(instId, scopes);
         ScopeRoot* root = roots[pos];
         Q_ASSERT(root != nullptr);
         for (int i = 0; i < count; ++i)

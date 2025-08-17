@@ -158,11 +158,11 @@ private:
     inline void _clearData(void);
 
 //////////////////////////////////////////////////////////////////////////
-// Member variables
+// Hidden members
 //////////////////////////////////////////////////////////////////////////
-protected:
-    QMap<int, QStringList>      mComboFilters;  //!< Map of column index to selected filter items
-    QMap<int, sStringFilter>    mTextFilters;   //!< Map of column index to filter text
+private:
+
+    QList<LoggingModelBase::eColumn>    mActiveFilters;
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call

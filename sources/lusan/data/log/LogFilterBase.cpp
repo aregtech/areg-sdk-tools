@@ -21,7 +21,19 @@
  ************************************************************************/
 #include "lusan/data/log/LogFilterBase.hpp"
 
-LogFilterBase::LogFilterBase(LogFilterBase::eFilterType filter)
+LogFilterBase::LogFilterBase(LogFilterBase::eFilterType filter, LogFilterBase::eVisualType visual)
     : mFilterType   (filter)
+    , mVisualType   (visual)
+    , mFilters      ( )
 {
+}
+
+void LogFilterBase::deactivateFilter(void)
+{
+    mFilters.clear();
+}
+
+void LogFilterBase::activateFilter(const LogFilterBase::FilterList& filters)
+{
+    mFilters = filters;
 }

@@ -20,55 +20,61 @@
  * Include files.
  ************************************************************************/
 #include "lusan/data/log/LogFilters.hpp"
-#include "LogFilters.hpp"
 
 ////////////////////////////////////////////////////////////////////////
 // LogFilterPriorities class implementation
 ////////////////////////////////////////////////////////////////////////
 
 LogFilterPriorities::LogFilterPriorities(void)
-    : LogFilterBase(LogFilterBase::eFilterType::FilterPriority)
-    , mFilterMask   ( 0x0000u )
-    , mFilterList   ( )
+    : LogFilterBase(LogFilterBase::eFilterType::FilterPriority, LogFilterBase::eVisualType::VisualList)
+    , mMask     ( 0x0000u )
+    , mData     ( )
+    , mPrios    ( )
 {
-    mFilterList.push_back({""       , static_cast<uint64_t>(NELogging::eLogPriority::PrioAny)       , false});
-    mFilterList.push_back({"SCOPE"  , static_cast<uint64_t>(NELogging::eLogPriority::PrioScope)     , false});
-    mFilterList.push_back({"DEBUG"  , static_cast<uint64_t>(NELogging::eLogPriority::PrioDebug)     , false});
-    mFilterList.push_back({"INFO"   , static_cast<uint64_t>(NELogging::eLogPriority::PrioInfo)      , false});
-    mFilterList.push_back({"WARN"   , static_cast<uint64_t>(NELogging::eLogPriority::PrioWarning)   , false});
-    mFilterList.push_back({"ERROR"  , static_cast<uint64_t>(NELogging::eLogPriority::PrioError)     , false});
-    mFilterList.push_back({"FATAL"  , static_cast<uint64_t>(NELogging::eLogPriority::PrioFatal)     , false});
+    mData.push_back("");
+    mPrios.push_back(static_cast<uint16_t>(NELogging::eLogPriority::PrioAny));
+
+    mData.push_back("DEBUG");
+    mPrios.push_back(static_cast<uint16_t>(NELogging::eLogPriority::PrioDebug));
+
+    mData.push_back("INFO");
+    mPrios.push_back(static_cast<uint16_t>(NELogging::eLogPriority::PrioInfo));
+
+    mData.push_back("WARN");
+    mPrios.push_back(static_cast<uint16_t>(NELogging::eLogPriority::PrioWarning));
+
+    mData.push_back("ERROR");
+    mPrios.push_back(static_cast<uint16_t>(NELogging::eLogPriority::PrioError));
+
+    mData.push_back("FATAL");
+    mPrios.push_back(static_cast<uint16_t>(NELogging::eLogPriority::PrioFatal));
 }
 
 LogFilterBase::eMatchResult LogFilterPriorities::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
 {
-    return (mFilterMask == 0u) || ((static_cast<uint16_t>(logMessage.logMessagePrio) & mFilterMask) != 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+    return (mMask == 0u) || ((static_cast<uint16_t>(logMessage.logMessagePrio) & mMask) != 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
 }
 
 void LogFilterPriorities::deactivateFilter(void)
 {
-    mFilterMask = 0x0000u;
-    for (auto & filter : mFilterList)
-    {
-        filter.active = false;
-    }
+    LogFilterBase::deactivateFilter();
+    mMask = 0x0000u;
 }
 
-const QList<LogFilterBase::sFilterData>& LogFilterPriorities::getFilterList(void) const
+void LogFilterPriorities::activateFilter(const LogFilterBase::FilterList& filters)
 {
-    return mFilterList;
-}
-
-void LogFilterPriorities::activateFilters(const QStringList& filters)
-{
-    mFilterMask = 0x0000u;
-    for (auto & filter : mFilterList)
+    LogFilterBase::activateFilter(filters);
+    mMask = 0x0000u;
+    for (auto & filter : filters)
     {
-        filter.active = false;
-        if (filters.indexOf(filter.data) >= 0)
+        const QString& prio = filter.data;
+        for (int i = 0; i < static_cast<int>(mData.size()); ++i)
         {
-            filter.active = true;
-            mFilterMask |= static_cast<uint16_t>(filter.value);
+            if (mData[i] == prio)
+            {
+                mMask |= mPrios[i];
+                break;
+            }
         }
     }
 }
@@ -78,94 +84,49 @@ void LogFilterPriorities::activateFilters(const QStringList& filters)
 ////////////////////////////////////////////////////////////////////////
 
 LogFilterScopes::LogFilterScopes(void)
-    : LogFilterBase(LogFilterBase::eFilterType::FilterScope)
-    , mScopes   ()
-    , mFilters  ()
+    : LogFilterBase(LogFilterBase::eFilterType::FilterScope, LogFilterBase::eVisualType::VisualList)
+    , mScopes   ( )
+    , mData     ( )
 {
 }
 
 LogFilterBase::eMatchResult LogFilterScopes::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
 {
-    constexpr uint32_t scopeMask = static_cast<uint32_t>(NELogging::eLogPriority::PrioLogs);
-
     if (mFilters.empty())
         return LogFilterBase::eMatchResult::MatchExact; // filter is not set, accept all
-
-    auto it = mFilters.find(logMessage.logCookie);
-    if ((it == mFilters.end()) || (it->second.empty()))
-        return LogFilterBase::eMatchResult::MatchExact;    // no filter for this instance, accept all
-
-    const ListScopes& scopes = it->second;
-    for (const auto& scope : scopes)
+    
+    auto it = mScopes.find(logMessage.logCookie);
+    if (it == mScopes.end())
+        return LogFilterBase::eMatchResult::NoMatch;
+    
+    const ListScopes & scopes = it->second;
+    for (auto id : scopes)
     {
-        if ((scope.scopeId == logMessage.logScopeId) && ((scope.scopePrio & static_cast<uint32_t>(logMessage.logMessagePrio) & scopeMask) != 0))
+        if (id == logMessage.logScopeId)
             return LogFilterBase::eMatchResult::MatchExact;
     }
-
+        
     return LogFilterBase::eMatchResult::NoMatch;
 }
 
 void LogFilterScopes::deactivateFilter(void)
 {
-    mFilters.clear();
+    LogFilterBase::deactivateFilter();
+    mScopes.clear();
 }
 
-void LogFilterScopes::setData(ITEM_ID instId, const ListScopes& scopes)
+void LogFilterScopes::activateFilter(const LogFilterBase::FilterList& filters)
 {
-    mScopes[instId] = scopes;
-}
-
-void LogFilterScopes::removeData(ITEM_ID instId)
-{
-    mScopes.erase(instId);
-    mFilters.erase(instId);
-}
-
-void LogFilterScopes::activateFilters(ITEM_ID instId, const QList<uint32_t>& scopes)
-{
-    mFilters.erase(instId);
-    if ((scopes.isEmpty()) || (mScopes.find(instId) == mScopes.end()))
+    LogFilterBase::activateFilter(filters);
+    mScopes.clear();
+    if (filters.isEmpty())
         return;
 
-    ListScopes& filterScopes = mFilters[instId];
-    const ListScopes& allScopes = mScopes[instId];
-
-    for (const auto& scope : allScopes)
+    for (const auto& filter : filters)
     {
-        if (scopes.indexOf(scope.scopeId) >= 0)
-        {
-            filterScopes.push_back(scope);
-        }
+        ListScopes& scopes = mScopes[filter.source];
+        scopes.push_back(filter.value.digit);
     }
-}
-
-void LogFilterScopes::activateFilters(ITEM_ID instId, const std::vector<std::pair<uint32_t, uint32_t>>& scopes)
-{
-    mFilters.erase(instId);
-    if ((scopes.empty()) || (mScopes.find(instId) == mScopes.end()))
-        return;
-
-    ListScopes& filterScopes = mFilters[instId];
-    const ListScopes& allScopes = mScopes[instId];
-
-    for (const auto& scope : allScopes)
-    {
-        for (const auto& scopePair : scopes)
-        {
-            if (scope.scopeId == scopePair.first)
-            {
-                NELogging::sScopeInfo filter{ scope };
-                filter.scopePrio = scopePair.second; // update priority if needed
-                filterScopes.push_back(filter);
-                break;  // found, no need to check further
-            }
-        }
-    }
-}
-
-const std::map<ITEM_ID, std::vector<NELogging::sScopeInfo>>& LogFilterScopes::getFilterList(void) const
-{
-    return mFilters;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -173,112 +134,43 @@ const std::map<ITEM_ID, std::vector<NELogging::sScopeInfo>>& LogFilterScopes::ge
 ////////////////////////////////////////////////////////////////////////
 
 LogFilterInstances::LogFilterInstances(void)
-    : LogFilterBase(LogFilterBase::eFilterType::FilterInstance)
-    , mInstances( )
-    , mFilters  ( )
+    : LogFilterBase(LogFilterBase::eFilterType::FilterInstance, LogFilterBase::eVisualType::VisualList)
+    , mNames    ()
+    , mIds      ()
+    , mDispNames()
+    , mDispIds  ()
 {
 }
 
 LogFilterBase::eMatchResult LogFilterInstances::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
 {
-    return (mFilters.isEmpty() || mFilters.indexOf(logMessage.logCookie) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
-}
-
-void LogFilterInstances::deactivateFilter(void)
-{
-    mFilters.clear();
-}
-
-void LogFilterInstances::setData(const std::vector<NEService::sServiceConnectedInstance>& instances)
-{
-    for (const auto& instance : instances)
+    if (mFilters.isEmpty())
+        return LogFilterBase::eMatchResult::MatchExact;
+    
+    for (auto filter : mFilters)
     {
-        setData(instance);
+        if (filter.value.digit == static_cast<uint64_t>(logMessage.logCookie))
+            return LogFilterBase::eMatchResult::MatchExact;
     }
+    
+    return LogFilterBase::eMatchResult::NoMatch;
 }
 
-void LogFilterInstances::setData(const NEService::sServiceConnectedInstance& instance)
+void LogFilterInstances::updateInstanceData(const NEService::sServiceConnectedInstance& instance)
 {
-    setData(instance.ciCookie, QString::fromStdString(instance.ciInstance));
-}
+    static constexpr char formatName[] { "%s (%lu)" };
+    static constexpr char formatId[]   { "%lu (%s)" };
+    
+    char text[256] {};
 
-void LogFilterInstances::setData(ITEM_ID instId, const QString& instName)
-{
-    for (const auto& inst : mInstances)
-    {
-        if (inst.value == static_cast<uint64_t>(instId))
-            return; // already exists, no need to add
-    }
-
-    mInstances.push_back(LogFilterBase::sFilterData{ instName, instId, false });
-}
-
-void LogFilterInstances::removeData(ITEM_ID instId)
-{
-    for (auto it = mInstances.constBegin(); it != mInstances.constEnd(); ++ it)
-    {
-        if (instId == static_cast<ITEM_ID>(it->value))
-        {
-            mInstances.erase(it);
-            break;
-        }
-    }
-
-    for (auto it = mFilters.constBegin(); it != mFilters.constEnd(); ++ it)
-    {
-        if ((*it) == instId)
-        {
-            mFilters.erase(it);
-            break;
-        }
-    }
-}
-
-void LogFilterInstances::activateFilters(const QList<ITEM_ID>& instId)
-{
-    mFilters.clear();
-    for (auto& inst : mInstances)
-    {
-        inst.active = false; // deactivate all instances
-        if (instId.indexOf(static_cast<ITEM_ID>(inst.value)) >= 0)
-        {
-            inst.active = true; // activate only those instances that are in the filter list
-            mFilters.push_back(static_cast<ITEM_ID>(inst.value));
-        }
-    }
-}
-
-const QList<LogFilterBase::sFilterData>& LogFilterInstances::getFilterList(void) const
-{
-    return mInstances;
-}
-
-////////////////////////////////////////////////////////////////////////
-// LogFilterTimestamp class implementation
-////////////////////////////////////////////////////////////////////////
-
-LogFilterTimestamp::LogFilterTimestamp(bool isTimeCreate)
-    : LogFilterBase(isTimeCreate ? LogFilterBase::eFilterType::FilterTimeCreated : LogFilterBase::eFilterType::FilterTimeReceived)
-    , mMinTime  (std::numeric_limits<uint64_t>::min())
-    , mMaxTime  (std::numeric_limits<uint64_t>::max())
-{
-}
-
-void LogFilterTimestamp::deactivateFilter(void)
-{
-    mMinTime = std::numeric_limits<uint64_t>::min();
-    mMaxTime = std::numeric_limits<uint64_t>::max();
-}
-
-void LogFilterTimestamp::activateFilters(TIME64 minTime, TIME64 maxTime)
-{
-    mMinTime = minTime;
-    mMaxTime = maxTime;
-}
-
-QPair<QString, QString> LogFilterTimestamp::getFilterList(void) const
-{
-    return QPair<QString, QString>(QString::number(mMinTime), QString::number(mMaxTime));
+    mIds.push_back(QString::number(instance.ciCookie));
+    mNames.push_back(QString::fromStdString(instance.ciInstance));
+    
+    String::formatString(text, 256, formatName, instance.ciInstance, instance.ciCookie);
+    mDispNames.push_back(QString::fromUtf8(text));
+    
+    String::formatString(text, 256, formatId, instance.ciCookie, instance.ciInstance);
+    mDispIds.push_back(QString::fromUtf8(text));
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -286,13 +178,23 @@ QPair<QString, QString> LogFilterTimestamp::getFilterList(void) const
 ////////////////////////////////////////////////////////////////////////
 
 LogFilterTimeCreated::LogFilterTimeCreated(void)
-    : LogFilterTimestamp(true)
+    : LogFilterBase (LogFilterBase::eFilterType::FilterTimeCreated, LogFilterBase::eVisualType::VisualUndefined)
 {
 }
 
 LogFilterBase::eMatchResult LogFilterTimeCreated::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
 {
-    return (mMinTime <= logMessage.logTimestamp) && (logMessage.logTimestamp <= mMaxTime) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+    if (mFilters.isEmpty())
+        return LogFilterBase::eMatchResult::MatchExact;
+    
+    if ((mFilters[MIN_TIME].value.digit <= logMessage.logTimestamp) && (mFilters[MAX_TIME].value.digit >= logMessage.logTimestamp))
+    {
+        return LogFilterBase::eMatchResult::MatchExact;
+    }
+    else
+    {
+        return LogFilterBase::eMatchResult::NoMatch;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -300,13 +202,23 @@ LogFilterBase::eMatchResult LogFilterTimeCreated::isLogMessageAccepted(const NEL
 ////////////////////////////////////////////////////////////////////////
 
 LogFilterTimeReceived::LogFilterTimeReceived(void)
-    : LogFilterTimestamp(false)
+    : LogFilterBase(LogFilterBase::eFilterType::FilterTimeReceived, LogFilterBase::eVisualType::VisualUndefined)
 {
 }
 
 LogFilterBase::eMatchResult LogFilterTimeReceived::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
 {
-    return (mMinTime <= logMessage.logReceived) && (logMessage.logReceived <= mMaxTime) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+    if (mFilters.isEmpty())
+        return LogFilterBase::eMatchResult::MatchExact;
+    
+    if ((mFilters[MIN_TIME].value.digit <= logMessage.logReceived) && (mFilters[MAX_TIME].value.digit >= logMessage.logReceived))
+    {
+        return LogFilterBase::eMatchResult::MatchExact;
+    }
+    else
+    {
+        return LogFilterBase::eMatchResult::NoMatch;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -314,8 +226,9 @@ LogFilterBase::eMatchResult LogFilterTimeReceived::isLogMessageAccepted(const NE
 ////////////////////////////////////////////////////////////////////////
 
 LogFilterDuration::LogFilterDuration(void)
-    : LogFilterBase(LogFilterBase::eFilterType::FilterDuration)
+    : LogFilterBase(LogFilterBase::eFilterType::FilterDuration, LogFilterBase::eVisualType::VisualText)
     , mDuration ( 0 )
+    , mData     ( )
 {
 }
 
@@ -326,22 +239,18 @@ LogFilterBase::eMatchResult LogFilterDuration::isLogMessageAccepted(const NELogg
 
 void LogFilterDuration::deactivateFilter(void)
 {
+    LogFilterBase::deactivateFilter();
     mDuration = 0;
 }
 
-void LogFilterDuration::activateFilter(uint32_t duration)
+void LogFilterDuration::activateFilter(const LogFilterBase::FilterList& filters)
 {
-    mDuration = duration;
-}
-
-void LogFilterDuration::activateFilter(const QString& duration)
-{
-    mDuration = duration.toUInt();
-}
-
-QString LogFilterDuration::getFilter(void) const
-{
-    return QString::number(mDuration);
+    LogFilterBase::activateFilter(filters);
+    mDuration = filters.isEmpty() ? 0 : static_cast<uint32_t>(filters[0].value.digit);
+    if (mData.isEmpty())
+        mData.push_back(QString::number(mDuration));
+    else
+        mData[0] = QString::number(mDuration);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -349,20 +258,53 @@ QString LogFilterDuration::getFilter(void) const
 ////////////////////////////////////////////////////////////////////////
 
 LogFilterThread::LogFilterThread(void)
-    : LogFilterBase(LogFilterBase::eFilterType::FilterThread)
-    , mThreads  ( )
-    , mFilters  ( )
+    : LogFilterBase(LogFilterBase::eFilterType::FilterThread, LogFilterBase::eVisualType::VisualList)
+    , mThreads      ( )
+    , mDataThreads  ( )
+    , mDispNames    ( )
+    , mDispIds      ( )
 {
+}
+
+void LogFilterThread::updateThreadData(const NELogging::sLogMessage& logMessage)
+{
+    static constexpr char formatNames[] { "%s (%ul:%ul)" };
+    static constexpr char formatIds[]   { "%ul (%ul)" };
+    char text[256] {};
+    
+    ListThreads& threads = mDataThreads[logMessage.logCookie];
+    for (const auto& thread : threads)
+    {
+        if (thread.value.digit == static_cast<uint64_t>(logMessage.logThreadId))
+            return;
+    }
+    
+    sFilterData data{};
+    data.source = logMessage.logCookie;
+    data.data   = QString::fromUtf8(logMessage.logThread);
+    data.value.digit = static_cast<uint64_t>(logMessage.logThreadId);
+    threads.push_back(data);
+    
+    String::formatString(text, 256, formatNames, logMessage.logThread, logMessage.logCookie, logMessage.logThreadId);
+    mDispNames.push_back(QString::fromUtf8(text));
+    
+    String::formatString(text, 256, formatIds, logMessage.logThreadId, logMessage.logCookie);
+    mDispIds.push_back(QString::fromUtf8(text));
 }
 
 LogFilterBase::eMatchResult LogFilterThread::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
 {
-    if (mFilters.empty())
+    if (mThreads.empty())
         return LogFilterBase::eMatchResult::MatchExact; // filter is not set, accept all
-
-    for (const auto& thread : mFilters)
+    
+    auto it = mThreads.find(logMessage.logCookie);
+    if (it == mThreads.end())
+        return LogFilterBase::eMatchResult::NoMatch; // no matching thread found, reject
+    
+    const auto & threads = *it;
+    for (const auto& thread : threads)
     {
-        if (thread.value == static_cast<uint64_t>(logMessage.logThreadId))
+        if (thread.value.digit == static_cast<uint64_t>(logMessage.logThreadId))
             return LogFilterBase::eMatchResult::MatchExact; // found a matching thread, accept
     }
 
@@ -371,72 +313,19 @@ LogFilterBase::eMatchResult LogFilterThread::isLogMessageAccepted(const NELoggin
 
 void LogFilterThread::deactivateFilter(void)
 {
-    mFilters.clear();
+    LogFilterBase::deactivateFilter();
+    mThreads.clear();
 }
 
-void LogFilterThread::setData(ITEM_ID source, ITEM_ID threadId, const QString& threadName)
+void LogFilterThread::activateFilter(const LogFilterBase::FilterList& filters)
 {
-    ListThreads& threads = mThreads[source];
-    for (const auto& thread : threads)
+    LogFilterBase::activateFilter(filters);
+    mThreads.clear();
+    for (auto& entry : filters)
     {
-        if (thread.value == static_cast<uint64_t>(threadId))
-            return; // already exists, no need to add
+        ListThreads & threads = mThreads[entry.source];
+        threads.push_back(entry);
     }
-
-    threads.push_back(LogFilterBase::sFilterData{ threadName, threadId, false });
-}
-
-void LogFilterThread::setData(const NELogging::sLogMessage& logMessage)
-{
-    ListThreads& threads = mThreads[logMessage.logCookie];
-    for (const auto& thread : threads)
-    {
-        if (thread.value == static_cast<uint64_t>(logMessage.logThreadId))
-            return; // already exists, no need to add
-    }
-
-    threads.push_back(LogFilterBase::sFilterData{ logMessage.logThread, logMessage.logThreadId, false });
-}
-
-void LogFilterThread::activateFilter(const QList<QString>& threadNames)
-{
-    mFilters.clear();
-    for (auto& thread : mThreads)
-    {
-        ListThreads& listThreads = thread;
-        for (auto& data : listThreads)
-        {
-            data.active = false;
-            if (threadNames.indexOf(data.data) >= 0)
-            {
-                data.active = true;
-                mFilters.push_back(data);
-            }
-        }
-    }
-}
-
-void LogFilterThread::activateFilter(const QList<ITEM_ID>& threadIds)
-{
-    mFilters.clear();
-    for (auto& thread : mThreads)
-    {
-        ListThreads& listThreads = thread;
-        for (auto& data : listThreads)
-        {
-            data.active = false;
-            if (threadIds.indexOf(static_cast<uint64_t>(data.value)) >= 0)
-            {
-                data.active = true;
-                mFilters.push_back(data);
-            }
-        }
-    }
-}
-
-QMap<ITEM_ID, QList<LogFilterBase::sFilterData>> LogFilterThread::getFilterNames(void) const
-{
-    return mThreads;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -444,90 +333,106 @@ QMap<ITEM_ID, QList<LogFilterBase::sFilterData>> LogFilterThread::getFilterNames
 ////////////////////////////////////////////////////////////////////////
 
 LogFilterText::LogFilterText(void)
-    : LogFilterBase(LogFilterBase::eFilterType::FilterMessage)
-    , mFilter   ( )
-    , mRegEx    ( )
+    : LogFilterBase(LogFilterBase::eFilterType::FilterMessage, LogFilterBase::eVisualType::VisualText)
+    , mSearch       ( )
+    , mIsSensitive  (false)
+    , mIsWholeWord  (false)
+    , mIsRegularEx  (false)
+    , mRegularEx    ( )
 {
 }
 
 LogFilterBase::eMatchResult LogFilterText::isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const
 {
-    const char* msg = logMessage.logMessage;
-    if (mFilter.data.empty())
+    const char* text= logMessage.logMessage;
+    if (mFilters.isEmpty())
     {
         return LogFilterBase::eMatchResult::MatchExact; // no filter set, accept all
     }
-    else if (mFilter.isRegEx)
+    else if (mIsRegularEx)
     {
-        return (containsWildCard(QString::fromUtf8(msg)) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+        return (containsWildCard(QString::fromUtf8(text)) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
     }
-    else if (mFilter.isWholeWord)
+    else if (mIsWholeWord)
     {
-        return (containsWord(msg) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+        return (containsWord(text) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
     }
-    else if (mFilter.isSensitive)
+    else if (mIsSensitive)
     {
-        return (containsExact(msg) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+        return (containsExact(text) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
     }
     else
     {
-        return (containsInsensitive(msg) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
+        return (containsInsensitive(text) >= 0) ? LogFilterBase::eMatchResult::MatchExact : LogFilterBase::eMatchResult::NoMatch;
     }
 }
 
 void LogFilterText::deactivateFilter(void)
 {
-    mRegEx = QRegularExpression();
-    mFilter.data.clear();
-    mFilter.isRegEx = false;
-    mFilter.isSensitive = false;
-    mFilter.isWholeWord = false;
+    LogFilterBase::deactivateFilter();
+
+    mSearch.clear();
+    mIsSensitive= false;
+    mIsWholeWord= false;
+    mIsRegularEx= false;
+    mRegularEx  = QRegularExpression();
 }
 
-void LogFilterText::activateFilter(const QString& filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx)
+void LogFilterText::activateFilter(const LogFilterBase::FilterList& filters)
 {
-    mRegEx = QRegularExpression();
-    mFilter.data = filter.toStdString();
-    mFilter.isRegEx = isRegEx;
-    mFilter.isSensitive = isCaseSensitive;
-    mFilter.isWholeWord = isWholeWord;
-    if (isRegEx)
+    LogFilterBase::activateFilter(filters);
+
+    mSearch.clear();
+    mIsSensitive= false;
+    mIsWholeWord= false;
+    mIsRegularEx= false;
+    mRegularEx      = QRegularExpression();
+    
+    if (filters.isEmpty() == false)
     {
-        // Escape regex special characters except * and ?
-        QString regexPattern = QRegularExpression::escape(filter);
-        regexPattern.replace("\\*", ".*");
-        regexPattern.replace("\\?", ".");
-
-        // For whole word, use word boundaries, but treat '_' as a word boundary as well
-        if (isWholeWord)
+        mSearch = filters[0].data.toStdString();
+        mIsSensitive = filters[0].value.srch.isSensitive;
+        mIsWholeWord = filters[0].value.srch.isWholeWord;
+        mIsRegularEx = filters[0].value.srch.isRegularEx;
+        
+        if (mIsRegularEx)
         {
-            // Custom boundaries: start of string or non-word char (including '_'), and end of string or non-word char (including '_')
-            // \b does not treat '_' as a boundary, so we use lookarounds
-            regexPattern = QStringLiteral("(?:(?<=^)|(?<=[^\\w]|_))") + regexPattern + QStringLiteral("(?:(?=$)|(?=[^\\w]|_))");
+            // Escape regex special characters except * and ?
+            QString regexPattern = QRegularExpression::escape(filters[0].data);
+            regexPattern.replace("\\*", ".*");
+            regexPattern.replace("\\?", ".");
+            
+            // For whole word, use word boundaries, but treat '_' as a word boundary as well
+            if (mIsWholeWord)
+            {
+                // Custom boundaries: start of string or non-word char (including '_'), and end of string or non-word char (including '_')
+                // \b does not treat '_' as a boundary, so we use lookarounds
+                regexPattern = QStringLiteral("(?:(?<=^)|(?<=[^\\w]|_))") + regexPattern + QStringLiteral("(?:(?=$)|(?=[^\\w]|_))");
+            }
+            
+            QRegularExpression::PatternOptions options = mIsSensitive ? QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption;
+            mRegularEx = QRegularExpression(regexPattern, options);
         }
-
-        QRegularExpression::PatternOptions options = isCaseSensitive ? QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption;
-        mRegEx = QRegularExpression(regexPattern, options);
     }
 }
 
-inline int LogFilterText::containsExact(const char* str) const
+inline int LogFilterText::containsExact(const char* text) const
 {
-    Q_ASSERT((mFilter.data.empty() == false) && (str != nullptr));
+    Q_ASSERT((mFilters.isEmpty() == false) && (text != nullptr));
 
-    const char* phrase= mFilter.data.c_str();
-    const char* found = strstr(str, phrase);
-    return (found != nullptr ? static_cast<int>(found - str) : -1);
+    const char* phrase= mSearch.c_str();
+    const char* found = strstr(text, phrase);
+    return (found != nullptr ? static_cast<int>(found - text) : -1);
 }
 
-inline int LogFilterText::containsInsensitive(const char* str) const
+inline int LogFilterText::containsInsensitive(const char* text) const
 {
-    Q_ASSERT((mFilter.data.empty() == false) && (str != nullptr));
+    Q_ASSERT((mFilters.isEmpty() == false) && (text != nullptr));
 
-    const char* phrase  = mFilter.data.c_str();
-    const char* s_start = str;
+    const char* phrase  = mSearch.c_str();
+    const char* s_start = text;
     const char* p_start = phrase;
-    while (*s_start && *p_start)
+    while ((*s_start != '\0') && (*p_start != '\0'))
     {
         if ((*s_start == *p_start) || (tolower(*s_start) == tolower(*p_start)))
         {
@@ -536,42 +441,40 @@ inline int LogFilterText::containsInsensitive(const char* str) const
         }
         else
         {
-            s_start = ++str; // reset to the next character in str
+            s_start = ++text; // reset to the next character in str
             p_start = phrase; // reset to the start of phrase
         }
     }
 
-    return (*p_start == '\0' ? static_cast<int>(str - s_start) : -1);
+    return (*p_start == '\0' ? static_cast<int>(s_start - text) : -1);
 }
 
-int LogFilterText::containsWord(const char* str) const
+int LogFilterText::containsWord(const char* text) const
 {
-    Q_ASSERT((mFilter.data.empty() == false) && (str != nullptr));
+    Q_ASSERT((mFilters.isEmpty() == false) && (text != nullptr));
 
     int result = -1;
-    const int phraseLen = static_cast<int>(mFilter.data.length());
-    bool isCaseSensitive = mFilter.isSensitive;
+    const int phraseLen = static_cast<int>(mSearch.length());
 
     do
     {
-        result = isCaseSensitive ? containsExact(str) : containsInsensitive(str);
+        result = mIsSensitive ? containsExact(text) : containsInsensitive(text);
         if (result < 0)
             break;
 
         // Check for word boundaries
-        if ((result == 0 || !isalnum(str[result - 1])) && (str[result + phraseLen] == '\0' || !isalnum(str[result + phraseLen])))
+        if ((result == 0 || !isalnum(text[result - 1])) && (text[result + phraseLen] == '\0' || !isalnum(text[result + phraseLen])))
             return result;
 
-        str += result + 1; // Move to the next character after the found phrase
-    } while (*str != '\0');
+        text += result + 1; // Move to the next character after the found phrase
+    } while (*text != '\0');
 
     return -1; // No whole word match found
 }
 
 inline int LogFilterText::containsWildCard(const QString& text) const
 {
-    Q_ASSERT((mFilter.data.empty() == false) && (text.isEmpty() == false) && (mRegEx.isValid()));
-
-    return text.indexOf(mRegEx);
+    Q_ASSERT((mFilters.isEmpty() == false) && (text.isEmpty() == false) && (mRegularEx.isValid()));
+    return text.indexOf(mRegularEx);
 }
 

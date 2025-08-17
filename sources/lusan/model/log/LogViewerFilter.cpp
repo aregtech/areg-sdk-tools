@@ -18,13 +18,13 @@
  ************************************************************************/
 #include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
+#include "lusan/data/log/LogFilters.hpp"
+
 #include <QModelIndex>
 #include <QRegularExpression>
 
 LogViewerFilter::LogViewerFilter(LoggingModelBase* model)
     : QSortFilterProxyModel (model)
-    , mComboFilters         ( )
-    , mTextFilters          ( )
 {
     setSourceModel(model);
 }
@@ -37,6 +37,36 @@ LogViewerFilter::~LogViewerFilter(void)
 
 void LogViewerFilter::setComboFilter(int logicalColumn, const QStringList& items)
 {
+    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
+    if (model == nullptr)
+        return;
+
+    LoggingModelBase::eColumn col = model->fromIndexToColumn(logicalColumn);
+    LogFilterBase* filter = model->getFilters()[static_cast<int>(col)];
+    if (items.isEmpty())
+    {
+        filter->deactivateFilter();
+    }
+    else if (filter->filterVisual() == LogFilterBase::eVisualType::VisualList)
+    {
+        switch (filter->filterType())
+        {
+        case LogFilterBase::eFilterType::FilterPriority:
+        {
+            LogFilterBase::FilterList list;
+            for (const auto& entry : items)
+            {
+                sFilterData data{};
+                data.data = entry;
+                list.push_back(data);
+            }
+            filter->activateFilter(list);
+        }
+        break;
+
+        }
+    }
+
     if (items.isEmpty())
     {
         mComboFilters.remove(logicalColumn);
@@ -51,13 +81,35 @@ void LogViewerFilter::setComboFilter(int logicalColumn, const QStringList& items
 
 void LogViewerFilter::setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard)
 {
+    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
+    if (model == nullptr)
+        return;
+
+    LoggingModelBase::eColumn col = model->fromIndexToColumn(logicalColumn);
+    LogFilterBase* filter = model->getFilters()[static_cast<int>(col)];
     if (text.isEmpty())
     {
-        mTextFilters.remove(logicalColumn);
+        filter->deactivateFilter();
     }
-    else
+    else if (filter->filterType() == LogFilterBase::eFilterType::FilterDuration)
     {
-        mTextFilters[logicalColumn] = sStringFilter{text, isCaseSensitive, isWholeWord, isWildCard};
+        QList<sFilterData> list;
+        sFilterData data{};
+        data.data = text;
+        data.value.digit = text.toUint32();
+        list.push_back(data);
+        filter->activateFilter(list);
+    }
+    else if (filter->filterType() == LogFilterBase::eFilterType::FilterMessage)
+    {
+        QList<sFilterData> list;
+        sFilterData data{};
+        data.data = text;
+        data.value.srch.isSensitive = isCaseSensitive;
+        data.value.srch.isWholeWord = isWholeWord;
+        data.value.srch.isRegularEx = isWildCard;
+        list.push_back(data);
+        filter->activateFilter(list);
     }
 
     invalidateFilter();
@@ -80,13 +132,32 @@ bool LogViewerFilter::filterExactMatch(const QModelIndex& index) const
 
 bool LogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
 {
-    QModelIndex index = sourceModel() != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
+    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
+    QModelIndex index = model != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
+    if (index.isValid() == false)
+        return false;
+
+    const QList<LogFilterBase*> & filters = model->getFilters();
+    if (filters.isEmpty() || mActiveFilters.isEmpty())
+        return true;
+
+    const NELogging::sLogMessage* logMessage = index.data(Qt::ItemDataRole::UserRole).value<const NELogging::sLogMessage*>();
+    for (const LoggingModelBase::eColumn col : mActiveFilters)
+    {
+        if (filters[static_cast<int>(col)]->isLogMessageAccepted(*logMessage) == LogFilterBase::eMatchResult::NoMatch)
+        {
+            return false; // If any filter does not match, the row is filtered out
+        }
+    }
+
+    return true;
 
     // Check if row matches all active filters
-    return  (matchesComboFilters(index) != eMatchType::NoMatch) && 
-            (matchesTextFilters(index)  != eMatchType::NoMatch);
+//    return  (matchesComboFilters(index) != eMatchType::NoMatch) && 
+//            (matchesTextFilters(index)  != eMatchType::NoMatch);
 }
 
+#if 0
 LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelIndex& index) const
 {
     eMatchType matchType = eMatchType::PartialMatch;
@@ -209,6 +280,8 @@ bool LogViewerFilter::wildcardMatch(const QString& text, const QString& wildcard
     QRegularExpression re(regexPattern, options);
     return text.contains(re);
 }
+
+#endif
 
 inline void LogViewerFilter::_clearData(void)
 {

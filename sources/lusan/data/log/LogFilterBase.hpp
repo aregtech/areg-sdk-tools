@@ -54,97 +54,34 @@ public:
         , MatchExact        = 1 //!< Exact match
         , MatchPartial      = 2 //!< Contains match
     };
-
-    enum eFilterData
+    
+    enum eVisualType
     {
-          NoData            = 0 //!< No data for filter 
-        , DataInteger       = 1 //!< Integer data for filter
-        , DataString        = 2 //!< String data for filter
-        , DataStringList    = 3 //!< List of strings for filter
-        , DataIntegerList   = 4 //!< List of integers for filter
+          VisualUndefined   = 0
+        , VisualText        = 1
+        , VisualList        = 2
+        , VisualTree        = 3
+        , VisualRange       = 4
     };
 
-    enum eFilterFields
+    struct sTextSrch
     {
-          FiledInvalid      = 0xFFFFu   //!< Invalid field index
-        , FieldPriority     = 0x0000u   //!< Filter by priority
-        , FieldTimeCreated  = 0x0001u   //!< Filter by time created
-        , FieldTimeReceived = 0x0002u   //!< Filter by time received
-        , FieldDuration     = 0x0003u   //!< Filter by duration
-        , FieldInstance     = 0x0004u   //!< Filter by instance
-        , FieldScope        = 0x0005u   //!< Filter by scope
-        , FieldThread       = 0x0006u   //!< Filter by thread
-        , FieldMessage      = 0x0007u   //!< Filter by message text
-
-        , FiledCount        = 0x0008u   //!< Total number of fields in the filter
+        bool    isSensitive { false };
+        bool    isWholeWord { false };
+        bool    isRegularEx { false };
     };
-
-    enum eFieldMask
+    
+    union uValue
     {
-          NoMask            = 0x0000u   //!< No filter mask
-        , MaskPriority      = 0x0003u   //!< Filter by priority
-        , NaskTimeCreated   = 0x000Cu   //!< Filter by time created
-        , MaskTimeReceived  = 0x0030u   //!< Filter by time received
-        , MaskDuration      = 0x00C0u   //!< Filter by duration
-        , MaskInstance      = 0x0300u   //!< Filter by instance
-        , MaskScope         = 0x0C00u   //!< Filter by scope
-        , MaskThread        = 0x3000u   //!< Filter by thread
-        , MaskMessage       = 0xC000u   //!< Filter by message text
-    };
-
-    enum eFieldReset
-    {
-          NoReset           = 0xFFFFu   //!< No reset
-        , ResetPriority     = 0xFFFCu   //!< Reset priority filter
-        , ResetTimeCreated  = 0xFFF3u   //!< Reset time created filter
-        , ResetTimeReceived = 0xFFCFu   //!< Reset time received filter
-        , ResetDuration     = 0xFF3Fu   //!< Reset duration filter
-        , ResetInstance     = 0xFCFFu   //!< Reset instance filter
-        , ResetScope        = 0xCFFFu   //!< Reset scope filter
-        , ResetThread       = 0x3FFFu   //!< Reset thread filter
-        , ResetMessage      = 0x0FFFu   //!< Reset message text filter
-    };
-
-    enum eFieldChecked
-    {
-          NoFieldChecked    = 0x0000u   //!< Field is not checked
-        , CheckPriority     = 0x0002u   //!< Field is checked for priority
-        , CheckTimeCreated  = 0x0008u   //!< Field is checked for time created
-        , CheckTimeReceived = 0x0020u   //!< Field is checked for time received
-        , CheckDuration     = 0x0080u   //!< Field is checked for duration
-        , CheckInstance     = 0x0200u   //!< Field is checked for instance
-        , CheckScope        = 0x0800u   //!< Field is checked for scope
-        , CheckThread       = 0x2000u   //!< Field is checked for thread
-        , CheckMessage      = 0x8000u   //!< Field is checked for message text
-    };
-
-    enum eFieldMatch
-    {
-          NoValueMatch      = 0x0000u   //!< No value match
-        , MatchPriority     = 0x0001u   //!< Value matches exactly
-        , MatchTimeCreated  = 0x0004u   //!< Value matches partially
-        , MatchTimeReceived = 0x0010u   //!< Value contains the filter text
-        , MatchDuration     = 0x0040u   //!< Value matches duration
-        , MatchInstance     = 0x0100u   //!< Value matches instance
-        , MatchScope        = 0x0400u   //!< Value matches scope
-        , MatchThread       = 0x1000u   //!< Value matches thread
-        , MatchMessage      = 0x4000u   //!< Value matches message text
-    };
-
-    struct sFieldFilter
-    {
-        uint16_t    field   { 0u }; //!< The field index of the filter
-        uint16_t    mask    { 0u };
-        uint16_t    reset   { 0u };
-        uint16_t    checked { 0u };
-        uint16_t    match   { 0u };
+        sTextSrch   srch;
+        uint64_t    digit;
     };
 
     struct sFilterData
     {
-        QString     data  {       };//!< The filter data as a string
-        uint64_t    value { 0     };//!< The filter digital value  
-        bool        active{ false };//!< Flag indicating if the data is active
+        ITEM_ID     source{ 0u };   //!< The source of the filter, e.g., instance ID
+        QString     data  {    };   //!< The filter data as a string
+        uValue      value {    };   //!< The filter digital value  
     };
 
     using FilterList = QList<sFilterData>;
@@ -156,7 +93,7 @@ protected:
     /**
      * \brief   Default constructor.
      **/
-    LogFilterBase(eFilterType filter);
+    LogFilterBase(eFilterType filter, eVisualType visual);
 
     /**
      * \brief   Destructor.
@@ -175,45 +112,46 @@ public:
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const = 0;
 
-    virtual void deactivateFilter(void) = 0;
-
-    // virtual QList<LogFilterBase::sFilterData> filterList(void) const = 0;
-
-    // virtual QString filterData(void) const = 0;
+    /**
+     * \brief   Deactivates the filter, clearing all active filters.
+     *          After deactivation, all log messages will be accepted.
+     **/
+    virtual void deactivateFilter(void);
 
     /**
-     * \brief   Sets the filtering data.
-     * \param   data            The data to set for filtering. It can be a string, wildcard, regular expression or digit as a string.
-     * \param   isCaseSensitive Flag indicating whether the filter is case sensitive. Valid only for filtering by text.
-     * \param   isWholeWord     Flag indicating whether the filter is for whole words only. Ignored for digits.
-     * \param   isRegEx         Flag indicating whether the filter is a regular expression. Ignored for digits.
+     * \brief   Activates the filter with the specified filter list.
+     *          The filter list contains the filters to be applied.
+     *          If the list of filters is empty, the filter will be deactivated
+     *          and all log messages will be accepted.
+     * \param   filters     The list of filters to activate.
      **/
-    // virtual void setData(const QString& data, bool isCaseSensitive, bool isWholeWord, bool isRegEx) = 0;
-
-    /**
-     * \brief   Sets the filtering data as a list.
-     * \param   data    The list of strings to set for filtering. It can be a list of strings, enumeration.
-     **/
-    // virtual void setData(const QStringList& data) = 0;
-
-    // virtual void activateFilter(const QString& filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx) = 0;
-    
-    // virtual void activateFilters(const QStringList& filters) = 0;
-
+    virtual void activateFilter(const LogFilterBase::FilterList & filters);
 
 ////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 ////////////////////////////////////////////////////////////////////////
 public:
 
+    /**
+     * \brief   Returns the type of the filter.
+     **/
     inline LogFilterBase::eFilterType filterType(void) const;
-
+    
+    inline const LogFilterBase::eVisualType filterVisual(void) const;
+        
+    /**
+     * \brief   Returns the list of active filters.
+     *          If no filters are set, it returns an empty list.
+     **/
+    inline const LogFilterBase::FilterList & getFilter(void) const;
+    
 ////////////////////////////////////////////////////////////////////////
 // Member variables
 ////////////////////////////////////////////////////////////////////////
 protected:
-
-    const eFilterType   mFilterType; //!< The type of the filter
+    const eFilterType   mFilterType;//!< The type of the filter
+    const eVisualType   mVisualType;//!< The visual type of the filter
+    FilterList          mFilters;   //!< The list of active filters
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -223,6 +161,16 @@ protected:
 inline LogFilterBase::eFilterType LogFilterBase::filterType(void) const
 {
     return mFilterType;
+}
+
+inline const LogFilterBase::eVisualType LogFilterBase::filterVisual(void) const
+{
+    return mVisualType;
+}
+
+inline const LogFilterBase::FilterList & LogFilterBase::getFilter(void) const
+{
+    return mFilters;
 }
 
 #endif  // LUSAN_DATA_LOG_LOGFILTERBASE_HPP

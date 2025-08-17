@@ -49,6 +49,7 @@
 class LogViewerFilter;
 class ScopeLogViewerFilter;
 class ScopeRoot;
+class LogFilterBase;
 
 /**
  * \brief   Base class for log viewer models (live and offline).
@@ -325,6 +326,10 @@ public:
      * \brief   Sets the scope logs filter object can be nullptr if the scope logs are not filtered.
      **/
     inline void setScopeFiler(ScopeLogViewerFilter* filter);
+
+    inline const QList<LogFilterBase*>& getFilters(void) const;
+
+    inline QList<LogFilterBase*>& getFilters(void);
 
 /************************************************************************
  * Signals
@@ -609,6 +614,10 @@ protected:
      **/
     inline void cleanLogs(void);
 
+    void addScopeList(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
+
+    void updateScopeList(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
+
 /************************************************************************/
 // IEThreadConsumer interface overrides
 /************************************************************************/
@@ -631,6 +640,10 @@ private:
     //!< Cleans the nodes of root list and deletes them.
     inline void _cleanNodes(void);
 
+    inline void _createFilters(void);
+
+    inline void _deleteFilters(void);
+
     inline LoggingModelBase& self(void);
 
 //////////////////////////////////////////////////////////////////////////
@@ -651,7 +664,8 @@ protected:
     uint32_t                mLogCount;      //!< The position of updated log.
     Thread                  mReadThread;    //!< The thread to run the model operations.
     Mutex                   mQuitThread;    //!< The event to notify when data is ready.
-    ScopeLogViewerFilter*   mScopeFilter;   //<!< The filter for scope logs, can be nullptr.
+    ScopeLogViewerFilter*   mScopeFilter;   //!< The filter for scope logs, can be nullptr.
+    QList<LogFilterBase*>   mFilters;       //!< The list of filters applied to the log messages.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -791,6 +805,16 @@ inline QString LoggingModelBase::getLogEntry(int row, int col) const
 inline void LoggingModelBase::setScopeFiler(ScopeLogViewerFilter* filter)
 {
     mScopeFilter = filter;
+}
+
+inline const QList<LogFilterBase*>& LoggingModelBase::getFilters(void) const
+{
+    return mFilters;
+}
+
+inline QList<LogFilterBase*>& LoggingModelBase::getFilters(void)
+{
+    return mFilters;
 }
 
 inline void LoggingModelBase::_closeDatabase(void)

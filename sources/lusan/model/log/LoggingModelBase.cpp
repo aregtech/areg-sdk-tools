@@ -26,6 +26,7 @@
 #include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
+#include "lusan/data/log/LogFilters.hpp"
 #include "areg/base/DateTime.hpp"
 
 #include <QBrush>
@@ -95,7 +96,9 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mReadThread   (static_cast<IEThreadConsumer &>(self()), "_LogReadingThread_")
     , mQuitThread   (false)
     , mScopeFilter  (nullptr)
+    , mFilters      ( )
 {
+    _createFilters();
 }
 
 LoggingModelBase::~LoggingModelBase(void)
@@ -252,6 +255,7 @@ void LoggingModelBase::removeColumn(LoggingModelBase::eColumn col)
     {
         Q_ASSERT(found < static_cast<int>(mActiveColumns.size()));
         beginRemoveColumns(QModelIndex(), found, found);
+        mFilters[static_cast<int>(col)]->clearFilter();
         mActiveColumns.remove(found, 1);
         endRemoveColumns();
     }
@@ -263,6 +267,8 @@ void LoggingModelBase::setActiveColumns(const QList<LoggingModelBase::eColumn>& 
 
     beginResetModel();
     mActiveColumns = cols;
+    _deleteFilters();
+    _createFilters();
     endResetModel();
 }
 
@@ -416,6 +422,7 @@ bool LoggingModelBase::addInstanceEntry(const NEService::sServiceConnectedInstan
     if ((pos == NECommon::INVALID_INDEX) || (unique == false))
     {
         mInstances.push_back(instance);
+        mFilters[static_cast<int>(eColumn::LogColumnSourceId)]->updateInstanceData(instance);
         result = true;
     }
     else
@@ -629,6 +636,48 @@ inline void LoggingModelBase::_cleanNodes(void)
     mRootList.clear();
 }
 
+void LoggingModelBase::addScopeList(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes)
+{
+    mScopes[instId] = scopes;
+    static_cast<LogFilterScopes*>(mFilter[static_cast<int>(eColumn::LogColumnScopeId)])->updateScopeList(instId, scopes);
+}
+
+void LoggingModelBase::updateScopeList(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes)
+{
+    mScopes[instId] = scopes;
+    static_cast<LogFilterScopes*>(mFilter[static_cast<int>(eColumn::LogColumnScopeId)])->updateScopeList(instId, scopes);
+}
+
+inline void LoggingModelBase::_createFilters(void)
+{
+    mFilters.resize(static_cast<int>(LoggingModelBase::eColumn::LogColumnCount));
+    
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnPriority)]    = new LogFilterPriorities();
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnTimestamp)]   = new LogFilterTimeCreated();
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeReceived)]= new LogFilterTimeReceived();
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeDuration)]= new LogFilterDuration();
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnSource)]      = new LogFilterInstances();
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnSourceId)]    = mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnSource)];
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnThread)]      = new LogFilterThread();
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnThreadId)]    = mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnThread)];
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnScopeId)]     = new LogFilterScopes();
+    mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnMessage)]     = new LogFilterText();
+
+}
+
+inline void LoggingModelBase::_deleteFilters(void)
+{
+    delete mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnPriority)];
+    delete mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnTimestamp)];
+    delete mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeReceived)];
+    delete mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeDuration)];
+    delete mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnSource)];
+    delete mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnThread)];
+    delete mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnScopeId)];
+    delete mFilters[static_cast<int>(LoggingModelBase::eColumn::LogColumnMessage)];
+    mFilters.clear();
+}
+
 void LoggingModelBase::onThreadRuns(void)
 {
     uint32_t    nextStart   { 0 };
@@ -656,6 +705,14 @@ void LoggingModelBase::onThreadRuns(void)
         {
             beginInsertRows(QModelIndex(), static_cast<int>(nextStart), static_cast<int>(nextStart) + readCount - 1);
             nextStart += static_cast<uint32_t>(readCount);
+            for (int uint32_t i = mLogCount; i < nextStart; ++i)
+            {
+                Q_ASSERT(mLogs[i].isValid());
+                const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(mLogs[i].getBuffer());
+                Q_ASSERT(logMessage != nullptr);
+                static_cast<LogFilterThread*>(mFilters[static_cast<int>(eColumn::LogColumnThread)])->updateThreadData(*logMessage);
+            }
+
             mLogCount = nextStart;
             endInsertRows();
         }

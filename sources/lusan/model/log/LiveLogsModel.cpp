@@ -168,11 +168,11 @@ void LiveLogsModel::_setupSignals(bool doSetup)
             emit signalLogServiceDisconnected();
         });
         mConRegisterScopes      = connect(log, &LogObserver::signalLogRegisterScopes     , this, [this](ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes) {
-            mScopes[cookie] = scopes;
+            addScopeList(cookie, scopes);
             emit signalScopesAvailable(cookie, scopes);
         });
         mConUpdateScopes        = connect(log, &LogObserver::signalLogUpdateScopes       , this, [this](ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes) {
-            mScopes[cookie] = scopes;
+            updateScopeList(cookie, scopes);
             emit signalScopesUpdated(cookie, scopes);
         });
     }

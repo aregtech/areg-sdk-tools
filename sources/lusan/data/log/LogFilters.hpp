@@ -33,15 +33,30 @@
 // LogFilterPriorities  class declaration
 ////////////////////////////////////////////////////////////////////////
 
+/**
+ * \brief   This object if filtering log message by priority
+ **/
 class LogFilterPriorities : public LogFilterBase
 {
 ////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 ////////////////////////////////////////////////////////////////////////
+private:
+    using PrioList  = QList<uint16_t>;
+
 public:
     LogFilterPriorities(void);
 
     virtual ~LogFilterPriorities(void) = default;
+
+////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+////////////////////////////////////////////////////////////////////////
+public:
+
+    inline const QStringList& getData(void) const;
+
+    inline const QStringList& getDisplayNames(void) const;
 
 ////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -55,20 +70,25 @@ public:
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
 
+    /**
+     * \brief   Deactivates the filter, clearing all active filters.
+     *          After deactivation, all log messages will be accepted.
+     **/
     virtual void deactivateFilter(void) override;
 
-////////////////////////////////////////////////////////////////////////
-// Attributes and operations
-////////////////////////////////////////////////////////////////////////
-public:
-
-    const QList<LogFilterBase::sFilterData>& getFilterList(void) const;
-
-    void activateFilters(const QStringList& filters);
+    /**
+     * \brief   Activates the filter with the specified filter list.
+     *          The filter list contains the filters to be applied.
+     *          If the list of filters is empty, the filter will be deactivated
+     *          and all log messages will be accepted.
+     * \param   filters     The list of filters to activate.
+     **/
+    virtual void activateFilter(const LogFilterBase::FilterList& filters) override;
     
 private:
-    uint16_t    mFilterMask;
-    FilterList  mFilterList;
+    uint16_t    mMask;
+    QStringList mData;
+    PrioList    mPrios;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -77,14 +97,37 @@ private:
 
 class LogFilterScopes : public LogFilterBase
 {
-    using   ListScopes = std::vector< NELogging::sScopeInfo>;
-    using   MapScopes = std::map<ITEM_ID, ListScopes>;
+////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+////////////////////////////////////////////////////////////////////////
+private:
+    using   ListScopes      = std::vector<uint32_t>;
+    using   MapScopes       = std::map<ITEM_ID, ListScopes>;
+
+public:
+    using   ListScopeInfo   = std::vector<NELogging::sScopeInfo>;
+    using   MapScopeInfo    = std::map<ITEM_ID, ListScopeInfo>;
 
 public:
         LogFilterScopes(void);
         virtual ~LogFilterScopes(void) = default;
 
+////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+////////////////////////////////////////////////////////////////////////
 public:
+
+    inline const LogFilterScopes::MapScopeInfo& getData(void) const;
+
+    inline const LogFilterScopes::MapScopeInfo& getDisplayNames(void) const;
+
+    inline void updateScopeData(ITEM_ID inst, const std::vector<NELogging::sScopeInfo>& listScopeInfo);
+
+////////////////////////////////////////////////////////////////////////
+// Overrides
+////////////////////////////////////////////////////////////////////////
+public:
+
     /**
      * \brief   Checks whether the log message passes the filter.
      * \param   logMessage  The log message to check.
@@ -92,22 +135,24 @@ public:
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
 
+    /**
+     * \brief   Deactivates the filter, clearing all active filters.
+     *          After deactivation, all log messages will be accepted.
+     **/
     virtual void deactivateFilter(void) override;
 
-public:
-    void setData(ITEM_ID instId, const ListScopes& scopes);
-
-    void removeData(ITEM_ID instId);
-
-    void activateFilters(ITEM_ID instId, const QList<uint32_t>& scopes);
-
-    void activateFilters(ITEM_ID instId, const std::vector<std::pair<uint32_t, uint32_t>>& scopes);
-
-    const std::map<ITEM_ID, std::vector<NELogging::sScopeInfo>>& getFilterList(void) const;
+    /**
+     * \brief   Activates the filter with the specified filter list.
+     *          The filter list contains the filters to be applied.
+     *          If the list of filters is empty, the filter will be deactivated
+     *          and all log messages will be accepted.
+     * \param   filters     The list of filters to activate.
+     **/
+    virtual void activateFilter(const LogFilterBase::FilterList& filters) override;
 
 private:
-    MapScopes   mScopes;
-    MapScopes   mFilters;
+    MapScopes       mScopes;
+    MapScopeInfo    mData;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -120,7 +165,22 @@ public:
     LogFilterInstances(void);
     virtual ~LogFilterInstances(void) = default;
 
+////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+////////////////////////////////////////////////////////////////////////
 public:
+
+    inline const QStringList& getData(bool isNames) const;
+
+    inline const QStringList& getDisplayNames(bool isNames) const;
+
+    void updateInstanceData(const NEService::sServiceConnectedInstance& instance);
+
+////////////////////////////////////////////////////////////////////////
+// Overrides
+////////////////////////////////////////////////////////////////////////
+public:
+
     /**
      * \brief   Checks whether the log message passes the filter.
      * \param   logMessage  The log message to check.
@@ -128,66 +188,33 @@ public:
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
 
-    virtual void deactivateFilter(void) override;
-
-public:
-    void setData(const std::vector< NEService::sServiceConnectedInstance> & instances);
-
-    void setData(const NEService::sServiceConnectedInstance& instance);
-
-    void setData(ITEM_ID instId, const QString & instName);
-
-    void removeData(ITEM_ID instId);
-
-    void activateFilters(const QList<ITEM_ID> & instId);
-
-    const QList<LogFilterBase::sFilterData> & getFilterList(void) const;
-
 private:
-    QList<sFilterData>  mInstances;
-    QList<ITEM_ID>      mFilters;
-};
-
-////////////////////////////////////////////////////////////////////////
-// LogFilterTimestamp class declaration
-////////////////////////////////////////////////////////////////////////
-
-class LogFilterTimestamp : public LogFilterBase
-{
-protected:
-    LogFilterTimestamp(bool isTimeCreate);
-    virtual ~LogFilterTimestamp(void) = default;
-
-public:
-    /**
-     * \brief   Checks whether the log message passes the filter.
-     * \param   logMessage  The log message to check.
-     * \return  True if the log message passes the filter, false otherwise.
-     **/
-    virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override = 0;
-
-    virtual void deactivateFilter(void) override;
-
-public:
-    void activateFilters(TIME64 minTime, TIME64 maxTime);
-
-    QPair<QString, QString> getFilterList(void) const;
-
-protected:
-    TIME64  mMinTime;
-    TIME64  mMaxTime;
+    QStringList     mNames;
+    QStringList     mIds;
+    QStringList     mDispNames;
+    QStringList     mDispIds;
 };
 
 ////////////////////////////////////////////////////////////////////////
 // LogFilterTimeCreated class declaration
 ////////////////////////////////////////////////////////////////////////
 
-class LogFilterTimeCreated : public LogFilterTimestamp
+class LogFilterTimeCreated : public LogFilterBase
 {
+////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+////////////////////////////////////////////////////////////////////////
+public:
+    static constexpr int MIN_TIME   { 0 };  //!< The index of the minimum timestamp filter
+    static constexpr int MAX_TIME   { 1 };  //!< The index of the maximum timestamp filter
+
 public:
     LogFilterTimeCreated(void);
     virtual ~LogFilterTimeCreated(void) = default;
 
+////////////////////////////////////////////////////////////////////////
+// Overrides
+////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Checks whether the log message passes the filter.
@@ -201,12 +228,22 @@ public:
 // LogFilterTimeReceived class declaration
 ////////////////////////////////////////////////////////////////////////
 
-class LogFilterTimeReceived : public LogFilterTimestamp
+class LogFilterTimeReceived : public LogFilterBase
 {
+////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+////////////////////////////////////////////////////////////////////////
+public:
+    static constexpr int MIN_TIME   { 0 };  //!< The index of the minimum timestamp filter
+    static constexpr int MAX_TIME   { 1 };  //!< The index of the maximum timestamp filter
+
 public:
     LogFilterTimeReceived(void);
     virtual ~LogFilterTimeReceived(void) = default;
 
+////////////////////////////////////////////////////////////////////////
+// Overrides
+////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Checks whether the log message passes the filter.
@@ -226,7 +263,15 @@ public:
     LogFilterDuration(void);
     virtual ~LogFilterDuration(void) = default;
 
+    inline const QStringList& getData(void) const;
+
+    inline const QStringList& getDisplayNames(void) const;
+
+////////////////////////////////////////////////////////////////////////
+// Overrides
+////////////////////////////////////////////////////////////////////////
 public:
+
     /**
      * \brief   Checks whether the log message passes the filter.
      * \param   logMessage  The log message to check.
@@ -234,17 +279,24 @@ public:
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
 
+    /**
+     * \brief   Deactivates the filter, clearing all active filters.
+     *          After deactivation, all log messages will be accepted.
+     **/
     virtual void deactivateFilter(void) override;
 
-public:
-    void activateFilter(uint32_t duration);
-
-    void activateFilter(const QString& duration);
-
-    QString getFilter(void) const;
+    /**
+     * \brief   Activates the filter with the specified filter list.
+     *          The filter list contains the filters to be applied.
+     *          If the list of filters is empty, the filter will be deactivated
+     *          and all log messages will be accepted.
+     * \param   filters     The list of filters to activate.
+     **/
+    virtual void activateFilter(const LogFilterBase::FilterList& filters) override;
 
 private:
     uint32_t    mDuration; //!< The duration in milliseconds
+    QStringList mData;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -253,38 +305,60 @@ private:
 
 class LogFilterThread : public LogFilterBase
 {
-    using   ListThreads = QList<LogFilterBase::sFilterData>;
+////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+////////////////////////////////////////////////////////////////////////
+public:
+    using   ListThreads = FilterList;
     using   MapThreads  = QMap<ITEM_ID, ListThreads>;
 
 public:
     LogFilterThread(void);
     virtual ~LogFilterThread(void) = default;
 
+////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+////////////////////////////////////////////////////////////////////////
 public:
+
+    inline const LogFilterThread::MapThreads& getData(void) const;
+
+    inline const QStringList& getDisplayNames(bool names) const;
+
+    inline void updateThreadData(const NELogging::sLogMessage& logMessage);
+
+////////////////////////////////////////////////////////////////////////
+// Overrides
+////////////////////////////////////////////////////////////////////////
+public:
+
     /**
      * \brief   Checks whether the log message passes the filter.
      * \param   logMessage  The log message to check.
      * \return  True if the log message passes the filter, false otherwise.
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
-
+    
+    /**
+     * \brief   Deactivates the filter, clearing all active filters.
+     *          After deactivation, all log messages will be accepted.
+     **/
     virtual void deactivateFilter(void) override;
-
-public:
-
-    void setData(ITEM_ID source, ITEM_ID threadId, const QString& threadName);
-
-    void setData(const NELogging::sLogMessage& logMessage);
-
-    void activateFilter(const QList<QString>& threadNames);
-
-    void activateFilter(const QList<ITEM_ID>& threadIds);
-
-    QMap<ITEM_ID, QList<LogFilterBase::sFilterData>> getFilterNames(void) const;
-
+    
+    /**
+     * \brief   Activates the filter with the specified filter list.
+     *          The filter list contains the filters to be applied.
+     *          If the list of filters is empty, the filter will be deactivated
+     *          and all log messages will be accepted.
+     * \param   filters     The list of filters to activate.
+     **/
+    virtual void activateFilter(const LogFilterBase::FilterList& filters) override;
+    
 private:
-    MapThreads  mThreads; //!< Map of thread IDs to thread names
-    ListThreads mFilters; //!< Map of active thread IDs to thread names
+    MapThreads  mThreads;       //!< Map of thread IDs to thread names
+    MapThreads  mDataThreads;       //!< Map of thread IDs to thread names
+    QStringList mDispNames;
+    QStringList mDispIds;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -294,19 +368,16 @@ private:
 class LogFilterText : public LogFilterBase
 {
 public:
-    struct sFilterData
-    {
-        std::string data        {       };  //!< The filter data as a string
-        bool        isSensitive { false };  //!< Flag indicating if the filter is case sensitive
-        bool        isWholeWord { false };  //!< Flag indicating if the filter is for whole words only
-        bool        isRegEx     { false };  //!< Flag indicating if the filter is a regular expression
-    };
-
-public:
     LogFilterText(void);
     virtual ~LogFilterText(void) = default;
 
+    inline const QString getDisplayName(bool isNames) const;
+
+////////////////////////////////////////////////////////////////////////
+// Overrides
+////////////////////////////////////////////////////////////////////////
 public:
+
     /**
      * \brief   Checks whether the log message passes the filter.
      * \param   logMessage  The log message to check.
@@ -314,14 +385,24 @@ public:
      **/
     virtual LogFilterBase::eMatchResult isLogMessageAccepted(const NELogging::sLogMessage& logMessage) const override;
 
+    /**
+     * \brief   Deactivates the filter, clearing all active filters.
+     *          After deactivation, all log messages will be accepted.
+     **/
     virtual void deactivateFilter(void) override;
 
-public:
+    /**
+     * \brief   Activates the filter with the specified filter list.
+     *          The filter list contains the filters to be applied.
+     *          If the list of filters is empty, the filter will be deactivated
+     *          and all log messages will be accepted.
+     * \param   filters     The list of filters to activate.
+     **/
+    virtual void activateFilter(const LogFilterBase::FilterList& filters) override;
 
-    void activateFilter(const QString & filter, bool isCaseSensitive, bool isWholeWord, bool isRegEx);
-
-    const sFilterData & getFilter(void) const;
-
+////////////////////////////////////////////////////////////////////////
+// Hidden methods
+////////////////////////////////////////////////////////////////////////
 private:
 
     inline int containsExact(const char* str) const;
@@ -331,10 +412,99 @@ private:
     inline int containsWord(const char* str) const;
 
     inline int containsWildCard(const QString & text) const;
-
+    
+////////////////////////////////////////////////////////////////////////
+// Member variables
+////////////////////////////////////////////////////////////////////////
 private:
-    sFilterData         mFilter;//!< The filter data
-    QRegularExpression  mRegEx; //<!< Regular expression for the filter, if applicable
+    std::string         mSearch;
+    bool                mIsSensitive;
+    bool                mIsWholeWord;
+    bool                mIsRegularEx;
+    QRegularExpression  mRegularEx;     //<!< Regular expression for the filter, if applicable
 };
+
+/************************************************************************
+ * Inline methods.
+ ************************************************************************/
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterPriorities inline methods
+////////////////////////////////////////////////////////////////////////
+
+inline const QStringList& LogFilterPriorities::getData(void) const
+{
+    return mData;
+}
+
+inline const QStringList& LogFilterPriorities::getDisplayNames(void) const
+{
+    return mData;
+}
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterScopes inline methods
+////////////////////////////////////////////////////////////////////////
+
+inline const LogFilterScopes::MapScopeInfo& LogFilterScopes::getData(void) const
+{
+    return mData;
+}
+
+inline const LogFilterScopes::MapScopeInfo& LogFilterScopes::getDisplayNames(void) const
+{
+    return mData;
+}
+
+inline void LogFilterScopes::updateScopeData(ITEM_ID inst, const std::vector<NELogging::sScopeInfo>& listScopeInfo)
+{
+    mData[inst] = listScopeInfo;
+}
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterInstances inline methods
+////////////////////////////////////////////////////////////////////////
+
+inline const QStringList& LogFilterInstances::getData(bool isNames) const
+{
+    return (isNames ? mNames : mIds);
+}
+
+const QStringList& LogFilterInstances::getDisplayNames(bool isNames) const
+{
+    return (isNames ? mDispNames : mDispIds);
+}
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterThread inline methods
+////////////////////////////////////////////////////////////////////////
+
+inline const LogFilterThread::MapThreads& LogFilterThread::getData(void) const
+{
+    return mDataThreads;
+}
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterDuration inline methods
+////////////////////////////////////////////////////////////////////////
+
+inline const QStringList& LogFilterDuration::getData(void) const
+{
+    return mData;
+}
+
+inline const QStringList& LogFilterDuration::getDisplayNames(void) const
+{
+    return mData;
+}
+
+////////////////////////////////////////////////////////////////////////
+// LogFilterText inline methods
+////////////////////////////////////////////////////////////////////////
+
+inline const QString LogFilterText::getDisplayName(bool isNames) const
+{
+    return (mSearch.empty() ? QString() : QString::fromStdString(mSearch));
+}
 
 #endif  // LUSAN_DATA_LOG_LOGFILTERS_HPP

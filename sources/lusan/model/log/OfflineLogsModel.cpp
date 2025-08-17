@@ -20,6 +20,7 @@
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/LogViewerFilter.hpp"
+#include "lusan/data/log/LogFilters.hpp"
 
 #include "areg/base/DateTime.hpp"
 #include "areg/base/SharedBuffer.hpp"
@@ -63,9 +64,11 @@ void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
         mScopes.clear();
         for (const auto & inst : mInstances)
         {
+            static_cast<LogFilterInstances*>(mFitlers[static_cast<int>(eColumn::LogColumnInstance)])->updateInstanceInfo(inst);
             std::vector<NELogging::sScopeInfo> scopes;
             mDatabase.getLogInstScopes(scopes, inst.ciCookie);
-            mScopes[inst.ciCookie] = scopes;
+            addScopeList(inst.ciCookie, scopes);
+
             emit signalScopesAvailable(inst.ciCookie, scopes);
         }
         
