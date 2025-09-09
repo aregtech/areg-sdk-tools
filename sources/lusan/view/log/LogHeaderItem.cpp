@@ -29,6 +29,7 @@
 #include <QPushButton>
 #include <QTableView>
 #include <QVBoxLayout>
+#include "LogHeaderTextFilter.hpp"
 
 LogComboFilter::LogComboFilter(QWidget* parent)
     : QFrame        (parent)

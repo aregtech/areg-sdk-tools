@@ -93,7 +93,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnSearch->setAutoRaise(true);
                 connect(mBtnSearch, &QToolButton::toggled, this, [this](bool checked) {
                         emit signalButtonSearchClicked(checked);
-                        emit signalSearchText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
+                        emit signalSearchText(false, text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
                         setFocus();
                     });
                 layout->addWidget(mBtnSearch, 0, Qt::AlignmentFlag::AlignRight | Qt::AlignmentFlag::AlignVCenter);
@@ -251,7 +251,7 @@ void SearchLineEdit::keyPressEvent(QKeyEvent* event)
     {
         // F3: Find next (same as clicking search button)
         emit signalButtonSearchClicked(true);
-        emit signalSearchText(text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
+        emit signalSearchText(event->key() == Qt::Key_Return, text(), isMatchCaseChecked(), isMatchWordChecked(), isWildCardChecked(), isBackwardChecked());
         setFocus();
         event->accept();
         return;

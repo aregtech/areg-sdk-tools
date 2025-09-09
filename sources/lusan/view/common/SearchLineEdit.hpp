@@ -90,21 +90,6 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
 
-    //!< Returns the tool button for match case.
-    inline QToolButton* buttonMatchCase(void) const;
-
-    //!< Returns the tool button for match word.
-    inline QToolButton* buttonMatchWord(void) const;
-
-    //!< Returns the tool button for wild card.
-    inline QToolButton* buttonWildCard(void) const;
-
-    //!< Returns the tool button for search backward.
-    inline QToolButton* buttonSearchBackward(void) const;
-
-    //!< Returns the tool button for search next.
-    inline QToolButton* buttonSearch(void) const;
-
     //!< Returns true if match case tool-button exists and checked.
     inline bool isMatchCaseChecked(void) const;
 
@@ -116,6 +101,14 @@ public:
 
     //!< Returns true if search backward tool-button exists and checked.
     inline bool isBackwardChecked(void) const;
+
+    inline void setMatchCaseChecked(bool checked);
+
+    inline void setMatchWordChecked(bool checked);
+
+    inline void setWildCardChecked(bool checked);
+
+    inline void setBackwardChecked(bool checked);
 
 //////////////////////////////////////////////////////////////////////////
 // SearchLineEdit class signals
@@ -160,13 +153,14 @@ signals:
 
     /**
      * \brief   Signal emitted when the search text is requested, i.e. when search next button is clicked.
-     * \param   text        The text to search.
-     * \param   isMatchCase If true, the search is case sensitive.
-     * \param   isWholeWord If true, the search matches whole words only.
-     * \param   isWildCard  If true, the search uses wild-card characters.
-     * \param   isBackward  If true, the search is backward.
+     * \brief   enterPressed    If true, the search is triggered by pressing Enter key.
+     * \param   text            The text to search.
+     * \param   isMatchCase     If true, the search is case sensitive.
+     * \param   isWholeWord     If true, the search matches whole words only.
+     * \param   isWildCard      If true, the search uses wild-card characters.
+     * \param   isBackward      If true, the search is backward.
      **/
-    void signalSearchText(const QString& text, bool isMatchCase, bool isWholeWord, bool isWildCard, bool isBackward);
+    void signalSearchText(bool enterPressed, const QString& text, bool isMatchCase, bool isWholeWord, bool isWildCard, bool isBackward);
 
     /**
      * \brief   Signal emitted when the filter text is changed, i.e. each time the text is changed.
@@ -193,6 +187,21 @@ protected:
      * \param   event   The key press event.
      **/
     virtual void keyPressEvent(QKeyEvent* event) override;
+
+    //!< Returns the tool button for match case.
+    inline QToolButton* buttonMatchCase(void) const;
+
+    //!< Returns the tool button for match word.
+    inline QToolButton* buttonMatchWord(void) const;
+
+    //!< Returns the tool button for wild card.
+    inline QToolButton* buttonWildCard(void) const;
+
+    //!< Returns the tool button for search backward.
+    inline QToolButton* buttonSearchBackward(void) const;
+
+    //!< Returns the tool button for search next.
+    inline QToolButton* buttonSearch(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -262,6 +271,30 @@ inline bool SearchLineEdit::isWildCardChecked(void) const
 inline bool SearchLineEdit::isBackwardChecked(void) const
 {
     return (mBtnBackward != nullptr) && mBtnBackward->isChecked();
+}
+
+inline void SearchLineEdit::setMatchCaseChecked(bool checked)
+{
+    if (mBtnMatchCase != nullptr)
+        mBtnMatchCase->setChecked(checked);
+}
+
+inline void SearchLineEdit::setMatchWordChecked(bool checked)
+{
+    if (mBtnMatchWord != nullptr)
+        mBtnMatchWord->setChecked(checked);
+}
+
+inline void SearchLineEdit::setWildCardChecked(bool checked)
+{
+    if (mBtnWildCard != nullptr)
+        mBtnWildCard->setChecked(checked);
+}
+
+inline void SearchLineEdit::setBackwardChecked(bool checked)
+{
+    if (mBtnBackward != nullptr)
+        mBtnBackward->setChecked(checked);
 }
 
 #endif  // LUSAN_VIEW_COMMON_SEARCHLINEEDIT_HPP

@@ -195,7 +195,7 @@ void LogViewerBase::setupWidgets(void)
     
     connect(mLogSearch  , &SearchLineEdit::signalSearchTextChanged      , this, [this]() {mLogSearch->setStyleSheet(""); mSearch.resetSearch();});
     connect(mLogSearch  , &SearchLineEdit::signalSearchText             , this
-            , [this](const QString& /*text*/, bool /*isMatchCase*/, bool /*isWholeWord*/, bool /*isWildCard*/, bool /*isBackward*/) {
+            , [this](bool /*enterPressed*/, const QString& /*text*/, bool /*isMatchCase*/, bool /*isWholeWord*/, bool /*isWildCard*/, bool /*isBackward*/) {
                 onSearchClicked(mSearch.canSearchNext() == false);
             });
     
