@@ -337,6 +337,17 @@ public:
      **/
     static void queryLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
     
+private:
+    
+    /**
+     * \brief   Instantiates the component object.
+     * \param   entry   The entry of registry, which describes the component.
+     * \param   ownerThread The instance of component owner thread.
+     **/
+    LogObserver(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread);
+    
+    virtual ~LogObserver(void);
+    
 //////////////////////////////////////////////////////////////////////////
 // Static methods
 //////////////////////////////////////////////////////////////////////////
@@ -441,22 +452,10 @@ signals:
      **/
     void signalLogObserverInstance(bool isStarted, const QString& address, uint16_t port, const QString& filePath);
 
-protected:
-
-    /**
-     * \brief   Instantiates the component object.
-     * \param   entry   The entry of registry, which describes the component.
-     * \param   ownerThread The instance of component owner thread.
-     * \param   data        The optional component data set in system. Can be empty / no data.
-     **/
-    LogObserver(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread, NEMemory::uAlign OPT data);
-
-    virtual ~LogObserver(void);
-
 /************************************************************************/
 // IELogObserverEventConsumer overrides
 /************************************************************************/
-
+protected:
     virtual void processEvent(const LogObserverEventData & data) override;
 
 /************************************************************************/

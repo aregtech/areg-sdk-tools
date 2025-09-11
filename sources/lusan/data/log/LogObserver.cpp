@@ -43,7 +43,14 @@ namespace
 BEGIN_MODEL(LogObserver::LogobserverModel)
 
     BEGIN_REGISTER_THREAD(LogObserver::LogobserverThread, NECommon::WATCHDOG_IGNORE)
-        BEGIN_REGISTER_COMPONENT(LogObserver::LogObserverComponent, LogObserver)
+        BEGIN_REGISTER_COMPONENT_EX( LogObserver::LogObserverComponent
+                                   , NEMemory::InvalidElement
+                                , ([](const NERegistry::ComponentEntry& e, ComponentThread& t) -> Component * {
+                                    return LogObserver::CreateComponent(e, t);
+                                })
+                                , ([](Component & c, const NERegistry::ComponentEntry & e) -> void {
+                                    LogObserver::DeleteComponent(c, e);
+                                }))
             REGISTER_IMPLEMENT_SERVICE( NEService::EmptyServiceName, NEService::EmptyServiceVersion )
         END_REGISTER_COMPONENT(LogObserver::LogObserverComponent)
     END_REGISTER_THREAD(LogObserver::LogobserverThread)
@@ -202,7 +209,7 @@ bool LogObserver::connect(const QString& address, uint16_t port, const QString& 
 Component * LogObserver::CreateComponent(const NERegistry::ComponentEntry & entry, ComponentThread & owner)
 {
     Q_ASSERT(_component.load() == nullptr);
-    _component.store(DEBUG_NEW LogObserver( entry, owner, entry.getComponentData()));
+    _component.store(DEBUG_NEW LogObserver( entry, owner));
     return static_cast<Component *>(_component.load());
 }
 
@@ -277,7 +284,7 @@ LogCollectorClient& LogObserver::getClient(void)
     return LogCollectorClient::getInstance();
 }
 
-LogObserver::LogObserver(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread, NEMemory::uAlign OPT /* data */)
+LogObserver::LogObserver(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread)
     : Component ( entry, ownerThread )
     , StubBase  ( self(), NEService::getEmptyInterface() )
     , IELogObserverEventConsumer()
