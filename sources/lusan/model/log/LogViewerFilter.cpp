@@ -56,7 +56,7 @@ void LogViewerFilter::setComboFilter(int logicalColumn, const QStringList& items
             LogFilterBase::FilterList list;
             for (const auto& entry : items)
             {
-                sFilterData data{};
+                LogFilterBase::sFilterData data{};
                 data.data = entry;
                 list.push_back(data);
             }
