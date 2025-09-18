@@ -28,8 +28,12 @@
 #include <QMap>
 
 #include "areg/base/GEGlobal.h"
+#include <any>
 
 class LoggingModelBase;
+
+using AnyData = std::any;
+using AnyList = std::vector<AnyData>;
 
 /**
  * \brief   Filter proxy model for the log viewer to enable filtering of log messages.
@@ -69,6 +73,15 @@ protected:
         , PartialOutput = 2 //!< Has partial match of filters to output, but not exact
         , ExactMatch    = 4 //!< Has exact match of filters
     };
+    
+public:
+    
+    struct sFilterData
+    {
+        QString text    { };
+        AnyData data    { };
+        bool    active  { false };
+    };
 
 public:
     /**
@@ -88,7 +101,7 @@ public slots:
      * \param   logicalColumn   The logical column index to filter.
      * \param   items          The list of selected items to filter by.
      **/
-    void setComboFilter(int logicalColumn, const QStringList& items);
+    void setComboFilter(int logicalColumn, const QList<LogComboFilter::sComboItem>& items);
 
     /**
      * \brief   Sets text filter for a specific column.
@@ -161,8 +174,8 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    QMap<int, QStringList>      mComboFilters;  //!< Map of column index to selected filter items
-    QMap<int, sStringFilter>    mTextFilters;   //!< Map of column index to filter text
+    QMap<int, QList<LogComboFilter::sComboItem>>    mComboFilters;  //!< Map of column index to selected filter items
+    QMap<int, sStringFilter>                        mTextFilters;   //!< Map of column index to filter text
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call

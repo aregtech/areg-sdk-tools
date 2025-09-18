@@ -144,40 +144,57 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             case LoggingModelBase::eColumn::LogColumnPriority:
             {
                 std::vector<String> names;
-                mModel->getPriorityNames(names);
-                mHeaders[static_cast<int>(col)]->setFilterData(names);
+                std::vector<std::any> prios;
+                mModel->getPriorityValues(names, prios);
+                mHeaders[static_cast<int>(LoggingModelBase::eColumn::LogColumnPriority)]->setFilterData(names, prios);
             }
             break;
                 
             case LoggingModelBase::eColumn::LogColumnSource:
             {
                 std::vector<String> names;
-                mModel->getLogInstanceNames(names);
-                mHeaders[static_cast<int>(col)]->setFilterData(names);
+                std::vector<std::any> ids;
+                mModel->getLogInstances(names, ids);
+                mHeaders[static_cast<int>(col)]->setFilterData(names, ids);
             }
             break;
                 
             case LoggingModelBase::eColumn::LogColumnSourceId:
             {
-                std::vector<ITEM_ID> ids;
-                mModel->getLogInstanceIds(ids);
-                mHeaders[static_cast<int>(col)]->setFilterData(ids);
+                const auto & insts = mModel->getLogInstances();
+                std::vector<std::any> ids;
+                std::vector<ITEM_ID> srcs;
+                for (const auto & inst : insts)
+                {
+                    srcs.push_back(inst.ciCookie);
+                    ids.push_back(std::make_any<ITEM_ID>(inst.ciCookie));
+                }
+                
+                mHeaders[static_cast<int>(col)]->setFilterData(srcs, ids);
             }
             break;
                 
             case LoggingModelBase::eColumn::LogColumnThread:
             {
                 std::vector<String> names;
-                mModel->getLogThreadNames(names);
-                mHeaders[static_cast<int>(col)]->setFilterData(names);
+                std::vector<std::any> ids;
+                mModel->getLogThreadValues(names, ids);
+                mHeaders[static_cast<int>(col)]->setFilterData(names, ids);
             }
             break;
                 
             case LoggingModelBase::eColumn::LogColumnThreadId:
             {
-                std::vector<ITEM_ID> ids;
-                mModel->getLogThreads(ids);
-                mHeaders[static_cast<int>(col)]->setFilterData(ids);
+                std::vector<ITEM_ID> tids;
+                std::vector<String> names;
+                std::vector<std::any> ids;
+                mModel->getLogThreadValues(names, ids);
+                for (auto id :ids)
+                {
+                    tids.push_back(std::any_cast<ITEM_ID>(id));
+                }
+                
+                mHeaders[static_cast<int>(col)]->setFilterData(tids, ids);
             }
             break;
                 

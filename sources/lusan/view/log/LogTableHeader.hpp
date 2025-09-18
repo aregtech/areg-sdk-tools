@@ -87,7 +87,7 @@ signals:
      * \param   logicalColumn  The logical column index of the filter.
      * \param   items           The list of items selected in the combo-box filter.
      **/
-    void signalComboFilterChanged(int logicalColumn, const QStringList& items);
+    void signalComboFilterChanged(int logicalColumn, const QList<LogComboFilter::sComboItem>& items);
 
     /**
      * \brief   The signal is triggered when a text filter is changed.

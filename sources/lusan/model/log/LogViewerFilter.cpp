@@ -35,7 +35,7 @@ LogViewerFilter::~LogViewerFilter(void)
     _clearData();
 }
 
-void LogViewerFilter::setComboFilter(int logicalColumn, const QStringList& items)
+void LogViewerFilter::setComboFilter(int logicalColumn, const QList<LogComboFilter::sComboItem>& items)
 {
     if (items.isEmpty())
     {
@@ -102,7 +102,7 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelInd
     for (auto it = mComboFilters.constBegin(); it != mComboFilters.constEnd(); ++it)
     {
         int column = it.key();
-        const QStringList& filterItems = it.value();
+        const QList<LogComboFilter::sComboItem>& filterItems = it.value();
 
         if (filterItems.isEmpty())
             continue;
@@ -112,7 +112,7 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelInd
         if (idxCol.isValid() == false)
             continue;
         
-        QString cellData = model->data(idxCol, Qt::DisplayRole).toString();
+        const NELogging::sLogMessage* msg = model->data(idxCol, Qt::UserRole).toString();
         // Check if the cell data matches any of the selected filter items
         bool matches = false;
         for (const QString& filterItem : filterItems)

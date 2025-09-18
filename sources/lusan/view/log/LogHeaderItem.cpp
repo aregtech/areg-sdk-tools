@@ -49,19 +49,20 @@ LogComboFilter::LogComboFilter(QWidget* parent)
     layout->addWidget(mListWidget);
 }
 
-void LogComboFilter::setItems(const QStringList& items)
+void LogComboFilter::setItems(const QStringList& items, const AnyList& data)
 {
-    QList<sComboItem> list;
-    for (const auto & entry : items)
+    mComboData.clear();
+    for (int i = 0; i < static_cast<int>(items.size()); ++i)
     {
+        const QString &entry = items[i];
         QList<QListWidgetItem*> f = mListWidget->findItems(entry, Qt::MatchFlag::MatchExactly);
         Q_ASSERT(f.size() <= 1);
-        list.push_back(sComboItem{entry, (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked)});
+        mComboData.push_back(sComboItem{entry, data[i], (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked)});
     }
     
     mListWidget->clear();
     
-    for (const auto& entry : list)
+    for (const auto& entry : mComboData)
     {
         QListWidgetItem* item = new QListWidgetItem(entry.text, mListWidget);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
@@ -70,14 +71,38 @@ void LogComboFilter::setItems(const QStringList& items)
     }
 }
 
-QStringList LogComboFilter::getCheckedItems() const
+void LogComboFilter::setItems(const QList<LogComboFilter::sComboItem>& items)
 {
-    QStringList checked;
+    mComboData.clear();
+    for (int i = 0; i < static_cast<int>(items.size()); ++i)
+    {
+        const QString &entry = items[i].text;
+        QList<QListWidgetItem*> f = mListWidget->findItems(entry, Qt::MatchFlag::MatchExactly);
+        Q_ASSERT(f.size() <= 1);
+        mComboData.push_back(sComboItem{entry, items[i].data, (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked)});
+    }
+    
+    mListWidget->clear();
+    
+    for (const auto& entry : mComboData)
+    {
+        QListWidgetItem* item = new QListWidgetItem(entry.text, mListWidget);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(entry.checked ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+        mListWidget->addItem(item);
+    }
+}
+
+QList<LogComboFilter::sComboItem> LogComboFilter::getCheckedItems() const
+{
+    QList<LogComboFilter::sComboItem> checked;
     for (int i = 0; i < mListWidget->count(); ++i)
     {
         QListWidgetItem* item = mListWidget->item(i);
         if (item->checkState() == Qt::Checked)
-            checked << item->text();
+        {
+            checked.push_back(sComboItem{item->text(), mComboData[i].data, true});
+        }
     }
 
     return checked;
@@ -287,7 +312,7 @@ void LogHeaderItem::setFilterData(const QString& data)
     }
 }
 
-void LogHeaderItem::setFilterData(const std::vector<String>& data)
+void LogHeaderItem::setFilterData(const std::vector<String>& data, const AnyList& list)
 {
     if (mType == eType::Combo && mCombo != nullptr)
     {
@@ -298,11 +323,11 @@ void LogHeaderItem::setFilterData(const std::vector<String>& data)
             items << QString::fromStdString(entry.getData());
         }
 
-        mCombo->setItems(items);
+        mCombo->setItems(items, list);
     }
 }
 
-void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data)
+void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data, const AnyList& list)
 {
     if (mType == eType::Combo && mCombo != nullptr)
     {
@@ -312,7 +337,7 @@ void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data)
             items << QString::number(static_cast<uint64_t>(entry));
         }
 
-        mCombo->setItems(items);
+        mCombo->setItems(items, list);
     }
 }
 

@@ -39,6 +39,7 @@
 #include <QString>
 #include <QVariant>
 
+#include <any>
 #include <map>
 #include <vector>
 
@@ -434,6 +435,8 @@ public:
      * \param   ids     On output, contains the list of IDs of connected instances.
      **/
     virtual void getLogInstanceIds(std::vector<ITEM_ID>& ids);
+    
+    virtual void getLogInstances(std::vector<String>&names, std::vector<std::any>& ids);
 
     /**
      * \brief   Call to query and get list of names of threads of the connected instances from log database.
@@ -446,12 +449,16 @@ public:
      * \param   ids     On output, contains the list of all thread IDs that sent messages.
      **/
     virtual void getLogThreads(std::vector<ITEM_ID>& ids);
+    
+    virtual void getLogThreadValues(std::vector<String>& names, std::vector<std::any>& ids);
 
     /**
      * \brief   Call to get the list of log priorities.
      * \param   names   On output, contains the names of all priorities.
      **/
     virtual void getPriorityNames(std::vector<String>& names);
+    
+    virtual void getPriorityValues(std::vector<String>& names, std::vector<std::any>& values);
 
     /**
      * \brief   Call to query and get information of connected instances from log database.

@@ -179,7 +179,7 @@ void LogViewerBase::setupWidgets(void)
     
     QItemSelectionModel* selection= mLogTable->selectionModel();
     connect(mHeader     , &LogTableHeader::signalComboFilterChanged, this
-            , [this](int logicalColumn, const QStringList& items){
+            , [this](int logicalColumn, const QList<LogComboFilter::sComboItem>& items){
                 _resetSearchResult();
                 mFilter->setComboFilter(logicalColumn, items);
             });
