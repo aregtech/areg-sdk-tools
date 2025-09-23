@@ -28,6 +28,9 @@
 #include <QMap>
 
 #include "areg/base/GEGlobal.h"
+#include "areg/base/String.hpp"
+#include "areg/base/Thread.hpp"
+#include "areg/component/NEService.hpp"
 #include <any>
 
 class LoggingModelBase;
@@ -35,6 +38,40 @@ class LoggingModelBase;
 using AnyData = std::any;
 using AnyList = std::vector<AnyData>;
 
+//!< Structure to hold text filter parameters
+struct sStringFilter
+{
+    QString text            {     };    //!< The text to filter by
+    bool    isCaseSensitive {false};    //!< Indicates if the filter is case-sensitive
+    bool    isWholeWord     {false};    //!< Indicates if the filter matches whole words only
+    bool    isWildCard      {false};    //!< Indicates if the filter uses wildcards
+};
+
+
+/**
+     * \brief   The type of match for the filter.
+     *          NoMatch - no match found,
+     *          PartialMatch - partial match found,
+     *          ExactMatch - exact match found.
+     **/
+enum eMatchType : int
+{
+      NoMatch       = 0 //!< Has not match of filters
+    , PartialMatch  = 1 //!< Has partial match of filters
+    , PartialOutput = 2 //!< Has partial match of filters to output, but not exact
+    , ExactMatch    = 4 //!< Has exact match of filters
+};
+
+struct sFilterData
+{
+    QString text    { };
+    AnyData data    { };
+    bool    active  { false };
+};
+
+using FilterList    = QList<sFilterData>;
+using FilterString  = sStringFilter;
+    
 /**
  * \brief   Filter proxy model for the log viewer to enable filtering of log messages.
  *          This proxy model filters the LiveLogsModel based on user-selected criteria
@@ -45,44 +82,8 @@ class LogViewerFilter : public QSortFilterProxyModel
     Q_OBJECT
     
 //////////////////////////////////////////////////////////////////////////
-// Internal types and constants
+// Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
-private:
-
-    //!< Structure to hold text filter parameters
-    struct sStringFilter
-    {
-        QString text            {};         //!< The text to filter by
-        bool    isCaseSensitive {false};    //!< Indicates if the filter is case-sensitive
-        bool    isWholeWord     {false};    //!< Indicates if the filter matches whole words only
-        bool    isWildCard      {false};    //!< Indicates if the filter uses wildcards
-    };
-
-protected:
-
-    /**
-     * \brief   The type of match for the filter.
-     *          NoMatch - no match found,
-     *          PartialMatch - partial match found,
-     *          ExactMatch - exact match found.
-     **/
-    enum eMatchType : int
-    {
-          NoMatch       = 0 //!< Has not match of filters
-        , PartialMatch  = 1 //!< Has partial match of filters
-        , PartialOutput = 2 //!< Has partial match of filters to output, but not exact
-        , ExactMatch    = 4 //!< Has exact match of filters
-    };
-    
-public:
-    
-    struct sFilterData
-    {
-        QString text    { };
-        AnyData data    { };
-        bool    active  { false };
-    };
-
 public:
     /**
      * \brief   Constructor with parent object.
@@ -99,9 +100,9 @@ public slots:
     /**
      * \brief   Sets combo box filter for a specific column.
      * \param   logicalColumn   The logical column index to filter.
-     * \param   items          The list of selected items to filter by.
+     * \param   filters         The list of selected items to filter by.
      **/
-    void setComboFilter(int logicalColumn, const QList<LogComboFilter::sComboItem>& items);
+    void setComboFilter(int logicalColumn, const FilterList& filters);
 
     /**
      * \brief   Sets text filter for a specific column.
@@ -109,6 +110,7 @@ public slots:
      * \param   text           The text to filter by.
      **/
     void setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
+    void setTextFilter(int logicalColumn, const FilterString& filter);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -174,8 +176,8 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    QMap<int, QList<LogComboFilter::sComboItem>>    mComboFilters;  //!< Map of column index to selected filter items
-    QMap<int, sStringFilter>                        mTextFilters;   //!< Map of column index to filter text
+    QMap<int, FilterList>   mComboFilters;  //!< Map of column index to selected filter items
+    QMap<int, FilterString> mTextFilters;   //!< Map of column index to filter text
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call

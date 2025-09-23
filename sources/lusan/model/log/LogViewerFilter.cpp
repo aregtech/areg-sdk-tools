@@ -35,15 +35,15 @@ LogViewerFilter::~LogViewerFilter(void)
     _clearData();
 }
 
-void LogViewerFilter::setComboFilter(int logicalColumn, const QList<LogComboFilter::sComboItem>& items)
+void LogViewerFilter::setComboFilter(int logicalColumn, const FilterList& filters)
 {
-    if (items.isEmpty())
+    if (filters.isEmpty())
     {
         mComboFilters.remove(logicalColumn);
     }
     else
     {
-        mComboFilters[logicalColumn] = items;
+        mComboFilters[logicalColumn] = filters;
     }
 
     invalidateFilter();
@@ -51,17 +51,23 @@ void LogViewerFilter::setComboFilter(int logicalColumn, const QList<LogComboFilt
 
 void LogViewerFilter::setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard)
 {
-    if (text.isEmpty())
+    setTextFilter(logicalColumn, FilterString{ text, isCaseSensitive, isWholeWord, isWildCard });
+}
+
+void LogViewerFilter::setTextFilter(int logicalColumn, const FilterString& filter)
+{
+    if (filter.text.isEmpty())
     {
         mTextFilters.remove(logicalColumn);
     }
     else
     {
-        mTextFilters[logicalColumn] = sStringFilter{text, isCaseSensitive, isWholeWord, isWildCard};
+        mTextFilters[logicalColumn] = filter;
     }
 
     invalidateFilter();
 }
+
 
 void LogViewerFilter::clearFilters()
 {
@@ -93,43 +99,78 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelInd
     if (index.isValid() == false)
         return eMatchType::NoMatch;
     
-    QAbstractItemModel* model = sourceModel();
+    LoggingModelBase* model = static_cast<LoggingModelBase *>(sourceModel());
     if (model == nullptr)
         return matchType;
     
     int row = index.row();    
     // Check each active combo filter
-    for (auto it = mComboFilters.constBegin(); it != mComboFilters.constEnd(); ++it)
+    for (auto it = mComboFilters.constBegin(); (matchType != eMatchType::NoMatch) && (it != mComboFilters.constEnd()); ++it)
     {
         int column = it.key();
-        const QList<LogComboFilter::sComboItem>& filterItems = it.value();
+        const FilterList& filters = it.value();
 
-        if (filterItems.isEmpty())
+        if (filters.isEmpty())
             continue;
         
+        int len = static_cast<int>(filters.size());
         // Get the data for this column and row
         QModelIndex idxCol = model->index(row, column);
         if (idxCol.isValid() == false)
             continue;
         
-        const NELogging::sLogMessage* msg = model->data(idxCol, Qt::UserRole).toString();
+        const NELogging::sLogMessage* msg = model->getLogData(row);
+        LoggingModelBase::eColumn ecol = model->fromIndexToColumn(column);
         // Check if the cell data matches any of the selected filter items
         bool matches = false;
-        for (const QString& filterItem : filterItems)
+        switch (ecol)
         {
-            if (cellData == filterItem)
+        case LoggingModelBase::eColumn::LogColumnPriority:
+        {
+            for (int i = 0; (matches == false) && (i < len); ++i)
             {
-                matches     = true;
-                matchType   = eMatchType::ExactMatch;
-                break;
+                matches = (std::any_cast<uin16_t>(f.data) & static_cast<uint16_t>(msg->logMessagePrio));
             }
+        }
+        break;
+
+        case LoggingModelBase::eColumn::LogColumnSource:
+        case LoggingModelBase::eColumn::LogColumnSourceId:
+        {
+            for (int i = 0; (matches == false) && (i < len); ++i)
+            {
+                matches = std::any_cast<ITEM_ID>(f.data) == msg->logCookie;
+            }
+        }
+        break;
+            
+        case LoggingModelBase::eColumn::LogColumnThreadId:
+        case LoggingModelBase::eColumn::LogColumnThread:
+        {
+            for (int i = 0; (matches == false) && (i < len); ++i)
+            {
+                matches = std::any_cast<ITEM_ID>(f.data) == msg->logThreadId;
+            }
+        }
+        break;
+
+        case LoggingModelBase::eColumn::LogColumnScopeId:
+        {
+            for (int i = 0; (matches == false) && (i < len); ++i)
+            {
+                matches = std::any_cast<uint32_t>(f.data) == msg->logScopeId;
+            }
+        }
+        break;
+
+        default:
+            break;
         }
         
         // If this column doesn't match, the row is filtered out
-        if (!matches)
-            return eMatchType::NoMatch;
+        matchType = (matches ? eMatchType::ExactMatch : eMatchType::NoMatch);
     }
-
+    
     return matchType;
 }
 
