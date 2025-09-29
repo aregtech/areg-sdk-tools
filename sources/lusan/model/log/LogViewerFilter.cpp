@@ -35,7 +35,7 @@ LogViewerFilter::~LogViewerFilter(void)
     _clearData();
 }
 
-void LogViewerFilter::setComboFilter(int logicalColumn, const FilterList& filters)
+void LogViewerFilter::setComboFilter(int logicalColumn, const NELusanCommon::FilterList& filters)
 {
     if (filters.isEmpty())
     {
@@ -51,10 +51,10 @@ void LogViewerFilter::setComboFilter(int logicalColumn, const FilterList& filter
 
 void LogViewerFilter::setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard)
 {
-    setTextFilter(logicalColumn, FilterString{ text, isCaseSensitive, isWholeWord, isWildCard });
+    setTextFilter(logicalColumn, NELusanCommon::FilterString{ text, isCaseSensitive, isWholeWord, isWildCard });
 }
 
-void LogViewerFilter::setTextFilter(int logicalColumn, const FilterString& filter)
+void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::FilterString& filter)
 {
     if (filter.text.isEmpty())
     {
@@ -77,11 +77,11 @@ void LogViewerFilter::clearFilters()
 
 bool LogViewerFilter::filterExactMatch(const QModelIndex& index) const
 {
-    eMatchType comboMatch = matchesComboFilters(index);
-    eMatchType textMatch = matchesTextFilters(index);
+    NELusanCommon::eMatchType comboMatch = matchesComboFilters(index);
+    NELusanCommon::eMatchType textMatch = matchesTextFilters(index);
 
-    return  ((comboMatch != eMatchType::NoMatch)    && (textMatch != eMatchType::NoMatch)) &&
-            ((comboMatch == eMatchType::ExactMatch) || (textMatch == eMatchType::ExactMatch));
+    return  ((comboMatch != NELusanCommon::eMatchType::NoMatch)    && (textMatch != NELusanCommon::eMatchType::NoMatch)) &&
+            ((comboMatch == NELusanCommon::eMatchType::ExactMatch) || (textMatch == NELusanCommon::eMatchType::ExactMatch));
 }
 
 bool LogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
@@ -89,15 +89,15 @@ bool LogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
     QModelIndex index = sourceModel() != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
 
     // Check if row matches all active filters
-    return  (matchesComboFilters(index) != eMatchType::NoMatch) && 
-            (matchesTextFilters(index)  != eMatchType::NoMatch);
+    return  (matchesComboFilters(index) != NELusanCommon::eMatchType::NoMatch) && 
+            (matchesTextFilters(index)  != NELusanCommon::eMatchType::NoMatch);
 }
 
-LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelIndex& index) const
+NELusanCommon::eMatchType LogViewerFilter::matchesComboFilters(const QModelIndex& index) const
 {
-    eMatchType matchType = eMatchType::PartialMatch;
+    NELusanCommon::eMatchType matchType = NELusanCommon::eMatchType::PartialMatch;
     if (index.isValid() == false)
-        return eMatchType::NoMatch;
+        return NELusanCommon::eMatchType::NoMatch;
     
     LoggingModelBase* model = static_cast<LoggingModelBase *>(sourceModel());
     if (model == nullptr)
@@ -105,10 +105,10 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelInd
     
     int row = index.row();    
     // Check each active combo filter
-    for (auto it = mComboFilters.constBegin(); (matchType != eMatchType::NoMatch) && (it != mComboFilters.constEnd()); ++it)
+    for (auto it = mComboFilters.constBegin(); (matchType != NELusanCommon::eMatchType::NoMatch) && (it != mComboFilters.constEnd()); ++it)
     {
         int column = it.key();
-        const FilterList& filters = it.value();
+        const NELusanCommon::FilterList& filters = it.value();
 
         if (filters.isEmpty())
             continue;
@@ -123,62 +123,54 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelInd
         LoggingModelBase::eColumn ecol = model->fromIndexToColumn(column);
         // Check if the cell data matches any of the selected filter items
         bool matches = false;
-        switch (ecol)
+        for (int i = 0; (matches == false) && (i < len); ++i)
         {
-        case LoggingModelBase::eColumn::LogColumnPriority:
-        {
-            for (int i = 0; (matches == false) && (i < len); ++i)
+            const NELusanCommon::sFilterData & f = filters[i];
+            switch (ecol)
             {
-                matches = (std::any_cast<uin16_t>(f.data) & static_cast<uint16_t>(msg->logMessagePrio));
+            case LoggingModelBase::eColumn::LogColumnPriority:
+            {
+                matches = (std::any_cast<uint16_t>(f.data) & static_cast<uint16_t>(msg->logMessagePrio));
             }
-        }
-        break;
+            break;
 
-        case LoggingModelBase::eColumn::LogColumnSource:
-        case LoggingModelBase::eColumn::LogColumnSourceId:
-        {
-            for (int i = 0; (matches == false) && (i < len); ++i)
+            case LoggingModelBase::eColumn::LogColumnSource:
+            case LoggingModelBase::eColumn::LogColumnSourceId:
             {
                 matches = std::any_cast<ITEM_ID>(f.data) == msg->logCookie;
             }
-        }
-        break;
+            break;
             
-        case LoggingModelBase::eColumn::LogColumnThreadId:
-        case LoggingModelBase::eColumn::LogColumnThread:
-        {
-            for (int i = 0; (matches == false) && (i < len); ++i)
+            case LoggingModelBase::eColumn::LogColumnThreadId:
+            case LoggingModelBase::eColumn::LogColumnThread:
             {
                 matches = std::any_cast<ITEM_ID>(f.data) == msg->logThreadId;
             }
-        }
-        break;
+            break;
 
-        case LoggingModelBase::eColumn::LogColumnScopeId:
-        {
-            for (int i = 0; (matches == false) && (i < len); ++i)
+            case LoggingModelBase::eColumn::LogColumnScopeId:
             {
                 matches = std::any_cast<uint32_t>(f.data) == msg->logScopeId;
             }
-        }
-        break;
-
-        default:
             break;
+
+            default:
+                break;
+            }
         }
         
         // If this column doesn't match, the row is filtered out
-        matchType = (matches ? eMatchType::ExactMatch : eMatchType::NoMatch);
+        matchType = (matches ? NELusanCommon::eMatchType::ExactMatch : NELusanCommon::eMatchType::NoMatch);
     }
     
     return matchType;
 }
 
-LogViewerFilter::eMatchType LogViewerFilter::matchesTextFilters(const QModelIndex& index) const
+NELusanCommon::eMatchType LogViewerFilter::matchesTextFilters(const QModelIndex& index) const
 {
-    eMatchType matchType = eMatchType::PartialMatch;
+    NELusanCommon::eMatchType matchType = NELusanCommon::eMatchType::PartialMatch;
     if (index.isValid() == false)
-        return eMatchType::NoMatch;
+        return NELusanCommon::eMatchType::NoMatch;
     
     QAbstractItemModel* model = sourceModel();
     if (model == nullptr)
@@ -189,7 +181,7 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesTextFilters(const QModelInde
     for (auto it = mTextFilters.constBegin(); it != mTextFilters.constEnd(); ++it)
     {
         int column = it.key();
-        const sStringFilter& filterText = it.value();
+        const NELusanCommon::sStringFilter& filterText = it.value();
 
         if (filterText.text.isEmpty())
             continue;
@@ -205,7 +197,7 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesTextFilters(const QModelInde
             uint32_t rowDuration = cellData.toUInt();
             uint32_t filDuration = filterText.text.toUInt();
             if  (rowDuration < filDuration)
-                return eMatchType::NoMatch;
+                return NELusanCommon::eMatchType::NoMatch;
         }
         else
         {
@@ -213,17 +205,17 @@ LogViewerFilter::eMatchType LogViewerFilter::matchesTextFilters(const QModelInde
             if (filterText.isWildCard || filterText.isWholeWord)
             {
                 if (wildcardMatch(cellData, filterText.text, filterText.isCaseSensitive, filterText.isWholeWord) == false)
-                    return eMatchType::NoMatch;
+                    return NELusanCommon::eMatchType::NoMatch;
     
-                matchType = eMatchType::ExactMatch;
+                matchType = NELusanCommon::eMatchType::ExactMatch;
             }
             else if (cellData.contains(filterText.text, filterText.isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive) == false)
             {
-                return eMatchType::NoMatch;
+                return NELusanCommon::eMatchType::NoMatch;
             }
             else
             {
-                matchType = eMatchType::ExactMatch;
+                matchType = NELusanCommon::eMatchType::ExactMatch;
             }
         }
     }

@@ -49,7 +49,7 @@ LogComboFilter::LogComboFilter(QWidget* parent)
     layout->addWidget(mListWidget);
 }
 
-void LogComboFilter::setItems(const QStringList& items, const AnyList& data)
+void LogComboFilter::setItems(const QStringList& items, const NELusanCommon::AnyList& data)
 {
     mComboData.clear();
     for (int i = 0; i < static_cast<int>(items.size()); ++i)
@@ -57,7 +57,7 @@ void LogComboFilter::setItems(const QStringList& items, const AnyList& data)
         const QString &entry = items[i];
         QList<QListWidgetItem*> f = mListWidget->findItems(entry, Qt::MatchFlag::MatchExactly);
         Q_ASSERT(f.size() <= 1);
-        mComboData.push_back(sComboItem{entry, data[i], (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked)});
+        mComboData.push_back(NELusanCommon::FilterData{entry, data[i], (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked)});
     }
     
     mListWidget->clear();
@@ -66,12 +66,12 @@ void LogComboFilter::setItems(const QStringList& items, const AnyList& data)
     {
         QListWidgetItem* item = new QListWidgetItem(entry.text, mListWidget);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(entry.checked ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+        item->setCheckState(entry.active ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
         mListWidget->addItem(item);
     }
 }
 
-void LogComboFilter::setItems(const QList<LogComboFilter::sComboItem>& items)
+void LogComboFilter::setItems(const QList<NELusanCommon::FilterData>& items)
 {
     mComboData.clear();
     for (int i = 0; i < static_cast<int>(items.size()); ++i)
@@ -79,7 +79,7 @@ void LogComboFilter::setItems(const QList<LogComboFilter::sComboItem>& items)
         const QString &entry = items[i].text;
         QList<QListWidgetItem*> f = mListWidget->findItems(entry, Qt::MatchFlag::MatchExactly);
         Q_ASSERT(f.size() <= 1);
-        mComboData.push_back(sComboItem{entry, items[i].data, (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked)});
+        mComboData.push_back(NELusanCommon::FilterData{entry, items[i].data, (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked)});
     }
     
     mListWidget->clear();
@@ -88,20 +88,20 @@ void LogComboFilter::setItems(const QList<LogComboFilter::sComboItem>& items)
     {
         QListWidgetItem* item = new QListWidgetItem(entry.text, mListWidget);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(entry.checked ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+        item->setCheckState(entry.active ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
         mListWidget->addItem(item);
     }
 }
 
-QList<LogComboFilter::sComboItem> LogComboFilter::getCheckedItems() const
+QList<NELusanCommon::FilterData> LogComboFilter::getCheckedItems() const
 {
-    QList<LogComboFilter::sComboItem> checked;
+    QList<NELusanCommon::FilterData> checked;
     for (int i = 0; i < mListWidget->count(); ++i)
     {
         QListWidgetItem* item = mListWidget->item(i);
         if (item->checkState() == Qt::Checked)
         {
-            checked.push_back(sComboItem{item->text(), mComboData[i].data, true});
+            checked.push_back(NELusanCommon::FilterData{item->text(), mComboData[i].data, true});
         }
     }
 
@@ -312,7 +312,7 @@ void LogHeaderItem::setFilterData(const QString& data)
     }
 }
 
-void LogHeaderItem::setFilterData(const std::vector<String>& data, const AnyList& list)
+void LogHeaderItem::setFilterData(const std::vector<String>& data, const NELusanCommon::AnyList& list)
 {
     if (mType == eType::Combo && mCombo != nullptr)
     {
@@ -327,7 +327,7 @@ void LogHeaderItem::setFilterData(const std::vector<String>& data, const AnyList
     }
 }
 
-void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data, const AnyList& list)
+void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data, const NELusanCommon::AnyList& list)
 {
     if (mType == eType::Combo && mCombo != nullptr)
     {

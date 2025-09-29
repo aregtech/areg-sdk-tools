@@ -92,12 +92,12 @@ public:
     /**
      * \brief   Sets the list of strings in the combo-box filter control
      **/
-    void setFilterData(const std::vector<String> & data, const AnyList& list);
+    void setFilterData(const std::vector<String> & data, const NELusanCommon::AnyList& list);
     
     /**
      * \brief   Sets the list of integers in the combo-box filter control
      **/
-    void setFilterData(const std::vector<ITEM_ID> & data, const AnyList& list);
+    void setFilterData(const std::vector<ITEM_ID> & data, const NELusanCommon::AnyList& list);
 
     /**
      * \brief   Returns true if header object can be visualized in the pop-up widget.
@@ -148,13 +148,7 @@ public:
 /************************************************************************
  * Internal types and constants
  ************************************************************************/
-    //!< Structure is used to filter combo-box entries
-    struct sComboItem
-    {
-        QString     text{};         //!< The string in combo-box
-        AnyData     data{};         //!< The combo-box data
-        bool        checked{false}; //!< Flag, indicating whether the element is selected or not
-    };
+    using AnyData = NELusanCommon::AnyData;
     
 public:
     explicit LogComboFilter(QWidget* parent = nullptr);
@@ -163,14 +157,14 @@ public:
      * \brief   Updates and sets the items of combo-box
      * \param   items   The list of entries to set in combo-box
      **/
-    void setItems(const QStringList& items, const AnyList & data);
+    void setItems(const QStringList& items, const NELusanCommon::AnyList & data);
     
-    void setItems(const QList<LogComboFilter::sComboItem>& items);
+    void setItems(const QList<NELusanCommon::FilterData>& items);
     
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    QList<LogComboFilter::sComboItem> getCheckedItems() const;
+    QList<NELusanCommon::FilterData> getCheckedItems() const;
 
     /**
      * \brief   Clears filter data.
@@ -195,8 +189,8 @@ signals:
 // Member variables.
 //////////////////////////////////////////////////////////////////////////
 private:
-    QListWidget*        mListWidget;    //!< The list widget to display as a bombo-box.
-    QList<sComboItem>   mComboData;
+    QListWidget*                        mListWidget;    //!< The list widget to display as a bombo-box.
+    QList<NELusanCommon::FilterData>    mComboData;
 };
 
 //////////////////////////////////////////////////////////////////////////
