@@ -49,7 +49,6 @@ Workspace::Workspace(OptionsManager& options, QWidget * parent /*= nullptr*/)
     connect(mWorkspace->buttonBoxOkCancel       , &QDialogButtonBox::accepted   , this, &Workspace::onAccept);
     connect(mWorkspace->buttonBoxOkCancel       , &QDialogButtonBox::rejected   , this, &Workspace::onReject);
     connect(mWorkspace->buttonBrowse            , &QPushButton::clicked         , this, &Workspace::onBrowseClicked);
-    connect(mWorkspace->buttonBrowse            , &QPushButton::clicked         , this, &Workspace::onBrowseClicked);
     connect(mWorkspace->checkDefault            , &QCheckBox::clicked           , this, &Workspace::onDefaultChecked);
     connect(mWorkspace->comboboxWorkspacePath   , &QComboBox::currentTextChanged, this, &Workspace::onWorskpacePathChanged);
     connect(mWorkspace->comboboxWorkspacePath   , &QComboBox::editTextChanged   , this, &Workspace::onWorskpacePathChanged);
