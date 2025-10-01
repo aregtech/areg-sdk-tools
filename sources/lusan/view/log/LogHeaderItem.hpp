@@ -23,7 +23,8 @@
  * Includes
  ************************************************************************/
 #include "lusan/common/NELusanCommon.hpp"
-#include "lusan/model/log/LiveLogsModel.hpp"
+#include "lusan/model/log/LoggingModelBase.hpp"
+#include "areg/base/String.hpp"
 
 #include <QFrame>
 #include <QList>
@@ -31,21 +32,8 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class LogFilterBase;
 class LogTableHeader;
-class QHBoxLayout;
-class QPushButton;
-class QLabel;
-class QLineEdit;
-class QListWidget;
-
-/************************************************************************
- * Implemented classes
- ************************************************************************/
-
-class LogComboFilter;
-class LogTextFilter;
-class LogHeaderItem;
-
 
 //////////////////////////////////////////////////////////////////////////
 // LogHeaderItem class declaration
@@ -74,8 +62,7 @@ public:
     /**
      * \brief   Initialize the elements
      * \param   header  The header object
-     * @param   column  The virtual column, based on LiveLogsModel
-     * @param   text    The header name to display
+     * \param   logicalIndex  The logical index of the column
      */
     LogHeaderItem(LogTableHeader& header, int logicalIndex);
 
@@ -92,8 +79,13 @@ public:
     /**
      * \brief   Sets the list of strings in the combo-box filter control
      **/
-    void setFilterData(const std::vector<String> & data, const NELusanCommon::AnyList& list);
+    void setFilterData(const std::vector<QString> & data, const NELusanCommon::AnyList& list);
     
+    /**
+     * \brief   Sets the list of strings in the combo-box filter control
+     **/
+    void setFilterData(const std::vector<String> & data, const NELusanCommon::AnyList& list);
+
     /**
      * \brief   Sets the list of integers in the combo-box filter control
      **/
@@ -108,6 +100,11 @@ public:
      * \brief   Resets filter data.
      **/
     void resetFilter(void);
+
+    /**
+     * \brief   Returns the filter data.
+     **/
+    QList<NELusanCommon::FilterData> getFilterData(void) const;
 
 private:
 /************************************************************************
@@ -130,136 +127,7 @@ private:
     LoggingModelBase::eColumn mColumn;  //!< The index of the header item.
     eType           mType;      //!< Type of the header item.
     LogTableHeader& mHeader;    //!< The header object, which contains this item.
-    LogComboFilter* mCombo;     //!< The combo-box filter, if applicable.
-    LogTextFilter*  mEdit;      //!< The line editor filter, if applicable.
-};
-
-//////////////////////////////////////////////////////////////////////////
-// LogComboFilter class declaration
-//////////////////////////////////////////////////////////////////////////
-/**
- * \brief   A class to display as a combo-box entries when click on header.
- **/
-class LogComboFilter : public QFrame
-{
-    Q_OBJECT
-    
-public:
-/************************************************************************
- * Internal types and constants
- ************************************************************************/
-    using AnyData = NELusanCommon::AnyData;
-    
-public:
-    explicit LogComboFilter(QWidget* parent = nullptr);
-
-    /**
-     * \brief   Updates and sets the items of combo-box
-     * \param   items   The list of entries to set in combo-box
-     **/
-    void setItems(const QStringList& items, const NELusanCommon::AnyList & data);
-    
-    void setItems(const QList<NELusanCommon::FilterData>& items);
-    
-    /**
-     * \brief   Returns list of selected (checked) entries.
-     **/
-    QList<NELusanCommon::FilterData> getCheckedItems() const;
-
-    /**
-     * \brief   Clears filter data.
-     **/
-    void clearFilter(void);
-
-    /**
-     * \brief   Shows the filter widget and set focus on the list widget.
-     **/
-    void showFilter(void);
-
-/************************************************************************
- * Signals
- ************************************************************************/
-signals:
-    /**
-     * \brief   The signal, which is triggered when an element from combo-box is selected.
-     **/
-    void signalFiltersChanged(void);
-
-//////////////////////////////////////////////////////////////////////////
-// Member variables.
-//////////////////////////////////////////////////////////////////////////
-private:
-    QListWidget*                        mListWidget;    //!< The list widget to display as a bombo-box.
-    QList<NELusanCommon::FilterData>    mComboData;
-};
-
-//////////////////////////////////////////////////////////////////////////
-// LogTextFilter class declaration
-//////////////////////////////////////////////////////////////////////////
-/**
- * \brief   A visual element to type a string to search and filter
- **/
-class LogTextFilter : public QFrame
-{
-    Q_OBJECT
-
-public:
-    /**
-     * \brief   Creates the simple or extended text filter object.
-     *          The extended text filter is an instance of SearchLineEdit and contains additional tool-buttons
-     * \param   isExtended  If true, the text filter is extended and contains additional tool-buttons for match case, match word, wild card, and backward search.
-     * \param   parent  The parent widget of the text filter.
-     **/
-    explicit LogTextFilter(bool isExtended, QWidget* parent = nullptr);
-
-    /**
-     * \brief   Returns types string in the line edit
-     **/
-    QString getText() const;
-
-    /**
-     * \brief   Sets the text in the line edit.
-     **/
-    void setText(const QString & newText);
-
-    /**
-     * \brief   Clears filter data.
-     **/
-    void clearFilter(void);
-
-    /**
-     * \brief   Shows the filter widget and set focus on the line edit widget.
-     **/
-    void showFilter(void);
-
-signals:
-/************************************************************************
- * Signals
- ************************************************************************/
-
-    /**
-     * \brief   A signal triggered when user types a text inside editor
-     * \param   text    A new text.
-     */
-    void signalFilterTextChanged(const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWidlCard);
-    
-private slots:
-/************************************************************************
- * Slots
- ************************************************************************/
-
-    /**
-     * \brief   Slot triggered when the tool-button is checked or unchecked.
-     *          The slot emits signalFilterTextChanged with the current text and flags.
-     * \param   checked     Is set true if tool-button is checked, false otherwise.
-     **/
-    void slotToolbuttonChecked(bool checked);
-
-//////////////////////////////////////////////////////////////////////////
-// Member variables
-//////////////////////////////////////////////////////////////////////////
-private:
-    QLineEdit* mLineEdit;   //!< Line edit controller
+    LogFilterBase * mWidget;    //<!< The filter widget, which is displayed in the header item.
 };
 
 //////////////////////////////////////////////////////////////////////////

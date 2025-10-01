@@ -365,17 +365,20 @@ namespace NELusanCommon
      **/
     enum eMatchType : int
     {
-        NoMatch       = 0 //!< Has not match of filters
+          NoMatch       = 0 //!< Has not match of filters
         , PartialMatch  = 1 //!< Has partial match of filters
         , PartialOutput = 2 //!< Has partial match of filters to output, but not exact
         , ExactMatch    = 4 //!< Has exact match of filters
     };
-    
+
+    /**
+     * \brief   The filter data structure.
+     **/
     struct sFilterData
     {
-        QString text    { };
-        AnyData data    { };
-        bool    active  { false };
+        QString text    { };        //!< The text to filter by
+        AnyData data    { };        //!< The data associated with the filter, can be any type
+        bool    active  { false };  //!< Indicates if the filter is active (checked)
     };
     
     using FilterList    = QList<sFilterData>;

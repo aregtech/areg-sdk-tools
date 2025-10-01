@@ -146,7 +146,12 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
                 std::vector<String> names;
                 std::vector<std::any> prios;
                 mModel->getPriorityValues(names, prios);
-                mHeaders[static_cast<int>(LoggingModelBase::eColumn::LogColumnPriority)]->setFilterData(names, prios);
+                LogHeaderItem * header = mHeaders[static_cast<int>(LoggingModelBase::eColumn::LogColumnPriority)];
+
+                header->blockSignals(true);
+                header->setFilterData(names, prios);
+                header->blockSignals(false);
+                // emit signalComboFilterChanged(static_cast<int>(LoggingModelBase::eColumn::LogColumnPriority), header->getFilterComboData());
             }
             break;
                 

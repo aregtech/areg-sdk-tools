@@ -23,15 +23,14 @@
  * Includes
  ************************************************************************/
 
-#include "lusan/common/NELusanCommon.hpp"
 #include <QSortFilterProxyModel>
-#include <QStringList>
-#include <QMap>
 
-#include "areg/base/GEGlobal.h"
-#include "areg/base/String.hpp"
-#include "areg/base/Thread.hpp"
-#include "areg/component/NEService.hpp"
+#include "lusan/common/NELusanCommon.hpp"
+#include "areg/logging/NELogging.hpp"
+#include <QMap>
+#include <QString>
+#include <QRegularExpression>
+
 
 class LoggingModelBase;
 
@@ -103,22 +102,24 @@ protected:
     virtual bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 
 //////////////////////////////////////////////////////////////////////////
-// Operations
+// Hidden methods
 //////////////////////////////////////////////////////////////////////////
-protected:
+private:
     /**
      * \brief   Helper method to check if a row matches the combo filters.
-     * \param   row         The row index in the source model.
+     * \param   model  The logging model to use for filtering.
+     * \param   msg    The log message to check against the filters.
      * \return  True if the row matches all combo filters.
      **/
-    NELusanCommon::eMatchType matchesComboFilters(const QModelIndex& index) const;
+    NELusanCommon::eMatchType matchesComboFilters(LoggingModelBase* model, const NELogging::sLogMessage* msg) const;
 
     /**
      * \brief   Helper method to check if a row matches the text filters.
-     * \param   row  The row index in the source model.
+     * \param   model  The logging model to use for filtering.
+     * \param   msg    The log message to check against the filters.
      * \return  True if the row matches all text filters.
      **/
-    NELusanCommon::eMatchType matchesTextFilters(const QModelIndex& index) const;
+    NELusanCommon::eMatchType matchesTextFilters(LoggingModelBase* model, const NELogging::sLogMessage* msg) const;
 
     /**
      * \brief   Helper method to perform wildcard matching.
@@ -129,8 +130,55 @@ protected:
      * \return  True if the text matches the wildcard pattern, false otherwise.
      **/
     bool wildcardMatch(const QString& text, const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord) const;
-    
-private:
+
+    /**
+     * \brief   Checks if the log message matches the priority filters.
+     * \param   msg     The log message to check.
+     * \param   filters The list of priority filters to match against.
+     * \return  True if the log message matches any of the priority filters, false otherwise.
+     **/
+    inline bool matchPrio(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+
+    /**
+     * \brief   Checks if the log message matches the source filters.
+     * \param   msg     The log message to check.
+     * \param   filters The list of source filters to match against.
+     * \return  True if the log message matches any of the source filters, false otherwise.
+     **/
+    inline bool matchSources(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+
+    /**
+     * \brief   Checks if the log message matches the thread filters.
+     * \param   msg     The log message to check.
+     * \param   filters The list of thread filters to match against.
+     * \return  True if the log message matches any of the thread filters, false otherwise.
+     **/
+    inline bool matchThreads(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+
+    /**
+     * \brief   Checks if the log message matches the duration filters.
+     * \param   msg     The log message to check.
+     * \param   filters The list of duration filters to match against.
+     * \return  True if the log message matches any of the duration filters, false otherwise.
+     **/
+    inline bool matchDuration(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+
+    /**
+     * \brief   Checks if the log message matches the message text filters.
+     * \param   msg     The log message to check.
+     * \param   filters The list of message text filters to match against.
+     * \return  True if the log message matches any of the message text filters, false otherwise.
+     **/
+    inline bool matchMessage(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+
+    /**
+     * \brief   Prepares the regular expression for wildcard matching.
+     * \param   wildcardPattern The wildcard pattern to convert to a regular expression.
+     * \param   isCaseSensitive Flag indicating if the match is case-sensitive.
+     * \param   isWholeWord     Flag indicating if the match is for whole words only.
+     * \param   isWildCard      Flag indicating if the pattern is a wildcard.
+     **/
+    inline void prepareReExpression(const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
 
     //!< Clear filter data/
     inline void _clearData(void);
@@ -139,8 +187,10 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
-    QMap<int, NELusanCommon::FilterList>   mComboFilters;  //!< Map of column index to selected filter items
-    QMap<int, NELusanCommon::FilterString> mTextFilters;   //!< Map of column index to filter text
+    QMap<int, NELusanCommon::FilterList>    mComboFilters;  //!< Map of column index to selected filter items
+    QMap<int, NELusanCommon::FilterList>    mTextFilters;   //!< Map of column index to filter text
+    QString                                 mRePattern;     //<!< Regular expression pattern for wildcard matching
+    QRegularExpression                      mReExpression;  //<!< Regular expression for wildcard matching
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call
