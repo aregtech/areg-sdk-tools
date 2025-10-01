@@ -216,7 +216,7 @@ private:
      * \param   index   The index in the source model to check.
      * \return  Returns the match type of the index against the scope filter.
      **/
-    LogViewerFilter::eMatchType matchesScopeFilter(const QModelIndex& index) const;
+    NELusanCommon::eMatchType matchesScopeFilter(const QModelIndex& index) const;
 
     /**
      * \brief   Clears all filter data.

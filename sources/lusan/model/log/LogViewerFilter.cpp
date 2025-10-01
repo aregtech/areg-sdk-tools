@@ -19,12 +19,13 @@
 #include "lusan/model/log/LogViewerFilter.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 #include <QModelIndex>
-#include <QRegularExpression>
 
 LogViewerFilter::LogViewerFilter(LoggingModelBase* model)
     : QSortFilterProxyModel (model)
     , mComboFilters         ( )
     , mTextFilters          ( )
+    , mRePattern            ( )
+    , mReExpression         ( )
 {
     setSourceModel(model);
 }
@@ -35,33 +36,61 @@ LogViewerFilter::~LogViewerFilter(void)
     _clearData();
 }
 
-void LogViewerFilter::setComboFilter(int logicalColumn, const QStringList& items)
+void LogViewerFilter::setComboFilter(int logicalColumn, const NELusanCommon::FilterList& filters)
 {
-    if (items.isEmpty())
+    if (filters.isEmpty())
     {
-        mComboFilters.remove(logicalColumn);
+        if (mComboFilters.contains(logicalColumn))
+        {
+            mComboFilters.remove(logicalColumn);
+            invalidateFilter();
+        }
     }
     else
     {
-        mComboFilters[logicalColumn] = items;
+        mComboFilters[logicalColumn] = filters;
+        invalidateFilter();
     }
-
-    invalidateFilter();
 }
 
 void LogViewerFilter::setTextFilter(int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard)
 {
-    if (text.isEmpty())
+    setTextFilter(logicalColumn, NELusanCommon::FilterString{ text, isCaseSensitive, isWholeWord, isWildCard });
+}
+
+void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::FilterString& filter)
+{
+    if (filter.text.isEmpty())
     {
-        mTextFilters.remove(logicalColumn);
+        if (mTextFilters.contains(logicalColumn))
+        {
+            mTextFilters.remove(logicalColumn);
+            LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
+            if ((model != nullptr) && (model->fromIndexToColumn(logicalColumn) == LoggingModelBase::eColumn::LogColumnMessage))
+            {
+                // If the filter is removed, we need to invalidate the filter
+                // to ensure that the model updates correctly.
+                prepareReExpression(filter.text, false, false, false);
+            }
+
+            invalidateFilter();
+        }
     }
     else
     {
-        mTextFilters[logicalColumn] = sStringFilter{text, isCaseSensitive, isWholeWord, isWildCard};
-    }
+        mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<NELusanCommon::FilterString>(filter), true} };
+        LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
+        if ((model != nullptr) && (model->fromIndexToColumn(logicalColumn) == LoggingModelBase::eColumn::LogColumnMessage))
+        {
+            // If the filter is set, prepare regex
+            // to ensure that the model updates correctly.
+            prepareReExpression(filter.text, filter.isCaseSensitive, filter.isWholeWord, filter.isWildCard);
+        }
 
-    invalidateFilter();
+        invalidateFilter();
+    }
 }
+
 
 void LogViewerFilter::clearFilters()
 {
@@ -71,119 +100,97 @@ void LogViewerFilter::clearFilters()
 
 bool LogViewerFilter::filterExactMatch(const QModelIndex& index) const
 {
-    eMatchType comboMatch = matchesComboFilters(index);
-    eMatchType textMatch = matchesTextFilters(index);
+    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
+    if (index.isValid() == false)
+        return false;
+    else if (model == nullptr)
+        return true;
 
-    return  ((comboMatch != eMatchType::NoMatch)    && (textMatch != eMatchType::NoMatch)) &&
-            ((comboMatch == eMatchType::ExactMatch) || (textMatch == eMatchType::ExactMatch));
+    const NELogging::sLogMessage* msg = model->getLogData(index.row());
+    NELusanCommon::eMatchType comboMatch = matchesComboFilters(model, msg);
+    if (comboMatch != NELusanCommon::eMatchType::NoMatch)
+    {
+        NELusanCommon::eMatchType textMatch = matchesTextFilters(model, msg);
+        if (textMatch != NELusanCommon::eMatchType::NoMatch)
+            return (comboMatch == NELusanCommon::eMatchType::ExactMatch) || (textMatch == NELusanCommon::eMatchType::ExactMatch);
+    }
+
+    return false;
 }
 
 bool LogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
 {
+    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
     QModelIndex index = sourceModel() != nullptr ? sourceModel()->index(row, 0, parent) : QModelIndex();
+    if (index.isValid() == false)
+        return false;
+    else if (model == nullptr)
+        return true;
 
+    const NELogging::sLogMessage* msg = model->getLogData(index.row());
     // Check if row matches all active filters
-    return  (matchesComboFilters(index) != eMatchType::NoMatch) && 
-            (matchesTextFilters(index)  != eMatchType::NoMatch);
+    return  (matchesComboFilters(model, msg) != NELusanCommon::eMatchType::NoMatch) &&
+            (matchesTextFilters(model, msg)  != NELusanCommon::eMatchType::NoMatch);
 }
 
-LogViewerFilter::eMatchType LogViewerFilter::matchesComboFilters(const QModelIndex& index) const
+NELusanCommon::eMatchType LogViewerFilter::matchesComboFilters(LoggingModelBase* model, const NELogging::sLogMessage* msg) const
 {
-    eMatchType matchType = eMatchType::PartialMatch;
-    if (index.isValid() == false)
-        return eMatchType::NoMatch;
-    
-    QAbstractItemModel* model = sourceModel();
-    if (model == nullptr)
-        return matchType;
-    
-    int row = index.row();    
+    NELusanCommon::eMatchType matchType = NELusanCommon::eMatchType::PartialMatch;
     // Check each active combo filter
-    for (auto it = mComboFilters.constBegin(); it != mComboFilters.constEnd(); ++it)
+    for (auto it = mComboFilters.constBegin(); (matchType != NELusanCommon::eMatchType::NoMatch) && (it != mComboFilters.constEnd()); ++it)
     {
-        int column = it.key();
-        const QStringList& filterItems = it.value();
-
-        if (filterItems.isEmpty())
+        const NELusanCommon::FilterList& filters = it.value();
+        if (filters.isEmpty())
             continue;
         
-        // Get the data for this column and row
-        QModelIndex idxCol = model->index(row, column);
-        if (idxCol.isValid() == false)
-            continue;
-        
-        QString cellData = model->data(idxCol, Qt::DisplayRole).toString();
-        // Check if the cell data matches any of the selected filter items
-        bool matches = false;
-        for (const QString& filterItem : filterItems)
+        LoggingModelBase::eColumn ecol = model->fromIndexToColumn(static_cast<int>(it.key()));
+        switch (ecol)
         {
-            if (cellData == filterItem)
-            {
-                matches     = true;
-                matchType   = eMatchType::ExactMatch;
-                break;
-            }
-        }
-        
-        // If this column doesn't match, the row is filtered out
-        if (!matches)
-            return eMatchType::NoMatch;
-    }
+        case LoggingModelBase::eColumn::LogColumnPriority:
+            matchType = matchPrio(msg, filters) ? NELusanCommon::eMatchType::ExactMatch : NELusanCommon::eMatchType::NoMatch;
+            break;
 
+        case LoggingModelBase::eColumn::LogColumnSource:
+        case LoggingModelBase::eColumn::LogColumnSourceId:
+            matchType = matchSources(msg, filters) ? NELusanCommon::eMatchType::ExactMatch : NELusanCommon::eMatchType::NoMatch;
+            break;
+
+        case LoggingModelBase::eColumn::LogColumnThreadId:
+        case LoggingModelBase::eColumn::LogColumnThread:
+            matchType = matchThreads(msg, filters) ? NELusanCommon::eMatchType::ExactMatch : NELusanCommon::eMatchType::NoMatch;
+            break;
+
+        default:
+            break;
+        }
+    }
+    
     return matchType;
 }
 
-LogViewerFilter::eMatchType LogViewerFilter::matchesTextFilters(const QModelIndex& index) const
+NELusanCommon::eMatchType LogViewerFilter::matchesTextFilters(LoggingModelBase* model, const NELogging::sLogMessage* msg) const
 {
-    eMatchType matchType = eMatchType::PartialMatch;
-    if (index.isValid() == false)
-        return eMatchType::NoMatch;
-    
-    QAbstractItemModel* model = sourceModel();
-    if (model == nullptr)
-        return matchType;
-    
-    const int row{ index.row() };
+    NELusanCommon::eMatchType matchType = NELusanCommon::eMatchType::PartialMatch;
     // Check each active text filter
-    for (auto it = mTextFilters.constBegin(); it != mTextFilters.constEnd(); ++it)
+    for (auto it = mTextFilters.constBegin(); (matchType != NELusanCommon::eMatchType::NoMatch) && (it != mTextFilters.constEnd()); ++it)
     {
-        int column = it.key();
-        const sStringFilter& filterText = it.value();
-
-        if (filterText.text.isEmpty())
+        const NELusanCommon::FilterList& filters = it.value();
+        if (filters.isEmpty())
             continue;
 
-        // Get the data for this column and row
-        QModelIndex idxCol = sourceModel()->index(row, column);
-        if (idxCol.isValid() == false)
-            continue;
-        
-        QString cellData = model->data(idxCol, Qt::DisplayRole).toString();
-        if (model->headerData(column, Qt::Orientation::Horizontal, static_cast<int>(Qt::ItemDataRole::UserRole)).toInt() == static_cast<int>(LoggingModelBase::eColumn::LogColumnTimeDuration))
+        LoggingModelBase::eColumn ecol = model->fromIndexToColumn(static_cast<int>(it.key()));
+        switch (ecol)
         {
-            uint32_t rowDuration = cellData.toUInt();
-            uint32_t filDuration = filterText.text.toUInt();
-            if  (rowDuration < filDuration)
-                return eMatchType::NoMatch;
-        }
-        else
-        {
-            // Check if the cell data contains the filter text (case-insensitive)
-            if (filterText.isWildCard || filterText.isWholeWord)
-            {
-                if (wildcardMatch(cellData, filterText.text, filterText.isCaseSensitive, filterText.isWholeWord) == false)
-                    return eMatchType::NoMatch;
-    
-                matchType = eMatchType::ExactMatch;
-            }
-            else if (cellData.contains(filterText.text, filterText.isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive) == false)
-            {
-                return eMatchType::NoMatch;
-            }
-            else
-            {
-                matchType = eMatchType::ExactMatch;
-            }
+        case LoggingModelBase::eColumn::LogColumnTimeDuration:
+            matchType = matchThreads(msg, filters) ? NELusanCommon::eMatchType::ExactMatch : NELusanCommon::eMatchType::NoMatch;
+            break;
+
+        case LoggingModelBase::eColumn::LogColumnMessage:
+            matchType = matchMessage(msg, filters) ? NELusanCommon::eMatchType::ExactMatch : NELusanCommon::eMatchType::NoMatch;
+            break;
+
+        default:
+            break;
         }
     }
 
@@ -208,6 +215,84 @@ bool LogViewerFilter::wildcardMatch(const QString& text, const QString& wildcard
     QRegularExpression::PatternOptions options = isCaseSensitive ? QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption;
     QRegularExpression re(regexPattern, options);
     return text.contains(re);
+}
+
+inline bool LogViewerFilter::matchPrio(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+{
+    return (std::any_cast<uint16_t>(filters[0].data) & static_cast<uint16_t>(msg->logMessagePrio)) != 0;
+}
+
+inline bool LogViewerFilter::matchSources(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+{
+    for (const auto& f : filters)
+    {
+        if (std::any_cast<ITEM_ID>(f.data) == msg->logCookie)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+inline bool LogViewerFilter::matchThreads(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+{
+    for (const auto& f : filters)
+    {
+        if (std::any_cast<ITEM_ID>(f.data) == msg->logThreadId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool LogViewerFilter::matchDuration(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+{
+    return (msg->logDuration >= std::any_cast<uint16_t>(filters[0].data));
+}
+
+inline bool LogViewerFilter::matchMessage(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+{
+    NELusanCommon::FilterString filterText = std::any_cast<NELusanCommon::FilterString>(filters[0].data);
+    // Check if the cell data contains the filter text (case-insensitive)
+    if (filterText.isWildCard || filterText.isWholeWord)
+    {
+        // return wildcardMatch(QString::fromUtf8(msg->logMessage, msg->logMessageLen), filterText.text, filterText.isCaseSensitive, filterText.isWholeWord);
+        Q_ASSERT(mRePattern.isEmpty() == false);
+        return QString::fromUtf8(msg->logMessage, msg->logMessageLen).contains(mReExpression);
+    }
+    else
+    {
+        return QString::fromUtf8(msg->logMessage, msg->logMessageLen).contains(filterText.text, filterText.isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive);
+    }
+}
+
+inline void LogViewerFilter::prepareReExpression(const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord, bool isWildCard)
+{
+    if ((isWildCard || isWholeWord) && !wildcardPattern.isEmpty())
+    {
+        // Escape regex special characters except * and ?
+        mRePattern = QRegularExpression::escape(wildcardPattern);
+        mRePattern.replace("\\*", ".*");
+        mRePattern.replace("\\?", ".");
+
+        // For whole word, use word boundaries, but treat '_' as a word boundary as well
+        if (isWholeWord)
+        {
+            // Custom boundaries: start of string or non-word char (including '_'), and end of string or non-word char (including '_')
+            // \b does not treat '_' as a boundary, so we use lookarounds
+            mRePattern = QStringLiteral("(?:(?<=^)|(?<=[^\\w]|_))") + mRePattern + QStringLiteral("(?:(?=$)|(?=[^\\w]|_))");
+        }
+
+        QRegularExpression::PatternOptions options = isCaseSensitive ? QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption;
+        mReExpression = QRegularExpression(mRePattern, options);
+    }
+    else
+    {
+        mRePattern.clear();
+        mReExpression = QRegularExpression();
+    }
 }
 
 inline void LogViewerFilter::_clearData(void)

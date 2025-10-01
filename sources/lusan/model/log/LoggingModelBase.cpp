@@ -324,6 +324,16 @@ void LoggingModelBase::getLogInstanceIds(std::vector<ITEM_ID>& ids)
     }
 }
 
+void LoggingModelBase::getLogInstances(std::vector<String>&names, std::vector<std::any>& ids)
+{
+    const std::vector< NEService::sServiceConnectedInstance> & instances{getLogInstances()};
+    for (const auto& instance : instances)
+    {
+        names.push_back(instance.ciInstance);
+        ids.push_back(std::make_any<ITEM_ID>(instance.ciCookie));
+    }
+}
+    
 void LoggingModelBase::getLogThreadNames(std::vector<String>& names)
 {
     mDatabase.getLogThreadNames(names);
@@ -334,9 +344,30 @@ void LoggingModelBase::getLogThreads(std::vector<ITEM_ID>& ids)
     mDatabase.getLogThreads(ids);
 }
 
+void LoggingModelBase::getLogThreadValues(std::vector<String>& names, std::vector<std::any>& ids)
+{
+    std::vector<ITEM_ID> tids;
+    mDatabase.getLogThreadNames(names);
+    mDatabase.getLogThreads(tids);
+    for (auto id : tids)
+    {
+        ids.push_back(std::make_any<ITEM_ID>(id));
+    }
+}
+
 void LoggingModelBase::getPriorityNames(std::vector<String>& names)
 {
     mDatabase.getPriorityNames(names);
+}
+
+void LoggingModelBase::getPriorityValues(std::vector<String>& names, std::vector<std::any>& values)
+{
+    mDatabase.getPriorityNames(names);
+    for (const auto & name : names)
+    {
+        NELogging::eLogPriority prio = name.isEmpty() ? NELogging::eLogPriority::PrioAny : NELogging::stringToLogPrio(name);
+        values.push_back(std::make_any<uint16_t>(static_cast<uint16_t>(prio)));
+    }
 }
 
 const std::vector< NEService::sServiceConnectedInstance> & LoggingModelBase::getLogInstances(void)

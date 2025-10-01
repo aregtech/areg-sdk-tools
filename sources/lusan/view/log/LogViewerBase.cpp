@@ -179,14 +179,14 @@ void LogViewerBase::setupWidgets(void)
     
     QItemSelectionModel* selection= mLogTable->selectionModel();
     connect(mHeader     , &LogTableHeader::signalComboFilterChanged, this
-            , [this](int logicalColumn, const QStringList& items){
+            , [this](int column, const QList<NELusanCommon::FilterData>& items){
                 _resetSearchResult();
-                mFilter->setComboFilter(logicalColumn, items);
+                mFilter->setComboFilter(column, items);
             });
     connect(mHeader     , &LogTableHeader::signalTextFilterChanged, this
-            , [this](int logicalColumn, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
+            , [this](int column, const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
                 _resetSearchResult();
-                mFilter->setTextFilter(logicalColumn, text, isCaseSensitive, isWholeWord, isWildCard);
+                mFilter->setTextFilter(column, text, isCaseSensitive, isWholeWord, isWildCard);
             });
     connect(mHeader     , &LogTableHeader::customContextMenuRequested   , this, [this](const QPoint& pos)  {onHeaderContextMenu(pos);});
     

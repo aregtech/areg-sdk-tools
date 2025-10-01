@@ -26,7 +26,9 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <any>
 #include <filesystem>
+#include <vector>
 
 /**
  * \namespace NELusanCommon
@@ -341,6 +343,47 @@ namespace NELusanCommon
      * \param   path    The path to fix.
      **/
     QString fixPath(const QString& path);
+    
+    using AnyData = std::any;
+    using AnyList = std::vector<AnyData>;
+    
+    //!< Structure to hold text filter parameters
+    struct sStringFilter
+    {
+        QString text            {     };    //!< The text to filter by
+        bool    isCaseSensitive {false};    //!< Indicates if the filter is case-sensitive
+        bool    isWholeWord     {false};    //!< Indicates if the filter matches whole words only
+        bool    isWildCard      {false};    //!< Indicates if the filter uses wildcards
+    };
+    
+    
+    /**
+     * \brief   The type of match for the filter.
+     *          NoMatch - no match found,
+     *          PartialMatch - partial match found,
+     *          ExactMatch - exact match found.
+     **/
+    enum eMatchType : int
+    {
+          NoMatch       = 0 //!< Has not match of filters
+        , PartialMatch  = 1 //!< Has partial match of filters
+        , PartialOutput = 2 //!< Has partial match of filters to output, but not exact
+        , ExactMatch    = 4 //!< Has exact match of filters
+    };
+
+    /**
+     * \brief   The filter data structure.
+     **/
+    struct sFilterData
+    {
+        QString text    { };        //!< The text to filter by
+        AnyData data    { };        //!< The data associated with the filter, can be any type
+        bool    active  { false };  //!< Indicates if the filter is active (checked)
+    };
+    
+    using FilterList    = QList<sFilterData>;
+    using FilterString  = sStringFilter;
+    using FilterData    = sFilterData;
 }
 
 #endif  // LUSAN_COMMON_NELUSANCOMMON_HPP

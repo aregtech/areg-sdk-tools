@@ -18,159 +18,7 @@
  ************************************************************************/
 #include "lusan/view/log/LogHeaderItem.hpp"
 #include "lusan/view/log/LogTableHeader.hpp"
-#include "lusan/view/common/SearchLineEdit.hpp"
-
-#include <QComboBox>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QLineEdit>
-#include <QListWidget>
-#include <QMouseEvent>
-#include <QPushButton>
-#include <QTableView>
-#include <QVBoxLayout>
-
-LogComboFilter::LogComboFilter(QWidget* parent)
-    : QFrame        (parent)
-    , mListWidget   (nullptr)
-{
-    setWindowFlags(Qt::Popup);
-    setFrameShape(QFrame::Box);
-    mListWidget = new QListWidget(this);
-    mListWidget->setSelectionMode(QAbstractItemView::NoSelection);
-    mListWidget->setFocusPolicy(Qt::NoFocus);
-    
-    connect(mListWidget, &QListWidget::itemChanged, this, [this](QListWidgetItem* /*item*/){
-        emit signalFiltersChanged();
-    });
-
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(2, 2, 2, 2);
-    layout->addWidget(mListWidget);
-}
-
-void LogComboFilter::setItems(const QStringList& items)
-{
-    QList<sComboItem> list;
-    for (const auto & entry : items)
-    {
-        QList<QListWidgetItem*> f = mListWidget->findItems(entry, Qt::MatchFlag::MatchExactly);
-        Q_ASSERT(f.size() <= 1);
-        list.push_back(sComboItem{entry, (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked)});
-    }
-    
-    mListWidget->clear();
-    
-    for (const auto& entry : list)
-    {
-        QListWidgetItem* item = new QListWidgetItem(entry.text, mListWidget);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(entry.checked ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
-        mListWidget->addItem(item);
-    }
-}
-
-QStringList LogComboFilter::getCheckedItems() const
-{
-    QStringList checked;
-    for (int i = 0; i < mListWidget->count(); ++i)
-    {
-        QListWidgetItem* item = mListWidget->item(i);
-        if (item->checkState() == Qt::Checked)
-            checked << item->text();
-    }
-
-    return checked;
-}
-
-void LogComboFilter::clearFilter(void)
-{
-    for (int i = 0; i < mListWidget->count(); ++i)
-    {
-        QListWidgetItem* item = mListWidget->item(i);
-        item->setCheckState(Qt::CheckState::Unchecked);
-    }
-}
-
-void LogComboFilter::showFilter(void)
-{
-    mListWidget->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
-    mListWidget->activateWindow();
-    show();
-}
-
-//////////////////////////////////////////////////////////////////////////
-// LogTextFilter class implementation.
-//////////////////////////////////////////////////////////////////////////
-
-LogTextFilter::LogTextFilter(bool isExtended, QWidget* parent)
-    : QFrame(parent)
-    , mLineEdit(nullptr)
-{
-    setWindowFlags(Qt::Popup);
-    setFrameShape(QFrame::Box);
-    if (isExtended)
-    {
-        mLineEdit = new SearchLineEdit(QList<SearchLineEdit::eToolButton>{SearchLineEdit::eToolButton::ToolButtonMatchCase, SearchLineEdit::eToolButton::ToolButtonMatchWord, SearchLineEdit::eToolButton::ToolButtonWildCard}, QSize(20, 20), this);
-        connect(static_cast<SearchLineEdit *>(mLineEdit), &SearchLineEdit::signalFilterText, this, [this](const QString & text, bool isCaseSensitive, bool isWholeWord, bool isWildCard){
-            emit signalFilterTextChanged(text, isCaseSensitive, isWholeWord, isWildCard);
-        });
-        connect(static_cast<SearchLineEdit*>(mLineEdit), &SearchLineEdit::signalButtonSearchMatchCaseClicked, this, &LogTextFilter::slotToolbuttonChecked);
-        connect(static_cast<SearchLineEdit*>(mLineEdit), &SearchLineEdit::signalButtonSearchMatchWordClicked, this, &LogTextFilter::slotToolbuttonChecked);
-        connect(static_cast<SearchLineEdit*>(mLineEdit), &SearchLineEdit::signalButtonSearchWildCardClicked , this, &LogTextFilter::slotToolbuttonChecked);
-    }
-    else
-    {
-        mLineEdit = new QLineEdit(this);
-        connect(mLineEdit, &QLineEdit::textChanged, this, [this](const QString & text){
-            emit signalFilterTextChanged(text, false, false, false);
-        });
-    }
-    
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(2, 2, 2, 2);
-    layout->addWidget(mLineEdit);
-}
-
-QString LogTextFilter::getText() const
-{
-    return mLineEdit->text();
-}
-
-void LogTextFilter::setText(const QString & newText)
-{
-    mLineEdit->setText(newText);
-}
-
-void LogTextFilter::slotToolbuttonChecked(bool checked)
-{
-    SearchLineEdit* srch = static_cast<SearchLineEdit*>(mLineEdit);
-    if (srch != nullptr)
-    {
-        QString textFilter{ srch->text()};
-        if (textFilter.isEmpty() == false)
-        {
-            emit signalFilterTextChanged(textFilter, srch->isMatchCaseChecked(), srch->isMatchWordChecked(), srch->isWildCardChecked());
-        }
-    }
-}
-
-void LogTextFilter::clearFilter(void)
-{
-    mLineEdit->setText(QString());
-}
-
-void LogTextFilter::showFilter(void)
-{
-    if (mLineEdit == nullptr)
-        return;
-
-    if (mLineEdit->text().isEmpty() == false)
-        mLineEdit->selectAll();
-    mLineEdit->activateWindow();
-    mLineEdit->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
-    show();
-}
+#include "lusan/view/log/LogFilterWidgets.hpp"
 
 /////////////////////////////////////////////////////////////
 // LogHeaderItem class implementation
@@ -181,47 +29,78 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     , mColumn(static_cast<LoggingModelBase::eColumn>(index))
     , mType (None)
     , mHeader(header)
-    , mCombo(nullptr)
-    , mEdit (nullptr)
+    , mWidget(nullptr)
 {
     switch (mColumn)
     {
     case LoggingModelBase::eColumn::LogColumnPriority:
+        mType = eType::Combo;
+        mWidget = new LogPrioComboFilter(&mHeader);
+        connect(mWidget, &LogPrioComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
+        });
+        break;
+
     case LoggingModelBase::eColumn::LogColumnSource:
+        mType = eType::Combo;
+        mWidget = new LogSourceComboFilter(&mHeader);
+        connect(mWidget, &LogSourceComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
+        });
+        break;
+
     case LoggingModelBase::eColumn::LogColumnSourceId:
+        mType = eType::Combo;
+        mWidget = new LogSourceIdComboFilter(&mHeader);
+        connect(mWidget, &LogSourceIdComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
+        });
+        break;
+
     case LoggingModelBase::eColumn::LogColumnThread:
+        mType = eType::Combo;
+        mWidget = new LogThreadComboFilter(&mHeader);
+        connect(mWidget, &LogThreadComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
+        });
+        break;
+
     case LoggingModelBase::eColumn::LogColumnThreadId:
         mType = eType::Combo;
-        mCombo = new LogComboFilter(&mHeader);
-        connect(mCombo, &LogComboFilter::signalFiltersChanged, &mHeader, [this]() {
-            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), mCombo->getCheckedItems());
-            });
+        mWidget = new LogThreadIdComboFilter(&mHeader);
+        connect(mWidget, &LogThreadIdComboFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+            emit mHeader.signalComboFilterChanged(fromColumnToIndex(), widget->getSelectedData());
+        });
+        break;
+
+    case LoggingModelBase::eColumn::LogColumnTimeDuration:
+        mType = eType::Text;
+        mWidget = new LogDurationEditFilter(&mHeader);
+        connect(mWidget, &LogDurationEditFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+            const QList<NELusanCommon::FilterData>& data = widget->getData();
+            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), data.isEmpty() ? QString() : data[0].text, false, false, false);
+        });
+        break;
+
+    case LoggingModelBase::eColumn::LogColumnMessage:
+        mType = eType::Text;
+        mWidget = new LogMessageEditFilter(&mHeader);
+        connect(mWidget, &LogMessageEditFilter::signalFiltersChanged, &mHeader, [this](LogFilterBase* widget) {
+            const QList<NELusanCommon::FilterData>& data = widget->getData();
+            if (data.isEmpty() || data[0].text.isEmpty())
+            {
+                emit mHeader.signalTextFilterChanged(fromColumnToIndex(), QString(), false, false, false);
+            }
+            else
+            {
+                NELusanCommon::FilterString fs = std::any_cast<NELusanCommon::FilterString>(data[0].data);
+                Q_ASSERT(fs.text.isEmpty() == false);
+                emit mHeader.signalTextFilterChanged(fromColumnToIndex(), fs.text, fs.isCaseSensitive, fs.isWholeWord, fs.isWildCard);
+            }
+        });
         break;
 
     case LoggingModelBase::eColumn::LogColumnScopeId:
-        mType = eType::Text;
-        mEdit = new LogTextFilter(false, &mHeader);
-        connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
-            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText, isCaseSensitive, isWholeWord, isWildCard);
-        });
-        break;
-        
-    case LoggingModelBase::eColumn::LogColumnMessage:
-        mType = eType::Text;
-        mEdit = new LogTextFilter(true, &mHeader);
-        connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
-            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText, isCaseSensitive, isWholeWord, isWildCard);
-            });
-        break;
-        
-    case LoggingModelBase::eColumn::LogColumnTimeDuration:
-        mType = eType::Text;
-        mEdit = new LogTextFilter(false, &mHeader);
-        connect(mEdit, &LogTextFilter::signalFilterTextChanged, &mHeader, [this](const QString& newText, bool /* isCaseSensitive */, bool /* isWholeWord */, bool /* isWildCard */) {
-            emit mHeader.signalTextFilterChanged(fromColumnToIndex(), newText, false, false, false);
-        });
-        break;
-        
     case LoggingModelBase::eColumn::LogColumnTimestamp:
     case LoggingModelBase::eColumn::LogColumnTimeReceived:
     default:
@@ -244,52 +123,50 @@ void LogHeaderItem::showFilters(void)
     if (mType == eType::None)
         return;
 
+    Q_ASSERT(mWidget != nullptr);
     int index   = fromColumnToIndex();
     int pos     = mHeader.sectionViewportPosition(index);
     int height  = mHeader.size().height();
     QPoint pt   = mHeader.mapToGlobal(QPoint(pos, height));
 
-    if (mType == eType::Combo)
+    if (mType == eType::Text)
     {
-        Q_ASSERT(mCombo != nullptr);
-        Q_ASSERT(mEdit == nullptr);
-        mCombo->move(pt);
-        mCombo->showFilter();
-        // mCombo->activateWindow();
-        // mCombo->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
-        // mCombo->show();
-    }
-    else if (mType == eType::Text)
-    {
-        Q_ASSERT(mCombo == nullptr);
-        Q_ASSERT(mEdit != nullptr);
-        QSize sz = mEdit->size();
+        Q_ASSERT(mWidget != nullptr);
+        QSize sz = mWidget->size();
         sz.setWidth(mHeader.sectionSize(index));
-        mEdit->setMinimumSize(sz);
-        mEdit->move(pt);
-        mEdit->showFilter();
-        // mEdit->show();
-        // mEdit->activateWindow();
-        // mEdit->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
+        mWidget->setMinimumSize(sz);
     }
-    else
-    {
-        Q_ASSERT(mCombo == nullptr);
-        Q_ASSERT(mEdit == nullptr);
-    }
+
+    mWidget->move(pt);
+    mWidget->showFilter();
 }
 
 void LogHeaderItem::setFilterData(const QString& data)
 {
-    if (mType == eType::Text && mEdit != nullptr)
+    if ((mType == eType::Text) && (mWidget != nullptr))
     {
-        mEdit->setText(data);
+        mWidget->setDataString(data);
     }
 }
 
-void LogHeaderItem::setFilterData(const std::vector<String>& data)
+void LogHeaderItem::setFilterData(const std::vector<QString>& data, const NELusanCommon::AnyList& list)
 {
-    if (mType == eType::Combo && mCombo != nullptr)
+    if ((mType == eType::Combo) && (mWidget != nullptr))
+    {
+        QStringList items;
+        items.reserve(static_cast<int>(data.size()));
+        for (const auto& entry : data)
+        {
+            items << entry;
+        }
+
+        mWidget->setDataItems(items, list);
+    }
+}
+
+void LogHeaderItem::setFilterData(const std::vector<String>& data, const NELusanCommon::AnyList& list)
+{
+    if ((mType == eType::Combo) && (mWidget != nullptr))
     {
         QStringList items;
         items.reserve(static_cast<int>(data.size()));
@@ -298,13 +175,13 @@ void LogHeaderItem::setFilterData(const std::vector<String>& data)
             items << QString::fromStdString(entry.getData());
         }
 
-        mCombo->setItems(items);
+        mWidget->setDataItems(items, list);
     }
 }
 
-void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data)
+void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data, const NELusanCommon::AnyList& list)
 {
-    if (mType == eType::Combo && mCombo != nullptr)
+    if ((mType == eType::Combo) && (mWidget != nullptr))
     {
         QStringList items;
         for (const auto& entry : data)
@@ -312,14 +189,17 @@ void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data)
             items << QString::number(static_cast<uint64_t>(entry));
         }
 
-        mCombo->setItems(items);
+        mWidget->setDataItems(items, list);
     }
 }
 
 void LogHeaderItem::resetFilter(void)
 {
-    if (mType == eType::Text && mEdit != nullptr)
-        mEdit->clearFilter();
-    else if (mType == eType::Combo && mCombo != nullptr)
-        mCombo->clearFilter();
+    if (mWidget != nullptr)
+        mWidget->clearFilter();
+}
+
+QList<NELusanCommon::FilterData> LogHeaderItem::getFilterData(void) const
+{
+    return (mWidget != nullptr ? mWidget->getSelectedData() : QList<NELusanCommon::FilterData>());
 }
