@@ -383,7 +383,7 @@ signals:
     void signalScopesUpdated(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
 
 //////////////////////////////////////////////////////////////////////////
-// LoggingModelBase overrider
+// LoggingModelBase overrides
 //////////////////////////////////////////////////////////////////////////
 public:
 
@@ -435,7 +435,12 @@ public:
      * \param   ids     On output, contains the list of IDs of connected instances.
      **/
     virtual void getLogInstanceIds(std::vector<ITEM_ID>& ids);
-    
+
+    /**
+     * \brief   Call to query and get list of names and IDs of connected instances from log database.
+     * \param   names   On output, contains the list of names of connected instances.
+     * \param   ids     On output, contains the list of IDs of connected instances.
+     **/
     virtual void getLogInstances(std::vector<String>&names, std::vector<std::any>& ids);
 
     /**
@@ -449,7 +454,12 @@ public:
      * \param   ids     On output, contains the list of all thread IDs that sent messages.
      **/
     virtual void getLogThreads(std::vector<ITEM_ID>& ids);
-    
+
+    /**
+     * \brief   Call to query and get list of names and IDs of threads of the connected instances from log database.
+     * \param   names   On output, contains the list of all thread names that sent messages.
+     * \param   ids     On output, contains the list of all thread IDs that sent messages.
+     **/
     virtual void getLogThreadValues(std::vector<String>& names, std::vector<std::any>& ids);
 
     /**
@@ -457,27 +467,28 @@ public:
      * \param   names   On output, contains the names of all priorities.
      **/
     virtual void getPriorityNames(std::vector<String>& names);
-    
+
+    /**
+     * \brief   Call to get the list of log priority values.
+     * \param   values  On output, contains the values of all priorities.
+     **/
     virtual void getPriorityValues(std::vector<String>& names, std::vector<std::any>& values);
 
     /**
      * \brief   Call to query and get information of connected instances from log database.
      *          This query will receive list of all registered instances.
-     * \param   infos   On output, contains the list of information of all registered instances in database.
      **/
     virtual const std::vector<NEService::sServiceConnectedInstance> & getLogInstances(void);
 
     /**
      * \brief   Call to query and get information of log scopes of specified instance from log database.
      *          This query will receive list of all registered scopes.
-     * \param   scopes  On output, contains the list of all registered scopes in database related with the specified instance ID.
-     * \param   instID  The ID of the instance.
+     * \param   instId  The ID of the instance.
      **/
     virtual const std::vector<NELogging::sScopeInfo>& getLogInstScopes(ITEM_ID instId);
 
     /**
      * \brief   Call to get all log messages from log database.
-     * \param   messages   On output, contains the list of all log messages.
      **/
     virtual const std::vector<SharedBuffer>& getLogMessages(void);
 
@@ -567,7 +578,7 @@ public:
     /**
      * \brief   Reads logs from the database asynchronously in a separate thread.
      * @param   maxEntries  The maximum number of log entries to read in one loop.
-     *          If -1, reads all available entries.
+     *                      If -1, reads all available entries.
      **/
     virtual void readLogsAsynchronous(int maxEntries = -1);
 

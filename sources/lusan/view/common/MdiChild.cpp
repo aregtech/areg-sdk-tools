@@ -48,7 +48,6 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
 
 MdiChild::~MdiChild(void)
 {
-    MdiMainWindow* wndMain = LusanApplication::getMainWindow();
 }
 
 bool MdiChild::openSucceeded(void) const
