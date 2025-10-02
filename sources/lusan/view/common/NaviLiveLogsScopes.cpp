@@ -510,7 +510,6 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
             Q_ASSERT(mMainWindow != nullptr);
             LiveLogsModel* logModel{ mMainWindow->setupLiveLogging() };
             mScopesModel->setLoggingModel(logModel);
-            LogCollectorClient::getInstance().setConfigLoggerDatabaseLocation(LusanApplication::getWorkspaceLogs().toStdString());
             LogObserver::createLogObserver(&NaviLiveLogsScopes::_logObserverStarted);
         }
     }

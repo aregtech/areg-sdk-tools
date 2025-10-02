@@ -17,11 +17,9 @@
  *
  ************************************************************************/
 #include "lusan/common/LogCollectorClient.hpp"
+#include "lusan/app/LusanApplication.hpp"
 #include "areglogger/client/LogObserverApi.h"
 #include "areg/base/SharedBuffer.hpp"
-#include "areg/base/String.hpp"
-#include "areg/base/TEArrayList.hpp"
-#include "areg/base/TEMap.hpp"
 
 LogCollectorClient& LogCollectorClient::getInstance(void)
 {
@@ -42,7 +40,16 @@ void LogCollectorClient::onLogObserverConfigured(bool isEnabled, const std::stri
 
 void LogCollectorClient::onLogDbConfigured(bool isEnabled, const std::string& dbName, const std::string& dbLocation, const std::string& dbUser)
 {
-    emit signalLogDbConfigured(isEnabled, dbName, dbLocation, dbUser);
+    std::string location{ LusanApplication::getWorkspaceLogs().toStdString() };
+    if (location.empty() == false)
+    {
+        setConfigLoggerDatabaseLocation(location);
+        emit signalLogDbConfigured(isEnabled, dbName, location, dbUser);
+    }
+    else
+    {
+        emit signalLogDbConfigured(isEnabled, dbName, dbLocation, dbUser);
+    }
 }
 
 void LogCollectorClient::onLogServiceConnected(bool isConnected, const std::string& address, uint16_t port)
