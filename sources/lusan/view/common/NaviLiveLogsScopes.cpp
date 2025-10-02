@@ -22,6 +22,7 @@
 
 #include "lusan/app/LusanApplication.hpp"
 
+#include "lusan/common/LogCollectorClient.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/data/log/ScopeNodeBase.hpp"
 
@@ -509,6 +510,7 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
             Q_ASSERT(mMainWindow != nullptr);
             LiveLogsModel* logModel{ mMainWindow->setupLiveLogging() };
             mScopesModel->setLoggingModel(logModel);
+            LogCollectorClient::getInstance().setConfigLoggerDatabaseLocation(LusanApplication::getWorkspaceLogs().toStdString());
             LogObserver::createLogObserver(&NaviLiveLogsScopes::_logObserverStarted);
         }
     }

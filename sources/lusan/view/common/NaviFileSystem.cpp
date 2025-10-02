@@ -448,22 +448,22 @@ NaviFileSystem::RootPaths NaviFileSystem::setupRootPaths(const WorkspaceEntry& w
 
     Q_ASSERT(root.isEmpty() == false);
     result.insert(root, "[Project: " + root + "]");
-    if (sources.isEmpty() == false)
+    if (!sources.isEmpty() && !result.contains(sources))
     {
         result.insert(sources, "[Sources: " + sources + "]");
     }
 
-    if (includes.isEmpty() == false)
+    if (!includes.isEmpty() && !result.contains(includes))
     {
         result.insert(includes, "[Includes: " + includes + "]");
     }
 
-    if (delivery.isEmpty() == false)
+    if (!delivery.isEmpty() && !result.contains(delivery))
     {
         result.insert(delivery, "[Delivery: " + delivery + "]");
     }
 
-    if (logs.isEmpty() == false)
+    if (!logs.isEmpty() && !result.contains(logs))
     {
         result.insert(logs, "[Logs: " + logs + "]");
     }
@@ -485,7 +485,6 @@ void NaviFileSystem::onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspa
         table->clearSelection();
         mNaviModel->refresh();
         QModelIndex idxRoot = mNaviModel->getRootIndex();
-        table->setRootIndex(idxRoot);
         table->setRootIndex(idxRoot);
         table->expand(idxRoot);
         table->setSortingEnabled(true);
