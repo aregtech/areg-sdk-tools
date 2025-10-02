@@ -22,7 +22,6 @@
 
 #include "lusan/app/LusanApplication.hpp"
 
-#include "lusan/common/LogCollectorClient.hpp"
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/data/log/ScopeNodeBase.hpp"
 
