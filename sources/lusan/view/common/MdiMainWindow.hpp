@@ -89,10 +89,10 @@ public:
 
     /**
      * \brief   Call to notify the main window that application is connected to log collector service and is ready to receive log messages.
-     * \param   isConnected   True if connected, false if disconnected.
-     * \param   address       The IP address of the log collector service.
-     * \param   port          The TCP port number of the log collector service.
-     * \param   dbPath        The path to the database file, if any. If empty, no database is used.
+     * \param   isConnected     True if connected, false if disconnected.
+     * \param   address         The IP address of the log collector service.
+     * \param   port            The TCP port number of the log collector service.
+     * \param   dbPath          The path to the database file, if any. If empty, no database is used.
      **/
     void logCollecttorConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath);
 
@@ -148,6 +148,12 @@ public:
     int showOptionPageLogging(const QString& address, const QString& hostName, uint16_t port, const QString& logFile, const QString& logLocation);
 
     /**
+     * \brief   Shows the specified navigation tab.
+     * \param   naviTab     The navigation tab to show.
+     **/
+    void showNaviTab(NavigationDock::eNaviWindow naviTab);
+
+    /**
      * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
      **/
     QString openLogFile(void);
@@ -156,6 +162,11 @@ public:
      * \brief   Called to setup live logging models.
      **/
     LiveLogsModel* setupLiveLogging(void);
+
+    /**
+     * \brief   Returns the live logging model.
+     **/
+    LiveLogsModel* getLiveLogging(void) const;
 
     /**
      * \brief   Returns the File System navigation window.

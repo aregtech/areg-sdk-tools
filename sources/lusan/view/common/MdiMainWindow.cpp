@@ -202,8 +202,8 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
         {
             // Copy logs to offline log viewer
             OfflineLogViewer* offlineLog = createOfflineLogViewer(QString(), true);
-            mNaviDock.showTab(NavigationDock::eNaviWindow::NaviOfflineLogs);
             mNaviDock.getLiveScopes().setLoggingModel(nullptr);
+            mNaviDock.showTab(NavigationDock::eNaviWindow::NaviOfflineLogs);
             offlineLog->show();
 
             // Properly close and delete the live log window and viewer
@@ -220,6 +220,11 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
                 delete mLogViewer;
                 mLogViewer = nullptr;
             }
+        }
+        else if (mLogViewer != nullptr)
+        {
+            mNaviDock.showTab(NavigationDock::eNaviWindow::NaviLiveLogs);
+            mLogViewer->show();
         }
     }
 }
@@ -242,6 +247,11 @@ LiveLogsModel * MdiMainWindow::setupLiveLogging(void)
     }
 
     return static_cast<LiveLogsModel *>(mLogViewer->getLoggingModel());
+}
+
+LiveLogsModel* MdiMainWindow::getLiveLogging(void) const
+{
+    return (mLogViewer != nullptr ? static_cast<LiveLogsModel *>(mLogViewer->getLoggingModel()) : nullptr);
 }
 
 NaviFileSystem& MdiMainWindow::getNaviFileSystem(void)
@@ -287,6 +297,11 @@ int MdiMainWindow::showOptionPageLogging(const QString& address, const QString& 
     emit signalOptionsClosed(result == static_cast<int>(QDialog::Accepted));
 
     return result;
+}
+
+void MdiMainWindow::showNaviTab(NavigationDock::eNaviWindow naviTab)
+{
+    mNaviDock.showTab(naviTab);
 }
 
 QString MdiMainWindow::openLogFile(void)

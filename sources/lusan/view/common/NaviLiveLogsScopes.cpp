@@ -742,11 +742,20 @@ void NaviLiveLogsScopes::optionOpenning(void)
 {
     if (isConnected())
     {
+        QString address{ LogObserver::getConnectedAddress() };
+        uint16_t port{ LogObserver::getConnectedPort() };
+        QString logFile{ mActiveLogFile.isEmpty() == false ? mActiveLogFile : LogObserver::getActiveDatabase() };
+        
         setupLogSignals(false);
         mState = eLoggingStates::LoggingPaused;
         LogObserver::disconnect();
         LogObserver::releaseLogObserver();
+        mMainWindow->logCollecttorConnected(false, address, port, logFile);
+        mScopesModel->setLoggingModel(nullptr);
+        mScopesModel->releaseModel();
     }
+    
+    enableButtons(QModelIndex());
 }
 
 void NaviLiveLogsScopes::optionApplied(void)
@@ -761,6 +770,10 @@ void NaviLiveLogsScopes::optionClosed(bool OKpressed)
 {
     if (isStopped() || isPaused())
     {
+        ctrlConnect()->setChecked(true);
+        Q_ASSERT(mMainWindow != nullptr);
+        LiveLogsModel* logModel{ mMainWindow->setupLiveLogging() };
+        mScopesModel->setLoggingModel(logModel);
         LogObserver::createLogObserver(&NaviLiveLogsScopes::_logObserverStarted);
     }
     else if (mState != eLoggingStates::LoggingUndefined)
