@@ -188,7 +188,7 @@ QModelIndex LoggingScopesModelBase::index(int row, int column, const QModelIndex
 
 QModelIndex LoggingScopesModelBase::parent(const QModelIndex& child) const
 {
-    if ((child.isValid() == false) || (child == mRootIndex))
+    if ((child.isValid() == false) || (child == mRootIndex) || (mLoggingModel == nullptr))
         return QModelIndex();
 
     ScopeNodeBase* childNode = static_cast<ScopeNodeBase*>(child.internalPointer());

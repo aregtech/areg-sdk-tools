@@ -104,7 +104,7 @@ void LiveLogsModel::setupModel(void)
 
 void LiveLogsModel::releaseModel(void)
 {
-    _setupSignals(true);
+    _setupSignals(false);
 }
 
 void LiveLogsModel::serviceConnected(bool isConnected, const QString& address, uint16_t port, const QString& dbPath)
