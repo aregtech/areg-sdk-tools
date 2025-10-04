@@ -37,16 +37,16 @@ FileSystemModel::FileSystemModel(QObject * parent /*= nullptr*/)
 {
 }
     
-FileSystemModel::FileSystemModel(const QMap<QString, QString> & workspaceEntries, const QStringList& extFilters, QObject* parent /*= nullptr*/)
+FileSystemModel::FileSystemModel(const WorkspaceElem & workspaceEntries, const QStringList& extFilters, QObject* parent /*= nullptr*/)
     : QAbstractItemModel(parent)
     , mRootEntry        ( tr("Workspace") )
     , mWorkspaceDirs    (workspaceEntries)
     , mFileFilter       ( extFilters )
     , mRootIndex        ( )
 {
-    for (WorkspaceEntries::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
+    for (WorkspaceElem::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
     {
-        FileSystemEntry* entry = new FileSystemEntry(*dir, workspaceEntries[NELusanCommon::fixPath(*dir)], FileSystemEntry::eEntryType::EntryDir, &mRootEntry);
+        FileSystemEntry* entry = new FileSystemEntry(dir->wsDir, dir->wsDisplay, FileSystemEntry::eEntryType::EntryDir, &mRootEntry);
         mRootEntry.addChild(entry);
     }
 
@@ -139,14 +139,9 @@ void FileSystemModel::fetchMore(const QModelIndex& parent)
         return;
     
     FileSystemEntry* parentEntry = static_cast<FileSystemEntry*>(parent.internalPointer());
-    if (parentEntry->hasValidChildren())
-        return;
-    
-    QFileInfoList list = parentEntry->fetchData(mFileFilter);
-    parentEntry->removeDummyEntry();
-    for ( QFileInfoList::const_iterator fi = list.constBegin(); fi != list.constEnd(); ++fi)
+    if (parentEntry->hasValidChildren() == false)
     {
-        parentEntry->addChild(*fi, false);
+        parentEntry->addChildren(mFileFilter);
     }
 }
 
@@ -172,7 +167,7 @@ Qt::ItemFlags FileSystemModel::flags(const QModelIndex &index) const
     return result;
 }
 
-const QModelIndex& FileSystemModel::setRootPaths(const QMap<QString, QString>& paths)
+const QModelIndex& FileSystemModel::setRootPaths(const WorkspaceElem& paths)
 {
     beginResetModel();
     mRootEntry.resetEntry();
@@ -186,10 +181,10 @@ const QModelIndex& FileSystemModel::setRootPaths(const QMap<QString, QString>& p
     return mRootIndex;
 }
 
-bool FileSystemModel::updateRootPaths(const QMap<QString, QString>& paths)
+bool FileSystemModel::updateRootPaths(const WorkspaceElem& paths)
 {
     bool result { false };
-    if (mWorkspaceDirs != paths)
+    if (sameRoots(paths) == false)
     {
         beginResetModel();
         mRootEntry.resetEntry();
@@ -207,7 +202,7 @@ bool FileSystemModel::updateRootPaths(const QMap<QString, QString>& paths)
     return result;
 }
 
-const QMap<QString, QString>& FileSystemModel::getRootPaths(void) const
+const WorkspaceElem& FileSystemModel::getRootPaths(void) const
 {
     return mWorkspaceDirs;
 }
@@ -304,7 +299,7 @@ bool FileSystemModel::deleteEntry(const QModelIndex & index)
     QModelIndex topIndex = this->parent(index);
     FileSystemEntry* entry = static_cast<FileSystemEntry*>(index.internalPointer());
     FileSystemEntry* parent = static_cast<FileSystemEntry*>(topIndex.internalPointer());
-    if ((entry == nullptr) || (parent == nullptr) || parent->isRoot() || mWorkspaceDirs.contains(entry->getPath()))
+    if ((entry == nullptr) || (parent == nullptr) || parent->isRoot() || containsRoot(entry->getPath()))
         return result;
     
     QFileInfo fi{entry->getPath()};
@@ -606,6 +601,38 @@ bool FileSystemModel::checkWorkspaceEntry(const QModelIndex& index) const
 void FileSystemModel::resetRoot(void)
 {
     resetEntry(&mRootEntry);
+}
+
+inline bool FileSystemModel::sameRoots(const WorkspaceElem & elems) const
+{
+    if (elems.isEmpty() || (elems.size() != mWorkspaceDirs.size()))
+    {
+        return (elems.isEmpty() && mWorkspaceDirs.isEmpty());
+    }
+    
+    for (WorkspaceElem::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
+    {
+        if (elems.contains(dir.key()) == false)
+            return false;
+        
+        const sWorkspaceElem & elem = elems[dir.key()];
+        if (dir->wsDir != elem.wsDir)
+            return false;
+    }
+    
+    return true;
+}
+
+inline bool FileSystemModel::containsRoot(const QString & rootPath) const
+{
+    QString path{rootPath.isEmpty() == false ? NELusanCommon::fixPath(rootPath) : QString()};
+    for (WorkspaceElem::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
+    {
+        if (dir->wsDir == path)
+            return true;
+    }
+    
+    return false;
 }
 
 void FileSystemModel::resetEntry(FileSystemEntry * entry)

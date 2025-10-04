@@ -218,6 +218,13 @@ public:
      * \param   ascending   Flag, indicating whether the sorting is done ascending or descending.
      **/
     virtual void sort(bool ascending);
+
+    /**
+     * \brief   Add children to the file system entry by fetching data.
+     * \param   filter  The filter to apply when fetching data. If empty, all entries are fetched.
+     * \return  Number of added children.
+     **/
+    virtual int addChildren(const QStringList & filter = QStringList());
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -269,7 +276,13 @@ public:
      * \brief   Returns the display name of the file system entry.
      **/
     inline const QString& getDisplayName(void) const;
-    
+
+    /**
+     * \brief   Sets the display name of the file system entry.
+     * \param   dispName    The display name of the file system entry.
+     **/
+    inline void setDisplayName(const QString & dispName);
+        
     /**
      * \brief   Returns the icon of the file system entry.
      **/
@@ -425,7 +438,6 @@ public:
      * \param   newPath     The new path to set.
      */
     void setFilePath(const QString& newPath);
-
     
     /**
      * \brief   Sets the file path of a child entry.
@@ -480,6 +492,28 @@ private:
 // FileSystemRootEntry class declaration
 //////////////////////////////////////////////////////////////////////////
 
+//!< The list of workspace entries.
+enum eWorkspaceElem : int
+{
+      WorkspaceRoot = 0     // The root entry of the workspace.
+    , WorkspaceSources      // The sources entry of the workspace.
+    , WorkspaceIncludes     // The includes entry of the workspace.
+    , WorkspaceDelivery     // The delivery entry of the workspace.
+    , WorkspaceLogs         // The logs entry of the workspace.
+
+    , WorkspaceEntryCount   // The count of workspace entries.
+};
+
+//!< The structure to hold workspace directory information.
+struct sWorkspaceElem
+{
+    QString     wsDir;      // The directory path.
+    QString     wsDisplay;  // The display name.
+};
+
+//!< List of workspace entries (top-most entries)
+using WorkspaceElem = QMap< eWorkspaceElem, sWorkspaceElem>;
+
 /**
  * \class   FileSystemRootEntry
  * \brief   Represents the root entry in the file system.
@@ -489,19 +523,6 @@ class FileSystemRootEntry : public FileSystemEntry
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
-private:
-    //!< The list of workspace entries.
-    enum eWorkspaceEntry : int
-    {
-          WorkspaceRoot     = 0 // The root entry of the workspace.
-        , WorkspaceSources      // The sources entry of the workspace.
-        , WorkspaceIncludes     // The includes entry of the workspace.
-        , WorkspaceDelivery     // The delivery entry of the workspace.
-        , WorkspaceLogs         // The logs entry of the workspace.
-
-        , WorkspaceEntryCount   // The count of workspace entries.
-    };
-
 public:
     /**
      * \brief   Constructor with initialization.
@@ -518,13 +539,26 @@ public:
      * \brief   Sets the workspace directories for the root entry.
      * \param   workspaceDirs   The list of workspace directories that contains file path and display name pair.
      **/
-    void setWorkspaceDirectories(const QMap<QString, QString>& workspaceDirs);
+    void setWorkspaceDirectories(const WorkspaceElem& workspaceDirs);
 
     /**
      * \brief   Updates the workspace directories for the root entry.
      * \param   workspaceDirs   The list of workspace directories that contains file path and display name pair.
      **/
-    void updateWorkspaceDirectories(const QMap<QString, QString>& workspaceDirs);
+    void updateWorkspaceDirectories(const WorkspaceElem& workspaceDirs);
+
+    /**
+     * \brief   Checks whether specified path exists in workspace list.
+     * \param   dirPath     The directory path to check.
+     * \return  Returns true if specified path is listed in the workspace list.
+     **/
+    bool containsDir(const QString & dirPath) const;
+
+    /**
+     * \brief   Search the directory path in the workspace list and return display name.
+     * \param   dirPath     The directory path to search.
+     **/
+    QString findDisplayName(const QString & dirPath) const;
     
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -555,13 +589,20 @@ protected:
      **/
     virtual FileSystemEntry* createChildEntry(const QFileInfo& fileInfo) const override;
 
+    /**
+     * \brief   Add children to the file system entry by fetching data.
+     * \param   filter  The filter to apply when fetching data. If empty, all entries are fetched.
+     * \return  Number of added children.
+     **/
+    virtual int addChildren(const QStringList& filter = QStringList()) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    mutable uint32_t        mNextId;        //!< The next ID for the root entry.
-    QMap<QString, QString>  mWorkspaceDirs; //!< The list of workspace directories.
-    QList<QString>          mEntries;       //!< The list of entries to display in the file system model.
+    mutable uint32_t    mNextId;        //!< The next ID for the root entry.
+    WorkspaceElem       mWorkspaceDirs; //!< The list of workspace directories.
+    QList<QString>      mEntries;       //!< The list of entries to display in the file system model.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
@@ -655,6 +696,11 @@ inline const QString& FileSystemEntry::getDisplayName(void) const
     return mDispName;
 }
 
+inline void FileSystemEntry::setDisplayName(const QString & dispName)
+{
+    mDispName = dispName;
+}
+    
 inline const QIcon& FileSystemEntry::getIcon(void) const
 {
     return mIcon;

@@ -34,12 +34,6 @@
  **/
 class FileSystemModel : public QAbstractItemModel
 {
-//////////////////////////////////////////////////////////////////////////
-// Internal types and constants
-//////////////////////////////////////////////////////////////////////////
-private:
-    using WorkspaceEntries  = QMap<QString, QString>;
-
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
@@ -58,7 +52,7 @@ public:
      * \param   extFilters          The list of file extension filters.
      * \param   parent              The parent object.
      **/
-    explicit FileSystemModel(const QMap<QString, QString> & workspaceEntries, const QStringList & extFilters, QObject* parent = nullptr);
+    explicit FileSystemModel(const WorkspaceElem & workspaceEntries, const QStringList & extFilters, QObject* parent = nullptr);
 
     /**
      * \brief   Destructor.
@@ -154,20 +148,20 @@ public:
      * \param   paths   The map of root paths.
      * \return  The index of the root item.
      **/
-    const QModelIndex& setRootPaths(const QMap<QString, QString>& paths);
+    const QModelIndex& setRootPaths(const WorkspaceElem& paths);
 
     /**
      * \brief   Updates the root paths of the file system model.
      * \param   paths   The map of root paths to update.
      * \return  True if the root paths are updated successfully, false if update ignored.
      **/
-    bool updateRootPaths(const QMap<QString, QString>& paths);
+    bool updateRootPaths(const WorkspaceElem& paths);
     
     /**
      * \brief   Returns the root paths of the file system model.
      * \return  The map of root paths.
      **/
-    const QMap<QString, QString>& getRootPaths(void) const;
+    const WorkspaceElem& getRootPaths(void) const;
 
     /**
      * \brief   Returns the file path for the given index.
@@ -397,12 +391,25 @@ private:
      **/
     void resetRoot(void);
 
+    /**
+     * \brief   Compares the current workspace root paths with the given ones.
+     * \param   elems   The map of workspace root paths to compare.
+     * \return  True if the root paths are the same, false otherwise.
+     **/
+    inline bool sameRoots(const WorkspaceElem & elems) const;
+
+    /**
+     * \brief   Checks if the model contains the specified workspace root path.
+     * \param   rootPath    The workspace root path to check.
+     **/
+    inline bool containsRoot(const QString & rootPath) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     FileSystemRootEntry mRootEntry;     //!< The root entry of the file system.
-    WorkspaceEntries    mWorkspaceDirs; //!< The map of workspace directories.
+    WorkspaceElem       mWorkspaceDirs; //!< The map of workspace directories.
     QStringList         mFileFilter;    //!< The filter to set when display file system data.
     QModelIndex         mRootIndex;     //!< The index of the root.
 };

@@ -22,6 +22,8 @@
 #include "lusan/view/common/NavigationWindow.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
+#include "lusan/model/common/FileSystemEntry.hpp"
+
 #include <QList>
 #include <QString>
 #include <QWidget>
@@ -54,12 +56,6 @@ namespace Ui {
 class NaviFileSystem    : public    NavigationWindow
                         , protected IETableHelper
 {
-//////////////////////////////////////////////////////////////////////////
-// Internal types and constants
-//////////////////////////////////////////////////////////////////////////
-private:
-    using RootPaths = QMap<QString, QString>;
-    
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -271,7 +267,7 @@ private:
      * \param   workspace   The workspace entry object that contains information of paths.
      * \return  The map of root paths.
      **/
-    RootPaths setupRootPaths(const WorkspaceEntry& workspace);
+    WorkspaceElem setupRootPaths(const WorkspaceEntry& workspace);
 
 private slots:
 
@@ -291,7 +287,7 @@ private:
     GeneralFileSystemModel* mGenModel;      //!< The general model of the file system.
     FileSystemFilter*       mFileFilter;    //!< The file filter object.
     Ui::NaviFileSystem*     ui;             //!< The user interface object.
-    RootPaths               mRootPaths;     //!< The list of root paths.
+    WorkspaceElem          mRootPaths;     //!< The list of root paths.
     TableCell*              mTableCell;     //!< The table cell object.
 };
 
