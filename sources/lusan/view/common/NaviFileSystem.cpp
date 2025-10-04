@@ -436,36 +436,36 @@ QFileInfo NaviFileSystem::getFileInfo(const QModelIndex & index) const
     }
 }
 
-NaviFileSystem::RootPaths NaviFileSystem::setupRootPaths(const WorkspaceEntry& workspace)
+WorkspaceElem NaviFileSystem::setupRootPaths(const WorkspaceEntry& workspace)
 {
-    RootPaths result;
+    WorkspaceElem result;
     
-    QString root{ NELusanCommon::fixPath(workspace.getWorkspaceRoot()) };
-    QString sources{ NELusanCommon::fixPath(workspace.getDirSources()) };
+    QString root    { NELusanCommon::fixPath(workspace.getWorkspaceRoot()) };
+    QString sources { NELusanCommon::fixPath(workspace.getDirSources()) };
     QString includes{ NELusanCommon::fixPath(workspace.getDirIncludes()) };
     QString delivery{ NELusanCommon::fixPath(workspace.getDirDelivery()) };
-    QString logs{ NELusanCommon::fixPath(workspace.getDirLogs()) };
+    QString logs    { NELusanCommon::fixPath(workspace.getDirLogs()) };
 
     Q_ASSERT(root.isEmpty() == false);
-    result.insert(root, "[Project: " + root + "]");
-    if (!sources.isEmpty() && !result.contains(sources))
+    result[eWorkspaceElem::WorkspaceRoot] = {root, "[Project: " + root + "]"};
+    if (!sources.isEmpty())
     {
-        result.insert(sources, "[Sources: " + sources + "]");
+        result[eWorkspaceElem::WorkspaceSources]    = {sources, "[Sources: " + sources + "]"};
     }
 
-    if (!includes.isEmpty() && !result.contains(includes))
+    if (!includes.isEmpty())
     {
-        result.insert(includes, "[Includes: " + includes + "]");
+        result[eWorkspaceElem::WorkspaceIncludes]   = {includes, "[Includes: " + includes + "]"};
     }
 
-    if (!delivery.isEmpty() && !result.contains(delivery))
+    if (!delivery.isEmpty())
     {
-        result.insert(delivery, "[Delivery: " + delivery + "]");
+        result[eWorkspaceElem::WorkspaceDelivery]   = {delivery, "[Delivery: " + delivery + "]"};
     }
 
-    if (!logs.isEmpty() && !result.contains(logs))
+    if (!logs.isEmpty())
     {
-        result.insert(logs, "[Logs: " + logs + "]");
+        result[eWorkspaceElem::WorkspaceLogs]       = {logs, "[Logs: " + logs + "]"};
     }
     
     return result;
@@ -476,7 +476,7 @@ void NaviFileSystem::onWorkspaceDirectoriesChanged(const WorkspaceEntry& workspa
     if (isActiveWorkspace == false)
         return;
     
-    RootPaths paths = setupRootPaths(workspace);
+    WorkspaceElem paths = setupRootPaths(workspace);
     if ((mNaviModel != nullptr) && mNaviModel->updateRootPaths(paths))
     {
         mRootPaths = paths;

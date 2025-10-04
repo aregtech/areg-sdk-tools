@@ -445,6 +445,44 @@ void FileSystemEntry::sort(bool ascending)
         {return ascending ? (*left < *right) : (*left > *right); });
 }
 
+int FileSystemEntry::addChildren(const QStringList & filter /*= QStringList()*/)
+{
+    int count{0};
+    removeDummyEntry();
+    
+    if (isDir())
+    {
+        QDir dir(mFilePath);
+        if (filter.size() > 0)
+        {
+            QFileInfoList dirs(dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Dirs, QDir::Name | QDir::IgnoreCase));
+            for (const auto & elem : dirs)
+            {
+                ++ count;
+                addChild(elem, false);                
+            }
+            
+            QFileInfoList files(dir.entryInfoList(filter, QDir::NoDotAndDotDot | QDir::Files, QDir::Name | QDir::IgnoreCase));
+            for (const auto & elem : files)
+            {
+                ++ count;
+                addChild(elem, false);
+            }
+        }
+        else
+        {
+            QFileInfoList entries{ dir.entryInfoList(  QDir::NoDotAndDotDot | QDir::AllEntries, QDir::Name | QDir::DirsFirst | QDir::IgnoreCase) };
+            for (const auto & elem : entries)
+            {
+                ++ count;
+                addChild(elem, false);
+            }
+        }
+    }
+    
+    return count;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // FileSystemRootEntry class implementation
 //////////////////////////////////////////////////////////////////////////
@@ -453,30 +491,54 @@ FileSystemRootEntry::FileSystemRootEntry(const QString& name)
     : FileSystemEntry(name, name, FileSystemEntry::eEntryType::EntryRoot, QIcon(), nullptr)
     , mNextId       ( 0 )
     , mWorkspaceDirs( )
-    , mEntries      ( static_cast<int>(eWorkspaceEntry::WorkspaceEntryCount) )
+    , mEntries      ( static_cast<int>(eWorkspaceElem::WorkspaceEntryCount) )
 {
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceRoot)]      = NELusanCommon::fixPath(LusanApplication::getWorkspaceRoot());
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceSources)]   = NELusanCommon::fixPath(LusanApplication::getWorkspaceSources());
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceIncludes)]  = NELusanCommon::fixPath(LusanApplication::getWorkspaceIncludes());
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceDelivery)]  = NELusanCommon::fixPath(LusanApplication::getWorkspaceDelivery());
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceLogs)]      = NELusanCommon::fixPath(LusanApplication::getWorkspaceLogs());
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceRoot)]      = NELusanCommon::fixPath(LusanApplication::getWorkspaceRoot());
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceSources)]   = NELusanCommon::fixPath(LusanApplication::getWorkspaceSources());
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceIncludes)]  = NELusanCommon::fixPath(LusanApplication::getWorkspaceIncludes());
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceDelivery)]  = NELusanCommon::fixPath(LusanApplication::getWorkspaceDelivery());
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceLogs)]      = NELusanCommon::fixPath(LusanApplication::getWorkspaceLogs());
 }
 
-void FileSystemRootEntry::setWorkspaceDirectories(const QMap<QString, QString>& workspaceDirs)
+void FileSystemRootEntry::setWorkspaceDirectories(const WorkspaceElem& workspaceDirs)
 {
     mWorkspaceDirs = workspaceDirs;
     removeAll();
     addDummyEntry();
 }
 
-void FileSystemRootEntry::updateWorkspaceDirectories(const QMap<QString, QString>& workspaceDirs)
+void FileSystemRootEntry::updateWorkspaceDirectories(const WorkspaceElem& workspaceDirs)
 {
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceRoot)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceRoot());
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceSources)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceSources());
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceIncludes)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceIncludes());
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceDelivery)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceDelivery());
-    mEntries[static_cast<int>(eWorkspaceEntry::WorkspaceLogs)] = NELusanCommon::fixPath(LusanApplication::getWorkspaceLogs());
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceRoot)]      = workspaceDirs.contains(eWorkspaceElem::WorkspaceRoot)    ? NELusanCommon::fixPath(workspaceDirs[eWorkspaceElem::WorkspaceRoot].wsDir)     : QString();
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceSources)]   = workspaceDirs.contains(eWorkspaceElem::WorkspaceSources) ? NELusanCommon::fixPath(workspaceDirs[eWorkspaceElem::WorkspaceSources].wsDir)  : QString();
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceIncludes)]  = workspaceDirs.contains(eWorkspaceElem::WorkspaceIncludes)? NELusanCommon::fixPath(workspaceDirs[eWorkspaceElem::WorkspaceIncludes].wsDir) : QString();
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceDelivery)]  = workspaceDirs.contains(eWorkspaceElem::WorkspaceDelivery)? NELusanCommon::fixPath(workspaceDirs[eWorkspaceElem::WorkspaceDelivery].wsDir) : QString();
+    mEntries[static_cast<int>(eWorkspaceElem::WorkspaceLogs)]      = workspaceDirs.contains(eWorkspaceElem::WorkspaceLogs)    ? NELusanCommon::fixPath(workspaceDirs[eWorkspaceElem::WorkspaceLogs].wsDir)     : QString();
     setWorkspaceDirectories(workspaceDirs);
+}
+
+bool FileSystemRootEntry::containsDir(const QString & dirPath) const
+{
+    QString path {NELusanCommon::fixPath(dirPath)};
+    for (WorkspaceElem::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
+    {
+        if (path.compare(dir->wsDir, Qt::CaseSensitivity::CaseInsensitive) == 0)
+            return true;
+    }
+    
+    return false;
+}
+
+QString FileSystemRootEntry::findDisplayName(const QString & dirPath) const
+{
+    QString path {NELusanCommon::fixPath(dirPath)};
+    for (WorkspaceElem::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
+    {
+        if (path.compare(dir->wsDir, Qt::CaseSensitivity::CaseInsensitive) == 0)
+            return dir->wsDisplay;
+    }
+    
+    return QString();
 }
 
 uint32_t FileSystemRootEntry::getNextId(void) const
@@ -489,7 +551,7 @@ QFileInfoList FileSystemRootEntry::fetchData(const QStringList & filter /*= QStr
     QFileInfoList result;
     for (const auto & entry : mEntries)
     {
-        if ((entry.isEmpty() == false) && mWorkspaceDirs.contains(entry))
+        if ((entry.isEmpty() == false) && containsDir(entry))
         {
             result.push_back(QFileInfo(NELusanCommon::fixPath(entry)));
         }
@@ -504,9 +566,9 @@ FileSystemEntry* FileSystemRootEntry::createChildEntry(const QString& path) cons
     if (result != nullptr)
     {
         QString filePath = NELusanCommon::fixPath(result->getPath());
-        Q_ASSERT(mWorkspaceDirs.contains(filePath));
+        Q_ASSERT(containsDir(filePath));
         result->mEntryType = FileSystemEntry::eEntryType::EntryWorkspace;
-        result->mDispName = mWorkspaceDirs[filePath];
+        result->mDispName = findDisplayName(filePath);
     }
     
     return result;
@@ -518,10 +580,56 @@ FileSystemEntry* FileSystemRootEntry::createChildEntry(const QFileInfo& fileInfo
     if (result != nullptr)
     {
         QString filePath = NELusanCommon::fixPath(result->getPath());
-        Q_ASSERT(mWorkspaceDirs.contains(filePath));
+        Q_ASSERT(containsDir(filePath));
         result->mEntryType = FileSystemEntry::eEntryType::EntryWorkspace;
-        result->mDispName = mWorkspaceDirs[filePath];
+        result->mDispName = findDisplayName(filePath);
     }
     
     return result;
+}
+
+int FileSystemRootEntry::addChildren(const QStringList & filter /*= QStringList()*/)
+{
+    Q_UNUSED(filter);
+    if (mWorkspaceDirs.contains(eWorkspaceElem::WorkspaceRoot))
+    {
+        const sWorkspaceElem & elem = mWorkspaceDirs[eWorkspaceElem::WorkspaceRoot];
+        FileSystemEntry* child = createChildEntry(QFileInfo(NELusanCommon::fixPath(elem.wsDir)));
+        child->mDispName = elem.wsDisplay;
+        addChild(child, false);
+    }
+
+    if (mWorkspaceDirs.contains(eWorkspaceElem::WorkspaceSources))
+    {
+        const sWorkspaceElem & elem = mWorkspaceDirs[eWorkspaceElem::WorkspaceSources];
+        FileSystemEntry* child = createChildEntry(QFileInfo(NELusanCommon::fixPath(elem.wsDir)));
+        child->mDispName = elem.wsDisplay;
+        addChild(child, false);
+    }
+
+    if (mWorkspaceDirs.contains(eWorkspaceElem::WorkspaceIncludes))
+    {
+        const sWorkspaceElem & elem = mWorkspaceDirs[eWorkspaceElem::WorkspaceIncludes];
+        FileSystemEntry* child = createChildEntry(QFileInfo(NELusanCommon::fixPath(elem.wsDir)));
+        addChild(child, false);
+        child->mDispName = elem.wsDisplay;
+    }
+
+    if (mWorkspaceDirs.contains(eWorkspaceElem::WorkspaceDelivery))
+    {
+        const sWorkspaceElem & elem = mWorkspaceDirs[eWorkspaceElem::WorkspaceDelivery];
+        FileSystemEntry* child = createChildEntry(QFileInfo(NELusanCommon::fixPath(elem.wsDir)));
+        child->mDispName = elem.wsDisplay;
+        addChild(child, false);
+    }
+
+    if (mWorkspaceDirs.contains(eWorkspaceElem::WorkspaceLogs))
+    {
+        const sWorkspaceElem & elem = mWorkspaceDirs[eWorkspaceElem::WorkspaceLogs];
+        FileSystemEntry* child = createChildEntry(QFileInfo(NELusanCommon::fixPath(elem.wsDir)));
+        child->mDispName = elem.wsDisplay;
+        addChild(child, false);
+    }
+    
+    return static_cast<int>(mWorkspaceDirs.size());
 }
