@@ -519,9 +519,10 @@ void FileSystemRootEntry::updateWorkspaceDirectories(const WorkspaceElem& worksp
 
 bool FileSystemRootEntry::containsDir(const QString & dirPath) const
 {
+    QString path {NELusanCommon::fixPath(dirPath)};
     for (WorkspaceElem::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
     {
-        if (dirPath == dir->wsDir)
+        if (path.compare(dir->wsDir, Qt::CaseSensitivity::CaseInsensitive) == 0)
             return true;
     }
     
@@ -530,9 +531,10 @@ bool FileSystemRootEntry::containsDir(const QString & dirPath) const
 
 QString FileSystemRootEntry::findDisplayName(const QString & dirPath) const
 {
+    QString path {NELusanCommon::fixPath(dirPath)};
     for (WorkspaceElem::const_iterator dir = mWorkspaceDirs.constBegin(); dir != mWorkspaceDirs.constEnd(); ++dir)
     {
-        if (dirPath == dir->wsDir)
+        if (path.compare(dir->wsDir, Qt::CaseSensitivity::CaseInsensitive) == 0)
             return dir->wsDisplay;
     }
     
