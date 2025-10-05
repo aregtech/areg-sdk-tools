@@ -59,12 +59,7 @@ void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& opti
     layout.beginLayout();
     QTextLine line = layout.createLine();
 
-    // Calculate the width of the highlighted substring
-    // QString highlightText = cellText.mid(start, end - start);
-    // QFontMetrics metrics(option.font);
-    // int highlightWidth = metrics.horizontalAdvance(highlightText);
     // Set the line width to match the highlighted text only
-    // line.setLineWidth(highlightWidth);
     line.setLineWidth(option.rect.width());
     layout.endLayout();
 

@@ -517,18 +517,14 @@ void SIAttribute::updateData(void)
 void SIAttribute::updateWidgets(void)
 {
     QTableWidget* table = mList->ctrlTableList();
-    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Interactive);
-    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::Interactive);
-    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeMode::Stretch);
-    
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
 
     mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel, mNotifyModel}, QList<int>{1, 2}, mList->ctrlTableList(), this, false);
     mDetails->ctrlTypes()->setModel(mTypeModel);
-    mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
-    mList->ctrlTableList()->setItemDelegateForColumn(1, mTableCell);
-    mList->ctrlTableList()->setItemDelegateForColumn(2, mTableCell);
+    table->setItemDelegateForColumn(0, mTableCell);
+    table->setItemDelegateForColumn(1, mTableCell);
+    table->setItemDelegateForColumn(2, mTableCell);
 
     SICommon::enableDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, nullptr, false);
 

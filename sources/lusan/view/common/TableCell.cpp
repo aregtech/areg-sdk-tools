@@ -18,10 +18,12 @@
  ************************************************************************/
 
 #include "lusan/view/common/TableCell.hpp"
+#include "lusan/app/LusanApplication.hpp"
 
 #include <QComboBox>
 #include <QStandardItemModel>
 #include <QLineEdit>
+#include <QStyleFactory>
 #include <QTableWidget>
 #include <QTableWidgetItem>
 
@@ -105,21 +107,21 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
         combo->setModel(model);
         combo->setProperty("index", index);
         connect(combo, &QComboBox::currentTextChanged, this, &TableCell::onComboTextChanged);
+        
         return combo;
     }
     else if ( isValidColumn(index.column()) )
     {
-        QLineEdit* editor = new QLineEdit(parent);
-        editor->setProperty("index", index);
-        connect(editor, &QLineEdit::textEdited, this, &TableCell::onEditorTextChanged);
+        QLineEdit* lineEdit = new QLineEdit(parent);
+        connect(lineEdit, &QLineEdit::textEdited, this, &TableCell::onEditorTextChanged);
         if (mWaitEnd)
         {
-            connect(editor, &QLineEdit::editingFinished, this, &TableCell::onEditorTextChangeFinished);
+            connect(lineEdit, &QLineEdit::editingFinished, this, &TableCell::onEditorTextChangeFinished);
         }
         
-        return editor;
+        return lineEdit;
     }
-
+    
     return nullptr;
 }
 

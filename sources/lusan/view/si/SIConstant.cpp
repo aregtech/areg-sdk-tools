@@ -472,19 +472,15 @@ void SIConstant::updateData(void)
 
 void SIConstant::updateWidgets(void)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Interactive);
-    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeMode::Interactive);
-    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeMode::Stretch);
-    
+    QTableWidget* table = mList->ctrlTableList();    
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
     
     mTableCell = new TableCell(QList<QAbstractItemModel *>{mTypeModel}, QList<int>{1}, mList->ctrlTableList(), this, false);
     mDetails->ctrlTypes()->setModel(mTypeModel);
-    mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
-    mList->ctrlTableList()->setItemDelegateForColumn(1, mTableCell);
-    mList->ctrlTableList()->setItemDelegateForColumn(2, mTableCell);
+    table->setItemDelegateForColumn(0, mTableCell);
+    table->setItemDelegateForColumn(1, mTableCell);
+    table->setItemDelegateForColumn(2, mTableCell);
 
     SICommon::enableDeprecated<SIConstantDetails, ConstantEntry>(mDetails, nullptr, false);
 

@@ -34,6 +34,12 @@ SIAttributeList::SIAttributeList(QWidget* parent)
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    
+    QHeaderView* header = table->horizontalHeader();
+    header->setSectionResizeMode(0, QHeaderView::ResizeMode::ResizeToContents);
+    header->setSectionResizeMode(1, QHeaderView::ResizeMode::ResizeToContents);
+    header->setSectionResizeMode(2, QHeaderView::ResizeMode::Stretch);
+    
 }
 
 QToolButton* SIAttributeList::ctrlButtonAdd(void)

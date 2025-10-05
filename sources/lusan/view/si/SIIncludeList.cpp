@@ -38,6 +38,10 @@ SIIncludeList::SIIncludeList(SIIncludeModel& model, QWidget* parent)
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+
+    QHeaderView* header = table->horizontalHeader();
+    Q_ASSERT(header != nullptr);
+    header->setSectionResizeMode(0, QHeaderView::Stretch);
 }
 
 QToolButton* SIIncludeList::ctrlButtonAdd(void) const

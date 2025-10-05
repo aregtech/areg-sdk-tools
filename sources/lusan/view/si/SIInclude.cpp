@@ -405,9 +405,6 @@ void SIInclude::updateData(void)
 
 void SIInclude::updateWidgets(void)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeMode::Stretch);
-    
     mTableCell = new TableCell(QList<QAbstractItemModel*>(), QList<int>(), mList->ctrlTableList(), this, false);
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
     SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
