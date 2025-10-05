@@ -113,6 +113,11 @@ protected:
      * \brief   Triggered when the mouse is pressed on the header section.
      **/
     virtual void mousePressEvent(QMouseEvent* event) override;
+    
+    /**
+     * \brief   Triggered when the mouse is moved.
+     **/
+    virtual void mouseMoveEvent(QMouseEvent* event) override;
 
 /************************************************************************
  * Hidden methods

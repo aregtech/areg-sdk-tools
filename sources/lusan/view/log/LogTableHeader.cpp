@@ -43,6 +43,8 @@ LogTableHeader::LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::
     {
         mHeaders.push_back(new LogHeaderItem(*this, i));
     }
+
+    setMouseTracking(true);
 }
 
 void LogTableHeader::resetFilters(void)
@@ -94,33 +96,52 @@ QRect LogTableHeader::sectionRect(int logicalIndex) const
 
 void LogTableHeader::paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const
 {
-    // Draw the background (mimic QHeaderView default)
-    QStyleOptionHeader opt;
-    initStyleOption(&opt);
-    opt.rect = rect;
-    opt.section = logicalIndex;
-    opt.state |= QStyle::State_Raised;
-    if (isSortIndicatorShown() && (sortIndicatorSection() == logicalIndex))
-    {
-        opt.sortIndicator = (sortIndicatorOrder() == Qt::AscendingOrder) ? QStyleOptionHeader::SortUp : QStyleOptionHeader::SortDown;
-    }
-    
-    style()->drawControl(QStyle::CE_Header, &opt, painter, this);
-    
     LoggingModelBase::eColumn col = mModel->fromIndexToColumn(logicalIndex);
     if (col != LoggingModelBase::eColumn::LogColumnInvalid)
     {
+        // Draw the background (mimic QHeaderView default)
+        QStyleOptionHeader opt;
+        initStyleOption(&opt);
+        opt.rect = rect;
+        opt.section = logicalIndex;
+        opt.state |= QStyle::State_Raised;
+        
+        QPen oldPen = painter->pen();
+        painter->setPen(Qt::darkGray);
+        style()->drawControl(QStyle::CE_HeaderLabel, &opt, painter, this);
+        style()->drawControl(QStyle::CE_HeaderSection, &opt, painter, this);
+        
         QRect rcButton; // Button rectangle (left side)
         QRect rcText;   // Text rectangle (right of button, with a small gap)
         drawingRects(rect, rcButton, rcText);
-        
+        painter->setPen(oldPen);
+
         // Draw button and symbol
         if (mHeaders[static_cast<int>(col)]->canPopupFilter())
         {
-            // painter->drawRect(rcButton);
+            bool isHovered = false;
+            if (QHeaderView::underMouse())
+            {
+                QPoint mousePos = mapFromGlobal(QCursor::pos());
+                isHovered  = rcButton.contains(mousePos);
+            }
+
+            // Always draw the ▼ symbol
             painter->drawText(rcButton, Qt::AlignCenter, QChar(0x25BC)); // ▼
+
+            // Draw rectangle around the ▼ symbol if hovered
+            if (isHovered)
+            {
+                QPen pen(Qt::lightGray);
+                pen.setWidth(1);
+                painter->save();
+                painter->setPen(pen);
+                painter->setBrush(Qt::NoBrush);
+                painter->drawRect(rcButton.adjusted(1, 5, -1, -5));
+                painter->restore();
+            }
         }
-        
+
         // Draw header text
         painter->drawText(rcText, Qt::AlignVCenter | Qt::AlignLeft, mModel->getHeaderName(logicalIndex));
     }
@@ -220,4 +241,11 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
 
     // Otherwise, allow normal header behavior (resize/move)
     QHeaderView::mousePressEvent(event);
+}
+
+void LogTableHeader::mouseMoveEvent(QMouseEvent* event)
+{
+    int logical = logicalIndexAt(event->pos());
+    updateSection(logical);
+    QHeaderView::mouseMoveEvent(event);
 }

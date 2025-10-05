@@ -325,6 +325,7 @@ int LusanApplication::startupMainWindow(const WorkspaceEntry& curWorkspace)
     w.showMaximized();
     w.show();
     emit signalApplicationRunning();
+    setStyleSheet("{ background: palette(base); color: palette(text);}");    
     int result = exec();
     mMainWindow = nullptr;
     return result;
@@ -334,7 +335,7 @@ int LusanApplication::runApplication()
 {
     int result{ 0 };
     mOptions.readOptions();
-
+    
     do
     {
         mIsRestarting = false;
