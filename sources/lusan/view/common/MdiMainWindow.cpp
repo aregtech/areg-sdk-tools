@@ -127,6 +127,7 @@ MdiMainWindow::MdiMainWindow()
     , mActViewNavigator(this)
     , mActViewWokspace(this)
     , mActViewLogs  (this)
+    , mActOffViewLogs(this)
     , mActViewOutput(this)
     , mActWindowsTile(this)
     , mActWindowsCascade(this)
@@ -602,7 +603,7 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
     ServiceInterface* child = new ServiceInterface(this, filePath, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
-    mdiSub->setWindowIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview));
+    mdiSub->setWindowIcon(ServiceInterface::getServiceInterfaceIcon());
     mdiSub->setWindowModified(true);
     mdiSub->setWindowFilePath(filePath);
     mdiSub->setToolTip(filePath);
@@ -668,12 +669,14 @@ inline void MdiMainWindow::initAction(QAction& act, const QIcon& icon, QString t
 
 void MdiMainWindow::_createActions()
 {
-    initAction(mActNewWorkspace, QIcon(), tr("New &Workspace"));
+    QIcon newWS;
+    newWS.addFile(QString::fromUtf8(":/icons/new-workspace"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    initAction(mActNewWorkspace, newWS, tr("New &Workspace"));
     mActNewWorkspace.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_W));
-    mActFileNewSI.setStatusTip(tr("Create a new workspace, restarts application"));
+    mActNewWorkspace.setStatusTip(tr("Create a new workspace, restarts application"));
     connect(&mActNewWorkspace, &QAction::triggered, this, [this](){LusanApplication::newWorkspace();});
     
-    initAction(mActFileNewSI, QIcon::fromTheme(QIcon::ThemeIcon::AppointmentNew), tr("New Service &Interface"));
+    initAction(mActFileNewSI, ServiceInterface::getServiceInterfaceIcon(), tr("New Service &Interface"));
     mActFileNewSI.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_I));
     mActFileNewSI.setStatusTip(tr("Create a new service interface file"));
     connect(&mActFileNewSI, &QAction::triggered, this, &MdiMainWindow::onFileNewSI);
@@ -683,7 +686,9 @@ void MdiMainWindow::_createActions()
     mActFileNewLog.setStatusTip(tr("Create a new live logs"));
     connect(&mActFileNewLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviLiveLogs); signalNewLiveLog();});
     
-    initAction(mActFileOfflineLog, QIcon::fromTheme(QIcon::ThemeIcon::ContactNew), tr("O&ffline Logs"));
+    QIcon newOffLog;
+    newOffLog.addFile(QString::fromUtf8(":/icons/new-offline-logs"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    initAction(mActFileOfflineLog, newOffLog, tr("O&ffline Logs"));
     mActFileOfflineLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_F));
     mActFileOfflineLog.setStatusTip(tr("Open offline logs"));
     connect(&mActFileOfflineLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviOfflineLogs); signalOpenOfflineLog();});
@@ -733,30 +738,37 @@ void MdiMainWindow::_createActions()
     connect(&mActEditPaste, &QAction::triggered, this, &MdiMainWindow::onEditPaste);
     
     QIcon iconNavi;
-    iconNavi.addFile(QString::fromUtf8(":/icons/View Navigator Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
-    initAction(mActViewNavigator, iconNavi, tr("&Navigator Window"));
-    mActViewNavigator.setStatusTip(tr("View Navigator Window"));
+    iconNavi.addFile(QString::fromUtf8(":/icons/view-navigation"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    initAction(mActViewNavigator, iconNavi, tr("&Navigation Window"));
+    mActViewNavigator.setStatusTip(tr("View Navigation Window"));
     connect(&mActViewNavigator, &QAction::triggered, this, [this](){
         if (mNaviDock.isHidden()) mNaviDock.show();
     });
-
-    initAction(mActViewWokspace, QIcon(), tr("&Workspace Navigator"));
+    
+    initAction(mActViewWokspace, NavigationDock::getWorkspaceExplorerIcon(), tr("&workspace-explorer"));
     mActViewWokspace.setStatusTip(tr("View Workspace Navigator Window"));
     connect(&mActViewWokspace, &QAction::triggered, this, [this]() {
         if (mNaviDock.isHidden()) mNaviDock.show();
         mNaviDock.showTab(NavigationDock::TabNameFileSystem);
     });
-
-    initAction(mActViewLogs, QIcon(), tr("&Logs Navigator"));
-    mActViewLogs.setStatusTip(tr("View Logs Navigator Window"));
+    
+    initAction(mActViewLogs, NavigationDock::getLiveLogIcon(), tr("Live &Logs Navigator"));
+    mActViewLogs.setStatusTip(tr("View Live Logs Navigator Window"));
     connect(&mActViewLogs, &QAction::triggered, this, [this] () {
         if (mNaviDock.isHidden()) mNaviDock.show();
         mNaviDock.showTab(NavigationDock::TabLiveLogsExplorer);
         if (mLiveLogWnd != nullptr) mLiveLogWnd->activateWindow();
     });
     
+    initAction(mActOffViewLogs, NavigationDock::getOfflineLogIcon(), tr("Offline &Logs Navigator"));
+    mActOffViewLogs.setStatusTip(tr("View Offline Logs Navigator Window"));
+    connect(&mActOffViewLogs, &QAction::triggered, this, [this] () {
+        if (mNaviDock.isHidden()) mNaviDock.show();
+        mNaviDock.showTab(NavigationDock::TabOfflineLogsExplorer);
+    });
+    
     QIcon iconOutput;
-    iconOutput.addFile(QString::fromUtf8(":/icons/View Output Window"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    iconOutput.addFile(QString::fromUtf8(":/icons/view-status"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
     initAction(mActViewOutput, iconOutput, tr("&Output Window"));
     mActViewOutput.setStatusTip(tr("View Output Window"));
     connect(&mActViewOutput, &QAction::triggered, this, [this](){

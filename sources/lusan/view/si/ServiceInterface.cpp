@@ -30,6 +30,13 @@ const QString& ServiceInterface::fileExtension(void)
     return _extSI;
 }
 
+QIcon ServiceInterface::getServiceInterfaceIcon(void)
+{
+    QIcon icon;
+    icon.addFile(QString::fromUtf8(":/icons/new-service"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+    
 uint32_t ServiceInterface::_count{0};
 
 ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & filePath /*= QString()*/, QWidget *parent /*= nullptr*/)

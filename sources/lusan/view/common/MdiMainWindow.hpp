@@ -519,6 +519,7 @@ private:
     QAction         mActViewNavigator;
     QAction         mActViewWokspace;
     QAction         mActViewLogs;
+    QAction         mActOffViewLogs;
     QAction         mActViewOutput;
 
     //!< Actions for Tools sub-menus.

@@ -1,5 +1,5 @@
 ﻿<RCC>
-    <qresource lang="Toolbar Icons" prefix="/icons">
+    <qresource prefix="/icons">
         <file alias="entry add">icons/entry_add.png</file>
         <file alias="entry delete">icons/entry_delete.png</file>
         <file alias="field add">icons/field_add.png</file>
@@ -7,8 +7,8 @@
         <file alias="entry insert">icons/entry_insert.png</file>
         <file alias="move down">icons/move_down.png</file>
         <file alias="move up">icons/move_up.png</file>
-        <file alias="View Navigator Window">icons/view_navigation.png</file>
-        <file alias="View Output Window">icons/view_status.png</file>
+        <file alias="view-navigation">icons/view-navigation.svg</file>
+        <file alias="view-status">icons/view-status.svg</file>
         <file alias="Sort Items">icons/sort.png</file>
         <file alias="Edit Item">icons/edit.png</file>
         <file alias="Update Item">icons/update.png</file>
@@ -32,6 +32,11 @@
         <file alias="right-arrow">icons/right-arrow.svg</file>
         <file alias="pin-target">icons/pin-target.svg</file>
         <file alias="push-pin">icons/pushpin-fix.svg</file>
+        <file alias="new-service">icons/new-service.svg</file>
+        <file alias="new-workspace">icons/new-workspace.svg</file>
+        <file alias="new-offline-logs">icons/new-offline-logs.svg</file>
+        <file alias="view-offline-logs">icons/view-offline-logs.svg</file>
+        <file alias="view-live-logs">icons/view-live-logs.svg</file>
     </qresource>
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>

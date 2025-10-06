@@ -20,6 +20,7 @@
  ************************************************************************/
 
 #include "areg/base/GEGlobal.h"
+#include <QIcon>
 #include <QList>
 #include <QPoint>
 #include <QString>
@@ -384,6 +385,152 @@ namespace NELusanCommon
     using FilterList    = QList<sFilterData>;
     using FilterString  = sStringFilter;
     using FilterData    = sFilterData;
+    
+    inline QIcon loadIcon(const QString & fileName);
+    
+    inline QIcon iconNewWorkspace(void);
+    
+    inline QIcon iconServiceInterface(void);
+    
+    inline QIcon iconNewLiveLogs(void);
+    
+    inline QIcon iconNewOfflineLogs(void);
+
+    inline QIcon iconOpenDocument(void);
+
+    inline QIcon iconSaveDocument(void);
+
+    inline QIcon iconSaveAsDocument(void);
+
+    inline QIcon iconApplicationExit(void);
+
+    inline QIcon iconCut(void);
+
+    inline QIcon iconCopy(void);
+
+    inline QIcon iconPaste(void);
+
+    inline QIcon iconViewNavigationWindow(void);
+
+    inline QIcon iconVeiwWorkspace(void);
+
+    inline QIcon iconViewLiveLogs(void);
+
+    inline QIcon icongViewOfflineLogs(void);
+
+    inline QIcon iconViewOutputWindow(void);
+
+    inline QIcon iconSettings(void);
+}
+
+QIcon NELusanCommon::iconSettings(void)
+{
+    QIcon icon{ QIcon::fromTheme("applications-development") };
+    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+QIcon NELusanCommon::iconViewOutputWindow(void)
+{
+    return loadIcon(":/icons/view-status");
+}
+
+QIcon NELusanCommon::icongViewOfflineLogs(void)
+{
+    return loadIcon(":/icons/view-offline-logs");
+}
+
+QIcon NELusanCommon::iconViewLiveLogs(void)
+{
+    return loadIcon(":/icons/view-live-logs");
+}
+
+QIcon NELusanCommon::iconVeiwWorkspace(void)
+{
+    return loadIcon(":/icons/workspace-explorer");
+}
+
+QIcon NELusanCommon::iconViewNavigationWindow(void)
+{
+    return loadIcon(":/icons/view-navigation");
+}
+
+QIcon NELusanCommon::iconPaste(void)
+{
+    QIcon icon{ QIcon::fromTheme("edit-paste", QIcon(":/images/paste.png")) };
+    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconCopy(void)
+{
+    QIcon icon{ QIcon::fromTheme("edit-copy", QIcon(":/images/copy.png")) };
+    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconCut(void)
+{
+    QIcon icon{ QIcon::fromTheme("edit-cut", QIcon(":/images/cut.png")) };
+    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconApplicationExit(void)
+{
+    QIcon icon{ QIcon::fromTheme("application-exit") };
+    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconSaveAsDocument(void)
+{
+    QIcon icon{ QIcon::fromTheme("document-save-as") };
+    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconSaveDocument(void)
+{
+    QIcon icon{ QIcon::fromTheme("document-save", QIcon(":/images/save.png")) };
+    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconOpenDocument(void)
+{
+    QIcon icon{ QIcon::fromTheme("document-open", QIcon(":/images/open.png")) };
+    icon.actualSize(QSize{ 32, 32 }, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconNewOfflineLogs(void)
+{
+    return loadIcon(":/icons/new-offline-logs");
+}
+
+inline QIcon NELusanCommon::iconNewLiveLogs(void)
+{
+    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::NetworkWireless) };
+    icon.actualSize(QSize{32, 32}, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconServiceInterface(void)
+{
+    return loadIcon(":/icons/new-service");
+}
+
+inline QIcon NELusanCommon::iconNewWorkspace(void)
+{
+    return loadIcon(":/icons/new-workspace");
+}
+    
+inline QIcon NELusanCommon::loadIcon(const QString & fileName)
+{
+    QIcon icon;
+    icon.addFile(QString::fromUtf8(":/icons/new-offline-logs"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
 }
 
 #endif  // LUSAN_COMMON_NELUSANCOMMON_HPP

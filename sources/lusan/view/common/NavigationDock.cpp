@@ -36,14 +36,14 @@ QIcon NavigationDock::getWorkspaceExplorerIcon(void)
 QIcon NavigationDock::getLiveLogIcon(void)
 {
     QIcon icon;
-    icon.addFile(QString::fromUtf8(":/icons/log-live"), NavigationDock::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
+    icon.addFile(QString::fromUtf8(":/icons/view-live-logs"), NavigationDock::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
     return icon;
 }
 
 QIcon NavigationDock::getOfflineLogIcon(void)
 {
     QIcon icon;
-    icon.addFile(QString::fromUtf8(":/icons/log-offline"), NavigationDock::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
+    icon.addFile(QString::fromUtf8(":/icons/view-offline-logs"), NavigationDock::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
     return icon;
 }
 
