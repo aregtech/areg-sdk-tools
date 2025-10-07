@@ -22,12 +22,6 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 const QString   OutputDock::TabNameLogging{ tr("Log analyzes") };
-const QSize     OutputDock::IconSize{ 32, 32 };
-
-QIcon OutputDock::getLoggingIcon(void)
-{
-    return QIcon();
-}
 
 const QString& OutputDock::getTabName(OutputDock::eOutputDock wndOutput)
 {

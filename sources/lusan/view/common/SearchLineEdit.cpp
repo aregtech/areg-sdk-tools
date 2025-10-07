@@ -21,7 +21,6 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 #include <QHBoxLayout>
-#include <QIcon>
 #include <QKeyEvent>
 #include <QWidget>
 
@@ -86,7 +85,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnSearch->setMaximumSize(buttonSize);
                 mBtnSearch->setAutoFillBackground(true);
                 mBtnSearch->setCheckable(true);
-                mBtnSearch->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::EditFind));
+                mBtnSearch->setIcon(NELusanCommon::iconSearch(NELusanCommon::SizeSmall));
                 mBtnSearch->setShortcut(QString::fromUtf8("Ctrl+F, F3, Alt+F"));
                 mBtnSearch->setToolTip(tr("Find text (Ctrl + F, F3, Alt + F)"));
                 mBtnSearch->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
@@ -112,7 +111,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnMatchCase->setMinimumSize(buttonSize);
                 mBtnMatchCase->setMaximumSize(buttonSize);
                 mBtnMatchCase->setAutoFillBackground(true);
-                mBtnMatchCase->setIcon(QIcon(QString::fromUtf8(":/icons/search-match-case")));
+                mBtnMatchCase->setIcon(NELusanCommon::iconSearchMatchCase(NELusanCommon::SizeSmall));
                 mBtnMatchCase->setShortcut(QString::fromUtf8("Ctrl+C"));
                 mBtnMatchCase->setToolTip(tr("Find text exact match (Ctrl + C)"));
                 mBtnMatchCase->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
@@ -138,7 +137,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnMatchWord->setMinimumSize(buttonSize);
                 mBtnMatchWord->setMaximumSize(buttonSize);
                 mBtnMatchWord->setAutoFillBackground(true);
-                mBtnMatchWord->setIcon(QIcon(QString::fromUtf8(":/icons/search-match-word")));
+                mBtnMatchWord->setIcon(NELusanCommon::iconSearchMatchWord(NELusanCommon::SizeSmall));
                 mBtnMatchWord->setShortcut(QString::fromUtf8("Ctrl+W"));
                 mBtnMatchWord->setToolTip(tr("Find text exact match (Ctrl + W)"));
                 mBtnMatchWord->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
@@ -164,7 +163,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnWildCard->setMinimumSize(buttonSize);
                 mBtnWildCard->setMaximumSize(buttonSize);
                 mBtnWildCard->setAutoFillBackground(true);
-                mBtnWildCard->setIcon(QIcon(QString::fromUtf8(":/icons/search-wild-card")));
+                mBtnWildCard->setIcon(NELusanCommon::iconSearchWildCard(NELusanCommon::SizeSmall));
                 mBtnWildCard->setShortcut(QString::fromUtf8("Alt+R"));
                 mBtnWildCard->setToolTip(tr("Search with wild-card (Ctrl + R)"));
                 mBtnWildCard->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));
@@ -190,7 +189,7 @@ void SearchLineEdit::initialize(const QList<SearchLineEdit::eToolButton> & addBu
                 mBtnBackward->setMinimumSize(buttonSize);
                 mBtnBackward->setMaximumSize(buttonSize);
                 mBtnBackward->setAutoFillBackground(true);
-                mBtnBackward->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoUp));
+                mBtnBackward->setIcon(NELusanCommon::iconGoUp(NELusanCommon::SizeSmall));
                 mBtnBackward->setShortcut(QString::fromUtf8("Shift+F3"));
                 mBtnBackward->setToolTip(tr("Search text backward (Schift+F3)"));
                 mBtnBackward->setCursor(QCursor(Qt::CursorShape::PointingHandCursor));

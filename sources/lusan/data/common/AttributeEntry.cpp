@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/AttributeEntry.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 const QString AttributeEntry::toString(eNotification value)
@@ -199,9 +200,9 @@ QIcon AttributeEntry::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon::fromTheme(QIcon::ThemeIcon::Battery);
+        return NELusanCommon::iconAttribute(NELusanCommon::SizeSmall);
     case ElementBase::eDisplay::DisplayType:
-        return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+        return (mParamType.isValid() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
     default:
         return QIcon();
     }

@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/common/IncludeEntry.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 #include "IncludeEntry.hpp"
 
@@ -220,7 +221,7 @@ bool IncludeEntry::isValid(void) const
 
 QIcon IncludeEntry::getIcon(ElementBase::eDisplay display) const
 {
-    return (display == ElementBase::eDisplay::DisplayName ? QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading) : QIcon());
+    return (display == ElementBase::eDisplay::DisplayName ? NELusanCommon::iconInclude(NELusanCommon::SizeSmall) : QIcon());
 }
 
 QString IncludeEntry::getString(ElementBase::eDisplay display) const

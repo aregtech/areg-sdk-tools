@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeContainer.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
 
@@ -178,9 +179,9 @@ QIcon DataTypeContainer::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon(QString::fromUtf8(":/icons/data type container"));
+        return NELusanCommon::iconContainer(NELusanCommon::SizeSmall);
     case ElementBase::eDisplay::DisplayType:
-        return (!canHaveKey() || mKeyType.isValid()) && mValueType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning);
+        return (!canHaveKey() || mKeyType.isValid()) && mValueType.isValid() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall);
     default:
         return QIcon();
     }

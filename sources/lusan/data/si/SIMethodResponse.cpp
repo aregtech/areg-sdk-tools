@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodResponse.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
 SIMethodResponse::SIMethodResponse(ElementBase* parent /*= nullptr*/)
     : SIMethodBase(eMethodType::MethodResponse, parent)
@@ -154,7 +155,7 @@ QIcon SIMethodResponse::getIcon(ElementBase::eDisplay display) const
 {
     if (display == ElementBase::eDisplay::DisplayName)
     {
-        return QIcon(QString::fromUtf8(":/icons/data method response"));
+        return NELusanCommon::iconMethodResponse(NELusanCommon::SizeSmall);
     }
     else
     {

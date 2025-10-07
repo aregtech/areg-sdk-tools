@@ -25,7 +25,6 @@
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 
 #include <QDockWidget>
-#include <QIcon>
 #include <QSize>
 #include <QTabWidget>
 #include "OutputDock.hpp"
@@ -51,16 +50,6 @@ public:
     static QString  TabNameFileSystem;      //!< The name of the tab for workspace explorer.
     static QString  TabLiveLogsExplorer;    //!< The name of the tab for live logs explorer.
     static QString  TabOfflineLogsExplorer; //!< The name of the tab for offline logs explorer.
-    static QSize    IconSize;               //<! The size of icons.
-
-    //!< Returns the icon for the workspace explorer tab.
-    static QIcon getWorkspaceExplorerIcon(void);
-
-    //!< Returns the icon for the live logs explorer tab.
-    static QIcon getLiveLogIcon(void);
-
-    //!< Returns the icon for the offline logs explorer tab.
-    static QIcon getOfflineLogIcon(void);
 
     //!< Returns the tab name of the specified navigation window
     static const QString& getTabName(NavigationDock::eNaviWindow navi);

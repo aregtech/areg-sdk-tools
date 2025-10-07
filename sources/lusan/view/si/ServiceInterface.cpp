@@ -22,7 +22,6 @@
 #include "lusan/data/si/ServiceInterfaceData.hpp"
 
 #include <QVBoxLayout>
-#include <QIcon>
 
 const QString& ServiceInterface::fileExtension(void)
 {
@@ -30,13 +29,6 @@ const QString& ServiceInterface::fileExtension(void)
     return _extSI;
 }
 
-QIcon ServiceInterface::getServiceInterfaceIcon(void)
-{
-    QIcon icon;
-    icon.addFile(QString::fromUtf8(":/icons/new-service"), QSize(32, 32), QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
-}
-    
 uint32_t ServiceInterface::_count{0};
 
 ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & filePath /*= QString()*/, QWidget *parent /*= nullptr*/)
@@ -51,7 +43,7 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
     , mConstant (mModel.getConstantsModel() , this)
     , mInclude  (mModel.getIncludesModel()  , this)
 {
-    QIcon tabIcon = QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview);
+    QIcon tabIcon = NELusanCommon::iconServiceInterfaceTab(NELusanCommon::SizeSmall);
     mTabWidget.setTabPosition(QTabWidget::South);
     // Add the SIOverview widget as the first tab
     mTabWidget.addTab(&mOverview , tabIcon, tr("Overview"));

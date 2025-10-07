@@ -62,8 +62,6 @@ public:
      **/
     static const QString& fileExtension(void);
     
-    static QIcon getServiceInterfaceIcon(void);
-
     /**
      * \brief   The list of pages in the service interface
      **/

@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/ConstantEntry.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 ConstantEntry::ConstantEntry(ElementBase* parent /*= nullptr*/)
@@ -173,9 +174,9 @@ QIcon ConstantEntry::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon::fromTheme(QIcon::ThemeIcon::InputGaming);
+        return NELusanCommon::iconConstant(NELusanCommon::SizeSmall);
     case ElementBase::eDisplay::DisplayType:
-        return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+        return (mParamType.isValid() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
     default:
         return QIcon();
     }

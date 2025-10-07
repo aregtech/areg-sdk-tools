@@ -431,7 +431,7 @@ void NaviLiveLogsScopes::enableButtons(const QModelIndex & selection)
 void NaviLiveLogsScopes::onLogObserverConfigured(bool isEnabled, const QString& address, uint16_t port)
 {
     ctrlConnect()->setEnabled(isEnabled);
-    ctrlConnect()->setIcon(QIcon::fromTheme(QString::fromUtf8("network-offline")));
+    ctrlConnect()->setIcon(NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig));
     ctrlConnect()->setToolTip(isEnabled ? tr("Connect to log collector") : tr("Logging is not enabled"));
     
     mAddress= address;
@@ -456,7 +456,7 @@ void NaviLiveLogsScopes::onLogServiceConnected(bool isConnected, const QString& 
 
     LogObserver* log = LogObserver::getComponent();
     ctrlConnect()->setChecked(isConnected);
-    ctrlConnect()->setIcon(QIcon::fromTheme(isConnected ? QString::fromUtf8("network-wireless") : QString::fromUtf8("network-offline")));
+    ctrlConnect()->setIcon(isConnected ? NELusanCommon::iconLiveLogConnected(NELusanCommon::SizeBig) : NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig));
     ctrlConnect()->setToolTip(isConnected ? address + ":" + QString::number(port) : tr("Connect to log collector"));
     Q_ASSERT(mMainWindow != nullptr);
     mMainWindow->logCollecttorConnected(isConnected, address, port, log != nullptr ? log->getActiveDatabase() : mActiveLogFile);
@@ -521,7 +521,7 @@ void NaviLiveLogsScopes::onConnectClicked(bool checked)
         setupLogSignals(false);
         
         ctrlConnect()->setChecked(false);
-        ctrlConnect()->setIcon(QIcon::fromTheme(QString::fromUtf8("network-offline")));
+        ctrlConnect()->setIcon(NELusanCommon::iconLiveLogDisconnected(NELusanCommon::SizeBig));
         ctrlConnect()->setToolTip(tr("Connect to log collector"));
         
         mState = eLoggingStates::LoggingDisconnected;
@@ -641,7 +641,7 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
     if (checked)
     {
         ctrlCollapse()->blockSignals(true);
-        ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
+        ctrlCollapse()->setIcon(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig));
         ctrlCollapse()->setChecked(true);
         
         navi->blockSignals(true);
@@ -656,7 +656,7 @@ void NaviLiveLogsScopes::onCollapseClicked(bool checked)
     else
     {
         ctrlCollapse()->blockSignals(true);
-        ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
+        ctrlCollapse()->setIcon(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig));
         ctrlCollapse()->setChecked(false);
         
         navi->blockSignals(true);
@@ -835,10 +835,10 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setCheckable(true);
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setChecked(hasScope);
     
-    mMenuActions[static_cast<int>(eLogActions::ExpandSelected)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::ListRemove), tr("Expand Selected"));
+    mMenuActions[static_cast<int>(eLogActions::ExpandSelected)] = menu.addAction(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig), tr("Expand Selected"));
     mMenuActions[static_cast<int>(eLogActions::ExpandSelected)]->setEnabled((ctrlTable()->isExpanded(index) == false) && (node->hasChildren()));
     
-    mMenuActions[static_cast<int>(eLogActions::CollapseSelected)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::ListAdd), tr("Collapse Selected"));
+    mMenuActions[static_cast<int>(eLogActions::CollapseSelected)] = menu.addAction(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig), tr("Collapse Selected"));
     mMenuActions[static_cast<int>(eLogActions::CollapseSelected)]->setEnabled(ctrlTable()->isExpanded(index) && node->hasChildren());
     
     mMenuActions[static_cast<int>(eLogActions::ExpandAll)] = menu.addAction(tr("Expand All"));
@@ -847,7 +847,7 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     mMenuActions[static_cast<int>(eLogActions::CollapseAll)] = menu.addAction(tr("Collapse All"));
     mMenuActions[static_cast<int>(eLogActions::CollapseAll)]->setEnabled(areRootsCollapsed() == false);
 
-    mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)] = menu.addAction(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave), tr("&Save Selection on Target"));
+    mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)] = menu.addAction(NELusanCommon::iconSaveDocument(NELusanCommon::SizeBig), tr("&Save Selection on Target"));
     mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)]->setEnabled(LogObserver::isConnected());
 
     mMenuActions[static_cast<int>(eLogActions::SavePrioAll)] = menu.addAction(tr("Save &All Targets"));
@@ -924,7 +924,7 @@ void NaviLiveLogsScopes::onNodeExpanded(const QModelIndex& index)
 {
     if (areRootsCollapsed() == false)
     {
-        ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-add")));
+        ctrlCollapse()->setIcon(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeSmall));
         ctrlCollapse()->setChecked(false);
     }
     
@@ -936,7 +936,7 @@ void NaviLiveLogsScopes::onNodeCollapsed(const QModelIndex& index)
 {
     if (areRootsCollapsed())
     {
-        ctrlCollapse()->setIcon(QIcon::fromTheme(QString::fromUtf8("list-remove")));
+        ctrlCollapse()->setIcon(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeSmall));
         ctrlCollapse()->setChecked(true);
     }
     

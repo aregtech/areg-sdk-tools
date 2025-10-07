@@ -205,7 +205,7 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
         
     case Qt::DecorationRole:
     {
-        static const QIcon _iconSelect(QString::fromUtf8(":/icons/right-arrow"));
+        static const QIcon _iconSelect(NELusanCommon::iconLogSelected(NELusanCommon::SizeSmall));
         return (column == eColumn::LogColumnSourceId) && (mScopeFilter != nullptr) && mScopeFilter->filterExactMatch(index) ? _iconSelect : getDecorationData(logMessage, column);
     }
         
