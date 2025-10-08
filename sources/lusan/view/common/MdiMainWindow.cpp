@@ -603,7 +603,7 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
     ServiceInterface* child = new ServiceInterface(this, filePath, &mMdiArea);
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
-    mdiSub->setWindowIcon(NELusanCommon::iconServiceInterfaceTab(NELusanCommon::SizeSmall));
+    mdiSub->setWindowIcon(NELusanCommon::iconServiceInterface(NELusanCommon::SizeSmall));
     mdiSub->setWindowModified(true);
     mdiSub->setWindowFilePath(filePath);
     mdiSub->setToolTip(filePath);

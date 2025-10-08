@@ -864,7 +864,7 @@ inline QIcon NELusanCommon::iconNewOfflineLogs(const QSize & size /*= QSize{32, 
 
 inline QIcon NELusanCommon::iconLiveLogWindow(const QSize & size /*= QSize{ 32, 32 }*/)
 {
-    return loadIcon(":/icons/new-llive-logs", size);
+    return loadIcon(":/icons/new-live-logs", size);
 }
 
 inline QIcon NELusanCommon::iconOfflineLogWindow(const QSize & size /*= QSize{ 32, 32 }*/)
