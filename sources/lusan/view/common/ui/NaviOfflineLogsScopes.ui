@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>446</width>
+    <width>413</width>
     <height>621</height>
    </rect>
   </property>
@@ -184,7 +184,8 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset theme="dialog-error"/>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/log-prio-error</normaloff>:/icons/log-prio-error</iconset>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -206,7 +207,8 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset theme="dialog-warning"/>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/log-prio-warning</normaloff>:/icons/log-prio-warning</iconset>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -228,7 +230,8 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset theme="dialog-information"/>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/log-prio-info</normaloff>:/icons/log-prio-info</iconset>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -250,7 +253,8 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset theme="format-justify-left"/>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/log-prio-debug</normaloff>:/icons/log-prio-debug</iconset>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -272,7 +276,8 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset theme="media-playlist-shuffle"/>
+           <iconset resource="../../../res/lusan.qrc">
+            <normaloff>:/icons/log-prio-scope</normaloff>:/icons/log-prio-scope</iconset>
           </property>
           <property name="checkable">
            <bool>true</bool>
@@ -377,6 +382,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../../res/lusan.qrc"/>
+ </resources>
  <connections/>
 </ui>
