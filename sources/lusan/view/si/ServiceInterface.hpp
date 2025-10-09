@@ -61,7 +61,7 @@ public:
      * \brief   Returns the file extension of the service interface document.
      **/
     static const QString& fileExtension(void);
-
+    
     /**
      * \brief   The list of pages in the service interface
      **/

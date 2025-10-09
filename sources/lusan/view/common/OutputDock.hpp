@@ -27,8 +27,6 @@
 
 #include "lusan/view/log/ScopeOutputViewer.hpp"
 
-#include <QIcon>
-#include <QSize>
 #include <QTabWidget>
 
 /************************************************************************
@@ -58,11 +56,6 @@ public:
 
     //!< The tab name for the logging output window
     static const QString    TabNameLogging;
-    //!< Size of tab icons
-    static const QSize      IconSize;
-
-    //!< Returns the icon for the logging output window
-    static QIcon getLoggingIcon(void);
 
     //!< Returns the tab name of the specified output window
     static const QString& getTabName(OutputDock::eOutputDock wndStatus);

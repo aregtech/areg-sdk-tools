@@ -172,19 +172,19 @@ void LiveLogViewer::updateToolbuttons(bool isPaused, bool isStopped)
     {
         ctrlPause()->setEnabled(true);
         ctrlPause()->setChecked(true);
-        ctrlPause()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-start")));
+        ctrlPause()->setIcon(NELusanCommon::iconPlay(NELusanCommon::SizeBig));
         ctrlPause()->setToolTip(_tooltipResumeLogging);
 
         ctrlStop()->setEnabled(true);
         ctrlStop()->setChecked(false);
-        ctrlStop()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-stop")));
+        ctrlStop()->setIcon(NELusanCommon::iconStop(NELusanCommon::SizeBig));
         ctrlStop()->setToolTip(_tooltipStopLogging);
     }
     else
     {
         ctrlPause()->setEnabled(true);
         ctrlPause()->setChecked(false);
-        ctrlPause()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-pause")));
+        ctrlPause()->setIcon(NELusanCommon::iconPause(NELusanCommon::SizeBig));
         ctrlPause()->setToolTip(_tooltipPauseLogging);
     }
 
@@ -192,19 +192,19 @@ void LiveLogViewer::updateToolbuttons(bool isPaused, bool isStopped)
     {
         ctrlStop()->setEnabled(true);
         ctrlStop()->setChecked(true);
-        ctrlStop()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-record")));
+        ctrlStop()->setIcon(NELusanCommon::iconRecord(NELusanCommon::SizeBig));
         ctrlStop()->setToolTip(_tooltipRestartLogging);
 
         ctrlPause()->setEnabled(false);
         ctrlPause()->setChecked(false);
-        ctrlPause()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-pause")));
+        ctrlPause()->setIcon(NELusanCommon::iconPause(NELusanCommon::SizeBig));
         ctrlPause()->setToolTip(_tooltipPauseLogging);
     }
     else
     {
         ctrlStop()->setEnabled(true);
         ctrlStop()->setChecked(false);
-        ctrlStop()->setIcon(QIcon::fromTheme(QString::fromUtf8("media-playback-stop")));
+        ctrlStop()->setIcon(NELusanCommon::iconStop(NELusanCommon::SizeBig));
         ctrlStop()->setToolTip(_tooltipStopLogging);
     }
 

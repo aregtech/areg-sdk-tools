@@ -36,6 +36,7 @@ SIAttributeList::SIAttributeList(QWidget* parent)
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     
     QHeaderView* header = table->horizontalHeader();
+    Q_ASSERT(header != nullptr);
     header->setSectionResizeMode(0, QHeaderView::ResizeMode::ResizeToContents);
     header->setSectionResizeMode(1, QHeaderView::ResizeMode::ResizeToContents);
     header->setSectionResizeMode(2, QHeaderView::ResizeMode::Stretch);

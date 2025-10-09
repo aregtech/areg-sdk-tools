@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/view/common/NavigationDock.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/MdiChild.hpp"
 
@@ -24,28 +25,6 @@
 QString  NavigationDock::TabNameFileSystem      {tr("Workspace")};
 QString  NavigationDock::TabLiveLogsExplorer    {tr("Live Logs")};
 QString  NavigationDock::TabOfflineLogsExplorer {tr("Offline Logs")};
-QSize    NavigationDock::IconSize               {32, 32};
-
-QIcon NavigationDock::getWorkspaceExplorerIcon(void)
-{
-    QIcon icon;
-    icon.addFile(QString::fromUtf8(":/icons/workspace-explorer"), NavigationDock::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
-    return icon;
-}
-
-QIcon NavigationDock::getLiveLogIcon(void)
-{
-    QIcon icon;
-    icon.addFile(QString::fromUtf8(":/icons/log-live"), NavigationDock::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
-    return icon;
-}
-
-QIcon NavigationDock::getOfflineLogIcon(void)
-{
-    QIcon icon;
-    icon.addFile(QString::fromUtf8(":/icons/log-offline"), NavigationDock::IconSize, QIcon::Mode::Normal, QIcon::State::Off);
-    return icon;
-}
 
 const QString& NavigationDock::getTabName(NavigationDock::eNaviWindow navi)
 {
@@ -85,9 +64,9 @@ NavigationDock::NavigationDock(MdiMainWindow* parent)
     , mOfflineScopes(parent, this)
     , mFileSystem   (parent, this)
 {    
-    mTabs.addTab(&mFileSystem   , NavigationDock::getWorkspaceExplorerIcon(), NavigationDock::TabNameFileSystem);
-    mTabs.addTab(&mLiveScopes   , NavigationDock::getLiveLogIcon()          , NavigationDock::TabLiveLogsExplorer);
-    mTabs.addTab(&mOfflineScopes, NavigationDock::getOfflineLogIcon()       , NavigationDock::TabOfflineLogsExplorer);
+    mTabs.addTab(&mFileSystem   , NELusanCommon::iconViewWorkspace(NELusanCommon::SizeBig)  , NavigationDock::TabNameFileSystem);
+    mTabs.addTab(&mLiveScopes   , NELusanCommon::iconViewLiveLogs(NELusanCommon::SizeBig)   , NavigationDock::TabLiveLogsExplorer);
+    mTabs.addTab(&mOfflineScopes, NELusanCommon::iconViewOfflineLogs(NELusanCommon::SizeBig), NavigationDock::TabOfflineLogsExplorer);
     mTabs.setTabPosition(QTabWidget::South);
     setWidget(&mTabs);
 

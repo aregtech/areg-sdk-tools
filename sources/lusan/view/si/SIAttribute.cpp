@@ -20,6 +20,8 @@
 #include "lusan/view/si/SIAttribute.hpp"
 #include "ui/ui_SIAttribute.h"
 
+#include "lusan/data/common/DataTypeBase.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/model/si/SIAttributeModel.hpp"
 #include "lusan/view/si/SIAttributeDetails.hpp"
@@ -85,10 +87,6 @@ SIAttributeWidget::SIAttributeWidget(QWidget* parent)
     setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
 }
 
-//////////////////////////////////////////////////////////////////////////
-// SIAttribute class implementation
-//////////////////////////////////////////////////////////////////////////
-
 SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
     : QScrollArea   (parent)
     , mModel        (model)
@@ -111,7 +109,7 @@ SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
-    
+
     updateWidgets();
     updateData();
     setupSignals();
@@ -538,8 +536,8 @@ void SIAttribute::setupSignals(void)
     Q_ASSERT(mDetails != nullptr);
     Q_ASSERT(mList != nullptr);
 
-    connect(mList->ctrlTableList(), &QTableWidget::currentCellChanged, this, &SIAttribute::onCurCellChanged);
-    connect(mList->ctrlButtonAdd(), &QToolButton::clicked, this, &SIAttribute::onAddClicked);
+    connect(mList->ctrlTableList(),    &QTableWidget::currentCellChanged, this, &SIAttribute::onCurCellChanged);
+    connect(mList->ctrlButtonAdd(),    &QToolButton::clicked, this, &SIAttribute::onAddClicked);
     connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIAttribute::onRemoveClicked);
     connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIAttribute::onInsertClicked);
     connect(mList->ctrlButtonMoveUp(), &QToolButton::clicked, this, &SIAttribute::onMoveUpClicked);
@@ -591,7 +589,7 @@ inline void SIAttribute::setTexts(int row, const AttributeEntry& entry, bool ins
         
         Q_ASSERT(col0->data(Qt::ItemDataRole::UserRole).toUInt() == entry.getId());
         col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(entry.getParamType()));
-        
+
         col0->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayName));
         col1->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayType));
         col2->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayValue));
@@ -653,7 +651,7 @@ inline void SIAttribute::updateDetails(const AttributeEntry* entry, bool updateA
 inline AttributeEntry* SIAttribute::findAttribute(int row)
 {
     QTableWidget* table = mList->ctrlTableList();
-    if (row < 0 || row > table->rowCount())
+    if ((row < 0) || (row >= table->rowCount()))
         return nullptr;
 
     QTableWidgetItem* item = table->item(row, 0);

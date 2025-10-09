@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/FieldEntry.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 FieldEntry::FieldEntry(ElementBase* parent /*= nullptr*/)
@@ -177,9 +178,9 @@ QIcon FieldEntry::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon(QString::fromUtf8(":/icons/data type struct field"));
+        return NELusanCommon::iconStructField(NELusanCommon::SizeSmall);
     case ElementBase::eDisplay::DisplayType:
-        return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+        return (mParamType.isValid() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
     default:
         return QIcon();
     }

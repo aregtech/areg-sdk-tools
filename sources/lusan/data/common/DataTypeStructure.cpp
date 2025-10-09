@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/common/XmlSI.hpp"
 
@@ -203,9 +204,9 @@ QIcon DataTypeStructure::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon(QString::fromUtf8(":/icons/data type structure"));
+        return NELusanCommon::iconStructure(NELusanCommon::SizeSmall);
     case ElementBase::eDisplay::DisplayType:
-        return (isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+        return (isValid() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
     default:
         return QIcon();
     }

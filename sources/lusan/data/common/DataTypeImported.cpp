@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeImported.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 DataTypeImported::DataTypeImported(ElementBase* parent /*= nullptr*/)
@@ -158,9 +159,9 @@ QIcon DataTypeImported::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon(QString::fromUtf8(":/icons/data type import"));
+        return NELusanCommon::iconImported(NELusanCommon::SizeSmall);
     case ElementBase::eDisplay::DisplayType:
-        return (isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+        return (isValid() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
     default:
         return QIcon();
     }

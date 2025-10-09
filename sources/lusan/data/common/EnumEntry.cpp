@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/EnumEntry.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 EnumEntry::EnumEntry(ElementBase* parent /*= nullptr*/)
@@ -192,7 +193,7 @@ QIcon EnumEntry::getIcon(ElementBase::eDisplay display) const
 {
     if (display == ElementBase::eDisplay::DisplayName)
     {
-        return QIcon(QString::fromUtf8(":/icons/data type enum field"));
+        return NELusanCommon::iconEnumField(NELusanCommon::SizeSmall);
     }
     else
     {

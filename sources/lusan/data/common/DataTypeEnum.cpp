@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/data/common/DataTypeEnum.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 DataTypeEnum::DataTypeEnum(ElementBase* parent /*= nullptr*/)
@@ -185,7 +186,7 @@ QIcon DataTypeEnum::getIcon(ElementBase::eDisplay display) const
 {
     if (display == ElementBase::eDisplay::DisplayName)
     {
-        return QIcon(QString::fromUtf8(":/icons/data type enum"));
+        return NELusanCommon::iconEnum(NELusanCommon::SizeSmall);
     }
     else
     {

@@ -38,7 +38,6 @@
 #include <QComboBox>
 #include <QGroupBox>
 #include <QHeaderView>
-#include <QIcon>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -1623,7 +1622,7 @@ inline void SIDataType::setNodeText(QTreeWidgetItem* node, DocumentElem * elem) 
     }
     else
     {
-        node->setIcon(0, QIcon::fromTheme("dialog-warning"));
+        node->setIcon(0, NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
         node->setText(0, "<invalid>");
     }
 }

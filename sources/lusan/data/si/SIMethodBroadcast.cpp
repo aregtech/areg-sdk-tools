@@ -154,7 +154,7 @@ QIcon SIMethodBroadcast::getIcon(ElementBase::eDisplay display) const
 {
     if (display == ElementBase::eDisplay::DisplayName)
     {
-        return QIcon(QString::fromUtf8(":/icons/data method broadcast"));
+        return NELusanCommon::iconMethodBroadcast(NELusanCommon::SizeSmall);
     }
     else
     {

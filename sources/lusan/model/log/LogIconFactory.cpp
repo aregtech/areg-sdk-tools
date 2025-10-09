@@ -17,6 +17,7 @@
  *
  ************************************************************************/
 #include "lusan/model/log/LogIconFactory.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "areg/logging/NELogging.hpp"
 #include <atomic>
 
@@ -319,58 +320,42 @@ namespace
         _logIcons[prio | LogActive] = notset;
 
         prio = static_cast<int>(LogIconFactory::eLogIcons::PrioScope);
-        QIcon scope(QIcon::fromTheme(QString::fromUtf8("media-playlist-shuffle")));
+        QIcon scope(NELusanCommon::iconLogScope(NELusanCommon::SizeSmall));
         _logIcons[prio] = scope;
         _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorScope)], scope, pixels);
 
         prio = static_cast<int>(LogIconFactory::eLogIcons::PrioDebug);
-        QIcon debug(QIcon::fromTheme(QString::fromUtf8("format-justify-left")));
+        QIcon debug(NELusanCommon::iconLogDebug(NELusanCommon::SizeSmall));
         _logIcons[prio] = debug;
         _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)], debug, pixels);
 
         prio = static_cast<int>(LogIconFactory::eLogIcons::PrioInfo);
-        QIcon info(QIcon::fromTheme(QString::fromUtf8("dialog-information")));
+        QIcon info(NELusanCommon::iconLogInfo(NELusanCommon::SizeSmall));
         _logIcons[prio] = info;
         _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)], info, pixels);
 
         prio = static_cast<int>(LogIconFactory::eLogIcons::PrioWarn);
-        QIcon warn(QIcon::fromTheme(QString::fromUtf8("dialog-warning")));
+        QIcon warn(NELusanCommon::iconLogWarning(NELusanCommon::SizeSmall));
         _logIcons[prio] = warn;
         _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)], warn, pixels);
 
         prio = static_cast<int>(LogIconFactory::eLogIcons::PrioError);
-        QIcon error(QIcon::fromTheme(QString::fromUtf8("dialog-error")));
+        QIcon error(NELusanCommon::iconLogError(NELusanCommon::SizeSmall));
         _logIcons[prio] = error;
         _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)], error, pixels);
 
         prio = static_cast<int>(LogIconFactory::eLogIcons::PrioFatal);
-        QIcon fatal(QIcon::fromTheme(QString::fromUtf8("media-optical")));
+        QIcon fatal(NELusanCommon::iconLogFatal(NELusanCommon::SizeSmall));
         _logIcons[prio] = fatal;
         _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)], fatal, pixels);
 
         prio = static_cast<int>(LogIconFactory::eLogIcons::PrioScopeEnter);
-        QIcon enter(QIcon::fromTheme(QString::fromUtf8("go-up")));
-        do
-        {
-            QPixmap pixmap = enter.pixmap(pixels, pixels);
-            QTransform trans;
-            trans.rotate(90);
-            pixmap = pixmap.transformed(trans, Qt::SmoothTransformation);
-            enter = QIcon(pixmap);
-        } while (false);
+        QIcon enter(NELusanCommon::iconScopeEnter(NELusanCommon::SizeSmall));
         _logIcons[prio] = enter;
         _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorScopeEnter)], enter, pixels);
 
         prio = static_cast<int>(LogIconFactory::eLogIcons::PrioScopeExit);
-        QIcon exit(QIcon::fromTheme(QString::fromUtf8("go-up")));
-        do
-        {
-            QPixmap pixmap = exit.pixmap(pixels, pixels);
-            QTransform trans;
-            trans.rotate(-90);
-            pixmap = pixmap.transformed(trans, Qt::SmoothTransformation);
-            exit = QIcon(pixmap);
-        } while (false);
+        QIcon exit(NELusanCommon::iconScopeExit(NELusanCommon::SizeSmall));
         _logIcons[prio] = exit;
         _logIcons[prio | LogActive] = _mergeIcons(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorScopeExit)], exit, pixels);
     }

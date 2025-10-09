@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/si/SIMethodRequest.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/si/SIMethodResponse.hpp"
 
 SIMethodRequest::SIMethodRequest(ElementBase* parent /*= nullptr*/)
@@ -203,11 +204,11 @@ QIcon SIMethodRequest::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon(QString::fromUtf8(":/icons/data method request"));
+        return NELusanCommon::iconMethodRequest(NELusanCommon::SizeSmall);
     case ElementBase::eDisplay::DisplayLink:
         if (mResponse.isValid() && (mResponse.getName().isEmpty() == false))
         {
-            return QIcon(QString::fromUtf8(":/icons/data method response"));
+            return NELusanCommon::iconMethodResponse(NELusanCommon::SizeSmall);
         }
         else if ((mResponse.isValid() == false) && mResponse.getName().isEmpty())
         {
@@ -215,7 +216,7 @@ QIcon SIMethodRequest::getIcon(ElementBase::eDisplay display) const
         }
         else
         {
-            return QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning);
+            return NELusanCommon::iconWarning(NELusanCommon::SizeSmall);
         }
     default:
         return QIcon();

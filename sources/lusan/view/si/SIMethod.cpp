@@ -38,7 +38,6 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QHeaderView>
-#include <QIcon>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QRadioButton>

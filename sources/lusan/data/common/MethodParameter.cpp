@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/common/MethodParameter.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
 MethodParameter::MethodParameter(ElementBase* parent /*= nullptr*/)
@@ -175,11 +176,11 @@ QIcon MethodParameter::getIcon(ElementBase::eDisplay display) const
     switch (display)
     {
     case ElementBase::eDisplay::DisplayName:
-        return QIcon(QString::fromUtf8(":/icons/data method param"));
+        return NELusanCommon::iconMethodParam(NELusanCommon::SizeSmall);
     case ElementBase::eDisplay::DisplayType:
-        return (mParamType.isValid() ? QIcon() : QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning));
+        return (mParamType.isValid() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
     case ElementBase::eDisplay::DisplayValue:
-        return (mIsDefault ? QIcon::fromTheme(QIcon::ThemeIcon::ToolsCheckSpelling) : QIcon());
+        return (mIsDefault ? NELusanCommon::iconDefaultValue(NELusanCommon::SizeSmall) : QIcon());
     default:
         return QIcon();
     }

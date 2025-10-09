@@ -128,7 +128,7 @@ void OptionPageWorkspace::populateListOfWorkspaces()
         QString text(QString::number(wsId));
         text += " : " + workspace.getWorkspaceRoot();
 
-        QListWidgetItem* item = new QListWidgetItem(QIcon::fromTheme(QIcon::ThemeIcon::FolderOpen), text, list);
+        QListWidgetItem* item = new QListWidgetItem(NELusanCommon::iconWorkspaceOpen(NELusanCommon::SizeSmall), text, list);
         item->setData(Qt::ItemDataRole::UserRole, wsId);
 
         if (currentWorkspace.getId() == wsId)
