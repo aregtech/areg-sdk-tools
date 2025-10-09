@@ -22,8 +22,8 @@
      <widget class="QWidget" name="widget" native="true">
       <property name="geometry">
        <rect>
-        <x>5</x>
-        <y>21</y>
+        <x>0</x>
+        <y>20</y>
         <width>152</width>
         <height>28</height>
        </rect>
@@ -68,7 +68,7 @@
           <string>Create and add new attribute entry</string>
          </property>
          <property name="text">
-          <string>.....</string>
+          <string>...</string>
          </property>
          <property name="icon">
           <iconset resource="../../../res/lusan.qrc">

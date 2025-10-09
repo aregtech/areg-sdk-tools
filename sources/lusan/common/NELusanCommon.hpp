@@ -713,9 +713,7 @@ inline QIcon NELusanCommon::iconMethodParam(const QSize & size)
 
 inline QIcon NELusanCommon::iconInclude(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::ImageLoading) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/data-include", size);
 }
 
 inline QIcon NELusanCommon::iconStructField(const QSize & size)
@@ -750,16 +748,12 @@ inline QIcon NELusanCommon::iconContainer(const QSize & size)
 
 inline QIcon NELusanCommon::iconConstant(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::InputGaming) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/data-constant", size);
 }
 
 inline QIcon NELusanCommon::iconAttribute(const QSize & size /*= QSize{32, 32}*/)
 {
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::Battery) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/data-attribute", size);
 }
 
 inline QIcon NELusanCommon::iconWarning(const QSize & size)

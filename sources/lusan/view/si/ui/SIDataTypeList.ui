@@ -22,8 +22,8 @@
      <widget class="QWidget" name="widget" native="true">
       <property name="geometry">
        <rect>
-        <x>5</x>
-        <y>18</y>
+        <x>0</x>
+        <y>20</y>
         <width>247</width>
         <height>28</height>
        </rect>
@@ -68,7 +68,7 @@
           <string>Create and add new data type entry</string>
          </property>
          <property name="text">
-          <string>.....</string>
+          <string>...</string>
          </property>
          <property name="icon">
           <iconset resource="../../../res/lusan.qrc">
@@ -412,7 +412,7 @@
           </size>
          </property>
          <property name="shortcut">
-          <string notr="true">Ctrl+S</string>
+          <string notr="true">Ctrl+Down</string>
          </property>
         </widget>
        </item>
@@ -423,13 +423,13 @@
        <rect>
         <x>2</x>
         <y>50</y>
-        <width>511</width>
+        <width>521</width>
         <height>521</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <property name="rightMargin">
-        <number>0</number>
+        <number>7</number>
        </property>
        <item>
         <widget class="QTreeWidget" name="treeTypes">
@@ -476,7 +476,11 @@
           <property name="font">
            <font>
             <bold>true</bold>
+            <kerning>true</kerning>
            </font>
+          </property>
+          <property name="textAlignment">
+           <set>AlignLeading|AlignVCenter</set>
           </property>
          </column>
          <column>
@@ -486,7 +490,11 @@
           <property name="font">
            <font>
             <bold>true</bold>
+            <kerning>true</kerning>
            </font>
+          </property>
+          <property name="textAlignment">
+           <set>AlignLeading|AlignVCenter</set>
           </property>
          </column>
          <column>
@@ -496,7 +504,11 @@
           <property name="font">
            <font>
             <bold>true</bold>
+            <kerning>true</kerning>
            </font>
+          </property>
+          <property name="textAlignment">
+           <set>AlignLeading|AlignVCenter</set>
           </property>
          </column>
         </widget>

@@ -22,8 +22,8 @@
      <widget class="QWidget" name="widget" native="true">
       <property name="geometry">
        <rect>
-        <x>5</x>
-        <y>21</y>
+        <x>0</x>
+        <y>20</y>
         <width>247</width>
         <height>28</height>
        </rect>
@@ -68,7 +68,7 @@
           <string>Create and add new method entry</string>
          </property>
          <property name="text">
-          <string>.....</string>
+          <string>...</string>
          </property>
          <property name="icon">
           <iconset resource="../../../res/lusan.qrc">
@@ -433,7 +433,10 @@
        </property>
        <item>
         <widget class="QTreeWidget" name="treeMethods">
-         <property name="autoFillBackground">
+         <property name="cursor" stdset="0">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+         <property name="mouseTracking">
           <bool>true</bool>
          </property>
          <property name="editTriggers">
@@ -441,9 +444,6 @@
          </property>
          <property name="showDropIndicator" stdset="0">
           <bool>false</bool>
-         </property>
-         <property name="alternatingRowColors">
-          <bool>true</bool>
          </property>
          <property name="iconSize">
           <size>
@@ -469,7 +469,7 @@
          </column>
          <column>
           <property name="text">
-           <string notr="true">DataType:</string>
+           <string notr="true">Data Type:</string>
           </property>
           <property name="font">
            <font>

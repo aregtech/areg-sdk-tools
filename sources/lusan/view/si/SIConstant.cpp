@@ -40,7 +40,7 @@
 
 SIConstantWidget::SIConstantWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui(new Ui::SIConstant)
+    , ui     (new Ui::SIConstant)
 {
     ui->setupUi(this);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
@@ -69,7 +69,7 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
     setWidgetResizable(true);
     setWidget(mWidget);
 
-    updateWidgets();    
+    updateWidgets();
     updateData();
     setupSignals();
     updateDetails(nullptr, true);
@@ -124,7 +124,7 @@ void SIConstant::dataTypeDeleted(DataTypeCustom* dataType)
     for (int i = 0; i < count; ++ i)
     {
         ConstantEntry * entry = findConstant(i);
-        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase *>(dataType))
+        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase*>(dataType))
         {
             entry->setParamType(nullptr);
             setTexts(i, *entry);
@@ -134,7 +134,7 @@ void SIConstant::dataTypeDeleted(DataTypeCustom* dataType)
             }
         }
     }
-    
+
     blockBasicSignals(false);
 }
 
@@ -149,7 +149,7 @@ void SIConstant::dataTypeUpdated(DataTypeCustom* dataType)
     for (int i = 0; i < count; ++ i)
     {
         ConstantEntry * entry = findConstant(i);
-        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase *>(dataType))
+        if ((entry != nullptr) && entry->getParamType() == static_cast<DataTypeBase*>(dataType))
         {
             setTexts(i, *entry);
             if (i == current)
@@ -158,7 +158,7 @@ void SIConstant::dataTypeUpdated(DataTypeCustom* dataType)
             }
         }
     }
-    
+
     blockBasicSignals(false);
 }
 
@@ -177,20 +177,19 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
 {
     if (currentRow == previousRow)
         return;
-    
+
     blockBasicSignals(true);
-    QTableWidget * table = mList->ctrlTableList();
     const ConstantEntry * entry = findConstant(currentRow);
     updateDetails(entry, true);
-    updateToolBottons(entry != nullptr ? currentRow : -1, table->rowCount());
+    updateToolBottons(entry != nullptr ? currentRow : -1, mList->ctrlTableList()->rowCount());
     blockBasicSignals(false);
 }
 
 void SIConstant::onAddClicked(void)
 {
     QString name(genName());
-    QTableWidget *table = mList->ctrlTableList();
-    
+    QTableWidget* table = mList->ctrlTableList();
+
     blockBasicSignals(true);
     ConstantEntry * entry = mModel.createConstant(name);
     if (entry != nullptr)
@@ -198,13 +197,13 @@ void SIConstant::onAddClicked(void)
         mDetails->ctrlName()->setEnabled(true);
         mDetails->ctrlTypes()->setEnabled(true);
         mDetails->ctrlValue()->setEnabled(true);
-        
-        QTableWidgetItem * current = table->currentItem();
+
+        QTableWidgetItem* current = table->currentItem();
         if (current != nullptr)
         {
             current->setSelected(false);
         }
-        
+
         int row = table->rowCount();
         setTexts(-1, *entry);
         table->selectRow(row);
@@ -214,7 +213,7 @@ void SIConstant::onAddClicked(void)
         mDetails->ctrlName()->selectAll();
         updateToolBottons(row, row + 1);
     }
-    
+
     blockBasicSignals(false);
 }
 
@@ -222,12 +221,12 @@ void SIConstant::onRemoveClicked(void)
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
-    ConstantEntry * entry = this->findConstant(row);
-    ConstantEntry * nextEntry{nullptr};
+    ConstantEntry* entry = findConstant(row);
+    ConstantEntry* nextEntry{ nullptr };
     if (entry == nullptr)
         return;
-    
-    blockBasicSignals(true);    
+
+    blockBasicSignals(true);
     int nextRow = row + 1 == table->rowCount() ? row - 1 : row + 1;
     QTableWidgetItem* next = (nextRow >= 0) && (nextRow < table->rowCount()) ? table->item(nextRow, static_cast<int>(eColumn::ColName)) : nullptr;
     if (next != nullptr)
@@ -236,16 +235,16 @@ void SIConstant::onRemoveClicked(void)
         table->setCurrentItem(next);
         next->setSelected(true);
     }
-    
-    QTableWidgetItem * col0 = table->item(row, static_cast<int>(eColumn::ColName));
-    QTableWidgetItem * col1 = table->item(row, static_cast<int>(eColumn::ColType));
+
+    QTableWidgetItem* col0 = table->item(row, static_cast<int>(eColumn::ColName));
+    QTableWidgetItem* col1 = table->item(row, static_cast<int>(eColumn::ColType));
     QTableWidgetItem * col2 = table->item(row, static_cast<int>(eColumn::ColValue));
     col0->setSelected(false);
     col1->setSelected(false);
     col2->setSelected(false);
-    
+
     updateDetails(nextEntry, true);
-    
+
     delete col0;
     delete col1;
     delete col2;
@@ -374,7 +373,7 @@ void SIConstant::onEditorDataChanged(const QModelIndex &index, const QString &ne
     QTableWidget* table = mList->ctrlTableList();
     if ((index.row() < 0) || (index.row() >= table->rowCount()) || (index.column() < 0))
         return;
-    
+
     cellChanged(index.row(), index.column(), newValue);
 }
 
@@ -418,7 +417,7 @@ void SIConstant::cellChanged(int row, int col, const QString& newValue)
 {
     ConstantEntry* entry = findConstant(row);
     Q_ASSERT(entry != nullptr);
-    
+
     if (col == 0)
     {
         if (mDetails->ctrlName()->text() != newValue)
@@ -454,7 +453,7 @@ void SIConstant::cellChanged(int row, int col, const QString& newValue)
         }
     }
 }
-    
+
 void SIConstant::updateData(void)
 {
     QTableWidget* table = mList->ctrlTableList();
@@ -465,18 +464,18 @@ void SIConstant::updateData(void)
         {
             setTexts(-1, entry);
         }
-        
+
         table->scrollToTop();
     }
 }
 
 void SIConstant::updateWidgets(void)
 {
-    QTableWidget* table = mList->ctrlTableList();    
+    QTableWidget* table = mList->ctrlTableList();
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
-    
-    mTableCell = new TableCell(QList<QAbstractItemModel *>{mTypeModel}, QList<int>{1}, mList->ctrlTableList(), this, false);
+
+    mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel}, QList<int>{1}, mList->ctrlTableList(), this, false);
     mDetails->ctrlTypes()->setModel(mTypeModel);
     table->setItemDelegateForColumn(0, mTableCell);
     table->setItemDelegateForColumn(1, mTableCell);
@@ -493,7 +492,7 @@ void SIConstant::setupSignals(void)
 {
     Q_ASSERT(mDetails != nullptr);
     Q_ASSERT(mList != nullptr);
-    
+
     connect(mList->ctrlTableList(),    &QTableWidget::currentCellChanged, this, &SIConstant::onCurCellChanged);
     connect(mList->ctrlButtonAdd(),    &QToolButton::clicked        , this, &SIConstant::onAddClicked);
     connect(mList->ctrlButtonRemove(), &QToolButton::clicked        , this, &SIConstant::onRemoveClicked);
@@ -525,7 +524,7 @@ void SIConstant::blockBasicSignals(bool doBlock)
 
 inline void SIConstant::setTexts(int row, const ConstantEntry & entry, bool insert /*= false*/)
 {
-    QTableWidget * table = mList->ctrlTableList();
+    QTableWidget* table = mList->ctrlTableList();
     if ((row < 0) || insert)
     {
         row = row < 0 ? table->rowCount() : row;
@@ -575,12 +574,12 @@ inline void SIConstant::updateDetails(const ConstantEntry* entry, bool updateAll
         {
             mDetails->ctrlTypes()->setCurrentIndex(0);
         }
-        
+
         if (mList->ctrlTableList()->currentRow() >= 0)
         {
             mList->ctrlButtonRemove()->setEnabled(true);
         }
-        
+
         if (updateAll)
         {
             mDetails->ctrlDescription()->setPlainText(entry->getDescription());
@@ -611,7 +610,7 @@ inline const ConstantEntry* SIConstant::findConstant(int row) const
     QTableWidget* table = mList->ctrlTableList();
     if ((row < 0) || (row >= table->rowCount()))
         return nullptr;
-    
+
     QTableWidgetItem* col0 = table->item(row, static_cast<int>(eColumn::ColName));
     uint32_t id = col0->data(Qt::ItemDataRole::UserRole).toUInt();
     return mModel.findConstant(id);
