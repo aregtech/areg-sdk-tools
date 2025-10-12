@@ -147,6 +147,13 @@ public:
      * \brief   Call to restart the application by creating new workspace
      **/
     static void newWorkspace(void);
+
+    /**
+     * \brief   Checks if the given path is a valid workspace path.
+     * \param   path    The path to check.
+     * \return  True if the path is a valid workspace path, false otherwise.
+     **/
+    static bool isWorkpacePath(const QString & path);
     
 //////////////////////////////////////////////////////////////////////////
 // Operations

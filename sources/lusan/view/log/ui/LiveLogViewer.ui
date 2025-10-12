@@ -316,7 +316,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QLabel" name="lableFile">
+                 <widget class="QLabel" name="labelFile">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                     <horstretch>0</horstretch>

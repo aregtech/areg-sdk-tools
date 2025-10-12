@@ -283,6 +283,29 @@ void LusanApplication::newWorkspace(void)
     }
 }
 
+bool LusanApplication::isWorkpacePath(const QString & path)
+{
+    if (LusanApplication::theApp == nullptr)
+        return false;
+
+    const WorkspaceEntry& workspace = LusanApplication::theApp->mOptions.getActiveWorkspace();
+    const QStringList dirs = {
+        workspace.getWorkspaceRoot(),
+        workspace.getDirSources(),
+        workspace.getDirDelivery(),
+        workspace.getDirIncludes(),
+        workspace.getDirLogs()
+    };
+
+    auto startsWith = [](const QString& base, const QString& value) -> bool {
+        return !value.isEmpty() && base.startsWith(value, Qt::CaseInsensitive);
+    };
+
+    return std::any_of(dirs.begin(), dirs.end(), [&](const QString& dir) {
+        return startsWith(path, dir);
+    });
+}
+
 WorkspaceEntry LusanApplication::startupWorkspace(bool enableDefault)
 {
     if (enableDefault == false)

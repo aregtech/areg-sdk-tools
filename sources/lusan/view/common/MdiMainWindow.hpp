@@ -187,6 +187,13 @@ public:
      * \brief   Returns the Output Window for scopes logs.
      **/
     ScopeOutputViewer& getOutputScopeLogs(void);
+
+    /**
+     * \brief   Sets the tooltip text for the tab bar of the given MDI sub-window.
+     * \param   subWindow   The MDI sub-window to set the tooltip for.
+     * \param   tooltip     The tooltip text to set.
+     **/
+    void setTabBarTooltip(QMdiSubWindow* subWindow, const QString& tooltip);
     
 //////////////////////////////////////////////////////////////////////////
 // Signals

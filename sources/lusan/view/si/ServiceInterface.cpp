@@ -119,9 +119,15 @@ const QString& ServiceInterface::fileFilter(void) const
 
 bool ServiceInterface::writeToFile(const QString& filePath)
 {
-    bool result = mModel.saveToFile(filePath);
-    mOverview.setServiceInterfaceName(mModel.getName());
-    return result;
+    if (mModel.saveToFile(filePath))
+    {
+        mOverview.setServiceInterfaceName(mModel.getName());
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 void ServiceInterface::slotDataTypeCreated(DataTypeCustom* dataType)

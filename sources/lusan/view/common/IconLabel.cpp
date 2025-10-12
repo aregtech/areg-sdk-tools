@@ -1,6 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_MDIAREA_HPP
-#define LUSAN_VIEW_COMMON_MDIAREA_HPP
-/************************************************************************
+﻿/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -12,21 +10,16 @@
  *  with this distribution or contact us at info[at]aregtech.com.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/common/MdiArea.hpp
+ *  \file        lusan/view/common/IconLabel.hpp
  *  \ingroup     Lusan - GUI Tool for AREG SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, MDI Area.
+ *  \brief       Lusan application, QLabel instance with icon.
  *
  ************************************************************************/
 
-#include <QMdiArea>
-#include <QWidget>
+#include "lusan/view/common/IconLabel.hpp"
 
-class MdiArea : public QMdiArea
+IconLabel::IconLabel(QWidget* parent)
+    : QLabel(parent)
 {
-    Q_OBJECT
-public:
-    MdiArea(QWidget * parent = nullptr);
-};
-
-#endif // LUSAN_VIEW_COMMON_MDIAREA_HPP
+}

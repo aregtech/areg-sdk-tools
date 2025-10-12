@@ -94,33 +94,33 @@ public:
     /**
      * \brief   Creates a new file.
      **/
-    void newFile();
+    virtual void newFile();
 
     /**
      * \brief   Loads a file.
      * \param   fileName    The name of the file to load.
      * \return  True if the file was successfully loaded, false otherwise.
      **/
-    bool loadFile(const QString& fileName);
+    virtual bool loadFile(const QString& fileName);
 
     /**
      * \brief   Saves the current file.
      * \return  True if the file was successfully saved, false otherwise.
      **/
-    bool save();
+    virtual bool save();
 
     /**
      * \brief   Saves the current file with a new name.
      * \return  True if the file was successfully saved, false otherwise.
      **/
-    bool saveAs();
+    virtual bool saveAs();
 
     /**
      * \brief   Saves the file with the specified name.
      * \param   fileName    The name of the file to save.
      * \return  True if the file was successfully saved, false otherwise.
      **/
-    bool saveFile(const QString& fileName);
+    virtual bool saveFile(const QString& fileName);
 
     /**
      * \brief   Gets a user-friendly version of the current file name.
@@ -162,7 +162,7 @@ public:
      * \param   mdiSubwindow    The MDI subwindow.
      **/
     inline void setMdiSubwindow(QMdiSubWindow * mdiSubwindow);
-
+    
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -172,7 +172,13 @@ public:
      * \brief   Returns the file open operation success flag.
      **/
     virtual bool openSucceeded(void) const;
-
+    
+    /**
+     * \brief   Sets the current file name.
+     * \param   fileName    The name of the file.
+     **/
+    virtual void setCurrentFile(const QString& fileName);
+    
 signals:
 
 /************************************************************************
@@ -253,19 +259,13 @@ protected:
      **/
     virtual void onWindowCreated(void);
 
-protected:
     /**
      * \brief   Prompts the user to save changes if necessary.
      * \return  True if the user chose to save or discard changes, false if the user canceled.
      **/
-    bool maybeSave();
-
-    /**
-     * \brief   Sets the current file name.
-     * \param   fileName    The name of the file.
-     **/
-    void setCurrentFile(const QString& fileName);
-
+    virtual bool maybeSave();
+    
+protected:
     /**
      * \brief   Strips the path from the file name.
      * \param   fullFileName    The full file name with path.
@@ -287,6 +287,7 @@ protected:
     QString             mCurFile;       //!< The current file name.
     QString             mDocName;       //!< The document name.
     bool                mIsUntitled;    //!< Indicates whether the file is untitled.
+    bool                mIsModified;    //!< Indicates the document modification flag.
     QMdiSubWindow*      mMdiSubWindow;  //!< The MDI subwindow.
     MdiMainWindow*      mMainWindow;    //!< The MDI main window
 };

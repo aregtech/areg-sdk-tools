@@ -20,16 +20,19 @@
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
+
+#include <QCloseEvent>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
-#include <QMessageBox>
+#include <QFileInfo>
 #include <QGuiApplication>
+#include <QMdiSubWindow>
+#include <QMessageBox>
 #include <QSaveFile>
 #include <QScrollBar>
+#include <QTabBar>
 #include <QTextDocument>
-#include <QDir>
-#include <QFileInfo>
-#include <QCloseEvent>
 
 MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWidget* parent /*= nullptr*/)
     : QWidget       (parent)
@@ -38,6 +41,7 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     , mCurFile      ( )
     , mDocName      ( )
     , mIsUntitled   ( true )
+    , mIsModified   ( false )
     , mMdiSubWindow ( nullptr )
     , mMainWindow   (wndMain)
 {
@@ -131,12 +135,17 @@ bool MdiChild::saveAs()
 
 bool MdiChild::saveFile(const QString& fileName)
 {
+    bool saved { false };
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
+    if (writeToFile(fileName) )
+    {
+        mIsUntitled = false;
+        setCurrentFile(fileName);
+        saved = true;
+    }
     
-    mIsUntitled = writeToFile(fileName);
-    setCurrentFile(fileName);
     QGuiApplication::restoreOverrideCursor();
-    return mIsUntitled;
+    return saved;
 }
 
 bool MdiChild::writeToFile(const QString& filePath)
@@ -213,9 +222,19 @@ void MdiChild::setCurrentFile(const QString& fileName)
 {
     mCurFile = QFileInfo(fileName).canonicalFilePath();
     mIsUntitled = false;
-    // document()->setModified(false);
-    setWindowModified(false);
-    setWindowTitle(userFriendlyCurrentFile() + "[*]");
+    
+    if (mMdiSubWindow != nullptr)
+    {
+        mMdiSubWindow->setWindowModified(false);
+        mMdiSubWindow->setWindowFilePath(mCurFile);
+        bool isInWorkspace{LusanApplication::isWorkpacePath(mCurFile)};
+        QString title{ QString("%1%2%3").arg( !mIsUntitled && !isInWorkspace ? "⚠️ " : ""
+                                            , userFriendlyCurrentFile()
+                                            , mIsUntitled || mIsModified ? "[*]" : "") };
+        mMdiSubWindow->setWindowTitle(title);
+        if (mMainWindow != nullptr)
+            mMainWindow->setTabBarTooltip(mMdiSubWindow, mCurFile);
+    }
 }
 
 QString MdiChild::strippedName(const QString& fullFileName)
