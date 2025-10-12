@@ -20,6 +20,7 @@
 #include "lusan/view/log/OfflineLogViewer.hpp"
 #include "ui/ui_OfflineLogViewer.h"
 
+#include "lusan/app/LusanApplication.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
@@ -115,12 +116,23 @@ void OfflineLogViewer::onDatabaseOpened(const QString& dbPath)
     QFileInfo info(dbPath);
     QString fileName = info.fileName();
     
-    ctrlFile()->setText(fileName);
     ctrlFile()->setToolTip(dbPath);
     
-    if (mMdiSubWindow != nullptr)
+    if (LusanApplication::isWorkpacePath(info.absoluteFilePath()) == false)
     {
-        mMdiSubWindow->setWindowTitle(tr("Offline Logs - %1").arg(fileName));
+        ctrlFile()->setText(QString("⚠️ %1").arg(fileName)); // Add space to avoid icon overwrite
+        if (mMdiSubWindow != nullptr)
+        {
+            mMdiSubWindow->setWindowTitle(tr("Offline Logs - ⚠️ %1").arg(fileName));
+        }
+    }
+    else
+    {
+        ctrlFile()->setText(fileName);    // Ensure text is set after clearing pixmap
+        if (mMdiSubWindow != nullptr)
+        {
+            mMdiSubWindow->setWindowTitle(tr("Offline Logs - %1").arg(fileName));
+        }
     }
 }
 
@@ -138,7 +150,7 @@ void OfflineLogViewer::onDatabaseClosed(const QString& dbPath)
 
 QLabel* OfflineLogViewer::ctrlFile(void)
 {
-    return ui->lableFile;
+    return ui->labelFile;
 }
 
 void OfflineLogViewer::setupSignals(bool doSetup)

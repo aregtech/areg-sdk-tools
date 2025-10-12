@@ -27,7 +27,6 @@ class MdiArea : public QMdiArea
     Q_OBJECT
 public:
     MdiArea(QWidget * parent = nullptr);
-
 };
 
 #endif // LUSAN_VIEW_COMMON_MDIAREA_HPP

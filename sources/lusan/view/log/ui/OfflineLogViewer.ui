@@ -155,6 +155,9 @@
                   <property name="placeholderText">
                    <string>search a phrase in logs</string>
                   </property>
+                  <property name="clearButtonEnabled">
+                   <bool>false</bool>
+                  </property>
                  </widget>
                 </item>
                </layout>
@@ -214,7 +217,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QLabel" name="lableFile">
+                 <widget class="QLabel" name="labelFile">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                     <horstretch>0</horstretch>

@@ -275,6 +275,26 @@ ScopeOutputViewer& MdiMainWindow::getOutputScopeLogs(void)
     return mOutputDock.getScopeLogsView();
 }
 
+void MdiMainWindow::setTabBarTooltip(QMdiSubWindow* subWindow, const QString& tooltip)
+{
+    if (subWindow == nullptr)
+        return;
+
+    QTabBar* tabBar = mMdiArea.findChild<QTabBar*>();
+    if (tabBar == nullptr)
+        return;
+
+    QList<QMdiSubWindow*> windows = mMdiArea.subWindowList();
+    for (int i = 0; i < static_cast<int>(windows.size()); ++i)
+    {
+        if (windows[i] == subWindow)
+        {
+            tabBar->setTabToolTip(i, tooltip);
+            break;
+        }
+    }
+}
+
 void MdiMainWindow::logDatabaseCreated(const QString& dbPath)
 {
     if (mLogViewer != nullptr)
@@ -604,15 +624,7 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconServiceInterface(NELusanCommon::SizeSmall));
-    mdiSub->setWindowModified(true);
-    mdiSub->setWindowFilePath(filePath);
-    mdiSub->setToolTip(filePath);
-    if (filePath.isEmpty() == false)
-    {
-        std::string stdFilePath{filePath.toStdString()};
-        mdiSub->setWindowTitle(QString::fromStdString(File::getFileNameWithExtension(stdFilePath.c_str()).getData()));
-    }
-
+    child->setCurrentFile(filePath);
     mMdiArea.showMaximized();
     return child;
 }
@@ -623,13 +635,7 @@ LiveLogViewer* MdiMainWindow::createLogViewerView(const QString& filePath /*= QS
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconLiveLogWindow(NELusanCommon::SizeSmall));
-    mdiSub->setWindowFilePath(filePath);
-    mdiSub->setToolTip(filePath);
-    if (filePath.isEmpty() == false)
-    {
-        std::string stdFilePath{filePath.toStdString()};
-        mdiSub->setWindowTitle(QString::fromStdString(File::getFileNameWithExtension(stdFilePath.c_str()).getData()));
-    }
+    child->setCurrentFile(filePath);
     mMdiArea.showMaximized();
     mNaviDock.showTab(NavigationDock::eNaviWindow::NaviLiveLogs);
     return child;
@@ -641,13 +647,7 @@ OfflineLogViewer* MdiMainWindow::createOfflineLogViewer(const QString& filePath,
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconOfflineLogWindow(NELusanCommon::SizeSmall));
-    mdiSub->setWindowFilePath(filePath);
-    if (filePath.isEmpty() == false)
-    {
-        std::string stdFilePath{filePath.toStdString()};
-        mdiSub->setWindowTitle(QString::fromStdString(File::getFileNameWithExtension(stdFilePath.c_str()).getData()));
-    }
-
+    mdiSub->setWindowFilePath(filePath);    
     mMdiArea.showMaximized();
     mNaviDock.showTab(NavigationDock::NaviOfflineLogs);
     OfflineLogsModel* logModel = static_cast<OfflineLogsModel *>(child->getLoggingModel());
@@ -684,16 +684,16 @@ void MdiMainWindow::_createActions()
     mActFileNewLog.setStatusTip(tr("Create a new live logs"));
     connect(&mActFileNewLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviLiveLogs); signalNewLiveLog();});
     
+    initAction(mActFileOpen, NELusanCommon::iconOpenFile(NELusanCommon::SizeBig), tr("&Open..."));
+    mActFileOpen.setShortcuts(QKeySequence::Open);
+    mActFileOpen.setStatusTip(tr("Open an existing file"));
+    connect(&mActFileOpen, &QAction::triggered, this, &MdiMainWindow::onFileOpen);
+    
     initAction(mActFileOfflineLog, NELusanCommon::iconNewOfflineLogs(NELusanCommon::SizeBig), tr("Open O&ffline Logs"));
     mActFileOfflineLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_F));
     mActFileOfflineLog.setStatusTip(tr("Open offline logs"));
     connect(&mActFileOfflineLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviOfflineLogs); signalOpenOfflineLog();});
     
-    initAction(mActFileOpen, NELusanCommon::iconOpenDocument(NELusanCommon::SizeBig), tr("&Open..."));
-    mActFileOpen.setShortcuts(QKeySequence::Open);
-    mActFileOpen.setStatusTip(tr("Open an existing file"));
-    connect(&mActFileOpen, &QAction::triggered, this, &MdiMainWindow::onFileOpen);
-
     initAction(mActFileSave, NELusanCommon::iconSaveDocument(NELusanCommon::SizeBig), tr("&Save"));
     mActFileSave.setShortcuts(QKeySequence::Save);
     mActFileSave.setStatusTip(tr("Save the document to disk"));
@@ -739,7 +739,7 @@ void MdiMainWindow::_createActions()
         if (mNaviDock.isHidden()) mNaviDock.show();
     });
     
-    initAction(mActViewWokspace, NELusanCommon::iconViewWorkspace(NELusanCommon::SizeBig), tr("&workspace-explorer"));
+    initAction(mActViewWokspace, NELusanCommon::iconViewWorkspace(NELusanCommon::SizeBig), tr("&Workspace Explorer"));
     mActViewWokspace.setStatusTip(tr("View Workspace Navigator Window"));
     connect(&mActViewWokspace, &QAction::triggered, this, [this]() {
         if (mNaviDock.isHidden()) mNaviDock.show();
@@ -798,8 +798,8 @@ void MdiMainWindow::_createMenus()
     mFileMenu->addAction(&mActNewWorkspace);
     mFileMenu->addAction(&mActFileNewSI);
     mFileMenu->addAction(&mActFileNewLog);
-    mFileMenu->addAction(&mActFileOfflineLog);
     mFileMenu->addAction(&mActFileOpen);
+    mFileMenu->addAction(&mActFileOfflineLog);
     mFileMenu->addAction(&mActFileSave);
     mFileMenu->addAction(&mActFileSaveAs);
     mFileSeparator = mFileMenu->addSeparator();
@@ -845,8 +845,8 @@ void MdiMainWindow::_createToolBars()
     mFileToolBar = addToolBar(tr("File"));
     mFileToolBar->addAction(&mActFileNewSI);
     mFileToolBar->addAction(&mActFileNewLog);
-    mFileToolBar->addAction(&mActFileOfflineLog);
     mFileToolBar->addAction(&mActFileOpen);
+    mFileToolBar->addAction(&mActFileOfflineLog);
     mFileToolBar->addAction(&mActFileSave);
     mFileToolBar->addSeparator();
 

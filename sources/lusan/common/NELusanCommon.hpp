@@ -386,6 +386,17 @@ namespace NELusanCommon
     using FilterString  = sStringFilter;
     using FilterData    = sFilterData;
 
+    /**
+     * \brief   Merges two icons into one, scaling them according to the specified factors.
+     * \param   icon1   First icon to merge
+     * \param   scale1  Scaling factor for the first icon (0.0 to 1.0)
+     * \param   icon2   Second icon to merge
+     * \param   scale2  Scaling factor for the second icon (0.0 to 1.0)
+     * \param   size    The size in pixels of the resulting icon
+     * \return  Instance of merged icons.
+     **/
+    QIcon mergeIcons(const QIcon& icon1, double scale1, const QIcon& icon2, double scale2, const QSize& size);
+
     //! Empty icon
     const QIcon     EmptyIcon{};
 
@@ -432,6 +443,8 @@ namespace NELusanCommon
 
     //<! Loads open document icon and sets the specified size
     inline QIcon iconOpenDocument(const QSize & size = QSize{ 32, 32 });
+    
+    inline QIcon iconOpenFile(const QSize & size = QSize{ 32, 32 });
 
     //<! Loads save document icon and sets the specified size
     inline QIcon iconSaveDocument(const QSize & size = QSize{ 32, 32 });
@@ -889,6 +902,11 @@ inline QIcon NELusanCommon::iconOpenDocument(const QSize & size /*= QSize{32, 32
     QIcon icon{ QIcon::fromTheme("document-open", QIcon(":/images/open.png")) };
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
+}
+
+inline QIcon NELusanCommon::iconOpenFile(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/open-file", size);
 }
 
 inline QIcon NELusanCommon::iconNewOfflineLogs(const QSize & size /*= QSize{32, 32}*/)

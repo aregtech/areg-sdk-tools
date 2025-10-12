@@ -148,6 +148,25 @@ protected:
      **/
     virtual void onWindowClosing(bool isActive) override;
 
+    /**
+     * \brief   Returns the default file filter.
+     **/
+    virtual const QString& fileFilter(void) const override;
+
+    /**
+     * \brief   Reads the document from the file.
+     * \param   filePath    The path of the file to read.
+     * \return  True if the document was successfully read, false otherwise.
+     **/
+    virtual bool writeToFile(const QString& filePath) override;
+
+    /**
+     * \brief   Saves the file with the specified name.
+     * \param   fileName    The name of the file to save.
+     * \return  True if the file was successfully saved, false otherwise.
+     **/
+    virtual bool saveFile(const QString& fileName);
+
 //////////////////////////////////////////////////////////////////////////
 // Slots.
 //////////////////////////////////////////////////////////////////////////

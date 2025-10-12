@@ -48,6 +48,7 @@
         <file alias="log-prio-warning">icons/log-prio-warning.svg</file>
         <file alias="log-prio-scope-enter">icons/log-prio-scope-enter.svg</file>
         <file alias="log-prio-scope-exit">icons/log-prio-scope-exit.svg</file>
+        <file alias="open-file">icons/open-file.svg</file>
     </qresource>
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>

@@ -212,6 +212,47 @@ void LogViewerBase::onWindowClosing(bool isActive)
     viewScope.releaseWindow(*this);
 }
 
+bool LogViewerBase::saveFile(const QString& fileName)
+{
+    Q_ASSERT(mLogModel != nullptr);
+    QString oldLocation{ mLogModel->getDatabasePath() };
+    if (MdiChild::saveFile(fileName))
+    {
+        // do not change the file path
+        setCurrentFile(oldLocation);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+const QString& LogViewerBase::fileFilter(void) const
+{
+    static const QString _filterLogs{ "Log Files (*." + LoggingModelBase::getFileExtension() + ")\nAll Files(*.*)" };
+    return _filterLogs;
+}
+
+bool LogViewerBase::writeToFile(const QString& filePath)
+{
+    bool result{ false };
+    if (mLogModel != nullptr)
+    {
+        const QString oldLocation{ mLogModel->getDatabasePath() };
+        if (oldLocation.isEmpty() == false)
+        {
+            result = File::copyFile(oldLocation.toStdString().c_str(), filePath.toStdString().c_str(), true);
+        }
+        else
+        {
+            QMessageBox::warning(this, tr("Error"), tr("Cannot export logs to file: %1.").arg(filePath));
+        }
+    }
+
+    return result;
+}
+
 void LogViewerBase::onSearchClicked(bool newSearch)
 {
     Q_ASSERT(mLogSearch != nullptr);

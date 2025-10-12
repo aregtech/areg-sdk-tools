@@ -161,7 +161,7 @@ QToolButton* LiveLogViewer::ctrlClear(void)
 
 QLabel* LiveLogViewer::ctrlFile(void)
 {
-    return ui->lableFile;
+    return ui->labelFile;
 }
 
 void LiveLogViewer::updateToolbuttons(bool isPaused, bool isStopped)
