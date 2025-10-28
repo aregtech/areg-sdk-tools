@@ -125,21 +125,21 @@ private slots:
      * \brief   Shows and select the log in the log view of specified entry in the output window.
      * \param   idxTarget   The index of entry in the  output window
      **/
-    inline void onShowLog(const QModelIndex& idxTarget);
+    void onShowLog(const QModelIndex& idxTarget);
 
     /**
      * \brief   Shows the log of the next nearest scope of the currently selected log row in output window.
      *          If the currently selected row is invalid, it selects the first log entry in the output window.
      *          If the currently selected row is the last scope message entry, moves to the end and does nothing.
      **/
-    inline void onShowNextLog(void);
+    void onShowNextLog(void);
 
     /**
      * \brief   Shows the log of the previous nearest scope of the currently selected log row in output window.
      *          If the currently selected row is invalid, it selects the last log entry in the output window.
      *          If the currently selected row is the first scope message entry, moves to the start and does nothing.
      **/
-    inline void onShowPrevLog(void);
+    void onShowPrevLog(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls

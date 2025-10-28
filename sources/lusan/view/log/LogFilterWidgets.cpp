@@ -183,7 +183,7 @@ void LogTextFilterBase::setDataList(const std::vector<NELusanCommon::FilterData>
 {
 }
 
-inline void LogTextFilterBase::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
+void LogTextFilterBase::setDataItems(const QStringList& items, const NELusanCommon::AnyList& data)
 {
 }
 
@@ -251,7 +251,7 @@ void LogPrioComboFilter::setDataItems(const QStringList& items, const NELusanCom
     for (int i = 0; i < static_cast<int>(items.size()); ++i)
     {
         const QString& text = items[i];
-        uint16_t prio = std::any_cast<uint16_t>(data[i]);
+        // uint16_t prio = std::any_cast<uint16_t>(data[i]);
         QList<QListWidgetItem*> f = widget->findItems(text, Qt::MatchFlag::MatchExactly);
         Q_ASSERT(f.size() <= 1);
         bool active = (f.size() == 1) && (f[0]->checkState() == Qt::CheckState::Checked);

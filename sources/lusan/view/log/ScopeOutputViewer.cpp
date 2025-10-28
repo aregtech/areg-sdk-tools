@@ -294,7 +294,7 @@ inline void ScopeOutputViewer::updateToolbuttons(int rowCount, const QModelIndex
     ctrlScopePrev()->setEnabled(hasEntries && ((selIndex.isValid() == false) || (selIndex.row() > 0)));
 }
 
-inline void ScopeOutputViewer::onShowLog(const QModelIndex& idxTarget)
+void ScopeOutputViewer::onShowLog(const QModelIndex& idxTarget)
 {
     if ((mMdiChild != nullptr) && (mFilter != nullptr))
     {
@@ -315,14 +315,14 @@ inline void ScopeOutputViewer::onShowLog(const QModelIndex& idxTarget)
     }
 }
 
-inline void ScopeOutputViewer::onShowNextLog(void)
+void ScopeOutputViewer::onShowNextLog(void)
 {
     QModelIndex idxTarget = getSelectedIndex();
     idxTarget = mFilter->getIndexNextScope(idxTarget, false);
     onShowLog(idxTarget.isValid() ? idxTarget : mFilter->index(mFilter->rowCount() - 1, 0));
 }
 
-inline void ScopeOutputViewer::onShowPrevLog(void)
+void ScopeOutputViewer::onShowPrevLog(void)
 {
     QModelIndex idxTarget = getSelectedIndex();
     idxTarget = mFilter->getIndexPrevScope(idxTarget, false);
