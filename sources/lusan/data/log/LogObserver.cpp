@@ -42,7 +42,7 @@ namespace
 
 BEGIN_MODEL(LogObserver::LogobserverModel)
 
-    BEGIN_REGISTER_THREAD(LogObserver::LogobserverThread, NECommon::WATCHDOG_IGNORE)
+    BEGIN_REGISTER_THREAD(LogObserver::LogobserverThread)
         BEGIN_REGISTER_COMPONENT_EX( LogObserver::LogObserverComponent
                                    , NEMemory::InvalidElement
                                 , ([](const NERegistry::ComponentEntry& e, ComponentThread& t) -> Component * {
