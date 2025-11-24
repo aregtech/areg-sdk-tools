@@ -541,6 +541,10 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     cleanLogs();
     endResetModel();
     mLogChunk = maxEntries;
+    
+    if (mDatabase.setupStatementReadLogs(mStatement, NEService::TARGET_ALL) == false)
+        return;
+
     mReadThread.createThread(NECommon::DO_NOT_WAIT);
 }
 
@@ -665,9 +669,6 @@ void LoggingModelBase::onThreadRuns(void)
     uint32_t    nextStart   { 0 };
     int         readCount   { 0 };
     
-    if (mDatabase.setupStatementReadLogs(mStatement, NEService::TARGET_ALL) == false)
-        return;
-
     uint32_t count = mDatabase.countLogEntries();
     if (count == 0)
         return;
