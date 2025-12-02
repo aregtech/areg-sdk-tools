@@ -541,10 +541,36 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     cleanLogs();
     endResetModel();
     mLogChunk = maxEntries;
+    mLogCount = 0u;
     
-    if (mDatabase.setupStatementReadLogs(mStatement, NEService::TARGET_ALL) == false)
+    uint32_t count = mDatabase.setupStatementReadLogs(mStatement, NEService::TARGET_ALL);
+    if (count == 0)
         return;
 
+    mLogs.resize(count);
+    mReadThread.createThread(NECommon::DO_NOT_WAIT);
+}
+
+bool LoggingModelBase::applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter)
+{
+    return mDatabase.setupFilterLogs(instId, filter);
+}
+
+void LoggingModelBase::filterLogsAsynchronous(int maxEntries)
+{
+    _quitThread();
+    beginResetModel();
+    cleanLogs();
+    endResetModel();
+    mLogChunk = maxEntries;
+    mLogCount = 0u;
+    
+    mStatement.reset();
+    uint32_t count = mDatabase.setupStatementFilterLogs(mStatement, NEService::TARGET_ALL);
+    if (count == 0)
+        return;
+    
+    mLogs.resize(count);
     mReadThread.createThread(NECommon::DO_NOT_WAIT);
 }
 
@@ -669,12 +695,7 @@ void LoggingModelBase::onThreadRuns(void)
     uint32_t    nextStart   { 0 };
     int         readCount   { 0 };
     
-    uint32_t count = mDatabase.countLogEntries();
-    if (count == 0)
-        return;
-    
     Q_ASSERT(mLogCount == 0);
-    mLogs.resize(count);
 
     do
     {

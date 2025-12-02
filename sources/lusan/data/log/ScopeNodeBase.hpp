@@ -529,6 +529,18 @@ public:
      **/
     virtual QString getDisplayName(void) const;
 
+    /**
+     * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
+     **/
+    virtual std::vector<ScopeNodeBase*> extractNodeLeafs(void) const;
+
+    /**
+     * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
+     * \param   leafs    The vector to fill with leaf nodes.
+     * \return  The number of leaf nodes found.
+     **/
+    virtual uint32_t extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

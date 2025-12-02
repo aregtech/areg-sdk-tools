@@ -581,8 +581,10 @@ public:
      *                      If -1, reads all available entries.
      **/
     virtual void readLogsAsynchronous(int maxEntries = -1);
-
-    virtual void filterLogsAsynchronous(int maxEntries = -1)
+    
+    virtual bool applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter);
+    
+    virtual void filterLogsAsynchronous(int maxEntries = -1);
 
 //////////////////////////////////////////////////////////////////////////
 // Helper methods

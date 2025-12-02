@@ -308,6 +308,18 @@ public:
      **/
     virtual int extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
 
+    /**
+     * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
+     **/
+    virtual std::vector<ScopeNodeBase*> extractNodeLeafs(void) const override;
+
+    /**
+     * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
+     * \param   leafs    The vector to fill with leaf nodes.
+     * \return  The number of leaf nodes found.
+     **/
+    virtual uint32_t extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////

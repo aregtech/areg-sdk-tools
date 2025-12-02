@@ -440,3 +440,13 @@ QString ScopeNodeBase::getDisplayName(void) const
 {
     return getNodeName();
 }
+
+std::vector<ScopeNodeBase*> ScopeNodeBase::extractNodeLeafs(void) const
+{
+    return (std::vector<ScopeNodeBase*>());
+}
+
+uint32_t ScopeNodeBase::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const
+{
+    return 0u;
+}

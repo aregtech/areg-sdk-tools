@@ -79,7 +79,7 @@ public:
      * \param   prio    The new priority to set for the log scope on target.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    bool setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+    virtual bool setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) override;
 
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -89,7 +89,7 @@ public:
      * \param   prio    The log priority to add to the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    bool addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+    virtual bool addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) override;
 
     /**
      * \brief   Removes the specified log priority from the log scope at the given index.
@@ -99,7 +99,7 @@ public:
      * \param   prio    The log priority to remove from the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio);
+    virtual bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) override;
 
     /**
      * \brief   Saves the log scope priority for the given target index.
@@ -107,7 +107,7 @@ public:
      * \param   target  The target index to save log scope priority. If invalid, saves for root index.
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
-    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const;
+    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
     
 protected:
     

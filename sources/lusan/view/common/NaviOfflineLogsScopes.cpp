@@ -453,7 +453,7 @@ uint32_t NaviOfflineLogsScopes::getSelectedPrios(void) const
 void NaviOfflineLogsScopes::updatePriority(const QModelIndex& node)
 {
     Q_ASSERT(mScopesModel != nullptr);
-    mScopesModel->setLogPriority(node, mLogPrio);
+    // mScopesModel->setLogPriority(node, mLogPrio);
 }
 
 void NaviOfflineLogsScopes::onLogPrioSelected(bool isChecked, NELogging::eLogPriority logPrio)

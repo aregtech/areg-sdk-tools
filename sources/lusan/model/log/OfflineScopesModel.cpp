@@ -32,12 +32,48 @@
 
 OfflineScopesModel::OfflineScopesModel(QObject* parent)
     : LoggingScopesModelBase(parent)
+    , MapScopeFilter        ( )
 {
     mRootIndex = createIndex(0, 0, nullptr);
 }
 
 OfflineScopesModel::~OfflineScopesModel(void)
 {
+}
+
+bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+{
+    ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
+    ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
+    if ((root == nullptr) || (mLoggingModel == nullptr) || (mLoggingModel->isOperable() == false))
+        return false;
+
+    ITEM_ID instId{ static_cast<ScopeRoot*>(root)->getRootId() };
+    if (mMapScopeFilter.find(instId) == mMapScopeFilter.end())
+    {
+        // no filter for this instance, create empty filter
+        mMapScopeFilter.insert(std::make_pair(instId, ListScopeFilter()));
+    }
+
+    std::unordered_map<uint32_t, uint32_t>& filterPrio = mMapScopeFilter[instId];
+    ListScopeFilter filter;
+    std::vector<ScopeNodeBase*> leafs;
+    if (node->isLeaf())
+        leafs.push_back(node);
+    else if (node->extractNodeLeafs(leafs) == 0u)
+        return false;
+
+    for (const auto& leaf : leafs)
+    {
+        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
+        filterPrio[scopeId] = static_cast<uint32_t>(prio);
+        filter.push_back({ scopeId, filterPrio[scopeId] });
+    }
+
+    mLoggingModel->applyFilters(instId, filter);
+    mLoggingModel->filterLogsAsynchronous();
+
+    return true;
 }
 
 void OfflineScopesModel::setLoggingModel(LoggingModelBase* model)

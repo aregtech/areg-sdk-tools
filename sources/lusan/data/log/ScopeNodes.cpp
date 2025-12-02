@@ -493,6 +493,28 @@ int ScopeNode::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const
     return result;
 }
 
+std::vector<ScopeNodeBase*> ScopeNode::extractNodeLeafs(void) const
+{
+    std::vector<ScopeNodeBase*>() leafs;
+    extractNodeLeafs(leafs);
+    return leafs;
+}
+
+uint32_t ScopeNode::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const
+{
+    for (const auto& node : mChildLeafs)
+    {
+        leafs.push_back(node);
+    }
+
+    for (const auto& node : mChildNodes)
+    {
+        node.second->extractNodeLeafs(leafs);
+    }
+
+    return static_cast<uint32_t>(leafs.size());
+}
+
 //////////////////////////////////////////////////////////////////////////
 // ScopeRoot class declaration
 //////////////////////////////////////////////////////////////////////////

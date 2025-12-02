@@ -27,6 +27,7 @@
 #include <QMap>
 
 #include "areg/base/GEGlobal.h"
+#include "aregextend/db/LogSqliteDatabase.hpp"
 
 /************************************************************************
  * Dependencies
@@ -45,6 +46,13 @@ class OfflineScopesModel : public LoggingScopesModelBase
     Q_OBJECT
 
 //////////////////////////////////////////////////////////////////////////
+// Internal types and constants
+//////////////////////////////////////////////////////////////////////////
+    using sScopeFilter      = LogSqliteDatabase::sScopeFilter;
+    using ListScopeFilter   = std::vector<sScopeFilter>;
+    using MapScopeFilter    = std::map<ITEM_ID, std::unordered_map<uint32_t, uint32_t>>;
+
+//////////////////////////////////////////////////////////////////////////
 // Constructor, operations
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -58,18 +66,73 @@ public:
     virtual ~OfflineScopesModel(void);
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes and operations
+// LoggingScopesModelBase overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    
-    virtual void setLoggingModel(LoggingModelBase* model);
+/************************************************************************
+ * LoggingScopesModelBase overrides
+ ************************************************************************/
 
+    /**
+     * \brief   Adds the specified log priority to the log scope at the given index.
+     *          The request to change the log priority is sent to the target module.
+     *          If the specified node has scope priority, it will not be changed.
+     * \param   index   The index of the log scope to change priority.
+     * \param   prio    The new priority to set for the log scope on target.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
+    virtual bool setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) override;
+
+    /**
+     * \brief   Adds the specified log priority to the log scope at the given index.
+     *          The request to change the log priority is sent to the target module.
+     *          If the log scope already has this priority, it will not be added again.
+     * \param   index   The index of the log scope to add priority.
+     * \param   prio    The log priority to add to the log scope.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
+    virtual bool addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) override;
+
+    /**
+     * \brief   Removes the specified log priority from the log scope at the given index.
+     *          The request to remove the log priority is sent to the target module.
+     *          If the log scope does not have this priority, it will not be removed.
+     * \param   index   The index of the log scope to remove priority.
+     * \param   prio    The log priority to remove from the log scope.
+     * \return  True if succeeded to sent the request to update log priority on target module.
+     **/
+    virtual bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) override;
+
+    /**
+     * \brief   Saves the log scope priority for the given target index.
+     *          If the target index is invalid, it saves the log scope priority for all instances.
+     * \param   target  The target index to save log scope priority. If invalid, saves for root index.
+     * \return  True if succeeded to save log scope priority, false otherwise.
+     **/
+    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
+
+    /**
+     * \brief   Sets the logging model object used to retrieve logging scopes data.
+     * \param   model   The logging model to set. This can be `nullptr` to reset the model.
+     *                  If can be either live logging model or offline logging model.
+     **/
+    virtual void setLoggingModel(LoggingModelBase* model) override;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
 private:
 
     /**
      * \brief   Builds the scope tree from offline model data.
      **/
     void _buildScopeTree(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    MapScopeFilter  mMapScopeFilter;
 };
 
 //////////////////////////////////////////////////////////////////////////
