@@ -49,9 +49,9 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLo
         return false;
 
     ITEM_ID instId{ static_cast<ScopeRoot*>(root)->getRootId() };
-    auto pos = MapScopeFilter.addIfUnique(instId, ScopeFilters(), false).first;
+    auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
     ASSERT(mMapScopeFilter.isValidPosition(pos));
-    ScopeFilters& filterPrio = mMapScopeFilter.getAt(pos);
+    ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
     ListScopeFilter filter;
     std::vector<ScopeNodeBase*> leafs;
     if (node->isLeaf())
@@ -73,6 +73,16 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLo
 }
 
 bool OfflineScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+{
+    return false;
+}
+
+bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+{
+    return false;
+}
+
+bool OfflineScopesModel::saveLogScopePriority(const QModelIndex& target) const
 {
     return false;
 }
