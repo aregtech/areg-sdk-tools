@@ -27,6 +27,9 @@
 #include <QMap>
 
 #include "areg/base/GEGlobal.h"
+#include "areg/base/TEArrayList.hpp"
+#include "areg/base/TEHashMap.hpp"
+#include "areg/base/TEMap.hpp"
 #include "aregextend/db/LogSqliteDatabase.hpp"
 
 /************************************************************************
@@ -49,8 +52,9 @@ class OfflineScopesModel : public LoggingScopesModelBase
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
     using sScopeFilter      = LogSqliteDatabase::sScopeFilter;
-    using ListScopeFilter   = std::vector<sScopeFilter>;
-    using MapScopeFilter    = std::map<ITEM_ID, std::unordered_map<uint32_t, uint32_t>>;
+    using ListScopeFilter   = TEArrayList<sScopeFilter>;
+    using ScopeFilters      = TEHashMap<uint32_t, uint32_t>;
+    using MapScopeFilter    = TEMap<ITEM_ID, ScopeFilters>;
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor, operations
