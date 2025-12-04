@@ -61,9 +61,10 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLo
 
     for (const auto& leaf : leafs)
     {
-        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
-        filterPrio[scopeId] = static_cast<uint32_t>(prio);
-        filter.add({ scopeId, filterPrio[scopeId] });
+        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->s();
+        uint32_t scopePrio = _logFilterPrio(prio);
+        filterPrio[scopeId] = scopePrio;
+        filter.add({ scopeId, scopePrio });
     }
 
     mLoggingModel->applyFilters(instId, filter.getData());
@@ -74,12 +75,66 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLo
 
 bool OfflineScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
 {
-    return false;
+    ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
+    ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
+    if ((root == nullptr) || (mLoggingModel == nullptr) || (mLoggingModel->isOperable() == false))
+        return false;
+    
+    ITEM_ID instId{ static_cast<ScopeRoot*>(root)->getRootId() };
+    auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
+    ASSERT(mMapScopeFilter.isValidPosition(pos));
+    ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
+    ListScopeFilter filter;
+    std::vector<ScopeNodeBase*> leafs;
+    if (node->isLeaf())
+        leafs.push_back(node);
+    else if (node->extractNodeLeafs(leafs) == 0u)
+        return false;
+    
+    for (const auto& leaf : leafs)
+    {
+        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
+        uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | static_cast<uint32_t>(prio) : static_cast<uint32_t>(NELogging);
+        filterPrio[scopeId] = scopePrio;
+        filter.add({ scopeId, scopePrio });
+    }
+    
+    mLoggingModel->applyFilters(instId, filter.getData());
+    mLoggingModel->filterLogsAsynchronous();
+    
+    return true;
 }
 
 bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
 {
-    return false;
+    ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
+    ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
+    if ((root == nullptr) || (mLoggingModel == nullptr) || (mLoggingModel->isOperable() == false))
+        return false;
+    
+    ITEM_ID instId{ static_cast<ScopeRoot*>(root)->getRootId() };
+    auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
+    ASSERT(mMapScopeFilter.isValidPosition(pos));
+    ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
+    ListScopeFilter filter;
+    std::vector<ScopeNodeBase*> leafs;
+    if (node->isLeaf())
+        leafs.push_back(node);
+    else if (node->extractNodeLeafs(leafs) == 0u)
+        return false;
+    
+    for (const auto& leaf : leafs)
+    {
+        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
+        uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | static_cast<uint32_t>(prio) : static_cast<uint32_t>(prio);
+        filterPrio[scopeId] = scopePrio;
+        filter.add({ scopeId, scopePrio });
+    }
+    
+    mLoggingModel->applyFilters(instId, filter.getData());
+    mLoggingModel->filterLogsAsynchronous();
+    
+    return true;
 }
 
 bool OfflineScopesModel::saveLogScopePriority(const QModelIndex& target) const
@@ -135,4 +190,34 @@ void OfflineScopesModel::_buildScopeTree(void)
     }
 
     endResetModel();
+}
+
+constexpr uint32_t OfflineScopesModel::_logFilterPrio(NELogging::eLogPriority prio) const
+{
+    uint32_t result{ NELogging::eLogPriority::PrioUndefined };
+    switch (prio)
+    {
+    case NELogging::eLogPriority::PrioScope:
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
+        break;
+
+    case NELogging::eLogPriority::PrioDebug:
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug); // fall through
+    case NELogging::eLogPriority::PrioInfo:
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo); // fall through
+    case NELogging::eLogPriority::PrioWarning:
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning); // fall through
+    case NELogging::eLogPriority::PrioError:
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioError); // fall through
+    case NELogging::eLogPriority::PrioFatal:
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal); // fall through
+        break;
+
+    case NELogging::eLogPriority::PrioNotset:
+    case NELogging::eLogPriority::PrioUndefined:
+    default:
+        break;
+    }
+
+    return result;
 }

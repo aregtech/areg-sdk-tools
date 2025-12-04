@@ -97,6 +97,23 @@ public:
      * \brief   Adds log priority bits.
      **/
     virtual void addPriority(unsigned int prio) override;
+
+    /**
+     * \brief   Sets the scope ID for the node. Valid only for leafs. Ignored in case of other nodes.
+     * \param   scopeId     The scope ID to set.
+     **/
+    virtual void setScopeId(uint32_t scopeId) override;
+
+    /**
+     * \brief   Returns scope ID of the leaf or 0 in case of other nodes.
+     **/
+    virtual uint32_t getScopeId(void) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    uint32_t    mScopeId;  //!< The scope ID of the leaf node.
 };
 
 //////////////////////////////////////////////////////////////////////////

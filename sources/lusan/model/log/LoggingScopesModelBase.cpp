@@ -514,36 +514,6 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
     }
 }
 
-constexpr uint32_t LoggingScopesModelBase::_logFilterPrio(NELogging::eLogPriority prio) const
-{
-    uint32_t result{ NELogging::eLogPriority::PrioUndefined };
-    switch (prio)
-    {
-    case NELogging::eLogPriority::PrioScope:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
-        break;
-
-    case NELogging::eLogPriority::PrioDebug:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug); // fall through
-    case NELogging::eLogPriority::PrioInfo:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo); // fall through
-    case NELogging::eLogPriority::PrioWarning:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning); // fall through
-    case NELogging::eLogPriority::PrioError:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioError); // fall through
-    case NELogging::eLogPriority::PrioFatal:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal); // fall through
-        break;
-
-    case NELogging::eLogPriority::PrioNotset:
-    case NELogging::eLogPriority::PrioUndefined:
-    default:
-        break;
-    }
-
-    return result;
-}
-    
 void LoggingScopesModelBase::buildScopes(void)
 {
     if (mLoggingModel == nullptr)

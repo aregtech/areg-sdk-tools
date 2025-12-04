@@ -29,26 +29,31 @@
 
 ScopeLeaf::ScopeLeaf(ScopeNode* parent)
     : ScopeNodeBase (ScopeNodeBase::eNode::Leaf, parent)
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf(const QString leafName, uint32_t prio, ScopeNode* parent)
     : ScopeNodeBase(ScopeNodeBase::eNode::Leaf, leafName, prio, parent)
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf(const ScopeNodeBase& base)
     : ScopeNodeBase(ScopeNodeBase::eNode::Leaf, base.getNodeName(), base.getPriority(), base.getParent())
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf( const ScopeLeaf & src )
     : ScopeNodeBase ( static_cast<const ScopeNodeBase &>(src) )
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf( ScopeLeaf && src ) noexcept
     : ScopeNodeBase( std::move(static_cast<ScopeNodeBase &>(src)) )
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
@@ -56,6 +61,17 @@ void ScopeLeaf::addPriority(unsigned int prio)
 {
     ScopeNodeBase::setPriority(prio);
 }
+
+void ScopeLeaf::setScopeId(uint32_t scopeId)
+{
+    mScopeId = scopeId;
+}
+
+uint32_t ScopeLeaf::getScopeId(void) const
+{
+    return mScopeId;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 // ScopeNode class implementation

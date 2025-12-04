@@ -450,3 +450,12 @@ uint32_t ScopeNodeBase::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) con
 {
     return 0u;
 }
+
+void ScopeNodeBase::setScopeId(uint32_t /*scopeId*/)
+{
+}
+
+uint32_t ScopeNodeBase::getScopeId(void) const
+{
+    return NELogging::LOG_SCOPE_ID_NONE;
+}

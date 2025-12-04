@@ -531,6 +531,7 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
     {
         mDatabase.connect(logModel.mDatabase.getDatabasePath(), true);
     }
+
     logModel.mDatabase.disconnect();
 }
 
