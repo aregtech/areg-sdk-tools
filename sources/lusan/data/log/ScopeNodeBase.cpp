@@ -173,15 +173,11 @@ int ScopeNodeBase::addChildRecursive(QString& scopePath, uint32_t prio, uint32_t
 int ScopeNodeBase::addChildRecursive(QStringList& scopeNodes, uint32_t prio, uint32_t scopeId)
 {
     ScopeNodeBase* node = addChildNode(scopeNodes, prio);
-    if ((node != nullptr) && (node->isValid()))
-    {
-        node->setScopeId(scopeId);
-        return (1 + node->addChildRecursive(scopeNodes, prio, scopeId));
-    }
-    else
-    {
+    if ((node == nullptr) || (node->isValid() == false))
         return 0;
-    }
+
+    node->setScopeId(scopeId);
+    return (1 + node->addChildRecursive(scopeNodes, prio, scopeId));
 }
 
 ScopeNodeBase* ScopeNodeBase::addChildNode(QString& scopePath, uint32_t prio)
@@ -205,14 +201,7 @@ ScopeNodeBase* ScopeNodeBase::addChildNode(ScopeNodeBase* childNode)
 ScopeNodeBase* ScopeNodeBase::makeChildNode(QString& scopePath, uint32_t prio)
 {
     QStringList scopeNodes;
-    if (splitScopePath(scopePath, scopeNodes) != 0)
-    {
-        return makeChildNode(scopeNodes, prio);
-    }
-    else
-    {
-        return nullptr;
-    }
+    return ((splitScopePath(scopePath, scopeNodes) != 0) ? makeChildNode(scopeNodes, prio) : nullptr);
 }
 
 ScopeNodeBase* ScopeNodeBase::makeChildNode(QStringList& nodeNames, uint32_t prio)
@@ -226,14 +215,10 @@ QString ScopeNodeBase::makePath(void) const
     QString result(mParent != nullptr ? mParent->makePath() : getPathString());
     
     if (isRoot() == false)
-    {
         result += getPathString();
-    }
     
     if (isNode())
-    {
         result += NELusanCommon::SCOPE_SEPRATOR;
-    }
     
     return result;
 }

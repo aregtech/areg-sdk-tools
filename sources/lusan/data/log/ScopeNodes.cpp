@@ -28,13 +28,13 @@
 //////////////////////////////////////////////////////////////////////////
 
 ScopeLeaf::ScopeLeaf(ScopeNode* parent)
-    : ScopeNodeBase (ScopeNodeBase::eNode::Leaf, parent)
+    : ScopeNodeBase ( ScopeNodeBase::eNode::Leaf, parent )
     , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf(const QString leafName, uint32_t prio, ScopeNode* parent)
-    : ScopeNodeBase(ScopeNodeBase::eNode::Leaf, leafName, prio, parent)
+    : ScopeNodeBase ( ScopeNodeBase::eNode::Leaf, leafName, prio, parent )
     , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
@@ -52,7 +52,7 @@ ScopeLeaf::ScopeLeaf( const ScopeLeaf & src )
 }
 
 ScopeLeaf::ScopeLeaf( ScopeLeaf && src ) noexcept
-    : ScopeNodeBase( std::move(static_cast<ScopeNodeBase &>(src)) )
+    : ScopeNodeBase ( std::move(static_cast<ScopeNodeBase &>(src)) )
     , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }

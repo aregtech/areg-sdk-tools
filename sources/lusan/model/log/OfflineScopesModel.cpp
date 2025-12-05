@@ -59,13 +59,13 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLo
     else if (node->extractNodeLeafs(leafs) == 0u)
         return false;
 
+    uint32_t scopePrio = _logFilterPrio(prio);
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
         if (scopeId == NELogging::LOG_SCOPE_ID_NONE)
             continue;
 
-        uint32_t scopePrio = _logFilterPrio(prio);
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
     }
@@ -93,7 +93,7 @@ bool OfflineScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLo
         leafs.push_back(node);
     else if (node->extractNodeLeafs(leafs) == 0u)
         return false;
-    
+
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
@@ -126,10 +126,11 @@ bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, NELogging::
     else if (node->extractNodeLeafs(leafs) == 0u)
         return false;
     
+    uint32_t prioRemove = ~static_cast<uint32_t>(prio);
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
-        uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | static_cast<uint32_t>(prio) : static_cast<uint32_t>(prio);
+        uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] & prioRemove : static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs) & prioRemove;
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
     }
