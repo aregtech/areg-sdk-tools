@@ -300,9 +300,18 @@ public:
      *                      On output, it contains the next level of the path separated by '_'.
      *                      The last node should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
+     * \param   scopeId     The scope ID to set for the leaf node.
      * \return  The number of nodes added.
      **/
-    virtual int addChildRecursive(QString& scopePath, uint32_t prio);
+    virtual int addChildRecursive(QString& scopePath, uint32_t prio, uint32_t scopeId);
+
+    /**
+     * \brief   Recursively adds a child a node if it does not exist.
+     *          Otherwise, adds a node log priority value.
+     * \param   scope       The scope information to add.
+     * \return  The number of nodes added.
+     **/
+    virtual int addChildRecursive(const NELogging::sScopeInfo & scope);
 
     /**
      * \brief   Recursively adds a child a node if it does not exist.
@@ -311,9 +320,10 @@ public:
      *                      On output, it removes the first node name from the list.
      *                      The last name should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
+     * \param   scopeId     The scope ID to set for the leaf node.
      * \return  The number of nodes added.
      **/
-    virtual int addChildRecursive(QStringList& nodeNames, uint32_t prio);
+    virtual int addChildRecursive(QStringList& nodeNames, uint32_t prio, uint32_t scopeId);
 
     /**
      * \brief   Adds a single child node if it does not exist.

@@ -158,12 +158,25 @@ void ScopeNodeBase::removePriority(unsigned int prio)
     }
 }
 
-int ScopeNodeBase::addChildRecursive(QString& scopePath, uint32_t prio)
+int ScopeNodeBase::addChildRecursive(const NELogging::sScopeInfo& scope)
+{
+    QString name(QString::fromStdString(scope.scopeName.getData()));
+    return addChildRecursive(name, scope.scopePrio, scope.scopeId);
+}
+
+int ScopeNodeBase::addChildRecursive(QString& scopePath, uint32_t prio, uint32_t scopeId)
 {
     QStringList scopeNodes;
-    if (splitScopePath(scopePath, scopeNodes) != 0)
+    return ((splitScopePath(scopePath, scopeNodes) != 0) ? addChildRecursive(scopeNodes, prio, scopeId) : 0);
+}
+
+int ScopeNodeBase::addChildRecursive(QStringList& scopeNodes, uint32_t prio, uint32_t scopeId)
+{
+    ScopeNodeBase* node = addChildNode(scopeNodes, prio);
+    if ((node != nullptr) && (node->isValid()))
     {
-        return addChildRecursive(scopeNodes, prio);
+        node->setScopeId(scopeId);
+        return (1 + node->addChildRecursive(scopeNodes, prio, scopeId));
     }
     else
     {
@@ -171,23 +184,10 @@ int ScopeNodeBase::addChildRecursive(QString& scopePath, uint32_t prio)
     }
 }
 
-int ScopeNodeBase::addChildRecursive(QStringList& scopeNodes, uint32_t prio)
-{
-    ScopeNodeBase* node = addChildNode(scopeNodes, prio);
-    return ((node != nullptr) && (node->isValid()) ? 1 + node->addChildRecursive(scopeNodes, prio) : 0);
-}
-
 ScopeNodeBase* ScopeNodeBase::addChildNode(QString& scopePath, uint32_t prio)
 {
     QStringList scopeNodes;
-    if (splitScopePath(scopePath, scopeNodes) != 0)
-    {
-        return addChildNode(scopeNodes, prio);
-    }
-    else
-    {
-        return nullptr;
-    }
+    return ((splitScopePath(scopePath, scopeNodes) != 0) ? addChildNode(scopeNodes, prio) : nullptr);
 }
 
 ScopeNodeBase* ScopeNodeBase::addChildNode(QStringList& nodeNames, uint32_t prio)

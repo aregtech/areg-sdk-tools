@@ -61,7 +61,10 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLo
 
     for (const auto& leaf : leafs)
     {
-        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->s();
+        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
+        if (scopeId == NELogging::LOG_SCOPE_ID_NONE)
+            continue;
+
         uint32_t scopePrio = _logFilterPrio(prio);
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
@@ -94,7 +97,7 @@ bool OfflineScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLo
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
-        uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | static_cast<uint32_t>(prio) : static_cast<uint32_t>(NELogging);
+        uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | static_cast<uint32_t>(prio) : static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs);
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
     }
