@@ -820,7 +820,7 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
 
     if (selectedAction == mMenuActions[static_cast<int>(eLogActions::PrioNotset)])
     {
-        mScopesModel->setLogPriority(index, NELogging::eLogPriority::PrioNotset);
+        mScopesModel->setLogPriority(index, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset));
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioDebug])
     {

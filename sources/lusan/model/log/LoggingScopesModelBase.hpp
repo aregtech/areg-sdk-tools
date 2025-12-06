@@ -147,7 +147,7 @@ public:
      * \param   prio    The new priority to set for the log scope on target.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) = 0;
+    virtual bool setLogPriority(const QModelIndex& index, uint32_t prio) = 0;
 
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -157,7 +157,7 @@ public:
      * \param   prio    The log priority to add to the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) = 0;
+    virtual bool addLogPriority(const QModelIndex& index, uint32_t prio) = 0;
 
     /**
      * \brief   Removes the specified log priority from the log scope at the given index.
@@ -167,7 +167,7 @@ public:
      * \param   prio    The log priority to remove from the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio) = 0;
+    virtual bool removeLogPriority(const QModelIndex& index, uint32_t prio) = 0;
 
     /**
      * \brief   Saves the log scope priority for the given target index.

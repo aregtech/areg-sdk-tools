@@ -127,7 +127,7 @@
         <item>
          <widget class="QToolButton" name="toolSaveSettings">
           <property name="toolTip">
-           <string>Open selected file</string>
+           <string>Save log settings</string>
           </property>
           <property name="statusTip">
            <string>Save log settings</string>

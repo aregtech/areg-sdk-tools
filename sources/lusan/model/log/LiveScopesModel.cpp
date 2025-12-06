@@ -42,7 +42,7 @@ void LiveScopesModel::setLoggingModel(LoggingModelBase* model)
     LoggingScopesModelBase::setLoggingModel(model);
 }
 
-bool LiveScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+bool LiveScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
 {
     bool result{ false };
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
@@ -50,9 +50,9 @@ bool LiveScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLogPr
     if (root == nullptr)
         return result;
     
-    if (node->getPriority() != static_cast<uint32_t>(prio))
+    if (node->getPriority() != prio)
     {
-        node->setPriority(static_cast<uint32_t>(prio));
+        node->setPriority(prio);
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         
@@ -76,7 +76,7 @@ bool LiveScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLogPr
     return result;
 }
 
-bool LiveScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+bool LiveScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
 {
     bool result{ false };
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
@@ -84,10 +84,9 @@ bool LiveScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPr
     if (root == nullptr)
         return result;
     
-    // if (((node->getPriority() & static_cast<uint32_t>(prio)) == 0) || node->hasMultiPrio(static_cast<uint32_t>(prio)))
-    if (node->canAddPriority(static_cast<uint32_t>(prio)))
+    if (node->canAddPriority(prio))
     {
-        node->addPriority(static_cast<uint32_t>(prio));        
+        node->addPriority(prio);        
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         
@@ -101,7 +100,7 @@ bool LiveScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPr
     return result;
 }
 
-bool LiveScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+bool LiveScopesModel::removeLogPriority(const QModelIndex& index, uint32_t prio)
 {
     bool result{ false };
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
@@ -110,9 +109,9 @@ bool LiveScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLo
         return result;
     
     // if ((node->getPriority() & static_cast<uint32_t>(prio)) != 0)
-    if (node->canRemovePriority(static_cast<uint32_t>(prio)))
+    if (node->canRemovePriority(prio))
     {
-        node->removePriority(static_cast<uint32_t>(prio));
+        node->removePriority(prio);
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         result = _requestNodePriority(static_cast<const ScopeRoot &>(*root), *node);

@@ -41,7 +41,7 @@ OfflineScopesModel::~OfflineScopesModel(void)
 {
 }
 
-bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+bool OfflineScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
 {
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
     ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
@@ -70,13 +70,13 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, NELogging::eLo
         filter.add({ scopeId, scopePrio });
     }
 
-    mLoggingModel->applyFilters(instId, filter.getData());
+    mLoggingModel->applyFilters(instId, filter);
     mLoggingModel->filterLogsAsynchronous();
 
     return true;
 }
 
-bool OfflineScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+bool OfflineScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
 {
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
     ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
@@ -97,18 +97,18 @@ bool OfflineScopesModel::addLogPriority(const QModelIndex& index, NELogging::eLo
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
-        uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | static_cast<uint32_t>(prio) : static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs);
+        uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | prio : static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs);
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
     }
     
-    mLoggingModel->applyFilters(instId, filter.getData());
+    mLoggingModel->applyFilters(instId, filter);
     mLoggingModel->filterLogsAsynchronous();
     
     return true;
 }
 
-bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, NELogging::eLogPriority prio)
+bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, uint32_t prio)
 {
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
     ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
@@ -126,7 +126,7 @@ bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, NELogging::
     else if (node->extractNodeLeafs(leafs) == 0u)
         return false;
     
-    uint32_t prioRemove = ~static_cast<uint32_t>(prio);
+    uint32_t prioRemove = ~prio;
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
@@ -135,7 +135,7 @@ bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, NELogging::
         filter.add({ scopeId, scopePrio });
     }
     
-    mLoggingModel->applyFilters(instId, filter.getData());
+    mLoggingModel->applyFilters(instId, filter);
     mLoggingModel->filterLogsAsynchronous();
     
     return true;
@@ -196,31 +196,51 @@ void OfflineScopesModel::_buildScopeTree(void)
     endResetModel();
 }
 
-constexpr uint32_t OfflineScopesModel::_logFilterPrio(NELogging::eLogPriority prio) const
+uint32_t OfflineScopesModel::_logFilterPrio(uint32_t prio) const
 {
-    uint32_t result{ NELogging::eLogPriority::PrioUndefined };
-    switch (prio)
+    std::function funcPrio = [](NELogging::eLogPriority prio) -> uint32_t {
+            uint32_t result = 0u;
+            switch (prio)
+            {
+            case NELogging::eLogPriority::PrioDebug:
+                result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug); // fall through
+            case NELogging::eLogPriority::PrioInfo:
+                result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo); // fall through
+            case NELogging::eLogPriority::PrioWarning:
+                result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning); // fall through
+            case NELogging::eLogPriority::PrioError:
+                result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioError); // fall through
+            case NELogging::eLogPriority::PrioFatal:
+                result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal); // fall through
+                break;
+
+            default:
+                break;
+            }
+
+            return result;
+    };
+
+    uint32_t result{ (prio & static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) != 0 ? NELogging::eLogPriority::PrioScope : NELogging::eLogPriority::PrioUndefined };
+    if ((prio & static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug)) != 0)
     {
-    case NELogging::eLogPriority::PrioScope:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
-        break;
-
-    case NELogging::eLogPriority::PrioDebug:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug); // fall through
-    case NELogging::eLogPriority::PrioInfo:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo); // fall through
-    case NELogging::eLogPriority::PrioWarning:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning); // fall through
-    case NELogging::eLogPriority::PrioError:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioError); // fall through
-    case NELogging::eLogPriority::PrioFatal:
-        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal); // fall through
-        break;
-
-    case NELogging::eLogPriority::PrioNotset:
-    case NELogging::eLogPriority::PrioUndefined:
-    default:
-        break;
+        result |= funcPrio(NELogging::eLogPriority::PrioDebug);
+    }
+    else if ((prio & static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo)) != 0)
+    {
+        result |= funcPrio(NELogging::eLogPriority::PrioInfo);
+    }
+    else if ((prio & static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning)) != 0)
+    {
+        result |= funcPrio(NELogging::eLogPriority::PrioWarning);
+    }
+    else if ((prio & static_cast<uint32_t>(NELogging::eLogPriority::PrioError)) != 0)
+    {
+        result |= funcPrio(NELogging::eLogPriority::PrioError);
+    }
+    else if ((prio & static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)) != 0)
+    {
+        result |= funcPrio(NELogging::eLogPriority::PrioFatal);
     }
 
     return result;
