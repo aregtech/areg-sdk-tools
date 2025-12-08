@@ -326,6 +326,9 @@ public:
      * \brief   Sets the scope logs filter object can be nullptr if the scope logs are not filtered.
      **/
     inline void setScopeFiler(ScopeLogViewerFilter* filter);
+    
+    inline LogSqliteDatabase& getDatabase();
+    inline const LogSqliteDatabase& getDatabase() const;
 
 /************************************************************************
  * Signals
@@ -835,6 +838,16 @@ inline void LoggingModelBase::cleanLogs(void)
 {
     mLogCount = 0;
     mLogs.clear();
+}
+
+inline LogSqliteDatabase& LoggingModelBase::getDatabase()
+{
+    return mDatabase;
+}
+
+inline const LogSqliteDatabase& LoggingModelBase::getDatabase() const
+{
+    return mDatabase;
 }
 
 inline LoggingModelBase& LoggingModelBase::self(void)

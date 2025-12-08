@@ -133,6 +133,14 @@ private:
     void _buildScopeTree(void);
 
     uint32_t _logFilterPrio(uint32_t prio) const;
+    
+    void _applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter);
+
+    bool _tableExists(const char* master, const char* table);
+
+    void _dropTable(const char* table);
+
+    uint32_t _countFilteredLogs(ITEM_ID instId);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
