@@ -32,111 +32,6 @@
 
 #include <QIcon>
 
-namespace {
-
-constexpr std::string_view _sqlCreateTempScopes
-    {
-        "CREATE TEMP TABLE filter_rules ("
-        "   scope_id      INTEGER NOT NULL DEFAULT 0,"
-        "   target_id     INTEGER NOT NULL DEFAULT 0,"
-        "   log_mask      INTEGER NOT NULL DEFAULT 1008"
-        "); "
-    };
-
-constexpr std::string_view _sqlInitTempScopes
-    {
-        "INSERT INTO filter_rules(scope_id, target_id, log_mask) SELECT scope_id, cookie_id, 1008 FROM scopes;"
-    };
-
-constexpr std::string_view _sqlCreateTempFilter
-    {
-        "CREATE TEMP TABLE filter_masks ("
-        "   scope_id      INTEGER NOT NULL DEFAULT 0,"
-        "   log_mask      INTEGER NOT NULL DEFAULT 1008"
-        ");"
-    };
-
-
-constexpr std::string_view _sqlInsertTempFilter
-    {
-        "INSERT INTO filter_masks(scope_id, log_mask) VALUES(?, ?);"
-    };
-
-constexpr std::string_view _sqlFilterScopeLogsCountAll
-    {
-        "SELECT COUNT(l.id)"
-        "   FROM logs AS l"
-        "   JOIN filter_rules AS r"
-        "       ON l.scope_id = r.scope_id AND l.cookie_id = r.target_id"
-        "   WHERE ((l.msg_prio & r.log_mask) != 0)"
-    };
-
-constexpr std::string_view _sqlFilterScopeLogsCount
-    {
-        "SELECT COUNT(l.id)"
-        "   FROM logs AS l"
-        "   JOIN filter_rules AS r"
-        "       ON l.scope_id = r.scope_id AND l.cookie_id = r.target_id"
-        "   WHERE (l.cookie_id = ?) AND ((l.msg_prio & r.log_mask) != 0)"
-    };
-
-constexpr std::string_view _sqlFilterScopeLogsAll
-    {
-        "SELECT l.msg_type, l.msg_prio, l.cookie_id, l.msg_module_id, l.msg_thread_id, l.time_created, l.time_received, l.time_duration, l.scope_id, l.session_id, l.msg_log, l.msg_thread, l.msg_module"
-        "   FROM logs AS l"
-        "   JOIN filter_rules AS r"
-        "       ON l.scope_id = r.scope_id AND l.cookie_id = r.target_id"
-        "   WHERE ((l.msg_prio & r.log_mask) != 0)"
-        "   ORDER BY time_created;"
-    };
-
-constexpr std::string_view _sqlFilterScopeLogsInst
-    {
-        "SELECT l.msg_type, l.msg_prio, l.cookie_id, l.msg_module_id, l.msg_thread_id, l.time_created, l.time_received, l.time_duration, l.scope_id, l.session_id, l.msg_log, l.msg_thread, l.msg_module"
-        "   FROM logs AS l"
-        "   JOIN filter_rules AS r"
-        "       ON l.scope_id = r.scope_id AND l.cookie_id = r.target_id"
-        "   WHERE (l.cookie_id = ?) AND ((l.msg_prio & r.log_mask) != 0)"
-        "   ORDER BY time_created;"
-    };
-
-constexpr std::string_view _sqlUpdateFilterScopes
-    {
-        "UPDATE filter_rules SET log_mask = ("
-        "       SELECT m.log_mask"
-        "       FROM filter_masks m"
-        "   WHERE m.scope_id = filter_rules.scope_id)"
-        "   WHERE target_id = ?"
-        "   AND scope_id IN (SELECT scope_id FROM filter_masks);"
-    };
-
-constexpr std::string_view _sqlResetFilterScopes
-    {
-        "UPDATE filter_rules SET log_mask = 1008 WHERE target_id = ?;"
-    };
-
-constexpr std::string_view _sqlResetFilterScopesAll
-    {
-        "UPDATE filter_rules SET log_mask = 1008;"
-    };
-
-constexpr std::string_view _sqlDisableFilterScopes
-    {
-        "UPDATE filter_rules SET log_mask = 1008 WHERE target_id = ?;"
-    };
-
-constexpr std::string_view _sqlDisableFilterScopesAll
-    {
-        "UPDATE filter_rules SET log_mask = 1008;"
-    };
-
-constexpr std::string_view _sqlDropTable
-    {
-        "DROP TABLE IF EXISTS %s;"
-    };
-
-}
-
 OfflineScopesModel::OfflineScopesModel(QObject* parent)
     : LoggingScopesModelBase(parent)
     , mMapScopeFilter       ( )
@@ -178,8 +73,7 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
     }
 
     mLoggingModel->applyFilters(instId, filter);
-    // _applyFilters(instId, filter);
-    mLoggingModel->filterLogsAsynchronous();
+    mLoggingModel->readLogsAsynchronous(-1);
 
     return true;
 }
@@ -211,8 +105,8 @@ bool OfflineScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
     }
     
     mLoggingModel->applyFilters(instId, filter);
-    mLoggingModel->filterLogsAsynchronous();
-    
+    mLoggingModel->readLogsAsynchronous(-1);
+
     return true;
 }
 
@@ -244,9 +138,8 @@ bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, uint32_t pr
     }
     
     mLoggingModel->applyFilters(instId, filter);
-    // _applyFilters(instId, filter);
-    mLoggingModel->filterLogsAsynchronous();
-    
+    mLoggingModel->readLogsAsynchronous(-1);
+
     return true;
 }
 
@@ -353,140 +246,4 @@ uint32_t OfflineScopesModel::_logFilterPrio(uint32_t prio) const
     }
 
     return result;
-}
-
-void OfflineScopesModel::_applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter)
-{
-    if (mLoggingModel == nullptr)
-        return;
-
-    LogSqliteDatabase& db = mLoggingModel->getDatabase();
-    if (db.isOperable() == false)
-        return;
-    if (db.tableExists("sqlite_master", "scopes") == false)
-        return;
-
-    if (db.tableExists("sqlite_temp_master", "filter_rules") == false)
-    {
-        SqliteStatement stmtTemp(db.getDatabase(), _sqlCreateTempScopes);
-        if (stmtTemp.execute() == false)
-        {
-            db.commit(false);
-            return;
-        }
-        
-        stmtTemp.reset();
-        if (stmtTemp.prepare(_sqlInitTempScopes) == false)
-            return;
-        
-        stmtTemp.execute();
-        db.commit(true);
-    }
-
-    if (filter.isEmpty())
-    {
-        SqliteStatement stmt(db.getDatabase());
-        if (instId == NEService::TARGET_ALL)
-        {
-            if (stmt.prepare(_sqlResetFilterScopesAll) == false)
-                return;
-        }
-        else
-        {
-            if (stmt.prepare(_sqlResetFilterScopes) == false)
-                return;
-
-            stmt.bindUint64(0, instId);
-        }
-
-        stmt.execute();
-    }
-    else
-    {
-        do
-        {
-            SqliteStatement stmt(db.getDatabase(), _sqlCreateTempFilter);
-            if (stmt.execute() == false)
-                return;
-        } while (false);
-
-        do
-        {
-            SqliteStatement stmt(db.getDatabase(), _sqlInsertTempFilter);
-            for (const auto& scope : filter.getData())
-            {
-                stmt.bindUint32(0, scope.scopeId);
-                stmt.bindUint32(1, scope.scopePrio);
-                if (stmt.execute() == false)
-                    return;
-
-                stmt.reset();
-                stmt.clearBindings();
-            }
-        } while (false);
-
-        do
-        {
-            SqliteStatement stmt(db.getDatabase(), _sqlUpdateFilterScopes);
-            stmt.bindInt64(0, instId);
-            if (stmt.execute() == false)
-                return;
-        } while (false);
-
-        _dropTable("filter_masks");
-    }
-
-    uint32_t count = _countFilteredLogs(instId);
-    if (count != 0)
-    {
-        SqliteStatement stmt(db.getDatabase());
-        if (instId == NEService::TARGET_ALL)
-        {
-            stmt.prepare(_sqlFilterScopeLogsAll);
-        }
-        else if (stmt.prepare(_sqlFilterScopeLogsInst))
-        {
-            stmt.bindInt64(0, instId);
-        }
-    }
-}
-
-bool OfflineScopesModel::_tableExists(const char* master, const char* table)
-{
-    LogSqliteDatabase& db = mLoggingModel->getDatabase();
-    return db.tableExists(master, table);
-}
-
-void OfflineScopesModel::_dropTable(const char* table)
-{
-    LogSqliteDatabase& db = mLoggingModel->getDatabase();
-    if (NEString::isEmpty<char>(table))
-        return;
-    else if (db.isOperable() == false)
-        return;
-
-    String sql;
-    sql.format(_sqlDropTable.data(), table);
-    SqliteStatement stmt(db.getDatabase(), sql);
-    stmt.execute();
-    stmt.finalize();
-}
-
-uint32_t OfflineScopesModel::_countFilteredLogs(ITEM_ID instId)
-{
-    LogSqliteDatabase& db = mLoggingModel->getDatabase();
-    if (db.isOperable() == false)
-        return 0;
-
-    SqliteStatement stmt(db.getDatabase());
-    if (instId == NEService::TARGET_ALL)
-    {
-        stmt.prepare(_sqlFilterScopeLogsCountAll);
-    }
-    else if (stmt.prepare(_sqlFilterScopeLogsCount))
-    {
-        stmt.bindInt64(0, instId);
-    }
-
-    return (stmt.next() != SqliteStatement::eQueryResult::Failed ? stmt.getUint32(0) : 0);
 }

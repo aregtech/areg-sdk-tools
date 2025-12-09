@@ -62,6 +62,14 @@ public:
      **/
     virtual void closeDatabase(void) override;
 
+    /**
+     * \brief   Sets up the logging query to run. By default, it reads all logs without filter.
+     *          Override if need to change.
+     * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `NEService::TARGET_ALL`.
+     * \return  Number or log entries to read.
+     **/
+    virtual uint32_t setupLogStatement(ITEM_ID instId = NEService::TARGET_ALL) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Signals
 //////////////////////////////////////////////////////////////////////////

@@ -69,8 +69,14 @@ void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
             emit signalScopesAvailable(inst.ciCookie, scopes);
         }
         
+        mDatabase.setupFilterLogs(NEService::TARGET_ALL, TEArrayList<LogSqliteDatabase::sScopeFilter>{});
         readLogsAsynchronous(OfflineLogsModel::DEFAULT_LOG_CHUNK);
     }
+}
+
+uint32_t OfflineLogsModel::setupLogStatement(ITEM_ID instId /*= NEService::TARGET_ALL*/)
+{
+    return mDatabase.setupStatementReadFilterLogs(mStatement, instId);
 }
 
 void OfflineLogsModel::closeDatabase(void)

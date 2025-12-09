@@ -544,35 +544,22 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     mLogChunk = maxEntries;
     mLogCount = 0u;
     
-    uint32_t count = mDatabase.setupStatementReadLogs(mStatement, NEService::TARGET_ALL);
+    uint32_t count = setupLogStatement(NEService::TARGET_ALL);
     if (count == 0)
         return;
 
     mLogs.resize(count);
     mReadThread.createThread(NECommon::DO_NOT_WAIT);
+}
+
+uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId /*= NEService::TARGET_ALL*/)
+{
+    return mDatabase.setupStatementReadLogs(mStatement, instId);
 }
 
 bool LoggingModelBase::applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter)
 {
     return mDatabase.setupFilterLogs(instId, filter);
-}
-
-void LoggingModelBase::filterLogsAsynchronous(int maxEntries)
-{
-    _quitThread();
-    beginResetModel();
-    cleanLogs();
-    endResetModel();
-    mLogChunk = maxEntries;
-    mLogCount = 0u;
-    
-    mStatement.reset();
-    uint32_t count = mDatabase.setupStatementFilterLogs(mStatement, NEService::TARGET_ALL);
-    if (count == 0)
-        return;
-    
-    mLogs.resize(count);
-    mReadThread.createThread(NECommon::DO_NOT_WAIT);
 }
 
 QString LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const

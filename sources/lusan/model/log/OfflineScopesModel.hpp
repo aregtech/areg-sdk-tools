@@ -132,21 +132,14 @@ private:
      **/
     void _buildScopeTree(void);
 
+    //!< Returns the combined allowed log priority for the given priority.
     uint32_t _logFilterPrio(uint32_t prio) const;
     
-    void _applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter);
-
-    bool _tableExists(const char* master, const char* table);
-
-    void _dropTable(const char* table);
-
-    uint32_t _countFilteredLogs(ITEM_ID instId);
-
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    MapScopeFilter  mMapScopeFilter;
+    MapScopeFilter  mMapScopeFilter;    //<!< The map of scope filters, where key is the instance ID and values is the pair of scope ID and message prio.
 };
 
 //////////////////////////////////////////////////////////////////////////
