@@ -131,67 +131,67 @@ void NaviOfflineLogsScopes::optionClosed(bool OKpressed)
     Q_UNUSED(OKpressed);
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlCollapse(void)
+QToolButton* NaviOfflineLogsScopes::ctrlCollapse(void) const
 {
     return ui->toolCollapse;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlOpenDatabase(void)
+QToolButton* NaviOfflineLogsScopes::ctrlOpenDatabase(void) const
 {
     return ui->toolDbOpen;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlCloseDatabase(void)
+QToolButton* NaviOfflineLogsScopes::ctrlCloseDatabase(void) const
 {
     return ui->toolDbClose;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlRefreshDatabase(void)
+QToolButton* NaviOfflineLogsScopes::ctrlRefreshDatabase(void) const
 {
     return ui->toolRefresh;
 }
 
-QTreeView* NaviOfflineLogsScopes::ctrlTable(void)
+QTreeView* NaviOfflineLogsScopes::ctrlTable(void) const
 {
     return ui->treeView;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlFind(void)
+QToolButton* NaviOfflineLogsScopes::ctrlFind(void) const
 {
     return ui->toolFind;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlLogError(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogError(void) const
 {
     return ui->toolError;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlLogWarning(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogWarning(void) const
 {
     return ui->toolWarning;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlLogInfo(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogInfo(void) const
 {
     return ui->toolInformation;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlLogDebug(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogDebug(void) const
 {
     return ui->toolDebug;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlLogScopes(void)
+QToolButton* NaviOfflineLogsScopes::ctrlLogScopes(void) const
 {
     return ui->toolScopes;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlMoveTop(void)
+QToolButton* NaviOfflineLogsScopes::ctrlMoveTop(void) const
 {
     return ui->toolMoveTop;
 }
 
-QToolButton* NaviOfflineLogsScopes::ctrlMoveBottom(void)
+QToolButton* NaviOfflineLogsScopes::ctrlMoveBottom(void) const
 {
     return ui->toolMoveBottom;
 }
@@ -219,6 +219,11 @@ void NaviOfflineLogsScopes::setupSignals(void)
     connect(mScopesModel            , &OfflineScopesModel::signalRootUpdated    , this, &NaviOfflineLogsScopes::onRootUpdated);
     connect(mScopesModel            , &OfflineScopesModel::signalScopesInserted , this, &NaviOfflineLogsScopes::onScopesInserted);
     connect(mMainWindow             , &MdiMainWindow::signalOpenOfflineLog      , this, [this](){onOpenDatabaseClicked();});
+    connect(ctrlLogError()          , &QToolButton::clicked, this, [this](bool checked){onLogPrioSelected(checked, NELogging::eLogPriority::PrioError);});
+    connect(ctrlLogWarning()        , &QToolButton::clicked, this, [this](bool checked){onLogPrioSelected(checked, NELogging::eLogPriority::PrioWarning);});
+    connect(ctrlLogInfo()           , &QToolButton::clicked, this, [this](bool checked){onLogPrioSelected(checked, NELogging::eLogPriority::PrioInfo);});
+    connect(ctrlLogDebug()          , &QToolButton::clicked, this, [this](bool checked){onLogPrioSelected(checked, NELogging::eLogPriority::PrioDebug);});
+    connect(ctrlLogScopes()         , &QToolButton::clicked, this, [this](bool checked){onLogPrioSelected(checked, NELogging::eLogPriority::PrioScope);});
 }
 
 void NaviOfflineLogsScopes::updateControls(void)
@@ -411,3 +416,86 @@ void NaviOfflineLogsScopes::onScopesInserted(const QModelIndex& parent)
         }
     }
 }
+
+uint32_t NaviOfflineLogsScopes::getSelectedPrios(void) const
+{
+    Q_ASSERT(ctrlLogScopes()  != nullptr);
+    Q_ASSERT(ctrlLogDebug()   != nullptr);
+    Q_ASSERT(ctrlLogInfo()    != nullptr);
+    Q_ASSERT(ctrlLogWarning() != nullptr);
+    Q_ASSERT(ctrlLogError()   != nullptr);
+    
+    uint32_t result {static_cast<uint32_t>(ctrlLogScopes()->isChecked() ? NELogging::eLogPriority::PrioScope : NELogging::eLogPriority::PrioInvalid)};
+    if (ctrlLogDebug()->isChecked())
+    {
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug);
+    }
+    else if (ctrlLogInfo()->isChecked())
+    {
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo);
+    }
+    else if (ctrlLogWarning()->isChecked())
+    {
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning);
+    }
+    else if (ctrlLogError()->isChecked())
+    {
+        result |= static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+    }
+    else if (result == static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid))
+    {
+        result = static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset);
+    }
+    
+    return result;
+}
+
+void NaviOfflineLogsScopes::updatePriority(const QModelIndex& node)
+{
+    Q_ASSERT(mScopesModel != nullptr);
+    mScopesModel->setLogPriority(node, mLogPrio);
+}
+
+void NaviOfflineLogsScopes::onLogPrioSelected(bool isChecked, NELogging::eLogPriority logPrio)
+{
+    if (isChecked)
+    {
+        if (logPrio == NELogging::eLogPriority::PrioScope)
+        {
+            mLogPrio |= static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
+        }
+        else
+        {
+            mLogPrio &= static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
+            switch (logPrio)
+            {
+            case NELogging::eLogPriority::PrioDebug:
+                mLogPrio |= static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug);
+                break;
+
+            case NELogging::eLogPriority::PrioInfo:
+                mLogPrio |= static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo);
+                break;
+
+            case NELogging::eLogPriority::PrioWarning:
+                mLogPrio |= static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning);
+                break;
+
+            case NELogging::eLogPriority::PrioError:
+                mLogPrio |= static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+                break;
+
+            default:
+                break; // ignore
+            }
+        }
+    }
+    else
+    {
+        mLogPrio &= ~static_cast<uint32_t>(logPrio);
+    }
+
+    mLogPrio = mLogPrio == static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid) ? static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset) : mLogPrio;
+    updatePriority(ctrlTable()->currentIndex());
+}
+

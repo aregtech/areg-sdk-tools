@@ -200,13 +200,14 @@ void NaviLiveLogsScopes::setupWidgets(void)
 
 void NaviLiveLogsScopes::setupSignals(void)
 {
+    connect(ctrlLogError()      , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *ctrlLogError()  , NELogging::eLogPriority::PrioError   );});
+    connect(ctrlLogWarning()    , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *ctrlLogWarning(), NELogging::eLogPriority::PrioWarning );});
+    connect(ctrlLogInfo()       , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *ctrlLogInfo()   , NELogging::eLogPriority::PrioInfo    );});
+    connect(ctrlLogDebug()      , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *ctrlLogDebug()  , NELogging::eLogPriority::PrioDebug   );});
+    connect(ctrlLogScopes()     , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *ctrlLogScopes() , NELogging::eLogPriority::PrioScope   );});
+
     connect(ctrlConnect()       , &QToolButton::clicked, this, &NaviLiveLogsScopes::onConnectClicked);
     connect(ctrlMoveBottom()    , &QToolButton::clicked, this, &NaviLiveLogsScopes::onMoveBottomClicked);
-    connect(ctrlLogError()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onPrioErrorClicked);
-    connect(ctrlLogWarning()    , &QToolButton::clicked, this, &NaviLiveLogsScopes::onPrioWarningClicked);
-    connect(ctrlLogInfo()       , &QToolButton::clicked, this, &NaviLiveLogsScopes::onPrioInfoClicked);
-    connect(ctrlLogDebug()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onPrioDebugClicked);
-    connect(ctrlLogScopes()     , &QToolButton::clicked, this, &NaviLiveLogsScopes::onPrioScopesClicked);
     connect(ctrlSaveSettings()  , &QToolButton::clicked, this, &NaviLiveLogsScopes::onSaveSettingsClicked);
     connect(ctrlSettings()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onOptionsClicked);
     connect(ctrlCollapse()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onCollapseClicked);
@@ -546,53 +547,12 @@ void NaviLiveLogsScopes::onMoveBottomClicked()
     }
 }
 
-void NaviLiveLogsScopes::onPrioErrorClicked(bool checked)
+void NaviLiveLogsScopes::onLogPrioChecked(bool checked, QToolButton& toolButton, NELogging::eLogPriority prio)
 {
     QModelIndex current = ctrlTable()->currentIndex();
-    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioError);
-    if (result == false)
+    if (updatePriority(current, checked, prio) == false)
     {
-        ctrlLogError()->setChecked(!checked);
-    }
-}
-
-void NaviLiveLogsScopes::onPrioWarningClicked(bool checked)
-{
-    QModelIndex current = ctrlTable()->currentIndex();
-    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioWarning);
-    if (result == false)
-    {
-        ctrlLogWarning()->setChecked(!checked);
-    }
-}
-
-void NaviLiveLogsScopes::onPrioInfoClicked(bool checked)
-{
-    QModelIndex current = ctrlTable()->currentIndex();
-    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioInfo);
-    if (result == false)
-    {
-        ctrlLogInfo()->setChecked(!checked);
-    }
-}
-
-void NaviLiveLogsScopes::onPrioDebugClicked(bool checked)
-{
-    QModelIndex current = ctrlTable()->currentIndex();
-    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioDebug);
-    if (result == false)
-    {
-        ctrlLogDebug()->setChecked(!checked);
-    }
-}
-
-void NaviLiveLogsScopes::onPrioScopesClicked(bool checked)
-{
-    QModelIndex current = ctrlTable()->currentIndex();
-    bool result = updatePriority(current, checked, NELogging::eLogPriority::PrioScope);
-    if (result == false)
-    {
-        ctrlLogScopes()->setChecked(!checked);
+        toolButton.setChecked(!checked);
     }
 }
 
@@ -860,7 +820,7 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
 
     if (selectedAction == mMenuActions[static_cast<int>(eLogActions::PrioNotset)])
     {
-        mScopesModel->setLogPriority(index, NELogging::eLogPriority::PrioNotset);
+        mScopesModel->setLogPriority(index, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset));
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioDebug])
     {

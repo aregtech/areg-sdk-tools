@@ -433,9 +433,7 @@ void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vect
         root->resetPrioritiesRecursive(false);
         for (int i = 0; i < count; ++i)
         {
-            const NELogging::sScopeInfo& scope = scopes[i];
-            QString scopeName{ scope.scopeName };
-            root->addChildRecursive(scopeName, scope.scopePrio);
+            root->addChildRecursive(scopes[i]);
         }
 
         root->resetPrioritiesRecursive(true);
@@ -513,7 +511,7 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
         mSignalsSetup = false;
     }
 }
-    
+
 void LoggingScopesModelBase::buildScopes(void)
 {
     if (mLoggingModel == nullptr)

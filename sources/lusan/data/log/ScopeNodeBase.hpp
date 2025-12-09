@@ -300,9 +300,18 @@ public:
      *                      On output, it contains the next level of the path separated by '_'.
      *                      The last node should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
+     * \param   scopeId     The scope ID to set for the leaf node.
      * \return  The number of nodes added.
      **/
-    virtual int addChildRecursive(QString& scopePath, uint32_t prio);
+    virtual int addChildRecursive(QString& scopePath, uint32_t prio, uint32_t scopeId);
+
+    /**
+     * \brief   Recursively adds a child a node if it does not exist.
+     *          Otherwise, adds a node log priority value.
+     * \param   scope       The scope information to add.
+     * \return  The number of nodes added.
+     **/
+    virtual int addChildRecursive(const NELogging::sScopeInfo & scope);
 
     /**
      * \brief   Recursively adds a child a node if it does not exist.
@@ -311,9 +320,10 @@ public:
      *                      On output, it removes the first node name from the list.
      *                      The last name should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
+     * \param   scopeId     The scope ID to set for the leaf node.
      * \return  The number of nodes added.
      **/
-    virtual int addChildRecursive(QStringList& nodeNames, uint32_t prio);
+    virtual int addChildRecursive(QStringList& nodeNames, uint32_t prio, uint32_t scopeId);
 
     /**
      * \brief   Adds a single child node if it does not exist.
@@ -528,6 +538,29 @@ public:
      * \brief   Returns the string to display on screen.
      **/
     virtual QString getDisplayName(void) const;
+
+    /**
+     * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
+     **/
+    virtual std::vector<ScopeNodeBase*> extractNodeLeafs(void) const;
+
+    /**
+     * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
+     * \param   leafs    The vector to fill with leaf nodes.
+     * \return  The number of leaf nodes found.
+     **/
+    virtual uint32_t extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const;
+
+    /**
+     * \brief   Sets the scope ID for the node. Valid only for leafs. Ignored in case of other nodes.
+     * \param   scopeId     The scope ID to set.
+     **/
+    virtual void setScopeId(uint32_t scopeId);
+
+    /**
+     * \brief   Returns scope ID of the leaf or 0 in case of other nodes.
+     **/
+    virtual uint32_t getScopeId(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

@@ -24,6 +24,7 @@
  ************************************************************************/
 
 #include "lusan/view/common/NavigationWindow.hpp"
+#include "areg/logging/NELogging.hpp"
 
 #include <QWidget>
 #include <QString>
@@ -138,43 +139,43 @@ public:
 private:
 
     //!< Returns the control object to expand or collapse entries of scopes.
-    QToolButton* ctrlCollapse(void);
+    QToolButton* ctrlCollapse(void) const;
 
     //!< Returns the control object to open database files.
-    QToolButton* ctrlOpenDatabase(void);
+    QToolButton* ctrlOpenDatabase(void) const;
 
     //!< Returns the control object to close the current database.
-    QToolButton* ctrlCloseDatabase(void);
+    QToolButton* ctrlCloseDatabase(void) const;
 
     //!< Returns the control object to refresh the current database.
-    QToolButton* ctrlRefreshDatabase(void);
+    QToolButton* ctrlRefreshDatabase(void) const;
 
     //!< Returns the control object to find a string.
-    QToolButton* ctrlFind(void);
+    QToolButton* ctrlFind(void) const;
 
     //!< Returns the control object to set error level of the logs
-    QToolButton* ctrlLogError(void);
+    QToolButton* ctrlLogError(void) const;
 
     //!< Returns the control object to set warning level of the logs
-    QToolButton* ctrlLogWarning(void);
+    QToolButton* ctrlLogWarning(void) const;
 
     //!< Returns the control object to set information level of the logs
-    QToolButton* ctrlLogInfo(void);
+    QToolButton* ctrlLogInfo(void) const;
 
     //!< Returns the control object to set debug level of the logs
-    QToolButton* ctrlLogDebug(void);
+    QToolButton* ctrlLogDebug(void) const;
 
     //!< Returns the control object to enable log scopes of the logs
-    QToolButton* ctrlLogScopes(void);
+    QToolButton* ctrlLogScopes(void) const;
 
     //!< Returns the control object to move to the top of log window.
-    QToolButton* ctrlMoveTop(void);
+    QToolButton* ctrlMoveTop(void) const;
 
     //!< Returns the control object to move to the bottom of log window.
-    QToolButton* ctrlMoveBottom(void);
+    QToolButton* ctrlMoveBottom(void) const;
 
     //!< Returns the control object of the log messages
-    QTreeView* ctrlTable(void);
+    QTreeView* ctrlTable(void) const;
 
     LoggingModelBase* getLoggingModel(void) const;
 
@@ -210,6 +211,10 @@ private:
      * \param   node       The scope node to check and expand child nodes.
      **/
     void expandChildNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node);
+    
+    uint32_t getSelectedPrios(void) const;
+    
+    void updatePriority(const QModelIndex& node);
 
 private slots:
     /**
@@ -239,12 +244,15 @@ private slots:
      **/
     void onScopesInserted(const QModelIndex & parent);
 
+    void onLogPrioSelected(bool isChecked, NELogging::eLogPriority logPrio);
+    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     Ui::NaviOfflineLogsScopes*  ui;             //!< The user interface object.
     OfflineScopesModel *        mScopesModel;   //!< The offline scopes model
+    uint32_t                    mLogPrio;       //!< The activated log priorities.
 };
 
 #endif  // LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP

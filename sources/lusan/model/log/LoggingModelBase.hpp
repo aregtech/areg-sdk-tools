@@ -326,6 +326,9 @@ public:
      * \brief   Sets the scope logs filter object can be nullptr if the scope logs are not filtered.
      **/
     inline void setScopeFiler(ScopeLogViewerFilter* filter);
+    
+    inline LogSqliteDatabase& getDatabase();
+    inline const LogSqliteDatabase& getDatabase() const;
 
 /************************************************************************
  * Signals
@@ -577,11 +580,26 @@ public:
 
     /**
      * \brief   Reads logs from the database asynchronously in a separate thread.
-     * @param   maxEntries  The maximum number of log entries to read in one loop.
+     * \param   maxEntries  The maximum number of log entries to read in one loop.
      *                      If -1, reads all available entries.
      **/
     virtual void readLogsAsynchronous(int maxEntries = -1);
 
+    /**
+     * \brief   Sets up the logging query to run. By default, it reads all logs without filter.
+     * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `NEService::TARGET_ALL`.
+     * \return  Number or log entries to read.
+     **/
+    virtual uint32_t setupLogStatement(ITEM_ID instId = NEService::TARGET_ALL);
+
+    /**
+     * \brief   Applies the filters to the log query.
+     * \param   instId  The ID of the instance to apply filters. Applies filters for all instances if `NEService::TARGET_ALL`.
+     * \param   filter  The list of scope filters to apply.
+     * \return  True if filters are applied successfully, false otherwise.
+     **/
+    virtual bool applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter);
+    
 //////////////////////////////////////////////////////////////////////////
 // Helper methods
 //////////////////////////////////////////////////////////////////////////
@@ -831,6 +849,16 @@ inline void LoggingModelBase::cleanLogs(void)
 {
     mLogCount = 0;
     mLogs.clear();
+}
+
+inline LogSqliteDatabase& LoggingModelBase::getDatabase()
+{
+    return mDatabase;
+}
+
+inline const LogSqliteDatabase& LoggingModelBase::getDatabase() const
+{
+    return mDatabase;
 }
 
 inline LoggingModelBase& LoggingModelBase::self(void)

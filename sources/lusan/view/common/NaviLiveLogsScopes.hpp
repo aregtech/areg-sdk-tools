@@ -357,21 +357,6 @@ private slots:
      **/
     void onMoveBottomClicked();
 
-    // Slot for error log priority tool button
-    void onPrioErrorClicked(bool checked);
-
-    // Slot for warning log priority tool button
-    void onPrioWarningClicked(bool checked);
-
-    // Slot for information log priority tool button
-    void onPrioInfoClicked(bool checked);
-
-    // Slot for debug log priority tool button
-    void onPrioDebugClicked(bool checked);
-
-    // Slot for log scope priority tool button
-    void onPrioScopesClicked(bool checked);
-
     // Slot for saving log priority changes on the target configuration.
     void onSaveSettingsClicked(bool checked);
 
@@ -433,6 +418,14 @@ private slots:
      * \param   index   The index of the node
      **/
     void onNodeCollapsed(const QModelIndex &index);
+
+    /**
+     * \brief   Slot, triggered when a log priority tool button is checked or unchecked.
+     * \param   checked     The flag, indicating whether the tool button is checked or unchecked.
+     * \param   toolButton  The reference to the tool button that was checked or unchecked.
+     * \param   prio        The log priority associated with the tool button.
+     **/
+    void onLogPrioChecked(bool checked, QToolButton &toolButton, NELogging::eLogPriority prio);
     
 //////////////////////////////////////////////////////////////////////////
 // Static methods

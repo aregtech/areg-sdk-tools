@@ -158,36 +158,32 @@ void ScopeNodeBase::removePriority(unsigned int prio)
     }
 }
 
-int ScopeNodeBase::addChildRecursive(QString& scopePath, uint32_t prio)
+int ScopeNodeBase::addChildRecursive(const NELogging::sScopeInfo& scope)
 {
-    QStringList scopeNodes;
-    if (splitScopePath(scopePath, scopeNodes) != 0)
-    {
-        return addChildRecursive(scopeNodes, prio);
-    }
-    else
-    {
-        return 0;
-    }
+    QString name(QString::fromStdString(scope.scopeName.getData()));
+    return addChildRecursive(name, scope.scopePrio, scope.scopeId);
 }
 
-int ScopeNodeBase::addChildRecursive(QStringList& scopeNodes, uint32_t prio)
+int ScopeNodeBase::addChildRecursive(QString& scopePath, uint32_t prio, uint32_t scopeId)
+{
+    QStringList scopeNodes;
+    return ((splitScopePath(scopePath, scopeNodes) != 0) ? addChildRecursive(scopeNodes, prio, scopeId) : 0);
+}
+
+int ScopeNodeBase::addChildRecursive(QStringList& scopeNodes, uint32_t prio, uint32_t scopeId)
 {
     ScopeNodeBase* node = addChildNode(scopeNodes, prio);
-    return ((node != nullptr) && (node->isValid()) ? 1 + node->addChildRecursive(scopeNodes, prio) : 0);
+    if ((node == nullptr) || (node->isValid() == false))
+        return 0;
+
+    node->setScopeId(scopeId);
+    return (1 + node->addChildRecursive(scopeNodes, prio, scopeId));
 }
 
 ScopeNodeBase* ScopeNodeBase::addChildNode(QString& scopePath, uint32_t prio)
 {
     QStringList scopeNodes;
-    if (splitScopePath(scopePath, scopeNodes) != 0)
-    {
-        return addChildNode(scopeNodes, prio);
-    }
-    else
-    {
-        return nullptr;
-    }
+    return ((splitScopePath(scopePath, scopeNodes) != 0) ? addChildNode(scopeNodes, prio) : nullptr);
 }
 
 ScopeNodeBase* ScopeNodeBase::addChildNode(QStringList& nodeNames, uint32_t prio)
@@ -205,14 +201,7 @@ ScopeNodeBase* ScopeNodeBase::addChildNode(ScopeNodeBase* childNode)
 ScopeNodeBase* ScopeNodeBase::makeChildNode(QString& scopePath, uint32_t prio)
 {
     QStringList scopeNodes;
-    if (splitScopePath(scopePath, scopeNodes) != 0)
-    {
-        return makeChildNode(scopeNodes, prio);
-    }
-    else
-    {
-        return nullptr;
-    }
+    return ((splitScopePath(scopePath, scopeNodes) != 0) ? makeChildNode(scopeNodes, prio) : nullptr);
 }
 
 ScopeNodeBase* ScopeNodeBase::makeChildNode(QStringList& nodeNames, uint32_t prio)
@@ -226,14 +215,10 @@ QString ScopeNodeBase::makePath(void) const
     QString result(mParent != nullptr ? mParent->makePath() : getPathString());
     
     if (isRoot() == false)
-    {
         result += getPathString();
-    }
     
     if (isNode())
-    {
         result += NELusanCommon::SCOPE_SEPRATOR;
-    }
     
     return result;
 }
@@ -439,4 +424,23 @@ int ScopeNodeBase::splitScopePath(QString& scopePath, QStringList& nodeNames) co
 QString ScopeNodeBase::getDisplayName(void) const
 {
     return getNodeName();
+}
+
+std::vector<ScopeNodeBase*> ScopeNodeBase::extractNodeLeafs(void) const
+{
+    return (std::vector<ScopeNodeBase*>());
+}
+
+uint32_t ScopeNodeBase::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const
+{
+    return 0u;
+}
+
+void ScopeNodeBase::setScopeId(uint32_t /*scopeId*/)
+{
+}
+
+uint32_t ScopeNodeBase::getScopeId(void) const
+{
+    return NELogging::LOG_SCOPE_ID_NONE;
 }

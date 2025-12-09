@@ -28,27 +28,32 @@
 //////////////////////////////////////////////////////////////////////////
 
 ScopeLeaf::ScopeLeaf(ScopeNode* parent)
-    : ScopeNodeBase (ScopeNodeBase::eNode::Leaf, parent)
+    : ScopeNodeBase ( ScopeNodeBase::eNode::Leaf, parent )
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf(const QString leafName, uint32_t prio, ScopeNode* parent)
-    : ScopeNodeBase(ScopeNodeBase::eNode::Leaf, leafName, prio, parent)
+    : ScopeNodeBase ( ScopeNodeBase::eNode::Leaf, leafName, prio, parent )
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf(const ScopeNodeBase& base)
     : ScopeNodeBase(ScopeNodeBase::eNode::Leaf, base.getNodeName(), base.getPriority(), base.getParent())
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf( const ScopeLeaf & src )
     : ScopeNodeBase ( static_cast<const ScopeNodeBase &>(src) )
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf( ScopeLeaf && src ) noexcept
-    : ScopeNodeBase( std::move(static_cast<ScopeNodeBase &>(src)) )
+    : ScopeNodeBase ( std::move(static_cast<ScopeNodeBase &>(src)) )
+    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
 {
 }
 
@@ -56,6 +61,17 @@ void ScopeLeaf::addPriority(unsigned int prio)
 {
     ScopeNodeBase::setPriority(prio);
 }
+
+void ScopeLeaf::setScopeId(uint32_t scopeId)
+{
+    mScopeId = scopeId;
+}
+
+uint32_t ScopeLeaf::getScopeId(void) const
+{
+    return mScopeId;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 // ScopeNode class implementation
@@ -491,6 +507,28 @@ int ScopeNode::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const
     }
 
     return result;
+}
+
+std::vector<ScopeNodeBase*> ScopeNode::extractNodeLeafs(void) const
+{
+    std::vector<ScopeNodeBase*> leafs;
+    extractNodeLeafs(leafs);
+    return leafs;
+}
+
+uint32_t ScopeNode::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const
+{
+    for (auto node : mChildLeafs)
+    {
+        leafs.push_back(node.second);
+    }
+
+    for (const auto& node : mChildNodes)
+    {
+        node.second->extractNodeLeafs(leafs);
+    }
+
+    return static_cast<uint32_t>(leafs.size());
 }
 
 //////////////////////////////////////////////////////////////////////////
