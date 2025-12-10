@@ -56,6 +56,10 @@ class OfflineScopesModel : public LoggingScopesModelBase
     using ScopeFilters      = TEHashMap<uint32_t, uint32_t>;
     using MapScopeFilter    = TEMap<ITEM_ID, ScopeFilters>;
 
+    static constexpr uint32_t INIT_LOG_PRIO { static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs) };
+
+    static constexpr uint32_t LOG_PRIO_MASK { INIT_LOG_PRIO };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor, operations
 //////////////////////////////////////////////////////////////////////////
@@ -121,6 +125,16 @@ public:
      *                  If can be either live logging model or offline logging model.
      **/
     virtual void setLoggingModel(LoggingModelBase* model) override;
+
+//////////////////////////////////////////////////////////////////////////
+// Internal overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
+
+    /**
+     * \brief   Build scopes from a single scope path
+     **/
+    virtual void buildScope(ScopeRoot& root, QString& scopePath, uint32_t scopePrio, uint32_t scopeId) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

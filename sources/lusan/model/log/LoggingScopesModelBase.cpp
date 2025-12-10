@@ -299,6 +299,11 @@ Qt::ItemFlags LoggingScopesModelBase::flags(const QModelIndex& index) const
     }
 }
 
+void LoggingScopesModelBase::buildScope(ScopeRoot& root, QString& scopePath, uint32_t scopePrio, uint32_t scopeId)
+{
+    root.addChildRecursive(scopePath, scopePrio, scopeId);
+}
+
 void LoggingScopesModelBase::clearModel(bool notify /*= false*/)
 {
     if (notify)
@@ -433,7 +438,8 @@ void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vect
         root->resetPrioritiesRecursive(false);
         for (int i = 0; i < count; ++i)
         {
-            root->addChildRecursive(scopes[i]);
+            QString scopePath(QString::fromStdString(scopes[i].scopeName.getData()));
+            buildScope(*root, scopePath, scopes[i].scopePrio, scopes[i].scopeId);
         }
 
         root->resetPrioritiesRecursive(true);

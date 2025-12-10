@@ -176,6 +176,18 @@ void OfflineScopesModel::setLoggingModel(LoggingModelBase* model)
     }
 }
 
+void OfflineScopesModel::buildScope(ScopeRoot& root, QString& scopePath, uint32_t scopePrio, uint32_t scopeId)
+{
+    scopePrio = INIT_LOG_PRIO; // change scope prio
+    ITEM_ID instId{ root.getRootId() };
+    auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
+    ASSERT(mMapScopeFilter.isValidPosition(pos));
+    ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
+    filterPrio[scopeId] = scopePrio;
+
+    LoggingScopesModelBase::buildScope(root, scopePath, scopePrio, scopeId);
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Private helper methods
 //////////////////////////////////////////////////////////////////////////

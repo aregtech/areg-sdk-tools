@@ -21,6 +21,7 @@
 #include "ui/ui_NaviOfflineLogsScopes.h"
 
 #include "lusan/data/log/ScopeNodes.hpp"
+#include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/model/log/OfflineScopesModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
@@ -38,6 +39,7 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
 
     , ui            (new Ui::NaviOfflineLogsScopes)
     , mScopesModel  (new OfflineScopesModel(this))
+    , mLogPrio      ( 0u )
 
 {
     ui->setupUi(this);
@@ -78,10 +80,12 @@ bool NaviOfflineLogsScopes::openDatabase(const QString& filePath)
     if (logModel->isOperable())
     {
         mScopesModel->setLoggingModel(logModel);
+        mLogPrio = static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs);
         return true;
     }
     else
     {
+        mLogPrio = 0u;
         mScopesModel->setLoggingModel(nullptr);
         QMessageBox::warning(this, tr("Database Error"), tr("Failed to open database file:\n%1").arg(filePath));
         return false;
@@ -92,6 +96,7 @@ void NaviOfflineLogsScopes::closeDatabase(void)
 {
     // Clear the tree view
     mScopesModel->setLoggingModel(nullptr);
+    mLogPrio = 0u;
     updateControls();    
 }
 
@@ -319,6 +324,7 @@ void NaviOfflineLogsScopes::restoreView(void)
         }
         
         const QModelIndex& idxSelected = logModel->getSelectedScope();
+        enableButtons(idxSelected);
         if (idxSelected.isValid())
         {
             navi->selectionModel()->setCurrentIndex(idxSelected, QItemSelectionModel::SelectCurrent | QItemSelectionModel::Rows);
@@ -355,6 +361,8 @@ void NaviOfflineLogsScopes::expandChildNodesRecursive(const QModelIndex& idxNode
             }
         }
     }
+
+    enableButtons(idxNode);
 }
 
 void NaviOfflineLogsScopes::onOpenDatabaseClicked(void)
@@ -393,6 +401,7 @@ void NaviOfflineLogsScopes::onRootUpdated(const QModelIndex& root)
 
     // Ensure all children of root are expanded and visible
     int rowCount = mScopesModel->rowCount(root);
+    enableButtons(root);
     for (int row = 0; row < rowCount; ++row)
     {
         QModelIndex child = mScopesModel->index(row, 0, root);
@@ -454,6 +463,85 @@ void NaviOfflineLogsScopes::updatePriority(const QModelIndex& node)
 {
     Q_ASSERT(mScopesModel != nullptr);
     mScopesModel->setLogPriority(node, mLogPrio);
+}
+
+void NaviOfflineLogsScopes::updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected)
+{
+    ctrlLogDebug()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, dbgSelected));
+    ctrlLogInfo()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, infoSelected));
+    ctrlLogWarning()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, warnSelected));
+    ctrlLogError()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, errSelected));
+    ctrlLogScopes()->setIcon(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, scopeSelected));
+    
+    ctrlLogError()->update();
+    ctrlLogWarning()->update();
+    ctrlLogInfo()->update();
+    ctrlLogDebug()->update();
+    ctrlLogScopes()->update();
+}
+
+void NaviOfflineLogsScopes::enableButtons(const QModelIndex& selection)
+{
+    ScopeNodeBase* node = selection.isValid() ? mScopesModel->data(selection, Qt::ItemDataRole::UserRole).value<ScopeNodeBase*>() : nullptr;
+    if (node != nullptr)
+    {
+        bool errSelected{ false }, warnSelected{ false }, infoSelected{ false }, dbgSelected{ false }, scopeSelected{ false };
+
+        ctrlLogError()->setEnabled(true);
+        ctrlLogWarning()->setEnabled(true);
+        ctrlLogInfo()->setEnabled(true);
+        ctrlLogDebug()->setEnabled(true);
+        ctrlLogScopes()->setEnabled(true);
+
+        ctrlLogError()->setChecked(false);
+        ctrlLogWarning()->setChecked(false);
+        ctrlLogInfo()->setChecked(false);
+        ctrlLogDebug()->setChecked(false);
+        ctrlLogScopes()->setChecked(false);
+
+        if (node->isValid() && (node->hasPrioNotset() == false))
+        {
+            if (node->hasPrioDebug())
+            {
+                ctrlLogDebug()->setChecked(true);
+                dbgSelected = true;
+            }
+
+            if (node->hasPrioInfo())
+            {
+                ctrlLogInfo()->setChecked(true);
+                infoSelected = true;
+            }
+
+            if (node->hasPrioWarning())
+            {
+                ctrlLogWarning()->setChecked(true);
+                warnSelected = true;
+            }
+
+            if (node->hasPrioError() || node->hasPrioFatal())
+            {
+                ctrlLogError()->setChecked(true);
+                errSelected = true;
+            }
+
+            if (node->hasLogScopes())
+            {
+                ctrlLogScopes()->setChecked(true);
+                scopeSelected = true;
+            }
+        }
+
+        updateColors(errSelected, warnSelected, infoSelected, dbgSelected, scopeSelected);
+    }
+    else
+    {
+        ctrlLogError()->setEnabled(false);
+        ctrlLogWarning()->setEnabled(false);
+        ctrlLogInfo()->setEnabled(false);
+        ctrlLogDebug()->setEnabled(false);
+        ctrlLogScopes()->setEnabled(false);
+    }
 }
 
 void NaviOfflineLogsScopes::onLogPrioSelected(bool isChecked, NELogging::eLogPriority logPrio)

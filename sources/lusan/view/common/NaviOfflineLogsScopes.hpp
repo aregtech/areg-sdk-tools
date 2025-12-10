@@ -216,6 +216,22 @@ private:
     
     void updatePriority(const QModelIndex& node);
 
+    /**
+     * \brief   Enables or disables lot priority tool buttons based on selection index.
+     *          It also changes the colors of the buttons depending on the priority.
+     **/
+    void enableButtons(const QModelIndex& selection);
+
+    /**
+     * \brief   Updates the colors of the log priority tool buttons.
+     * \param   errSelected    If true, the error button is checked and the colored.
+     * \param   warnSelected   If true, the warning button is checked and the colored.
+     * \param   infoSelected   If true, the info button is checked and the colored.
+     * \param   dbgSelected    If true, the debug button is checked and the colored.
+     * \param   scopeSelected  If true, the scopes button is checked and the colored.
+     **/
+    void updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected);
+
 private slots:
     /**
      * \brief   The slot is triggered when the open database tool button is clicked.
