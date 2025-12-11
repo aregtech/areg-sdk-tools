@@ -23,7 +23,7 @@
  * Includes
  ************************************************************************/
 
-#include "lusan/view/common/NavigationWindow.hpp"
+#include "lusan/view/common/NaviLogScopeBase.hpp"
 #include "areg/logging/NELogging.hpp"
 
 #include <QItemSelection>
@@ -54,7 +54,7 @@ namespace Ui {
 /**
  * \brief   The NaviLiveLogsScopes class is a view of the logging sources and logging scopes.
  **/
-class NaviLiveLogsScopes : public NavigationWindow
+class NaviLiveLogsScopes : public NaviLogScopeBase
 {
 private:
 
@@ -137,13 +137,6 @@ public:
      **/
     void setLogCollectorConnection(const QString& address, uint16_t port);
     
-    /**
-     * \brief   Sets the pointer of associated live logs model. 
-     * \param   logModel    The pointer to the live logs model.
-     *                      Can be nullptr if no live logs are available.
-     */
-    void setLoggingModel(LiveLogsModel* logModel);
-
     /**
      * \brief   Returns the pointer to the live logs model used by live logging scope navigation view.
      *          If no live logs are available, returns nullptr.
@@ -252,53 +245,12 @@ private:
     void blockBasicSignals(bool block);
 
     /**
-     * \brief   Enables or disables lot priority tool buttons based on selection index.
-     *          It also changes the colors of the buttons depending on the priority.
-     **/
-    void enableButtons(const QModelIndex& selection);
-
-    /**
-     * \brief   Updates the colors of the log priority tool buttons.
-     * \param   errSelected    If true, the error button is checked and the colored.
-     * \param   warnSelected   If true, the warning button is checked and the colored.
-     * \param   infoSelected   If true, the info button is checked and the colored.
-     * \param   dbgSelected    If true, the debug button is checked and the colored.
-     * \param   scopeSelected  If true, the scopes button is checked and the colored.
-     **/
-    void updateColors(bool errSelected, bool warnSelected, bool infoSelected, bool dbgSelected, bool scopeSelected);
-
-    /**
-     * \brief   Updates the expanded of the log scopes model based on the current index.
-     * \param   current    The current index to update expanded.
-     **/
-    void updateExpanded(const QModelIndex& current);
-
-    /**
-     * \brief   Updates the priority of the log scope at the given index.
-     * \param   node       The index of the log scope to update priority.
-     * \param   addPrio    If true, adds the priority. Otherwise, removes the priority.
-     * \param   prio       The log priority to set or remove.
-     * \return  Returns true if succeeded the request to update the priority. Otherwise, returns false.
-     **/
-    bool updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio);
-
-    /**
      * \brief   Connects or disconnects log observer related signals and slots.
      * \param   setup   The flag, indicating whether the signals and slots are connector or not.
      *                  If `true`, the signals and slots are connected.
      *                  If `false`, the signals and slots are disconnected.
      **/
     void setupLogSignals(bool setup);
-
-    /**
-     * \brief   Returns true if root entries are collapsed.
-     **/
-    bool areRootsCollapsed(void) const;
-
-    /**
-     * \brief   Collapses the root entries.
-     **/
-    void collapseRoots(void);
 
 private slots:
     /**
@@ -366,9 +318,6 @@ private slots:
     // Slot for collapsing and expanding nodes.
     void onCollapseClicked(bool checked);
     
-    // Slot. which triggered when the selection in the log scopes navigation is changed.
-    void onRowChanged(const QModelIndex &current, const QModelIndex &previous);
-
     /**
      * \brief   The signal triggered when receive the list of connected instances that make logs.
      * \param   instances   The list of the connected instances.
@@ -406,26 +355,6 @@ private slots:
      * \param   mdiChild    The MDI child window that is about to be closed.
      **/
     void onWindowCreated(MdiChild* mdiChild);
-
-    /**
-     * \brief   Slot, triggered when a node is expanded.
-     * \param   index   The index of the node that was expanded.
-     **/
-    void onNodeExpanded(const QModelIndex &index);
-
-    /**
-     * \brief   Slot, triggered when a node is collapsed
-     * \param   index   The index of the node
-     **/
-    void onNodeCollapsed(const QModelIndex &index);
-
-    /**
-     * \brief   Slot, triggered when a log priority tool button is checked or unchecked.
-     * \param   checked     The flag, indicating whether the tool button is checked or unchecked.
-     * \param   toolButton  The reference to the tool button that was checked or unchecked.
-     * \param   prio        The log priority associated with the tool button.
-     **/
-    void onLogPrioChecked(bool checked, QToolButton &toolButton, NELogging::eLogPriority prio);
     
 //////////////////////////////////////////////////////////////////////////
 // Static methods
@@ -444,8 +373,6 @@ private:
     QString                 mInitLogFile;   //!< The initialized log file.
     QString                 mActiveLogFile; //!< The active log file.
     QString                 mLogLocation;   //!< The location of log files.
-    LiveScopesModel*        mScopesModel;   //!< The model of the log scopes.
-    QItemSelectionModel*    mSelModel;      //!< The item selection model to catch selection events.
     bool                    mSignalsActive; //!< The flag, indicating whether the log observer signals are active or not.
     eLoggingStates          mState;         //!< The variable to store live logging state.
     QList<QAction*>         mMenuActions;   //!< The list of menu actions

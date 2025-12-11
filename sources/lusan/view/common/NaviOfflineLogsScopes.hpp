@@ -23,7 +23,7 @@
  * Includes
  ************************************************************************/
 
-#include "lusan/view/common/NavigationWindow.hpp"
+#include "lusan/view/common/NaviLogScopeBase.hpp"
 #include "areg/logging/NELogging.hpp"
 
 #include <QWidget>
@@ -53,7 +53,7 @@ namespace Ui {
  * \brief   The NaviOfflineLogsScopes class is a view for offline log navigation.
  *          It provides functionality to load and browse log database files.
  **/
-class NaviOfflineLogsScopes : public NavigationWindow
+class NaviOfflineLogsScopes : public NaviLogScopeBase
 {
     Q_OBJECT
 
@@ -104,13 +104,7 @@ public:
      * \param   model   The offline logging data model to read log data.
      *                  If null or database is not opened, it resets the scope explorer.
      **/
-    void setLoggingModel(OfflineLogsModel * model);
-
-    /**
-     * \brief   Returns the pointer to the offline logging model used by this view.
-     *          If no database is opened, it returns nullptr.
-     **/
-    OfflineLogsModel* getLoggingModel(void);
+    virtual void setLoggingModel(LoggingModelBase * model) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -177,8 +171,6 @@ private:
     //!< Returns the control object of the log messages
     QTreeView* ctrlTable(void) const;
 
-    LoggingModelBase* getLoggingModel(void) const;
-
     /**
      * \brief   Initializes the widgets.
      **/
@@ -205,16 +197,8 @@ private:
      **/
     void restoreView(void);
 
-    /**
-     * \brief   Expands the child nodes of the specified scope tree recursively.
-     * \param   idxNode    The index of the node to expand.
-     * \param   node       The scope node to check and expand child nodes.
-     **/
-    void expandChildNodesRecursive(const QModelIndex& idxNode, const ScopeNodeBase& node);
-    
+    //!< Returns the accumulated selected priorities.
     uint32_t getSelectedPrios(void) const;
-    
-    void updatePriority(const QModelIndex& node);
 
 private slots:
     /**
@@ -244,15 +228,11 @@ private slots:
      **/
     void onScopesInserted(const QModelIndex & parent);
 
-    void onLogPrioSelected(bool isChecked, NELogging::eLogPriority logPrio);
-    
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     Ui::NaviOfflineLogsScopes*  ui;             //!< The user interface object.
-    OfflineScopesModel *        mScopesModel;   //!< The offline scopes model
-    uint32_t                    mLogPrio;       //!< The activated log priorities.
 };
 
 #endif  // LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP

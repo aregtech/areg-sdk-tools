@@ -131,7 +131,7 @@ bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, uint32_t pr
     uint32_t prioRemove = ~prio;
     for (const auto& leaf : leafs)
     {
-        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
+        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
         uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] & prioRemove : static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs) & prioRemove;
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
@@ -174,6 +174,18 @@ void OfflineScopesModel::setLoggingModel(LoggingModelBase* model)
         beginResetModel();
         endResetModel();
     }
+}
+
+void OfflineScopesModel::buildScope(ScopeRoot& root, QString& scopePath, uint32_t scopePrio, uint32_t scopeId)
+{
+    scopePrio = INIT_LOG_PRIO; // change scope prio
+    ITEM_ID instId{ root.getRootId() };
+    auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
+    ASSERT(mMapScopeFilter.isValidPosition(pos));
+    ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
+    filterPrio[scopeId] = scopePrio;
+
+    LoggingScopesModelBase::buildScope(root, scopePath, scopePrio, scopeId);
 }
 
 //////////////////////////////////////////////////////////////////////////

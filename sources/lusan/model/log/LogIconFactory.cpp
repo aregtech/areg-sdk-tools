@@ -961,6 +961,8 @@ namespace
                                                 , false, pixels);
         _mapIcons[prio] = all;
         _mapIcons[prio | prioScope] = _setScopeRound(all, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+        _mapIcons[prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)] = _mapIcons[prio];
+        _mapIcons[prio | prioScope | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)] = _mapIcons[prio | prioScope];
         
         all = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                 , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -969,8 +971,9 @@ namespace
                                                 , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
                                                 , true, pixels);
         _mapIcons[prio | NoPrio] = all;
+        _mapIcons[prio | NoPrio | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)] = _mapIcons[prio | NoPrio];
         _mapIcons[prio | NoPrio | prioScope] = _setScopeRound(all, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
-
+        _mapIcons[prio | NoPrio | prioScope | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)] = _mapIcons[prio | NoPrio | prioScope];
     }
 }
 
