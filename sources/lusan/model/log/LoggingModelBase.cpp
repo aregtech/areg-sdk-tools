@@ -518,7 +518,6 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
 
     _cleanNodes();
     mRootList = std::move(logModel.mRootList);
-    Q_ASSERT(logModel.mRootList.size() == 0);
 
     mSelectedScope = std::move(logModel.mSelectedScope);
     logModel.mSelectedScope = QModelIndex();

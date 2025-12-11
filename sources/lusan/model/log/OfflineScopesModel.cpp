@@ -131,7 +131,7 @@ bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, uint32_t pr
     uint32_t prioRemove = ~prio;
     for (const auto& leaf : leafs)
     {
-        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
+        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
         uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] & prioRemove : static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs) & prioRemove;
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
