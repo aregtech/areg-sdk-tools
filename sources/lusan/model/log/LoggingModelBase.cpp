@@ -561,6 +561,16 @@ bool LoggingModelBase::applyFilters(uint32_t instId, const TEArrayList<LogSqlite
     return mDatabase.setupFilterLogs(instId, filter);
 }
 
+bool LoggingModelBase::resetFilters(uint32_t instId)
+{
+    return mDatabase.resetFilterMask(instId);
+}
+
+bool LoggingModelBase::disableFilters(uint32_t instId)
+{
+    return mDatabase.disableFilterMask(instId);
+}
+
 QString LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
 {
     Q_ASSERT(logMessage != nullptr);

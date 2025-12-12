@@ -117,13 +117,29 @@ unsigned int ScopeNodeBase::getPriority( void ) const
     return mPrioStates;
 }
 
+inline bool ScopeNodeBase::_isExactPrio(uint32_t prio) const
+{
+    switch (prio)
+    {
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioError):
+    case static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal):
+        return true;
+
+    default:
+        return false;
+    }
+}
+
 void ScopeNodeBase::setPriority( uint32_t prio)
 {
     if ((hasPrioValid() == false) || hasPrioNotset())
     {
         mPrioStates = prio;
     }
-    else if (hasLogScopes() && (prio != static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)))
+    else if (hasLogScopes() && (prio != static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)) && _isExactPrio(prio))
     {
         mPrioStates = prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
     }
@@ -142,6 +158,10 @@ void ScopeNodeBase::addPriority( unsigned int prio )
     if ((hasPrioValid() == false) || isLeaf())
     {
         ScopeNodeBase::setPriority(prio);
+    }
+    else if (hasPrioNotset())
+    {
+        mPrioStates = prio;
     }
     else
     {

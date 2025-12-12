@@ -896,7 +896,7 @@ namespace
         _mapIcons[prio] = infoErrorFatal;
         _mapIcons[prio | prioScope] = _setScopeRound(infoErrorFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
         
-        infoErrorFatal = _createRoundFourIconWithDiagonals(   _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
+        infoErrorFatal = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
@@ -949,6 +949,94 @@ namespace
         _mapIcons[prio | NoPrio] = dbgInfoWarnErr;
         _mapIcons[prio | NoPrio | prioScope] = _setScopeRound(dbgInfoWarnErr, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
         
+        // icon prio debug + info + warn + fatal
+        QIcon dbgInfoWarnFatal;
+        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+
+        dbgInfoWarnFatal = _createRoundFourIconWithDiagonals(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
+                                                           , false, pixels);
+        _mapIcons[prio] = dbgInfoWarnFatal;
+        _mapIcons[prio | prioScope] = _setScopeRound(dbgInfoWarnFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+
+        dbgInfoWarnFatal = _createRoundFourIconWithDiagonals(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
+                                                           , true, pixels);
+        _mapIcons[prio | NoPrio] = dbgInfoWarnFatal;
+        _mapIcons[prio | NoPrio | prioScope] = _setScopeRound(dbgInfoWarnFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+
+        // icon prio debug + info + error + fatal
+        QIcon dbgInfoErrFatal;
+        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+
+        dbgInfoErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
+                                                           , false, pixels);
+        _mapIcons[prio] = dbgInfoErrFatal;
+        _mapIcons[prio | prioScope] = _setScopeRound(dbgInfoErrFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+
+        dbgInfoErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
+                                                           , true, pixels);
+        _mapIcons[prio | NoPrio] = dbgInfoErrFatal;
+        _mapIcons[prio | NoPrio | prioScope] = _setScopeRound(dbgInfoErrFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+
+        // icon prio debug + warn + error + fatal
+        QIcon dbgWarnErrFatal;
+        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+
+        dbgWarnErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
+                                                           , false, pixels);
+        _mapIcons[prio] = dbgWarnErrFatal;
+        _mapIcons[prio | prioScope] = _setScopeRound(dbgWarnErrFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+
+        dbgWarnErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
+                                                           , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
+                                                           , true, pixels);
+        _mapIcons[prio | NoPrio] = dbgWarnErrFatal;
+        _mapIcons[prio | NoPrio | prioScope] = _setScopeRound(dbgWarnErrFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+
+        // icon prio info + warn + error + fatal
+        QIcon infoWarnErrFatal;
+        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+
+        infoWarnErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
+                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
+                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
+                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
+                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
+                                                            , false, pixels);
+        _mapIcons[prio] = infoWarnErrFatal;
+        _mapIcons[prio | prioScope] = _setScopeRound(infoWarnErrFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+
+        infoWarnErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
+                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
+                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
+                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
+                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
+                                                            , true, pixels);
+        _mapIcons[prio | NoPrio] = infoWarnErrFatal;
+        _mapIcons[prio | NoPrio | prioScope] = _setScopeRound(infoWarnErrFatal, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
+
         // icon prio all
         QIcon all;
         prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);

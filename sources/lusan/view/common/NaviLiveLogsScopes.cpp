@@ -183,6 +183,7 @@ void NaviLiveLogsScopes::setupWidgets(void)
     ctrlLogInfo()->setEnabled(false);
     ctrlLogDebug()->setEnabled(false);
     ctrlLogScopes()->setEnabled(false);
+
     ctrlTable()->setModel(mScopesModel);
     ctrlTable()->setContextMenuPolicy(Qt::CustomContextMenu);
     ctrlTable()->setAlternatingRowColors(false);
@@ -194,7 +195,7 @@ void NaviLiveLogsScopes::setupSignals(void)
     connect(ctrlMoveBottom()    , &QToolButton::clicked, this, &NaviLiveLogsScopes::onMoveBottomClicked);
     connect(ctrlSaveSettings()  , &QToolButton::clicked, this, &NaviLiveLogsScopes::onSaveSettingsClicked);
     connect(ctrlSettings()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onOptionsClicked);
-    connect(ctrlCollapse()      , &QToolButton::clicked, this, &NaviLiveLogsScopes::onCollapseClicked);
+    connect(ctrlCollapse()      , &QToolButton::clicked, this, [this](bool checked) {onCollapseClicked(checked, ctrlCollapse());});
     connect(ctrlTable()         , &QTreeView::expanded , this, [this](const QModelIndex& index) { onNodeExpanded(index, true , ctrlCollapse()); });
     connect(ctrlTable()         , &QTreeView::collapsed, this, [this](const QModelIndex& index) { onNodeExpanded(index, false, ctrlCollapse()); });;
     connect(ctrlTable()         , &QWidget::customContextMenuRequested  , this  , &NaviLiveLogsScopes::onTreeViewContextMenuRequested);
@@ -411,49 +412,6 @@ void NaviLiveLogsScopes::onOptionsClicked(bool checked)
     mMainWindow->showOptionPageLogging(address, hostName, port, logFile, logLocation);
 }
 
-void NaviLiveLogsScopes::onCollapseClicked(bool checked)
-{
-    Q_ASSERT(mScopesModel != nullptr);
-    if (mScopesModel->rowCount(mScopesModel->getRootIndex()) == 0)
-    {
-        ctrlCollapse()->blockSignals(true);
-        ctrlCollapse()->setChecked(false);        
-        ctrlCollapse()->blockSignals(false);
-        return;
-    }
-    
-    QTreeView * navi = ctrlTable();
-    if (checked)
-    {
-        ctrlCollapse()->blockSignals(true);
-        ctrlCollapse()->setIcon(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig));
-        ctrlCollapse()->setChecked(true);
-        
-        navi->blockSignals(true);
-        collapseRoots();
-        navi->expand(mScopesModel->getRootIndex());
-        mScopesModel->nodeExpanded(mScopesModel->getRootIndex());
-        navi->setCurrentIndex(mScopesModel->getRootIndex());
-        navi->blockSignals(false);
-        
-        ctrlCollapse()->blockSignals(false);
-    }
-    else
-    {
-        ctrlCollapse()->blockSignals(true);
-        ctrlCollapse()->setIcon(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig));
-        ctrlCollapse()->setChecked(false);
-        
-        navi->blockSignals(true);
-        navi->expandAll();
-        mScopesModel->nodeTreeExpanded(mScopesModel->getRootIndex());
-        navi->setCurrentIndex(mScopesModel->getRootIndex());
-        navi->blockSignals(false);
-        
-        ctrlCollapse()->blockSignals(false);
-    }
-}
-
 void NaviLiveLogsScopes::onRootUpdated(const QModelIndex & root)
 {
     Q_ASSERT(mScopesModel != nullptr);
@@ -585,6 +543,7 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     }
 
     mMenuActions[static_cast<int>(eLogActions::PrioNotset)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioNotset, false), tr("&Reset Priority"));
+    mMenuActions[static_cast<int>(eLogActions::PrioNotset)]->setEnabled(true);
     mMenuActions[static_cast<int>(eLogActions::PrioNotset)]->setCheckable(false);
 
     mMenuActions[static_cast<int>(eLogActions::PrioDebug)] = menu.addAction(LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, hasDebug), hasDebug ? tr("Hide &Debug messages") : tr("Show &Debug messages"));
@@ -612,26 +571,32 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     mMenuActions[static_cast<int>(eLogActions::PrioScope)]->setChecked(hasScope);
     
     mMenuActions[static_cast<int>(eLogActions::ExpandSelected)] = menu.addAction(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig), tr("Expand Selected"));
+    mMenuActions[static_cast<int>(eLogActions::ExpandSelected)]->setCheckable(false);
     mMenuActions[static_cast<int>(eLogActions::ExpandSelected)]->setEnabled((ctrlTable()->isExpanded(index) == false) && (node->hasChildren()));
     
     mMenuActions[static_cast<int>(eLogActions::CollapseSelected)] = menu.addAction(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig), tr("Collapse Selected"));
+    mMenuActions[static_cast<int>(eLogActions::CollapseSelected)]->setCheckable(false);
     mMenuActions[static_cast<int>(eLogActions::CollapseSelected)]->setEnabled(ctrlTable()->isExpanded(index) && node->hasChildren());
     
     mMenuActions[static_cast<int>(eLogActions::ExpandAll)] = menu.addAction(tr("Expand All"));
+    mMenuActions[static_cast<int>(eLogActions::ExpandAll)]->setCheckable(false);
     mMenuActions[static_cast<int>(eLogActions::ExpandAll)]->setEnabled(true);
 
     mMenuActions[static_cast<int>(eLogActions::CollapseAll)] = menu.addAction(tr("Collapse All"));
+    mMenuActions[static_cast<int>(eLogActions::CollapseAll)]->setCheckable(false);
     mMenuActions[static_cast<int>(eLogActions::CollapseAll)]->setEnabled(areRootsCollapsed() == false);
 
     mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)] = menu.addAction(NELusanCommon::iconSaveDocument(NELusanCommon::SizeBig), tr("&Save Selection on Target"));
+    mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)]->setCheckable(false);
     mMenuActions[static_cast<int>(eLogActions::SavePrioTarget)]->setEnabled(LogObserver::isConnected());
 
     mMenuActions[static_cast<int>(eLogActions::SavePrioAll)] = menu.addAction(tr("Save &All Targets"));
+    mMenuActions[static_cast<int>(eLogActions::SavePrioAll)]->setCheckable(false);
     mMenuActions[static_cast<int>(eLogActions::SavePrioAll)]->setEnabled(LogObserver::isConnected());
 
 
     QAction* selectedAction = menu.exec(ctrlTable()->viewport()->mapToGlobal(pos));
-    if (!selectedAction)
+    if (nullptr == selectedAction)
         return;
 
     if (selectedAction == mMenuActions[static_cast<int>(eLogActions::PrioNotset)])
@@ -674,11 +639,11 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     }
     else if (selectedAction == mMenuActions[eLogActions::ExpandAll])
     {
-        onCollapseClicked(true);
+        onCollapseClicked(true, ctrlCollapse());
     }
     else if (selectedAction == mMenuActions[eLogActions::CollapseAll])
     {
-        onCollapseClicked(false);
+        onCollapseClicked(false, ctrlCollapse());
     }
     else if (selectedAction == mMenuActions[eLogActions::SavePrioTarget])
     {

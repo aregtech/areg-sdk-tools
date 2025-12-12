@@ -24,10 +24,10 @@
  ************************************************************************/
 
 #include "lusan/view/common/NaviLogScopeBase.hpp"
-#include "areg/logging/NELogging.hpp"
 
-#include <QWidget>
+#include <QList>
 #include <QString>
+#include <QWidget>
 
 /************************************************************************
  * Dependencies
@@ -37,6 +37,7 @@ class OfflineLogsModel;
 class OfflineScopesModel;
 class MdiMainWindow;
 class ScopeNodeBase;
+class QAction;
 class QToolButton;
 class QTreeView;
 class QVBoxLayout;
@@ -56,6 +57,25 @@ namespace Ui {
 class NaviOfflineLogsScopes : public NaviLogScopeBase
 {
     Q_OBJECT
+
+    //!< The priority indexes for the context menu entries.
+    enum eLogActions
+    {
+          PrioNotset    = 0 //!< Reset priorities
+        , PrioAllset        //!< Set all priorities
+        , PrioDebug         //!< Set debug priority
+        , PrioInfo          //!< Set info priority
+        , PrioWarn          //!< Set warning priority
+        , PrioError         //!< Set error priority
+        , PrioFatal         //!< Set fatal priority
+        , PrioScope         //!< Set scope priority
+        , ExpandSelected    //!< Expands selected node
+        , CollapseSelected  //!< Collapse selected node
+        , ExpandAll         //!< Expand all nodes
+        , CollapseAll       //!< Collapse all nodes
+
+        , PrioCount         //!< The number of entries in the menu
+    };
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors / Destructor
@@ -228,11 +248,18 @@ private slots:
      **/
     void onScopesInserted(const QModelIndex & parent);
 
+    /**
+     * \brief   Slot triggered when the user makes right click on the scope navigation window.
+     * \param   pos     The mouse right click cursor position on scope navigation window.
+     **/
+    void onTreeViewContextMenuRequested(const QPoint& pos);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     Ui::NaviOfflineLogsScopes*  ui;             //!< The user interface object.
+    QList<QAction*>             mMenuActions;   //!< The list of menu actions
 };
 
 #endif  // LUSAN_VIEW_COMMON_NAVIOFFLINELOGSSCOPES_HPP
