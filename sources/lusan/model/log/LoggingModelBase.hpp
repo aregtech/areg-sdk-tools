@@ -599,7 +599,23 @@ public:
      * \return  True if filters are applied successfully, false otherwise.
      **/
     virtual bool applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter);
-    
+
+    /**
+     * \brief   Resets the filters for the specified instance.
+     *          If `instId` is `NEService::TARGET_ALL`, resets filters for all instances.
+     * \param   instId  The ID of the instance to reset filters. If `NEService::TARGET_ALL`, resets for all instances.
+     * \return  True if filters are reset successfully, false otherwise.
+     **/
+    virtual bool resetFilters(uint32_t instId = NEService::TARGET_ALL);
+
+    /**
+     * \brief   Disables the filters for the specified instance.
+     *          If `instId` is `NEService::TARGET_ALL`, disables filters for all instances.
+     * \param   instId  The ID of the instance to disable filters. If `NEService::TARGET_ALL`, disables for all instances.
+     * \return  True if filters are disabled successfully, false otherwise.
+     **/
+    virtual bool disableFilters(uint32_t instId = NEService::TARGET_ALL);
+
 //////////////////////////////////////////////////////////////////////////
 // Helper methods
 //////////////////////////////////////////////////////////////////////////

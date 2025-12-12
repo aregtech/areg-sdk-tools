@@ -132,6 +132,9 @@ public:
      **/
     virtual LoggingModelBase* getLoggingModel(void) const;
 
+    // Call to collapse and expand nodes.
+    virtual void onCollapseClicked(bool checked, QToolButton* button);
+
 protected:
 
     /**

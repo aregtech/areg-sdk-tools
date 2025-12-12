@@ -51,30 +51,56 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
         return false;
 
     ITEM_ID instId{ static_cast<ScopeRoot*>(root)->getRootId() };
-    auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
-    ASSERT(mMapScopeFilter.isValidPosition(pos));
-    ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
-    ListScopeFilter filter;
-    std::vector<ScopeNodeBase*> leafs;
-    if (node->isLeaf())
-        leafs.push_back(node);
-    else if (node->extractNodeLeafs(leafs) == 0u)
-        return false;
-
-    uint32_t scopePrio = _logFilterPrio(prio);
-    for (const auto& leaf : leafs)
+    node->setPriority(prio == 0u ? static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset) : prio);
+    if ((node == root) && (prio == static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)))
     {
-        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
-        if (scopeId == NELogging::LOG_SCOPE_ID_NONE)
-            continue;
+        // Remove log priority
+        auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
+        ASSERT(mMapScopeFilter.isValidPosition(pos));
+        ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
+        for (auto pos = filterPrio.firstPosition(); filterPrio.isValidPosition(pos); pos = filterPrio.nextPosition(pos))
+            filterPrio.valueAtPosition(pos) = 0u;
 
-        filterPrio[scopeId] = scopePrio;
-        filter.add({ scopeId, scopePrio });
+        mLoggingModel->disableFilters(instId);
+    }
+    else if ((node == root) && (prio == static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs)))
+    {
+        // Reset log priority
+        auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
+        ASSERT(mMapScopeFilter.isValidPosition(pos));
+        ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
+        for (auto pos = filterPrio.firstPosition(); filterPrio.isValidPosition(pos); pos = filterPrio.nextPosition(pos))
+            filterPrio.valueAtPosition(pos) = static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs);
+
+        mLoggingModel->resetFilters(instId);
+    }
+    else
+    {
+        auto pos = mMapScopeFilter.addIfUnique(instId, ScopeFilters{}, false).first;
+        ASSERT(mMapScopeFilter.isValidPosition(pos));
+        ScopeFilters& filterPrio = mMapScopeFilter.valueAtPosition(pos);
+        ListScopeFilter filter;
+        std::vector<ScopeNodeBase*> leafs;
+        if (node->isLeaf())
+            leafs.push_back(node);
+        else if (node->extractNodeLeafs(leafs) == 0u)
+            return false;
+
+        uint32_t scopePrio = _logFilterPrio(prio);
+        for (const auto& leaf : leafs)
+        {
+            uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
+            if (scopeId == NELogging::LOG_SCOPE_ID_NONE)
+                continue;
+
+            filterPrio[scopeId] = scopePrio;
+            filter.add({ scopeId, scopePrio });
+        }
+
+        mLoggingModel->applyFilters(instId, filter);
     }
 
-    mLoggingModel->applyFilters(instId, filter);
     mLoggingModel->readLogsAsynchronous(-1);
-
     return true;
 }
 
@@ -96,9 +122,10 @@ bool OfflineScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
     else if (node->extractNodeLeafs(leafs) == 0u)
         return false;
 
+    node->addPriority(prio);
     for (const auto& leaf : leafs)
     {
-        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getPriority();
+        uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
         uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | prio : static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs);
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
@@ -129,6 +156,7 @@ bool OfflineScopesModel::removeLogPriority(const QModelIndex& index, uint32_t pr
         return false;
     
     uint32_t prioRemove = ~prio;
+    node->removePriority(prio);
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();

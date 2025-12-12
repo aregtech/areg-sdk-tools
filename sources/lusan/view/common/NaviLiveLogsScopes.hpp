@@ -315,9 +315,6 @@ private slots:
     // Slot for opening the options dialog.
     void onOptionsClicked(bool checked);
 
-    // Slot for collapsing and expanding nodes.
-    void onCollapseClicked(bool checked);
-    
     /**
      * \brief   The signal triggered when receive the list of connected instances that make logs.
      * \param   instances   The list of the connected instances.

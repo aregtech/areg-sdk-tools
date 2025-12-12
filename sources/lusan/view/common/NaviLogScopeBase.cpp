@@ -321,3 +321,48 @@ LoggingModelBase* NaviLogScopeBase::getLoggingModel(void) const
     Q_ASSERT(mScopesModel != nullptr);
     return mScopesModel->getLoggingModel();
 }
+
+void NaviLogScopeBase::onCollapseClicked(bool checked, QToolButton* button)
+{
+    Q_ASSERT(mScopesModel != nullptr);
+    Q_ASSERT(button != nullptr);
+    Q_ASSERT(mNaviTree != nullptr);
+
+    if (mScopesModel->rowCount(mScopesModel->getRootIndex()) == 0)
+    {
+        button->blockSignals(true);
+        button->setChecked(false);
+        button->blockSignals(false);
+        return;
+    }
+
+    if (checked)
+    {
+        button->blockSignals(true);
+        button->setIcon(NELusanCommon::iconNodeExpanded(NELusanCommon::SizeBig));
+        button->setChecked(true);
+
+        mNaviTree->blockSignals(true);
+        collapseRoots();
+        mNaviTree->expand(mScopesModel->getRootIndex());
+        mScopesModel->nodeExpanded(mScopesModel->getRootIndex());
+        mNaviTree->setCurrentIndex(mScopesModel->getRootIndex());
+        mNaviTree->blockSignals(false);
+
+        button->blockSignals(false);
+    }
+    else
+    {
+        button->blockSignals(true);
+        button->setIcon(NELusanCommon::iconNodeCollapsed(NELusanCommon::SizeBig));
+        button->setChecked(false);
+
+        mNaviTree->blockSignals(true);
+        mNaviTree->expandAll();
+        mScopesModel->nodeTreeExpanded(mScopesModel->getRootIndex());
+        mNaviTree->setCurrentIndex(mScopesModel->getRootIndex());
+        mNaviTree->blockSignals(false);
+
+        button->blockSignals(false);
+    }
+}
