@@ -32,7 +32,7 @@ This is intentional: Areg’s logging system is tightly coupled with its runtime
 
 > [!NOTE]
 > Lusan is **not a general-purpose log viewer**. It relies on the Areg SDK’s built-in logging system. If your application does not use Areg’s communication engine, you must still integrate the Areg library and enable logging (while disabling unused features) to use Lusan.  
-> **Example** of integrating Areg logging without using other Areg features: **[Areg Logging Only Example]**(https://github.com/aregtech/areg-sdk/blob/master/examples/07_logging/src/main.cpp)
+> **Example** of integrating Areg logging without using other Areg features: [**Areg Logging Only Example**](https://github.com/aregtech/areg-sdk/blob/master/examples/07_logging/src/main.cpp).
 
 ---
 
