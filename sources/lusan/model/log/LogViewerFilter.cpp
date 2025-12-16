@@ -88,7 +88,7 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::Filt
             
         case LoggingModelBase::eColumn::LogColumnTimeDuration:
         {   
-            uint32_t duration = filter.text.isEmpty() ? 0u : filter.text.toUInt();
+            uint32_t duration = filter.text.toUInt();
             mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<uint32_t>(duration), true} };
         }
         break;
