@@ -189,8 +189,8 @@ private:
 protected:
     QMap<int, NELusanCommon::FilterList>    mComboFilters;  //!< Map of column index to selected filter items
     QMap<int, NELusanCommon::FilterList>    mTextFilters;   //!< Map of column index to filter text
-    QString                                 mRePattern;     //<!< Regular expression pattern for wildcard matching
-    QRegularExpression                      mReExpression;  //<!< Regular expression for wildcard matching
+    QString                                 mRePattern;     //!< Regular expression pattern for wildcard matching
+    QRegularExpression                      mReExpression;  //!< Regular expression for wildcard matching
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call
