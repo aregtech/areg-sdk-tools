@@ -2,8 +2,8 @@ option(CMAKE_AUTOUIC "Handle UIC automatically for Qt targets" ON)
 option(CMAKE_AUTOMOC "Handle MOC automatically for Qt targets" ON)
 option(CMAKE_AUTORCC "Handle RCC automatically for Qt targets" ON)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets LinguistTools)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Widgets LinguistTools)
 
 set(AREG_BINARY         shared)
 set(AREG_LOGGER_BINARY  shared)
