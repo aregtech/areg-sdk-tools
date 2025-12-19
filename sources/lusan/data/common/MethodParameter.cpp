@@ -7,7 +7,7 @@
  *  providing essential features for developers.
  *
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
- *  with this distribution or contact us at info[at]aregtech.com.
+ *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/data/common/MethodParameter.cpp

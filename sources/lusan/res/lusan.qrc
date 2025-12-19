@@ -1,5 +1,5 @@
 ﻿<RCC>
-    <qresource lang="log-prio-fatal" prefix="/icons">
+    <qresource lang="lusan-icons" prefix="/icons">
         <file alias="entry add">icons/sign-plus.svg</file>
         <file alias="entry delete">icons/sign-minus.svg</file>
         <file alias="field add">icons/sign-plus-field.svg</file>

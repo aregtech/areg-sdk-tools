@@ -10,7 +10,7 @@ set(APP_NAME lusan)
 project("${PROJECT_NAME}" 
         VERSION "${PROJECT_VERSION}" 
         DESCRIPTION "The user interface tools for AREG communication framework" 
-        HOMEPAGE_URL "https://aregtech.com" 
+        HOMEPAGE_URL "https://areg.tech" 
         LANGUAGES CXX
 )
 
@@ -68,6 +68,37 @@ set_target_properties(${APP_NAME} PROPERTIES
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
+
+get_target_property(_qt_bin_dir Qt6::qmake IMPORTED_LOCATION)
+get_filename_component(_qt_bin_dir "${_qt_bin_dir}" DIRECTORY)
+if (WIN32)
+    add_custom_command(TARGET lusan POST_BUILD
+        COMMAND "${_qt_bin_dir}/windeployqt.exe"
+            --no-opengl-sw
+            --no-compiler-runtime
+            --no-translations
+            --no-system-dxc-compiler
+            --no-quick-import
+            --no-ffmpeg
+            "$<TARGET_FILE:${APP_NAME}>"
+        COMMENT "Deploying Qt runtime libraries for Win32"
+    )
+elseif (APPLE)
+    add_custom_command(TARGET lusan POST_BUILD
+        COMMAND "${_qt_bin_dir}/macdeployqt .exe"
+            --no-opengl-sw
+            --no-compiler-runtime
+            --no-translations
+            --no-system-dxc-compiler
+            --no-quick-import
+            --no-ffmpeg
+            "$<TARGET_FILE:${APP_NAME}>"
+        COMMENT "Deploying Qt runtime libraries for macOS"
+    )
+else()
+    message(STATUS "Qt deployment skipped on Linux (handled by system packaging)")
+endif()
+
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(${APP_NAME})
