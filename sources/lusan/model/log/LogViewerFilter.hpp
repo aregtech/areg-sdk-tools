@@ -9,7 +9,7 @@
  *  providing essential features for developers.
  *
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
- *  with this distribution or contact us at info[at]aregtech.com.
+ *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/model/log/LogViewerFilter.hpp
@@ -189,8 +189,8 @@ private:
 protected:
     QMap<int, NELusanCommon::FilterList>    mComboFilters;  //!< Map of column index to selected filter items
     QMap<int, NELusanCommon::FilterList>    mTextFilters;   //!< Map of column index to filter text
-    QString                                 mRePattern;     //<!< Regular expression pattern for wildcard matching
-    QRegularExpression                      mReExpression;  //<!< Regular expression for wildcard matching
+    QString                                 mRePattern;     //!< Regular expression pattern for wildcard matching
+    QRegularExpression                      mReExpression;  //!< Regular expression for wildcard matching
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden call

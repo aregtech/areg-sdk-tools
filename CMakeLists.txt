@@ -74,17 +74,25 @@ get_filename_component(_qt_bin_dir "${_qt_bin_dir}" DIRECTORY)
 if (WIN32)
     add_custom_command(TARGET lusan POST_BUILD
         COMMAND "${_qt_bin_dir}/windeployqt.exe"
-                --no-opengl-sw
-                --no-angle
-                "$<TARGET_FILE:lusan>"
+            --no-opengl-sw
+            --no-compiler-runtime
+            --no-translations
+            --no-system-dxc-compiler
+            --no-quick-import
+            --no-ffmpeg
+            "$<TARGET_FILE:${APP_NAME}>"
         COMMENT "Deploying Qt runtime libraries for Win32"
     )
 elseif (APPLE)
     add_custom_command(TARGET lusan POST_BUILD
         COMMAND "${_qt_bin_dir}/macdeployqt .exe"
-                --no-opengl-sw
-                --no-angle
-                "$<TARGET_FILE:lusan>"
+            --no-opengl-sw
+            --no-compiler-runtime
+            --no-translations
+            --no-system-dxc-compiler
+            --no-quick-import
+            --no-ffmpeg
+            "$<TARGET_FILE:${APP_NAME}>"
         COMMENT "Deploying Qt runtime libraries for macOS"
     )
 else()

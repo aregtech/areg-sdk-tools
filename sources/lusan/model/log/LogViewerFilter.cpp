@@ -7,7 +7,7 @@
  *  providing essential features for developers.
  *
  *  For detailed licensing terms, please refer to the LICENSE.txt file included
- *  with this distribution or contact us at info[at]aregtech.com.
+ *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
  *  \file        lusan/model/log/LogViewerFilter.cpp
@@ -78,13 +78,31 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::Filt
     }
     else
     {
-        mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<NELusanCommon::FilterString>(filter), true} };
         LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
-        if ((model != nullptr) && (model->fromIndexToColumn(logicalColumn) == LoggingModelBase::eColumn::LogColumnMessage))
+        LoggingModelBase::eColumn ecol = model != nullptr ? model->fromIndexToColumn(logicalColumn) : LoggingModelBase::eColumn::LogColumnInvalid;
+        switch (ecol)
         {
+        case LoggingModelBase::eColumn::LogColumnInvalid:
+            mTextFilters.clear();
+            break;
+            
+        case LoggingModelBase::eColumn::LogColumnTimeDuration:
+        {   
+            uint32_t duration = filter.text.toUInt();
+            mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<uint32_t>(duration), true} };
+        }
+        break;
+        
+        case LoggingModelBase::eColumn::LogColumnMessage:
+            mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<NELusanCommon::FilterString>(filter), true} };
             // If the filter is set, prepare regex
             // to ensure that the model updates correctly.
             prepareReExpression(filter.text, filter.isCaseSensitive, filter.isWholeWord, filter.isWildCard);
+            break;
+        
+        default:
+            mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<NELusanCommon::FilterString>(filter), true} };
+            break;
         }
 
         invalidateFilter();
@@ -182,7 +200,7 @@ NELusanCommon::eMatchType LogViewerFilter::matchesTextFilters(LoggingModelBase* 
         switch (ecol)
         {
         case LoggingModelBase::eColumn::LogColumnTimeDuration:
-            matchType = matchThreads(msg, filters) ? NELusanCommon::eMatchType::ExactMatch : NELusanCommon::eMatchType::NoMatch;
+            matchType = matchDuration(msg, filters) ? NELusanCommon::eMatchType::ExactMatch : NELusanCommon::eMatchType::NoMatch;
             break;
 
         case LoggingModelBase::eColumn::LogColumnMessage:
@@ -249,7 +267,7 @@ inline bool LogViewerFilter::matchThreads(const NELogging::sLogMessage* msg, con
 
 inline bool LogViewerFilter::matchDuration(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
 {
-    return (msg->logDuration >= std::any_cast<uint16_t>(filters[0].data));
+    return (msg->logDuration >= std::any_cast<uint32_t>(filters[0].data));
 }
 
 inline bool LogViewerFilter::matchMessage(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
