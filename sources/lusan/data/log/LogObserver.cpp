@@ -337,7 +337,7 @@ void LogObserver::startupServiceInterface(Component & holder)
     emit signalLogObserverInstance(true, address, port, logFile);
 }
 
-void LogObserver::shutdownServiceIntrface(Component & holder)
+void LogObserver::shutdownServiceInterface(Component & holder)
 {
     QString address { mLogClient.getLoggerIpAddress().c_str() };
     uint16_t port   { mLogClient.getLoggerPort() };
@@ -347,7 +347,7 @@ void LogObserver::shutdownServiceIntrface(Component & holder)
 
     static_cast<LogObserverBase &>(mLogClient).stop();
     static_cast<LogObserverBase &>(mLogClient).disconnect();
-    StubBase::shutdownServiceIntrface(holder);
+    StubBase::shutdownServiceInterface(holder);
     
     LogObserverEvent::removeListener(static_cast<IELogObserverEventConsumer &>(self()), getComponentThread());
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogObserverConfigured    , this, &LogObserver::slotLogObserverConfigured);

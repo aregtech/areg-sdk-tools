@@ -472,7 +472,7 @@ protected:
      * \brief   This function is triggered by Component when shuts down.
      * \param   holder  The holder component of service interface of Stub.
      **/
-    virtual void shutdownServiceIntrface ( Component & holder ) override;
+    virtual void shutdownServiceInterface( Component & holder ) override;
 
 //////////////////////////////////////////////////////////////////////////
 // These methods must exist, but can have empty body
