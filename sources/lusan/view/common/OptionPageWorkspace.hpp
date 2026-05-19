@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP
+#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP
 #define LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -189,7 +189,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     OptionPageWorkspace(void) = delete;
-    DECLARE_NOCOPY_NOMOVE(OptionPageWorkspace);
+    AREG_NOCOPY_NOMOVE(OptionPageWorkspace);
 };
 
 #endif // LUSAN_VIEW_COMMON_OPTIONPAGEWORKSPACE_HPP

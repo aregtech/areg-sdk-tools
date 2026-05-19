@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP
+#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP
 #define LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -129,7 +129,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     OptionPageProjectDirs(void) = delete;
-    DECLARE_NOCOPY_NOMOVE(OptionPageProjectDirs);
+    AREG_NOCOPY_NOMOVE(OptionPageProjectDirs);
 };
 
 #endif // LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP

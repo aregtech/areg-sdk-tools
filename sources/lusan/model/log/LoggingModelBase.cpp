@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -80,9 +80,9 @@ const QString & LoggingModelBase::getFileExtension()
 
 LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject* parent)
     : TableModelBase (parent)
-    , mLoggingType  (logsType)
     , mDatabase     ( )
-    , mStatement    (mDatabase.getDatabase())
+    , mStatement    (mDatabase.database())
+    , mLoggingType  (logsType)
     , mActiveColumns(getDefaultColumns())
     , mRootList     ( )
     , mLogs         ( )
@@ -92,7 +92,7 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mScopes       ( )
     , mLogChunk     (-1)
     , mLogCount     (0)
-    , mReadThread   (static_cast<IEThreadConsumer &>(self()), "_LogReadingThread_")
+    , mReadThread   (static_cast<areg::ThreadConsumer &>(self()), "_LogReadingThread_")
     , mQuitThread   (false)
     , mScopeFilter  (nullptr)
 {
@@ -185,9 +185,9 @@ QVariant LoggingModelBase::data(const QModelIndex& index, int role) const
     if ((col < 0) || (col >= static_cast<int>(mActiveColumns.size())))
         return QVariant();
     
-    const SharedBuffer & logData {mLogs[row]};
-    Q_ASSERT(logData.isValid());
-    const NELogging::sLogMessage* logMessage = reinterpret_cast<const NELogging::sLogMessage*>(logData.getBuffer());
+    const areg::SharedBuffer & logData {mLogs[row]};
+    Q_ASSERT(logData.is_valid());
+    const areg::LogEntry* logMessage = reinterpret_cast<const areg::LogEntry*>(logData.buffer());
     if (logMessage == nullptr)
         return QVariant();
     
@@ -282,8 +282,8 @@ void LoggingModelBase::releaseModel(void)
 
 void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
 {
-    std::string path(File::normalizePath(dbPath.toStdString().c_str()));
-    if (mDatabase.getDatabasePath() != path)
+    std::string path(areg::File::normalize_path(dbPath.toStdString().c_str()));
+    if (mDatabase.database_path() != path)
     {
         mDatabase.connect(path, readOnly);
     }
@@ -291,7 +291,7 @@ void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
 
 QString LoggingModelBase::getDatabasePath(void) const
 {
-    return QString::fromStdString(mDatabase.getDatabasePath().getData());
+    return QString::fromStdString(mDatabase.database_path().data());
 }
 
 void LoggingModelBase::closeDatabase(void)
@@ -301,12 +301,12 @@ void LoggingModelBase::closeDatabase(void)
 
 bool LoggingModelBase::isOperable(void) const
 {
-    return mDatabase.isOperable();
+    return mDatabase.is_operable();
 }
 
-void LoggingModelBase::getLogInstanceNames(std::vector<String>& names)
+void LoggingModelBase::getLogInstanceNames(std::vector<areg::String>& names)
 {
-    const std::vector< NEService::sServiceConnectedInstance> & instances{getLogInstances()};
+    const std::vector< areg::ConnectedInstance> & instances{getLogInstances()};
     names.clear();
     for (const auto& instance : instances)
     {
@@ -316,7 +316,7 @@ void LoggingModelBase::getLogInstanceNames(std::vector<String>& names)
 
 void LoggingModelBase::getLogInstanceIds(std::vector<ITEM_ID>& ids)
 {
-    const std::vector< NEService::sServiceConnectedInstance> & instances{getLogInstances()};
+    const std::vector< areg::ConnectedInstance> & instances{getLogInstances()};
     ids.clear();
     for (const auto& instance : instances)
     {
@@ -324,9 +324,9 @@ void LoggingModelBase::getLogInstanceIds(std::vector<ITEM_ID>& ids)
     }
 }
 
-void LoggingModelBase::getLogInstances(std::vector<String>&names, std::vector<std::any>& ids)
+void LoggingModelBase::getLogInstances(std::vector<areg::String>&names, std::vector<std::any>& ids)
 {
-    const std::vector< NEService::sServiceConnectedInstance> & instances{getLogInstances()};
+    const std::vector< areg::ConnectedInstance> & instances{getLogInstances()};
     for (const auto& instance : instances)
     {
         names.push_back(instance.ciInstance);
@@ -334,92 +334,92 @@ void LoggingModelBase::getLogInstances(std::vector<String>&names, std::vector<st
     }
 }
     
-void LoggingModelBase::getLogThreadNames(std::vector<String>& names)
+void LoggingModelBase::getLogThreadNames(std::vector<areg::String>& names)
 {
-    mDatabase.getLogThreadNames(names);
+    mDatabase.log_thread_names(names);
 }
 
 void LoggingModelBase::getLogThreads(std::vector<ITEM_ID>& ids)
 {
-    mDatabase.getLogThreads(ids);
+    mDatabase.log_threads(ids);
 }
 
-void LoggingModelBase::getLogThreadValues(std::vector<String>& names, std::vector<std::any>& ids)
+void LoggingModelBase::getLogThreadValues(std::vector<areg::String>& names, std::vector<std::any>& ids)
 {
     std::vector<ITEM_ID> tids;
-    mDatabase.getLogThreadNames(names);
-    mDatabase.getLogThreads(tids);
+    mDatabase.log_thread_names(names);
+    mDatabase.log_threads(tids);
     for (auto id : tids)
     {
         ids.push_back(std::make_any<ITEM_ID>(id));
     }
 }
 
-void LoggingModelBase::getPriorityNames(std::vector<String>& names)
+void LoggingModelBase::getPriorityNames(std::vector<areg::String>& names)
 {
-    mDatabase.getPriorityNames(names);
+    mDatabase.log_priority_names(names);
 }
 
-void LoggingModelBase::getPriorityValues(std::vector<String>& names, std::vector<std::any>& values)
+void LoggingModelBase::getPriorityValues(std::vector<areg::String>& names, std::vector<std::any>& values)
 {
-    mDatabase.getPriorityNames(names);
+    mDatabase.log_priority_names(names);
     for (const auto & name : names)
     {
-        NELogging::eLogPriority prio = name.isEmpty() ? NELogging::eLogPriority::PrioAny : NELogging::stringToLogPrio(name);
+        areg::LogPriority prio = name.is_empty() ? areg::LogPriority::PrioAny : areg::string_to_priority(name);
         values.push_back(std::make_any<uint16_t>(static_cast<uint16_t>(prio)));
     }
 }
 
-const std::vector< NEService::sServiceConnectedInstance> & LoggingModelBase::getLogInstances(void)
+const std::vector< areg::ConnectedInstance> & LoggingModelBase::getLogInstances(void)
 {
     if (isOfflineLogging() && mInstances.empty())
     {
-        mDatabase.getLogInstanceInfos(mInstances);
+        mDatabase.log_instance_infos(mInstances);
     }
 
     return mInstances;
 }
 
-const std::vector<NELogging::sScopeInfo> & LoggingModelBase::getLogInstScopes(ITEM_ID instId)
+const std::vector<areg::ScopeEntry> & LoggingModelBase::getLogInstScopes(ITEM_ID instId)
 {
-    static std::vector<NELogging::sScopeInfo> _dummy;
+    static std::vector<areg::ScopeEntry> _dummy;
     if (isOfflineLogging() && mScopes.empty())
     {
-        mDatabase.getLogInstScopes(mScopes[instId], instId);
+        mDatabase.log_inst_scopes(mScopes[instId], instId);
     }
     
     return (mScopes.find(instId) != mScopes.end() ? mScopes.at(instId) : _dummy); 
 }
 
-const std::vector<SharedBuffer>& LoggingModelBase::getLogMessages()
+const std::vector<areg::SharedBuffer>& LoggingModelBase::getLogMessages()
 {
     if (isOfflineLogging() && (mLogCount == 0))
     {
-        mDatabase.getLogMessages(mLogs);
+        mDatabase.log_messages(mLogs);
     }
 
     return mLogs;
 }
 
-void LoggingModelBase::getLogInstMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId /*= NEService::COOKIE_ANY*/)
+void LoggingModelBase::getLogInstMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId /*= areg::COOKIE_ANY*/)
 {
-    mDatabase.getLogInstMessages(messages, instId);
+    mDatabase.log_inst_messages(messages, instId);
 }
 
-void LoggingModelBase::getLogScopeMessages(std::vector<SharedBuffer>& messages, uint32_t scopeId /*= 0*/)
+void LoggingModelBase::getLogScopeMessages(std::vector<areg::SharedBuffer>& messages, uint32_t scopeId /*= 0*/)
 {
-    mDatabase.getLogScopeMessages(messages, scopeId);
+    mDatabase.log_scope_messages(messages, scopeId);
 }
 
-void LoggingModelBase::getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId)
+void LoggingModelBase::getLogMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId)
 {
-    mDatabase.getLogMessages(messages, instId, scopeId);
+    mDatabase.log_messages(messages, instId, scopeId);
 }
 
 int LoggingModelBase::findInstanceEntry(ITEM_ID instId)
 {
-    int result{ NECommon::INVALID_INDEX };
-    const std::vector<NEService::sServiceConnectedInstance> & instances = getLogInstances();
+    int result{ areg::INVALID_INDEX };
+    const std::vector<areg::ConnectedInstance> & instances = getLogInstances();
     for (int i = 0; i < static_cast<int>(instances.size()); ++ i)
     {
         if (instances[i].ciCookie == instId)
@@ -432,19 +432,19 @@ int LoggingModelBase::findInstanceEntry(ITEM_ID instId)
     return result;
 }
 
-const NEService::sServiceConnectedInstance& LoggingModelBase::getInstanceEntry(ITEM_ID instId)
+const areg::ConnectedInstance& LoggingModelBase::getInstanceEntry(ITEM_ID instId)
 {
-    static const NEService::sServiceConnectedInstance _instInvalid;
+    static const areg::ConnectedInstance _instInvalid;
     int pos = findInstanceEntry(instId);
-    const std::vector<NEService::sServiceConnectedInstance>& instances = getLogInstances();
-    return (pos != NECommon::INVALID_INDEX ? instances[pos] : _instInvalid);
+    const std::vector<areg::ConnectedInstance>& instances = getLogInstances();
+    return (pos != areg::INVALID_INDEX ? instances[pos] : _instInvalid);
 }
 
-bool LoggingModelBase::addInstanceEntry(const NEService::sServiceConnectedInstance& instance, bool unique)
+bool LoggingModelBase::addInstanceEntry(const areg::ConnectedInstance& instance, bool unique)
 {
     bool result{ false };
     int pos = findInstanceEntry(instance.ciCookie);
-    if ((pos == NECommon::INVALID_INDEX) || (unique == false))
+    if ((pos == areg::INVALID_INDEX) || (unique == false))
     {
         mInstances.push_back(instance);
         result = true;
@@ -459,7 +459,7 @@ bool LoggingModelBase::addInstanceEntry(const NEService::sServiceConnectedInstan
 
 int LoggingModelBase::removeInstanceEntry(ITEM_ID instId)
 {
-    int result{ NECommon::INVALID_INDEX };
+    int result{ areg::INVALID_INDEX };
     for (int i = 0; i < static_cast<int>(mInstances.size()); ++i)
     {
         if (mInstances[i].ciCookie == instId)
@@ -473,7 +473,7 @@ int LoggingModelBase::removeInstanceEntry(ITEM_ID instId)
     return result;
 }
 
-int LoggingModelBase::addInstances(const std::vector<NEService::sServiceConnectedInstance>& instances, bool unique)
+int LoggingModelBase::addInstances(const std::vector<areg::ConnectedInstance>& instances, bool unique)
 {
     int result{ 0 };
     for (const auto& instance : instances)
@@ -484,12 +484,12 @@ int LoggingModelBase::addInstances(const std::vector<NEService::sServiceConnecte
     return result;
 }
 
-int LoggingModelBase::removeInstances(const std::vector<NEService::sServiceConnectedInstance>& instances)
+int LoggingModelBase::removeInstances(const std::vector<areg::ConnectedInstance>& instances)
 {
     int result{ 0 };
     for (const auto& instance : instances)
     {
-        result += removeInstanceEntry(instance.ciCookie) != NECommon::INVALID_INDEX ? 1 : 0;
+        result += removeInstanceEntry(instance.ciCookie) != areg::INVALID_INDEX ? 1 : 0;
     }
 
     return result;
@@ -526,9 +526,9 @@ void LoggingModelBase::dataTransfer(LoggingModelBase& logModel)
     logModel.mSelectedLog = QModelIndex();
 
     mDatabase.disconnect();
-    if (logModel.mDatabase.isOperable())
+    if (logModel.mDatabase.is_operable())
     {
-        mDatabase.connect(logModel.mDatabase.getDatabasePath(), true);
+        mDatabase.connect(logModel.mDatabase.database_path(), true);
     }
 
     logModel.mDatabase.disconnect();
@@ -543,48 +543,48 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     mLogChunk = maxEntries;
     mLogCount = 0u;
     
-    uint32_t count = setupLogStatement(NEService::TARGET_ALL);
+    uint32_t count = setupLogStatement(areg::TARGET_ALL);
     if (count == 0)
         return;
 
     mLogs.resize(count);
-    mReadThread.createThread(NECommon::DO_NOT_WAIT);
+    mReadThread.start(areg::DO_NOT_WAIT);
 }
 
-uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId /*= NEService::TARGET_ALL*/)
+uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId /*= areg::TARGET_ALL*/)
 {
-    return mDatabase.setupStatementReadLogs(mStatement, instId);
+    return mDatabase.setup_statement_read_logs(mStatement, instId);
 }
 
-bool LoggingModelBase::applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter)
+bool LoggingModelBase::applyFilters(uint32_t instId, const areg::ArrayList<areg::ext::LogSqliteDatabase::ScopeFilter>& filter)
 {
-    return mDatabase.setupFilterLogs(instId, filter);
+    return mDatabase.setup_filter_logs(instId, filter);
 }
 
 bool LoggingModelBase::resetFilters(uint32_t instId)
 {
-    return mDatabase.resetFilterMask(instId);
+    return mDatabase.reset(instId);
 }
 
 bool LoggingModelBase::disableFilters(uint32_t instId)
 {
-    return mDatabase.disableFilterMask(instId);
+    return mDatabase.disable_filter_mask(instId);
 }
 
-QString LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QString LoggingModelBase::getDisplayData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_ASSERT(logMessage != nullptr);
 
     switch (column)
     {
     case eColumn::LogColumnPriority:
-        return QString::fromStdString(NELogging::logPrioToString(logMessage->logMessagePrio).getData());
+        return QString::fromStdString(areg::priority_to_string(logMessage->logMessagePrio).data());
 
     case eColumn::LogColumnTimestamp:
-        return QString::fromStdString(DateTime(logMessage->logTimestamp).formatTime().getData());
+        return QString::fromStdString(areg::DateTime(logMessage->logTimestamp).format_time().data());
 
     case eColumn::LogColumnTimeReceived:
-        return QString::fromStdString(DateTime(logMessage->logReceived).formatTime().getData());
+        return QString::fromStdString(areg::DateTime(logMessage->logReceived).format_time().data());
     
     case eColumn::LogColumnTimeDuration:
         return QString::number(logMessage->logDuration);
@@ -612,21 +612,21 @@ QString LoggingModelBase::getDisplayData(const NELogging::sLogMessage* logMessag
     }
 }
 
-QBrush LoggingModelBase::getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QBrush LoggingModelBase::getBackgroundData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
     return QBrush(LogIconFactory::getLogBackgroundColor(*logMessage));
 }
 
-QColor LoggingModelBase::getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QColor LoggingModelBase::getForegroundData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_UNUSED(column)
     Q_ASSERT(logMessage != nullptr);
     return LogIconFactory::getLogColor(*logMessage);
 }
 
-QIcon LoggingModelBase::getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const
+QIcon LoggingModelBase::getDecorationData(const areg::LogEntry* logMessage, eColumn column) const
 {
     Q_ASSERT(logMessage != nullptr);
     if (column != eColumn::LogColumnPriority)
@@ -634,22 +634,22 @@ QIcon LoggingModelBase::getDecorationData(const NELogging::sLogMessage* logMessa
 
     switch (logMessage->logMessagePrio)
     {
-    case NELogging::eLogPriority::PrioScope:
-        if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
+    case areg::LogPriority::PrioScope:
+        if (logMessage->logMsgType == areg::LogMessageType::ScopeEnter)
             return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeEnter, true);
-        else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
+        else if (logMessage->logMsgType == areg::LogMessageType::ScopeExit)
             return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScopeExit, true);
         else
             return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioScope, true);
-    case NELogging::eLogPriority::PrioDebug:
+    case areg::LogPriority::PrioDebug:
         return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioDebug, true);
-    case NELogging::eLogPriority::PrioInfo:
+    case areg::LogPriority::PrioInfo:
         return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioInfo, true);
-    case NELogging::eLogPriority::PrioWarning:
+    case areg::LogPriority::PrioWarning:
         return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioWarn, true);
-    case NELogging::eLogPriority::PrioError:
+    case areg::LogPriority::PrioError:
         return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioError, true);
-    case NELogging::eLogPriority::PrioFatal:
+    case areg::LogPriority::PrioFatal:
         return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioFatal, true);
     default:
         return LogIconFactory::getLogIcon(LogIconFactory::eLogIcons::PrioNotset, false);
@@ -687,7 +687,7 @@ inline void LoggingModelBase::_cleanNodes(void)
     mRootList.clear();
 }
 
-void LoggingModelBase::onThreadRuns(void)
+void LoggingModelBase::on_run(void)
 {
     uint32_t    nextStart   { 0 };
     int         readCount   { 0 };
@@ -697,11 +697,11 @@ void LoggingModelBase::onThreadRuns(void)
     do
     {
         readCount = -1;
-        if (mQuitThread.tryLock() == false)
+        if (mQuitThread.try_lock() == false)
             break;
         
         mQuitThread.unlock();
-        readCount   = mDatabase.fillLogMessages(mLogs, mStatement, nextStart, mLogChunk);
+        readCount   = areg::ext::LogSqliteDatabase::fill_log_messages(mLogs, mStatement, nextStart, mLogChunk);
         if (readCount != 0)
         {
             beginInsertRows(QModelIndex(), static_cast<int>(nextStart), static_cast<int>(nextStart) + readCount - 1);
@@ -713,3 +713,4 @@ void LoggingModelBase::onThreadRuns(void)
     
     Q_ASSERT((mLogCount == static_cast<uint32_t>(mLogs.size())) || (readCount == -1));
 }
+

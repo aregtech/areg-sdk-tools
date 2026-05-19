@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_LOG_LOGTEXTHIGHLIGHT_HPP
+#ifndef LUSAN_VIEW_LOG_LOGTEXTHIGHLIGHT_HPP
 #define LUSAN_VIEW_LOG_LOGTEXTHIGHLIGHT_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -24,7 +24,7 @@
  ************************************************************************/
 #include <QStyledItemDelegate>
 #include "lusan/model/log/LogSearchModel.hpp"
-#include "areg/base/GEGlobal.h"
+#include "areg/base/areg_global.h"
 
 /************************************************************************
  * Dependencies
@@ -60,7 +60,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
-    DECLARE_NOCOPY_NOMOVE(LogTextHighlight);
+    AREG_NOCOPY_NOMOVE(LogTextHighlight);
 };
 
 #endif  // LUSAN_VIEW_LOG_LOGTEXTHIGHLIGHT_HPP

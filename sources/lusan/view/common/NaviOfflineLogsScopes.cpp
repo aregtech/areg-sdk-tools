@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -257,24 +257,24 @@ void NaviOfflineLogsScopes::showDatabaseInfo(void)
     // Get some basic information from the model
     try
     {
-        std::vector<String> instanceNames;
+        std::vector<areg::String> instanceNames;
         logModel->getLogInstanceNames(instanceNames);
 
         QStandardItem* instancesItem = new QStandardItem(tr("Instances (%1)").arg(instanceNames.size()));
         for (const auto& name : instanceNames)
         {
-            instancesItem->appendRow(new QStandardItem(QString::fromStdString(name.getData())));
+            instancesItem->appendRow(new QStandardItem(QString::fromStdString(name.data())));
         }
 
         infoModel->appendRow(instancesItem);
 
-        std::vector<String> threadNames;
+        std::vector<areg::String> threadNames;
         logModel->getLogThreadNames(threadNames);
 
         QStandardItem* threadsItem = new QStandardItem(tr("Threads (%1)").arg(threadNames.size()));
         for (const auto& name : threadNames)
         {
-            threadsItem->appendRow(new QStandardItem(QString::fromStdString(name.getData())));
+            threadsItem->appendRow(new QStandardItem(QString::fromStdString(name.data())));
         }
 
         infoModel->appendRow(threadsItem);
@@ -406,7 +406,7 @@ void NaviOfflineLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     bool hasScope{ false }, hasDebug{ false }, hasInfo{ false }, hasWarn{ false }, hasError{ false }, hasFatal{ false };
     if (hasNotset == false)
     {
-        hasScope = node->hasLogScopes();
+        hasScope = node->hasScopeEntries();
         hasDebug = node->hasPrioDebug();
         hasInfo = node->hasPrioInfo();
         hasWarn = node->hasPrioWarning();
@@ -469,35 +469,35 @@ void NaviOfflineLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     bool processed{true};
     if (selectedAction == mMenuActions[static_cast<int>(eLogActions::PrioNotset)])
     {
-        mScopesModel->setLogPriority(index, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset));
+        mScopesModel->setLogPriority(index, static_cast<uint32_t>(areg::LogPriority::PrioNotset));
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioAllset])
     {
-        mScopesModel->setLogPriority(index, static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs));
+        mScopesModel->setLogPriority(index, static_cast<uint32_t>(areg::LogPriority::PrioScopeLogs));
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioDebug])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioDebug);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioDebug);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioInfo])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioInfo);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioInfo);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioWarn])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioWarning);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioWarning);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioError])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioError);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioError);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioFatal])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioFatal);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioFatal);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioScope])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioScope);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioScope);
     }
     else if (selectedAction == mMenuActions[eLogActions::ExpandSelected])
     {

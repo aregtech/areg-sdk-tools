@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -33,7 +33,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
 
-#include "areg/base/NESocket.hpp"
+#include "areg/base/SocketDefs.hpp"
 
 #include <QAction>
 #include <QMenu>
@@ -53,7 +53,7 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
 
     , ui            (new Ui::NaviLiveLogsScopes)
     , mAddress      ()
-    , mPort         (NESocket::InvalidPort)
+    , mPort         (areg::InvalidPort)
     , mInitLogFile  ( )
     , mActiveLogFile( )
     , mLogLocation  ( )
@@ -534,7 +534,7 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
     bool hasScope{false}, hasDebug{false}, hasInfo{false}, hasWarn{false}, hasError{false}, hasFatal{false};
     if (hasNotset == false)
     {
-        hasScope = node->hasLogScopes();
+        hasScope = node->hasScopeEntries();
         hasDebug = node->hasPrioDebug();
         hasInfo  = node->hasPrioInfo();
         hasWarn  = node->hasPrioWarning();
@@ -601,31 +601,31 @@ void NaviLiveLogsScopes::onTreeViewContextMenuRequested(const QPoint& pos)
 
     if (selectedAction == mMenuActions[static_cast<int>(eLogActions::PrioNotset)])
     {
-        mScopesModel->setLogPriority(index, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset));
+        mScopesModel->setLogPriority(index, static_cast<uint32_t>(areg::LogPriority::PrioNotset));
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioDebug])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioDebug);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioDebug);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioInfo])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioInfo);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioInfo);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioWarn])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioWarning);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioWarning);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioError])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioError);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioError);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioFatal])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioFatal);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioFatal);
     }
     else if (selectedAction == mMenuActions[eLogActions::PrioScope])
     {
-        updatePriority(index, selectedAction->isChecked(), NELogging::eLogPriority::PrioScope);
+        updatePriority(index, selectedAction->isChecked(), areg::LogPriority::PrioScope);
     }
     else if (selectedAction == mMenuActions[eLogActions::ExpandSelected])
     {

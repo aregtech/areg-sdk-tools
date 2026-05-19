@@ -18,7 +18,7 @@
  ************************************************************************/
 #include "lusan/model/log/LogIconFactory.hpp"
 #include "lusan/common/NELusanCommon.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/logging/areg_log.h"
 #include <atomic>
 
 #include <QColor>
@@ -74,7 +74,7 @@ namespace
     constexpr int IconBegin         { 0 };
     constexpr int IconEnd           { LogIconFactory::IconPixels - IconBegin };
     constexpr int IconMiddle        { (IconEnd - IconBegin) / 2 };
-    constexpr uint32_t NoPrio       { static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset) };
+    constexpr uint32_t NoPrio       { static_cast<uint32_t>(areg::LogPriority::PrioNotset) };
     constexpr int32_t  AlphaSolid   { 255 };
     constexpr int32_t  AlphaMixed   { 75 };
 
@@ -368,20 +368,20 @@ namespace
         Q_ASSERT(_mapIcons.isEmpty());
 
         // Icon no prio
-        uint32_t prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid);
+        uint32_t prio = static_cast<uint32_t>(areg::LogPriority::PrioInvalid);
         QIcon notSet = _createNotSetIcon(pixels);
-        _mapIcons[static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid)]  = notSet;
-        _mapIcons[static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)]   = notSet;
+        _mapIcons[static_cast<uint32_t>(areg::LogPriority::PrioInvalid)]  = notSet;
+        _mapIcons[static_cast<uint32_t>(areg::LogPriority::PrioNotset)]   = notSet;
 
         // icon prio scope
         QIcon scope = _createScopeIcon(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorScope)], pixels);
-        uint32_t prioScope = static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
+        uint32_t prioScope = static_cast<uint32_t>(areg::LogPriority::PrioScope);
         _mapIcons[prioScope] = scope;
         _mapIcons[prioScope | NoPrio] = scope;
 
         // icon prio fatal
         QIcon fatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);        
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioFatal);        
         fatal = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
                                                   , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
                                                   , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)]
@@ -402,7 +402,7 @@ namespace
         
         // icon prio error
         QIcon error;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioError);
         error = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
                                                   , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
                                                   , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
@@ -423,7 +423,7 @@ namespace
         
         // icon prio warn
         QIcon warn;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioWarning);
 
         warn  = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
                                                  , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -445,7 +445,7 @@ namespace
         
         // icon prio info
         QIcon info;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioInfo);
 
         info  = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                  , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -467,7 +467,7 @@ namespace
         
         // icon prio debug
         QIcon debug;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug);
 
         debug  = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                   , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
@@ -489,7 +489,7 @@ namespace
         
         // icon prio debug + info
         QIcon dbgInfo;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioInfo);
 
         dbgInfo = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                     , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
@@ -511,7 +511,7 @@ namespace
         
         // icon prio debug + warn
         QIcon dbgWarn;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioWarning);
 
         dbgWarn = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                     , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
@@ -533,7 +533,7 @@ namespace
         
         // icon prio debug + error
         QIcon dbgError;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioError);
 
         dbgError = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                     , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
@@ -555,7 +555,7 @@ namespace
         
         // icon prio debug + fatal
         QIcon dbgFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         dbgFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                     , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
@@ -577,7 +577,7 @@ namespace
         
         // icon prio info + warn
         QIcon infoWarn;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioWarning);
 
         infoWarn = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                     , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -599,7 +599,7 @@ namespace
         
         // icon prio info + error
         QIcon infoError;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioError);
 
         infoError = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                       , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -621,7 +621,7 @@ namespace
         
         // icon prio info + fatal
         QIcon infoFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         infoFatal = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                       , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -643,7 +643,7 @@ namespace
         
         // icon prio warn + error
         QIcon warnError;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioError);
 
         warnError = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
                                                       , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -665,7 +665,7 @@ namespace
         
         // icon prio warn + fatal
         QIcon warnFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         warnFatal = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
                                                       , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -687,7 +687,7 @@ namespace
         
         // icon prio error + fatal
         QIcon errorFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioError) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         errorFatal = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
                                                        , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
@@ -709,7 +709,7 @@ namespace
         
         // icon prio debug + info + warn
         QIcon dbgInfoWarn;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioWarning);
 
         dbgInfoWarn = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                         , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -731,7 +731,7 @@ namespace
         
         // icon prio debug + info + error
         QIcon dbgInfoError;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioError);
 
         dbgInfoError = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                         , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -753,7 +753,7 @@ namespace
         
         // icon prio debug + info + fatal
         QIcon dbgInfoFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         dbgInfoFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                         , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -775,7 +775,7 @@ namespace
         
         // icon prio debug + warn + error
         QIcon dbgWarnError;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioError);
 
         dbgWarnError = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                         , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -797,7 +797,7 @@ namespace
         
         // icon prio debug + warn + fatal
         QIcon dbgWarnFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         dbgWarnFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                         , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -819,7 +819,7 @@ namespace
         
         // icon prio debug + error + fatal
         QIcon dbgErrorFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioError) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         dbgErrorFatal = _createRoundFourIconWithDiagonals(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                         , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
@@ -841,7 +841,7 @@ namespace
         
         // icon prio info + warn + error
         QIcon infoWarnError;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioError);
 
         infoWarnError = _createRoundFourIconWithDiagonals(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                         , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -863,7 +863,7 @@ namespace
         
         // icon prio info + warn + fatal
         QIcon infoWarnFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         infoWarnFatal = _createRoundFourIconWithDiagonals(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                         , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -885,7 +885,7 @@ namespace
         
         // icon prio info + error + fatal
         QIcon infoErrorFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioError) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         infoErrorFatal = _createRoundFourIconWithDiagonals(   _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                             , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
@@ -907,7 +907,7 @@ namespace
         
         // icon prio warn + error + fatal
         QIcon warnErrorFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioError) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         warnErrorFatal = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)]
@@ -929,7 +929,7 @@ namespace
         
         // icon prio debug + info + warn + error
         QIcon dbgInfoWarnErr;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioError);
 
         dbgInfoWarnErr = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -951,7 +951,7 @@ namespace
         
         // icon prio debug + info + warn + fatal
         QIcon dbgInfoWarnFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         dbgInfoWarnFatal = _createRoundFourIconWithDiagonals(_colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -973,7 +973,7 @@ namespace
 
         // icon prio debug + info + error + fatal
         QIcon dbgInfoErrFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioError) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         dbgInfoErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -995,7 +995,7 @@ namespace
 
         // icon prio debug + warn + error + fatal
         QIcon dbgWarnErrFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioError) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         dbgWarnErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                            , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -1017,7 +1017,7 @@ namespace
 
         // icon prio info + warn + error + fatal
         QIcon infoWarnErrFatal;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError) | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioError) | static_cast<uint32_t>(areg::LogPriority::PrioFatal);
 
         infoWarnErrFatal = _createRoundFourIconWithDiagonals( _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
                                                             , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)]
@@ -1039,7 +1039,7 @@ namespace
 
         // icon prio all
         QIcon all;
-        prio = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug) | static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo) | static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning) | static_cast<uint32_t>(NELogging::eLogPriority::PrioError);
+        prio = static_cast<uint32_t>(areg::LogPriority::PrioDebug) | static_cast<uint32_t>(areg::LogPriority::PrioInfo) | static_cast<uint32_t>(areg::LogPriority::PrioWarning) | static_cast<uint32_t>(areg::LogPriority::PrioError);
 
         all = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                 , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -1049,8 +1049,8 @@ namespace
                                                 , false, pixels);
         _mapIcons[prio] = all;
         _mapIcons[prio | prioScope] = _setScopeRound(all, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
-        _mapIcons[prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)] = _mapIcons[prio];
-        _mapIcons[prio | prioScope | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)] = _mapIcons[prio | prioScope];
+        _mapIcons[prio | static_cast<uint32_t>(areg::LogPriority::PrioFatal)] = _mapIcons[prio];
+        _mapIcons[prio | prioScope | static_cast<uint32_t>(areg::LogPriority::PrioFatal)] = _mapIcons[prio | prioScope];
         
         all = _createRoundFourIconWithDiagonals(  _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)]
                                                 , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)]
@@ -1059,16 +1059,16 @@ namespace
                                                 , _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)]
                                                 , true, pixels);
         _mapIcons[prio | NoPrio] = all;
-        _mapIcons[prio | NoPrio | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)] = _mapIcons[prio | NoPrio];
+        _mapIcons[prio | NoPrio | static_cast<uint32_t>(areg::LogPriority::PrioFatal)] = _mapIcons[prio | NoPrio];
         _mapIcons[prio | NoPrio | prioScope] = _setScopeRound(all, _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWithScope)], pixels);
-        _mapIcons[prio | NoPrio | prioScope | static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)] = _mapIcons[prio | NoPrio | prioScope];
+        _mapIcons[prio | NoPrio | prioScope | static_cast<uint32_t>(areg::LogPriority::PrioFatal)] = _mapIcons[prio | NoPrio | prioScope];
     }
 }
 
 QIcon LogIconFactory::getIcon(uint32_t scopePrio, uint32_t pixels)
 {
     _initialize(pixels);
-    uint32_t prio = (scopePrio & static_cast<uint32_t>(NELogging::eLogPriority::PrioValidLogs));
+    uint32_t prio = (scopePrio & static_cast<uint32_t>(areg::LogPriority::PrioValidLogs));
     Q_ASSERT(_mapIcons.contains(prio));
     return _mapIcons[prio];
 }
@@ -1081,23 +1081,23 @@ QIcon LogIconFactory::getLogIcon(LogIconFactory::eLogIcons prio, bool active, ui
     return _logIcons[key];
 }
 
-QColor LogIconFactory::getColor(NELogging::eLogPriority logPrio)
+QColor LogIconFactory::getColor(areg::LogPriority logPrio)
 {
     switch (logPrio)
     {
-    case NELogging::eLogPriority::PrioFatal:
+    case areg::LogPriority::PrioFatal:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)];
-    case NELogging::eLogPriority::PrioError:
+    case areg::LogPriority::PrioError:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)];
-    case NELogging::eLogPriority::PrioWarning:
+    case areg::LogPriority::PrioWarning:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)];
-    case NELogging::eLogPriority::PrioInfo:
+    case areg::LogPriority::PrioInfo:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)];
-    case NELogging::eLogPriority::PrioDebug:
+    case areg::LogPriority::PrioDebug:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)];
-    case NELogging::eLogPriority::PrioScope:
+    case areg::LogPriority::PrioScope:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorScope)];
-    case NELogging::eLogPriority::PrioNotset:
+    case areg::LogPriority::PrioNotset:
     default:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)];
     }
@@ -1108,56 +1108,56 @@ QColor LogIconFactory::getLogColor(LogIconFactory::eLogColor logPrio)
     return _colors[static_cast<int>(logPrio)];
 }
 
-QColor LogIconFactory::getLogColor(const NELogging::sLogMessage & logMessage)
+QColor LogIconFactory::getLogColor(const areg::LogEntry & logMessage)
 {
     switch (logMessage.logMessagePrio)
     {
-    case NELogging::eLogPriority::PrioNotset:
+    case areg::LogPriority::PrioNotset:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)];
-    case NELogging::eLogPriority::PrioScope:
-        if (logMessage.logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
+    case areg::LogPriority::PrioScope:
+        if (logMessage.logMsgType == areg::LogMessageType::ScopeEnter)
             return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorScopeEnter)];
-        else if (logMessage.logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
+        else if (logMessage.logMsgType == areg::LogMessageType::ScopeExit)
             return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorScopeExit)];
         else
             return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorScope)];
-    case NELogging::eLogPriority::PrioFatal:
+    case areg::LogPriority::PrioFatal:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)];
-    case NELogging::eLogPriority::PrioError:
+    case areg::LogPriority::PrioError:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorError)];
-    case NELogging::eLogPriority::PrioWarning:
+    case areg::LogPriority::PrioWarning:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)];
-    case NELogging::eLogPriority::PrioInfo:
+    case areg::LogPriority::PrioInfo:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)];
-    case NELogging::eLogPriority::PrioDebug:
+    case areg::LogPriority::PrioDebug:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)];
     default:
         return _colors[static_cast<int>(LogIconFactory::eLogColor::ColorDefault)];
     }
 }
 
-QColor LogIconFactory::getLogBackgroundColor(const NELogging::sLogMessage & logMessage)
+QColor LogIconFactory::getLogBackgroundColor(const areg::LogEntry & logMessage)
 {
     return LogIconFactory::getLogBackgroundColor(logMessage.logMessagePrio);
 }
 
-QColor LogIconFactory::getLogBackgroundColor(NELogging::eLogPriority logPrio)
+QColor LogIconFactory::getLogBackgroundColor(areg::LogPriority logPrio)
 {
     switch (logPrio)
     {
-    case NELogging::eLogPriority::PrioNotset:
+    case areg::LogPriority::PrioNotset:
         return _colorsBkg[static_cast<int>(LogIconFactory::eLogColor::ColorNotSet)];
-    case NELogging::eLogPriority::PrioScope:
+    case areg::LogPriority::PrioScope:
         return _colorsBkg[static_cast<int>(LogIconFactory::eLogColor::ColorScope)];
-    case NELogging::eLogPriority::PrioFatal:
+    case areg::LogPriority::PrioFatal:
         return _colorsBkg[static_cast<int>(LogIconFactory::eLogColor::ColorFatal)];
-    case NELogging::eLogPriority::PrioError:
+    case areg::LogPriority::PrioError:
         return _colorsBkg[static_cast<int>(LogIconFactory::eLogColor::ColorError)];
-    case NELogging::eLogPriority::PrioWarning:
+    case areg::LogPriority::PrioWarning:
         return _colorsBkg[static_cast<int>(LogIconFactory::eLogColor::ColorWarn)];
-    case NELogging::eLogPriority::PrioInfo:
+    case areg::LogPriority::PrioInfo:
         return _colorsBkg[static_cast<int>(LogIconFactory::eLogColor::ColorInfo)];
-    case NELogging::eLogPriority::PrioDebug:
+    case areg::LogPriority::PrioDebug:
         return _colorsBkg[static_cast<int>(LogIconFactory::eLogColor::ColorDebug)];
     default:
         return _colorsBkg[static_cast<int>(LogIconFactory::eLogColor::ColorDefault)];

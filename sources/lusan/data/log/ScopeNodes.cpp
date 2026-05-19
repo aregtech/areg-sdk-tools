@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -21,7 +21,8 @@
  ************************************************************************/
 #include "lusan/data/log/ScopeNodes.hpp"
 
-#include "areg/component/NEService.hpp"
+#include "lusan/common/NELusanCommon.hpp"
+#include "areg/component/ServiceDefs.hpp"
 
 //////////////////////////////////////////////////////////////////////////
 // ScopeLeaf class implementation
@@ -29,37 +30,51 @@
 
 ScopeLeaf::ScopeLeaf(ScopeNode* parent)
     : ScopeNodeBase ( ScopeNodeBase::eNode::Leaf, parent )
-    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
+    , mScopeId      ( areg::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf(const QString leafName, uint32_t prio, ScopeNode* parent)
     : ScopeNodeBase ( ScopeNodeBase::eNode::Leaf, leafName, prio, parent )
-    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
+    , mScopeId      ( areg::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf(const ScopeNodeBase& base)
     : ScopeNodeBase(ScopeNodeBase::eNode::Leaf, base.getNodeName(), base.getPriority(), base.getParent())
-    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
+    , mScopeId      ( areg::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf( const ScopeLeaf & src )
     : ScopeNodeBase ( static_cast<const ScopeNodeBase &>(src) )
-    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
+    , mScopeId      ( areg::LOG_SCOPE_ID_NONE )
 {
 }
 
 ScopeLeaf::ScopeLeaf( ScopeLeaf && src ) noexcept
     : ScopeNodeBase ( std::move(static_cast<ScopeNodeBase &>(src)) )
-    , mScopeId      ( NELogging::LOG_SCOPE_ID_NONE )
+    , mScopeId      ( areg::LOG_SCOPE_ID_NONE )
 {
 }
 
 void ScopeLeaf::addPriority(unsigned int prio)
 {
     ScopeNodeBase::setPriority(prio);
+}
+
+QString ScopeLeaf::makePath() const
+{
+    // The parent node's makePath() ends with '_'. Replace that trailing '_' with '.'
+    // so the full path uses the new areg leaf syntax: "areg_path_node.leaf_name".
+    QString parentPath = mParent != nullptr ? mParent->makePath() : QString();
+    if (parentPath.isEmpty() == false && parentPath.back() == NELusanCommon::SCOPE_SEPRATOR)
+    {
+        parentPath.chop(1);
+        return parentPath + NELusanCommon::SCOPE_LEAF_SEPRATOR + mNodeName;
+    }
+
+    return parentPath + mNodeName;
 }
 
 void ScopeLeaf::setScopeId(uint32_t scopeId)
@@ -120,7 +135,7 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, unsig
 }
 
 ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, const QString & name, ScopeRoot * parent /*= nullptr*/ )
-    : ScopeNodeBase ( nodeType, name, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), parent )
+    : ScopeNodeBase ( nodeType, name, static_cast<uint32_t>(areg::LogPriority::PrioNotset), parent )
     , mChildNodes   ( )
     , mChildLeafs   ( )
 {
@@ -307,7 +322,7 @@ ScopeNodeBase* ScopeNode::findChild(const QString& childName) const
 
 int ScopeNode::getChildPosition(const QString& childName) const
 {
-    int result{ static_cast<int>(NECommon::INVALID_INDEX) };
+    int result{ static_cast<int>(areg::INVALID_INDEX) };
     int pos = 0;
     for (const auto & node : mChildNodes)
     {
@@ -320,7 +335,7 @@ int ScopeNode::getChildPosition(const QString& childName) const
         ++pos;
     }
 
-    if (result == static_cast<int>(NECommon::INVALID_INDEX))
+    if (result == static_cast<int>(areg::INVALID_INDEX))
     {
         pos = 0;
         for (const auto & node : mChildLeafs)
@@ -537,7 +552,7 @@ uint32_t ScopeNode::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const
 
 ScopeRoot::ScopeRoot(void)
     : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
-    , mRootId   (NEService::COOKIE_LOCAL)
+    , mRootId   (areg::COOKIE_LOCAL)
 {
 }
 
@@ -547,14 +562,14 @@ ScopeRoot::ScopeRoot(ITEM_ID rootId)
 {
 }
 
-ScopeRoot::ScopeRoot(const NEService::sServiceConnectedInstance& instance)
-    : ScopeNode (ScopeNodeBase::eNode::Root, QString(instance.ciInstance.c_str()), static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
+ScopeRoot::ScopeRoot(const areg::ConnectedInstance& instance)
+    : ScopeNode (ScopeNodeBase::eNode::Root, QString(instance.ciInstance.c_str()), static_cast<uint32_t>(areg::LogPriority::PrioNotset), nullptr)
     , mRootId   (instance.ciCookie)
 {
 }
 
 ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString rootName)
-    : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset), nullptr)
+    : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(areg::LogPriority::PrioNotset), nullptr)
     , mRootId   (rootId)
 {
 }

@@ -24,7 +24,7 @@
  ************************************************************************/
 
 #include "lusan/view/common/NaviLogScopeBase.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/logging/areg_log.h"
 
 #include <QItemSelection>
 #include <QList>

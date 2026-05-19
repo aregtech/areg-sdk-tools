@@ -20,7 +20,7 @@
 #include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
-#include "areg/base/NECommon.hpp"
+#include "areg/base/CommonDefs.hpp"
 
 #include <QDir>
 #include <QFile>

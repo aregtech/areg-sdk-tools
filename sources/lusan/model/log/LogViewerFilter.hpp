@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP
+#ifndef LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP
 #define LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -26,7 +26,7 @@
 #include <QSortFilterProxyModel>
 
 #include "lusan/common/NELusanCommon.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/logging/areg_log.h"
 #include <QMap>
 #include <QString>
 #include <QRegularExpression>
@@ -111,7 +111,7 @@ private:
      * \param   msg    The log message to check against the filters.
      * \return  True if the row matches all combo filters.
      **/
-    NELusanCommon::eMatchType matchesComboFilters(LoggingModelBase* model, const NELogging::sLogMessage* msg) const;
+    NELusanCommon::eMatchType matchesComboFilters(LoggingModelBase* model, const areg::LogEntry* msg) const;
 
     /**
      * \brief   Helper method to check if a row matches the text filters.
@@ -119,7 +119,7 @@ private:
      * \param   msg    The log message to check against the filters.
      * \return  True if the row matches all text filters.
      **/
-    NELusanCommon::eMatchType matchesTextFilters(LoggingModelBase* model, const NELogging::sLogMessage* msg) const;
+    NELusanCommon::eMatchType matchesTextFilters(LoggingModelBase* model, const areg::LogEntry* msg) const;
 
     /**
      * \brief   Helper method to perform wildcard matching.
@@ -137,7 +137,7 @@ private:
      * \param   filters The list of priority filters to match against.
      * \return  True if the log message matches any of the priority filters, false otherwise.
      **/
-    inline bool matchPrio(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+    inline bool matchPrio(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const;
 
     /**
      * \brief   Checks if the log message matches the source filters.
@@ -145,7 +145,7 @@ private:
      * \param   filters The list of source filters to match against.
      * \return  True if the log message matches any of the source filters, false otherwise.
      **/
-    inline bool matchSources(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+    inline bool matchSources(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const;
 
     /**
      * \brief   Checks if the log message matches the thread filters.
@@ -153,7 +153,7 @@ private:
      * \param   filters The list of thread filters to match against.
      * \return  True if the log message matches any of the thread filters, false otherwise.
      **/
-    inline bool matchThreads(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+    inline bool matchThreads(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const;
 
     /**
      * \brief   Checks if the log message matches the duration filters.
@@ -161,7 +161,7 @@ private:
      * \param   filters The list of duration filters to match against.
      * \return  True if the log message matches any of the duration filters, false otherwise.
      **/
-    inline bool matchDuration(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+    inline bool matchDuration(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const;
 
     /**
      * \brief   Checks if the log message matches the message text filters.
@@ -169,7 +169,7 @@ private:
      * \param   filters The list of message text filters to match against.
      * \return  True if the log message matches any of the message text filters, false otherwise.
      **/
-    inline bool matchMessage(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const;
+    inline bool matchMessage(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const;
 
     /**
      * \brief   Prepares the regular expression for wildcard matching.
@@ -197,7 +197,7 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 private:
     LogViewerFilter(void) = delete;
-    DECLARE_NOCOPY_NOMOVE(LogViewerFilter);
+    AREG_NOCOPY_NOMOVE(LogViewerFilter);
 };
 
 #endif // LUSAN_MODEL_LOG_LOGVIEWERFILTER_HPP

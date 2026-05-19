@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_DATA_LOG_LOGOBSERVER_HPP
+#ifndef LUSAN_DATA_LOG_LOGOBSERVER_HPP
 #define LUSAN_DATA_LOG_LOGOBSERVER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -23,14 +23,14 @@
  ************************************************************************/
 
 #include "lusan/common/NELusanCommon.hpp"
-#include "areg/base/GEGlobal.h"
+#include "areg/base/areg_global.h"
 
 #include "lusan/data/log/LogObserverEvent.hpp"
-#include "areg/base/NESocket.hpp"
+#include "areg/base/SocketDefs.hpp"
 #include "areg/component/Component.hpp"
-#include "areg/component/NEService.hpp"
+#include "areg/component/ServiceDefs.hpp"
 #include "areg/component/StubBase.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/logging/areg_log.h"
 
 #include <QObject>
 #include <QString>
@@ -40,7 +40,7 @@
  * Dependencies.
  ************************************************************************/
 class LogCollectorClient;
-struct sLogScope;
+struct ScopeInfo;
 
 //!< The callback to notify that the service component started.
 typedef void (*FuncLogObserverStarted)();
@@ -50,9 +50,9 @@ typedef void (*FuncLogObserverStarted)();
  *          It is used to support multithreading environment when receives and sends log data from the log collector.
  **/
 class LogObserver   : public    QObject
-                    , public    Component
-                    , protected StubBase
-                    , protected IELogObserverEventConsumer
+                    , public    areg::Component
+                    , protected areg::StubBase
+                    , protected LogObserverEventConsumer
 {
     Q_OBJECT
 
@@ -88,7 +88,7 @@ public:
     /**
      * \brief   Returns the `SocketAddress` object of the connected log collector service.
      **/
-    static const NESocket::SocketAddress& getLogServiceAddress(void);
+    static const areg::SocketAddress& getLogServiceAddress(void);
 
     /**
      * \brief   Returns the IP-address of connected log collector.
@@ -200,34 +200,34 @@ public:
     /**
      * \brief   Requests the list of registered scopes of the specified connected instance.
      * \param   target  The cookie ID of the target instance to receive the list of registered scopes.
-     *                  If the target is NEService::TARGET_ALL (or 0), it receives the list of scopes of all connected instances.
+     *                  If the target is areg::TARGET_ALL (or 0), it receives the list of scopes of all connected instances.
      *                  Otherwise, should be indicated the valid cookie ID of the connected log instance.
      * \return  Returns true if processed with success. Otherwise, returns false.
      **/
-    static bool requestScopes(ITEM_ID target = NEService::TARGET_ALL);
+    static bool requestScopes(ITEM_ID target = areg::TARGET_ALL);
     
     /**
      * \brief   Requests to update the priority of the logging message to receive.
      *          The indicated scopes can be scope group.
      * \param   target  The valid cookie ID of the target to update the log message priority.
-     *                  This value cannot be NEService::TARGET_ALL (or 0).
+     *                  This value cannot be areg::TARGET_ALL (or 0).
      * \param   scopes  The list of scopes of scope group to update the priority.
      *                  The scope group should  end with '*'. For example 'areg_base_*'.
      *                  In this case the ID of the scope can be 0.
      * \param   count   The number of scope entries in the list.
      * \return  Returns true if processed with success. Otherwise, returns false.
      **/
-    static bool requestChangeScopePrio(ITEM_ID target, const sLogScope* scopes, uint32_t count);
+    static bool requestChangeScopePrio(ITEM_ID target, const ScopeInfo* scopes, uint32_t count);
     
     /**
      * \brief   Requests to save current configuration of the specified target. This is normally called when update the log priority of the instance,
      *          so that on next start the application logs message of the scopes and priorities currently set.
      * \param   target  The cookie ID of the target instance to save the configuration.
-     *                  If the target is NEService::TARGET_ALL (or 0), the request is sent to all connected instances.
+     *                  If the target is areg::TARGET_ALL (or 0), the request is sent to all connected instances.
      *                  Otherwise, should be indicated the valid cookie ID of the connected log instance.
      * \return  Returns true if processed with success. Otherwise, returns false.
      **/
-    static bool requestSaveConfig(ITEM_ID target = NEService::TARGET_ALL);
+    static bool requestSaveConfig(ITEM_ID target = areg::TARGET_ALL);
     
     /**
      * \brief   Saves the configuration of the log observer in the configuration file.
@@ -240,14 +240,14 @@ public:
      * \param   owner   The component owning thread.
      * \return  Returns instantiated component to run in the system
      **/
-    static Component * CreateComponent( const NERegistry::ComponentEntry & entry, ComponentThread & owner );
+    static areg::Component * CreateComponent( const areg::ComponentEntry & entry, areg::ComponentThread & owner );
     
     /**
      * \brief   Called by system to delete component and free resources.
      * \param   compObject  The instance of component previously created by CreateComponent method.
      * \param   entry   The entry of registry, which describes the component.
      **/
-    static void DeleteComponent( Component & compObject, const NERegistry::ComponentEntry & entry );
+    static void DeleteComponent( areg::Component & compObject, const areg::ComponentEntry & entry );
     
     /**
      * \brief   Returns the pointer of log observer component if loaded. Otherwise, returns null.
@@ -258,7 +258,7 @@ public:
      * \brief   Call to query and get list of names of connected instances from log database.
      * \param   names   On output, contains the list of names of connected instances.
      **/
-    static void queryLogInstanceNames(std::vector<String>& names);
+    static void queryLogInstanceNames(std::vector<areg::String>& names);
     
     /**
      * \brief   Call to query and get list of IDs of connected instances from log database
@@ -270,7 +270,7 @@ public:
      * \brief   Call to query and get list of names of threads of the connected instances from log database.
      * \param   names   On output, contains the list of all thread names that sent messages.
      **/
-    static void queryLogThreadNames(std::vector<String>& names);
+    static void queryLogThreadNames(std::vector<areg::String>& names);
     
     /**
      * \brief   Call to query and get list of IDs of threads of the connected instances from log database.
@@ -282,14 +282,14 @@ public:
      * \brief   Call to get the list of log priorities.
      * \param   names   On output, contains the names of all priorities.
      **/
-    static void queryPriorityNames(std::vector<String>& names);
+    static void queryPriorityNames(std::vector<areg::String>& names);
     
     /**
      * \brief   Call to query and get information of connected instances from log database.
      *          This query will receive list of all registered instances.
      * \param   infos   On output, contains the list of information of all registered instances in database.
      **/
-    static void queryLogInstanceInfos(std::vector< NEService::sServiceConnectedInstance>& infos);
+    static void queryLogInstanceInfos(std::vector< areg::ConnectedInstance>& infos);
     
     /**
      * \brief   Call to query and get information of log scopes of specified instance from log database.
@@ -297,23 +297,23 @@ public:
      * \param   scopes  On output, contains the list of all registered scopes in database related with the specified instance ID.
      * \param   instID  The ID of the instance.
      **/
-    static void queryLogInstScopes(std::vector<NELogging::sScopeInfo>& scopes, ITEM_ID instId);
+    static void queryLogInstScopes(std::vector<areg::ScopeEntry>& scopes, ITEM_ID instId);
     
     /**
      * \brief   Call to get all log messages from log database.
      * \param   messages   On output, contains the list of all log messages.
      **/
-    static void queryLogMessages(std::vector<SharedBuffer>& messages);
+    static void queryLogMessages(std::vector<areg::SharedBuffer>& messages);
     
     /**
      * \brief   Call to get log messages of the specified instance from log database.
-     *          If `instId` is `NEService::COOKIE_ANY` it receives the list of all instances
+     *          If `instId` is `areg::COOKIE_ANY` it receives the list of all instances
      *          similar to the call to `getLogMessages()`.
      * \param   messages    On output, contains the list of log messages of the specified instance.
      * \param   instId  The ID of the instance to get log messages.
-     *                  If `NEService::COOKIE_ANY` it receives log messages of all instances.
+     *                  If `areg::COOKIE_ANY` it receives log messages of all instances.
      **/
-    static void queryLogInstMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId = NEService::COOKIE_ANY);
+    static void queryLogInstMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId = areg::COOKIE_ANY);
     
     /**
      * \brief   Call to get log messages of the specified scope from log database.
@@ -323,19 +323,19 @@ public:
      * \param   scopeId     The ID of the scope to get log messages.
      *                      If `0` it receives log messages of all scopes.
      **/
-    static void queryLogScopeMessages(std::vector<SharedBuffer>& messages, uint32_t scopeId = 0);
+    static void queryLogScopeMessages(std::vector<areg::SharedBuffer>& messages, uint32_t scopeId = 0);
     
     /**
      * \brief   Call to get log messages of the specified instance and log scope ID from log database.
-     *          If `instId` is `NEService::COOKIE_ANY` and `scopeId` is `0`, it receives the list of all logs
+     *          If `instId` is `areg::COOKIE_ANY` and `scopeId` is `0`, it receives the list of all logs
      *          similar to the call to `getLogMessages()`.
      * \param   messages    On output, contains the list of log messages of the specified instance and scope.
      * \param   instId      The ID of the instance to get log messages.
-     *                      If `NEService::COOKIE_ANY` it receives log messages of all instances.
+     *                      If `areg::COOKIE_ANY` it receives log messages of all instances.
      * \param   scopeId     The ID of the scope to get log messages.
      *                      If `0` it receives log messages of all scopes.
      **/
-    static void queryLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
+    static void queryLogMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
     
 private:
     
@@ -344,7 +344,7 @@ private:
      * \param   entry   The entry of registry, which describes the component.
      * \param   ownerThread The instance of component owner thread.
      **/
-    LogObserver(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread);
+    LogObserver(const areg::ComponentEntry & entry, areg::ComponentThread & ownerThread);
     
     virtual ~LogObserver(void);
     
@@ -408,14 +408,14 @@ signals:
      * \brief   The signal is triggered when receive the list of connected instances that make logs.
      * \param   instances   The list of the connected instances.
      **/
-    void signalLogInstancesConnect(const std::vector<NEService::sServiceConnectedInstance>& instances);
+    void signalLogInstancesConnect(const std::vector<areg::ConnectedInstance>& instances);
 
     /**
      * \brief   The signal is triggered when receive the list of disconnected instances that make logs.
      * \param   instances   The list of IDs of the disconnected instances.
      * \param   count       The number of entries in the list.
      **/
-    void signalLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances);
+    void signalLogInstancesDisconnect(const std::vector<areg::ConnectedInstance>& instances);
 
     /**
      * \brief   The signal is triggered when connection with the log collector service is lost.
@@ -428,20 +428,20 @@ signals:
      * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
      * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
      **/
-    void signalLogRegisterScopes(ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes);
+    void signalLogRegisterScopes(ITEM_ID cookie, const std::vector<areg::ScopeEntry>& scopes);
 
     /**
      * \brief   The signal is triggered when receive the list of previously registered scopes with new priorities.
      * \param   cookie  The cookie ID of the connected instance / application. Same as sLogInstance::liCookie
      * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
      **/
-    void signalLogUpdateScopes(ITEM_ID cookie, const std::vector <NELogging::sScopeInfo>& scopes);
+    void signalLogUpdateScopes(ITEM_ID cookie, const std::vector <areg::ScopeEntry>& scopes);
 
     /**
      * \brief   The signal is triggered when receive message to log.
      * \param   logMessage  The buffer with structure of the message to log.
      **/
-    void signalLogMessage(const SharedBuffer & logMessage);
+    void signalLogMessage(const areg::SharedBuffer & logMessage);
 
     /**
      * \brief   The signal is triggered when the log observer instance is activated or shutdown.
@@ -456,7 +456,7 @@ signals:
 // IELogObserverEventConsumer overrides
 /************************************************************************/
 protected:
-    virtual void processEvent(const LogObserverEventData & data) override;
+    virtual void process_event(const LogObserverEventData & data) override;
 
 /************************************************************************/
 // StubBase overrides. Triggered by Component on startup.
@@ -466,13 +466,13 @@ protected:
      * \brief   This function is triggered by Component when starts up.
      * \param   holder  The holder component of service interface of Stub.
      **/
-    virtual void startupServiceInterface( Component & holder ) override;
+    virtual void startup_service_interface( areg::Component & holder ) override;
 
     /**
      * \brief   This function is triggered by Component when shuts down.
      * \param   holder  The holder component of service interface of Stub.
      **/
-    virtual void shutdownServiceInterface( Component & holder ) override;
+    virtual void shutdown_service_interface( areg::Component & holder ) noexcept override;
 
 //////////////////////////////////////////////////////////////////////////
 // These methods must exist, but can have empty body
@@ -485,12 +485,12 @@ protected:
     /**
      * \brief   Sends update notification message to all clients.
      **/
-    virtual void sendNotification(unsigned int /*msgId*/) override;
+    virtual void send_notification(unsigned int /*msgId*/) override;
 
     /**
      * \brief   Sends error message to clients.
      **/
-    virtual void errorRequest(unsigned int /*msgId*/, bool /*msgCancel*/) override;
+    virtual void error_request(unsigned int /*msgId*/, bool /*msgCancel*/) override;
 
 /************************************************************************/
 // IEStubEventConsumer interface overrides.
@@ -499,12 +499,12 @@ protected:
     /**
      * \brief   Triggered to process service request event.
      **/
-    virtual void processRequestEvent(ServiceRequestEvent& /*eventElem*/) override;
+    virtual void process_request_event(areg::ServiceRequestEvent& /*eventElem*/) override;
 
     /**
      * \brief   Triggered to process attribute update notification event.
      **/
-    virtual void processAttributeEvent(ServiceRequestEvent& /*eventElem*/) override;
+    virtual void process_attribute_event(areg::ServiceRequestEvent& /*eventElem*/) override;
 
 //////////////////////////////////////////////////////////////////////////
 // slots
@@ -566,14 +566,14 @@ private slots:
      * \brief   The callback of the event triggered when receive the list of connected instances that make logs.
      * \param   instances   The list of the connected instances.
      **/
-    void slotLogInstancesConnect(const std::vector< NEService::sServiceConnectedInstance > & instances);
+    void slotLogInstancesConnect(const std::vector< areg::ConnectedInstance > & instances);
 
     /**
      * \brief   The callback of the event triggered when receive the list of disconnected instances that make logs.
      * \param   instances   The list of IDs of the disconnected instances.
      * \param   count       The number of entries in the list.
      **/
-    void slotLogInstancesDisconnect(const std::vector< NEService::sServiceConnectedInstance > & instances);
+    void slotLogInstancesDisconnect(const std::vector< areg::ConnectedInstance > & instances);
 
     /**
      * \brief   The callback of the event triggered when connection with the log collector service is lost.
@@ -587,7 +587,7 @@ private slots:
      * \param   scopes  The list of the scopes registered in the application. Each entry contains the ID of the scope, message priority and the full name.
      * \param   count   The number of scope entries in the list.
      **/
-    void slotLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count);
+    void slotLogRegisterScopes(ITEM_ID cookie, const ScopeInfo* scopes, int count);
 
     /**
      * \brief   The callback of the event triggered when receive the list of previously registered scopes with new priorities.
@@ -595,27 +595,27 @@ private slots:
      * \param   scopes  The list of previously registered scopes. Each entry contains the ID of the scope, message priority and the full name.
      * \param   count   The number of scope entries in the list.
      **/
-    void slotLogUpdateScopes(ITEM_ID cookie, const sLogScope* scopes, int count);
+    void slotLogUpdateScopes(ITEM_ID cookie, const ScopeInfo* scopes, int count);
 
     /**
      * \brief   The callback of the event triggered when receive message to log.
      * \param   logMessage  The structure of the message to log.
      **/
-    void slotLogMessage(const SharedBuffer & logMessage);
+    void slotLogMessage(const areg::SharedBuffer & logMessage);
 
 private:
     inline LogObserver& self(void);
 
 private:
     LogCollectorClient& mLogClient;     //!< Log observer client.
-    String              mConfigFile;    //!< The path to config file.
+    areg::String        mConfigFile;    //!< The path to config file.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
     LogObserver( void ) = delete;
-    DECLARE_NOCOPY_NOMOVE( LogObserver );
+    AREG_NOCOPY_NOMOVE( LogObserver );
 };
 
 //////////////////////////////////////////////////////////////////////////

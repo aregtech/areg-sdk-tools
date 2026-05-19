@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP
+#ifndef LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP
 #define LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -27,11 +27,11 @@
 #include "areg/base/File.hpp"
 #include "areg/base/SharedBuffer.hpp"
 #include "areg/base/String.hpp"
-#include "areg/base/SynchObjects.hpp"
+#include "areg/base/SyncPrimitives.hpp"
 #include "areg/base/Thread.hpp"
-#include "areg/base/IEThreadConsumer.hpp"
-#include "areg/component/NEService.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/base/ThreadConsumer.hpp"
+#include "areg/component/ServiceDefs.hpp"
+#include "areg/logging/areg_log.h"
 #include "aregextend/db/LogSqliteDatabase.hpp"
 #include "aregextend/db/SqliteStatement.hpp"
 
@@ -56,7 +56,7 @@ class ScopeRoot;
  *          Provides common data and interface for log models.
  **/
 class LoggingModelBase  : public    TableModelBase
-                        , protected IEThreadConsumer
+                        , protected areg::ThreadConsumer
 {
     Q_OBJECT
 
@@ -93,9 +93,9 @@ public:
     };
 
     using   ListColumns     = QList<LoggingModelBase::eColumn>;
-    using   ListLogs        = std::vector<SharedBuffer>;
-    using   ListInstances   = std::vector< NEService::sServiceConnectedInstance>;
-    using   ListScopes      = std::vector< NELogging::sScopeInfo>;
+    using   ListLogs        = std::vector<areg::SharedBuffer>;
+    using   ListInstances   = std::vector< areg::ConnectedInstance>;
+    using   ListScopes      = std::vector< areg::ScopeEntry>;
     using   MapScopes       = std::map<ITEM_ID, ListScopes>;
     using   ListExpanded    = std::vector<QModelIndex>;
     using   RootList        = std::vector<ScopeRoot*>;
@@ -315,7 +315,7 @@ public:
     /**
      * \brief   Returns the logging message structure of specified row.
      **/
-    inline const NELogging::sLogMessage* getLogData(int row) const;
+    inline const areg::LogEntry* getLogData(int row) const;
 
     /**
      * \brief   Return the logging message entry of specified row and column.
@@ -327,8 +327,8 @@ public:
      **/
     inline void setScopeFiler(ScopeLogViewerFilter* filter);
     
-    inline LogSqliteDatabase& getDatabase();
-    inline const LogSqliteDatabase& getDatabase() const;
+    inline areg::ext::LogSqliteDatabase& getDatabase();
+    inline const areg::ext::LogSqliteDatabase& getDatabase() const;
 
 /************************************************************************
  * Signals
@@ -356,7 +356,7 @@ signals:
      *          In case of disconnected mode this signal is not triggered.
      * \param   instances   The list of instances available.
      **/
-    void signalInstanceAvailable(const std::vector< NEService::sServiceConnectedInstance>& instances);
+    void signalInstanceAvailable(const std::vector< areg::ConnectedInstance>& instances);
 
     /**
      * \brief   Signal emitted when one or more instances are disconnected.
@@ -374,7 +374,7 @@ signals:
      * \param   instId      The ID of an instance, which scopes are available.
      * \param   scopes      The list of scopes available for the specified instance.
      **/
-    void signalScopesAvailable(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
+    void signalScopesAvailable(ITEM_ID instId, const std::vector<areg::ScopeEntry>& scopes);
 
     /**
      * \brief   Signal emitted when scopes of the specified instance are updated.
@@ -383,7 +383,7 @@ signals:
      * \param   instId      The ID of an instance, which scopes are updated.
      * \param   scopes      The list of scopes available for the specified instance.
      **/
-    void signalScopesUpdated(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
+    void signalScopesUpdated(ITEM_ID instId, const std::vector<areg::ScopeEntry>& scopes);
 
 //////////////////////////////////////////////////////////////////////////
 // LoggingModelBase overrides
@@ -431,7 +431,7 @@ public:
      * \brief   Call to query and get list of names of connected instances from log database.
      * \param   names   On output, contains the list of names of connected instances.
      **/
-    virtual void getLogInstanceNames(std::vector<String>& names);
+    virtual void getLogInstanceNames(std::vector<areg::String>& names);
 
     /**
      * \brief   Call to query and get list of IDs of connected instances from log database
@@ -444,13 +444,13 @@ public:
      * \param   names   On output, contains the list of names of connected instances.
      * \param   ids     On output, contains the list of IDs of connected instances.
      **/
-    virtual void getLogInstances(std::vector<String>&names, std::vector<std::any>& ids);
+    virtual void getLogInstances(std::vector<areg::String>&names, std::vector<std::any>& ids);
 
     /**
      * \brief   Call to query and get list of names of threads of the connected instances from log database.
      * \param   names   On output, contains the list of all thread names that sent messages.
      **/
-    virtual void getLogThreadNames(std::vector<String>& names);
+    virtual void getLogThreadNames(std::vector<areg::String>& names);
 
     /**
      * \brief   Call to query and get list of IDs of threads of the connected instances from log database.
@@ -463,47 +463,47 @@ public:
      * \param   names   On output, contains the list of all thread names that sent messages.
      * \param   ids     On output, contains the list of all thread IDs that sent messages.
      **/
-    virtual void getLogThreadValues(std::vector<String>& names, std::vector<std::any>& ids);
+    virtual void getLogThreadValues(std::vector<areg::String>& names, std::vector<std::any>& ids);
 
     /**
      * \brief   Call to get the list of log priorities.
      * \param   names   On output, contains the names of all priorities.
      **/
-    virtual void getPriorityNames(std::vector<String>& names);
+    virtual void getPriorityNames(std::vector<areg::String>& names);
 
     /**
      * \brief   Call to get the list of log priority values.
      * \param   values  On output, contains the values of all priorities.
      **/
-    virtual void getPriorityValues(std::vector<String>& names, std::vector<std::any>& values);
+    virtual void getPriorityValues(std::vector<areg::String>& names, std::vector<std::any>& values);
 
     /**
      * \brief   Call to query and get information of connected instances from log database.
      *          This query will receive list of all registered instances.
      **/
-    virtual const std::vector<NEService::sServiceConnectedInstance> & getLogInstances(void);
+    virtual const std::vector<areg::ConnectedInstance> & getLogInstances(void);
 
     /**
      * \brief   Call to query and get information of log scopes of specified instance from log database.
      *          This query will receive list of all registered scopes.
      * \param   instId  The ID of the instance.
      **/
-    virtual const std::vector<NELogging::sScopeInfo>& getLogInstScopes(ITEM_ID instId);
+    virtual const std::vector<areg::ScopeEntry>& getLogInstScopes(ITEM_ID instId);
 
     /**
      * \brief   Call to get all log messages from log database.
      **/
-    virtual const std::vector<SharedBuffer>& getLogMessages(void);
+    virtual const std::vector<areg::SharedBuffer>& getLogMessages(void);
 
     /**
      * \brief   Call to get log messages of the specified instance from log database.
-     *          If `instId` is `NEService::COOKIE_ANY` it receives the list of all instances
+     *          If `instId` is `areg::COOKIE_ANY` it receives the list of all instances
      *          similar to the call to `getLogMessages()`.
      * \param   messages    On output, contains the list of log messages of the specified instance.
      * \param   instId  The ID of the instance to get log messages.
-     *                  If `NEService::COOKIE_ANY` it receives log messages of all instances.
+     *                  If `areg::COOKIE_ANY` it receives log messages of all instances.
      **/
-    virtual void getLogInstMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId = NEService::COOKIE_ANY);
+    virtual void getLogInstMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId = areg::COOKIE_ANY);
 
     /**
      * \brief   Call to get log messages of the specified scope from log database.
@@ -513,19 +513,19 @@ public:
      * \param   scopeId     The ID of the scope to get log messages.
      *                      If `0` it receives log messages of all scopes.
      **/
-    virtual void getLogScopeMessages(std::vector<SharedBuffer>& messages, uint32_t scopeId = 0);
+    virtual void getLogScopeMessages(std::vector<areg::SharedBuffer>& messages, uint32_t scopeId = 0);
 
     /**
      * \brief   Call to get log messages of the specified instance and log scope ID from log database.
-     *          If `instId` is `NEService::COOKIE_ANY` and `scopeId` is `0`, it receives the list of all logs
+     *          If `instId` is `areg::COOKIE_ANY` and `scopeId` is `0`, it receives the list of all logs
      *          similar to the call to `getLogMessages()`.
      * \param   messages    On output, contains the list of log messages of the specified instance and scope.
      * \param   instId      The ID of the instance to get log messages.
-     *                      If `NEService::COOKIE_ANY` it receives log messages of all instances.
+     *                      If `areg::COOKIE_ANY` it receives log messages of all instances.
      * \param   scopeId     The ID of the scope to get log messages.
      *                      If `0` it receives log messages of all scopes.
      **/
-    virtual void getLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
+    virtual void getLogMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId);
 
     /**
      * \brief   Find the instance with the given ID and returns valid index if found.
@@ -539,7 +539,7 @@ public:
      *          If not found, returns instance object with empty and invalid data.
      * \param   instId  The ID of the instance to get.
      **/
-    virtual const NEService::sServiceConnectedInstance& getInstanceEntry(ITEM_ID instId);
+    virtual const areg::ConnectedInstance& getInstanceEntry(ITEM_ID instId);
 
     /**
      * \brief   Adds an instance entry to the model.
@@ -548,7 +548,7 @@ public:
      * \param   unique     If true, adds the instance only if it is not already present.
      * \return  True if the instance was added successfully, false otherwise.
      **/
-    virtual bool addInstanceEntry(const NEService::sServiceConnectedInstance& instance, bool unique);
+    virtual bool addInstanceEntry(const areg::ConnectedInstance& instance, bool unique);
 
     /**
      * \brief   Removes the instance entry with the given ID from the model.
@@ -563,14 +563,14 @@ public:
      * \param   unique      Flag, indicating whether each instance should be unique in the list.
      * \return  Returns number of instances added to the list.
      **/
-    virtual int addInstances(const std::vector<NEService::sServiceConnectedInstance>& instances, bool unique);
+    virtual int addInstances(const std::vector<areg::ConnectedInstance>& instances, bool unique);
 
     /**
      * \brief   Removes list of instances from the list. Triggered, when instances are disconnected.
      * \param   instances   The list of disconnected instances.
      * \return  Returns number of instances removed from the list.
      **/
-    virtual int removeInstances(const std::vector<NEService::sServiceConnectedInstance>& instances);
+    virtual int removeInstances(const std::vector<areg::ConnectedInstance>& instances);
 
     /**
      * \brief   Transfers the data from given model. Copies the list of connected instances, scopes and logs.
@@ -587,34 +587,34 @@ public:
 
     /**
      * \brief   Sets up the logging query to run. By default, it reads all logs without filter.
-     * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `NEService::TARGET_ALL`.
+     * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `areg::TARGET_ALL`.
      * \return  Number or log entries to read.
      **/
-    virtual uint32_t setupLogStatement(ITEM_ID instId = NEService::TARGET_ALL);
+    virtual uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL);
 
     /**
      * \brief   Applies the filters to the log query.
-     * \param   instId  The ID of the instance to apply filters. Applies filters for all instances if `NEService::TARGET_ALL`.
+     * \param   instId  The ID of the instance to apply filters. Applies filters for all instances if `areg::TARGET_ALL`.
      * \param   filter  The list of scope filters to apply.
      * \return  True if filters are applied successfully, false otherwise.
      **/
-    virtual bool applyFilters(uint32_t instId, const TEArrayList<LogSqliteDatabase::sScopeFilter>& filter);
+    virtual bool applyFilters(uint32_t instId, const areg::ArrayList<areg::ext::LogSqliteDatabase::ScopeFilter>& filter);
 
     /**
      * \brief   Resets the filters for the specified instance.
-     *          If `instId` is `NEService::TARGET_ALL`, resets filters for all instances.
-     * \param   instId  The ID of the instance to reset filters. If `NEService::TARGET_ALL`, resets for all instances.
+     *          If `instId` is `areg::TARGET_ALL`, resets filters for all instances.
+     * \param   instId  The ID of the instance to reset filters. If `areg::TARGET_ALL`, resets for all instances.
      * \return  True if filters are reset successfully, false otherwise.
      **/
-    virtual bool resetFilters(uint32_t instId = NEService::TARGET_ALL);
+    virtual bool resetFilters(uint32_t instId = areg::TARGET_ALL);
 
     /**
      * \brief   Disables the filters for the specified instance.
-     *          If `instId` is `NEService::TARGET_ALL`, disables filters for all instances.
-     * \param   instId  The ID of the instance to disable filters. If `NEService::TARGET_ALL`, disables for all instances.
+     *          If `instId` is `areg::TARGET_ALL`, disables filters for all instances.
+     * \param   instId  The ID of the instance to disable filters. If `areg::TARGET_ALL`, disables for all instances.
      * \return  True if filters are disabled successfully, false otherwise.
      **/
-    virtual bool disableFilters(uint32_t instId = NEService::TARGET_ALL);
+    virtual bool disableFilters(uint32_t instId = areg::TARGET_ALL);
 
 //////////////////////////////////////////////////////////////////////////
 // Helper methods
@@ -634,22 +634,22 @@ protected:
     /**
      * \brief   Helper to get display data for a log message and column.
      **/
-    QString getDisplayData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QString getDisplayData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get background color data for a log message and column.
      **/
-    QBrush getBackgroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QBrush getBackgroundData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get foreground color data for a log message and column.
      **/
-    QColor getForegroundData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QColor getForegroundData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get decoration (icon) data for a log message and column.
      **/
-    QIcon getDecorationData(const NELogging::sLogMessage* logMessage, eColumn column) const;
+    QIcon getDecorationData(const areg::LogEntry* logMessage, eColumn column) const;
 
     /**
      * \brief   Helper to get text alignment data for a column.
@@ -662,7 +662,7 @@ protected:
     inline void cleanLogs(void);
 
 /************************************************************************/
-// IEThreadConsumer interface overrides
+// areg::ThreadConsumer interface overrides
 /************************************************************************/
 protected:
 
@@ -673,7 +673,7 @@ protected:
      *          the thread will complete work. To restart thread running, 
      *          createThread() method should be called again.
      **/
-    virtual void onThreadRuns( void ) override;
+    virtual void on_run( void ) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -689,9 +689,9 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 protected:
+    areg::ext::LogSqliteDatabase       mDatabase;      //!< The SQLite database object to read log data.
+    areg::ext::SqliteStatement         mStatement;     //!< The SQLite statement to query log data.
     eLogging                mLoggingType;   //!< The type of logging, either live or offline.
-    LogSqliteDatabase       mDatabase;      //!< The SQLite database object to read log data.
-    SqliteStatement         mStatement;     //!< The SQLite statement to query log data.
     ListColumns             mActiveColumns; //!< The list of active columns.
     RootList                mRootList;      //!< The list of root nodes
     ListLogs                mLogs;          //!< The list of log messages.
@@ -701,8 +701,8 @@ protected:
     MapScopes               mScopes;        //!< The map of scopes, where key is instance ID and value is the list of scopes.
     int                     mLogChunk;      //!< The position in the log messages list to read from.
     uint32_t                mLogCount;      //!< The position of updated log.
-    Thread                  mReadThread;    //!< The thread to run the model operations.
-    Mutex                   mQuitThread;    //!< The event to notify when data is ready.
+    areg::Thread            mReadThread;    //!< The thread to run the model operations.
+    areg::Mutex             mQuitThread;    //!< The event to notify when data is ready.
     ScopeLogViewerFilter*   mScopeFilter;   //<!< The filter for scope logs, can be nullptr.
 };
 
@@ -749,13 +749,13 @@ inline LoggingModelBase::eColumn LoggingModelBase::fromIndexToColumn(int logical
 
 inline QString LoggingModelBase::getLogFileName(void) const
 {
-    String dbPath = mDatabase.getDatabasePath();
-    return QString(dbPath.isEmpty() == false ? File::getFileNameWithExtension(dbPath).getString() : "");
+    areg::String dbPath = mDatabase.database_path();
+    return QString(!dbPath.is_empty() ? areg::File::name_with_extension(dbPath).as_string() : "");
 }
 
 inline QString LoggingModelBase::getLogFilePath(void) const
 {
-    return QString::fromStdString(mDatabase.getDatabasePath().getData());
+    return QString::fromStdString(mDatabase.database_path().data());
 }
 
 inline void LoggingModelBase::markDisconnected()
@@ -830,14 +830,14 @@ inline void LoggingModelBase::selectTop(void)
     mSelectedLog = rows > 0 ? index(0, 0) : QModelIndex();
 }
 
-inline const NELogging::sLogMessage* LoggingModelBase::getLogData(int row) const
+inline const areg::LogEntry* LoggingModelBase::getLogData(int row) const
 {
-    return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? reinterpret_cast<const NELogging::sLogMessage*>(mLogs[row].getBuffer()) : nullptr);
+    return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? reinterpret_cast<const areg::LogEntry*>(mLogs[row].buffer()) : nullptr);
 }
 
 inline QString LoggingModelBase::getLogEntry(int row, int col) const
 {
-    return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? getDisplayData(reinterpret_cast<const NELogging::sLogMessage*>(mLogs[row].getBuffer()), static_cast<eColumn>(col)) : QString());
+    return ((row >= 0) && (row < static_cast<int>(mLogs.size())) ? getDisplayData(reinterpret_cast<const areg::LogEntry*>(mLogs[row].buffer()), static_cast<eColumn>(col)) : QString());
 }
 
 inline void LoggingModelBase::setScopeFiler(ScopeLogViewerFilter* filter)
@@ -853,10 +853,10 @@ inline void LoggingModelBase::_closeDatabase(void)
 
 inline void LoggingModelBase::_quitThread(void)
 {
-    if (mReadThread.isValid())
+    if (mReadThread.is_valid())
     {
-        mQuitThread.lock(NECommon::WAIT_INFINITE);
-        mReadThread.shutdownThread(NECommon::WAIT_INFINITE);
+        mQuitThread.lock(areg::WAIT_INFINITE);
+        mReadThread.shutdown(areg::WAIT_INFINITE);
         mQuitThread.unlock();
     }
 }
@@ -867,12 +867,12 @@ inline void LoggingModelBase::cleanLogs(void)
     mLogs.clear();
 }
 
-inline LogSqliteDatabase& LoggingModelBase::getDatabase()
+inline areg::ext::LogSqliteDatabase& LoggingModelBase::getDatabase()
 {
     return mDatabase;
 }
 
-inline const LogSqliteDatabase& LoggingModelBase::getDatabase() const
+inline const areg::ext::LogSqliteDatabase& LoggingModelBase::getDatabase() const
 {
     return mDatabase;
 }

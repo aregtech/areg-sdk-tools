@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -24,13 +24,15 @@
 #include "lusan/common/LogCollectorClient.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
-#include "areg/appbase/NEApplication.hpp"
+#include "areg/appbase/AppDefs.hpp"
 #include "areg/base/DateTime.hpp"
 #include "areg/component/ComponentLoader.hpp"
 #include "areg/component/ComponentThread.hpp"
 #include "areglogger/client/LogObserverApi.h"
 
 #include <atomic>
+
+#include <QMetaType>
 
 namespace
 {
@@ -44,14 +46,14 @@ BEGIN_MODEL(LogObserver::LogobserverModel)
 
     BEGIN_REGISTER_THREAD(LogObserver::LogobserverThread)
         BEGIN_REGISTER_COMPONENT_EX( LogObserver::LogObserverComponent
-                                   , NEMemory::InvalidElement
-                                , ([](const NERegistry::ComponentEntry& e, ComponentThread& t) -> Component * {
+                                   , areg::InvalidElement
+                                , ([](const areg::ComponentEntry& e, areg::ComponentThread& t) -> areg::Component * {
                                     return LogObserver::CreateComponent(e, t);
                                 })
-                                , ([](Component & c, const NERegistry::ComponentEntry & e) -> void {
+                                , ([](areg::Component & c, const areg::ComponentEntry & e) -> void {
                                     LogObserver::DeleteComponent(c, e);
                                 }))
-            REGISTER_IMPLEMENT_SERVICE( NEService::EmptyServiceName, NEService::EmptyServiceVersion )
+            REGISTER_IMPLEMENT_SERVICE( areg::EmptyServiceName, areg::EmptyServiceVersion )
         END_REGISTER_COMPONENT(LogObserver::LogObserverComponent)
     END_REGISTER_THREAD(LogObserver::LogobserverThread)
 
@@ -62,12 +64,12 @@ bool LogObserver::createLogObserver(FuncLogObserverStarted callbackStarted)
     bool result{ true };
     if (_modelInitialized.exchange(true) == false)
     {
-        Q_ASSERT(Thread::findThreadByName(LogObserver::LogobserverThread) == nullptr);
-        Q_ASSERT(ComponentLoader::isModelLoaded(LogObserver::LogobserverModel) == false);
+        Q_ASSERT(areg::Thread::find_by_name(LogObserver::LogobserverThread) == nullptr);
+        Q_ASSERT(areg::ComponentLoader::is_model_loaded(LogObserver::LogobserverModel) == false);
 
         _observerStart = false;
         _logObserverStarted = callbackStarted;
-        result = ComponentLoader::loadComponentModel(LogObserver::LogobserverModel);
+        result = areg::ComponentLoader::load_component_model(LogObserver::LogobserverModel);
     }
     
     return result;
@@ -77,12 +79,12 @@ void LogObserver::releaseLogObserver(void)
 {
     _modelInitialized = false;
     _observerStart = false;
-    ComponentLoader::unloadComponentModel(true, LogObserver::LogobserverModel);
+    areg::ComponentLoader::unload_component_model(true, LogObserver::LogobserverModel);
 }
 
 void LogObserver::disconnect(void)
 {
-    static_cast<LogObserverBase &>(LogObserver::getClient()).disconnect();
+    static_cast<areg::logger::LogObserverBase &>(LogObserver::getClient()).disconnect();
 }
 
 bool LogObserver::pause(void)
@@ -107,74 +109,74 @@ bool LogObserver::restart(const QString& dbLocation)
 
 bool LogObserver::requestInstances(void)
 {
-    return LogObserver::getClient().requestInstances();
+    return LogObserver::getClient().request_instances();
 }
 
-bool LogObserver::requestScopes(ITEM_ID target /*= NEService::TARGET_ALL*/)
+bool LogObserver::requestScopes(ITEM_ID target /*= areg::TARGET_ALL*/)
 {
-    return LogObserver::getClient().requestScopes(target);
+    return LogObserver::getClient().request_scopes(target);
 }
 
-bool LogObserver::requestChangeScopePrio(ITEM_ID target, const sLogScope* scopes, uint32_t count)
+bool LogObserver::requestChangeScopePrio(ITEM_ID target, const ScopeInfo* scopes, uint32_t count)
 {
-    return LogObserver::getClient().requestChangeScopePrio(target, scopes, count);
+    return LogObserver::getClient().request_change_scope_prio(target, scopes, count);
 }
 
-bool LogObserver::requestSaveConfig(ITEM_ID target /*= NEService::TARGET_ALL*/)
+bool LogObserver::requestSaveConfig(ITEM_ID target /*= areg::TARGET_ALL*/)
 {
-    return LogObserver::getClient().requestSaveConfig(target);
+    return LogObserver::getClient().request_save_config(target);
 }
 
 void LogObserver::saveLoggerConfig(void)
 {
-    LogObserver::getClient().saveLoggerConfig();
+    LogObserver::getClient().save_logger_config();
 }
 
-const NESocket::SocketAddress& LogObserver::getLogServiceAddress(void)
+const areg::SocketAddress& LogObserver::getLogServiceAddress(void)
 {
-    return LogObserver::getClient().getLoggerAddress();
+    return LogObserver::getClient().logger_address();
 }
 
 QString LogObserver::getConnectedAddress(void)
 {
-    return QString(LogObserver::getClient().getLoggerIpAddress().c_str());
+    return QString(LogObserver::getClient().logger_ip_address().c_str());
 }
 
 QString LogObserver::getConnectedHostName(void)
 {
-    return QString(LogObserver::getClient().getLoggerHostName().c_str());
+    return QString(LogObserver::getClient().logger_host_name().c_str());
 }
 
 uint16_t LogObserver::getConnectedPort(void)
 {
-    return LogObserver::getClient().getLoggerPort();
+    return LogObserver::getClient().logger_port();
 }
 
 QString LogObserver::getActiveDatabase(void)
 {
-    return QString(LogObserver::getClient().getActiveDatabasePath().c_str());
+    return QString(LogObserver::getClient().active_database_path().c_str());
 }
 
 QString LogObserver::getInitDatabase(void)
 {
-    return QString(LogObserver::getClient().getInitDatabasePath().c_str());
+    return QString(LogObserver::getClient().init_database_path().c_str());
 }
 
 QString LogObserver::getConfigDatabaseName(void)
 {
-    return QString(LogObserver::getClient().getConfigLoggerDatabaseName().c_str());
+    return QString(LogObserver::getClient().config_logger_database_name().c_str());
 }
 
 QString LogObserver::getConfigDatabaseLocation(void)
 {
-    return QString(LogObserver::getClient().getConfigLoggerDatabaseLocation().c_str());
+    return QString(LogObserver::getClient().config_logger_database_location().c_str());
 }
 
 bool LogObserver::setConfigDatabaseName(const QString& dbName)
 {
     if (LogObserver::getComponent() != nullptr)
     {
-        LogObserver::getClient().setConfigLoggerDatabaseName(dbName.toStdString());
+        LogObserver::getClient().set_config_logger_database_name(dbName.toStdString());
         return true;
     }
     else
@@ -187,7 +189,7 @@ bool LogObserver::setConfigDatabaseLocation(const QString& dbLocation)
 {
     if (LogObserver::getComponent() != nullptr)
     {
-        LogObserver::getClient().setConfigLoggerDatabaseLocation(dbLocation.toStdString());
+        LogObserver::getClient().set_config_logger_database_location(dbLocation.toStdString());
         return true;
     }
     else
@@ -198,22 +200,22 @@ bool LogObserver::setConfigDatabaseLocation(const QString& dbLocation)
 
 bool LogObserver::isConnected(void)
 {
-    return LogObserver::getClient().isConnected();
+    return LogObserver::getClient().is_connected();
 }
 
 bool LogObserver::connect(const QString& address, uint16_t port, const QString& dbLocation)
 {
-    return static_cast<LogObserverBase &>(LogObserver::getClient()).connect(address.toStdString(), port, dbLocation.toStdString());
+    return static_cast<areg::logger::LogObserverBase &>(LogObserver::getClient()).connect(address.toStdString(), port, dbLocation.toStdString());
 }
 
-Component * LogObserver::CreateComponent(const NERegistry::ComponentEntry & entry, ComponentThread & owner)
+areg::Component * LogObserver::CreateComponent(const areg::ComponentEntry & entry, areg::ComponentThread & owner)
 {
     Q_ASSERT(_component.load() == nullptr);
     _component.store(DEBUG_NEW LogObserver( entry, owner));
-    return static_cast<Component *>(_component.load());
+    return static_cast<areg::Component *>(_component.load());
 }
 
-void LogObserver::DeleteComponent(Component & compObject, const NERegistry::ComponentEntry & /* entry */)
+void LogObserver::DeleteComponent(areg::Component & compObject, const areg::ComponentEntry & /* entry */)
 {
     _component.store(nullptr);
     delete (&compObject);
@@ -224,59 +226,59 @@ LogObserver* LogObserver::getComponent(void)
     return _component.load();
 }
 
-void LogObserver::queryLogInstanceNames(std::vector<String>& names)
+void LogObserver::queryLogInstanceNames(std::vector<areg::String>& names)
 {
-    LogObserver::getClient().getLogInstanceNames(names);
+    LogObserver::getClient().log_instance_names(names);
 }
 
 void LogObserver::queryLogInstances(std::vector<ITEM_ID>& ids)
 {
-    LogObserver::getClient().getLogInstances(ids);
+    LogObserver::getClient().log_instances(ids);
 }
 
-void LogObserver::queryLogThreadNames(std::vector<String>& names)
+void LogObserver::queryLogThreadNames(std::vector<areg::String>& names)
 {
-    LogObserver::getClient().getLogThreadNames(names);
+    LogObserver::getClient().log_thread_names(names);
 }
 
 void LogObserver::queryLogThreads(std::vector<ITEM_ID>& ids)
 {
-    LogObserver::getClient().getLogThreads(ids);
+    LogObserver::getClient().log_threads(ids);
 }
 
-void LogObserver::queryPriorityNames(std::vector<String>& names)
+void LogObserver::queryPriorityNames(std::vector<areg::String>& names)
 {
-    LogObserver::getClient().getPriorityNames(names);
+    LogObserver::getClient().log_priority_names(names);
 }
 
-void LogObserver::queryLogInstanceInfos(std::vector<NEService::sServiceConnectedInstance>& infos)
+void LogObserver::queryLogInstanceInfos(std::vector<areg::ConnectedInstance>& infos)
 {
-    LogObserver::getClient().getLogInstanceInfos(infos);
+    LogObserver::getClient().log_instance_infos(infos);
 }
 
-void LogObserver::queryLogInstScopes(std::vector<NELogging::sScopeInfo>& scopes, ITEM_ID instId)
+void LogObserver::queryLogInstScopes(std::vector<areg::ScopeEntry>& scopes, ITEM_ID instId)
 {
-    LogObserver::getClient().getLogInstScopes(scopes, instId);
+    LogObserver::getClient().log_inst_scopes(scopes, instId);
 }
 
-void LogObserver::queryLogMessages(std::vector<SharedBuffer>& messages)
+void LogObserver::queryLogMessages(std::vector<areg::SharedBuffer>& messages)
 {
-    LogObserver::getClient().getLogMessages(messages);
+    LogObserver::getClient().log_messages(messages);
 }
 
-void LogObserver::queryLogInstMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId)
+void LogObserver::queryLogInstMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId)
 {
-    LogObserver::getClient().getLogInstMessages(messages, instId);
+    LogObserver::getClient().log_inst_messages(messages, instId);
 }
 
-void LogObserver::queryLogScopeMessages(std::vector<SharedBuffer>& messages, uint32_t scopeId)
+void LogObserver::queryLogScopeMessages(std::vector<areg::SharedBuffer>& messages, uint32_t scopeId)
 {
-    LogObserver::getClient().getLogScopeMessages(messages, scopeId);
+    LogObserver::getClient().log_scope_messages(messages, scopeId);
 }
 
-void LogObserver::queryLogMessages(std::vector<SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId)
+void LogObserver::queryLogMessages(std::vector<areg::SharedBuffer>& messages, ITEM_ID instId, uint32_t scopeId)
 {
-    LogObserver::getClient().getLogMessages(messages, instId, scopeId);
+    LogObserver::getClient().log_messages(messages, instId, scopeId);
 }
 
 LogCollectorClient& LogObserver::getClient(void)
@@ -284,10 +286,10 @@ LogCollectorClient& LogObserver::getClient(void)
     return LogCollectorClient::getInstance();
 }
 
-LogObserver::LogObserver(const NERegistry::ComponentEntry & entry, ComponentThread & ownerThread)
-    : Component ( entry, ownerThread )
-    , StubBase  ( self(), NEService::getEmptyInterface() )
-    , IELogObserverEventConsumer()
+LogObserver::LogObserver(const areg::ComponentEntry & entry, areg::ComponentThread & ownerThread)
+    : areg::Component ( entry, ownerThread )
+    , areg::StubBase  ( self(), areg::empty_interface() )
+    , LogObserverEventConsumer()
 
     , mLogClient    (LogCollectorClient::getInstance())
     , mConfigFile   (NELusanCommon::INIT_FILE.toStdString())
@@ -298,11 +300,11 @@ LogObserver::~LogObserver(void)
 {
 }
 
-void LogObserver::startupServiceInterface(Component & holder)
+void LogObserver::startup_service_interface(areg::Component & holder)
 {
-    StubBase::startupServiceInterface(holder);
-    static_cast<LogObserverBase &>(mLogClient).stop();
-    static_cast<LogObserverBase &>(mLogClient).disconnect();
+    areg::StubBase::startup_service_interface(holder);
+    static_cast<areg::logger::LogObserverBase &>(mLogClient).stop();
+    static_cast<areg::logger::LogObserverBase &>(mLogClient).disconnect();
 
     FuncLogObserverStarted callback = _logObserverStarted.load();
     if (callback != nullptr)
@@ -310,8 +312,10 @@ void LogObserver::startupServiceInterface(Component & holder)
         callback();
     }
     
-    LogObserverEvent::addListener(static_cast<IELogObserverEventConsumer &>(self()), getComponentThread());
-    
+    LogObserverEvent::add_listener(static_cast<LogObserverEventConsumer &>(self()), master_thread());
+
+    qRegisterMetaType<areg::SharedBuffer>("areg::SharedBuffer");
+
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogObserverConfigured   , this, &LogObserver::slotLogObserverConfigured    , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogDbConfigured         , this, &LogObserver::slotLogDbConfigured          , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogServiceConnected     , this, &LogObserver::slotLogServiceConnected      , Qt::DirectConnection);
@@ -325,31 +329,31 @@ void LogObserver::startupServiceInterface(Component & holder)
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogUpdateScopes         , this, &LogObserver::slotLogUpdateScopes          , Qt::DirectConnection);
     QObject::connect(&mLogClient, &LogCollectorClient::signalLogMessage              , this, &LogObserver::slotLogMessage               , Qt::DirectConnection);
     
-    if (mLogClient.isInitialized() == false)
+    if (mLogClient.is_initialized() == false)
     {
-        mLogClient.initialize(mConfigFile.getData());
+        mLogClient.initialize(mConfigFile.data());
     }
     
-    QString address { mLogClient.getLoggerIpAddress().c_str() };
-    uint16_t port   { mLogClient.getLoggerPort() };
-    QString logFile { mLogClient.getActiveDatabasePath().c_str() };
+    QString address { mLogClient.logger_ip_address().c_str() };
+    uint16_t port   { mLogClient.logger_port() };
+    QString logFile { mLogClient.active_database_path().c_str() };
 
     emit signalLogObserverInstance(true, address, port, logFile);
 }
 
-void LogObserver::shutdownServiceInterface(Component & holder)
+void LogObserver::shutdown_service_interface(Component & holder) noexcept
 {
-    QString address { mLogClient.getLoggerIpAddress().c_str() };
-    uint16_t port   { mLogClient.getLoggerPort() };
-    QString logFile { mLogClient.getActiveDatabasePath().c_str() };
+    QString address { mLogClient.logger_ip_address().c_str() };
+    uint16_t port   { mLogClient.logger_port() };
+    QString logFile { mLogClient.active_database_path().c_str() };
 
     emit signalLogObserverInstance(false, address, port, logFile);
 
-    static_cast<LogObserverBase &>(mLogClient).stop();
-    static_cast<LogObserverBase &>(mLogClient).disconnect();
-    StubBase::shutdownServiceInterface(holder);
+    static_cast<areg::logger::LogObserverBase &>(mLogClient).stop();
+    static_cast<areg::logger::LogObserverBase &>(mLogClient).disconnect();
+    StubBase::shutdown_service_interface(holder);
     
-    LogObserverEvent::removeListener(static_cast<IELogObserverEventConsumer &>(self()), getComponentThread());
+    LogObserverEvent::remove_listener(static_cast<LogObserverEventConsumer &>(self()), master_thread());
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogObserverConfigured    , this, &LogObserver::slotLogObserverConfigured);
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogDbConfigured          , this, &LogObserver::slotLogDbConfigured);
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogServiceConnected      , this, &LogObserver::slotLogServiceConnected);
@@ -364,40 +368,40 @@ void LogObserver::shutdownServiceInterface(Component & holder)
     QObject::disconnect(&mLogClient, &LogCollectorClient::signalLogMessage               , this, &LogObserver::slotLogMessage);
 }
 
-void LogObserver::sendNotification(unsigned int  /*msgId*/)
+void LogObserver::send_notification(unsigned int  /*msgId*/)
 {
 }
 
-void LogObserver::errorRequest(unsigned int /*msgId*/, bool /*msgCancel*/)
+void LogObserver::error_request(unsigned int /*msgId*/, bool /*msgCancel*/)
 {
 }
 
-void LogObserver::processRequestEvent(ServiceRequestEvent& /*eventElem*/)
+void LogObserver::process_request_event(areg::ServiceRequestEvent& /*eventElem*/)
 {
 }
 
-void LogObserver::processAttributeEvent(ServiceRequestEvent& /*eventElem*/)
+void LogObserver::process_attribute_event(areg::ServiceRequestEvent& /*eventElem*/)
 {
 }
 
-void LogObserver::processEvent(const LogObserverEventData& data)
+void LogObserver::process_event(const LogObserverEventData& data)
 {
-    const SharedBuffer& stream{ data.getBuffer() };
-    stream.moveToBegin();
+    const areg::SharedBuffer& stream{ data.getBuffer() };
+    stream.move_to_begin();
 
     switch (data.getEvent())
     {
-    case LogObserverEventData::eLogObserverEvent::CMD_Configured:
+    case LogObserverEventData::LogObserverCommand::CMD_Configured:
     {
         bool isEnabled{ false };
-        uint16_t port{ NESocket::InvalidPort };
+        uint16_t port{ areg::InvalidPort };
         std::string address;
         stream >> isEnabled >> address >> port;
         emit signalLogObserverConfigured(isEnabled, QString::fromStdString(address), port);
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_DbConfigured:
+    case LogObserverEventData::LogObserverCommand::CMD_DbConfigured:
     {
         bool isEnabled{ false };
         std::string dbName;
@@ -409,17 +413,17 @@ void LogObserver::processEvent(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_Connected:
+    case LogObserverEventData::LogObserverCommand::CMD_Connected:
     {
         bool isConnected{ false };
         std::string address;
-        uint16_t port{ NESocket::InvalidPort };
+        uint16_t port{ areg::InvalidPort };
         stream >> isConnected >> address >> port;
         emit signalLogServiceConnected(isConnected, QString::fromStdString(address), port);
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_Started:
+    case LogObserverEventData::LogObserverCommand::CMD_Started:
     {
         bool isStarted{ false };
         stream >> isStarted;
@@ -427,7 +431,7 @@ void LogObserver::processEvent(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_DbCreated:
+    case LogObserverEventData::LogObserverCommand::CMD_DbCreated:
     {
         std::string dbLocation;
         stream >> dbLocation;
@@ -435,21 +439,21 @@ void LogObserver::processEvent(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_MessageFailed:
+    case LogObserverEventData::LogObserverCommand::CMD_MessageFailed:
     {
         emit signalLogMessagingFailed();
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_InstConnected:
+    case LogObserverEventData::LogObserverCommand::CMD_InstConnected:
     {
         uint32_t count{ 0 };
         stream >> count;
 
-        std::vector< NEService::sServiceConnectedInstance> instances(count);
+        std::vector< areg::ConnectedInstance> instances(count);
         for (uint32_t i = 0; i < count; ++i)
         {
-            NEService::sServiceConnectedInstance& instance = instances[i];
+            areg::ConnectedInstance& instance = instances[i];
             stream >> instance;
         }
 
@@ -457,15 +461,15 @@ void LogObserver::processEvent(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_InstDisconnected:
+    case LogObserverEventData::LogObserverCommand::CMD_InstDisconnected:
     {
         uint32_t count{ 0 };
         stream >> count;
 
-        std::vector< NEService::sServiceConnectedInstance> instances(count);
+        std::vector< areg::ConnectedInstance> instances(count);
         for (uint32_t i = 0; i < count; ++i)
         {
-            NEService::sServiceConnectedInstance& instance = instances[i];
+            areg::ConnectedInstance& instance = instances[i];
             stream >> instance;
         }
 
@@ -473,24 +477,24 @@ void LogObserver::processEvent(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_ServiceDisconnect:
+    case LogObserverEventData::LogObserverCommand::CMD_ServiceDisconnect:
     {
         emit signalLogServiceDisconnected();
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_ScopesRegistered:
+    case LogObserverEventData::LogObserverCommand::CMD_ScopesRegistered:
     {
-        ITEM_ID inst{ NEService::COOKIE_ANY };
+        ITEM_ID inst{ areg::COOKIE_ANY };
         uint32_t count{ 0 };
         stream >> inst >> count;
 
-        std::vector<NELogging::sScopeInfo> scopes(inst);
+        std::vector<areg::ScopeEntry> scopes(count);
         for (uint32_t i = 0; i < count; ++i)
         {
-            sLogScope data{};
-            NELogging::sScopeInfo & scope = scopes[i];
-            stream.read(reinterpret_cast<unsigned char *>(&data), sizeof(sLogScope));
+            ScopeInfo data{};
+            areg::ScopeEntry & scope = scopes[i];
+            stream.read(reinterpret_cast<unsigned char *>(&data), sizeof(ScopeInfo));
             scope.scopeId   = data.lsId;
             scope.scopePrio = data.lsPrio;
             scope.scopeName = data.lsName;
@@ -500,18 +504,18 @@ void LogObserver::processEvent(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_ScopesUpdated:
+    case LogObserverEventData::LogObserverCommand::CMD_ScopesUpdated:
     {
-        ITEM_ID inst{ NEService::COOKIE_ANY };
+        ITEM_ID inst{ areg::COOKIE_ANY };
         uint32_t count{ 0 };
         stream >> inst >> count;
 
-        std::vector<NELogging::sScopeInfo> scopes(inst);
+        std::vector<areg::ScopeEntry> scopes(count);
         for (uint32_t i = 0; i < count; ++i)
         {
-            sLogScope data{};
-            NELogging::sScopeInfo & scope = scopes[i];
-            stream.read(reinterpret_cast<unsigned char *>(&data), sizeof(sLogScope));
+            ScopeInfo data{};
+            areg::ScopeEntry & scope = scopes[i];
+            stream.read(reinterpret_cast<unsigned char *>(&data), sizeof(ScopeInfo));
             scope.scopeId   = data.lsId;
             scope.scopePrio = data.lsPrio;
             scope.scopeName = data.lsName;
@@ -521,7 +525,7 @@ void LogObserver::processEvent(const LogObserverEventData& data)
     }
     break;
 
-    case LogObserverEventData::eLogObserverEvent::CMD_LogMessage:
+    case LogObserverEventData::LogObserverCommand::CMD_LogMessage:
     {
         emit signalLogMessage(stream);
     }
@@ -534,32 +538,32 @@ void LogObserver::processEvent(const LogObserverEventData& data)
 
 void LogObserver::slotLogObserverConfigured(bool isEnabled, const std::string& address, uint16_t port)
 {
-    SharedBuffer stream;
+    areg::SharedBuffer stream;
     stream << isEnabled << address << port;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_Configured, stream), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_Configured, stream), master_thread());
 }
 
 void LogObserver::slotLogDbConfigured(bool isEnabled, const std::string& dbName, const std::string& dbLocation, const std::string& dbUser)
 {
-    SharedBuffer stream;
+    areg::SharedBuffer stream;
     stream << isEnabled << dbName << dbLocation << dbUser;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_DbConfigured, stream), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_DbConfigured, stream), master_thread());
 }
 
 void LogObserver::slotLogServiceConnected(bool isConnected, const std::string& address, uint16_t port)
 {
-    SharedBuffer stream;
+    areg::SharedBuffer stream;
     stream << isConnected << address << port;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_Connected, stream), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_Connected, stream), master_thread());
 }
 
 void LogObserver::slotLogObserverStarted(bool isStarted)
 {
     if (isStarted )
     {
-        SharedBuffer stream;
+        areg::SharedBuffer stream;
         stream << isStarted;
-        LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_Started, stream), getComponentThread());
+        LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_Started, stream), master_thread());
     }
     else
     {
@@ -569,64 +573,64 @@ void LogObserver::slotLogObserverStarted(bool isStarted)
 
 void LogObserver::slotLogDbCreated(const std::string& dbLocation)
 {
-    SharedBuffer stream;
+    areg::SharedBuffer stream;
     stream << dbLocation;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_DbCreated, stream), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_DbCreated, stream), master_thread());
 }
 
 void LogObserver::slotLogMessagingFailed(void)
 {
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_MessageFailed), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_MessageFailed), master_thread());
 }
 
-void LogObserver::slotLogInstancesConnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
+void LogObserver::slotLogInstancesConnect(const std::vector<areg::ConnectedInstance>& instances)
 {
-    SharedBuffer stream;
+    areg::SharedBuffer stream;
     stream << instances;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstConnected, stream), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_InstConnected, stream), master_thread());
 }
 
-void LogObserver::slotLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
+void LogObserver::slotLogInstancesDisconnect(const std::vector<areg::ConnectedInstance>& instances)
 {
-    SharedBuffer stream;
+    areg::SharedBuffer stream;
     stream << instances;
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_InstDisconnected, stream), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_InstDisconnected, stream), master_thread());
 }
 
 void LogObserver::slotLogServiceDisconnected(void)
 {
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_ServiceDisconnect), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_ServiceDisconnect), master_thread());
 }
 
-void LogObserver::slotLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
+void LogObserver::slotLogRegisterScopes(ITEM_ID cookie, const ScopeInfo* scopes, int count)
 {
-    constexpr uint32_t size{ sizeof(sLogScope) };
-    SharedBuffer stream;
+    constexpr uint32_t size{ sizeof(ScopeInfo) };
+    areg::SharedBuffer stream;
     stream << cookie << count;
     for (int i = 0; i < count; ++i)
     {
-        const sLogScope& scope{ scopes[i] };
+        const ScopeInfo& scope{ scopes[i] };
         stream.write(reinterpret_cast<const unsigned char*>(&scope), size);
     }
 
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_ScopesRegistered, stream), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_ScopesRegistered, stream), master_thread());
 }
 
-void LogObserver::slotLogUpdateScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
+void LogObserver::slotLogUpdateScopes(ITEM_ID cookie, const ScopeInfo* scopes, int count)
 {
-    constexpr uint32_t size{ sizeof(sLogScope) };
-    SharedBuffer stream;
+    constexpr uint32_t size{ sizeof(ScopeInfo) };
+    areg::SharedBuffer stream;
     stream << cookie << count;
     for (int i = 0; i < count; ++i)
     {
-        const sLogScope& scope{ scopes[i] };
+        const ScopeInfo& scope{ scopes[i] };
         stream.write(reinterpret_cast<const unsigned char*>(&scope), size);
     }
 
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_ScopesUpdated, stream), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_ScopesUpdated, stream), master_thread());
 }
 
-void LogObserver::slotLogMessage(const SharedBuffer& logMessage)
+void LogObserver::slotLogMessage(const areg::SharedBuffer& logMessage)
 {
-    LogObserverEvent::sendEvent(LogObserverEventData(LogObserverEventData::eLogObserverEvent::CMD_LogMessage, logMessage), getComponentThread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_LogMessage, logMessage), master_thread());
 }

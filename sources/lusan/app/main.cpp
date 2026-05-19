@@ -38,8 +38,7 @@ int main(int argc, char *argv[])
     LusanApplication::setOrganizationName(_organization);
     LusanApplication::setApplicationName(_application);
     LusanApplication::setApplicationVersion(_version);
-    Application::setWorkingDirectory(nullptr);
-
+    areg::Application::set_working_directory(nullptr);
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
     for (const QString &locale : uiLanguages)

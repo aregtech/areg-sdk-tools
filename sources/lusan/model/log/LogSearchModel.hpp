@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_MODEL_LOG_LOGSEARCHMODEL_HPP
+#ifndef LUSAN_MODEL_LOG_LOGSEARCHMODEL_HPP
 #define LUSAN_MODEL_LOG_LOGSEARCHMODEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -26,7 +26,7 @@
 #include <QRegularExpression>
 #include <QString>
 #include "lusan/common/NELusanCommon.hpp"
-#include "areg/base/GEGlobal.h"
+#include "areg/base/areg_global.h"
 
 /************************************************************************
  * Dependencies
@@ -257,7 +257,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    DECLARE_NOCOPY_NOMOVE(LogSearchModel);
+    AREG_NOCOPY_NOMOVE(LogSearchModel);
 };
 
 //////////////////////////////////////////////////////////////////////////

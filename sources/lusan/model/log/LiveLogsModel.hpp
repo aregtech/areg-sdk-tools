@@ -23,7 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/model/log/LoggingModelBase.hpp"
-#include "areg/component/NEService.hpp"
+#include "areg/component/ServiceDefs.hpp"
 #include "areglogger/client/LogObserverApi.h"
 
 #include <QList>
@@ -151,13 +151,13 @@ private slots:
      * \brief   The slot is triggered when receive message to log.
      * \param   logMessage  The structure of the message to log.
      **/
-    void slotLogMessage(const SharedBuffer& logMessage);
+    void slotLogMessage(const areg::SharedBuffer& logMessage);
     
     /**
      * \brief   The slot is triggered when receive the list of disconnected instances that make logs.
      * \param   instances   The list of IDs of the disconnected instances.
      **/
-    void slotLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance >& instances);
+    void slotLogInstancesDisconnect(const std::vector<areg::ConnectedInstance >& instances);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

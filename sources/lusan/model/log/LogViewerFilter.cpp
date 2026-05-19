@@ -124,7 +124,7 @@ bool LogViewerFilter::filterExactMatch(const QModelIndex& index) const
     else if (model == nullptr)
         return true;
 
-    const NELogging::sLogMessage* msg = model->getLogData(index.row());
+    const areg::LogEntry* msg = model->getLogData(index.row());
     NELusanCommon::eMatchType comboMatch = matchesComboFilters(model, msg);
     if (comboMatch != NELusanCommon::eMatchType::NoMatch)
     {
@@ -145,13 +145,13 @@ bool LogViewerFilter::filterAcceptsRow(int row, const QModelIndex& parent) const
     else if (model == nullptr)
         return true;
 
-    const NELogging::sLogMessage* msg = model->getLogData(index.row());
+    const areg::LogEntry* msg = model->getLogData(index.row());
     // Check if row matches all active filters
     return  (matchesComboFilters(model, msg) != NELusanCommon::eMatchType::NoMatch) &&
             (matchesTextFilters(model, msg)  != NELusanCommon::eMatchType::NoMatch);
 }
 
-NELusanCommon::eMatchType LogViewerFilter::matchesComboFilters(LoggingModelBase* model, const NELogging::sLogMessage* msg) const
+NELusanCommon::eMatchType LogViewerFilter::matchesComboFilters(LoggingModelBase* model, const areg::LogEntry* msg) const
 {
     NELusanCommon::eMatchType matchType = NELusanCommon::eMatchType::PartialMatch;
     // Check each active combo filter
@@ -186,7 +186,7 @@ NELusanCommon::eMatchType LogViewerFilter::matchesComboFilters(LoggingModelBase*
     return matchType;
 }
 
-NELusanCommon::eMatchType LogViewerFilter::matchesTextFilters(LoggingModelBase* model, const NELogging::sLogMessage* msg) const
+NELusanCommon::eMatchType LogViewerFilter::matchesTextFilters(LoggingModelBase* model, const areg::LogEntry* msg) const
 {
     NELusanCommon::eMatchType matchType = NELusanCommon::eMatchType::PartialMatch;
     // Check each active text filter
@@ -235,12 +235,12 @@ bool LogViewerFilter::wildcardMatch(const QString& text, const QString& wildcard
     return text.contains(re);
 }
 
-inline bool LogViewerFilter::matchPrio(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+inline bool LogViewerFilter::matchPrio(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
     return (std::any_cast<uint16_t>(filters[0].data) & static_cast<uint16_t>(msg->logMessagePrio)) != 0;
 }
 
-inline bool LogViewerFilter::matchSources(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+inline bool LogViewerFilter::matchSources(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
     for (const auto& f : filters)
     {
@@ -253,7 +253,7 @@ inline bool LogViewerFilter::matchSources(const NELogging::sLogMessage* msg, con
     return false;
 }
 
-inline bool LogViewerFilter::matchThreads(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+inline bool LogViewerFilter::matchThreads(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
     for (const auto& f : filters)
     {
@@ -265,12 +265,12 @@ inline bool LogViewerFilter::matchThreads(const NELogging::sLogMessage* msg, con
     return false;
 }
 
-inline bool LogViewerFilter::matchDuration(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+inline bool LogViewerFilter::matchDuration(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
     return (msg->logDuration >= std::any_cast<uint32_t>(filters[0].data));
 }
 
-inline bool LogViewerFilter::matchMessage(const NELogging::sLogMessage* msg, const NELusanCommon::FilterList& filters) const
+inline bool LogViewerFilter::matchMessage(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
     NELusanCommon::FilterString filterText = std::any_cast<NELusanCommon::FilterString>(filters[0].data);
     // Check if the cell data contains the filter text (case-insensitive)

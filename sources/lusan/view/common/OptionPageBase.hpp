@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEBASE_HPP
+#ifndef LUSAN_VIEW_COMMON_OPTIONPAGEBASE_HPP
 #define LUSAN_VIEW_COMMON_OPTIONPAGEBASE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -23,7 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QWidget>
-#include "areg/base/GEMacros.h"
+#include "areg/base/areg_macros.h"
 
 class QDialog;
 
@@ -143,7 +143,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     OptionPageBase(void) = delete;
-    DECLARE_NOCOPY_NOMOVE(OptionPageBase);
+    AREG_NOCOPY_NOMOVE(OptionPageBase);
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -27,8 +27,8 @@
 #include <QList>
 #include <QMap>
 
-#include "areg/component/NEService.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/component/ServiceDefs.hpp"
+#include "areg/logging/areg_log.h"
 #include "areglogger/client/LogObserverApi.h"
 
 /************************************************************************
@@ -99,7 +99,7 @@ public:
      * \param   prio    The log priority to remove from the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool removeLogPriority(const QModelIndex& index, uint32_t prio) override;
+    virtual bool removLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Saves the log scope priority for the given target index.
@@ -119,7 +119,7 @@ protected:
      * \param   instances   The list of instances available.
      * \return  Returns true if the instance was added to the root element.
      **/
-    virtual bool slotInstancesAvailable(const std::vector<NEService::sServiceConnectedInstance> & instances) override;
+    virtual bool slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances) override;
     
 private:
 

@@ -19,7 +19,7 @@
  *
  ************************************************************************/
 
-#include "areg/base/GEGlobal.h"
+#include "areg/base/areg_global.h"
 #include <QIcon>
 #include <QList>
 #include <QPoint>
@@ -155,8 +155,9 @@ namespace NELusanCommon
     constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
     constexpr const char * const xmlElementFile             { "File" };
     
-    constexpr char const    SCOPE_SEPRATOR                  { '_' };
-    
+    constexpr char const    SCOPE_SEPRATOR                  { '_' };    //!< Node separator in scope path
+    constexpr char const    SCOPE_LEAF_SEPRATOR             { '.' };    //!< Leaf separator in scope path (node.leaf_name)
+
     constexpr char const    SCOPE_ALL                       { '*' };
 
     enum class eSorting : uint8_t

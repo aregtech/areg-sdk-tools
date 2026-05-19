@@ -28,22 +28,22 @@ LogCollectorClient& LogCollectorClient::getInstance(void)
 }
 
 LogCollectorClient::LogCollectorClient(void)
-    : QObject           ( )
-    , LogObserverBase   ( )
+    : QObject ( )
+    , areg::logger::LogObserverBase   ( )
 {
 }
 
-void LogCollectorClient::onLogObserverConfigured(bool isEnabled, const std::string& address, uint16_t port)
+void LogCollectorClient::on_log_observer_configured(bool isEnabled, const std::string& address, uint16_t port)
 {
     emit signalLogObserverConfigured(isEnabled, address, port);
 }
 
-void LogCollectorClient::onLogDbConfigured(bool isEnabled, const std::string& dbName, const std::string& dbLocation, const std::string& dbUser)
+void LogCollectorClient::on_log_db_configured(bool isEnabled, const std::string& dbName, const std::string& dbLocation, const std::string& dbUser)
 {
     std::string location{ LusanApplication::getWorkspaceLogs().toStdString() };
     if (location.empty() == false)
     {
-        setConfigLoggerDatabaseLocation(location);
+        set_config_logger_database_location(location);
         emit signalLogDbConfigured(isEnabled, dbName, location, dbUser);
     }
     else
@@ -52,52 +52,52 @@ void LogCollectorClient::onLogDbConfigured(bool isEnabled, const std::string& db
     }
 }
 
-void LogCollectorClient::onLogServiceConnected(bool isConnected, const std::string& address, uint16_t port)
+void LogCollectorClient::on_log_service_connected(bool isConnected, const std::string& address, uint16_t port)
 {
     emit signalLogServiceConnected(isConnected, address, port);
 }
 
-void LogCollectorClient::onLogObserverStarted(bool isStarted)
+void LogCollectorClient::on_log_observer_started(bool isStarted)
 {
     emit signalLogObserverStarted(isStarted);
 }
 
-void LogCollectorClient::onLogDbCreated(const std::string& dbLocation)
+void LogCollectorClient::on_log_db_created(const std::string& dbLocation)
 {
     emit signalLogDbCreated(dbLocation);
 }
 
-void LogCollectorClient::onLogMessagingFailed(void)
+void LogCollectorClient::on_log_messaging_failed(void)
 {
     emit signalLogMessagingFailed();
 }
 
-void LogCollectorClient::onLogInstancesConnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
+void LogCollectorClient::on_log_instances_connect(const std::vector<areg::ConnectedInstance>& instances)
 {
     emit signalLogInstancesConnect(instances);
 }
 
-void LogCollectorClient::onLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
+void LogCollectorClient::on_log_instances_disconnect(const std::vector<areg::ConnectedInstance>& instances)
 {
     emit signalLogInstancesDisconnect(instances);
 }
 
-void LogCollectorClient::onLogServiceDisconnected(void)
+void LogCollectorClient::on_log_service_disconnected(void)
 {
     emit signalLogServiceDisconnected();
 }
 
-void LogCollectorClient::onLogRegisterScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
+void LogCollectorClient::on_log_register_scopes(ITEM_ID cookie, const ScopeInfo* scopes, int count)
 {
     emit signalLogRegisterScopes(cookie, scopes, count);
 }
 
-void LogCollectorClient::onLogUpdateScopes(ITEM_ID cookie, const sLogScope* scopes, int count)
+void LogCollectorClient::on_log_update_scopes(ITEM_ID cookie, const ScopeInfo* scopes, int count)
 {
     emit signalLogUpdateScopes(cookie, scopes, count);
 }
 
-void LogCollectorClient::onLogMessage(const SharedBuffer& logMessage)
+void LogCollectorClient::on_log_message(const areg::SharedBuffer& logMessage)
 {
     emit signalLogMessage(logMessage);
 }

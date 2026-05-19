@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_SEARCHLINEEDIT_HPP
+#ifndef LUSAN_VIEW_COMMON_SEARCHLINEEDIT_HPP
 #define LUSAN_VIEW_COMMON_SEARCHLINEEDIT_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -19,7 +19,7 @@
  *
  ************************************************************************/
 
-#include "areg/base/GEGlobal.h"
+#include "areg/base/areg_global.h"
 #include <QLineEdit>
 #include <QToolButton>
 #include <QSize>
@@ -212,7 +212,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    DECLARE_NOCOPY_NOMOVE(SearchLineEdit);
+    AREG_NOCOPY_NOMOVE(SearchLineEdit);
 };
 
 //////////////////////////////////////////////////////////////////////////
