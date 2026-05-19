@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -39,7 +39,7 @@ QString LiveLogsModel::generateFileName(void)
         }
     }
 
-    return QString(File::normalizePath(result.toStdString().c_str()).getString());
+    return QString::fromStdString(areg::File::normalize_path(result.toStdString()).as_string());
 }
 
 QString LiveLogsModel::newFileName(void)
@@ -55,7 +55,7 @@ QString LiveLogsModel::newFileName(void)
     
     if (dir.isEmpty() == false)
     {
-        dir = File::normalizePath(dir.toStdString().c_str()).getString();
+        dir = QString::fromStdString(areg::File::normalize_path(dir.toStdString()).as_string());
         QString fileName = generateFileName();
         
         std::filesystem::path fPath(dir.toStdString().c_str());
@@ -71,7 +71,7 @@ LiveLogsModel::LiveLogsModel(QObject *parent)
 
     , mIsConnected              (false)
     , mAddress                  ( )
-    , mPort                     (NESocket::InvalidPort)
+    , mPort                     (areg::InvalidPort)
     , mSignalsSetup             (false)
     , mConLogger                ( )
     , mConLogs                  ( )
@@ -160,18 +160,18 @@ void LiveLogsModel::_setupSignals(bool doSetup)
         
         mConLogger              = connect(log, &LogObserver::signalLogServiceConnected   , this, [this]() {
         });
-        mConInstancesConnect    = connect(log, &LogObserver::signalLogInstancesConnect   , this, [this](const std::vector<NEService::sServiceConnectedInstance>& instances) {
+        mConInstancesConnect    = connect(log, &LogObserver::signalLogInstancesConnect   , this, [this](const std::vector<areg::ConnectedInstance>& instances) {
             addInstances(instances, true);
             emit signalInstanceAvailable(instances);
         });
         mConServiceDisconnected = connect(log, &LogObserver::signalLogServiceDisconnected, this, [this] {
             emit signalLogServiceDisconnected();
         });
-        mConRegisterScopes      = connect(log, &LogObserver::signalLogRegisterScopes     , this, [this](ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes) {
+        mConRegisterScopes      = connect(log, &LogObserver::signalLogRegisterScopes     , this, [this](ITEM_ID cookie, const std::vector<areg::ScopeEntry>& scopes) {
             mScopes[cookie] = scopes;
             emit signalScopesAvailable(cookie, scopes);
         });
-        mConUpdateScopes        = connect(log, &LogObserver::signalLogUpdateScopes       , this, [this](ITEM_ID cookie, const std::vector<NELogging::sScopeInfo>& scopes) {
+        mConUpdateScopes        = connect(log, &LogObserver::signalLogUpdateScopes       , this, [this](ITEM_ID cookie, const std::vector<areg::ScopeEntry>& scopes) {
             mScopes[cookie] = scopes;
             emit signalScopesUpdated(cookie, scopes);
         });
@@ -189,9 +189,9 @@ void LiveLogsModel::_setupSignals(bool doSetup)
     }
 }
     
-void LiveLogsModel::slotLogMessage(const SharedBuffer& logMessage)
+void LiveLogsModel::slotLogMessage(const areg::SharedBuffer& logMessage)
 {
-    if (logMessage.isEmpty() == false)
+    if (logMessage.is_empty() == false)
     {
         int count {static_cast<int>(mLogs.size())};
         beginInsertRows(QModelIndex(), count, count);
@@ -201,7 +201,7 @@ void LiveLogsModel::slotLogMessage(const SharedBuffer& logMessage)
     }
 }
 
-void LiveLogsModel::slotLogInstancesDisconnect(const std::vector<NEService::sServiceConnectedInstance>& instances)
+void LiveLogsModel::slotLogInstancesDisconnect(const std::vector<areg::ConnectedInstance>& instances)
 {
     removeInstances(instances);
     std::vector<ITEM_ID> ids(instances.size());

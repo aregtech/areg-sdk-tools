@@ -27,7 +27,7 @@
 #include "lusan/view/log/LiveLogViewer.hpp"
 #include "lusan/view/log/OfflineLogViewer.hpp"
 
-#include "areg/base/NESocket.hpp"
+#include "areg/base/SocketDefs.hpp"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -308,7 +308,7 @@ int MdiMainWindow::showOptionPageLogging(const QString& address, const QString& 
     ProjectSettings settings(this);
 
     emit signalOptionsOpening();
-    if ((address.isEmpty() == false) && (port != NESocket::InvalidPort) && (logFile.isEmpty() == false) && (logLocation.isEmpty() == false))
+    if ((address.isEmpty() == false) && (port != areg::InvalidPort) && (logFile.isEmpty() == false) && (logLocation.isEmpty() == false))
     {
         settings.getSettingLog()->setData(address, hostName, port, logFile, logLocation);
     }

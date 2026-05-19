@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -56,7 +56,7 @@ bool LiveScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
         root->resetPrioritiesRecursive(true);
         root->refreshPrioritiesRecursive();
         
-        sLogScope scope;
+        ScopeInfo scope;
         scope.lsId = 0;
         scope.lsPrio = node->getPriority();
         QString path = node->makePath();
@@ -65,7 +65,7 @@ bool LiveScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
             path += NELusanCommon::SCOPE_ALL;
         }
         
-        NEString::copyString(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
+        areg::copy_string(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str());
         result = LogObserver::requestChangeScopePrio(static_cast<ScopeRoot *>(root)->getRootId(), &scope, 1);
     }
     else
@@ -100,7 +100,7 @@ bool LiveScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
     return result;
 }
 
-bool LiveScopesModel::removeLogPriority(const QModelIndex& index, uint32_t prio)
+bool LiveScopesModel::removLogPriority(const QModelIndex& index, uint32_t prio)
 {
     bool result{ false };
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
@@ -135,11 +135,11 @@ bool LiveScopesModel::saveLogScopePriority(const QModelIndex& target /*= QModelI
     }
     else
     {
-        return LogObserver::requestSaveConfig(NEService::TARGET_ALL);
+        return LogObserver::requestSaveConfig(areg::TARGET_ALL);
     }
 }
 
-bool LiveScopesModel::slotInstancesAvailable(const std::vector<NEService::sServiceConnectedInstance> & instances)
+bool LiveScopesModel::slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances)
 {
     if (LoggingScopesModelBase::slotInstancesAvailable(instances))
     {
@@ -162,14 +162,14 @@ bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNod
     QList<ScopeNodeBase*> nodes;
     int count = node.extractChildNodesWithPriority(nodes);
     count += count == 0 ? 1 : 0;
-    sLogScope* scopes = new sLogScope[count];
+    ScopeInfo* scopes = new ScopeInfo[count];
     if (scopes != nullptr)
     {
         int pos = 0;
         if (nodes.isEmpty())
         {
             // Q_ASSERT(node.hasPrioNotset());
-            sLogScope& scope = scopes[0];
+            ScopeInfo& scope = scopes[0];
             scope.lsId = 0;
             scope.lsPrio = node.getPriority();
             QString path = node.makePath();
@@ -178,14 +178,14 @@ bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNod
                 path += NELusanCommon::SCOPE_ALL;
             }
 
-            NEMemory::memCopy(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str(), path.length() + 1);
+            areg::mem_copy(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str(), path.length() + 1);
             ++pos;
         }
 
         for (; pos < count; ++pos)
         {
             ScopeNodeBase* nodeBase = nodes[pos];
-            sLogScope& scope = scopes[pos];
+            ScopeInfo& scope = scopes[pos];
             scope.lsId = 0;
             scope.lsPrio = nodeBase->getPriority();
             QString path = nodeBase->makePath();
@@ -194,7 +194,7 @@ bool LiveScopesModel::_requestNodePriority(const ScopeRoot& root, const ScopeNod
                 path += NELusanCommon::SCOPE_ALL;
             }
 
-            NEMemory::memCopy(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str(), path.length() + 1);
+            areg::mem_copy(scope.lsName, LENGTH_SCOPE, path.toStdString().c_str(), path.length() + 1);
         }
 
         result = LogObserver::requestChangeScopePrio(root.getRootId(), scopes, count);

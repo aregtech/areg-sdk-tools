@@ -25,7 +25,7 @@ ScopeNodeBase::ScopeNodeBase(void)
     : mNodeType     ( ScopeNodeBase::eNode::Invalid )
     , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( nullptr )
-    , mPrioStates   ( static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid) )
+    , mPrioStates   ( static_cast<uint32_t>(areg::LogPriority::PrioInvalid) )
     , mNodeName     ( )
 {
 }
@@ -34,7 +34,7 @@ ScopeNodeBase::ScopeNodeBase(ScopeNodeBase::eNode nodeType, ScopeNodeBase* paren
     : mNodeType     ( nodeType )
     , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( parent )
-    , mPrioStates   ( static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid) )
+    , mPrioStates   ( static_cast<uint32_t>(areg::LogPriority::PrioInvalid) )
     , mNodeName     ( )
 {
 }
@@ -121,11 +121,11 @@ inline bool ScopeNodeBase::_isExactPrio(uint32_t prio) const
 {
     switch (prio)
     {
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioError):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal):
+    case static_cast<uint32_t>(areg::LogPriority::PrioDebug):
+    case static_cast<uint32_t>(areg::LogPriority::PrioInfo):
+    case static_cast<uint32_t>(areg::LogPriority::PrioWarning):
+    case static_cast<uint32_t>(areg::LogPriority::PrioError):
+    case static_cast<uint32_t>(areg::LogPriority::PrioFatal):
         return true;
 
     default:
@@ -139,11 +139,11 @@ void ScopeNodeBase::setPriority( uint32_t prio)
     {
         mPrioStates = prio;
     }
-    else if (hasLogScopes() && (prio != static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)) && _isExactPrio(prio))
+    else if (hasScopeEntries() && (prio != static_cast<uint32_t>(areg::LogPriority::PrioNotset)) && _isExactPrio(prio))
     {
-        mPrioStates = prio | static_cast<uint32_t>(NELogging::eLogPriority::PrioScope);
+        mPrioStates = prio | static_cast<uint32_t>(areg::LogPriority::PrioScope);
     }
-    else if (prio == static_cast<uint32_t>(NELogging::eLogPriority::PrioScope))
+    else if (prio == static_cast<uint32_t>(areg::LogPriority::PrioScope))
     {
         mPrioStates |= prio;
     }
@@ -174,13 +174,13 @@ void ScopeNodeBase::removePriority(unsigned int prio)
     mPrioStates &= ~prio;
     if (hasPrioValid() == false)
     {
-        mPrioStates = static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset);
+        mPrioStates = static_cast<uint32_t>(areg::LogPriority::PrioNotset);
     }
 }
 
-int ScopeNodeBase::addChildRecursive(const NELogging::sScopeInfo& scope)
+int ScopeNodeBase::addChildRecursive(const areg::ScopeEntry& scope)
 {
-    QString name(QString::fromStdString(scope.scopeName.getData()));
+    QString name(QString::fromStdString(scope.scopeName.data()));
     return addChildRecursive(name, scope.scopePrio, scope.scopeId);
 }
 
@@ -233,13 +233,15 @@ ScopeNodeBase* ScopeNodeBase::makeChildNode(QStringList& nodeNames, uint32_t pri
 QString ScopeNodeBase::makePath(void) const
 {
     QString result(mParent != nullptr ? mParent->makePath() : getPathString());
-    
+
     if (isRoot() == false)
         result += getPathString();
-    
+
+    // Nodes end with '_' so children can append their name with the correct separator.
+    // ScopeLeaf overrides this to swap the trailing '_' for '.' (leaf separator).
     if (isNode())
         result += NELusanCommon::SCOPE_SEPRATOR;
-    
+
     return result;
 }
 
@@ -255,7 +257,9 @@ ScopeNodeBase* ScopeNodeBase::findChild(const QString& childName) const
 
 ScopeNodeBase* ScopeNodeBase::findChildByPath(const QString& childPath) const
 {
-    QStringList nameList = childPath.split(NELusanCommon::SCOPE_SEPRATOR);
+    QStringList nameList;
+    QString pathCopy(childPath);
+    splitScopePath(pathCopy, nameList);
     const ScopeNodeBase* node{ nameList.isEmpty() ? nullptr : this };
     while ((nameList.isEmpty() == false) && (node != nullptr))
     {
@@ -269,7 +273,7 @@ ScopeNodeBase* ScopeNodeBase::findChildByPath(const QString& childPath) const
 
 int ScopeNodeBase::getChildPosition(const QString& childName) const
 {
-    return static_cast<int>(NECommon::INVALID_INDEX);
+    return static_cast<int>(areg::INVALID_INDEX);
 }
 
 ScopeNodeBase* ScopeNodeBase::getChildAt(int pos) const
@@ -294,7 +298,8 @@ int ScopeNodeBase::getChildLeafsCount(void) const
 
 void ScopeNodeBase::addChildPriorityRecursive(QString& nodePath, uint32_t prio)
 {
-    QStringList nameList = nodePath.split(NELusanCommon::SCOPE_SEPRATOR);
+    QStringList nameList;
+    splitScopePath(nodePath, nameList);
     addChildPriorityRecursive(nameList, prio);
 }
 
@@ -324,7 +329,8 @@ void ScopeNodeBase::addChildPriorityRecursive(QStringList& pathList, uint32_t pr
 
 void ScopeNodeBase::removeChildPriorityRecursive(QString& nodePath, uint32_t prio)
 {
-    QStringList nameList = nodePath.split(NELusanCommon::SCOPE_SEPRATOR);
+    QStringList nameList;
+    splitScopePath(nodePath, nameList);
     removeChildPriorityRecursive(nameList, prio);
 }
 
@@ -337,7 +343,7 @@ void ScopeNodeBase::removeChildPriorityRecursive(QStringList& pathList, uint32_t
         ScopeNodeBase* child = findChild(nodeName);
         if (child != nullptr)
         {
-            child->addChildPriorityRecursive(pathList, prio);
+            child->removeChildPriorityRecursive(pathList, prio);
             removePriority(prio);
         }
     }
@@ -394,7 +400,7 @@ QList<ScopeNodeBase*> ScopeNodeBase::getNodesWithPriority(void) const
 int ScopeNodeBase::extractNodesWithPriority(QList<ScopeNodeBase*>& list) const
 {
     int result{ 0 };
-    if (hasPrioValid() && (hasMultiPrio(static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) == false))
+    if (hasPrioValid() && (hasMultiPrio(static_cast<uint32_t>(areg::LogPriority::PrioScope)) == false))
     {
         list.push_back(const_cast<ScopeNodeBase *>(this));
         result = 1;
@@ -410,34 +416,53 @@ int ScopeNodeBase::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) co
 
 int ScopeNodeBase::splitScopePath(QString& scopePath, QStringList& nodeNames) const
 {
-    QStringList nodes = scopePath.split(NELusanCommon::SCOPE_SEPRATOR, Qt::KeepEmptyParts);
-    QString prefix, postfix;
-    
-    for (int i = 0; i < static_cast<int>(nodes.size()); ++ i)
+    // New syntax: '_' separates nodes, '.' separates the last node from its leaf name.
+    // The leaf name is taken verbatim after the first '.', preserving any '_' in it (snake_case).
+    // If no '.' is present, the last '_'-delimited token is the leaf (backward compatibility).
+    // Consecutive underscores ('__') encode a literal '_' prefix in a node name.
+
+    int dotPos = scopePath.indexOf(NELusanCommon::SCOPE_LEAF_SEPRATOR);
+    QString nodePart = (dotPos >= 0) ? scopePath.left(dotPos) : scopePath;
+    QString leafName = (dotPos >= 0) ? scopePath.mid(dotPos + 1) : QString();
+
+    // Split the node part by '_', preserving double-underscore sequences as literal '_' prefixes.
+    if (nodePart.isEmpty() == false)
     {
-        const QString & name = nodes[i];
-        if (name.isEmpty())
+        QStringList nodes = nodePart.split(NELusanCommon::SCOPE_SEPRATOR, Qt::KeepEmptyParts);
+        QString prefix, postfix;
+
+        for (int i = 0; i < static_cast<int>(nodes.size()); ++i)
         {
-            if ((i == (static_cast<int>(nodes.size()) - 1)) && (nodeNames.isEmpty() == false))
+            const QString& name = nodes[i];
+            if (name.isEmpty())
             {
-                postfix += NELusanCommon::SCOPE_SEPRATOR;
-                nodeNames[nodeNames.size() - 1] = prefix + nodeNames[nodeNames.size() - 1] + postfix;
-                prefix.clear();
-                postfix.clear();
+                if ((i == static_cast<int>(nodes.size()) - 1) && (nodeNames.isEmpty() == false))
+                {
+                    postfix += NELusanCommon::SCOPE_SEPRATOR;
+                    nodeNames[nodeNames.size() - 1] = prefix + nodeNames[nodeNames.size() - 1] + postfix;
+                    prefix.clear();
+                    postfix.clear();
+                }
+                else
+                {
+                    prefix += NELusanCommon::SCOPE_SEPRATOR;
+                }
             }
             else
             {
-                prefix += NELusanCommon::SCOPE_SEPRATOR;
+                nodeNames.push_back(prefix + name + postfix);
+                prefix.clear();
+                postfix.clear();
             }
         }
-        else
-        {
-            nodeNames.push_back(prefix + name + postfix);
-            prefix.clear();
-            postfix.clear();
-        }
     }
-    
+
+    // Append the leaf name verbatim (may contain '_' for snake_case leaf names).
+    if (leafName.isEmpty() == false)
+    {
+        nodeNames.push_back(leafName);
+    }
+
     return static_cast<int>(nodeNames.size());
 }
 
@@ -462,5 +487,5 @@ void ScopeNodeBase::setScopeId(uint32_t /*scopeId*/)
 
 uint32_t ScopeNodeBase::getScopeId(void) const
 {
-    return NELogging::LOG_SCOPE_ID_NONE;
+    return areg::LOG_SCOPE_ID_NONE;
 }

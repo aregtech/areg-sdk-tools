@@ -242,7 +242,7 @@ bool LogViewerBase::writeToFile(const QString& filePath)
         const QString oldLocation{ mLogModel->getDatabasePath() };
         if (oldLocation.isEmpty() == false)
         {
-            result = File::copyFile(oldLocation.toStdString().c_str(), filePath.toStdString().c_str(), true);
+            result = areg::File::copy_file(oldLocation.toStdString().c_str(), filePath.toStdString().c_str(), true);
         }
         else
         {

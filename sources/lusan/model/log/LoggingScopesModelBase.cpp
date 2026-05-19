@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -201,14 +201,14 @@ QModelIndex LoggingScopesModelBase::parent(const QModelIndex& child) const
     if (parentNode->isRoot())
     {
         int pos = findRoot(static_cast<ScopeRoot*>(parentNode)->getRootId());
-        Q_ASSERT(pos != static_cast<int>(NECommon::INVALID_INDEX));
+        Q_ASSERT(pos != static_cast<int>(areg::INVALID_INDEX));
         return createIndex(pos, 0, parentNode);
     }
     else
     {
         ScopeNodeBase* grandParent = parentNode->getParent();
         int pos = grandParent->getChildPosition(parentNode->getNodeName());
-        Q_ASSERT(pos != static_cast<int>(NECommon::INVALID_INDEX));
+        Q_ASSERT(pos != static_cast<int>(areg::INVALID_INDEX));
         return createIndex(pos, 0, parentNode);
     }
 }
@@ -352,7 +352,7 @@ int LoggingScopesModelBase::findRoot(ITEM_ID rootId) const
         }
     }
 
-    return static_cast<int>(NECommon::INVALID_INDEX);
+    return static_cast<int>(areg::INVALID_INDEX);
 }
 
 void LoggingScopesModelBase::slotLogServiceConnected(void)
@@ -365,13 +365,13 @@ void LoggingScopesModelBase::slotLogServiceDisconnected(void)
     clearModel(false);
 }
 
-bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<NEService::sServiceConnectedInstance> & instances)
+bool LoggingScopesModelBase::slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances)
 {
     bool result {false};
     beginResetModel();
     for (const auto & instance : instances)
     {
-        if ((instance.ciSource != NEService::eMessageSource::MessageSourceObserver) && (existsRoot(instance.ciCookie) == false))
+        if ((instance.ciSource != areg::MessageSource::SourceObserver) && (existsRoot(instance.ciCookie) == false))
         {
             result = true;
             ScopeRoot* root = new ScopeRoot(instance);
@@ -421,10 +421,10 @@ void LoggingScopesModelBase::slotInstancesUnavailable(const std::vector<ITEM_ID>
     }
 }
 
-void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes)
+void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vector<areg::ScopeEntry>& scopes)
 {
-    int pos = scopes.empty() == false ? findRoot(instId) : static_cast<int>(NECommon::INVALID_INDEX);
-    if (pos != static_cast<int>(NECommon::INVALID_INDEX))
+    int pos = scopes.empty() == false ? findRoot(instId) : static_cast<int>(areg::INVALID_INDEX);
+    if (pos != static_cast<int>(areg::INVALID_INDEX))
     {
         Q_ASSERT(mLoggingModel != nullptr);
         LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
@@ -438,7 +438,7 @@ void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vect
         root->resetPrioritiesRecursive(false);
         for (int i = 0; i < count; ++i)
         {
-            QString scopePath(QString::fromStdString(scopes[i].scopeName.getData()));
+            QString scopePath(QString::fromStdString(scopes[i].scopeName.data()));
             buildScope(*root, scopePath, scopes[i].scopePrio, scopes[i].scopeId);
         }
 
@@ -451,10 +451,10 @@ void LoggingScopesModelBase::slotScopesAvailable(ITEM_ID instId, const std::vect
     }
 }
 
-void LoggingScopesModelBase::slotScopesUpdated(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes)
+void LoggingScopesModelBase::slotScopesUpdated(ITEM_ID instId, const std::vector<areg::ScopeEntry>& scopes)
 {
-    int pos = scopes.empty() == false ? findRoot(instId) : static_cast<int>(NECommon::INVALID_INDEX);
-    if (pos != static_cast<int>(NECommon::INVALID_INDEX))
+    int pos = scopes.empty() == false ? findRoot(instId) : static_cast<int>(areg::INVALID_INDEX);
+    if (pos != static_cast<int>(areg::INVALID_INDEX))
     {
         Q_ASSERT(mLoggingModel != nullptr);
         LoggingModelBase::RootList& roots = mLoggingModel->getRootList();
@@ -464,7 +464,7 @@ void LoggingScopesModelBase::slotScopesUpdated(ITEM_ID instId, const std::vector
         Q_ASSERT(root != nullptr);
         for (int i = 0; i < count; ++i)
         {
-            const NELogging::sScopeInfo & scope = scopes[i];
+            const areg::ScopeEntry & scope = scopes[i];
             QString scopeName{ scope.scopeName };
             root->addChildPriorityRecursive(scopeName, scope.scopePrio);
         }
@@ -492,16 +492,16 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
         mConSvcDisconnected = connect(mLoggingModel, &LoggingModelBase::signalLogServiceDisconnected, this, [this]() {
             this->slotLogServiceDisconnected();
         });
-        mConInstAvailable = connect(mLoggingModel, &LoggingModelBase::signalInstanceAvailable       , this, [this](const std::vector<NEService::sServiceConnectedInstance>& instances) {
+        mConInstAvailable = connect(mLoggingModel, &LoggingModelBase::signalInstanceAvailable       , this, [this](const std::vector<areg::ConnectedInstance>& instances) {
             this->slotInstancesAvailable(instances);
         });
         mConInstUnavailable = connect(mLoggingModel, &LoggingModelBase::signalInstanceUnavailable   , this, [this](const std::vector<ITEM_ID>& instIds) {
             this->slotInstancesUnavailable(instIds);
         });
-        mConScopesAvailable = connect(mLoggingModel, &LoggingModelBase::signalScopesAvailable       , this, [this](ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes) {
+        mConScopesAvailable = connect(mLoggingModel, &LoggingModelBase::signalScopesAvailable       , this, [this](ITEM_ID instId, const std::vector<areg::ScopeEntry>& scopes) {
             this->slotScopesAvailable(instId, scopes);
         });
-        mConScopesUnavailable = connect(mLoggingModel, &LoggingModelBase::signalScopesUpdated       , this, [this](ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes) {
+        mConScopesUnavailable = connect(mLoggingModel, &LoggingModelBase::signalScopesUpdated       , this, [this](ITEM_ID instId, const std::vector<areg::ScopeEntry>& scopes) {
             this->slotScopesUpdated(instId, scopes);
         });
     }
@@ -524,12 +524,12 @@ void LoggingScopesModelBase::buildScopes(void)
         return;
     
     beginResetModel();
-    const std::vector<NEService::sServiceConnectedInstance>& instances = mLoggingModel->getLogInstances();
+    const std::vector<areg::ConnectedInstance>& instances = mLoggingModel->getLogInstances();
     slotInstancesAvailable(instances);
     
     for (const auto& inst : instances)
     {
-        const std::vector<NELogging::sScopeInfo> & scopes = mLoggingModel->getLogInstScopes(inst.ciCookie);
+        const std::vector<areg::ScopeEntry> & scopes = mLoggingModel->getLogInstScopes(inst.ciCookie);
         slotScopesAvailable(inst.ciCookie, scopes);
     }
     
@@ -581,3 +581,4 @@ void LoggingScopesModelBase::refresh(void)
     beginResetModel();
     endResetModel();
 }
+

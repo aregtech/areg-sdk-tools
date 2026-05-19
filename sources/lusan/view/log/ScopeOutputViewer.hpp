@@ -23,7 +23,7 @@
  * Includes
  ************************************************************************/
 #include "lusan/view/common/OutputWindow.hpp"
-#include "areg/component/NEService.hpp"
+#include "areg/component/ServiceDefs.hpp"
 
 /************************************************************************
  * Dependencies

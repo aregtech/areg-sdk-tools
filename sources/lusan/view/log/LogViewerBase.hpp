@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP
+#ifndef LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP
 #define LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -20,7 +20,7 @@
  ************************************************************************/
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/model/log/LogSearchModel.hpp"
-#include "areg/base/GEGlobal.h"
+#include "areg/base/areg_global.h"
 
 /************************************************************************
  * Dependencies
@@ -296,7 +296,7 @@ protected:
 // Forbidden calls.
 //////////////////////////////////////////////////////////////////////////
 private:
-    DECLARE_NOCOPY_NOMOVE(LogViewerBase);
+    AREG_NOCOPY_NOMOVE(LogViewerBase);
 };
 
 //////////////////////////////////////////////////////////////////////////

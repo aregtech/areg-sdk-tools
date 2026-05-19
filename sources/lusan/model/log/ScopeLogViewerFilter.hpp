@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_MODEL_LOG_SCOPELOGVIEWERFILTER_HPP
+#ifndef LUSAN_MODEL_LOG_SCOPELOGVIEWERFILTER_HPP
 #define LUSAN_MODEL_LOG_SCOPELOGVIEWERFILTER_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -246,7 +246,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    DECLARE_NOCOPY_NOMOVE(ScopeLogViewerFilter);
+    AREG_NOCOPY_NOMOVE(ScopeLogViewerFilter);
 };
 
 //////////////////////////////////////////////////////////////////////////

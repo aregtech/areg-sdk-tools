@@ -164,7 +164,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             {
             case LoggingModelBase::eColumn::LogColumnPriority:
             {
-                std::vector<String> names;
+                std::vector<areg::String> names;
                 std::vector<std::any> prios;
                 mModel->getPriorityValues(names, prios);
                 LogHeaderItem * header = mHeaders[static_cast<int>(LoggingModelBase::eColumn::LogColumnPriority)];
@@ -178,7 +178,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
                 
             case LoggingModelBase::eColumn::LogColumnSource:
             {
-                std::vector<String> names;
+                std::vector<areg::String> names;
                 std::vector<std::any> ids;
                 mModel->getLogInstances(names, ids);
                 mHeaders[static_cast<int>(col)]->setFilterData(names, ids);
@@ -202,7 +202,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
                 
             case LoggingModelBase::eColumn::LogColumnThread:
             {
-                std::vector<String> names;
+                std::vector<areg::String> names;
                 std::vector<std::any> ids;
                 mModel->getLogThreadValues(names, ids);
                 mHeaders[static_cast<int>(col)]->setFilterData(names, ids);
@@ -212,7 +212,7 @@ void LogTableHeader::mousePressEvent(QMouseEvent* event)
             case LoggingModelBase::eColumn::LogColumnThreadId:
             {
                 std::vector<ITEM_ID> tids;
-                std::vector<String> names;
+                std::vector<areg::String> names;
                 std::vector<std::any> ids;
                 mModel->getLogThreadValues(names, ids);
                 for (auto id :ids)

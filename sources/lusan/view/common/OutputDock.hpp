@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_OUTPUTDOCK_HPP
+#ifndef LUSAN_VIEW_COMMON_OUTPUTDOCK_HPP
 #define LUSAN_VIEW_COMMON_OUTPUTDOCK_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -23,7 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QDockWidget>
-#include "areg/base/GEGlobal.h"
+#include "areg/base/areg_global.h"
 
 #include "lusan/view/log/ScopeOutputViewer.hpp"
 
@@ -106,7 +106,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    DECLARE_NOCOPY_NOMOVE(OutputDock);
+    AREG_NOCOPY_NOMOVE(OutputDock);
 };
 
 //////////////////////////////////////////////////////////////////////////

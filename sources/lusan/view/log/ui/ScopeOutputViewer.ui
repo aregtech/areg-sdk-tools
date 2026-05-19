@@ -42,7 +42,7 @@
     <number>4</number>
    </property>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_up" native="true">
      <property name="minimumSize">
       <size>
        <width>0</width>
@@ -145,7 +145,7 @@
        <string>Scope Duration (milliseconds):</string>
       </property>
      </widget>
-     <widget class="QWidget" name="widget_2" native="true">
+     <widget class="QWidget" name="widget_buttons" native="true">
       <property name="geometry">
        <rect>
         <x>265</x>
@@ -291,7 +291,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QWidget" name="widget" native="true">
+        <widget class="QWidget" name="widgetlayout" native="true">
          <property name="enabled">
           <bool>true</bool>
          </property>

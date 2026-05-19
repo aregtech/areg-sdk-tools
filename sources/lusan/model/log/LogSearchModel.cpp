@@ -112,7 +112,7 @@ LogSearchModel::sFoundPos LogSearchModel::nextSearch(uint32_t lastFound)
         if (mLogModel->hasIndex(startAt, 0))
         {
             QModelIndex index = mLogModel->index(startAt, 0);
-            const NELogging::sLogMessage* log{ mLogModel->data(index, static_cast<int>(Qt::ItemDataRole::UserRole)).value<const NELogging::sLogMessage*>() };
+            const areg::LogEntry* log{ mLogModel->data(index, static_cast<int>(Qt::ItemDataRole::UserRole)).value<const areg::LogEntry*>() };
             if (log == nullptr)
                 return result;
 

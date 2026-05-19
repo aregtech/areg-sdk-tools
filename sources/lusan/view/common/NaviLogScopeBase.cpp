@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -61,11 +61,11 @@ void NaviLogScopeBase::setupControls(QTreeView* treeView, QToolButton* prioError
 
     validateControls();
 
-    connect(mPrioError  , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioError  , NELogging::eLogPriority::PrioError);  });
-    connect(mPrioWarning, &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioWarning, NELogging::eLogPriority::PrioWarning);});
-    connect(mPrioInfo   , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioInfo   , NELogging::eLogPriority::PrioInfo);   });
-    connect(mPrioDebug  , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioDebug  , NELogging::eLogPriority::PrioDebug);  });
-    connect(mPrioScopes , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioScopes , NELogging::eLogPriority::PrioScope);  });
+    connect(mPrioError  , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioError  , areg::LogPriority::PrioError);  });
+    connect(mPrioWarning, &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioWarning, areg::LogPriority::PrioWarning);});
+    connect(mPrioInfo   , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioInfo   , areg::LogPriority::PrioInfo);   });
+    connect(mPrioDebug  , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioDebug  , areg::LogPriority::PrioDebug);  });
+    connect(mPrioScopes , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioScopes , areg::LogPriority::PrioScope);  });
     if (mSelModel != nullptr)
     {
         mNaviTree->setModel(mScopesModel);
@@ -153,7 +153,7 @@ void NaviLogScopeBase::enableButtons(const QModelIndex& selection)
                 errSelected = true;
             }
 
-            if (node->hasLogScopes())
+            if (node->hasScopeEntries())
             {
                 mPrioScopes->setChecked(true);
                 scopeSelected = true;
@@ -204,7 +204,7 @@ void NaviLogScopeBase::updateExpanded(const QModelIndex& current)
     }
 }
 
-bool NaviLogScopeBase::updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio)
+bool NaviLogScopeBase::updatePriority(const QModelIndex& node, bool addPrio, areg::LogPriority prio)
 {
     bool result{ false };
     if (node.isValid())
@@ -212,11 +212,11 @@ bool NaviLogScopeBase::updatePriority(const QModelIndex& node, bool addPrio, NEL
         Q_ASSERT(mScopesModel != nullptr);
         if (addPrio)
         {
-            result = mScopesModel->addLogPriority(node, prio);
+            result = mScopesModel->addLogPriority(node, static_cast<uint32_t>(prio));
         }
         else
         {
-            result = mScopesModel->removeLogPriority(node, prio);
+            result = mScopesModel->removLogPriority(node, static_cast<uint32_t>(prio));
         }
     }
 
@@ -261,7 +261,7 @@ void NaviLogScopeBase::collapseRoots(void)
     }
 }
 
-void NaviLogScopeBase::onLogPrioChecked(bool checked, QToolButton& toolButton, NELogging::eLogPriority prio)
+void NaviLogScopeBase::onLogPrioChecked(bool checked, QToolButton& toolButton, areg::LogPriority prio)
 {
     validateControls();
     QModelIndex current = mNaviTree->currentIndex();

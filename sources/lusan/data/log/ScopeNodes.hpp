@@ -22,8 +22,8 @@
  * Include files.
  ************************************************************************/
 #include "lusan/data/log/ScopeNodeBase.hpp"
-#include "areg/base/TESortedLinkedList.hpp"
-#include "areg/component/NEService.hpp"
+#include "areg/base/SortedLinkedList.hpp"
+#include "areg/component/ServiceDefs.hpp"
 
 #include <map>
 
@@ -59,7 +59,7 @@ public:
      * \param   prio        The log priority to set.
      * \param   parent      The pointer to the parent node object.
      **/
-    ScopeLeaf(const QString leafName, uint32_t prio = static_cast<unsigned int>(NELogging::eLogPriority::PrioNotset), ScopeNode* parent = nullptr);
+    ScopeLeaf(const QString leafName, uint32_t prio = static_cast<unsigned int>(areg::LogPriority::PrioNotset), ScopeNode* parent = nullptr);
 
     /**
      * \brief   Copies data from the ScopeNodeBase object. Should be called explicit.
@@ -97,6 +97,14 @@ public:
      * \brief   Adds log priority bits.
      **/
     virtual void addPriority(unsigned int prio) override;
+
+    /**
+     * \brief   Builds the full scope path for this leaf.
+     *          The parent node path ends with '_'; this override replaces that
+     *          trailing '_' with '.' so the path matches the new areg syntax:
+     *          e.g. "areg_path_node.leaf_name".
+     **/
+    virtual QString makePath(void) const override;
 
     /**
      * \brief   Sets the scope ID for the node. Valid only for leafs. Ignored in case of other nodes.
@@ -150,7 +158,7 @@ public:
      * \param   prio        The log priority to set.
      * \param   parent      The pointer to the parent node object.
      **/
-    ScopeNode(const QString nodeName, uint32_t prio = static_cast<unsigned int>(NELogging::eLogPriority::PrioNotset), ScopeNode* parent = nullptr);
+    ScopeNode(const QString nodeName, uint32_t prio = static_cast<unsigned int>(areg::LogPriority::PrioNotset), ScopeNode* parent = nullptr);
 
     /**
      * \brief   Creates a node with empty list of child leafs and nodes
@@ -409,7 +417,7 @@ public:
      * \brief   Creates a root node and sets the unique root ID and root name.
      * \param   instance    The structure of connected instance, which contains root ID and name.
      **/
-    explicit ScopeRoot(const NEService::sServiceConnectedInstance& instance);
+    explicit ScopeRoot(const areg::ConnectedInstance& instance);
 
     /**
      * \brief   Create a root node with the given name and ID.

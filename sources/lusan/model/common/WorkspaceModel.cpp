@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the AREG Framework.
@@ -19,7 +19,7 @@
 
 #include "lusan/model/common/WorkspaceModel.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
-#include "areg/base/NECommon.hpp"
+#include "areg/base/CommonDefs.hpp"
 #include <algorithm>
 
 WorkspaceModel::WorkspaceModel(OptionsManager &options, QObject* parent)
@@ -128,7 +128,7 @@ int WorkspaceModel::find(const QString& root) const
         }
     }
     
-    return static_cast<int>(NECommon::INVALID_INDEX);
+    return static_cast<int>(areg::INVALID_INDEX);
 }
 
 int WorkspaceModel::find(const uint64_t key) const
@@ -142,7 +142,7 @@ int WorkspaceModel::find(const uint64_t key) const
         }
     }
     
-    return static_cast<int>(NECommon::INVALID_INDEX);
+    return static_cast<int>(areg::INVALID_INDEX);
 }
 
 int WorkspaceModel::rowCount(const QModelIndex& parent) const
@@ -223,14 +223,14 @@ bool WorkspaceModel::isDefaultWorkspace(uint32_t row) const
 
 bool WorkspaceModel::hasDefaultWorkspace(void) const
 {
-    return (mDefWorkspace != 0) && (_findById(mDefWorkspace) != static_cast<int>(NECommon::INVALID_INDEX));
+    return (mDefWorkspace != 0) && (_findById(mDefWorkspace) != static_cast<int>(areg::INVALID_INDEX));
 }
 
 uint64_t WorkspaceModel::activateDefaultWorkspace(void)
 {
     uint64_t result{ 0u };
-    int index = (mDefWorkspace != 0 ? _findById(mDefWorkspace) : static_cast<int>(NECommon::INVALID_INDEX));
-    if (index != static_cast<int>(NECommon::INVALID_INDEX))
+    int index = (mDefWorkspace != 0 ? _findById(mDefWorkspace) : static_cast<int>(areg::INVALID_INDEX));
+    if (index != static_cast<int>(areg::INVALID_INDEX))
     {
         result = mItems[index].activate();
     }
@@ -240,8 +240,8 @@ uint64_t WorkspaceModel::activateDefaultWorkspace(void)
 
 const WorkspaceEntry& WorkspaceModel::getDefaultWorkspace(void) const
 {
-    int index = (mDefWorkspace != 0 ? _findById(mDefWorkspace) : static_cast<int>(NECommon::INVALID_INDEX));
-    return (index != static_cast<int>(NECommon::INVALID_INDEX) ? mItems[index] : WorkspaceEntry::InvalidWorkspace);
+    int index = (mDefWorkspace != 0 ? _findById(mDefWorkspace) : static_cast<int>(areg::INVALID_INDEX));
+    return (index != static_cast<int>(areg::INVALID_INDEX) ? mItems[index] : WorkspaceEntry::InvalidWorkspace);
 }
 
 bool WorkspaceModel::setDefaultWorkspace(const QString & root)
@@ -259,7 +259,7 @@ bool WorkspaceModel::setDefaultWorkspace(const QString & root)
 inline int WorkspaceModel::_findById(uint32_t id) const
 {
     if (id == 0)
-        return NECommon::INVALID_INDEX;
+        return areg::INVALID_INDEX;
 
     for (int i = 0; i < static_cast<int>(mItems.size()); ++i)
     {
@@ -267,6 +267,6 @@ inline int WorkspaceModel::_findById(uint32_t id) const
             return i;
     }
 
-    return NECommon::INVALID_INDEX;
+    return areg::INVALID_INDEX;
 }
 

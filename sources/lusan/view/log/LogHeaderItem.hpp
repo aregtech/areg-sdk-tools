@@ -84,7 +84,7 @@ public:
     /**
      * \brief   Sets the list of strings in the combo-box filter control
      **/
-    void setFilterData(const std::vector<String> & data, const NELusanCommon::AnyList& list);
+    void setFilterData(const std::vector<areg::String> & data, const NELusanCommon::AnyList& list);
 
     /**
      * \brief   Sets the list of integers in the combo-box filter control

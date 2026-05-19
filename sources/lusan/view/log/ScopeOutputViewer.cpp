@@ -24,7 +24,7 @@
 #include "lusan/view/common/OutputDock.hpp"
 #include "lusan/view/log/LogViewerBase.hpp"
 
-#include "areg/logging/NELogging.hpp"
+#include "areg/logging/areg_log.h"
 
 ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     : OutputWindow  (static_cast<int>(OutputDock::eOutputDock::OutputLogging), wndMain, parent)
@@ -166,7 +166,7 @@ void ScopeOutputViewer::onFilterChanged(const QModelIndex & indexStart, const QM
     ctrlDuration()->setText(QString("N/A"));
     if (indexEnd.isValid())
     {
-        const NELogging::sLogMessage * log = mLogModel != nullptr ? mLogModel->data(indexEnd, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>() : nullptr;
+        const areg::LogEntry * log = mLogModel != nullptr ? mLogModel->data(indexEnd, static_cast<int>(Qt::UserRole)).value<const areg::LogEntry *>() : nullptr;
         if (log != nullptr)
         {
             float duration = static_cast<float>(static_cast<double>(log->logDuration) / 1000.0f);

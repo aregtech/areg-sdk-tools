@@ -26,8 +26,8 @@
 #include <QList>
 #include <QMap>
 
-#include "areg/component/NEService.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/component/ServiceDefs.hpp"
+#include "areg/logging/areg_log.h"
 
 /************************************************************************
  * Dependencies
@@ -167,7 +167,7 @@ public:
      * \param   prio    The log priority to remove from the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool removeLogPriority(const QModelIndex& index, uint32_t prio) = 0;
+    virtual bool removLogPriority(const QModelIndex& index, uint32_t prio) = 0;
 
     /**
      * \brief   Saves the log scope priority for the given target index.
@@ -337,7 +337,7 @@ protected slots:
      * \param   instances   The list of instances available.
      * \return  Returns true if the instance was added to the root element.
      **/
-    virtual bool slotInstancesAvailable(const std::vector<NEService::sServiceConnectedInstance> & instances);
+    virtual bool slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances);
     
     /**
      * \brief   Signal emitted when one or more instances are disconnected.
@@ -354,7 +354,7 @@ protected slots:
      *          In case of disconnected mode this signal is not triggered.
      * \param   instIds     The list of IDs of disconnected instances.
      **/
-    virtual void slotScopesAvailable(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>& scopes);
+    virtual void slotScopesAvailable(ITEM_ID instId, const std::vector<areg::ScopeEntry>& scopes);
 
     /**
      * \brief   Signal emitted when scopes of the specified instance are updated.
@@ -363,7 +363,7 @@ protected slots:
      * \param   instId      The ID of the instance whose scopes are updated.
      * \param   scopes      The list of updated scopes.
      **/
-    virtual void slotScopesUpdated(ITEM_ID instId, const std::vector<NELogging::sScopeInfo>&scopes);
+    virtual void slotScopesUpdated(ITEM_ID instId, const std::vector<areg::ScopeEntry>&scopes);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

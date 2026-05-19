@@ -24,7 +24,7 @@
  ************************************************************************/
 
 #include "lusan/common/NELusanCommon.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/logging/areg_log.h"
 
 #include <QColor>
 #include <QIcon>
@@ -42,16 +42,16 @@ public:
     //<! The log icons, which are used in tool buttons and menus.
     enum class eLogIcons    : uint32_t
     {
-          PrioInvalid   = static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid)
-        , PrioNotset    = static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)
-        , PrioDebug     = static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug)
-        , PrioInfo      = static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo)
-        , PrioWarn      = static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning)
-        , PrioError     = static_cast<uint32_t>(NELogging::eLogPriority::PrioError)
-        , PrioFatal     = static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)
-        , PrioScope     = static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)
-        , PrioScopeEnter= static_cast<uint32_t>(NELogging::eLogPriority::PrioScope) | 4
-        , PrioScopeExit = static_cast<uint32_t>(NELogging::eLogPriority::PrioScope) | 8
+          PrioInvalid   = static_cast<uint32_t>(areg::LogPriority::PrioInvalid)
+        , PrioNotset    = static_cast<uint32_t>(areg::LogPriority::PrioNotset)
+        , PrioDebug     = static_cast<uint32_t>(areg::LogPriority::PrioDebug)
+        , PrioInfo      = static_cast<uint32_t>(areg::LogPriority::PrioInfo)
+        , PrioWarn      = static_cast<uint32_t>(areg::LogPriority::PrioWarning)
+        , PrioError     = static_cast<uint32_t>(areg::LogPriority::PrioError)
+        , PrioFatal     = static_cast<uint32_t>(areg::LogPriority::PrioFatal)
+        , PrioScope     = static_cast<uint32_t>(areg::LogPriority::PrioScope)
+        , PrioScopeEnter= static_cast<uint32_t>(areg::LogPriority::PrioScope) | 4
+        , PrioScopeExit = static_cast<uint32_t>(areg::LogPriority::PrioScope) | 8
     };
 
     //!< The indexes of log colors, which are used in the log scope tree view and log messages.
@@ -99,7 +99,7 @@ public:
      * \brief   Returns the color for the log priority.
      * \param   logPrio      The log priority.
      **/
-    static QColor getColor(NELogging::eLogPriority logPrio);
+    static QColor getColor(areg::LogPriority logPrio);
 
     /**
      * \brief   Returns the color for the log priority.
@@ -111,19 +111,19 @@ public:
      * \brief   Returns the color for the log message.
      * \param   logMessage   The log message to get color.
      **/
-    static QColor getLogColor(const NELogging::sLogMessage & logMessage);
+    static QColor getLogColor(const areg::LogEntry & logMessage);
 
     /**
      * \brief   Returns the background color for the log message based on log message priority.
      * \param   logMessage  The log message with message priority information to get background color.
      **/
-    static QColor getLogBackgroundColor(const NELogging::sLogMessage & logMessage);
+    static QColor getLogBackgroundColor(const areg::LogEntry & logMessage);
 
     /**
      * \brief   Returns the background color for the specified log priority.
      * \param   logPrio     The log message priority.
      **/
-    static QColor getLogBackgroundColor(NELogging::eLogPriority logPrio);
+    static QColor getLogBackgroundColor(areg::LogPriority logPrio);
 };
 
 #endif  // LUSAN_MODEL_LOG_LogIconFactory_HPP

@@ -26,7 +26,7 @@
 #include "lusan/data/log/LogObserver.hpp"
 #include "lusan/view/common/OptionPageWorkspace.hpp"
 
-#include "areg/base/NESocket.hpp"
+#include "areg/base/SocketDefs.hpp"
 
 #include <QAbstractItemView>
 #include <QtAssert>
@@ -53,7 +53,7 @@ OptionPageLogging::OptionPageLogging(QDialog* parent)
     , mPortValidator{QRegularExpression("[0-9]{2,5}"), this}
     , mTestTriggered{false}
     , mAddress      {}
-    , mPort         {NESocket::InvalidPort}
+    , mPort         {areg::InvalidPort}
     , mLogFileName  {}
     , mLogLocation  {}
     , mTestConnect  {}
@@ -95,7 +95,7 @@ OptionPageLogging::~OptionPageLogging()
 void OptionPageLogging::setupDialog()
 {
     LogCollectorClient& client = LogCollectorClient::getInstance();
-    if (client.isInitialized() == false)
+    if (client.is_initialized() == false)
     {
         client.initialize(NELusanCommon::INIT_FILE.toStdString());
     }
@@ -105,13 +105,13 @@ void OptionPageLogging::setupDialog()
     QString logLocation { currentWorkspace.getDirLogs() };
     if (logLocation.isEmpty())
     {
-        logLocation = mLogLocation.isEmpty() ? client.getConfigLoggerDatabaseLocation().c_str() : mLogLocation;
+        logLocation = mLogLocation.isEmpty() ? client.config_logger_database_location().c_str() : mLogLocation;
         logLocation = NELusanCommon::fixPath(logLocation);
     }
     
-    QString logFile = mLogFileName.isEmpty() ? client.getConfigLoggerDatabaseName().c_str() : mLogFileName;
-    QString address = mAddress.isEmpty() ? client.getConfigLoggerAddress().c_str() : mAddress;
-    uint16_t port   = mPort == NESocket::InvalidPort ? client.getConfigLoggerPort() : mPort;
+    QString logFile = mLogFileName.isEmpty() ? client.config_logger_database_name().c_str() : mLogFileName;
+    QString address = mAddress.isEmpty() ? client.config_logger_address().c_str() : mAddress;
+    uint16_t port   = mPort == areg::InvalidPort ? client.config_logger_port() : mPort;
     
     textPortNumber()->setValidator(&mPortValidator);
     textLogLocation()->setText(logLocation);
@@ -198,7 +198,7 @@ void OptionPageLogging::setData(const QString& address, const QString& hostName,
         textPortNumber()->setText(QString::number(port));
     }
     
-    if (NESocket::isIpAddress(oldAddress.toStdString()))
+    if (areg::is_ip_address(oldAddress.toStdString()))
     {
         if (oldAddress != address)
         {
@@ -231,7 +231,7 @@ void OptionPageLogging::saveData() const
     QString ipAddress   { getServiceAddress() };
     uint16_t portNumber { getServicePort() };
 
-    if (logLocation.isEmpty() || logFileName.isEmpty() || ipAddress.isEmpty() || (portNumber == NESocket::InvalidPort))
+    if (logLocation.isEmpty() || logFileName.isEmpty() || ipAddress.isEmpty() || (portNumber == areg::InvalidPort))
     {
         return;
     }
@@ -247,11 +247,11 @@ void OptionPageLogging::saveData() const
     LogCollectorClient& lgClient = LogCollectorClient::getInstance();
 
     // Save logging configuration
-    lgClient.setConfigLoggerDatabaseLocation(logLocation.toStdString());
-    lgClient.setConfigLoggerDatabaseName(logFileName.toStdString());
-    lgClient.setConfigLoggerAddress(ipAddress.toStdString());
-    lgClient.setConfigLoggerPort(portNumber);
-    lgClient.saveLoggerConfig();
+    lgClient.set_config_logger_database_location(logLocation.toStdString());
+    lgClient.set_config_logger_database_name(logFileName.toStdString());
+    lgClient.set_config_logger_address(ipAddress.toStdString());
+    lgClient.set_config_logger_port(portNumber);
+    LogObserver::saveLoggerConfig();
 }
 
 inline QString OptionPageLogging::getLogLocation(void) const
@@ -297,7 +297,7 @@ void OptionPageLogging::onTestButtonClicked(bool checked)
     uint16_t portNumber{ static_cast<uint16_t>(textPortNumber()->text().toUInt()) };
     setCanSave(false);
 
-    if (logLocation.isEmpty() || logFileName.isEmpty() || ipAddress.isEmpty() || (portNumber == NESocket::InvalidPort))
+    if (logLocation.isEmpty() || logFileName.isEmpty() || ipAddress.isEmpty() || (portNumber == areg::InvalidPort))
     {
         QMessageBox::critical(this, tr("Error"), tr("Invalid Log Collector Service configuration, fields cannot be invalid!"));
         return;
@@ -311,7 +311,7 @@ void OptionPageLogging::onTestButtonClicked(bool checked)
     mTestMessage = connect(&client, &LogCollectorClient::signalLogInstancesConnect, this, &OptionPageLogging::onLogInstancesConnected);
     
     std::filesystem::path path(logLocation.toStdString());
-    if (static_cast<LogObserverBase &>(client).connect(ipAddress.toStdString(), portNumber, path.string()) == false)
+    if (static_cast<areg::logger::LogObserverBase &>(client).connect(ipAddress.toStdString(), portNumber, path.string()) == false)
     {
         disconnect(mTestConnect);
         disconnect(mTestMessage);
@@ -371,7 +371,7 @@ void OptionPageLogging::onLogServiceConnected(bool isConnected, const std::strin
         mPort = port;
         textConnectionStatus()->setTextColor(QColor(Qt::green));
         textConnectionStatus()->setText(_textServiceConnected.arg(address.c_str()).arg(port));
-        LogCollectorClient::getInstance().requestInstances();
+        LogObserver::requestInstances();
     }
     else
     {
@@ -389,7 +389,7 @@ void OptionPageLogging::onLogServiceConnected(bool isConnected, const std::strin
     }
 }
 
-void OptionPageLogging::onLogInstancesConnected(const std::vector< NEService::sServiceConnectedInstance >& instances)
+void OptionPageLogging::onLogInstancesConnected(const std::vector< areg::ConnectedInstance >& instances)
 {
     if (mTestTriggered == false)
         return;

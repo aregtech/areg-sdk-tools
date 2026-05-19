@@ -26,10 +26,10 @@
 #include <QList>
 #include <QMap>
 
-#include "areg/base/GEGlobal.h"
-#include "areg/base/TEArrayList.hpp"
-#include "areg/base/TEHashMap.hpp"
-#include "areg/base/TEMap.hpp"
+#include "areg/base/areg_global.h"
+#include "areg/base/ArrayList.hpp"
+#include "areg/base/HashMap.hpp"
+#include "areg/base/OrderedMap.hpp"
 #include "aregextend/db/LogSqliteDatabase.hpp"
 
 /************************************************************************
@@ -51,12 +51,12 @@ class OfflineScopesModel : public LoggingScopesModelBase
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
-    using sScopeFilter      = LogSqliteDatabase::sScopeFilter;
-    using ListScopeFilter   = TEArrayList<sScopeFilter>;
-    using ScopeFilters      = TEHashMap<uint32_t, uint32_t>;
-    using MapScopeFilter    = TEMap<ITEM_ID, ScopeFilters>;
+    using sScopeFilter      = areg::ext::LogSqliteDatabase::ScopeFilter;
+    using ListScopeFilter   = areg::ArrayList<sScopeFilter>;
+    using ScopeFilters      = areg::HashMap<uint32_t, uint32_t>;
+    using MapScopeFilter    = areg::OrderedMap<ITEM_ID, ScopeFilters>;
 
-    static constexpr uint32_t INIT_LOG_PRIO { static_cast<uint32_t>(NELogging::eLogPriority::PrioScopeLogs) };
+    static constexpr uint32_t INIT_LOG_PRIO { static_cast<uint32_t>(areg::LogPriority::PrioScopeLogs) };
 
     static constexpr uint32_t LOG_PRIO_MASK { INIT_LOG_PRIO };
 
@@ -109,7 +109,7 @@ public:
      * \param   prio    The log priority to remove from the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool removeLogPriority(const QModelIndex& index, uint32_t prio) override;
+    virtual bool removLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Saves the log scope priority for the given target index.

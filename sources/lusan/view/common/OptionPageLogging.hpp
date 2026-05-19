@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_OPTIONPAGELOGGING_HPP
+#ifndef LUSAN_VIEW_COMMON_OPTIONPAGELOGGING_HPP
 #define LUSAN_VIEW_COMMON_OPTIONPAGELOGGING_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the AREG SDK.
@@ -24,7 +24,7 @@
  ************************************************************************/
 #include "lusan/view/common/OptionPageBase.hpp"
 
-#include "areg/component/NEService.hpp"
+#include "areg/component/ServiceDefs.hpp"
 
 #include <QValidator>
 #include <memory>
@@ -158,7 +158,7 @@ private slots:
      * \brief   Slot triggered when the log source instance message is received.
      * \param   instances       A vector of connected service instances.
      **/
-    void onLogInstancesConnected(const std::vector< NEService::sServiceConnectedInstance >& instances);
+    void onLogInstancesConnected(const std::vector< areg::ConnectedInstance >& instances);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -244,7 +244,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     OptionPageLogging(void) = delete; // Disable default constructor
-    DECLARE_NOCOPY_NOMOVE(OptionPageLogging);
+    AREG_NOCOPY_NOMOVE(OptionPageLogging);
 };
 
 #endif // LUSAN_VIEW_COMMON_OPTIONPAGELOGGING_HPP

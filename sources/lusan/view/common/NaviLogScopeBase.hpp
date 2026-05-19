@@ -24,7 +24,7 @@
  ************************************************************************/
 
 #include "lusan/view/common/NavigationWindow.hpp"
-#include "areg/logging/NELogging.hpp"
+#include "areg/logging/areg_log.h"
 
 #include <QWidget>
 #include <QString>
@@ -105,7 +105,7 @@ public:
      * \param   prio       The log priority to set or remove.
      * \return  Returns true if succeeded the request to update the priority. Otherwise, returns false.
      **/
-    virtual bool updatePriority(const QModelIndex& node, bool addPrio, NELogging::eLogPriority prio);
+    virtual bool updatePriority(const QModelIndex& node, bool addPrio, areg::LogPriority prio);
 
     /**
      * \brief   Expands the child nodes of the specified scope tree recursively.
@@ -143,7 +143,7 @@ protected:
      * \param   toolButton  The reference to the tool button that was checked or unchecked.
      * \param   prio        The log priority associated with the tool button.
      **/
-    virtual void onLogPrioChecked(bool checked, QToolButton& toolButton, NELogging::eLogPriority prio);
+    virtual void onLogPrioChecked(bool checked, QToolButton& toolButton, areg::LogPriority prio);
 
     /**
      * \brief   Slot, triggered when a navigation node is expanded or collapsed.

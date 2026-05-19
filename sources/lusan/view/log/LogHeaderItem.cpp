@@ -164,7 +164,7 @@ void LogHeaderItem::setFilterData(const std::vector<QString>& data, const NELusa
     }
 }
 
-void LogHeaderItem::setFilterData(const std::vector<String>& data, const NELusanCommon::AnyList& list)
+void LogHeaderItem::setFilterData(const std::vector<areg::String>& data, const NELusanCommon::AnyList& list)
 {
     if ((mType == eType::Combo) && (mWidget != nullptr))
     {
@@ -172,7 +172,7 @@ void LogHeaderItem::setFilterData(const std::vector<String>& data, const NELusan
         items.reserve(static_cast<int>(data.size()));
         for (const auto& entry : data)
         {
-            items << QString::fromStdString(entry.getData());
+            items << QString::fromStdString(entry.data());
         }
 
         mWidget->setDataItems(items, list);

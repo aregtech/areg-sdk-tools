@@ -24,8 +24,8 @@
  ************************************************************************/
 #include "lusan/common/NELusanCommon.hpp"
 
-#include "areg/base/GEGlobal.h"
-#include "areg/component/TEEvent.hpp"
+#include "areg/base/areg_global.h"
+#include "areg/component/EventTemplate.hpp"
 #include "areg/base/SharedBuffer.hpp"
 
 class LogObserverEventData
@@ -34,7 +34,7 @@ class LogObserverEventData
 // LogObserverEventData Types and constants
 //////////////////////////////////////////////////////////////////////////
 public:
-    enum class eLogObserverEvent : unsigned short
+    enum class LogObserverCommand : unsigned short
     {
           CMD_Unknown           //!< Invalid event
         , CMD_Configured        //!< Initialize and connect the log observer
@@ -51,56 +51,50 @@ public:
         , CMD_LogMessage        //!< The log observer received log message.
     };
 
-    DECLARE_STREAMABLE(LogObserverEventData::eLogObserverEvent);
-
 public:
     inline LogObserverEventData(void);
-    inline LogObserverEventData(eLogObserverEvent event);
-    inline LogObserverEventData(eLogObserverEvent event, const SharedBuffer& data);
+    inline LogObserverEventData(LogObserverCommand event);
+    inline LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data);
     inline LogObserverEventData(const LogObserverEventData& src);
+    inline LogObserverEventData(LogObserverEventData && src);
 
-    inline LogObserverEventData::eLogObserverEvent getEvent(void) const;
+    inline LogObserverEventData::LogObserverCommand getEvent(void) const;
 
-    inline SharedBuffer& getBuffer(void);
+    inline areg::SharedBuffer& getBuffer(void);
 
-    inline const SharedBuffer& getBuffer(void) const;
+    inline const areg::SharedBuffer& getBuffer(void) const;
 
-    inline operator const IEInStream& (void) const;
+    inline operator const areg::InStream& (void) const;
 
-    inline operator IEOutStream& (void);
+    inline operator areg::OutStream& (void);
 
 private:
-    eLogObserverEvent   mEvent;     //!< The event type
-    SharedBuffer        mBuffer;    //!< The buffer to store event data
+    LogObserverCommand  mEvent;     //!< The event type
+    areg::SharedBuffer  mBuffer;    //!< The buffer to store event data
 };
-
-//////////////////////////////////////////////////////////////////////////
-// Implement PatientInfoEventData::eUpdateCommands streamable.
-//////////////////////////////////////////////////////////////////////////
-IMPLEMENT_STREAMABLE(LogObserverEventData::eLogObserverEvent);
 
 //////////////////////////////////////////////////////////////////////////
 // Define custom event and the event consumer.
 //////////////////////////////////////////////////////////////////////////
-DECLARE_EVENT(LogObserverEventData, LogObserverEvent, IELogObserverEventConsumer);
+AREG_DECLARE_EVENT(LogObserverEventData, LogObserverEvent, LogObserverEventConsumer);
 
 
 //////////////////////////////////////////////////////////////////////////
 // LogObserverEventData inline methods.
 //////////////////////////////////////////////////////////////////////////
 LogObserverEventData::LogObserverEventData(void)
-    : mEvent(LogObserverEventData::eLogObserverEvent::CMD_Unknown)
+    : mEvent(LogObserverEventData::LogObserverCommand::CMD_Unknown)
     , mBuffer()
 {
 }
 
-inline LogObserverEventData::LogObserverEventData(eLogObserverEvent event)
+inline LogObserverEventData::LogObserverEventData(LogObserverCommand event)
     : mEvent(event)
     , mBuffer()
 {
 }
 
-inline LogObserverEventData::LogObserverEventData(eLogObserverEvent event, const SharedBuffer& data)
+inline LogObserverEventData::LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data)
     : mEvent(event)
     , mBuffer(data)
 {
@@ -112,29 +106,36 @@ inline LogObserverEventData::LogObserverEventData(const LogObserverEventData& sr
 {
 }
 
-inline LogObserverEventData::eLogObserverEvent LogObserverEventData::getEvent(void) const
+inline LogObserverEventData::LogObserverEventData(LogObserverEventData&& src)
+    : mEvent(src.mEvent)
+    , mBuffer(std::move(src.mBuffer))
+{
+    src.mEvent = LogObserverCommand::CMD_Unknown;
+}
+
+inline LogObserverEventData::LogObserverCommand LogObserverEventData::getEvent(void) const
 {
     return mEvent;
 }
 
-inline SharedBuffer& LogObserverEventData::getBuffer(void)
+inline areg::SharedBuffer& LogObserverEventData::getBuffer(void)
 {
     return mBuffer;
 }
 
-inline const SharedBuffer& LogObserverEventData::getBuffer(void) const
+inline const areg::SharedBuffer& LogObserverEventData::getBuffer(void) const
 {
     return mBuffer;
 }
 
-inline LogObserverEventData::operator const IEInStream& (void) const
+inline LogObserverEventData::operator const areg::InStream& (void) const
 {
-    return static_cast<const IEInStream&>(mBuffer);
+    return static_cast<const areg::InStream&>(mBuffer);
 }
 
-inline LogObserverEventData::operator IEOutStream& (void)
+inline LogObserverEventData::operator areg::OutStream& (void)
 {
-    return static_cast<IEOutStream&>(mBuffer);
+    return static_cast<areg::OutStream&>(mBuffer);
 }
 
 #endif  // LUSAN_DATA_LOG_LOGOBSERVEREVENT_HPP

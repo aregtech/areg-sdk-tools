@@ -20,8 +20,8 @@
 #include "lusan/model/log/ScopeLogViewerFilter.hpp"
 #include "lusan/model/log/LoggingModelBase.hpp"
 
-#include "areg/logging/NELogging.hpp"
-#include "areg/component/NEService.hpp"
+#include "areg/logging/areg_log.h"
+#include "areg/component/ServiceDefs.hpp"
 
 ScopeLogViewerFilter::ScopeLogViewerFilter(uint32_t scopeId /*= 0u*/, LoggingModelBase* model /*= nullptr*/)
     : LogViewerFilter(model)
@@ -49,7 +49,7 @@ ScopeLogViewerFilter::~ScopeLogViewerFilter(void)
 
 void ScopeLogViewerFilter::setScopeFilter(LoggingModelBase *model, const QModelIndex& index)
 {
-    const NELogging::sLogMessage* logMessage = index.data(Qt::ItemDataRole::UserRole).value<const NELogging::sLogMessage *>();
+    const areg::LogEntry* logMessage = index.data(Qt::ItemDataRole::UserRole).value<const areg::LogEntry *>();
     if ((logMessage != nullptr) && (model != nullptr))
     {
         setScopeFilter(model, logMessage->logScopeId, logMessage->logSessionId, logMessage->logThreadId, logMessage->logCookie);
@@ -106,7 +106,7 @@ QModelIndex ScopeLogViewerFilter::getIndexNextScope(const QModelIndex& startAt, 
     if (row >= (count - 1))
         return QModelIndex();
 
-    const NELogging::sLogMessage* log = data(idxTarget, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
+    const areg::LogEntry* log = data(idxTarget, static_cast<int>(Qt::UserRole)).value<const areg::LogEntry *>();
     uint32_t scopeId    = log->logScopeId;
     uint32_t sessionId  = log->logSessionId;
     uint32_t moduleId   = log->logCookie;
@@ -114,7 +114,7 @@ QModelIndex ScopeLogViewerFilter::getIndexNextScope(const QModelIndex& startAt, 
     for ( row += 1; row < count; ++ row)
     {
         QModelIndex idx = index(row, 0);
-        log = data(idx, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
+        log = data(idx, static_cast<int>(Qt::UserRole)).value<const areg::LogEntry *>();
         if ((log->logScopeId != scopeId) || (log->logSessionId != sessionId) || (log->logCookie != moduleId))
         {
             return (asSource ? mapToSource(idx) : idx);
@@ -143,7 +143,7 @@ QModelIndex ScopeLogViewerFilter::getIndexPrevScope(const QModelIndex& startAt, 
     if (row == 0)
         return QModelIndex();
 
-    const NELogging::sLogMessage* log = data(idxTarget, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
+    const areg::LogEntry* log = data(idxTarget, static_cast<int>(Qt::UserRole)).value<const areg::LogEntry *>();
     uint32_t scopeId = log->logScopeId;
     uint32_t sessionId  = log->logSessionId;
     uint32_t moduleId   = log->logCookie;
@@ -151,7 +151,7 @@ QModelIndex ScopeLogViewerFilter::getIndexPrevScope(const QModelIndex& startAt, 
     for ( row -= 1; row >= 0; -- row)
     {
         QModelIndex idx = index(row, 0);
-        log = data(idx, static_cast<int>(Qt::UserRole)).value<const NELogging::sLogMessage *>();
+        log = data(idx, static_cast<int>(Qt::UserRole)).value<const areg::LogEntry *>();
         if ((log->logScopeId != scopeId) || (log->logSessionId != sessionId) || (log->logCookie != moduleId))
         {
             return (asSource ? mapToSource(idx) : idx);
@@ -199,13 +199,13 @@ NELusanCommon::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QModelI
     else if (index.isValid() == false)
         return NELusanCommon::eMatchType::NoMatch;
     
-    const NELogging::sLogMessage* logMessage = index.data(Qt::ItemDataRole::UserRole).value<const NELogging::sLogMessage*>();
+    const areg::LogEntry* logMessage = index.data(Qt::ItemDataRole::UserRole).value<const areg::LogEntry*>();
     if (logMessage == nullptr)
         return NELusanCommon::eMatchType::NoMatch;
     
     if ((logMessage->logCookie != mInstanceData.value()) && mInstanceData.valid())
         return NELusanCommon::eMatchType::NoMatch;
-    else if ((logMessage->logCookie <= NEService::COOKIE_ANY) && (mInstanceData.valid() == false))
+    else if ((logMessage->logCookie <= areg::COOKIE_ANY) && (mInstanceData.valid() == false))
         return NELusanCommon::eMatchType::NoMatch;
     else if (logMessage->logCookie != mSelInstanceData.value())
         return NELusanCommon::eMatchType::PartialOutput;
@@ -259,7 +259,7 @@ NELusanCommon::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QModelI
     }
 
     Q_ASSERT(logMessage->logSessionId == mSelSessionData.value());
-    if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeEnter)
+    if (logMessage->logMsgType == areg::LogMessageType::ScopeEnter)
     {
         mIndexStart = index;
         if (mIndexEnd.isValid() == false)
@@ -267,7 +267,7 @@ NELusanCommon::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QModelI
             emit const_cast<ScopeLogViewerFilter *>(this)->signalFilterSelected(mIndexStart, mIndexEnd);
         }
     }
-    else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageText)
+    else if (logMessage->logMsgType == areg::LogMessageType::MessageText)
     {
         if (mIndexStart.isValid() == false)
         {
@@ -278,7 +278,7 @@ NELusanCommon::eMatchType ScopeLogViewerFilter::matchesScopeFilter(const QModelI
             }
         }
     }
-    else if (logMessage->logMsgType == NELogging::eLogMessageType::LogMessageScopeExit)
+    else if (logMessage->logMsgType == areg::LogMessageType::ScopeExit)
     {
         mIndexEnd = index;
         emit const_cast<ScopeLogViewerFilter *>(this)->signalFilterSelected(mIndexStart, mIndexEnd);

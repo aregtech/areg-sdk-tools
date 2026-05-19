@@ -263,7 +263,7 @@ void LogPrioComboFilter::setDataItems(const QStringList& items, const NELusanCom
 
 QList<NELusanCommon::FilterData> LogPrioComboFilter::getSelectedData() const
 {
-    uint16_t prio = static_cast<uint16_t>(NELogging::eLogPriority::PrioInvalid);
+    uint16_t prio = static_cast<uint16_t>(areg::LogPriority::PrioInvalid);
     QString text{};
 
     QListWidget* widget = listWidget();

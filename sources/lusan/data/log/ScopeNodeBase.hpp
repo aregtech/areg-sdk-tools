@@ -22,8 +22,8 @@
  * Include files.
  ************************************************************************/
 #include "lusan/common/NELusanCommon.hpp"
-#include "areg/base/GEGlobal.h"
-#include "areg/logging/NELogging.hpp"
+#include "areg/base/areg_global.h"
+#include "areg/logging/areg_log.h"
 
 #include <QList>
 #include <QString>
@@ -81,7 +81,7 @@ protected:
      * \param   nodeName    The name of the node.
      * \param   prio        The logging priority flags set bitwise.
      **/
-    ScopeNodeBase(ScopeNodeBase::eNode nodeType, const QString& nodeName, unsigned int prio = static_cast<unsigned int>(NELogging::eLogPriority::PrioNotset), ScopeNodeBase* parent = nullptr);
+    ScopeNodeBase(ScopeNodeBase::eNode nodeType, const QString& nodeName, unsigned int prio = static_cast<unsigned int>(areg::LogPriority::PrioNotset), ScopeNodeBase* parent = nullptr);
 
     //!< Copies, moves and destroys the node object.
     ScopeNodeBase(const ScopeNodeBase& src);
@@ -183,7 +183,7 @@ public:
     /**
      * \brief   Returns true if the logging scopes priority bit set.
      **/
-    inline bool hasLogScopes(void) const;
+    inline bool hasScopeEntries(void) const;
 
     /**
      * \brief   Returns true if the node has any valid priority bits set.
@@ -296,8 +296,8 @@ public:
     /**
      * \brief   Recursively adds a child a node if it does not exist.
      *          Otherwise, adds a node log priority value.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, it contains the next level of the path separated by '_'.
+     * \param   scopePath   The path to the node. Nodes are separated by '_', the leaf by '.'.
+     *                      On output, it contains the next level of the path.
      *                      The last node should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
      * \param   scopeId     The scope ID to set for the leaf node.
@@ -311,7 +311,7 @@ public:
      * \param   scope       The scope information to add.
      * \return  The number of nodes added.
      **/
-    virtual int addChildRecursive(const NELogging::sScopeInfo & scope);
+    virtual int addChildRecursive(const areg::ScopeEntry & scope);
 
     /**
      * \brief   Recursively adds a child a node if it does not exist.
@@ -328,8 +328,8 @@ public:
     /**
      * \brief   Adds a single child node if it does not exist.
      *          Otherwise, adds a node log priority value.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, it contains the next level of the path separated by '_'.
+     * \param   scopePath   The path to the node. Nodes are separated by '_', the leaf by '.'.
+     *                      On output, it contains the next level of the path.
      *                      The last node should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
      * \return  The pointer to the added child node.
@@ -357,10 +357,11 @@ public:
 
     /**
      * \brief   Creates a child node. The child node is not added to the parent.
-     *          Each child node is separated by '_'. If the path does not contain '_', it is created as a 'leaf'.
+     *          Nodes are separated by '_'; if the path contains '.', the part after
+     *          the dot is created as a leaf (verbatim, may contain '_').
      *          If path is empty, returns nullptr.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, it contains the next level of the path separated by '_'.
+     * \param   scopePath   The path to the node. Nodes separated by '_', leaf by '.'.
+     *                      On output, it contains the next level of the path.
      *                      The last node should be marked as 'leaf'.
      * \param   prio        The logging priority to set.
      * \return  The node object created.
@@ -525,11 +526,12 @@ public:
     
     /**
      * \brief   Creates a list of node names from the passed scope path.
-     *          The path is separated by '_'. If path contains "__", only one
-     *          symbol is removed and the is used as a prefix (or postfix) in the name.
-     * \param   scopePath   The path to the node. The path is separated by '_'.
-     *                      On output, the `scopePath` is empty.
-     * \param   nodeNames   The list names to create nodes.
+     *          Nodes are separated by '_'; a '.' separates the last node from
+     *          its leaf name, which is taken verbatim (may contain '_' for snake_case).
+     *          If the path contains no '.', the last '_'-delimited token becomes the leaf.
+     *          Consecutive underscores ('__') encode a literal '_' in a node name.
+     * \param   scopePath   The scope path to split. Not modified.
+     * \param   nodeNames   The list of names produced (nodes followed by the leaf name).
      * \return  The number of names in the list.
      **/
     virtual int splitScopePath(QString& scopePath, QStringList& nodeNames) const;
@@ -618,47 +620,47 @@ inline bool ScopeNodeBase::isValid( void ) const
 
 inline bool ScopeNodeBase::hasPrioNotset( void ) const
 {
-    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset)) != 0;
+    return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioNotset)) != 0;
 }
 
 inline bool ScopeNodeBase::hasPrioDebug(void) const
 {
-    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug)) != 0;
+    return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioDebug)) != 0;
 }
 
 inline bool ScopeNodeBase::hasPrioInfo( void ) const
 {
-    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo)) != 0;
+    return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioInfo)) != 0;
 }
 
 inline bool ScopeNodeBase::hasPrioWarning( void ) const
 {
-    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning)) != 0;
+    return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioWarning)) != 0;
 }
 
 inline bool ScopeNodeBase::hasPrioError( void ) const
 {
-    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioError)) != 0;
+    return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioError)) != 0;
 }
 
 inline bool ScopeNodeBase::hasPrioFatal( void ) const
 {
-    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal)) != 0;
+    return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioFatal)) != 0;
 }
 
 inline bool ScopeNodeBase::hasLogsEneabled( void ) const
 {
-    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioLogs)) != 0;
+    return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioLogs)) != 0;
 }
 
-inline bool ScopeNodeBase::hasLogScopes( void ) const
+inline bool ScopeNodeBase::hasScopeEntries( void ) const
 {
-    return (mPrioStates & static_cast<uint32_t>(NELogging::eLogPriority::PrioScope)) != 0;
+    return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioScope)) != 0;
 }
 
 inline bool ScopeNodeBase::hasPrioValid( void ) const
 {
-    return (mPrioStates != static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid));
+    return (mPrioStates != static_cast<uint32_t>(areg::LogPriority::PrioInvalid));
 }
 
 inline bool ScopeNodeBase::hasMultiPrio(uint32_t prioIgnore) const
@@ -666,15 +668,15 @@ inline bool ScopeNodeBase::hasMultiPrio(uint32_t prioIgnore) const
     uint32_t prio = mPrioStates & (~prioIgnore);
     switch (prio)
     {
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid):
+    case static_cast<uint32_t>(areg::LogPriority::PrioInvalid):
         return false;
 
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioDebug):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioInfo):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioWarning):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioError):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioFatal):
-    case static_cast<uint32_t>(NELogging::eLogPriority::PrioNotset):
+    case static_cast<uint32_t>(areg::LogPriority::PrioDebug):
+    case static_cast<uint32_t>(areg::LogPriority::PrioInfo):
+    case static_cast<uint32_t>(areg::LogPriority::PrioWarning):
+    case static_cast<uint32_t>(areg::LogPriority::PrioError):
+    case static_cast<uint32_t>(areg::LogPriority::PrioFatal):
+    case static_cast<uint32_t>(areg::LogPriority::PrioNotset):
         return true;
         
     default:
@@ -694,7 +696,7 @@ inline void ScopeNodeBase::setParent(ScopeNodeBase* parent)
 
 inline void ScopeNodeBase::resetPriority(void)
 {
-    mPrioStates = static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid);
+    mPrioStates = static_cast<uint32_t>(areg::LogPriority::PrioInvalid);
 }
 
 inline void ScopeNodeBase::updateParentPrio(uint32_t prio, bool recursive)
@@ -754,7 +756,7 @@ inline bool ScopeNodeBase::canAddPriority(unsigned int prio) const
 
 inline bool ScopeNodeBase::canRemovePriority(unsigned int prio) const
 {
-    if (mPrioStates == static_cast<uint32_t>(NELogging::eLogPriority::PrioInvalid))
+    if (mPrioStates == static_cast<uint32_t>(areg::LogPriority::PrioInvalid))
     {
         return false;
     }
