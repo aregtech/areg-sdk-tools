@@ -53,6 +53,9 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
             , [this](const QModelIndex& start, const QModelIndex& end) {
                 onFilterChanged(start, end);
     });
+    connect(mFilter, &QAbstractItemModel::modelReset, this, [this]() {
+        ctrlDuration()->setText(QString("N/A"));
+    });
     connect(selModel            , &QItemSelectionModel::currentRowChanged, this
             , [this](const QModelIndex &current, const QModelIndex &previous){
                 updateToolbuttons(mFilter->rowCount(), current);
