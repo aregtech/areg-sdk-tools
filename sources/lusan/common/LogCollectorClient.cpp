@@ -97,7 +97,7 @@ void LogCollectorClient::on_log_update_scopes(ITEM_ID cookie, const ScopeInfo* s
     emit signalLogUpdateScopes(cookie, scopes, count);
 }
 
-void LogCollectorClient::on_log_message(const areg::SharedBuffer& logMessage)
+void LogCollectorClient::on_log_message(const areg::MessageEnvelope& logMessage)
 {
     emit signalLogMessage(logMessage);
 }

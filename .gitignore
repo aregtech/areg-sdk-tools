@@ -36,4 +36,8 @@
 
 # other directories
 .vs/
-build/
+build*
+*claude*
+
+mempalace.yaml
+entities.json

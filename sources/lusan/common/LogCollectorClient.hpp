@@ -129,7 +129,7 @@ signals:
      * \brief   The signal triggered when receive message to log.
      * \param   logMessage  The buffer with structure of the message to log.
      **/
-    void signalLogMessage(const areg::SharedBuffer & logMessage);
+    void signalLogMessage(const areg::MessageEnvelope & logMessage);
 
 //////////////////////////////////////////////////////////////////////////
 // Protected Overrides / Callbacks
@@ -238,9 +238,9 @@ protected:
     /**
      * \brief   Callback triggered when receiving a message to log.
      *
-     * \param   log_message     The structure of the message to log.
+     * \param   logMessage  The structure of the message to log.
      **/
-    void on_log_message(const areg::SharedBuffer & log_message) final;
+    void on_log_message(const areg::MessageEnvelope& logMessage) final;
 
 };
 
