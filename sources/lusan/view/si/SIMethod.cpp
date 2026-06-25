@@ -70,9 +70,9 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
 {
     mParams->setHidden(true);
 
-    ui.horizontalLayout->addWidget(mList);
-    ui.horizontalLayout->addWidget(mDetails);
-    ui.horizontalLayout->addWidget(mParams);
+    ui.horizontalLayout->addWidget(mList, 1);
+    ui.horizontalLayout->addWidget(mDetails, 1);
+    ui.horizontalLayout->addWidget(mParams, 1);
     
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);

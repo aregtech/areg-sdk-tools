@@ -51,8 +51,8 @@ SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     , ui        (*mWidget->ui)
     , mVersionValidator(0, 999999, this)
 {
-    ui.horizontalLayout->addWidget(mDetails);
-    ui.horizontalLayout->addWidget(mLinks);
+    ui.horizontalLayout->addWidget(mDetails, 1);
+    ui.horizontalLayout->addWidget(mLinks, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);

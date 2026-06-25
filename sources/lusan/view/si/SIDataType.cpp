@@ -116,9 +116,9 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
 {
     mFields->setHidden(true);
     
-    ui.horizontalLayout->addWidget(mList);
-    ui.horizontalLayout->addWidget(mDetails);
-    ui.horizontalLayout->addWidget(mFields);
+    ui.horizontalLayout->addWidget(mList, 1);
+    ui.horizontalLayout->addWidget(mDetails, 1);
+    ui.horizontalLayout->addWidget(mFields, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);

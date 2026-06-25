@@ -58,8 +58,8 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
     , mTableCell(nullptr)
     , mCount    (0)
 {
-    ui.horizontalLayout->addWidget(mList);
-    ui.horizontalLayout->addWidget(mDetails);
+    ui.horizontalLayout->addWidget(mList, 1);
+    ui.horizontalLayout->addWidget(mDetails, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
