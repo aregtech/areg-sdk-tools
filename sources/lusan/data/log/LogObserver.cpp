@@ -64,7 +64,6 @@ bool LogObserver::createLogObserver(FuncLogObserverStarted callbackStarted)
     bool result{ true };
     if (_modelInitialized.exchange(true) == false)
     {
-        Q_ASSERT(areg::Thread::find_by_name(LogObserver::LogobserverThread) == nullptr);
         Q_ASSERT(areg::ComponentLoader::is_model_loaded(LogObserver::LogobserverModel) == false);
 
         _observerStart = false;
@@ -630,7 +629,7 @@ void LogObserver::slotLogUpdateScopes(ITEM_ID cookie, const ScopeInfo* scopes, i
     LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_ScopesUpdated, stream), master_thread());
 }
 
-void LogObserver::slotLogMessage(const areg::SharedBuffer& logMessage)
+void LogObserver::slotLogMessage(const areg::MessageEnvelope& logMessage)
 {
-    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_LogMessage, logMessage), master_thread());
+    LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_LogMessage, areg::SharedBuffer(logMessage)), master_thread());
 }

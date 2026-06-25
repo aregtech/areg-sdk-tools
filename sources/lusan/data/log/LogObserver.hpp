@@ -601,7 +601,7 @@ private slots:
      * \brief   The callback of the event triggered when receive message to log.
      * \param   logMessage  The structure of the message to log.
      **/
-    void slotLogMessage(const areg::SharedBuffer & logMessage);
+    void slotLogMessage(const areg::MessageEnvelope & logMessage);
 
 private:
     inline LogObserver& self(void);
