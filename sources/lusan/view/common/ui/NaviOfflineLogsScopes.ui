@@ -178,7 +178,10 @@
         <item>
          <widget class="QToolButton" name="toolError">
           <property name="toolTip">
-           <string>Show or hide log error priority</string>
+           <string>Show / hide error messages</string>
+          </property>
+          <property name="statusTip">
+           <string>Show / hide error messages</string>
           </property>
           <property name="text">
            <string>...</string>
@@ -198,10 +201,10 @@
         <item>
          <widget class="QToolButton" name="toolWarning">
           <property name="toolTip">
-           <string>Show or hide log warning priority</string>
+           <string>Show / hide warning messages</string>
           </property>
           <property name="statusTip">
-           <string>Show or hide log warning priority</string>
+           <string>Show / hide warning messages</string>
           </property>
           <property name="text">
            <string>...</string>
@@ -221,10 +224,10 @@
         <item>
          <widget class="QToolButton" name="toolInformation">
           <property name="toolTip">
-           <string>Show or hide log information priority</string>
+           <string>Show / hide information messages</string>
           </property>
           <property name="statusTip">
-           <string>Show or hide log information priority</string>
+           <string>Show / hide information messages</string>
           </property>
           <property name="text">
            <string>...</string>
@@ -244,10 +247,10 @@
         <item>
          <widget class="QToolButton" name="toolDebug">
           <property name="toolTip">
-           <string>Delete selected file / folder</string>
+           <string>Show / hide debug messages</string>
           </property>
           <property name="statusTip">
-           <string>Show or hide log debug priority</string>
+           <string>Show / hide debug messages</string>
           </property>
           <property name="text">
            <string>...</string>
@@ -267,10 +270,10 @@
         <item>
          <widget class="QToolButton" name="toolScopes">
           <property name="toolTip">
-           <string>Refresh file system view</string>
+           <string>Show / hide scope messages</string>
           </property>
           <property name="statusTip">
-           <string>Show or hide log scopes</string>
+           <string>Show / hide scope messages</string>
           </property>
           <property name="text">
            <string>...</string>

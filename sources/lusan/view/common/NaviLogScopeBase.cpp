@@ -60,6 +60,16 @@ void NaviLogScopeBase::setupControls(QTreeView* treeView, QToolButton* prioError
     Q_ASSERT(mScopesModel != nullptr);
 
     validateControls();
+    mPrioError->setToolTip(tr("Show / hide error messages"));
+    mPrioError->setStatusTip(tr("Show / hide error messages"));
+    mPrioWarning->setToolTip(tr("Show / hide warning messages"));
+    mPrioWarning->setStatusTip(tr("Show / hide warning messages"));
+    mPrioInfo->setToolTip(tr("Show / hide information messages"));
+    mPrioInfo->setStatusTip(tr("Show / hide information messages"));
+    mPrioDebug->setToolTip(tr("Show / hide debug messages"));
+    mPrioDebug->setStatusTip(tr("Show / hide debug messages"));
+    mPrioScopes->setToolTip(tr("Show / hide scope messages"));
+    mPrioScopes->setStatusTip(tr("Show / hide scope messages"));
 
     connect(mPrioError  , &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioError  , areg::LogPriority::PrioError);  });
     connect(mPrioWarning, &QToolButton::clicked, this, [this](bool checked) {onLogPrioChecked(checked, *mPrioWarning, areg::LogPriority::PrioWarning);});
