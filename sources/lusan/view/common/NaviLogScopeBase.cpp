@@ -220,6 +220,12 @@ bool NaviLogScopeBase::updatePriority(const QModelIndex& node, bool addPrio, are
         }
     }
 
+    if (result && (mNaviTree != nullptr))
+    {
+        // Force immediate repaint of visible rows so updated node icons are not delayed until hover.
+        mNaviTree->viewport()->update();
+    }
+
     return result;
 }
 
