@@ -189,7 +189,9 @@ config::*::version          = 2.0.0                         # Configuration sche
 # Global Runtime Settings
 # ---------------------------------------------------------------------------
 config::*::default::blocksize       = 64                    # Default block size (bytes) for shared buffer allocation to minimize fragmentation. 0 = ignore
-config::*::default::messagequeue    = 0                     # Default message queue size in dispatcher threads. 0 = ignore, no limitation
+config::*::queue::capacity          = 0                     # Dispatcher event-queue ring capacity (rounded up to power of two, min 32). 0 = built-in default (1024)
+config::*::queue::timeout           = 0                     # Dispatcher full-ring block timeout (ms) in lossless mode. 0 = built-in default (1000 ms)
+config::*::queue::drop              = false                 # Dispatcher full-ring policy. false = lossless (producer blocks); true = drop-newest (best-effort, never blocks)
 
 # ###########################################################################
 # APPLICATION LOGGING SETTINGS
@@ -238,20 +240,20 @@ log::*::layout::exit        = %d: [ %t  %x.%z: Exit <-- ]%n    # Scope exit form
 # Log observer uses extended layout with logging object ID (%a).
 # This is useful when collecting logs from multiple distributed sources.
 # ---------------------------------------------------------------------------
-log::logobserver::layout::enter     = %d: [ %a.%x.%t.%z: Enter -->]%n   # Entry: timestamp [logID.module.thread.scope: Enter]
-log::logobserver::layout::message   = %d: [ %a.%x.%t.%p >>> ] %m%n      # Message: timestamp [logID.module.thread.priority] message
-log::logobserver::layout::exit      = %d: [ %a.%x.%t.%z: Exit <-- ]%n   # Exit: timestamp [logID.module.thread.scope: Exit]
+log::lusan::layout::enter     = %d: [ %a.%x.%t.%z: Enter -->]%n   # Entry: timestamp [logID.module.thread.scope: Enter]
+log::lusan::layout::message   = %d: [ %a.%x.%t.%p >>> ] %m%n      # Message: timestamp [logID.module.thread.priority] message
+log::lusan::layout::exit      = %d: [ %a.%x.%t.%z: Exit <-- ]%n   # Exit: timestamp [logID.module.thread.scope: Exit]
 
 # ---------------------------------------------------------------------------
 # Log Observer Database Settings
 # ---------------------------------------------------------------------------
 # Log observer can store logs in a database for centralized log management.
 # ---------------------------------------------------------------------------
-log::logobserver::enable::file      = false                         # Log observer: disable file logging
-log::logobserver::enable::db        = true                          # Log observer: enable database logging
-log::logobserver::db::engine        = sqlite3                       # Database engine: SQLite 3
-log::logobserver::db::name          = log_%time%.sqlog              # Database file name with timestamp mask
-log::logobserver::db::location      = ./logs                        # Database file directory
+log::lusan::enable::file      = false                         # Log observer: disable file logging
+log::lusan::enable::db        = true                          # Log observer: enable database logging
+log::lusan::db::engine        = sqlite3                       # Database engine: SQLite 3
+log::lusan::db::name          = log_%time%.sqlog              # Database file name with timestamp mask
+log::lusan::db::location      = ./logs                        # Database file directory
 
 # ---------------------------------------------------------------------------
 # Service-Specific Logging Overrides
@@ -295,16 +297,20 @@ router::*::port::tcpip      = 8181			                # Router TCP port number (d
 # Format: net::MODULE::TRANSPORT::sndbuf|rcvbuf = SIZE_IN_KB
 #   MODULE    = process name ("mtrouter", "logcollector") or "*" (all processes).
 #   TRANSPORT = "tcpip" (future: "udp", "sm" for shared memory).
-#   Value is in KB (kilobytes). E.g., 4096 = 4 MB, 16384 = 16 MB.
-#   Not applied on Windows — OS autotuning is used there instead.
+#   Value is in KB (kilobytes). E.g., 4096 = 4 MB, 8192 = 8MB, 12288 = 12MB, 16384 = 16 MB.
+#   Not applied on Windows - OS autotuning is used there instead.
 #   On Linux, the kernel doubles the configured value internally.
 # ---------------------------------------------------------------------------
-net::mtrouter::tcpip::sndbuf        = 16384                 # Router SO_SNDBUF (4096 KB = 4 MB). Increase for 3MB+ frames.
-net::mtrouter::tcpip::rcvbuf        = 16384                 # Router SO_RCVBUF (4096 KB = 4 MB).
-net::logcollector::tcpip::sndbuf    = 2048                  # Logger SO_SNDBUF (2048 KB = 2 MB — log traffic is bursty but small).
+net::mtrouter::tcpip::sndbuf        = 8192                  # Router SO_SNDBUF (8192 KB = 8 MB). Increase for 3MB+ frames.
+net::mtrouter::tcpip::rcvbuf        = 8192                  # Router SO_RCVBUF (8192 KB = 8 MB).
+net::logcollector::tcpip::sndbuf    = 2048                  # Logger SO_SNDBUF (2048 KB = 2 MB - log traffic is bursty but small).
 net::logcollector::tcpip::rcvbuf    = 2048                  # Logger SO_RCVBUF (2048 KB = 2 MB).
-net::*::tcpip::sndbuf               = 16384                 # Default SO_SNDBUF for all services (uncomment to set a global default).
-net::*::tcpip::rcvbuf               = 16384                 # Default SO_RCVBUF for all services (uncomment to set a global default).
+net::*::tcpip::sndbuf               = 8192                  # Default SO_SNDBUF for all services (uncomment to set a global default).
+net::*::tcpip::rcvbuf               = 8192                  # Default SO_RCVBUF for all services (uncomment to set a global default).
+net::*::tcpip::drain                = 128                   # Send/drain batch size per dispatcher wake-up. 0 = use compile-time DEFAULT_DRAIN_LIMIT.
+net::*::tcpip::pairs                = 0                     # Pool thread-pair count. 0 = disabled (shared send/recv threads). >0 = dedicated pool pairs per N clients.
+net::*::tcpip::timeout              = 2500                  # SO_SNDTIMEO in ms. Raise (e.g. 30000) when debugging on Windows to prevent breakpoint-pause disconnects.
+net::*::tcpip::cache                = 256                   # The size per-socket cache to receive data. Same value is used to initialize send cache.
 
 # ---------------------------------------------------------------------------
 # Remote Logger Settings
