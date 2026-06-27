@@ -38,17 +38,26 @@ LogViewerFilter::~LogViewerFilter(void)
 
 void LogViewerFilter::setComboFilter(int logicalColumn, const NELusanCommon::FilterList& filters)
 {
+    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
+    if (model == nullptr)
+        return;
+
+    LoggingModelBase::eColumn ecol = model->fromIndexToColumn(logicalColumn);
+    if (ecol == LoggingModelBase::eColumn::LogColumnInvalid)
+        return;
+
+    int columnKey = static_cast<int>(ecol);
     if (filters.isEmpty())
     {
-        if (mComboFilters.contains(logicalColumn))
+        if (mComboFilters.contains(columnKey))
         {
-            mComboFilters.remove(logicalColumn);
+            mComboFilters.remove(columnKey);
             invalidateFilter();
         }
     }
     else
     {
-        mComboFilters[logicalColumn] = filters;
+        mComboFilters[columnKey] = filters;
         invalidateFilter();
     }
 }
@@ -60,13 +69,21 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const QString& text, bool
 
 void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::FilterString& filter)
 {
+    LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
+    if (model == nullptr)
+        return;
+
+    LoggingModelBase::eColumn ecol = model->fromIndexToColumn(logicalColumn);
+    if (ecol == LoggingModelBase::eColumn::LogColumnInvalid)
+        return;
+
+    int columnKey = static_cast<int>(ecol);
     if (filter.text.isEmpty())
     {
-        if (mTextFilters.contains(logicalColumn))
+        if (mTextFilters.contains(columnKey))
         {
-            mTextFilters.remove(logicalColumn);
-            LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
-            if ((model != nullptr) && (model->fromIndexToColumn(logicalColumn) == LoggingModelBase::eColumn::LogColumnMessage))
+            mTextFilters.remove(columnKey);
+            if (ecol == LoggingModelBase::eColumn::LogColumnMessage)
             {
                 // If the filter is removed, we need to invalidate the filter
                 // to ensure that the model updates correctly.
@@ -78,8 +95,6 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::Filt
     }
     else
     {
-        LoggingModelBase* model = static_cast<LoggingModelBase*>(sourceModel());
-        LoggingModelBase::eColumn ecol = model != nullptr ? model->fromIndexToColumn(logicalColumn) : LoggingModelBase::eColumn::LogColumnInvalid;
         switch (ecol)
         {
         case LoggingModelBase::eColumn::LogColumnInvalid:
@@ -89,19 +104,19 @@ void LogViewerFilter::setTextFilter(int logicalColumn, const NELusanCommon::Filt
         case LoggingModelBase::eColumn::LogColumnTimeDuration:
         {   
             uint32_t duration = filter.text.toUInt();
-            mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<uint32_t>(duration), true} };
+            mTextFilters[columnKey] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<uint32_t>(duration), true} };
         }
         break;
         
         case LoggingModelBase::eColumn::LogColumnMessage:
-            mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<NELusanCommon::FilterString>(filter), true} };
+            mTextFilters[columnKey] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<NELusanCommon::FilterString>(filter), true} };
             // If the filter is set, prepare regex
             // to ensure that the model updates correctly.
             prepareReExpression(filter.text, filter.isCaseSensitive, filter.isWholeWord, filter.isWildCard);
             break;
         
         default:
-            mTextFilters[logicalColumn] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<NELusanCommon::FilterString>(filter), true} };
+            mTextFilters[columnKey] = NELusanCommon::FilterList{ NELusanCommon::FilterData{filter.text, std::make_any<NELusanCommon::FilterString>(filter), true} };
             break;
         }
 
@@ -161,7 +176,7 @@ NELusanCommon::eMatchType LogViewerFilter::matchesComboFilters(LoggingModelBase*
         if (filters.isEmpty())
             continue;
         
-        LoggingModelBase::eColumn ecol = model->fromIndexToColumn(static_cast<int>(it.key()));
+        LoggingModelBase::eColumn ecol = static_cast<LoggingModelBase::eColumn>(it.key());
         switch (ecol)
         {
         case LoggingModelBase::eColumn::LogColumnPriority:
@@ -196,7 +211,7 @@ NELusanCommon::eMatchType LogViewerFilter::matchesTextFilters(LoggingModelBase* 
         if (filters.isEmpty())
             continue;
 
-        LoggingModelBase::eColumn ecol = model->fromIndexToColumn(static_cast<int>(it.key()));
+        LoggingModelBase::eColumn ecol = static_cast<LoggingModelBase::eColumn>(it.key());
         switch (ecol)
         {
         case LoggingModelBase::eColumn::LogColumnTimeDuration:
@@ -237,6 +252,9 @@ bool LogViewerFilter::wildcardMatch(const QString& text, const QString& wildcard
 
 inline bool LogViewerFilter::matchPrio(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
+    if (filters.isEmpty() || (filters[0].data.has_value() == false) || (filters[0].data.type() != typeid(uint16_t)))
+        return false;
+
     return (std::any_cast<uint16_t>(filters[0].data) & static_cast<uint16_t>(msg->logMessagePrio)) != 0;
 }
 
@@ -244,6 +262,9 @@ inline bool LogViewerFilter::matchSources(const areg::LogEntry* msg, const NELus
 {
     for (const auto& f : filters)
     {
+        if ((f.data.has_value() == false) || (f.data.type() != typeid(ITEM_ID)))
+            continue;
+
         if (std::any_cast<ITEM_ID>(f.data) == msg->logCookie)
         {
             return true;
@@ -257,6 +278,9 @@ inline bool LogViewerFilter::matchThreads(const areg::LogEntry* msg, const NELus
 {
     for (const auto& f : filters)
     {
+        if ((f.data.has_value() == false) || (f.data.type() != typeid(ITEM_ID)))
+            continue;
+
         if (std::any_cast<ITEM_ID>(f.data) == msg->logThreadId)
         {
             return true;
@@ -267,11 +291,17 @@ inline bool LogViewerFilter::matchThreads(const areg::LogEntry* msg, const NELus
 
 inline bool LogViewerFilter::matchDuration(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
+    if (filters.isEmpty() || (filters[0].data.has_value() == false) || (filters[0].data.type() != typeid(uint32_t)))
+        return false;
+
     return (msg->logDuration >= std::any_cast<uint32_t>(filters[0].data));
 }
 
 inline bool LogViewerFilter::matchMessage(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
+    if (filters.isEmpty() || (filters[0].data.has_value() == false) || (filters[0].data.type() != typeid(NELusanCommon::FilterString)))
+        return false;
+
     NELusanCommon::FilterString filterText = std::any_cast<NELusanCommon::FilterString>(filters[0].data);
     // Check if the cell data contains the filter text (case-insensitive)
     if (filterText.isWildCard || filterText.isWholeWord)

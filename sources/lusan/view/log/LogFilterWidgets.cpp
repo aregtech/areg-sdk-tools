@@ -160,6 +160,10 @@ LogTextFilterBase::LogTextFilterBase(bool extend, QWidget* parent)
         connect(widget, &SearchLineEdit::signalFilterText, this, [this](const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard) {
             _doSignalFilterChanged(text, isCaseSensitive, isWholeWord, isWildCard);
             });
+        connect(widget, &SearchLineEdit::signalSearchText, this, [this](const QString& text, bool isCaseSensitive, bool isWholeWord, bool isWildCard, bool /*isBackward*/) {
+            _doSignalFilterChanged(text, isCaseSensitive, isWholeWord, isWildCard);
+            hide();
+        });
         connect(widget, &SearchLineEdit::signalButtonSearchMatchCaseClicked   , this, func);
         connect(widget, &SearchLineEdit::signalButtonSearchMatchWordClicked   , this, func);
         connect(widget, &SearchLineEdit::signalButtonSearchWildCardClicked    , this, func);
@@ -171,6 +175,9 @@ LogTextFilterBase::LogTextFilterBase(bool extend, QWidget* parent)
         connect(widget, &QLineEdit::textChanged, this, [this](const QString& text) {
             _doSignalFilterChanged(text, false, false, false);
             });
+        connect(widget, &QLineEdit::returnPressed, this, [this]() {
+            hide();
+        });
     }
 }
 

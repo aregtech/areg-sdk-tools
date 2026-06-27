@@ -32,7 +32,10 @@ LogTextHighlight::LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QO
 
 void LogTextHighlight::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-    if ((static_cast<int>(mFoundPos.rowFound) != index.row()) || (mFoundPos.posStart < 0) || (mFoundPos.posEnd <= mFoundPos.posStart))
+    const int foundColumn = static_cast<int>(mFoundPos.colFound);
+    if ((static_cast<int>(mFoundPos.rowFound) != index.row()) ||
+        ((foundColumn >= 0) && (foundColumn != index.column())) ||
+        (mFoundPos.posStart < 0) || (mFoundPos.posEnd <= mFoundPos.posStart))
     {
         QStyledItemDelegate::paint(painter, option, index);
         return;

@@ -302,6 +302,7 @@ void LiveLogViewer::cleanResources(void)
 
     setupSignals(false);
     LogObserver::releaseLogObserver();
+    disconnect(mFilter, nullptr, this, nullptr);
 
     QTableView* view = ctrlTable();
     view->setModel(nullptr);
@@ -315,6 +316,11 @@ void LiveLogViewer::cleanResources(void)
     
     delete mMdiWindow;
     mMdiWindow = nullptr;
+    mHeader = nullptr;
+    mLogTable = nullptr;
+    mLogSearch = nullptr;
+    mHighlight = nullptr;
+    mHighlightColumn = -1;
     
     delete mFilter;
     mFilter = nullptr;

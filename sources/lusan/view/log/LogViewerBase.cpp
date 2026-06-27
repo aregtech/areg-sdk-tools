@@ -54,6 +54,7 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
     , mSearch   (nullptr)
     , mFoundPos ()
     , mHighlight(nullptr)
+    , mHighlightColumn(-1)
 {
 }
 
@@ -160,14 +161,6 @@ void LogViewerBase::setupWidgets(void)
     mLogTable->setVerticalScrollMode(QTableView::ScrollPerItem);
     mLogTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    // In LogViewerBase constructor or setupWidgets()
-    int index = mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage);
-    if (index >= 0)
-    {
-        mHighlight = new LogTextHighlight(mFoundPos, mLogTable);
-        mLogTable->setItemDelegateForColumn(index, mHighlight);
-    }
-
     // Set the layout
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(mMdiWindow);
@@ -176,6 +169,25 @@ void LogViewerBase::setupWidgets(void)
 
     mLogTable->setModel(mFilter);
     mLogTable->setAutoScroll(true);
+    if (mHighlight == nullptr)
+    {
+        mHighlight = new LogTextHighlight(mFoundPos, mLogTable);
+        mLogTable->setItemDelegate(mHighlight);
+    }
+    _updateHighlightColumn();
+
+    connect(mFilter, &QAbstractItemModel::columnsInserted, this
+            , [this](const QModelIndex&, int, int) {
+                _updateHighlightColumn();
+            });
+    connect(mFilter, &QAbstractItemModel::columnsRemoved, this
+            , [this](const QModelIndex&, int, int) {
+                _updateHighlightColumn();
+            });
+    connect(mFilter, &QAbstractItemModel::modelReset, this
+            , [this]() {
+                _updateHighlightColumn();
+            });
     
     QItemSelectionModel* selection= mLogTable->selectionModel();
     connect(mHeader     , &LogTableHeader::signalComboFilterChanged, this
@@ -282,12 +294,14 @@ void LogViewerBase::onSearchClicked(bool newSearch)
     
     if (mSearch.isValidPosition(mFoundPos))
     {
+        mFoundPos.colFound = mHighlightColumn >= 0 ? mHighlightColumn : 0;
         mLogSearch->setStyleSheet(QString());
         moveToRow(mFoundPos.rowFound, true);
         mLogSearch->update();
     }
     else
     {
+        mFoundPos.colFound = static_cast<int32_t>(LogSearchModel::InvalidPos);
         mLogSearch->setStyleSheet(QString::fromUtf8("QLineEdit { background-color: #ffcccc; }"));
         mLogSearch->update();
     }
@@ -382,7 +396,11 @@ void LogViewerBase::moveToRow(int row, bool select)
     Q_ASSERT(mLogTable != nullptr);
     if ((row >= 0) && (count > 0) && (row < count))
     {
-        QModelIndex idxSelected = mFilter->index(row, 0, QModelIndex());
+        int colMessage = mHeader != nullptr ? mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage) : 0;
+        if (colMessage < 0)
+            colMessage = 0;
+
+        QModelIndex idxSelected = mFilter->index(row, colMessage, QModelIndex());
         mLogTable->scrollTo(idxSelected);
         if (select)
         {
@@ -425,6 +443,7 @@ void LogViewerBase::resetColumnOrder()
     mLogModel->setActiveColumns(LoggingModelBase::getDefaultColumns());
     mHeader->resetFilters();
     mLogTable->setModel(mFilter);
+    _updateHighlightColumn();
 }
 
 void LogViewerBase::resetFilters(void)
@@ -482,16 +501,34 @@ void LogViewerBase::onCurrentRowChanged(const QModelIndex &current, const QModel
 
 inline void LogViewerBase::_clearResources(void)
 {
+    if (mFilter != nullptr)
+    {
+        disconnect(mFilter, nullptr, this, nullptr);
+    }
+
     mSearch.setLogModel(nullptr);
 
     delete mMdiWindow;
     mMdiWindow = nullptr;
+    mHeader = nullptr;
+    mLogTable = nullptr;
+    mLogSearch = nullptr;
+    mHighlight = nullptr;
+    mHighlightColumn = -1;
 
     delete mFilter;
     mFilter = nullptr;
 
     delete mLogModel;
     mLogModel = nullptr;
+}
+
+void LogViewerBase::_updateHighlightColumn(void)
+{
+    if ((mLogTable == nullptr) || (mHeader == nullptr))
+        return;
+
+    mHighlightColumn = mHeader->getColumnIndex(LoggingModelBase::eColumn::LogColumnMessage);
 }
 
 void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
