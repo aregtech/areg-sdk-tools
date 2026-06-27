@@ -185,6 +185,7 @@ void OfflineLogViewer::cleanResources(void)
     Q_ASSERT(mFilter != nullptr);
 
     setupSignals(false);
+    disconnect(mFilter, nullptr, this, nullptr);
 
     QTableView* view = ctrlTable();
     view->setModel(nullptr);
@@ -198,6 +199,11 @@ void OfflineLogViewer::cleanResources(void)
 
     delete mMdiWindow;
     mMdiWindow = nullptr;
+    mHeader = nullptr;
+    mLogTable = nullptr;
+    mLogSearch = nullptr;
+    mHighlight = nullptr;
+    mHighlightColumn = -1;
 
     delete mFilter;
     mFilter = nullptr;

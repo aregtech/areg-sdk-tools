@@ -260,6 +260,11 @@ private:
     void _populateColumnsMenu(QMenu* menu, int curRow);
 
     /**
+     * \brief   Updates the current logical index of the "Message" column.
+     **/
+    void _updateHighlightColumn(void);
+
+    /**
      * \brief   Resets the search result in the log viewer.
      **/
     inline void _resetSearchResult(void);
@@ -291,6 +296,7 @@ protected:
     LogSearchModel              mSearch;    //!< The search model, used for searching logs in the log viewer.
     LogSearchModel::sFoundPos   mFoundPos;  //!< The found position of the search in the log viewer.
     LogTextHighlight*           mHighlight; //!< The text highlight object, used for highlighting the search results in the log viewer.
+    int                         mHighlightColumn; //!< The current logical column index where highlight delegate is installed.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls.
