@@ -777,10 +777,24 @@ void SIMethod::onParamDefaultChecked(bool isChecked)
     setNodeText(item, param);
     showParamDetails(method, *param);
     updateToolButtonsForParams(method, method->findIndex(id));
+
+    if (isChecked)
+    {
+        QLineEdit* ctrlDefault = mParams->ctrlParamDefaultValue();
+        if (ctrlDefault->isEnabled())
+        {
+            ctrlDefault->setFocus();
+            if (ctrlDefault->text().isEmpty() == false)
+            {
+                ctrlDefault->selectAll();
+            }
+        }
+    }
 }
 
 void SIMethod::onParamDefaultChanged(const QString& newText)
 {
+    Q_UNUSED(newText);
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
     Q_ASSERT(item != nullptr);
@@ -791,7 +805,6 @@ void SIMethod::onParamDefaultChanged(const QString& newText)
     MethodParameter* param = method->setDefaultValue(id, mParams->ctrlParamDefaultValue()->text());
     Q_ASSERT(param != nullptr);
     setNodeText(item, param);
-    showParamDetails(method, *param);
 }
 
 void SIMethod::onParamDescriptionChanged(void)
@@ -904,6 +917,7 @@ void SIMethod::blockBasicSignals(bool doBlock)
     
     mParams->ctrlParamName()->blockSignals(doBlock);
     mParams->ctrlParamTypes()->blockSignals(doBlock);
+    mParams->ctrlParamHasDefault()->blockSignals(doBlock);
     mParams->ctrlParamDefaultValue()->blockSignals(doBlock);
 
     mList->ctrlTableList()->blockSignals(doBlock);
@@ -1021,17 +1035,18 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
         
         mParams->ctrlParamName()->setText(param.getName());
         mParams->ctrlParamTypes()->setCurrentText(param.getType());
+        const bool canEditDefault = method->canSwitchDefaultValue(param.getId());
         if (param.hasDefault())
         {
             mParams->ctrlParamHasDefault()->setChecked(true);
             mParams->ctrlParamDefaultValue()->setText(param.getValue());
-            mParams->ctrlParamDefaultValue()->setEnabled(method->canSwitchDefaultValue(param.getId()));
+            mParams->ctrlParamDefaultValue()->setEnabled(canEditDefault);
         }
         else
         {
             mParams->ctrlParamHasDefault()->setChecked(false);
             mParams->ctrlParamDefaultValue()->setText(QString());
-            mParams->ctrlParamDefaultValue()->setEnabled(method->canSwitchDefaultValue(param.getId()));
+            mParams->ctrlParamDefaultValue()->setEnabled(false);
         }
         
         mParams->ctrlParamDescription()->setPlainText(param.getDescription());
@@ -1048,7 +1063,9 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
         
         mParams->ctrlParamName()->setText(QString());
         mParams->ctrlParamTypes()->setCurrentText(QString());
+        mParams->ctrlParamHasDefault()->setChecked(false);
         mParams->ctrlParamDefaultValue()->setText(QString());
+        mParams->ctrlParamDefaultValue()->setEnabled(false);
         mParams->ctrlParamDescription()->setPlainText(QString());
         SICommon::enableDeprecated<SIMethodParamDetails, MethodParameter>(mParams, nullptr, false);
     }
