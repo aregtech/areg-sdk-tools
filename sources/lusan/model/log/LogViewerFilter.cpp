@@ -252,20 +252,18 @@ bool LogViewerFilter::wildcardMatch(const QString& text, const QString& wildcard
 
 inline bool LogViewerFilter::matchPrio(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
-    if (filters.isEmpty() || (filters[0].data.has_value() == false) || (filters[0].data.type() != typeid(uint16_t)))
+    if (filters.isEmpty())
         return false;
 
-    return (std::any_cast<uint16_t>(filters[0].data) & static_cast<uint16_t>(msg->logMessagePrio)) != 0;
+    const uint16_t* prio = std::any_cast<uint16_t>(&filters[0].data);
+    return (prio != nullptr) && ((*prio & static_cast<uint16_t>(msg->logMessagePrio)) != 0);
 }
 
 inline bool LogViewerFilter::matchSources(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
     for (const auto& f : filters)
     {
-        if ((f.data.has_value() == false) || (f.data.type() != typeid(ITEM_ID)))
-            continue;
-
-        if (std::any_cast<ITEM_ID>(f.data) == msg->logCookie)
+        if (const ITEM_ID* value = std::any_cast<ITEM_ID>(&f.data); (value != nullptr) && (*value == msg->logCookie))
         {
             return true;
         }
@@ -278,10 +276,7 @@ inline bool LogViewerFilter::matchThreads(const areg::LogEntry* msg, const NELus
 {
     for (const auto& f : filters)
     {
-        if ((f.data.has_value() == false) || (f.data.type() != typeid(ITEM_ID)))
-            continue;
-
-        if (std::any_cast<ITEM_ID>(f.data) == msg->logThreadId)
+        if (const ITEM_ID* value = std::any_cast<ITEM_ID>(&f.data); (value != nullptr) && (*value == msg->logThreadId))
         {
             return true;
         }
@@ -291,20 +286,24 @@ inline bool LogViewerFilter::matchThreads(const areg::LogEntry* msg, const NELus
 
 inline bool LogViewerFilter::matchDuration(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
-    if (filters.isEmpty() || (filters[0].data.has_value() == false) || (filters[0].data.type() != typeid(uint32_t)))
+    if (filters.isEmpty())
         return false;
 
-    return (msg->logDuration >= std::any_cast<uint32_t>(filters[0].data));
+    const uint32_t* duration = std::any_cast<uint32_t>(&filters[0].data);
+    return (duration != nullptr) && (msg->logDuration >= *duration);
 }
 
 inline bool LogViewerFilter::matchMessage(const areg::LogEntry* msg, const NELusanCommon::FilterList& filters) const
 {
-    if (filters.isEmpty() || (filters[0].data.has_value() == false) || (filters[0].data.type() != typeid(NELusanCommon::FilterString)))
+    if (filters.isEmpty())
         return false;
 
-    NELusanCommon::FilterString filterText = std::any_cast<NELusanCommon::FilterString>(filters[0].data);
+    const NELusanCommon::FilterString* filterText = std::any_cast<NELusanCommon::FilterString>(&filters[0].data);
+    if (filterText == nullptr)
+        return false;
+
     // Check if the cell data contains the filter text (case-insensitive)
-    if (filterText.isWildCard || filterText.isWholeWord)
+    if (filterText->isWildCard || filterText->isWholeWord)
     {
         // return wildcardMatch(QString::fromUtf8(msg->logMessage, msg->logMessageLen), filterText.text, filterText.isCaseSensitive, filterText.isWholeWord);
         Q_ASSERT(mRePattern.isEmpty() == false);
@@ -312,7 +311,7 @@ inline bool LogViewerFilter::matchMessage(const areg::LogEntry* msg, const NELus
     }
     else
     {
-        return QString::fromUtf8(msg->logMessage, msg->logMessageLen).contains(filterText.text, filterText.isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive);
+        return QString::fromUtf8(msg->logMessage, msg->logMessageLen).contains(filterText->text, filterText->isCaseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive);
     }
 }
 
