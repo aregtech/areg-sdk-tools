@@ -45,6 +45,8 @@ OfflineScopesModel::~OfflineScopesModel(void)
 
 bool OfflineScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
 {
+    bool result{ false };
+    bool hasUpdates{ false };
     ScopeNodeBase* node = index.isValid() ? static_cast<ScopeNodeBase*>(index.internalPointer()) : nullptr;
     ScopeNodeBase* root = node != nullptr ? node->getTreeRoot() : nullptr;
     if ((root == nullptr) || (mLoggingModel == nullptr) || (mLoggingModel->isOperable() == false))
@@ -61,7 +63,7 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
         for (auto pos = filterPrio.first_position(); filterPrio.is_valid_position(pos); pos = filterPrio.next_position(pos))
             filterPrio.value_at(pos) = 0u;
 
-        mLoggingModel->disableFilters(instId);
+        result = mLoggingModel->disableFilters(instId);
     }
     else if ((node == root) && (prio == static_cast<uint32_t>(areg::LogPriority::PrioScopeLogs)))
     {
@@ -72,7 +74,7 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
         for (auto pos = filterPrio.first_position(); filterPrio.is_valid_position(pos); pos = filterPrio.next_position(pos))
             filterPrio.value_at(pos) = static_cast<uint32_t>(areg::LogPriority::PrioScopeLogs);
 
-        mLoggingModel->resetFilters(instId);
+        result = mLoggingModel->resetFilters(instId);
     }
     else
     {
@@ -93,15 +95,20 @@ bool OfflineScopesModel::setLogPriority(const QModelIndex& index, uint32_t prio)
             if (scopeId == areg::LOG_SCOPE_ID_NONE)
                 continue;
 
+            hasUpdates = true;
             filterPrio[scopeId] = scopePrio;
             filter.add({ scopeId, scopePrio });
         }
 
-        mLoggingModel->applyFilters(instId, filter);
+        result = hasUpdates ? mLoggingModel->applyFilters(instId, filter) : true;
     }
 
-    mLoggingModel->readLogsAsynchronous(-1);
-    return true;
+    if (result && ((node == root) || hasUpdates))
+    {
+        mLoggingModel->readLogsAsynchronous(-1);
+    }
+
+    return result;
 }
 
 bool OfflineScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
@@ -123,15 +130,25 @@ bool OfflineScopesModel::addLogPriority(const QModelIndex& index, uint32_t prio)
         return false;
 
     node->addPriority(prio);
+    bool hasUpdates{ false };
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
+        if (scopeId == areg::LOG_SCOPE_ID_NONE)
+            continue;
+
         uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] | prio : static_cast<uint32_t>(areg::LogPriority::PrioScopeLogs);
+        hasUpdates = true;
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
     }
-    
-    mLoggingModel->applyFilters(instId, filter);
+
+    if (hasUpdates == false)
+        return true;
+
+    if (mLoggingModel->applyFilters(instId, filter) == false)
+        return false;
+
     mLoggingModel->readLogsAsynchronous(-1);
 
     return true;
@@ -157,15 +174,25 @@ bool OfflineScopesModel::removLogPriority(const QModelIndex& index, uint32_t pri
     
     uint32_t prioRemove = ~prio;
     node->removePriority(prio);
+    bool hasUpdates{ false };
     for (const auto& leaf : leafs)
     {
         uint32_t scopeId = static_cast<ScopeLeaf*>(leaf)->getScopeId();
+        if (scopeId == areg::LOG_SCOPE_ID_NONE)
+            continue;
+
         uint32_t scopePrio = filterPrio.contains(scopeId) ? filterPrio[scopeId] & prioRemove : static_cast<uint32_t>(areg::LogPriority::PrioScopeLogs) & prioRemove;
+        hasUpdates = true;
         filterPrio[scopeId] = scopePrio;
         filter.add({ scopeId, scopePrio });
     }
-    
-    mLoggingModel->applyFilters(instId, filter);
+
+    if (hasUpdates == false)
+        return true;
+
+    if (mLoggingModel->applyFilters(instId, filter) == false)
+        return false;
+
     mLoggingModel->readLogsAsynchronous(-1);
 
     return true;
@@ -287,4 +314,3 @@ uint32_t OfflineScopesModel::_logFilterPrio(uint32_t prio) const
 
     return result;
 }
-
