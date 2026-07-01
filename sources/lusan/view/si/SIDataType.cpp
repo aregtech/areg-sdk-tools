@@ -346,7 +346,7 @@ void SIDataType::onInsertFieldClicked(void)
             selectedStructField(nullptr, *static_cast<FieldEntry*>(field), static_cast<DataTypeStructure*>(dataType));
             const QList<FieldEntry>& list = static_cast<DataTypeStructure*>(dataType)->getElements();
             Q_ASSERT(count == list.size());
-            for (int i = row + 1; row < count; ++i)
+            for (int i = row + 1; i < count; ++i)
             {
                 QTreeWidgetItem* temp = parent->child(i);
                 Q_ASSERT(temp != nullptr);
@@ -359,7 +359,7 @@ void SIDataType::onInsertFieldClicked(void)
             selectedEnumField(nullptr, *static_cast<EnumEntry*>(field), static_cast<DataTypeEnum*>(dataType));
             const QList<EnumEntry>& list = static_cast<DataTypeEnum*>(dataType)->getElements();
             Q_ASSERT(count == list.size());
-            for (int i = row + 1; row < count; ++i)
+            for (int i = row + 1; i < count; ++i)
             {
                 QTreeWidgetItem* temp = parent->child(i);
                 Q_ASSERT(temp != nullptr);

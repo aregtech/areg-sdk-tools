@@ -20,6 +20,8 @@
 #include "lusan/view/si/SICommon.hpp"
 #include "ui/ui_SIDataTypeList.h"
 
+#include <QAbstractItemView>
+
 SIDataTypeList::SIDataTypeList(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::SIDataTypeList)
@@ -31,6 +33,8 @@ SIDataTypeList::SIDataTypeList(QWidget *parent)
     this->setFont(font);
     ui->setupUi(this);
     QTreeWidget* table = ui->treeTypes;
+    table->setSelectionMode(QAbstractItemView::SingleSelection);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->header()->setSectionResizeMode(QHeaderView::Stretch);
     setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
