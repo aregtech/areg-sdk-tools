@@ -19,9 +19,12 @@
 
 #include "lusan/common/NELusanCommon.hpp"
 
+#include <QColor>
 #include <QDateTime>
 #include <QFileInfo>
+#include <QImage>
 #include <QPainter>
+#include <QPixmap>
 #include <QStandardPaths>
 
 const QStringList NELusanCommon::FILTERS
@@ -37,6 +40,68 @@ const QString    NELusanCommon::VERSION        { "1.0.0" };
 const QString    NELusanCommon::OPTIONS        { "lusan.opt" };
 const QString    NELusanCommon::INIT_FILE      { "./config/lusan.init" };
 
+
+namespace
+{
+    bool _darkThemeIcons{ false };
+
+    //!< Lightens dark strokes so monochrome icons stay visible on dark backgrounds.
+    QImage adaptImageToDark(QImage image)
+    {
+        image = image.convertToFormat(QImage::Format_ARGB32);
+        const int height = image.height();
+        const int width  = image.width();
+        for (int y = 0; y < height; ++y)
+        {
+            QRgb* line = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < width; ++x)
+            {
+                const QRgb rgba = line[x];
+                if (qAlpha(rgba) == 0)
+                    continue;
+
+                QColor color = QColor::fromRgba(rgba);
+                int hue{ 0 }, sat{ 0 }, light{ 0 }, alpha{ 0 };
+                color.getHsl(&hue, &sat, &light, &alpha);
+                if (light < 128)
+                {
+                    color.setHsl(hue, sat, 255 - light, alpha);
+                    line[x] = color.rgba();
+                }
+            }
+        }
+
+        return image;
+    }
+}
+
+QIcon NELusanCommon::loadIcon(const QString & fileName, const QSize & size /*= QSize{32, 32}*/)
+{
+    if (_darkThemeIcons == false)
+    {
+        QIcon icon;
+        icon.addFile(fileName, size, QIcon::Mode::Normal, QIcon::State::On);
+        return icon;
+    }
+
+    QIcon source;
+    source.addFile(fileName, size, QIcon::Mode::Normal, QIcon::State::On);
+    QPixmap pixmap = source.pixmap(size);
+    if (pixmap.isNull())
+        return source;
+
+    return QIcon(QPixmap::fromImage(adaptImageToDark(pixmap.toImage())));
+}
+
+void NELusanCommon::setIconsForDarkTheme(bool isDark)
+{
+    _darkThemeIcons = isDark;
+}
+
+bool NELusanCommon::iconsForDarkTheme(void)
+{
+    return _darkThemeIcons;
+}
 
 QString NELusanCommon::getOptionsFile(void)
 {

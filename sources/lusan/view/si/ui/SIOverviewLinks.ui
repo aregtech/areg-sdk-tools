@@ -65,9 +65,6 @@
           <property name="autoFillBackground">
            <bool>false</bool>
           </property>
-          <property name="styleSheet">
-           <string notr="true">body {color: blue;}</string>
-          </property>
           <property name="text">
            <string>Data Types ...</string>
           </property>
@@ -115,9 +112,6 @@
           </property>
           <property name="autoFillBackground">
            <bool>false</bool>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">body {color: blue;}</string>
           </property>
           <property name="text">
            <string>Attributes ...</string>
@@ -167,9 +161,6 @@
           <property name="autoFillBackground">
            <bool>false</bool>
           </property>
-          <property name="styleSheet">
-           <string notr="true">body {color: blue;}</string>
-          </property>
           <property name="text">
            <string>Methods ...</string>
           </property>
@@ -218,9 +209,6 @@
           <property name="autoFillBackground">
            <bool>false</bool>
           </property>
-          <property name="styleSheet">
-           <string notr="true">body {color: blue;}</string>
-          </property>
           <property name="text">
            <string>Constants ...</string>
           </property>
@@ -268,9 +256,6 @@
           </property>
           <property name="autoFillBackground">
            <bool>false</bool>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">body {color: blue;}</string>
           </property>
           <property name="text">
            <string>Includes ...</string>

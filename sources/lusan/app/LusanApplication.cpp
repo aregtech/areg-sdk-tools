@@ -23,7 +23,7 @@
 #include "lusan/view/common/Workspace.hpp"
 #include "lusan/data/common/WorkspaceEntry.hpp"
 #include "lusan/view/common/WorkspaceSetupDialog.hpp"
-
+#include "lusan/app/NEAppThemes.hpp"
 
 const QStringList   LusanApplication::ExternalExts
 {
@@ -283,6 +283,14 @@ void LusanApplication::newWorkspace(void)
     }
 }
 
+void LusanApplication::applyConfiguredTheme(void)
+{
+    if (LusanApplication::theApp == nullptr)
+        return;
+    
+    NEAppThemes::applyTheme(LusanApplication::theApp->mOptions.getTheme());
+}
+
 bool LusanApplication::isWorkpacePath(const QString & path)
 {
     if (LusanApplication::theApp == nullptr)
@@ -348,7 +356,6 @@ int LusanApplication::startupMainWindow(const WorkspaceEntry& curWorkspace)
     w.showMaximized();
     w.show();
     emit signalApplicationRunning();
-    setStyleSheet("{ background: palette(base); color: palette(text);}");    
     int result = exec();
     mMainWindow = nullptr;
     return result;
@@ -358,6 +365,7 @@ int LusanApplication::runApplication()
 {
     int result{ 0 };
     mOptions.readOptions();
+    applyConfiguredTheme();
     
     do
     {

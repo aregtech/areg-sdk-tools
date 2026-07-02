@@ -220,15 +220,16 @@ bool MdiChild::maybeSave()
 
 void MdiChild::setCurrentFile(const QString& fileName)
 {
-    mCurFile = QFileInfo(fileName).canonicalFilePath();
+    mCurFile = fileName.isEmpty() ? QString() : QFileInfo(fileName).canonicalFilePath();
     mIsUntitled = false;
-    
+
     if (mMdiSubWindow != nullptr)
     {
         mMdiSubWindow->setWindowModified(false);
         mMdiSubWindow->setWindowFilePath(mCurFile);
-        bool isInWorkspace{LusanApplication::isWorkpacePath(mCurFile)};
-        QString title{ QString("%1%2%3").arg( !mIsUntitled && !isInWorkspace ? "⚠️ " : ""
+        // Plain ASCII marker; emoji in titles triggers slow DirectWrite font fallback on first use.
+        bool showWarning{ (mCurFile.isEmpty() == false) && (LusanApplication::isWorkpacePath(mCurFile) == false) };
+        QString title{ QString("%1%2%3").arg( showWarning ? "[!] " : ""
                                             , userFriendlyCurrentFile()
                                             , mIsUntitled || mIsModified ? "[*]" : "") };
         mMdiSubWindow->setWindowTitle(title);

@@ -23,7 +23,7 @@
 MdiArea::MdiArea(QWidget* parent /*= nullptr*/)
     : QMdiArea(parent)
 {
-    setSizeAdjustPolicy(QMdiArea::SizeAdjustPolicy::AdjustToContents);
+    setSizeAdjustPolicy(QMdiArea::SizeAdjustPolicy::AdjustIgnored);
     setDocumentMode(true);
     setViewMode(ViewMode::TabbedView);
     setTabsClosable(true);

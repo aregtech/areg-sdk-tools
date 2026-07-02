@@ -20,6 +20,7 @@
  ************************************************************************/
 
 #include <list>
+#include <cstdint>
 #include "lusan/data/common/WorkspaceEntry.hpp"
 
 #include <QObject>
@@ -37,6 +38,15 @@ class OptionsManager    : public QObject
 
     Q_OBJECT
 public:
+    enum class eAppTheme : uint8_t
+    {
+          SystemDefault = 0
+        , ModernLight
+        , ModernDark
+        , MidnightBlue
+        , Nord
+    };
+
     /**
      * \brief   Constructor.
      **/
@@ -196,6 +206,16 @@ public:
      **/
     bool isActiveWorkspace(uint32_t id) const;
 
+    /**
+     * \brief   Returns currently configured application theme.
+     **/
+    inline eAppTheme getTheme(void) const;
+
+    /**
+     * \brief   Sets currently configured application theme.
+     **/
+    inline void setTheme(eAppTheme theme);
+
 private:
     /**
      * \brief   Reads the option list from an XML stream.
@@ -208,6 +228,11 @@ private:
      * \param   xml         The XML stream reader.
      **/
     void _readOption(QXmlStreamReader& xml);
+
+    /**
+     * \brief   Reads the application theme setting from XML.
+     **/
+    void _readTheme(QXmlStreamReader& xml);
 
     /**
      * \brief   Reads the workspace list from an XML stream.
@@ -246,6 +271,7 @@ private:
     uint32_t    mDefWorkspace;  //!< The ID of default workspace.
     Workspaces  mWorkspaces;    //!< The list of workspace entries.
     uint32_t    mCurId;         //!< The current workspace ID.
+    eAppTheme   mTheme;         //!< Configured application theme.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -265,6 +291,16 @@ inline const std::vector<WorkspaceEntry>& OptionsManager::getWorkspaceList(void)
 inline void OptionsManager::_sort()
 {
     std::sort(mWorkspaces.begin(), mWorkspaces.end(), std::greater<WorkspaceEntry>());
+}
+
+inline OptionsManager::eAppTheme OptionsManager::getTheme(void) const
+{
+    return mTheme;
+}
+
+inline void OptionsManager::setTheme(eAppTheme theme)
+{
+    mTheme = theme;
 }
 
 #endif // LUSAN_MODEL_COMMON_OPTIONSMANAGER_HPP

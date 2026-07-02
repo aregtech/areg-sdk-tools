@@ -19,6 +19,9 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/app/NEAppThemes.hpp"
+#include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/data/common/OptionsManager.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
@@ -30,6 +33,7 @@
 #include "areg/base/SocketDefs.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QCloseEvent>
 #include <QDir>
 #include <QFile>
@@ -41,7 +45,7 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QStatusBar>
-#include <QStatusBar>
+#include <QTimer>
 #include <QToolBar>
 
 namespace
@@ -100,11 +104,13 @@ MdiMainWindow::MdiMainWindow()
     , mFileMenu     (nullptr)
     , mEditMenu     (nullptr)
     , mViewMenu     (nullptr)
+    , mThemeMenu    (nullptr)
     , mDesignMenu   (nullptr)
     , mLoggingMenu  (nullptr)
     , mToolsMenu    (nullptr)
     , mWindowMenu   (nullptr)
     , mHelpMenu     (nullptr)
+    , mThemeActions (nullptr)
 
     , mFileToolBar  (nullptr)
     , mEditToolBar  (nullptr)
@@ -135,6 +141,7 @@ MdiMainWindow::MdiMainWindow()
     , mActWindowsPrev(this)
     , mActWindowMenuSeparator(this)
     , mActHelpAbout (nullptr)
+    , mSIWarmupDone (false)
 {
     _createActions();
     _createMenus();
@@ -149,6 +156,7 @@ MdiMainWindow::MdiMainWindow()
 
     setWindowTitle(tr("Lusan"));
     setUnifiedTitleAndToolBarOnMac(true);
+    QTimer::singleShot(0, this, &MdiMainWindow::onWarmupServiceInterface);
 }
 
 const QString& MdiMainWindow::fileFilters(void) const
@@ -601,6 +609,43 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
     }
 }
 
+void MdiMainWindow::onWarmupServiceInterface()
+{
+    if (mSIWarmupDone)
+        return;
+
+    mSIWarmupDone = true;
+    DataTypeFactory::warmup();
+}
+
+void MdiMainWindow::onShowMenuTheme()
+{
+    if (mThemeActions == nullptr)
+        return;
+
+    const int current = static_cast<int>(LusanApplication::getOptions().getTheme());
+    const QList<QAction*> actions = mThemeActions->actions();
+    for (QAction* action : actions)
+    {
+        action->setChecked(action->data().toInt() == current);
+    }
+}
+
+void MdiMainWindow::onThemeSelected(QAction* action)
+{
+    if (action == nullptr)
+        return;
+
+    OptionsManager& options = LusanApplication::getOptions();
+    const OptionsManager::eAppTheme theme = static_cast<OptionsManager::eAppTheme>(action->data().toInt());
+    if (theme == options.getTheme())
+        return;
+
+    options.setTheme(theme);
+    options.writeOptions();
+    LusanApplication::applyConfiguredTheme();
+}
+
 MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
 {
     MdiChild* result{nullptr};
@@ -621,11 +666,21 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
 ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& filePath /*= QString()*/)
 {
     ServiceInterface* child = new ServiceInterface(this, filePath, &mMdiArea);
+    if ((filePath.isEmpty() == false) && (child->openSucceeded() == false))
+    {
+        delete child;
+        QMessageBox::warning( this
+                            , tr("Invalid Service Interface")
+                            , tr("Failed to read the service interface file:\n%1\nThe file is not accessible or has invalid format.").arg(filePath));
+        return nullptr;
+    }
+
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconServiceInterface(NELusanCommon::SizeSmall));
     child->setCurrentFile(filePath);
-    mMdiArea.showMaximized();
+    mMdiArea.setActiveSubWindow(mdiSub);
+    mdiSub->showMaximized();
     return child;
 }
 
@@ -827,6 +882,21 @@ void MdiMainWindow::_createMenus()
     mViewMenu->addAction(&mActViewWokspace);
     mViewMenu->addAction(&mActViewLogs);
     mViewMenu->addAction(&mActViewOutput);
+    mViewMenu->addSeparator();
+    mThemeMenu = mViewMenu->addMenu(tr("&Theme"));
+    mThemeActions = new QActionGroup(this);
+    mThemeActions->setExclusive(true);
+    const QList<OptionsManager::eAppTheme> themes = NEAppThemes::allThemes();
+    for (OptionsManager::eAppTheme theme : themes)
+    {
+        QAction* action = mThemeMenu->addAction(NEAppThemes::themeDisplayName(theme));
+        action->setCheckable(true);
+        action->setData(static_cast<int>(theme));
+        mThemeActions->addAction(action);
+    }
+
+    connect(mThemeActions, &QActionGroup::triggered, this, &MdiMainWindow::onThemeSelected);
+    connect(mThemeMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuTheme);
 
     mToolsMenu = menuBar()->addMenu(tr("&Tools"));
     mToolsMenu->addAction(&mActToolsOptions);

@@ -224,6 +224,13 @@ int DataTypeFactory::getPredefinedTypes(QList<DataTypeBase *>& result, const QLi
     return static_cast<int>(result.size()) - initCount;
 }
 
+void DataTypeFactory::warmup(void)
+{
+    (void)getPrimitiveTypes();
+    (void)getBasicTypes();
+    (void)getContainerTypes();
+}
+
 void DataTypeFactory::_initPredefined(void)
 {
     Q_ASSERT(mPredefinePrimitiveTypes.isEmpty());

@@ -31,7 +31,9 @@ class OptionPageWorkspace;
 }
 class WorkspaceEntry;
 class QDialog;
+class QComboBox;
 class QLineEdit;
+class QLabel;
 
 /**
  * \brief   This class is managing the workspace settings.
@@ -111,6 +113,11 @@ private slots:
      **/
     void onDefaultChecked(bool checked);
 
+    /**
+     * \brief   Triggered when selected theme is changed.
+     **/
+    void onThemeChanged(int index);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
 //////////////////////////////////////////////////////////////////////////
@@ -157,6 +164,8 @@ private:
      * \brief   Deletes the selected workspace item.
      **/
     void deleteSelectedWorkspaceItem() const;
+    void setupThemeControls();
+    int selectedTheme(void) const;
     
     //!< Returns root path edit object
     inline QLineEdit* ctrlRoot(void) const;
@@ -183,6 +192,9 @@ private:
     QString                                     mIncludes;              //!< The includes directory of active workspace.
     QString                                     mDelivery;              //!< The delivery directory of active workspace.
     QString                                     mLogs;                  //!< The logs directory of active workspace.
+    QComboBox*                                  mThemeCombo;            //!< Theme selector control.
+    QLabel*                                     mThemeLabel;            //!< Theme label control.
+    int                                         mInitialTheme;          //!< Initially loaded theme value.
 
 //////////////////////////////////////////////////////////////////////////
 // Forbidden calls

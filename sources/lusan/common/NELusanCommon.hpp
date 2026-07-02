@@ -132,6 +132,7 @@ namespace NELusanCommon
      **/
     constexpr const char * const xmlElementOptionList       { "OptionList" };
     constexpr const char * const xmlElementOption           { "Option" };
+    constexpr const char * const xmlElementTheme            { "Theme" };
     constexpr const char * const xmlElementWorkspaceList    { "WorspaceList" };
     constexpr const char * const xmlElementWorkspace        { "Workspace" };
     constexpr const char * const xmlElementSettings         { "Settings" };
@@ -412,11 +413,23 @@ namespace NELusanCommon
 
     /**
      * \brief   Loads an icon from the specified file.
+     *          When dark theme icons are enabled, dark strokes are lightened.
      * \param   fileName    The name of the file to load the icon from.
      * \param   size        The size of the icon to load.
      * \return  The loaded icon.
      **/
-    inline QIcon loadIcon(const QString & fileName, const QSize & size = QSize{32, 32});
+    QIcon loadIcon(const QString & fileName, const QSize & size = QSize{32, 32});
+
+    /**
+     * \brief   Enables or disables icon adaptation for dark themes.
+     * \param   isDark  True if the active theme has a dark background.
+     **/
+    void setIconsForDarkTheme(bool isDark);
+
+    /**
+     * \brief   Returns true if icons are adapted for dark themes.
+     **/
+    bool iconsForDarkTheme(void);
 
     //!< Loads new workspace icon and sets the specified size
     inline QIcon iconNewWorkspace(const QSize & size = QSize{ 32, 32 });
@@ -638,9 +651,7 @@ inline QIcon NELusanCommon::iconScopeExit(const QSize & size)
 
 inline QIcon NELusanCommon::iconServiceInterfaceTab(const QSize & size)
 {
-    QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::DocumentPrintPreview) };
-    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
+    return loadIcon(":/icons/new-service", size);
 }
 
 inline QIcon NELusanCommon::iconSearchMatchCase(const QSize & size)
@@ -954,13 +965,6 @@ inline QIcon NELusanCommon::iconLiveLogDisconnected(const QSize & size)
 inline QIcon NELusanCommon::iconNewWorkspace(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/new-workspace", size);
-}
-    
-inline QIcon NELusanCommon::loadIcon(const QString & fileName, const QSize & size /*= QSize{32, 32}*/)
-{
-    QIcon icon;
-    icon.addFile(fileName, size, QIcon::Mode::Normal, QIcon::State::On);
-    return icon;
 }
 
 #endif  // LUSAN_COMMON_NELUSANCOMMON_HPP

@@ -41,7 +41,7 @@ bool SIIncludeData::readFromXml(QXmlStreamReader& xml)
     if ((xml.tokenType() != QXmlStreamReader::StartElement) || (xml.name() != XmlSI::xmlSIElementIncludeList))
         return false;
 
-    while (!(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementIncludeList))
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSI::xmlSIElementIncludeList))
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement)
         {

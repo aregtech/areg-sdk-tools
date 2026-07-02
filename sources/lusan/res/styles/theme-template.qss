@@ -1,0 +1,369 @@
+/*
+ * Lusan application theme template.
+ * The ${token} placeholders are replaced at runtime with theme colors,
+ * see NEAppThemes::themeStyleSheet(). Widget backgrounds and text colors
+ * come from QPalette (Fusion style); this sheet adds the modern accents.
+ */
+
+QMdiArea
+{
+    background: ${window};
+}
+
+QScrollArea
+{
+    border: none;
+    background: transparent;
+}
+
+QToolTip
+{
+    background-color: ${base};
+    color: ${text};
+    border: 1px solid ${border};
+    padding: 4px 6px;
+}
+
+/* ---- Buttons ---- */
+
+QPushButton
+{
+    background-color: ${button};
+    border: 1px solid ${border};
+    border-radius: 6px;
+    padding: 4px 14px;
+    min-height: 18px;
+}
+
+QPushButton:hover
+{
+    background-color: ${hover};
+    border-color: ${accent};
+}
+
+QPushButton:pressed
+{
+    background-color: ${pressed};
+}
+
+QPushButton:default
+{
+    border-color: ${accent};
+}
+
+QPushButton:disabled
+{
+    color: ${muted};
+    background-color: transparent;
+}
+
+QPushButton[flat="true"]
+{
+    background: transparent;
+    border: none;
+}
+
+QToolButton
+{
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+QToolButton:hover
+{
+    background: ${hover};
+    border-color: ${border};
+}
+
+QToolButton:pressed, QToolButton:checked
+{
+    background: ${pressed};
+}
+
+/* ---- Text inputs ---- */
+
+QLineEdit, QPlainTextEdit, QTextEdit
+{
+    background-color: ${base};
+    border: 1px solid ${border};
+    border-radius: 6px;
+    padding: 3px 6px;
+    selection-background-color: ${accent};
+    selection-color: ${onAccent};
+}
+
+QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus
+{
+    border-color: ${accent};
+}
+
+QLineEdit:disabled, QPlainTextEdit:disabled, QTextEdit:disabled
+{
+    color: ${muted};
+}
+
+/* ---- Combo boxes ---- */
+
+QComboBox
+{
+    background-color: ${base};
+    border: 1px solid ${border};
+    border-radius: 6px;
+    padding: 3px 8px;
+    min-height: 18px;
+}
+
+QComboBox:hover, QComboBox:focus
+{
+    border-color: ${accent};
+}
+
+QComboBox:disabled
+{
+    color: ${muted};
+}
+
+QComboBox::drop-down
+{
+    border: none;
+    width: 22px;
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+}
+
+QComboBox::down-arrow
+{
+    image: url(${arrow});
+    width: 12px;
+    height: 12px;
+}
+
+QComboBox QAbstractItemView
+{
+    background-color: ${base};
+    border: 1px solid ${border};
+    selection-background-color: ${accent};
+    selection-color: ${onAccent};
+    outline: none;
+}
+
+/* ---- Tabs ---- */
+
+QTabWidget::pane
+{
+    border: 1px solid ${border};
+    border-radius: 6px;
+}
+
+QTabBar::tab
+{
+    background: transparent;
+    color: ${muted};
+    border: 1px solid transparent;
+    padding: 5px 14px;
+    margin: 2px;
+    border-radius: 6px;
+}
+
+QTabBar::tab:hover
+{
+    background: ${hover};
+    color: ${text};
+}
+
+QTabBar::tab:selected
+{
+    background: ${base};
+    color: ${accent};
+    border-color: ${border};
+}
+
+/* ---- Item views ---- */
+
+QTreeView, QTableView, QListView
+{
+    background-color: ${base};
+    alternate-background-color: ${alt};
+    border: 1px solid ${border};
+    border-radius: 6px;
+    gridline-color: ${border};
+    selection-background-color: ${accent};
+    selection-color: ${onAccent};
+    outline: none;
+}
+
+QHeaderView::section
+{
+    background-color: ${panel};
+    color: ${muted};
+    border: none;
+    border-bottom: 1px solid ${border};
+    border-right: 1px solid ${border};
+    padding: 4px 8px;
+}
+
+/* ---- Containers ---- */
+
+QGroupBox
+{
+    border: 1px solid ${border};
+    border-radius: 8px;
+    margin-top: 12px;
+    padding-top: 4px;
+}
+
+QGroupBox::title
+{
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 0 4px;
+    color: ${muted};
+}
+
+QSplitter::handle
+{
+    background: ${border};
+}
+
+QDockWidget::title
+{
+    background: ${panel};
+    padding: 6px;
+}
+
+/* ---- Menus, toolbars, status bar ---- */
+
+QMenuBar
+{
+    background-color: ${panel};
+    border-bottom: 1px solid ${border};
+}
+
+QMenuBar::item
+{
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: transparent;
+}
+
+QMenuBar::item:selected
+{
+    background: ${hover};
+}
+
+QMenu
+{
+    background-color: ${base};
+    border: 1px solid ${border};
+    padding: 4px;
+}
+
+QMenu::item
+{
+    padding: 5px 24px 5px 12px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected
+{
+    background-color: ${accent};
+    color: ${onAccent};
+}
+
+QMenu::item:disabled
+{
+    color: ${muted};
+}
+
+QMenu::separator
+{
+    height: 1px;
+    background: ${border};
+    margin: 4px 8px;
+}
+
+QToolBar
+{
+    background: ${panel};
+    border: none;
+    spacing: 2px;
+    padding: 2px;
+}
+
+QStatusBar
+{
+    background: ${panel};
+    border-top: 1px solid ${border};
+}
+
+/* ---- Scroll bars ---- */
+
+QScrollBar:vertical
+{
+    background: transparent;
+    width: 12px;
+    margin: 2px;
+}
+
+QScrollBar::handle:vertical
+{
+    background: ${scroll};
+    border-radius: 4px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover
+{
+    background: ${scrollHover};
+}
+
+QScrollBar:horizontal
+{
+    background: transparent;
+    height: 12px;
+    margin: 2px;
+}
+
+QScrollBar::handle:horizontal
+{
+    background: ${scroll};
+    border-radius: 4px;
+    min-width: 30px;
+}
+
+QScrollBar::handle:horizontal:hover
+{
+    background: ${scrollHover};
+}
+
+QScrollBar::add-line, QScrollBar::sub-line
+{
+    height: 0px;
+    width: 0px;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page
+{
+    background: transparent;
+}
+
+/* ---- Service interface overview quick links ---- */
+
+QPushButton#linkDataTypes, QPushButton#linkAttributes, QPushButton#linkMethods,
+QPushButton#linkConstants, QPushButton#linkIncludes
+{
+    background: transparent;
+    border: none;
+    color: ${accent};
+    text-align: left;
+    padding: 2px 4px;
+}
+
+QPushButton#linkDataTypes:hover, QPushButton#linkAttributes:hover, QPushButton#linkMethods:hover,
+QPushButton#linkConstants:hover, QPushButton#linkIncludes:hover
+{
+    color: ${accentHover};
+}

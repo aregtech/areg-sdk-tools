@@ -39,6 +39,7 @@ class OfflineLogViewer;
 class ScopeOutputViewer;
 
 QT_BEGIN_NAMESPACE
+class QActionGroup;
 class QDockWidget;
 class QListView;
 class QMdiArea;
@@ -333,6 +334,17 @@ private slots:
     void onShowMenuWindow();
 
     /**
+     * \brief   Updates checked state of theme menu entries.
+     **/
+    void onShowMenuTheme();
+
+    /**
+     * \brief   Applies and saves the theme selected in the view menu.
+     * \param   action  The triggered theme menu action.
+     **/
+    void onThemeSelected(QAction* action);
+
+    /**
      * \brief   Slot for handling the MDI child window closed event.
      * \param   mdiChild    The MDI child window that is closed.
      **/
@@ -343,6 +355,11 @@ private slots:
      * \param   mdiSubWindow    The MDI sub-window that is activated.
      **/
     void onSubWindowActivated(QMdiSubWindow* mdiSubWindow);
+
+    /**
+     * \brief   Warms up SI-related caches and widgets to reduce first open latency.
+     **/
+    void onWarmupServiceInterface();
 
 private:
 
@@ -493,11 +510,13 @@ private:
     QMenu*          mFileMenu;      //!< The file menu.
     QMenu*          mEditMenu;      //!< The edit menu.
     QMenu*          mViewMenu;      //!< The view menu.
+    QMenu*          mThemeMenu;     //!< The theme selection submenu of the view menu.
     QMenu*          mDesignMenu;    //!< The design top level menu.
     QMenu*          mLoggingMenu;   //!< The logging menu.
     QMenu*          mToolsMenu;     //!< The top level menu "Tools"
     QMenu*          mWindowMenu;    //!< The window menu.
     QMenu*          mHelpMenu;      //!< The help menu.
+    QActionGroup*   mThemeActions;  //!< The exclusive group of theme selection actions.
 
     QToolBar*       mFileToolBar;   //!< The file toolbar.
     QToolBar*       mEditToolBar;   //!< The edit toolbar.
@@ -543,6 +562,7 @@ private:
     QAction*        mActHelpAbout;
 
     QAction*        mActsRecentFiles[MaxRecentFiles];   //!< Actions for opening recent files.    
+    bool            mSIWarmupDone;                       //!< True if SI warmup routine already ran.
 };
 
 //////////////////////////////////////////////////////////////////////////

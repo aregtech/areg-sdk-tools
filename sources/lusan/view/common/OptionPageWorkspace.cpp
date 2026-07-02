@@ -21,9 +21,13 @@
 #include "ui/ui_OptionPageWorkspace.h"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/app/NEAppThemes.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
 
+#include <QComboBox>
 #include <QDialog>
+#include <QGridLayout>
+#include <QLabel>
 #include <algorithm>
 
 OptionPageWorkspace::OptionPageWorkspace(QDialog* parent)
@@ -34,6 +38,9 @@ OptionPageWorkspace::OptionPageWorkspace(QDialog* parent)
     , mIncludes             ( )
     , mDelivery             ( )
     , mLogs                 ( )
+    , mThemeCombo           ( nullptr )
+    , mThemeLabel           ( nullptr )
+    , mInitialTheme         ( static_cast<int>(OptionsManager::eAppTheme::SystemDefault) )
 {
     mUi->setupUi(this);
     setupUi();
@@ -50,6 +57,7 @@ void OptionPageWorkspace::connectSignalHandlers()
     connect(mUi->listOfWorkspaces, &QListWidget::itemSelectionChanged, this, &OptionPageWorkspace::onWorkspaceSelectionChanged);
     connect(mUi->workspaceEdit   , &QPlainTextEdit::textChanged      , this, &OptionPageWorkspace::onWorkspaceDescChanged);
     connect(mUi->checkDefault    , &QCheckBox::clicked               , this, &OptionPageWorkspace::onDefaultChecked);
+    connect(mThemeCombo          , qOverload<int>(&QComboBox::currentIndexChanged), this, &OptionPageWorkspace::onThemeChanged);
 }
 
 void OptionPageWorkspace::initializePathsWithSelectedWorkspaceData(uint32_t const workspaceId) const
@@ -185,6 +193,7 @@ void OptionPageWorkspace::onWorkspaceSelectionChanged() const
 void OptionPageWorkspace::setupUi()
 {
     populateListOfWorkspaces();
+    setupThemeControls();
     selectWorkspace(0);
 }
 
@@ -199,31 +208,46 @@ void OptionPageWorkspace::selectWorkspace(int const index) const
 
 void OptionPageWorkspace::applyChanges()
 {
-    if (mModifiedWorkspaces.empty())
+    const bool hasWorkspaceChanges = (mModifiedWorkspaces.empty() == false);
+    const int selectedThemeValue = selectedTheme();
+    const bool hasThemeChanges = (selectedThemeValue != mInitialTheme);
+    if ((hasWorkspaceChanges == false) && (hasThemeChanges == false))
         return;
-
-    for (auto const& [id, data] : mModifiedWorkspaces)
+    
+    OptionsManager& options = LusanApplication::getOptions();
+    if (hasWorkspaceChanges)
     {
-        std::optional<WorkspaceEntry> workspace{ getWorkspace(id) };
-        if (!workspace)
+        for (auto const& [id, data] : mModifiedWorkspaces)
         {
-            Q_ASSERT(false);
-            continue;
-        }
+            std::optional<WorkspaceEntry> workspace{ getWorkspace(id) };
+            if (!workspace)
+            {
+                Q_ASSERT(false);
+                continue;
+            }
 
-        if (data.hasDeleted)
-        {
-            LusanApplication::getOptions().removeWorkspace(workspace->getKey());
+            if (data.hasDeleted)
+            {
+                options.removeWorkspace(workspace->getKey());
+            }
+            else if (data.newDescription)
+            {
+                workspace->setWorkspaceDescription(*data.newDescription);
+                options.updateWorkspace(*workspace);
+            }
         }
-        else if (data.newDescription)
-        {
-            workspace->setWorkspaceDescription(*data.newDescription);
-            LusanApplication::getOptions().updateWorkspace(*workspace);
-        }
+        
+        mModifiedWorkspaces.clear();
     }
-
-    mModifiedWorkspaces.clear();
-    LusanApplication::getOptions().writeOptions();
+    
+    if (hasThemeChanges)
+    {
+        options.setTheme(static_cast<OptionsManager::eAppTheme>(selectedThemeValue));
+        mInitialTheme = selectedThemeValue;
+    }
+    
+    options.writeOptions();
+    LusanApplication::applyConfiguredTheme();
     
     OptionPageBase::applyChanges();
 }
@@ -272,6 +296,11 @@ void OptionPageWorkspace::onDefaultChecked(bool checked)
     }
 }
 
+void OptionPageWorkspace::onThemeChanged(int /*index*/)
+{
+    setDataModified(selectedTheme() != mInitialTheme);
+}
+
 std::optional<uint32_t> OptionPageWorkspace::getSelectedWorkspaceId() const
 {
     QListWidgetItem* selectedItem = mUi->listOfWorkspaces->currentItem();
@@ -283,6 +312,33 @@ std::optional<uint32_t> OptionPageWorkspace::getSelectedWorkspaceId() const
     {
         return std::nullopt;
     }
+}
+
+void OptionPageWorkspace::setupThemeControls()
+{
+    QGridLayout* layout = mUi->layoutWidget->findChild<QGridLayout*>("gridLayout");
+    if (layout == nullptr)
+        return;
+
+    mThemeLabel = new QLabel(tr("Application Theme:"), this);
+    mThemeCombo = new QComboBox(this);
+    mThemeCombo->setToolTip(tr("Select the application visual style"));
+    const QList<OptionsManager::eAppTheme> themes = NEAppThemes::allThemes();
+    for (OptionsManager::eAppTheme theme : themes)
+    {
+        mThemeCombo->addItem(NEAppThemes::themeDisplayName(theme), static_cast<int>(theme));
+    }
+    layout->addWidget(mThemeLabel, 7, 0, 1, 2);
+    layout->addWidget(mThemeCombo, 7, 2, 1, 1);
+
+    mInitialTheme = static_cast<int>(LusanApplication::getOptions().getTheme());
+    const int index = mThemeCombo->findData(mInitialTheme);
+    mThemeCombo->setCurrentIndex(index >= 0 ? index : 0);
+}
+
+int OptionPageWorkspace::selectedTheme(void) const
+{
+    return (mThemeCombo != nullptr ? mThemeCombo->currentData().toInt() : mInitialTheme);
 }
 
 inline QLineEdit* OptionPageWorkspace::ctrlRoot(void) const

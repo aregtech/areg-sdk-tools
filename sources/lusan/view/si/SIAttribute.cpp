@@ -104,7 +104,7 @@ SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustToContents);
+    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
     setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
     resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
