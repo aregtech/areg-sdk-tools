@@ -53,4 +53,9 @@
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>
     </qresource>
+    <qresource prefix="/styles">
+        <file alias="theme-template.qss">styles/theme-template.qss</file>
+        <file alias="arrow-down-dark.svg">styles/arrow-down-dark.svg</file>
+        <file alias="arrow-down-light.svg">styles/arrow-down-light.svg</file>
+    </qresource>
 </RCC>

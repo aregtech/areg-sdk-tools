@@ -149,6 +149,11 @@ public:
     static void newWorkspace(void);
 
     /**
+     * \brief   Applies configured application theme from options.
+     **/
+    static void applyConfiguredTheme(void);
+
+    /**
      * \brief   Checks if the given path is a valid workspace path.
      * \param   path    The path to check.
      * \return  True if the path is a valid workspace path, false otherwise.

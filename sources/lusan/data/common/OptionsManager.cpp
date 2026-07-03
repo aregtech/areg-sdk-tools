@@ -29,11 +29,44 @@
 #include <QXmlStreamWriter>
 #include <algorithm>
 
+namespace
+{
+    QString themeToString(OptionsManager::eAppTheme theme)
+    {
+        switch (theme)
+        {
+        case OptionsManager::eAppTheme::SystemDefault: return QStringLiteral("System");
+        case OptionsManager::eAppTheme::ModernLight: return QStringLiteral("ModernLight");
+        case OptionsManager::eAppTheme::ModernDark: return QStringLiteral("ModernDark");
+        case OptionsManager::eAppTheme::MidnightBlue: return QStringLiteral("MidnightBlue");
+        case OptionsManager::eAppTheme::Nord: return QStringLiteral("Nord");
+        default: return QStringLiteral("System");
+        }
+    }
+
+    OptionsManager::eAppTheme themeFromString(const QStringView theme)
+    {
+        if (theme.compare(QStringLiteral("System"), Qt::CaseInsensitive) == 0)
+            return OptionsManager::eAppTheme::SystemDefault;
+        if (theme.compare(QStringLiteral("ModernDark"), Qt::CaseInsensitive) == 0)
+            return OptionsManager::eAppTheme::ModernDark;
+        if (theme.compare(QStringLiteral("MidnightBlue"), Qt::CaseInsensitive) == 0)
+            return OptionsManager::eAppTheme::MidnightBlue;
+        if (theme.compare(QStringLiteral("Nord"), Qt::CaseInsensitive) == 0)
+            return OptionsManager::eAppTheme::Nord;
+        if (theme.compare(QStringLiteral("ModernLight"), Qt::CaseInsensitive) == 0)
+            return OptionsManager::eAppTheme::ModernLight;
+        
+        return OptionsManager::eAppTheme::SystemDefault;
+    }
+}
+
 OptionsManager::OptionsManager(void)
     : mActiveKey    ( 0 )
     , mDefWorkspace ( 0 )
     , mWorkspaces   ( )
     , mCurId        ( 0 )
+    , mTheme        ( eAppTheme::SystemDefault )
 {
 }
 
@@ -240,6 +273,7 @@ void OptionsManager::writeOptions(void)
         xml.writeStartElement(NELusanCommon::xmlElementOptionList);
         xml.writeAttribute(NELusanCommon::xmlAttributeVersion, NELusanCommon::xmlWorkspaceVersion);
             xml.writeStartElement(NELusanCommon::xmlElementOption);
+                xml.writeTextElement(NELusanCommon::xmlElementTheme, themeToString(mTheme));
                 xml.writeStartElement(NELusanCommon::xmlElementWorkspaceList);
                 if (hasDefaultWorkspace())
                 {
@@ -357,7 +391,7 @@ void OptionsManager::_readOptionList(QXmlStreamReader& xml)
         xmlName = xml.name();
     }
     
-    while (xmlName != NELusanCommon::xmlElementOptionList)
+    while (!xml.atEnd() && (xmlName != NELusanCommon::xmlElementOptionList))
     {
         if (tokenType == QXmlStreamReader::StartElement)
         {
@@ -384,10 +418,15 @@ void OptionsManager::_readOption(QXmlStreamReader& xml)
         xmlName = xml.name();
     }
 
-    while (xmlName != NELusanCommon::xmlElementOption)
+    while (!xml.atEnd() && (xmlName != NELusanCommon::xmlElementOption))
     {
         if (tokenType == QXmlStreamReader::StartElement)
         {
+            if (xmlName == NELusanCommon::xmlElementTheme)
+            {
+                _readTheme(xml);
+            }
+            else
             if (xmlName == NELusanCommon::xmlElementWorkspaceList)
             {
                 _readWorkspaceList(xml);
@@ -398,6 +437,15 @@ void OptionsManager::_readOption(QXmlStreamReader& xml)
         tokenType = xml.tokenType();
         xmlName = xml.name();
     }
+}
+
+void OptionsManager::_readTheme(QXmlStreamReader& xml)
+{
+    if (xml.name() != NELusanCommon::xmlElementTheme)
+        return;
+
+    const QString theme = xml.readElementText(QXmlStreamReader::IncludeChildElements);
+    mTheme = themeFromString(theme);
 }
 
 void OptionsManager::_readWorkspaceList(QXmlStreamReader& xml)
@@ -418,7 +466,7 @@ void OptionsManager::_readWorkspaceList(QXmlStreamReader& xml)
         xmlName = xml.name();
     }
     
-    while (xmlName != NELusanCommon::xmlElementWorkspaceList)
+    while (!xml.atEnd() && (xmlName != NELusanCommon::xmlElementWorkspaceList))
     {
         if (tokenType == QXmlStreamReader::StartElement)
         {

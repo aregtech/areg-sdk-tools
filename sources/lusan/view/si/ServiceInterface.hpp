@@ -23,19 +23,20 @@
 #include "lusan/view/common/MdiChild.hpp"
 
 #include "lusan/model/si/ServiceInterfaceModel.hpp"
-#include "lusan/view/si/SIConstant.hpp"
-#include "lusan/view/si/SIDataType.hpp"
-#include "lusan/view/si/SIAttribute.hpp"
-#include "lusan/view/si/SIInclude.hpp"
-#include "lusan/view/si/SIMethod.hpp"
-#include "lusan/view/si/SIOverview.hpp"
 
+#include <QList>
 #include <QTabWidget>
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
 class MdiMainWindow;
+class SIAttribute;
+class SIConstant;
+class SIDataType;
+class SIInclude;
+class SIMethod;
+class SIOverview;
 
 /**
  * \brief   The ServiceInterface class represents the MDI window for the service interface in the Lusan application.
@@ -173,14 +174,29 @@ protected:
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////
 private:
+    //!< Returns true if the index is a valid SI page index.
+    static bool isValidTabIndex(int index);
+    //!< Returns true if the page at given index is already created.
+    bool isTabInitialized(int index) const;
+    //!< Returns the tab title of the page at given index.
+    QString tabTitle(int index) const;
+    //!< Initializes next queued page and re-schedules itself while queue is not empty.
+    void processQueuedTabInitialization(void);
+    //!< Creates the page at given index if it does not exist yet.
+    void ensureTabInitialized(int index);
+    //!< Places the created page into the tab holder widget at given index.
+    void attachPage(int index, QWidget* page);
+
+private:
     ServiceInterfaceModel   mModel; //!< The model of the service interface
     QTabWidget  mTabWidget; //!< The tab widget to display the service interface elements
-    SIOverview  mOverview;  //!< The overview widget
-    SIDataType  mDataType;  //!< The data type widget
-    SIAttribute mAttribute; //!< The data attribute widget
-    SIMethod    mMethod;    //!< The method widget
-    SIConstant  mConstant;  //!< The constant widget
-    SIInclude   mInclude;   //!< The include widget
+    SIOverview*  mOverview;  //!< The overview widget
+    SIDataType*  mDataType;  //!< The data type widget
+    SIAttribute* mAttribute; //!< The data attribute widget
+    SIMethod*    mMethod;    //!< The method widget
+    SIConstant*  mConstant;  //!< The constant widget
+    SIInclude*   mInclude;   //!< The include widget
+    QList<int>   mPendingInitTabs; //!< Background initialization queue
 };
 
 #endif // LUSAN_APPLICATION_SI_SERVICEINTERFACEVIEW_HPP

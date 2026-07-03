@@ -93,6 +93,11 @@ public:
      **/
     static int getPredefinedTypes(QList<DataTypeBase *>& result, const QList<DataTypeBase::eCategory> & categories);
 
+    /**
+     * \brief   Warms up predefined type cache to avoid first-use latency.
+     **/
+    static void warmup(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////

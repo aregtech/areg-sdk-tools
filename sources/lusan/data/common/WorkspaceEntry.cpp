@@ -152,7 +152,7 @@ bool WorkspaceEntry::readFromXml(QXmlStreamReader& xml)
         xmlName = xml.name();
     }
     
-    while (xmlName != NELusanCommon::xmlElementWorkspace)
+    while (!xml.atEnd() && (xmlName != NELusanCommon::xmlElementWorkspace))
     {
         if (tokenType == QXmlStreamReader::StartElement)
         {
@@ -189,7 +189,7 @@ inline void WorkspaceEntry::_readSettings(QXmlStreamReader& xml)
         xmlName = xml.name();
     }
     
-    while (xmlName != NELusanCommon::xmlElementSettings)
+    while (!xml.atEnd() && (xmlName != NELusanCommon::xmlElementSettings))
     {
         if (tokenType == QXmlStreamReader::StartElement)
         {
@@ -216,7 +216,7 @@ void WorkspaceEntry::_readDirectories(QXmlStreamReader& xml)
         xmlName = xml.name();
     }
     
-    while (xmlName != NELusanCommon::xmlElementDirectories)
+    while (!xml.atEnd() && (xmlName != NELusanCommon::xmlElementDirectories))
     {
         if (tokenType == QXmlStreamReader::StartElement)
         {

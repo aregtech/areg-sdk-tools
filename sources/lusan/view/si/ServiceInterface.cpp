@@ -20,8 +20,27 @@
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 #include "lusan/data/si/ServiceInterfaceData.hpp"
+#include "lusan/view/si/SIAttribute.hpp"
+#include "lusan/view/si/SIConstant.hpp"
+#include "lusan/view/si/SIDataType.hpp"
+#include "lusan/view/si/SIInclude.hpp"
+#include "lusan/view/si/SIMethod.hpp"
+#include "lusan/view/si/SIOverview.hpp"
 
+#include <QTimer>
 #include <QVBoxLayout>
+
+namespace
+{
+    constexpr int TabInitStartDelayMs{ 200 };
+    constexpr int TabInitDelayMs{ 50 };
+
+    const QIcon& tabIcon(void)
+    {
+        static const QIcon _icon{ NELusanCommon::iconServiceInterfaceTab(NELusanCommon::SizeSmall) };
+        return _icon;
+    }
+}
 
 const QString& ServiceInterface::fileExtension(void)
 {
@@ -36,25 +55,35 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
 
     , mModel    (filePath)
     , mTabWidget(this)
-    , mOverview (mModel.getOverviewModel()  , this)
-    , mDataType (mModel.getDataTypeModel()  , this)
-    , mAttribute(mModel.getAttributeModel() , this)
-    , mMethod   (mModel.getMethodsModel()   , this)
-    , mConstant (mModel.getConstantsModel() , this)
-    , mInclude  (mModel.getIncludesModel()  , this)
+    , mOverview (nullptr)
+    , mDataType (nullptr)
+    , mAttribute(nullptr)
+    , mMethod   (nullptr)
+    , mConstant (nullptr)
+    , mInclude  (nullptr)
+    , mPendingInitTabs( )
 {
-    QIcon tabIcon = NELusanCommon::iconServiceInterfaceTab(NELusanCommon::SizeSmall);
     mTabWidget.setTabPosition(QTabWidget::South);
-    // Add the SIOverview widget as the first tab
-    mTabWidget.addTab(&mOverview , tabIcon, tr("Overview"));
-    mTabWidget.addTab(&mDataType , tabIcon, tr("Data Types"));
-    mTabWidget.addTab(&mAttribute, tabIcon, tr("Data Attributes"));
-    mTabWidget.addTab(&mMethod   , tabIcon, tr("Methods"));
-    mTabWidget.addTab(&mConstant , tabIcon, tr("Constants"));
-    mTabWidget.addTab(&mInclude  , tabIcon, tr("Includes"));
-    mTabWidget.setTabShape(QTabWidget::Triangular);
+    const int pageCount{ static_cast<int>(eSIPages::PageIncludes) + 1 };
+    for (int i = 0; i < pageCount; ++i)
+    {
+        QWidget* holder = new QWidget(&mTabWidget);
+        QVBoxLayout* holderLayout = new QVBoxLayout(holder);
+        holderLayout->setContentsMargins(0, 0, 0, 0);
+        mTabWidget.addTab(holder, tabIcon(), tabTitle(i));
+        if (i != static_cast<int>(eSIPages::PageOverview))
+            mPendingInitTabs.append(i);
+    }
+
+    mTabWidget.setTabShape(QTabWidget::Rounded);
     mTabWidget.setTabsClosable(false);
     mTabWidget.setMovable(false);
+    connect(&mTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
+        ensureTabInitialized(index);
+    });
+
+    ensureTabInitialized(static_cast<int>(eSIPages::PageOverview));
+    QTimer::singleShot(TabInitStartDelayMs, this, &ServiceInterface::processQueuedTabInitialization);
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -66,7 +95,6 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
     connect(&data, &SIDataTypeData::signalDataTypeDeleted   , this, &ServiceInterface::slotDataTypeDeleted);
     connect(&data, &SIDataTypeData::signalDataTypeConverted , this, &ServiceInterface::slotDataTypeConverted);
     connect(&data, &SIDataTypeData::signalDataTypeUpdated   , this, &ServiceInterface::slotDataTypeUpdated);
-    connect(&mOverview, &SIOverview::signalPageLinkClicked  , this, &ServiceInterface::slotPageLinkClicked);
     
     setAttribute(Qt::WA_DeleteOnClose);
 
@@ -121,7 +149,9 @@ bool ServiceInterface::writeToFile(const QString& filePath)
 {
     if (mModel.saveToFile(filePath))
     {
-        mOverview.setServiceInterfaceName(mModel.getName());
+        if (mOverview != nullptr)
+            mOverview->setServiceInterfaceName(mModel.getName());
+        
         return true;
     }
     else
@@ -132,42 +162,161 @@ bool ServiceInterface::writeToFile(const QString& filePath)
 
 void ServiceInterface::slotDataTypeCreated(DataTypeCustom* dataType)
 {
-    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeCreated(dataType);
-    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeCreated(dataType);
-    static_cast<IEDataTypeConsumer&>(mAttribute).dataTypeCreated(dataType);
-    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeCreated(dataType);
-    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeCreated(dataType);
-    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeCreated(dataType);
+    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypeCreated(dataType);
+    if (mDataType != nullptr)  static_cast<IEDataTypeConsumer&>(*mDataType).dataTypeCreated(dataType);
+    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypeCreated(dataType);
+    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypeCreated(dataType);
+    if (mConstant != nullptr)  static_cast<IEDataTypeConsumer&>(*mConstant).dataTypeCreated(dataType);
+    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypeCreated(dataType);
 }
 
 void ServiceInterface::slotDataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
 {
-    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeConverted(oldType, newType);
-    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeConverted(oldType, newType);
-    static_cast<IEDataTypeConsumer&>(mAttribute).dataTypeConverted(oldType, newType);
-    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeConverted(oldType, newType);
-    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeConverted(oldType, newType);
-    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeConverted(oldType, newType);
+    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypeConverted(oldType, newType);
+    if (mDataType != nullptr)  static_cast<IEDataTypeConsumer&>(*mDataType).dataTypeConverted(oldType, newType);
+    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypeConverted(oldType, newType);
+    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypeConverted(oldType, newType);
+    if (mConstant != nullptr)  static_cast<IEDataTypeConsumer&>(*mConstant).dataTypeConverted(oldType, newType);
+    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypeConverted(oldType, newType);
 }
 
 void ServiceInterface::slotDataTypeDeleted(DataTypeCustom* dataType)
 {
-    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeDeleted(dataType);
-    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeDeleted(dataType);
-    static_cast<IEDataTypeConsumer&>(mAttribute).dataTypeDeleted(dataType);
-    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeDeleted(dataType);
-    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeDeleted(dataType);
-    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeDeleted(dataType);
+    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypeDeleted(dataType);
+    if (mDataType != nullptr)  static_cast<IEDataTypeConsumer&>(*mDataType).dataTypeDeleted(dataType);
+    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypeDeleted(dataType);
+    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypeDeleted(dataType);
+    if (mConstant != nullptr)  static_cast<IEDataTypeConsumer&>(*mConstant).dataTypeDeleted(dataType);
+    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypeDeleted(dataType);
 }
 
 void ServiceInterface::slotDataTypeUpdated(DataTypeCustom* dataType)
 {
-    static_cast<IEDataTypeConsumer&>(mOverview).dataTypeUpdated(dataType);
-    static_cast<IEDataTypeConsumer&>(mDataType).dataTypeUpdated(dataType);
-    static_cast<IEDataTypeConsumer&>(mAttribute).dataTypeUpdated(dataType);
-    static_cast<IEDataTypeConsumer&>(mMethod).dataTypeUpdated(dataType);
-    static_cast<IEDataTypeConsumer&>(mConstant).dataTypeUpdated(dataType);
-    static_cast<IEDataTypeConsumer&>(mInclude).dataTypeUpdated(dataType);
+    if (mOverview != nullptr)  static_cast<IEDataTypeConsumer&>(*mOverview).dataTypeUpdated(dataType);
+    if (mDataType != nullptr)  static_cast<IEDataTypeConsumer&>(*mDataType).dataTypeUpdated(dataType);
+    if (mAttribute != nullptr) static_cast<IEDataTypeConsumer&>(*mAttribute).dataTypeUpdated(dataType);
+    if (mMethod != nullptr)    static_cast<IEDataTypeConsumer&>(*mMethod).dataTypeUpdated(dataType);
+    if (mConstant != nullptr)  static_cast<IEDataTypeConsumer&>(*mConstant).dataTypeUpdated(dataType);
+    if (mInclude != nullptr)   static_cast<IEDataTypeConsumer&>(*mInclude).dataTypeUpdated(dataType);
+}
+
+void ServiceInterface::attachPage(int index, QWidget* page)
+{
+    QWidget* holder = mTabWidget.widget(index);
+    if ((holder != nullptr) && (holder->layout() != nullptr) && (page != nullptr))
+    {
+        holder->layout()->addWidget(page);
+    }
+}
+
+bool ServiceInterface::isValidTabIndex(int index)
+{
+    return (index >= 0) && (index < static_cast<int>(eSIPages::PageIncludes) + 1);
+}
+
+bool ServiceInterface::isTabInitialized(int index) const
+{
+    switch (static_cast<eSIPages>(index))
+    {
+    case eSIPages::PageOverview:   return mOverview != nullptr;
+    case eSIPages::PageDataTypes:  return mDataType != nullptr;
+    case eSIPages::PageAttributes: return mAttribute != nullptr;
+    case eSIPages::PageMethods:    return mMethod != nullptr;
+    case eSIPages::PageConstants:  return mConstant != nullptr;
+    case eSIPages::PageIncludes:   return mInclude != nullptr;
+    default:                       return false;
+    }
+}
+
+QString ServiceInterface::tabTitle(int index) const
+{
+    switch (static_cast<eSIPages>(index))
+    {
+    case eSIPages::PageOverview:   return tr("Overview");
+    case eSIPages::PageDataTypes:  return tr("Data Types");
+    case eSIPages::PageAttributes: return tr("Data Attributes");
+    case eSIPages::PageMethods:    return tr("Methods");
+    case eSIPages::PageConstants:  return tr("Constants");
+    case eSIPages::PageIncludes:   return tr("Includes");
+    default:                       return QString();
+    }
+}
+
+void ServiceInterface::processQueuedTabInitialization(void)
+{
+    if (mPendingInitTabs.isEmpty())
+        return;
+
+    ensureTabInitialized(mPendingInitTabs.first());
+    if (mPendingInitTabs.isEmpty() == false)
+    {
+        QTimer::singleShot(TabInitDelayMs, this, &ServiceInterface::processQueuedTabInitialization);
+    }
+}
+
+void ServiceInterface::ensureTabInitialized(int index)
+{
+    if (isValidTabIndex(index) == false)
+        return;
+
+    mPendingInitTabs.removeAll(index);
+    if (isTabInitialized(index))
+        return;
+
+    switch (static_cast<eSIPages>(index))
+    {
+    case eSIPages::PageOverview:
+        if (mOverview == nullptr)
+        {
+            mOverview = new SIOverview(mModel.getOverviewModel(), &mTabWidget);
+            connect(mOverview, &SIOverview::signalPageLinkClicked, this, &ServiceInterface::slotPageLinkClicked);
+            attachPage(index, mOverview);
+        }
+        break;
+
+    case eSIPages::PageDataTypes:
+        if (mDataType == nullptr)
+        {
+            mDataType = new SIDataType(mModel.getDataTypeModel(), &mTabWidget);
+            attachPage(index, mDataType);
+        }
+        break;
+
+    case eSIPages::PageAttributes:
+        if (mAttribute == nullptr)
+        {
+            mAttribute = new SIAttribute(mModel.getAttributeModel(), &mTabWidget);
+            attachPage(index, mAttribute);
+        }
+        break;
+
+    case eSIPages::PageMethods:
+        if (mMethod == nullptr)
+        {
+            mMethod = new SIMethod(mModel.getMethodsModel(), &mTabWidget);
+            attachPage(index, mMethod);
+        }
+        break;
+
+    case eSIPages::PageConstants:
+        if (mConstant == nullptr)
+        {
+            mConstant = new SIConstant(mModel.getConstantsModel(), &mTabWidget);
+            attachPage(index, mConstant);
+        }
+        break;
+
+    case eSIPages::PageIncludes:
+        if (mInclude == nullptr)
+        {
+            mInclude = new SIInclude(mModel.getIncludesModel(), &mTabWidget);
+            attachPage(index, mInclude);
+        }
+        break;
+
+    default:
+        break;
+    }
 }
 
 void ServiceInterface::slotPageLinkClicked(int page)

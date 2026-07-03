@@ -120,10 +120,10 @@ void OfflineLogViewer::onDatabaseOpened(const QString& dbPath)
     
     if (LusanApplication::isWorkpacePath(info.absoluteFilePath()) == false)
     {
-        ctrlFile()->setText(QString("⚠️ %1").arg(fileName)); // Add space to avoid icon overwrite
+        ctrlFile()->setText(QString("[!] %1").arg(fileName)); // Add space to avoid icon overwrite
         if (mMdiSubWindow != nullptr)
         {
-            mMdiSubWindow->setWindowTitle(tr("Offline Logs - ⚠️ %1").arg(fileName));
+            mMdiSubWindow->setWindowTitle(tr("Offline Logs - [!] %1").arg(fileName));
         }
     }
     else

@@ -20,6 +20,7 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/MdiChild.hpp"
+#include <algorithm>
 
 
 QString  NavigationDock::TabNameFileSystem      {tr("Workspace")};
@@ -68,6 +69,9 @@ NavigationDock::NavigationDock(MdiMainWindow* parent)
     mTabs.addTab(&mLiveScopes   , NELusanCommon::iconViewLiveLogs(NELusanCommon::SizeBig)   , NavigationDock::TabLiveLogsExplorer);
     mTabs.addTab(&mOfflineScopes, NELusanCommon::iconViewOfflineLogs(NELusanCommon::SizeBig), NavigationDock::TabOfflineLogsExplorer);
     mTabs.setTabPosition(QTabWidget::South);
+    mTabs.setUsesScrollButtons(true);
+    mTabs.setElideMode(Qt::ElideRight);
+    mTabs.setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Expanding);
     setWidget(&mTabs);
 
     initSize();
@@ -144,14 +148,27 @@ bool NavigationDock::showTab(NavigationDock::eNaviWindow navi)
 
 void NavigationDock::initSize()
 {
-    QSize szFS{mFileSystem.width()      ,  mFileSystem.height()};
-    QSize szLL{mLiveScopes.width()      , mLiveScopes.height()};
-    QSize szOL{mOfflineScopes.width()   , mOfflineScopes.height()};
-    int maxWidth    = std::max(szFS.width() , std::max(szLL.width() , szOL.width() ));
-    int maxHeight   = std::max(szFS.height(), std::max(szLL.height(), szOL.height()));
-    
-    resize(QSize { maxWidth - 100,  maxHeight + 100 });
-    setSizePolicy(QSizePolicy::Policy::Fixed, QSizePolicy::Policy::Expanding);
+    const int minWidth = static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH);
+    const int minHeight = static_cast<int>(NELusanCommon::MIN_NAVI_HEIGHT);
+    setMinimumWidth(minWidth);
+    setMinimumHeight(minHeight);
+    resize(QSize { minWidth, std::max(minHeight, height()) });
+    setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
+}
+
+QSize NavigationDock::sizeHint(void) const
+{
+    QSize result{ QDockWidget::sizeHint() };
+    result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
+    return result;
+}
+
+QSize NavigationDock::minimumSizeHint(void) const
+{
+    QSize result{ QDockWidget::minimumSizeHint() };
+    result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
+    result.setHeight(std::max(result.height(), static_cast<int>(NELusanCommon::MIN_NAVI_HEIGHT)));
+    return result;
 }
 
 void NavigationDock::onOptionsOpening(void)
