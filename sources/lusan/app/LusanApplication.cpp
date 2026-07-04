@@ -52,6 +52,7 @@ const QStringList   LusanApplication::InternalExts
       "*.siml"
     , "*.dtml"
     , "*.coml"
+    , "*.fsml"
     , "*.sqlog"
 };
 

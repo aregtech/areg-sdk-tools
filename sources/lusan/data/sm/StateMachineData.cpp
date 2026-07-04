@@ -198,7 +198,7 @@ bool StateMachineData::readFromFile(const QString& filePath)
                 {
                     if (xml.hasError() == false)
                     {
-                        xml.raiseError("Invalid FSML format");
+                        xml.raiseError(tr("Invalid FSML format"));
                     }
                 }
             }
@@ -259,7 +259,7 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
         const VersionNumber parsedVersion(formatVersion);
         if (parsedVersion.isValid() == false)
         {
-            xml.raiseError(QString("Invalid FormatVersion '%1'").arg(formatVersion));
+            xml.raiseError(tr("Invalid FormatVersion \'%1\'").arg(formatVersion));
             return false;
         }
 
@@ -277,8 +277,7 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
     const VersionNumber& current = currentFormatVersion();
     if (mFormatVersion.getMajor() > current.getMajor())
     {
-        xml.raiseError(QString("Unsupported FSML format version %1; supported version is %2")
-                           .arg(mFormatVersion.toString(), current.toString()));
+        xml.raiseError(tr("Unsupported FSML format version %1; supported version is %2").arg(mFormatVersion.toString(), current.toString()));
         return false;
     }
 
@@ -357,7 +356,7 @@ bool StateMachineData::readFromXml(QXmlStreamReader& xml)
     {
         if (migrateFromVersion(mFormatVersion) == false)
         {
-            xml.raiseError(QString("Cannot migrate FSML format version %1 to %2")
+            xml.raiseError(QString(tr("Cannot migrate FSML format version %1 to %2"))
                                .arg(mFormatVersion.toString(), current.toString()));
             return false;
         }

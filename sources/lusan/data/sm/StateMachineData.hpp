@@ -48,8 +48,11 @@
  *          increasing ID counter. It carries the editor-owned
  *          `FormatVersion` separately from the user's `Overview@Version`.
  **/
-class StateMachineData : public ElementBase
+class StateMachineData  : protected QObject
+                        , public    ElementBase
 {
+    Q_OBJECT
+
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
