@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMTimerData.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -101,13 +102,38 @@ bool SMTimerEntry::isValid(void) const
 
 bool SMTimerEntry::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementTimer)
+        return false;
+
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+    mName    = attributes.value(XmlSM::xmlSMAttributeName).toString();
+    mTimeout = attributes.value(XmlSM::xmlSMAttributeTimeout).toUInt();
+    mRepeat  = attributes.value(XmlSM::xmlSMAttributeRepeat).toUInt();
+    mDescription.clear();
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementTimer))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+        {
+            mDescription = xml.readElementText();
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMTimerEntry::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    xml.writeStartElement(XmlSM::xmlSMElementTimer);
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+    xml.writeAttribute(XmlSM::xmlSMAttributeName, mName);
+    xml.writeAttribute(XmlSM::xmlSMAttributeTimeout, QString::number(mTimeout));
+    xml.writeAttribute(XmlSM::xmlSMAttributeRepeat, QString::number(mRepeat));
+    writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
+    xml.writeEndElement();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -131,13 +157,38 @@ bool SMTimerData::isValid(void) const
 
 bool SMTimerData::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementTimerList)
+        return false;
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementTimerList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementTimer)
+        {
+            SMTimerEntry entry(this);
+            if (entry.readFromXml(xml))
+            {
+                addElement(std::move(entry), true);
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMTimerData::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    if (getElements().isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementTimerList);
+    for (const SMTimerEntry& entry : getElements())
+    {
+        entry.writeToXml(xml);
+    }
+
+    xml.writeEndElement();
 }
 
 SMTimerEntry* SMTimerData::createTimer(const QString& name)

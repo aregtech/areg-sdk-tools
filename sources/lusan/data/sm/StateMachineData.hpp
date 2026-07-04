@@ -8,7 +8,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -133,6 +133,40 @@ public:
 
     inline const SMLayoutData& getLayout(void) const;
     inline SMLayoutData& getLayout(void);
+
+//////////////////////////////////////////////////////////////////////////
+// XML persistence
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Reads the whole `.fsml` document from a file, replacing the model content.
+     *          On any parse error the document is marked not-opened (openSucceeded() ==
+     *          false) so the window can refuse it and never overwrite the original.
+     * \param   filePath    The path of the `.fsml` document to read.
+     * \return  True if the document parsed without error, false otherwise.
+     **/
+    bool readFromFile(const QString& filePath);
+
+    /**
+     * \brief   Writes the whole `.fsml` document to a file (deterministic, UTF-8,
+     *          4-space indentation). When \p filePath is empty the last read/written path
+     *          is used.
+     * \param   filePath    The destination path, or empty to reuse the document's path.
+     * \return  True on success, false otherwise.
+     **/
+    bool writeToFile(const QString& filePath = QString());
+
+    /**
+     * \brief   Reads the `StateMachine` root element and every section from the stream.
+     * \return  True if the root element was recognized, false otherwise.
+     **/
+    bool readFromXml(QXmlStreamReader& xml);
+
+    /**
+     * \brief   Writes the `StateMachine` root element and every non-empty section in the
+     *          fixed spec-7.7 order.
+     **/
+    void writeToXml(QXmlStreamWriter& xml) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Cross-registry lookups

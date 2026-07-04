@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMOverviewData.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -66,11 +67,36 @@ bool SMOverviewData::isValid(void) const
 
 bool SMOverviewData::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementOverview)
+        return false;
+
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+    mName = attributes.value(XmlSM::xmlSMAttributeName).toString();
+    mVersion = VersionNumber(attributes.value(XmlSM::xmlSMAttributeVersion).toString());
+    mThreading = fromThreadingString(attributes.value(XmlSM::xmlSMAttributeThreading).toString());
+    mDescription.clear();
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementOverview))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+        {
+            mDescription = xml.readElementText();
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMOverviewData::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    xml.writeStartElement(XmlSM::xmlSMElementOverview);
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+    xml.writeAttribute(XmlSM::xmlSMAttributeName, mName);
+    xml.writeAttribute(XmlSM::xmlSMAttributeVersion, mVersion.toString());
+    xml.writeAttribute(XmlSM::xmlSMAttributeThreading, SMOverviewData::toString(mThreading));
+    writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
+    xml.writeEndElement();
 }

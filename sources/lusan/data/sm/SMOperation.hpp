@@ -8,7 +8,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -60,6 +60,18 @@ public:
 
     static SMArgumentEntry::eValueSource fromSourceString(const QString& source);
     static const char* toString(SMArgumentEntry::eValueSource source);
+
+    /**
+     * \brief   Writes an `ArgumentList` wrapper with one `Argument` per entry. Writes
+     *          nothing when the list is empty (empty lists are omitted, spec 7.7).
+     **/
+    static void writeArgumentList(QXmlStreamWriter& xml, const QList<SMArgumentEntry>& args);
+
+    /**
+     * \brief   Reads an `ArgumentList` wrapper (the reader must be positioned on its
+     *          start element) into \p args, re-parenting entries to \p parent.
+     **/
+    static bool readArgumentList(QXmlStreamReader& xml, QList<SMArgumentEntry>& args, ElementBase* parent);
 
 public:
     SMArgumentEntry(ElementBase* parent = nullptr);
@@ -364,6 +376,19 @@ public:
      * \return  The same pointer that was passed in.
      **/
     SMOperationBase* addOperation(SMOperationBase* operation);
+
+    /**
+     * \brief   Writes this operation list wrapped in \p wrapperName (`EntryList`,
+     *          `ExitList` or `OperationList`). Writes nothing when the list is empty.
+     **/
+    void writeToXml(QXmlStreamWriter& xml, const char* wrapperName) const;
+
+    /**
+     * \brief   Reads an operation-list wrapper (`EntryList` / `ExitList` /
+     *          `OperationList`); the reader must be positioned on \p wrapperName. Each
+     *          child operation element is created by kind and appended in document order.
+     **/
+    bool readFromXml(QXmlStreamReader& xml, const char* wrapperName);
 
     inline const QList<SMOperationBase*>& getOperations(void) const;
     inline int getCount(void) const;

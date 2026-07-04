@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMState.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -242,13 +243,87 @@ bool SMStateEntry::isValid(void) const
 
 bool SMStateEntry::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementState)
+        return false;
+
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+    mName = attributes.value(XmlSM::xmlSMAttributeName).toString();
+    mKind = fromKindString(attributes.value(XmlSM::xmlSMAttributeKind).toString());
+    mHistory = attributes.hasAttribute(XmlSM::xmlSMAttributeHistory)
+                    ? fromHistoryString(attributes.value(XmlSM::xmlSMAttributeHistory).toString())
+                    : eHistory::None;
+    if (attributes.hasAttribute(XmlSM::xmlSMAttributeSubmachine))
+    {
+        setSubmachine(attributes.value(XmlSM::xmlSMAttributeSubmachine).toString());
+    }
+    if (attributes.hasAttribute(XmlSM::xmlSMAttributeOnFinal))
+    {
+        setOnFinal(attributes.value(XmlSM::xmlSMAttributeOnFinal).toString());
+    }
+    mDescription.clear();
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementState))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
+        {
+            if (xml.name() == XmlSM::xmlSMElementDescription)
+            {
+                mDescription = xml.readElementText();
+            }
+            else if (xml.name() == XmlSM::xmlSMElementEntryList)
+            {
+                mEntryList.readFromXml(xml, XmlSM::xmlSMElementEntryList);
+            }
+            else if (xml.name() == XmlSM::xmlSMElementExitList)
+            {
+                mExitList.readFromXml(xml, XmlSM::xmlSMElementExitList);
+            }
+            else if (xml.name() == XmlSM::xmlSMElementTransitionList)
+            {
+                mTransitions.readFromXml(xml);
+            }
+            else if (xml.name() == XmlSM::xmlSMElementStateList)
+            {
+                getOrCreateNestedStates()->readFromXml(xml);
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    xml.writeStartElement(XmlSM::xmlSMElementState);
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+    xml.writeAttribute(XmlSM::xmlSMAttributeName, mName);
+    xml.writeAttribute(XmlSM::xmlSMAttributeKind, SMStateEntry::toString(mKind));
+    if (mHistory != eHistory::None)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeHistory, SMStateEntry::toString(mHistory));
+    }
+    if (mSubmachine.isEmpty() == false)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeSubmachine, mSubmachine);
+    }
+    if (mOnFinal.isEmpty() == false)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeOnFinal, mOnFinal);
+    }
+
+    writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
+    mEntryList.writeToXml(xml, XmlSM::xmlSMElementEntryList);
+    mExitList.writeToXml(xml, XmlSM::xmlSMElementExitList);
+    mTransitions.writeToXml(xml);
+    if (mNested != nullptr)
+    {
+        mNested->writeToXml(xml);
+    }
+
+    xml.writeEndElement();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -393,11 +468,40 @@ bool SMStateData::isValid(void) const
 
 bool SMStateData::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementStateList)
+        return false;
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementStateList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementState)
+        {
+            SMStateEntry* state = new SMStateEntry(this);
+            if (state->readFromXml(xml))
+            {
+                addElement(state, true);
+            }
+            else
+            {
+                delete state;
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMStateData::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    if (getElements().isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementStateList);
+    for (const SMStateEntry* state : getElements())
+    {
+        state->writeToXml(xml);
+    }
+
+    xml.writeEndElement();
 }
