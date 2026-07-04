@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMIncludeData.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -34,13 +35,40 @@ bool SMIncludeData::isValid(void) const
 
 bool SMIncludeData::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementIncludeList)
+        return false;
+
+    // The `.fsml` `<Location>` shape matches `.siml` exactly, so IncludeEntry's own
+    // reader/writer are reused verbatim.
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementIncludeList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementLocation)
+        {
+            IncludeEntry entry(this);
+            if (entry.readFromXml(xml))
+            {
+                addElement(std::move(entry), true);
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMIncludeData::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    if (getElements().isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementIncludeList);
+    for (const IncludeEntry& entry : getElements())
+    {
+        entry.writeToXml(xml);
+    }
+
+    xml.writeEndElement();
 }
 
 IncludeEntry* SMIncludeData::createInclude(const QString& location)

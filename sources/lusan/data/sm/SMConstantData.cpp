@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMConstantData.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -34,13 +35,59 @@ bool SMConstantData::isValid(void) const
 
 bool SMConstantData::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementConstantList)
+        return false;
+
+    // `.fsml` carries the constant value as an attribute (not a `<Value>` child as `.siml`
+    // does), so the entry is read here rather than delegated to ConstantEntry::readFromXml.
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementConstantList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementConstant)
+        {
+            ConstantEntry entry(this);
+            QXmlStreamAttributes attributes = xml.attributes();
+            entry.setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+            entry.setName(attributes.value(XmlSM::xmlSMAttributeName).toString());
+            entry.setType(attributes.value(XmlSM::xmlSMAttributeDataType).toString());
+            entry.setValue(attributes.value(XmlSM::xmlSMAttributeValue).toString());
+
+            while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementConstant))
+            {
+                if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+                {
+                    entry.setDescription(xml.readElementText());
+                }
+
+                xml.readNext();
+            }
+
+            addElement(std::move(entry), true);
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMConstantData::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    if (getElements().isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementConstantList);
+    for (const ConstantEntry& entry : getElements())
+    {
+        xml.writeStartElement(XmlSM::xmlSMElementConstant);
+        xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(entry.getId()));
+        xml.writeAttribute(XmlSM::xmlSMAttributeName, entry.getName());
+        xml.writeAttribute(XmlSM::xmlSMAttributeDataType, entry.getType());
+        xml.writeAttribute(XmlSM::xmlSMAttributeValue, entry.getValue());
+        writeTextElem(xml, XmlSM::xmlSMElementDescription, entry.getDescription(), true);
+        xml.writeEndElement();
+    }
+
+    xml.writeEndElement();
 }
 
 ConstantEntry* SMConstantData::createConstant(const QString& name)

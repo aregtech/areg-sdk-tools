@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,9 +18,21 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMCondition.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+
+namespace
+{
+    //!< Writes \p text as a CDATA-wrapped child element (byte-exact, never normalized).
+    void writeCDataElem(QXmlStreamWriter& xml, const char* elemName, const QString& text)
+    {
+        xml.writeStartElement(elemName);
+        xml.writeCDATA(text);
+        xml.writeEndElement();
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // SMConditionEntry static helpers
@@ -185,13 +197,75 @@ bool SMConditionEntry::isValid(void) const
 
 bool SMConditionEntry::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementCondition)
+        return false;
+
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+    mLhsKind = SMArgumentEntry::fromSourceString(attributes.value(XmlSM::xmlSMAttributeLhsKind).toString());
+    mLhs     = attributes.value(XmlSM::xmlSMAttributeLhs).toString();
+    mOperator = attributes.hasAttribute(XmlSM::xmlSMAttributeOperator)
+                    ? fromOperatorString(attributes.value(XmlSM::xmlSMAttributeOperator).toString())
+                    : eOperator::None;
+    mRhsKind = SMArgumentEntry::fromSourceString(attributes.value(XmlSM::xmlSMAttributeRhsKind).toString());
+    mRhs     = attributes.value(XmlSM::xmlSMAttributeRhs).toString();
+    mNegate  = (attributes.value(XmlSM::xmlSMAttributeNegate).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0);
+    mExpression.clear();
+    mArguments.clear();
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementCondition))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
+        {
+            if (xml.name() == XmlSM::xmlSMElementExpression)
+            {
+                mExpression = xml.readElementText();
+            }
+            else if (xml.name() == XmlSM::xmlSMElementArgumentList)
+            {
+                SMArgumentEntry::readArgumentList(xml, mArguments, this);
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMConditionEntry::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    xml.writeStartElement(XmlSM::xmlSMElementCondition);
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+    xml.writeAttribute(XmlSM::xmlSMAttributeLhsKind, SMArgumentEntry::toString(mLhsKind));
+
+    if (isExpressionRow() == false)
+    {
+        if (mLhs.isEmpty() == false)
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeLhs, mLhs);
+        }
+        if (hasOperator())
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeOperator, SMConditionEntry::toString(mOperator));
+            xml.writeAttribute(XmlSM::xmlSMAttributeRhsKind, SMArgumentEntry::toString(mRhsKind));
+            xml.writeAttribute(XmlSM::xmlSMAttributeRhs, mRhs);
+        }
+    }
+
+    if (mNegate)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeNegate, XmlSM::xmlSMValueTrue);
+    }
+
+    if (isExpressionRow())
+    {
+        writeCDataElem(xml, XmlSM::xmlSMElementExpression, mExpression);
+    }
+
+    SMArgumentEntry::writeArgumentList(xml, mArguments);
+
+    xml.writeEndElement();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -295,11 +369,49 @@ bool SMConditionList::isValid(void) const
 
 bool SMConditionList::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementConditionList)
+        return false;
+
+    mCombine = xml.attributes().hasAttribute(XmlSM::xmlSMAttributeCombine)
+                    ? fromCombineString(xml.attributes().value(XmlSM::xmlSMAttributeCombine).toString())
+                    : eCombine::And;
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementConditionList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementCondition)
+        {
+            SMConditionEntry* row = new SMConditionEntry(this);
+            if (row->readFromXml(xml))
+            {
+                addElement(row, false);
+            }
+            else
+            {
+                delete row;
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMConditionList::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    if (getElements().isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementConditionList);
+    if (mCombine == eCombine::Or)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeCombine, SMConditionList::toString(mCombine));
+    }
+
+    for (const SMConditionEntry* row : getElements())
+    {
+        row->writeToXml(xml);
+    }
+
+    xml.writeEndElement();
 }

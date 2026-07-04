@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMTransition.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -151,13 +152,63 @@ bool SMTransitionEntry::isValid(void) const
 
 bool SMTransitionEntry::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementTransition)
+        return false;
+
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+    mStimulusKind = fromKindString(attributes.value(XmlSM::xmlSMAttributeStimulusKind).toString());
+    mStimulus     = attributes.value(XmlSM::xmlSMAttributeStimulus).toString();
+    if (attributes.hasAttribute(XmlSM::xmlSMAttributeTo))
+    {
+        setTo(attributes.value(XmlSM::xmlSMAttributeTo).toString());
+    }
+    else
+    {
+        clearTo();
+    }
+    mDescription.clear();
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementTransition))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
+        {
+            if (xml.name() == XmlSM::xmlSMElementDescription)
+            {
+                mDescription = xml.readElementText();
+            }
+            else if (xml.name() == XmlSM::xmlSMElementConditionList)
+            {
+                mConditions.readFromXml(xml);
+            }
+            else if (xml.name() == XmlSM::xmlSMElementOperationList)
+            {
+                mOperations.readFromXml(xml, XmlSM::xmlSMElementOperationList);
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMTransitionEntry::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    xml.writeStartElement(XmlSM::xmlSMElementTransition);
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+    xml.writeAttribute(XmlSM::xmlSMAttributeStimulusKind, SMTransitionEntry::toString(mStimulusKind));
+    xml.writeAttribute(XmlSM::xmlSMAttributeStimulus, mStimulus);
+    if (mHasTo)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeTo, mTo);
+    }
+
+    writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
+    mConditions.writeToXml(xml);
+    mOperations.writeToXml(xml, XmlSM::xmlSMElementOperationList);
+
+    xml.writeEndElement();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -247,11 +298,40 @@ bool SMTransitionData::isValid(void) const
 
 bool SMTransitionData::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementTransitionList)
+        return false;
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementTransitionList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementTransition)
+        {
+            SMTransitionEntry* entry = new SMTransitionEntry(this);
+            if (entry->readFromXml(xml))
+            {
+                addElement(entry, false);
+            }
+            else
+            {
+                delete entry;
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMTransitionData::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    if (getElements().isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementTransitionList);
+    for (const SMTransitionEntry* entry : getElements())
+    {
+        entry->writeToXml(xml);
+    }
+
+    xml.writeEndElement();
 }

@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -83,13 +84,37 @@ bool SMAttributeEntry::isValid(void) const
 
 bool SMAttributeEntry::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementAttribute)
+        return false;
+
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+    setName(attributes.value(XmlSM::xmlSMAttributeName).toString());
+    setType(attributes.value(XmlSM::xmlSMAttributeDataType).toString());
+    mValue = attributes.value(XmlSM::xmlSMAttributeValue).toString();
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementAttribute))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+        {
+            setDescription(xml.readElementText());
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMAttributeEntry::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    xml.writeStartElement(XmlSM::xmlSMElementAttribute);
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+    xml.writeAttribute(XmlSM::xmlSMAttributeName, getName());
+    xml.writeAttribute(XmlSM::xmlSMAttributeDataType, getType());
+    xml.writeAttribute(XmlSM::xmlSMAttributeValue, mValue);
+    writeTextElem(xml, XmlSM::xmlSMElementDescription, getDescription(), true);
+    xml.writeEndElement();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -113,13 +138,38 @@ bool SMAttributeData::isValid(void) const
 
 bool SMAttributeData::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementAttributeList)
+        return false;
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementAttributeList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementAttribute)
+        {
+            SMAttributeEntry entry(this);
+            if (entry.readFromXml(xml))
+            {
+                addElement(std::move(entry), true);
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMAttributeData::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    if (getElements().isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementAttributeList);
+    for (const SMAttributeEntry& entry : getElements())
+    {
+        entry.writeToXml(xml);
+    }
+
+    xml.writeEndElement();
 }
 
 SMAttributeEntry* SMAttributeData::createAttribute(const QString& name)

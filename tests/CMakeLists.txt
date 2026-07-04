@@ -70,5 +70,28 @@ target_link_libraries(lusan_sm_tests PRIVATE
 # A console test, not a windowed app — keep stdout for the harness.
 set_target_properties(lusan_sm_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
+# SM-02: deterministic XML round-trip + parse robustness. Reuses the same headless
+# support sources; the reference documents live next to the spec in .claude/.
+qt_add_executable(lusan_sm_serialization_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN_ROOT}/tests/sm/SMSerializationTests.cpp
+)
+
+target_include_directories(lusan_sm_serialization_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_serialization_tests PRIVATE
+    ${COMMON_COMPILE_DEF}
+    IMP_LOGGER_DLL
+    LUSAN_TEST_DATA_DIR="${LUSAN_ROOT}/.claude"
+)
+target_link_libraries(lusan_sm_serialization_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_serialization_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
 enable_testing()
 add_test(NAME sm_model_tests COMMAND lusan_sm_tests)
+add_test(NAME sm_serialization_tests COMMAND lusan_sm_serialization_tests)

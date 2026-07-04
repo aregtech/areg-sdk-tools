@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -21,6 +21,7 @@
 
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -42,13 +43,53 @@ bool SMDataTypeData::isValid(void) const
 
 bool SMDataTypeData::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementDataTypeList)
+        return false;
+
+    // `.fsml` reuses the `.siml` DataType vocabulary verbatim, so the shared DataType
+    // factory and per-type readers produce an identical model (and identical round-trip).
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementDataTypeList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDataType)
+        {
+            const QString type = xml.attributes().value(XmlSI::xmlSIAttributeType).toString();
+            DataTypeCustom* dataType = DataTypeFactory::createCustomDataType(type);
+            if (dataType != nullptr)
+            {
+                dataType->setParent(this);
+                if (dataType->readFromXml(xml))
+                {
+                    addElement(dataType, true);
+                }
+                else
+                {
+                    delete dataType;
+                }
+            }
+            else
+            {
+                xml.skipCurrentElement();
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMDataTypeData::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    if (getElements().isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementDataTypeList);
+    for (const DataTypeCustom* dataType : getElements())
+    {
+        dataType->writeToXml(xml);
+    }
+
+    xml.writeEndElement();
 }
 
 const QList<DataTypeCustom*>& SMDataTypeData::getCustomDataTypes(void) const

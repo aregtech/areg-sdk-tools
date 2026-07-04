@@ -6,7 +6,7 @@
  *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
@@ -18,9 +18,40 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+
+namespace
+{
+    //!< Writes \p text as a CDATA-wrapped child element (byte-exact, never normalized).
+    void writeCDataElem(QXmlStreamWriter& xml, const char* elemName, const QString& text)
+    {
+        xml.writeStartElement(elemName);
+        xml.writeCDATA(text);
+        xml.writeEndElement();
+    }
+
+    //!< Creates the operation object matching an XML element name, or nullptr if unknown.
+    SMOperationBase* createOperation(QStringView name, ElementBase* parent)
+    {
+        if (name == XmlSM::xmlSMElementActionCall)
+            return new SMActionCall(parent);
+        else if (name == XmlSM::xmlSMElementAttributeSet)
+            return new SMAttributeSet(parent);
+        else if (name == XmlSM::xmlSMElementTimerStart)
+            return new SMTimerStart(parent);
+        else if (name == XmlSM::xmlSMElementTimerStop)
+            return new SMTimerStop(parent);
+        else if (name == XmlSM::xmlSMElementEventSend)
+            return new SMEventSend(parent);
+        else if (name == XmlSM::xmlSMElementInlineCode)
+            return new SMInlineCode(parent);
+        else
+            return nullptr;
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // SMArgumentEntry implementation
@@ -131,13 +162,81 @@ bool SMArgumentEntry::isValid(void) const
 
 bool SMArgumentEntry::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    if (xml.name() != XmlSM::xmlSMElementArgument)
+        return false;
+
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+    mName   = attributes.value(XmlSM::xmlSMAttributeName).toString();
+    mSource = fromSourceString(attributes.value(XmlSM::xmlSMAttributeSource).toString());
+    mValue  = attributes.value(XmlSM::xmlSMAttributeValue).toString();
+    mExpression.clear();
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementArgument))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementExpression)
+        {
+            mExpression = xml.readElementText();
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMArgumentEntry::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    xml.writeStartElement(XmlSM::xmlSMElementArgument);
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+    xml.writeAttribute(XmlSM::xmlSMAttributeName, mName);
+    xml.writeAttribute(XmlSM::xmlSMAttributeSource, SMArgumentEntry::toString(mSource));
+    if (mSource == eValueSource::Expression)
+    {
+        writeCDataElem(xml, XmlSM::xmlSMElementExpression, mExpression);
+    }
+    else
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeValue, mValue);
+    }
+
+    xml.writeEndElement();
+}
+
+void SMArgumentEntry::writeArgumentList(QXmlStreamWriter& xml, const QList<SMArgumentEntry>& args)
+{
+    if (args.isEmpty())
+        return;
+
+    xml.writeStartElement(XmlSM::xmlSMElementArgumentList);
+    for (const SMArgumentEntry& arg : args)
+    {
+        arg.writeToXml(xml);
+    }
+
+    xml.writeEndElement();
+}
+
+bool SMArgumentEntry::readArgumentList(QXmlStreamReader& xml, QList<SMArgumentEntry>& args, ElementBase* parent)
+{
+    if (xml.name() != XmlSM::xmlSMElementArgumentList)
+        return false;
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementArgumentList))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementArgument)
+        {
+            SMArgumentEntry arg(parent);
+            if (arg.readFromXml(xml))
+            {
+                args.append(std::move(arg));
+            }
+        }
+
+        xml.readNext();
+    }
+
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -211,13 +310,152 @@ bool SMOperationBase::isValid(void) const
 
 bool SMOperationBase::readFromXml(QXmlStreamReader& xml)
 {
-    xml.skipCurrentElement();
+    // The reader is positioned on the operation start element; the concrete subclass
+    // (and therefore mKind) was already selected by the operation-list factory.
+    QXmlStreamAttributes attributes = xml.attributes();
+    setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
+    const QString elemName = xml.name().toString();
+
+    switch (mKind)
+    {
+    case eOperation::ActionCall:
+        static_cast<SMActionCall*>(this)->setAction(attributes.value(XmlSM::xmlSMAttributeAction).toString());
+        break;
+
+    case eOperation::AttributeSet:
+    {
+        SMAttributeSet* set = static_cast<SMAttributeSet*>(this);
+        set->setAttribute(attributes.value(XmlSM::xmlSMAttributeAttribute).toString());
+        set->setSource(SMArgumentEntry::fromSourceString(attributes.value(XmlSM::xmlSMAttributeSource).toString()));
+        set->setValue(attributes.value(XmlSM::xmlSMAttributeValue).toString());
+        break;
+    }
+
+    case eOperation::TimerStart:
+    {
+        SMTimerStart* timer = static_cast<SMTimerStart*>(this);
+        timer->setTimer(attributes.value(XmlSM::xmlSMAttributeTimer).toString());
+        if (attributes.hasAttribute(XmlSM::xmlSMAttributeTimeout))
+        {
+            timer->setTimeout(attributes.value(XmlSM::xmlSMAttributeTimeout).toUInt());
+        }
+        if (attributes.hasAttribute(XmlSM::xmlSMAttributeRepeat))
+        {
+            timer->setRepeat(attributes.value(XmlSM::xmlSMAttributeRepeat).toUInt());
+        }
+        break;
+    }
+
+    case eOperation::TimerStop:
+        static_cast<SMTimerStop*>(this)->setTimer(attributes.value(XmlSM::xmlSMAttributeTimer).toString());
+        break;
+
+    case eOperation::EventSend:
+        static_cast<SMEventSend*>(this)->setEvent(attributes.value(XmlSM::xmlSMAttributeEvent).toString());
+        break;
+
+    case eOperation::InlineCode:
+    default:
+        break;
+    }
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == elemName))
+    {
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
+        {
+            QStringView name = xml.name();
+            if (name == XmlSM::xmlSMElementArgumentList)
+            {
+                if (mKind == eOperation::ActionCall)
+                {
+                    SMArgumentEntry::readArgumentList(xml, static_cast<SMActionCall*>(this)->getArguments(), this);
+                }
+                else if (mKind == eOperation::EventSend)
+                {
+                    SMArgumentEntry::readArgumentList(xml, static_cast<SMEventSend*>(this)->getArguments(), this);
+                }
+            }
+            else if ((name == XmlSM::xmlSMElementExpression) && (mKind == eOperation::AttributeSet))
+            {
+                static_cast<SMAttributeSet*>(this)->setExpression(xml.readElementText());
+            }
+            else if ((name == XmlSM::xmlSMElementBody) && (mKind == eOperation::InlineCode))
+            {
+                static_cast<SMInlineCode*>(this)->setBody(xml.readElementText());
+            }
+        }
+
+        xml.readNext();
+    }
+
     return true;
 }
 
 void SMOperationBase::writeToXml(QXmlStreamWriter& xml) const
 {
-    Q_UNUSED(xml);
+    xml.writeStartElement(getElementName());
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+
+    switch (mKind)
+    {
+    case eOperation::ActionCall:
+    {
+        const SMActionCall* call = static_cast<const SMActionCall*>(this);
+        xml.writeAttribute(XmlSM::xmlSMAttributeAction, call->getAction());
+        SMArgumentEntry::writeArgumentList(xml, call->getArguments());
+        break;
+    }
+
+    case eOperation::AttributeSet:
+    {
+        const SMAttributeSet* set = static_cast<const SMAttributeSet*>(this);
+        xml.writeAttribute(XmlSM::xmlSMAttributeAttribute, set->getAttribute());
+        xml.writeAttribute(XmlSM::xmlSMAttributeSource, SMArgumentEntry::toString(set->getSource()));
+        if (set->getSource() == SMArgumentEntry::eValueSource::Expression)
+        {
+            writeCDataElem(xml, XmlSM::xmlSMElementExpression, set->getExpression());
+        }
+        else
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeValue, set->getValue());
+        }
+        break;
+    }
+
+    case eOperation::TimerStart:
+    {
+        const SMTimerStart* timer = static_cast<const SMTimerStart*>(this);
+        xml.writeAttribute(XmlSM::xmlSMAttributeTimer, timer->getTimer());
+        if (timer->hasTimeoutOverride())
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeTimeout, QString::number(timer->getTimeout()));
+        }
+        if (timer->hasRepeatOverride())
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeRepeat, QString::number(timer->getRepeat()));
+        }
+        break;
+    }
+
+    case eOperation::TimerStop:
+        xml.writeAttribute(XmlSM::xmlSMAttributeTimer, static_cast<const SMTimerStop*>(this)->getTimer());
+        break;
+
+    case eOperation::EventSend:
+    {
+        const SMEventSend* send = static_cast<const SMEventSend*>(this);
+        xml.writeAttribute(XmlSM::xmlSMAttributeEvent, send->getEvent());
+        SMArgumentEntry::writeArgumentList(xml, send->getArguments());
+        break;
+    }
+
+    case eOperation::InlineCode:
+    default:
+        writeCDataElem(xml, XmlSM::xmlSMElementBody, static_cast<const SMInlineCode*>(this)->getBody());
+        break;
+    }
+
+    xml.writeEndElement();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -579,4 +817,48 @@ void SMOperationList::clear(void)
     }
 
     mOperations.clear();
+}
+
+void SMOperationList::writeToXml(QXmlStreamWriter& xml, const char* wrapperName) const
+{
+    if (mOperations.isEmpty())
+        return;
+
+    xml.writeStartElement(wrapperName);
+    for (const SMOperationBase* op : mOperations)
+    {
+        op->writeToXml(xml);
+    }
+
+    xml.writeEndElement();
+}
+
+bool SMOperationList::readFromXml(QXmlStreamReader& xml, const char* wrapperName)
+{
+    if (xml.name() != QLatin1String(wrapperName))
+        return false;
+
+    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == QLatin1String(wrapperName)))
+    {
+        // Skip the wrapper's own start element; only child operation elements are handled.
+        if ((xml.tokenType() == QXmlStreamReader::StartElement) && (xml.name() != QLatin1String(wrapperName)))
+        {
+            SMOperationBase* op = createOperation(xml.name(), mParent);
+            if (op != nullptr)
+            {
+                // readFromXml sets the ID from the file (document order == priority order);
+                // the operation is appended directly, never re-numbered.
+                op->readFromXml(xml);
+                mOperations.append(op);
+            }
+            else
+            {
+                xml.skipCurrentElement();
+            }
+        }
+
+        xml.readNext();
+    }
+
+    return true;
 }
