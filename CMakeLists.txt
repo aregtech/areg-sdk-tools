@@ -9,7 +9,7 @@ set(APP_NAME lusan)
 
 project("${PROJECT_NAME}" 
         VERSION "${PROJECT_VERSION}" 
-        DESCRIPTION "The user interface tools for AREG communication framework" 
+        DESCRIPTION "The user interface tools for Areg communication framework" 
         HOMEPAGE_URL "https://areg.tech" 
         LANGUAGES CXX
 )
@@ -102,4 +102,10 @@ endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(${APP_NAME})
+endif()
+
+# Opt-in unit tests (additive; the default application build is unaffected).
+option(LUSAN_BUILD_TESTS "Build Lusan unit tests" OFF)
+if(LUSAN_BUILD_TESTS)
+    include("${LUSAN_ROOT}/tests/CMakeLists.txt")
 endif()

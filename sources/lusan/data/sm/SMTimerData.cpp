@@ -1,0 +1,153 @@
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the Areg Framework.
+ *
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  with this distribution or contact us at info[at]areg.tech.
+ *
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/data/sm/SMTimerData.cpp
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, FSM timers registry.
+ *
+ ************************************************************************/
+
+#include "lusan/data/sm/SMTimerData.hpp"
+
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+
+//////////////////////////////////////////////////////////////////////////
+// SMTimerEntry implementation
+//////////////////////////////////////////////////////////////////////////
+
+SMTimerEntry::SMTimerEntry(ElementBase* parent /*= nullptr*/)
+    : DocumentElem  (parent)
+    , mName         ( )
+    , mTimeout      (1)
+    , mRepeat       (1)
+    , mDescription  ( )
+{
+}
+
+SMTimerEntry::SMTimerEntry(  uint32_t id
+                           , const QString& name
+                           , uint32_t timeout /*= 1*/
+                           , uint32_t repeat  /*= 1*/
+                           , ElementBase* parent /*= nullptr*/)
+    : DocumentElem  (id, parent)
+    , mName         (name)
+    , mTimeout      (timeout)
+    , mRepeat       (repeat)
+    , mDescription  ( )
+{
+}
+
+SMTimerEntry::SMTimerEntry(const SMTimerEntry& src)
+    : DocumentElem  (src)
+    , mName         (src.mName)
+    , mTimeout      (src.mTimeout)
+    , mRepeat       (src.mRepeat)
+    , mDescription  (src.mDescription)
+{
+}
+
+SMTimerEntry::SMTimerEntry(SMTimerEntry&& src) noexcept
+    : DocumentElem  (std::move(src))
+    , mName         (std::move(src.mName))
+    , mTimeout      (src.mTimeout)
+    , mRepeat       (src.mRepeat)
+    , mDescription  (std::move(src.mDescription))
+{
+}
+
+SMTimerEntry& SMTimerEntry::operator = (const SMTimerEntry& other)
+{
+    if (this != &other)
+    {
+        DocumentElem::operator = (other);
+        mName        = other.mName;
+        mTimeout     = other.mTimeout;
+        mRepeat      = other.mRepeat;
+        mDescription = other.mDescription;
+    }
+
+    return *this;
+}
+
+SMTimerEntry& SMTimerEntry::operator = (SMTimerEntry&& other) noexcept
+{
+    if (this != &other)
+    {
+        DocumentElem::operator = (std::move(other));
+        mName        = std::move(other.mName);
+        mTimeout     = other.mTimeout;
+        mRepeat      = other.mRepeat;
+        mDescription = std::move(other.mDescription);
+    }
+
+    return *this;
+}
+
+bool SMTimerEntry::isValid(void) const
+{
+    return (mName.isEmpty() == false) && (mTimeout >= 1);
+}
+
+bool SMTimerEntry::readFromXml(QXmlStreamReader& xml)
+{
+    xml.skipCurrentElement();
+    return true;
+}
+
+void SMTimerEntry::writeToXml(QXmlStreamWriter& xml) const
+{
+    Q_UNUSED(xml);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMTimerData implementation
+//////////////////////////////////////////////////////////////////////////
+
+SMTimerData::SMTimerData(ElementBase* parent /*= nullptr*/)
+    : TEDataContainer<SMTimerEntry, DocumentElem>(parent)
+{
+}
+
+SMTimerData::SMTimerData(const QList<SMTimerEntry>& entries, ElementBase* parent /*= nullptr*/)
+    : TEDataContainer<SMTimerEntry, DocumentElem>(entries, parent)
+{
+}
+
+bool SMTimerData::isValid(void) const
+{
+    return true;
+}
+
+bool SMTimerData::readFromXml(QXmlStreamReader& xml)
+{
+    xml.skipCurrentElement();
+    return true;
+}
+
+void SMTimerData::writeToXml(QXmlStreamWriter& xml) const
+{
+    Q_UNUSED(xml);
+}
+
+SMTimerEntry* SMTimerData::createTimer(const QString& name)
+{
+    if (findElement(name) != nullptr)
+    {
+        return nullptr;
+    }
+
+    SMTimerEntry entry(getNextId(), name, 1, 1, this);
+    addElement(std::move(entry), true);
+    return findElement(name);
+}

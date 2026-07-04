@@ -1,0 +1,343 @@
+#ifndef LUSAN_DATA_SM_SMSTATE_HPP
+#define LUSAN_DATA_SM_SMSTATE_HPP
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the Areg Framework.
+ *
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  with this distribution or contact us at info[at]areg.tech.
+ *
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/data/sm/SMState.hpp
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, FSM states and the recursive state list
+ *
+ ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include "lusan/data/common/DocumentElem.hpp"
+#include "lusan/data/common/TEDataContainer.hpp"
+#include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/data/sm/SMTransition.hpp"
+
+#include <QString>
+
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class SMStateData;
+
+/**
+ * \class   SMStateEntry
+ * \brief   One state. Kinds: Start, Normal, Final. A Normal state may be
+ *          composite in exactly one of two ways: painted in place (it owns a nested
+ *          StateList) or imported (it carries a `Submachine` alias) — the two are
+ *          mutually exclusive. A composite may carry `History` and `OnFinal`.
+ **/
+class SMStateEntry : public DocumentElem
+{
+public:
+    /**
+     * \enum    eStateKind
+     * \brief   The kind of state
+     **/
+    enum class eStateKind
+    {
+          Start     //!< The entry state of its level; exactly one per level.
+        , Normal    //!< A regular state.
+        , Final     //!< The terminal state of its level.
+    };
+
+    /**
+     * \enum    eHistory
+     * \brief   Composite-state history mode.
+     **/
+    enum class eHistory
+    {
+          None      //!< Every entry descends via the Start chain (default).
+        , Shallow   //!< Re-entry activates the last active direct substate.
+        , Deep      //!< Re-entry restores the entire last active path to the leaf.
+    };
+
+    static constexpr const char* const  STR_KIND_START      { "Start"   };
+    static constexpr const char* const  STR_KIND_NORMAL     { "Normal"  };
+    static constexpr const char* const  STR_KIND_FINAL      { "Final"   };
+    static constexpr const char* const  STR_HISTORY_NONE    { "None"    };
+    static constexpr const char* const  STR_HISTORY_SHALLOW { "Shallow" };
+    static constexpr const char* const  STR_HISTORY_DEEP    { "Deep"    };
+
+    static SMStateEntry::eStateKind fromKindString(const QString& kind);
+    static const char* toString(SMStateEntry::eStateKind kind);
+    static SMStateEntry::eHistory fromHistoryString(const QString& history);
+    static const char* toString(SMStateEntry::eHistory history);
+
+//////////////////////////////////////////////////////////////////////////
+// Constructors / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    SMStateEntry(ElementBase* parent = nullptr);
+    SMStateEntry(uint32_t id, const QString& name, eStateKind kind, ElementBase* parent = nullptr);
+    SMStateEntry(const SMStateEntry& src);
+    SMStateEntry(SMStateEntry&& src) noexcept;
+    virtual ~SMStateEntry(void);
+
+    SMStateEntry& operator = (const SMStateEntry& other);
+    SMStateEntry& operator = (SMStateEntry&& other) noexcept;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    inline const QString& getName(void) const;
+    inline void setName(const QString& name);
+
+    inline eStateKind getKind(void) const;
+    inline void setKind(eStateKind kind);
+
+    inline eHistory getHistory(void) const;
+    inline void setHistory(eHistory history);
+
+    /**
+     * \brief   The imported-submachine alias (empty when not imported). Setting it clears
+     *          any painted nested StateList — the two are mutually exclusive.
+     **/
+    inline const QString& getSubmachine(void) const;
+    void setSubmachine(const QString& alias);
+    inline bool isImportedSubmachine(void) const;
+
+    inline const QString& getOnFinal(void) const;
+    inline void setOnFinal(const QString& event);
+
+    inline const QString& getDescription(void) const;
+    inline void setDescription(const QString& description);
+
+    inline const SMOperationList& getEntryList(void) const;
+    inline SMOperationList& getEntryList(void);
+    inline const SMOperationList& getExitList(void) const;
+    inline SMOperationList& getExitList(void);
+    inline const SMTransitionData& getTransitions(void) const;
+    inline SMTransitionData& getTransitions(void);
+
+    /**
+     * \brief   True if the state owns a painted nested StateList.
+     **/
+    inline bool hasNestedStates(void) const;
+
+    /**
+     * \brief   Returns the painted nested StateList, or nullptr if none.
+     **/
+    inline const SMStateData* getNestedStates(void) const;
+    inline SMStateData* getNestedStates(void);
+
+    /**
+     * \brief   Creates (if needed) and returns the painted nested StateList. Clears any
+     *          imported-submachine alias — the two are mutually exclusive.
+     **/
+    SMStateData* getOrCreateNestedStates(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+    virtual bool isValid(void) const override;
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    QString             mName;          //!< The state name (document-unique.
+    eStateKind          mKind;          //!< The state kind.
+    eHistory            mHistory;       //!< The history mode (composite states).
+    QString             mSubmachine;    //!< The imported-submachine alias (or empty).
+    QString             mOnFinal;       //!< The completion-hook event (or empty).
+    QString             mDescription;   //!< The description text.
+    SMOperationList     mEntryList;     //!< Operations executed on entry, in order.
+    SMOperationList     mExitList;      //!< Operations executed on exit, in order.
+    SMTransitionData    mTransitions;   //!< The outgoing transitions (priority order).
+    SMStateData*        mNested;        //!< The painted nested StateList (owned) or nullptr.
+};
+
+//////////////////////////////////////////////////////////////////////////
+// SMStateData class declaration
+//////////////////////////////////////////////////////////////////////////
+
+/**
+ * \class   SMStateData
+ * \brief   A machine level's `StateList`: the recursive, owning container of
+ *          states. The root document owns one at level 0; every painted composite state
+ *          owns a nested one. States are held by pointer for stable addresses and are
+ *          deleted on destruction.
+ **/
+class SMStateData : public TEDataContainer<SMStateEntry*, DocumentElem>
+{
+public:
+    SMStateData(ElementBase* parent = nullptr);
+    SMStateData(const SMStateData& src);
+    SMStateData(SMStateData&& src) noexcept;
+    virtual ~SMStateData(void);
+
+    SMStateData& operator = (const SMStateData& other);
+    SMStateData& operator = (SMStateData&& other) noexcept;
+
+    /**
+     * \brief   Creates a new state appended at the end of this level.
+     * \param   name    The unique name of the new state.
+     * \param   kind    The state kind.
+     * \return  Pointer to the created state, or nullptr if the name already exists here.
+     **/
+    SMStateEntry* createState(const QString& name, SMStateEntry::eStateKind kind);
+
+    /**
+     * \brief   Finds a state by name in this level only.
+     **/
+    SMStateEntry* findState(const QString& name) const;
+
+    /**
+     * \brief   Finds a state by name across this level and every nested level:
+     *          state names are unique within the whole document).
+     **/
+    SMStateEntry* findStateRecursive(const QString& name) const;
+
+    /**
+     * \brief   Returns the single Start state of this level, or nullptr if none.
+     **/
+    SMStateEntry* getStartState(void) const;
+
+    /**
+     * \brief   Counts the states in this level and all nested levels.
+     **/
+    int countStatesRecursive(void) const;
+
+    /**
+     * \brief   Deletes and removes all states of this level (recursively via ownership).
+     **/
+    void removeAll(void);
+
+    virtual bool isValid(void) const override;
+    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+
+private:
+    //!< Deep-copies the states of \p src into this (empty) level, re-parenting them.
+    void cloneFrom(const SMStateData& src);
+};
+
+//////////////////////////////////////////////////////////////////////////
+// SMStateEntry inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline const QString& SMStateEntry::getName(void) const
+{
+    return mName;
+}
+
+inline void SMStateEntry::setName(const QString& name)
+{
+    mName = name;
+}
+
+inline SMStateEntry::eStateKind SMStateEntry::getKind(void) const
+{
+    return mKind;
+}
+
+inline void SMStateEntry::setKind(eStateKind kind)
+{
+    mKind = kind;
+}
+
+inline SMStateEntry::eHistory SMStateEntry::getHistory(void) const
+{
+    return mHistory;
+}
+
+inline void SMStateEntry::setHistory(eHistory history)
+{
+    mHistory = history;
+}
+
+inline const QString& SMStateEntry::getSubmachine(void) const
+{
+    return mSubmachine;
+}
+
+inline bool SMStateEntry::isImportedSubmachine(void) const
+{
+    return (mSubmachine.isEmpty() == false);
+}
+
+inline const QString& SMStateEntry::getOnFinal(void) const
+{
+    return mOnFinal;
+}
+
+inline void SMStateEntry::setOnFinal(const QString& event)
+{
+    mOnFinal = event;
+}
+
+inline const QString& SMStateEntry::getDescription(void) const
+{
+    return mDescription;
+}
+
+inline void SMStateEntry::setDescription(const QString& description)
+{
+    mDescription = description;
+}
+
+inline const SMOperationList& SMStateEntry::getEntryList(void) const
+{
+    return mEntryList;
+}
+
+inline SMOperationList& SMStateEntry::getEntryList(void)
+{
+    return mEntryList;
+}
+
+inline const SMOperationList& SMStateEntry::getExitList(void) const
+{
+    return mExitList;
+}
+
+inline SMOperationList& SMStateEntry::getExitList(void)
+{
+    return mExitList;
+}
+
+inline const SMTransitionData& SMStateEntry::getTransitions(void) const
+{
+    return mTransitions;
+}
+
+inline SMTransitionData& SMStateEntry::getTransitions(void)
+{
+    return mTransitions;
+}
+
+inline bool SMStateEntry::hasNestedStates(void) const
+{
+    return (mNested != nullptr);
+}
+
+inline const SMStateData* SMStateEntry::getNestedStates(void) const
+{
+    return mNested;
+}
+
+inline SMStateData* SMStateEntry::getNestedStates(void)
+{
+    return mNested;
+}
+
+#endif  // LUSAN_DATA_SM_SMSTATE_HPP
