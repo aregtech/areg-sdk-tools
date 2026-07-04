@@ -9,26 +9,26 @@ include(FetchContent)
 find_package(areg CONFIG)
 if (NOT areg_FOUND)
     # ##################################################################
-    # AREG SDK not found as a package, fetching from GitHub.
+    # Areg SDK not found as a package, fetching from GitHub.
     # ##################################################################
 
-    # Location of fetched third-party sources (including AREG SDK).
+    # Location of fetched third-party sources (including Areg SDK).
     if (NOT DEFINED AREG_DEPS_DIR OR "${AREG_DEPS_DIR}" STREQUAL "")
         set(AREG_DEPS_DIR "${CMAKE_BINARY_DIR}/packages")
     endif()
     set(FETCHCONTENT_BASE_DIR "${AREG_DEPS_DIR}")
     
-    # The root directory for AREG SDK build outputs.
+    # The root directory for Areg SDK build outputs.
     set(AREG_BUILD_DIR  "${CMAKE_BINARY_DIR}")
     set(AREG_DEPS_DIR   "${CMAKE_BINARY_DIR}/packages")
     # Build Areg shared library.
     set(AREG_LIB_TYPE         shared)
     set(AREG_LOGGER_LIB_TYPE  shared)
-    # Disable building AREG SDK examples, unit tests and build structures.
+    # Disable building Areg SDK examples, unit tests and build structures.
     option(AREG_TESTS           "Build areg-sdk tests"     OFF)
     option(AREG_EXAMPLES        "Build areg-sdk examples"  OFF)
     option(AREG_SYSTEM_GTEST    "Build GTest"              OFF)
-    option(AREG_OUTPUT_LAYOUT   "AREG build structure"     OFF)
+    option(AREG_OUTPUT_LAYOUT   "Areg build structure"     OFF)
     option(AREG_EXTENDED        "Escape building extended" OFF)
 
     FetchContent_Declare(
@@ -38,7 +38,7 @@ if (NOT areg_FOUND)
     )
     FetchContent_MakeAvailable(areg)
 
-    # Set the root directory of the fetched AREG SDK
+    # Set the root directory of the fetched Areg SDK
     set(AREG_SDK_ROOT         "${areg_SOURCE_DIR}")
     set(AREG_CMAKE_CONFIG_DIR "${AREG_SDK_ROOT}/conf/cmake")
     set(AREG_CMAKE            "${AREG_SDK_ROOT}/areg.cmake")
@@ -46,8 +46,8 @@ if (NOT areg_FOUND)
     message(STATUS ">>> Location of 'areg.cmake' ${AREG_CMAKE}")
 
 else()
-    # AREG SDK package found
-    message(STATUS ">>> Found AREG package at '${areg_DIR}',")
+    # Areg SDK package found
+    message(STATUS ">>> Found Areg package at '${areg_DIR}',")
     message(STATUS ">>> Libs: '${areg_LIBRARY}', Configs: '${areg_CONFIG}', Package Root: '${areg_ROOT}'")
     message(STATUS ">>> Tools: '${AREG_SDK_TOOLS}', 'areg.cmake': ${AREG_CMAKE}")
 endif()

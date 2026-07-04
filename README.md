@@ -140,7 +140,7 @@ git clone https://github.com/aregtech/areg-sdk-tools.git .
 
 ## License
 
-The sources of Lusan are released under the **MIT License**. It uses sources of Areg SDK, which are released under the **Apache License 2.0**. 
+The sources of Lusan are released under the **Apache version 2.0 License**. It uses sources of Areg SDK, which are released under the **Apache License 2.0**. 
 You are free to use, modify, and distribute the software in accordance with the license terms.
 
 ---
