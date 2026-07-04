@@ -38,6 +38,7 @@
 #include "lusan/data/sm/SMLayoutData.hpp"
 
 #include <QString>
+#include <QVector>
 
 /**
  * \class   StateMachineData
@@ -47,8 +48,11 @@
  *          increasing ID counter. It carries the editor-owned
  *          `FormatVersion` separately from the user's `Overview@Version`.
  **/
-class StateMachineData : public ElementBase
+class StateMachineData  : protected QObject
+                        , public    ElementBase
 {
+    Q_OBJECT
+
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
@@ -77,6 +81,26 @@ public:
 
     static constexpr const char* const  XML_FORMAT_100      { "1.0.0" };
     static constexpr const char* const  XML_FORMAT_DEFAULT  { XML_FORMAT_100 };
+
+    /**
+     * \struct  UnknownAttribute
+     * \brief   One unknown root-level attribute preserved for newer minor/patch formats.
+     **/
+    struct UnknownAttribute
+    {
+        QString name;
+        QString value;
+    };
+
+    /**
+     * \struct  UnknownElement
+     * \brief   One unknown root-level subtree and the insertion bucket around known sections.
+     **/
+    struct UnknownElement
+    {
+        int     bucket { 0 };
+        QString xml;
+    };
 
 private:
     static constexpr const uint32_t     MINIMUM_ID          { 50u };    //!< Reserved-low-ID floor (as in .siml).
@@ -197,9 +221,19 @@ public:
     int getStateCount(void) const;
 
 //////////////////////////////////////////////////////////////////////////
+// hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    bool migrateFromVersion(const VersionNumber& sourceVersion);
+    bool migrateTo100(const VersionNumber& sourceVersion);
+
+    void clearUnknownContent(void);
+
+//////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
+
     QString         mFilePath;      //!< The document file path.
     VersionNumber   mFormatVersion; //!< The editor-owned file format version.
     SMOverviewData  mOverview;      //!< The Overview section.
@@ -213,6 +247,8 @@ private:
     SMImportData    mImports;       //!< The ImportList section.
     SMStateData     mStates;        //!< The root StateList (level 0).
     SMLayoutData    mLayout;        //!< The Layout section.
+    QVector<UnknownAttribute> mUnknownRootAttributes; //!< Unknown root attributes preserved on round-trip.
+    QVector<UnknownElement>   mUnknownRootElements;   //!< Unknown root elements preserved on round-trip.
     bool            mOpenSuccess;   //!< Whether the document opened successfully.
 };
 

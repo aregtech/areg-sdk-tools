@@ -33,7 +33,8 @@
  * \class   ServiceInterfaceData
  * \brief   Represents the service interface data in the Lusan application.
  **/
-class ServiceInterfaceData  : public ElementBase
+class ServiceInterfaceData  : protected QObject
+                            , public    ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants

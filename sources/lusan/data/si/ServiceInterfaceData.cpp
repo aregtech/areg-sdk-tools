@@ -59,7 +59,7 @@ bool ServiceInterfaceData::readFromFile(const QString& filePath)
             {
                 if (readFromXml(xml) == false)
                 {
-                    xml.raiseError("Invalid XML format");
+                    xml.raiseError(tr("Invalid XML format"));
                 }
             }
         }
