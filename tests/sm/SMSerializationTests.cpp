@@ -13,13 +13,14 @@
  *  \file        tests/sm/SMSerializationTests.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       SM-02 unit tests: `.fsml` deterministic XML round-trip and parse robustness.
+ *  \brief       SM-02/SM-03 unit tests: `.fsml` serialization robustness and versioning.
  *
  *  Self-contained test program (no external framework, no new dependency):
  *    1. `TrafficLight.fsml` loads and resaves byte-identically.
  *    3. Truncated/corrupted documents terminate with a clean error (no hang, no crash,
  *       and never open as an empty valid document).
  *    4. Code bodies and expressions round-trip byte-exactly through CDATA.
+ *    5. FormatVersion migration/preservation/refusal behavior follows spec 7.8.
  *  Acceptance 2 (validation against `fsml.xsd`) is checked out of process with lxml — the
  *  written output is produced here and validated by the build/verify step.
  *
@@ -83,6 +84,31 @@ namespace
         const QByteArray content = file.readAll();
         file.close();
         return content;
+    }
+
+    bool writeAllBytes(const QString& path, const QByteArray& content)
+    {
+        QFile file(path);
+        if (file.open(QIODevice::WriteOnly) == false)
+        {
+            return false;
+        }
+
+        const bool written = (file.write(content) == content.size());
+        file.close();
+        return written;
+    }
+
+    bool replaceOnce(QByteArray& haystack, const QByteArray& needle, const QByteArray& replacement)
+    {
+        const int pos = haystack.indexOf(needle);
+        if (pos < 0)
+        {
+            return false;
+        }
+
+        haystack.replace(pos, needle.size(), replacement);
+        return true;
     }
 }
 
@@ -218,6 +244,100 @@ namespace
 
 namespace
 {
+    void testVersionMigration(void)
+    {
+        std::printf("[SM-03] older FormatVersion migrates in memory only\n");
+
+        const QByteArray original = readAllBytes(dataFile("TrafficLight.fsml"));
+        CHECK(original.isEmpty() == false);
+
+        QByteArray older = original;
+        CHECK(replaceOnce(older, "FormatVersion=\"1.0.0\"", "FormatVersion=\"0.9.0\""));
+
+        const QString olderPath = outFile("sm03_older.fsml");
+        CHECK(writeAllBytes(olderPath, older));
+        const QByteArray beforeOpen = readAllBytes(olderPath);
+
+        StateMachineData doc;
+        CHECK(doc.readFromFile(olderPath));
+        CHECK(doc.openSucceeded());
+        CHECK(doc.getFormatVersion().toString() == StateMachineData::XML_FORMAT_DEFAULT);
+
+        const QByteArray afterOpen = readAllBytes(olderPath);
+        CHECK(beforeOpen == afterOpen);
+    }
+
+    void testUnknownPreservation(void)
+    {
+        std::printf("[SM-03] newer minor preserves unknown root content\n");
+
+        const QByteArray original = readAllBytes(dataFile("TrafficLight.fsml"));
+        CHECK(original.isEmpty() == false);
+
+        QByteArray future = original;
+        CHECK(replaceOnce(future,
+                          "<StateMachine FormatVersion=\"1.0.0\">",
+                          "<StateMachine FormatVersion=\"1.1.0\" FutureAttr=\"KeepMe\">"));
+        CHECK(replaceOnce(future,
+                          "</StateMachine>",
+                          "    <FutureSection Flag=\"x\"><FutureLeaf Value=\"42\"/></FutureSection>\n</StateMachine>"));
+
+        const QString inPath = outFile("sm03_future_minor_in.fsml");
+        CHECK(writeAllBytes(inPath, future));
+
+        StateMachineData doc;
+        CHECK(doc.readFromFile(inPath));
+        CHECK(doc.openSucceeded());
+        CHECK(doc.getFormatVersion().toString() == QString("1.1.0"));
+
+        const QString outPath = outFile("sm03_future_minor_out.fsml");
+        CHECK(doc.writeToFile(outPath));
+
+        const QByteArray written = readAllBytes(outPath);
+        CHECK(written.contains("FormatVersion=\"1.1.0\""));
+        CHECK(written.contains("FutureAttr=\"KeepMe\""));
+        CHECK(written.contains("<FutureSection"));
+        CHECK(written.contains("<FutureLeaf"));
+    }
+
+    void testRejectNewerMajor(void)
+    {
+        std::printf("[SM-03] newer major is refused with both versions in the message\n");
+
+        const QByteArray original = readAllBytes(dataFile("TrafficLight.fsml"));
+        CHECK(original.isEmpty() == false);
+
+        QByteArray newerMajor = original;
+        CHECK(replaceOnce(newerMajor, "FormatVersion=\"1.0.0\"", "FormatVersion=\"2.0.0\""));
+
+        const QString newerPath = outFile("sm03_newer_major.fsml");
+        CHECK(writeAllBytes(newerPath, newerMajor));
+        const QByteArray beforeOpen = readAllBytes(newerPath);
+
+        StateMachineData doc;
+        const bool opened = doc.readFromFile(newerPath);
+        CHECK(opened == false);
+        CHECK(doc.openSucceeded() == false);
+        CHECK(readAllBytes(newerPath) == beforeOpen);
+
+        QXmlStreamReader xml(newerMajor);
+        CHECK(xml.readNextStartElement());
+
+        StateMachineData direct;
+        CHECK(direct.readFromXml(xml) == false);
+        CHECK(xml.hasError());
+        const QString error = xml.errorString();
+        CHECK(error.contains("2.0.0"));
+        CHECK(error.contains(StateMachineData::XML_FORMAT_DEFAULT));
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////
+// Acceptance criteria for SM-03
+////////////////////////////////////////////////////////////////////////////
+
+namespace
+{
     void testRobustness(void)
     {
         std::printf("[SM-02] truncated/corrupted documents terminate with a clean error\n");
@@ -278,11 +398,14 @@ namespace
 
 int main(int /*argc*/, char** /*argv*/)
 {
-    std::printf("==== SM-02 XML serialization tests ====\n");
+    std::printf("==== SM serialization/versioning tests ====\n");
 
     testRoundTrip();
     testCData();
     testRobustness();
+    testVersionMigration();
+    testUnknownPreservation();
+    testRejectNewerMajor();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;
