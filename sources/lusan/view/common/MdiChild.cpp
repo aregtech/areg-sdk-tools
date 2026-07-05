@@ -94,6 +94,7 @@ void MdiChild::newFile()
 {
     mIsUntitled = true;
     mCurFile = newDocumentName();
+    mIsModified = true;
     setWindowTitle(mCurFile + "[*]");
     setWindowModified(true);
 #if 0
@@ -139,6 +140,7 @@ bool MdiChild::saveFile(const QString& fileName)
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     if (writeToFile(fileName) )
     {
+        mIsModified = false;
         mIsUntitled = false;
         setCurrentFile(fileName);
         saved = true;
@@ -160,20 +162,16 @@ QString MdiChild::userFriendlyCurrentFile()
 
 void MdiChild::closeEvent(QCloseEvent* event)
 {
-#if 0
     if (maybeSave())
     {
+        onWindowClosing(isActiveWindow());
+        emit signalMdiChildClosed(this);
         event->accept();
     }
     else
     {
         event->ignore();
     }
-#else
-    onWindowClosing(isActiveWindow());
-    emit signalMdiChildClosed(this);
-    event->accept();
-#endif
 }
 
 void MdiChild::onWindowClosing(bool /*isActive*/)
@@ -196,8 +194,8 @@ void MdiChild::onDocumentModified()
 
 bool MdiChild::maybeSave()
 {
-//    if (!document()->isModified())
-//        return true;
+    if (mIsModified == false)
+        return true;
 
     const QMessageBox::StandardButton ret
         = QMessageBox::warning(this, tr("MDI"),
@@ -216,6 +214,18 @@ bool MdiChild::maybeSave()
     }
 
     return true;
+}
+
+void MdiChild::setModified(bool modified)
+{
+    mIsModified = modified;
+    if (mMdiSubWindow != nullptr)
+    {
+        mMdiSubWindow->setWindowModified(modified);
+        bool showWarning{ (mIsUntitled == false) && (mCurFile.isEmpty() == false) && (LusanApplication::isWorkpacePath(mCurFile) == false) };
+        QString title{ QString("%1%2%3").arg(showWarning ? "[!] " : "", userFriendlyCurrentFile(), mIsUntitled || mIsModified ? "[*]" : "") };
+        mMdiSubWindow->setWindowTitle(title);
+    }
 }
 
 void MdiChild::setCurrentFile(const QString& fileName)

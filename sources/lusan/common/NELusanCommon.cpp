@@ -30,6 +30,7 @@
 const QStringList NELusanCommon::FILTERS
 {
       QStringLiteral("Service Interface Files (*.siml)")
+    , QStringLiteral("State Machine Files (*.fsml)")
     , QStringLiteral("Log Files (*.logs)")
     , QStringLiteral("All Files (*.*)")
 };
@@ -170,4 +171,3 @@ QIcon NELusanCommon::mergeIcons(const QIcon& icon1, double scale1, const QIcon& 
     // Step 5: Return the merged icon
     return QIcon(result);
 }
-

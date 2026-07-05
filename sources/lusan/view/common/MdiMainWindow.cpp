@@ -22,9 +22,11 @@
 #include "lusan/app/NEAppThemes.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
 #include "lusan/data/common/OptionsManager.hpp"
+#include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
+#include "lusan/view/sm/StateMachine.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
@@ -47,6 +49,7 @@
 #include <QStatusBar>
 #include <QTimer>
 #include <QToolBar>
+#include <QPushButton>
 
 namespace
 {
@@ -86,6 +89,11 @@ inline QString MdiMainWindow::_filterServiceFiles(void)
     return QString{"Service Interface Document (*.siml);;All Files (*.*)"};
 }
 
+inline QString MdiMainWindow::_filterStateMachineFiles(void)
+{
+    return QString{"State Machine Document (*.fsml);;All Files (*.*)"};
+}
+
 inline QString MdiMainWindow::_filterLoggingFiles(void)
 {
     return QString{"Log Database Files (*.sqlog);;All Files (*.*)"};
@@ -117,6 +125,7 @@ MdiMainWindow::MdiMainWindow()
     , mViewToolBar  (nullptr)
     , mActNewWorkspace(this)
     , mActFileNewSI (this)
+    , mActFileNewFSM(this)
     , mActFileNewLog(this)
     , mActFileOfflineLog(this)
     , mActFileOpen  (this)
@@ -163,6 +172,7 @@ const QString& MdiMainWindow::fileFilters(void) const
 {
     static const QString _filter {
         "Service Interface Document (*.siml)\n"
+        "State Machine Document (*.fsml)\n"
         "Log Database Files (*.sqlog)\n"
         "All Files (*.*)"
     };
@@ -359,6 +369,16 @@ void MdiMainWindow::onFileNewSI()
     ServiceInterface* child = createServiceInterfaceView();
     child->newFile();
     child->show();
+}
+
+void MdiMainWindow::onFileNewFSM()
+{
+    StateMachine* child = createStateMachineView();
+    if (child != nullptr)
+    {
+        child->newFile();
+        child->show();
+    }
 }
 
 void MdiMainWindow::onFileNewLiveLog()
@@ -655,6 +675,10 @@ MdiChild* MdiMainWindow::createMdiChild(const QString& filePath /*= QString()*/)
     {
         result = createServiceInterfaceView(filePath);
     }
+    else if (ext == StateMachine::fileExtension())
+    {
+        result = createStateMachineView(filePath);
+    }
     else if (ext == OfflineLogViewer::fileExtension())
     {
         result = createOfflineLogViewer(filePath, false);
@@ -678,6 +702,59 @@ ServiceInterface* MdiMainWindow::createServiceInterfaceView(const QString& fileP
     QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
     child->setMdiSubwindow(mdiSub);
     mdiSub->setWindowIcon(NELusanCommon::iconServiceInterface(NELusanCommon::SizeSmall));
+    child->setCurrentFile(filePath);
+    mMdiArea.setActiveSubWindow(mdiSub);
+    mdiSub->showMaximized();
+    return child;
+}
+
+StateMachine* MdiMainWindow::createStateMachineView(const QString& filePath /*= QString()*/)
+{
+    QString sourcePath;
+    if (filePath.isEmpty() == false)
+    {
+        QString autosavePath;
+        if (StateMachineData::hasRecoverableAutosave(filePath, &autosavePath))
+        {
+            QMessageBox recovery(this);
+            recovery.setWindowTitle(tr("State Machine Recovery"));
+            recovery.setIcon(QMessageBox::Question);
+            recovery.setText(tr("Unsaved changes were found for:\n%1").arg(filePath));
+            recovery.setInformativeText(tr("Do you want to restore data from:\n%1").arg(autosavePath));
+            QPushButton* restore = recovery.addButton(tr("Restore"), QMessageBox::AcceptRole);
+            QPushButton* discard = recovery.addButton(tr("Discard"), QMessageBox::DestructiveRole);
+            QPushButton* cancel  = recovery.addButton(QMessageBox::Cancel);
+            recovery.exec();
+
+            if (recovery.clickedButton() == cancel)
+            {
+                return nullptr;
+            }
+            else if (recovery.clickedButton() == restore)
+            {
+                sourcePath = autosavePath;
+            }
+            else if (recovery.clickedButton() == discard)
+            {
+                StateMachineData::removeAutosave(filePath);
+            }
+        }
+    }
+
+    StateMachine* child = new StateMachine(this, filePath, sourcePath, &mMdiArea);
+    if ((filePath.isEmpty() == false) && (child->openSucceeded() == false))
+    {
+        delete child;
+        QMessageBox::warning(this,
+                             tr("Invalid State Machine"),
+                             tr("Failed to read the state machine file:\n%1\nThe file is not accessible or has invalid format.")
+                                 .arg(sourcePath.isEmpty() ? filePath : sourcePath));
+        return nullptr;
+    }
+
+    QMdiSubWindow* mdiSub = mMdiArea.addSubWindow(child);
+    child->setMdiSubwindow(mdiSub);
+    mdiSub->setWindowIcon(NELusanCommon::iconStateMachine(NELusanCommon::SizeSmall));
     child->setCurrentFile(filePath);
     mMdiArea.setActiveSubWindow(mdiSub);
     mdiSub->showMaximized();
@@ -733,6 +810,11 @@ void MdiMainWindow::_createActions()
     mActFileNewSI.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_I));
     mActFileNewSI.setStatusTip(tr("Create a new service interface file"));
     connect(&mActFileNewSI, &QAction::triggered, this, &MdiMainWindow::onFileNewSI);
+
+    initAction(mActFileNewFSM, NELusanCommon::iconStateMachine(NELusanCommon::SizeBig), tr("New State &Machine"));
+    mActFileNewFSM.setShortcut(QKeyCombination(Qt::Modifier::CTRL | Qt::Modifier::SHIFT, Qt::Key::Key_M));
+    mActFileNewFSM.setStatusTip(tr("Create a new state machine file"));
+    connect(&mActFileNewFSM, &QAction::triggered, this, &MdiMainWindow::onFileNewFSM);
 
     initAction(mActFileNewLog, NELusanCommon::iconNewLiveLogs(NELusanCommon::SizeBig), tr("New &Live Logs"));
     mActFileNewLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_L));
@@ -852,6 +934,7 @@ void MdiMainWindow::_createMenus()
     mFileMenu = menuBar()->addMenu(tr("&File"));
     mFileMenu->addAction(&mActNewWorkspace);
     mFileMenu->addAction(&mActFileNewSI);
+    mFileMenu->addAction(&mActFileNewFSM);
     mFileMenu->addAction(&mActFileNewLog);
     mFileMenu->addAction(&mActFileOpen);
     mFileMenu->addAction(&mActFileOfflineLog);
@@ -914,6 +997,7 @@ void MdiMainWindow::_createToolBars()
 {
     mFileToolBar = addToolBar(tr("File"));
     mFileToolBar->addAction(&mActFileNewSI);
+    mFileToolBar->addAction(&mActFileNewFSM);
     mFileToolBar->addAction(&mActFileNewLog);
     mFileToolBar->addAction(&mActFileOpen);
     mFileToolBar->addAction(&mActFileOfflineLog);

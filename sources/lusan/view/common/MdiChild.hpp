@@ -43,6 +43,7 @@ public:
     {
           MdiUnknown            = 0 //!< Unknown MDI Window type
         , MdiServiceInterface       //!< Service Interface MDI Window type
+        , MdiStateMachine           //!< State Machine MDI Window type
         , MdiLogViewer              //!< Log Viewer MDI Window type
         , MdiOfflineLogViewer       //!< Offline Log Viewer MDI window type
     };
@@ -74,6 +75,12 @@ public:
      * \return  True if it is a Service Interface window, false otherwise.
      **/
     inline bool isServiceInterfaceWindow(void) const;
+
+    /**
+     * \brief   Checks if the MDI child is a State Machine window.
+     * \return  True if it is a State Machine window, false otherwise.
+     **/
+    inline bool isStateMachineWindow(void) const;
 
     /**
      * \brief   Checks if the MDI child is a Log Viewer window.
@@ -134,12 +141,15 @@ public:
      **/
     inline const QString & currentFile(void) const;
 
-    void cut();
-    void copy();
-    void paste();
+    virtual void cut();
+    virtual void copy();
+    virtual void paste();
 
-    void undo();
-    void redo();
+    virtual void undo();
+    virtual void redo();
+
+    inline bool isModified(void) const;
+    virtual void setModified(bool modified);
 
     void clear();
     void selectAll();
@@ -306,6 +316,11 @@ inline bool MdiChild::isServiceInterfaceWindow(void) const
     return (mMdiWindowType == MdiServiceInterface);
 }
 
+inline bool MdiChild::isStateMachineWindow(void) const
+{
+    return (mMdiWindowType == MdiStateMachine);
+}
+
 inline bool MdiChild::isLogViewerWindow(void) const
 {
     return (mMdiWindowType == MdiLogViewer);
@@ -319,6 +334,11 @@ inline bool MdiChild::isOfflineLogViewerWindow(void) const
 inline const QString & MdiChild::currentFile(void) const
 {
     return mCurFile;
+}
+
+inline bool MdiChild::isModified(void) const
+{
+    return mIsModified;
 }
 
 inline const QString& MdiChild::getDocumentName(void) const

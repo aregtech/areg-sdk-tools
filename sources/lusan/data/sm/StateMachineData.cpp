@@ -22,6 +22,8 @@
 
 #include <QByteArray>
 #include <QFile>
+#include <QFileInfo>
+#include <QSaveFile>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
@@ -156,6 +158,21 @@ namespace
             }
         }
     }
+
+    QByteArray buildXmlBuffer(const StateMachineData& data)
+    {
+        QByteArray buffer;
+        {
+            QXmlStreamWriter xml(&buffer);
+            xml.setAutoFormatting(true);
+            xml.setAutoFormattingIndent(4);
+            xml.writeStartDocument("1.0", true);
+            data.writeToXml(xml);
+        }
+
+        buffer.append('\n');
+        return buffer;
+    }
 }
 
 StateMachineData::StateMachineData(void)
@@ -177,6 +194,30 @@ StateMachineData::StateMachineData(void)
 {
     // A fresh document gets a valid Overview ID from the document-wide counter, mirroring ServiceInterfaceData.
     mOverview.setId(getNextId());
+}
+
+std::unique_ptr<StateMachineData> StateMachineData::createNewDocument(const QString& machineName)
+{
+    std::unique_ptr<StateMachineData> result{ std::make_unique<StateMachineData>() };
+    result->mOpenSuccess = true;
+    result->mOverview.setName(machineName);
+
+    SMStateEntry* start = result->mStates.createState(QStringLiteral("Start"), SMStateEntry::eStateKind::Start);
+    if (start != nullptr)
+    {
+        SMLayoutView& view = result->mLayout.addView(result->mOverview.getId());
+        view.zoom = 100;
+        view.x    = 0.0;
+        view.y    = 0.0;
+
+        SMLayoutNode& node = result->mLayout.addNode(start->getId());
+        node.x      = 80.0;
+        node.y      = 140.0;
+        node.width  = 160.0;
+        node.height = 64.0;
+    }
+
+    return result;
 }
 
 bool StateMachineData::readFromFile(const QString& filePath)
@@ -214,34 +255,96 @@ bool StateMachineData::readFromFile(const QString& filePath)
 bool StateMachineData::writeToFile(const QString& filePath /*= QString()*/)
 {
     const QString path = filePath.isEmpty() ? mFilePath : filePath;
-    if (path.isEmpty())
-        return false;
+    return path.isEmpty() ? false : writeToPathAtomic(path, true);
+}
 
-    QByteArray buffer;
+bool StateMachineData::writeToAutosaveFile(const QString& autosavePath) const
+{
+    return autosavePath.isEmpty() ? false : writeToPathAtomicConst(autosavePath);
+}
+
+QString StateMachineData::autosavePathForDocument(const QString& documentPath)
+{
+    return documentPath.isEmpty() ? QString() : documentPath + QStringLiteral(".autosave");
+}
+
+bool StateMachineData::hasRecoverableAutosave(const QString& documentPath, QString* autosavePath /*= nullptr*/)
+{
+    const QString path = autosavePathForDocument(documentPath);
+    if (autosavePath != nullptr)
     {
-        QXmlStreamWriter xml(&buffer);
-        xml.setAutoFormatting(true);
-        xml.setAutoFormattingIndent(4);
-        xml.writeStartDocument("1.0", true);
-        writeToXml(xml);
+        *autosavePath = path;
     }
-    buffer.append('\n');
 
-    QFile file(path);
-    if (file.open(QFile::WriteOnly) == false)
-        return false;
-
-    const bool written = (file.write(buffer) == buffer.size());
-    file.close();
-    if (written == false)
-        return false;
-
-    if (filePath.isEmpty() == false)
+    QFileInfo autosaveInfo(path);
+    if ((autosaveInfo.exists() == false) || (autosaveInfo.isFile() == false))
     {
-        mFilePath = filePath;
+        return false;
+    }
+
+    QFileInfo documentInfo(documentPath);
+    if ((documentInfo.exists() == false) || (documentInfo.isFile() == false))
+    {
+        return true;
+    }
+
+    return autosaveInfo.lastModified() > documentInfo.lastModified();
+}
+
+bool StateMachineData::removeAutosave(const QString& documentPath)
+{
+    const QString path = autosavePathForDocument(documentPath);
+    return path.isEmpty() ? true : (QFile::exists(path) == false || QFile::remove(path));
+}
+
+bool StateMachineData::writeToPathAtomic(const QString& path, bool updateFilePath)
+{
+    const QByteArray buffer = buildXmlBuffer(*this);
+
+    QSaveFile file(path);
+    file.setDirectWriteFallback(false);
+    if (file.open(QIODevice::WriteOnly) == false)
+    {
+        return false;
+    }
+
+    if (file.write(buffer) != buffer.size())
+    {
+        file.cancelWriting();
+        return false;
+    }
+
+    if (file.commit() == false)
+    {
+        return false;
+    }
+
+    if (updateFilePath)
+    {
+        mFilePath = path;
     }
 
     return true;
+}
+
+bool StateMachineData::writeToPathAtomicConst(const QString& path) const
+{
+    const QByteArray buffer = buildXmlBuffer(*this);
+
+    QSaveFile file(path);
+    file.setDirectWriteFallback(false);
+    if (file.open(QIODevice::WriteOnly) == false)
+    {
+        return false;
+    }
+
+    if (file.write(buffer) != buffer.size())
+    {
+        file.cancelWriting();
+        return false;
+    }
+
+    return file.commit();
 }
 
 bool StateMachineData::readFromXml(QXmlStreamReader& xml)
