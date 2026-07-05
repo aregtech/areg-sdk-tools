@@ -350,10 +350,13 @@ QScrollBar::add-page, QScrollBar::sub-page
     background: transparent;
 }
 
-/* ---- Service interface overview quick links ---- */
+/* ---- Service interface / state machine overview quick links ---- */
 
 QPushButton#linkDataTypes, QPushButton#linkAttributes, QPushButton#linkMethods,
-QPushButton#linkConstants, QPushButton#linkIncludes
+QPushButton#linkConstants, QPushButton#linkIncludes,
+QPushButton#smLinkDataTypes, QPushButton#smLinkAttributes, QPushButton#smLinkEvents,
+QPushButton#smLinkMethods, QPushButton#smLinkConstants, QPushButton#smLinkIncludes,
+QPushButton#smLinkDesign
 {
     background: transparent;
     border: none;
@@ -363,7 +366,10 @@ QPushButton#linkConstants, QPushButton#linkIncludes
 }
 
 QPushButton#linkDataTypes:hover, QPushButton#linkAttributes:hover, QPushButton#linkMethods:hover,
-QPushButton#linkConstants:hover, QPushButton#linkIncludes:hover
+QPushButton#linkConstants:hover, QPushButton#linkIncludes:hover,
+QPushButton#smLinkDataTypes:hover, QPushButton#smLinkAttributes:hover, QPushButton#smLinkEvents:hover,
+QPushButton#smLinkMethods:hover, QPushButton#smLinkConstants:hover, QPushButton#smLinkIncludes:hover,
+QPushButton#smLinkDesign:hover
 {
     color: ${accentHover};
 }
