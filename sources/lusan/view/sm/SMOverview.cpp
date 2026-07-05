@@ -25,6 +25,7 @@
 
 #include <QEvent>
 #include <QFormLayout>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -58,62 +59,94 @@ SMOverview::SMOverview(SMOverviewModel& model, QWidget* parent /*= nullptr*/)
 void SMOverview::buildUi(void)
 {
     QWidget* content = new QWidget(this);
-    QHBoxLayout* columns = new QHBoxLayout(content);
+    QVBoxLayout* root = new QVBoxLayout(content);
 
-    QWidget* details = new QWidget(content);
-    QVBoxLayout* outer = new QVBoxLayout(details);
-    outer->setContentsMargins(0, 0, 0, 0);
+    QLabel* headline = new QLabel(tr("State Machine Overview ..."), content);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
 
-    QFormLayout* form = new QFormLayout();
-    mName = new QLineEdit(content);
-    form->addRow(tr("Machine name:"), mName);
+    QHBoxLayout* columns = new QHBoxLayout();
 
-    mNameError = new QLabel(tr("Name must start with a letter or '_' and contain only letters, digits or '_'."), content);
+    // Left column: "Details :" group with label-beside-control rows, mirroring SI.
+    QGroupBox* details = new QGroupBox(tr("Details :"), content);
+    details->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    QFormLayout* form = new QFormLayout(details);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+    form->setRowWrapPolicy(QFormLayout::DontWrapRows);
+
+    QWidget* nameCell = new QWidget(details);
+    QVBoxLayout* nameCellLayout = new QVBoxLayout(nameCell);
+    nameCellLayout->setContentsMargins(0, 0, 0, 0);
+    nameCellLayout->setSpacing(2);
+    mName = new QLineEdit(nameCell);
+    nameCellLayout->addWidget(mName);
+    mNameError = new QLabel(tr("Name must start with a letter or '_' and contain only letters, digits or '_'."), nameCell);
     mNameError->setStyleSheet(QStringLiteral("color: #c0392b;"));
     mNameError->setWordWrap(true);
     mNameError->setVisible(false);
-    form->addRow(QString(), mNameError);
+    nameCellLayout->addWidget(mNameError);
+    form->addRow(tr("Name:"), nameCell);
 
-    QWidget* versionBox = new QWidget(content);
-    QHBoxLayout* versionLayout = new QHBoxLayout(versionBox);
-    versionLayout->setContentsMargins(0, 0, 0, 0);
+    QGroupBox* threading = new QGroupBox(tr("Threading Mode:"), details);
+    threading->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    QHBoxLayout* threadingLayout = new QHBoxLayout(threading);
+    mShared = new QRadioButton(tr("Shared"), threading);
+    mShared->setToolTip(tr("The machine may be driven from more than one thread; generated code is thread-safe."));
+    mLocal = new QRadioButton(tr("Local"), threading);
+    mLocal->setToolTip(tr("The whole machine is guaranteed to live in a single thread; generated code has no locking."));
+    threadingLayout->addWidget(mShared);
+    threadingLayout->addWidget(mLocal);
+    threadingLayout->addStretch(1);
+    form->addRow(tr("Threading:"), threading);
+
+    QGroupBox* versionBox = new QGroupBox(tr("Machine Version:"), details);
+    QGridLayout* versionGrid = new QGridLayout(versionBox);
     mMajor = new QLineEdit(versionBox);
     mMinor = new QLineEdit(versionBox);
     mPatch = new QLineEdit(versionBox);
-    mMajor->setValidator(&mVersionValidator);
-    mMinor->setValidator(&mVersionValidator);
-    mPatch->setValidator(&mVersionValidator);
-    versionLayout->addWidget(mMajor);
-    versionLayout->addWidget(new QLabel(QStringLiteral("."), versionBox));
-    versionLayout->addWidget(mMinor);
-    versionLayout->addWidget(new QLabel(QStringLiteral("."), versionBox));
-    versionLayout->addWidget(mPatch);
+    const std::initializer_list<QLineEdit*> versionEdits{ mMajor, mMinor, mPatch };
+    for (QLineEdit* edit : versionEdits)
+    {
+        edit->setValidator(&mVersionValidator);
+        edit->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        edit->setLayoutDirection(Qt::RightToLeft);
+    }
+    versionGrid->addWidget(new QLabel(tr("Major"), versionBox), 0, 0);
+    versionGrid->addWidget(new QLabel(tr("Minor"), versionBox), 0, 2);
+    versionGrid->addWidget(new QLabel(tr("Patch"), versionBox), 0, 4);
+    versionGrid->addWidget(mMajor, 1, 0);
+    versionGrid->addWidget(new QLabel(QStringLiteral("."), versionBox), 1, 1);
+    versionGrid->addWidget(mMinor, 1, 2);
+    versionGrid->addWidget(new QLabel(QStringLiteral("."), versionBox), 1, 3);
+    versionGrid->addWidget(mPatch, 1, 4);
     form->addRow(tr("Version:"), versionBox);
 
-    outer->addLayout(form);
-
-    QGroupBox* threading = new QGroupBox(tr("Threading mode"), content);
-    QVBoxLayout* threadingLayout = new QVBoxLayout(threading);
-    mShared = new QRadioButton(tr("Shared"), threading);
-    QLabel* sharedHint = new QLabel(tr("The machine may be driven from more than one thread; generated code is thread-safe."), threading);
-    sharedHint->setWordWrap(true);
-    mLocal = new QRadioButton(tr("Local"), threading);
-    QLabel* localHint = new QLabel(tr("The whole machine is guaranteed to live in a single thread; generated code has no locking."), threading);
-    localHint->setWordWrap(true);
-    threadingLayout->addWidget(mShared);
-    threadingLayout->addWidget(sharedHint);
-    threadingLayout->addWidget(mLocal);
-    threadingLayout->addWidget(localHint);
-    outer->addWidget(threading);
-
-    outer->addWidget(new QLabel(tr("Description:"), details));
+    // Description row: label beside the text editor, mirroring SI.
     mDescription = new QPlainTextEdit(details);
+    mDescription->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    mDescription->setPlaceholderText(tr("Describe the state machine here"));
     mDescription->installEventFilter(this);
-    outer->addWidget(mDescription, 1);
+    form->addRow(tr("Description:"), mDescription);
 
     columns->addWidget(details, 1);
-    columns->addWidget(buildLinksPanel(), 0, Qt::AlignTop);
 
+    // Right column: Quick Links
+    QWidget* links = new QWidget(content);
+    links->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    QVBoxLayout* linksColumn = new QVBoxLayout(links);
+    linksColumn->setContentsMargins(0, 0, 0, 0);
+    linksColumn->addWidget(buildLinksPanel());
+    linksColumn->addStretch(1);
+    columns->addWidget(links, 1);
+
+    root->addLayout(columns, 1);
+
+    // Clamp the content to the viewport width so the two Ignored columns split it 50/50
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setWidgetResizable(true);
     setWidget(content);
 }
@@ -123,6 +156,7 @@ QWidget* SMOverview::buildLinksPanel(void)
     struct Link
     {
         int             page;
+        const char*     name;
         const char*     text;
         const char*     tip;
         const char*     hint;
@@ -130,13 +164,13 @@ QWidget* SMOverview::buildLinksPanel(void)
 
     static const Link _links[] =
     {
-          { StateMachine::PageDataTypes , QT_TR_NOOP("Data Types ...") , QT_TR_NOOP("Click to open the Data Types page") , QT_TR_NOOP("Declare enumerations, structures and imported types") }
-        , { StateMachine::PageAttributes, QT_TR_NOOP("Attributes ...") , QT_TR_NOOP("Click to open the Attributes page")  , QT_TR_NOOP("Declare the machine's internal data variables")     }
-        , { StateMachine::PageEvents    , QT_TR_NOOP("Events ...")     , QT_TR_NOOP("Click to open the Events page")      , QT_TR_NOOP("Declare events and timers")                         }
-        , { StateMachine::PageMethods   , QT_TR_NOOP("Methods ...")    , QT_TR_NOOP("Click to open the Methods page")     , QT_TR_NOOP("Declare triggers, actions and conditions")          }
-        , { StateMachine::PageConstants , QT_TR_NOOP("Constants ...")  , QT_TR_NOOP("Click to open the Constants page")   , QT_TR_NOOP("Declare named typed literals")                      }
-        , { StateMachine::PageIncludes  , QT_TR_NOOP("Includes ...")   , QT_TR_NOOP("Click to open the Includes page")    , QT_TR_NOOP("Declare include files and imported machines")       }
-        , { StateMachine::PageDesign    , QT_TR_NOOP("Design ...")     , QT_TR_NOOP("Click to open the Design page")      , QT_TR_NOOP("Edit the state graph on the canvas")                }
+          { StateMachine::PageDataTypes , "smLinkDataTypes" , QT_TR_NOOP("Data Types ...") , QT_TR_NOOP("Click to open the Data Types page") , QT_TR_NOOP("Declare enumerations, structures and imported types") }
+        , { StateMachine::PageAttributes, "smLinkAttributes", QT_TR_NOOP("Attributes ...") , QT_TR_NOOP("Click to open the Attributes page")  , QT_TR_NOOP("Declare the machine's internal data variables")     }
+        , { StateMachine::PageEvents    , "smLinkEvents"    , QT_TR_NOOP("Events ...")     , QT_TR_NOOP("Click to open the Events page")      , QT_TR_NOOP("Declare events and timers")                         }
+        , { StateMachine::PageMethods   , "smLinkMethods"   , QT_TR_NOOP("Methods ...")    , QT_TR_NOOP("Click to open the Methods page")     , QT_TR_NOOP("Declare triggers, actions and conditions")          }
+        , { StateMachine::PageConstants , "smLinkConstants" , QT_TR_NOOP("Constants ...")  , QT_TR_NOOP("Click to open the Constants page")   , QT_TR_NOOP("Declare named typed literals")                      }
+        , { StateMachine::PageIncludes  , "smLinkIncludes"  , QT_TR_NOOP("Includes ...")   , QT_TR_NOOP("Click to open the Includes page")    , QT_TR_NOOP("Declare include files and imported machines")       }
+        , { StateMachine::PageDesign    , "smLinkDesign"    , QT_TR_NOOP("Design ...")     , QT_TR_NOOP("Click to open the Design page")      , QT_TR_NOOP("Edit the state graph on the canvas")                }
     };
 
     QGroupBox* group = new QGroupBox(tr("Quick Links:"), this);
@@ -146,6 +180,7 @@ QWidget* SMOverview::buildLinksPanel(void)
     for (const Link& link : _links)
     {
         QPushButton* button = new QPushButton(tr(link.text), group);
+        button->setObjectName(QString::fromLatin1(link.name));
         button->setFlat(true);
         button->setCursor(Qt::PointingHandCursor);
         button->setToolTip(tr(link.tip));
@@ -157,7 +192,9 @@ QWidget* SMOverview::buildLinksPanel(void)
         const int page = link.page;
         connect(button, &QPushButton::clicked, this, [this, page]() { emit signalPageLinkClicked(page); });
 
-        layout->addRow(button, new QLabel(tr(link.hint), group));
+        QLabel* hint = new QLabel(tr(link.hint), group);
+        hint->setWordWrap(true);    // keep the panel from forcing the row wider than half the page
+        layout->addRow(button, hint);
     }
 
     return group;
