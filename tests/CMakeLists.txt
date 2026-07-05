@@ -92,6 +92,96 @@ target_link_libraries(lusan_sm_serialization_tests PRIVATE
 )
 set_target_properties(lusan_sm_serialization_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
+# ---------------------------------------------------------------------------
+# SM-04: undo/redo command framework (FSM) + the same shared framework applied to
+# the Service Interface editor. The command layer lives in model/common (shared),
+# model/sm (FSM specifics) and model/si (SI specifics); each test links the headless
+# data layer of its editor plus that shared command framework.
+# ---------------------------------------------------------------------------
+
+set(LUSAN_CMD_COMMON_SRC
+    ${LUSAN}/model/common/DocCommand.cpp
+    ${LUSAN}/model/common/DocModelNotifier.cpp
+)
+
+qt_add_executable(lusan_sm_command_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN_CMD_COMMON_SRC}
+    ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMLayoutCommands.cpp
+    ${LUSAN}/model/sm/SMStateCommands.cpp
+    ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
+)
+target_include_directories(lusan_sm_command_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_command_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_command_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# The Service Interface headless data layer.
+set(LUSAN_SI_SUPPORT_SRC
+    ${LUSAN}/common/ElementBase.cpp
+    ${LUSAN}/common/VersionNumber.cpp
+    ${LUSAN}/common/NELusanCommon.cpp
+    ${LUSAN}/common/XmlSI.cpp
+    ${LUSAN}/data/common/DocumentElem.cpp
+    ${LUSAN}/data/common/ParamBase.cpp
+    ${LUSAN}/data/common/ParamType.cpp
+    ${LUSAN}/data/common/MethodBase.cpp
+    ${LUSAN}/data/common/MethodParameter.cpp
+    ${LUSAN}/data/common/AttributeEntry.cpp
+    ${LUSAN}/data/common/ConstantEntry.cpp
+    ${LUSAN}/data/common/IncludeEntry.cpp
+    ${LUSAN}/data/common/DataTypeBase.cpp
+    ${LUSAN}/data/common/DataTypeCustom.cpp
+    ${LUSAN}/data/common/DataTypeEnum.cpp
+    ${LUSAN}/data/common/DataTypeStructure.cpp
+    ${LUSAN}/data/common/DataTypeImported.cpp
+    ${LUSAN}/data/common/DataTypePrimitive.cpp
+    ${LUSAN}/data/common/DataTypeBasic.cpp
+    ${LUSAN}/data/common/DataTypeContainer.cpp
+    ${LUSAN}/data/common/DataTypeEmpty.cpp
+    ${LUSAN}/data/common/DataTypeFactory.cpp
+    ${LUSAN}/data/common/EnumEntry.cpp
+    ${LUSAN}/data/common/FieldEntry.cpp
+    ${LUSAN}/data/si/SIAttributeData.cpp
+    ${LUSAN}/data/si/SIConstantData.cpp
+    ${LUSAN}/data/si/SIDataTypeData.cpp
+    ${LUSAN}/data/si/SIIncludeData.cpp
+    ${LUSAN}/data/si/SIMethodBase.cpp
+    ${LUSAN}/data/si/SIMethodBroadcast.cpp
+    ${LUSAN}/data/si/SIMethodData.cpp
+    ${LUSAN}/data/si/SIMethodRequest.cpp
+    ${LUSAN}/data/si/SIMethodResponse.cpp
+    ${LUSAN}/data/si/SIOverviewData.cpp
+    ${LUSAN}/data/si/SIResponseLink.cpp
+    ${LUSAN}/data/si/ServiceInterfaceData.cpp
+)
+
+qt_add_executable(lusan_si_command_tests
+    ${LUSAN_SI_SUPPORT_SRC}
+    ${LUSAN_CMD_COMMON_SRC}
+    ${LUSAN}/model/si/SICommand.cpp
+    ${LUSAN_ROOT}/tests/si/SICommandTests.cpp
+)
+target_include_directories(lusan_si_command_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_si_command_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_si_command_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_si_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
 enable_testing()
 add_test(NAME sm_model_tests COMMAND lusan_sm_tests)
 add_test(NAME sm_serialization_tests COMMAND lusan_sm_serialization_tests)
+add_test(NAME sm_command_tests COMMAND lusan_sm_command_tests)
+add_test(NAME si_command_tests COMMAND lusan_si_command_tests)
