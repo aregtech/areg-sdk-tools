@@ -19,9 +19,18 @@
 
 #include "lusan/view/sm/StateMachine.hpp"
 
+#include "lusan/view/sm/SMOverview.hpp"
+
 #include <QLabel>
 #include <QMessageBox>
+#include <QTimer>
 #include <QVBoxLayout>
+
+namespace
+{
+    constexpr int TabInitStartDelayMs{ 200 };
+    constexpr int TabInitDelayMs{ 50 };
+}
 
 const QString& StateMachine::fileExtension(void)
 {
@@ -32,14 +41,11 @@ const QString& StateMachine::fileExtension(void)
 StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= QString()*/, const QString& sourcePath /*= QString()*/, QWidget* parent /*= nullptr*/)
     : MdiChild           (MdiChild::eMdiWindow::MdiStateMachine, wndMain, parent)
     , mModel             (this)
+    , mTabWidget         (this)
+    , mOverview          (nullptr)
+    , mPages             (pageCount(), nullptr)
+    , mPendingInitTabs   ( )
 {
-    QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(new QLabel(tr("State Machine document"), this));
-    setLayout(layout);
-
-    connect(&mModel, &StateMachineModel::signalDirtyChanged, this, &MdiChild::setModified);
-
     if (filePath.isEmpty() == false)
     {
         mIsUntitled = false;
@@ -48,6 +54,35 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
             setCurrentFile(filePath);
         }
     }
+
+    mTabWidget.setTabPosition(QTabWidget::South);
+    mTabWidget.setTabShape(QTabWidget::Rounded);
+    mTabWidget.setTabsClosable(false);
+    mTabWidget.setMovable(false);
+    for (int i = 0; i < pageCount(); ++i)
+    {
+        QWidget* holder = new QWidget(&mTabWidget);
+        QVBoxLayout* holderLayout = new QVBoxLayout(holder);
+        holderLayout->setContentsMargins(0, 0, 0, 0);
+        mTabWidget.addTab(holder, tabTitle(i));
+        if (i != static_cast<int>(PageOverview))
+            mPendingInitTabs.append(i);
+    }
+
+    connect(&mTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
+        ensureTabInitialized(index);
+    });
+
+    ensureTabInitialized(static_cast<int>(PageOverview));
+    QTimer::singleShot(TabInitStartDelayMs, this, &StateMachine::processQueuedTabInitialization);
+
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(&mTabWidget);
+    setLayout(layout);
+
+    connect(&mModel, &StateMachineModel::signalDirtyChanged, this, &MdiChild::setModified);
+    setAttribute(Qt::WA_DeleteOnClose);
 }
 
 void StateMachine::newFile()
@@ -148,4 +183,79 @@ void StateMachine::onWindowClosing(bool isActive)
 bool StateMachine::loadDocument(const QString& documentPath, const QString& sourcePath /*= QString()*/)
 {
     return mModel.loadFromFile(documentPath, sourcePath);
+}
+
+bool StateMachine::isValidTabIndex(int index)
+{
+    return (index >= 0) && (index < pageCount());
+}
+
+bool StateMachine::isTabInitialized(int index) const
+{
+    return isValidTabIndex(index) && (mPages.at(index) != nullptr);
+}
+
+QString StateMachine::tabTitle(int index) const
+{
+    switch (static_cast<eSMPages>(index))
+    {
+    case PageOverview:   return tr("Overview");
+    case PageDataTypes:  return tr("Data Types");
+    case PageAttributes: return tr("Attributes");
+    case PageEvents:     return tr("Events");
+    case PageMethods:    return tr("Methods");
+    case PageConstants:  return tr("Constants");
+    case PageIncludes:   return tr("Includes");
+    case PageDesign:     return tr("Design");
+    default:             return QString();
+    }
+}
+
+void StateMachine::processQueuedTabInitialization(void)
+{
+    if (mPendingInitTabs.isEmpty())
+        return;
+
+    ensureTabInitialized(mPendingInitTabs.first());
+    if (mPendingInitTabs.isEmpty() == false)
+    {
+        QTimer::singleShot(TabInitDelayMs, this, &StateMachine::processQueuedTabInitialization);
+    }
+}
+
+void StateMachine::ensureTabInitialized(int index)
+{
+    if (isValidTabIndex(index) == false)
+        return;
+
+    mPendingInitTabs.removeAll(index);
+    if (isTabInitialized(index))
+        return;
+
+    QWidget* page = nullptr;
+    if (index == static_cast<int>(PageOverview))
+    {
+        mOverview = new SMOverview(mModel.getOverviewModel(), &mTabWidget);
+        connect(mOverview, &SMOverview::signalPageLinkClicked, this, [this](int page) {
+            mTabWidget.setCurrentIndex(page);
+        });
+        page = mOverview;
+    }
+    else
+    {
+        // Placeholder until the owning task builds the page.
+        page = new QLabel(tabTitle(index), &mTabWidget);
+    }
+
+    mPages[index] = page;
+    attachPage(index, page);
+}
+
+void StateMachine::attachPage(int index, QWidget* page)
+{
+    QWidget* holder = mTabWidget.widget(index);
+    if ((holder != nullptr) && (holder->layout() != nullptr) && (page != nullptr))
+    {
+        holder->layout()->addWidget(page);
+    }
 }

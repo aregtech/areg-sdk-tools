@@ -20,6 +20,8 @@
  ************************************************************************/
 
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/sm/SMOverviewModel.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -55,6 +57,8 @@ public:
     inline const StateMachineData& getData(void) const;
     inline QUndoStack& getUndoStack(void);
     inline const QUndoStack& getUndoStack(void) const;
+    inline DocModelNotifier& getNotifier(void);
+    inline SMOverviewModel& getOverviewModel(void);
 
 signals:
     void signalDirtyChanged(bool dirty);
@@ -69,8 +73,10 @@ private:
 
 private:
     std::unique_ptr<StateMachineData> mData;
+    DocModelNotifier mNotifier;
     QUndoStack      mUndoStack;
     QTimer          mAutosaveTimer;
+    SMOverviewModel mOverviewModel;
     bool            mOpenSuccess;
 };
 
@@ -108,6 +114,16 @@ inline QUndoStack& StateMachineModel::getUndoStack(void)
 inline const QUndoStack& StateMachineModel::getUndoStack(void) const
 {
     return mUndoStack;
+}
+
+inline DocModelNotifier& StateMachineModel::getNotifier(void)
+{
+    return mNotifier;
+}
+
+inline SMOverviewModel& StateMachineModel::getOverviewModel(void)
+{
+    return mOverviewModel;
 }
 
 #endif  // LUSAN_MODEL_SM_STATEMACHINEMODEL_HPP

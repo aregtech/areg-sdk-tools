@@ -29,8 +29,10 @@ namespace
 StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     : QObject        (parent)
     , mData          (std::make_unique<StateMachineData>())
+    , mNotifier      (this)
     , mUndoStack     (this)
     , mAutosaveTimer (this)
+    , mOverviewModel (*this)
     , mOpenSuccess   (false)
 {
     mUndoStack.setUndoLimit(100);
@@ -52,6 +54,7 @@ bool StateMachineModel::createNewDocument(const QString& machineName)
 
     mUndoStack.clear();
     mUndoStack.setClean();
+    mNotifier.notifyDocumentReloaded();
     markDirty();
     updateAutosaveTimer();
     return true;
@@ -78,6 +81,7 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
 
     mUndoStack.clear();
     mUndoStack.setClean();
+    mNotifier.notifyDocumentReloaded();
     if (sourcePath.isEmpty() == false)
     {
         markDirty();
