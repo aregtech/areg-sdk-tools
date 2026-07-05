@@ -39,6 +39,7 @@
 
 #include <QString>
 #include <QVector>
+#include <memory>
 
 /**
  * \class   StateMachineData
@@ -112,6 +113,14 @@ public:
     StateMachineData(void);
     virtual ~StateMachineData(void) = default;
 
+    /**
+     * \brief   Creates the spec-14 skeleton for a new document:
+     *          Overview with machine name, one root Start state and default layout entries.
+     * \param   machineName  The machine name to set in Overview.
+     * \return  A newly initialized document root.
+     **/
+    static std::unique_ptr<StateMachineData> createNewDocument(const QString& machineName);
+
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
@@ -181,6 +190,30 @@ public:
     bool writeToFile(const QString& filePath = QString());
 
     /**
+     * \brief   Writes autosave content without changing the document's current file path.
+     * \param   autosavePath The autosave destination path.
+     * \return  True on success, false otherwise.
+     **/
+    bool writeToAutosaveFile(const QString& autosavePath) const;
+
+    /**
+     * \brief   Returns the autosave sibling path for a document path.
+     **/
+    static QString autosavePathForDocument(const QString& documentPath);
+
+    /**
+     * \brief   True if a recoverable autosave exists for \p documentPath.
+     *          Recovery is offered when autosave exists and is newer than the document.
+     **/
+    static bool hasRecoverableAutosave(const QString& documentPath, QString* autosavePath = nullptr);
+
+    /**
+     * \brief   Removes the autosave sibling file if it exists.
+     * \return  True if no autosave exists or it was removed.
+     **/
+    static bool removeAutosave(const QString& documentPath);
+
+    /**
      * \brief   Reads the `StateMachine` root element and every section from the stream.
      * \return  True if the root element was recognized, false otherwise.
      **/
@@ -224,6 +257,8 @@ public:
 // hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
+    bool writeToPathAtomic(const QString& path, bool updateFilePath);
+    bool writeToPathAtomicConst(const QString& path) const;
     bool migrateFromVersion(const VersionNumber& sourceVersion);
     bool migrateTo100(const VersionNumber& sourceVersion);
 

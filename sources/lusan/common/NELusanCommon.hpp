@@ -437,6 +437,9 @@ namespace NELusanCommon
     //<! Loads service interface icon and sets the specified size
     inline QIcon iconServiceInterface(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads state-machine icon and sets the specified size
+    inline QIcon iconStateMachine(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads live logging connected icon and sets the specified size
     inline QIcon iconLiveLogConnected(const QSize & size = QSize{ 32, 32 });
 
@@ -946,6 +949,11 @@ inline QIcon NELusanCommon::iconNewLiveLogs(const QSize & size /*= QSize{32, 32}
 inline QIcon NELusanCommon::iconServiceInterface(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/new-service", size);
+}
+
+inline QIcon NELusanCommon::iconStateMachine(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/workflow-algorithm", size);
 }
 
 inline QIcon NELusanCommon::iconLiveLogConnected(const QSize & size)

@@ -37,8 +37,10 @@
 #include <QDir>
 #include <QFile>
 #include <QString>
+#include <QThread>
 #include <QXmlStreamReader>
 #include <cstdio>
+#include <memory>
 
 #ifndef LUSAN_TEST_DATA_DIR
 #define LUSAN_TEST_DATA_DIR "."
@@ -392,6 +394,59 @@ namespace
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+// Acceptance criteria for SM-05 (data-layer part)
+//////////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testNewDocumentSkeleton(void)
+    {
+        std::printf("[SM-05] new document skeleton has Overview + root Start + default layout\n");
+
+        std::unique_ptr<StateMachineData> doc = StateMachineData::createNewDocument("NewMachine");
+        CHECK(doc != nullptr);
+        CHECK((doc != nullptr) && doc->openSucceeded());
+        CHECK((doc != nullptr) && (doc->getOverview().getName() == QString("NewMachine")));
+
+        SMStateEntry* start = (doc != nullptr) ? doc->getStates().getStartState() : nullptr;
+        CHECK(start != nullptr);
+        CHECK((start != nullptr) && (start->getKind() == SMStateEntry::eStateKind::Start));
+
+        const SMLayoutView* rootView = (doc != nullptr) ? doc->getLayout().findView(doc->getOverview().getId()) : nullptr;
+        CHECK(rootView != nullptr);
+        const SMLayoutNode* startNode = (doc != nullptr && start != nullptr) ? doc->getLayout().findNode(start->getId()) : nullptr;
+        CHECK(startNode != nullptr);
+    }
+
+    void testAutosaveHelpers(void)
+    {
+        std::printf("[SM-05] autosave helper path/detection/remove\n");
+
+        const QString docPath = outFile("sm05_autosave_doc.fsml");
+        const QString autosavePath = StateMachineData::autosavePathForDocument(docPath);
+        CHECK(autosavePath.endsWith(".fsml.autosave"));
+
+        std::unique_ptr<StateMachineData> created = StateMachineData::createNewDocument("AutosaveMachine");
+        CHECK(created != nullptr);
+        CHECK((created != nullptr) && created->writeToFile(docPath));
+
+        QThread::msleep(20);
+
+        StateMachineData dirty;
+        dirty.getOverview().setName("AutosaveMachine");
+        CHECK(dirty.writeToAutosaveFile(autosavePath));
+        CHECK(StateMachineData::hasRecoverableAutosave(docPath));
+
+        QString detectedPath;
+        CHECK(StateMachineData::hasRecoverableAutosave(docPath, &detectedPath));
+        CHECK(detectedPath == autosavePath);
+
+        CHECK(StateMachineData::removeAutosave(docPath));
+        CHECK(StateMachineData::hasRecoverableAutosave(docPath) == false);
+    }
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Entry point
 //////////////////////////////////////////////////////////////////////////
@@ -406,6 +461,8 @@ int main(int /*argc*/, char** /*argv*/)
     testVersionMigration();
     testUnknownPreservation();
     testRejectNewerMajor();
+    testNewDocumentSkeleton();
+    testAutosaveHelpers();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

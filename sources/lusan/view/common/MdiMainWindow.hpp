@@ -32,6 +32,7 @@
  ************************************************************************/
 class MdiChild;
 class ServiceInterface;
+class StateMachine;
 class LiveLogsModel;
 class NaviFileSystem;
 class LiveLogViewer;
@@ -68,6 +69,9 @@ private:
     
     //!< Returns the filters to display when opening service interface files.
     inline static QString _filterServiceFiles(void);
+
+    //!< Returns the filters to display when opening state machine files.
+    inline static QString _filterStateMachineFiles(void);
     
     //!< Returns the filter to display when opening log database files.
     inline static QString _filterLoggingFiles(void);
@@ -269,6 +273,11 @@ private slots:
     void onFileNewSI(void);
 
     /**
+     * \brief   Slot for creating a new FSM file.
+     **/
+    void onFileNewFSM(void);
+
+    /**
      * \brief   Slot for creating a new log file.
      **/
     void onFileNewLiveLog(void);
@@ -374,6 +383,12 @@ private:
      * \return  A pointer to the new Service Interface View.
      **/
     ServiceInterface* createServiceInterfaceView(const QString& filePath = QString());
+
+    /**
+     * \brief   Creates a new State Machine View.
+     * \return  A pointer to the new State Machine View.
+     **/
+    StateMachine* createStateMachineView(const QString& filePath = QString());
 
     /**
      * \brief   Creates a new Log Viewer View.
@@ -525,6 +540,7 @@ private:
     //!< Actions for File sub-menus.
     QAction         mActNewWorkspace;
     QAction         mActFileNewSI;
+    QAction         mActFileNewFSM;
     QAction         mActFileNewLog;
     QAction         mActFileOfflineLog;
     QAction         mActFileOpen;

@@ -190,8 +190,8 @@ void NaviFileSystem::onToolNewFolderClicked(bool checked)
 
 void NaviFileSystem::onToolNewFileClicked(bool checked)
 {
-    static QString _defName("NewService");
-    static QString _defExt(".siml");
+    static QString _defName("NewStateMachine");
+    static QString _defExt(".fsml");
 
     if (mNaviModel == nullptr)
         return;
