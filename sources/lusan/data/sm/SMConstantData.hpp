@@ -26,6 +26,8 @@
 #include "lusan/data/common/TEDataContainer.hpp"
 #include "lusan/data/common/ConstantEntry.hpp"
 
+class SMDataTypeData;
+
 /**
  * \class   SMConstantData
  * \brief   The `ConstantList` registry: an ordered container of ConstantEntry. The FSM
@@ -37,9 +39,11 @@ class SMConstantData : public TEDataContainer<ConstantEntry, DocumentElem>
 public:
     SMConstantData(ElementBase* parent = nullptr);
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+
+    bool readFromXml(QXmlStreamReader& xml) override;
+    
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Creates a new constant appended at the end of the list.
@@ -47,6 +51,12 @@ public:
      * \return  Pointer to the created constant, or nullptr if the name already exists.
      **/
     ConstantEntry* createConstant(const QString& name);
+
+    /**
+     * \brief   Resolves every constant's declared type against the document's custom data types.
+     * \param   dataTypes   The document's data type registry.
+     **/
+    void validate(const SMDataTypeData& dataTypes);
 };
 
 #endif  // LUSAN_DATA_SM_SMCONSTANTDATA_HPP

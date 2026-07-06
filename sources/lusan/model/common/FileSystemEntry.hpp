@@ -190,7 +190,7 @@ public:
      * \brief   Checks if the file system entry has fetched data.
      * \return  True if the file system entry has fetched data, false otherwise.
      **/
-    virtual bool hasFetched(void) const;
+    virtual bool hasFetched() const;
     
     /**
      * \brief   Fetches data for the file system entry.
@@ -203,7 +203,7 @@ public:
      * \brief   Checks if the file system entry has valid children.
      * \return  True if the file system entry has valid children, false otherwise.
      **/
-    virtual bool hasValidChildren(void) const;
+    virtual bool hasValidChildren() const;
 
     /**
      * \brief   Refreshes the children of the file system entry.
@@ -234,7 +234,7 @@ public:
     /**
      * \brief   Returns the list of child elements.
      **/
-    inline const QList<FileSystemEntry *>& getChildren(void) const;
+    inline const QList<FileSystemEntry *>& getChildren() const;
 
     /**
      * \brief   Returns the child element at the given index.
@@ -260,22 +260,22 @@ public:
     /**
      * \brief   Returns the number of child elements.
      **/
-    inline int getChildCount(void) const;
+    inline int getChildCount() const;
 
     /**
      * \brief   Returns the path of the file system entry.
      **/
-    inline const QString& getPath(void) const;
+    inline const QString& getPath() const;
     
     /**
      * \brief   Returns the file name of the file system entry.
      **/
-    inline QString getFileName(void) const;
+    inline QString getFileName() const;
     
     /**
      * \brief   Returns the display name of the file system entry.
      **/
-    inline const QString& getDisplayName(void) const;
+    inline const QString& getDisplayName() const;
 
     /**
      * \brief   Sets the display name of the file system entry.
@@ -286,22 +286,22 @@ public:
     /**
      * \brief   Returns the icon of the file system entry.
      **/
-    inline const QIcon& getIcon(void) const;
+    inline const QIcon& getIcon() const;
 
     /**
      * \brief   Returns the row of the file system entry in the parent's child list.
      **/
-    inline int getRow(void) const;
+    inline int getRow() const;
     
     /**
      * \brief   Returns the parent of the file system entry.
      **/
-    inline FileSystemEntry* getParent(void);
+    inline FileSystemEntry* getParent();
 
     /**
      * \brief   Returns the parent of the file system entry.
      **/
-    inline const FileSystemEntry* getParent(void) const;
+    inline const FileSystemEntry* getParent() const;
 
     /**
      * \brief   Sets the type of the file system entry.
@@ -313,42 +313,42 @@ public:
      * \brief   Checks if the file system entry is a directory.
      * \return  True if the file system entry is a directory, false otherwise.
      **/
-    inline bool isDir(void) const;
+    inline bool isDir() const;
 
     /**
      * \brief   Checks if the file system entry is a file.
      * \return  True if the file system entry is a file, false otherwise.
      **/
-    inline bool isFile(void) const;
+    inline bool isFile() const;
 
     /**
      * \brief   Checks if the file system entry is a symbolic link.
      * \return  True if the file system entry is a symbolic link, false otherwise.
      **/
-    inline bool isSymlink(void) const;
+    inline bool isSymlink() const;
 
     /**
      * \brief   Checks if the file system entry is a root.
      * \return  True if the file system entry is a root, false otherwise.
      **/
-    inline bool isRoot(void) const;
+    inline bool isRoot() const;
 
     /**
      * \brief   Checks if the file system entry is a workspace directory.
      * \return  True if the file system entry is a workspace directory, false otherwise.
      **/
-    inline bool isWorkspaceDir(void) const;
+    inline bool isWorkspaceDir() const;
 
     /**
      * \brief   Checks if the file system entry is valid.
      * \return  True if the file system entry is valid, false otherwise.
      **/
-    inline bool isValid(void) const;
+    inline bool isValid() const;
     
     /**
      * \brief   Returns the ID of the file system entry.
      **/
-    inline uint32_t getId(void) const;
+    inline uint32_t getId() const;
 
     /**
      * \brief   Adds a child entry to the file system entry.
@@ -391,12 +391,12 @@ public:
      *          The dummy entry cannot be added if the entry is either not a directory
      *          or it container list of child elements.
      **/
-    inline bool addDummyEntry(void);
+    inline bool addDummyEntry();
 
     /**
      * \brief   Removes the dummy element from the list.
      **/
-    inline void removeDummyEntry(void);
+    inline void removeDummyEntry();
     
     /**
      * \brief   Removes a child entry from the file system entry.
@@ -425,12 +425,12 @@ public:
     /**
      * \brief   Removes all child entries from the file system entry.
      **/
-    inline void removeAll(void);
+    inline void removeAll();
 
     /**
      * \brief   Resets the file system entry.
      **/
-    inline void resetEntry(void);
+    inline void resetEntry();
 
     /**
      * \brief   Sets the file path, updates the display name, if it is not the root entry
@@ -462,12 +462,12 @@ protected:
      * \brief   Returns the next ID for the file system entry.
      * \return  The next ID for the file system entry.
      **/
-    virtual uint32_t getNextId(void) const;
+    virtual uint32_t getNextId() const;
     
     /**
      * \brief   Deletes all child entries.
      **/
-    void deleteEntries(void);
+    void deleteEntries();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -485,7 +485,7 @@ protected:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    FileSystemEntry(void) = delete;
+    FileSystemEntry() = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -533,7 +533,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~FileSystemRootEntry(void) = default;
+    virtual ~FileSystemRootEntry() = default;
     
     /**
      * \brief   Sets the workspace directories for the root entry.
@@ -568,7 +568,7 @@ protected:
      * \brief   Returns the next ID for the root entry.
      * \return  The next ID for the root entry.
      **/
-    virtual uint32_t  getNextId(void) const override;
+    virtual uint32_t  getNextId() const override;
     
     /**
      * \brief   Fetches data for the root entry.
@@ -608,14 +608,14 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    FileSystemRootEntry(void) = delete;
+    FileSystemRootEntry() = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
 // FileSystemEntry class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QList<FileSystemEntry*>& FileSystemEntry::getChildren(void) const
+inline const QList<FileSystemEntry*>& FileSystemEntry::getChildren() const
 {
     return mChildren;
 }
@@ -674,24 +674,24 @@ inline const FileSystemEntry* FileSystemEntry::getChild(uint32_t id) const
     return nullptr;
 }
 
-inline int FileSystemEntry::getChildCount(void) const
+inline int FileSystemEntry::getChildCount() const
 {
     return mChildren.size();
 }
 
-inline const QString& FileSystemEntry::getPath(void) const
+inline const QString& FileSystemEntry::getPath() const
 {
     return mFilePath;
 }
 
-inline QString FileSystemEntry::getFileName(void) const
+inline QString FileSystemEntry::getFileName() const
 {
     QFileInfo fi(mFilePath);
     QString fileName(fi.fileName());
     return (fileName.isEmpty() && fi.isDir() ? fi.dir().dirName() : fileName);
 }
 
-inline const QString& FileSystemEntry::getDisplayName(void) const
+inline const QString& FileSystemEntry::getDisplayName() const
 {
     return mDispName;
 }
@@ -701,22 +701,22 @@ inline void FileSystemEntry::setDisplayName(const QString & dispName)
     mDispName = dispName;
 }
     
-inline const QIcon& FileSystemEntry::getIcon(void) const
+inline const QIcon& FileSystemEntry::getIcon() const
 {
     return mIcon;
 }
 
-inline int FileSystemEntry::getRow(void) const
+inline int FileSystemEntry::getRow() const
 {
     return (mParent != nullptr ? mParent->mChildren.indexOf(this) : -1);
 }
 
-inline FileSystemEntry* FileSystemEntry::getParent(void)
+inline FileSystemEntry* FileSystemEntry::getParent()
 {
     return mParent;
 }
 
-inline const FileSystemEntry* FileSystemEntry::getParent(void) const
+inline const FileSystemEntry* FileSystemEntry::getParent() const
 {
     return mParent;
 }
@@ -726,37 +726,37 @@ inline void FileSystemEntry::setEntryType(FileSystemEntry::eEntryType entryType)
     mEntryType = entryType;
 }
 
-inline bool FileSystemEntry::isDir(void) const
+inline bool FileSystemEntry::isDir() const
 {
     return ((static_cast<uint16_t>(mEntryType) & static_cast<uint16_t>(EntryDir)) != 0);
 }
 
-inline bool FileSystemEntry::isFile(void) const
+inline bool FileSystemEntry::isFile() const
 {
     return ((static_cast<uint16_t>(mEntryType) & static_cast<uint16_t>(EntryFile)) != 0);
 }
 
-inline bool FileSystemEntry::isSymlink(void) const
+inline bool FileSystemEntry::isSymlink() const
 {
     return (mEntryType == EntrySymlink);
 }
 
-inline bool FileSystemEntry::isRoot(void) const
+inline bool FileSystemEntry::isRoot() const
 {
     return (mEntryType == EntryRoot);
 }
 
-inline bool FileSystemEntry::isWorkspaceDir(void) const
+inline bool FileSystemEntry::isWorkspaceDir() const
 {
     return (mEntryType == EntryWorkspace);
 }
 
-inline bool FileSystemEntry::isValid(void) const
+inline bool FileSystemEntry::isValid() const
 {
     return (mEntryType != EntryUnknown);
 }
 
-inline uint32_t FileSystemEntry::getId(void) const
+inline uint32_t FileSystemEntry::getId() const
 {
     return mId;
 }
@@ -797,7 +797,7 @@ inline FileSystemEntry* FileSystemEntry::addChild(const QFileInfo &fi, bool sort
     return entry;
 }
 
-inline bool FileSystemEntry::addDummyEntry(void)
+inline bool FileSystemEntry::addDummyEntry()
 {
     bool result {false};
     if (mChildren.isEmpty())
@@ -813,7 +813,7 @@ inline bool FileSystemEntry::addDummyEntry(void)
     return result;
 }
 
-inline void FileSystemEntry::removeDummyEntry(void)
+inline void FileSystemEntry::removeDummyEntry()
 {
     if ((mChildren.size() == 1) && (mChildren[0]->isValid() == false))
     {
@@ -855,12 +855,12 @@ inline void FileSystemEntry::removeChild(uint32_t id)
     }
 }
 
-inline void FileSystemEntry::removeAll(void)
+inline void FileSystemEntry::removeAll()
 {
     deleteEntries();
 }
 
-inline void FileSystemEntry::resetEntry(void)
+inline void FileSystemEntry::resetEntry()
 {
     deleteEntries();
     addDummyEntry();

@@ -51,57 +51,57 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullp
     setupSignals();
 }
 
-QTreeView* NaviFileSystem::ctrlTable(void) const
+QTreeView* NaviFileSystem::ctrlTable() const
 {
     return ui->treeView;
 }
 
-QToolButton* NaviFileSystem::ctrlToolRefresh(void) const
+QToolButton* NaviFileSystem::ctrlToolRefresh() const
 {
     return ui->toolRefresh;
 }
 
-QToolButton* NaviFileSystem::ctrlToolShowAll(void) const
+QToolButton* NaviFileSystem::ctrlToolShowAll() const
 {
     return ui->toolShowAll;
 }
 
-QToolButton* NaviFileSystem::ctrlToolNaviRoot(void) const
+QToolButton* NaviFileSystem::ctrlToolNaviRoot() const
 {
     return ui->toolNaviRoot;
 }
 
-QToolButton* NaviFileSystem::ctrlToolCollapse(void) const
+QToolButton* NaviFileSystem::ctrlToolCollapse() const
 {
     return ui->toolCollapseAll;
 }
 
-QToolButton* NaviFileSystem::ctrlToolNewFolder(void) const
+QToolButton* NaviFileSystem::ctrlToolNewFolder() const
 {
     return ui->toolNewFolder;
 }
 
-QToolButton* NaviFileSystem::ctrlToolNewFile(void) const
+QToolButton* NaviFileSystem::ctrlToolNewFile() const
 {
     return ui->toolNewFile;
 }
 
-QToolButton* NaviFileSystem::ctrlToolOpen(void) const
+QToolButton* NaviFileSystem::ctrlToolOpen() const
 {
     return ui->toolOpenSelected;
 }
 
-QToolButton* NaviFileSystem::ctrlToolEdit(void) const
+QToolButton* NaviFileSystem::ctrlToolEdit() const
 {
     return ui->toolEditSelected;
 }
 
-QToolButton* NaviFileSystem::ctrlToolDelete(void) const
+QToolButton* NaviFileSystem::ctrlToolDelete() const
 {
     return ui->toolDeleteSelected;
 }
 
-int NaviFileSystem::getColumnCount(void) const
+int NaviFileSystem::getColumnCount() const
 {
     return 1;
 }
@@ -111,7 +111,7 @@ QString NaviFileSystem::getCellText(const QModelIndex& cell) const
     return (mNaviModel != nullptr ? mNaviModel->getFileInfo(cell).fileName() : QString());
 }
 
-void NaviFileSystem::optionApplied(void)
+void NaviFileSystem::optionApplied()
 {
     NavigationWindow::optionApplied();
 }
@@ -368,7 +368,7 @@ void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString
     }
 }
 
-void NaviFileSystem::updateData(void)
+void NaviFileSystem::updateData()
 {
     mRootPaths = setupRootPaths(LusanApplication::getOptions().getActiveWorkspace());
     QStringList filters{ LusanApplication::InternalExts };
@@ -376,7 +376,7 @@ void NaviFileSystem::updateData(void)
     mNaviModel->setFileFilter(filters);
 }
 
-void NaviFileSystem::setupWidgets(void)
+void NaviFileSystem::setupWidgets()
 {
     QModelIndex idxRoot = mNaviModel->setRootPaths(mRootPaths);
     mTableCell = new TableCell(ctrlTable(), this, true);
@@ -396,7 +396,7 @@ void NaviFileSystem::setupWidgets(void)
     ctrlToolEdit()->setEnabled(false);
 }
 
-void NaviFileSystem::setupSignals(void)
+void NaviFileSystem::setupSignals()
 {
     connect(ctrlToolRefresh()       , &QToolButton::clicked,      this, &NaviFileSystem::onToolRefreshClicked);
     connect(ctrlToolShowAll()       , &QToolButton::toggled,      this, &NaviFileSystem::onToolShowAllToggled);

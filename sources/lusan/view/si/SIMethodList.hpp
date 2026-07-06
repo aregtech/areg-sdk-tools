@@ -34,23 +34,23 @@ class SIMethodList : public QWidget
 public:
     explicit SIMethodList(QWidget* parent = nullptr);
     
-    QToolButton * ctrlButtonAdd(void) const;
+    QToolButton * ctrlButtonAdd() const;
     
-    QToolButton * ctrlButtonInsert(void) const;
+    QToolButton * ctrlButtonInsert() const;
     
-    QToolButton * ctrlButtonRemove(void) const;
+    QToolButton * ctrlButtonRemove() const;
     
-    QToolButton * ctrlButtonParamAdd(void) const;
+    QToolButton * ctrlButtonParamAdd() const;
     
-    QToolButton * ctrlButtonParamRemove(void) const;
+    QToolButton * ctrlButtonParamRemove() const;
     
-    QToolButton * ctrlButtonParamInsert(void) const;
+    QToolButton * ctrlButtonParamInsert() const;
     
-    QToolButton * ctrlButtonMoveUp(void) const;
+    QToolButton * ctrlButtonMoveUp() const;
     
-    QToolButton * ctrlButtonMoveDown(void) const;
+    QToolButton * ctrlButtonMoveDown() const;
     
-    QTreeWidget * ctrlTableList(void) const;
+    QTreeWidget * ctrlTableList() const;
 
 private:
     Ui::SIMethodList* ui;

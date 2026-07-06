@@ -72,7 +72,7 @@ public:
     /**
      * \brief   Returns the list of constants.
      **/
-    const QList<ConstantEntry> & getConstants(void) const;
+    const QList<ConstantEntry> & getConstants() const;
 
     /**
      * \brief   Searches the constant entry in the list by given unique ID.
@@ -115,7 +115,7 @@ public:
     /**
      * \brief   Returns the instance of data type data object relevant with the constants.
      **/
-    inline SIDataTypeData& getDataTypeData(void);
+    inline SIDataTypeData& getDataTypeData();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
@@ -129,7 +129,7 @@ private:
 // SIConstantModel class inline function implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline SIDataTypeData& SIConstantModel::getDataTypeData(void)
+inline SIDataTypeData& SIConstantModel::getDataTypeData()
 {
     return mDataType;
 }

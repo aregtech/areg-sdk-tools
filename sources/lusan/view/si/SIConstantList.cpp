@@ -43,32 +43,32 @@ SIConstantList::SIConstantList(QWidget* parent)
     
 }
 
-QToolButton* SIConstantList::ctrlButtonAdd(void)
+QToolButton* SIConstantList::ctrlButtonAdd()
 {
     return ui->toolAddElem;
 }
 
-QToolButton* SIConstantList::ctrlButtonRemove(void)
+QToolButton* SIConstantList::ctrlButtonRemove()
 {
     return ui->toolDeleteElem;
 }
 
-QToolButton* SIConstantList::ctrlButtonInsert(void)
+QToolButton* SIConstantList::ctrlButtonInsert()
 {
     return ui->toolInsertElem;
 }
 
-QToolButton* SIConstantList::ctrlButtonMoveUp(void)
+QToolButton* SIConstantList::ctrlButtonMoveUp()
 {
     return ui->toolMoveUp;
 }
 
-QToolButton* SIConstantList::ctrlButtonMoveDown(void)
+QToolButton* SIConstantList::ctrlButtonMoveDown()
 {
     return ui->toolMoveDown;
 }
 
-QTableWidget* SIConstantList::ctrlTableList(void)
+QTableWidget* SIConstantList::ctrlTableList()
 {
     return ui->tableConstants;
 }

@@ -61,7 +61,7 @@ public:
     /**
      * \brief   Returns the file extension of the service interface document.
      **/
-    static const QString& fileExtension(void);
+    static const QString& fileExtension();
     
     /**
      * \brief   The list of pages in the service interface
@@ -88,7 +88,7 @@ public:
      **/
     ServiceInterface(MdiMainWindow *wndMain, const QString & filePath = QString(), QWidget *parent = nullptr);
 
-    virtual ~ServiceInterface(void);
+    virtual ~ServiceInterface();
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -134,34 +134,34 @@ public:
     /**
      * \brief   Returns the file open operation success flag.
      **/
-    virtual bool openSucceeded(void) const override;
+    virtual bool openSucceeded() const override;
     
 protected:
     
     /**
      * \brief   Returns the default file name of new created document.
      **/
-    virtual QString newDocumentName(void) override;
+    virtual QString newDocumentName() override;
 
     /**
      * \brief   Returns the default name of new created document.
      **/
-    virtual const QString& newDocument(void) const override;
+    virtual const QString& newDocument() const override;
 
     /**
      * \brief   Returns the default extension of new created document.
      **/
-    virtual const QString& newDocumentExt(void) const override;
+    virtual const QString& newDocumentExt() const override;
 
     /**
      * \brief   Returns the default file suffix.
      **/
-    virtual const QString& fileSuffix(void) const override;
+    virtual const QString& fileSuffix() const override;
 
     /**
      * \brief   Returns the default file filter.
      **/
-    virtual const QString& fileFilter(void) const override;
+    virtual const QString& fileFilter() const override;
 
     /**
      * \brief   Reads the document from the file.
@@ -181,7 +181,7 @@ private:
     //!< Returns the tab title of the page at given index.
     QString tabTitle(int index) const;
     //!< Initializes next queued page and re-schedules itself while queue is not empty.
-    void processQueuedTabInitialization(void);
+    void processQueuedTabInitialization();
     //!< Creates the page at given index if it does not exist yet.
     void ensureTabInitialized(int index);
     //!< Places the created page into the tab holder widget at given index.

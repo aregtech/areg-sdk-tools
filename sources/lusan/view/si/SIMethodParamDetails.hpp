@@ -36,19 +36,19 @@ class SIMethodParamDetails : public QWidget
 public:
     explicit SIMethodParamDetails(QWidget* parent = nullptr);
     
-    QLineEdit * ctrlParamName(void) const;
+    QLineEdit * ctrlParamName() const;
     
-    QComboBox * ctrlParamTypes(void) const;
+    QComboBox * ctrlParamTypes() const;
 
-    QCheckBox* ctrlParamHasDefault(void) const;
+    QCheckBox* ctrlParamHasDefault() const;
     
-    QLineEdit * ctrlParamDefaultValue(void) const;
+    QLineEdit * ctrlParamDefaultValue() const;
         
-    QPlainTextEdit * ctrlParamDescription(void) const;
+    QPlainTextEdit * ctrlParamDescription() const;
     
-    QCheckBox * ctrlDeprecated(void) const;
+    QCheckBox * ctrlDeprecated() const;
     
-    QLineEdit * ctrlDeprecateHint(void) const;
+    QLineEdit * ctrlDeprecateHint() const;
 
 private:
     Ui::SIMethodParamDetails* ui;

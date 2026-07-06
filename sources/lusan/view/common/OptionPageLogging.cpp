@@ -171,7 +171,7 @@ void OptionPageLogging::closingOptions(bool OKpressed)
     OptionPageBase::closingOptions(OKpressed);
 }
 
-void OptionPageLogging::warnMessage(void)
+void OptionPageLogging::warnMessage()
 {
     QMessageBox::critical(static_cast<QWidget *>(this), tr("Error"), tr("The endpoint must be tested and must be working before saving the changes!"));
 }
@@ -254,22 +254,22 @@ void OptionPageLogging::saveData() const
     LogObserver::saveLoggerConfig();
 }
 
-inline QString OptionPageLogging::getLogLocation(void) const
+inline QString OptionPageLogging::getLogLocation() const
 {
     return textLogLocation()->text();
 }
 
-inline QString OptionPageLogging::getLogFileName(void) const
+inline QString OptionPageLogging::getLogFileName() const
 {
     return textLogFileName()->text();
 }
 
-inline QString OptionPageLogging::getServiceAddress(void) const
+inline QString OptionPageLogging::getServiceAddress() const
 {
     return textIpAddress()->text();
 }
 
-inline uint16_t OptionPageLogging::getServicePort(void) const
+inline uint16_t OptionPageLogging::getServicePort() const
 {
     return static_cast<uint16_t>(textPortNumber()->text().toUInt());
 }
@@ -352,11 +352,11 @@ void OptionPageLogging::onDataChanged()
     setDataModified(true);
 }
 
-void OptionPageLogging::onLogLocationChanged(void)
+void OptionPageLogging::onLogLocationChanged()
 {
 }
 
-void OptionPageLogging::onLogFileNameChanged(void)
+void OptionPageLogging::onLogFileNameChanged()
 {
 }
 
@@ -407,37 +407,37 @@ void OptionPageLogging::onLogInstancesConnected(const std::vector< areg::Connect
     mTestTriggered = false;
 }
 
-inline QLineEdit* OptionPageLogging::textLogLocation(void) const
+inline QLineEdit* OptionPageLogging::textLogLocation() const
 {
     return ui->editLogLocation;
 }
 
-inline QLineEdit* OptionPageLogging::textLogFileName(void) const
+inline QLineEdit* OptionPageLogging::textLogFileName() const
 {
     return ui->editLogFileName;
 }
 
-inline QLineEdit* OptionPageLogging::textIpAddress(void) const
+inline QLineEdit* OptionPageLogging::textIpAddress() const
 {
     return ui->editLogAddres;
 }
 
-inline QLineEdit* OptionPageLogging::textPortNumber(void) const
+inline QLineEdit* OptionPageLogging::textPortNumber() const
 {
     return ui->editLogPort;
 }
 
-inline QTextEdit* OptionPageLogging::textConnectionStatus(void) const
+inline QTextEdit* OptionPageLogging::textConnectionStatus() const
 {
     return ui->textConnectStatus;
 }
 
-inline QPushButton* OptionPageLogging::buttonBrowseDirs(void) const
+inline QPushButton* OptionPageLogging::buttonBrowseDirs() const
 {
     return ui->buttonBrowseDirs;
 }
 
-inline QPushButton* OptionPageLogging::buttonTestConnection(void) const
+inline QPushButton* OptionPageLogging::buttonTestConnection() const
 {
     return ui->buttonTestConnect;
 }

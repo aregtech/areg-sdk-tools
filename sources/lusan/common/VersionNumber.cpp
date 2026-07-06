@@ -21,7 +21,7 @@
 
 #include <QAnyStringView>
 
-VersionNumber::VersionNumber(void)
+VersionNumber::VersionNumber()
     : mVersion(0, 0, 1)
 {
 }
@@ -78,7 +78,7 @@ bool VersionNumber::operator >= (const VersionNumber& other) const
     return mVersion >= other.mVersion;
 }
 
-QString VersionNumber::toString(void) const
+QString VersionNumber::toString() const
 {
     return mVersion.toString();
 }
@@ -91,7 +91,7 @@ bool VersionNumber::fromString(const QString& versionStr)
     return isValid();
 }
 
-bool VersionNumber::isValid(void) const
+bool VersionNumber::isValid() const
 {
     return (mVersion.majorVersion() != 0) || (mVersion.minorVersion() != 0) || (mVersion.microVersion() != 0);
 }

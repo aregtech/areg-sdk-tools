@@ -115,7 +115,7 @@ private:
     /**
      * \brief   Default constructor.
      **/
-    DataTypePrimitive(void) = delete;
+    DataTypePrimitive() = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -135,7 +135,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypePrimitiveInt(void);
+    DataTypePrimitiveInt();
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
@@ -201,7 +201,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypePrimitiveUint(void);
+    DataTypePrimitiveUint();
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
@@ -267,7 +267,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypePrimitiveFloat(void);
+    DataTypePrimitiveFloat();
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.

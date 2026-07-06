@@ -19,17 +19,17 @@
 
 #include "lusan/data/common/DataTypeEmpty.hpp"
 
-DataTypeEmpty::DataTypeEmpty(void)
+DataTypeEmpty::DataTypeEmpty()
     : DataTypeBase(DataTypeBase::eCategory::Undefined, QString(), 0, nullptr)
 {
 }
 
-inline unsigned int DataTypeEmpty::getId(void) const
+inline unsigned int DataTypeEmpty::getId() const
 {
     return 0;
 }
 
-bool DataTypeEmpty::isValid(void) const
+bool DataTypeEmpty::isValid() const
 {
     return false;
 }
@@ -43,7 +43,7 @@ void DataTypeEmpty::writeToXml(QXmlStreamWriter& xml) const
 {
 }
 
-unsigned int DataTypeEmpty::getNextId(void) const
+unsigned int DataTypeEmpty::getNextId() const
 {
     return 0;
 }

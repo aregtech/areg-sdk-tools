@@ -73,17 +73,17 @@ public:
     /**
      * \brief   Returns the list of primitive data type objects.
      **/
-    static const QList<DataTypePrimitive*>& getPrimitiveTypes(void);
+    static const QList<DataTypePrimitive*>& getPrimitiveTypes();
 
     /**
      * \brief   Returns the list of basic data type objects.
      **/
-    static const QList<DataTypeBasicObject*>& getBasicTypes(void);
+    static const QList<DataTypeBasicObject*>& getBasicTypes();
 
     /**
      * \brief   Returns the list of container data type objects.
      **/
-    static const QList<DataTypeBasicContainer*>& getContainerTypes(void);
+    static const QList<DataTypeBasicContainer*>& getContainerTypes();
 
     /**
      * \brief   Returns the list of predefined data types.
@@ -96,7 +96,7 @@ public:
     /**
      * \brief   Warms up predefined type cache to avoid first-use latency.
      **/
-    static void warmup(void);
+    static void warmup();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -106,7 +106,7 @@ private:
     /**
      * \brief   Initializes the predefined data types.
      **/
-    static void _initPredefined(void);
+    static void _initPredefined();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden objects

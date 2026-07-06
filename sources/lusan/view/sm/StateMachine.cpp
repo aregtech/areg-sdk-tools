@@ -19,6 +19,8 @@
 
 #include "lusan/view/sm/StateMachine.hpp"
 
+#include "lusan/view/sm/SMAttribute.hpp"
+#include "lusan/view/sm/SMConstant.hpp"
 #include "lusan/view/sm/SMDataType.hpp"
 #include "lusan/view/sm/SMOverview.hpp"
 
@@ -33,7 +35,7 @@ namespace
     constexpr int TabInitDelayMs{ 50 };
 }
 
-const QString& StateMachine::fileExtension(void)
+const QString& StateMachine::fileExtension()
 {
     static const QString _extFSM{ "fsml" };
     return _extFSM;
@@ -95,7 +97,7 @@ void StateMachine::newFile()
     }
 }
 
-bool StateMachine::openSucceeded(void) const
+bool StateMachine::openSucceeded() const
 {
     return mModel.openSucceeded();
 }
@@ -110,32 +112,32 @@ void StateMachine::redo()
     mModel.getUndoStack().redo();
 }
 
-QString StateMachine::newDocumentName(void)
+QString StateMachine::newDocumentName()
 {
     static uint32_t _seqNr{ 0 };
     mDocName = newDocument() + QString::number(++_seqNr);
     return mDocName + newDocumentExt();
 }
 
-const QString& StateMachine::newDocument(void) const
+const QString& StateMachine::newDocument() const
 {
     static const QString _newFSMDoc{ "NewStateMachine" };
     return _newFSMDoc;
 }
 
-const QString& StateMachine::newDocumentExt(void) const
+const QString& StateMachine::newDocumentExt() const
 {
     static const QString _extFSM{ ".fsml" };
     return _extFSM;
 }
 
-const QString& StateMachine::fileSuffix(void) const
+const QString& StateMachine::fileSuffix() const
 {
     static const QString _suffixFSM{ "fsml" };
     return _suffixFSM;
 }
 
-const QString& StateMachine::fileFilter(void) const
+const QString& StateMachine::fileFilter() const
 {
     static const QString _filterFSM{ "State Machine document (*.fsml)\nAll Files (*.*)" };
     return _filterFSM;
@@ -212,7 +214,7 @@ QString StateMachine::tabTitle(int index) const
     }
 }
 
-void StateMachine::processQueuedTabInitialization(void)
+void StateMachine::processQueuedTabInitialization()
 {
     if (mPendingInitTabs.isEmpty())
         return;
@@ -245,6 +247,14 @@ void StateMachine::ensureTabInitialized(int index)
     else if (index == static_cast<int>(PageDataTypes))
     {
         page = new SMDataType(mModel.getDataTypeModel(), &mTabWidget);
+    }
+    else if (index == static_cast<int>(PageAttributes))
+    {
+        page = new SMAttribute(mModel.getAttributeModel(), &mTabWidget);
+    }
+    else if (index == static_cast<int>(PageConstants))
+    {
+        page = new SMConstant(mModel.getConstantModel(), &mTabWidget);
     }
     else
     {

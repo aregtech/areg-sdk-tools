@@ -43,47 +43,47 @@ SIMethodList::SIMethodList(QWidget *parent)
     header->setSectionResizeMode(3, QHeaderView::Stretch);
 }
 
-QToolButton * SIMethodList::ctrlButtonAdd(void) const
+QToolButton * SIMethodList::ctrlButtonAdd() const
 {
     return ui->toolAddMethod;
 }
 
-QToolButton * SIMethodList::ctrlButtonInsert(void) const
+QToolButton * SIMethodList::ctrlButtonInsert() const
 {
     return ui->toolInsertMethod;
 }
 
-QToolButton * SIMethodList::ctrlButtonRemove(void) const
+QToolButton * SIMethodList::ctrlButtonRemove() const
 {
     return ui->toolDeleteMethod;
 }
 
-QToolButton * SIMethodList::ctrlButtonParamAdd(void) const
+QToolButton * SIMethodList::ctrlButtonParamAdd() const
 {
     return ui->toolParamAdd;
 }
 
-QToolButton * SIMethodList::ctrlButtonParamRemove(void) const
+QToolButton * SIMethodList::ctrlButtonParamRemove() const
 {
     return ui->toolParamDelete;
 }
 
-QToolButton * SIMethodList::ctrlButtonParamInsert(void) const
+QToolButton * SIMethodList::ctrlButtonParamInsert() const
 {
     return ui->toolParamInsert;
 }
 
-QToolButton * SIMethodList::ctrlButtonMoveUp(void) const
+QToolButton * SIMethodList::ctrlButtonMoveUp() const
 {
     return ui->toolMoveUp;
 }
 
-QToolButton * SIMethodList::ctrlButtonMoveDown(void) const
+QToolButton * SIMethodList::ctrlButtonMoveDown() const
 {
     return ui->toolMoveDown;
 }
 
-QTreeWidget * SIMethodList::ctrlTableList(void) const
+QTreeWidget * SIMethodList::ctrlTableList() const
 {
     return ui->treeMethods;
 }

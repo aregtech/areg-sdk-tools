@@ -46,22 +46,22 @@ class SMDataTypeDetails : public QWidget
 public:
     explicit SMDataTypeDetails(QWidget* parent = nullptr);
 
-    QLineEdit* ctrlName(void) const;
-    QRadioButton* ctrlTypeStruct(void) const;
-    QRadioButton* ctrlTypeEnum(void) const;
-    QRadioButton* ctrlTypeImport(void) const;
-    QRadioButton* ctrlTypeContainer(void) const;
-    QComboBox* ctrlEnumDerived(void) const;
-    QLineEdit* ctrlImportLocation(void) const;
-    QPushButton* ctrlButtonBrowse(void) const;
-    QLineEdit* ctrlImportNamespace(void) const;
-    QLineEdit* ctrlImportObject(void) const;
-    QComboBox* ctrlContainerObject(void) const;
-    QComboBox* ctrlContainerKey(void) const;
-    QComboBox* ctrlContainerValue(void) const;
-    QPlainTextEdit* ctrlDescription(void) const;
-    QCheckBox* ctrlDeprecated(void) const;
-    QLineEdit* ctrlDeprecateHint(void) const;
+    QLineEdit* ctrlName() const;
+    QRadioButton* ctrlTypeStruct() const;
+    QRadioButton* ctrlTypeEnum() const;
+    QRadioButton* ctrlTypeImport() const;
+    QRadioButton* ctrlTypeContainer() const;
+    QComboBox* ctrlEnumDerived() const;
+    QLineEdit* ctrlImportLocation() const;
+    QPushButton* ctrlButtonBrowse() const;
+    QLineEdit* ctrlImportNamespace() const;
+    QLineEdit* ctrlImportObject() const;
+    QComboBox* ctrlContainerObject() const;
+    QComboBox* ctrlContainerKey() const;
+    QComboBox* ctrlContainerValue() const;
+    QPlainTextEdit* ctrlDescription() const;
+    QCheckBox* ctrlDeprecated() const;
+    QLineEdit* ctrlDeprecateHint() const;
 
     //!< Shows/hides the "Enumeration Details:" row.
     void setEnumRowVisible(bool visible);
@@ -71,7 +71,7 @@ public:
     void setContainerRowVisible(bool visible);
 
 private:
-    void buildUi(void);
+    void buildUi();
 
 private:
     QFormLayout*    mForm;

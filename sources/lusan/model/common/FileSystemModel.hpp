@@ -161,7 +161,7 @@ public:
      * \brief   Returns the root paths of the file system model.
      * \return  The map of root paths.
      **/
-    const WorkspaceElem& getRootPaths(void) const;
+    const WorkspaceElem& getRootPaths() const;
 
     /**
      * \brief   Returns the file path for the given index.
@@ -173,7 +173,7 @@ public:
     /**
      * \brief   Resets the model and refreshes the model starting from root entry.
      **/
-    void refresh(void);
+    void refresh();
 
     /**
      * \brief   Resets and refreshes the entries of specified index.
@@ -201,7 +201,7 @@ public:
     /**
      * \brief   Cleans the file filter to display all file system data.
      **/
-    void cleanFilters(void);
+    void cleanFilters();
 
     /**
      * \brief   Deletes a file system entry for the given index.
@@ -213,7 +213,7 @@ public:
     /**
      * \brief   Returns the root index of the file system model.
      **/
-    QModelIndex getRootIndex(void) const;
+    QModelIndex getRootIndex() const;
     
     /**
      * \brief   Inserts a new directory into the file system model.
@@ -389,7 +389,7 @@ private:
     /**
      * \brief   Resets the root entry of the file system.
      **/
-    void resetRoot(void);
+    void resetRoot();
 
     /**
      * \brief   Compares the current workspace root paths with the given ones.
@@ -430,7 +430,7 @@ class GeneralFileSystemModel    : public QFileSystemModel
 public:
     GeneralFileSystemModel(QObject* parent = nullptr);
 
-    virtual ~GeneralFileSystemModel(void) = default;
+    virtual ~GeneralFileSystemModel() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

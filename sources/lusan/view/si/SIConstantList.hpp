@@ -61,32 +61,32 @@ public:
     /**
      * \brief   Returns add button object.
      **/
-    QToolButton* ctrlButtonAdd(void);
+    QToolButton* ctrlButtonAdd();
 
     /**
      * \brief   Returns remove button object.
      **/
-    QToolButton* ctrlButtonRemove(void);
+    QToolButton* ctrlButtonRemove();
 
     /**
      * \brief   Returns insert button object.
      **/
-    QToolButton* ctrlButtonInsert(void);
+    QToolButton* ctrlButtonInsert();
     
     /**
      * \brief   Returns move up button object.
      **/
-    QToolButton* ctrlButtonMoveUp(void);
+    QToolButton* ctrlButtonMoveUp();
 
     /**
      * \brief   Returns move down button object.
      **/
-    QToolButton* ctrlButtonMoveDown(void);
+    QToolButton* ctrlButtonMoveDown();
 
     /**
      * \brief   Returns the table widget object.
      **/
-    QTableWidget* ctrlTableList(void);
+    QTableWidget* ctrlTableList();
 
 private:
     Ui::SIConstantList* ui; //!< The user interface object.

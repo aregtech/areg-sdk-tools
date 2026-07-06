@@ -25,6 +25,8 @@
 #include "lusan/data/common/ParamBase.hpp"
 #include "lusan/data/common/TEDataContainer.hpp"
 
+class SMDataTypeData;
+
 /**
  * \class   SMAttributeEntry
  * \brief   One machine attribute (spec 6.10): a typed internal variable with a default
@@ -60,16 +62,18 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline const QString& getValue(void) const;
+    inline const QString& getValue() const;
     inline void setValue(const QString& value);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    virtual QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -99,7 +103,7 @@ public:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -113,13 +117,21 @@ public:
      * \return  Pointer to the created attribute, or nullptr if the name already exists.
      **/
     SMAttributeEntry* createAttribute(const QString& name);
+
+    /**
+     * \brief   Resolves every attribute's declared type against the document's custom
+     *          data types, so `getParamType()`/type-based icons reflect the current registry
+     *          right after a file load (a freshly parsed entry only has the type name).
+     * \param   dataTypes   The document's data type registry.
+     **/
+    void validate(const SMDataTypeData& dataTypes);
 };
 
 //////////////////////////////////////////////////////////////////////////
 // SMAttributeEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& SMAttributeEntry::getValue(void) const
+inline const QString& SMAttributeEntry::getValue() const
 {
     return mValue;
 }

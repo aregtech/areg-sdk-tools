@@ -39,7 +39,7 @@ OfflineScopesModel::OfflineScopesModel(QObject* parent)
     mRootIndex = createIndex(0, 0, nullptr);
 }
 
-OfflineScopesModel::~OfflineScopesModel(void)
+OfflineScopesModel::~OfflineScopesModel()
 {
 }
 
@@ -247,7 +247,7 @@ void OfflineScopesModel::buildScope(ScopeRoot& root, QString& scopePath, uint32_
 // Private helper methods
 //////////////////////////////////////////////////////////////////////////
 
-void OfflineScopesModel::_buildScopeTree(void)
+void OfflineScopesModel::_buildScopeTree()
 {
     if (mLoggingModel == nullptr)
         return;

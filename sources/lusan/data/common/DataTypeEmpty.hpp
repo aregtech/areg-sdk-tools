@@ -35,7 +35,7 @@ public:
      * \brief   Default constructor.
      * \param   parent  The parent element.
      **/
-    DataTypeEmpty(void);
+    DataTypeEmpty();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -51,7 +51,7 @@ public:
      * \brief Gets the ID of the element.
      * \return The ID of the element.
      */
-    inline unsigned int getId(void) const;
+    inline unsigned int getId() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -61,7 +61,7 @@ public:
      * \brief   Checks if the data type is valid.
      * \return  True if the data type is valid, false otherwise.
      **/
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
 
     /**
      * \brief   Reads data from an XML stream.
@@ -81,7 +81,7 @@ protected:
      * \brief Gets the next available ID.
      * \return The next available ID.
      */
-    virtual unsigned int getNextId(void) const override;
+    virtual unsigned int getNextId() const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

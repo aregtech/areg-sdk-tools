@@ -48,51 +48,51 @@ public:
 public:
     explicit SIDataTypeDetails(QWidget *parent = nullptr);
     
-    QLineEdit* ctrlName(void) const;
+    QLineEdit* ctrlName() const;
     
-    QRadioButton* ctrlTypeStruct(void)  const;
+    QRadioButton* ctrlTypeStruct()  const;
     
-    QRadioButton* ctrlTypeEnum(void)  const;
+    QRadioButton* ctrlTypeEnum()  const;
     
-    QRadioButton* ctrlTypeImport(void) const;
+    QRadioButton* ctrlTypeImport() const;
     
-    QRadioButton* ctrlTypeContainer(void) const;
+    QRadioButton* ctrlTypeContainer() const;
     
-    QComboBox* ctrlContainerObject(void) const;
+    QComboBox* ctrlContainerObject() const;
     
-    QComboBox* ctrlContainerKey(void) const;
+    QComboBox* ctrlContainerKey() const;
     
-    QComboBox* ctrlContainerValue(void) const;
+    QComboBox* ctrlContainerValue() const;
     
-    QPlainTextEdit* ctrlDescription(void) const;
+    QPlainTextEdit* ctrlDescription() const;
     
-    QCheckBox* ctrlDeprecated(void) const;
+    QCheckBox* ctrlDeprecated() const;
     
-    QLineEdit* ctrlDeprecateHint(void) const;
+    QLineEdit* ctrlDeprecateHint() const;
     
-    QComboBox* ctrlEnumDerived(void) const;
+    QComboBox* ctrlEnumDerived() const;
     
-    QLineEdit* ctrlImportLocation(void) const;
+    QLineEdit* ctrlImportLocation() const;
     
-    QPushButton* ctrlButtonBrowse(void) const;
+    QPushButton* ctrlButtonBrowse() const;
     
-    QLineEdit* ctrlImportNamespace(void) const;
+    QLineEdit* ctrlImportNamespace() const;
 
-    QLineEdit* ctrlImportObject(void) const;
+    QLineEdit* ctrlImportObject() const;
 
-    SIDataTypeDetails::CtrlGroup ctrlDetailsEnum(void) const;
+    SIDataTypeDetails::CtrlGroup ctrlDetailsEnum() const;
 
-    SIDataTypeDetails::CtrlGroup ctrlDetailsImport(void) const;
+    SIDataTypeDetails::CtrlGroup ctrlDetailsImport() const;
 
-    SIDataTypeDetails::CtrlGroup ctrlDetailsContainer(void) const;
+    SIDataTypeDetails::CtrlGroup ctrlDetailsContainer() const;
 
-    QFormLayout* ctrlLayout(void) const;
+    QFormLayout* ctrlLayout() const;
 
-    QSpacerItem* ctrlSpacer1(void) const;
+    QSpacerItem* ctrlSpacer1() const;
 
-    QSpacerItem* ctrlSpacer2(void) const;
+    QSpacerItem* ctrlSpacer2() const;
 
-    SpaceItem ctrlSpacer(void) const;
+    SpaceItem ctrlSpacer() const;
 
     void setSpace(int newHeight);
 

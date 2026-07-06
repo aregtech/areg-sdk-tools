@@ -49,7 +49,7 @@ protected:
 // Attributes
 //////////////////////////////////////////////////////////////////////////
 protected:
-    inline StateMachineData& data(void) const;
+    inline StateMachineData& data() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -74,7 +74,7 @@ public:
 // SMCommand inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline StateMachineData& SMCommand::data(void) const
+inline StateMachineData& SMCommand::data() const
 {
     return mData;
 }

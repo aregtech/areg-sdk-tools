@@ -156,14 +156,14 @@ void NavigationDock::initSize()
     setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
 }
 
-QSize NavigationDock::sizeHint(void) const
+QSize NavigationDock::sizeHint() const
 {
     QSize result{ QDockWidget::sizeHint() };
     result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
     return result;
 }
 
-QSize NavigationDock::minimumSizeHint(void) const
+QSize NavigationDock::minimumSizeHint() const
 {
     QSize result{ QDockWidget::minimumSizeHint() };
     result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
@@ -171,14 +171,14 @@ QSize NavigationDock::minimumSizeHint(void) const
     return result;
 }
 
-void NavigationDock::onOptionsOpening(void)
+void NavigationDock::onOptionsOpening()
 {
     static_cast<NavigationWindow &>(mFileSystem).optionOpenning();
     static_cast<NavigationWindow &>(mLiveScopes).optionOpenning();
     static_cast<NavigationWindow &>(mOfflineScopes).optionOpenning();
 }
 
-void NavigationDock::onOptionsApplied(void)
+void NavigationDock::onOptionsApplied()
 {
     static_cast<NavigationWindow &>(mFileSystem).optionApplied();
     static_cast<NavigationWindow &>(mLiveScopes).optionApplied();

@@ -128,7 +128,7 @@ void ProjectSettings::onButtonClicked(QAbstractButton* button)
     }
 }
 
-void ProjectSettings::onAcceptClicked(void)
+void ProjectSettings::onAcceptClicked()
 {
     if (mOptionProjectDirs->canAcceptOptions() && mOptionPageWorkspace->canAcceptOptions() && mOptionPageLogging->canAcceptOptions())
     {

@@ -214,7 +214,7 @@ SMMethodEntry& SMMethodEntry::operator = (SMMethodEntry&& other) noexcept
     return *this;
 }
 
-bool SMMethodEntry::isValid(void) const
+bool SMMethodEntry::isValid() const
 {
     return (getName().isEmpty() == false);
 }
@@ -298,12 +298,12 @@ SMMethodData::SMMethodData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-SMMethodData::~SMMethodData(void)
+SMMethodData::~SMMethodData()
 {
     removeAll();
 }
 
-bool SMMethodData::isValid(void) const
+bool SMMethodData::isValid() const
 {
     return true;
 }
@@ -372,7 +372,7 @@ SMMethodEntry* SMMethodData::findTrigger(const QString& name) const
     return ((method != nullptr) && method->isTrigger()) ? method : nullptr;
 }
 
-void SMMethodData::removeAll(void)
+void SMMethodData::removeAll()
 {
     for (SMMethodEntry* entry : getElements())
     {

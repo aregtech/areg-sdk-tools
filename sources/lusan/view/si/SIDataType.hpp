@@ -79,7 +79,7 @@ class SIDataType    : public QScrollArea
 public:
     explicit SIDataType(SIDataTypeModel & model, QWidget *parent = nullptr);
 
-    virtual ~SIDataType(void);
+    virtual ~SIDataType();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -132,42 +132,42 @@ protected:
     /**
      * \brief Triggered when the add button is clicked.
      */
-    void onAddClicked(void);
+    void onAddClicked();
 
     /**
      * \brief Triggered when the insert button is clicked.
      */
-    void onInsertClicked(void);
+    void onInsertClicked();
     
     /**
      * \brief Triggered when the add field button is clicked.
      */
-    void onAddFieldClicked(void);
+    void onAddFieldClicked();
 
     /**
      * \brief Triggered when the insert field button is clicked.
      */
-    void onInsertFieldClicked(void);
+    void onInsertFieldClicked();
     
     /**
      * \brief Triggered when the remove button is clicked.
      */
-    void onRemoveClicked(void);
+    void onRemoveClicked();
 
     /**
      * \brief Triggered when the remove field button is clicked.
      */
-    void onRemoveFieldClicked(void);
+    void onRemoveFieldClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked.
      **/
-    void onMoveUpClicked(void);
+    void onMoveUpClicked();
 
     /**
      * \brief   Triggered when the move down button is clicked.
      **/
-    void onMoveDownClicked(void);
+    void onMoveDownClicked();
 
     /**
      * \brief Triggered when the data type name is changed.
@@ -190,7 +190,7 @@ protected:
     /**
      * \brief   Triggered when the description is changed.
      **/
-    void onDescriptionChanged(void);
+    void onDescriptionChanged();
 
     /**
      * \brief   Triggered when the struct is selected.
@@ -262,7 +262,7 @@ protected:
     /**
      * \brief   Triggered when the import location browse button is clicked.
      **/
-    void onImportLocationBrowse(void);
+    void onImportLocationBrowse();
 
     /**
      * \brief   Triggered when the field name is changed.
@@ -285,7 +285,7 @@ protected:
     /**
      * \brief   Triggered when the field description is changed.
      **/
-    void onFieldDescriptionChanged(void);
+    void onFieldDescriptionChanged();
 
     /**
      * \brief   Triggered when the field deprecated flag is changed.
@@ -335,17 +335,17 @@ private:
     /**
      * \brief Updates the data in the table.
      */
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief Updates the widgets.
      */
-    void updateWidgets(void);
+    void updateWidgets();
 
     /**
      * \brief Initializes the signals.
      */
-    void setupSignals(void);
+    void setupSignals();
 
     /**
      * \brief Blocks the basic signals.
@@ -493,7 +493,7 @@ private:
     /**
      * \brief   Gets the field object of structure or enumeration of selected node of tree table.
      **/
-    inline ElementBase* getSelectedField(void) const;
+    inline ElementBase* getSelectedField() const;
 
     /**
      * \brief   Disables or enables the radio buttons to select data type object.
@@ -516,7 +516,7 @@ private:
     /**
      * \brief   Called when no item is selected in the list or the list is empty.
      **/
-    inline void showClean(void);
+    inline void showClean();
 
     /**
      * \brief   Moves the data type up in the list.
@@ -569,7 +569,7 @@ private:
     /**
      * \brief   Returns generated unique name for the data type.
      **/
-    inline QString genName(void);
+    inline QString genName();
 
     /**
      * \brief   Returns generated unique name for the data type field.
@@ -580,17 +580,17 @@ private:
     /**
      * \brief   Returns list of basic container data type objects.
      **/
-    static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
+    static const QList<DataTypeBasicContainer *> & _getContainerTypes();
 
     /**
      * \brief   Returns list of custom data type objects.
      **/
-    static const QList<DataTypeBase *>& _getIntegerTypes(void);
+    static const QList<DataTypeBase *>& _getIntegerTypes();
 
     /**
      * \brief   Returns list of predefined data type objects.
      **/
-    static const QList<DataTypeBase *>& _getPredefinedTypes(void);
+    static const QList<DataTypeBase *>& _getPredefinedTypes();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

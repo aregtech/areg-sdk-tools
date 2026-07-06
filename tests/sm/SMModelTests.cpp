@@ -272,7 +272,7 @@ namespace
         note.text = "Shared yellow phase note.";
     }
 
-    void testConstructionAndRepresentation(void)
+    void testConstructionAndRepresentation()
     {
         std::printf("[Test] construction and representation\n");
         StateMachineData doc;
@@ -304,7 +304,7 @@ namespace
         CHECK(doc.getLayout().getNotes().first().id != 0);
     }
 
-    void testRegistryLookups(void)
+    void testRegistryLookups()
     {
         std::printf("[Test] name-based registry lookups\n");
         StateMachineData doc;
@@ -327,7 +327,7 @@ namespace
         CHECK(doc.findState("Ghost") == nullptr);
     }
 
-    void testSharedStimulusNameSpace(void)
+    void testSharedStimulusNameSpace()
     {
         std::printf("[Test] shared stimulus name space\n");
         StateMachineData doc;
@@ -349,7 +349,7 @@ namespace
         CHECK(doc.isStimulusName("Unknown") == false);
     }
 
-    void testOrderingInvariants(void)
+    void testOrderingInvariants()
     {
         std::printf("[Test] document-order preservation\n");
         StateMachineData doc;
@@ -378,7 +378,7 @@ namespace
         CHECK(trans.at(1)->isExternal() == false);
     }
 
-    void testIdInvariants(void)
+    void testIdInvariants()
     {
         std::printf("[Test] monotonic, collision-free IDs (all sections incl. notes)\n");
         StateMachineData doc;

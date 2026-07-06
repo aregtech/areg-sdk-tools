@@ -54,7 +54,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIMethodData(void);
+    virtual ~SIMethodData();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -181,25 +181,25 @@ public:
      * \brief   Gets the list of all method objects.
      * \return  The list of all method objects.
      **/
-    inline const QList<SIMethodBase*>& getAllMethods(void) const;
+    inline const QList<SIMethodBase*>& getAllMethods() const;
 
     /**
      * \brief   Gets the list of request method objects.
      * \return  The list of request method objects.
      **/
-    inline const QList<SIMethodRequest*>& getRequests(void) const;
+    inline const QList<SIMethodRequest*>& getRequests() const;
 
     /**
      * \brief   Gets the list of response method objects.
      * \return  The list of response method objects.
      **/
-    inline const QList<SIMethodResponse*>& getResponses(void) const;
+    inline const QList<SIMethodResponse*>& getResponses() const;
 
     /**
      * \brief   Gets the list of broadcast method objects.
      * \return  The list of broadcast method objects.
      **/
-    inline const QList<SIMethodBroadcast*>& getBroadcasts(void) const;
+    inline const QList<SIMethodBroadcast*>& getBroadcasts() const;
 
     /**
      * \brief   Reads data from an XML stream.
@@ -217,7 +217,7 @@ public:
     /**
      * \brief   Removes all entries and frees resources.
      **/
-    void removeAll(void);
+    void removeAll();
 
     /**
      * \brief   Converts a method to a new type.
@@ -359,22 +359,22 @@ inline bool SIMethodData::hasBroadcast(const QString& broadcast) const
     return (findMethod(broadcast, SIMethodBase::eMethodType::MethodBroadcast) != nullptr);
 }
 
-inline const QList<SIMethodBase*>& SIMethodData::getAllMethods(void) const
+inline const QList<SIMethodBase*>& SIMethodData::getAllMethods() const
 {
     return getElements();
 }
 
-inline const QList<SIMethodRequest*>& SIMethodData::getRequests(void) const
+inline const QList<SIMethodRequest*>& SIMethodData::getRequests() const
 {
     return mRequestMethods;
 }
 
-inline const QList<SIMethodResponse*>& SIMethodData::getResponses(void) const
+inline const QList<SIMethodResponse*>& SIMethodData::getResponses() const
 {
     return mResponseMethods;
 }
 
-inline const QList<SIMethodBroadcast*>& SIMethodData::getBroadcasts(void) const
+inline const QList<SIMethodBroadcast*>& SIMethodData::getBroadcasts() const
 {
     return mBroadcastMethods;
 }

@@ -95,7 +95,7 @@ SMTimerEntry& SMTimerEntry::operator = (SMTimerEntry&& other) noexcept
     return *this;
 }
 
-bool SMTimerEntry::isValid(void) const
+bool SMTimerEntry::isValid() const
 {
     return (mName.isEmpty() == false) && (mTimeout >= 1);
 }
@@ -150,7 +150,7 @@ SMTimerData::SMTimerData(const QList<SMTimerEntry>& entries, ElementBase* parent
 {
 }
 
-bool SMTimerData::isValid(void) const
+bool SMTimerData::isValid() const
 {
     return true;
 }

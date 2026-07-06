@@ -29,7 +29,7 @@
 
 namespace
 {
-    const VersionNumber& currentFormatVersion(void)
+    const VersionNumber& currentFormatVersion()
     {
         static const VersionNumber kCurrent(StateMachineData::XML_FORMAT_DEFAULT);
         return kCurrent;
@@ -175,7 +175,7 @@ namespace
     }
 }
 
-StateMachineData::StateMachineData(void)
+StateMachineData::StateMachineData()
     : ElementBase       (MINIMUM_ID, nullptr)
     , mFilePath         ( )
     , mFormatVersion    (XML_FORMAT_DEFAULT)
@@ -247,6 +247,14 @@ bool StateMachineData::readFromFile(const QString& filePath)
 
         file.close();
         mOpenSuccess = (xml.hasError() == false);
+        if (mOpenSuccess)
+        {
+            // A freshly parsed entry only carries its type name; resolve the cached type
+            // pointer now so icons/pickers match an interactively edited document.
+            mDataTypes.validate(mDataTypes);
+            mAttributes.validate(mDataTypes);
+            mConstants.validate(mDataTypes);
+        }
     }
 
     return mOpenSuccess;
@@ -533,11 +541,11 @@ bool StateMachineData::migrateFromVersion(const VersionNumber& sourceVersion)
 
 bool StateMachineData::migrateTo100(const VersionNumber& sourceVersion)
 {
-    (void) sourceVersion;
+    Q_UNUSED(sourceVersion);
     return true;
 }
 
-void StateMachineData::clearUnknownContent(void)
+void StateMachineData::clearUnknownContent()
 {
     mUnknownRootAttributes.clear();
     mUnknownRootElements.clear();
@@ -576,7 +584,7 @@ SMStateEntry* StateMachineData::findState(const QString& name) const
     return mStates.findStateRecursive(name);
 }
 
-int StateMachineData::getStateCount(void) const
+int StateMachineData::getStateCount() const
 {
     return mStates.countStatesRecursive();
 }

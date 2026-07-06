@@ -36,52 +36,52 @@ SIOverviewDetails::SIOverviewDetails(QWidget* parent)
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
 
-QLineEdit* SIOverviewDetails::ctrlMajor(void)
+QLineEdit* SIOverviewDetails::ctrlMajor()
 {
     return ui->editVersionMajor;
 }
 
-QLineEdit* SIOverviewDetails::ctrlMinor(void)
+QLineEdit* SIOverviewDetails::ctrlMinor()
 {
     return ui->editVersionMinor;
 }
 
-QLineEdit* SIOverviewDetails::ctrlPatch(void)
+QLineEdit* SIOverviewDetails::ctrlPatch()
 {
     return ui->editVersionPatch;
 }
 
-QLineEdit* SIOverviewDetails::ctrlName(void)
+QLineEdit* SIOverviewDetails::ctrlName()
 {
     return ui->editServiceName;
 }
 
-QRadioButton* SIOverviewDetails::ctrlPublic(void)
+QRadioButton* SIOverviewDetails::ctrlPublic()
 {
     return ui->radioPublic;
 }
 
-QRadioButton* SIOverviewDetails::ctrlPrivate(void)
+QRadioButton* SIOverviewDetails::ctrlPrivate()
 {
     return ui->radioPrivate;
 }
 
-QRadioButton* SIOverviewDetails::ctrlInternet(void)
+QRadioButton* SIOverviewDetails::ctrlInternet()
 {
     return ui->radioInternet;
 }
 
-QPlainTextEdit* SIOverviewDetails::ctrlDescription(void)
+QPlainTextEdit* SIOverviewDetails::ctrlDescription()
 {
     return ui->textDescribe;
 }
 
-QCheckBox* SIOverviewDetails::ctrlDeprecated(void)
+QCheckBox* SIOverviewDetails::ctrlDeprecated()
 {
     return ui->checkDeprecated;
 }
 
-QLineEdit* SIOverviewDetails::ctrlDeprecateHint(void)
+QLineEdit* SIOverviewDetails::ctrlDeprecateHint()
 {
     return ui->editDeprecated;
 }

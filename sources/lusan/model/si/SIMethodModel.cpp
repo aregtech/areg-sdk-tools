@@ -57,22 +57,22 @@ SIMethodBase* SIMethodModel::findMethod(uint32_t id) const
     return mData.findMethod(id);
 }
 
-const QList<SIMethodBase*>& SIMethodModel::getMethodList(void) const
+const QList<SIMethodBase*>& SIMethodModel::getMethodList() const
 {
     return mData.getAllMethods();
 }
 
-const QList<SIMethodBroadcast*>& SIMethodModel::getBroadcastMethods(void) const
+const QList<SIMethodBroadcast*>& SIMethodModel::getBroadcastMethods() const
 {
     return mData.getBroadcasts();
 }
 
-const QList<SIMethodRequest*>& SIMethodModel::getRequestMethods(void) const
+const QList<SIMethodRequest*>& SIMethodModel::getRequestMethods() const
 {
     return mData.getRequests();
 }
 
-const QList<SIMethodResponse*>& SIMethodModel::getResponseMethods(void) const
+const QList<SIMethodResponse*>& SIMethodModel::getResponseMethods() const
 {
     return mData.getResponses();
 }

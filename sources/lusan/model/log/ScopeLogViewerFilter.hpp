@@ -44,13 +44,13 @@ private:
         T           data    { 0u };     //!< The data to filter
         bool        isSet   { false };  //!< True if the data is set, false otherwise
 
-        inline sTData(void) : data(0u), isSet(false) {}
+        inline sTData() : data(0u), isSet(false) {}
         inline sTData(const T& value) : data(value), isSet(true) {}
         inline operator const T& ( ) const  { return data; }
         inline operator bool ( ) const      { return isSet; }
-        inline void     clear(void)         { data = 0u; isSet = false; }
+        inline void     clear()         { data = 0u; isSet = false; }
         inline bool     valid() const       { return isSet; }
-        inline const T& value(void) const   { return data; }
+        inline const T& value() const   { return data; }
     };
 
     using   SessionData = sTData<uint32_t>;
@@ -86,7 +86,7 @@ public:
      **/
     ScopeLogViewerFilter(uint32_t scopeId = 0u, LoggingModelBase* model = nullptr);
 
-    virtual ~ScopeLogViewerFilter(void);
+    virtual ~ScopeLogViewerFilter();
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -173,7 +173,7 @@ public:
     /**
      * \brief   Clears all filters.
      **/
-    virtual void clearFilters(void) override;
+    virtual void clearFilters() override;
 
     /**
      * \brief   Returns true if the given source row has exact match of the filters.
@@ -222,7 +222,7 @@ private:
      * \brief   Clears all filter data.
      *          The method resets scope ID, session IDs, instance IDs, and priority bits.
      **/
-    inline void _clearData(void);
+    inline void _clearData();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

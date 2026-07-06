@@ -50,7 +50,7 @@ protected:
 // Attributes
 //////////////////////////////////////////////////////////////////////////
 protected:
-    inline ServiceInterfaceData& data(void) const;
+    inline ServiceInterfaceData& data() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -75,7 +75,7 @@ public:
 // SICommand inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline ServiceInterfaceData& SICommand::data(void) const
+inline ServiceInterfaceData& SICommand::data() const
 {
     return mData;
 }

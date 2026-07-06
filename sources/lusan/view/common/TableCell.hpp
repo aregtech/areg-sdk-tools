@@ -46,8 +46,8 @@ class IETableHelper
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 protected:
-    IETableHelper(void) = default;
-    virtual ~IETableHelper(void) = default;
+    IETableHelper() = default;
+    virtual ~IETableHelper() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -57,7 +57,7 @@ public:
     /**
      * \brief   Returns the number of columns in the table.
      **/
-    virtual int getColumnCount(void) const = 0;
+    virtual int getColumnCount() const = 0;
 
     /**
      * \brief   Returns the text of the cell.
@@ -182,7 +182,7 @@ private slots:
      *          This slot is used to handle the event when the user has finished editing the text
      *          in the editor widget. It validates the new text and updates the model accordingly.
      **/
-    void onEditorTextChangeFinished(void);
+    void onEditorTextChangeFinished();
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

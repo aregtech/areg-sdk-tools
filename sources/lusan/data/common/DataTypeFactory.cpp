@@ -147,21 +147,21 @@ DataTypeCustom* DataTypeFactory::createCustomDataType(DataTypeBase::eCategory ca
     }
 }
 
-const QList<DataTypePrimitive*>& DataTypeFactory::getPrimitiveTypes(void)
+const QList<DataTypePrimitive*>& DataTypeFactory::getPrimitiveTypes()
 {
     if (mPredefinePrimitiveTypes.isEmpty())
         _initPredefined();
     return mPredefinePrimitiveTypes;
 }
 
-const QList<DataTypeBasicObject*>& DataTypeFactory::getBasicTypes(void)
+const QList<DataTypeBasicObject*>& DataTypeFactory::getBasicTypes()
 {
     if (mPredefinedBasicTypes.isEmpty())
         _initPredefined();
     return mPredefinedBasicTypes;
 }
 
-const QList<DataTypeBasicContainer*>& DataTypeFactory::getContainerTypes(void)
+const QList<DataTypeBasicContainer*>& DataTypeFactory::getContainerTypes()
 {
     if (mPredefinedContainerTypes.isEmpty())
         _initPredefined();
@@ -224,14 +224,14 @@ int DataTypeFactory::getPredefinedTypes(QList<DataTypeBase *>& result, const QLi
     return static_cast<int>(result.size()) - initCount;
 }
 
-void DataTypeFactory::warmup(void)
+void DataTypeFactory::warmup()
 {
-    (void)getPrimitiveTypes();
-    (void)getBasicTypes();
-    (void)getContainerTypes();
+    getPrimitiveTypes();
+    getBasicTypes();
+    getContainerTypes();
 }
 
-void DataTypeFactory::_initPredefined(void)
+void DataTypeFactory::_initPredefined()
 {
     Q_ASSERT(mPredefinePrimitiveTypes.isEmpty());
     Q_ASSERT(mPredefinedBasicTypes.isEmpty());

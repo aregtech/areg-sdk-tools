@@ -135,7 +135,7 @@ SMEventEntry& SMEventEntry::operator = (SMEventEntry&& other) noexcept
     return *this;
 }
 
-bool SMEventEntry::isValid(void) const
+bool SMEventEntry::isValid() const
 {
     return (getName().isEmpty() == false);
 }
@@ -189,12 +189,12 @@ SMEventData::SMEventData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-SMEventData::~SMEventData(void)
+SMEventData::~SMEventData()
 {
     removeAll();
 }
 
-bool SMEventData::isValid(void) const
+bool SMEventData::isValid() const
 {
     return true;
 }
@@ -257,7 +257,7 @@ SMEventEntry* SMEventData::findEvent(const QString& name) const
     return (found != nullptr) ? *found : nullptr;
 }
 
-void SMEventData::removeAll(void)
+void SMEventData::removeAll()
 {
     for (SMEventEntry* entry : getElements())
     {

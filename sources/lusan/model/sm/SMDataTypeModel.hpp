@@ -69,11 +69,11 @@ public:
 // Reads
 //////////////////////////////////////////////////////////////////////////
 public:
-    const SMDataTypeData& getDataTypeData(void) const;
-    SMDataTypeData& getDataTypeData(void);
+    const SMDataTypeData& getDataTypeData() const;
+    SMDataTypeData& getDataTypeData();
 
-    const QList<DataTypeCustom*>& getCustomDataTypes(void) const;
-    int getDataTypeCount(void) const;
+    const QList<DataTypeCustom*>& getCustomDataTypes() const;
+    int getDataTypeCount() const;
 
     DataTypeCustom* findDataType(const QString& name) const;
     DataTypeCustom* findDataType(uint32_t id) const;
@@ -87,7 +87,7 @@ public:
     int findChildIndex(const DataTypeCustom* dataType, const QString& childName) const;
     int getChildCount(const DataTypeCustom* dataType) const;
 
-    DocModelNotifier& getNotifier(void) const;
+    DocModelNotifier& getNotifier() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Mutations — data type level
@@ -142,8 +142,8 @@ public:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    const SMDataTypeData& types(void) const;
-    SMDataTypeData& types(void);
+    const SMDataTypeData& types() const;
+    SMDataTypeData& types();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

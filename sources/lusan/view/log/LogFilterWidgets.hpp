@@ -71,22 +71,22 @@ public:
     /**
      * \brief   Clears filter data.
      **/
-    virtual void clearFilter(void);
+    virtual void clearFilter();
 
     /**
      * \brief   Shows the filter widget and set focus on the list widget.
      **/
-    virtual void showFilter(void);
+    virtual void showFilter();
 
     /**
      * \brief   Returns the list of filter data items.
      **/
-    inline const QList<NELusanCommon::FilterData>& getData(void) const;
+    inline const QList<NELusanCommon::FilterData>& getData() const;
 
     /**
      * \brief   Returns the list of filter data items.
      **/
-    inline QWidget* getWidget(void) const;
+    inline QWidget* getWidget() const;
 
 /************************************************************************
  * Signals
@@ -141,7 +141,7 @@ public:
     /**
      * \brief   Clears filter data.
      **/
-    virtual void clearFilter(void) override;
+    virtual void clearFilter() override;
 
 protected:
     /**
@@ -189,12 +189,12 @@ public:
     /**
      * \brief   Clears filter data.
      **/
-    virtual void clearFilter(void) override;
+    virtual void clearFilter() override;
 
     /**
      * \brief   Shows the filter widget and set focus on the list widget.
      **/
-    virtual void showFilter(void) override;
+    virtual void showFilter() override;
 
 protected:
 
@@ -344,12 +344,12 @@ public:
 //////////////////////////////////////////////////////////////////////////
 // inline methods
 //////////////////////////////////////////////////////////////////////////
-inline const QList<NELusanCommon::FilterData>& LogFilterBase::getData(void) const
+inline const QList<NELusanCommon::FilterData>& LogFilterBase::getData() const
 {
     return mData;
 }
 
-inline QWidget* LogFilterBase::getWidget(void) const
+inline QWidget* LogFilterBase::getWidget() const
 {
     return mWidget;
 }

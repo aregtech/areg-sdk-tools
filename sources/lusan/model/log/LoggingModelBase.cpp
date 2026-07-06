@@ -33,7 +33,7 @@
 #include <QIcon>
 #include <QSize>
 
-const QStringList& LoggingModelBase::getHeaderList(void)
+const QStringList& LoggingModelBase::getHeaderList()
 {
     static QStringList _headers
     {
@@ -52,13 +52,13 @@ const QStringList& LoggingModelBase::getHeaderList(void)
     return _headers;
 }
 
-const QList<int>& LoggingModelBase::getHeaderWidths(void)
+const QList<int>& LoggingModelBase::getHeaderWidths()
 {
     static QList<int>  _widths{ 50, 100, 100, 50, 100, 50, 50, 200 };
     return _widths;
 }
 
-const QList<LoggingModelBase::eColumn>& LoggingModelBase::getDefaultColumns(void)
+const QList<LoggingModelBase::eColumn>& LoggingModelBase::getDefaultColumns()
 {
     static QList<LoggingModelBase::eColumn>   _columnIds
     {
@@ -98,7 +98,7 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
 {
 }
 
-LoggingModelBase::~LoggingModelBase(void)
+LoggingModelBase::~LoggingModelBase()
 {
     _cleanNodes();
 }
@@ -266,17 +266,17 @@ void LoggingModelBase::setActiveColumns(const QList<LoggingModelBase::eColumn>& 
     endResetModel();
 }
 
-void LoggingModelBase::refresh(void)
+void LoggingModelBase::refresh()
 {
     beginResetModel();
     endResetModel();
 }
 
-void LoggingModelBase::setupModel(void)
+void LoggingModelBase::setupModel()
 {
 }
 
-void LoggingModelBase::releaseModel(void)
+void LoggingModelBase::releaseModel()
 {
 }
 
@@ -289,17 +289,17 @@ void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
     }
 }
 
-QString LoggingModelBase::getDatabasePath(void) const
+QString LoggingModelBase::getDatabasePath() const
 {
     return QString::fromStdString(mDatabase.database_path().data());
 }
 
-void LoggingModelBase::closeDatabase(void)
+void LoggingModelBase::closeDatabase()
 {
     _closeDatabase();
 }
 
-bool LoggingModelBase::isOperable(void) const
+bool LoggingModelBase::isOperable() const
 {
     return mDatabase.is_operable();
 }
@@ -370,7 +370,7 @@ void LoggingModelBase::getPriorityValues(std::vector<areg::String>& names, std::
     }
 }
 
-const std::vector< areg::ConnectedInstance> & LoggingModelBase::getLogInstances(void)
+const std::vector< areg::ConnectedInstance> & LoggingModelBase::getLogInstances()
 {
     if (isOfflineLogging() && mInstances.empty())
     {
@@ -676,7 +676,7 @@ int LoggingModelBase::getAlignmentData(eColumn column) const
     }
 }
 
-inline void LoggingModelBase::_cleanNodes(void)
+inline void LoggingModelBase::_cleanNodes()
 {
     for (ScopeRoot* root : mRootList)
     {
@@ -687,7 +687,7 @@ inline void LoggingModelBase::_cleanNodes(void)
     mRootList.clear();
 }
 
-void LoggingModelBase::on_run(void)
+void LoggingModelBase::on_run()
 {
     uint32_t    nextStart   { 0 };
     int         readCount   { 0 };

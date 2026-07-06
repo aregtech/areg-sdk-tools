@@ -88,7 +88,7 @@ QString DataTypePrimitive::convertValue(const QString& value) const
 // DataTypePrimitiveInt class implementation
 //////////////////////////////////////////////////////////////////////////
 
-DataTypePrimitiveInt::DataTypePrimitiveInt(void)
+DataTypePrimitiveInt::DataTypePrimitiveInt()
     : DataTypePrimitive(DataTypeBase::eCategory::PrimitiveSint)
 {
 }
@@ -139,7 +139,7 @@ QString DataTypePrimitiveInt::convertValue(const QString& value) const
 // DataTypePrimitiveUint class implementation
 //////////////////////////////////////////////////////////////////////////
 
-DataTypePrimitiveUint::DataTypePrimitiveUint(void)
+DataTypePrimitiveUint::DataTypePrimitiveUint()
     : DataTypePrimitive(DataTypeBase::eCategory::PrimitiveUint)
 {
 }
@@ -190,7 +190,7 @@ QString DataTypePrimitiveUint::convertValue(const QString& value) const
 // DataTypePrimitiveFloat class implementation
 //////////////////////////////////////////////////////////////////////////
 
-DataTypePrimitiveFloat::DataTypePrimitiveFloat(void)
+DataTypePrimitiveFloat::DataTypePrimitiveFloat()
     : DataTypePrimitive(DataTypeBase::eCategory::PrimitiveFloat)
 {
 }

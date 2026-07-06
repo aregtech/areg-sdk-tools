@@ -60,7 +60,7 @@ public:
     /**
      * \brief   Closes the currently opened database.
      **/
-    virtual void closeDatabase(void) override;
+    virtual void closeDatabase() override;
 
     /**
      * \brief   Sets up the logging query to run. By default, it reads all logs without filter.

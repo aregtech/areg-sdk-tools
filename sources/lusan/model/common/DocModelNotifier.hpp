@@ -72,7 +72,7 @@ class DocModelNotifier : public QObject
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit DocModelNotifier(QObject* parent = nullptr);
-    virtual ~DocModelNotifier(void) = default;
+    virtual ~DocModelNotifier() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Emit helpers (only commands call these)
@@ -84,7 +84,7 @@ public:
     void notifyListReordered(uint32_t ownerId, eDocElementKind kind);
     void notifyLayoutChanged(const QList<uint32_t>& ownerIds);
     void notifyNameChanged(uint32_t id, const QString& oldName, const QString& newName);
-    void notifyDocumentReloaded(void);
+    void notifyDocumentReloaded();
     void notifyReadOnlyChanged(bool readOnly);
 
 //////////////////////////////////////////////////////////////////////////
@@ -97,7 +97,7 @@ signals:
     void listReordered(uint32_t ownerId, eDocElementKind kind);
     void layoutChanged(const QList<uint32_t>& ownerIds);
     void nameChanged(uint32_t id, const QString& oldName, const QString& newName);
-    void documentReloaded(void);
+    void documentReloaded();
     void readOnlyChanged(bool readOnly);
 };
 

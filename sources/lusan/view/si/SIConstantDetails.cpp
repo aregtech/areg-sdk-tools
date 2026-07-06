@@ -34,32 +34,32 @@ SIConstantDetails::SIConstantDetails(QWidget* parent)
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
 
-QLineEdit* SIConstantDetails::ctrlName(void)
+QLineEdit* SIConstantDetails::ctrlName()
 {
     return ui->editName;
 }
 
-QComboBox* SIConstantDetails::ctrlTypes(void)
+QComboBox* SIConstantDetails::ctrlTypes()
 {
     return ui->comboTypes;
 }
 
-QLineEdit* SIConstantDetails::ctrlValue(void)
+QLineEdit* SIConstantDetails::ctrlValue()
 {
     return ui->editValue;
 }
 
-QPlainTextEdit* SIConstantDetails::ctrlDescription(void)
+QPlainTextEdit* SIConstantDetails::ctrlDescription()
 {
     return ui->textDescribe;
 }
 
-QCheckBox* SIConstantDetails::ctrlDeprecated(void)
+QCheckBox* SIConstantDetails::ctrlDeprecated()
 {
     return ui->checkDeprecated;
 }
 
-QLineEdit* SIConstantDetails::ctrlDeprecateHint(void)
+QLineEdit* SIConstantDetails::ctrlDeprecateHint()
 {
     return ui->editDeprecated;
 }

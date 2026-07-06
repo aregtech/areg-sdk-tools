@@ -145,7 +145,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (SMTransitionEntry&& other) noe
     return *this;
 }
 
-bool SMTransitionEntry::isValid(void) const
+bool SMTransitionEntry::isValid() const
 {
     return (mStimulus.isEmpty() == false);
 }
@@ -231,7 +231,7 @@ SMTransitionData::SMTransitionData(SMTransitionData&& src) noexcept
 {
 }
 
-SMTransitionData::~SMTransitionData(void)
+SMTransitionData::~SMTransitionData()
 {
     removeAll();
 }
@@ -281,7 +281,7 @@ SMTransitionEntry* SMTransitionData::createTransition(SMTransitionEntry::eStimul
     return entry;
 }
 
-void SMTransitionData::removeAll(void)
+void SMTransitionData::removeAll()
 {
     for (SMTransitionEntry* entry : getElements())
     {
@@ -291,7 +291,7 @@ void SMTransitionData::removeAll(void)
     removeAllElements();
 }
 
-bool SMTransitionData::isValid(void) const
+bool SMTransitionData::isValid() const
 {
     return true;
 }

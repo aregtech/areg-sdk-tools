@@ -68,7 +68,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~DocumentElem(void) = default;
+    virtual ~DocumentElem() = default;
 
 public:
     /**

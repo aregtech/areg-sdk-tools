@@ -48,7 +48,7 @@ class SMOverview : public QScrollArea
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit SMOverview(SMOverviewModel& model, QWidget* parent = nullptr);
-    virtual ~SMOverview(void) = default;
+    virtual ~SMOverview() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -71,20 +71,20 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 private slots:
     void onNameEdited(const QString& text);
-    void onNameCommitted(void);
-    void onVersionEdited(void);
+    void onNameCommitted();
+    void onVersionEdited();
     void onThreadingToggled(bool checked);
-    void onOverviewChanged(void);
+    void onOverviewChanged();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    void buildUi(void);
-    QWidget* buildLinksPanel(void);
-    void setupSignals(void);
-    void updateData(void);
-    void commitDescription(void);
+    void buildUi();
+    QWidget* buildLinksPanel();
+    void setupSignals();
+    void updateData();
+    void commitDescription();
     void showNameValid(bool valid);
     static bool isValidMachineName(const QString& name);
 

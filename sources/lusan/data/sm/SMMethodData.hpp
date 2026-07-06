@@ -92,27 +92,27 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline eMethodType getMethodType(void) const;
+    inline eMethodType getMethodType() const;
     inline void setMethodType(eMethodType type);
 
-    inline bool isTrigger(void) const;
-    inline bool isAction(void) const;
-    inline bool isCondition(void) const;
+    inline bool isTrigger() const;
+    inline bool isAction() const;
+    inline bool isCondition() const;
 
-    inline const QString& getReturn(void) const;
+    inline const QString& getReturn() const;
     inline void setReturn(const QString& type);
 
-    inline eImplement getImplement(void) const;
+    inline eImplement getImplement() const;
     inline void setImplement(eImplement implement);
 
-    inline const QString& getBody(void) const;
+    inline const QString& getBody() const;
     inline void setBody(const QString& body);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -140,9 +140,9 @@ class SMMethodData : public TEDataContainer<SMMethodEntry*, DocumentElem>
 {
 public:
     SMMethodData(ElementBase* parent = nullptr);
-    virtual ~SMMethodData(void);
+    virtual ~SMMethodData();
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -170,14 +170,14 @@ public:
     /**
      * \brief   Deletes and removes all methods.
      **/
-    void removeAll(void);
+    void removeAll();
 };
 
 //////////////////////////////////////////////////////////////////////////
 // SMMethodEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline SMMethodEntry::eMethodType SMMethodEntry::getMethodType(void) const
+inline SMMethodEntry::eMethodType SMMethodEntry::getMethodType() const
 {
     return mMethodType;
 }
@@ -187,22 +187,22 @@ inline void SMMethodEntry::setMethodType(SMMethodEntry::eMethodType type)
     mMethodType = type;
 }
 
-inline bool SMMethodEntry::isTrigger(void) const
+inline bool SMMethodEntry::isTrigger() const
 {
     return (mMethodType == eMethodType::Trigger);
 }
 
-inline bool SMMethodEntry::isAction(void) const
+inline bool SMMethodEntry::isAction() const
 {
     return (mMethodType == eMethodType::Action);
 }
 
-inline bool SMMethodEntry::isCondition(void) const
+inline bool SMMethodEntry::isCondition() const
 {
     return (mMethodType == eMethodType::Condition);
 }
 
-inline const QString& SMMethodEntry::getReturn(void) const
+inline const QString& SMMethodEntry::getReturn() const
 {
     return mReturn;
 }
@@ -212,7 +212,7 @@ inline void SMMethodEntry::setReturn(const QString& type)
     mReturn = type;
 }
 
-inline SMMethodEntry::eImplement SMMethodEntry::getImplement(void) const
+inline SMMethodEntry::eImplement SMMethodEntry::getImplement() const
 {
     return mImplement;
 }
@@ -222,7 +222,7 @@ inline void SMMethodEntry::setImplement(SMMethodEntry::eImplement implement)
     mImplement = implement;
 }
 
-inline const QString& SMMethodEntry::getBody(void) const
+inline const QString& SMMethodEntry::getBody() const
 {
     return mBody;
 }

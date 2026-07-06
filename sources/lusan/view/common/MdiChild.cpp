@@ -50,41 +50,41 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     emit wndMain->signalMdiWindowCreated(this);
 }
 
-MdiChild::~MdiChild(void)
+MdiChild::~MdiChild()
 {
 }
 
-bool MdiChild::openSucceeded(void) const
+bool MdiChild::openSucceeded() const
 {
     return false;
 }
 
-QString MdiChild::newDocumentName(void)
+QString MdiChild::newDocumentName()
 {
     static uint32_t _seqNr{0};
     mDocName = newDocument() + QString::number(++_seqNr);
     return (mDocName + newDocumentExt());
 }
 
-const QString& MdiChild::newDocument(void) const
+const QString& MdiChild::newDocument() const
 {
     static const QString _newDoc{"document"};
     return _newDoc;
 }
 
-const QString& MdiChild::newDocumentExt(void) const
+const QString& MdiChild::newDocumentExt() const
 {
     static const QString _newExt("");
     return _newExt;
 }
 
-const QString& MdiChild::fileSuffix(void) const
+const QString& MdiChild::fileSuffix() const
 {
     static const QString _suffix("");
     return _suffix;
 }
 
-const QString& MdiChild::fileFilter(void) const
+const QString& MdiChild::fileFilter() const
 {
     static const QString _filter("All Files (*.*)");
     return _filter;
@@ -178,11 +178,11 @@ void MdiChild::onWindowClosing(bool /*isActive*/)
 {
 }
 
-void MdiChild::onWindowActivated(void)
+void MdiChild::onWindowActivated()
 {
 }
 
-void MdiChild::onWindowCreated(void)
+void MdiChild::onWindowCreated()
 {
     
 }

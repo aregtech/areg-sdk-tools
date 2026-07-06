@@ -29,11 +29,11 @@ OutputWindow::OutputWindow(int outWindow, MdiMainWindow * wndMain, QWidget* pare
 {
 }
 
-void OutputWindow::optionOpenning(void)
+void OutputWindow::optionOpenning()
 {
 }
 
-void OutputWindow::optionApplied(void)
+void OutputWindow::optionApplied()
 {
 }
 
@@ -41,7 +41,7 @@ void OutputWindow::optionClosed(bool OKpressed)
 {
 }
 
-bool OutputWindow::isScopesOutputWindow(void) const
+bool OutputWindow::isScopesOutputWindow() const
 {
     return (mOutWindowType == static_cast<int>(OutputDock::eOutputDock::OutputLogging));
 }

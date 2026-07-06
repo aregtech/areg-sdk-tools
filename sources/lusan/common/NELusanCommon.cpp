@@ -99,12 +99,12 @@ void NELusanCommon::setIconsForDarkTheme(bool isDark)
     _darkThemeIcons = isDark;
 }
 
-bool NELusanCommon::iconsForDarkTheme(void)
+bool NELusanCommon::iconsForDarkTheme()
 {
     return _darkThemeIcons;
 }
 
-QString NELusanCommon::getOptionsFile(void)
+QString NELusanCommon::getOptionsFile()
 {
     return getUserProfileFile(OPTIONS);
 }
@@ -114,19 +114,19 @@ QString NELusanCommon::getUserProfileFile(const QString& fileName)
     return QString("%1/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation), fileName);
 }
 
-uint32_t NELusanCommon::getId(void)
+uint32_t NELusanCommon::getId()
 {
     static uint32_t _id = 0;
     return (++_id != 0 ? _id : ++_id);
 }
 
 
-uint64_t NELusanCommon::getTimestamp(void)
+uint64_t NELusanCommon::getTimestamp()
 {
     return static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch());
 }
 
-const QString& NELusanCommon::getStyleToolbutton(void)
+const QString& NELusanCommon::getStyleToolbutton()
 {
     static const QString& _style(QString::fromUtf8(NELusanCommon::StyleToolbuttonChecked.data(), NELusanCommon::StyleToolbuttonChecked.length()));
     return _style;

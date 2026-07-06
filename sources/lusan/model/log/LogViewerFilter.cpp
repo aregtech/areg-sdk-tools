@@ -30,7 +30,7 @@ LogViewerFilter::LogViewerFilter(LoggingModelBase* model)
     setSourceModel(model);
 }
 
-LogViewerFilter::~LogViewerFilter(void)
+LogViewerFilter::~LogViewerFilter()
 {
     setSourceModel(nullptr);
     _clearData();
@@ -342,7 +342,7 @@ inline void LogViewerFilter::prepareReExpression(const QString& wildcardPattern,
     }
 }
 
-inline void LogViewerFilter::_clearData(void)
+inline void LogViewerFilter::_clearData()
 {
     mComboFilters.clear();
     mTextFilters.clear();

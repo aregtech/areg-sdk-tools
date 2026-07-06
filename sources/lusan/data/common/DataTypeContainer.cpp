@@ -150,7 +150,7 @@ void DataTypeContainer::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement(); // DataType
 }
 
-bool DataTypeContainer::canHaveKey(void) const
+bool DataTypeContainer::canHaveKey() const
 {
     bool result{ false };
     const QList<DataTypeBasicContainer*> containerTypes = DataTypeFactory::getContainerTypes();
@@ -166,7 +166,7 @@ bool DataTypeContainer::canHaveKey(void) const
     return result;
 }
 
-QString DataTypeContainer::toTypeString(void) const
+QString DataTypeContainer::toTypeString() const
 {
     if (canHaveKey())
         return getContainer() + "<" + getKey() + ", " + getValue() + ">";

@@ -45,7 +45,7 @@ SIMethodResponse::SIMethodResponse(SIMethodResponse&& src) noexcept
 {
 }
 
-SIMethodResponse::~SIMethodResponse(void)
+SIMethodResponse::~SIMethodResponse()
 {
 }
 

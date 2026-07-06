@@ -50,7 +50,7 @@ void LogFilterBase::setWidget(QWidget* widget)
     layout->addWidget(mWidget);
 }
 
-void LogFilterBase::clearFilter(void)
+void LogFilterBase::clearFilter()
 {
     if (mWidget != nullptr)
     {
@@ -59,7 +59,7 @@ void LogFilterBase::clearFilter(void)
     }
 }
 
-void LogFilterBase::showFilter(void)
+void LogFilterBase::showFilter()
 {
     mWidget->setFocus(Qt::FocusReason::ActiveWindowFocusReason);
     mWidget->activateWindow();
@@ -122,7 +122,7 @@ QList<NELusanCommon::FilterData> LogComboFilterBase::getSelectedData() const
     return checked;
 }
 
-void LogComboFilterBase::clearFilter(void)
+void LogComboFilterBase::clearFilter()
 {
     QListWidget* widget = listWidget();
     Q_ASSERT(widget != nullptr);
@@ -199,13 +199,13 @@ QList<NELusanCommon::FilterData> LogTextFilterBase::getSelectedData() const
     return mData;
 }
 
-void LogTextFilterBase::clearFilter(void)
+void LogTextFilterBase::clearFilter()
 {
     editWidget()->setText(QString());
     LogFilterBase::clearFilter();
 }
 
-void LogTextFilterBase::showFilter(void)
+void LogTextFilterBase::showFilter()
 {
     QLineEdit* widget = editWidget();
     Q_ASSERT(widget != nullptr);

@@ -70,7 +70,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit ProjectSettings(MdiMainWindow *parent);
-    virtual ~ProjectSettings(void);
+    virtual ~ProjectSettings();
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -80,17 +80,17 @@ public:
     /**
      * \brief   Returns the pointer to project settings widget.
      **/
-    inline OptionPageProjectDirs * getSettingProjectDirs(void);
+    inline OptionPageProjectDirs * getSettingProjectDirs();
 
     /**
      * \brief   Returns the pointer to workspace settings widget.
      **/
-    inline OptionPageWorkspace* getSettingWorkspace(void);
+    inline OptionPageWorkspace* getSettingWorkspace();
 
     /**
      * \brief   Returns the pointer to log settings widget.
      **/
-    inline OptionPageLogging* getSettingLog(void);
+    inline OptionPageLogging* getSettingLog();
 
     /**
      * \brief   Activates the page in the settings dialog.
@@ -118,7 +118,7 @@ private slots:
     /**
      * \brief   Slot, triggered when OK button in the button box is clicked.
      **/
-    void onAcceptClicked(void);
+    void onAcceptClicked();
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
@@ -170,17 +170,17 @@ private:
 // ProjectSettings inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline OptionPageProjectDirs * ProjectSettings::getSettingProjectDirs(void)
+inline OptionPageProjectDirs * ProjectSettings::getSettingProjectDirs()
 {
     return mOptionProjectDirs;
 }
 
-inline OptionPageWorkspace * ProjectSettings::getSettingWorkspace(void)
+inline OptionPageWorkspace * ProjectSettings::getSettingWorkspace()
 {
     return mOptionPageWorkspace;
 }
 
-inline OptionPageLogging * ProjectSettings::getSettingLog(void)
+inline OptionPageLogging * ProjectSettings::getSettingLog()
 {
     return mOptionPageLogging;
 }

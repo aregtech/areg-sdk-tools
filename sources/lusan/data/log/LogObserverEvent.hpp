@@ -52,21 +52,21 @@ public:
     };
 
 public:
-    inline LogObserverEventData(void);
+    inline LogObserverEventData();
     inline LogObserverEventData(LogObserverCommand event);
     inline LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data);
     inline LogObserverEventData(const LogObserverEventData& src);
     inline LogObserverEventData(LogObserverEventData && src);
 
-    inline LogObserverEventData::LogObserverCommand getEvent(void) const;
+    inline LogObserverEventData::LogObserverCommand getEvent() const;
 
-    inline areg::SharedBuffer& getBuffer(void);
+    inline areg::SharedBuffer& getBuffer();
 
-    inline const areg::SharedBuffer& getBuffer(void) const;
+    inline const areg::SharedBuffer& getBuffer() const;
 
-    inline operator const areg::InStream& (void) const;
+    inline operator const areg::InStream& () const;
 
-    inline operator areg::OutStream& (void);
+    inline operator areg::OutStream& ();
 
 private:
     LogObserverCommand  mEvent;     //!< The event type
@@ -82,7 +82,7 @@ AREG_DECLARE_EVENT(LogObserverEventData, LogObserverEvent, LogObserverEventConsu
 //////////////////////////////////////////////////////////////////////////
 // LogObserverEventData inline methods.
 //////////////////////////////////////////////////////////////////////////
-LogObserverEventData::LogObserverEventData(void)
+LogObserverEventData::LogObserverEventData()
     : mEvent(LogObserverEventData::LogObserverCommand::CMD_Unknown)
     , mBuffer()
 {
@@ -113,27 +113,27 @@ inline LogObserverEventData::LogObserverEventData(LogObserverEventData&& src)
     src.mEvent = LogObserverCommand::CMD_Unknown;
 }
 
-inline LogObserverEventData::LogObserverCommand LogObserverEventData::getEvent(void) const
+inline LogObserverEventData::LogObserverCommand LogObserverEventData::getEvent() const
 {
     return mEvent;
 }
 
-inline areg::SharedBuffer& LogObserverEventData::getBuffer(void)
+inline areg::SharedBuffer& LogObserverEventData::getBuffer()
 {
     return mBuffer;
 }
 
-inline const areg::SharedBuffer& LogObserverEventData::getBuffer(void) const
+inline const areg::SharedBuffer& LogObserverEventData::getBuffer() const
 {
     return mBuffer;
 }
 
-inline LogObserverEventData::operator const areg::InStream& (void) const
+inline LogObserverEventData::operator const areg::InStream& () const
 {
     return static_cast<const areg::InStream&>(mBuffer);
 }
 
-inline LogObserverEventData::operator areg::OutStream& (void)
+inline LogObserverEventData::operator areg::OutStream& ()
 {
     return static_cast<areg::OutStream&>(mBuffer);
 }

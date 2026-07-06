@@ -54,7 +54,7 @@ LiveLogViewer::LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     setupSignals(true);
 }
 
-LiveLogViewer::~LiveLogViewer(void)
+LiveLogViewer::~LiveLogViewer()
 {
     cleanResources();
 }
@@ -97,19 +97,19 @@ void LiveLogViewer::logDatabaseCreated(const QString& dbPath)
     }
 }
 
-bool LiveLogViewer::isServiceConnected(void) const
+bool LiveLogViewer::isServiceConnected() const
 {
     Q_ASSERT(mLogModel != nullptr);
     return static_cast<LiveLogsModel *>(mLogModel)->isConnected();
 }
 
-bool LiveLogViewer::isEmpty(void) const
+bool LiveLogViewer::isEmpty() const
 {
     Q_ASSERT(mLogModel != nullptr);
     return mLogModel->isEmpty();
 }
 
-void LiveLogViewer::detachLiveLog(void)
+void LiveLogViewer::detachLiveLog()
 {
     Q_ASSERT(mLogModel != nullptr);
     if (mMdiSubWindow != nullptr)
@@ -144,22 +144,22 @@ void LiveLogViewer::onCurrentRowChanged(const QModelIndex &current, const QModel
     mLogModel->setSelectedLog(current);
 }
 
-QToolButton* LiveLogViewer::ctrlPause(void)
+QToolButton* LiveLogViewer::ctrlPause()
 {
     return ui->toolPause;
 }
 
-QToolButton* LiveLogViewer::ctrlStop(void)
+QToolButton* LiveLogViewer::ctrlStop()
 {
     return ui->toolStop;
 }
 
-QToolButton* LiveLogViewer::ctrlClear(void)
+QToolButton* LiveLogViewer::ctrlClear()
 {
     return ui->toolClear;
 }
 
-QLabel* LiveLogViewer::ctrlFile(void)
+QLabel* LiveLogViewer::ctrlFile()
 {
     return ui->labelFile;
 }
@@ -244,13 +244,13 @@ void LiveLogViewer::onStopClicked(bool checked)
     }
 }
 
-void LiveLogViewer::onClearClicked(void)
+void LiveLogViewer::onClearClicked()
 {
     Q_ASSERT(mLogModel != nullptr);
     mLogModel->dataReset();
 }
 
-QString LiveLogViewer::getDatabasePath(void) const
+QString LiveLogViewer::getDatabasePath() const
 {
     Q_ASSERT(mLogModel != nullptr);
     return mLogModel->getDatabasePath();
@@ -288,7 +288,7 @@ void LiveLogViewer::setupSignals(bool doSetup)
     }
 }
 
-void LiveLogViewer::cleanResources(void)
+void LiveLogViewer::cleanResources()
 {
     if (ui == nullptr)
     {

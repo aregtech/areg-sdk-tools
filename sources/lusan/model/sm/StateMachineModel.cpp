@@ -34,6 +34,8 @@ StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     , mAutosaveTimer (this)
     , mOverviewModel (*this)
     , mDataTypeModel (*this)
+    , mAttributeModel(*this)
+    , mConstantModel (*this)
     , mOpenSuccess   (false)
 {
     mUndoStack.setUndoLimit(100);
@@ -112,7 +114,7 @@ bool StateMachineModel::saveToFile(const QString& filePath /*= QString()*/)
     return true;
 }
 
-bool StateMachineModel::writeAutosave(void)
+bool StateMachineModel::writeAutosave()
 {
     if ((mData == nullptr) || mUndoStack.isClean())
     {
@@ -128,12 +130,12 @@ bool StateMachineModel::writeAutosave(void)
     return mData->writeToAutosaveFile(StateMachineData::autosavePathForDocument(documentPath));
 }
 
-bool StateMachineModel::removeAutosave(void)
+bool StateMachineModel::removeAutosave()
 {
     return (mData != nullptr ? StateMachineData::removeAutosave(mData->getFilePath()) : true);
 }
 
-void StateMachineModel::onAutosaveTimeout(void)
+void StateMachineModel::onAutosaveTimeout()
 {
     writeAutosave();
 }
@@ -149,7 +151,7 @@ void StateMachineModel::onUndoCleanChanged(bool clean)
     updateAutosaveTimer();
 }
 
-void StateMachineModel::markDirty(void)
+void StateMachineModel::markDirty()
 {
     if (mUndoStack.isClean())
     {
@@ -157,7 +159,7 @@ void StateMachineModel::markDirty(void)
     }
 }
 
-void StateMachineModel::updateAutosaveTimer(void)
+void StateMachineModel::updateAutosaveTimer()
 {
     const bool enableTimer = (mData != nullptr)
                            && (mUndoStack.isClean() == false)

@@ -53,24 +53,24 @@ public:
     };
 
 public:
-    static const QString& fileExtension(void);
+    static const QString& fileExtension();
 
 public:
     StateMachine(MdiMainWindow* wndMain, const QString& filePath = QString(), const QString& sourcePath = QString(), QWidget* parent = nullptr);
-    virtual ~StateMachine(void) = default;
+    virtual ~StateMachine() = default;
 
 public:
     virtual void newFile() override;
-    virtual bool openSucceeded(void) const override;
+    virtual bool openSucceeded() const override;
     virtual void undo() override;
     virtual void redo() override;
 
 protected:
-    virtual QString newDocumentName(void) override;
-    virtual const QString& newDocument(void) const override;
-    virtual const QString& newDocumentExt(void) const override;
-    virtual const QString& fileSuffix(void) const override;
-    virtual const QString& fileFilter(void) const override;
+    virtual QString newDocumentName() override;
+    virtual const QString& newDocument() const override;
+    virtual const QString& newDocumentExt() const override;
+    virtual const QString& fileSuffix() const override;
+    virtual const QString& fileFilter() const override;
     virtual bool writeToFile(const QString& filePath) override;
     virtual bool maybeSave() override;
     virtual void onWindowClosing(bool isActive) override;
@@ -79,7 +79,7 @@ private:
     bool loadDocument(const QString& documentPath, const QString& sourcePath = QString());
 
     //!< Number of editor pages.
-    static constexpr int pageCount(void) { return static_cast<int>(PageDesign) + 1; }
+    static constexpr int pageCount() { return static_cast<int>(PageDesign) + 1; }
     //!< True if the index is a valid page index.
     static bool isValidTabIndex(int index);
     //!< True if the page at the given index has already been built.
@@ -87,7 +87,7 @@ private:
     //!< The tab title of the page at the given index.
     QString tabTitle(int index) const;
     //!< Builds the next queued page and re-schedules itself while the queue is not empty.
-    void processQueuedTabInitialization(void);
+    void processQueuedTabInitialization();
     //!< Builds the page at the given index if it does not exist yet.
     void ensureTabInitialized(int index);
     //!< Places the built page into the tab holder widget at the given index.

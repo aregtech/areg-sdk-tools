@@ -34,42 +34,42 @@ SIMethodDetails::SIMethodDetails(QWidget* parent)
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
 
-QLineEdit * SIMethodDetails::ctrlName(void) const
+QLineEdit * SIMethodDetails::ctrlName() const
 {
     return ui->editName;
 }
 
-QRadioButton * SIMethodDetails::ctrlBroadcast(void) const
+QRadioButton * SIMethodDetails::ctrlBroadcast() const
 {
     return ui->radioBroadcast;
 }
 
-QRadioButton * SIMethodDetails::ctrlRequest(void) const
+QRadioButton * SIMethodDetails::ctrlRequest() const
 {
     return ui->radioRequest;
 }
 
-QRadioButton * SIMethodDetails::ctrlResponse(void) const
+QRadioButton * SIMethodDetails::ctrlResponse() const
 {
     return ui->radioResponse;
 }
 
-QComboBox * SIMethodDetails::ctrlConnectedResponse(void) const
+QComboBox * SIMethodDetails::ctrlConnectedResponse() const
 {
     return  ui->comboReply;
 }
 
-QPlainTextEdit * SIMethodDetails::ctrlDescription(void) const
+QPlainTextEdit * SIMethodDetails::ctrlDescription() const
 {
     return ui->textDescribe;
 }
 
-QCheckBox * SIMethodDetails::ctrlDeprecated(void) const
+QCheckBox * SIMethodDetails::ctrlDeprecated() const
 {
     return ui->checkDeprecated;
 }
 
-QLineEdit * SIMethodDetails::ctrlDeprecateHint(void) const
+QLineEdit * SIMethodDetails::ctrlDeprecateHint() const
 {
     return ui->editDeprecated;
 }

@@ -38,19 +38,19 @@ class SMDataTypeList : public QWidget
 public:
     explicit SMDataTypeList(QWidget* parent = nullptr);
 
-    QTreeWidget* ctrlTableList(void) const;
+    QTreeWidget* ctrlTableList() const;
 
-    QToolButton* ctrlButtonAdd(void) const;
-    QToolButton* ctrlButtonInsert(void) const;
-    QToolButton* ctrlButtonRemove(void) const;
-    QToolButton* ctrlButtonMoveUp(void) const;
-    QToolButton* ctrlButtonMoveDown(void) const;
-    QToolButton* ctrlButtonAddField(void) const;
-    QToolButton* ctrlButtonInsertField(void) const;
-    QToolButton* ctrlButtonRemoveField(void) const;
+    QToolButton* ctrlButtonAdd() const;
+    QToolButton* ctrlButtonInsert() const;
+    QToolButton* ctrlButtonRemove() const;
+    QToolButton* ctrlButtonMoveUp() const;
+    QToolButton* ctrlButtonMoveDown() const;
+    QToolButton* ctrlButtonAddField() const;
+    QToolButton* ctrlButtonInsertField() const;
+    QToolButton* ctrlButtonRemoveField() const;
 
 private:
-    void buildUi(void);
+    void buildUi();
     static QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
 
 private:

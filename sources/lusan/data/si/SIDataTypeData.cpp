@@ -45,7 +45,7 @@ SIDataTypeData::SIDataTypeData(QList<DataTypeCustom *>&& entries, ElementBase* p
 {
 }
 
-SIDataTypeData::~SIDataTypeData(void)
+SIDataTypeData::~SIDataTypeData()
 {
     QList<DataTypeCustom*>& list = getElements();;
     qDeleteAll(list);
@@ -148,29 +148,29 @@ void SIDataTypeData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
-void SIDataTypeData::removeAll(void)
+void SIDataTypeData::removeAll()
 {
     QList<DataTypeCustom*>& customDataTypes {getElements()};
     qDeleteAll(customDataTypes);
     customDataTypes.clear();
 }
 
-const QList<DataTypePrimitive*>& SIDataTypeData::getPrimitiveDataTypes(void) const
+const QList<DataTypePrimitive*>& SIDataTypeData::getPrimitiveDataTypes() const
 {
     return DataTypeFactory::getPrimitiveTypes();
 }
 
-const QList<DataTypeBasicObject*>& SIDataTypeData::getBasicDataTypes(void) const
+const QList<DataTypeBasicObject*>& SIDataTypeData::getBasicDataTypes() const
 {
     return DataTypeFactory::getBasicTypes();
 }
 
-const QList<DataTypeBasicContainer*>& SIDataTypeData::getContainerDatTypes(void) const
+const QList<DataTypeBasicContainer*>& SIDataTypeData::getContainerDatTypes() const
 {
     return DataTypeFactory::getContainerTypes();
 }
 
-const QList<DataTypeCustom*>& SIDataTypeData::getCustomDataTypes(void) const
+const QList<DataTypeCustom*>& SIDataTypeData::getCustomDataTypes() const
 {
     return getElements();
 }

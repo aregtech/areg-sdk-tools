@@ -71,7 +71,7 @@ public:
 
     SMTransitionEntry(const SMTransitionEntry& src);
     SMTransitionEntry(SMTransitionEntry&& src) noexcept;
-    virtual ~SMTransitionEntry(void) = default;
+    virtual ~SMTransitionEntry() = default;
 
     SMTransitionEntry& operator = (const SMTransitionEntry& other);
     SMTransitionEntry& operator = (SMTransitionEntry&& other) noexcept;
@@ -80,32 +80,32 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline eStimulusKind getStimulusKind(void) const;
+    inline eStimulusKind getStimulusKind() const;
     inline void setStimulusKind(eStimulusKind kind);
 
-    inline const QString& getStimulus(void) const;
+    inline const QString& getStimulus() const;
     inline void setStimulus(const QString& stimulus);
 
     /**
      * \brief   The target sibling state name; empty when this is an internal transition.
      **/
-    inline const QString& getTo(void) const;
+    inline const QString& getTo() const;
     inline void setTo(const QString& target);
-    inline void clearTo(void);
+    inline void clearTo();
 
     /**
      * \brief   True for an external transition (a `To` target is present).
      **/
-    inline bool isExternal(void) const;
+    inline bool isExternal() const;
 
-    inline const QString& getDescription(void) const;
+    inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
-    inline const SMConditionList& getConditions(void) const;
-    inline SMConditionList& getConditions(void);
+    inline const SMConditionList& getConditions() const;
+    inline SMConditionList& getConditions();
 
-    inline const SMOperationList& getOperations(void) const;
-    inline SMOperationList& getOperations(void);
+    inline const SMOperationList& getOperations() const;
+    inline SMOperationList& getOperations();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -114,9 +114,9 @@ public:
     /**
      * \brief   The transition's display name — its stimulus; required by the container.
      **/
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -149,7 +149,7 @@ public:
     SMTransitionData(ElementBase* parent = nullptr);
     SMTransitionData(const SMTransitionData& src);
     SMTransitionData(SMTransitionData&& src) noexcept;
-    virtual ~SMTransitionData(void);
+    virtual ~SMTransitionData();
 
     SMTransitionData& operator = (const SMTransitionData& other);
     SMTransitionData& operator = (SMTransitionData&& other) noexcept;
@@ -166,9 +166,9 @@ public:
     /**
      * \brief   Deletes and removes all transitions.
      **/
-    void removeAll(void);
+    void removeAll();
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -181,7 +181,7 @@ private:
 // SMTransitionEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline SMTransitionEntry::eStimulusKind SMTransitionEntry::getStimulusKind(void) const
+inline SMTransitionEntry::eStimulusKind SMTransitionEntry::getStimulusKind() const
 {
     return mStimulusKind;
 }
@@ -191,7 +191,7 @@ inline void SMTransitionEntry::setStimulusKind(eStimulusKind kind)
     mStimulusKind = kind;
 }
 
-inline const QString& SMTransitionEntry::getStimulus(void) const
+inline const QString& SMTransitionEntry::getStimulus() const
 {
     return mStimulus;
 }
@@ -201,7 +201,7 @@ inline void SMTransitionEntry::setStimulus(const QString& stimulus)
     mStimulus = stimulus;
 }
 
-inline const QString& SMTransitionEntry::getTo(void) const
+inline const QString& SMTransitionEntry::getTo() const
 {
     return mTo;
 }
@@ -212,18 +212,18 @@ inline void SMTransitionEntry::setTo(const QString& target)
     mHasTo = true;
 }
 
-inline void SMTransitionEntry::clearTo(void)
+inline void SMTransitionEntry::clearTo()
 {
     mTo.clear();
     mHasTo = false;
 }
 
-inline bool SMTransitionEntry::isExternal(void) const
+inline bool SMTransitionEntry::isExternal() const
 {
     return mHasTo;
 }
 
-inline const QString& SMTransitionEntry::getDescription(void) const
+inline const QString& SMTransitionEntry::getDescription() const
 {
     return mDescription;
 }
@@ -233,27 +233,27 @@ inline void SMTransitionEntry::setDescription(const QString& description)
     mDescription = description;
 }
 
-inline const SMConditionList& SMTransitionEntry::getConditions(void) const
+inline const SMConditionList& SMTransitionEntry::getConditions() const
 {
     return mConditions;
 }
 
-inline SMConditionList& SMTransitionEntry::getConditions(void)
+inline SMConditionList& SMTransitionEntry::getConditions()
 {
     return mConditions;
 }
 
-inline const SMOperationList& SMTransitionEntry::getOperations(void) const
+inline const SMOperationList& SMTransitionEntry::getOperations() const
 {
     return mOperations;
 }
 
-inline SMOperationList& SMTransitionEntry::getOperations(void)
+inline SMOperationList& SMTransitionEntry::getOperations()
 {
     return mOperations;
 }
 
-inline const QString& SMTransitionEntry::getName(void) const
+inline const QString& SMTransitionEntry::getName() const
 {
     return mStimulus;
 }

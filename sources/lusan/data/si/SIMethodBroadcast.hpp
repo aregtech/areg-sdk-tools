@@ -66,7 +66,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIMethodBroadcast(void);
+    virtual ~SIMethodBroadcast();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators

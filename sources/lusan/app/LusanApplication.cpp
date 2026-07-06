@@ -69,35 +69,35 @@ LusanApplication::LusanApplication(int& argc, char** argv)
     LusanApplication::theApp = this;
 }
 
-LusanApplication::~LusanApplication(void)
+LusanApplication::~LusanApplication()
 {
     LusanApplication::theApp = nullptr;
 }
 
-OptionsManager& LusanApplication::getOptions(void)
+OptionsManager& LusanApplication::getOptions()
 {
     Q_ASSERT(LusanApplication::theApp != nullptr);
     return LusanApplication::theApp->mOptions;
 }
 
-LusanApplication& LusanApplication::getApplication(void)
+LusanApplication& LusanApplication::getApplication()
 {
     Q_ASSERT(LusanApplication::theApp != nullptr);
     return (*LusanApplication::theApp);
 }
 
-WorkspaceEntry LusanApplication::getActiveWorkspace(void)
+WorkspaceEntry LusanApplication::getActiveWorkspace()
 {
     Q_ASSERT(LusanApplication::theApp != nullptr);
     return LusanApplication::theApp->mOptions.getActiveWorkspace();
 }
 
-bool LusanApplication::isInitialized(void)
+bool LusanApplication::isInitialized()
 {
     return (LusanApplication::theApp != nullptr);
 }
 
-QStringList LusanApplication::getSupportedFileExtensions(void)
+QStringList LusanApplication::getSupportedFileExtensions()
 {
     QString result(tr("Supported Files"));
     result += " (";
@@ -127,7 +127,7 @@ QStringList LusanApplication::getSupportedFileExtensions(void)
     return QStringList(result);
 }
 
-QStringList LusanApplication::getExternalFileExtensions(void)
+QStringList LusanApplication::getExternalFileExtensions()
 {
     QString externals(tr("External Files"));
     externals += " (";
@@ -147,7 +147,7 @@ QStringList LusanApplication::getExternalFileExtensions(void)
     return QStringList(externals);
 }
 
-QStringList LusanApplication::getInternalFileExtensions(void)
+QStringList LusanApplication::getInternalFileExtensions()
 {
     QString internals(tr("Internal Files"));
     internals += " (";
@@ -167,7 +167,7 @@ QStringList LusanApplication::getInternalFileExtensions(void)
     return QStringList(internals);
 }
 
-QStringList LusanApplication::getWorkspaceDirectories(void)
+QStringList LusanApplication::getWorkspaceDirectories()
 {
     QStringList result;
     if (LusanApplication::theApp != nullptr)
@@ -196,7 +196,7 @@ QStringList LusanApplication::getWorkspaceDirectories(void)
     return result;
 }
 
-QString LusanApplication::getWorkspaceRoot(void)
+QString LusanApplication::getWorkspaceRoot()
 {
     if (LusanApplication::theApp != nullptr)
     {
@@ -209,7 +209,7 @@ QString LusanApplication::getWorkspaceRoot(void)
     }
 }
 
-QString LusanApplication::getWorkspaceSources(void)
+QString LusanApplication::getWorkspaceSources()
 {
     if (LusanApplication::theApp != nullptr)
     {
@@ -222,7 +222,7 @@ QString LusanApplication::getWorkspaceSources(void)
     }
 }
 
-QString LusanApplication::getWorkspaceIncludes(void)
+QString LusanApplication::getWorkspaceIncludes()
 {
     if (LusanApplication::theApp != nullptr)
     {
@@ -235,7 +235,7 @@ QString LusanApplication::getWorkspaceIncludes(void)
     }
 }
 
-QString LusanApplication::getWorkspaceDelivery(void)
+QString LusanApplication::getWorkspaceDelivery()
 {
     if (LusanApplication::theApp != nullptr)
     {
@@ -248,7 +248,7 @@ QString LusanApplication::getWorkspaceDelivery(void)
     }
 }
 
-QString LusanApplication::getWorkspaceLogs(void)
+QString LusanApplication::getWorkspaceLogs()
 {
     if (LusanApplication::theApp != nullptr)
     {
@@ -261,17 +261,17 @@ QString LusanApplication::getWorkspaceLogs(void)
     }
 }
 
-LogCollectorClient& LusanApplication::getLogCollectorClient(void)
+LogCollectorClient& LusanApplication::getLogCollectorClient()
 {
     return LogCollectorClient::getInstance();
 }
 
-MdiMainWindow* LusanApplication::getMainWindow(void)
+MdiMainWindow* LusanApplication::getMainWindow()
 {
     return (LusanApplication::theApp != nullptr ? LusanApplication::theApp->mMainWindow : nullptr);
 }
 
-void LusanApplication::newWorkspace(void)
+void LusanApplication::newWorkspace()
 {
     LusanApplication& theApp{LusanApplication::getApplication()};
     
@@ -284,7 +284,7 @@ void LusanApplication::newWorkspace(void)
     }
 }
 
-void LusanApplication::applyConfiguredTheme(void)
+void LusanApplication::applyConfiguredTheme()
 {
     if (LusanApplication::theApp == nullptr)
         return;

@@ -35,117 +35,117 @@ SIDataTypeDetails::SIDataTypeDetails(QWidget *parent)
 }
 
 
-QLineEdit* SIDataTypeDetails::ctrlName(void) const
+QLineEdit* SIDataTypeDetails::ctrlName() const
 {
     return ui->editName;
 }
 
-QRadioButton* SIDataTypeDetails::ctrlTypeStruct(void) const
+QRadioButton* SIDataTypeDetails::ctrlTypeStruct() const
 {
     return ui->radioTypeStruct;
 }
 
-QRadioButton* SIDataTypeDetails::ctrlTypeEnum(void) const
+QRadioButton* SIDataTypeDetails::ctrlTypeEnum() const
 {
     return ui->radioTypeEnum;
 }
 
-QRadioButton* SIDataTypeDetails::ctrlTypeImport(void) const
+QRadioButton* SIDataTypeDetails::ctrlTypeImport() const
 {
     return ui->radioTypeImport;
 }
 
-QRadioButton* SIDataTypeDetails::ctrlTypeContainer(void) const
+QRadioButton* SIDataTypeDetails::ctrlTypeContainer() const
 {
     return ui->radioTypeContainer;
 }
 
-QComboBox* SIDataTypeDetails::ctrlContainerObject(void) const
+QComboBox* SIDataTypeDetails::ctrlContainerObject() const
 {
     return ui->comboContainerObject;
 }
 
-QComboBox* SIDataTypeDetails::ctrlContainerKey(void) const
+QComboBox* SIDataTypeDetails::ctrlContainerKey() const
 {
     return ui->comboContainerKey;
 }
 
-QComboBox* SIDataTypeDetails::ctrlContainerValue(void) const
+QComboBox* SIDataTypeDetails::ctrlContainerValue() const
 {
     return ui->comboContainerValue;
 }
 
-QPlainTextEdit* SIDataTypeDetails::ctrlDescription(void) const
+QPlainTextEdit* SIDataTypeDetails::ctrlDescription() const
 {
     return ui->textDescribe;
 }
 
-QCheckBox* SIDataTypeDetails::ctrlDeprecated(void) const
+QCheckBox* SIDataTypeDetails::ctrlDeprecated() const
 {
     return ui->checkDeprecated;
 }
 
-QLineEdit* SIDataTypeDetails::ctrlDeprecateHint(void) const
+QLineEdit* SIDataTypeDetails::ctrlDeprecateHint() const
 {
     return ui->editDeprecated;
 }
 
-QComboBox* SIDataTypeDetails::ctrlEnumDerived(void) const
+QComboBox* SIDataTypeDetails::ctrlEnumDerived() const
 {
     return ui->comboEnumDerive;
 }
 
-QLineEdit* SIDataTypeDetails::ctrlImportLocation(void) const
+QLineEdit* SIDataTypeDetails::ctrlImportLocation() const
 {
     return ui->editImportInclude;
 }
 
-QPushButton* SIDataTypeDetails::ctrlButtonBrowse(void) const
+QPushButton* SIDataTypeDetails::ctrlButtonBrowse() const
 {
     return ui->buttonImportInclude;
 }
 
-QLineEdit* SIDataTypeDetails::ctrlImportNamespace(void) const
+QLineEdit* SIDataTypeDetails::ctrlImportNamespace() const
 {
     return ui->editImportNamespace;
 }
 
-QLineEdit* SIDataTypeDetails::ctrlImportObject(void) const
+QLineEdit* SIDataTypeDetails::ctrlImportObject() const
 {
     return ui->editImportObject;
 }
 
-SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsEnum(void) const
+SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsEnum() const
 {
     return CtrlGroup{ui->labelEnum, ui->groupEnum};
 }
 
-SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsImport(void) const
+SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsImport() const
 {
     return CtrlGroup{ui->labelImport, ui->groupImport};
 }
 
-SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsContainer(void) const
+SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsContainer() const
 {
     return CtrlGroup{ui->labelContainer, ui->groupContainer};
 }
 
-QFormLayout* SIDataTypeDetails::ctrlLayout(void) const
+QFormLayout* SIDataTypeDetails::ctrlLayout() const
 {
     return ui->formLayout;
 }
 
-QSpacerItem* SIDataTypeDetails::ctrlSpacer1(void) const
+QSpacerItem* SIDataTypeDetails::ctrlSpacer1() const
 {
     return ui->verticalSpacer1;
 }
 
-QSpacerItem* SIDataTypeDetails::ctrlSpacer2(void) const
+QSpacerItem* SIDataTypeDetails::ctrlSpacer2() const
 {
     return ui->verticalSpacer2;
 }
 
-SIDataTypeDetails::SpaceItem SIDataTypeDetails::ctrlSpacer(void) const
+SIDataTypeDetails::SpaceItem SIDataTypeDetails::ctrlSpacer() const
 {
     return SpaceItem{ ui->verticalSpacer1, ui->verticalSpacer2 };
 }

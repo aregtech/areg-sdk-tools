@@ -174,7 +174,7 @@ void EnumEntry::setValue(const QString& value)
     mValue = value;
 }
 
-const QString EnumEntry::getDescription(void) const
+const QString EnumEntry::getDescription() const
 {
     return mDescription;
 }

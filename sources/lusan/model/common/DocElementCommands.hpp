@@ -60,7 +60,7 @@ protected:
     {
     }
 
-    virtual ~TDocElementCommand(void) override
+    virtual ~TDocElementCommand() override
     {
         if constexpr (std::is_pointer_v<Data>)
         {
@@ -72,7 +72,7 @@ protected:
     }
 
     //!< The element as its ID-bearing base, whether stored by value or by pointer.
-    ElementBase* elem(void) const
+    ElementBase* elem() const
     {
         if constexpr (std::is_pointer_v<Data>)
         {
@@ -84,7 +84,7 @@ protected:
         }
     }
 
-    void doInsert(void)
+    void doInsert()
     {
         if (mIndex < 0)
         {
@@ -101,7 +101,7 @@ protected:
         notifier().notifyElementAdded(mId, mKind);
     }
 
-    void doRemove(void)
+    void doRemove()
     {
         mIndex = mContainer.findIndex(mId);
         mContainer.removeElement(mId, &mElement);
@@ -135,8 +135,8 @@ public:
         this->mOwned   = true;
     }
 
-    virtual void redo(void) override { this->doInsert(); }
-    virtual void undo(void) override { this->doRemove(); }
+    virtual void redo() override { this->doInsert(); }
+    virtual void undo() override { this->doRemove(); }
 };
 
 /**
@@ -155,8 +155,8 @@ public:
         this->mId = id;
     }
 
-    virtual void redo(void) override { this->doRemove(); }
-    virtual void undo(void) override { this->doInsert(); }
+    virtual void redo() override { this->doRemove(); }
+    virtual void undo() override { this->doInsert(); }
 };
 
 /**
@@ -169,7 +169,7 @@ template<typename Value>
 class TDocSetPropertyCommand : public DocCommand
 {
 public:
-    using Getter = std::function<Value(void)>;
+    using Getter = std::function<Value()>;
     using Setter = std::function<void(const Value&)>;
 
     TDocSetPropertyCommand(DocModelNotifier& notifier, uint32_t id, eDocElementKind kind, Getter getter, Setter setter, Value newValue, const QString& text, QUndoCommand* parent = nullptr)
@@ -183,14 +183,14 @@ public:
     {
     }
 
-    virtual void redo(void) override
+    virtual void redo() override
     {
         mOld = mGet();
         mSet(mNew);
         notifier().notifyElementChanged(mId, mKind);
     }
 
-    virtual void undo(void) override
+    virtual void undo() override
     {
         mSet(mOld);
         notifier().notifyElementChanged(mId, mKind);
@@ -225,11 +225,11 @@ public:
     {
     }
 
-    virtual void redo(void) override { apply(); }
-    virtual void undo(void) override { apply(); }
+    virtual void redo() override { apply(); }
+    virtual void undo() override { apply(); }
 
 private:
-    void apply(void)
+    void apply()
     {
         mContainer.swapElements(mIndex1, mIndex2);
         notifier().notifyListReordered(mOwnerId, mKind);

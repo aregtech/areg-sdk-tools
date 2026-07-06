@@ -74,7 +74,7 @@ protected:
     /**
      * \brief   Returns the number of columns in the table.
      **/
-    virtual int getColumnCount(void) const override;
+    virtual int getColumnCount() const override;
 
     /**
      * \brief   Returns the text of the cell.
@@ -86,7 +86,7 @@ protected:
      * \brief   This method is called when the apply button in options dialog is pressed.
      *          It can be used to apply changes made in the options dialog.
      **/
-    virtual void optionApplied(void) override;
+    virtual void optionApplied() override;
 
     /**
      * \brief   This method is called when the options dialog is closed.
@@ -187,67 +187,67 @@ private:
     /**
      * \brief   Returns the file system tree view control.
      **/
-    QTreeView* ctrlTable(void) const;
+    QTreeView* ctrlTable() const;
 
     /**
      * \brief   Returns the refresh tool button control.
      **/
-    QToolButton* ctrlToolRefresh(void) const;
+    QToolButton* ctrlToolRefresh() const;
 
     /**
      * \brief   Returns the show all tool button control.
      **/
-    QToolButton* ctrlToolShowAll(void) const;
+    QToolButton* ctrlToolShowAll() const;
 
     /**
      * \brief   Returns the navigate from root (machine) tool button control.
      **/
-    QToolButton* ctrlToolNaviRoot(void) const;
+    QToolButton* ctrlToolNaviRoot() const;
 
     /**
      * \brief   Returns the collapse all tool button control.
      **/
-    QToolButton* ctrlToolCollapse(void) const;
+    QToolButton* ctrlToolCollapse() const;
 
     /**
      * \brief   Returns the new folder tool button control.
      **/
-    QToolButton* ctrlToolNewFolder(void) const;
+    QToolButton* ctrlToolNewFolder() const;
 
     /**
      * \brief   Returns the new file tool button control.
      **/
-    QToolButton* ctrlToolNewFile(void) const;
+    QToolButton* ctrlToolNewFile() const;
 
     /**
      * \brief   Returns the open tool button control.
      **/
-    QToolButton* ctrlToolOpen(void) const;
+    QToolButton* ctrlToolOpen() const;
 
     /**
      * \brief   Returns the edit tool button control.
      **/
-    QToolButton* ctrlToolEdit(void) const;
+    QToolButton* ctrlToolEdit() const;
 
     /**
      * \brief   Returns the delete tool button control.
      **/
-    QToolButton* ctrlToolDelete(void) const;
+    QToolButton* ctrlToolDelete() const;
 
     /**
      * \brief   Updates the data of the file system.
      **/
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief   Initializes the widgets.
      **/
-    void setupWidgets(void);
+    void setupWidgets();
 
     /**
      * \brief   Initializes the signals.
      **/
-    void setupSignals(void);
+    void setupSignals();
 
     /**
      * \brief   Blocks the basic signals.

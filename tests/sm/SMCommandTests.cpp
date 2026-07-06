@@ -91,7 +91,7 @@ namespace
 
 namespace
 {
-    void testScriptedSequence(void)
+    void testScriptedSequence()
     {
         StateMachineData    doc;
         DocModelNotifier    notifier;
@@ -127,7 +127,7 @@ namespace
 
         {
             const uint32_t overviewId = doc.getOverview().getId();
-            auto getter = [&doc](void) -> QString { return doc.getOverview().getName(); };
+            auto getter = [&doc]() -> QString { return doc.getOverview().getName(); };
             auto setter = [&doc](const QString& value) { doc.getOverview().setName(value); };
             pushAndSnap(new TDocSetPropertyCommand<QString>(notifier, overviewId, eDocElementKind::Overview, getter, setter, QString("Machine2"), "Rename machine"));
         }
@@ -176,7 +176,7 @@ namespace
 
 namespace
 {
-    void testCoalescedLayoutDrag(void)
+    void testCoalescedLayoutDrag()
     {
         StateMachineData    doc;
         DocModelNotifier    notifier;
@@ -218,7 +218,7 @@ namespace
 
 namespace
 {
-    void testCompositeDelete(void)
+    void testCompositeDelete()
     {
         StateMachineData    doc;
         DocModelNotifier    notifier;
@@ -255,7 +255,7 @@ namespace
 
 namespace
 {
-    void testDeepHistory(void)
+    void testDeepHistory()
     {
         StateMachineData    doc;
         DocModelNotifier    notifier;
@@ -302,7 +302,7 @@ namespace
 
 namespace
 {
-    void testDataTypeLifecycle(void)
+    void testDataTypeLifecycle()
     {
         StateMachineModel model;
         SMDataTypeModel&  dt = model.getDataTypeModel();
@@ -414,7 +414,7 @@ namespace
 
 namespace
 {
-    void testContainerLifecycle(void)
+    void testContainerLifecycle()
     {
         StateMachineModel model;
         SMDataTypeModel&  dt = model.getDataTypeModel();

@@ -70,7 +70,7 @@ class SIOverview : public QScrollArea
 public:
     explicit SIOverview(SIOverviewModel & model, QWidget* parent = nullptr);
 
-    virtual ~SIOverview(void);
+    virtual ~SIOverview();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -119,7 +119,7 @@ protected:
     /**
      * \brief   The slot is triggered when the service interface description is changed.
      **/
-    void onDescriptionChanged(void);
+    void onDescriptionChanged();
 
     /**
      * \brief   The slot is triggered when the deprecation hint is changed.
@@ -182,17 +182,17 @@ private:
     /**
      * \brief   Initializes the SIConstant object.
      **/
-    void updateWidgets(void);
+    void updateWidgets();
 
     /**
      * \brief   Initializes the SIInclude object.
      **/
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief   Initializes the signals.
      **/
-    void setupSignals(void);
+    void setupSignals();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

@@ -45,14 +45,14 @@ public:
      * \brief   Generates and returns file name of the log database base on the information set in the initialization file.
      *          Normalizes the file name if it contains a mask, such as "log_%time%.sqlog".
      **/
-    static QString generateFileName(void);
+    static QString generateFileName();
     
     /**
      * \brief   Generates and returns the path to the log database new file.
      *          The log database location and file name are set in the initialization file.
      *          Normalizes the file name if it contains a mask, such as "log_%time%.sqlog".
      **/
-    static QString newFileName(void);
+    static QString newFileName();
     
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -60,7 +60,7 @@ public:
 public:
     explicit LiveLogsModel(QObject *parent = nullptr);
     
-    virtual ~LiveLogsModel(void);
+    virtual ~LiveLogsModel();
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
@@ -70,12 +70,12 @@ public:
     /**
      * \brief   Setup logging model.
      **/    
-    virtual void setupModel(void) override;
+    virtual void setupModel() override;
     
     /**
      * \brief   Release logging model.
      **/    
-    virtual void releaseModel(void) override;
+    virtual void releaseModel() override;
     
     /**
      * \brief   Call to start connection to the log collector service.
@@ -88,7 +88,7 @@ public:
     /**
      * \brief   Call to start disconnection from the log collector service.
      **/
-    void disconnectService(void);
+    void disconnectService();
 
     /**
      * \brief   Triggered when service is connected.
@@ -102,37 +102,37 @@ public:
     /**
      * \brief   Returns true if application is connected to the log collector service.
      **/
-    inline bool isConnected(void) const;
+    inline bool isConnected() const;
 
     /**
      * \brief   Returns the address of the log collector service.
      **/
-    inline QString getLofServiceAddress(void) const;
+    inline QString getLofServiceAddress() const;
 
     /**
      * \brief   Returns the port of the log collector service.
      **/
-    inline uint16_t getLogServicePort(void) const;
+    inline uint16_t getLogServicePort() const;
 
     /**
      * \brief   Call to pause logging. When logging is paused,
      *          on resume it continues writing logs in the same database.
      **/
-    void pauseLogging(void);
+    void pauseLogging();
 
     /**
      * \brief   Call to resume logging. When logging is resumed,
      *          it continues writing logs in the same database.
      *          Only paused logging can be resumed.
      **/
-    void resumeLogging(void);
+    void resumeLogging();
 
     /**
      * \brief   Call to stop logging. When logging is stopped,
      *          it closes the database and stops writing logs.
      *          On restart, it creates new database.
      **/
-    void stopLogging(void);
+    void stopLogging();
 
     /**
      * \brief   Call to restart logging. When logging is restarted,
@@ -187,17 +187,17 @@ private:
 // LiveLogsModel class inline methods.
 //////////////////////////////////////////////////////////////////////////
 
-inline bool LiveLogsModel::isConnected(void) const
+inline bool LiveLogsModel::isConnected() const
 {
     return mIsConnected;
 }
 
-inline QString LiveLogsModel::getLofServiceAddress(void) const
+inline QString LiveLogsModel::getLofServiceAddress() const
 {
     return mAddress;
 }
 
-inline uint16_t LiveLogsModel::getLogServicePort(void) const
+inline uint16_t LiveLogsModel::getLogServicePort() const
 {
     return mPort;
 }

@@ -95,7 +95,7 @@ SMImportEntry& SMImportEntry::operator = (SMImportEntry&& other) noexcept
     return *this;
 }
 
-bool SMImportEntry::isValid(void) const
+bool SMImportEntry::isValid() const
 {
     return (mName.isEmpty() == false) && (mLocation.isEmpty() == false);
 }
@@ -145,7 +145,7 @@ SMImportData::SMImportData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-bool SMImportData::isValid(void) const
+bool SMImportData::isValid() const
 {
     return true;
 }

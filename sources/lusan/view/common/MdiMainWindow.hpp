@@ -68,13 +68,13 @@ class MdiMainWindow : public QMainWindow
 private:
     
     //!< Returns the filters to display when opening service interface files.
-    inline static QString _filterServiceFiles(void);
+    inline static QString _filterServiceFiles();
 
     //!< Returns the filters to display when opening state machine files.
-    inline static QString _filterStateMachineFiles(void);
+    inline static QString _filterStateMachineFiles();
     
     //!< Returns the filter to display when opening log database files.
-    inline static QString _filterLoggingFiles(void);
+    inline static QString _filterLoggingFiles();
     
 //////////////////////////////////////////////////////////////////////////
 // Public methods
@@ -117,12 +117,12 @@ public:
      * \brief   Gets the workspace root directory.
      * \return  The path to the workspace root.
      **/
-    inline const QString& getWorkspaceRoot(void) const;
+    inline const QString& getWorkspaceRoot() const;
 
     /**
      * \brief   Returns the last file opened or saved.
      **/
-    inline const QString getLastFile(void) const;
+    inline const QString getLastFile() const;
 
     /**
      * \brief   Sets the last file opened or saved.
@@ -134,12 +134,12 @@ public:
      * \brief   Returns a pointer to the live log viewer window.
      *          Returns nullptr if does not receive logs in live mode.
      **/
-    inline LiveLogViewer* getLiveLogViewer(void) const;
+    inline LiveLogViewer* getLiveLogViewer() const;
 
     /**
      * \brief   Returns the active MDI child window.
      **/
-    inline MdiChild* getActiveWindow(void) const;
+    inline MdiChild* getActiveWindow() const;
 
     /**
      * \brief   Call to show the options dialog with active log setting page.
@@ -161,37 +161,37 @@ public:
     /**
      * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
      **/
-    QString openLogFile(void);
+    QString openLogFile();
 
     /**
      * \brief   Called to setup live logging models.
      **/
-    LiveLogsModel* setupLiveLogging(void);
+    LiveLogsModel* setupLiveLogging();
 
     /**
      * \brief   Returns the live logging model.
      **/
-    LiveLogsModel* getLiveLogging(void) const;
+    LiveLogsModel* getLiveLogging() const;
 
     /**
      * \brief   Returns the File System navigation window.
      **/
-    NaviFileSystem& getNaviFileSystem(void);
+    NaviFileSystem& getNaviFileSystem();
 
     /**
      * \brief   Returns the Live Logging Scopes Navigation window.
      **/
-    NaviLiveLogsScopes& getNaviLiveScopes(void);
+    NaviLiveLogsScopes& getNaviLiveScopes();
 
     /**
      * \brief   Returns the Offline Logging Scopes Navigation window.
      **/
-    NaviOfflineLogsScopes& getNaviOfflineScopes(void);
+    NaviOfflineLogsScopes& getNaviOfflineScopes();
 
     /**
      * \brief   Returns the Output Window for scopes logs.
      **/
-    ScopeOutputViewer& getOutputScopeLogs(void);
+    ScopeOutputViewer& getOutputScopeLogs();
 
     /**
      * \brief   Sets the tooltip text for the tab bar of the given MDI sub-window.
@@ -224,12 +224,12 @@ signals:
     /**
      * \brief   The signal triggered when the options dialog is opened.
      **/
-    void signalOptionsOpening(void);
+    void signalOptionsOpening();
 
     /**
      * \brief   The signal triggered when the options dialog is applied.
      **/
-    void signalOptionsApplied(void);
+    void signalOptionsApplied();
 
     /**
      * \brief   The signal triggered when the options dialog is closed.
@@ -241,17 +241,17 @@ signals:
      * \brief   The signal triggered when the main window is about to close.
      *          This signal is used to notify other components that the main window is closing.
      **/
-    void signalMainwindowClosing(void);
+    void signalMainwindowClosing();
 
     /**
      * \brief   The signal triggered when a new live log file is created.
      **/
-    void signalNewLiveLog(void);
+    void signalNewLiveLog();
 
     /**
      * \brief   The signal triggered when to open offline log file.
      **/
-    void signalOpenOfflineLog(void);
+    void signalOpenOfflineLog();
     
 //////////////////////////////////////////////////////////////////////////
 // protected methods
@@ -270,37 +270,37 @@ private slots:
     /**
      * \brief   Slot for creating a new SI file.
      **/
-    void onFileNewSI(void);
+    void onFileNewSI();
 
     /**
      * \brief   Slot for creating a new FSM file.
      **/
-    void onFileNewFSM(void);
+    void onFileNewFSM();
 
     /**
      * \brief   Slot for creating a new log file.
      **/
-    void onFileNewLiveLog(void);
+    void onFileNewLiveLog();
 
     /**
      * \brief   Slot for saving the current file.
      **/
-    void onFileSave(void);
+    void onFileSave();
 
     /**
      * \brief   Slot for saving the current file with a new name.
      **/
-    void onFileSaveAs(void);
+    void onFileSaveAs();
 
     /**
      * \brief   Slot for opening a file.
      **/
-    void onFileOpen(void);
+    void onFileOpen();
 
     /**
      * \brief   Slot for exiting the application.
      **/
-    void onFileExit(void);
+    void onFileExit();
 
     /**
      * \brief   Slot for opening a recent file.
@@ -325,7 +325,7 @@ private slots:
     /**
      * \brief   Slot for showing the tools options dialog.
      **/
-    void onToolsOptions(void);
+    void onToolsOptions();
 
     /**
      * \brief   Slot for showing the about dialog.
@@ -409,7 +409,7 @@ private:
      * \brief   Returns the file filter string, which contains the list of supported extensions.
      *          The string is used to open files supported by lusan application.
      **/
-    const QString& fileFilters(void) const;
+    const QString& fileFilters() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -499,7 +499,7 @@ private:
      * \brief   Returns a reference to the current instance of MdiMainWindow.
      * \return  A reference to the current instance of MdiMainWindow.
      **/
-    inline MdiMainWindow& self(void);
+    inline MdiMainWindow& self();
 
     /**
      * \brief   Initializes an action with the given parameters.
@@ -590,17 +590,17 @@ inline void MdiMainWindow::setWorkspaceRoot(const QString& workspace)
     mWorkspaceRoot = workspace;
 }
 
-inline const QString& MdiMainWindow::getWorkspaceRoot(void) const
+inline const QString& MdiMainWindow::getWorkspaceRoot() const
 {
     return mWorkspaceRoot;
 }
 
-inline MdiMainWindow& MdiMainWindow::self(void)
+inline MdiMainWindow& MdiMainWindow::self()
 {
     return (*this);
 }
 
-inline const QString MdiMainWindow::getLastFile(void) const
+inline const QString MdiMainWindow::getLastFile() const
 {
     return mLastFile;
 }
@@ -610,12 +610,12 @@ inline void MdiMainWindow::setLastFile(const QString& lastFile)
     mLastFile = lastFile;
 }
 
-inline LiveLogViewer* MdiMainWindow::getLiveLogViewer(void) const
+inline LiveLogViewer* MdiMainWindow::getLiveLogViewer() const
 {
     return mLogViewer;
 }
 
-inline MdiChild* MdiMainWindow::getActiveWindow(void) const
+inline MdiChild* MdiMainWindow::getActiveWindow() const
 {
     return activeMdiChild();
 }

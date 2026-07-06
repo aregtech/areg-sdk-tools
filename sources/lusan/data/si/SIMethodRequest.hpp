@@ -69,7 +69,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIMethodRequest(void);
+    virtual ~SIMethodRequest();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -139,23 +139,23 @@ public:
      * \brief   Returns the connected response name.
      * \return  The connected response name.
      **/
-    const QString& getConectedResponseName(void) const;
+    const QString& getConectedResponseName() const;
 
     /**
      * \brief   Returns the connected response object.
      * \return  The connected response object.
      **/
-    const SIMethodResponse* getConectedResponse(void) const;
+    const SIMethodResponse* getConectedResponse() const;
 
     /**
      * \brief   Returns true if the connected response is valid.
      **/
-    bool hasValidResponse(void) const;
+    bool hasValidResponse() const;
 
     /**
      * \brief   Clears the connected response name.
      **/
-    void clearResponse(void);
+    void clearResponse();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables.

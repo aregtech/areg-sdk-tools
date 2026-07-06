@@ -58,7 +58,7 @@ public:
     /**
      * \brief   Resets filter data of all columns.
      **/
-    void resetFilters(void);
+    void resetFilters();
 
     /**
      * \brief   Returns the logical index of the column.

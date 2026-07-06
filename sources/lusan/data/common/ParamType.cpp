@@ -161,52 +161,52 @@ bool ParamType::operator != (const QString& typeName) const
     return !(operator == (typeName));
 }
 
-ParamType::operator const DataTypeCustom* (void) const
+ParamType::operator const DataTypeCustom* () const
 {
     return (isCustomDefined() ? static_cast<const DataTypeCustom*>(mTypeObj) : static_cast<const DataTypeCustom *>(nullptr));
 }
 
-ParamType::operator DataTypeCustom* (void)
+ParamType::operator DataTypeCustom* ()
 {
     return (isCustomDefined() ? static_cast<DataTypeCustom*>(mTypeObj) : static_cast<DataTypeCustom*>(nullptr));
 }
 
-ParamType::operator const DataTypeStructure* (void) const
+ParamType::operator const DataTypeStructure* () const
 {
     return (isStructure() ? static_cast<const DataTypeStructure*>(mTypeObj) : static_cast<const DataTypeStructure*>(nullptr));
 }
 
-ParamType::operator DataTypeStructure* (void)
+ParamType::operator DataTypeStructure* ()
 {
     return (isStructure() ? static_cast<DataTypeStructure*>(mTypeObj) : static_cast<DataTypeStructure*>(nullptr));
 }
 
-ParamType::operator const DataTypeEnum* (void) const
+ParamType::operator const DataTypeEnum* () const
 {
     return (isEnumeration() ? static_cast<const DataTypeEnum*>(mTypeObj) : static_cast<const DataTypeEnum*>(nullptr));
 }
 
-ParamType::operator DataTypeEnum* (void)
+ParamType::operator DataTypeEnum* ()
 {
     return (isEnumeration() ? static_cast<DataTypeEnum*>(mTypeObj) : static_cast<DataTypeEnum*>(nullptr));
 }
 
-ParamType::operator const DataTypeContainer* (void) const
+ParamType::operator const DataTypeContainer* () const
 {
     return (isContainer() ? static_cast<const DataTypeContainer*>(mTypeObj) : static_cast<const DataTypeContainer*>(nullptr));
 }
 
-ParamType::operator DataTypeContainer* (void)
+ParamType::operator DataTypeContainer* ()
 {
     return (isContainer() ? static_cast<DataTypeContainer*>(mTypeObj) : static_cast<DataTypeContainer*>(nullptr));
 }
 
-ParamType::operator const DataTypeImported* (void) const
+ParamType::operator const DataTypeImported* () const
 {
     return (isImported() ? static_cast<const DataTypeImported*>(mTypeObj) : static_cast<const DataTypeImported*>(nullptr));
 }
 
-ParamType::operator DataTypeImported* (void)
+ParamType::operator DataTypeImported* ()
 {
     return (isImported() ? static_cast<DataTypeImported*>(mTypeObj) : static_cast<DataTypeImported*>(nullptr));
 }

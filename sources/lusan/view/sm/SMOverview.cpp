@@ -56,7 +56,7 @@ SMOverview::SMOverview(SMOverviewModel& model, QWidget* parent /*= nullptr*/)
     updateData();
 }
 
-void SMOverview::buildUi(void)
+void SMOverview::buildUi()
 {
     QWidget* content = new QWidget(this);
     QVBoxLayout* root = new QVBoxLayout(content);
@@ -151,7 +151,7 @@ void SMOverview::buildUi(void)
     setWidget(content);
 }
 
-QWidget* SMOverview::buildLinksPanel(void)
+QWidget* SMOverview::buildLinksPanel()
 {
     struct Link
     {
@@ -200,7 +200,7 @@ QWidget* SMOverview::buildLinksPanel(void)
     return group;
 }
 
-void SMOverview::setupSignals(void)
+void SMOverview::setupSignals()
 {
     connect(mName , &QLineEdit::textEdited     , this, &SMOverview::onNameEdited);
     connect(mName , &QLineEdit::editingFinished, this, &SMOverview::onNameCommitted);
@@ -219,7 +219,7 @@ void SMOverview::setupSignals(void)
     });
 }
 
-void SMOverview::updateData(void)
+void SMOverview::updateData()
 {
     const QSignalBlocker blockName(mName);
     const QSignalBlocker blockMajor(mMajor);
@@ -250,7 +250,7 @@ void SMOverview::onNameEdited(const QString& text)
     showNameValid(isValidMachineName(text));
 }
 
-void SMOverview::onNameCommitted(void)
+void SMOverview::onNameCommitted()
 {
     const QString text = mName->text();
     if (isValidMachineName(text))
@@ -261,7 +261,7 @@ void SMOverview::onNameCommitted(void)
     }
 }
 
-void SMOverview::onVersionEdited(void)
+void SMOverview::onVersionEdited()
 {
     mCommitting = true;
     mModel.setVersion(VersionNumber(mMajor->text().toUInt(), mMinor->text().toUInt(), mPatch->text().toUInt()));
@@ -275,7 +275,7 @@ void SMOverview::onThreadingToggled(bool checked)
     mCommitting = false;
 }
 
-void SMOverview::onOverviewChanged(void)
+void SMOverview::onOverviewChanged()
 {
     if (mCommitting)
         return;
@@ -283,7 +283,7 @@ void SMOverview::onOverviewChanged(void)
     updateData();
 }
 
-void SMOverview::commitDescription(void)
+void SMOverview::commitDescription()
 {
     mCommitting = true;
     mModel.setDescription(mDescription->toPlainText());

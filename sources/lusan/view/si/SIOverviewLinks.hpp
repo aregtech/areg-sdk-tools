@@ -35,27 +35,27 @@ public:
     /**
      * \brief   Link to the data types tabbed page.
      **/
-    QPushButton* linkDataTypes(void) const;
+    QPushButton* linkDataTypes() const;
 
     /**
      * \brief   Link to the attributes tabbed page.
      **/
-    QPushButton* linkAttributes(void) const;
+    QPushButton* linkAttributes() const;
 
     /**
      * \brief   Link to the methods tabbed page.
      **/
-    QPushButton* linkMethods(void) const;
+    QPushButton* linkMethods() const;
 
     /**
      * \brief   Link to the constants tabbed page.
      **/
-    QPushButton* linkConstants(void) const;
+    QPushButton* linkConstants() const;
 
     /**
      * \brief   Link to the includes tabbed page.
      **/
-    QPushButton* linkIncludes(void) const;
+    QPushButton* linkIncludes() const;
 
 private:
     Ui::SIOverviewLinks* ui;

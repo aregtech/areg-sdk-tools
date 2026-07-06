@@ -62,8 +62,8 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     NavigationDock(MdiMainWindow* parent);
-    virtual QSize sizeHint(void) const override;
-    virtual QSize minimumSizeHint(void) const override;
+    virtual QSize sizeHint() const override;
+    virtual QSize minimumSizeHint() const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes
@@ -72,22 +72,22 @@ public:
     /**
      * \brief   Returns the tab widget of the navigation.
      **/
-    inline QTabWidget& getTabWidget(void);
+    inline QTabWidget& getTabWidget();
 
     /**
      * \brief   Returns the file system widget.
      **/
-    inline NaviFileSystem& getFileSystem(void);
+    inline NaviFileSystem& getFileSystem();
 
     /**
      * \brief   Returns the live mode log explorer widget.
      **/
-    inline NaviLiveLogsScopes& getLiveScopes(void);
+    inline NaviLiveLogsScopes& getLiveScopes();
 
     /**
      * \brief   Returns the offline log explorer widget.
      **/
-    inline NaviOfflineLogsScopes& getOfflineScopes(void);
+    inline NaviOfflineLogsScopes& getOfflineScopes();
 
     /**
      * \brief   Adds a new tab with the widget to the tab-control.
@@ -131,7 +131,7 @@ private:
     /**
      * \brief   Returns the instance of NavigationDock window.
      **/
-    inline NavigationDock& self(void);
+    inline NavigationDock& self();
 
     /**
      * \brief   Initializes the size of tab widgets.
@@ -143,12 +143,12 @@ private slots:
     /**
      * \brief   Slot is triggered when options dialog is opened.
      **/
-    void onOptionsOpening(void);
+    void onOptionsOpening();
 
     /**
      * \brief   Slot is triggered when apply button in options dialog is pressed.
      **/
-    void onOptionsApplied(void);
+    void onOptionsApplied();
 
     /**
      * \brief   Slot is triggered when options dialog is closed.
@@ -171,22 +171,22 @@ private:
 // NavigationDock class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QTabWidget& NavigationDock::getTabWidget(void)
+inline QTabWidget& NavigationDock::getTabWidget()
 {
     return mTabs;
 }
 
-inline NaviFileSystem& NavigationDock::getFileSystem(void)
+inline NaviFileSystem& NavigationDock::getFileSystem()
 {
     return mFileSystem;
 }
 
-inline NaviLiveLogsScopes& NavigationDock::getLiveScopes(void)
+inline NaviLiveLogsScopes& NavigationDock::getLiveScopes()
 {
     return mLiveScopes;
 }
 
-inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes(void)
+inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes()
 {
     return mOfflineScopes;
 }
@@ -201,7 +201,7 @@ inline int NavigationDock::addTab(NavigationWindow& widget, NavigationDock::eNav
     return (navi != NavigationDock::eNaviWindow::NaviUnknown ? addTab(widget, NavigationDock::getTabName(navi)) : -1);
 }
 
-inline NavigationDock& NavigationDock::self(void)
+inline NavigationDock& NavigationDock::self()
 {
     return (*this);
 }

@@ -52,13 +52,13 @@ public:
     /**
      * \brief   Returns the file extension of the service interface document.
      **/
-    static const QString& fileExtension(void);
+    static const QString& fileExtension();
 
     /**
      * \brief   Returns the file name of the log viewer.
      *          The file name is generated based on the current date and time.
      **/
-    static QString generateFileName(void);
+    static QString generateFileName();
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor
@@ -72,7 +72,7 @@ public:
      **/
     explicit LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent = nullptr);
     
-    virtual ~LiveLogViewer(void);
+    virtual ~LiveLogViewer();
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -95,22 +95,22 @@ public:
     /**
      * \brief   Returns true if application is connected to the logging service.
      **/
-    bool isServiceConnected(void) const;
+    bool isServiceConnected() const;
 
     /**
      * \brief   Called to check whether log viewer has log entries.
      **/
-    bool isEmpty(void) const;
+    bool isEmpty() const;
 
     /**
      * \brief   Called to detach the log viewer and stop receiving messages.
      **/
-    void detachLiveLog(void);
+    void detachLiveLog();
 
     /**
      * \brief   Returns the database path of the live logs database.
      **/
-    QString getDatabasePath(void) const;
+    QString getDatabasePath() const;
 
 /************************************************************************
  * MdiChild overrides
@@ -155,20 +155,20 @@ private slots:
     /**
      * \brief   Slot, triggered when Clear logging window button is clicked.
      **/
-    void onClearClicked(void);
+    void onClearClicked();
 
 private:
     //!< Returns Pause / Resume toolbutton
-    QToolButton* ctrlPause(void);
+    QToolButton* ctrlPause();
 
     //!< Returns Stop / Restart toolbutton
-    QToolButton* ctrlStop(void);
+    QToolButton* ctrlStop();
 
     //!< Returns Clear logs toolbutton
-    QToolButton* ctrlClear(void);
+    QToolButton* ctrlClear();
 
     //!< Returns Logging File name label widget.
-    QLabel* ctrlFile(void);
+    QLabel* ctrlFile();
         
     /**
      * \brief   Resets the order of the columns.
@@ -192,7 +192,7 @@ private:
      * \brief   Cleans up resources used by the offline log viewer.
      *          This method is called when the viewer is closed or no longer needed.
      **/
-    void cleanResources(void);
+    void cleanResources();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables

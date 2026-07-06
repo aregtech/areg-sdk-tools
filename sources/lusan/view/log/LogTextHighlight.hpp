@@ -43,7 +43,7 @@ class LogTextHighlight : public QStyledItemDelegate
 //////////////////////////////////////////////////////////////////////////
 public:
     LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QObject* parent = nullptr);
-    virtual ~LogTextHighlight(void) = default;
+    virtual ~LogTextHighlight() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

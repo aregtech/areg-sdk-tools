@@ -50,25 +50,25 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    const QString& getName(void) const;
-    const VersionNumber& getVersion(void) const;
-    SMOverviewData::eThreading getThreading(void) const;
-    const QString& getDescription(void) const;
+    const QString& getName() const;
+    const VersionNumber& getVersion() const;
+    SMOverviewData::eThreading getThreading() const;
+    const QString& getDescription() const;
 
     void setName(const QString& name);
     void setVersion(const VersionNumber& version);
     void setThreading(SMOverviewData::eThreading threading);
     void setDescription(const QString& description);
 
-    DocModelNotifier& getNotifier(void) const;
-    uint32_t getOverviewId(void) const;
+    DocModelNotifier& getNotifier() const;
+    uint32_t getOverviewId() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    const SMOverviewData& overview(void) const;
-    SMOverviewData& overview(void);
+    const SMOverviewData& overview() const;
+    SMOverviewData& overview();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

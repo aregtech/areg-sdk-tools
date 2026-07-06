@@ -167,7 +167,7 @@ public:
      * \brief   Updates the list of data types.
      *          Uses filter list to exclude data types.
      **/
-    void updateDataTypeLists(void);
+    void updateDataTypeLists();
 
     /**
      * \brief   Searches for the data type in the list. If find, removes and includes in the filter.
@@ -195,17 +195,17 @@ public:
     /**
      * \brief   Returns flag, indicating whether the list can have an empty entry.
      **/
-    inline bool hasEmptyEntry(void) const;
+    inline bool hasEmptyEntry() const;
 
     /**
      * \brief   Adds an empty entry to the list. The empty type has no data type.
      **/
-    inline void addEmptyEntry(void);
+    inline void addEmptyEntry();
 
     /**
      * \brief   Removes the empty entry from the list.
      **/
-    inline void removeEmptyEntry(void);
+    inline void removeEmptyEntry();
 
     /**
      * \brief   Returns the data type object by the given name.
@@ -248,12 +248,12 @@ private:
 // DataTypesModel class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline bool DataTypesModel::hasEmptyEntry(void) const
+inline bool DataTypesModel::hasEmptyEntry() const
 {
     return mHasEmpty;
 }
 
-inline void DataTypesModel::addEmptyEntry(void)
+inline void DataTypesModel::addEmptyEntry()
 {
     if (mHasEmpty && (mDataTypeList.indexOf(&_emptyType) < 0))
     {
@@ -264,7 +264,7 @@ inline void DataTypesModel::addEmptyEntry(void)
     }
 }
 
-inline void DataTypesModel::removeEmptyEntry(void)
+inline void DataTypesModel::removeEmptyEntry()
 {
     if (mHasEmpty && (mDataTypeList.indexOf(&_emptyType) >= 0))
     {

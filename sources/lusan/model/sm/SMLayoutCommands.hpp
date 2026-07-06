@@ -43,9 +43,9 @@ public:
                       , double x, double y, double width, double height
                       , const QString& text, QUndoCommand* parent = nullptr);
 
-    virtual void redo(void) override;
-    virtual void undo(void) override;
-    virtual int id(void) const override;
+    virtual void redo() override;
+    virtual void undo() override;
+    virtual int id() const override;
     virtual bool mergeWith(const QUndoCommand* other) override;
 
 private:
@@ -70,8 +70,8 @@ class SMRemoveLayoutCommand : public SMCommand
 public:
     SMRemoveLayoutCommand(StateMachineData& data, DocModelNotifier& notifier, const QList<uint32_t>& ownerIds, const QString& text, QUndoCommand* parent = nullptr);
 
-    virtual void redo(void) override;
-    virtual void undo(void) override;
+    virtual void redo() override;
+    virtual void undo() override;
 
 private:
     QList<uint32_t>         mIds;

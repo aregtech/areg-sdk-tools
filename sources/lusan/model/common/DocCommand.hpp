@@ -52,13 +52,13 @@ protected:
     DocCommand(DocModelNotifier& notifier, const QString& text, QUndoCommand* parent = nullptr);
 
 public:
-    virtual ~DocCommand(void) = default;
+    virtual ~DocCommand() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
 //////////////////////////////////////////////////////////////////////////
 protected:
-    inline DocModelNotifier& notifier(void) const;
+    inline DocModelNotifier& notifier() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -84,7 +84,7 @@ public:
 // DocCommand inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline DocModelNotifier& DocCommand::notifier(void) const
+inline DocModelNotifier& DocCommand::notifier() const
 {
     return mNotifier;
 }
