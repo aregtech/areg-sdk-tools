@@ -43,7 +43,7 @@ namespace
     const QString _defName("NewInclude");
 }
 
-QStringList SIInclude::getSupportedExtensions(void)
+QStringList SIInclude::getSupportedExtensions()
 {
     QStringList exts{};
     exts.append(LusanApplication::getExternalFileExtensions());
@@ -92,13 +92,13 @@ SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
     updateDetails(nullptr, true);
 }
 
-SIInclude::~SIInclude(void)
+SIInclude::~SIInclude()
 {
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mDetails);
 }
 
-int SIInclude::getColumnCount(void) const
+int SIInclude::getColumnCount() const
 {
     return mList->ctrlTableList()->columnCount();
 }
@@ -122,7 +122,7 @@ void SIInclude::onCurCellChanged(int currentRow, int currentColumn, int previous
     blockBasicSignals(false);
 }
 
-void SIInclude::onAddClicked(void)
+void SIInclude::onAddClicked()
 {
     QString location(genName());
     QTableWidget* table = mList->ctrlTableList();
@@ -151,7 +151,7 @@ void SIInclude::onAddClicked(void)
     blockBasicSignals(false);
 }
 
-void SIInclude::onRemoveClicked(void)
+void SIInclude::onRemoveClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -182,7 +182,7 @@ void SIInclude::onRemoveClicked(void)
     blockBasicSignals(false);
 }
 
-void SIInclude::onInsertClicked(void)
+void SIInclude::onInsertClicked()
 {
     QString location(genName());
     QTableWidget* table = mList->ctrlTableList();
@@ -221,7 +221,7 @@ void SIInclude::onInsertClicked(void)
     blockBasicSignals(false);
 }
 
-void SIInclude::onMoveUpClicked(void)
+void SIInclude::onMoveUpClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -236,7 +236,7 @@ void SIInclude::onMoveUpClicked(void)
     }
 }
 
-void SIInclude::onMoveDownClicked(void)
+void SIInclude::onMoveDownClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -251,7 +251,7 @@ void SIInclude::onMoveDownClicked(void)
     }
 }
 
-void SIInclude::onBrowseClicked(void)
+void SIInclude::onBrowseClicked()
 {
     WorkspaceFileDialog dialog(   true
                                 , false
@@ -325,7 +325,7 @@ void SIInclude::onIncludeChanged(const QString& newText)
     }
 }
 
-void SIInclude::onDescriptionChanged(void)
+void SIInclude::onDescriptionChanged()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -388,7 +388,7 @@ void SIInclude::cellChanged(int row, int col, const QString& newValue)
     }
 }
 
-void SIInclude::updateData(void)
+void SIInclude::updateData()
 {
     QTableWidget* table = mList->ctrlTableList();
     const QList<IncludeEntry>& list = mModel.getIncludes();
@@ -403,7 +403,7 @@ void SIInclude::updateData(void)
     }
 }
 
-void SIInclude::updateWidgets(void)
+void SIInclude::updateWidgets()
 {
     mTableCell = new TableCell(QList<QAbstractItemModel*>(), QList<int>(), mList->ctrlTableList(), this, false);
     mList->ctrlTableList()->setItemDelegateForColumn(0, mTableCell);
@@ -413,7 +413,7 @@ void SIInclude::updateWidgets(void)
     SICommon::enableDeprecated<SIIncludeDetails, IncludeEntry>(mDetails, nullptr, false);
 }
 
-void SIInclude::setupSignals(void)
+void SIInclude::setupSignals()
 {
     Q_ASSERT(mDetails != nullptr);
     Q_ASSERT(mList != nullptr);
@@ -573,7 +573,7 @@ inline void SIInclude::updateToolBottons(int row, int rowCount)
     }
 }
 
-inline QString SIInclude::genName(void)
+inline QString SIInclude::genName()
 {
     static const QString _defName("NewInclude");
 

@@ -68,7 +68,7 @@ SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     setupSignals();
 }
 
-SIOverview::~SIOverview(void)
+SIOverview::~SIOverview()
 {
     ui.horizontalLayout->removeWidget(mLinks);
     ui.horizontalLayout->removeWidget(mDetails);
@@ -108,7 +108,7 @@ void SIOverview::onDeprecatedChecked(bool isChecked)
     SICommon::checkedDeprecated<SIOverviewDetails, SIOverviewModel>(mDetails, &mModel, isChecked);
 }
 
-void SIOverview::onDescriptionChanged(void)
+void SIOverview::onDescriptionChanged()
 {
     mModel.setDescription(mDetails->ctrlDescription()->toPlainText());
 }
@@ -158,7 +158,7 @@ void SIOverview::onLinkAttributesClicked(bool /*checked*/)
     emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageAttributes));
 }
 
-void SIOverview::updateWidgets(void)
+void SIOverview::updateWidgets()
 {
     mDetails->ctrlMajor()->setValidator(&mVersionValidator);
     mDetails->ctrlMinor()->setValidator(&mVersionValidator);
@@ -167,7 +167,7 @@ void SIOverview::updateWidgets(void)
     mDetails->ctrlInternet()->setEnabled(false);
 }
 
-void SIOverview::updateData(void)
+void SIOverview::updateData()
 {
     const VersionNumber& version{ mModel.getVersion() };
 
@@ -200,7 +200,7 @@ void SIOverview::updateData(void)
     }
 }
 
-void SIOverview::setupSignals(void)
+void SIOverview::setupSignals()
 {
     connect(mDetails->ctrlMajor()       , &QLineEdit::textEdited    , this, &SIOverview::onMajorChanged);
     connect(mDetails->ctrlMinor()       , &QLineEdit::textEdited    , this, &SIOverview::onMinorChanged);

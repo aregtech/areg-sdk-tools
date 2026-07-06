@@ -36,17 +36,17 @@ public:
 
     // Getters to access controls
 
-    QToolButton * ctrlButtonAdd(void);
+    QToolButton * ctrlButtonAdd();
 
-    QToolButton* ctrlButtonRemove(void);
+    QToolButton* ctrlButtonRemove();
 
-    QToolButton* ctrlButtonInsert(void);
+    QToolButton* ctrlButtonInsert();
 
-    QToolButton* ctrlButtonMoveUp(void);
+    QToolButton* ctrlButtonMoveUp();
 
-    QToolButton* ctrlButtonMoveDown(void);
+    QToolButton* ctrlButtonMoveDown();
 
-    QTableWidget* ctrlTableList(void);
+    QTableWidget* ctrlTableList();
 
 private:
     Ui::SIAttributeList* ui;

@@ -21,13 +21,13 @@
 #include "areglogger/client/LogObserverApi.h"
 #include "areg/base/SharedBuffer.hpp"
 
-LogCollectorClient& LogCollectorClient::getInstance(void)
+LogCollectorClient& LogCollectorClient::getInstance()
 {
     static LogCollectorClient _instance;
     return _instance;
 }
 
-LogCollectorClient::LogCollectorClient(void)
+LogCollectorClient::LogCollectorClient()
     : QObject ( )
     , areg::logger::LogObserverBase   ( )
 {
@@ -67,7 +67,7 @@ void LogCollectorClient::on_log_db_created(const std::string& dbLocation)
     emit signalLogDbCreated(dbLocation);
 }
 
-void LogCollectorClient::on_log_messaging_failed(void)
+void LogCollectorClient::on_log_messaging_failed()
 {
     emit signalLogMessagingFailed();
 }
@@ -82,7 +82,7 @@ void LogCollectorClient::on_log_instances_disconnect(const std::vector<areg::Con
     emit signalLogInstancesDisconnect(instances);
 }
 
-void LogCollectorClient::on_log_service_disconnected(void)
+void LogCollectorClient::on_log_service_disconnected()
 {
     emit signalLogServiceDisconnected();
 }

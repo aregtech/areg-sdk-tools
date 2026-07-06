@@ -35,23 +35,23 @@ class SIDataTypeList : public QWidget
 public:
     explicit SIDataTypeList(QWidget *parent = nullptr);
 
-    QTreeWidget* ctrlTableList(void) const;
+    QTreeWidget* ctrlTableList() const;
 
-    QToolButton* ctrlButtonAdd(void) const;
+    QToolButton* ctrlButtonAdd() const;
     
-    QToolButton* ctrlButtonInsert(void) const;
+    QToolButton* ctrlButtonInsert() const;
     
-    QToolButton* ctrlButtonRemove(void) const;
+    QToolButton* ctrlButtonRemove() const;
 
-    QToolButton* ctrlButtonMoveUp(void) const;
+    QToolButton* ctrlButtonMoveUp() const;
 
-    QToolButton* ctrlButtonMoveDown(void) const;
+    QToolButton* ctrlButtonMoveDown() const;
 
-    QToolButton* ctrlButtonAddField(void) const;
+    QToolButton* ctrlButtonAddField() const;
 
-    QToolButton* ctrlButtonRemoveField(void) const;
+    QToolButton* ctrlButtonRemoveField() const;
 
-    QToolButton* ctrlButtonInsertField(void) const;
+    QToolButton* ctrlButtonInsertField() const;
 
 private:
     Ui::SIDataTypeList* ui;

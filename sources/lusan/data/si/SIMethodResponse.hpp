@@ -69,7 +69,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIMethodResponse(void);
+    virtual ~SIMethodResponse();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators

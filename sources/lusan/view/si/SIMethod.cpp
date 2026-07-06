@@ -90,7 +90,7 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
     setupSignals();
 }
 
-SIMethod::~SIMethod(void)
+SIMethod::~SIMethod()
 {
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mDetails);
@@ -367,7 +367,7 @@ void SIMethod::onDeprecateHintChanged(const QString& newText)
     SICommon::setDeprecateHint<SIMethodDetails, SIMethodBase>(mDetails, method, newText);
 }
 
-void SIMethod::onDescriptionChanged(void)
+void SIMethod::onDescriptionChanged()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -391,7 +391,7 @@ void SIMethod::onConnectedResponseChanged(const QString& newText)
     }
 }
 
-void SIMethod::onAddClicked(void)
+void SIMethod::onAddClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QString name = genName();
@@ -416,7 +416,7 @@ void SIMethod::onAddClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onInsertClicked(void)
+void SIMethod::onInsertClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QString name = genName();
@@ -445,7 +445,7 @@ void SIMethod::onInsertClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onRemoveClicked(void)
+void SIMethod::onRemoveClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -491,7 +491,7 @@ void SIMethod::onRemoveClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onParamAddClicked(void)
+void SIMethod::onParamAddClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
@@ -529,7 +529,7 @@ void SIMethod::onParamAddClicked(void)
     }
 }
 
-void SIMethod::onParamRemoveClicked(void)
+void SIMethod::onParamRemoveClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -605,7 +605,7 @@ void SIMethod::onParamRemoveClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onParamInsertClicked(void)
+void SIMethod::onParamInsertClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
@@ -653,7 +653,7 @@ void SIMethod::onParamInsertClicked(void)
     }
 }
 
-void SIMethod::onMoveUpClicked(void)
+void SIMethod::onMoveUpClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -674,7 +674,7 @@ void SIMethod::onMoveUpClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onMoveDownClicked(void)
+void SIMethod::onMoveDownClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -807,7 +807,7 @@ void SIMethod::onParamDefaultChanged(const QString& newText)
     setNodeText(item, param);
 }
 
-void SIMethod::onParamDescriptionChanged(void)
+void SIMethod::onParamDescriptionChanged()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -852,7 +852,7 @@ void SIMethod::onParamDeprecateHintChanged(const QString& newText)
     SICommon::setDeprecateHint<SIMethodParamDetails, MethodParameter>(mParams, param, newText);
 }
 
-void SIMethod::updateData(void)
+void SIMethod::updateData()
 {
     mParamTypes->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mParamTypes->updateDataTypeLists();
@@ -871,13 +871,13 @@ void SIMethod::updateData(void)
     mDetails->ctrlConnectedResponse()->setModel(mReplyModel);
 }
 
-void SIMethod::updateWidgets(void)
+void SIMethod::updateWidgets()
 {
     showMethodDetails(nullptr);
     updateToolButtonsForMethod(-1, 0);
 }
 
-void SIMethod::setupSignals(void)
+void SIMethod::setupSignals()
 {
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged       , this, &SIMethod::onNameChanged);
     connect(mDetails->ctrlRequest()         , &QRadioButton::toggled        , this, &SIMethod::onRequestSelected);
@@ -1292,7 +1292,7 @@ inline void SIMethod::updateToolButtonsForParams(SIMethodBase * method, int row)
     }
 }
 
-inline QString SIMethod::genName(void)
+inline QString SIMethod::genName()
 {
     static const QString _defName("NewMethod");
     QString name;

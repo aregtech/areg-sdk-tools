@@ -57,7 +57,7 @@ void SMMoveNodeCommand::applyTo(const SMLayoutNode& geometry)
     notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
 }
 
-void SMMoveNodeCommand::redo(void)
+void SMMoveNodeCommand::redo()
 {
     if (mCaptured == false)
     {
@@ -69,12 +69,12 @@ void SMMoveNodeCommand::redo(void)
     applyTo(mNew);
 }
 
-void SMMoveNodeCommand::undo(void)
+void SMMoveNodeCommand::undo()
 {
     applyTo(mOld);
 }
 
-int SMMoveNodeCommand::id(void) const
+int SMMoveNodeCommand::id() const
 {
     return CMD_ID;
 }
@@ -101,7 +101,7 @@ SMRemoveLayoutCommand::SMRemoveLayoutCommand(StateMachineData& data, DocModelNot
 {
 }
 
-void SMRemoveLayoutCommand::redo(void)
+void SMRemoveLayoutCommand::redo()
 {
     SMLayoutData& layout = data().getLayout();
     if (mCaptured == false)
@@ -137,7 +137,7 @@ void SMRemoveLayoutCommand::redo(void)
     notifier().notifyLayoutChanged(mIds);
 }
 
-void SMRemoveLayoutCommand::undo(void)
+void SMRemoveLayoutCommand::undo()
 {
     SMLayoutData& layout = data().getLayout();
     for (const SMLayoutView& view : mViews)

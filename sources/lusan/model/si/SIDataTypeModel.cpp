@@ -36,12 +36,12 @@ int SIDataTypeModel::getDataTypes(QList<DataTypeBase *> & result, const QList<Da
     return mData.getDataTypes(result, categories, makeSorting);
 }
 
-const QList<DataTypeBasicContainer*>& SIDataTypeModel::getContainerDatTypes(void) const
+const QList<DataTypeBasicContainer*>& SIDataTypeModel::getContainerDatTypes() const
 {
     return mData.getContainerDatTypes();
 }
 
-const QList<DataTypeCustom *>& SIDataTypeModel::getCustomDataTypes(void) const
+const QList<DataTypeCustom *>& SIDataTypeModel::getCustomDataTypes() const
 {
     return mData.getCustomDataTypes();
 }
@@ -141,12 +141,12 @@ void SIDataTypeModel::sortById(bool ascending)
     mData.sortById(ascending);
 }
 
-const QList<DataTypeCustom*>& SIDataTypeModel::getDataTypes(void) const
+const QList<DataTypeCustom*>& SIDataTypeModel::getDataTypes() const
 {
     return mData.getCustomDataTypes();
 }
 
-int SIDataTypeModel::getDataTypeCount(void) const
+int SIDataTypeModel::getDataTypeCount() const
 {
     return static_cast<int>(mData.getCustomDataTypes().size());
 }

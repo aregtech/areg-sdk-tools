@@ -51,7 +51,7 @@ public:
 protected:
     OptionPageBase(QDialog* parent);
 
-    virtual ~OptionPageBase(void) = default;
+    virtual ~OptionPageBase() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -61,7 +61,7 @@ public:
     /**
      * \brief   Call when the option should apply the changes.
      **/
-    virtual void applyChanges(void);
+    virtual void applyChanges();
 
     /**
      * \brief   Call when the option page is closing.
@@ -72,7 +72,7 @@ public:
     /**
      * \brief   Triggered, letting option page object to display a warning message.
      **/
-    virtual void warnMessage(void);
+    virtual void warnMessage();
 
     /**
      * \brief   Called when the workspace directories in option pages are updated.
@@ -91,7 +91,7 @@ public:
     /**
      * \brief   Returns true if data of the option page is modified.
      **/
-    inline bool isDataModified(void) const;
+    inline bool isDataModified() const;
 
     /**
      * \brief   Set data modified flag in the option page.
@@ -101,7 +101,7 @@ public:
     /**
      * \brief   Returns true if the data in option page can be save. False, otherwise.
      **/
-    inline bool canSave(void) const;
+    inline bool canSave() const;
 
     /**
      * \brief   Sets saving flag in the option page.
@@ -111,7 +111,7 @@ public:
     /**
      * \brief   Returns true if the data in option page can be accepted and the settings dialog can be closed. Otherwise, returns false.
      **/
-    inline bool canAcceptOptions(void) const;
+    inline bool canAcceptOptions() const;
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -142,7 +142,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    OptionPageBase(void) = delete;
+    OptionPageBase() = delete;
     AREG_NOCOPY_NOMOVE(OptionPageBase);
 };
 
@@ -150,7 +150,7 @@ private:
 // OptionPageBase inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline bool OptionPageBase::isDataModified(void) const
+inline bool OptionPageBase::isDataModified() const
 {
     return mDataModified;
 }
@@ -160,7 +160,7 @@ inline void OptionPageBase::setDataModified(bool modified)
     mDataModified = modified;
 }
 
-inline bool OptionPageBase::canSave(void) const
+inline bool OptionPageBase::canSave() const
 {
     return mCanSave;
 }
@@ -170,7 +170,7 @@ inline void OptionPageBase::setCanSave(bool canSave)
     mCanSave = canSave;
 }
 
-inline bool OptionPageBase::canAcceptOptions(void) const
+inline bool OptionPageBase::canAcceptOptions() const
 {
     return mCanSave || (mDataModified == false);
 }

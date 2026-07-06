@@ -36,7 +36,7 @@ class SMIncludeData : public TEDataContainer<IncludeEntry, DocumentElem>
 public:
     SMIncludeData(ElementBase* parent = nullptr);
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 

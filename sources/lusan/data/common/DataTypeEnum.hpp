@@ -131,7 +131,7 @@ public:
      **/
     EnumEntry* insertField(int position, const QString& name);
     
-    inline const QString& getDerived(void) const;
+    inline const QString& getDerived() const;
 
     /**
      * \brief   Sets the type name of values. The type names can be primitive signed or unsigned integers like 'uint32', 'int16', etc.
@@ -147,7 +147,7 @@ private:
 // DataTypeEnum class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& DataTypeEnum::getDerived(void) const
+inline const QString& DataTypeEnum::getDerived() const
 {
     return mDerived;
 }

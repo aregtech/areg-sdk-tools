@@ -336,32 +336,32 @@ void OptionPageWorkspace::setupThemeControls()
     mThemeCombo->setCurrentIndex(index >= 0 ? index : 0);
 }
 
-int OptionPageWorkspace::selectedTheme(void) const
+int OptionPageWorkspace::selectedTheme() const
 {
     return (mThemeCombo != nullptr ? mThemeCombo->currentData().toInt() : mInitialTheme);
 }
 
-inline QLineEdit* OptionPageWorkspace::ctrlRoot(void) const
+inline QLineEdit* OptionPageWorkspace::ctrlRoot() const
 {
     return mUi->rootDirEdit;
 }
 
-inline QLineEdit* OptionPageWorkspace::ctrlSources(void) const
+inline QLineEdit* OptionPageWorkspace::ctrlSources() const
 {
     return mUi->sourceDirEdit;
 }
 
-inline QLineEdit* OptionPageWorkspace::ctrlIncludes(void) const
+inline QLineEdit* OptionPageWorkspace::ctrlIncludes() const
 {
     return mUi->includeDirEdit;
 }
 
-inline QLineEdit* OptionPageWorkspace::ctrlDelivery(void) const
+inline QLineEdit* OptionPageWorkspace::ctrlDelivery() const
 {
     return mUi->deliveryDirEdit;
 }
 
-inline QLineEdit* OptionPageWorkspace::ctrlLogs(void) const
+inline QLineEdit* OptionPageWorkspace::ctrlLogs() const
 {
     return mUi->logDirEdit;
 }

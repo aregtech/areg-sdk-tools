@@ -19,6 +19,7 @@
 
 #include "lusan/data/sm/SMConstantData.hpp"
 #include "lusan/common/XmlSM.hpp"
+#include "lusan/data/sm/SMDataTypeData.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -28,7 +29,7 @@ SMConstantData::SMConstantData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-bool SMConstantData::isValid(void) const
+bool SMConstantData::isValid() const
 {
     return true;
 }
@@ -100,4 +101,13 @@ ConstantEntry* SMConstantData::createConstant(const QString& name)
     ConstantEntry entry(getNextId(), name, this);
     addElement(std::move(entry), true);
     return findElement(name);
+}
+
+void SMConstantData::validate(const SMDataTypeData& dataTypes)
+{
+    const QList<DataTypeCustom*>& customTypes = dataTypes.getCustomDataTypes();
+    for (ConstantEntry& entry : getElements())
+    {
+        entry.validate(customTypes);
+    }
 }

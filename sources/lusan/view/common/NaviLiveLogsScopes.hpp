@@ -101,7 +101,7 @@ public:
      **/
     NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~NaviLiveLogsScopes(void);
+    virtual ~NaviLiveLogsScopes();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -111,7 +111,7 @@ public:
     /**
      * \brief   Returns the IP-address of the log collector to connect.
      **/
-    const QString & getLogCollectorAddress(void) const;
+    const QString & getLogCollectorAddress() const;
 
     /**
      * \brief   Sets the IP-address of the log collector to connect.
@@ -122,7 +122,7 @@ public:
     /**
      * \brief   Returns the TCP/IP port number of the log collector to connect.
      **/
-    uint16_t getLogCollectorPort(void) const;
+    uint16_t getLogCollectorPort() const;
 
     /**
      * \brief   Sets the TCP/IP port number of the log collector to connect.
@@ -141,25 +141,25 @@ public:
      * \brief   Returns the pointer to the live logs model used by live logging scope navigation view.
      *          If no live logs are available, returns nullptr.
      **/
-    LiveLogsModel* getLoggingModel(void);
+    LiveLogsModel* getLoggingModel();
     
     //!< Returns true if the logging is configured.
-    inline bool isConfigured(void) const;
+    inline bool isConfigured() const;
 
     //!< Returns true if disconnected from log collector service.
-    inline bool isDisconnected(void) const;
+    inline bool isDisconnected() const;
 
     //!< Returns true if connected to log observer service.
-    inline bool isConnected(void) const;
+    inline bool isConnected() const;
 
     //!< Returns true if connected to log observer service and receives messages.
-    inline bool isRunning(void) const;
+    inline bool isRunning() const;
 
     //!< Returns true if connection is paused (disconnected) and can be restored.
-    inline bool isPaused(void) const;
+    inline bool isPaused() const;
 
     //!< Returns true if connection is stopped (paused) and can be restored only when new data is applied.
-    inline bool isStopped(void) const;
+    inline bool isStopped() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -168,13 +168,13 @@ public:
     /**
      * \brief   This method is called when the options dialog is opened.
      **/
-    virtual void optionOpenning(void) override;
+    virtual void optionOpenning() override;
 
     /**
      * \brief   This method is called when the apply button in options dialog is pressed.
      *          It can be used to apply changes made in the options dialog.
      **/
-    virtual void optionApplied(void) override;
+    virtual void optionApplied() override;
 
     /**
      * \brief   This method is called when the options dialog is closed.
@@ -188,55 +188,55 @@ public:
 private:
 
     //!< Returns the control object to expand or collapse entries of scopes.
-    QToolButton* ctrlCollapse(void);
+    QToolButton* ctrlCollapse();
 
     //!< Returns the control object to connect to log observer service.
-    QToolButton* ctrlConnect(void);
+    QToolButton* ctrlConnect();
 
     //!< Returns the control object to open settings.
-    QToolButton* ctrlSettings(void);
+    QToolButton* ctrlSettings();
 
     //!< Returns the control object to save current settings.
-    QToolButton* ctrlSaveSettings(void);
+    QToolButton* ctrlSaveSettings();
 
     //!< Returns the control object to find a string.
-    QToolButton* ctrlFind(void);
+    QToolButton* ctrlFind();
 
     //!< Returns the control object to set error level of the logs
-    QToolButton* ctrlLogError(void);
+    QToolButton* ctrlLogError();
 
     //!< Returns the control object to set warning level of the logs
-    QToolButton* ctrlLogWarning(void);
+    QToolButton* ctrlLogWarning();
 
     //!< Returns the control object to set information level of the logs
-    QToolButton* ctrlLogInfo(void);
+    QToolButton* ctrlLogInfo();
 
     //!< Returns the control object to set debug level of the logs
-    QToolButton* ctrlLogDebug(void);
+    QToolButton* ctrlLogDebug();
 
     //!< Returns the control object to enable log scopes of the logs
-    QToolButton* ctrlLogScopes(void);
+    QToolButton* ctrlLogScopes();
 
     //!< Returns the control object to move to the bottom of log window.
-    QToolButton* ctrlMoveBottom(void);
+    QToolButton* ctrlMoveBottom();
 
     //!< Returns the control object of the log messages
-    QTreeView* ctrlTable(void);
+    QTreeView* ctrlTable();
 
     /**
      * \brief   Updates the data of the file system.
      **/
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief   Initializes the widgets.
      **/
-    void setupWidgets(void);
+    void setupWidgets();
 
     /**
      * \brief   Initializes the signals.
      **/
-    void setupSignals(void);
+    void setupSignals();
 
     /**
      * \brief   Blocks the basic signals.
@@ -358,7 +358,7 @@ private slots:
 //////////////////////////////////////////////////////////////////////////
 private:
     //!< Callback to get notified that log observer service client has been started.
-    static void _logObserverStarted(void);
+    static void _logObserverStarted();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -379,7 +379,7 @@ private:
 // NaviLiveLogsScopes inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline bool NaviLiveLogsScopes::isConfigured(void) const
+inline bool NaviLiveLogsScopes::isConfigured() const
 {
     switch (mState)
     {
@@ -400,7 +400,7 @@ inline bool NaviLiveLogsScopes::isConfigured(void) const
     }
 }
 
-inline bool NaviLiveLogsScopes::isDisconnected(void) const
+inline bool NaviLiveLogsScopes::isDisconnected() const
 {
     switch (mState)
     {
@@ -421,7 +421,7 @@ inline bool NaviLiveLogsScopes::isDisconnected(void) const
     }
 }
 
-inline bool NaviLiveLogsScopes::isConnected(void) const
+inline bool NaviLiveLogsScopes::isConnected() const
 {
     switch (mState)
     {
@@ -442,7 +442,7 @@ inline bool NaviLiveLogsScopes::isConnected(void) const
     }
 }
 
-inline bool NaviLiveLogsScopes::isRunning(void) const
+inline bool NaviLiveLogsScopes::isRunning() const
 {
     switch (mState)
     {
@@ -463,7 +463,7 @@ inline bool NaviLiveLogsScopes::isRunning(void) const
     }
 }
 
-inline bool NaviLiveLogsScopes::isPaused(void) const
+inline bool NaviLiveLogsScopes::isPaused() const
 {
     switch (mState)
     {
@@ -484,7 +484,7 @@ inline bool NaviLiveLogsScopes::isPaused(void) const
     }
 }
 
-inline bool NaviLiveLogsScopes::isStopped(void) const
+inline bool NaviLiveLogsScopes::isStopped() const
 {
     switch (mState)
     {

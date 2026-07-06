@@ -77,7 +77,7 @@ public:
     /**
      * \brief Destructor.
      */
-    virtual ~ElementBase(void);
+    virtual ~ElementBase();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -125,7 +125,7 @@ public:
      * \brief Gets the ID of the element.
      * \return The ID of the element.
      */
-    inline unsigned int getId(void) const;
+    inline unsigned int getId() const;
 
     /**
      * \brief Sets the parent element.
@@ -143,7 +143,7 @@ public:
      * \brief Gets the parent element.
      * \return Pointer to the parent element.
      */
-    inline ElementBase* getParent(void) const;
+    inline ElementBase* getParent() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -165,7 +165,7 @@ public:
      * \brief Gets the next available ID.
      * \return The next available ID.
      */
-    virtual unsigned int getNextId(void) const;
+    virtual unsigned int getNextId() const;
 
 protected:
     /**
@@ -192,7 +192,7 @@ inline void ElementBase::setId(unsigned int id) const
     mId = id;
 }
 
-inline unsigned int ElementBase::getId(void) const
+inline unsigned int ElementBase::getId() const
 {
     if (mId == 0)
     {
@@ -212,7 +212,7 @@ inline void ElementBase::setParent(const ElementBase* parent) const
     mParent = const_cast<ElementBase *>(parent);
 }
 
-inline ElementBase* ElementBase::getParent(void) const
+inline ElementBase* ElementBase::getParent() const
 {
     return const_cast<ElementBase *>(mParent);
 }

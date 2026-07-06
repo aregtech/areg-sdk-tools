@@ -29,7 +29,7 @@ OptionPageBase::OptionPageBase(QDialog* parent)
 {
 }
 
-void OptionPageBase::applyChanges(void)
+void OptionPageBase::applyChanges()
 {
     mDataModified   = false;
     mCanSave        = true;
@@ -40,7 +40,7 @@ void OptionPageBase::closingOptions(bool /*OKpressed*/)
     mDataModified = false;
 }
 
-void OptionPageBase::warnMessage(void)
+void OptionPageBase::warnMessage()
 {
 }
 

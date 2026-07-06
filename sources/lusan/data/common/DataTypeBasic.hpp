@@ -36,7 +36,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeBasicObject(void);
+    DataTypeBasicObject();
 
     /**
      * \brief   Copy constructor.
@@ -106,7 +106,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeBasicContainer(void);
+    DataTypeBasicContainer();
 
     /**
      * \brief   Copy constructor.
@@ -159,7 +159,7 @@ public:
      * \brief   Checks if the data type has a key.
      * \return  True if the data type has a key, false otherwise.
      **/
-    bool hasKey(void) const;
+    bool hasKey() const;
 
     /**
      * \brief   Reads data from an XML stream.

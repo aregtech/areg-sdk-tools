@@ -185,7 +185,7 @@ SMArgumentEntry* SMConditionEntry::addArgument(const QString& name, SMArgumentEn
     return &mArguments.last();
 }
 
-bool SMConditionEntry::isValid(void) const
+bool SMConditionEntry::isValid() const
 {
     if (isExpressionRow())
     {
@@ -305,7 +305,7 @@ SMConditionList::SMConditionList(SMConditionList&& src) noexcept
 {
 }
 
-SMConditionList::~SMConditionList(void)
+SMConditionList::~SMConditionList()
 {
     removeAll();
 }
@@ -345,14 +345,14 @@ void SMConditionList::cloneFrom(const SMConditionList& src)
     }
 }
 
-SMConditionEntry* SMConditionList::addCondition(void)
+SMConditionEntry* SMConditionList::addCondition()
 {
     SMConditionEntry* entry = new SMConditionEntry(getNextId(), this);
     addElement(entry, false);
     return entry;
 }
 
-void SMConditionList::removeAll(void)
+void SMConditionList::removeAll()
 {
     for (SMConditionEntry* row : getElements())
     {
@@ -362,7 +362,7 @@ void SMConditionList::removeAll(void)
     removeAllElements();
 }
 
-bool SMConditionList::isValid(void) const
+bool SMConditionList::isValid() const
 {
     return true;
 }

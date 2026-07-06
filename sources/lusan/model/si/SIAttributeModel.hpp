@@ -74,7 +74,7 @@ public:
     /**
      * \brief   Returns the list of attributes.
      **/
-    const QList<AttributeEntry>& getAttributes(void) const;
+    const QList<AttributeEntry>& getAttributes() const;
 
     /**
      * \brief   Searches the attribute entry in the list by given unique ID.
@@ -117,7 +117,7 @@ public:
     /**
      * \brief   Returns the instance of data type data object relevant with the attributes.
      **/
-    inline SIDataTypeData& getDataTypeData(void);
+    inline SIDataTypeData& getDataTypeData();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
@@ -131,7 +131,7 @@ private:
 // SIAttributeModel class inline function implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline SIDataTypeData& SIAttributeModel::getDataTypeData(void)
+inline SIDataTypeData& SIAttributeModel::getDataTypeData()
 {
     return mDataType;
 }

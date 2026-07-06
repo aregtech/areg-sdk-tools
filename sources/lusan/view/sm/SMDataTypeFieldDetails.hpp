@@ -41,23 +41,27 @@ class SMDataTypeFieldDetails : public QWidget
 public:
     explicit SMDataTypeFieldDetails(QWidget* parent = nullptr);
 
-    QLineEdit* ctrlName(void) const;
-    QComboBox* ctrlTypes(void) const;
-    QLineEdit* ctrlValue(void) const;
-    QPlainTextEdit* ctrlDescription(void) const;
-    QCheckBox* ctrlDeprecated(void) const;
-    QLineEdit* ctrlDeprecateHint(void) const;
+    QLineEdit* ctrlName() const;
+    QComboBox* ctrlTypes() const;
+    QLineEdit* ctrlValue() const;
+    QPlainTextEdit* ctrlDescription() const;
+    QCheckBox* ctrlDeprecated() const;
+    QLineEdit* ctrlDeprecateHint() const;
 
     //!< Shows/hides the Type combo row — enumeration entries have no type, only a value.
     void setTypeRowVisible(bool visible);
 
+    //!< Shows the given reason below the value control; an empty reason hides the hint.
+    void showValueHint(const QString& reason);
+
 private:
-    void buildUi(void);
+    void buildUi();
 
 private:
     QLineEdit*      mName;
     QComboBox*      mType;
     QLineEdit*      mValue;
+    QLabel*         mValueHint;
     QPlainTextEdit* mDescription;
     QCheckBox*      mDeprecated;
     QLineEdit*      mDeprecateHint;

@@ -44,32 +44,32 @@ SIIncludeList::SIIncludeList(SIIncludeModel& model, QWidget* parent)
     header->setSectionResizeMode(0, QHeaderView::Stretch);
 }
 
-QToolButton* SIIncludeList::ctrlButtonAdd(void) const
+QToolButton* SIIncludeList::ctrlButtonAdd() const
 {
     return ui->toolAddElem;
 }
 
-QToolButton* SIIncludeList::ctrlButtonRemove(void) const
+QToolButton* SIIncludeList::ctrlButtonRemove() const
 {
     return ui->toolDeleteElem;
 }
 
-QToolButton* SIIncludeList::ctrlButtonMoveUp(void) const
+QToolButton* SIIncludeList::ctrlButtonMoveUp() const
 {
     return ui->toolMoveUp;
 }
 
-QToolButton* SIIncludeList::ctrlButtonMoveDown(void) const
+QToolButton* SIIncludeList::ctrlButtonMoveDown() const
 {
     return ui->toolMoveDown;
 }
 
-QToolButton* SIIncludeList::ctrlButtonInsert(void) const
+QToolButton* SIIncludeList::ctrlButtonInsert() const
 {
     return ui->toolInsertElem;
 }
 
-QTableWidget* SIIncludeList::ctrlTableList(void) const
+QTableWidget* SIIncludeList::ctrlTableList() const
 {
     return ui->tableIncludes;
 }

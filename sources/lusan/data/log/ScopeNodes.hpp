@@ -72,7 +72,7 @@ public:
     ScopeLeaf( const ScopeLeaf & src );    
     ScopeLeaf( ScopeLeaf && src ) noexcept;
 
-    virtual ~ScopeLeaf( void ) = default;
+    virtual ~ScopeLeaf() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -104,7 +104,7 @@ public:
      *          trailing '_' with '.' so the path matches the new areg syntax:
      *          e.g. "areg_path_node.leaf_name".
      **/
-    virtual QString makePath(void) const override;
+    virtual QString makePath() const override;
 
     /**
      * \brief   Sets the scope ID for the node. Valid only for leafs. Ignored in case of other nodes.
@@ -115,7 +115,7 @@ public:
     /**
      * \brief   Returns scope ID of the leaf or 0 in case of other nodes.
      **/
-    virtual uint32_t getScopeId(void) const override;
+    virtual uint32_t getScopeId() const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -172,7 +172,7 @@ public:
     ScopeNode( const ScopeNode & src );    
     ScopeNode( ScopeNode && src ) noexcept;
     
-    virtual ~ScopeNode( void );
+    virtual ~ScopeNode();
 
 //////////////////////////////////////////////////////////////////////////
 // Protected constructor
@@ -263,27 +263,27 @@ public:
     /**
      * \brief   Returns the total number of children.
      **/
-    virtual int getChildCount(void) const override;
+    virtual int getChildCount() const override;
 
     /**
      * \brief   Returns the total number of child nodes.
      **/
-    virtual int getChildNodesCount(void) const override;
+    virtual int getChildNodesCount() const override;
 
     /**
      * \brief   Returns the total number of child leafs.
      **/
-    virtual int getChildLeafsCount(void) const override;
+    virtual int getChildLeafsCount() const override;
 
     /**
      * \brief   Returns true if the current node has other node objects with children.
      **/
-    virtual bool hasNodes(void) const override;
+    virtual bool hasNodes() const override;
 
     /**
      * \brief   Returns true if the current node has leafs.
      **/
-    virtual bool hasLeafs(void) const override;
+    virtual bool hasLeafs() const override;
 
     /**
      * \brief   Returns true if the node has a leaf with the specified name.
@@ -312,12 +312,12 @@ public:
     /**
      * \brief   Refreshes the priorities by keeping the priority of leafs and refreshing the priorities of the nodes.
      **/
-    virtual void refreshPrioritiesRecursive(void) override;
+    virtual void refreshPrioritiesRecursive() override;
 
     /**
      * \brief   Returns the list of nodes with log priority. The node should not have NotSet priority flag.
      **/
-    virtual QList<ScopeNodeBase*> getNodesWithPriority(void) const override;
+    virtual QList<ScopeNodeBase*> getNodesWithPriority() const override;
 
     /**
      * \brief   Extracts nodes with log priority. The node should not have NotSet priority flag.
@@ -336,7 +336,7 @@ public:
     /**
      * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
      **/
-    virtual std::vector<ScopeNodeBase*> extractNodeLeafs(void) const override;
+    virtual std::vector<ScopeNodeBase*> extractNodeLeafs() const override;
 
     /**
      * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
@@ -352,17 +352,17 @@ public:
     /**
      * \brief   Returns the list of child nodes.
      **/
-    inline const ScopeNode::NodeList & getNodes( void ) const;
+    inline const ScopeNode::NodeList & getNodes() const;
 
     /**
      * \brief   Returns the list of child leafs.
      **/
-    inline const ScopeNode::LeafList & getLeafs( void ) const;
+    inline const ScopeNode::LeafList & getLeafs() const;
 
     /**
      * \brief   Returns the total number of children.
      **/
-    inline unsigned int childNodeCount( void ) const;
+    inline unsigned int childNodeCount() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -372,12 +372,12 @@ protected:
     /**
      * \brief   Resets the priority of the nodes.
      **/
-    inline void resetPrioNodes(void);
+    inline void resetPrioNodes();
 
     /**
      * \brief   Resets the priority of the leafs.
      **/
-    inline void resetPrioLeafs(void);
+    inline void resetPrioLeafs();
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -405,7 +405,7 @@ public:
     /**
      * \brief   Default constructor. Creates an empty root node.
      **/
-    ScopeRoot(void);
+    ScopeRoot();
 
     /**
      * \brief   Creates a root node and sets the root ID, which is unique within the system.
@@ -432,7 +432,7 @@ public:
     ScopeRoot( const ScopeRoot & src );
     ScopeRoot( ScopeRoot && src ) noexcept;
     
-    virtual ~ScopeRoot( void ) = default;
+    virtual ~ScopeRoot() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Assigning operators
@@ -456,12 +456,12 @@ public:
     /**
      * \brief   Returns the string used to create the path. Root nodes should return empty string.
      **/
-    virtual QString getPathString(void) const override;
+    virtual QString getPathString() const override;
     
     /**
      * \brief   Returns the string to display on screen.
      **/
-    virtual QString getDisplayName(void) const override;
+    virtual QString getDisplayName() const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -470,7 +470,7 @@ public:
     /**
      * \brief   Returns the ID of the root.
      **/
-    inline ITEM_ID getRootId( void ) const;
+    inline ITEM_ID getRootId() const;
 
     /**
      * \brief   Sets root ID
@@ -480,7 +480,7 @@ public:
     /**
      * \brief   Returns the root node name.
      **/
-    inline const QString & getRootName(void) const;
+    inline const QString & getRootName() const;
 
     /**
      * \brief   Sets root node name
@@ -500,22 +500,22 @@ private:
 // ScopeNode class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const ScopeNode::NodeList& ScopeNode::getNodes(void) const
+inline const ScopeNode::NodeList& ScopeNode::getNodes() const
 {
     return mChildNodes;
 }
 
-inline const ScopeNode::LeafList& ScopeNode::getLeafs(void) const
+inline const ScopeNode::LeafList& ScopeNode::getLeafs() const
 {
     return mChildLeafs;
 }
 
-inline unsigned int ScopeNode::childNodeCount(void) const
+inline unsigned int ScopeNode::childNodeCount() const
 {
     return (mChildLeafs.size() + mChildNodes.size());
 }
 
-inline void ScopeNode::resetPrioNodes(void)
+inline void ScopeNode::resetPrioNodes()
 {
     resetPriority();
     for (const auto& node : mChildNodes)
@@ -524,7 +524,7 @@ inline void ScopeNode::resetPrioNodes(void)
     }
 }
 
-inline void ScopeNode::resetPrioLeafs(void)
+inline void ScopeNode::resetPrioLeafs()
 {
     resetPriority();
     for (const auto& leaf : mChildLeafs)
@@ -537,7 +537,7 @@ inline void ScopeNode::resetPrioLeafs(void)
 // ScopeRoot class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline ITEM_ID ScopeRoot::getRootId(void) const
+inline ITEM_ID ScopeRoot::getRootId() const
 {
     return mRootId;
 }
@@ -547,7 +547,7 @@ inline void ScopeRoot::setRootId(const ITEM_ID rootId)
     mRootId = rootId;
 }
 
-inline const QString& ScopeRoot::getRootName(void) const
+inline const QString& ScopeRoot::getRootName() const
 {
     return mNodeName;
 }

@@ -47,7 +47,7 @@ LogTableHeader::LogTableHeader(QTableView* parent, LoggingModelBase* model, Qt::
     setMouseTracking(true);
 }
 
-void LogTableHeader::resetFilters(void)
+void LogTableHeader::resetFilters()
 {
     for (QList<LogHeaderItem*>::const_iterator item = mHeaders.constBegin(); item != mHeaders.constEnd(); ++item)
     {

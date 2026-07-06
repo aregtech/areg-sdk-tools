@@ -79,7 +79,7 @@ namespace
 
 namespace
 {
-    void testScriptedSequence(void)
+    void testScriptedSequence()
     {
         ServiceInterfaceData    doc;
         DocModelNotifier        notifier;
@@ -112,7 +112,7 @@ namespace
 
         {
             const uint32_t overviewId = doc.getOverviewData().getId();
-            auto getter = [&doc](void) -> QString { return doc.getOverviewData().getName(); };
+            auto getter = [&doc]() -> QString { return doc.getOverviewData().getName(); };
             auto setter = [&doc](const QString& value) { doc.getOverviewData().setName(value); };
             pushAndSnap(new TDocSetPropertyCommand<QString>(notifier, overviewId, eDocElementKind::Overview, getter, setter, QString("Renamed"), "Rename service"));
         }
@@ -153,7 +153,7 @@ namespace
 
 namespace
 {
-    void testComposite(void)
+    void testComposite()
     {
         ServiceInterfaceData    doc;
         DocModelNotifier        notifier;
@@ -193,7 +193,7 @@ namespace
 
 namespace
 {
-    void testDeepHistory(void)
+    void testDeepHistory()
     {
         ServiceInterfaceData    doc;
         DocModelNotifier        notifier;

@@ -149,7 +149,7 @@ void DataTypeImported::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement(); // DataType
 }
 
-QString DataTypeImported::toTypeString(void) const
+QString DataTypeImported::toTypeString() const
 {
     return (mNamespace.isEmpty() ? mObject : mNamespace + "::" + mObject);
 }

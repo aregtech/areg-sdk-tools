@@ -55,7 +55,7 @@ QToolButton* SMDataTypeList::createToolButton(QWidget* parent, const QString& ic
     return button;
 }
 
-void SMDataTypeList::buildUi(void)
+void SMDataTypeList::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -118,47 +118,47 @@ void SMDataTypeList::buildUi(void)
     root->addWidget(group);
 }
 
-QTreeWidget* SMDataTypeList::ctrlTableList(void) const
+QTreeWidget* SMDataTypeList::ctrlTableList() const
 {
     return mTable;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonAdd(void) const
+QToolButton* SMDataTypeList::ctrlButtonAdd() const
 {
     return mButtonAdd;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonInsert(void) const
+QToolButton* SMDataTypeList::ctrlButtonInsert() const
 {
     return mButtonInsert;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonRemove(void) const
+QToolButton* SMDataTypeList::ctrlButtonRemove() const
 {
     return mButtonRemove;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonMoveUp(void) const
+QToolButton* SMDataTypeList::ctrlButtonMoveUp() const
 {
     return mButtonMoveUp;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonMoveDown(void) const
+QToolButton* SMDataTypeList::ctrlButtonMoveDown() const
 {
     return mButtonMoveDown;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonAddField(void) const
+QToolButton* SMDataTypeList::ctrlButtonAddField() const
 {
     return mButtonAddField;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonInsertField(void) const
+QToolButton* SMDataTypeList::ctrlButtonInsertField() const
 {
     return mButtonInsertField;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonRemoveField(void) const
+QToolButton* SMDataTypeList::ctrlButtonRemoveField() const
 {
     return mButtonRemoveField;
 }

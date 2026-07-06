@@ -111,7 +111,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIOverviewData(void) = default;
+    virtual ~SIOverviewData() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

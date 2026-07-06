@@ -28,7 +28,7 @@ SMIncludeData::SMIncludeData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-bool SMIncludeData::isValid(void) const
+bool SMIncludeData::isValid() const
 {
     return true;
 }

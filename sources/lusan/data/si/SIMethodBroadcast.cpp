@@ -44,7 +44,7 @@ SIMethodBroadcast::SIMethodBroadcast(SIMethodBroadcast&& src) noexcept
 {
 }
 
-SIMethodBroadcast::~SIMethodBroadcast(void)
+SIMethodBroadcast::~SIMethodBroadcast()
 {
 }
 

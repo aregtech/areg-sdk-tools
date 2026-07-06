@@ -34,53 +34,53 @@ SIIncludeDetails::SIIncludeDetails(QWidget* parent)
     setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
 }
 
-SIIncludeDetails::~SIIncludeDetails(void)
+SIIncludeDetails::~SIIncludeDetails()
 {
     delete ui;
     ui = nullptr;
 }
 
-QString SIIncludeDetails::getSelectedFile(void) const
+QString SIIncludeDetails::getSelectedFile() const
 {
     return ui->editInclude->text();
 }
 
-QString SIIncludeDetails::getDescription(void) const
+QString SIIncludeDetails::getDescription() const
 {
     return ui->textDescribe->toPlainText();
 }
 
-bool SIIncludeDetails::isDeprecated(void) const
+bool SIIncludeDetails::isDeprecated() const
 {
     return ui->checkDeprecated->isChecked();
 }
 
-QString SIIncludeDetails::getDeprecateHint(void) const
+QString SIIncludeDetails::getDeprecateHint() const
 {
     return ui->editDeprecated->text();
 }
 
-QLineEdit * SIIncludeDetails::ctrlInclude(void)
+QLineEdit * SIIncludeDetails::ctrlInclude()
 {
     return ui->editInclude;
 }
 
-QLineEdit * SIIncludeDetails::ctrlDeprecateHint(void)
+QLineEdit * SIIncludeDetails::ctrlDeprecateHint()
 {
     return ui->editDeprecated;
 }
 
-QCheckBox * SIIncludeDetails::ctrlDeprecated(void)
+QCheckBox * SIIncludeDetails::ctrlDeprecated()
 {
     return ui->checkDeprecated;
 }
 
-QPlainTextEdit * SIIncludeDetails::ctrlDescription(void)
+QPlainTextEdit * SIIncludeDetails::ctrlDescription()
 {
     return ui->textDescribe;
 }
 
-QPushButton * SIIncludeDetails::ctrlBrowseButton(void)
+QPushButton * SIIncludeDetails::ctrlBrowseButton()
 {
     return ui->buttonBrowse;
 }

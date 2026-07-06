@@ -58,7 +58,7 @@ SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
     setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
 }
 
-const QList<DataTypeBasicContainer *> & SIDataType::_getContainerTypes(void)
+const QList<DataTypeBasicContainer *> & SIDataType::_getContainerTypes()
 {
     static QList<DataTypeBasicContainer *> _result;
     if (_result.isEmpty())
@@ -69,7 +69,7 @@ const QList<DataTypeBasicContainer *> & SIDataType::_getContainerTypes(void)
     return _result;
 }
 
-const QList<DataTypeBase *>& SIDataType::_getIntegerTypes(void)
+const QList<DataTypeBase *>& SIDataType::_getIntegerTypes()
 {
     static QList<DataTypeBase *> _result;
     if (_result.isEmpty())
@@ -80,7 +80,7 @@ const QList<DataTypeBase *>& SIDataType::_getIntegerTypes(void)
     return _result;
 }
 
-const QList<DataTypeBase *>& SIDataType::_getPredefinedTypes(void)
+const QList<DataTypeBase *>& SIDataType::_getPredefinedTypes()
 {
     static QList<DataTypeBase *> _result;
     if (_result.isEmpty())
@@ -143,7 +143,7 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     setupSignals();
 }
 
-SIDataType::~SIDataType(void)
+SIDataType::~SIDataType()
 {
     ui.horizontalLayout->removeWidget(mList);
     ui.horizontalLayout->removeWidget(mRightPanel);
@@ -209,7 +209,7 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
     blockBasicSignals(false);
 }
 
-void SIDataType::onAddClicked(void)
+void SIDataType::onAddClicked()
 {
     QString name(genName());
     QTreeWidget* table = mList->ctrlTableList();
@@ -235,7 +235,7 @@ void SIDataType::onAddClicked(void)
     blockBasicSignals(false);
 }
 
-void SIDataType::onInsertClicked(void)
+void SIDataType::onInsertClicked()
 {
     QString name(genName());
     QTreeWidget* table = mList->ctrlTableList();
@@ -264,7 +264,7 @@ void SIDataType::onInsertClicked(void)
     blockBasicSignals(false);
 }
 
-void SIDataType::onAddFieldClicked(void)
+void SIDataType::onAddFieldClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
@@ -313,7 +313,7 @@ void SIDataType::onAddFieldClicked(void)
     }
 }
 
-void SIDataType::onInsertFieldClicked(void)
+void SIDataType::onInsertFieldClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
@@ -385,7 +385,7 @@ void SIDataType::onInsertFieldClicked(void)
     }
 }
 
-void SIDataType::onRemoveClicked(void)
+void SIDataType::onRemoveClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -419,7 +419,7 @@ void SIDataType::onRemoveClicked(void)
     updateToolButtons(row, rowCount);
 }
 
-void SIDataType::onRemoveFieldClicked(void)
+void SIDataType::onRemoveFieldClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -458,7 +458,7 @@ void SIDataType::onRemoveFieldClicked(void)
     updateToolButtons(row, rowCount);
 }
 
-void SIDataType::onMoveUpClicked(void)
+void SIDataType::onMoveUpClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -479,7 +479,7 @@ void SIDataType::onMoveUpClicked(void)
     blockBasicSignals(false);
 }
 
-void SIDataType::onMoveDownClicked(void)
+void SIDataType::onMoveDownClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -533,7 +533,7 @@ void SIDataType::onDeprecateHintChanged(const QString& newText)
     SICommon::setDeprecateHint<SIDataTypeDetails, DataTypeCustom>(mDetails, entry, newText);
 }
 
-void SIDataType::onDescriptionChanged(void)
+void SIDataType::onDescriptionChanged()
 {
     QTreeWidgetItem * item = mList->ctrlTableList()->currentItem();
     if (item == nullptr)
@@ -880,7 +880,7 @@ void SIDataType::onImportObjectChanged(const QString& newText)
     blockBasicSignals(false);
 }
 
-void SIDataType::onImportLocationBrowse(void)
+void SIDataType::onImportLocationBrowse()
 {
     WorkspaceFileDialog dialog(  true
                                , false
@@ -982,7 +982,7 @@ void SIDataType::onFieldValueChanged(const QString& newValue)
     }
 }
 
-void SIDataType::onFieldDescriptionChanged(void)
+void SIDataType::onFieldDescriptionChanged()
 {
     QString descr{mFields->ctrlDescription()->toPlainText()};
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
@@ -1072,7 +1072,7 @@ void SIDataType::showContainerDetails(bool show)
     item.second->setHidden(!show);
 }
 
-void SIDataType::updateData(void)
+void SIDataType::updateData()
 {
     const QList<DataTypeCustom*>& list = mModel.getDataTypes();
     QTreeWidget* table = mList->ctrlTableList();
@@ -1109,7 +1109,7 @@ void SIDataType::updateData(void)
     }
 }
 
-void SIDataType::updateWidgets(void)
+void SIDataType::updateWidgets()
 {
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
@@ -1142,7 +1142,7 @@ void SIDataType::updateWidgets(void)
     showClean();
 }
 
-void SIDataType::setupSignals(void)
+void SIDataType::setupSignals()
 {
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged  , this, &SIDataType::onCurCellChanged);
     connect(mList->ctrlButtonAdd()          , &QToolButton::clicked             , this, &SIDataType::onAddClicked);
@@ -1558,7 +1558,7 @@ void SIDataType::updateImportNames(QTreeWidgetItem* node, DataTypeImported* data
     setNodeText(node, dataType);
 }
 
-inline ElementBase* SIDataType::getSelectedField(void) const
+inline ElementBase* SIDataType::getSelectedField() const
 {
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
     if (item == nullptr)
@@ -1636,7 +1636,7 @@ inline void SIDataType::setNodeText(QTreeWidgetItem* node, DocumentElem * elem) 
     }
 }
 
-inline void SIDataType::showClean(void)
+inline void SIDataType::showClean()
 {
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, nullptr, false);
     SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, nullptr, false);
@@ -1781,7 +1781,7 @@ inline void SIDataType::updateToolButtons(int row, int rowCount)
     }
 }
 
-inline QString SIDataType::genName(void)
+inline QString SIDataType::genName()
 {
     static const QString _defName("NewDataType");
 

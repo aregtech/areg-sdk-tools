@@ -61,7 +61,7 @@ namespace
     }
 }
 
-OptionsManager::OptionsManager(void)
+OptionsManager::OptionsManager()
     : mActiveKey    ( 0 )
     , mDefWorkspace ( 0 )
     , mWorkspaces   ( )
@@ -183,7 +183,7 @@ WorkspaceEntry OptionsManager::activateWorkspace(const QString& root, const QStr
     return result;
 }
 
-WorkspaceEntry OptionsManager::getActiveWorkspace(void) const
+WorkspaceEntry OptionsManager::getActiveWorkspace() const
 {
     WorkspaceEntry result;
     if (mActiveKey == 0)
@@ -216,7 +216,7 @@ bool OptionsManager::existsWorkspace(const QString& root) const
     return result;
 }
 
-bool OptionsManager::readOptions(void)
+bool OptionsManager::readOptions()
 {
     QString fileOptions{ NELusanCommon::getOptionsFile() };
     QFile file(fileOptions);
@@ -250,7 +250,7 @@ bool OptionsManager::readOptions(void)
     return result;
 }
 
-void OptionsManager::writeOptions(void)
+void OptionsManager::writeOptions()
 {
     QString fileOptions{ NELusanCommon::getOptionsFile() };
     QFile file(fileOptions);
@@ -292,7 +292,7 @@ void OptionsManager::writeOptions(void)
     file.close();
 }
 
-bool OptionsManager::hasDefaultWorkspace(void) const
+bool OptionsManager::hasDefaultWorkspace() const
 {
     return ((mDefWorkspace != 0) && _existWorkspaceId(mDefWorkspace));
 }
@@ -307,22 +307,22 @@ bool OptionsManager::isDefaultWorkspace(const QString& workspaceRoot) const
     return (workspaceRoot.isEmpty() == false) && (workspaceRoot == getDefaultWorkspaceRoot());
 }
 
-uint64_t OptionsManager::getDefaultWorkspaceId(void) const
+uint64_t OptionsManager::getDefaultWorkspaceId() const
 {
     return getDefaultWorkspace().getId();
 }
 
-const QString& OptionsManager::getDefaultWorkspaceRoot(void) const
+const QString& OptionsManager::getDefaultWorkspaceRoot() const
 {
     return getDefaultWorkspace().getWorkspaceRoot();
 }
 
-const WorkspaceEntry& OptionsManager::getDefaultWorkspace(void) const
+const WorkspaceEntry& OptionsManager::getDefaultWorkspace() const
 {
     return (mDefWorkspace != 0 ? _findWorkspace(mDefWorkspace) : WorkspaceEntry::InvalidWorkspace);
 }
 
-uint64_t OptionsManager::activateDefaultWorkspace(void)
+uint64_t OptionsManager::activateDefaultWorkspace()
 {
     uint32_t id     = mDefWorkspace;
     mActiveKey      = 0u;

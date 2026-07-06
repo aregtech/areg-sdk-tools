@@ -36,7 +36,7 @@ class TableModelBase : public QAbstractTableModel
 //////////////////////////////////////////////////////////////////////////
 protected:
     TableModelBase(QObject* parent = nullptr);
-    virtual ~TableModelBase(void) = default;
+    virtual ~TableModelBase() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -45,7 +45,7 @@ public:
     /**
      * \brief   Retrieves the 32-bit unique identifier for the model.
      **/
-    inline uint32_t getModelId(void) const;
+    inline uint32_t getModelId() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
@@ -58,7 +58,7 @@ private:
 // TableModelBase inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline uint32_t TableModelBase::getModelId(void) const
+inline uint32_t TableModelBase::getModelId() const
 {
     return mModelId;
 }

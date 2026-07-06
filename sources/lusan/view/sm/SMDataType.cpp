@@ -20,6 +20,7 @@
 #include "lusan/view/sm/SMDataType.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
 #include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
@@ -31,6 +32,7 @@
 #include "lusan/data/common/FieldEntry.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/sm/SMLiteralValidator.hpp"
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
 #include "lusan/view/sm/SMDataTypeDetails.hpp"
 #include "lusan/view/sm/SMDataTypeFieldDetails.hpp"
@@ -83,7 +85,7 @@ SMDataType::SMDataType(SMDataTypeModel& model, QWidget* parent /*= nullptr*/)
     refreshAll();
 }
 
-void SMDataType::buildUi(void)
+void SMDataType::buildUi()
 {
     QWidget* content = new QWidget(this);
     QVBoxLayout* root = new QVBoxLayout(content);
@@ -124,7 +126,7 @@ void SMDataType::buildUi(void)
     setWidget(content);
 }
 
-void SMDataType::setupSignals(void)
+void SMDataType::setupSignals()
 {
     connect(mList->ctrlTableList()         , &QTreeWidget::currentItemChanged , this, &SMDataType::onCurCellChanged);
     connect(mList->ctrlButtonAdd()         , &QToolButton::clicked            , this, &SMDataType::onAddClicked);
@@ -193,13 +195,13 @@ bool SMDataType::eventFilter(QObject* watched, QEvent* event)
     return QScrollArea::eventFilter(watched, event);
 }
 
-DataTypeCustom* SMDataType::currentDataType(void) const
+DataTypeCustom* SMDataType::currentDataType() const
 {
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
     return (item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>() : nullptr);
 }
 
-uint32_t SMDataType::currentFieldId(void) const
+uint32_t SMDataType::currentFieldId() const
 {
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
     return (item != nullptr ? item->data(1, Qt::ItemDataRole::UserRole).toUInt() : 0u);
@@ -403,6 +405,7 @@ void SMDataType::selectedStructField(DataTypeStructure* parent, uint32_t fieldId
         mFields->ctrlValue()->setText(field->getValue());
         mFields->ctrlDescription()->setPlainText(field->getDescription());
     }
+    mFields->showValueHint(validateFieldValue(field->getType(), field->getValue()));
     applyDeprecatedDisplay(mFields->ctrlDeprecated(), mFields->ctrlDeprecateHint(), field);
 
     mList->ctrlButtonRemove()->setEnabled(false);
@@ -429,6 +432,9 @@ void SMDataType::selectedEnumField(DataTypeEnum* parent, uint32_t fieldId)
         mFields->ctrlValue()->setText(field->getValue());
         mFields->ctrlDescription()->setPlainText(field->getDescription());
     }
+    // The enumerator's own literal (its ordinal/derived-type value) is a different concern
+    // from a structure field's typed default — not validated here; just clear any stale hint.
+    mFields->showValueHint(QString());
     applyDeprecatedDisplay(mFields->ctrlDeprecated(), mFields->ctrlDeprecateHint(), field);
 
     mList->ctrlButtonRemove()->setEnabled(false);
@@ -471,7 +477,7 @@ void SMDataType::updateMoveButtons(int row, int rowCount)
     mList->ctrlButtonMoveDown()->setEnabled(row < (rowCount - 1));
 }
 
-void SMDataType::showClean(void)
+void SMDataType::showClean()
 {
     activateFields(false);
     mDetails->setEnumRowVisible(false);
@@ -503,6 +509,12 @@ QTreeWidgetItem* SMDataType::createNode(DataTypeCustom* dataType) const
         {
             QTreeWidgetItem* child = new QTreeWidgetItem();
             setNodeText(child, &field);
+            const QString reason = validateFieldValue(field.getType(), field.getValue());
+            if (reason.isEmpty() == false)
+            {
+                child->setIcon(2, NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
+                child->setToolTip(2, reason);
+            }
             child->setData(0, Qt::ItemDataRole::UserRole, QVariant::fromValue(dataType));
             child->setData(1, Qt::ItemDataRole::UserRole, field.getId());
             item->addChild(child);
@@ -523,6 +535,16 @@ QTreeWidgetItem* SMDataType::createNode(DataTypeCustom* dataType) const
     return item;
 }
 
+QString SMDataType::validateFieldValue(const QString& typeName, const QString& value) const
+{
+    // No default is always valid, and a declared (enum/structure/container/imported) type is
+    // ignored — its literal form, if any, is not this validator's concern.
+    if (value.isEmpty() || (mModel.findDataType(typeName) != nullptr))
+        return QString();
+
+    return SMLiteralValidator::validate(typeName, value);
+}
+
 void SMDataType::setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const
 {
     node->setIcon(0, elem->getIcon(ElementBase::eDisplay::DisplayName));
@@ -533,7 +555,7 @@ void SMDataType::setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) co
     node->setText(2, elem->getString(ElementBase::eDisplay::DisplayValue));
 }
 
-void SMDataType::refreshAll(void)
+void SMDataType::refreshAll()
 {
     QTreeWidget* table = mList->ctrlTableList();
     uint32_t selType = 0;
@@ -642,7 +664,7 @@ void SMDataType::populateContainerObjectCombo(QComboBox* combo) const
     }
 }
 
-QString SMDataType::genTypeName(void)
+QString SMDataType::genTypeName()
 {
     static const QString _defName("NewDataType");
     QString name;
@@ -667,7 +689,7 @@ QString SMDataType::genFieldName(const DataTypeCustom* dataType) const
     return name;
 }
 
-void SMDataType::onAddClicked(void)
+void SMDataType::onAddClicked()
 {
     const QString name = genTypeName();
     DataTypeCustom* dataType = mModel.createDataType(name, DataTypeBase::eCategory::Structure);
@@ -677,7 +699,7 @@ void SMDataType::onAddClicked(void)
     }
 }
 
-void SMDataType::onInsertClicked(void)
+void SMDataType::onInsertClicked()
 {
     DataTypeCustom* current = currentDataType();
     const int position = (current != nullptr ? mModel.findIndex(current) : 0);
@@ -689,7 +711,7 @@ void SMDataType::onInsertClicked(void)
     }
 }
 
-void SMDataType::onRemoveClicked(void)
+void SMDataType::onRemoveClicked()
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -711,7 +733,7 @@ void SMDataType::onRemoveClicked(void)
     }
 }
 
-void SMDataType::onAddFieldClicked(void)
+void SMDataType::onAddFieldClicked()
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -725,7 +747,7 @@ void SMDataType::onAddFieldClicked(void)
     }
 }
 
-void SMDataType::onInsertFieldClicked(void)
+void SMDataType::onInsertFieldClicked()
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -741,7 +763,7 @@ void SMDataType::onInsertFieldClicked(void)
     }
 }
 
-void SMDataType::onRemoveFieldClicked(void)
+void SMDataType::onRemoveFieldClicked()
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -775,7 +797,7 @@ void SMDataType::onRemoveFieldClicked(void)
     }
 }
 
-void SMDataType::onMoveUpClicked(void)
+void SMDataType::onMoveUpClicked()
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -809,7 +831,7 @@ void SMDataType::onMoveUpClicked(void)
     }
 }
 
-void SMDataType::onMoveDownClicked(void)
+void SMDataType::onMoveDownClicked()
 {
     DataTypeCustom* dataType = currentDataType();
     if (dataType == nullptr)
@@ -844,7 +866,7 @@ void SMDataType::onMoveDownClicked(void)
     }
 }
 
-void SMDataType::onNameCommitted(void)
+void SMDataType::onNameCommitted()
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (currentFieldId() == 0))
@@ -913,7 +935,7 @@ void SMDataType::onEnumDerivedChanged(int index)
     mModel.setEnumDerived(static_cast<DataTypeEnum*>(dataType), selected != nullptr ? selected->getName() : QString());
 }
 
-void SMDataType::onImportLocationCommitted(void)
+void SMDataType::onImportLocationCommitted()
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
@@ -922,7 +944,7 @@ void SMDataType::onImportLocationCommitted(void)
     }
 }
 
-void SMDataType::onImportNamespaceCommitted(void)
+void SMDataType::onImportNamespaceCommitted()
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
@@ -931,7 +953,7 @@ void SMDataType::onImportNamespaceCommitted(void)
     }
 }
 
-void SMDataType::onImportObjectCommitted(void)
+void SMDataType::onImportObjectCommitted()
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (dataType->getCategory() == DataTypeBase::eCategory::Imported))
@@ -940,7 +962,7 @@ void SMDataType::onImportObjectCommitted(void)
     }
 }
 
-void SMDataType::onImportBrowse(void)
+void SMDataType::onImportBrowse()
 {
     WorkspaceFileDialog dialog(  true
                                , false
@@ -1049,7 +1071,7 @@ void SMDataType::onDeprecatedToggled(bool checked)
     }
 }
 
-void SMDataType::onDeprecateHintCommitted(void)
+void SMDataType::onDeprecateHintCommitted()
 {
     DataTypeCustom* dataType = currentDataType();
     if ((dataType != nullptr) && (currentFieldId() == 0))
@@ -1058,7 +1080,7 @@ void SMDataType::onDeprecateHintCommitted(void)
     }
 }
 
-void SMDataType::onFieldNameCommitted(void)
+void SMDataType::onFieldNameCommitted()
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -1082,7 +1104,7 @@ void SMDataType::onFieldTypeChanged(int index)
     }
 }
 
-void SMDataType::onFieldValueCommitted(void)
+void SMDataType::onFieldValueCommitted()
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -1118,7 +1140,7 @@ void SMDataType::onFieldDeprecatedToggled(bool checked)
     }
 }
 
-void SMDataType::onFieldDeprecateHintCommitted(void)
+void SMDataType::onFieldDeprecateHintCommitted()
 {
     DataTypeCustom* dataType = currentDataType();
     const uint32_t fieldId = currentFieldId();
@@ -1128,7 +1150,7 @@ void SMDataType::onFieldDeprecateHintCommitted(void)
     }
 }
 
-void SMDataType::onNotifierChanged(void)
+void SMDataType::onNotifierChanged()
 {
     refreshAll();
 }

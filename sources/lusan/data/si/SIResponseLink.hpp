@@ -34,7 +34,7 @@ class SIResponseLink  : public TETypeWrap<SIMethodResponse>
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    SIResponseLink(void) = default;
+    SIResponseLink() = default;
     SIResponseLink(const SIResponseLink& src) = default;
     SIResponseLink(SIResponseLink&& src) noexcept = default;
 
@@ -42,7 +42,7 @@ public:
     SIResponseLink(const QString& methodName, const QList<SIMethodResponse*>& listResponses);
     SIResponseLink(SIMethodResponse* method);
 
-    ~SIResponseLink(void) = default;
+    ~SIResponseLink() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Operators

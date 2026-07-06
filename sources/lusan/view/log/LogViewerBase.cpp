@@ -37,7 +37,7 @@
 #include <QTableView>
 
 
-const QString& LogViewerBase::fileExtension(void)
+const QString& LogViewerBase::fileExtension()
 {
     return LoggingModelBase::getFileExtension();
 }
@@ -58,12 +58,12 @@ LogViewerBase::LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* 
 {
 }
 
-LogViewerBase::~LogViewerBase(void)
+LogViewerBase::~LogViewerBase()
 {
     _clearResources();
 }
 
-bool LogViewerBase::isDatabaseOpen(void) const
+bool LogViewerBase::isDatabaseOpen() const
 {
     Q_ASSERT(mLogModel != nullptr);
     return mLogModel->isOperable();
@@ -125,7 +125,7 @@ void LogViewerBase::keyPressEvent(QKeyEvent* event)
     MdiChild::keyPressEvent(event);
 }
 
-void LogViewerBase::setupWidgets(void)
+void LogViewerBase::setupWidgets()
 {
     Q_ASSERT((mLogTable != nullptr) && (mLogSearch != nullptr) && (mLogModel != nullptr));
     Q_ASSERT((mFilter == nullptr) && (mHeader == nullptr));
@@ -240,7 +240,7 @@ bool LogViewerBase::saveFile(const QString& fileName)
     }
 }
 
-const QString& LogViewerBase::fileFilter(void) const
+const QString& LogViewerBase::fileFilter() const
 {
     static const QString _filterLogs{ "Log Files (*." + LoggingModelBase::getFileExtension() + ")\nAll Files(*.*)" };
     return _filterLogs;
@@ -312,42 +312,42 @@ void LogViewerBase::onSearchClicked(bool newSearch)
     }
 }
 
-QTableView* LogViewerBase::ctrlTable(void)
+QTableView* LogViewerBase::ctrlTable()
 {
     return mLogTable;
 }
 
-LogTableHeader* LogViewerBase::ctrlHeader(void)
+LogTableHeader* LogViewerBase::ctrlHeader()
 {
     return mHeader;
 }
 
-SearchLineEdit* LogViewerBase::ctrlSearchText(void)
+SearchLineEdit* LogViewerBase::ctrlSearchText()
 {
     return mLogSearch;
 }
 
-QToolButton* LogViewerBase::ctrlButtonSearch(void)
+QToolButton* LogViewerBase::ctrlButtonSearch()
 {
     return mLogSearch->buttonSearch();
 }
 
-QToolButton* LogViewerBase::ctrlButtonCaseSensitive(void)
+QToolButton* LogViewerBase::ctrlButtonCaseSensitive()
 {
     return mLogSearch->buttonMatchCase();
 }
 
-QToolButton* LogViewerBase::ctrlButtonWholeWords(void)
+QToolButton* LogViewerBase::ctrlButtonWholeWords()
 {
     return mLogSearch->buttonMatchWord();
 }
 
-QToolButton* LogViewerBase::ctrlSearchWildcard(void)
+QToolButton* LogViewerBase::ctrlSearchWildcard()
 {
     return mLogSearch->buttonWildCard();
 }
 
-QToolButton* LogViewerBase::ctrlSearchBackward(void)
+QToolButton* LogViewerBase::ctrlSearchBackward()
 {
     return mLogSearch->buttonSearchBackward();
 }
@@ -446,7 +446,7 @@ void LogViewerBase::resetColumnOrder()
     _updateHighlightColumn();
 }
 
-void LogViewerBase::resetFilters(void)
+void LogViewerBase::resetFilters()
 {
     Q_ASSERT(mLogTable != nullptr);
     Q_ASSERT(mHeader != nullptr);
@@ -499,7 +499,7 @@ void LogViewerBase::onCurrentRowChanged(const QModelIndex &current, const QModel
 {
 }
 
-inline void LogViewerBase::_clearResources(void)
+inline void LogViewerBase::_clearResources()
 {
     if (mFilter != nullptr)
     {
@@ -523,7 +523,7 @@ inline void LogViewerBase::_clearResources(void)
     mLogModel = nullptr;
 }
 
-void LogViewerBase::_updateHighlightColumn(void)
+void LogViewerBase::_updateHighlightColumn()
 {
     if ((mLogTable == nullptr) || (mHeader == nullptr))
         return;
@@ -578,7 +578,7 @@ void LogViewerBase::_populateColumnsMenu(QMenu* menu, int curRow)
         });
 }
 
-inline void LogViewerBase::_resetSearchResult(void)
+inline void LogViewerBase::_resetSearchResult()
 {
     mFoundPos = LogSearchModel::sFoundPos{};
     mSearch.resetSearch();

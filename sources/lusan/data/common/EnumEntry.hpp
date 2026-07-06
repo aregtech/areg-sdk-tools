@@ -176,7 +176,7 @@ public:
     /**
      * \brief   Returns the description of the enum entry.
      **/
-    const QString getDescription(void) const;
+    const QString getDescription() const;
 
     /**
      * \brief   Sets the description of the enum entry.
@@ -193,7 +193,7 @@ public:
     /**
      * \brief   Returns true if the enum entry is deprecated.
      **/
-    inline bool getIsDeprecated(void) const;
+    inline bool getIsDeprecated() const;
   
     /**
      * \brief   Sets the deprecation hint of the enum entry.
@@ -204,7 +204,7 @@ public:
     /**
      * \brief   Returns the deprecation hint of the enum entry.
      **/
-    inline const QString& getDeprecateHint(void) const;
+    inline const QString& getDeprecateHint() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
@@ -226,7 +226,7 @@ inline void EnumEntry::setIsDeprecated(bool isDeprecated)
     mIsDeprecated = isDeprecated;
 }
 
-inline bool EnumEntry::getIsDeprecated(void) const
+inline bool EnumEntry::getIsDeprecated() const
 {
     return mIsDeprecated;
 }
@@ -236,7 +236,7 @@ inline void EnumEntry::setDeprecateHint(const QString & hint)
     mDeprecateHint = mIsDeprecated ? hint : QString();
 }
 
-inline const QString& EnumEntry::getDeprecateHint(void) const
+inline const QString& EnumEntry::getDeprecateHint() const
 {
     return (mIsDeprecated ? mDeprecateHint : EmptyString);
 }

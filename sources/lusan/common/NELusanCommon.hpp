@@ -91,7 +91,7 @@ namespace NELusanCommon
      * \brief   Gets the options file path.
      * \return  The options file path.
      **/
-    QString getOptionsFile(void);
+    QString getOptionsFile();
 
     /**
      * \brief   Gets the user profile file path.
@@ -104,13 +104,13 @@ namespace NELusanCommon
      * \brief   Generates a unique ID.
      * \return  A unique ID.
      **/
-    uint32_t getId(void);
+    uint32_t getId();
 
     /**
      * \brief   Gets the current timestamp.
      * \return  The current timestamp.
      **/
-    uint64_t getTimestamp(void);
+    uint64_t getTimestamp();
 
     /**
      * \brief   Stylesheet for QToolButton when it is checked.
@@ -120,7 +120,7 @@ namespace NELusanCommon
     /**
      * \brief   Returns QToolButton stylesheet when it is checked.
      **/
-    const QString& getStyleToolbutton(void);
+    const QString& getStyleToolbutton();
     
     /**
      * \brief   XML workspace version.
@@ -429,7 +429,7 @@ namespace NELusanCommon
     /**
      * \brief   Returns true if icons are adapted for dark themes.
      **/
-    bool iconsForDarkTheme(void);
+    bool iconsForDarkTheme();
 
     //!< Loads new workspace icon and sets the specified size
     inline QIcon iconNewWorkspace(const QSize & size = QSize{ 32, 32 });

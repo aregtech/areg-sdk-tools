@@ -70,7 +70,7 @@ public:
 public:
     LogSearchModel(QAbstractItemModel* logModel = nullptr);
 
-    virtual ~LogSearchModel(void) = default;
+    virtual ~LogSearchModel() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -81,7 +81,7 @@ public:
      * \brief   Returns the logging model used for searching.
      *          It can be either live or offline logging model.
      **/
-    inline QAbstractItemModel* getLogModel(void) const;
+    inline QAbstractItemModel* getLogModel() const;
 
     /**
      * \brief   Sets the logging model to use for searching.
@@ -103,46 +103,46 @@ public:
      *          It is used to indicate the starting point of the search.
      * \return  The row index where the search started.
      **/
-    inline uint32_t getRowBegin(void) const;
+    inline uint32_t getRowBegin() const;
 
     /**
      * \brief   Returns the row index where the search found a match.
      *          It is used to indicate the row where the search phrase was found.
      * \return  The row index where the search found a match.
      **/
-    inline uint32_t getFoundRow(void) const;
+    inline uint32_t getFoundRow() const;
 
     /**
      * \brief   Return the index of the column where the search found a match.
      **/
-    inline uint32_t getFoundColumn(void) const;
+    inline uint32_t getFoundColumn() const;
 
     /**
      * \brief   Returns the start positions of the found search phrase in the string.
      **/
-    inline int32_t getFoundStartPosition(void) const;
+    inline int32_t getFoundStartPosition() const;
 
     /**
      * \brief   Returns the end positions of the found search phrase in the string.
      **/
-    inline int32_t getFoundEndPosition(void) const;
+    inline int32_t getFoundEndPosition() const;
 
     /**
      * \brief   Returns the search phrase used for searching.
      *          It is the text that was searched in the log messages.
      **/
-    inline const  QString& getSearchPhrase(void) const;
+    inline const  QString& getSearchPhrase() const;
 
     /**
      * \brief   Returns true if the next search can be performed.
      **/
-    inline bool canSearchNext(void) const;
+    inline bool canSearchNext() const;
 
     /**
      * \brief   Returns true if the search has found a match.
      *          It is used to indicate whether the search was successful or not.
      **/
-    inline bool hasFound(void) const;
+    inline bool hasFound() const;
 
     /**
      * \brief   Returns true if specified position is valid.
@@ -158,12 +158,12 @@ public:
      * \brief   Returns the search phrase that was found in the log messages.
      *          It is used to display the found phrase in the UI.
      **/
-    QString getFoundPhrase(void) const;
+    QString getFoundPhrase() const;
 
     /**
      * \brief   Resets the search parameters and clears the search results.
      **/
-    void resetSearch(void);
+    void resetSearch();
 
     /**
      * \brief   Start searching for the specified phrase in the log messages.
@@ -214,7 +214,7 @@ private:
      *          It handles case sensitivity, whole word matching, and wildcard characters.
      * \return  Returns the configured QRegularExpression object for searching.
      **/
-    QRegularExpression createRegex(void);
+    QRegularExpression createRegex();
 
     /**
      * \brief   Checks if the text matches the search phrase as a simple string.
@@ -264,7 +264,7 @@ private:
 // LogSearchModel inline methods implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline QAbstractItemModel* LogSearchModel::getLogModel(void) const
+inline QAbstractItemModel* LogSearchModel::getLogModel() const
 {
     return mLogModel;
 }
@@ -279,42 +279,42 @@ inline bool LogSearchModel::isReachedEnd(uint32_t pos) const
     return (pos == ReachedEnd);
 }
 
-inline uint32_t LogSearchModel::getRowBegin(void) const
+inline uint32_t LogSearchModel::getRowBegin() const
 {
     return mRowBegin;
 }
 
-inline uint32_t LogSearchModel::getFoundRow(void) const
+inline uint32_t LogSearchModel::getFoundRow() const
 {
     return mRowFound;
 }
 
-inline uint32_t LogSearchModel::getFoundColumn(void) const
+inline uint32_t LogSearchModel::getFoundColumn() const
 {
     return mColFound;
 }
 
-inline int32_t LogSearchModel::getFoundStartPosition(void) const
+inline int32_t LogSearchModel::getFoundStartPosition() const
 {
     return mPosStart;
 }
 
-inline int32_t LogSearchModel::getFoundEndPosition(void) const
+inline int32_t LogSearchModel::getFoundEndPosition() const
 {
     return mPosEnd;
 }
 
-inline const QString& LogSearchModel::getSearchPhrase(void) const
+inline const QString& LogSearchModel::getSearchPhrase() const
 {
     return mSearchPhrase;
 }
 
-inline bool LogSearchModel::canSearchNext(void) const
+inline bool LogSearchModel::canSearchNext() const
 {
     return (mSearchPhrase.isEmpty() == false) && isValidPosition(mRowBegin) && isValidPosition(mRowFound);
 }
 
-inline bool LogSearchModel::hasFound(void) const
+inline bool LogSearchModel::hasFound() const
 {
     return (mRowFound != InvalidPos) && (mRowFound != ReachedEnd);
 }

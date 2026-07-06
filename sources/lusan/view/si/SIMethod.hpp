@@ -73,7 +73,7 @@ class SIMethod  : public QScrollArea
 public:
     explicit SIMethod(SIMethodModel & model, QWidget* parent = nullptr);
 
-    virtual ~SIMethod(void);
+    virtual ~SIMethod();
     
 //////////////////////////////////////////////////////////////////////////
 // override
@@ -153,7 +153,7 @@ protected:
     /**
      * \brief   Triggered when the description is changed.
      **/
-    void onDescriptionChanged(void);
+    void onDescriptionChanged();
 
     /**
      * \brief   Triggered when the request connected new response is selected.
@@ -164,42 +164,42 @@ protected:
     /**
      * \brief   Triggered when the add button is clicked to add new method.
      **/
-    void onAddClicked(void);
+    void onAddClicked();
     
     /**
      * \brief   Triggered when the insert button is clicked to insert new method.
      **/
-    void onInsertClicked(void);
+    void onInsertClicked();
     
     /**
      * \brief   Triggered when the remove button is clicked to remove selected method.
      **/
-    void onRemoveClicked(void);
+    void onRemoveClicked();
 
     /**
      * \brief   Triggered when the add parameter button is clicked to add new parameter.
      **/
-    void onParamAddClicked(void);
+    void onParamAddClicked();
 
     /**
      * \brief   Triggered when the remove parameter button is clicked to remove selected parameter.
      **/
-    void onParamRemoveClicked(void);
+    void onParamRemoveClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked to insert new method parameter.
      **/
-    void onParamInsertClicked(void);
+    void onParamInsertClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked to move a method up in the list.
      **/
-    void onMoveUpClicked(void);
+    void onMoveUpClicked();
 
     /**
      * \brief   Triggered when the move down button is clicked to move a method down in the list.
      **/
-    void onMoveDownClicked(void);
+    void onMoveDownClicked();
 
     /**
      * \brief   Triggered when the current cell is changed in the tree table.
@@ -235,7 +235,7 @@ protected:
     /**
      * \brief   Triggered when the description of the parameter is changed.
      **/
-    void onParamDescriptionChanged(void);
+    void onParamDescriptionChanged();
 
     /**
      * \brief   Triggered when the deprecated flag of the parameter is changed.
@@ -256,17 +256,17 @@ private:
     /**
      * \brief Updates the data in the table.
      */
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief Updates the widgets.
      */
-    void updateWidgets(void);
+    void updateWidgets();
 
     /**
      * \brief Initializes the signals.
      */
-    void setupSignals(void);
+    void setupSignals();
 
     /**
      * \brief Blocks the basic signals.
@@ -378,7 +378,7 @@ private:
     /**
      * \brief   Generates and returns new method name.
      **/
-    inline QString genName(void);
+    inline QString genName();
 
     /**
      * \brief   Generates and returns new parameter name of the method.

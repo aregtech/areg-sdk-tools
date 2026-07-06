@@ -38,17 +38,17 @@ public:
 
     // Getters to access controls
 
-    QLineEdit* ctrlName(void);
+    QLineEdit* ctrlName();
 
-    QComboBox* ctrlTypes(void);
+    QComboBox* ctrlTypes();
 
-    QComboBox* ctrlNotification(void);
+    QComboBox* ctrlNotification();
 
-    QPlainTextEdit* ctrlDescription(void);
+    QPlainTextEdit* ctrlDescription();
 
-    QCheckBox* ctrlDeprecated(void);
+    QCheckBox* ctrlDeprecated();
 
-    QLineEdit* ctrlDeprecateHint(void);
+    QLineEdit* ctrlDeprecateHint();
 
 private:
     Ui::SIAttributeDetails* ui;

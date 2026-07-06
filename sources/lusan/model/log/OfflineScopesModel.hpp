@@ -71,7 +71,7 @@ public:
      */
     OfflineScopesModel(QObject* parent = nullptr);
 
-    virtual ~OfflineScopesModel(void);
+    virtual ~OfflineScopesModel();
 
 //////////////////////////////////////////////////////////////////////////
 // LoggingScopesModelBase overrides
@@ -144,7 +144,7 @@ private:
     /**
      * \brief   Builds the scope tree from offline model data.
      **/
-    void _buildScopeTree(void);
+    void _buildScopeTree();
 
     //!< Returns the combined allowed log priority for the given priority.
     uint32_t _logFilterPrio(uint32_t prio) const;

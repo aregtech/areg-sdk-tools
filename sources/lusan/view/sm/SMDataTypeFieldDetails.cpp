@@ -33,6 +33,7 @@ SMDataTypeFieldDetails::SMDataTypeFieldDetails(QWidget* parent /*= nullptr*/)
     , mName             (nullptr)
     , mType             (nullptr)
     , mValue            (nullptr)
+    , mValueHint        (nullptr)
     , mDescription      (nullptr)
     , mDeprecated       (nullptr)
     , mDeprecateHint    (nullptr)
@@ -42,7 +43,7 @@ SMDataTypeFieldDetails::SMDataTypeFieldDetails(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMDataTypeFieldDetails::buildUi(void)
+void SMDataTypeFieldDetails::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -61,8 +62,19 @@ void SMDataTypeFieldDetails::buildUi(void)
     mTypeValueForm = new QFormLayout(typeValue);
     mType = new QComboBox(typeValue);
     mTypeValueForm->addRow(tr("Type:"), mType);
-    mValue = new QLineEdit(typeValue);
-    mTypeValueForm->addRow(tr("Value:"), mValue);
+
+    QWidget* valueCell = new QWidget(typeValue);
+    QVBoxLayout* valueCellLayout = new QVBoxLayout(valueCell);
+    valueCellLayout->setContentsMargins(0, 0, 0, 0);
+    valueCellLayout->setSpacing(2);
+    mValue = new QLineEdit(valueCell);
+    valueCellLayout->addWidget(mValue);
+    mValueHint = new QLabel(valueCell);
+    mValueHint->setStyleSheet(QStringLiteral("color: #c0392b;"));
+    mValueHint->setWordWrap(true);
+    mValueHint->setVisible(false);
+    valueCellLayout->addWidget(mValueHint);
+    mTypeValueForm->addRow(tr("Value:"), valueCell);
     mFieldForm->addRow(tr("Field:"), typeValue);
 
     mDescription = new QPlainTextEdit(details);
@@ -79,32 +91,32 @@ void SMDataTypeFieldDetails::buildUi(void)
     root->addWidget(details);
 }
 
-QLineEdit* SMDataTypeFieldDetails::ctrlName(void) const
+QLineEdit* SMDataTypeFieldDetails::ctrlName() const
 {
     return mName;
 }
 
-QComboBox* SMDataTypeFieldDetails::ctrlTypes(void) const
+QComboBox* SMDataTypeFieldDetails::ctrlTypes() const
 {
     return mType;
 }
 
-QLineEdit* SMDataTypeFieldDetails::ctrlValue(void) const
+QLineEdit* SMDataTypeFieldDetails::ctrlValue() const
 {
     return mValue;
 }
 
-QPlainTextEdit* SMDataTypeFieldDetails::ctrlDescription(void) const
+QPlainTextEdit* SMDataTypeFieldDetails::ctrlDescription() const
 {
     return mDescription;
 }
 
-QCheckBox* SMDataTypeFieldDetails::ctrlDeprecated(void) const
+QCheckBox* SMDataTypeFieldDetails::ctrlDeprecated() const
 {
     return mDeprecated;
 }
 
-QLineEdit* SMDataTypeFieldDetails::ctrlDeprecateHint(void) const
+QLineEdit* SMDataTypeFieldDetails::ctrlDeprecateHint() const
 {
     return mDeprecateHint;
 }
@@ -112,4 +124,11 @@ QLineEdit* SMDataTypeFieldDetails::ctrlDeprecateHint(void) const
 void SMDataTypeFieldDetails::setTypeRowVisible(bool visible)
 {
     mTypeValueForm->setRowVisible(mType, visible);
+}
+
+void SMDataTypeFieldDetails::showValueHint(const QString& reason)
+{
+    mValueHint->setText(reason);
+    mValueHint->setVisible(reason.isEmpty() == false);
+    mValue->setStyleSheet(reason.isEmpty() ? QString() : QStringLiteral("border: 1px solid #c0392b;"));
 }

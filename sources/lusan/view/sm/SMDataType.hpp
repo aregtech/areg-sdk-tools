@@ -53,45 +53,45 @@ class SMDataType : public QScrollArea
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit SMDataType(SMDataTypeModel& model, QWidget* parent = nullptr);
-    virtual ~SMDataType(void) = default;
+    virtual ~SMDataType() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
 private slots:
     void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
-    void onAddClicked(void);
-    void onInsertClicked(void);
-    void onRemoveClicked(void);
-    void onAddFieldClicked(void);
-    void onInsertFieldClicked(void);
-    void onRemoveFieldClicked(void);
-    void onMoveUpClicked(void);
-    void onMoveDownClicked(void);
+    void onAddClicked();
+    void onInsertClicked();
+    void onRemoveClicked();
+    void onAddFieldClicked();
+    void onInsertFieldClicked();
+    void onRemoveFieldClicked();
+    void onMoveUpClicked();
+    void onMoveDownClicked();
 
-    void onNameCommitted(void);
+    void onNameCommitted();
     void onStructSelected(bool checked);
     void onEnumSelected(bool checked);
     void onImportSelected(bool checked);
     void onContainerSelected(bool checked);
     void onEnumDerivedChanged(int index);
-    void onImportLocationCommitted(void);
-    void onImportNamespaceCommitted(void);
-    void onImportObjectCommitted(void);
-    void onImportBrowse(void);
+    void onImportLocationCommitted();
+    void onImportNamespaceCommitted();
+    void onImportObjectCommitted();
+    void onImportBrowse();
     void onContainerObjectChanged(int index);
     void onContainerKeyChanged(int index);
     void onContainerValueChanged(int index);
     void onDeprecatedToggled(bool checked);
-    void onDeprecateHintCommitted(void);
+    void onDeprecateHintCommitted();
 
-    void onFieldNameCommitted(void);
+    void onFieldNameCommitted();
     void onFieldTypeChanged(int index);
-    void onFieldValueCommitted(void);
+    void onFieldValueCommitted();
     void onFieldDeprecatedToggled(bool checked);
-    void onFieldDeprecateHintCommitted(void);
+    void onFieldDeprecateHintCommitted();
 
-    void onNotifierChanged(void);
+    void onNotifierChanged();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -103,18 +103,22 @@ protected:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
-    void buildUi(void);
-    void setupSignals(void);
+    void buildUi();
+    void setupSignals();
 
     //!< Rebuilds the whole tree from the live model and restores the selection by ID.
-    void refreshAll(void);
+    void refreshAll();
     //!< Selects the data type / field by ID; returns false if not found (and selects nothing).
     bool selectDataType(uint32_t typeId, uint32_t fieldId = 0);
     //!< Clears the details/fields panels and disables the field-only tool buttons.
-    void showClean(void);
+    void showClean();
 
     QTreeWidgetItem* createNode(DataTypeCustom* dataType) const;
     void setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const;
+    //!< Empty string if a structure field's default is valid for its type (a missing value,
+    //!< or a declared enum/structure/container/imported type, is always valid), otherwise a
+    //!< short, user-facing reason.
+    QString validateFieldValue(const QString& typeName, const QString& value) const;
 
     void selectedStruct(DataTypeStructure* dataType);
     void selectedEnum(DataTypeEnum* dataType);
@@ -131,10 +135,10 @@ private:
     void populateContainerObjectCombo(QComboBox* combo) const;
 
     //!< The data type / field currently selected in the tree, or nullptr / 0.
-    DataTypeCustom* currentDataType(void) const;
-    uint32_t currentFieldId(void) const;
+    DataTypeCustom* currentDataType() const;
+    uint32_t currentFieldId() const;
 
-    QString genTypeName(void);
+    QString genTypeName();
     QString genFieldName(const DataTypeCustom* dataType) const;
 
 //////////////////////////////////////////////////////////////////////////

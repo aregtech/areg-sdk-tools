@@ -46,47 +46,47 @@ SIDataTypeList::SIDataTypeList(QWidget *parent)
     header->setSectionResizeMode(2, QHeaderView::Stretch);
 }
 
-QTreeWidget* SIDataTypeList::ctrlTableList(void) const
+QTreeWidget* SIDataTypeList::ctrlTableList() const
 {
     return ui->treeTypes;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonAdd(void) const
+QToolButton* SIDataTypeList::ctrlButtonAdd() const
 {
     return ui->toolAddType;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonInsert(void) const
+QToolButton* SIDataTypeList::ctrlButtonInsert() const
 {
     return ui->toolInsertType;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonRemove(void) const
+QToolButton* SIDataTypeList::ctrlButtonRemove() const
 {
     return ui->toolDeleteType;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonMoveUp(void) const
+QToolButton* SIDataTypeList::ctrlButtonMoveUp() const
 {
     return ui->toolMoveUp;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonMoveDown(void) const
+QToolButton* SIDataTypeList::ctrlButtonMoveDown() const
 {
     return ui->toolMoveDown;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonAddField(void) const
+QToolButton* SIDataTypeList::ctrlButtonAddField() const
 {
     return ui->toolFieldAdd;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonRemoveField(void) const
+QToolButton* SIDataTypeList::ctrlButtonRemoveField() const
 {
     return ui->toolFieldDelete;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonInsertField(void) const
+QToolButton* SIDataTypeList::ctrlButtonInsertField() const
 {
     return ui->toolFieldInsert;
 }

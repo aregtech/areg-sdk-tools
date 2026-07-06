@@ -125,7 +125,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIOverviewModel(void) = delete;
+    SIOverviewModel() = delete;
     SIOverviewModel(const SIOverviewModel& /*src*/) = delete;
     SIOverviewModel& operator = (const SIOverviewModel& /*src*/) = delete;
     SIOverviewModel(SIOverviewModel&& /*src*/) = delete;

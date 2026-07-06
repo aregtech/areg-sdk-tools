@@ -95,7 +95,7 @@ public:
      **/
     explicit SIConstant(SIConstantModel& model, QWidget* parent = nullptr);
 
-    virtual ~SIConstant(void);
+    virtual ~SIConstant();
     
 protected:
 
@@ -131,7 +131,7 @@ protected:
     /**
      * \brief   Returns the number of columns in the table.
      **/
-    virtual int getColumnCount(void) const override;
+    virtual int getColumnCount() const override;
 
     /**
      * \brief   Returns the text of the cell.
@@ -156,27 +156,27 @@ protected slots:
     /**
      * \brief   Triggered when the add button is clicked.
      **/
-    void onAddClicked(void);
+    void onAddClicked();
 
     /**
      * \brief   Triggered when the remove button is clicked.
      **/
-    void onRemoveClicked(void);
+    void onRemoveClicked();
 
     /**
      * \brief   Triggered when the insert button is clicked.
      **/
-    void onInsertClicked(void);
+    void onInsertClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked.
      **/
-    void onMoveUpClicked(void);
+    void onMoveUpClicked();
 
     /**
      * \brief   Triggered when the move down button is clicked.
      **/
-    void onMoveDownClicked(void);
+    void onMoveDownClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked.
@@ -218,7 +218,7 @@ protected slots:
     /**
      * \brief   Triggered when the description is changed.
      **/
-    void onDescriptionChanged(void);
+    void onDescriptionChanged();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -228,17 +228,17 @@ private:
     /**
      * \brief   Initializes the SIConstant object.
      **/
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief   Updates the widgets.
      **/
-    void updateWidgets(void);
+    void updateWidgets();
 
     /**
      * \brief   Initializes the signals.
      **/
-    void setupSignals(void);
+    void setupSignals();
 
     /**
      * \brief   Blocks the basic signals.
@@ -292,7 +292,7 @@ private:
     /**
      * \brief   Generates new unique name of the constant.
      **/
-    inline QString genName(void);
+    inline QString genName();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members

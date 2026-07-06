@@ -53,7 +53,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~ReplyMethodModel(void) = default;
+    virtual ~ReplyMethodModel() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -128,7 +128,7 @@ public:
      * \brief   Updates the list of SIMethodResponse objects.
      *          The data is taken from the SIMethodData object.
      **/
-    void updateList(void);
+    void updateList();
 
     /**
      * \brief   Finds the SIMethodResponse object by name.
@@ -155,7 +155,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    ReplyMethodModel(void) = delete;
+    ReplyMethodModel() = delete;
     ReplyMethodModel(const ReplyMethodModel& /*src*/) = delete;
 };
 

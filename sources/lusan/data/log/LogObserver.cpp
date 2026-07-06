@@ -74,29 +74,29 @@ bool LogObserver::createLogObserver(FuncLogObserverStarted callbackStarted)
     return result;
 }
 
-void LogObserver::releaseLogObserver(void)
+void LogObserver::releaseLogObserver()
 {
     _modelInitialized = false;
     _observerStart = false;
     areg::ComponentLoader::unload_component_model(true, LogObserver::LogobserverModel);
 }
 
-void LogObserver::disconnect(void)
+void LogObserver::disconnect()
 {
     static_cast<areg::logger::LogObserverBase &>(LogObserver::getClient()).disconnect();
 }
 
-bool LogObserver::pause(void)
+bool LogObserver::pause()
 {
     return LogObserver::getClient().pause();
 }
 
-bool LogObserver::resume(void)
+bool LogObserver::resume()
 {
     return LogObserver::getClient().resume();
 }
 
-void LogObserver::stop(void)
+void LogObserver::stop()
 {
     LogObserver::getClient().stop();
 }
@@ -106,7 +106,7 @@ bool LogObserver::restart(const QString& dbLocation)
     return LogObserver::getClient().restart(dbLocation.toStdString());
 }
 
-bool LogObserver::requestInstances(void)
+bool LogObserver::requestInstances()
 {
     return LogObserver::getClient().request_instances();
 }
@@ -126,47 +126,47 @@ bool LogObserver::requestSaveConfig(ITEM_ID target /*= areg::TARGET_ALL*/)
     return LogObserver::getClient().request_save_config(target);
 }
 
-void LogObserver::saveLoggerConfig(void)
+void LogObserver::saveLoggerConfig()
 {
     LogObserver::getClient().save_logger_config();
 }
 
-const areg::SocketAddress& LogObserver::getLogServiceAddress(void)
+const areg::SocketAddress& LogObserver::getLogServiceAddress()
 {
     return LogObserver::getClient().logger_address();
 }
 
-QString LogObserver::getConnectedAddress(void)
+QString LogObserver::getConnectedAddress()
 {
     return QString(LogObserver::getClient().logger_ip_address().c_str());
 }
 
-QString LogObserver::getConnectedHostName(void)
+QString LogObserver::getConnectedHostName()
 {
     return QString(LogObserver::getClient().logger_host_name().c_str());
 }
 
-uint16_t LogObserver::getConnectedPort(void)
+uint16_t LogObserver::getConnectedPort()
 {
     return LogObserver::getClient().logger_port();
 }
 
-QString LogObserver::getActiveDatabase(void)
+QString LogObserver::getActiveDatabase()
 {
     return QString(LogObserver::getClient().active_database_path().c_str());
 }
 
-QString LogObserver::getInitDatabase(void)
+QString LogObserver::getInitDatabase()
 {
     return QString(LogObserver::getClient().init_database_path().c_str());
 }
 
-QString LogObserver::getConfigDatabaseName(void)
+QString LogObserver::getConfigDatabaseName()
 {
     return QString(LogObserver::getClient().config_logger_database_name().c_str());
 }
 
-QString LogObserver::getConfigDatabaseLocation(void)
+QString LogObserver::getConfigDatabaseLocation()
 {
     return QString(LogObserver::getClient().config_logger_database_location().c_str());
 }
@@ -197,7 +197,7 @@ bool LogObserver::setConfigDatabaseLocation(const QString& dbLocation)
     }
 }
 
-bool LogObserver::isConnected(void)
+bool LogObserver::isConnected()
 {
     return LogObserver::getClient().is_connected();
 }
@@ -220,7 +220,7 @@ void LogObserver::DeleteComponent(areg::Component & compObject, const areg::Comp
     delete (&compObject);
 }
 
-LogObserver* LogObserver::getComponent(void)
+LogObserver* LogObserver::getComponent()
 {
     return _component.load();
 }
@@ -280,7 +280,7 @@ void LogObserver::queryLogMessages(std::vector<areg::SharedBuffer>& messages, IT
     LogObserver::getClient().log_messages(messages, instId, scopeId);
 }
 
-LogCollectorClient& LogObserver::getClient(void)
+LogCollectorClient& LogObserver::getClient()
 {
     return LogCollectorClient::getInstance();
 }
@@ -295,7 +295,7 @@ LogObserver::LogObserver(const areg::ComponentEntry & entry, areg::ComponentThre
 {
 }
 
-LogObserver::~LogObserver(void)
+LogObserver::~LogObserver()
 {
 }
 
@@ -577,7 +577,7 @@ void LogObserver::slotLogDbCreated(const std::string& dbLocation)
     LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_DbCreated, stream), master_thread());
 }
 
-void LogObserver::slotLogMessagingFailed(void)
+void LogObserver::slotLogMessagingFailed()
 {
     LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_MessageFailed), master_thread());
 }
@@ -596,7 +596,7 @@ void LogObserver::slotLogInstancesDisconnect(const std::vector<areg::ConnectedIn
     LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_InstDisconnected, stream), master_thread());
 }
 
-void LogObserver::slotLogServiceDisconnected(void)
+void LogObserver::slotLogServiceDisconnected()
 {
     LogObserverEvent::send_event(LogObserverEventData(LogObserverEventData::LogObserverCommand::CMD_ServiceDisconnect), master_thread());
 }

@@ -33,8 +33,8 @@ class IEDataTypeConsumer
 {
 
 protected:
-    IEDataTypeConsumer(void) = default;
-    virtual ~IEDataTypeConsumer(void) = default;
+    IEDataTypeConsumer() = default;
+    virtual ~IEDataTypeConsumer() = default;
 
 public:
 

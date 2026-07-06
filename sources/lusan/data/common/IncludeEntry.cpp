@@ -119,7 +119,7 @@ bool IncludeEntry::operator > (const IncludeEntry& other) const
     return (mLocation > other.mLocation);
 }
 
-const QString& IncludeEntry::getLocation(void) const
+const QString& IncludeEntry::getLocation() const
 {
     return mLocation;
 }
@@ -129,7 +129,7 @@ void IncludeEntry::setLocation(const QString& path)
     mLocation = path;
 }
 
-const QString& IncludeEntry::getDescription(void) const
+const QString& IncludeEntry::getDescription() const
 {
     return mDescription;
 }
@@ -139,7 +139,7 @@ void IncludeEntry::setDescription(const QString& description)
     mDescription = description;
 }
 
-bool IncludeEntry::getIsDeprecated(void) const
+bool IncludeEntry::getIsDeprecated() const
 {
     return mDeprecated;
 }
@@ -149,7 +149,7 @@ void IncludeEntry::setIsDeprecated(bool deprecated)
     mDeprecated = deprecated;
 }
 
-const QString& IncludeEntry::getDeprecateHint(void) const
+const QString& IncludeEntry::getDeprecateHint() const
 {
     return mDeprecateHint;
 }
@@ -214,7 +214,7 @@ void IncludeEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
-bool IncludeEntry::isValid(void) const
+bool IncludeEntry::isValid() const
 {
     return !mLocation.isEmpty();
 }

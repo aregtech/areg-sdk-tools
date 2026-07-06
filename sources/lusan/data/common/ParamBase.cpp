@@ -118,7 +118,7 @@ bool ParamBase::validate(const QList<DataTypeCustom*>& customTypes)
     return mParamType.validate(customTypes);
 }
 
-void ParamBase::invalidate(void)
+void ParamBase::invalidate()
 {
     mParamType.invalidate();
 }
@@ -153,7 +153,7 @@ void ParamBase::setParamType(DataTypeBase* dataType)
     mParamType.setType(dataType);
 }
 
-DataTypeBase* ParamBase::getParamType(void) const
+DataTypeBase* ParamBase::getParamType() const
 {
     return const_cast<ParamType &>(mParamType).getType();
 }

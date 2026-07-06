@@ -60,23 +60,23 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
     inline void setName(const QString& name);
 
-    inline uint32_t getTimeout(void) const;
+    inline uint32_t getTimeout() const;
     inline void setTimeout(uint32_t timeout);
 
-    inline uint32_t getRepeat(void) const;
+    inline uint32_t getRepeat() const;
     inline void setRepeat(uint32_t repeat);
 
-    inline const QString& getDescription(void) const;
+    inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -104,7 +104,7 @@ public:
     SMTimerData(ElementBase* parent = nullptr);
     SMTimerData(const QList<SMTimerEntry>& entries, ElementBase* parent = nullptr);
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -120,7 +120,7 @@ public:
 // SMTimerEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& SMTimerEntry::getName(void) const
+inline const QString& SMTimerEntry::getName() const
 {
     return mName;
 }
@@ -130,7 +130,7 @@ inline void SMTimerEntry::setName(const QString& name)
     mName = name;
 }
 
-inline uint32_t SMTimerEntry::getTimeout(void) const
+inline uint32_t SMTimerEntry::getTimeout() const
 {
     return mTimeout;
 }
@@ -140,7 +140,7 @@ inline void SMTimerEntry::setTimeout(uint32_t timeout)
     mTimeout = timeout;
 }
 
-inline uint32_t SMTimerEntry::getRepeat(void) const
+inline uint32_t SMTimerEntry::getRepeat() const
 {
     return mRepeat;
 }
@@ -150,7 +150,7 @@ inline void SMTimerEntry::setRepeat(uint32_t repeat)
     mRepeat = repeat;
 }
 
-inline const QString& SMTimerEntry::getDescription(void) const
+inline const QString& SMTimerEntry::getDescription() const
 {
     return mDescription;
 }

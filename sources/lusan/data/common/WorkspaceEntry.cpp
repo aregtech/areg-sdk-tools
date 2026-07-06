@@ -23,7 +23,7 @@
 
 const WorkspaceEntry WorkspaceEntry::InvalidWorkspace{};
 
-WorkspaceEntry::WorkspaceEntry(void)
+WorkspaceEntry::WorkspaceEntry()
     : mId(0)
     , mLastAccessed(0)
     , mWorkspaceRoot("")

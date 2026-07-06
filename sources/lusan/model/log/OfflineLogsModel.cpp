@@ -79,7 +79,7 @@ uint32_t OfflineLogsModel::setupLogStatement(ITEM_ID instId /*= areg::TARGET_ALL
     return mDatabase.setup_statement_read_filter_logs(mStatement, instId);
 }
 
-void OfflineLogsModel::closeDatabase(void)
+void OfflineLogsModel::closeDatabase()
 {
     _closeDatabase();
     emit signalDatabaseIsClosed(QString::fromStdString(mDatabase.database_path().data()));

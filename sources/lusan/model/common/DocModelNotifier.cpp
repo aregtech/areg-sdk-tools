@@ -54,7 +54,7 @@ void DocModelNotifier::notifyNameChanged(uint32_t id, const QString& oldName, co
     emit nameChanged(id, oldName, newName);
 }
 
-void DocModelNotifier::notifyDocumentReloaded(void)
+void DocModelNotifier::notifyDocumentReloaded()
 {
     emit documentReloaded();
 }

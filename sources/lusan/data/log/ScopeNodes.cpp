@@ -82,7 +82,7 @@ void ScopeLeaf::setScopeId(uint32_t scopeId)
     mScopeId = scopeId;
 }
 
-uint32_t ScopeLeaf::getScopeId(void) const
+uint32_t ScopeLeaf::getScopeId() const
 {
     return mScopeId;
 }
@@ -148,7 +148,7 @@ ScopeNode::ScopeNode( ScopeNodeBase::eNode nodeType, ScopeRoot * parent /*= null
 {
 }
 
-ScopeNode::~ScopeNode(void)
+ScopeNode::~ScopeNode()
 {
     for (const auto& node : mChildLeafs )
     {
@@ -383,27 +383,27 @@ ScopeNodeBase* ScopeNode::getChildAt(int pos) const
     return result;
 }
 
-int ScopeNode::getChildCount(void) const
+int ScopeNode::getChildCount() const
 {
     return static_cast<int>(mChildNodes.size() + mChildLeafs.size());
 }
 
-int ScopeNode::getChildNodesCount(void) const
+int ScopeNode::getChildNodesCount() const
 {
     return static_cast<int>(mChildNodes.size());
 }
 
-int ScopeNode::getChildLeafsCount(void) const
+int ScopeNode::getChildLeafsCount() const
 {
     return static_cast<int>(mChildLeafs.size());
 }
 
-bool ScopeNode::hasNodes(void) const
+bool ScopeNode::hasNodes() const
 {
     return (mChildNodes.empty() == false);
 }
 
-bool ScopeNode::hasLeafs(void) const
+bool ScopeNode::hasLeafs() const
 {
     return (mChildLeafs.empty() == false);
 }
@@ -451,7 +451,7 @@ void ScopeNode::resetPrioritiesRecursive(bool skipLeafs /*= false*/)
     }
 }
 
-void ScopeNode::refreshPrioritiesRecursive(void)
+void ScopeNode::refreshPrioritiesRecursive()
 {
     for (const auto& node : mChildNodes)
     {
@@ -466,7 +466,7 @@ void ScopeNode::refreshPrioritiesRecursive(void)
     }
 }
 
-QList<ScopeNodeBase*> ScopeNode::getNodesWithPriority(void) const
+QList<ScopeNodeBase*> ScopeNode::getNodesWithPriority() const
 {
     QList<ScopeNodeBase*> result = ScopeNodeBase::getNodesWithPriority();
     if (result.isEmpty())
@@ -524,7 +524,7 @@ int ScopeNode::extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const
     return result;
 }
 
-std::vector<ScopeNodeBase*> ScopeNode::extractNodeLeafs(void) const
+std::vector<ScopeNodeBase*> ScopeNode::extractNodeLeafs() const
 {
     std::vector<ScopeNodeBase*> leafs;
     extractNodeLeafs(leafs);
@@ -550,7 +550,7 @@ uint32_t ScopeNode::extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const
 // ScopeRoot class declaration
 //////////////////////////////////////////////////////////////////////////
 
-ScopeRoot::ScopeRoot(void)
+ScopeRoot::ScopeRoot()
     : ScopeNode (ScopeNodeBase::eNode::Root, nullptr)
     , mRootId   (areg::COOKIE_LOCAL)
 {
@@ -600,12 +600,12 @@ ScopeRoot& ScopeRoot::operator = (ScopeRoot&& src) noexcept
     return (*this);
 }
 
-QString ScopeRoot::getPathString(void) const
+QString ScopeRoot::getPathString() const
 {
     return QString();
 }
 
-QString ScopeRoot::getDisplayName(void) const
+QString ScopeRoot::getDisplayName() const
 {
     QString result {getNodeName() + " (" + QString::number(mRootId) + ")"};
     return result;

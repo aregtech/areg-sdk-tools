@@ -24,7 +24,7 @@
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 
-WorkspaceSetupDialog::WorkspaceSetupDialog(void)
+WorkspaceSetupDialog::WorkspaceSetupDialog()
     : QDialog           (nullptr)
     , mUi               (new Ui::WorkspaceSetupDialog())
     , mOptionProjectDirs(nullptr)
@@ -46,7 +46,7 @@ WorkspaceSetupDialog::WorkspaceSetupDialog(void)
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
-WorkspaceSetupDialog::~WorkspaceSetupDialog(void)
+WorkspaceSetupDialog::~WorkspaceSetupDialog()
 {
     delete mUi;
     mUi = nullptr;
@@ -58,7 +58,7 @@ WorkspaceSetupDialog::~WorkspaceSetupDialog(void)
     }
 }
 
-void WorkspaceSetupDialog::applyDirectories(void)
+void WorkspaceSetupDialog::applyDirectories()
 {
     if (mOptionProjectDirs != nullptr)
     {

@@ -285,7 +285,7 @@ bool FileSystemEntry::operator > (const FileSystemEntry& other) const
         return (mFilePath.compare(other.mFilePath, Qt::CaseSensitivity::CaseInsensitive) > 0);
 }
 
-uint32_t FileSystemEntry::getNextId(void) const
+uint32_t FileSystemEntry::getNextId() const
 {
     return (mParent != nullptr ? mParent->getNextId() : 0);
 }
@@ -324,7 +324,7 @@ bool FileSystemEntry::containsEntryName(const QString& fileName) const
     return false;
 }
 
-void FileSystemEntry::deleteEntries(void)
+void FileSystemEntry::deleteEntries()
 {
     if (mChildren.size() == 1)
     {
@@ -378,7 +378,7 @@ FileSystemEntry* FileSystemEntry::createChildEntry(const QFileInfo& fileInfo) co
     return new FileSystemEntry(fileInfo, const_cast<FileSystemEntry *>(this));
 }
 
-bool FileSystemEntry::hasFetched(void) const
+bool FileSystemEntry::hasFetched() const
 {
     return ((mChildren.size() != 1) || mChildren[0]->isValid());
 }
@@ -405,7 +405,7 @@ QFileInfoList FileSystemEntry::fetchData(const QStringList & filter /*= QStringL
     return QFileInfoList();    
 }
 
-bool FileSystemEntry::hasValidChildren(void) const
+bool FileSystemEntry::hasValidChildren() const
 {
     if (mChildren.size() == 1)
     {
@@ -541,7 +541,7 @@ QString FileSystemRootEntry::findDisplayName(const QString & dirPath) const
     return QString();
 }
 
-uint32_t FileSystemRootEntry::getNextId(void) const
+uint32_t FileSystemRootEntry::getNextId() const
 {
     return (mParent != nullptr ? mParent->getNextId() : ++ mNextId);
 }

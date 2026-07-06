@@ -84,28 +84,28 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline eOperandKind getLhsKind(void) const;
+    inline eOperandKind getLhsKind() const;
     inline void setLhsKind(eOperandKind kind);
-    inline const QString& getLhs(void) const;
+    inline const QString& getLhs() const;
     inline void setLhs(const QString& lhs);
 
-    inline eOperator getOperator(void) const;
+    inline eOperator getOperator() const;
     inline void setOperator(eOperator op);
-    inline bool hasOperator(void) const;
+    inline bool hasOperator() const;
 
-    inline eOperandKind getRhsKind(void) const;
+    inline eOperandKind getRhsKind() const;
     inline void setRhsKind(eOperandKind kind);
-    inline const QString& getRhs(void) const;
+    inline const QString& getRhs() const;
     inline void setRhs(const QString& rhs);
 
-    inline bool isNegated(void) const;
+    inline bool isNegated() const;
     inline void setNegated(bool negate);
 
-    inline const QString& getExpression(void) const;
+    inline const QString& getExpression() const;
     inline void setExpression(const QString& expression);
 
-    inline const QList<SMArgumentEntry>& getArguments(void) const;
-    inline QList<SMArgumentEntry>& getArguments(void);
+    inline const QList<SMArgumentEntry>& getArguments() const;
+    inline QList<SMArgumentEntry>& getArguments();
 
     /**
      * \brief   Appends an argument (for a condition-method LHS), allocating its ID.
@@ -115,7 +115,7 @@ public:
     /**
      * \brief   True if this is an expression row (LHSKind = Expression).
      **/
-    inline bool isExpressionRow(void) const;
+    inline bool isExpressionRow() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -124,9 +124,9 @@ public:
     /**
      * \brief   The row's display name — its LHS reference; required by the container.
      **/
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -178,25 +178,25 @@ public:
     SMConditionList(ElementBase* parent = nullptr);
     SMConditionList(const SMConditionList& src);
     SMConditionList(SMConditionList&& src) noexcept;
-    virtual ~SMConditionList(void);
+    virtual ~SMConditionList();
 
     SMConditionList& operator = (const SMConditionList& other);
     SMConditionList& operator = (SMConditionList&& other) noexcept;
 
-    inline eCombine getCombine(void) const;
+    inline eCombine getCombine() const;
     inline void setCombine(eCombine combine);
 
     /**
      * \brief   Creates a new empty condition row appended at the end.
      **/
-    SMConditionEntry* addCondition(void);
+    SMConditionEntry* addCondition();
 
     /**
      * \brief   Deletes and removes all condition rows.
      **/
-    void removeAll(void);
+    void removeAll();
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -211,7 +211,7 @@ private:
 // SMConditionEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline SMConditionEntry::eOperandKind SMConditionEntry::getLhsKind(void) const
+inline SMConditionEntry::eOperandKind SMConditionEntry::getLhsKind() const
 {
     return mLhsKind;
 }
@@ -221,7 +221,7 @@ inline void SMConditionEntry::setLhsKind(eOperandKind kind)
     mLhsKind = kind;
 }
 
-inline const QString& SMConditionEntry::getLhs(void) const
+inline const QString& SMConditionEntry::getLhs() const
 {
     return mLhs;
 }
@@ -231,7 +231,7 @@ inline void SMConditionEntry::setLhs(const QString& lhs)
     mLhs = lhs;
 }
 
-inline SMConditionEntry::eOperator SMConditionEntry::getOperator(void) const
+inline SMConditionEntry::eOperator SMConditionEntry::getOperator() const
 {
     return mOperator;
 }
@@ -241,12 +241,12 @@ inline void SMConditionEntry::setOperator(eOperator op)
     mOperator = op;
 }
 
-inline bool SMConditionEntry::hasOperator(void) const
+inline bool SMConditionEntry::hasOperator() const
 {
     return (mOperator != eOperator::None);
 }
 
-inline SMConditionEntry::eOperandKind SMConditionEntry::getRhsKind(void) const
+inline SMConditionEntry::eOperandKind SMConditionEntry::getRhsKind() const
 {
     return mRhsKind;
 }
@@ -256,7 +256,7 @@ inline void SMConditionEntry::setRhsKind(eOperandKind kind)
     mRhsKind = kind;
 }
 
-inline const QString& SMConditionEntry::getRhs(void) const
+inline const QString& SMConditionEntry::getRhs() const
 {
     return mRhs;
 }
@@ -266,7 +266,7 @@ inline void SMConditionEntry::setRhs(const QString& rhs)
     mRhs = rhs;
 }
 
-inline bool SMConditionEntry::isNegated(void) const
+inline bool SMConditionEntry::isNegated() const
 {
     return mNegate;
 }
@@ -276,7 +276,7 @@ inline void SMConditionEntry::setNegated(bool negate)
     mNegate = negate;
 }
 
-inline const QString& SMConditionEntry::getExpression(void) const
+inline const QString& SMConditionEntry::getExpression() const
 {
     return mExpression;
 }
@@ -286,27 +286,27 @@ inline void SMConditionEntry::setExpression(const QString& expression)
     mExpression = expression;
 }
 
-inline const QList<SMArgumentEntry>& SMConditionEntry::getArguments(void) const
+inline const QList<SMArgumentEntry>& SMConditionEntry::getArguments() const
 {
     return mArguments;
 }
 
-inline QList<SMArgumentEntry>& SMConditionEntry::getArguments(void)
+inline QList<SMArgumentEntry>& SMConditionEntry::getArguments()
 {
     return mArguments;
 }
 
-inline bool SMConditionEntry::isExpressionRow(void) const
+inline bool SMConditionEntry::isExpressionRow() const
 {
     return (mLhsKind == eOperandKind::Expression);
 }
 
-inline const QString& SMConditionEntry::getName(void) const
+inline const QString& SMConditionEntry::getName() const
 {
     return mLhs;
 }
 
-inline SMConditionList::eCombine SMConditionList::getCombine(void) const
+inline SMConditionList::eCombine SMConditionList::getCombine() const
 {
     return mCombine;
 }

@@ -143,7 +143,7 @@ public:
     /**
      * \brief   Returns true if the entry is valid. The entry is valid if location parameter is not empty.
      **/
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
 
     /**
      * \brief Returns the icon to display for specific display type.
@@ -165,7 +165,7 @@ public:
      * \brief   Gets the include file path location.
      * \return  The file path.
      **/
-    const QString& getLocation(void) const;
+    const QString& getLocation() const;
 
     /**
      * \brief   Sets the include file path location.
@@ -176,7 +176,7 @@ public:
     /**
      * \brief   Gets the name of the include entry, i.e. the location.
      **/
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
 
     /**
      * \brief   Sets the name of the include entry, i.e. the location.
@@ -187,7 +187,7 @@ public:
      * \brief   Gets the description.
      * \return  The description.
      **/
-    const QString& getDescription(void) const;
+    const QString& getDescription() const;
 
     /**
      * \brief   Sets the description.
@@ -199,7 +199,7 @@ public:
      * \brief   Gets the deprecated flag.
      * \return  The deprecated flag.
      **/
-    bool getIsDeprecated(void) const;
+    bool getIsDeprecated() const;
 
     /**
      * \brief   Sets the deprecated flag.
@@ -211,7 +211,7 @@ public:
      * \brief   Gets the deprecation hint.
      * \return  The deprecation hint.
      **/
-    const QString& getDeprecateHint(void) const;
+    const QString& getDeprecateHint() const;
 
     /**
      * \brief   Sets the deprecation hint.
@@ -239,7 +239,7 @@ private:
 // IncludeEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& IncludeEntry::getName(void) const
+inline const QString& IncludeEntry::getName() const
 {
     return getLocation();
 }

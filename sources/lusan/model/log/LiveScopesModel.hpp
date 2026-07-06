@@ -56,7 +56,7 @@ public:
      */
     LiveScopesModel(QObject * parent = nullptr);
 
-    virtual ~LiveScopesModel(void);
+    virtual ~LiveScopesModel();
 
 public:
 /************************************************************************

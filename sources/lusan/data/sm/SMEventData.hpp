@@ -42,7 +42,7 @@ public:
     SMEventEntry& operator = (const SMEventEntry& other);
     SMEventEntry& operator = (SMEventEntry&& other) noexcept;
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 };
@@ -61,9 +61,9 @@ class SMEventData : public TEDataContainer<SMEventEntry*, DocumentElem>
 {
 public:
     SMEventData(ElementBase* parent = nullptr);
-    virtual ~SMEventData(void);
+    virtual ~SMEventData();
 
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
     virtual bool readFromXml(QXmlStreamReader& xml) override;
     virtual void writeToXml(QXmlStreamWriter& xml) const override;
 
@@ -82,7 +82,7 @@ public:
     /**
      * \brief   Deletes and removes all events.
      **/
-    void removeAll(void);
+    void removeAll();
 };
 
 #endif  // LUSAN_DATA_SM_SMEVENTDATA_HPP

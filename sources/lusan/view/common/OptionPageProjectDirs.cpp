@@ -158,27 +158,27 @@ void OptionPageProjectDirs::updateWorkspaceDirectories( const sWorkspaceDir& /*s
     }
 }
 
-inline QLineEdit* OptionPageProjectDirs::ctrlRoot(void) const
+inline QLineEdit* OptionPageProjectDirs::ctrlRoot() const
 {
     return mUi->rootDirEdit;
 }
 
-inline QLineEdit* OptionPageProjectDirs::ctrlSources(void) const
+inline QLineEdit* OptionPageProjectDirs::ctrlSources() const
 {
     return mUi->sourceDirEdit;
 }
 
-inline QLineEdit* OptionPageProjectDirs::ctrlIncludes(void) const
+inline QLineEdit* OptionPageProjectDirs::ctrlIncludes() const
 {
     return mUi->includeDirEdit;
 }
 
-inline QLineEdit* OptionPageProjectDirs::ctrlDelivery(void) const
+inline QLineEdit* OptionPageProjectDirs::ctrlDelivery() const
 {
     return mUi->deliveryDirEdit;
 }
 
-inline QLineEdit* OptionPageProjectDirs::ctrlLogs(void) const
+inline QLineEdit* OptionPageProjectDirs::ctrlLogs() const
 {
     return mUi->logDirEdit;
 }

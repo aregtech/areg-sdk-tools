@@ -34,7 +34,7 @@ SMLayoutData::SMLayoutData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-bool SMLayoutData::isValid(void) const
+bool SMLayoutData::isValid() const
 {
     return true;
 }

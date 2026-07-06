@@ -163,7 +163,7 @@ public:
     /**
      * \brief   Invalidates the structure data type.
      **/
-    void invalidate(void);
+    void invalidate();
 };
 
 #endif // LUSAN_DATA_COMMON_DATATYPESTRUCTURE_HPP

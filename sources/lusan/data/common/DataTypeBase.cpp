@@ -81,7 +81,7 @@ bool DataTypeBase::operator != (const DataTypeBase& other) const
     return  (mCategory != other.mCategory) || (mName != other.mName);
 }
 
-const QString& DataTypeBase::getName(void) const
+const QString& DataTypeBase::getName() const
 {
     return mName;
 }
@@ -91,82 +91,82 @@ void DataTypeBase::setName(const QString& name)
     mName = name;
 }
 
-DataTypeBase::eCategory DataTypeBase::getCategory(void) const
+DataTypeBase::eCategory DataTypeBase::getCategory() const
 {
     return mCategory;
 }
 
-bool DataTypeBase::isValid(void) const
+bool DataTypeBase::isValid() const
 {
     return !mName.isEmpty() && (mCategory != eCategory::Undefined);
 }
 
-bool DataTypeBase::isPrimitive(void) const
+bool DataTypeBase::isPrimitive() const
 {
     return ((static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::Primitive)) != 0);
 }
 
-bool DataTypeBase::isCustomDefined(void) const
+bool DataTypeBase::isCustomDefined() const
 {
     return ((static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::CustomDefined)) != 0);
 }
 
-bool DataTypeBase::isPredefined(void) const
+bool DataTypeBase::isPredefined() const
 {
     return ((static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::Primitive)) != 0) || (mCategory == eCategory::BasicObject);
 }
 
-bool DataTypeBase::isPrimitiveBool(void) const
+bool DataTypeBase::isPrimitiveBool() const
 {
     return (mCategory == eCategory::Primitive);
 }
 
-bool DataTypeBase::isPrimitiveInt(void) const
+bool DataTypeBase::isPrimitiveInt() const
 {
     return (static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::PrimitiveSint)) != 0;
 }
 
-bool DataTypeBase::isPrimitiveSint(void) const
+bool DataTypeBase::isPrimitiveSint() const
 {
     return (mCategory == eCategory::PrimitiveSint);
 }
 
-bool DataTypeBase::isPrimitiveUint(void) const
+bool DataTypeBase::isPrimitiveUint() const
 {
     return (mCategory == eCategory::PrimitiveUint);
 }
 
-bool DataTypeBase::isPrimitiveFloat(void) const
+bool DataTypeBase::isPrimitiveFloat() const
 {
     return (mCategory == eCategory::PrimitiveFloat);
 }
 
-bool DataTypeBase::isBasicObject(void) const
+bool DataTypeBase::isBasicObject() const
 {
     return (mCategory == eCategory::BasicObject);
 }
 
-bool DataTypeBase::isBasicContainer(void) const
+bool DataTypeBase::isBasicContainer() const
 {
     return (mCategory == eCategory::BasicContainer);
 }
 
-bool DataTypeBase::isEnumeration(void) const
+bool DataTypeBase::isEnumeration() const
 {
     return (mCategory == eCategory::Enumeration);
 }
 
-bool DataTypeBase::isStructure(void) const
+bool DataTypeBase::isStructure() const
 {
     return (mCategory == eCategory::Structure);
 }
 
-bool DataTypeBase::isImported(void) const
+bool DataTypeBase::isImported() const
 {
     return (mCategory == eCategory::Imported);
 }
 
-bool DataTypeBase::isContainer(void) const
+bool DataTypeBase::isContainer() const
 {
     return (mCategory == eCategory::Container);
 }

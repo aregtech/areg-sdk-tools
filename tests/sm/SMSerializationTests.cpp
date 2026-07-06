@@ -122,7 +122,7 @@ namespace
 
 namespace
 {
-    void testRoundTrip(void)
+    void testRoundTrip()
     {
         std::printf("[SM-02] byte-identical round-trip (TrafficLight.fsml)\n");
 
@@ -165,7 +165,7 @@ namespace
 
 namespace
 {
-    void testCData(void)
+    void testCData()
     {
         std::printf("[SM-02] CDATA bodies/expressions round-trip byte-exactly\n");
 
@@ -246,7 +246,7 @@ namespace
 
 namespace
 {
-    void testVersionMigration(void)
+    void testVersionMigration()
     {
         std::printf("[SM-03] older FormatVersion migrates in memory only\n");
 
@@ -269,7 +269,7 @@ namespace
         CHECK(beforeOpen == afterOpen);
     }
 
-    void testUnknownPreservation(void)
+    void testUnknownPreservation()
     {
         std::printf("[SM-03] newer minor preserves unknown root content\n");
 
@@ -302,7 +302,7 @@ namespace
         CHECK(written.contains("<FutureLeaf"));
     }
 
-    void testRejectNewerMajor(void)
+    void testRejectNewerMajor()
     {
         std::printf("[SM-03] newer major is refused with both versions in the message\n");
 
@@ -340,7 +340,7 @@ namespace
 
 namespace
 {
-    void testRobustness(void)
+    void testRobustness()
     {
         std::printf("[SM-02] truncated/corrupted documents terminate with a clean error\n");
 
@@ -400,7 +400,7 @@ namespace
 
 namespace
 {
-    void testNewDocumentSkeleton(void)
+    void testNewDocumentSkeleton()
     {
         std::printf("[SM-05] new document skeleton has Overview + root Start + default layout\n");
 
@@ -419,7 +419,7 @@ namespace
         CHECK(startNode != nullptr);
     }
 
-    void testAutosaveHelpers(void)
+    void testAutosaveHelpers()
     {
         std::printf("[SM-05] autosave helper path/detection/remove\n");
 

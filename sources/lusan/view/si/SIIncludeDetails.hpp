@@ -53,7 +53,7 @@ public:
      **/
     explicit SIIncludeDetails(QWidget* parent = nullptr);
 
-    virtual ~SIIncludeDetails(void);
+    virtual ~SIIncludeDetails();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -63,47 +63,47 @@ public:
     /**
      * \brief   Returns the selected file.
      **/
-    QString getSelectedFile(void) const;
+    QString getSelectedFile() const;
 
     /**
      * \brief   Returns the description of the selected file.
      **/
-    QString getDescription(void) const;
+    QString getDescription() const;
 
     /**
      * \brief   Returns true if the selected file is deprecated.
      **/
-    bool isDeprecated(void) const;
+    bool isDeprecated() const;
 
     /**
      * \brief   Returns the hint of the deprecated file.
      **/
-    QString getDeprecateHint(void) const;
+    QString getDeprecateHint() const;
 
     /**
      * \brief   Returns the control of the include file path.
      **/
-    QLineEdit * ctrlInclude(void);
+    QLineEdit * ctrlInclude();
 
     /**
      * \brief   Returns the control of the deprecation hint.
      **/
-    QLineEdit * ctrlDeprecateHint(void);
+    QLineEdit * ctrlDeprecateHint();
 
     /**
      * \brief   Returns the control of the deprecation flag.
      **/
-    QCheckBox * ctrlDeprecated(void);
+    QCheckBox * ctrlDeprecated();
 
     /**
      * \brief   Returns the control of the description.
      **/
-    QPlainTextEdit * ctrlDescription(void);
+    QPlainTextEdit * ctrlDescription();
 
     /**
      * \brief   Returns the control of the browse button.
      **/
-    QPushButton * ctrlBrowseButton(void);
+    QPushButton * ctrlBrowseButton();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables

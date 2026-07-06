@@ -84,17 +84,17 @@ namespace
     }
 }
 
-inline QString MdiMainWindow::_filterServiceFiles(void)
+inline QString MdiMainWindow::_filterServiceFiles()
 {
     return QString{"Service Interface Document (*.siml);;All Files (*.*)"};
 }
 
-inline QString MdiMainWindow::_filterStateMachineFiles(void)
+inline QString MdiMainWindow::_filterStateMachineFiles()
 {
     return QString{"State Machine Document (*.fsml);;All Files (*.*)"};
 }
 
-inline QString MdiMainWindow::_filterLoggingFiles(void)
+inline QString MdiMainWindow::_filterLoggingFiles()
 {
     return QString{"Log Database Files (*.sqlog);;All Files (*.*)"};
 }
@@ -168,7 +168,7 @@ MdiMainWindow::MdiMainWindow()
     QTimer::singleShot(0, this, &MdiMainWindow::onWarmupServiceInterface);
 }
 
-const QString& MdiMainWindow::fileFilters(void) const
+const QString& MdiMainWindow::fileFilters() const
 {
     static const QString _filter {
         "Service Interface Document (*.siml)\n"
@@ -248,7 +248,7 @@ void MdiMainWindow::logCollecttorConnected(bool isConnected, const QString& addr
     }
 }
 
-LiveLogsModel * MdiMainWindow::setupLiveLogging(void)
+LiveLogsModel * MdiMainWindow::setupLiveLogging()
 {
     if (mLogViewer == nullptr)
     {
@@ -268,27 +268,27 @@ LiveLogsModel * MdiMainWindow::setupLiveLogging(void)
     return static_cast<LiveLogsModel *>(mLogViewer->getLoggingModel());
 }
 
-LiveLogsModel* MdiMainWindow::getLiveLogging(void) const
+LiveLogsModel* MdiMainWindow::getLiveLogging() const
 {
     return (mLogViewer != nullptr ? static_cast<LiveLogsModel *>(mLogViewer->getLoggingModel()) : nullptr);
 }
 
-NaviFileSystem& MdiMainWindow::getNaviFileSystem(void)
+NaviFileSystem& MdiMainWindow::getNaviFileSystem()
 {
     return mNaviDock.getFileSystem();
 }
 
-NaviLiveLogsScopes& MdiMainWindow::getNaviLiveScopes(void)
+NaviLiveLogsScopes& MdiMainWindow::getNaviLiveScopes()
 {
     return mNaviDock.getLiveScopes();
 }
 
-NaviOfflineLogsScopes& MdiMainWindow::getNaviOfflineScopes(void)
+NaviOfflineLogsScopes& MdiMainWindow::getNaviOfflineScopes()
 {
     return mNaviDock.getOfflineScopes();
 }
 
-ScopeOutputViewer& MdiMainWindow::getOutputScopeLogs(void)
+ScopeOutputViewer& MdiMainWindow::getOutputScopeLogs()
 {
     return mOutputDock.getScopeLogsView();
 }
@@ -343,7 +343,7 @@ void MdiMainWindow::showNaviTab(NavigationDock::eNaviWindow naviTab)
     mNaviDock.showTab(naviTab);
 }
 
-QString MdiMainWindow::openLogFile(void)
+QString MdiMainWindow::openLogFile()
 {
     QString filePath = QFileDialog::getOpenFileName(this, tr("Open Log Database"), LusanApplication::getWorkspaceLogs(), _filterLoggingFiles());
     return (filePath.isEmpty() == false && openFile(filePath) ? filePath : QString(""));
@@ -454,7 +454,7 @@ void MdiMainWindow::onFileOpenRecent()
     }
 }
 
-void MdiMainWindow::onFileExit(void)
+void MdiMainWindow::onFileExit()
 {
     QMainWindow::close();
 }
@@ -486,7 +486,7 @@ void MdiMainWindow::onEditPaste()
     }
 }
 
-void MdiMainWindow::onToolsOptions(void)
+void MdiMainWindow::onToolsOptions()
 {
     ProjectSettings settings(this);
     emit signalOptionsOpening();

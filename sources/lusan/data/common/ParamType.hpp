@@ -37,8 +37,8 @@ class DataTypeStructure;
 class TypeFinder : public TETypeFind<DataTypeBase, DataTypeCustom>
 {
 public:
-    TypeFinder(void) = default;
-    ~TypeFinder(void) = default;
+    TypeFinder() = default;
+    ~TypeFinder() = default;
 public:
     DataTypeBase* findObject(const QString name, const QList<DataTypeCustom*>& listTypes) const;
 };
@@ -53,7 +53,7 @@ class ParamType : public TETypeWrap<DataTypeBase, DataTypeCustom, TypeFinder>
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    ParamType(void) = default;
+    ParamType() = default;
     ParamType(const ParamType& src) = default;
     ParamType(ParamType&& src) noexcept = default;
 
@@ -83,110 +83,110 @@ public:
     bool operator == (const QString& typeName) const;
     bool operator != (const QString& typeName) const;
 
-    operator const DataTypeCustom* (void) const;
-    operator DataTypeCustom* (void);
+    operator const DataTypeCustom* () const;
+    operator DataTypeCustom* ();
 
-    operator const DataTypeStructure* (void) const;
-    operator DataTypeStructure* (void);
+    operator const DataTypeStructure* () const;
+    operator DataTypeStructure* ();
 
-    operator const DataTypeEnum* (void) const;
-    operator DataTypeEnum* (void);
+    operator const DataTypeEnum* () const;
+    operator DataTypeEnum* ();
 
-    operator const DataTypeContainer* (void) const;
-    operator DataTypeContainer* (void);
+    operator const DataTypeContainer* () const;
+    operator DataTypeContainer* ();
 
-    operator const DataTypeImported* (void) const;
-    operator DataTypeImported* (void);
+    operator const DataTypeImported* () const;
+    operator DataTypeImported* ();
 
     /**
      * \brief   Gets the category of the data type.
      * \return  The category of the data type.
      **/
-    inline DataTypeBase::eCategory getCategory(void) const;
+    inline DataTypeBase::eCategory getCategory() const;
 
     /**
      * \brief   Checks if the data type is a primitive type.
      * \return  True if the data type is a primitive type, false otherwise.
      **/
-    inline bool isPrimitive(void) const;
+    inline bool isPrimitive() const;
 
     /**
      * \brief   Checks if the data type is a custom defined type.
      * \return  True if the data type is a custom defined type, false otherwise.
      **/
-    inline bool isCustomDefined(void) const;
+    inline bool isCustomDefined() const;
 
     /**
      * \brief   Checks if the data type is a predefined type.
      * \return  True if the data type is a predefined type, false otherwise.
      **/
-    inline bool isPredefined(void) const;
+    inline bool isPredefined() const;
 
     /**
      * \brief   Checks if the data type is a boolean type.
      * \return  True if the data type is a boolean type, false otherwise.
      **/
-    inline bool isPrimitiveBool(void) const;
+    inline bool isPrimitiveBool() const;
 
     /**
      * \brief   Checks if the data type is a primitive signed integer type.
      * \return  True if the data type is a primitive integer type, false otherwise.
      **/
-    inline bool isPrimitiveInt(void) const;
+    inline bool isPrimitiveInt() const;
 
     /**
      * \brief   Checks if the data type is a primitive signed integer type.
      * \return  True if the data type is a primitive integer type, false otherwise.
      **/
-    inline bool isPrimitiveSint(void) const;
+    inline bool isPrimitiveSint() const;
 
     /**
      * \brief   Checks if the data type is a primitive unsigned integer type.
      * \return  True if the data type is a primitive unsigned integer type, false otherwise.
      **/
-    inline bool isPrimitiveUint(void) const;
+    inline bool isPrimitiveUint() const;
 
     /**
      * \brief   Checks if the data type is a primitive float type.
      * \return  True if the data type is a primitive float type, false otherwise.
      **/
-    inline bool isPrimitiveFloat(void) const;
+    inline bool isPrimitiveFloat() const;
 
     /**
      * \brief   Checks if the data type is a basic object.
      * \return  True if the data type is a basic object, false otherwise.
      **/
-    inline bool isBasicObject(void) const;
+    inline bool isBasicObject() const;
 
     /**
      * \brief   Checks if the data type is a basic container.
      * \return  True if the data type is a basic container, false otherwise.
      **/
-    inline bool isBasicContainer(void) const;
+    inline bool isBasicContainer() const;
 
     /**
      * \brief   Checks if the data type is an enumeration.
      * \return  True if the data type is an enumeration, false otherwise.
      **/
-    inline bool isEnumeration(void) const;
+    inline bool isEnumeration() const;
 
     /**
      * \brief   Checks if the data type is a structure.
      * \return  True if the data type is a structure, false otherwise.
      **/
-    inline bool isStructure(void) const;
+    inline bool isStructure() const;
 
     /**
      * \brief   Checks if the data type is imported.
      * \return  True if the data type is imported, false otherwise.
      **/
-    inline bool isImported(void) const;
+    inline bool isImported() const;
 
     /**
      * \brief   Checks if the data type is a container.
      * \return  True if the data type is a container, false otherwise.
      **/
-    inline bool isContainer(void) const;
+    inline bool isContainer() const;
 
     /**
      * \brief   Checks if the data type matches the specified type.
@@ -200,77 +200,77 @@ public:
 // ParamType class inline functions
 //////////////////////////////////////////////////////////////////////////
 
-inline DataTypeBase::eCategory ParamType::getCategory(void) const
+inline DataTypeBase::eCategory ParamType::getCategory() const
 {
     return mTypeObj->getCategory();
 }
 
-inline bool ParamType::isPrimitive(void) const
+inline bool ParamType::isPrimitive() const
 {
     return mTypeObj->isPrimitive();
 }
 
-inline bool ParamType::isCustomDefined(void) const
+inline bool ParamType::isCustomDefined() const
 {
     return mTypeObj->isCustomDefined();
 }
 
-inline bool ParamType::isPredefined(void) const
+inline bool ParamType::isPredefined() const
 {
     return mTypeObj->isPredefined();
 }
 
-inline bool ParamType::isPrimitiveBool(void) const
+inline bool ParamType::isPrimitiveBool() const
 {
     return mTypeObj->isPrimitiveBool();
 }
 
-inline bool ParamType::isPrimitiveInt(void) const
+inline bool ParamType::isPrimitiveInt() const
 {
     return mTypeObj->isPrimitiveInt();
 }
 
-inline bool ParamType::isPrimitiveSint(void) const
+inline bool ParamType::isPrimitiveSint() const
 {
     return mTypeObj->isPrimitiveSint();
 }
 
-inline bool ParamType::isPrimitiveUint(void) const
+inline bool ParamType::isPrimitiveUint() const
 {
     return mTypeObj->isPrimitiveUint();
 }
 
-inline bool ParamType::isPrimitiveFloat(void) const
+inline bool ParamType::isPrimitiveFloat() const
 {
     return mTypeObj->isPrimitiveFloat();
 }
 
-inline bool ParamType::isBasicObject(void) const
+inline bool ParamType::isBasicObject() const
 {
     return mTypeObj->isBasicObject();
 }
 
-inline bool ParamType::isBasicContainer(void) const
+inline bool ParamType::isBasicContainer() const
 {
     return mTypeObj->isBasicContainer();
 }
 
-inline bool ParamType::isEnumeration(void) const
+inline bool ParamType::isEnumeration() const
 {
     return mTypeObj->isEnumeration();
 }
 
-inline bool ParamType::isStructure(void) const
+inline bool ParamType::isStructure() const
 {
     return mTypeObj->isStructure();
 }
 
-inline bool ParamType::isImported(void) const
+inline bool ParamType::isImported() const
 {
     return mTypeObj->isImported();
 }
 
-inline bool ParamType::isContainer(void) const
+inline bool ParamType::isContainer() const
 {
     return mTypeObj->isContainer();
 }

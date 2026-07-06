@@ -78,7 +78,7 @@ public:
     /**
      * \brief   Call when the option should apply the changes.
      **/
-    virtual void applyChanges(void) override;
+    virtual void applyChanges() override;
 
     /**
      * \brief   Call when the option page is closing.
@@ -89,7 +89,7 @@ public:
     /**
      * \brief   Triggered, letting option page object to display a warning message.
      **/
-    virtual void warnMessage(void) override;
+    virtual void warnMessage() override;
     
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
@@ -139,12 +139,12 @@ private slots:
     /**
      * \brief   Slot, triggered when the log location field is updated.
      **/
-    void onLogLocationChanged(void);
+    void onLogLocationChanged();
 
     /**
      * \brief   Slot, triggered when the log file name field is updated.
      **/
-    void onLogFileNameChanged(void);
+    void onLogFileNameChanged();
 
     /**
      * \brief   Slot triggered when the log service connection status changes.
@@ -183,47 +183,47 @@ private:
     /**
      * \brief   Returns value of log location field.
      **/
-    inline QString getLogLocation(void) const;
+    inline QString getLogLocation() const;
     
     /**
      * \brief   Returns value of log file name field.
      **/
-    inline QString getLogFileName(void) const;
+    inline QString getLogFileName() const;
     
     /**
      * \brief   Returns value of log collector service IP-address field.
      **/
-    inline QString getServiceAddress(void) const;
+    inline QString getServiceAddress() const;
     
     /**
      * \brief   Returns value of log collector service port number field.
      **/
-    inline uint16_t getServicePort(void) const;
+    inline uint16_t getServicePort() const;
 
 /************************************************************************
  * Inline methods
  ************************************************************************/
 
     //!< Returns the widget for the log location.
-    inline QLineEdit* textLogLocation(void) const;
+    inline QLineEdit* textLogLocation() const;
     
     //!< Returns the widget for the log file name.
-    inline QLineEdit* textLogFileName(void) const;
+    inline QLineEdit* textLogFileName() const;
 
     //!< Returns the widget for the IP address or host name input to set the address of the log colletor service.
-    inline QLineEdit* textIpAddress(void) const;
+    inline QLineEdit* textIpAddress() const;
 
     //<! Returns the widget for the port number input.
-    inline QLineEdit* textPortNumber(void) const;
+    inline QLineEdit* textPortNumber() const;
 
     //<! Returns the widget for the connection status text.
-    inline QTextEdit* textConnectionStatus(void) const;
+    inline QTextEdit* textConnectionStatus() const;
 
     //<! Returns the button for browsing directories.
-    inline QPushButton* buttonBrowseDirs(void) const;
+    inline QPushButton* buttonBrowseDirs() const;
 
     //<! Returns the button for testing the connection to the log collector service.
-    inline QPushButton* buttonTestConnection(void) const;
+    inline QPushButton* buttonTestConnection() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
@@ -243,7 +243,7 @@ private:
 // Forbidden calls.
 //////////////////////////////////////////////////////////////////////////
 private:
-    OptionPageLogging(void) = delete; // Disable default constructor
+    OptionPageLogging() = delete; // Disable default constructor
     AREG_NOCOPY_NOMOVE(OptionPageLogging);
 };
 

@@ -69,7 +69,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~MethodBase(void);
+    virtual ~MethodBase();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -180,7 +180,7 @@ public:
     /**
      * \brief   Invalidates the method.
      **/
-    void invalidate(void);
+    void invalidate();
 
     /**
      * \brief   Checks if the parameter with the given ID has a default value.
@@ -214,7 +214,7 @@ public:
      * \brief   Gets the first position with a default value.
      * \return  The first position with a default value.
      **/
-    int firsPositionWithDefault(void) const;
+    int firsPositionWithDefault() const;
 
     /**
      * \brief   Checks if the parameter with the given ID can switch its default value.

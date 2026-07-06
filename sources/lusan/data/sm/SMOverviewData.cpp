@@ -60,7 +60,7 @@ SMOverviewData::SMOverviewData(uint32_t id, const QString& name, ElementBase* pa
 {
 }
 
-bool SMOverviewData::isValid(void) const
+bool SMOverviewData::isValid() const
 {
     return (mName.isEmpty() == false);
 }

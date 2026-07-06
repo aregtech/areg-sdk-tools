@@ -36,17 +36,17 @@ class SIDataTypeFieldDetails : public QWidget
 public:
     explicit SIDataTypeFieldDetails(QWidget* parent = nullptr);
     
-    QLineEdit* ctrlName(void) const;
+    QLineEdit* ctrlName() const;
     
-    QComboBox* ctrlTypes(void) const;
+    QComboBox* ctrlTypes() const;
     
-    QLineEdit* ctrlValue(void) const;
+    QLineEdit* ctrlValue() const;
     
-    QPlainTextEdit* ctrlDescription(void) const;
+    QPlainTextEdit* ctrlDescription() const;
     
-    QCheckBox* ctrlDeprecated(void) const;
+    QCheckBox* ctrlDeprecated() const;
     
-    QLineEdit* ctrlDeprecateHint(void) const;
+    QLineEdit* ctrlDeprecateHint() const;
     
 private:
     Ui::SIDataTypeFieldDetails* ui;

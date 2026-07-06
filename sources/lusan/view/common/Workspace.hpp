@@ -49,23 +49,23 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~Workspace(void);
+    virtual ~Workspace();
 
     /**
      * \brief   Returns true if the workspace has new entry.
      **/
-    inline bool hasNewWorkspaceEntry(void) const;
+    inline bool hasNewWorkspaceEntry() const;
     
 protected slots:
     /**
      * \brief   Slot called when the dialog is accepted.
      **/
-    void onAccept(void);
+    void onAccept();
     
     /**
      * \brief   Slot called when the dialog is rejected.
      **/
-    void onReject(void);
+    void onReject();
     
     /**
      * \brief   Slot called when the workspace path is changed.
@@ -111,7 +111,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // Workspace inline functions implementation
 //////////////////////////////////////////////////////////////////////////
-inline bool Workspace::hasNewWorkspaceEntry(void) const
+inline bool Workspace::hasNewWorkspaceEntry() const
 {
     return mModel.hasNewWorkspace();
 }

@@ -37,21 +37,21 @@ class SIMethodDetails : public QWidget
 public:
     explicit SIMethodDetails(QWidget* parent = nullptr);
     
-    QLineEdit * ctrlName(void) const;
+    QLineEdit * ctrlName() const;
     
-    QRadioButton * ctrlBroadcast(void) const;
+    QRadioButton * ctrlBroadcast() const;
     
-    QRadioButton * ctrlRequest(void) const;
+    QRadioButton * ctrlRequest() const;
     
-    QRadioButton * ctrlResponse(void) const;
+    QRadioButton * ctrlResponse() const;
     
-    QComboBox * ctrlConnectedResponse(void) const;
+    QComboBox * ctrlConnectedResponse() const;
     
-    QPlainTextEdit * ctrlDescription(void) const;
+    QPlainTextEdit * ctrlDescription() const;
     
-    QCheckBox * ctrlDeprecated(void) const;
+    QCheckBox * ctrlDeprecated() const;
     
-    QLineEdit * ctrlDeprecateHint(void) const;
+    QLineEdit * ctrlDeprecateHint() const;
 
 private:
     Ui::SIMethodDetails* ui;

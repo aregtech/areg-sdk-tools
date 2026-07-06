@@ -104,13 +104,13 @@ public:
      * \brief   Returns the list of data elements.
      * \return  The list of data elements.
      **/
-    inline const QList<Data>& getElements(void) const;
-    inline QList<Data>& getElements(void);
+    inline const QList<Data>& getElements() const;
+    inline QList<Data>& getElements();
 
     /**
      * \brief   Checks if the container is empty.
      **/
-    inline bool isEmpty(void) const;
+    inline bool isEmpty() const;
 
     /**
      * \brief   Sets the list of data elements.
@@ -302,13 +302,13 @@ public:
      * \brief   Checks whether the container has list of elements.
      * \return  True if the container object has elements, false otherwise.
      **/
-    inline bool hasElements(void) const;
+    inline bool hasElements() const;
 
     /**
      * \brief   Returns the number of elements in the container.
      * \return  The number of elements in the container.
      **/
-    inline int getElementCount(void) const;
+    inline int getElementCount() const;
 
     /**
      * \brief   Swaps 2 elements by given index.
@@ -337,32 +337,32 @@ public:
     /**
      * \brief   Resets the sorting state to stop sorting.
      **/
-    inline void noSortElements(void);
+    inline void noSortElements();
 
     /**
      * \brief   Checks if the elements in the list are sorted.
      **/
-    inline bool isSorted(void) const;
+    inline bool isSorted() const;
 
     /**
      * \brief   Checks if the elements are sorted by ID.
      **/
-    inline bool isSortedById(void) const;
+    inline bool isSortedById() const;
 
     /**
      * \brief   Checks if the elements are sorted by name.
      **/
-    inline bool isSortedByName(void) const;
+    inline bool isSortedByName() const;
 
     /**
      * \brief   Checks if the elements are sorted by ID in ascending order.
      **/
-    inline bool isSortedByIdAscending(void) const;
+    inline bool isSortedByIdAscending() const;
 
     /**
      * \brief   Checks if the elements are sorted by ID in descending order.
      **/
-    inline bool isSortedByIdDescending(void) const;
+    inline bool isSortedByIdDescending() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Protected methods
@@ -414,12 +414,12 @@ protected:
     /**
      * \brief   Fixes the entries in the list.
      **/
-    inline void fixEntries(void);
+    inline void fixEntries();
 
     /**
      * \brief   Reorders the IDs of the elements in the list.
      **/
-    inline void reorderIds(void);
+    inline void reorderIds();
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -511,13 +511,13 @@ TEDataContainer<Data, ElemBase>& TEDataContainer<Data, ElemBase>::operator = (TE
 }
 
 template<class Data, class ElemBase>
-inline const QList<Data>& TEDataContainer<Data, ElemBase>::getElements(void) const
+inline const QList<Data>& TEDataContainer<Data, ElemBase>::getElements() const
 {
     return mElementList;
 }
 
 template<class Data, class ElemBase>
-inline bool TEDataContainer<Data, ElemBase>::isEmpty(void) const
+inline bool TEDataContainer<Data, ElemBase>::isEmpty() const
 {
     return mElementList.isEmpty();
 }
@@ -908,13 +908,13 @@ inline void TEDataContainer<Data, ElemBase>::sortElementsById(bool ascending)
 }
 
 template<class Data, class ElemBase>
-inline bool TEDataContainer<Data, ElemBase>::hasElements(void) const
+inline bool TEDataContainer<Data, ElemBase>::hasElements() const
 {
     return (mElementList.isEmpty() == false);
 }
 
 template<class Data, class ElemBase>
-inline int TEDataContainer<Data, ElemBase>::getElementCount(void) const
+inline int TEDataContainer<Data, ElemBase>::getElementCount() const
 {
     return static_cast<int>(mElementList.size());
 }
@@ -998,37 +998,37 @@ inline void TEDataContainer<Data, ElemBase>::sortElements(NELusanCommon::eSortin
 }
 
 template<class Data, class ElemBase>
-inline void TEDataContainer<Data, ElemBase>::noSortElements(void)
+inline void TEDataContainer<Data, ElemBase>::noSortElements()
 {
     mSorting = NELusanCommon::eSortingType::NoSorting;
 }
 
 template<class Data, class ElemBase>
-inline bool TEDataContainer<Data, ElemBase>::isSorted(void) const
+inline bool TEDataContainer<Data, ElemBase>::isSorted() const
 {
     return (mSorting != NELusanCommon::eSortingType::NoSorting);
 }
 
 template<class Data, class ElemBase>
-inline bool TEDataContainer<Data, ElemBase>::isSortedById(void) const
+inline bool TEDataContainer<Data, ElemBase>::isSortedById() const
 {
     return (static_cast<uint8_t>(mSorting) & static_cast<uint8_t>(NELusanCommon::eOrdering::OrderById)) != 0;
 }
 
 template<class Data, class ElemBase>
-inline bool TEDataContainer<Data, ElemBase>::isSortedByName(void) const
+inline bool TEDataContainer<Data, ElemBase>::isSortedByName() const
 {
     return (static_cast<uint8_t>(mSorting) & static_cast<uint8_t>(NELusanCommon::eOrdering::OrderByName)) != 0;
 }
 
 template<class Data, class ElemBase>
-inline bool TEDataContainer<Data, ElemBase>::isSortedByIdAscending(void) const
+inline bool TEDataContainer<Data, ElemBase>::isSortedByIdAscending() const
 {
     return (static_cast<uint8_t>(mSorting) & static_cast<uint8_t>(NELusanCommon::eSorting::SortingAscending)) != 0;
 }
 
 template<class Data, class ElemBase>
-inline bool TEDataContainer<Data, ElemBase>::isSortedByIdDescending(void) const
+inline bool TEDataContainer<Data, ElemBase>::isSortedByIdDescending() const
 {
     return (static_cast<uint8_t>(mSorting) & static_cast<uint8_t>(NELusanCommon::eSorting::SortingDescending)) != 0;
 }
@@ -1112,13 +1112,13 @@ inline void TEDataContainer<Data, ElemBase>::getIdsSorted(QList<uint32_t>& out_i
 }
 
 template<class Data, class ElemBase>
-inline QList<Data>& TEDataContainer<Data, ElemBase>::getElements(void)
+inline QList<Data>& TEDataContainer<Data, ElemBase>::getElements()
 {
     return mElementList;
 }
 
 template<class Data, class ElemBase>
-inline void TEDataContainer<Data, ElemBase>::fixEntries(void)
+inline void TEDataContainer<Data, ElemBase>::fixEntries()
 {
     for (Data& entry : mElementList)
     {
@@ -1132,7 +1132,7 @@ inline void TEDataContainer<Data, ElemBase>::fixEntries(void)
 }
 
 template<class Data, class ElemBase>
-inline void TEDataContainer<Data, ElemBase>::reorderIds(void)
+inline void TEDataContainer<Data, ElemBase>::reorderIds()
 {
     if (mElementList.size() > 1)
     {

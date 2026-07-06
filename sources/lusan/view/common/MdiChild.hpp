@@ -57,7 +57,7 @@ public:
      **/
     MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~MdiChild(void);
+    virtual ~MdiChild();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -68,31 +68,31 @@ public:
      * \brief   Returns the MDI Window type.
      * \return  The MDI Window type.
      **/
-    inline MdiChild::eMdiWindow getMdiWindowType(void) const;
+    inline MdiChild::eMdiWindow getMdiWindowType() const;
 
     /**
      * \brief   Checks if the MDI child is a Service Interface window.
      * \return  True if it is a Service Interface window, false otherwise.
      **/
-    inline bool isServiceInterfaceWindow(void) const;
+    inline bool isServiceInterfaceWindow() const;
 
     /**
      * \brief   Checks if the MDI child is a State Machine window.
      * \return  True if it is a State Machine window, false otherwise.
      **/
-    inline bool isStateMachineWindow(void) const;
+    inline bool isStateMachineWindow() const;
 
     /**
      * \brief   Checks if the MDI child is a Log Viewer window.
      * \return  True if it is a Log Viewer window, false otherwise.
      **/
-    inline bool isLogViewerWindow(void) const;
+    inline bool isLogViewerWindow() const;
 
     /**
      * \brief   Checks if the MDI child is an Offline Log Viewer window.
      * \return  True if it is an Offline Log Viewer window, false otherwise.
      **/
-    inline bool isOfflineLogViewerWindow(void) const;
+    inline bool isOfflineLogViewerWindow() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Actions
@@ -139,7 +139,7 @@ public:
      * \brief   Gets the current file name.
      * \return  The current file name.
      **/
-    inline const QString & currentFile(void) const;
+    inline const QString & currentFile() const;
 
     virtual void cut();
     virtual void copy();
@@ -148,7 +148,7 @@ public:
     virtual void undo();
     virtual void redo();
 
-    inline bool isModified(void) const;
+    inline bool isModified() const;
     virtual void setModified(bool modified);
 
     void clear();
@@ -160,12 +160,12 @@ public:
     /**
      * \brief   Returns the document name.
      **/
-    inline const QString& getDocumentName(void) const;
+    inline const QString& getDocumentName() const;
 
     /**
      * \brief   Returns the MDI subwindow.
      **/
-    inline QMdiSubWindow* getMdiSubwindow(void) const;
+    inline QMdiSubWindow* getMdiSubwindow() const;
 
     /**
      * \brief   Sets the MDI subwindow.
@@ -181,7 +181,7 @@ public:
     /**
      * \brief   Returns the file open operation success flag.
      **/
-    virtual bool openSucceeded(void) const;
+    virtual bool openSucceeded() const;
     
     /**
      * \brief   Sets the current file name.
@@ -215,27 +215,27 @@ protected:
     /**
      * \brief   Returns the default file name of new created document.
      **/
-    virtual QString newDocumentName(void);
+    virtual QString newDocumentName();
 
     /**
      * \brief   Returns the default name of new created document.
      **/
-    virtual const QString& newDocument(void) const;
+    virtual const QString& newDocument() const;
 
     /**
      * \brief   Returns the default extension of new created document.
      **/
-    virtual const QString& newDocumentExt(void) const;
+    virtual const QString& newDocumentExt() const;
 
     /**
      * \brief   Returns the default file suffix.
      **/
-    virtual const QString& fileSuffix(void) const;
+    virtual const QString& fileSuffix() const;
 
     /**
      * \brief   Returns the default file filter.
      **/
-    virtual const QString& fileFilter(void) const;
+    virtual const QString& fileFilter() const;
 
     /**
      * \brief   Reads the document from the file.
@@ -261,13 +261,13 @@ protected:
      * \brief   Called when the MDI child window is activated.
      *          This method can be overridden to handle window activation events.
      **/
-    virtual void onWindowActivated(void);
+    virtual void onWindowActivated();
 
     /**
      * \brief   Called when the MDI child window is created.
      *          This method can be overridden to handle window creation events.
      **/
-    virtual void onWindowCreated(void);
+    virtual void onWindowCreated();
 
     /**
      * \brief   Prompts the user to save changes if necessary.
@@ -306,47 +306,47 @@ protected:
 // MdiChild class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline MdiChild::eMdiWindow MdiChild::getMdiWindowType(void) const
+inline MdiChild::eMdiWindow MdiChild::getMdiWindowType() const
 {
     return mMdiWindowType;
 }
 
-inline bool MdiChild::isServiceInterfaceWindow(void) const
+inline bool MdiChild::isServiceInterfaceWindow() const
 {
     return (mMdiWindowType == MdiServiceInterface);
 }
 
-inline bool MdiChild::isStateMachineWindow(void) const
+inline bool MdiChild::isStateMachineWindow() const
 {
     return (mMdiWindowType == MdiStateMachine);
 }
 
-inline bool MdiChild::isLogViewerWindow(void) const
+inline bool MdiChild::isLogViewerWindow() const
 {
     return (mMdiWindowType == MdiLogViewer);
 }
 
-inline bool MdiChild::isOfflineLogViewerWindow(void) const
+inline bool MdiChild::isOfflineLogViewerWindow() const
 {
     return (mMdiWindowType == MdiOfflineLogViewer);
 }
 
-inline const QString & MdiChild::currentFile(void) const
+inline const QString & MdiChild::currentFile() const
 {
     return mCurFile;
 }
 
-inline bool MdiChild::isModified(void) const
+inline bool MdiChild::isModified() const
 {
     return mIsModified;
 }
 
-inline const QString& MdiChild::getDocumentName(void) const
+inline const QString& MdiChild::getDocumentName() const
 {
     return mDocName;
 }
 
-inline QMdiSubWindow* MdiChild::getMdiSubwindow(void) const
+inline QMdiSubWindow* MdiChild::getMdiSubwindow() const
 {
     return mMdiSubWindow;
 }

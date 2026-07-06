@@ -202,7 +202,7 @@ bool FileSystemModel::updateRootPaths(const WorkspaceElem& paths)
     return result;
 }
 
-const WorkspaceElem& FileSystemModel::getRootPaths(void) const
+const WorkspaceElem& FileSystemModel::getRootPaths() const
 {
     return mWorkspaceDirs;
 }
@@ -216,7 +216,7 @@ QString FileSystemModel::filePath(const QModelIndex& index)
     return (entry != nullptr ? entry->getPath() : QString());
 }
 
-void FileSystemModel::refresh(void)
+void FileSystemModel::refresh()
 {
     refresh(&mRootEntry);
 }
@@ -276,7 +276,7 @@ void FileSystemModel::setFileFilter(const QStringList& filterList)
     }
 }
 
-void FileSystemModel::cleanFilters(void)
+void FileSystemModel::cleanFilters()
 {
     mFileFilter.clear();
     if (mRootEntry.hasFetched())
@@ -287,7 +287,7 @@ void FileSystemModel::cleanFilters(void)
     }
 }
 
-QModelIndex FileSystemModel::getRootIndex(void) const
+QModelIndex FileSystemModel::getRootIndex() const
 {
     return (mRootEntry.hasValidChildren() ? mRootIndex : QModelIndex());
 }
@@ -598,7 +598,7 @@ bool FileSystemModel::checkWorkspaceEntry(const QModelIndex& index) const
     return false;
 }
 
-void FileSystemModel::resetRoot(void)
+void FileSystemModel::resetRoot()
 {
     resetEntry(&mRootEntry);
 }

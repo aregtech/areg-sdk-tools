@@ -43,7 +43,7 @@ LoggingScopesModelBase::LoggingScopesModelBase(QObject* parent)
     mRootIndex = createIndex(0, 0, nullptr);
 }
 
-LoggingScopesModelBase::~LoggingScopesModelBase(void)
+LoggingScopesModelBase::~LoggingScopesModelBase()
 {
     _setupSignals(false);
     clearModel(false);
@@ -355,12 +355,12 @@ int LoggingScopesModelBase::findRoot(ITEM_ID rootId) const
     return static_cast<int>(areg::INVALID_INDEX);
 }
 
-void LoggingScopesModelBase::slotLogServiceConnected(void)
+void LoggingScopesModelBase::slotLogServiceConnected()
 {
     clearModel(false);
 }
 
-void LoggingScopesModelBase::slotLogServiceDisconnected(void)
+void LoggingScopesModelBase::slotLogServiceDisconnected()
 {
     clearModel(false);
 }
@@ -518,7 +518,7 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
     }
 }
 
-void LoggingScopesModelBase::buildScopes(void)
+void LoggingScopesModelBase::buildScopes()
 {
     if (mLoggingModel == nullptr)
         return;
@@ -536,7 +536,7 @@ void LoggingScopesModelBase::buildScopes(void)
     endResetModel();
 }
 
-void LoggingScopesModelBase::setupModel(void)
+void LoggingScopesModelBase::setupModel()
 {
     clearModel(false);
     if (mLoggingModel != nullptr)
@@ -545,7 +545,7 @@ void LoggingScopesModelBase::setupModel(void)
     }
 }
 
-void LoggingScopesModelBase::releaseModel(void)
+void LoggingScopesModelBase::releaseModel()
 {
     clearModel(true);
     if (mLoggingModel != nullptr)
@@ -576,7 +576,7 @@ void LoggingScopesModelBase::dataTransfer(LoggingScopesModelBase& scopeModel)
     endResetModel();
 }
 
-void LoggingScopesModelBase::refresh(void)
+void LoggingScopesModelBase::refresh()
 {
     beginResetModel();
     endResetModel();

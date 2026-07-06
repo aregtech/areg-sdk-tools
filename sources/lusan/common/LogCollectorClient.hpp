@@ -37,12 +37,12 @@ class LogCollectorClient  final : public QObject
 // Hidden constructors and destructor.
 //////////////////////////////////////////////////////////////////////////
 private:
-    LogCollectorClient(void);
-    virtual ~LogCollectorClient(void) = default;
+    LogCollectorClient();
+    virtual ~LogCollectorClient() = default;
 
 public:
 
-    static LogCollectorClient& getInstance(void);
+    static LogCollectorClient& getInstance();
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -89,7 +89,7 @@ signals:
     /**
      * \brief   The signal triggered when fails to send or receive message.
      **/
-    void signalLogMessagingFailed(void);
+    void signalLogMessagingFailed();
 
     /**
      * \brief   The signal triggered when receive the list of connected instances that make logs.
@@ -107,7 +107,7 @@ signals:
     /**
      * \brief   The signal triggered when connection with the log collector service is lost.
      **/
-    void signalLogServiceDisconnected(void);
+    void signalLogServiceDisconnected();
 
     /**
      * \brief   The signal triggered when receive the list of the scopes registered in an application.

@@ -67,7 +67,7 @@ DataTypeCustom::DataTypeCustom(DataTypeCustom&& src) noexcept
 {
 }
 
-DataTypeCustom::~DataTypeCustom(void)
+DataTypeCustom::~DataTypeCustom()
 {
 }
 
@@ -97,7 +97,7 @@ DataTypeCustom& DataTypeCustom::operator = (DataTypeCustom&& other) noexcept
     return *this;
 }
 
-const QString& DataTypeCustom::getDescription(void) const
+const QString& DataTypeCustom::getDescription() const
 {
     return mDescription;
 }
@@ -107,12 +107,12 @@ void DataTypeCustom::setDescription(const QString& description)
     mDescription = description;
 }
 
-bool DataTypeCustom::isValid(void) const
+bool DataTypeCustom::isValid() const
 {
     return (getId() != 0) && DataTypeBase::isValid();
 }
 
-bool DataTypeCustom::getIsDeprecated(void) const
+bool DataTypeCustom::getIsDeprecated() const
 {
     return mIsDeprecated;
 }
@@ -122,7 +122,7 @@ void DataTypeCustom::setIsDeprecated(bool isDeprecated)
     mIsDeprecated = isDeprecated;
 }
 
-const QString& DataTypeCustom::getDeprecateHint(void) const
+const QString& DataTypeCustom::getDeprecateHint() const
 {
     return mIsDeprecated ? mDeprecateHint : ElementBase::EmptyString;
 }
@@ -138,7 +138,7 @@ void DataTypeCustom::setIsDeprecated(bool isDeprecated, const QString& reason)
     mDeprecateHint = reason;
 }
 
-QString DataTypeCustom::getType(void) const
+QString DataTypeCustom::getType() const
 {
     return DataTypeCustom::getType(mCategory);
 }

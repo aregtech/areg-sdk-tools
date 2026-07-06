@@ -83,7 +83,7 @@ public:
      **/
     SMOverviewData(uint32_t id, const QString& name, ElementBase* parent = nullptr);
 
-    virtual ~SMOverviewData(void) = default;
+    virtual ~SMOverviewData() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -92,7 +92,7 @@ public:
     /**
      * \brief   Checks whether the overview is valid (has a non-empty machine name).
      **/
-    virtual bool isValid(void) const override;
+    virtual bool isValid() const override;
 
     /**
      * \brief   Reads data from an XML stream.
@@ -108,17 +108,17 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
     inline void setName(const QString& name);
 
-    inline const VersionNumber& getVersion(void) const;
+    inline const VersionNumber& getVersion() const;
     inline void setVersion(const VersionNumber& version);
     inline void setVersion(const QString& version);
 
-    inline eThreading getThreading(void) const;
+    inline eThreading getThreading() const;
     inline void setThreading(eThreading threading);
 
-    inline const QString& getDescription(void) const;
+    inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
 //////////////////////////////////////////////////////////////////////////
@@ -135,7 +135,7 @@ private:
 // SMOverviewData inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& SMOverviewData::getName(void) const
+inline const QString& SMOverviewData::getName() const
 {
     return mName;
 }
@@ -145,7 +145,7 @@ inline void SMOverviewData::setName(const QString& name)
     mName = name;
 }
 
-inline const VersionNumber& SMOverviewData::getVersion(void) const
+inline const VersionNumber& SMOverviewData::getVersion() const
 {
     return mVersion;
 }
@@ -160,7 +160,7 @@ inline void SMOverviewData::setVersion(const QString& version)
     mVersion.fromString(version);
 }
 
-inline SMOverviewData::eThreading SMOverviewData::getThreading(void) const
+inline SMOverviewData::eThreading SMOverviewData::getThreading() const
 {
     return mThreading;
 }
@@ -170,7 +170,7 @@ inline void SMOverviewData::setThreading(SMOverviewData::eThreading threading)
     mThreading = threading;
 }
 
-inline const QString& SMOverviewData::getDescription(void) const
+inline const QString& SMOverviewData::getDescription() const
 {
     return mDescription;
 }

@@ -43,32 +43,32 @@ SIAttributeList::SIAttributeList(QWidget* parent)
     
 }
 
-QToolButton* SIAttributeList::ctrlButtonAdd(void)
+QToolButton* SIAttributeList::ctrlButtonAdd()
 {
     return ui->toolAddAttribute;
 }
 
-QToolButton* SIAttributeList::ctrlButtonRemove(void)
+QToolButton* SIAttributeList::ctrlButtonRemove()
 {
     return ui->toolDeleteAttribute;
 }
 
-QToolButton* SIAttributeList::ctrlButtonInsert(void)
+QToolButton* SIAttributeList::ctrlButtonInsert()
 {
     return ui->toolInsertAttribute;
 }
 
-QToolButton* SIAttributeList::ctrlButtonMoveUp(void)
+QToolButton* SIAttributeList::ctrlButtonMoveUp()
 {
     return ui->toolMoveUp;
 }
 
-QToolButton* SIAttributeList::ctrlButtonMoveDown(void)
+QToolButton* SIAttributeList::ctrlButtonMoveDown()
 {
     return ui->toolMoveDown;
 }
 
-QTableWidget* SIAttributeList::ctrlTableList(void)
+QTableWidget* SIAttributeList::ctrlTableList()
 {
     return ui->tableAttributes;
 }

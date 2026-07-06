@@ -70,7 +70,7 @@ public:
      **/
     SIDataTypeData(QList<DataTypeCustom *>&& entries, ElementBase* parent = nullptr) noexcept;
 
-    virtual ~SIDataTypeData(void);
+    virtual ~SIDataTypeData();
     
 signals:
 
@@ -165,28 +165,28 @@ public:
     /**
      * \brief   remove all entries and frees resources.
      **/
-    void removeAll(void);
+    void removeAll();
 
     /**
      * \brief   Returns the list of primitive data types objects.
      **/
-    const QList<DataTypePrimitive*>& getPrimitiveDataTypes(void) const;
+    const QList<DataTypePrimitive*>& getPrimitiveDataTypes() const;
 
     /**
      * \brief   Returns the list of basic data types objects.
      **/
-    const QList<DataTypeBasicObject*>& getBasicDataTypes(void) const;
+    const QList<DataTypeBasicObject*>& getBasicDataTypes() const;
 
     /**
      * \brief   Returns the list of basic container data types objects.
      **/
-    const QList<DataTypeBasicContainer*>& getContainerDatTypes(void) const;
+    const QList<DataTypeBasicContainer*>& getContainerDatTypes() const;
 
     /**
      * \brief   Gets the list of data types.
      * \return  The list of data types.
      **/
-    const QList<DataTypeCustom*>& getCustomDataTypes(void) const;
+    const QList<DataTypeCustom*>& getCustomDataTypes() const;
 
     /**
      * \brief   Sets the list of data types.

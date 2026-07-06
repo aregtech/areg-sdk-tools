@@ -60,7 +60,7 @@ SMDataTypeDetails::SMDataTypeDetails(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMDataTypeDetails::buildUi(void)
+void SMDataTypeDetails::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -137,82 +137,82 @@ void SMDataTypeDetails::buildUi(void)
     root->addWidget(details);
 }
 
-QLineEdit* SMDataTypeDetails::ctrlName(void) const
+QLineEdit* SMDataTypeDetails::ctrlName() const
 {
     return mName;
 }
 
-QRadioButton* SMDataTypeDetails::ctrlTypeStruct(void) const
+QRadioButton* SMDataTypeDetails::ctrlTypeStruct() const
 {
     return mTypeStruct;
 }
 
-QRadioButton* SMDataTypeDetails::ctrlTypeEnum(void) const
+QRadioButton* SMDataTypeDetails::ctrlTypeEnum() const
 {
     return mTypeEnum;
 }
 
-QRadioButton* SMDataTypeDetails::ctrlTypeImport(void) const
+QRadioButton* SMDataTypeDetails::ctrlTypeImport() const
 {
     return mTypeImport;
 }
 
-QComboBox* SMDataTypeDetails::ctrlEnumDerived(void) const
+QComboBox* SMDataTypeDetails::ctrlEnumDerived() const
 {
     return mEnumDerived;
 }
 
-QLineEdit* SMDataTypeDetails::ctrlImportLocation(void) const
+QLineEdit* SMDataTypeDetails::ctrlImportLocation() const
 {
     return mImportLocation;
 }
 
-QPushButton* SMDataTypeDetails::ctrlButtonBrowse(void) const
+QPushButton* SMDataTypeDetails::ctrlButtonBrowse() const
 {
     return mImportBrowse;
 }
 
-QLineEdit* SMDataTypeDetails::ctrlImportNamespace(void) const
+QLineEdit* SMDataTypeDetails::ctrlImportNamespace() const
 {
     return mImportNamespace;
 }
 
-QLineEdit* SMDataTypeDetails::ctrlImportObject(void) const
+QLineEdit* SMDataTypeDetails::ctrlImportObject() const
 {
     return mImportObject;
 }
 
-QRadioButton* SMDataTypeDetails::ctrlTypeContainer(void) const
+QRadioButton* SMDataTypeDetails::ctrlTypeContainer() const
 {
     return mTypeContainer;
 }
 
-QComboBox* SMDataTypeDetails::ctrlContainerObject(void) const
+QComboBox* SMDataTypeDetails::ctrlContainerObject() const
 {
     return mContainerObject;
 }
 
-QComboBox* SMDataTypeDetails::ctrlContainerKey(void) const
+QComboBox* SMDataTypeDetails::ctrlContainerKey() const
 {
     return mContainerKey;
 }
 
-QComboBox* SMDataTypeDetails::ctrlContainerValue(void) const
+QComboBox* SMDataTypeDetails::ctrlContainerValue() const
 {
     return mContainerValue;
 }
 
-QPlainTextEdit* SMDataTypeDetails::ctrlDescription(void) const
+QPlainTextEdit* SMDataTypeDetails::ctrlDescription() const
 {
     return mDescription;
 }
 
-QCheckBox* SMDataTypeDetails::ctrlDeprecated(void) const
+QCheckBox* SMDataTypeDetails::ctrlDeprecated() const
 {
     return mDeprecated;
 }
 
-QLineEdit* SMDataTypeDetails::ctrlDeprecateHint(void) const
+QLineEdit* SMDataTypeDetails::ctrlDeprecateHint() const
 {
     return mDeprecateHint;
 }

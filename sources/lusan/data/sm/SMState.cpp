@@ -148,7 +148,7 @@ SMStateEntry::SMStateEntry(SMStateEntry&& src) noexcept
     }
 }
 
-SMStateEntry::~SMStateEntry(void)
+SMStateEntry::~SMStateEntry()
 {
     delete mNested;
     mNested = nullptr;
@@ -225,7 +225,7 @@ void SMStateEntry::setSubmachine(const QString& alias)
     }
 }
 
-SMStateData* SMStateEntry::getOrCreateNestedStates(void)
+SMStateData* SMStateEntry::getOrCreateNestedStates()
 {
     if (mNested == nullptr)
     {
@@ -236,7 +236,7 @@ SMStateData* SMStateEntry::getOrCreateNestedStates(void)
     return mNested;
 }
 
-bool SMStateEntry::isValid(void) const
+bool SMStateEntry::isValid() const
 {
     return (mName.isEmpty() == false);
 }
@@ -346,7 +346,7 @@ SMStateData::SMStateData(SMStateData&& src) noexcept
 {
 }
 
-SMStateData::~SMStateData(void)
+SMStateData::~SMStateData()
 {
     removeAll();
 }
@@ -424,7 +424,7 @@ SMStateEntry* SMStateData::findStateRecursive(const QString& name) const
     return nullptr;
 }
 
-SMStateEntry* SMStateData::getStartState(void) const
+SMStateEntry* SMStateData::getStartState() const
 {
     for (SMStateEntry* state : getElements())
     {
@@ -437,7 +437,7 @@ SMStateEntry* SMStateData::getStartState(void) const
     return nullptr;
 }
 
-int SMStateData::countStatesRecursive(void) const
+int SMStateData::countStatesRecursive() const
 {
     int count = getElementCount();
     for (SMStateEntry* state : getElements())
@@ -451,7 +451,7 @@ int SMStateData::countStatesRecursive(void) const
     return count;
 }
 
-void SMStateData::removeAll(void)
+void SMStateData::removeAll()
 {
     for (SMStateEntry* state : getElements())
     {
@@ -461,7 +461,7 @@ void SMStateData::removeAll(void)
     removeAllElements();
 }
 
-bool SMStateData::isValid(void) const
+bool SMStateData::isValid() const
 {
     return true;
 }
