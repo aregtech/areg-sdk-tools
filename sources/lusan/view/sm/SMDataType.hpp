@@ -1,0 +1,153 @@
+#ifndef LUSAN_VIEW_SM_SMDATATYPE_HPP
+#define LUSAN_VIEW_SM_SMDATATYPE_HPP
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the Areg Framework.
+ *
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE file included
+ *  with this distribution or contact us at info[at]areg.tech.
+ *
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/sm/SMDataType.hpp
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, FSM Data Types page.
+ *
+ ************************************************************************/
+
+#include <QScrollArea>
+#include "lusan/data/common/DataTypeBase.hpp"
+
+class DataTypeCustom;
+class DataTypeEnum;
+class DataTypeImported;
+class DataTypeContainer;
+class DataTypeStructure;
+class DocumentElem;
+class ElementBase;
+class QComboBox;
+class QTreeWidgetItem;
+class SMDataTypeDetails;
+class SMDataTypeFieldDetails;
+class SMDataTypeList;
+class SMDataTypeModel;
+
+/**
+ * \brief   The FSM Data Types page: enumerations, structures, imported types and containers
+ *          (spec 6.9/6.10 — identical vocabulary and editing UX to the Service Interface
+ *          page). Every edit is committed through SMDataTypeModel's undo commands; the page
+ *          mutates no model state directly, and refreshes by rebuilding the tree from the
+ *          live model on every relevant DocModelNotifier signal (self-triggered or
+ *          external/undo alike) rather than patching individual tree nodes.
+ **/
+class SMDataType : public QScrollArea
+{
+    Q_OBJECT
+
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    explicit SMDataType(SMDataTypeModel& model, QWidget* parent = nullptr);
+    virtual ~SMDataType(void) = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Slots
+//////////////////////////////////////////////////////////////////////////
+private slots:
+    void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+    void onAddClicked(void);
+    void onInsertClicked(void);
+    void onRemoveClicked(void);
+    void onAddFieldClicked(void);
+    void onInsertFieldClicked(void);
+    void onRemoveFieldClicked(void);
+    void onMoveUpClicked(void);
+    void onMoveDownClicked(void);
+
+    void onNameCommitted(void);
+    void onStructSelected(bool checked);
+    void onEnumSelected(bool checked);
+    void onImportSelected(bool checked);
+    void onContainerSelected(bool checked);
+    void onEnumDerivedChanged(int index);
+    void onImportLocationCommitted(void);
+    void onImportNamespaceCommitted(void);
+    void onImportObjectCommitted(void);
+    void onImportBrowse(void);
+    void onContainerObjectChanged(int index);
+    void onContainerKeyChanged(int index);
+    void onContainerValueChanged(int index);
+    void onDeprecatedToggled(bool checked);
+    void onDeprecateHintCommitted(void);
+
+    void onFieldNameCommitted(void);
+    void onFieldTypeChanged(int index);
+    void onFieldValueCommitted(void);
+    void onFieldDeprecatedToggled(bool checked);
+    void onFieldDeprecateHintCommitted(void);
+
+    void onNotifierChanged(void);
+
+//////////////////////////////////////////////////////////////////////////
+// Overrides
+//////////////////////////////////////////////////////////////////////////
+protected:
+    virtual bool eventFilter(QObject* watched, QEvent* event) override;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    void buildUi(void);
+    void setupSignals(void);
+
+    //!< Rebuilds the whole tree from the live model and restores the selection by ID.
+    void refreshAll(void);
+    //!< Selects the data type / field by ID; returns false if not found (and selects nothing).
+    bool selectDataType(uint32_t typeId, uint32_t fieldId = 0);
+    //!< Clears the details/fields panels and disables the field-only tool buttons.
+    void showClean(void);
+
+    QTreeWidgetItem* createNode(DataTypeCustom* dataType) const;
+    void setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const;
+
+    void selectedStruct(DataTypeStructure* dataType);
+    void selectedEnum(DataTypeEnum* dataType);
+    void selectedImport(DataTypeImported* dataType);
+    void selectedContainer(DataTypeContainer* dataType);
+    void selectedStructField(DataTypeStructure* parent, uint32_t fieldId);
+    void selectedEnumField(DataTypeEnum* parent, uint32_t fieldId);
+
+    void activateFields(bool activate);
+    void updateMoveButtons(int row, int rowCount);
+
+    void populateTypeCombo(QComboBox* combo, const DataTypeCustom* exclude) const;
+    void populateIntegerCombo(QComboBox* combo) const;
+    void populateContainerObjectCombo(QComboBox* combo) const;
+
+    //!< The data type / field currently selected in the tree, or nullptr / 0.
+    DataTypeCustom* currentDataType(void) const;
+    uint32_t currentFieldId(void) const;
+
+    QString genTypeName(void);
+    QString genFieldName(const DataTypeCustom* dataType) const;
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    SMDataTypeModel&        mModel;
+    SMDataTypeList*         mList;
+    SMDataTypeDetails*      mDetails;
+    SMDataTypeFieldDetails* mFields;
+    uint32_t                mNameCounter;
+    QString                 mCurUrl;
+    QString                 mCurFile;
+};
+
+#endif  // LUSAN_VIEW_SM_SMDATATYPE_HPP
