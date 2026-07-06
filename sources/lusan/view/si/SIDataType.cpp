@@ -45,6 +45,7 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QVBoxLayout>
 
 #include "lusan/view/si/SICommon.hpp"
 
@@ -102,6 +103,7 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mDetails  (new SIDataTypeDetails(this))
     , mList     (new SIDataTypeList(this))
     , mFields   (new SIDataTypeFieldDetails(this))
+    , mRightPanel(new QWidget(this))
     , mWidget   (new SIDataTypeWidget(this))
     , ui        (*mWidget->ui)
     , mModel    (model)
@@ -115,10 +117,18 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mCount    (0)
 {
     mFields->setHidden(true);
-    
+
+    QVBoxLayout* rightLayout = new QVBoxLayout(mRightPanel);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->addWidget(mDetails);
+    rightLayout->addWidget(mFields);
+
+    // Ignored so the row splits by stretch alone, not by each child's size hint —
+    // see .claude/memory/equal-split-two-panels.md.
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mRightPanel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
-    ui.horizontalLayout->addWidget(mFields, 1);
+    ui.horizontalLayout->addWidget(mRightPanel, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
@@ -136,8 +146,7 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
 SIDataType::~SIDataType(void)
 {
     ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
-    ui.horizontalLayout->removeWidget(mFields);
+    ui.horizontalLayout->removeWidget(mRightPanel);
 }
 
 void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)

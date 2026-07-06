@@ -149,6 +149,25 @@ QComboBox QAbstractItemView
     outline: none;
 }
 
+QComboBox QAbstractItemView::item
+{
+    background-color: ${base};
+    color: ${text};
+    padding: 3px 8px;
+}
+
+QComboBox QAbstractItemView::item:hover
+{
+    background-color: ${hover};
+    color: ${text};
+}
+
+QComboBox QAbstractItemView::item:selected
+{
+    background-color: ${accent};
+    color: ${onAccent};
+}
+
 /* ---- Tabs ---- */
 
 QTabWidget::pane

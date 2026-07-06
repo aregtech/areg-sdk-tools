@@ -33,6 +33,7 @@ StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     , mUndoStack     (this)
     , mAutosaveTimer (this)
     , mOverviewModel (*this)
+    , mDataTypeModel (*this)
     , mOpenSuccess   (false)
 {
     mUndoStack.setUndoLimit(100);

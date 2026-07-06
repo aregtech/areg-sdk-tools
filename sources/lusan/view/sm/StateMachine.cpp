@@ -19,6 +19,7 @@
 
 #include "lusan/view/sm/StateMachine.hpp"
 
+#include "lusan/view/sm/SMDataType.hpp"
 #include "lusan/view/sm/SMOverview.hpp"
 
 #include <QLabel>
@@ -240,6 +241,10 @@ void StateMachine::ensureTabInitialized(int index)
             mTabWidget.setCurrentIndex(page);
         });
         page = mOverview;
+    }
+    else if (index == static_cast<int>(PageDataTypes))
+    {
+        page = new SMDataType(mModel.getDataTypeModel(), &mTabWidget);
     }
     else
     {

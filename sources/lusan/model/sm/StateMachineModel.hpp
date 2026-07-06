@@ -22,6 +22,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMOverviewModel.hpp"
+#include "lusan/model/sm/SMDataTypeModel.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -59,6 +60,7 @@ public:
     inline const QUndoStack& getUndoStack(void) const;
     inline DocModelNotifier& getNotifier(void);
     inline SMOverviewModel& getOverviewModel(void);
+    inline SMDataTypeModel& getDataTypeModel(void);
 
 signals:
     void signalDirtyChanged(bool dirty);
@@ -77,6 +79,7 @@ private:
     QUndoStack      mUndoStack;
     QTimer          mAutosaveTimer;
     SMOverviewModel mOverviewModel;
+    SMDataTypeModel mDataTypeModel;
     bool            mOpenSuccess;
 };
 
@@ -124,6 +127,11 @@ inline DocModelNotifier& StateMachineModel::getNotifier(void)
 inline SMOverviewModel& StateMachineModel::getOverviewModel(void)
 {
     return mOverviewModel;
+}
+
+inline SMDataTypeModel& StateMachineModel::getDataTypeModel(void)
+{
+    return mDataTypeModel;
 }
 
 #endif  // LUSAN_MODEL_SM_STATEMACHINEMODEL_HPP

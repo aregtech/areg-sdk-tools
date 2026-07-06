@@ -599,6 +599,7 @@ private:
     SIDataTypeDetails*      mDetails;   //!< The data type details widget.
     SIDataTypeList*         mList;      //!< The data type list (tree table) widget.
     SIDataTypeFieldDetails* mFields;    //!< The data type field details widget.
+    QWidget*                mRightPanel;//!< Holds mDetails/mFields so the row is exactly 2 equal-width panels.
     SIDataTypeWidget*       mWidget;    //!< The helper widget.
     Ui::SIDataType &        ui;         //!< The UI helper object.
     SIDataTypeModel&        mModel;     //!< The data type main model object.

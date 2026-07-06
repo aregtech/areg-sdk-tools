@@ -18,6 +18,11 @@
  *               serialization, so element IDs are compared too), that redo restores original
  *               IDs with no duplicates, that a composite delete is a single step, that layout
  *               drags coalesce, and that 100+ step histories navigate without corruption.
+ *               Also covers SM-07 (SMDataTypeModel): the full data-type/field lifecycle
+ *               (create/insert/rename/convert/reorder/delete) through the same undo stack.
+ *               SM-07-02 extends this with container data types: basic-container object,
+ *               key and value type mutations, keyed/non-keyed switching, through the same
+ *               undo stack.
  *
  *  Self-contained (no external test framework), matching SMModelTests.cpp.
  *
@@ -29,6 +34,15 @@
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/common/DataTypeEnum.hpp"
+#include "lusan/data/common/DataTypeImported.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
+#include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
+#include "lusan/data/common/EnumEntry.hpp"
 
 #include <QUndoStack>
 #include <QXmlStreamWriter>
@@ -281,6 +295,208 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Scenario E: SM-07 Data Types page model — enumeration/structure/imported
+// lifecycle through SMDataTypeModel exactly as SMDataType (the view) drives it,
+// undo/redo round-trip, and a category conversion composite.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testDataTypeLifecycle(void)
+    {
+        StateMachineModel model;
+        SMDataTypeModel&  dt = model.getDataTypeModel();
+
+        QStringList checkpoints;
+        checkpoints << serialize(model.getData());
+        auto snap = [&]() { checkpoints << serialize(model.getData()); };
+
+        DataTypeCustom* point = dt.createDataType("Point", DataTypeBase::eCategory::Structure);
+        CHECK(point != nullptr);
+        snap();
+
+        ElementBase* fx = dt.createField(point, "x");
+        CHECK(fx != nullptr);
+        const uint32_t fxId = fx->getId();
+        snap();
+        ElementBase* fy = dt.createField(point, "y");
+        CHECK(fy != nullptr);
+        const uint32_t fyId = fy->getId();
+        snap();
+
+        dt.setFieldType(static_cast<DataTypeStructure*>(point), fxId, QStringLiteral("uint32"));
+        snap();
+        dt.setFieldValue(point, fxId, "1");
+        snap();
+        dt.setDescription(point, "A 2D point");
+        snap();
+        dt.setDeprecated(point, true);
+        snap();
+        dt.setDeprecateHint(point, "use Point2D instead");
+        snap();
+
+        DataTypeCustom* color = dt.createDataType("Color", DataTypeBase::eCategory::Enumeration);
+        CHECK(color != nullptr);
+        snap();
+        ElementBase* red = dt.createField(color, "Red");
+        CHECK(red != nullptr);
+        const uint32_t redId = red->getId();
+        snap();
+        dt.setFieldValue(color, redId, "0");
+        snap();
+        dt.setEnumDerived(static_cast<DataTypeEnum*>(color), "uint16");
+        snap();
+
+        DataTypeCustom* foo = dt.createDataType("Foo", DataTypeBase::eCategory::Imported);
+        CHECK(foo != nullptr);
+        snap();
+        dt.setImportLocation(static_cast<DataTypeImported*>(foo), "foo.hpp");
+        snap();
+        dt.setImportNamespace(static_cast<DataTypeImported*>(foo), "ns");
+        snap();
+        dt.setImportObject(static_cast<DataTypeImported*>(foo), "Foo");
+        snap();
+
+        dt.renameDataType(point, "Point2D");
+        CHECK(point->getName() == QStringLiteral("Point2D"));
+        snap();
+
+        dt.swapDataTypes(point->getId(), color->getId());
+        CHECK(dt.findIndex(point) == 1);
+        snap();
+
+        DataTypeCustom* converted = dt.convertDataType(color, DataTypeBase::eCategory::Structure);
+        CHECK((converted != nullptr) && (converted->getCategory() == DataTypeBase::eCategory::Structure));
+        CHECK(converted->getName() == QStringLiteral("Color"));
+        snap();
+
+        dt.deleteField(point, fyId);
+        CHECK(dt.getChildCount(point) == 1);
+        snap();
+
+        dt.deleteDataType(foo);
+        CHECK(dt.findDataType(QStringLiteral("Foo")) == nullptr);
+        snap();
+
+        DataTypeCustom* first = dt.insertDataType(0, "First", DataTypeBase::eCategory::Structure);
+        CHECK((first != nullptr) && (dt.findIndex(first) == 0));
+        snap();
+
+        const int steps = static_cast<int>(checkpoints.size()) - 1;
+        const QString built = serialize(model.getData());
+
+        bool undoExact = true;
+        for (int k = steps; k >= 1; --k)
+        {
+            model.getUndoStack().undo();
+            undoExact = undoExact && (serialize(model.getData()) == checkpoints[k - 1]);
+        }
+        CHECK(undoExact);
+        CHECK(serialize(model.getData()) == checkpoints[0]);
+        CHECK(dt.getDataTypeCount() == 0);
+
+        bool redoExact = true;
+        for (int k = 1; k <= steps; ++k)
+        {
+            model.getUndoStack().redo();
+            redoExact = redoExact && (serialize(model.getData()) == checkpoints[k]);
+        }
+        CHECK(redoExact);
+        CHECK(serialize(model.getData()) == built);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Scenario F (SM-07-02): container data types — direct creation and conversion-from-
+// existing both seed sensible defaults, switching basic container enables/disables and
+// clears the key, key/value are set by name through SMDataTypeModel, undo/redo round-trip.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testContainerLifecycle(void)
+    {
+        StateMachineModel model;
+        SMDataTypeModel&  dt = model.getDataTypeModel();
+
+        QStringList checkpoints;
+        checkpoints << serialize(model.getData());
+        auto snap = [&]() { checkpoints << serialize(model.getData()); };
+
+        DataTypeCustom* itemType = dt.createDataType("Item", DataTypeBase::eCategory::Structure);
+        CHECK(itemType != nullptr);
+        snap();
+
+        // Direct creation seeds the default basic container ("Array") and value ("bool").
+        DataTypeCustom* listType = dt.createDataType("List", DataTypeBase::eCategory::Container);
+        CHECK(listType != nullptr);
+        DataTypeContainer* list = static_cast<DataTypeContainer*>(listType);
+        CHECK(list->getContainer() == QStringLiteral("Array"));
+        CHECK(list->getValue() == QStringLiteral("bool"));
+        CHECK(list->canHaveKey() == false);
+        snap();
+
+        dt.setContainerValue(list, QStringLiteral("Item"));
+        CHECK(list->getValue() == QStringLiteral("Item"));
+        snap();
+
+        // Switching to a keyed basic container enables the key with a non-empty default.
+        dt.setContainerObject(list, QStringLiteral("HashMap"));
+        CHECK(list->getContainer() == QStringLiteral("HashMap"));
+        CHECK(list->canHaveKey());
+        CHECK(list->getKey().isEmpty() == false);
+        snap();
+
+        dt.setContainerKey(list, QStringLiteral("uint32"));
+        CHECK(list->getKey() == QStringLiteral("uint32"));
+        snap();
+
+        // Switching back to a non-keyed basic container clears the key.
+        dt.setContainerObject(list, QStringLiteral("Array"));
+        CHECK(list->canHaveKey() == false);
+        CHECK(list->getKey().isEmpty());
+        snap();
+
+        // Conversion-from-existing (Structure -> Container) also seeds sensible defaults.
+        DataTypeCustom* converted = dt.convertDataType(itemType, DataTypeBase::eCategory::Container);
+        CHECK((converted != nullptr) && (converted->getCategory() == DataTypeBase::eCategory::Container));
+        DataTypeContainer* dict = static_cast<DataTypeContainer*>(converted);
+        CHECK(dict->getContainer() == QStringLiteral("Array"));
+        snap();
+
+        dt.setContainerObject(dict, QStringLiteral("Map"));
+        snap();
+        dt.setContainerKey(dict, QStringLiteral("int32"));
+        snap();
+        dt.setContainerValue(dict, QStringLiteral("List"));
+        CHECK(dict->getValue() == QStringLiteral("List"));
+        snap();
+
+        const int steps = static_cast<int>(checkpoints.size()) - 1;
+        const QString built = serialize(model.getData());
+
+        bool undoExact = true;
+        for (int k = steps; k >= 1; --k)
+        {
+            model.getUndoStack().undo();
+            undoExact = undoExact && (serialize(model.getData()) == checkpoints[k - 1]);
+        }
+        CHECK(undoExact);
+        CHECK(serialize(model.getData()) == checkpoints[0]);
+        CHECK(dt.getDataTypeCount() == 0);
+
+        bool redoExact = true;
+        for (int k = 1; k <= steps; ++k)
+        {
+            model.getUndoStack().redo();
+            redoExact = redoExact && (serialize(model.getData()) == checkpoints[k]);
+        }
+        CHECK(redoExact);
+        CHECK(serialize(model.getData()) == built);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -291,6 +507,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testCoalescedLayoutDrag();
     testCompositeDelete();
     testDeepHistory();
+    testDataTypeLifecycle();
+    testContainerLifecycle();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);
