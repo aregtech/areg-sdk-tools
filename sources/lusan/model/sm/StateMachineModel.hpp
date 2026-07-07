@@ -26,6 +26,7 @@
 #include "lusan/model/sm/SMAttributeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
+#include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/SMConstantModel.hpp"
 
 #include <QObject>
@@ -68,6 +69,7 @@ public:
     inline SMAttributeModel& getAttributeModel();
     inline SMEventModel& getEventModel();
     inline SMTimerModel& getTimerModel();
+    inline SMMethodModel& getMethodModel();
     inline SMConstantModel& getConstantModel();
 
 signals:
@@ -91,6 +93,7 @@ private:
     SMAttributeModel mAttributeModel;
     SMEventModel    mEventModel;
     SMTimerModel    mTimerModel;
+    SMMethodModel   mMethodModel;
     SMConstantModel mConstantModel;
     bool            mOpenSuccess;
 };
@@ -159,6 +162,11 @@ inline SMEventModel& StateMachineModel::getEventModel()
 inline SMTimerModel& StateMachineModel::getTimerModel()
 {
     return mTimerModel;
+}
+
+inline SMMethodModel& StateMachineModel::getMethodModel()
+{
+    return mMethodModel;
 }
 
 inline SMConstantModel& StateMachineModel::getConstantModel()

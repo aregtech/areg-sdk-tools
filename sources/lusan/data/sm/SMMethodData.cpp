@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
@@ -219,6 +220,41 @@ bool SMMethodEntry::isValid() const
     return (getName().isEmpty() == false);
 }
 
+QIcon SMMethodEntry::getIcon(ElementBase::eDisplay display) const
+{
+    if (display != ElementBase::eDisplay::DisplayName)
+        return QIcon();
+
+    switch (mMethodType)
+    {
+    case eMethodType::Action:
+        return NELusanCommon::iconMethodBroadcast(NELusanCommon::SizeSmall);
+    case eMethodType::Condition:
+        return NELusanCommon::iconMethodResponse(NELusanCommon::SizeSmall);
+    case eMethodType::Trigger:
+    default:
+        return NELusanCommon::iconMethodRequest(NELusanCommon::SizeSmall);
+    }
+}
+
+QString SMMethodEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return QString::fromLatin1(SMMethodEntry::toString(mMethodType));
+    case ElementBase::eDisplay::DisplayValue:
+        // Conditions are defined by their return type; the others by their parameter count.
+        return (mMethodType == eMethodType::Condition)
+            ? mReturn
+            : ((getElementCount() > 0) ? QStringLiteral("%1 param(s)").arg(getElementCount()) : QString());
+    default:
+        return QString();
+    }
+}
+
 bool SMMethodEntry::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() != XmlSM::xmlSMElementMethod)
@@ -363,6 +399,12 @@ SMMethodEntry* SMMethodData::createMethod(const QString& name, SMMethodEntry::eM
 SMMethodEntry* SMMethodData::findMethod(const QString& name) const
 {
     SMMethodEntry* const* found = findElement(name);
+    return (found != nullptr) ? *found : nullptr;
+}
+
+SMMethodEntry* SMMethodData::findMethod(uint32_t id) const
+{
+    SMMethodEntry* const* found = findElement(id);
     return (found != nullptr) ? *found : nullptr;
 }
 

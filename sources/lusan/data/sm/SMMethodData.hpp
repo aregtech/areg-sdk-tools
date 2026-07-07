@@ -116,6 +116,18 @@ public:
     bool readFromXml(QXmlStreamReader& xml) override;
     void writeToXml(QXmlStreamWriter& xml) const override;
 
+    /**
+     * \brief   Returns the icon to display for the given classification (kind-specific icon
+     *          for Name, none otherwise).
+     **/
+    QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief   Returns the display string: the name for Name, the method kind for Type, and
+     *          the parameter count (or the return type for conditions) for Value.
+     **/
+    QString getString(ElementBase::eDisplay display) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -158,6 +170,11 @@ public:
      * \brief   Finds a method by name.
      **/
     SMMethodEntry* findMethod(const QString& name) const;
+
+    /**
+     * \brief   Finds a method by ID.
+     **/
+    SMMethodEntry* findMethod(uint32_t id) const;
 
     /**
      * \brief   Finds a method by name only if it is a Trigger (used by the shared
