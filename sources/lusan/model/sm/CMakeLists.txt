@@ -7,6 +7,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
@@ -21,6 +22,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMEventModel.hpp
     ${LUSAN}/model/sm/SMLayoutCommands.hpp
     ${LUSAN}/model/sm/SMLiteralValidator.hpp
+    ${LUSAN}/model/sm/SMMethodModel.hpp
     ${LUSAN}/model/sm/SMOverviewModel.hpp
     ${LUSAN}/model/sm/SMStateCommands.hpp
     ${LUSAN}/model/sm/SMTimerModel.hpp

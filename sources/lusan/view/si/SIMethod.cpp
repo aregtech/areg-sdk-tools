@@ -44,6 +44,7 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QVBoxLayout>
 
 #include "lusan/view/si/SICommon.hpp"
 
@@ -70,10 +71,20 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
 {
     mParams->setHidden(true);
 
+    // Two equal-width panels: the list on the left, and the swapped details/parameter forms
+    // wrapped in a single right panel. Both columns use an Ignored horizontal size policy so
+    // the row splits exactly 50/50 regardless of either side's size hint.
+    QWidget* rightPanel = new QWidget(mWidget);
+    QVBoxLayout* rightLayout = new QVBoxLayout(rightPanel);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->addWidget(mDetails);
+    rightLayout->addWidget(mParams);
+    mList->setSizePolicy(QSizePolicy::Ignored, mList->sizePolicy().verticalPolicy());
+    rightPanel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+
     ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
-    ui.horizontalLayout->addWidget(mParams, 1);
-    
+    ui.horizontalLayout->addWidget(rightPanel, 1);
+
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
