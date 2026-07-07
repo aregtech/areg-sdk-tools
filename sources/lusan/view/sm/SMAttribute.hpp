@@ -69,6 +69,9 @@ private slots:
     void onNameCommitted();
     void onTypeChanged(int index);
     void onValueCommitted();
+    //!< Mirrors the value into the list row and re-validates while the user types; the
+    //!< model commit still happens once on editing-finished.
+    void onValueTextChanged(const QString& text);
     void onDeprecatedToggled(bool checked);
     void onDeprecateHintCommitted();
 

@@ -511,6 +511,12 @@ namespace NELusanCommon
     //<! Loads constant icon and sets the specified size
     inline QIcon iconConstant(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads state-machine event icon and sets the specified size
+    inline QIcon iconEvent(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads state-machine timer icon and sets the specified size
+    inline QIcon iconTimer(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads container icon and sets the specified size
     inline QIcon iconContainer(const QSize & size = QSize{ 32, 32 });
 
@@ -822,6 +828,16 @@ inline QIcon NELusanCommon::iconConstant(const QSize & size)
 inline QIcon NELusanCommon::iconAttribute(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/data-attribute", size);
+}
+
+inline QIcon NELusanCommon::iconEvent(const QSize & size)
+{
+    return loadIcon(":/icons/sm-event", size);
+}
+
+inline QIcon NELusanCommon::iconTimer(const QSize & size)
+{
+    return loadIcon(":/icons/sm-timer", size);
 }
 
 inline QIcon NELusanCommon::iconWarning(const QSize & size)

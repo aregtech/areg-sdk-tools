@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMTimerData.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
@@ -98,6 +99,34 @@ SMTimerEntry& SMTimerEntry::operator = (SMTimerEntry&& other) noexcept
 bool SMTimerEntry::isValid() const
 {
     return (mName.isEmpty() == false) && (mTimeout >= 1);
+}
+
+QIcon SMTimerEntry::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return NELusanCommon::iconTimer(NELusanCommon::SizeSmall);
+    case ElementBase::eDisplay::DisplayType:
+        return (mTimeout >= 1) ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall);
+    default:
+        return QIcon();
+    }
+}
+
+QString SMTimerEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return mName;
+    case ElementBase::eDisplay::DisplayType:
+        return QStringLiteral("%1 ms").arg(mTimeout);
+    case ElementBase::eDisplay::DisplayValue:
+        return isContinuous() ? QStringLiteral("Continuous") : QStringLiteral("%1 time(s)").arg(mRepeat);
+    default:
+        return QString();
+    }
 }
 
 bool SMTimerEntry::readFromXml(QXmlStreamReader& xml)

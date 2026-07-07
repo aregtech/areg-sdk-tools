@@ -1,0 +1,7 @@
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="64px" height="64px" viewBox="-2 -2 28 28" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#1d7fd1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="14" r="8"/>
+    <path d="M12 10v4l3 2.5"/>
+    <path d="M9 2h6"/>
+    <path d="M12 2v2.5"/>
+</svg>

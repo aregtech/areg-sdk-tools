@@ -117,8 +117,8 @@ void SMAttribute::setupSignals()
 
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMAttribute::onNameCommitted);
     connect(mDetails->ctrlTypes()  , &QComboBox::currentIndexChanged, this, &SMAttribute::onTypeChanged);
-    connect(mDetails->ctrlValue()->lineEdit(), &QLineEdit::editingFinished, this, &SMAttribute::onValueCommitted);
-    connect(mDetails->ctrlValue()  , QOverload<int>::of(&QComboBox::activated), this, &SMAttribute::onValueCommitted);
+    connect(mDetails->ctrlValue()  , &QLineEdit::editingFinished    , this, &SMAttribute::onValueCommitted);
+    connect(mDetails->ctrlValue()  , &QLineEdit::textChanged        , this, &SMAttribute::onValueTextChanged);
     connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMAttribute::onDeprecatedToggled);
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMAttribute::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
@@ -180,9 +180,10 @@ void SMAttribute::populateTypeCombo()
 
 void SMAttribute::updateValueControl(const SMAttributeEntry* entry)
 {
-    QComboBox* value = mDetails->ctrlValue();
+    QLineEdit* value = mDetails->ctrlValue();
     const QSignalBlocker blocker(value);
     value->clear();
+    mDetails->setValueChoices(QStringList());
 
     if (entry == nullptr)
     {
@@ -213,13 +214,16 @@ void SMAttribute::updateValueControl(const SMAttributeEntry* entry)
 
     if ((custom != nullptr) && (custom->getCategory() == DataTypeBase::eCategory::Enumeration))
     {
+        QStringList choices;
         for (const EnumEntry& field : static_cast<DataTypeEnum*>(custom)->getElements())
         {
-            value->addItem(field.getName());
+            choices.append(field.getName());
         }
+
+        mDetails->setValueChoices(choices);
     }
 
-    value->setCurrentText(entry->getValue());
+    value->setText(entry->getValue());
     updateValueValidation(typeName, entry->getValue());
 }
 
@@ -464,11 +468,29 @@ void SMAttribute::onValueCommitted()
     if (id == 0)
         return;
 
-    mModel.setValue(id, mDetails->ctrlValue()->currentText());
+    mModel.setValue(id, mDetails->ctrlValue()->text());
     SMAttributeEntry* entry = mModel.findAttribute(id);
     if (entry != nullptr)
     {
         updateValueValidation(entry->getType(), entry->getValue());
+    }
+}
+
+void SMAttribute::onValueTextChanged(const QString& text)
+{
+    SMAttributeEntry* entry = mModel.findAttribute(currentAttributeId());
+    if (entry == nullptr)
+        return;
+
+    const QString reason = valueValidationReason(entry->getType(), text);
+    mDetails->showValueHint(reason);
+
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    if (item != nullptr)
+    {
+        item->setText(2, text);
+        item->setIcon(2, reason.isEmpty() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
+        item->setToolTip(2, reason);
     }
 }
 

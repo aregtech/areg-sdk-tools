@@ -45,6 +45,18 @@ public:
     bool isValid() const override;
     bool readFromXml(QXmlStreamReader& xml) override;
     void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    QString getString(ElementBase::eDisplay display) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -78,6 +90,11 @@ public:
      * \brief   Finds an event by name.
      **/
     SMEventEntry* findEvent(const QString& name) const;
+
+    /**
+     * \brief   Finds an event by ID.
+     **/
+    SMEventEntry* findEvent(uint32_t id) const;
 
     /**
      * \brief   Deletes and removes all events.
