@@ -14,6 +14,9 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMEventDetails.cpp
     ${LUSAN}/view/sm/SMEventList.cpp
     ${LUSAN}/view/sm/SMEventParamDetails.cpp
+    ${LUSAN}/view/sm/SMInclude.cpp
+    ${LUSAN}/view/sm/SMIncludeDetails.cpp
+    ${LUSAN}/view/sm/SMIncludeList.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
     ${LUSAN}/view/sm/SMMethodDetails.cpp
     ${LUSAN}/view/sm/SMMethodList.cpp
@@ -38,6 +41,9 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMEventDetails.hpp
     ${LUSAN}/view/sm/SMEventList.hpp
     ${LUSAN}/view/sm/SMEventParamDetails.hpp
+    ${LUSAN}/view/sm/SMInclude.hpp
+    ${LUSAN}/view/sm/SMIncludeDetails.hpp
+    ${LUSAN}/view/sm/SMIncludeList.hpp
     ${LUSAN}/view/sm/SMMethod.hpp
     ${LUSAN}/view/sm/SMMethodDetails.hpp
     ${LUSAN}/view/sm/SMMethodList.hpp

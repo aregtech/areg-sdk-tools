@@ -28,6 +28,7 @@
 #include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/SMConstantModel.hpp"
+#include "lusan/model/sm/SMIncludeModel.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -71,6 +72,7 @@ public:
     inline SMTimerModel& getTimerModel();
     inline SMMethodModel& getMethodModel();
     inline SMConstantModel& getConstantModel();
+    inline SMIncludeModel& getIncludeModel();
 
 signals:
     void signalDirtyChanged(bool dirty);
@@ -95,6 +97,7 @@ private:
     SMTimerModel    mTimerModel;
     SMMethodModel   mMethodModel;
     SMConstantModel mConstantModel;
+    SMIncludeModel  mIncludeModel;
     bool            mOpenSuccess;
 };
 
@@ -172,6 +175,11 @@ inline SMMethodModel& StateMachineModel::getMethodModel()
 inline SMConstantModel& StateMachineModel::getConstantModel()
 {
     return mConstantModel;
+}
+
+inline SMIncludeModel& StateMachineModel::getIncludeModel()
+{
+    return mIncludeModel;
 }
 
 #endif  // LUSAN_MODEL_SM_STATEMACHINEMODEL_HPP

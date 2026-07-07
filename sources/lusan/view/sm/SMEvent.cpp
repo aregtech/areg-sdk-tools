@@ -122,9 +122,9 @@ void SMEvent::setupSignals()
     connect(mList->ctrlButtonRemove()   , &QToolButton::clicked           , this, &SMEvent::onRemoveClicked);
     connect(mList->ctrlButtonMoveUp()   , &QToolButton::clicked           , this, &SMEvent::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown() , &QToolButton::clicked           , this, &SMEvent::onMoveDownClicked);
+    connect(mList->ctrlButtonAddParam() , &QToolButton::clicked           , this, [this]() { addNewParam(); });
     connect(mList->actionNewEvent()     , &QAction::triggered             , this, [this]() { addNewEvent(); });
     connect(mList->actionNewTimer()     , &QAction::triggered             , this, [this]() { addNewTimer(); });
-    connect(mList->actionNewParam()     , &QAction::triggered             , this, [this]() { addNewParam(); });
 
     QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
     QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
@@ -455,24 +455,11 @@ void SMEvent::updateToolbar(eRowKind kind)
 {
     const bool hasEntry = (kind == eRowKind::Event) || (kind == eRowKind::Param) || (kind == eRowKind::Timer);
 
-    mList->ctrlButtonAdd()->setEnabled(kind != eRowKind::None);
+    // The Add button always opens its menu, so it stays enabled regardless of selection.
+    mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonInsert()->setEnabled(hasEntry);
     mList->ctrlButtonRemove()->setEnabled(hasEntry);
-    mList->actionNewParam()->setEnabled((kind == eRowKind::Event) || (kind == eRowKind::Param));
-
-    switch (kind)
-    {
-    case eRowKind::Param:
-        mList->setAddTarget(SMEventList::eAddTarget::AddParam);
-        break;
-    case eRowKind::GroupTimers:
-    case eRowKind::Timer:
-        mList->setAddTarget(SMEventList::eAddTarget::AddTimer);
-        break;
-    default:
-        mList->setAddTarget(SMEventList::eAddTarget::AddEvent);
-        break;
-    }
+    mList->ctrlButtonAddParam()->setEnabled((kind == eRowKind::Event) || (kind == eRowKind::Param));
 
     if (hasEntry == false)
     {

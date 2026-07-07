@@ -10,42 +10,37 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMMethodList.cpp
+ *  \file        lusan/view/sm/SMIncludeList.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Methods page — methods and parameters list panel.
+ *  \brief       Lusan application, FSM Includes page — include list panel.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMMethodList.hpp"
+#include "lusan/view/sm/SMIncludeList.hpp"
 
-#include <QAction>
 #include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QMenu>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
-SMMethodList::SMMethodList(QWidget* parent /*= nullptr*/)
+SMIncludeList::SMIncludeList(QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
     , mTable            (nullptr)
     , mButtonAdd        (nullptr)
     , mButtonInsert     (nullptr)
     , mButtonRemove     (nullptr)
-    , mButtonAddParam   (nullptr)
     , mButtonMoveUp     (nullptr)
     , mButtonMoveDown   (nullptr)
-    , mActNewTrigger    (nullptr)
-    , mActNewAction     (nullptr)
-    , mActNewCondition  (nullptr)
+    , mButtonUpdate     (nullptr)
 {
     buildUi();
 }
 
-QToolButton* SMMethodList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
+QToolButton* SMIncludeList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
 {
     QToolButton* button = new QToolButton(parent);
     button->setMaximumSize(24, 24);
@@ -58,12 +53,12 @@ QToolButton* SMMethodList::createToolButton(QWidget* parent, const QString& icon
     return button;
 }
 
-void SMMethodList::buildUi()
+void SMIncludeList::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
 
-    QGroupBox* group = new QGroupBox(tr("Methods:"), this);
+    QGroupBox* group = new QGroupBox(tr("Include Files:"), this);
     QVBoxLayout* groupLayout = new QVBoxLayout(group);
 
     QWidget* toolbar = new QWidget(group);
@@ -71,31 +66,9 @@ void SMMethodList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new method (a trigger by default)"), QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected entry")            , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new entry above"), QKeySequence(Qt::CTRL | Qt::Key_T));
-
-    // The Add split button: a plain click creates the default (a trigger method), the
-    // drop-down offers the three method kinds explicitly. Adding a parameter is a separate
-    // toolbar button, never an Add drop-down entry.
-    mActNewTrigger   = new QAction(tr("Trigger")  , this);
-    mActNewAction    = new QAction(tr("Action")   , this);
-    mActNewCondition = new QAction(tr("Condition"), this);
-    QMenu* addMenu = new QMenu(mButtonAdd);
-    addMenu->addAction(mActNewTrigger);
-    addMenu->addAction(mActNewAction);
-    addMenu->addAction(mActNewCondition);
-    mButtonAdd->setMenu(addMenu);
-    mButtonAdd->setPopupMode(QToolButton::MenuButtonPopup);
-    // A smaller icon plus extra width give the drop-down arrow room so it never crowds the icon.
-    mButtonAdd->setIconSize(QSize(20, 20));
-    mButtonAdd->setMaximumSize(44, 24);
-
-    QFrame* sepParam = new QFrame(toolbar);
-    sepParam->setFrameShape(QFrame::VLine);
-    sepParam->setMaximumSize(24, 24);
-
-    mButtonAddParam = createToolButton(toolbar, QStringLiteral(":/icons/field add"), tr("Create and add new parameter to the selected method"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new include entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected include entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
+    mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new include entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
@@ -104,80 +77,76 @@ void SMMethodList::buildUi()
     mButtonMoveUp   = createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
     mButtonMoveDown = createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
 
+    QFrame* sepUpdate = new QFrame(toolbar);
+    sepUpdate->setFrameShape(QFrame::VLine);
+    sepUpdate->setMaximumSize(24, 24);
+
+    mButtonUpdate = createToolButton(toolbar, QStringLiteral(":/icons/Update Item"), tr("Refresh the type, name and version from the include files."), QKeySequence(Qt::CTRL | Qt::Key_R));
+
     toolbarLayout->addWidget(mButtonAdd);
     toolbarLayout->addWidget(mButtonRemove);
     toolbarLayout->addWidget(mButtonInsert);
-    toolbarLayout->addWidget(sepParam);
-    toolbarLayout->addWidget(mButtonAddParam);
     toolbarLayout->addWidget(sep);
     toolbarLayout->addWidget(mButtonMoveUp);
     toolbarLayout->addWidget(mButtonMoveDown);
+    toolbarLayout->addWidget(sepUpdate);
+    toolbarLayout->addWidget(mButtonUpdate);
     toolbarLayout->addStretch(1);
 
     mTable = new QTreeWidget(group);
     mTable->setCursor(Qt::PointingHandCursor);
     mTable->setMouseTracking(true);
+    mTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     mTable->setDropIndicatorShown(false);
     mTable->setIconSize(QSize(16, 16));
     mTable->setSortingEnabled(false);
-    mTable->setAnimated(true);
+    mTable->setRootIsDecorated(false);
     mTable->setAllColumnsShowFocus(false);
-    mTable->setColumnCount(3);
-    mTable->header()->setCascadingSectionResizes(false);
+    mTable->setColumnCount(4);
+    mTable->header()->setStretchLastSection(false);
     mTable->header()->setMinimumSectionSize(50);
-    mTable->setHeaderLabels(QStringList{ tr("Name:"), tr("Type:"), tr("Value:") });
+    mTable->setHeaderLabels(QStringList{ tr("Location:"), tr("Type:"), tr("Name:"), tr("Version:") });
+    mTable->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+    mTable->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    mTable->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    mTable->header()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
 
     groupLayout->addWidget(toolbar);
     groupLayout->addWidget(mTable);
     root->addWidget(group);
 }
 
-QTreeWidget* SMMethodList::ctrlTableList() const
+QTreeWidget* SMIncludeList::ctrlTableList() const
 {
     return mTable;
 }
 
-QToolButton* SMMethodList::ctrlButtonAdd() const
+QToolButton* SMIncludeList::ctrlButtonAdd() const
 {
     return mButtonAdd;
 }
 
-QToolButton* SMMethodList::ctrlButtonInsert() const
+QToolButton* SMIncludeList::ctrlButtonInsert() const
 {
     return mButtonInsert;
 }
 
-QToolButton* SMMethodList::ctrlButtonRemove() const
+QToolButton* SMIncludeList::ctrlButtonRemove() const
 {
     return mButtonRemove;
 }
 
-QToolButton* SMMethodList::ctrlButtonMoveUp() const
+QToolButton* SMIncludeList::ctrlButtonMoveUp() const
 {
     return mButtonMoveUp;
 }
 
-QToolButton* SMMethodList::ctrlButtonMoveDown() const
+QToolButton* SMIncludeList::ctrlButtonMoveDown() const
 {
     return mButtonMoveDown;
 }
 
-QToolButton* SMMethodList::ctrlButtonAddParam() const
+QToolButton* SMIncludeList::ctrlButtonUpdate() const
 {
-    return mButtonAddParam;
-}
-
-QAction* SMMethodList::actionNewTrigger() const
-{
-    return mActNewTrigger;
-}
-
-QAction* SMMethodList::actionNewAction() const
-{
-    return mActNewAction;
-}
-
-QAction* SMMethodList::actionNewCondition() const
-{
-    return mActNewCondition;
+    return mButtonUpdate;
 }

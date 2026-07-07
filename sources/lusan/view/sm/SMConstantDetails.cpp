@@ -21,11 +21,13 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
+#include <QStringListModel>
 #include <QVBoxLayout>
 
 SMConstantDetails::SMConstantDetails(QWidget* parent /*= nullptr*/)
@@ -33,6 +35,8 @@ SMConstantDetails::SMConstantDetails(QWidget* parent /*= nullptr*/)
     , mName             (nullptr)
     , mTypes            (nullptr)
     , mValue            (nullptr)
+    , mValueCompleter   (nullptr)
+    , mValueChoices     (nullptr)
     , mValueHint        (nullptr)
     , mDescription      (nullptr)
     , mDeprecated       (nullptr)
@@ -61,8 +65,14 @@ void SMConstantDetails::buildUi()
     QVBoxLayout* valueCellLayout = new QVBoxLayout(valueCell);
     valueCellLayout->setContentsMargins(0, 0, 0, 0);
     valueCellLayout->setSpacing(2);
-    mValue = new QComboBox(valueCell);
-    mValue->setEditable(true);
+    mValue = new QLineEdit(valueCell);
+    mValueChoices = new QStringListModel(mValue);
+    mValueCompleter = new QCompleter(mValueChoices, mValue);
+    mValueCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+    // Unfiltered popup shows every enumerator once the user starts typing, replacing the
+    // picker role of the former editable combo box.
+    mValueCompleter->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
+    mValue->setCompleter(mValueCompleter);
     valueCellLayout->addWidget(mValue);
     mValueHint = new QLabel(valueCell);
     mValueHint->setStyleSheet(QStringLiteral("color: #c0392b;"));
@@ -94,7 +104,7 @@ QComboBox* SMConstantDetails::ctrlTypes() const
     return mTypes;
 }
 
-QComboBox* SMConstantDetails::ctrlValue() const
+QLineEdit* SMConstantDetails::ctrlValue() const
 {
     return mValue;
 }
@@ -119,4 +129,9 @@ void SMConstantDetails::showValueHint(const QString& reason)
     mValueHint->setText(reason);
     mValueHint->setVisible(reason.isEmpty() == false);
     mValue->setStyleSheet(reason.isEmpty() ? QString() : QStringLiteral("border: 1px solid #c0392b;"));
+}
+
+void SMConstantDetails::setValueChoices(const QStringList& choices)
+{
+    mValueChoices->setStringList(choices);
 }

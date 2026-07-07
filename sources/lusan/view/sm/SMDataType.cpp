@@ -38,6 +38,7 @@
 #include "lusan/view/sm/SMDataTypeFieldDetails.hpp"
 #include "lusan/view/sm/SMDataTypeList.hpp"
 
+#include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QEvent>
@@ -137,6 +138,10 @@ void SMDataType::setupSignals()
     connect(mList->ctrlButtonRemoveField() , &QToolButton::clicked            , this, &SMDataType::onRemoveFieldClicked);
     connect(mList->ctrlButtonMoveUp()      , &QToolButton::clicked            , this, &SMDataType::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown()    , &QToolButton::clicked            , this, &SMDataType::onMoveDownClicked);
+    connect(mList->actionNewStruct()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Structure); });
+    connect(mList->actionNewEnum()         , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Enumeration); });
+    connect(mList->actionNewImport()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Imported); });
+    connect(mList->actionNewContainer()    , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Container); });
 
     connect(mDetails->ctrlName()            , &QLineEdit::editingFinished      , this, &SMDataType::onNameCommitted);
     connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked           , this, &SMDataType::onStructSelected);
@@ -691,8 +696,13 @@ QString SMDataType::genFieldName(const DataTypeCustom* dataType) const
 
 void SMDataType::onAddClicked()
 {
+    addNewType(DataTypeBase::eCategory::Structure);
+}
+
+void SMDataType::addNewType(DataTypeBase::eCategory category)
+{
     const QString name = genTypeName();
-    DataTypeCustom* dataType = mModel.createDataType(name, DataTypeBase::eCategory::Structure);
+    DataTypeCustom* dataType = mModel.createDataType(name, category);
     if (dataType != nullptr)
     {
         selectDataType(dataType->getId());

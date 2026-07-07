@@ -117,8 +117,8 @@ void SMConstant::setupSignals()
 
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMConstant::onNameCommitted);
     connect(mDetails->ctrlTypes()  , &QComboBox::currentIndexChanged, this, &SMConstant::onTypeChanged);
-    connect(mDetails->ctrlValue()->lineEdit(), &QLineEdit::editingFinished, this, &SMConstant::onValueCommitted);
-    connect(mDetails->ctrlValue()  , QOverload<int>::of(&QComboBox::activated), this, &SMConstant::onValueCommitted);
+    connect(mDetails->ctrlValue()  , &QLineEdit::editingFinished    , this, &SMConstant::onValueCommitted);
+    connect(mDetails->ctrlValue()  , &QLineEdit::textChanged        , this, &SMConstant::onValueTextChanged);
     connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMConstant::onDeprecatedToggled);
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMConstant::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
@@ -180,9 +180,10 @@ void SMConstant::populateTypeCombo()
 
 void SMConstant::updateValueControl(const ConstantEntry* entry)
 {
-    QComboBox* value = mDetails->ctrlValue();
+    QLineEdit* value = mDetails->ctrlValue();
     const QSignalBlocker blocker(value);
     value->clear();
+    mDetails->setValueChoices(QStringList());
 
     if (entry == nullptr)
     {
@@ -213,13 +214,16 @@ void SMConstant::updateValueControl(const ConstantEntry* entry)
 
     if ((custom != nullptr) && (custom->getCategory() == DataTypeBase::eCategory::Enumeration))
     {
+        QStringList choices;
         for (const EnumEntry& field : static_cast<DataTypeEnum*>(custom)->getElements())
         {
-            value->addItem(field.getName());
+            choices.append(field.getName());
         }
+
+        mDetails->setValueChoices(choices);
     }
 
-    value->setCurrentText(entry->getValue());
+    value->setText(entry->getValue());
     updateValueValidation(typeName, entry->getValue());
 }
 
@@ -464,11 +468,29 @@ void SMConstant::onValueCommitted()
     if (id == 0)
         return;
 
-    mModel.setValue(id, mDetails->ctrlValue()->currentText());
+    mModel.setValue(id, mDetails->ctrlValue()->text());
     ConstantEntry* entry = mModel.findConstant(id);
     if (entry != nullptr)
     {
         updateValueValidation(entry->getType(), entry->getValue());
+    }
+}
+
+void SMConstant::onValueTextChanged(const QString& text)
+{
+    ConstantEntry* entry = mModel.findConstant(currentConstantId());
+    if (entry == nullptr)
+        return;
+
+    const QString reason = valueValidationReason(entry->getType(), text);
+    mDetails->showValueHint(reason);
+
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    if (item != nullptr)
+    {
+        item->setText(2, text);
+        item->setIcon(2, reason.isEmpty() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
+        item->setToolTip(2, reason);
     }
 }
 

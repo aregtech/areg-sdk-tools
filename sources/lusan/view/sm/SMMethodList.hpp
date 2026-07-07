@@ -30,41 +30,34 @@ class QTreeWidget;
 /**
  * \brief   The list half of the Methods page: one 3-column tree (Name/Type/Value) whose
  *          top-level rows are methods and whose child rows are the method parameters, under a
- *          single toolbar. The Add button is a split button: its plain click creates the kind
- *          matching the current selection (a method, or a parameter when a method/parameter is
- *          selected), while its drop-down always offers New Method / New Parameter explicitly.
- *          The panel is presentation only; the SMMethod page wires the buttons and fills the
- *          tree.
+ *          single toolbar. The Add split button always adds a method: a plain click creates a
+ *          trigger (the default), and its drop-down offers Trigger / Action / Condition
+ *          explicitly. Adding a parameter is a separate toolbar button, enabled only while a
+ *          method or parameter is selected. The panel is presentation only; the SMMethod page
+ *          wires the buttons and fills the tree.
  **/
 class SMMethodList : public QWidget
 {
     Q_OBJECT
 
 public:
-    //!< The entry kind a plain click on the Add button creates; drives its icon and tooltip.
-    enum class eAddTarget : int
-    {
-          AddMethod //!< Plain click adds a new method.
-        , AddParam  //!< Plain click adds a new parameter to the selected method.
-    };
-
-public:
     explicit SMMethodList(QWidget* parent = nullptr);
 
     QTreeWidget* ctrlTableList() const;
 
-    //!< The split Add button; the drop-down actions are actionNewMethod/Param.
+    //!< The split Add button; the drop-down actions are actionNewTrigger/Action/Condition.
     QToolButton* ctrlButtonAdd() const;
     QToolButton* ctrlButtonInsert() const;
     QToolButton* ctrlButtonRemove() const;
+    //!< The separate "add parameter" button (enabled only when a method/parameter is selected).
+    QToolButton* ctrlButtonAddParam() const;
     QToolButton* ctrlButtonMoveUp() const;
     QToolButton* ctrlButtonMoveDown() const;
 
-    QAction* actionNewMethod() const;
-    QAction* actionNewParam() const;
-
-    //!< Switches what a plain click on the Add button creates (icon + tooltip follow).
-    void setAddTarget(eAddTarget target);
+    //!< The Add drop-down entries, one per method kind (default click = Trigger).
+    QAction* actionNewTrigger() const;
+    QAction* actionNewAction() const;
+    QAction* actionNewCondition() const;
 
 private:
     void buildUi();
@@ -72,13 +65,15 @@ private:
 
 private:
     QTreeWidget*        mTable;         //!< The methods/parameters tree.
-    QToolButton*        mButtonAdd;     //!< Split button: context-aware create + drop-down.
+    QToolButton*        mButtonAdd;     //!< Split button: add a method + method-kind drop-down.
     QToolButton*        mButtonInsert;  //!< Inserts a sibling above the selection.
     QToolButton*        mButtonRemove;  //!< Deletes the selected entry.
+    QToolButton*        mButtonAddParam;//!< Adds a parameter to the selected method.
     QToolButton*        mButtonMoveUp;  //!< Moves the selection up within its list.
     QToolButton*        mButtonMoveDown;//!< Moves the selection down within its list.
-    QAction*            mActNewMethod;  //!< Drop-down: create a new method.
-    QAction*            mActNewParam;   //!< Drop-down: create a new parameter.
+    QAction*            mActNewTrigger; //!< Drop-down: create a new trigger method.
+    QAction*            mActNewAction;  //!< Drop-down: create a new action method.
+    QAction*            mActNewCondition;//!< Drop-down: create a new condition method.
 };
 
 #endif  // LUSAN_VIEW_SM_SMMETHODLIST_HPP

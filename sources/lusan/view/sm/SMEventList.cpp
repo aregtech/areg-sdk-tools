@@ -38,11 +38,11 @@ SMEventList::SMEventList(QWidget* parent /*= nullptr*/)
     , mButtonAdd        (nullptr)
     , mButtonInsert     (nullptr)
     , mButtonRemove     (nullptr)
+    , mButtonAddParam   (nullptr)
     , mButtonMoveUp     (nullptr)
     , mButtonMoveDown   (nullptr)
     , mActNewEvent      (nullptr)
     , mActNewTimer      (nullptr)
-    , mActNewParam      (nullptr)
 {
     buildUi();
 }
@@ -73,24 +73,28 @@ void SMEventList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new event entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create a new event or timer")      , QKeySequence(Qt::CTRL | Qt::Key_A));
     mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected entry")            , QKeySequence(Qt::CTRL | Qt::Key_D));
     mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new entry above"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
-    // The Add split button: plain click creates the selection-matched kind, the drop-down
-    // always offers all three creations so no kind ever requires selecting a group first.
+    // The Add button always opens a menu (no default kind): an event and a timer are unrelated
+    // stimuli, so the user always chooses. Adding a parameter is a separate toolbar button.
     mActNewEvent = new QAction(QIcon(QStringLiteral(":/icons/sm-event")), tr("New Event"), this);
     mActNewTimer = new QAction(QIcon(QStringLiteral(":/icons/sm-timer")), tr("New Timer"), this);
-    mActNewParam = new QAction(QIcon(QStringLiteral(":/icons/field add")), tr("New Parameter"), this);
     QMenu* addMenu = new QMenu(mButtonAdd);
     addMenu->addAction(mActNewEvent);
     addMenu->addAction(mActNewTimer);
-    addMenu->addSeparator();
-    addMenu->addAction(mActNewParam);
     mButtonAdd->setMenu(addMenu);
-    mButtonAdd->setPopupMode(QToolButton::MenuButtonPopup);
-    // The arrow zone needs extra width on top of the icon-sized button.
-    mButtonAdd->setMaximumSize(38, 24);
+    mButtonAdd->setPopupMode(QToolButton::InstantPopup);
+    // A smaller icon plus extra width give the drop-down arrow room so it never crowds the icon.
+    mButtonAdd->setIconSize(QSize(20, 20));
+    mButtonAdd->setMaximumSize(44, 24);
+
+    QFrame* sepParam = new QFrame(toolbar);
+    sepParam->setFrameShape(QFrame::VLine);
+    sepParam->setMaximumSize(24, 24);
+
+    mButtonAddParam = createToolButton(toolbar, QStringLiteral(":/icons/field add"), tr("Create and add new parameter to the selected event"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
 
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
@@ -102,6 +106,8 @@ void SMEventList::buildUi()
     toolbarLayout->addWidget(mButtonAdd);
     toolbarLayout->addWidget(mButtonRemove);
     toolbarLayout->addWidget(mButtonInsert);
+    toolbarLayout->addWidget(sepParam);
+    toolbarLayout->addWidget(mButtonAddParam);
     toolbarLayout->addWidget(sep);
     toolbarLayout->addWidget(mButtonMoveUp);
     toolbarLayout->addWidget(mButtonMoveDown);
@@ -122,8 +128,14 @@ void SMEventList::buildUi()
 
     mGroupEvents = new QTreeWidgetItem(mTable);
     mGroupEvents->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    mGroupEvents->setIcon(0, QIcon(QStringLiteral(":/icons/sm-event")));
+    // Always show the expand/collapse indicator on the group rows, even while empty, so they
+    // read as expandable containers rather than leaf rows.
+    mGroupEvents->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
     mGroupTimers = new QTreeWidgetItem(mTable);
     mGroupTimers->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    mGroupTimers->setIcon(0, QIcon(QStringLiteral(":/icons/sm-timer")));
+    mGroupTimers->setChildIndicatorPolicy(QTreeWidgetItem::ShowIndicator);
     updateGroups(0, 0);
     mGroupEvents->setExpanded(true);
     mGroupTimers->setExpanded(true);
@@ -152,26 +164,6 @@ void SMEventList::updateGroups(int eventCount, int timerCount)
     mGroupTimers->setText(0, tr("Timers (%1)").arg(timerCount));
     decorateGroup(mGroupEvents);
     decorateGroup(mGroupTimers);
-}
-
-void SMEventList::setAddTarget(eAddTarget target)
-{
-    switch (target)
-    {
-    case eAddTarget::AddParam:
-        mButtonAdd->setIcon(QIcon(QStringLiteral(":/icons/field add")));
-        mButtonAdd->setToolTip(tr("Create and add new parameter entry"));
-        break;
-    case eAddTarget::AddTimer:
-        mButtonAdd->setIcon(QIcon(QStringLiteral(":/icons/entry add")));
-        mButtonAdd->setToolTip(tr("Create and add new timer entry"));
-        break;
-    case eAddTarget::AddEvent:
-    default:
-        mButtonAdd->setIcon(QIcon(QStringLiteral(":/icons/entry add")));
-        mButtonAdd->setToolTip(tr("Create and add new event entry"));
-        break;
-    }
 }
 
 void SMEventList::changeEvent(QEvent* event)
@@ -215,6 +207,11 @@ QToolButton* SMEventList::ctrlButtonRemove() const
     return mButtonRemove;
 }
 
+QToolButton* SMEventList::ctrlButtonAddParam() const
+{
+    return mButtonAddParam;
+}
+
 QToolButton* SMEventList::ctrlButtonMoveUp() const
 {
     return mButtonMoveUp;
@@ -233,9 +230,4 @@ QAction* SMEventList::actionNewEvent() const
 QAction* SMEventList::actionNewTimer() const
 {
     return mActNewTimer;
-}
-
-QAction* SMEventList::actionNewParam() const
-{
-    return mActNewParam;
 }

@@ -1,5 +1,5 @@
-#ifndef LUSAN_VIEW_SM_SMDATATYPELIST_HPP
-#define LUSAN_VIEW_SM_SMDATATYPELIST_HPP
+#ifndef LUSAN_VIEW_SM_SMINCLUDELIST_HPP
+#define LUSAN_VIEW_SM_SMINCLUDELIST_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,10 +12,10 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMDataTypeList.hpp
+ *  \file        lusan/view/sm/SMIncludeList.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Data Types page — data type list panel.
+ *  \brief       Lusan application, FSM Includes page — include list panel.
  *
  ************************************************************************/
 
@@ -23,22 +23,20 @@
 #include <QString>
 #include <QWidget>
 
-class QAction;
-class QMenu;
 class QToolButton;
 class QTreeWidget;
 
 /**
- * \brief   The data type list panel, code-built to mirror SIDataTypeList: a
- *          "Data Types List:" group holding the add/insert/delete + field add/insert/delete
- *          + move up/down toolbar above a 3-column tree (Name/Data Type/Default Value).
+ * \brief   The include list panel, code-built to mirror the Service Interface Includes list:
+ *          an "Include Files:" group holding the add/insert/delete + move up/down toolbar
+ *          above a single-column flat list of include locations.
  **/
-class SMDataTypeList : public QWidget
+class SMIncludeList : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit SMDataTypeList(QWidget* parent = nullptr);
+    explicit SMIncludeList(QWidget* parent = nullptr);
 
     QTreeWidget* ctrlTableList() const;
 
@@ -47,36 +45,20 @@ public:
     QToolButton* ctrlButtonRemove() const;
     QToolButton* ctrlButtonMoveUp() const;
     QToolButton* ctrlButtonMoveDown() const;
-    QToolButton* ctrlButtonAddField() const;
-    QToolButton* ctrlButtonInsertField() const;
-    QToolButton* ctrlButtonRemoveField() const;
-
-    //!< The Add drop-down entries, one per data type category (default click = Structure).
-    QAction* actionNewStruct() const;
-    QAction* actionNewEnum() const;
-    QAction* actionNewImport() const;
-    QAction* actionNewContainer() const;
+    QToolButton* ctrlButtonUpdate() const;
 
 private:
     void buildUi();
     static QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
-    //!< Attaches the type menu to the Add split button and applies the shared arrow-friendly sizing.
-    static void decorateAddButton(QToolButton* button, QMenu* menu);
 
 private:
     QTreeWidget*    mTable;
     QToolButton*    mButtonAdd;
     QToolButton*    mButtonInsert;
     QToolButton*    mButtonRemove;
-    QToolButton*    mButtonAddField;
-    QToolButton*    mButtonInsertField;
-    QToolButton*    mButtonRemoveField;
     QToolButton*    mButtonMoveUp;
     QToolButton*    mButtonMoveDown;
-    QAction*        mActNewStruct;
-    QAction*        mActNewEnum;
-    QAction*        mActNewImport;
-    QAction*        mActNewContainer;
+    QToolButton*    mButtonUpdate;
 };
 
-#endif  // LUSAN_VIEW_SM_SMDATATYPELIST_HPP
+#endif  // LUSAN_VIEW_SM_SMINCLUDELIST_HPP

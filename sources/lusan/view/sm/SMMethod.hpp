@@ -22,12 +22,13 @@
 #include <QScrollArea>
 #include <cstdint>
 
+#include "lusan/data/sm/SMMethodData.hpp"
+
 class DocumentElem;
 class QEvent;
 class QTreeWidgetItem;
 class SMEventParamDetails;
 class SMMethodDetails;
-class SMMethodEntry;
 class SMMethodList;
 class SMMethodModel;
 
@@ -107,7 +108,7 @@ private:
     void buildUi();
     void setupSignals();
 
-    void addNewMethod();
+    void addNewMethod(SMMethodEntry::eMethodType type);
     void addNewParam();
 
     //!< Rebuilds the tree from the live model and restores the selection by ID.

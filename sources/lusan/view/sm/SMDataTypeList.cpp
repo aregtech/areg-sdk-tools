@@ -19,10 +19,12 @@
 
 #include "lusan/view/sm/SMDataTypeList.hpp"
 
+#include <QAction>
 #include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QMenu>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QVBoxLayout>
@@ -38,8 +40,22 @@ SMDataTypeList::SMDataTypeList(QWidget* parent /*= nullptr*/)
     , mButtonRemoveField    (nullptr)
     , mButtonMoveUp         (nullptr)
     , mButtonMoveDown       (nullptr)
+    , mActNewStruct         (nullptr)
+    , mActNewEnum           (nullptr)
+    , mActNewImport         (nullptr)
+    , mActNewContainer      (nullptr)
 {
     buildUi();
+}
+
+void SMDataTypeList::decorateAddButton(QToolButton* button, QMenu* menu)
+{
+    button->setMenu(menu);
+    button->setPopupMode(QToolButton::MenuButtonPopup);
+    // A smaller icon plus extra width give the drop-down arrow its own breathing room, so it
+    // never crowds the icon (kept consistent across the Data Type / Method / Event toolbars).
+    button->setIconSize(QSize(20, 20));
+    button->setMaximumSize(44, 24);
 }
 
 QToolButton* SMDataTypeList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
@@ -68,9 +84,22 @@ void SMDataTypeList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new data type entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new data type entry (a structure by default)"), QKeySequence(Qt::CTRL | Qt::Key_A));
     mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected data type entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
     mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new data type entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
+
+    // The Add split button: a plain click creates the default (a structure), the drop-down
+    // offers the four data type categories explicitly.
+    mActNewStruct    = new QAction(QIcon(QStringLiteral(":/icons/data type structure")), tr("Structure")  , this);
+    mActNewEnum      = new QAction(QIcon(QStringLiteral(":/icons/data type enum"))     , tr("Enumeration"), this);
+    mActNewImport    = new QAction(QIcon(QStringLiteral(":/icons/data type import"))   , tr("Imported")   , this);
+    mActNewContainer = new QAction(QIcon(QStringLiteral(":/icons/data type container")), tr("Container")  , this);
+    QMenu* addMenu = new QMenu(mButtonAdd);
+    addMenu->addAction(mActNewStruct);
+    addMenu->addAction(mActNewEnum);
+    addMenu->addAction(mActNewImport);
+    addMenu->addAction(mActNewContainer);
+    decorateAddButton(mButtonAdd, addMenu);
 
     QFrame* sep1 = new QFrame(toolbar);
     sep1->setFrameShape(QFrame::VLine);
@@ -161,4 +190,24 @@ QToolButton* SMDataTypeList::ctrlButtonInsertField() const
 QToolButton* SMDataTypeList::ctrlButtonRemoveField() const
 {
     return mButtonRemoveField;
+}
+
+QAction* SMDataTypeList::actionNewStruct() const
+{
+    return mActNewStruct;
+}
+
+QAction* SMDataTypeList::actionNewEnum() const
+{
+    return mActNewEnum;
+}
+
+QAction* SMDataTypeList::actionNewImport() const
+{
+    return mActNewImport;
+}
+
+QAction* SMDataTypeList::actionNewContainer() const
+{
+    return mActNewContainer;
 }
