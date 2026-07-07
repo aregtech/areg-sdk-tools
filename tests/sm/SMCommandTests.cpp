@@ -36,6 +36,8 @@
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/sm/SMEventModel.hpp"
+#include "lusan/model/sm/SMTimerModel.hpp"
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeImported.hpp"
@@ -497,6 +499,129 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Scenario G (SM-09): Events page model (SMEventModel) — event and payload-parameter
+// lifecycle, and Timers page model (SMTimerModel) — timer lifecycle, both through the same
+// undo stack, plus the shared stimulus name-space collision check (StateMachineData::
+// findStimulus) that the pages use for live "name already used" feedback.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testEventTimerLifecycle()
+    {
+        StateMachineModel model;
+        SMEventModel&     ev = model.getEventModel();
+        SMTimerModel&     tm = model.getTimerModel();
+
+        QStringList checkpoints;
+        checkpoints << serialize(model.getData());
+        auto snap = [&]() { checkpoints << serialize(model.getData()); };
+
+        SMEventEntry* started = ev.createEvent("Started");
+        CHECK(started != nullptr);
+        snap();
+
+        MethodParameter* speed = ev.createParam(started, "speed");
+        CHECK(speed != nullptr);
+        const uint32_t speedId = speed->getId();
+        snap();
+
+        ev.setParamType(started, speedId, "uint32");
+        snap();
+        ev.setParamDefault(started, speedId, true, "0");
+        snap();
+        MethodParameter* speedNow = ev.findParam(started, speedId);
+        CHECK((speedNow != nullptr) && speedNow->hasDefault() && (speedNow->getValue() == QStringLiteral("0")));
+
+        MethodParameter* code = ev.createParam(started, "code");
+        CHECK(code != nullptr);
+        const uint32_t codeId = code->getId();
+        snap();
+
+        ev.setDescription(started->getId(), "Machine started");
+        snap();
+
+        SMEventEntry* stopped = ev.createEvent("Stopped");
+        CHECK(stopped != nullptr);
+        snap();
+
+        ev.renameEvent(stopped->getId(), "Halted");
+        CHECK(ev.findEvent("Halted") == stopped);
+        snap();
+
+        ev.swapEvents(started->getId(), stopped->getId());
+        CHECK(ev.findIndex(stopped) == 0);
+        snap();
+
+        ev.deleteParam(started, codeId);
+        CHECK(ev.getParamCount(started) == 1);
+        snap();
+
+        SMTimerEntry* t1 = tm.createTimer("T1");
+        CHECK(t1 != nullptr);
+        snap();
+        tm.setTimeout(t1->getId(), 500u);
+        snap();
+        tm.setRepeat(t1->getId(), 3u);
+        snap();
+
+        SMTimerEntry* t2 = tm.createTimer("T2");
+        CHECK(t2 != nullptr);
+        snap();
+        // The Continuous checkbox writes Repeat=0 (spec 6.10); 0xFFFFFFFF is also continuous.
+        tm.setRepeat(t2->getId(), 0u);
+        CHECK(tm.findTimer(t2->getId())->isContinuous());
+        snap();
+        tm.setDescription(t2->getId(), "Heartbeat");
+        snap();
+
+        tm.swapTimers(t1->getId(), t2->getId());
+        CHECK(tm.findIndex(t2->getId()) == 0);
+        snap();
+
+        SMTimerEntry* t0 = tm.insertTimer(0, "T0");
+        CHECK((t0 != nullptr) && (tm.findIndex(t0->getId()) == 0));
+        snap();
+
+        tm.deleteTimer(t1->getId());
+        CHECK(tm.findTimer("T1") == nullptr);
+        snap();
+
+        // Shared stimulus name space (spec 6.10): an event and a timer must not share a name.
+        CHECK(model.getData().isStimulusName("Halted"));
+        CHECK(model.getData().isStimulusName("T2"));
+        CHECK(model.getData().isStimulusName("NoSuchStimulus") == false);
+        const StateMachineData::StimulusRef eventRef = model.getData().findStimulus("Halted");
+        CHECK(eventRef.type == StateMachineData::eStimulusType::Event);
+        const StateMachineData::StimulusRef timerRef = model.getData().findStimulus("T2");
+        CHECK(timerRef.type == StateMachineData::eStimulusType::Timer);
+
+        const int steps = static_cast<int>(checkpoints.size()) - 1;
+        const QString built = serialize(model.getData());
+
+        bool undoExact = true;
+        for (int k = steps; k >= 1; --k)
+        {
+            model.getUndoStack().undo();
+            undoExact = undoExact && (serialize(model.getData()) == checkpoints[k - 1]);
+        }
+        CHECK(undoExact);
+        CHECK(serialize(model.getData()) == checkpoints[0]);
+        CHECK(ev.getEventCount() == 0);
+        CHECK(tm.getTimerCount() == 0);
+
+        bool redoExact = true;
+        for (int k = 1; k <= steps; ++k)
+        {
+            model.getUndoStack().redo();
+            redoExact = redoExact && (serialize(model.getData()) == checkpoints[k]);
+        }
+        CHECK(redoExact);
+        CHECK(serialize(model.getData()) == built);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -509,6 +634,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testDeepHistory();
     testDataTypeLifecycle();
     testContainerLifecycle();
+    testEventTimerLifecycle();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

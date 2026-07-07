@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMEventData.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
@@ -140,6 +141,26 @@ bool SMEventEntry::isValid() const
     return (getName().isEmpty() == false);
 }
 
+QIcon SMEventEntry::getIcon(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName)
+        ? NELusanCommon::iconEvent(NELusanCommon::SizeSmall)
+        : QIcon();
+}
+
+QString SMEventEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayValue:
+        return (getElementCount() > 0) ? QStringLiteral("%1 param(s)").arg(getElementCount()) : QString();
+    default:
+        return QString();
+    }
+}
+
 bool SMEventEntry::readFromXml(QXmlStreamReader& xml)
 {
     if (xml.name() != XmlSM::xmlSMElementEvent)
@@ -254,6 +275,12 @@ SMEventEntry* SMEventData::createEvent(const QString& name)
 SMEventEntry* SMEventData::findEvent(const QString& name) const
 {
     SMEventEntry* const* found = findElement(name);
+    return (found != nullptr) ? *found : nullptr;
+}
+
+SMEventEntry* SMEventData::findEvent(uint32_t id) const
+{
+    SMEventEntry* const* found = findElement(id);
     return (found != nullptr) ? *found : nullptr;
 }
 

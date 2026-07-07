@@ -35,6 +35,8 @@ StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     , mOverviewModel (*this)
     , mDataTypeModel (*this)
     , mAttributeModel(*this)
+    , mEventModel    (*this)
+    , mTimerModel    (*this)
     , mConstantModel (*this)
     , mOpenSuccess   (false)
 {

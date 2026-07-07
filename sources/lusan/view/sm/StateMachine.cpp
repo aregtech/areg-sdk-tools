@@ -22,6 +22,7 @@
 #include "lusan/view/sm/SMAttribute.hpp"
 #include "lusan/view/sm/SMConstant.hpp"
 #include "lusan/view/sm/SMDataType.hpp"
+#include "lusan/view/sm/SMEvent.hpp"
 #include "lusan/view/sm/SMOverview.hpp"
 
 #include <QLabel>
@@ -251,6 +252,10 @@ void StateMachine::ensureTabInitialized(int index)
     else if (index == static_cast<int>(PageAttributes))
     {
         page = new SMAttribute(mModel.getAttributeModel(), &mTabWidget);
+    }
+    else if (index == static_cast<int>(PageEvents))
+    {
+        page = new SMEvent(mModel.getEventModel(), mModel.getTimerModel(), &mTabWidget);
     }
     else if (index == static_cast<int>(PageConstants))
     {

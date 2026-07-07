@@ -72,6 +72,11 @@ public:
     inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
+    /**
+     * \brief   True if the repeat count means "continuous" (0 or 0xFFFFFFFF, spec 6.10).
+     **/
+    inline bool isContinuous() const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -79,6 +84,18 @@ public:
     bool isValid() const override;
     bool readFromXml(QXmlStreamReader& xml) override;
     void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -158,6 +175,11 @@ inline const QString& SMTimerEntry::getDescription() const
 inline void SMTimerEntry::setDescription(const QString& description)
 {
     mDescription = description;
+}
+
+inline bool SMTimerEntry::isContinuous() const
+{
+    return (mRepeat == 0) || (mRepeat == 0xFFFFFFFFu);
 }
 
 #endif  // LUSAN_DATA_SM_SMTIMERDATA_HPP

@@ -23,16 +23,18 @@
 
 class QCheckBox;
 class QComboBox;
+class QCompleter;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
+class QStringListModel;
 
 /**
  * \brief   The selected attribute editor, code-built to mirror SIAttributeDetails: a
- *          "Details:" group with label-beside-control rows — Name, Type, Value (an editable
- *          combo: free text for a primitive type, a picker of enumerator names for an
- *          enumeration type, disabled for a structure/container/imported type — spec 6.9
- *          has no literal form for those), an inline validation hint below the value,
+ *          "Details:" group with label-beside-control rows Name, Type, Value (a plain
+ *          line edit: free text for a primitive type, completion of enumerator names for
+ *          an enumeration type, disabled for a structure/container/imported type
+ *          9 has no literal form for those), an inline validation hint below the value,
  *          Description, Deprecated.
  **/
 class SMAttributeDetails : public QWidget
@@ -44,7 +46,7 @@ public:
 
     QLineEdit* ctrlName() const;
     QComboBox* ctrlTypes() const;
-    QComboBox* ctrlValue() const;
+    QLineEdit* ctrlValue() const;
     QPlainTextEdit* ctrlDescription() const;
     QCheckBox* ctrlDeprecated() const;
     QLineEdit* ctrlDeprecateHint() const;
@@ -52,17 +54,23 @@ public:
     //!< Shows the given reason below the value control; an empty reason hides the hint.
     void showValueHint(const QString& reason);
 
+    //!< Sets the completion proposals of the value editor (the enumerator names of an
+    //!< enumeration type); an empty list turns the completion off.
+    void setValueChoices(const QStringList& choices);
+
 private:
     void buildUi();
 
 private:
-    QLineEdit*      mName;
-    QComboBox*      mTypes;
-    QComboBox*      mValue;
-    QLabel*         mValueHint;
-    QPlainTextEdit* mDescription;
-    QCheckBox*      mDeprecated;
-    QLineEdit*      mDeprecateHint;
+    QLineEdit*          mName;
+    QComboBox*          mTypes;
+    QLineEdit*          mValue;
+    QCompleter*         mValueCompleter;
+    QStringListModel*   mValueChoices;
+    QLabel*             mValueHint;
+    QPlainTextEdit*     mDescription;
+    QCheckBox*          mDeprecated;
+    QLineEdit*          mDeprecateHint;
 };
 
 #endif  // LUSAN_VIEW_SM_SMATTRIBUTEDETAILS_HPP

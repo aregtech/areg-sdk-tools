@@ -112,6 +112,10 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/sm/SMAttributeModel.cpp
+    ${LUSAN}/model/sm/SMEventModel.cpp
+    ${LUSAN}/model/sm/SMTimerModel.cpp
+    ${LUSAN}/model/sm/SMConstantModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
     # Container tests need the real basic-container catalog (Array/HashMap/Map/...): it is
