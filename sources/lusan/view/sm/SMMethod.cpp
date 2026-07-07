@@ -115,8 +115,10 @@ void SMMethod::setupSignals()
     connect(mList->ctrlButtonRemove()   , &QToolButton::clicked           , this, &SMMethod::onRemoveClicked);
     connect(mList->ctrlButtonMoveUp()   , &QToolButton::clicked           , this, &SMMethod::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown() , &QToolButton::clicked           , this, &SMMethod::onMoveDownClicked);
-    connect(mList->actionNewMethod()    , &QAction::triggered             , this, [this]() { addNewMethod(); });
-    connect(mList->actionNewParam()     , &QAction::triggered             , this, [this]() { addNewParam(); });
+    connect(mList->ctrlButtonAddParam() , &QToolButton::clicked           , this, [this]() { addNewParam(); });
+    connect(mList->actionNewTrigger()   , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Trigger); });
+    connect(mList->actionNewAction()    , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Action); });
+    connect(mList->actionNewCondition() , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Condition); });
 
     QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
     QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
@@ -417,8 +419,7 @@ void SMMethod::updateToolbar(eRowKind kind)
     mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonInsert()->setEnabled(hasEntry);
     mList->ctrlButtonRemove()->setEnabled(hasEntry);
-    mList->actionNewParam()->setEnabled(hasEntry);
-    mList->setAddTarget(hasEntry ? SMMethodList::eAddTarget::AddParam : SMMethodList::eAddTarget::AddMethod);
+    mList->ctrlButtonAddParam()->setEnabled(hasEntry);
 
     if (hasEntry == false)
     {
@@ -555,22 +556,15 @@ QString SMMethod::genParamName(const SMMethodEntry* method) const
 
 void SMMethod::onAddClicked()
 {
-    switch (currentKind())
-    {
-    case eRowKind::Method:
-    case eRowKind::Param:
-        addNewParam();
-        break;
-    default:
-        addNewMethod();
-        break;
-    }
+    // The Add button (and the Insert-key shortcut) always creates a method; parameters are
+    // added through the separate Add-Parameter toolbar button.
+    addNewMethod(SMMethodEntry::eMethodType::Trigger);
 }
 
-void SMMethod::addNewMethod()
+void SMMethod::addNewMethod(SMMethodEntry::eMethodType type)
 {
     const QString name = genMethodName();
-    SMMethodEntry* entry = mModel.createMethod(name, SMMethodEntry::eMethodType::Trigger);
+    SMMethodEntry* entry = mModel.createMethod(name, type);
     if (entry != nullptr)
     {
         selectMethod(entry->getId());

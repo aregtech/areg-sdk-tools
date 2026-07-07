@@ -32,23 +32,15 @@ class QTreeWidgetItem;
  * \brief   The list half of the Events page: one 3-column tree (Name/Type/Value) with two
  *          permanent, non-editable top-level group nodes — "Events" (children: events, whose
  *          children are their payload parameters) and "Timers" (children: timers) — under a
- *          single toolbar. The Add button is a split button: its plain click creates the
- *          entry kind matching the current selection, while its drop-down menu always offers
- *          New Event / New Timer / New Parameter explicitly. The panel is presentation only;
- *          the SMEvent page wires the buttons and fills the tree.
+ *          single toolbar. The Add button always opens a menu offering New Event / New Timer
+ *          (an event and a timer are unrelated stimuli, so there is no default kind). Adding a
+ *          payload parameter is a separate toolbar button, enabled only while an event or
+ *          parameter is selected. The panel is presentation only; the SMEvent page wires the
+ *          buttons and fills the tree.
  **/
 class SMEventList : public QWidget
 {
     Q_OBJECT
-
-public:
-    //!< The entry kind a plain click on the Add button creates; drives its icon and tooltip.
-    enum class eAddTarget : int
-    {
-          AddEvent  //!< Plain click adds a new event.
-        , AddTimer  //!< Plain click adds a new timer.
-        , AddParam  //!< Plain click adds a new payload parameter to the selected event.
-    };
 
 public:
     explicit SMEventList(QWidget* parent = nullptr);
@@ -60,20 +52,18 @@ public:
     //!< The permanent "Timers" group node (never deleted, never editable).
     QTreeWidgetItem* ctrlGroupTimers() const;
 
-    //!< The split Add button; the drop-down actions are actionNewEvent/Timer/Param.
+    //!< The Add button; opens the New Event / New Timer drop-down menu.
     QToolButton* ctrlButtonAdd() const;
     QToolButton* ctrlButtonInsert() const;
     QToolButton* ctrlButtonRemove() const;
+    //!< The separate "add parameter" button (enabled only when an event/parameter is selected).
+    QToolButton* ctrlButtonAddParam() const;
     QToolButton* ctrlButtonMoveUp() const;
     QToolButton* ctrlButtonMoveDown() const;
 
-    //!< The Add drop-down menu entries, always listed regardless of the button's default.
+    //!< The Add drop-down menu entries.
     QAction* actionNewEvent() const;
     QAction* actionNewTimer() const;
-    QAction* actionNewParam() const;
-
-    //!< Switches what a plain click on the Add button creates (icon + tooltip follow).
-    void setAddTarget(eAddTarget target);
 
     //!< Refreshes the group labels with live counts and re-applies the group row styling
     //!< (bold, full-row span, accent tint) — call whenever the tree is rebuilt.
@@ -93,14 +83,14 @@ private:
     QTreeWidget*        mTable;         //!< The grouped events/timers tree.
     QTreeWidgetItem*    mGroupEvents;   //!< Permanent "Events" group node.
     QTreeWidgetItem*    mGroupTimers;   //!< Permanent "Timers" group node.
-    QToolButton*        mButtonAdd;     //!< Split button: context-aware create + drop-down.
+    QToolButton*        mButtonAdd;     //!< Add button: opens the New Event / New Timer menu.
     QToolButton*        mButtonInsert;  //!< Inserts a sibling above the selection.
     QToolButton*        mButtonRemove;  //!< Deletes the selected entry.
+    QToolButton*        mButtonAddParam;//!< Adds a payload parameter to the selected event.
     QToolButton*        mButtonMoveUp;  //!< Moves the selection up within its group.
     QToolButton*        mButtonMoveDown;//!< Moves the selection down within its group.
     QAction*            mActNewEvent;   //!< Drop-down: create a new event.
     QAction*            mActNewTimer;   //!< Drop-down: create a new timer.
-    QAction*            mActNewParam;   //!< Drop-down: create a new payload parameter.
 };
 
 #endif  // LUSAN_VIEW_SM_SMEVENTLIST_HPP

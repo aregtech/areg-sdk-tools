@@ -141,6 +141,10 @@ private:
     QString genTypeName();
     QString genFieldName(const DataTypeCustom* dataType) const;
 
+    //!< Creates and selects a new data type of the given category (the Add split button and
+    //!< its category drop-down entries all route here).
+    void addNewType(DataTypeBase::eCategory category);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

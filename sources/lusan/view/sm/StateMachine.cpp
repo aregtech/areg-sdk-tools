@@ -23,6 +23,7 @@
 #include "lusan/view/sm/SMConstant.hpp"
 #include "lusan/view/sm/SMDataType.hpp"
 #include "lusan/view/sm/SMEvent.hpp"
+#include "lusan/view/sm/SMInclude.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/sm/SMOverview.hpp"
 
@@ -265,6 +266,10 @@ void StateMachine::ensureTabInitialized(int index)
     else if (index == static_cast<int>(PageConstants))
     {
         page = new SMConstant(mModel.getConstantModel(), &mTabWidget);
+    }
+    else if (index == static_cast<int>(PageIncludes))
+    {
+        page = new SMInclude(mModel.getIncludeModel(), &mTabWidget);
     }
     else
     {

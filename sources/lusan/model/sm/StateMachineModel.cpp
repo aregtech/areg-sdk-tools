@@ -39,6 +39,7 @@ StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     , mTimerModel    (*this)
     , mMethodModel   (*this)
     , mConstantModel (*this)
+    , mIncludeModel  (*this)
     , mOpenSuccess   (false)
 {
     mUndoStack.setUndoLimit(100);
