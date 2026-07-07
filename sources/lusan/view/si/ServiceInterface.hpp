@@ -134,41 +134,41 @@ public:
     /**
      * \brief   Returns the file open operation success flag.
      **/
-    virtual bool openSucceeded() const override;
+    bool openSucceeded() const override;
     
 protected:
     
     /**
      * \brief   Returns the default file name of new created document.
      **/
-    virtual QString newDocumentName() override;
+    QString newDocumentName() override;
 
     /**
      * \brief   Returns the default name of new created document.
      **/
-    virtual const QString& newDocument() const override;
+    const QString& newDocument() const override;
 
     /**
      * \brief   Returns the default extension of new created document.
      **/
-    virtual const QString& newDocumentExt() const override;
+    const QString& newDocumentExt() const override;
 
     /**
      * \brief   Returns the default file suffix.
      **/
-    virtual const QString& fileSuffix() const override;
+    const QString& fileSuffix() const override;
 
     /**
      * \brief   Returns the default file filter.
      **/
-    virtual const QString& fileFilter() const override;
+    const QString& fileFilter() const override;
 
     /**
      * \brief   Reads the document from the file.
      * \param   filePath    The path of the file to read.
      * \return  True if the document was successfully read, false otherwise.
      **/
-    virtual bool writeToFile(const QString& filePath) override;
+    bool writeToFile(const QString& filePath) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

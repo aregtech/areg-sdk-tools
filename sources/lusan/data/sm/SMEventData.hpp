@@ -42,9 +42,9 @@ public:
     SMEventEntry& operator = (const SMEventEntry& other);
     SMEventEntry& operator = (SMEventEntry&& other) noexcept;
 
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -63,9 +63,9 @@ public:
     SMEventData(ElementBase* parent = nullptr);
     virtual ~SMEventData();
 
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Creates a new event appended at the end of the list.

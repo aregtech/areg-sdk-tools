@@ -55,12 +55,12 @@ public:
      * \param   dbPath      The path to the database.
      * \param   readOnly    If true, the database is opened in read-only mode.
      **/
-    virtual void openDatabase(const QString& dbPath, bool readOnly) override;
+    void openDatabase(const QString& dbPath, bool readOnly) override;
 
     /**
      * \brief   Closes the currently opened database.
      **/
-    virtual void closeDatabase() override;
+    void closeDatabase() override;
 
     /**
      * \brief   Sets up the logging query to run. By default, it reads all logs without filter.
@@ -68,7 +68,7 @@ public:
      * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `areg::TARGET_ALL`.
      * \return  Number or log entries to read.
      **/
-    virtual uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL) override;
+    uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Signals

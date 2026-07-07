@@ -132,14 +132,14 @@ public:
      * \param   index       The index of the table cell.
      * \return  Returns the created editor widget.
      **/
-    virtual QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
     /**
      * \brief   Sets the data to the editor widget.
      * \param   editor      The editor widget.
      * \param   index       The index of the table cell.
      **/
-    virtual void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
 
     /**
      * \brief   Sets the data to the model.
@@ -147,7 +147,7 @@ public:
      * \param   model       The model to set the data.
      * \param   index       The index of the table cell.
      **/
-    virtual void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Signals

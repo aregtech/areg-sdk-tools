@@ -72,13 +72,13 @@ protected:
      * \brief   Called when the MDI child window is closed.
      * \param   isActive    Indicates whether the window is active or not.
      **/
-    virtual void onWindowClosing(bool isActive) override;
+    void onWindowClosing(bool isActive) override;
 
     /**
      * \brief   Called when the MDI child window is activated.
      *          This method can be overridden to handle window activation events.
      **/
-    virtual void onWindowActivated() override;
+    void onWindowActivated() override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots.

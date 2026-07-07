@@ -69,11 +69,11 @@ public:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -103,9 +103,9 @@ public:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

@@ -62,8 +62,8 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     NavigationDock(MdiMainWindow* parent);
-    virtual QSize sizeHint() const override;
-    virtual QSize minimumSizeHint() const override;
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes

@@ -138,19 +138,19 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     // Header:
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     // Basic functionality:
-    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-    virtual int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
     // Add/Remove data:
-    virtual bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
-    virtual bool insertColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
-    virtual bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
-    virtual bool removeColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool insertColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool removeColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
 
-    virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
@@ -673,7 +673,7 @@ protected:
      *          the thread will complete work. To restart thread running, 
      *          createThread() method should be called again.
      **/
-    virtual void on_run() override;
+    void on_run() override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

@@ -70,12 +70,12 @@ public:
     /**
      * \brief   Setup logging model.
      **/    
-    virtual void setupModel() override;
+    void setupModel() override;
     
     /**
      * \brief   Release logging model.
      **/    
-    virtual void releaseModel() override;
+    void releaseModel() override;
     
     /**
      * \brief   Call to start connection to the log collector service.

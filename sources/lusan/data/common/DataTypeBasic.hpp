@@ -84,13 +84,13 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -166,13 +166,13 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 private:
     bool    mHasKey;    //!< The flag, indicating whether the data type has a key.

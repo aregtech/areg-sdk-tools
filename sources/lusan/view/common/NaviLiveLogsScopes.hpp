@@ -168,19 +168,19 @@ public:
     /**
      * \brief   This method is called when the options dialog is opened.
      **/
-    virtual void optionOpenning() override;
+    void optionOpenning() override;
 
     /**
      * \brief   This method is called when the apply button in options dialog is pressed.
      *          It can be used to apply changes made in the options dialog.
      **/
-    virtual void optionApplied() override;
+    void optionApplied() override;
 
     /**
      * \brief   This method is called when the options dialog is closed.
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
-    virtual void optionClosed(bool OKpressed) override;
+    void optionClosed(bool OKpressed) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members

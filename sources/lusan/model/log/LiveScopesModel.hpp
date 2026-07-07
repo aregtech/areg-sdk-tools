@@ -69,7 +69,7 @@ public:
      *          If `nullptr`, resets the model and clears the data.
      * \param   model   The logging model to set.
      **/
-    virtual void setLoggingModel(LoggingModelBase* model) override;
+    void setLoggingModel(LoggingModelBase* model) override;
         
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -79,7 +79,7 @@ public:
      * \param   prio    The new priority to set for the log scope on target.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool setLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool setLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -89,7 +89,7 @@ public:
      * \param   prio    The log priority to add to the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool addLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool addLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Removes the specified log priority from the log scope at the given index.
@@ -99,7 +99,7 @@ public:
      * \param   prio    The log priority to remove from the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool removLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool removLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Saves the log scope priority for the given target index.
@@ -107,7 +107,7 @@ public:
      * \param   target  The target index to save log scope priority. If invalid, saves for root index.
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
-    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
+    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
     
 protected:
     
@@ -119,7 +119,7 @@ protected:
      * \param   instances   The list of instances available.
      * \return  Returns true if the instance was added to the root element.
      **/
-    virtual bool slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances) override;
+    bool slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances) override;
     
 private:
 

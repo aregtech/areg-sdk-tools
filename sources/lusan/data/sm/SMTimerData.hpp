@@ -76,9 +76,9 @@ public:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -104,9 +104,9 @@ public:
     SMTimerData(ElementBase* parent = nullptr);
     SMTimerData(const QList<SMTimerEntry>& entries, ElementBase* parent = nullptr);
 
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Creates a new timer appended at the end of the list.

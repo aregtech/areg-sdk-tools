@@ -78,18 +78,18 @@ public:
     /**
      * \brief   Call when the option should apply the changes.
      **/
-    virtual void applyChanges() override;
+    void applyChanges() override;
 
     /**
      * \brief   Call when the option page is closing.
      * \param   OKpressed   If true, the user pressed OK button, otherwise Cancel button.
      **/
-    virtual void closingOptions(bool OKpressed) override;
+    void closingOptions(bool OKpressed) override;
     
     /**
      * \brief   Triggered, letting option page object to display a warning message.
      **/
-    virtual void warnMessage() override;
+    void warnMessage() override;
     
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
@@ -113,7 +113,7 @@ public:
      * \param   delivery   The delivery directory.
      * \param   logs       The logs directory.
      **/
-    virtual void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
+    void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Slots

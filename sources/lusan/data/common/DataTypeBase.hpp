@@ -129,19 +129,19 @@ public:
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
     
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
     
     /**
      * \brief   Checks if the data type is valid.
      * \return  True if the data type is valid, false otherwise.
      **/
-    virtual bool isValid() const override;
+    bool isValid() const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

@@ -186,13 +186,13 @@ protected:
     /**
      * \brief   QLineEdit event triggered when the search line edit is resized.
      **/
-    virtual void resizeEvent(QResizeEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
     /**
      * \brief   Override keyPressEvent to handle search shortcuts.
      * \param   event   The key press event.
      **/
-    virtual void keyPressEvent(QKeyEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

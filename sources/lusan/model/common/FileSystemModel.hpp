@@ -71,28 +71,28 @@ public:
      * \param   parent  The parent index.
      * \return  The index of the item.
      **/
-    virtual QModelIndex index(int row, int column, const QModelIndex& parent) const override;
+    QModelIndex index(int row, int column, const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the parent index of the given child index.
      * \param   child   The child index.
      * \return  The parent index.
      **/
-    virtual QModelIndex parent(const QModelIndex& child) const override;
+    QModelIndex parent(const QModelIndex& child) const override;
 
     /**
      * \brief   Returns the number of rows under the given parent.
      * \param   parent  The parent index.
      * \return  The number of rows.
      **/
-    virtual int rowCount(const QModelIndex& parent) const override;
+    int rowCount(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the number of columns for the children of the given parent.
      * \param   parent  The parent index.
      * \return  The number of columns.
      **/
-    virtual int columnCount(const QModelIndex& parent) const override;
+    int columnCount(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the data stored under the given role for the item referred to by the index.
@@ -100,7 +100,7 @@ public:
      * \param   role    The role for which data is requested.
      * \return  The data for the given role and section.
      **/
-    virtual QVariant data(const QModelIndex& index, int role) const override;
+    QVariant data(const QModelIndex& index, int role) const override;
 
     /**
      * \brief   Returns the data for the given role and section in the header with the specified orientation.
@@ -109,27 +109,27 @@ public:
      * \param   role        The role for which data is requested.
      * \return  The data for the given role and section.
      **/
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     /**
      * \brief   Fetches more data for the given parent index.
      * \param   parent  The parent index.
      **/
-    virtual void fetchMore(const QModelIndex& parent) override;
+    void fetchMore(const QModelIndex& parent) override;
 
     /**
      * \brief   Checks if more data can be fetched for the given parent index.
      * \param   parent  The parent index.
      * \return  True if more data can be fetched, false otherwise.
      **/
-    virtual bool canFetchMore(const QModelIndex& parent) const override;
+    bool canFetchMore(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the flags for the item at the given index.
      * \param   index   The index of the item.
      * \return  The flags of the item.
      **/
-    virtual Qt::ItemFlags flags(const QModelIndex &index) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -442,7 +442,7 @@ public:
      * \param   parent  The parent index.
      * \return  The number of columns.
      **/
-    virtual int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
     /**
      * \brief   Returns the header data stored under the given role.
@@ -451,7 +451,7 @@ public:
      * \param   role        The role for which data is requested.
      * \return  The header data for the given role and section.
      **/
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
