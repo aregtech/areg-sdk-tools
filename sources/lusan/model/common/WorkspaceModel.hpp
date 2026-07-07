@@ -92,7 +92,7 @@ public:
      * \param   parent  The parent QModelIndex.
      * \return  The number of rows.
      **/
-    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 
     /**
      * \brief   Returns the data for a given index and role.
@@ -100,13 +100,13 @@ public:
      * \param   role    The role for which data is requested.
      * \return  The data for the given index and role.
      **/
-    virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
     /**
      * \brief   Returns the role names for the model.
      * \return  A hash of role names.
      **/
-    virtual QHash<int, QByteArray> roleNames() const override;
+    QHash<int, QByteArray> roleNames() const override;
     
     /**
      * \brief   Gets the list of workspace entries.

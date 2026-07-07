@@ -76,7 +76,7 @@ public:
     /**
      * \brief   Call when the option should apply the changes.
      **/
-    virtual void applyChanges() override;
+    void applyChanges() override;
     
     /**
      * \brief   Called when the workspace directories in option pages are updated.
@@ -85,7 +85,7 @@ public:
      * \param   delivery   The delivery directory.
      * \param   logs       The logs directory.
      **/
-    virtual void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
+    void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Slots

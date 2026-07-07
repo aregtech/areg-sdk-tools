@@ -60,7 +60,7 @@ protected:
     {
     }
 
-    virtual ~TDocElementCommand() override
+    ~TDocElementCommand() override
     {
         if constexpr (std::is_pointer_v<Data>)
         {
@@ -135,8 +135,8 @@ public:
         this->mOwned   = true;
     }
 
-    virtual void redo() override { this->doInsert(); }
-    virtual void undo() override { this->doRemove(); }
+    void redo() override { this->doInsert(); }
+    void undo() override { this->doRemove(); }
 };
 
 /**
@@ -155,8 +155,8 @@ public:
         this->mId = id;
     }
 
-    virtual void redo() override { this->doRemove(); }
-    virtual void undo() override { this->doInsert(); }
+    void redo() override { this->doRemove(); }
+    void undo() override { this->doInsert(); }
 };
 
 /**
@@ -183,14 +183,14 @@ public:
     {
     }
 
-    virtual void redo() override
+    void redo() override
     {
         mOld = mGet();
         mSet(mNew);
         notifier().notifyElementChanged(mId, mKind);
     }
 
-    virtual void undo() override
+    void undo() override
     {
         mSet(mOld);
         notifier().notifyElementChanged(mId, mKind);
@@ -225,8 +225,8 @@ public:
     {
     }
 
-    virtual void redo() override { apply(); }
-    virtual void undo() override { apply(); }
+    void redo() override { apply(); }
+    void undo() override { apply(); }
 
 private:
     void apply()

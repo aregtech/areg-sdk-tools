@@ -248,7 +248,7 @@ protected:
      * \brief   Handles the close event.
      * \param   event    The close event.
      **/
-    virtual void closeEvent(QCloseEvent* event) override;
+    void closeEvent(QCloseEvent* event) override;
 
     /**
      * \brief   Called when the MDI child window is closing.

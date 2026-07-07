@@ -95,9 +95,9 @@ public:
     inline const QString& getExpression() const;
     inline void setExpression(const QString& expression);
 
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 private:
     QString         mName;          //!< The mapped parameter name.
@@ -172,9 +172,9 @@ public:
      **/
     virtual QString getName() const = 0;
 
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 protected:
     eOperation  mKind;      //!< The operation kind.
@@ -201,8 +201,8 @@ public:
      **/
     SMArgumentEntry* addArgument(const QString& name, SMArgumentEntry::eValueSource source, const QString& value);
 
-    virtual SMOperationBase* clone() const override;
-    virtual QString getName() const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString                     mAction;        //!< The action method name.
@@ -229,8 +229,8 @@ public:
     inline const QString& getExpression() const;
     inline void setExpression(const QString& expression);
 
-    virtual SMOperationBase* clone() const override;
-    virtual QString getName() const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString                         mAttribute;     //!< The target attribute name.
@@ -261,8 +261,8 @@ public:
     void setRepeat(uint32_t repeat);
     void clearRepeat();
 
-    virtual SMOperationBase* clone() const override;
-    virtual QString getName() const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString     mTimer;         //!< The timer name.
@@ -286,8 +286,8 @@ public:
     inline const QString& getTimer() const;
     inline void setTimer(const QString& timer);
 
-    virtual SMOperationBase* clone() const override;
-    virtual QString getName() const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString     mTimer;     //!< The timer name.
@@ -311,8 +311,8 @@ public:
 
     SMArgumentEntry* addArgument(const QString& name, SMArgumentEntry::eValueSource source, const QString& value);
 
-    virtual SMOperationBase* clone() const override;
-    virtual QString getName() const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString                     mEvent;         //!< The event name.
@@ -333,8 +333,8 @@ public:
     inline const QString& getBody() const;
     inline void setBody(const QString& body);
 
-    virtual SMOperationBase* clone() const override;
-    virtual QString getName() const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString     mBody;      //!< The verbatim C++ body (CDATA on write).

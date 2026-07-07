@@ -168,12 +168,12 @@ public:
      *          The method clears all filters and sets the source model.
      * \param   sourceModel The pointer to the source model to filter.
      **/
-    virtual void setSourceModel(QAbstractItemModel *sourceModel) override;
+    void setSourceModel(QAbstractItemModel *sourceModel) override;
 
     /**
      * \brief   Clears all filters.
      **/
-    virtual void clearFilters() override;
+    void clearFilters() override;
 
     /**
      * \brief   Returns true if the given source row has exact match of the filters.
@@ -183,7 +183,7 @@ public:
      * \param   parent   The parent index in the source model.
      * \return  True if the row has exact match of the filter.
      **/
-    virtual bool filterExactMatch(const QModelIndex & index) const override;
+    bool filterExactMatch(const QModelIndex & index) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -204,7 +204,7 @@ protected:
      * \param   parent   The parent index in the source model.
      * \return  True if the row should be included, false otherwise.
      **/
-    virtual bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
+    bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

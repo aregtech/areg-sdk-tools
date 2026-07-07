@@ -97,13 +97,13 @@ protected:
     /**
      * \brief   Returns the number of columns in the table.
      **/
-    virtual int getColumnCount() const override;
+    int getColumnCount() const override;
 
     /**
      * \brief   Returns the text of the cell.
      * \param   cell    The index of the cell.
      **/
-    virtual QString getCellText(const QModelIndex& cell) const override;
+    QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

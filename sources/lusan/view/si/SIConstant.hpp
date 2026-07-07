@@ -104,7 +104,7 @@ protected:
      * \param   dataType    New created data type object.
      * \return  Returns true if new created data type is in the list. Otherwise, returns false.
      **/
-    virtual void dataTypeCreated(DataTypeCustom* dataType) override;
+    void dataTypeCreated(DataTypeCustom* dataType) override;
 
     /**
      * \brief   Triggered when the data type is converted.
@@ -112,32 +112,32 @@ protected:
      * \param   newType     The new data type object.
      * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
      **/
-    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
+    void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
 
     /**
      * \brief   Triggered when the data type is deleted and invalidated.
      * \param   dataType    The data type object to be deleted.
      * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
      **/
-    virtual void dataTypeDeleted(DataTypeCustom* dataType) override;
+    void dataTypeDeleted(DataTypeCustom* dataType) override;
 
     /**
      * \brief   Triggered when the data type is updated.
      * \param   dataType    The data type object to update.
      * \return  Returns true if the data type is updated. Otherwise, returns false.
      **/
-    virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
+    void dataTypeUpdated(DataTypeCustom* dataType) override;
 
     /**
      * \brief   Returns the number of columns in the table.
      **/
-    virtual int getColumnCount() const override;
+    int getColumnCount() const override;
 
     /**
      * \brief   Returns the text of the cell.
      * \param   cell    The index of the cell.
      **/
-    virtual QString getCellText(const QModelIndex& cell) const override;
+    QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

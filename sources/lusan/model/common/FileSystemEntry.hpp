@@ -568,33 +568,33 @@ protected:
      * \brief   Returns the next ID for the root entry.
      * \return  The next ID for the root entry.
      **/
-    virtual uint32_t  getNextId() const override;
+    uint32_t  getNextId() const override;
     
     /**
      * \brief   Fetches data for the root entry.
      * \param   filter  The list of file extension filters.
      * \return  The list of file information.
      **/
-    virtual QFileInfoList fetchData(const QStringList & filter = QStringList()) const override;
+    QFileInfoList fetchData(const QStringList & filter = QStringList()) const override;
     
     /**
      * \brief   Create and returns the child entry. The entry will not be added to the children list.
      * \param   path    The path of the file system entry.
      **/
-    virtual FileSystemEntry* createChildEntry(const QString& path) const override;
+    FileSystemEntry* createChildEntry(const QString& path) const override;
 
     /**
      * \brief   Create and returns the child entry. The entry will not be added to the children list.
      * \param   fileInfo    The file information of the file system entry.
      **/
-    virtual FileSystemEntry* createChildEntry(const QFileInfo& fileInfo) const override;
+    FileSystemEntry* createChildEntry(const QFileInfo& fileInfo) const override;
 
     /**
      * \brief   Add children to the file system entry by fetching data.
      * \param   filter  The filter to apply when fetching data. If empty, all entries are fetched.
      * \return  Number of added children.
      **/
-    virtual int addChildren(const QStringList& filter = QStringList()) override;
+    int addChildren(const QStringList& filter = QStringList()) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

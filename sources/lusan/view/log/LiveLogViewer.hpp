@@ -121,12 +121,12 @@ protected:
      * \brief   Called when the MDI child window is closed.
      * \param   isActive    Indicates whether the window is active or not.
      **/
-    virtual void onWindowClosing(bool isActive) override;
+    void onWindowClosing(bool isActive) override;
 
     /**
      * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.
      **/
-    virtual void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous) override;
+    void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Slots.

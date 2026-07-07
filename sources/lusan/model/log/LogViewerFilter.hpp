@@ -99,7 +99,7 @@ protected:
      * \param   parent   The parent index in the source model.
      * \return  True if the row should be included, false otherwise.
      **/
-    virtual bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
+    bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

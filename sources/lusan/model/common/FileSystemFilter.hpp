@@ -45,7 +45,7 @@ protected:
      * \param   source_right    The right side index to compare.
      * \return  True if the left side index element is greater than the right side index.
      **/
-    virtual bool lessThan(const QModelIndex& source_left, const QModelIndex& source_right) const override;
+    bool lessThan(const QModelIndex& source_left, const QModelIndex& source_right) const override;
 };
 
 #endif // LUSAN_MODEL_COMMON_FILESYSTEMFILTER_HPP

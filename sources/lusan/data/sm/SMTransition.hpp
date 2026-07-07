@@ -116,9 +116,9 @@ public:
      **/
     inline const QString& getName() const;
 
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -168,9 +168,9 @@ public:
      **/
     void removeAll();
 
-    virtual bool isValid() const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 private:
     //!< Deep-copies the transitions of \p src into this (empty) list, re-parenting them.

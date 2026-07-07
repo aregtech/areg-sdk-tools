@@ -92,17 +92,17 @@ public:
     /**
      * \brief   Checks whether the overview is valid (has a non-empty machine name).
      **/
-    virtual bool isValid() const override;
+    bool isValid() const override;
 
     /**
      * \brief   Reads data from an XML stream.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

@@ -133,7 +133,7 @@ protected:
       * \brief   Override keyPressEvent to handle search shortcuts.
       * \param   event   The key press event.
       **/
-    virtual void keyPressEvent(QKeyEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     
     /**
      * \brief   Sets up the widgets of the log viewer.
@@ -146,19 +146,19 @@ protected:
      *          This method can be overridden to handle window closing events.
      * \param   isActive    Indicates whether the window is active or not.
      **/
-    virtual void onWindowClosing(bool isActive) override;
+    void onWindowClosing(bool isActive) override;
 
     /**
      * \brief   Returns the default file filter.
      **/
-    virtual const QString& fileFilter() const override;
+    const QString& fileFilter() const override;
 
     /**
      * \brief   Reads the document from the file.
      * \param   filePath    The path of the file to read.
      * \return  True if the document was successfully read, false otherwise.
      **/
-    virtual bool writeToFile(const QString& filePath) override;
+    bool writeToFile(const QString& filePath) override;
 
     /**
      * \brief   Saves the file with the specified name.

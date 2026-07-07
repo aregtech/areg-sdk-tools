@@ -60,20 +60,20 @@ public:
     virtual ~StateMachine() = default;
 
 public:
-    virtual void newFile() override;
-    virtual bool openSucceeded() const override;
-    virtual void undo() override;
-    virtual void redo() override;
+    void newFile() override;
+    bool openSucceeded() const override;
+    void undo() override;
+    void redo() override;
 
 protected:
-    virtual QString newDocumentName() override;
-    virtual const QString& newDocument() const override;
-    virtual const QString& newDocumentExt() const override;
-    virtual const QString& fileSuffix() const override;
-    virtual const QString& fileFilter() const override;
-    virtual bool writeToFile(const QString& filePath) override;
-    virtual bool maybeSave() override;
-    virtual void onWindowClosing(bool isActive) override;
+    QString newDocumentName() override;
+    const QString& newDocument() const override;
+    const QString& newDocumentExt() const override;
+    const QString& fileSuffix() const override;
+    const QString& fileFilter() const override;
+    bool writeToFile(const QString& filePath) override;
+    bool maybeSave() override;
+    void onWindowClosing(bool isActive) override;
 
 private:
     bool loadDocument(const QString& documentPath, const QString& sourcePath = QString());

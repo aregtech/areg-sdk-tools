@@ -456,7 +456,7 @@ signals:
 // IELogObserverEventConsumer overrides
 /************************************************************************/
 protected:
-    virtual void process_event(const LogObserverEventData & data) override;
+    void process_event(const LogObserverEventData & data) override;
 
 /************************************************************************/
 // StubBase overrides. Triggered by Component on startup.
@@ -466,31 +466,31 @@ protected:
      * \brief   This function is triggered by Component when starts up.
      * \param   holder  The holder component of service interface of Stub.
      **/
-    virtual void startup_service_interface( areg::Component & holder ) override;
+    void startup_service_interface( areg::Component & holder ) override;
 
     /**
      * \brief   This function is triggered by Component when shuts down.
      * \param   holder  The holder component of service interface of Stub.
      **/
-    virtual void shutdown_service_interface( areg::Component & holder ) noexcept override;
+    void shutdown_service_interface( areg::Component & holder ) noexcept override;
 
 //////////////////////////////////////////////////////////////////////////
 // These methods must exist, but can have empty body
 //////////////////////////////////////////////////////////////////////////
 protected:
 /************************************************************************/
-// StubBase overrides. Public pure virtual methods
+// StubBase overrides. Public pure methods
 /************************************************************************/
 
     /**
      * \brief   Sends update notification message to all clients.
      **/
-    virtual void send_notification(unsigned int /*msgId*/) override;
+    void send_notification(unsigned int /*msgId*/) override;
 
     /**
      * \brief   Sends error message to clients.
      **/
-    virtual void error_request(unsigned int /*msgId*/, bool /*msgCancel*/) override;
+    void error_request(unsigned int /*msgId*/, bool /*msgCancel*/) override;
 
 /************************************************************************/
 // IEStubEventConsumer interface overrides.
@@ -499,12 +499,12 @@ protected:
     /**
      * \brief   Triggered to process service request event.
      **/
-    virtual void process_request_event(areg::ServiceRequestEvent& /*eventElem*/) override;
+    void process_request_event(areg::ServiceRequestEvent& /*eventElem*/) override;
 
     /**
      * \brief   Triggered to process attribute update notification event.
      **/
-    virtual void process_attribute_event(areg::ServiceRequestEvent& /*eventElem*/) override;
+    void process_attribute_event(areg::ServiceRequestEvent& /*eventElem*/) override;
 
 //////////////////////////////////////////////////////////////////////////
 // slots

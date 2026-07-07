@@ -49,7 +49,7 @@ public:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
-    virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

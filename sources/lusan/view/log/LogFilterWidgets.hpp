@@ -124,24 +124,24 @@ public:
      * \brief   Updates and sets the filter data of widget
      * \param   data    The data to set in the widget.
      **/
-    virtual void setDataString(const QString& data) override;
+    void setDataString(const QString& data) override;
 
     /**
      * \brief   Updates and sets the items widget.
      *          Mainly required for combo-boxes.
      * \param   data    The list of data to set in combo-box
      **/
-    virtual void setDataList(const std::vector<NELusanCommon::FilterData>& data) override;
+    void setDataList(const std::vector<NELusanCommon::FilterData>& data) override;
 
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 
     /**
      * \brief   Clears filter data.
      **/
-    virtual void clearFilter() override;
+    void clearFilter() override;
 
 protected:
     /**
@@ -165,36 +165,36 @@ public:
      * \brief   Updates and sets the filter data of widget
      * \param   data    The data to set in the widget.
      **/
-    virtual void setDataString(const QString& data) override;
+    void setDataString(const QString& data) override;
 
     /**
      * \brief   Updates and sets the items widget.
      *          Mainly required for combo-boxes.
      * \param   data    The list of data to set in combo-box
      **/
-    virtual void setDataList(const std::vector<NELusanCommon::FilterData>& data) override;
+    void setDataList(const std::vector<NELusanCommon::FilterData>& data) override;
 
     /**
      * \brief   Updates and sets the items of combo-box
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 
     /**
      * \brief   Clears filter data.
      **/
-    virtual void clearFilter() override;
+    void clearFilter() override;
 
     /**
      * \brief   Shows the filter widget and set focus on the list widget.
      **/
-    virtual void showFilter() override;
+    void showFilter() override;
 
 protected:
 
@@ -223,12 +223,12 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -246,7 +246,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
 };
 
@@ -265,7 +265,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
 };
 
@@ -284,7 +284,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
 };
 
@@ -303,7 +303,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
 };
 
@@ -321,7 +321,7 @@ public:
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -338,7 +338,7 @@ public:
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 };
 
 //////////////////////////////////////////////////////////////////////////

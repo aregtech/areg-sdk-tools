@@ -80,7 +80,7 @@ public:
      * \param   mdiChild    The MDI child window to release
      * \return  Returns true if succeeded to release the window and returns false if the window is not bound.
      **/   
-    virtual bool releaseWindow(MdiChild& mdiChild) override;
+    bool releaseWindow(MdiChild& mdiChild) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Operations
