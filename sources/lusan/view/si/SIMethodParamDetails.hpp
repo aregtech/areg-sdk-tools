@@ -25,33 +25,38 @@ class QComboBox;
 class QLineEdit;
 class QPlainTextEdit ;
 
-namespace Ui {
-    class SIMethodParamDetails;
-}
-
 class SIMethodParamDetails : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit SIMethodParamDetails(QWidget* parent = nullptr);
-    
+
     QLineEdit * ctrlParamName() const;
-    
+
     QComboBox * ctrlParamTypes() const;
 
     QCheckBox* ctrlParamHasDefault() const;
-    
+
     QLineEdit * ctrlParamDefaultValue() const;
-        
+
     QPlainTextEdit * ctrlParamDescription() const;
-    
+
     QCheckBox * ctrlDeprecated() const;
-    
+
     QLineEdit * ctrlDeprecateHint() const;
 
 private:
-    Ui::SIMethodParamDetails* ui;
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QComboBox*      mType;
+    QCheckBox*      mHasDefault;
+    QLineEdit*      mValue;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIMETHODPARAMDETAILS_HPP

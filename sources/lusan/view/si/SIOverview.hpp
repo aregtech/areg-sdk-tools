@@ -33,10 +33,7 @@ class SIOverviewDetails;
 class SIOverviewLinks;
 class SIOverviewParamDetails;
 class SIOverviewModel;
-
-namespace Ui {
-    class SIOverview;
-}
+class QHBoxLayout;
 
 /************************************************************************
  * \brief   The helper widget.
@@ -51,7 +48,7 @@ public:
     explicit SIOverviewWidget(QWidget* parent);
 
 private:
-    Ui::SIOverview* ui;
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the details and links panels.
 };
 
 /**
@@ -202,7 +199,6 @@ private:
     SIOverviewDetails*  mDetails;   //!< The details of the service interface overview.
     SIOverviewLinks*    mLinks;     //!< The links of the service interface overview.
     SIOverviewWidget*   mWidget;    //!< The widget of the service interface overview.
-    Ui::SIOverview&     ui;         //!< The user interface of the service interface overview.
     QIntValidator       mVersionValidator; //!< The validator to validate the version number.
 };
 

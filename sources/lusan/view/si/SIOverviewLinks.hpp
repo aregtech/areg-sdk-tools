@@ -21,9 +21,6 @@
 #include <QWidget>
 
 class QPushButton;
-namespace Ui {
-    class SIOverviewLinks;
-}
 
 class SIOverviewLinks : public QWidget
 {
@@ -58,7 +55,14 @@ public:
     QPushButton* linkIncludes() const;
 
 private:
-    Ui::SIOverviewLinks* ui;
+    void buildUi();
+
+private:
+    QPushButton* mDataTypes;
+    QPushButton* mAttributes;
+    QPushButton* mMethods;
+    QPushButton* mConstants;
+    QPushButton* mIncludes;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIOVERVIEWLINKS_HPP

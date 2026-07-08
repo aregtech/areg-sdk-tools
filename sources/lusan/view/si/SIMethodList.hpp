@@ -20,12 +20,10 @@
  ************************************************************************/
 #include <QWidget>
 
+class QKeySequence;
+class QString;
 class QToolButton;
 class QTreeWidget;
-
-namespace Ui {
-    class SIMethodList;
-}
 
 class SIMethodList : public QWidget
 {
@@ -33,27 +31,39 @@ class SIMethodList : public QWidget
 
 public:
     explicit SIMethodList(QWidget* parent = nullptr);
-    
+
     QToolButton * ctrlButtonAdd() const;
-    
+
     QToolButton * ctrlButtonInsert() const;
-    
+
     QToolButton * ctrlButtonRemove() const;
-    
+
     QToolButton * ctrlButtonParamAdd() const;
-    
+
     QToolButton * ctrlButtonParamRemove() const;
-    
+
     QToolButton * ctrlButtonParamInsert() const;
-    
+
     QToolButton * ctrlButtonMoveUp() const;
-    
+
     QToolButton * ctrlButtonMoveDown() const;
-    
+
     QTreeWidget * ctrlTableList() const;
 
 private:
-    Ui::SIMethodList* ui;
+    void buildUi();
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+
+private:
+    QTreeWidget* mTable;
+    QToolButton* mButtonAdd;
+    QToolButton* mButtonInsert;
+    QToolButton* mButtonRemove;
+    QToolButton* mButtonParamAdd;
+    QToolButton* mButtonParamRemove;
+    QToolButton* mButtonParamInsert;
+    QToolButton* mButtonMoveUp;
+    QToolButton* mButtonMoveDown;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIMETHODLIST_HPP

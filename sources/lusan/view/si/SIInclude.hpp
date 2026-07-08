@@ -29,15 +29,12 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIInclude;
-}
-    
 class IncludeEntry;
 class SIIncludeDetails;
 class SIIncludeList;
 class SIIncludeModel;
 class TableCell;
+class QHBoxLayout;
 
 /**
  * \brief   The widget object for SIInclude page.
@@ -55,7 +52,7 @@ public:
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIInclude* ui;
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the list and details panels.
 };
 
 /**
@@ -258,7 +255,6 @@ private:
     SIIncludeDetails*   mDetails;   //!< The details page.
     SIIncludeList*      mList;      //!< The list page.
     SIIncludeWidget*    mWidget;    //!< The widget object.
-    Ui::SIInclude&      ui;         //!< The UI object.
     TableCell*          mTableCell; //!< The table cell.
 
     QString             mCurUrl;    //!< The current URL.

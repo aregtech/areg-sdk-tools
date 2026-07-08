@@ -95,6 +95,40 @@ void SMOverviewModel::setDescription(const QString& description)
     mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Overview, getter, setter, description, QObject::tr("Set description")));
 }
 
+bool SMOverviewModel::getIsDeprecated() const
+{
+    return overview().getIsDeprecated();
+}
+
+const QString& SMOverviewModel::getDeprecateHint() const
+{
+    return overview().getDeprecateHint();
+}
+
+void SMOverviewModel::setIsDeprecated(bool isDeprecated)
+{
+    if (isDeprecated == getIsDeprecated())
+        return;
+
+    StateMachineModel* facade = &mFacade;
+    const uint32_t id = getOverviewId();
+    auto getter = [facade]() -> bool { return facade->getData().getOverview().getIsDeprecated(); };
+    auto setter = [facade](const bool& value) { facade->getData().getOverview().setIsDeprecated(value); };
+    mFacade.getUndoStack().push(new TDocSetPropertyCommand<bool>(getNotifier(), id, eDocElementKind::Overview, getter, setter, isDeprecated, QObject::tr("Set deprecated flag")));
+}
+
+void SMOverviewModel::setDeprecateHint(const QString& hint)
+{
+    if (hint == getDeprecateHint())
+        return;
+
+    StateMachineModel* facade = &mFacade;
+    const uint32_t id = getOverviewId();
+    auto getter = [facade]() -> QString { return facade->getData().getOverview().getDeprecateHint(); };
+    auto setter = [facade](const QString& value) { facade->getData().getOverview().setDeprecateHint(value); };
+    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Overview, getter, setter, hint, QObject::tr("Set deprecation hint")));
+}
+
 DocModelNotifier& SMOverviewModel::getNotifier() const
 {
     return mFacade.getNotifier();

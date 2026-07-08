@@ -23,10 +23,6 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIIncludeDetails;
-}
-    
 class QPushButton;
 class QCheckBox;
 class QLineEdit;
@@ -104,12 +100,19 @@ public:
      * \brief   Returns the control of the browse button.
      **/
     QPushButton * ctrlBrowseButton();
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIIncludeDetails*   ui; //!< The user interface object.
+    void buildUi();
+
+private:
+    QLineEdit*      mInclude;       //!< The include file path editor.
+    QPushButton*    mBrowse;        //!< The browse button.
+    QPlainTextEdit* mDescription;   //!< The description editor.
+    QCheckBox*      mDeprecated;    //!< The deprecated flag.
+    QLineEdit*      mDeprecateHint; //!< The deprecation hint editor.
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls

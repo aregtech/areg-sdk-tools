@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIDataType.hpp"
-#include "ui/ui_SIDataType.h"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
@@ -36,8 +35,10 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QFormLayout>
 #include <QGroupBox>
 #include <QHeaderView>
+#include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -46,16 +47,27 @@
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFont>
 
 #include "lusan/view/si/SICommon.hpp"
 
 SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui     (new Ui::SIDataType)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Data Type Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 const QList<DataTypeBasicContainer *> & SIDataType::_getContainerTypes()
@@ -105,7 +117,6 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mFields   (new SIDataTypeFieldDetails(this))
     , mRightPanel(new QWidget(this))
     , mWidget   (new SIDataTypeWidget(this))
-    , ui        (*mWidget->ui)
     , mModel    (model)
     , mTypeModel(new DataTypesModel(model.getDataTypeData(), true))
     , mValueModel(new DataTypesModel(model.getDataTypeData(), false))
@@ -127,14 +138,11 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     // see .claude/memory/equal-split-two-panels.md.
     mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mRightPanel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mRightPanel, 1);
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(mRightPanel, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -145,8 +153,8 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
 
 SIDataType::~SIDataType()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mRightPanel);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mRightPanel);
 }
 
 void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
@@ -1047,29 +1055,26 @@ void SIDataType::onFieldDeprecateHint(const QString& newText)
 
 void SIDataType::showEnumDetails(bool show)
 {
-    static constexpr int _space{180};
     SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsEnum()};
-    mDetails->changeSpace((show ? -1 : 1) * _space);
-    item.first->setHidden(!show);
-    item.second->setHidden(!show);
+    QFormLayout* form = mDetails->ctrlLayout();
+    form->setRowVisible(item.first, show);
+    form->setRowVisible(item.second, show);
 }
 
 void SIDataType::showImportDetails(bool show)
 {
-    static constexpr int _space{120};
     SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsImport()};
-    mDetails->changeSpace((show ? -1 : 1) * _space);
-    item.first->setHidden(!show);
-    item.second->setHidden(!show);
+    QFormLayout* form = mDetails->ctrlLayout();
+    form->setRowVisible(item.first, show);
+    form->setRowVisible(item.second, show);
 }
 
 void SIDataType::showContainerDetails(bool show)
 {
-    static constexpr int _space{60};
     SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsContainer()};
-    mDetails->changeSpace((show ? -1 : 1) * _space);
-    item.first->setHidden(!show);
-    item.second->setHidden(!show);
+    QFormLayout* form = mDetails->ctrlLayout();
+    form->setRowVisible(item.first, show);
+    form->setRowVisible(item.second, show);
 }
 
 void SIDataType::updateData()

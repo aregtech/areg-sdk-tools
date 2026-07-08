@@ -18,7 +18,10 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIAttribute.hpp"
-#include "ui/ui_SIAttribute.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QVBoxLayout>
 
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
@@ -80,11 +83,20 @@ QVariant SIAttributeNotifyModel::data(const QModelIndex& index, int role /*= Qt:
 
 SIAttributeWidget::SIAttributeWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui     (new Ui::SIAttribute)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Data Attribute Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
@@ -93,20 +105,18 @@ SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
     , mDetails      (new SIAttributeDetails(this))
     , mList         (new SIAttributeList(this))
     , mWidget       (new SIAttributeWidget(this))
-    , ui            (*mWidget->ui)
     , mTypeModel    (new DataTypesModel(model.getDataTypeData(), false))
     , mNotifyModel  (new SIAttributeNotifyModel(this))
     , mTableCell    (nullptr)
     , mCount        (0)
 {
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mDetails->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(mDetails, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -118,8 +128,8 @@ SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
 
 SIAttribute::~SIAttribute()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mDetails);
 }
 
 void SIAttribute::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)

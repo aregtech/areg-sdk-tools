@@ -21,10 +21,6 @@
 #include <QWidget>
 #include <utility>
 
-namespace Ui {
-    class SIDataTypeDetails;
-}
-    
 class QCheckBox;
 class QComboBox;
 class QFormLayout;
@@ -34,7 +30,6 @@ class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 class QRadioButton;
-class QSpacerItem;
 
 class SIDataTypeDetails : public QWidget
 {
@@ -42,8 +37,6 @@ class SIDataTypeDetails : public QWidget
 
 public:
     using CtrlGroup = std::pair<QLabel*, QGroupBox*>;
-
-    using SpaceItem = std::pair<QSpacerItem*, QSpacerItem*>;
 
 public:
     explicit SIDataTypeDetails(QWidget *parent = nullptr);
@@ -88,18 +81,33 @@ public:
 
     QFormLayout* ctrlLayout() const;
 
-    QSpacerItem* ctrlSpacer1() const;
-
-    QSpacerItem* ctrlSpacer2() const;
-
-    SpaceItem ctrlSpacer() const;
-
-    void setSpace(int newHeight);
-
-    void changeSpace(int delta);
-    
 private:
-    Ui::SIDataTypeDetails* ui;
+    void buildUi();
+
+private:
+    QFormLayout*    mForm;
+    QLineEdit*      mName;
+    QRadioButton*   mTypeStruct;
+    QRadioButton*   mTypeEnum;
+    QRadioButton*   mTypeImport;
+    QRadioButton*   mTypeContainer;
+    QLabel*         mLabelEnum;
+    QGroupBox*      mGroupEnum;
+    QComboBox*      mEnumDerived;
+    QLabel*         mLabelImport;
+    QGroupBox*      mGroupImport;
+    QLineEdit*      mImportLocation;
+    QPushButton*    mImportBrowse;
+    QLineEdit*      mImportNamespace;
+    QLineEdit*      mImportObject;
+    QLabel*         mLabelContainer;
+    QGroupBox*      mGroupContainer;
+    QComboBox*      mContainerObject;
+    QComboBox*      mContainerKey;
+    QComboBox*      mContainerValue;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIDATATYPEDETAILS_HPP

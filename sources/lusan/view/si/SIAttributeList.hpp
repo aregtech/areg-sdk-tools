@@ -20,10 +20,8 @@
  ************************************************************************/
 #include <QWidget>
 
-namespace Ui {
-    class SIAttributeList;
-}
-    
+class QKeySequence;
+class QString;
 class QToolButton;
 class QTableWidget;
 
@@ -49,7 +47,16 @@ public:
     QTableWidget* ctrlTableList();
 
 private:
-    Ui::SIAttributeList* ui;
+    void buildUi();
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+
+private:
+    QTableWidget* mTable;
+    QToolButton*  mButtonAdd;
+    QToolButton*  mButtonRemove;
+    QToolButton*  mButtonInsert;
+    QToolButton*  mButtonMoveUp;
+    QToolButton*  mButtonMoveDown;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIATTRIBUTELIST_HPP

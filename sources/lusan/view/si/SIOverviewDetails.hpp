@@ -20,10 +20,6 @@
  ************************************************************************/
 #include <QWidget>
 
-namespace Ui {
-    class SIOverviewDetails;
-}
-    
 class QCheckBox;
 class QLineEdit;
 class QPlainTextEdit;
@@ -58,7 +54,19 @@ public:
     QLineEdit* ctrlDeprecateHint();
 
 private:
-    Ui::SIOverviewDetails*  ui;
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QRadioButton*   mPublic;
+    QRadioButton*   mPrivate;
+    QRadioButton*   mInternet;
+    QLineEdit*      mMajor;
+    QLineEdit*      mMinor;
+    QLineEdit*      mPatch;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIOVERVIEWDETAILS_HPP

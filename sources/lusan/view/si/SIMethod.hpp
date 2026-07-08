@@ -42,9 +42,7 @@ class MethodParameter;
 class DataTypesModel;
 class ReplyMethodModel;
 
-namespace Ui {
-    class SIMethod;
-}
+class QHBoxLayout;
 
 class SIMethodWidget : public QWidget
 {
@@ -56,7 +54,7 @@ public:
     explicit SIMethodWidget(QWidget* parent);
 
 private:
-    Ui::SIMethod* ui;
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the list and details panels.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -397,7 +395,6 @@ private:
     SIMethodWidget*         mWidget;        //!< The helper widget object.
     DataTypesModel*         mParamTypes;    //!< The parameter data type model object.
     ReplyMethodModel*       mReplyModel;    //!< The reply (response) method model object.
-    Ui::SIMethod&           ui;             //!< The UI helper object.
 
     uint32_t                mCount;         //!< The counter to generate new method names.
 };

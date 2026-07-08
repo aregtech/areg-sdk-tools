@@ -54,11 +54,15 @@ public:
     const VersionNumber& getVersion() const;
     SMOverviewData::eThreading getThreading() const;
     const QString& getDescription() const;
+    bool getIsDeprecated() const;
+    const QString& getDeprecateHint() const;
 
     void setName(const QString& name);
     void setVersion(const VersionNumber& version);
     void setThreading(SMOverviewData::eThreading threading);
     void setDescription(const QString& description);
+    void setIsDeprecated(bool isDeprecated);
+    void setDeprecateHint(const QString& hint);
 
     DocModelNotifier& getNotifier() const;
     uint32_t getOverviewId() const;

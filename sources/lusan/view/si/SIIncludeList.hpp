@@ -23,10 +23,8 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIIncludeList;
-}
-
+class QKeySequence;
+class QString;
 class QTableWidget;
 class QToolButton;
 class SIIncludeModel;
@@ -87,7 +85,16 @@ protected:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIIncludeList*  ui;     //!< The user interface object.
+    void buildUi();
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+
+private:
+    QTableWidget* mTable;
+    QToolButton*  mButtonAdd;
+    QToolButton*  mButtonRemove;
+    QToolButton*  mButtonInsert;
+    QToolButton*  mButtonMoveUp;
+    QToolButton*  mButtonMoveDown;
     SIIncludeModel&     mModel; //!< The model of the include list.
 
 //////////////////////////////////////////////////////////////////////////

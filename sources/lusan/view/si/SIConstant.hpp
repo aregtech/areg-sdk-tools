@@ -29,16 +29,13 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIConstant;
-}
-
 class ConstantEntry;
 class DataTypesModel;
 class SIConstantDetails;
 class SIConstantList;
 class SIConstantModel;
 class TableCell;
+class QHBoxLayout;
 
 //////////////////////////////////////////////////////////////////////////
 // SIConstantWidget class declaration
@@ -57,7 +54,7 @@ public:
     explicit SIConstantWidget(QWidget* parent);
 
 private:
-    Ui::SIConstant* ui;
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the list and details panels.
 };
 
 
@@ -302,7 +299,6 @@ private:
     SIConstantDetails*  mDetails;   //!< The details widget of the constant.
     SIConstantList*     mList;      //!< The list widget of the constant.
     SIConstantWidget*   mWidget;    //!< The widget of the constant.
-    Ui::SIConstant&     ui;         //!< The user interface of the constant.
     DataTypesModel*     mTypeModel; //!< The model of the data types.
     TableCell*          mTableCell; //!< The table cell object.
     uint32_t            mCount;     //!< The counter to generate names.

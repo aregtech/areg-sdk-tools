@@ -18,7 +18,10 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIOverview.hpp"
-#include "ui/ui_SIOverview.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QVBoxLayout>
 
 #include "lusan/model/si/SIOverviewModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
@@ -35,11 +38,20 @@
 
 SIOverviewWidget::SIOverviewWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui(new Ui::SIOverview)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Overview ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
@@ -48,18 +60,15 @@ SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     , mDetails  (new SIOverviewDetails(this))
     , mLinks    (new SIOverviewLinks(this))
     , mWidget   (new SIOverviewWidget(this))
-    , ui        (*mWidget->ui)
     , mVersionValidator(0, 999999, this)
 {
-    ui.horizontalLayout->addWidget(mDetails, 1);
-    ui.horizontalLayout->addWidget(mLinks, 1);
+    mDetails->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mLinks->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mWidget->mPanels->addWidget(mDetails, 1);
+    mWidget->mPanels->addWidget(mLinks, 1);
 
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
-    
+    // Clamp the content to the viewport width so the two Ignored columns split it 50/50
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -70,8 +79,8 @@ SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
 
 SIOverview::~SIOverview()
 {
-    ui.horizontalLayout->removeWidget(mLinks);
-    ui.horizontalLayout->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mLinks);
+    mWidget->mPanels->removeWidget(mDetails);
 }
 
 void SIOverview::setServiceInterfaceName(const QString & siName)
