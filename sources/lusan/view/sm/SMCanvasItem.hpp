@@ -34,6 +34,20 @@
  **/
 class SMCanvasItem : public QGraphicsItem
 {
+public:
+    /**
+     * \enum    eConnHighlight
+     * \brief   The connection-highlight overlay of an item: how it relates to the
+     *          currently selected element(s). Set by the scene, rendered by the item.
+     **/
+    enum class eConnHighlight
+    {
+          None      //!< Not connected to the selection.
+        , Outgoing  //!< Leaves a selected state.
+        , Incoming  //!< Enters a selected state.
+        , Both      //!< Both ends touch the selection (self- or intra-selection edge).
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -47,13 +61,25 @@ public:
     virtual ~SMCanvasItem();
 
 //////////////////////////////////////////////////////////////////////////
-// Attributes
+// Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
      * \brief   Returns the ID of the document element the item renders.
      **/
     inline uint32_t getElementId() const;
+
+    /**
+     * \brief   The connection-highlight overlay state.
+     **/
+    inline eConnHighlight getConnHighlight() const;
+    void setConnHighlight(eConnHighlight highlight);
+
+    /**
+     * \brief   Re-reads the rendered element's model and layout state. Called by the
+     *          scene when a change notification names this item's element.
+     **/
+    virtual void updateFromModel();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -65,7 +91,8 @@ protected:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    const uint32_t  mElementId; //!< The rendered document element's ID.
+    const uint32_t  mElementId;     //!< The rendered document element's ID.
+    eConnHighlight  mConnHighlight; //!< The connection-highlight overlay state.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -75,6 +102,11 @@ private:
 inline uint32_t SMCanvasItem::getElementId() const
 {
     return mElementId;
+}
+
+inline SMCanvasItem::eConnHighlight SMCanvasItem::getConnHighlight() const
+{
+    return mConnHighlight;
 }
 
 #endif  // LUSAN_VIEW_SM_SMCANVASITEM_HPP

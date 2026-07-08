@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QScrollArea>
+#include "lusan/data/si/SIMethodBase.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 /************************************************************************
@@ -251,6 +252,12 @@ protected:
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
 private:
+    /**
+     * \brief   Adds a new method of the specified type and selects it in the list.
+     * \param   type    Type of the created method.
+     **/
+    void addNewMethod(SIMethodBase::eMethodType type);
+
     /**
      * \brief Updates the data in the table.
      */

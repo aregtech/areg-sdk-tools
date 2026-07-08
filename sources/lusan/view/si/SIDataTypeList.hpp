@@ -20,6 +20,7 @@
  ************************************************************************/
 #include <QWidget>
 
+class QAction;
 class QKeySequence;
 class QString;
 class QTreeWidget;
@@ -51,9 +52,13 @@ public:
 
     QToolButton* ctrlButtonInsertField() const;
 
+    QAction* actionNewStruct() const;
+    QAction* actionNewEnum() const;
+    QAction* actionNewImport() const;
+    QAction* actionNewContainer() const;
+
 private:
     void buildUi();
-    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
 
 private:
     QTreeWidget* mTable;
@@ -65,6 +70,10 @@ private:
     QToolButton* mButtonAddField;
     QToolButton* mButtonRemoveField;
     QToolButton* mButtonInsertField;
+    QAction*     mActNewStruct;
+    QAction*     mActNewEnum;
+    QAction*     mActNewImport;
+    QAction*     mActNewContainer;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIDATATYPELIST_HPP

@@ -37,6 +37,7 @@
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/model/common/ReplyMethodModel.hpp"
 
+#include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QHeaderView>
@@ -406,21 +407,23 @@ void SIMethod::onConnectedResponseChanged(const QString& newText)
     }
 }
 
-void SIMethod::onAddClicked()
+void SIMethod::addNewMethod(SIMethodBase::eMethodType type)
 {
     QTreeWidget* table = mList->ctrlTableList();
     QString name = genName();
 
     blockBasicSignals(true);
-    
+
     QTreeWidgetItem* cur = table->currentItem();
     if (cur != nullptr)
     {
         cur->setSelected(false);
     }
-    
-    SIMethodBase * newMethod = mModel.addMethod(name, SIMethodBase::eMethodType::MethodRequest);
+
+    SIMethodBase* newMethod = mModel.addMethod(name, type);
     Q_ASSERT(newMethod != nullptr);
+    mReplyModel->methodCreated(newMethod);
+
     int pos = table->topLevelItemCount();
     QTreeWidgetItem* item = updateMethodNode(new QTreeWidgetItem(), newMethod);
     table->addTopLevelItem(item);
@@ -429,6 +432,11 @@ void SIMethod::onAddClicked()
     showMethodDetails(newMethod);
     updateToolButtonsForMethod(pos, pos + 1);
     blockBasicSignals(false);
+}
+
+void SIMethod::onAddClicked()
+{
+    addNewMethod(SIMethodBase::eMethodType::MethodRequest);
 }
 
 void SIMethod::onInsertClicked()
@@ -911,6 +919,9 @@ void SIMethod::setupSignals()
     connect(mList->ctrlButtonParamRemove()  , &QToolButton::clicked         , this, &SIMethod::onParamRemoveClicked);
     connect(mList->ctrlButtonMoveUp()       , &QToolButton::clicked         , this, &SIMethod::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown()     , &QToolButton::clicked         , this, &SIMethod::onMoveDownClicked);
+    connect(mList->actionNewRequest()       , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodRequest); });
+    connect(mList->actionNewResponse()      , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodResponse); });
+    connect(mList->actionNewBroadcast()     , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodBroadcast); });
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged, this, &SIMethod::onCurCellChanged);
 
     connect(mParams->ctrlParamName()        , &QLineEdit::textChanged       , this, &SIMethod::onParamNameChanged);

@@ -43,6 +43,30 @@ QColor NESMDesign::selectionColor(const QPalette& palette)
     return palette.color(QPalette::Highlight);
 }
 
+QColor NESMDesign::stateBodyColor(const QPalette& palette)
+{
+    return palette.color(QPalette::AlternateBase);
+}
+
+QColor NESMDesign::stateBorderColor(const QPalette& palette)
+{
+    QColor result{ palette.color(QPalette::WindowText) };
+    result.setAlphaF(0.6);
+    return result;
+}
+
+QColor NESMDesign::deriveHeaderShade(const QColor& bodyColor)
+{
+    return bodyColor.darker(HeaderShadeFactor);
+}
+
+QColor NESMDesign::contrastTextColor(const QColor& fill)
+{
+    // Rec. 601 luma decides between near-white and near-black text.
+    const double luma = 0.299 * fill.redF() + 0.587 * fill.greenF() + 0.114 * fill.blueF();
+    return (luma < 0.5 ? QColor(0xF2, 0xF2, 0xF2) : QColor(0x1A, 0x1A, 0x1A));
+}
+
 qreal NESMDesign::snapValue(qreal value, int gridSize)
 {
     const qreal grid = static_cast<qreal>(std::max(gridSize, GridSizeMin));

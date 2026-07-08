@@ -23,6 +23,7 @@
 #include <QByteArray>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -582,6 +583,33 @@ bool StateMachineData::isStimulusName(const QString& name) const
 SMStateEntry* StateMachineData::findState(const QString& name) const
 {
     return mStates.findStateRecursive(name);
+}
+
+SMStateEntry* StateMachineData::findStateById(uint32_t id) const
+{
+    return mStates.findStateByIdRecursive(id);
+}
+
+SMStateData* StateMachineData::findLevel(uint32_t levelId)
+{
+    if (levelId == mOverview.getId())
+    {
+        return &mStates;
+    }
+
+    SMStateEntry* state = mStates.findStateByIdRecursive(levelId);
+    return (state != nullptr ? state->getNestedStates() : nullptr);
+}
+
+const SMStateData* StateMachineData::findLevel(uint32_t levelId) const
+{
+    return const_cast<StateMachineData*>(this)->findLevel(levelId);
+}
+
+bool StateMachineData::isValidIdentifier(const QString& name)
+{
+    static const QRegularExpression _identifier{ QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$") };
+    return _identifier.match(name).hasMatch();
 }
 
 int StateMachineData::getStateCount() const

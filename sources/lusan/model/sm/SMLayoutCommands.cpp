@@ -19,11 +19,18 @@
 
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
 //////////////////////////////////////////////////////////////////////////
 // SMMoveNodeCommand
 //////////////////////////////////////////////////////////////////////////
+
+uint32_t SMMoveNodeCommand::takeNextGesture()
+{
+    static uint32_t _gesture{ 0u };
+    return ++_gesture;
+}
 
 SMMoveNodeCommand::SMMoveNodeCommand(  StateMachineData& data, DocModelNotifier& notifier
                                      , uint32_t owner, uint32_t gestureId
@@ -89,6 +96,90 @@ bool SMMoveNodeCommand::mergeWith(const QUndoCommand* other)
 
     mNew = move->mNew;   // absorb the latest geometry; the original mOld is kept
     return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMAttachNodeCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMAttachNodeCommand::SMAttachNodeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                         , const SMStateEntry& state, const QRectF& geometry
+                                         , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mState    (state)
+    , mGeometry (geometry)
+{
+}
+
+void SMAttachNodeCommand::redo()
+{
+    const uint32_t owner = mState.getId();
+    SMLayoutNode* node = data().getLayout().findNode(owner);
+    if (node == nullptr)
+    {
+        node = &data().getLayout().addNode(owner);
+    }
+
+    node->x      = mGeometry.x();
+    node->y      = mGeometry.y();
+    node->width  = mGeometry.width();
+    node->height = mGeometry.height();
+    notifier().notifyLayoutChanged(QList<uint32_t>{ owner });
+}
+
+void SMAttachNodeCommand::undo()
+{
+    const uint32_t owner = mState.getId();
+    data().getLayout().removeOwned(QList<uint32_t>{ owner });
+    notifier().notifyLayoutChanged(QList<uint32_t>{ owner });
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetNodeExpandedCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetNodeExpandedCommand::SMSetNodeExpandedCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                                   , uint32_t owner, bool expanded
+                                                   , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mOwner    (owner)
+    , mNew      (expanded)
+{
+}
+
+void SMSetNodeExpandedCommand::apply(bool expanded)
+{
+    SMLayoutNode* node = data().getLayout().findNode(mOwner);
+    if (node != nullptr)
+    {
+        node->hasExpanded = true;
+        node->expanded    = expanded;
+        notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
+    }
+}
+
+void SMSetNodeExpandedCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        const SMLayoutNode* node = data().getLayout().findNode(mOwner);
+        mOldHas      = (node != nullptr) && node->hasExpanded;
+        mOldExpanded = (node != nullptr) ? node->expanded : true;
+        mCaptured    = true;
+    }
+
+    apply(mNew);
+}
+
+void SMSetNodeExpandedCommand::undo()
+{
+    SMLayoutNode* node = data().getLayout().findNode(mOwner);
+    if (node != nullptr)
+    {
+        node->hasExpanded = mOldHas;
+        node->expanded    = mOldExpanded;
+        notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

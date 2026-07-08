@@ -19,14 +19,18 @@
 
 #include "lusan/view/sm/SMDesign.hpp"
 
+#include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMCanvasItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
 #include "lusan/view/sm/SMScene.hpp"
+#include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QAction>
 #include <QKeyEvent>
+#include <QMessageBox>
 #include <QPainter>
 #include <QVBoxLayout>
 
@@ -91,6 +95,10 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActToggleGrid(nullptr)
     , mActToggleSnap(nullptr)
     , mActSelectAll (nullptr)
+    , mActAddState  (nullptr)
+    , mActAddFinal  (nullptr)
+    , mActDelete    (nullptr)
+    , mActRename    (nullptr)
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -99,6 +107,13 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     rebuildScene();
     setupActions();
     mView->installEventFilter(this);
+
+    // Minimal canvas context menu over the same action set; the full toolbar and
+    // Design menu surfaces replace nothing here, they reuse these actions.
+    mView->setContextMenuPolicy(Qt::ActionsContextMenu);
+    QAction* separator = new QAction(this);
+    separator->setSeparator(true);
+    mView->addActions({ mActAddState, mActAddFinal, separator, mActRename, mActDelete });
 
     connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMDesign::onDocumentReloaded);
 }
@@ -203,8 +218,29 @@ void SMDesign::setupActions()
         getScene().selectAll();
     });
 
+    mActAddState = new QAction(tr("Add State"), this);
+    connect(mActAddState, &QAction::triggered, this, [this]() {
+        getScene().setActiveTool(NESMDesign::eCanvasTool::AddState);
+    });
+
+    mActAddFinal = new QAction(tr("Add Final State"), this);
+    connect(mActAddFinal, &QAction::triggered, this, [this]() {
+        getScene().setActiveTool(NESMDesign::eCanvasTool::AddFinalState);
+    });
+
+    mActDelete = new QAction(tr("Delete"), this);
+    mActDelete->setShortcut(QKeySequence::Delete);
+    connect(mActDelete, &QAction::triggered, this, &SMDesign::deleteSelection);
+
+    mActRename = new QAction(tr("Rename"), this);
+    mActRename->setShortcut(QKeySequence(Qt::Key_F2));
+    connect(mActRename, &QAction::triggered, this, [this]() {
+        getScene().startRenameOfSelection();
+    });
+
     const QList<QAction*> actions{ mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit
-                                 , mActToggleGrid, mActToggleSnap, mActSelectAll };
+                                 , mActToggleGrid, mActToggleSnap, mActSelectAll
+                                 , mActAddState, mActAddFinal, mActDelete, mActRename };
     for (QAction* action : actions)
     {
         action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -213,6 +249,97 @@ void SMDesign::setupActions()
 
     mActToggleGrid->setChecked(getScene().isGridVisible());
     mActToggleSnap->setChecked(getScene().isSnapToGrid());
+}
+
+void SMDesign::deleteSelection()
+{
+    SMScene& scene = getScene();
+    const QList<SMStateItem*> selection{ scene.selectedStateItems() };
+    if (selection.isEmpty())
+    {
+        return;
+    }
+
+    StateMachineModel& model = mModel;
+    StateMachineData&  data  = model.getData();
+    SMStateData* level = data.findLevel(scene.getLevelId());
+    if (level == nullptr)
+    {
+        return;
+    }
+
+    // The Start state is auto-created with its level and cannot be recreated by a tool.
+    QStringList names;
+    QList<uint32_t> deletable;
+    bool skippedStart{ false };
+    int  substates{ 0 };
+    for (const SMStateItem* item : selection)
+    {
+        const SMStateEntry* state = data.findStateById(item->getElementId());
+        if (state == nullptr)
+        {
+            continue;
+        }
+
+        if (state->getKind() == SMStateEntry::eStateKind::Start)
+        {
+            skippedStart = true;
+            continue;
+        }
+
+        names.append(state->getName());
+        deletable.append(state->getId());
+        if (state->hasNestedStates())
+        {
+            substates += state->getNestedStates()->countStatesRecursive();
+        }
+    }
+
+    if (deletable.isEmpty())
+    {
+        QMessageBox::information(this, tr("Delete States")
+                                 , tr("The Start state cannot be deleted — every machine level needs exactly one."));
+        return;
+    }
+
+    QString message = (deletable.size() == 1)
+            ? tr("Delete state '%1'?").arg(names.first())
+            : tr("Delete %1 states (%2)?").arg(deletable.size()).arg(names.join(QStringLiteral(", ")));
+    if (substates > 0)
+    {
+        message += QStringLiteral("\n") + tr("%1 painted substate(s) are deleted with it.").arg(substates);
+    }
+
+    message += QStringLiteral("\n") + tr("Transitions from and to the deleted state(s) are deleted too.");
+    if (skippedStart)
+    {
+        message += QStringLiteral("\n") + tr("The selected Start state is kept — every level needs one.");
+    }
+
+    const QMessageBox::StandardButton answer =
+            QMessageBox::question(this, tr("Delete States"), message, QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (answer != QMessageBox::Yes)
+    {
+        return;
+    }
+
+    const QString text = (deletable.size() == 1)
+            ? tr("Delete state %1").arg(names.first())
+            : tr("Delete %1 states").arg(deletable.size());
+    if (deletable.size() == 1)
+    {
+        model.getUndoStack().push(new SMRemoveStateCommand(data, model.getNotifier(), *level, deletable.first(), text));
+    }
+    else
+    {
+        SMCompositeCommand* composite = new SMCompositeCommand(data, model.getNotifier(), text);
+        for (uint32_t stateId : deletable)
+        {
+            new SMRemoveStateCommand(data, model.getNotifier(), *level, stateId, text, composite);
+        }
+
+        model.getUndoStack().push(composite);
+    }
 }
 
 void SMDesign::rebuildScene()

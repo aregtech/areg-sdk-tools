@@ -20,6 +20,7 @@
  ************************************************************************/
 #include <QWidget>
 
+class QAction;
 class QKeySequence;
 class QString;
 class QToolButton;
@@ -50,9 +51,12 @@ public:
 
     QTreeWidget * ctrlTableList() const;
 
+    QAction* actionNewRequest() const;
+    QAction* actionNewResponse() const;
+    QAction* actionNewBroadcast() const;
+
 private:
     void buildUi();
-    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
 
 private:
     QTreeWidget* mTable;
@@ -64,6 +68,9 @@ private:
     QToolButton* mButtonParamInsert;
     QToolButton* mButtonMoveUp;
     QToolButton* mButtonMoveDown;
+    QAction*     mActNewRequest;
+    QAction*     mActNewResponse;
+    QAction*     mActNewBroadcast;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIMETHODLIST_HPP

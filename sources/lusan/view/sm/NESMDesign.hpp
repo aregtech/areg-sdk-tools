@@ -78,6 +78,45 @@ namespace NESMDesign
     //!< The fixed canvas working area of one machine level.
     constexpr double    SceneExtent     { 10000.0 };
 
+    //!< The default box size of a newly placed state.
+    constexpr double    StateDefaultWidth   { 160.0 };
+    constexpr double    StateDefaultHeight  { 96.0 };
+    //!< The smallest box a state can be resized to.
+    constexpr double    StateMinWidth       { 64.0 };
+    constexpr double    StateMinHeight      { 48.0 };
+    //!< The state box corner radius.
+    constexpr double    StateCornerRadius   { 8.0 };
+    //!< The header band height (name and badges).
+    constexpr double    StateHeaderHeight   { 24.0 };
+    //!< One behavior row's height in the state body.
+    constexpr double    StateRowHeight      { 16.0 };
+    //!< The horizontal text padding inside the state box.
+    constexpr double    StatePadding        { 8.0 };
+    //!< The side length of a selection resize handle.
+    constexpr double    HandleSize          { 7.0 };
+    //!< The darkening factor applied to the body color to derive the header shade.
+    constexpr int       HeaderShadeFactor   { 145 };
+
+    /**
+     * \brief   Returns the default state body fill color of the given palette.
+     **/
+    QColor stateBodyColor(const QPalette& palette);
+
+    /**
+     * \brief   Returns the state border color of the given palette.
+     **/
+    QColor stateBorderColor(const QPalette& palette);
+
+    /**
+     * \brief   Derives the header shade of a body color (always darker, spec-fixed).
+     **/
+    QColor deriveHeaderShade(const QColor& bodyColor);
+
+    /**
+     * \brief   Returns a readable text color (light or dark) for the given fill.
+     **/
+    QColor contrastTextColor(const QColor& fill);
+
     /**
      * \brief   Returns the canvas background color of the given palette.
      **/

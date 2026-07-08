@@ -31,6 +31,11 @@
 #include <filesystem>
 #include <vector>
 
+class QKeySequence;
+class QMenu;
+class QToolButton;
+class QWidget;
+
 /**
  * \namespace NELusanCommon
  * \brief     Contains common definitions and utility functions for the Lusan application.
@@ -621,6 +626,15 @@ namespace NELusanCommon
 
     //<! Loads service interface tab icon and sets the specified size
     inline QIcon iconServiceInterfaceTab(const QSize & size = QSize{ 32, 32 });
+    
+    //!< Crate a tool button object.    
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+    
+    //!< Applies the shared look to a plain toolbar button (without a split drop-down menu).
+    void decorateToolButton(QToolButton* button);
+
+    //!< Attaches the type menu to the Add split button and applies the shared arrow-friendly sizing.
+    void decorateToolButton(QToolButton* button, QMenu* menu);
 }
 
 inline QIcon NELusanCommon::iconLogDebug(const QSize & size)

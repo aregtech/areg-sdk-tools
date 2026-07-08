@@ -249,6 +249,25 @@ public:
     SMStateEntry* findState(const QString& name) const;
 
     /**
+     * \brief   Finds a state by element ID anywhere in the document.
+     **/
+    SMStateEntry* findStateById(uint32_t id) const;
+
+    /**
+     * \brief   Returns the StateList of a machine level: the root list when \p levelId is
+     *          the Overview ID, otherwise the nested list of the composite state with that
+     *          ID; nullptr when the ID names no level.
+     **/
+    SMStateData* findLevel(uint32_t levelId);
+    const SMStateData* findLevel(uint32_t levelId) const;
+
+    /**
+     * \brief   True if the name is a valid element identifier: a letter or underscore
+     *          followed by letters, digits, or underscores.
+     **/
+    static bool isValidIdentifier(const QString& name);
+
+    /**
      * \brief   The total number of states across every machine level.
      **/
     int getStateCount() const;

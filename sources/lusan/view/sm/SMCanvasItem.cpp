@@ -24,8 +24,22 @@
 SMCanvasItem::SMCanvasItem(uint32_t elementId, QGraphicsItem* parent /*= nullptr*/)
     : QGraphicsItem (parent)
     , mElementId    (elementId)
+    , mConnHighlight(eConnHighlight::None)
 {
     setFlag(QGraphicsItem::ItemSendsGeometryChanges, true);
+}
+
+void SMCanvasItem::setConnHighlight(eConnHighlight highlight)
+{
+    if (highlight != mConnHighlight)
+    {
+        mConnHighlight = highlight;
+        update();
+    }
+}
+
+void SMCanvasItem::updateFromModel()
+{
 }
 
 SMCanvasItem::~SMCanvasItem()
