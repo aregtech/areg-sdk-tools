@@ -40,6 +40,7 @@ StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     , mMethodModel   (*this)
     , mConstantModel (*this)
     , mIncludeModel  (*this)
+    , mSelectionModel(this)
     , mOpenSuccess   (false)
 {
     mUndoStack.setUndoLimit(100);
@@ -61,6 +62,7 @@ bool StateMachineModel::createNewDocument(const QString& machineName)
 
     mUndoStack.clear();
     mUndoStack.setClean();
+    mSelectionModel.reset();
     mNotifier.notifyDocumentReloaded();
     markDirty();
     updateAutosaveTimer();
@@ -88,6 +90,7 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
 
     mUndoStack.clear();
     mUndoStack.setClean();
+    mSelectionModel.reset();
     mNotifier.notifyDocumentReloaded();
     if (sourcePath.isEmpty() == false)
     {

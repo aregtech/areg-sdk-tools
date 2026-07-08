@@ -17,10 +17,16 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMInclude.cpp
     ${LUSAN}/view/sm/SMIncludeDetails.cpp
     ${LUSAN}/view/sm/SMIncludeList.cpp
+    ${LUSAN}/view/sm/NESMDesign.cpp
+    ${LUSAN}/view/sm/SMCanvasItem.cpp
+    ${LUSAN}/view/sm/SMCanvasTool.cpp
+    ${LUSAN}/view/sm/SMDesign.cpp
+    ${LUSAN}/view/sm/SMGraphicsView.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
     ${LUSAN}/view/sm/SMMethodDetails.cpp
     ${LUSAN}/view/sm/SMMethodList.cpp
     ${LUSAN}/view/sm/SMOverview.cpp
+    ${LUSAN}/view/sm/SMScene.cpp
     ${LUSAN}/view/sm/SMTimerDetails.cpp
     ${LUSAN}/view/sm/StateMachine.cpp
 )
@@ -44,10 +50,16 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMInclude.hpp
     ${LUSAN}/view/sm/SMIncludeDetails.hpp
     ${LUSAN}/view/sm/SMIncludeList.hpp
+    ${LUSAN}/view/sm/NESMDesign.hpp
+    ${LUSAN}/view/sm/SMCanvasItem.hpp
+    ${LUSAN}/view/sm/SMCanvasTool.hpp
+    ${LUSAN}/view/sm/SMDesign.hpp
+    ${LUSAN}/view/sm/SMGraphicsView.hpp
     ${LUSAN}/view/sm/SMMethod.hpp
     ${LUSAN}/view/sm/SMMethodDetails.hpp
     ${LUSAN}/view/sm/SMMethodList.hpp
     ${LUSAN}/view/sm/SMOverview.hpp
+    ${LUSAN}/view/sm/SMScene.hpp
     ${LUSAN}/view/sm/SMTimerDetails.hpp
     ${LUSAN}/view/sm/StateMachine.hpp
 )

@@ -22,6 +22,7 @@
 #include "lusan/view/sm/SMAttribute.hpp"
 #include "lusan/view/sm/SMConstant.hpp"
 #include "lusan/view/sm/SMDataType.hpp"
+#include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEvent.hpp"
 #include "lusan/view/sm/SMInclude.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
@@ -270,6 +271,10 @@ void StateMachine::ensureTabInitialized(int index)
     else if (index == static_cast<int>(PageIncludes))
     {
         page = new SMInclude(mModel.getIncludeModel(), &mTabWidget);
+    }
+    else if (index == static_cast<int>(PageDesign))
+    {
+        page = new SMDesign(mModel, &mTabWidget);
     }
     else
     {
