@@ -29,6 +29,7 @@
 #include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/SMConstantModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
+#include "lusan/model/sm/SMSelectionModel.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -73,6 +74,7 @@ public:
     inline SMMethodModel& getMethodModel();
     inline SMConstantModel& getConstantModel();
     inline SMIncludeModel& getIncludeModel();
+    inline SMSelectionModel& getSelectionModel();
 
 signals:
     void signalDirtyChanged(bool dirty);
@@ -98,6 +100,7 @@ private:
     SMMethodModel   mMethodModel;
     SMConstantModel mConstantModel;
     SMIncludeModel  mIncludeModel;
+    SMSelectionModel mSelectionModel;
     bool            mOpenSuccess;
 };
 
@@ -180,6 +183,11 @@ inline SMConstantModel& StateMachineModel::getConstantModel()
 inline SMIncludeModel& StateMachineModel::getIncludeModel()
 {
     return mIncludeModel;
+}
+
+inline SMSelectionModel& StateMachineModel::getSelectionModel()
+{
+    return mSelectionModel;
 }
 
 #endif  // LUSAN_MODEL_SM_STATEMACHINEMODEL_HPP
