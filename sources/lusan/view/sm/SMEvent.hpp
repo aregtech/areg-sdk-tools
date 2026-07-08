@@ -92,18 +92,24 @@ private slots:
 
     void onEventNameTextChanged(const QString& text);
     void onEventNameCommitted();
+    void onEventDeprecatedToggled(bool checked);
+    void onEventDeprecateHintCommitted();
 
     void onParamNameTextChanged(const QString& text);
     void onParamNameCommitted();
     void onParamTypeChanged(int index);
     void onParamHasDefaultToggled(bool checked);
     void onParamValueCommitted();
+    void onParamDeprecatedToggled(bool checked);
+    void onParamDeprecateHintCommitted();
 
     void onTimerNameTextChanged(const QString& text);
     void onTimerNameCommitted();
     void onTimeoutCommitted();
     void onRepeatCommitted();
     void onContinuousToggled(bool checked);
+    void onTimerDeprecatedToggled(bool checked);
+    void onTimerDeprecateHintCommitted();
 
     void onNotifierChanged();
     //!< Repopulates the parameter type combo on any DataType-kind notifier signal (a

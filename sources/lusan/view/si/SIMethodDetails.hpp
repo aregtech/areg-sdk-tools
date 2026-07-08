@@ -26,35 +26,41 @@ class QLineEdit;
 class QPlainTextEdit;
 class QRadioButton;
 
-namespace Ui {
-    class SIMethodDetails;
-}
-
 class SIMethodDetails : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit SIMethodDetails(QWidget* parent = nullptr);
-    
+
     QLineEdit * ctrlName() const;
-    
+
     QRadioButton * ctrlBroadcast() const;
-    
+
     QRadioButton * ctrlRequest() const;
-    
+
     QRadioButton * ctrlResponse() const;
-    
+
     QComboBox * ctrlConnectedResponse() const;
-    
+
     QPlainTextEdit * ctrlDescription() const;
-    
+
     QCheckBox * ctrlDeprecated() const;
-    
+
     QLineEdit * ctrlDeprecateHint() const;
 
 private:
-    Ui::SIMethodDetails* ui;
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QRadioButton*   mRequest;
+    QRadioButton*   mResponse;
+    QRadioButton*   mBroadcast;
+    QComboBox*      mReply;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIMETHODDETAILS_HPP

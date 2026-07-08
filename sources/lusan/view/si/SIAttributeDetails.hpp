@@ -20,10 +20,6 @@
  ************************************************************************/
 #include <QWidget>
 
-namespace Ui {
-    class SIAttributeDetails;
-}
-
 class QCheckBox;
 class QComboBox;
 class QLineEdit;
@@ -51,7 +47,15 @@ public:
     QLineEdit* ctrlDeprecateHint();
 
 private:
-    Ui::SIAttributeDetails* ui;
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QComboBox*      mTypes;
+    QComboBox*      mNotify;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIATTRIBUTEDETAILS_HPP

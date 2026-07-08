@@ -27,10 +27,8 @@
  * Dependencies
  ************************************************************************/
 
-namespace Ui {
-    class SIConstantList;
-}
-
+class QKeySequence;
+class QString;
 class QToolButton;
 class QTableWidget;
 
@@ -89,7 +87,16 @@ public:
     QTableWidget* ctrlTableList();
 
 private:
-    Ui::SIConstantList* ui; //!< The user interface object.
+    void buildUi();
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+
+private:
+    QTableWidget* mTable;
+    QToolButton*  mButtonAdd;
+    QToolButton*  mButtonRemove;
+    QToolButton*  mButtonInsert;
+    QToolButton*  mButtonMoveUp;
+    QToolButton*  mButtonMoveDown;
 };
 
 #endif // LUSAN_APPLICATION_SI_SICONSTANTLIST_HPP

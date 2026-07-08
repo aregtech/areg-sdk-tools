@@ -32,15 +32,12 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-class SIAttribute;
-}
-
 class DataTypesModel;
 class SIAttributeDetails;
 class SIAttributeList;
 class SIAttributeModel;
 class TableCell;
+class QHBoxLayout;
 
 //////////////////////////////////////////////////////////////////////////
 // SIAttributeNotifyModel class declaration
@@ -87,18 +84,18 @@ public:
 class SIAttributeWidget : public QWidget
 {
     friend class SIAttribute;
-    
+
     Q_OBJECT
-    
+
 public:
     /**
      * \brief Constructor with initialization.
      * \param parent The parent widget.
      */
     explicit SIAttributeWidget(QWidget* parent);
-    
+
 private:
-    Ui::SIAttribute* ui; //!< The user interface of the data attribute.
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the list and details panels.
 };
 
 
@@ -357,7 +354,6 @@ private:
     SIAttributeDetails*     mDetails;       //!< The details widget of the data attribute.
     SIAttributeList*        mList;          //!< The list widget of the data attribute.
     SIAttributeWidget*      mWidget;        //!< The widget of the data attribute.
-    Ui::SIAttribute&        ui;             //!< The user interface of the data attribute.
     DataTypesModel*         mTypeModel;     //!< The model of the data types.
     SIAttributeNotifyModel* mNotifyModel;   //!< The model of the notification types.
     TableCell*              mTableCell;     //!< The table cell object.

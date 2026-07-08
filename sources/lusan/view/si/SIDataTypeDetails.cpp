@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -13,152 +13,234 @@
  *  \file        lusan/view/si/SIDataTypeDetails.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface data type editor.
  *
  ************************************************************************/
 #include "lusan/view/si/SIDataTypeDetails.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTypeDetails.h"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QRadioButton>
+#include <QVBoxLayout>
 
 SIDataTypeDetails::SIDataTypeDetails(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::SIDataTypeDetails)
+    : QWidget           (parent)
+    , mForm             (nullptr)
+    , mName             (nullptr)
+    , mTypeStruct       (nullptr)
+    , mTypeEnum         (nullptr)
+    , mTypeImport       (nullptr)
+    , mTypeContainer    (nullptr)
+    , mLabelEnum        (nullptr)
+    , mGroupEnum        (nullptr)
+    , mEnumDerived      (nullptr)
+    , mLabelImport      (nullptr)
+    , mGroupImport      (nullptr)
+    , mImportLocation   (nullptr)
+    , mImportBrowse     (nullptr)
+    , mImportNamespace  (nullptr)
+    , mImportObject     (nullptr)
+    , mLabelContainer   (nullptr)
+    , mGroupContainer   (nullptr)
+    , mContainerObject  (nullptr)
+    , mContainerKey     (nullptr)
+    , mContainerValue   (nullptr)
+    , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
-    QFont font{this->font()};
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    buildUi();
+}
+
+void SIDataTypeDetails::buildUi()
+{
+    QVBoxLayout* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* details = new QGroupBox(tr("Details:"), this);
+    QVBoxLayout* detailsLayout = new QVBoxLayout(details);
+
+    mForm = new QFormLayout();
+    mForm->setRowWrapPolicy(QFormLayout::DontWrapRows);
+    mForm->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+    // Row: Name
+    mName = new QLineEdit(details);
+    mForm->addRow(tr("Name:"), mName);
+
+    // Row: Type Definition (4 radios in a row)
+    QGroupBox* typeGroup = new QGroupBox(tr("Type Definition:"), details);
+    typeGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    QHBoxLayout* typeLayout = new QHBoxLayout(typeGroup);
+    mTypeStruct    = new QRadioButton(tr("Structure"), typeGroup);
+    mTypeEnum      = new QRadioButton(tr("Enumeration"), typeGroup);
+    mTypeImport    = new QRadioButton(tr("Imported"), typeGroup);
+    mTypeContainer = new QRadioButton(tr("Container"), typeGroup);
+    typeLayout->addWidget(mTypeStruct);
+    typeLayout->addWidget(mTypeEnum);
+    typeLayout->addWidget(mTypeImport);
+    typeLayout->addWidget(mTypeContainer);
+    typeLayout->addStretch(1);
+    mForm->addRow(tr("Type:"), typeGroup);
+
+    // Row: Enumeration details
+    mLabelEnum = new QLabel(tr("Enumeration:"), details);
+    mGroupEnum = new QGroupBox(tr("Enumeration Details:"), details);
+    QFormLayout* enumForm = new QFormLayout(mGroupEnum);
+    mEnumDerived = new QComboBox(mGroupEnum);
+    enumForm->addRow(tr("Derived:"), mEnumDerived);
+    mForm->addRow(mLabelEnum, mGroupEnum);
+
+    // Row: Import details
+    mLabelImport = new QLabel(tr("Imported:"), details);
+    mGroupImport = new QGroupBox(tr("Import Details:"), details);
+    QFormLayout* importForm = new QFormLayout(mGroupImport);
+    QWidget* includeCell = new QWidget(mGroupImport);
+    QHBoxLayout* includeLayout = new QHBoxLayout(includeCell);
+    includeLayout->setContentsMargins(0, 0, 0, 0);
+    mImportLocation = new QLineEdit(includeCell);
+    mImportBrowse = new QPushButton(tr("Browse ..."), includeCell);
+    includeLayout->addWidget(mImportLocation);
+    includeLayout->addWidget(mImportBrowse);
+    importForm->addRow(tr("Location:"), includeCell);
+    mImportNamespace = new QLineEdit(mGroupImport);
+    importForm->addRow(tr("Namespace:"), mImportNamespace);
+    mImportObject = new QLineEdit(mGroupImport);
+    importForm->addRow(tr("Object:"), mImportObject);
+    mForm->addRow(mLabelImport, mGroupImport);
+
+    // Row: Container details
+    mLabelContainer = new QLabel(tr("Container:"), details);
+    mGroupContainer = new QGroupBox(tr("Container Details:"), details);
+    QFormLayout* containerForm = new QFormLayout(mGroupContainer);
+    mContainerObject = new QComboBox(mGroupContainer);
+    containerForm->addRow(tr("Base:"), mContainerObject);
+    mContainerKey = new QComboBox(mGroupContainer);
+    containerForm->addRow(tr("Key:"), mContainerKey);
+    mContainerValue = new QComboBox(mGroupContainer);
+    containerForm->addRow(tr("Value:"), mContainerValue);
+    mForm->addRow(mLabelContainer, mGroupContainer);
+
+    // Row: Description
+    mDescription = new QPlainTextEdit(details);
+    mDescription->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    mDescription->setPlaceholderText(tr("Describe data here"));
+    mForm->addRow(tr("Description:"), mDescription);
+
+    // Row: Deprecated
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    mForm->addRow(mDeprecated, mDeprecateHint);
+
+    detailsLayout->addLayout(mForm);
+    root->addWidget(details);
 }
 
 
 QLineEdit* SIDataTypeDetails::ctrlName() const
 {
-    return ui->editName;
+    return mName;
 }
 
 QRadioButton* SIDataTypeDetails::ctrlTypeStruct() const
 {
-    return ui->radioTypeStruct;
+    return mTypeStruct;
 }
 
 QRadioButton* SIDataTypeDetails::ctrlTypeEnum() const
 {
-    return ui->radioTypeEnum;
+    return mTypeEnum;
 }
 
 QRadioButton* SIDataTypeDetails::ctrlTypeImport() const
 {
-    return ui->radioTypeImport;
+    return mTypeImport;
 }
 
 QRadioButton* SIDataTypeDetails::ctrlTypeContainer() const
 {
-    return ui->radioTypeContainer;
+    return mTypeContainer;
 }
 
 QComboBox* SIDataTypeDetails::ctrlContainerObject() const
 {
-    return ui->comboContainerObject;
+    return mContainerObject;
 }
 
 QComboBox* SIDataTypeDetails::ctrlContainerKey() const
 {
-    return ui->comboContainerKey;
+    return mContainerKey;
 }
 
 QComboBox* SIDataTypeDetails::ctrlContainerValue() const
 {
-    return ui->comboContainerValue;
+    return mContainerValue;
 }
 
 QPlainTextEdit* SIDataTypeDetails::ctrlDescription() const
 {
-    return ui->textDescribe;
+    return mDescription;
 }
 
 QCheckBox* SIDataTypeDetails::ctrlDeprecated() const
 {
-    return ui->checkDeprecated;
+    return mDeprecated;
 }
 
 QLineEdit* SIDataTypeDetails::ctrlDeprecateHint() const
 {
-    return ui->editDeprecated;
+    return mDeprecateHint;
 }
 
 QComboBox* SIDataTypeDetails::ctrlEnumDerived() const
 {
-    return ui->comboEnumDerive;
+    return mEnumDerived;
 }
 
 QLineEdit* SIDataTypeDetails::ctrlImportLocation() const
 {
-    return ui->editImportInclude;
+    return mImportLocation;
 }
 
 QPushButton* SIDataTypeDetails::ctrlButtonBrowse() const
 {
-    return ui->buttonImportInclude;
+    return mImportBrowse;
 }
 
 QLineEdit* SIDataTypeDetails::ctrlImportNamespace() const
 {
-    return ui->editImportNamespace;
+    return mImportNamespace;
 }
 
 QLineEdit* SIDataTypeDetails::ctrlImportObject() const
 {
-    return ui->editImportObject;
+    return mImportObject;
 }
 
 SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsEnum() const
 {
-    return CtrlGroup{ui->labelEnum, ui->groupEnum};
+    return CtrlGroup{mLabelEnum, mGroupEnum};
 }
 
 SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsImport() const
 {
-    return CtrlGroup{ui->labelImport, ui->groupImport};
+    return CtrlGroup{mLabelImport, mGroupImport};
 }
 
 SIDataTypeDetails::CtrlGroup SIDataTypeDetails::ctrlDetailsContainer() const
 {
-    return CtrlGroup{ui->labelContainer, ui->groupContainer};
+    return CtrlGroup{mLabelContainer, mGroupContainer};
 }
 
 QFormLayout* SIDataTypeDetails::ctrlLayout() const
 {
-    return ui->formLayout;
-}
-
-QSpacerItem* SIDataTypeDetails::ctrlSpacer1() const
-{
-    return ui->verticalSpacer1;
-}
-
-QSpacerItem* SIDataTypeDetails::ctrlSpacer2() const
-{
-    return ui->verticalSpacer2;
-}
-
-SIDataTypeDetails::SpaceItem SIDataTypeDetails::ctrlSpacer() const
-{
-    return SpaceItem{ ui->verticalSpacer1, ui->verticalSpacer2 };
-}
-
-void SIDataTypeDetails::setSpace(int newHeight)
-{
-    newHeight = newHeight > 0 ? newHeight : 1;
-    ui->verticalSpacer1->changeSize(20, newHeight, QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
-    ui->verticalSpacer2->changeSize(20, newHeight, QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Preferred);
-}
-
-void SIDataTypeDetails::changeSpace(int delta)
-{
-    int newHeight = ui->verticalSpacer1->minimumSize().height();
-    setSpace(newHeight + delta);
+    return mForm;
 }

@@ -57,7 +57,55 @@ public:
      * \param display   The classification to display.
      */
     QString getString(ElementBase::eDisplay display) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    //!< Returns true if the event is marked deprecated.
+    inline bool getIsDeprecated() const;
+    //!< Marks (or clears) the event as deprecated.
+    inline void setIsDeprecated(bool isDeprecated);
+    //!< Returns the hint explaining why the event is deprecated.
+    inline const QString& getDeprecateHint() const;
+    //!< Sets the hint explaining why the event is deprecated.
+    inline void setDeprecateHint(const QString& hint);
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    bool    mIsDeprecated;  //!< Flag, indicating whether the event is deprecated.
+    QString mDeprecateHint; //!< The hint, why the event is deprecated.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// SMEventEntry inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool SMEventEntry::getIsDeprecated() const
+{
+    return mIsDeprecated;
+}
+
+inline void SMEventEntry::setIsDeprecated(bool isDeprecated)
+{
+    mIsDeprecated = isDeprecated;
+    if (isDeprecated == false)
+    {
+        mDeprecateHint.clear();
+    }
+}
+
+inline const QString& SMEventEntry::getDeprecateHint() const
+{
+    return mDeprecateHint;
+}
+
+inline void SMEventEntry::setDeprecateHint(const QString& hint)
+{
+    mDeprecateHint = hint;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // SMEventData class declaration

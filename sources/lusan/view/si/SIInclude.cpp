@@ -18,7 +18,10 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIInclude.hpp"
-#include "ui/ui_SIInclude.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QVBoxLayout>
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
@@ -53,11 +56,20 @@ QStringList SIInclude::getSupportedExtensions()
 
 SIIncludeWidget::SIIncludeWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui(new Ui::SIInclude)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Includes Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
@@ -66,7 +78,6 @@ SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
     , mDetails  (new SIIncludeDetails(this))
     , mList     (new SIIncludeList(model, this))
     , mWidget   (new SIIncludeWidget(this))
-    , ui        (*mWidget->ui)
     , mTableCell(nullptr)
     , mCurUrl   ( )
     , mCurFile  ( )
@@ -74,15 +85,13 @@ SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
     , mCurView  ( -1 )
     , mCount    ( 0 )
 {
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mDetails->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(mDetails, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
-
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -94,8 +103,8 @@ SIInclude::SIInclude(SIIncludeModel & model, QWidget* parent)
 
 SIInclude::~SIInclude()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mDetails);
 }
 
 int SIInclude::getColumnCount() const

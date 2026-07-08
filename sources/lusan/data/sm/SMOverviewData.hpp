@@ -121,6 +121,12 @@ public:
     inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
+    inline bool getIsDeprecated() const;
+    inline void setIsDeprecated(bool isDeprecated);
+
+    inline const QString& getDeprecateHint() const;
+    inline void setDeprecateHint(const QString& hint);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -129,6 +135,8 @@ private:
     VersionNumber   mVersion;       //!< The user-owned document version (Overview@Version).
     eThreading      mThreading;     //!< The threading mode.
     QString         mDescription;   //!< The description text.
+    bool            mIsDeprecated;  //!< The flag indicating that the whole machine is deprecated.
+    QString         mDeprecateHint; //!< The hint shown when the machine is deprecated.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -178,6 +186,26 @@ inline const QString& SMOverviewData::getDescription() const
 inline void SMOverviewData::setDescription(const QString& description)
 {
     mDescription = description;
+}
+
+inline bool SMOverviewData::getIsDeprecated() const
+{
+    return mIsDeprecated;
+}
+
+inline void SMOverviewData::setIsDeprecated(bool isDeprecated)
+{
+    mIsDeprecated = isDeprecated;
+}
+
+inline const QString& SMOverviewData::getDeprecateHint() const
+{
+    return mDeprecateHint;
+}
+
+inline void SMOverviewData::setDeprecateHint(const QString& hint)
+{
+    mDeprecateHint = hint;
 }
 
 #endif  // LUSAN_DATA_SM_SMOVERVIEWDATA_HPP

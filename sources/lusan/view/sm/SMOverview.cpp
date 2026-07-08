@@ -23,6 +23,7 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/view/sm/StateMachine.hpp"
 
+#include <QCheckBox>
 #include <QEvent>
 #include <QFormLayout>
 #include <QGridLayout>
@@ -48,6 +49,8 @@ SMOverview::SMOverview(SMOverviewModel& model, QWidget* parent /*= nullptr*/)
     , mShared           (nullptr)
     , mLocal            (nullptr)
     , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
     , mVersionValidator (0, 999999, this)
     , mCommitting       (false)
 {
@@ -132,6 +135,13 @@ void SMOverview::buildUi()
     mDescription->installEventFilter(this);
     form->addRow(tr("Description:"), mDescription);
 
+    // Deprecated row: right-aligned checkbox as the label, hint edit beside it, mirroring SI.
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    mDeprecateHint->setEnabled(false);
+    form->addRow(mDeprecated, mDeprecateHint);
+
     columns->addWidget(details, 1);
 
     // Right column: Quick Links
@@ -208,6 +218,8 @@ void SMOverview::setupSignals()
     connect(mMinor, &QLineEdit::textEdited      , this, &SMOverview::onVersionEdited);
     connect(mPatch, &QLineEdit::textEdited      , this, &SMOverview::onVersionEdited);
     connect(mShared, &QRadioButton::toggled     , this, &SMOverview::onThreadingToggled);
+    connect(mDeprecated, &QCheckBox::toggled    , this, &SMOverview::onDeprecatedToggled);
+    connect(mDeprecateHint, &QLineEdit::editingFinished, this, &SMOverview::onDeprecateHintCommitted);
 
     connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMOverview::onOverviewChanged);
     connect(&mModel.getNotifier(), &DocModelNotifier::elementChanged, this, [this](uint32_t id, eDocElementKind kind)
@@ -228,6 +240,8 @@ void SMOverview::updateData()
     const QSignalBlocker blockShared(mShared);
     const QSignalBlocker blockLocal(mLocal);
     const QSignalBlocker blockDescription(mDescription);
+    const QSignalBlocker blockDeprecated(mDeprecated);
+    const QSignalBlocker blockDeprecateHint(mDeprecateHint);
 
     mName->setText(mModel.getName());
     showNameValid(isValidMachineName(mModel.getName()));
@@ -243,6 +257,11 @@ void SMOverview::updateData()
         mShared->setChecked(true);
 
     mDescription->setPlainText(mModel.getDescription());
+
+    const bool deprecated = mModel.getIsDeprecated();
+    mDeprecated->setChecked(deprecated);
+    mDeprecateHint->setEnabled(deprecated);
+    mDeprecateHint->setText(deprecated ? mModel.getDeprecateHint() : QString());
 }
 
 void SMOverview::onNameEdited(const QString& text)
@@ -273,6 +292,30 @@ void SMOverview::onThreadingToggled(bool checked)
     mCommitting = true;
     mModel.setThreading(checked ? SMOverviewData::eThreading::Shared : SMOverviewData::eThreading::Local);
     mCommitting = false;
+}
+
+void SMOverview::onDeprecatedToggled(bool checked)
+{
+    mCommitting = true;
+    mModel.setIsDeprecated(checked);
+    mCommitting = false;
+
+    mDeprecateHint->setEnabled(checked);
+    mDeprecateHint->setText(checked ? mModel.getDeprecateHint() : QString());
+    if (checked)
+    {
+        mDeprecateHint->setFocus();
+    }
+}
+
+void SMOverview::onDeprecateHintCommitted()
+{
+    if (mDeprecated->isChecked())
+    {
+        mCommitting = true;
+        mModel.setDeprecateHint(mDeprecateHint->text());
+        mCommitting = false;
+    }
 }
 
 void SMOverview::onOverviewChanged()

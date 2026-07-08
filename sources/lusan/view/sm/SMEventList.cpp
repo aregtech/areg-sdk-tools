@@ -88,7 +88,7 @@ void SMEventList::buildUi()
     mButtonAdd->setPopupMode(QToolButton::InstantPopup);
     // A smaller icon plus extra width give the drop-down arrow room so it never crowds the icon.
     mButtonAdd->setIconSize(QSize(20, 20));
-    mButtonAdd->setMaximumSize(44, 24);
+    mButtonAdd->setMaximumSize(56, 24);
 
     QFrame* sepParam = new QFrame(toolbar);
     sepParam->setFrameShape(QFrame::VLine);

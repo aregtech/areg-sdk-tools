@@ -18,7 +18,9 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIMethod.hpp"
-#include "ui/ui_SIMethod.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
 
 #include "lusan/view/si/SIMethodDetails.hpp"
 #include "lusan/view/si/SIMethodParamDetails.hpp"
@@ -50,11 +52,20 @@
 
 SIMethodWidget::SIMethodWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui(new Ui::SIMethod)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Methods Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
@@ -66,7 +77,6 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
     , mWidget       (new SIMethodWidget(this))
     , mParamTypes   (new DataTypesModel(model.getDataTypeData(), false))
     , mReplyModel   (new ReplyMethodModel(model.getMethodData()))
-    , ui            (*mWidget->ui)
     , mCount        (0)
 {
     mParams->setHidden(true);
@@ -79,23 +89,17 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
     rightLayout->setContentsMargins(0, 0, 0, 0);
     rightLayout->addWidget(mDetails);
     rightLayout->addWidget(mParams);
-    mList->setSizePolicy(QSizePolicy::Ignored, mList->sizePolicy().verticalPolicy());
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     rightPanel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
 
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(rightPanel, 1);
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(rightPanel, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
 
-    setWidgetResizable(true);
-    setWidget(mWidget);
-    
     updateData();
     updateWidgets();
     setupSignals();
@@ -103,9 +107,9 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
 
 SIMethod::~SIMethod()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
-    ui.horizontalLayout->removeWidget(mParams);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mParams);
 }
 
 void SIMethod::dataTypeCreated(DataTypeCustom* dataType)

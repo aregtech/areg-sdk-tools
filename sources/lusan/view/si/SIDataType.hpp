@@ -47,10 +47,7 @@ class SIDataTypeFieldDetails;
 class SIDataTypeModel;
 class TableCell;
 class QTreeWidgetItem;
-
-namespace Ui {
-    class SIDataType;
-}
+class QHBoxLayout;
 
 class SIDataTypeWidget : public QWidget
 {
@@ -62,7 +59,7 @@ public:
     explicit SIDataTypeWidget(QWidget* parent);
 
 private:
-    Ui::SIDataType * ui;
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the list and details panels.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -601,7 +598,6 @@ private:
     SIDataTypeFieldDetails* mFields;    //!< The data type field details widget.
     QWidget*                mRightPanel;//!< Holds mDetails/mFields so the row is exactly 2 equal-width panels.
     SIDataTypeWidget*       mWidget;    //!< The helper widget.
-    Ui::SIDataType &        ui;         //!< The UI helper object.
     SIDataTypeModel&        mModel;     //!< The data type main model object.
     DataTypesModel*         mTypeModel; //!< The model to display data types in the type combo-box.
     DataTypesModel*         mValueModel;//!< The model to display data types in the value combo-box.

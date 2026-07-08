@@ -87,6 +87,7 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     

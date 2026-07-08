@@ -18,7 +18,10 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIConstant.hpp"
-#include "ui/ui_SIConstant.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QVBoxLayout>
 
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
@@ -40,11 +43,20 @@
 
 SIConstantWidget::SIConstantWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui     (new Ui::SIConstant)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Constants Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
@@ -53,19 +65,17 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
     , mDetails  (new SIConstantDetails(this))
     , mList     (new SIConstantList(this))
     , mWidget   (new SIConstantWidget(this))
-    , ui        (*mWidget->ui)
     , mTypeModel(new DataTypesModel(model.getDataTypeData(), false))
     , mTableCell(nullptr)
     , mCount    (0)
 {
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mDetails->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(mDetails, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -77,8 +87,8 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
 
 SIConstant::~SIConstant()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mDetails);
 }
 
 void SIConstant::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)

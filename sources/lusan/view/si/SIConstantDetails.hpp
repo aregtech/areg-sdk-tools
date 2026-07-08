@@ -27,10 +27,6 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIConstantDetails;
-}
-
 class QCheckBox;
 class QComboBox;
 class QLineEdit;
@@ -89,7 +85,15 @@ public:
     QLineEdit* ctrlDeprecateHint();
 
 private:
-    Ui::SIConstantDetails* ui;  //!< The user interface object.
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QComboBox*      mTypes;
+    QLineEdit*      mValue;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SICONSTANTDETAILS_HPP

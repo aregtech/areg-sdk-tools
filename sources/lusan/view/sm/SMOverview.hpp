@@ -29,6 +29,7 @@
  * Dependencies
  ************************************************************************/
 class SMOverviewModel;
+class QCheckBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
@@ -74,6 +75,8 @@ private slots:
     void onNameCommitted();
     void onVersionEdited();
     void onThreadingToggled(bool checked);
+    void onDeprecatedToggled(bool checked);
+    void onDeprecateHintCommitted();
     void onOverviewChanged();
 
 //////////////////////////////////////////////////////////////////////////
@@ -101,6 +104,8 @@ private:
     QRadioButton*       mShared;
     QRadioButton*       mLocal;
     QPlainTextEdit*     mDescription;
+    QCheckBox*          mDeprecated;
+    QLineEdit*          mDeprecateHint;
     QIntValidator       mVersionValidator;
     bool                mCommitting;    //!< True while a page edit is being pushed, so the resulting notification does not refresh the field being edited.
 };

@@ -72,6 +72,15 @@ public:
     inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
+    //!< Returns true if the timer is marked deprecated.
+    inline bool getIsDeprecated() const;
+    //!< Marks (or clears) the timer as deprecated.
+    inline void setIsDeprecated(bool isDeprecated);
+    //!< Returns the hint explaining why the timer is deprecated.
+    inline const QString& getDeprecateHint() const;
+    //!< Sets the hint explaining why the timer is deprecated.
+    inline void setDeprecateHint(const QString& hint);
+
     /**
      * \brief   True if the repeat count means "continuous" (0 or 0xFFFFFFFF, spec 6.10).
      **/
@@ -105,6 +114,8 @@ private:
     uint32_t    mTimeout;       //!< The timeout in milliseconds (minimum 1).
     uint32_t    mRepeat;        //!< The repeat count (0 = continuous).
     QString     mDescription;   //!< The description text.
+    bool        mIsDeprecated;  //!< Flag, indicating whether the timer is deprecated.
+    QString     mDeprecateHint; //!< The hint, why the timer is deprecated.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -175,6 +186,30 @@ inline const QString& SMTimerEntry::getDescription() const
 inline void SMTimerEntry::setDescription(const QString& description)
 {
     mDescription = description;
+}
+
+inline bool SMTimerEntry::getIsDeprecated() const
+{
+    return mIsDeprecated;
+}
+
+inline void SMTimerEntry::setIsDeprecated(bool isDeprecated)
+{
+    mIsDeprecated = isDeprecated;
+    if (isDeprecated == false)
+    {
+        mDeprecateHint.clear();
+    }
+}
+
+inline const QString& SMTimerEntry::getDeprecateHint() const
+{
+    return mDeprecateHint;
+}
+
+inline void SMTimerEntry::setDeprecateHint(const QString& hint)
+{
+    mDeprecateHint = hint;
 }
 
 inline bool SMTimerEntry::isContinuous() const

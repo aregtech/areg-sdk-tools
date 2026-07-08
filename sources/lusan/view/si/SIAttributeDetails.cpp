@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -10,56 +10,94 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/si/SIAttributeDetails.hpp
+ *  \file        lusan/view/si/SIAttributeDetails.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface attribute editor.
  *
  ************************************************************************/
 #include "lusan/view/si/SIAttributeDetails.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIAttributeDetails.h"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QVBoxLayout>
 
 SIAttributeDetails::SIAttributeDetails(QWidget* parent)
-    : QWidget(parent)
-    , ui(new Ui::SIAttributeDetails)
+    : QWidget           (parent)
+    , mName             (nullptr)
+    , mTypes            (nullptr)
+    , mNotify           (nullptr)
+    , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
-    QFont font{ this->font() };
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    buildUi();
+}
+
+void SIAttributeDetails::buildUi()
+{
+    QVBoxLayout* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* details = new QGroupBox(tr("Details:"), this);
+    QFormLayout* form = new QFormLayout(details);
+    form->setRowWrapPolicy(QFormLayout::DontWrapRows);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+    mName = new QLineEdit(details);
+    form->addRow(tr("Name:"), mName);
+
+    mTypes = new QComboBox(details);
+    form->addRow(tr("Type:"), mTypes);
+
+    mNotify = new QComboBox(details);
+    mNotify->addItem(tr("On Change"));
+    mNotify->addItem(tr("Always"));
+    form->addRow(tr("Notify:"), mNotify);
+
+    mDescription = new QPlainTextEdit(details);
+    mDescription->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    mDescription->setPlaceholderText(tr("Describe attribute here"));
+    form->addRow(tr("Description:"), mDescription);
+
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    form->addRow(mDeprecated, mDeprecateHint);
+
+    root->addWidget(details);
 }
 
 QLineEdit* SIAttributeDetails::ctrlName()
 {
-    return ui->editName;
+    return mName;
 }
 
 QComboBox* SIAttributeDetails::ctrlTypes()
 {
-    return ui->comboTypes;
+    return mTypes;
 }
 
 QComboBox* SIAttributeDetails::ctrlNotification()
 {
-    return ui->comboNotify;
+    return mNotify;
 }
 
 QPlainTextEdit* SIAttributeDetails::ctrlDescription()
 {
-    return ui->textDescribe;
+    return mDescription;
 }
 
 QCheckBox* SIAttributeDetails::ctrlDeprecated()
 {
-    return ui->checkDeprecated;
+    return mDeprecated;
 }
 
 QLineEdit* SIAttributeDetails::ctrlDeprecateHint()
 {
-    return ui->editDeprecated;
+    return mDeprecateHint;
 }

@@ -20,10 +20,8 @@
  ************************************************************************/
 #include <QWidget>
 
-namespace Ui {
-    class SIDataTypeList;
-}
-
+class QKeySequence;
+class QString;
 class QTreeWidget;
 class QToolButton;
 
@@ -38,9 +36,9 @@ public:
     QTreeWidget* ctrlTableList() const;
 
     QToolButton* ctrlButtonAdd() const;
-    
+
     QToolButton* ctrlButtonInsert() const;
-    
+
     QToolButton* ctrlButtonRemove() const;
 
     QToolButton* ctrlButtonMoveUp() const;
@@ -54,7 +52,19 @@ public:
     QToolButton* ctrlButtonInsertField() const;
 
 private:
-    Ui::SIDataTypeList* ui;
+    void buildUi();
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+
+private:
+    QTreeWidget* mTable;
+    QToolButton* mButtonAdd;
+    QToolButton* mButtonInsert;
+    QToolButton* mButtonRemove;
+    QToolButton* mButtonMoveUp;
+    QToolButton* mButtonMoveDown;
+    QToolButton* mButtonAddField;
+    QToolButton* mButtonRemoveField;
+    QToolButton* mButtonInsertField;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIDATATYPELIST_HPP

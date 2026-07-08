@@ -55,7 +55,7 @@ void SMDataTypeList::decorateAddButton(QToolButton* button, QMenu* menu)
     // A smaller icon plus extra width give the drop-down arrow its own breathing room, so it
     // never crowds the icon (kept consistent across the Data Type / Method / Event toolbars).
     button->setIconSize(QSize(20, 20));
-    button->setMaximumSize(44, 24);
+    button->setMaximumSize(56, 24);
 }
 
 QToolButton* SMDataTypeList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)

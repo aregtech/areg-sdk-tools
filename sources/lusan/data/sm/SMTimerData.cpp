@@ -34,6 +34,8 @@ SMTimerEntry::SMTimerEntry(ElementBase* parent /*= nullptr*/)
     , mTimeout      (1)
     , mRepeat       (1)
     , mDescription  ( )
+    , mIsDeprecated (false)
+    , mDeprecateHint( )
 {
 }
 
@@ -47,6 +49,8 @@ SMTimerEntry::SMTimerEntry(  uint32_t id
     , mTimeout      (timeout)
     , mRepeat       (repeat)
     , mDescription  ( )
+    , mIsDeprecated (false)
+    , mDeprecateHint( )
 {
 }
 
@@ -56,6 +60,8 @@ SMTimerEntry::SMTimerEntry(const SMTimerEntry& src)
     , mTimeout      (src.mTimeout)
     , mRepeat       (src.mRepeat)
     , mDescription  (src.mDescription)
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDeprecateHint(src.mDeprecateHint)
 {
 }
 
@@ -65,6 +71,8 @@ SMTimerEntry::SMTimerEntry(SMTimerEntry&& src) noexcept
     , mTimeout      (src.mTimeout)
     , mRepeat       (src.mRepeat)
     , mDescription  (std::move(src.mDescription))
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDeprecateHint(std::move(src.mDeprecateHint))
 {
 }
 
@@ -73,10 +81,12 @@ SMTimerEntry& SMTimerEntry::operator = (const SMTimerEntry& other)
     if (this != &other)
     {
         DocumentElem::operator = (other);
-        mName        = other.mName;
-        mTimeout     = other.mTimeout;
-        mRepeat      = other.mRepeat;
-        mDescription = other.mDescription;
+        mName          = other.mName;
+        mTimeout       = other.mTimeout;
+        mRepeat        = other.mRepeat;
+        mDescription   = other.mDescription;
+        mIsDeprecated  = other.mIsDeprecated;
+        mDeprecateHint = other.mDeprecateHint;
     }
 
     return *this;
@@ -87,10 +97,12 @@ SMTimerEntry& SMTimerEntry::operator = (SMTimerEntry&& other) noexcept
     if (this != &other)
     {
         DocumentElem::operator = (std::move(other));
-        mName        = std::move(other.mName);
-        mTimeout     = other.mTimeout;
-        mRepeat      = other.mRepeat;
-        mDescription = std::move(other.mDescription);
+        mName          = std::move(other.mName);
+        mTimeout       = other.mTimeout;
+        mRepeat        = other.mRepeat;
+        mDescription   = std::move(other.mDescription);
+        mIsDeprecated  = other.mIsDeprecated;
+        mDeprecateHint = std::move(other.mDeprecateHint);
     }
 
     return *this;
@@ -140,12 +152,22 @@ bool SMTimerEntry::readFromXml(QXmlStreamReader& xml)
     mTimeout = attributes.value(XmlSM::xmlSMAttributeTimeout).toUInt();
     mRepeat  = attributes.value(XmlSM::xmlSMAttributeRepeat).toUInt();
     mDescription.clear();
+    mIsDeprecated = attributes.hasAttribute(XmlSM::xmlSMAttributeIsDeprecated)
+        && (attributes.value(XmlSM::xmlSMAttributeIsDeprecated).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0);
+    mDeprecateHint.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementTimer))
     {
-        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
-            mDescription = xml.readElementText();
+            if (xml.name() == XmlSM::xmlSMElementDeprecateHint)
+            {
+                mDeprecateHint = xml.readElementText();
+            }
+            else if (xml.name() == XmlSM::xmlSMElementDescription)
+            {
+                mDescription = xml.readElementText();
+            }
         }
 
         xml.readNext();
@@ -161,6 +183,11 @@ void SMTimerEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSM::xmlSMAttributeName, mName);
     xml.writeAttribute(XmlSM::xmlSMAttributeTimeout, QString::number(mTimeout));
     xml.writeAttribute(XmlSM::xmlSMAttributeRepeat, QString::number(mRepeat));
+    if (mIsDeprecated)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeIsDeprecated, XmlSM::xmlSMValueTrue);
+        writeTextElem(xml, XmlSM::xmlSMElementDeprecateHint, mDeprecateHint, true);
+    }
     writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
     xml.writeEndElement();
 }

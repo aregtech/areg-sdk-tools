@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -13,58 +13,102 @@
  *  \file        lusan/view/si/SIMethodParamDetails.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface method parameter editor.
  *
  ************************************************************************/
 #include "lusan/view/si/SIMethodParamDetails.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIMethodParamDetails.h"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QVBoxLayout>
 
 SIMethodParamDetails::SIMethodParamDetails(QWidget* parent)
-    : QWidget(parent)
-    , ui(new Ui::SIMethodParamDetails)
+    : QWidget           (parent)
+    , mName             (nullptr)
+    , mType             (nullptr)
+    , mHasDefault       (nullptr)
+    , mValue            (nullptr)
+    , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
-    QFont font{ this->font() };
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    buildUi();
 }
 
-QLineEdit * SIMethodParamDetails::ctrlParamName() const
+void SIMethodParamDetails::buildUi()
 {
-    return ui->editParamName;
+    QVBoxLayout* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* details = new QGroupBox(tr("Parameter Details:"), this);
+    QFormLayout* form = new QFormLayout(details);
+    form->setRowWrapPolicy(QFormLayout::DontWrapRows);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+    mName = new QLineEdit(details);
+    form->addRow(tr("Name:"), mName);
+
+    mType = new QComboBox(details);
+    form->addRow(tr("Type:"), mType);
+
+    QWidget* valueCell = new QWidget(details);
+    QHBoxLayout* valueLayout = new QHBoxLayout(valueCell);
+    valueLayout->setContentsMargins(0, 0, 0, 0);
+    mHasDefault = new QCheckBox(valueCell);
+    mValue = new QLineEdit(valueCell);
+    valueLayout->addWidget(mHasDefault);
+    valueLayout->addWidget(mValue, 1);
+    form->addRow(tr("Value:"), valueCell);
+
+    mDescription = new QPlainTextEdit(details);
+    mDescription->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    mDescription->setPlaceholderText(tr("Describe parameter here"));
+    form->addRow(tr("Description:"), mDescription);
+
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    form->addRow(mDeprecated, mDeprecateHint);
+
+    root->addWidget(details);
 }
 
-QComboBox * SIMethodParamDetails::ctrlParamTypes() const
+QLineEdit* SIMethodParamDetails::ctrlParamName() const
 {
-    return ui->comboParamType;
+    return mName;
+}
+
+QComboBox* SIMethodParamDetails::ctrlParamTypes() const
+{
+    return mType;
 }
 
 QCheckBox* SIMethodParamDetails::ctrlParamHasDefault() const
 {
-    return ui->checkDefaultValue;
+    return mHasDefault;
 }
 
-QLineEdit * SIMethodParamDetails::ctrlParamDefaultValue() const
+QLineEdit* SIMethodParamDetails::ctrlParamDefaultValue() const
 {
-    return ui->editDefaultValue;
+    return mValue;
 }
 
-QPlainTextEdit * SIMethodParamDetails::ctrlParamDescription() const
+QPlainTextEdit* SIMethodParamDetails::ctrlParamDescription() const
 {
-    return ui->textParamDescribe;
+    return mDescription;
 }
 
-QCheckBox * SIMethodParamDetails::ctrlDeprecated() const
+QCheckBox* SIMethodParamDetails::ctrlDeprecated() const
 {
-    return ui->checkDeprecated;
+    return mDeprecated;
 }
 
-QLineEdit * SIMethodParamDetails::ctrlDeprecateHint() const
+QLineEdit* SIMethodParamDetails::ctrlDeprecateHint() const
 {
-    return ui->editDeprecated;
+    return mDeprecateHint;
 }

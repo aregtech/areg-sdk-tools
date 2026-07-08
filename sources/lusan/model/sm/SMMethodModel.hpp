@@ -102,6 +102,9 @@ public:
     void setImplement(uint32_t id, SMMethodEntry::eImplement implement);
     void setBody(uint32_t id, const QString& body);
     void setDescription(uint32_t id, const QString& text);
+    //!< Sets the deprecated flag (and clears the hint when cleared) as one undo step.
+    void setDeprecated(uint32_t id, bool deprecated);
+    void setDeprecateHint(uint32_t id, const QString& hint);
 
 //////////////////////////////////////////////////////////////////////////
 // Mutations — parameters
@@ -119,6 +122,9 @@ public:
     //!< Sets the optional default flag and its literal as one undo step (one user gesture).
     void setParamDefault(SMMethodEntry* method, uint32_t paramId, bool hasDefault, const QString& value);
     void setParamDescription(SMMethodEntry* method, uint32_t paramId, const QString& text);
+    //!< Sets the parameter deprecated flag (and clears the hint when cleared) as one undo step.
+    void setParamDeprecated(SMMethodEntry* method, uint32_t paramId, bool deprecated);
+    void setParamDeprecateHint(SMMethodEntry* method, uint32_t paramId, const QString& hint);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

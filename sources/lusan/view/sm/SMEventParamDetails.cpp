@@ -37,6 +37,8 @@ SMEventParamDetails::SMEventParamDetails(QWidget* parent /*= nullptr*/)
     , mHasDefault       (nullptr)
     , mValue            (nullptr)
     , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
     buildUi();
 }
@@ -81,6 +83,11 @@ void SMEventParamDetails::buildUi()
     mDescription->setPlaceholderText(tr("Describe parameter here"));
     form->addRow(tr("Description:"), mDescription);
 
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    form->addRow(mDeprecated, mDeprecateHint);
+
     root->addWidget(details);
 }
 
@@ -107,6 +114,16 @@ QLineEdit* SMEventParamDetails::ctrlValue() const
 QPlainTextEdit* SMEventParamDetails::ctrlDescription() const
 {
     return mDescription;
+}
+
+QCheckBox* SMEventParamDetails::ctrlDeprecated() const
+{
+    return mDeprecated;
+}
+
+QLineEdit* SMEventParamDetails::ctrlDeprecateHint() const
+{
+    return mDeprecateHint;
 }
 
 void SMEventParamDetails::showNameHint(const QString& reason)

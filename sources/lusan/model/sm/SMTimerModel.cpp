@@ -22,6 +22,16 @@
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 
+namespace
+{
+    //!< Deprecation flag + hint committed as one undo step, matching the single user gesture.
+    struct DeprecationState
+    {
+        bool    flag { false };
+        QString hint { };
+    };
+}
+
 SMTimerModel::SMTimerModel(StateMachineModel& facade)
     : mFacade(facade)
 {
@@ -143,6 +153,39 @@ void SMTimerModel::setDescription(uint32_t id, const QString& text)
     auto getter = [facade, id]() -> QString { SMTimerEntry* e = facade->getData().getTimers().findElement(id); return (e != nullptr ? e->getDescription() : QString()); };
     auto setter = [facade, id](const QString& value) { SMTimerEntry* e = facade->getData().getTimers().findElement(id); if (e != nullptr) e->setDescription(value); };
     mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Timer, getter, setter, text, QObject::tr("Set description")));
+}
+
+void SMTimerModel::setDeprecated(uint32_t id, bool deprecated)
+{
+    SMTimerEntry* entry = findTimer(id);
+    if (entry == nullptr)
+        return;
+
+    StateMachineModel* facade = &mFacade;
+    auto getter = [facade, id]() -> DeprecationState
+    {
+        SMTimerEntry* e = facade->getData().getTimers().findElement(id);
+        return (e != nullptr ? DeprecationState{ e->getIsDeprecated(), e->getDeprecateHint() } : DeprecationState{});
+    };
+    auto setter = [facade, id](const DeprecationState& value)
+    {
+        SMTimerEntry* e = facade->getData().getTimers().findElement(id);
+        if (e != nullptr) { e->setIsDeprecated(value.flag); e->setDeprecateHint(value.hint); }
+    };
+    const DeprecationState next{ deprecated, deprecated ? entry->getDeprecateHint() : QString() };
+    mFacade.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), id, eDocElementKind::Timer, getter, setter, next, QObject::tr("Set deprecated")));
+}
+
+void SMTimerModel::setDeprecateHint(uint32_t id, const QString& hint)
+{
+    SMTimerEntry* entry = findTimer(id);
+    if ((entry == nullptr) || (entry->getIsDeprecated() == false) || (hint == entry->getDeprecateHint()))
+        return;
+
+    StateMachineModel* facade = &mFacade;
+    auto getter = [facade, id]() -> QString { SMTimerEntry* e = facade->getData().getTimers().findElement(id); return (e != nullptr ? e->getDeprecateHint() : QString()); };
+    auto setter = [facade, id](const QString& value) { SMTimerEntry* e = facade->getData().getTimers().findElement(id); if (e != nullptr) e->setDeprecateHint(value); };
+    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Timer, getter, setter, hint, QObject::tr("Set deprecation hint")));
 }
 
 const SMTimerData& SMTimerModel::timers() const

@@ -21,6 +21,7 @@
 
 #include <QWidget>
 
+class QCheckBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
@@ -41,6 +42,8 @@ public:
 
     QLineEdit* ctrlName() const;
     QPlainTextEdit* ctrlDescription() const;
+    QCheckBox* ctrlDeprecated() const;
+    QLineEdit* ctrlDeprecateHint() const;
 
     //!< Shows the given reason below the name field; an empty reason hides the hint.
     void showNameHint(const QString& reason);
@@ -52,6 +55,8 @@ private:
     QLineEdit*      mName;
     QLabel*         mNameHint;
     QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif  // LUSAN_VIEW_SM_SMEVENTDETAILS_HPP

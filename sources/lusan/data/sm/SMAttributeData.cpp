@@ -122,12 +122,22 @@ bool SMAttributeEntry::readFromXml(QXmlStreamReader& xml)
     setName(attributes.value(XmlSM::xmlSMAttributeName).toString());
     setType(attributes.value(XmlSM::xmlSMAttributeDataType).toString());
     mValue = attributes.value(XmlSM::xmlSMAttributeValue).toString();
+    setIsDeprecated(attributes.hasAttribute(XmlSM::xmlSMAttributeIsDeprecated)
+        && (attributes.value(XmlSM::xmlSMAttributeIsDeprecated).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0));
+    setDeprecateHint(QString());
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementAttribute))
     {
-        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
-            setDescription(xml.readElementText());
+            if (xml.name() == XmlSM::xmlSMElementDeprecateHint)
+            {
+                setDeprecateHint(xml.readElementText());
+            }
+            else if (xml.name() == XmlSM::xmlSMElementDescription)
+            {
+                setDescription(xml.readElementText());
+            }
         }
 
         xml.readNext();
@@ -143,6 +153,11 @@ void SMAttributeEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSM::xmlSMAttributeName, getName());
     xml.writeAttribute(XmlSM::xmlSMAttributeDataType, getType());
     xml.writeAttribute(XmlSM::xmlSMAttributeValue, mValue);
+    if (getIsDeprecated())
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeIsDeprecated, XmlSM::xmlSMValueTrue);
+        writeTextElem(xml, XmlSM::xmlSMElementDeprecateHint, getDeprecateHint(), true);
+    }
     writeTextElem(xml, XmlSM::xmlSMElementDescription, getDescription(), true);
     xml.writeEndElement();
 }

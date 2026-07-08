@@ -90,12 +90,16 @@ private slots:
     void onMethodTypeToggled(bool checked);
     void onReturnCommitted();
     void onImplementToggled(bool checked);
+    void onMethodDeprecatedToggled(bool checked);
+    void onMethodDeprecateHintCommitted();
 
     void onParamNameTextChanged(const QString& text);
     void onParamNameCommitted();
     void onParamTypeChanged(int index);
     void onParamHasDefaultToggled(bool checked);
     void onParamValueCommitted();
+    void onParamDeprecatedToggled(bool checked);
+    void onParamDeprecateHintCommitted();
 
     void onNotifierChanged();
     //!< Repopulates the type combos on any DataType-kind notifier signal.

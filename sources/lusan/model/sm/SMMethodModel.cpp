@@ -31,6 +31,13 @@ namespace
         bool    hasDefault { false };
         QString value      { };
     };
+
+    //!< Deprecation flag + hint committed as one undo step, matching the single user gesture.
+    struct DeprecationState
+    {
+        bool    flag { false };
+        QString hint { };
+    };
 }
 
 SMMethodModel::SMMethodModel(StateMachineModel& facade)
@@ -216,6 +223,39 @@ void SMMethodModel::setDescription(uint32_t id, const QString& text)
     mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Method, getter, setter, text, QObject::tr("Set description")));
 }
 
+void SMMethodModel::setDeprecated(uint32_t id, bool deprecated)
+{
+    SMMethodEntry* entry = findMethod(id);
+    if (entry == nullptr)
+        return;
+
+    StateMachineModel* facade = &mFacade;
+    auto getter = [facade, id]() -> DeprecationState
+    {
+        SMMethodEntry* m = facade->getData().getMethods().findMethod(id);
+        return (m != nullptr ? DeprecationState{ m->getIsDeprecated(), m->getDeprecateHint() } : DeprecationState{});
+    };
+    auto setter = [facade, id](const DeprecationState& value)
+    {
+        SMMethodEntry* m = facade->getData().getMethods().findMethod(id);
+        if (m != nullptr) { m->setIsDeprecated(value.flag); m->setDeprecateHint(value.hint); }
+    };
+    const DeprecationState next{ deprecated, deprecated ? entry->getDeprecateHint() : QString() };
+    mFacade.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), id, eDocElementKind::Method, getter, setter, next, QObject::tr("Set deprecated")));
+}
+
+void SMMethodModel::setDeprecateHint(uint32_t id, const QString& hint)
+{
+    SMMethodEntry* entry = findMethod(id);
+    if ((entry == nullptr) || (entry->getIsDeprecated() == false) || (hint == entry->getDeprecateHint()))
+        return;
+
+    StateMachineModel* facade = &mFacade;
+    auto getter = [facade, id]() -> QString { SMMethodEntry* m = facade->getData().getMethods().findMethod(id); return (m != nullptr ? m->getDeprecateHint() : QString()); };
+    auto setter = [facade, id](const QString& value) { SMMethodEntry* m = facade->getData().getMethods().findMethod(id); if (m != nullptr) m->setDeprecateHint(value); };
+    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Method, getter, setter, hint, QObject::tr("Set deprecation hint")));
+}
+
 MethodParameter* SMMethodModel::createParam(SMMethodEntry* method, const QString& name)
 {
     if ((method == nullptr) || (method->findElement(name) != nullptr))
@@ -310,6 +350,42 @@ void SMMethodModel::setParamDescription(SMMethodEntry* method, uint32_t paramId,
     auto getter = [method, paramId]() -> QString { MethodParameter* p = method->findElement(paramId); return (p != nullptr ? p->getDescription() : QString()); };
     auto setter = [method, paramId](const QString& value) { MethodParameter* p = method->findElement(paramId); if (p != nullptr) p->setDescription(value); };
     mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::Method, getter, setter, text, QObject::tr("Set parameter description")));
+}
+
+void SMMethodModel::setParamDeprecated(SMMethodEntry* method, uint32_t paramId, bool deprecated)
+{
+    if (method == nullptr)
+        return;
+
+    const uint32_t ownerId = method->getId();
+    auto getter = [method, paramId]() -> DeprecationState
+    {
+        MethodParameter* p = method->findElement(paramId);
+        return (p != nullptr ? DeprecationState{ p->getIsDeprecated(), p->getDeprecateHint() } : DeprecationState{});
+    };
+    auto setter = [method, paramId](const DeprecationState& value)
+    {
+        MethodParameter* p = method->findElement(paramId);
+        if (p != nullptr) { p->setIsDeprecated(value.flag); p->setDeprecateHint(value.hint); }
+    };
+    MethodParameter* param = method->findElement(paramId);
+    const DeprecationState next{ deprecated, (deprecated && (param != nullptr)) ? param->getDeprecateHint() : QString() };
+    mFacade.getUndoStack().push(new TDocSetPropertyCommand<DeprecationState>(getNotifier(), ownerId, eDocElementKind::Method, getter, setter, next, QObject::tr("Set parameter deprecated")));
+}
+
+void SMMethodModel::setParamDeprecateHint(SMMethodEntry* method, uint32_t paramId, const QString& hint)
+{
+    if (method == nullptr)
+        return;
+
+    MethodParameter* param = method->findElement(paramId);
+    if ((param == nullptr) || (param->getIsDeprecated() == false) || (hint == param->getDeprecateHint()))
+        return;
+
+    const uint32_t ownerId = method->getId();
+    auto getter = [method, paramId]() -> QString { MethodParameter* p = method->findElement(paramId); return (p != nullptr ? p->getDeprecateHint() : QString()); };
+    auto setter = [method, paramId](const QString& value) { MethodParameter* p = method->findElement(paramId); if (p != nullptr) p->setDeprecateHint(value); };
+    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), ownerId, eDocElementKind::Method, getter, setter, hint, QObject::tr("Set parameter deprecation hint")));
 }
 
 const SMMethodData& SMMethodModel::methods() const
