@@ -31,9 +31,9 @@ class QPlainTextEdit;
  * \brief   The selected event payload parameter editor: a "Details:" group with
  *          label-beside-control rows — Name, Type, an optional Default (a check-box next to
  *          the literal value field, disabled until checked — spec 6.10: `ParamList` entries
- *          carry an optional `Default`), Description. No Deprecated row: a `.fsml` `Parameter`
- *          does not persist a deprecated flag (only ID/Name/DataType/Default/Description are
- *          round-tripped), unlike a structure field.
+ *          carry an optional `Default`), Description and a Deprecated row (a check-box next to
+ *          its hint field). The deprecated flag and hint are round-tripped in the `.fsml`
+ *          `Parameter` (`IsDeprecated` attribute + `DeprecateHint` child).
  **/
 class SMEventParamDetails : public QWidget
 {
@@ -47,6 +47,8 @@ public:
     QCheckBox* ctrlHasDefault() const;
     QLineEdit* ctrlValue() const;
     QPlainTextEdit* ctrlDescription() const;
+    QCheckBox* ctrlDeprecated() const;
+    QLineEdit* ctrlDeprecateHint() const;
 
     //!< Shows the given reason below the name field; an empty reason hides the hint.
     void showNameHint(const QString& reason);
@@ -61,6 +63,8 @@ private:
     QCheckBox*      mHasDefault;
     QLineEdit*      mValue;
     QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif  // LUSAN_VIEW_SM_SMEVENTPARAMDETAILS_HPP

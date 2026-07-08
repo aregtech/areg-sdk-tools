@@ -52,6 +52,20 @@
 #include <QTreeWidgetItem>
 #include <QVBoxLayout>
 
+namespace
+{
+    //!< Refreshes a deprecated check-box + hint pair from a flag/hint, without re-triggering
+    //!< the edit signals that would otherwise push a spurious command.
+    void applyDeprecatedDisplay(QCheckBox* checkBox, QLineEdit* hintEdit, bool deprecated, const QString& hint)
+    {
+        const QSignalBlocker blockCheck(checkBox);
+        const QSignalBlocker blockHint(hintEdit);
+        checkBox->setChecked(deprecated);
+        hintEdit->setEnabled(deprecated);
+        hintEdit->setText(deprecated ? hint : QString());
+    }
+}
+
 SMMethod::SMMethod(SMMethodModel& model, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
@@ -136,6 +150,8 @@ void SMMethod::setupSignals()
     connect(mDetails->ctrlReturn()   , &QComboBox::activated      , this, [this](int) { onReturnCommitted(); });
     connect(mDetails->ctrlHandler()  , &QRadioButton::toggled     , this, &SMMethod::onImplementToggled);
     connect(mDetails->ctrlEmbedded() , &QRadioButton::toggled     , this, &SMMethod::onImplementToggled);
+    connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMMethod::onMethodDeprecatedToggled);
+    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMMethod::onMethodDeprecateHintCommitted);
     mDetails->ctrlBody()->ctrlBody()->installEventFilter(this);
     mDetails->ctrlDescription()->installEventFilter(this);
 
@@ -144,6 +160,8 @@ void SMMethod::setupSignals()
     connect(mParamDetails->ctrlTypes()     , &QComboBox::currentIndexChanged, this, &SMMethod::onParamTypeChanged);
     connect(mParamDetails->ctrlHasDefault(), &QCheckBox::toggled            , this, &SMMethod::onParamHasDefaultToggled);
     connect(mParamDetails->ctrlValue()     , &QLineEdit::editingFinished    , this, &SMMethod::onParamValueCommitted);
+    connect(mParamDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMMethod::onParamDeprecatedToggled);
+    connect(mParamDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMMethod::onParamDeprecateHintCommitted);
     mParamDetails->ctrlDescription()->installEventFilter(this);
 
     DocModelNotifier& notifier = mModel.getNotifier();
@@ -410,6 +428,7 @@ void SMMethod::showCleanForm()
     mDetails->ctrlName()->setPlaceholderText(tr("Select a method, or click Add"));
     mDetails->ctrlName()->setEnabled(false);
     mDetails->ctrlDescription()->setEnabled(false);
+    applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), false, QString());
 }
 
 void SMMethod::updateToolbar(eRowKind kind)
@@ -462,6 +481,7 @@ void SMMethod::showMethodForm(SMMethodEntry* method)
     mDetails->setBodyVisible(isCondition && isEmbedded);
     updateBodyEditor(method);
 
+    applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), method->getIsDeprecated(), method->getDeprecateHint());
     mDetails->showNameHint(nameCollisionReason(method, method->getName(), method->getId()));
 }
 
@@ -510,6 +530,7 @@ void SMMethod::selectedParam(SMMethodEntry* owner, uint32_t paramId)
         mParamDetails->ctrlValue()->setText(param->getValue());
         mParamDetails->ctrlDescription()->setPlainText(param->getDescription());
     }
+    applyDeprecatedDisplay(mParamDetails->ctrlDeprecated(), mParamDetails->ctrlDeprecateHint(), param->getIsDeprecated(), param->getDeprecateHint());
     mParamDetails->showNameHint(paramNameCollisionReason(owner, param->getName(), param->getId()));
 
     updateToolbar(eRowKind::Param);
@@ -779,6 +800,31 @@ void SMMethod::onMethodNameCommitted()
     }
 }
 
+void SMMethod::onMethodDeprecatedToggled(bool checked)
+{
+    SMMethodEntry* method = currentMethod();
+    if ((method == nullptr) || (currentKind() != eRowKind::Method))
+        return;
+
+    mModel.setDeprecated(method->getId(), checked);
+    const QSignalBlocker blockHint(mDetails->ctrlDeprecateHint());
+    mDetails->ctrlDeprecateHint()->setEnabled(checked);
+    mDetails->ctrlDeprecateHint()->setText(checked ? method->getDeprecateHint() : QString());
+    if (checked)
+    {
+        mDetails->ctrlDeprecateHint()->setFocus();
+    }
+}
+
+void SMMethod::onMethodDeprecateHintCommitted()
+{
+    SMMethodEntry* method = currentMethod();
+    if ((method != nullptr) && (currentKind() == eRowKind::Method))
+    {
+        mModel.setDeprecateHint(method->getId(), mDetails->ctrlDeprecateHint()->text());
+    }
+}
+
 void SMMethod::onMethodTypeToggled(bool checked)
 {
     if (checked == false)
@@ -889,6 +935,34 @@ void SMMethod::onParamValueCommitted()
         return;
 
     mModel.setParamDefault(method, paramId, mParamDetails->ctrlHasDefault()->isChecked(), mParamDetails->ctrlValue()->text());
+}
+
+void SMMethod::onParamDeprecatedToggled(bool checked)
+{
+    SMMethodEntry* method = currentMethod();
+    const uint32_t paramId = currentParamId();
+    if ((method == nullptr) || (paramId == 0))
+        return;
+
+    mModel.setParamDeprecated(method, paramId, checked);
+    MethodParameter* param = mModel.findParam(method, paramId);
+    const QSignalBlocker blockHint(mParamDetails->ctrlDeprecateHint());
+    mParamDetails->ctrlDeprecateHint()->setEnabled(checked);
+    mParamDetails->ctrlDeprecateHint()->setText((checked && (param != nullptr)) ? param->getDeprecateHint() : QString());
+    if (checked)
+    {
+        mParamDetails->ctrlDeprecateHint()->setFocus();
+    }
+}
+
+void SMMethod::onParamDeprecateHintCommitted()
+{
+    SMMethodEntry* method = currentMethod();
+    const uint32_t paramId = currentParamId();
+    if ((method != nullptr) && (paramId != 0))
+    {
+        mModel.setParamDeprecateHint(method, paramId, mParamDetails->ctrlDeprecateHint()->text());
+    }
 }
 
 void SMMethod::refreshAll()

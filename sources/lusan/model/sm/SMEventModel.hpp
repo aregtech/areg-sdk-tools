@@ -98,6 +98,9 @@ public:
 
     void renameEvent(uint32_t id, const QString& newName);
     void setDescription(uint32_t id, const QString& text);
+    //!< Sets the deprecated flag (and clears the hint when cleared) as one undo step.
+    void setDeprecated(uint32_t id, bool deprecated);
+    void setDeprecateHint(uint32_t id, const QString& hint);
 
 //////////////////////////////////////////////////////////////////////////
 // Mutations — payload parameters
@@ -115,6 +118,9 @@ public:
     //!< Sets the optional default flag and its literal as one undo step (one user gesture).
     void setParamDefault(SMEventEntry* event, uint32_t paramId, bool hasDefault, const QString& value);
     void setParamDescription(SMEventEntry* event, uint32_t paramId, const QString& text);
+    //!< Sets the parameter deprecated flag (and clears the hint when cleared) as one undo step.
+    void setParamDeprecated(SMEventEntry* event, uint32_t paramId, bool deprecated);
+    void setParamDeprecateHint(SMEventEntry* event, uint32_t paramId, const QString& hint);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

@@ -84,6 +84,9 @@ public:
     //!< Repeat count; 0 (or 0xFFFFFFFF) means continuous.
     void setRepeat(uint32_t id, uint32_t repeat);
     void setDescription(uint32_t id, const QString& text);
+    //!< Sets the deprecated flag (and clears the hint when cleared) as one undo step.
+    void setDeprecated(uint32_t id, bool deprecated);
+    void setDeprecateHint(uint32_t id, const QString& hint);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

@@ -37,6 +37,8 @@ SMTimerDetails::SMTimerDetails(QWidget* parent /*= nullptr*/)
     , mRepeat           (nullptr)
     , mContinuous       (nullptr)
     , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
     buildUi();
 }
@@ -82,6 +84,11 @@ void SMTimerDetails::buildUi()
     mDescription->setPlaceholderText(tr("Describe timer here"));
     form->addRow(tr("Description:"), mDescription);
 
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    form->addRow(mDeprecated, mDeprecateHint);
+
     root->addWidget(details);
 }
 
@@ -108,6 +115,16 @@ QCheckBox* SMTimerDetails::ctrlContinuous() const
 QPlainTextEdit* SMTimerDetails::ctrlDescription() const
 {
     return mDescription;
+}
+
+QCheckBox* SMTimerDetails::ctrlDeprecated() const
+{
+    return mDeprecated;
+}
+
+QLineEdit* SMTimerDetails::ctrlDeprecateHint() const
+{
+    return mDeprecateHint;
 }
 
 void SMTimerDetails::showNameHint(const QString& reason)

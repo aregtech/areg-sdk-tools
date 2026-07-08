@@ -22,6 +22,7 @@
 #include <QWidget>
 
 class SMCodeEditor;
+class QCheckBox;
 class QComboBox;
 class QFormLayout;
 class QLabel;
@@ -52,6 +53,8 @@ public:
     QRadioButton* ctrlEmbedded() const;
     SMCodeEditor* ctrlBody() const;
     QPlainTextEdit* ctrlDescription() const;
+    QCheckBox* ctrlDeprecated() const;
+    QLineEdit* ctrlDeprecateHint() const;
 
     //!< Shows the given reason below the name field; an empty reason hides the hint.
     void showNameHint(const QString& reason);
@@ -77,6 +80,8 @@ private:
     QWidget*        mImplementRow;  //!< The Implement field cell (row toggled with the mode).
     SMCodeEditor*   mBody;
     QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
     QFormLayout*    mForm;          //!< The details form (used to toggle whole rows).
 };
 

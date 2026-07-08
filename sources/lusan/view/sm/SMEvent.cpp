@@ -54,6 +54,20 @@
 #include <QTreeWidgetItem>
 #include <QVBoxLayout>
 
+namespace
+{
+    //!< Refreshes a deprecated check-box + hint pair from a flag/hint, without re-triggering
+    //!< the edit signals that would otherwise push a spurious command.
+    void applyDeprecatedDisplay(QCheckBox* checkBox, QLineEdit* hintEdit, bool deprecated, const QString& hint)
+    {
+        const QSignalBlocker blockCheck(checkBox);
+        const QSignalBlocker blockHint(hintEdit);
+        checkBox->setChecked(deprecated);
+        hintEdit->setEnabled(deprecated);
+        hintEdit->setText(deprecated ? hint : QString());
+    }
+}
+
 SMEvent::SMEvent(SMEventModel& eventModel, SMTimerModel& timerModel, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mEventModel       (eventModel)
@@ -138,6 +152,8 @@ void SMEvent::setupSignals()
 
     connect(mDetails->ctrlName()   , &QLineEdit::textChanged    , this, &SMEvent::onEventNameTextChanged);
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished, this, &SMEvent::onEventNameCommitted);
+    connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMEvent::onEventDeprecatedToggled);
+    connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMEvent::onEventDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
 
     connect(mParamDetails->ctrlName()      , &QLineEdit::textChanged          , this, &SMEvent::onParamNameTextChanged);
@@ -145,6 +161,8 @@ void SMEvent::setupSignals()
     connect(mParamDetails->ctrlTypes()     , &QComboBox::currentIndexChanged  , this, &SMEvent::onParamTypeChanged);
     connect(mParamDetails->ctrlHasDefault(), &QCheckBox::toggled              , this, &SMEvent::onParamHasDefaultToggled);
     connect(mParamDetails->ctrlValue()     , &QLineEdit::editingFinished      , this, &SMEvent::onParamValueCommitted);
+    connect(mParamDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMEvent::onParamDeprecatedToggled);
+    connect(mParamDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMEvent::onParamDeprecateHintCommitted);
     mParamDetails->ctrlDescription()->installEventFilter(this);
 
     connect(mTimerDetails->ctrlName()      , &QLineEdit::textChanged            , this, &SMEvent::onTimerNameTextChanged);
@@ -152,6 +170,8 @@ void SMEvent::setupSignals()
     connect(mTimerDetails->ctrlTimeout()   , &QAbstractSpinBox::editingFinished , this, &SMEvent::onTimeoutCommitted);
     connect(mTimerDetails->ctrlRepeat()    , &QAbstractSpinBox::editingFinished , this, &SMEvent::onRepeatCommitted);
     connect(mTimerDetails->ctrlContinuous(), &QCheckBox::toggled                , this, &SMEvent::onContinuousToggled);
+    connect(mTimerDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMEvent::onTimerDeprecatedToggled);
+    connect(mTimerDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMEvent::onTimerDeprecateHintCommitted);
     mTimerDetails->ctrlDescription()->installEventFilter(this);
 
     DocModelNotifier& notifier = mEventModel.getNotifier();
@@ -449,6 +469,7 @@ void SMEvent::showCleanForm()
     mDetails->ctrlName()->setPlaceholderText(tr("Select an event or timer, or click Add"));
     mDetails->ctrlName()->setEnabled(false);
     mDetails->ctrlDescription()->setEnabled(false);
+    applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), false, QString());
 }
 
 void SMEvent::updateToolbar(eRowKind kind)
@@ -487,6 +508,7 @@ void SMEvent::selectedEvent(SMEventEntry* event)
         mDetails->ctrlName()->setText(event->getName());
         mDetails->ctrlDescription()->setPlainText(event->getDescription());
     }
+    applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), event->getIsDeprecated(), event->getDeprecateHint());
     mDetails->showNameHint(stimulusCollisionReason(event->getName(), event->getId()));
 
     updateToolbar(eRowKind::Event);
@@ -514,6 +536,7 @@ void SMEvent::selectedParam(SMEventEntry* owner, uint32_t paramId)
         mParamDetails->ctrlValue()->setText(param->getValue());
         mParamDetails->ctrlDescription()->setPlainText(param->getDescription());
     }
+    applyDeprecatedDisplay(mParamDetails->ctrlDeprecated(), mParamDetails->ctrlDeprecateHint(), param->getIsDeprecated(), param->getDeprecateHint());
     mParamDetails->showNameHint(paramNameCollisionReason(owner, param->getName(), param->getId()));
 
     updateToolbar(eRowKind::Param);
@@ -538,6 +561,7 @@ void SMEvent::selectedTimer(const SMTimerEntry* entry)
         mTimerDetails->ctrlRepeat()->setValue(continuous ? 1 : static_cast<int>(entry->getRepeat()));
         mTimerDetails->ctrlDescription()->setPlainText(entry->getDescription());
     }
+    applyDeprecatedDisplay(mTimerDetails->ctrlDeprecated(), mTimerDetails->ctrlDeprecateHint(), entry->getIsDeprecated(), entry->getDeprecateHint());
     mTimerDetails->showNameHint(stimulusCollisionReason(entry->getName(), entry->getId()));
 
     updateToolbar(eRowKind::Timer);
@@ -935,6 +959,31 @@ void SMEvent::onEventNameCommitted()
     }
 }
 
+void SMEvent::onEventDeprecatedToggled(bool checked)
+{
+    SMEventEntry* event = currentEvent();
+    if ((event == nullptr) || (currentKind() != eRowKind::Event))
+        return;
+
+    mEventModel.setDeprecated(event->getId(), checked);
+    const QSignalBlocker blockHint(mDetails->ctrlDeprecateHint());
+    mDetails->ctrlDeprecateHint()->setEnabled(checked);
+    mDetails->ctrlDeprecateHint()->setText(checked ? event->getDeprecateHint() : QString());
+    if (checked)
+    {
+        mDetails->ctrlDeprecateHint()->setFocus();
+    }
+}
+
+void SMEvent::onEventDeprecateHintCommitted()
+{
+    SMEventEntry* event = currentEvent();
+    if ((event != nullptr) && (currentKind() == eRowKind::Event))
+    {
+        mEventModel.setDeprecateHint(event->getId(), mDetails->ctrlDeprecateHint()->text());
+    }
+}
+
 void SMEvent::onParamNameTextChanged(const QString& text)
 {
     SMEventEntry* event = currentEvent();
@@ -996,6 +1045,34 @@ void SMEvent::onParamValueCommitted()
     mEventModel.setParamDefault(event, paramId, mParamDetails->ctrlHasDefault()->isChecked(), mParamDetails->ctrlValue()->text());
 }
 
+void SMEvent::onParamDeprecatedToggled(bool checked)
+{
+    SMEventEntry* event = currentEvent();
+    const uint32_t paramId = currentParamId();
+    if ((event == nullptr) || (paramId == 0))
+        return;
+
+    mEventModel.setParamDeprecated(event, paramId, checked);
+    MethodParameter* param = mEventModel.findParam(event, paramId);
+    const QSignalBlocker blockHint(mParamDetails->ctrlDeprecateHint());
+    mParamDetails->ctrlDeprecateHint()->setEnabled(checked);
+    mParamDetails->ctrlDeprecateHint()->setText((checked && (param != nullptr)) ? param->getDeprecateHint() : QString());
+    if (checked)
+    {
+        mParamDetails->ctrlDeprecateHint()->setFocus();
+    }
+}
+
+void SMEvent::onParamDeprecateHintCommitted()
+{
+    SMEventEntry* event = currentEvent();
+    const uint32_t paramId = currentParamId();
+    if ((event != nullptr) && (paramId != 0))
+    {
+        mEventModel.setParamDeprecateHint(event, paramId, mParamDetails->ctrlDeprecateHint()->text());
+    }
+}
+
 void SMEvent::onTimerNameTextChanged(const QString& text)
 {
     if (currentKind() == eRowKind::Timer)
@@ -1041,6 +1118,32 @@ void SMEvent::onContinuousToggled(bool checked)
     mTimerDetails->ctrlRepeat()->setEnabled(checked == false);
     mTimerDetails->ctrlRepeat()->setValue(1);
     mTimerModel.setRepeat(id, checked ? 0u : 1u);
+}
+
+void SMEvent::onTimerDeprecatedToggled(bool checked)
+{
+    const uint32_t id = currentTimerId();
+    if (id == 0)
+        return;
+
+    mTimerModel.setDeprecated(id, checked);
+    SMTimerEntry* entry = mTimerModel.findTimer(id);
+    const QSignalBlocker blockHint(mTimerDetails->ctrlDeprecateHint());
+    mTimerDetails->ctrlDeprecateHint()->setEnabled(checked);
+    mTimerDetails->ctrlDeprecateHint()->setText((checked && (entry != nullptr)) ? entry->getDeprecateHint() : QString());
+    if (checked)
+    {
+        mTimerDetails->ctrlDeprecateHint()->setFocus();
+    }
+}
+
+void SMEvent::onTimerDeprecateHintCommitted()
+{
+    const uint32_t id = currentTimerId();
+    if (id != 0)
+    {
+        mTimerModel.setDeprecateHint(id, mTimerDetails->ctrlDeprecateHint()->text());
+    }
 }
 
 void SMEvent::refreshAll()

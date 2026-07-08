@@ -83,12 +83,15 @@ QToolButton:pressed, QToolButton:checked
 }
 
 /* Split buttons (MenuButtonPopup): keep the drop-down zone on the same background as the
-   button itself, otherwise Fusion paints it as a darker sunken bevel that hides the arrow. */
+   button itself, otherwise Fusion paints it as a darker sunken bevel that hides the arrow.
+   A thin left divider and a wider zone separate the arrow from the button icon so it does
+   not crowd the icon. */
 QToolButton::menu-button
 {
     background: transparent;
     border: none;
-    width: 14px;
+    border-left: 1px solid ${border};
+    width: 18px;
 }
 
 QToolButton::menu-arrow

@@ -21,6 +21,7 @@
 
 #include "lusan/view/sm/SMCodeEditor.hpp"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -45,6 +46,8 @@ SMMethodDetails::SMMethodDetails(QWidget* parent /*= nullptr*/)
     , mImplementRow     (nullptr)
     , mBody             (nullptr)
     , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
     , mForm             (nullptr)
 {
     buildUi();
@@ -110,6 +113,11 @@ void SMMethodDetails::buildUi()
     mDescription->setPlaceholderText(tr("Describe method here"));
     mForm->addRow(tr("Description:"), mDescription);
 
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    mForm->addRow(mDeprecated, mDeprecateHint);
+
     root->addWidget(details);
 
     setConditionVisible(false);
@@ -159,6 +167,16 @@ SMCodeEditor* SMMethodDetails::ctrlBody() const
 QPlainTextEdit* SMMethodDetails::ctrlDescription() const
 {
     return mDescription;
+}
+
+QCheckBox* SMMethodDetails::ctrlDeprecated() const
+{
+    return mDeprecated;
+}
+
+QLineEdit* SMMethodDetails::ctrlDeprecateHint() const
+{
+    return mDeprecateHint;
 }
 
 void SMMethodDetails::showNameHint(const QString& reason)

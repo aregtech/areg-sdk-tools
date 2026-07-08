@@ -108,6 +108,15 @@ public:
     inline const QString& getBody() const;
     inline void setBody(const QString& body);
 
+    //!< Returns true if the method is marked deprecated.
+    inline bool getIsDeprecated() const;
+    //!< Marks (or clears) the method as deprecated.
+    inline void setIsDeprecated(bool isDeprecated);
+    //!< Returns the hint explaining why the method is deprecated.
+    inline const QString& getDeprecateHint() const;
+    //!< Sets the hint explaining why the method is deprecated.
+    inline void setDeprecateHint(const QString& hint);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -136,6 +145,8 @@ private:
     QString     mReturn;        //!< The condition return type (conditions only; default bool).
     eImplement  mImplement;     //!< The condition implementation mode (conditions only).
     QString     mBody;          //!< The verbatim embedded-condition body (CDATA on write).
+    bool        mIsDeprecated;  //!< Flag, indicating whether the method is deprecated.
+    QString     mDeprecateHint; //!< The hint, why the method is deprecated.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -247,6 +258,30 @@ inline const QString& SMMethodEntry::getBody() const
 inline void SMMethodEntry::setBody(const QString& body)
 {
     mBody = body;
+}
+
+inline bool SMMethodEntry::getIsDeprecated() const
+{
+    return mIsDeprecated;
+}
+
+inline void SMMethodEntry::setIsDeprecated(bool isDeprecated)
+{
+    mIsDeprecated = isDeprecated;
+    if (isDeprecated == false)
+    {
+        mDeprecateHint.clear();
+    }
+}
+
+inline const QString& SMMethodEntry::getDeprecateHint() const
+{
+    return mDeprecateHint;
+}
+
+inline void SMMethodEntry::setDeprecateHint(const QString& hint)
+{
+    mDeprecateHint = hint;
 }
 
 #endif  // LUSAN_DATA_SM_SMMETHODDATA_HPP

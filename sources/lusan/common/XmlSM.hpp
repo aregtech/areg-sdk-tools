@@ -40,6 +40,7 @@ namespace XmlSM
     constexpr const char* const xmlSMElementStateMachine    { "StateMachine" };
     constexpr const char* const xmlSMElementOverview        { XmlSI::xmlSIElementOverview };
     constexpr const char* const xmlSMElementDescription     { XmlSI::xmlSIElementDescription };
+    constexpr const char* const xmlSMElementDeprecateHint   { XmlSI::xmlSIElementDeprecateHint };
 
     constexpr const char* const xmlSMElementDataTypeList    { XmlSI::xmlSIElementDataTypeList };
     constexpr const char* const xmlSMElementDataType        { XmlSI::xmlSIElementDataType };
@@ -121,6 +122,7 @@ namespace XmlSM
     constexpr const char* const xmlSMAttributeMethodType    { XmlSI::xmlSIAttributeMethodType };
     constexpr const char* const xmlSMAttributeReturn        { "Return" };
     constexpr const char* const xmlSMAttributeImplement     { "Implement" };
+    constexpr const char* const xmlSMAttributeIsDeprecated  { XmlSI::xmlSIAttributeIsDeprecated };
     constexpr const char* const xmlSMAttributeLocation      { "Location" };
     constexpr const char* const xmlSMAttributeKind          { "Kind" };
     constexpr const char* const xmlSMAttributeHistory       { "History" };

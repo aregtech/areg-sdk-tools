@@ -19,6 +19,7 @@
 
 #include "lusan/view/sm/SMEventDetails.hpp"
 
+#include <QCheckBox>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
@@ -31,6 +32,8 @@ SMEventDetails::SMEventDetails(QWidget* parent /*= nullptr*/)
     , mName             (nullptr)
     , mNameHint         (nullptr)
     , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
     buildUi();
 }
@@ -63,6 +66,11 @@ void SMEventDetails::buildUi()
     mDescription->setPlaceholderText(tr("Describe event here"));
     form->addRow(tr("Description:"), mDescription);
 
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    form->addRow(mDeprecated, mDeprecateHint);
+
     root->addWidget(details);
 }
 
@@ -74,6 +82,16 @@ QLineEdit* SMEventDetails::ctrlName() const
 QPlainTextEdit* SMEventDetails::ctrlDescription() const
 {
     return mDescription;
+}
+
+QCheckBox* SMEventDetails::ctrlDeprecated() const
+{
+    return mDeprecated;
+}
+
+QLineEdit* SMEventDetails::ctrlDeprecateHint() const
+{
+    return mDeprecateHint;
 }
 
 void SMEventDetails::showNameHint(const QString& reason)

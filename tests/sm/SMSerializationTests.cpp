@@ -241,6 +241,73 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Deprecation flags/hints round-trip on events, methods, timers, attributes and params
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testDeprecation()
+    {
+        std::printf("[deprecation] flags + hints round-trip on events/methods/timers/attributes/params\n");
+
+        StateMachineData doc;
+        doc.getOverview().setName("DeprecationTest");
+
+        SMAttributeEntry* attr = doc.getAttributes().createAttribute("mCount");
+        CHECK(attr != nullptr);
+        if (attr != nullptr) { attr->setIsDeprecated(true); attr->setDeprecateHint("use mTotal"); }
+
+        SMEventEntry* ev = doc.getEvents().createEvent("Started");
+        CHECK(ev != nullptr);
+        if (ev != nullptr)
+        {
+            ev->setIsDeprecated(true);
+            ev->setDeprecateHint("replaced by Ready");
+            MethodParameter* p = ev->addParam("code");
+            CHECK(p != nullptr);
+            if (p != nullptr) { p->setIsDeprecated(true); p->setDeprecateHint("unused payload"); }
+        }
+
+        SMMethodEntry* m = doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+        CHECK(m != nullptr);
+        if (m != nullptr) { m->setIsDeprecated(true); m->setDeprecateHint("call Start instead"); }
+
+        SMTimerEntry* t = doc.getTimers().createTimer("Tick");
+        CHECK(t != nullptr);
+        if (t != nullptr) { t->setIsDeprecated(true); t->setDeprecateHint("no longer used"); }
+
+        const QString outPath = outFile("dep_roundtrip.fsml");
+        CHECK(doc.writeToFile(outPath));
+
+        StateMachineData reread;
+        CHECK(reread.readFromFile(outPath));
+        CHECK(reread.openSucceeded());
+
+        SMAttributeEntry* rattr = reread.getAttributes().findElement("mCount");
+        CHECK((rattr != nullptr) && rattr->getIsDeprecated() && (rattr->getDeprecateHint() == "use mTotal"));
+
+        SMEventEntry* rev = reread.getEvents().findEvent("Started");
+        CHECK((rev != nullptr) && rev->getIsDeprecated() && (rev->getDeprecateHint() == "replaced by Ready"));
+        if (rev != nullptr)
+        {
+            MethodParameter* rp = rev->findElement("code");
+            CHECK((rp != nullptr) && rp->getIsDeprecated() && (rp->getDeprecateHint() == "unused payload"));
+        }
+
+        SMMethodEntry* rm = reread.getMethods().findMethod("Go");
+        CHECK((rm != nullptr) && rm->getIsDeprecated() && (rm->getDeprecateHint() == "call Start instead"));
+
+        SMTimerEntry* rt = reread.getTimers().findElement("Tick");
+        CHECK((rt != nullptr) && rt->getIsDeprecated() && (rt->getDeprecateHint() == "no longer used"));
+
+        // Idempotent resave.
+        const QString outPath2 = outFile("dep_roundtrip_2.fsml");
+        CHECK(reread.writeToFile(outPath2));
+        CHECK(readAllBytes(outPath) == readAllBytes(outPath2));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Acceptance 3: truncated / corrupted input terminates with a clean error
 //////////////////////////////////////////////////////////////////////////
 
@@ -457,6 +524,7 @@ int main(int /*argc*/, char** /*argv*/)
 
     testRoundTrip();
     testCData();
+    testDeprecation();
     testRobustness();
     testVersionMigration();
     testUnknownPreservation();
