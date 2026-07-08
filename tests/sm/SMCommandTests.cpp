@@ -622,6 +622,66 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Scenario H: SM-13 canvas state lifecycle — create (state + node as one step),
+// rename, and delete removing the transitions that target the deleted state.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testCanvasStateLifecycle()
+    {
+        StateMachineData    doc;
+        DocModelNotifier    notifier;
+        QUndoStack          stack;
+
+        const QString empty = serialize(doc);
+
+        // Create: one undo step producing the state and its Node layout entry.
+        SMCreateStateCommand* create = new SMCreateStateCommand(  doc, notifier, doc.getStates()
+                                                                , "Idle", SMStateEntry::eStateKind::Start
+                                                                , QRectF(32.0, 48.0, 160.0, 96.0), "Add Idle");
+        stack.push(create);
+        const uint32_t idleId = create->getStateId();
+        CHECK(stack.count() == 1);
+        CHECK(doc.getStates().findState("Idle") != nullptr);
+        const SMLayoutNode* node = doc.getLayout().findNode(idleId);
+        CHECK((node != nullptr) && (node->x == 32.0) && (node->height == 96.0));
+
+        stack.undo();
+        CHECK(serialize(doc) == empty);
+        stack.redo();
+        CHECK(doc.getLayout().findNode(idleId) != nullptr);
+
+        // Rename: one undoable step broadcasting nameChanged.
+        int renames = 0;
+        QObject::connect(&notifier, &DocModelNotifier::nameChanged, [&](uint32_t, const QString&, const QString&){ ++renames; });
+        stack.push(new SMRenameStateCommand(doc, notifier, idleId, "Ready", "Rename Idle"));
+        CHECK(doc.getStates().findState("Ready") != nullptr);
+        CHECK(renames == 1);
+        stack.undo();
+        CHECK(doc.getStates().findState("Idle") != nullptr);
+        stack.redo();
+
+        // Delete: a transition of a surviving state targeting the deleted one goes with it.
+        SMStateEntry* run = doc.getStates().createState("Run", SMStateEntry::eStateKind::Normal);
+        run->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evStop", "Ready");
+        run->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evLoop", "Run");
+        const QString beforeDelete = serialize(doc);
+
+        stack.push(new SMRemoveStateCommand(doc, notifier, doc.getStates(), idleId, "Delete Ready"));
+        CHECK(doc.getStates().findState("Ready") == nullptr);
+        CHECK(run->getTransitions().getElementCount() == 1);        // evStop → Ready removed
+
+        stack.undo();
+        CHECK(serialize(doc) == beforeDelete);                      // transition restored with IDs
+        CHECK(run->getTransitions().getElementCount() == 2);
+
+        stack.redo();
+        CHECK(run->getTransitions().getElementCount() == 1);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -635,6 +695,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testDataTypeLifecycle();
     testContainerLifecycle();
     testEventTimerLifecycle();
+    testCanvasStateLifecycle();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

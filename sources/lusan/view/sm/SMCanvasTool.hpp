@@ -109,6 +109,39 @@ public:
 };
 
 /**
+ * \class   SMPlaceStateTool
+ * \brief   The Add State / Add Final State tool: a click places a state of the tool's
+ *          kind at the (snapped) click position as one undo step and opens the in-place
+ *          name editor. The scene's single-shot/sticky policy decides whether the tool
+ *          stays active afterwards.
+ **/
+class SMPlaceStateTool : public SMCanvasTool
+{
+public:
+    /**
+     * \brief   Creates the placement tool.
+     * \param   scene       The scene the tool operates on.
+     * \param   finalState  True places Final states, false places Normal states.
+     **/
+    SMPlaceStateTool(SMScene& scene, bool finalState);
+    virtual ~SMPlaceStateTool() = default;
+
+    virtual NESMDesign::eCanvasTool getKind() const override;
+    virtual bool mousePress(QGraphicsSceneMouseEvent* event) override;
+    virtual bool mouseRelease(QGraphicsSceneMouseEvent* event) override;
+    virtual bool mouseDoubleClick(QGraphicsSceneMouseEvent* event) override;
+
+private:
+    /**
+     * \brief   Places the state centered at the given scene position.
+     **/
+    void placeState(const QPointF& scenePos);
+
+private:
+    const bool  mFinal; //!< True to place Final states.
+};
+
+/**
  * \brief   Creates the strategy object of the given tool mode.
  * \param   tool    The requested tool mode.
  * \param   scene   The scene the tool operates on.

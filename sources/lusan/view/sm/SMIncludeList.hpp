@@ -49,7 +49,6 @@ public:
 
 private:
     void buildUi();
-    static QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
 
 private:
     QTreeWidget*    mTable;

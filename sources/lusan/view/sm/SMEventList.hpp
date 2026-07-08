@@ -77,7 +77,6 @@ private:
     void buildUi();
     //!< Applies the section-header look (bold, span, tint) to one group node.
     void decorateGroup(QTreeWidgetItem* group);
-    static QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
 
 private:
     QTreeWidget*        mTable;         //!< The grouped events/timers tree.

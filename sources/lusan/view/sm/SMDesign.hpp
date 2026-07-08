@@ -76,6 +76,21 @@ public:
     inline QAction* actionToggleSnap() const;
     inline QAction* actionSelectAll() const;
 
+    /**
+     * \brief   The state editing actions: placement tools, delete, and rename.
+     **/
+    inline QAction* actionAddState() const;
+    inline QAction* actionAddFinalState() const;
+    inline QAction* actionDelete() const;
+    inline QAction* actionRename() const;
+
+    /**
+     * \brief   Deletes the selected states after confirmation: painted substates go
+     *          recursively, transitions targeting a deleted state go with it, and the
+     *          whole selection is one undo step. Start states are never deleted.
+     **/
+    void deleteSelection();
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -130,6 +145,10 @@ private:
     QAction*            mActToggleGrid; //!< Show / hide the grid.
     QAction*            mActToggleSnap; //!< Toggle snap-to-grid.
     QAction*            mActSelectAll;  //!< Select every element on the level.
+    QAction*            mActAddState;   //!< Activate the Add State tool.
+    QAction*            mActAddFinal;   //!< Activate the Add Final State tool.
+    QAction*            mActDelete;     //!< Delete the selection with confirmation.
+    QAction*            mActRename;     //!< Rename the selected state in place.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -179,6 +198,26 @@ inline QAction* SMDesign::actionToggleSnap() const
 inline QAction* SMDesign::actionSelectAll() const
 {
     return mActSelectAll;
+}
+
+inline QAction* SMDesign::actionAddState() const
+{
+    return mActAddState;
+}
+
+inline QAction* SMDesign::actionAddFinalState() const
+{
+    return mActAddFinal;
+}
+
+inline QAction* SMDesign::actionDelete() const
+{
+    return mActDelete;
+}
+
+inline QAction* SMDesign::actionRename() const
+{
+    return mActRename;
 }
 
 #endif  // LUSAN_VIEW_SM_SMDESIGN_HPP

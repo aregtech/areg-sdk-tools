@@ -86,7 +86,6 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 private:
     void buildUi();
-    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
 
 private:
     QTableWidget* mTable;

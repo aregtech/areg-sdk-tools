@@ -26,6 +26,12 @@
 #include "lusan/data/sm/SMLayoutData.hpp"
 
 #include <QList>
+#include <QRectF>
+
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class SMStateEntry;
 
 /**
  * \class   SMMoveNodeCommand
@@ -37,6 +43,12 @@ class SMMoveNodeCommand : public SMCommand
 {
 public:
     static constexpr int CMD_ID { 0x5401 };
+
+    /**
+     * \brief   Returns a fresh gesture ID. All move sources share this counter so two
+     *          different gestures can never coalesce into one undo step.
+     **/
+    static uint32_t takeNextGesture();
 
     SMMoveNodeCommand(  StateMachineData& data, DocModelNotifier& notifier
                       , uint32_t owner, uint32_t gestureId
@@ -57,6 +69,62 @@ private:
     SMLayoutNode    mNew;
     SMLayoutNode    mOld;
     bool            mCaptured { false };
+};
+
+/**
+ * \class   SMAttachNodeCommand
+ * \brief   Creates the Node layout entry of a freshly added state. The owner ID is read
+ *          from the state at redo time, because the ID is allocated only when the sibling
+ *          add-state command inserts the entry — so this command always runs as the child
+ *          following that insertion inside one composite.
+ **/
+class SMAttachNodeCommand : public SMCommand
+{
+public:
+    /**
+     * \brief   Creates the command.
+     * \param   data        The document root.
+     * \param   notifier    The change-notification hub.
+     * \param   state       The state whose Node entry is created; must outlive the command.
+     * \param   geometry    The initial box geometry in scene coordinates.
+     * \param   text        The undo-stack display text.
+     * \param   parent      The owning composite command.
+     **/
+    SMAttachNodeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                        , const SMStateEntry& state, const QRectF& geometry
+                        , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    const SMStateEntry& mState;     //!< The state owning the Node entry.
+    QRectF              mGeometry;  //!< The initial box geometry.
+};
+
+/**
+ * \class   SMSetNodeExpandedCommand
+ * \brief   Toggles a state node's expanded/collapsed flag (body visibility).
+ **/
+class SMSetNodeExpandedCommand : public SMCommand
+{
+public:
+    SMSetNodeExpandedCommand(  StateMachineData& data, DocModelNotifier& notifier
+                             , uint32_t owner, bool expanded
+                             , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    void apply(bool expanded);
+
+private:
+    uint32_t    mOwner;                 //!< The owning state ID.
+    bool        mNew;                   //!< The expanded flag to apply.
+    bool        mOldExpanded { true };  //!< The previous expanded flag.
+    bool        mOldHas      { false }; //!< Whether the flag was present before.
+    bool        mCaptured    { false };
 };
 
 /**

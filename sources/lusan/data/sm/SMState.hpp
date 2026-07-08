@@ -208,6 +208,16 @@ public:
     SMStateEntry* findStateRecursive(const QString& name) const;
 
     /**
+     * \brief   Finds a state by element ID in this level only.
+     **/
+    SMStateEntry* findStateById(uint32_t id) const;
+
+    /**
+     * \brief   Finds a state by element ID across this level and every nested level.
+     **/
+    SMStateEntry* findStateByIdRecursive(uint32_t id) const;
+
+    /**
      * \brief   Returns the single Start state of this level, or nullptr if none.
      **/
     SMStateEntry* getStartState() const;

@@ -35,7 +35,9 @@
  * Dependencies
  ************************************************************************/
 class SMCanvasItem;
+class SMStateItem;
 class StateMachineModel;
+enum class eDocElementKind;
 
 /**
  * \class   SMScene
@@ -143,6 +145,16 @@ public:
      **/
     void selectAll();
 
+    /**
+     * \brief   Returns the selected state box items of this level.
+     **/
+    QList<SMStateItem*> selectedStateItems() const;
+
+    /**
+     * \brief   Opens the in-place name editor when exactly one state is selected (F2).
+     **/
+    void startRenameOfSelection();
+
 //////////////////////////////////////////////////////////////////////////
 // Internal: item registry (called by SMCanvasItem on scene changes)
 //////////////////////////////////////////////////////////////////////////
@@ -181,13 +193,40 @@ protected:
 private slots:
     void onSceneSelectionChanged();
     void onModelSelectionChanged(const QList<uint32_t>& selected);
+    void onElementAdded(uint32_t id, eDocElementKind kind);
+    void onElementRemoved(uint32_t id, eDocElementKind kind);
+    void onElementChanged(uint32_t id, eDocElementKind kind);
+    void onNameChanged(uint32_t id, const QString& oldName, const QString& newName);
+    void onLayoutChanged(const QList<uint32_t>& ownerIds);
 
 private:
     /**
-     * \brief   Moves the selected top-level items by one step (keyboard nudge).
+     * \brief   Moves the selected top-level items by one step (keyboard nudge) as one
+     *          undo step; items without model backing are moved directly.
      * \return  True when a selection was moved.
      **/
     bool nudgeSelection(int dx, int dy, bool pixelWise);
+
+    /**
+     * \brief   Creates the graphics items of every state of this level.
+     **/
+    void populateFromModel();
+
+    /**
+     * \brief   Creates the box item of one state (no-op when it already exists).
+     **/
+    void createStateItem(uint32_t stateId);
+
+    /**
+     * \brief   True when the state is a direct child of this scene's level.
+     **/
+    bool isOnThisLevel(uint32_t stateId) const;
+
+    /**
+     * \brief   Recomputes the incoming/outgoing highlight of every transition item
+     *          connected to the selected states.
+     **/
+    void updateConnHighlights();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -197,6 +236,9 @@ private:
     const uint32_t                  mLevelId;       //!< The displayed level's owner element ID.
     QHash<uint32_t, SMCanvasItem*>  mItems;         //!< Element ID to graphics item.
     std::unique_ptr<SMCanvasTool>   mTool;          //!< The active tool strategy.
+    std::unique_ptr<SMCanvasTool>   mRetiredTool;   //!< The replaced tool, kept alive until the
+                                                    //!< next switch: a tool may retire itself from
+                                                    //!< inside its own event handler.
     bool                            mToolSticky;    //!< Keep the tool after a finished gesture.
     int                             mGridSize;      //!< The grid cell size in scene units.
     bool                            mGridVisible;   //!< The grid visibility.

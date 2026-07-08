@@ -117,6 +117,8 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMConstantModel.cpp
+    ${LUSAN}/model/sm/SMIncludeModel.cpp
+    ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
     # Container tests need the real basic-container catalog (Array/HashMap/Map/...): it is
@@ -135,6 +137,48 @@ target_link_libraries(lusan_sm_command_tests PRIVATE
     aregsqlite3
 )
 set_target_properties(lusan_sm_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# SM-13: design-canvas smoke test. Drives the real SMDesign/SMScene/SMStateItem
+# stack with synthetic mouse/key events on the Qt offscreen platform, so the
+# canvas interactions are verifiable without a display or input injection.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_sm_canvas_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN_CMD_COMMON_SRC}
+    ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMLayoutCommands.cpp
+    ${LUSAN}/model/sm/SMStateCommands.cpp
+    ${LUSAN}/model/sm/SMOverviewModel.cpp
+    ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/sm/SMAttributeModel.cpp
+    ${LUSAN}/model/sm/SMEventModel.cpp
+    ${LUSAN}/model/sm/SMTimerModel.cpp
+    ${LUSAN}/model/sm/SMMethodModel.cpp
+    ${LUSAN}/model/sm/SMConstantModel.cpp
+    ${LUSAN}/model/sm/SMIncludeModel.cpp
+    ${LUSAN}/model/sm/SMSelectionModel.cpp
+    ${LUSAN}/model/sm/StateMachineModel.cpp
+    ${LUSAN}/view/sm/NESMDesign.cpp
+    ${LUSAN}/view/sm/SMCanvasItem.cpp
+    ${LUSAN}/view/sm/SMCanvasTool.cpp
+    ${LUSAN}/view/sm/SMDesign.cpp
+    ${LUSAN}/view/sm/SMGraphicsView.cpp
+    ${LUSAN}/view/sm/SMScene.cpp
+    ${LUSAN}/view/sm/SMStateItem.cpp
+    ${LUSAN_ROOT}/tests/sm/SMCanvasSmokeTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_canvas_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_canvas_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_canvas_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_canvas_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # The Service Interface headless data layer.
 set(LUSAN_SI_SUPPORT_SRC

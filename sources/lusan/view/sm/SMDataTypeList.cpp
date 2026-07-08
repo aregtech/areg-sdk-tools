@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/sm/SMDataTypeList.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
 #include <QAction>
 #include <QFrame>
@@ -48,29 +49,6 @@ SMDataTypeList::SMDataTypeList(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMDataTypeList::decorateAddButton(QToolButton* button, QMenu* menu)
-{
-    button->setMenu(menu);
-    button->setPopupMode(QToolButton::MenuButtonPopup);
-    // A smaller icon plus extra width give the drop-down arrow its own breathing room, so it
-    // never crowds the icon (kept consistent across the Data Type / Method / Event toolbars).
-    button->setIconSize(QSize(20, 20));
-    button->setMaximumSize(56, 24);
-}
-
-QToolButton* SMDataTypeList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
-{
-    QToolButton* button = new QToolButton(parent);
-    button->setMaximumSize(24, 24);
-    button->setCursor(Qt::PointingHandCursor);
-    button->setMouseTracking(true);
-    button->setToolTip(toolTip);
-    button->setIcon(QIcon(iconName));
-    button->setIconSize(QSize(25, 25));
-    button->setShortcut(shortcut);
-    return button;
-}
-
 void SMDataTypeList::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
@@ -84,9 +62,9 @@ void SMDataTypeList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new data type entry (a structure by default)"), QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected data type entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new data type entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
+    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new data type entry (a structure by default)"), QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected data type entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
+    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new data type entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
     // The Add split button: a plain click creates the default (a structure), the drop-down
     // offers the four data type categories explicitly.
@@ -99,22 +77,22 @@ void SMDataTypeList::buildUi()
     addMenu->addAction(mActNewEnum);
     addMenu->addAction(mActNewImport);
     addMenu->addAction(mActNewContainer);
-    decorateAddButton(mButtonAdd, addMenu);
+    NELusanCommon::decorateToolButton(mButtonAdd, addMenu);
 
     QFrame* sep1 = new QFrame(toolbar);
     sep1->setFrameShape(QFrame::VLine);
     sep1->setMaximumSize(24, 24);
 
-    mButtonAddField    = createToolButton(toolbar, QStringLiteral(":/icons/field add")   , tr("Create and add new field entry")   , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
-    mButtonRemoveField = createToolButton(toolbar, QStringLiteral(":/icons/field delete"), tr("Delete selected field entry")      , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
-    mButtonInsertField = createToolButton(toolbar, QStringLiteral(":/icons/field insert"), tr("Create and insert new field entry"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
+    mButtonAddField    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field add")   , tr("Create and add new field entry")   , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    mButtonRemoveField = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field delete"), tr("Delete selected field entry")      , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
+    mButtonInsertField = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field insert"), tr("Create and insert new field entry"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
 
     QFrame* sep2 = new QFrame(toolbar);
     sep2->setFrameShape(QFrame::VLine);
     sep2->setMaximumSize(24, 24);
 
-    mButtonMoveUp   = createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
-    mButtonMoveDown = createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
+    mButtonMoveUp   = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
+    mButtonMoveDown = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
 
     toolbarLayout->addWidget(mButtonAdd);
     toolbarLayout->addWidget(mButtonRemove);

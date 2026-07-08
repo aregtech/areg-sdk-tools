@@ -302,6 +302,12 @@ protected:
 private:
 
     /**
+     * \brief   Adds a new data type using the specified category.
+     * \param   category    Category of the created data type.
+     **/
+    void addNewType(DataTypeBase::eCategory category);
+
+    /**
      * \brief   Called to convert the data type saved in specified tree node.
      * \param   current     The tree node to convert the data type.
      * \param   newCategory The new category of the data type.

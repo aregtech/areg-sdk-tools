@@ -26,6 +26,8 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QStandardPaths>
+#include <QToolButton>
+#include <QMenu>
 
 const QStringList NELusanCommon::FILTERS
 {
@@ -170,4 +172,43 @@ QIcon NELusanCommon::mergeIcons(const QIcon& icon1, double scale1, const QIcon& 
 
     // Step 5: Return the merged icon
     return QIcon(result);
+}
+
+QToolButton* NELusanCommon::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
+{
+    QToolButton* button = new QToolButton(parent);
+    button->setMaximumSize(24, 24);
+    button->setCursor(Qt::PointingHandCursor);
+    button->setMouseTracking(true);
+    button->setToolTip(toolTip);
+    button->setIcon(QIcon(iconName));
+    button->setIconSize(QSize(25, 25));
+    button->setShortcut(shortcut);
+    return button;
+}
+
+void NELusanCommon::decorateToolButton(QToolButton* button)
+{
+    if (button == nullptr)
+        return;
+
+    button->setMenu(nullptr);
+    button->setPopupMode(QToolButton::DelayedPopup);
+    button->setIconSize(QSize(24, 24));
+    button->setMaximumSize(24, 24);
+}
+
+void NELusanCommon::decorateToolButton(QToolButton* button, QMenu* menu)
+{
+    if ((button == nullptr) || (menu == nullptr))
+    {
+        decorateToolButton(button);
+        return;
+    }
+
+    button->setMenu(menu);
+    button->setPopupMode(QToolButton::MenuButtonPopup);
+    // Keep a dedicated right-side drop-down zone so the menu arrow never crowds the icon.
+    button->setIconSize(QSize(20, 20));
+    button->setFixedSize(48, 24);
 }
