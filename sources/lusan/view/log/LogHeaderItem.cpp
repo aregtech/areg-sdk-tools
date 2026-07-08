@@ -108,7 +108,7 @@ LogHeaderItem::LogHeaderItem(LogTableHeader& header, int index)
     }
 }
 
-inline int LogHeaderItem::fromColumnToIndex(void) const
+inline int LogHeaderItem::fromColumnToIndex() const
 {
     return mHeader.mModel->fromColumnToIndex(mColumn);
 }
@@ -118,7 +118,7 @@ inline LoggingModelBase::eColumn LogHeaderItem::fromIndexToColumn(int logicalInd
     return mHeader.mModel->fromIndexToColumn(logicalIndex);
 }
 
-void LogHeaderItem::showFilters(void)
+void LogHeaderItem::showFilters()
 {
     if (mType == eType::None)
         return;
@@ -193,13 +193,13 @@ void LogHeaderItem::setFilterData(const std::vector<ITEM_ID>& data, const NELusa
     }
 }
 
-void LogHeaderItem::resetFilter(void)
+void LogHeaderItem::resetFilter()
 {
     if (mWidget != nullptr)
         mWidget->clearFilter();
 }
 
-QList<NELusanCommon::FilterData> LogHeaderItem::getFilterData(void) const
+QList<NELusanCommon::FilterData> LogHeaderItem::getFilterData() const
 {
     return (mWidget != nullptr ? mWidget->getSelectedData() : QList<NELusanCommon::FilterData>());
 }

@@ -139,7 +139,7 @@ void ReplyMethodModel::methodUpdated(SIMethodBase* method)
     }
 }
 
-void ReplyMethodModel::updateList(void)
+void ReplyMethodModel::updateList()
 {
     const QList<SIMethodResponse*>& list{ mData.getResponses() };
     uint32_t count = list.size();

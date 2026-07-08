@@ -18,7 +18,10 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIAttribute.hpp"
-#include "ui/ui_SIAttribute.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QVBoxLayout>
 
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
@@ -80,11 +83,20 @@ QVariant SIAttributeNotifyModel::data(const QModelIndex& index, int role /*= Qt:
 
 SIAttributeWidget::SIAttributeWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui     (new Ui::SIAttribute)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Data Attribute Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
@@ -93,20 +105,18 @@ SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
     , mDetails      (new SIAttributeDetails(this))
     , mList         (new SIAttributeList(this))
     , mWidget       (new SIAttributeWidget(this))
-    , ui            (*mWidget->ui)
     , mTypeModel    (new DataTypesModel(model.getDataTypeData(), false))
     , mNotifyModel  (new SIAttributeNotifyModel(this))
     , mTableCell    (nullptr)
     , mCount        (0)
 {
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mDetails->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(mDetails, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -116,10 +126,10 @@ SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
     updateDetails(nullptr, true);
 }
 
-SIAttribute::~SIAttribute(void)
+SIAttribute::~SIAttribute()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mDetails);
 }
 
 void SIAttribute::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
@@ -203,7 +213,7 @@ void SIAttribute::dataTypeUpdated(DataTypeCustom* dataType)
     blockBasicSignals(false);
 }
 
-int SIAttribute::getColumnCount(void) const
+int SIAttribute::getColumnCount() const
 {
     return mList->ctrlTableList()->columnCount();
 }
@@ -226,7 +236,7 @@ void SIAttribute::onCurCellChanged(int currentRow, int currentColumn, int previo
     blockBasicSignals(false);
 }
 
-void SIAttribute::onAddClicked(void)
+void SIAttribute::onAddClicked()
 {
     QString name(genName());
     QTableWidget* table = mList->ctrlTableList();
@@ -258,7 +268,7 @@ void SIAttribute::onAddClicked(void)
     blockBasicSignals(false);
 }
 
-void SIAttribute::onRemoveClicked(void)
+void SIAttribute::onRemoveClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -295,7 +305,7 @@ void SIAttribute::onRemoveClicked(void)
     blockBasicSignals(false);
 }
 
-void SIAttribute::onInsertClicked(void)
+void SIAttribute::onInsertClicked()
 {
     QString name(genName());
     QTableWidget* table = mList->ctrlTableList();
@@ -337,7 +347,7 @@ void SIAttribute::onInsertClicked(void)
     blockBasicSignals(false);
 }
 
-void SIAttribute::onMoveUpClicked(void)
+void SIAttribute::onMoveUpClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -352,7 +362,7 @@ void SIAttribute::onMoveUpClicked(void)
     }
 }
 
-void SIAttribute::onMoveDownClicked(void)
+void SIAttribute::onMoveDownClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -444,7 +454,7 @@ void SIAttribute::onDeprecateHintChanged(const QString& newText)
     }
 }
 
-void SIAttribute::onDescriptionChanged(void)
+void SIAttribute::onDescriptionChanged()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -497,7 +507,7 @@ void SIAttribute::cellChanged(int row, int col, const QString& newValue)
     }
 }
 
-void SIAttribute::updateData(void)
+void SIAttribute::updateData()
 {
     QTableWidget* table = mList->ctrlTableList();
     const QList<AttributeEntry>& list = mModel.getAttributes();
@@ -512,7 +522,7 @@ void SIAttribute::updateData(void)
     }
 }
 
-void SIAttribute::updateWidgets(void)
+void SIAttribute::updateWidgets()
 {
     QTableWidget* table = mList->ctrlTableList();
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
@@ -531,7 +541,7 @@ void SIAttribute::updateWidgets(void)
     mDetails->ctrlNotification()->setEnabled(false);
 }
 
-void SIAttribute::setupSignals(void)
+void SIAttribute::setupSignals()
 {
     Q_ASSERT(mDetails != nullptr);
     Q_ASSERT(mList != nullptr);
@@ -723,7 +733,7 @@ inline void SIAttribute::updateToolBottons(int row, int rowCount)
     }
 }
 
-inline QString SIAttribute::genName(void)
+inline QString SIAttribute::genName()
 {
     static const QString _defName("NewAttribute");
 

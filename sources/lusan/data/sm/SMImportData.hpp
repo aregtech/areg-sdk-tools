@@ -63,25 +63,25 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
     inline void setName(const QString& name);
 
-    inline const QString& getLocation(void) const;
+    inline const QString& getLocation() const;
     inline void setLocation(const QString& location);
 
-    inline const VersionNumber& getVersion(void) const;
+    inline const VersionNumber& getVersion() const;
     inline void setVersion(const VersionNumber& version);
 
-    inline const QString& getDescription(void) const;
+    inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -106,9 +106,9 @@ class SMImportData : public TEDataContainer<SMImportEntry, DocumentElem>
 public:
     SMImportData(ElementBase* parent = nullptr);
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Creates a new import appended at the end of the list.
@@ -122,7 +122,7 @@ public:
 // SMImportEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& SMImportEntry::getName(void) const
+inline const QString& SMImportEntry::getName() const
 {
     return mName;
 }
@@ -132,7 +132,7 @@ inline void SMImportEntry::setName(const QString& name)
     mName = name;
 }
 
-inline const QString& SMImportEntry::getLocation(void) const
+inline const QString& SMImportEntry::getLocation() const
 {
     return mLocation;
 }
@@ -142,7 +142,7 @@ inline void SMImportEntry::setLocation(const QString& location)
     mLocation = location;
 }
 
-inline const VersionNumber& SMImportEntry::getVersion(void) const
+inline const VersionNumber& SMImportEntry::getVersion() const
 {
     return mVersion;
 }
@@ -152,7 +152,7 @@ inline void SMImportEntry::setVersion(const VersionNumber& version)
     mVersion = version;
 }
 
-inline const QString& SMImportEntry::getDescription(void) const
+inline const QString& SMImportEntry::getDescription() const
 {
     return mDescription;
 }

@@ -86,18 +86,18 @@ public:
     SMArgumentEntry& operator = (const SMArgumentEntry& other);
     SMArgumentEntry& operator = (SMArgumentEntry&& other) noexcept;
 
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
     inline void setName(const QString& name);
-    inline eValueSource getSource(void) const;
+    inline eValueSource getSource() const;
     inline void setSource(eValueSource source);
-    inline const QString& getValue(void) const;
+    inline const QString& getValue() const;
     inline void setValue(const QString& value);
-    inline const QString& getExpression(void) const;
+    inline const QString& getExpression() const;
     inline void setExpression(const QString& expression);
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 private:
     QString         mName;          //!< The mapped parameter name.
@@ -149,32 +149,32 @@ protected:
     SMOperationBase& operator = (SMOperationBase&& other) noexcept;
 
 public:
-    virtual ~SMOperationBase(void) = default;
+    virtual ~SMOperationBase() = default;
 
     /**
      * \brief   Returns the operation kind.
      **/
-    inline eOperation getOperationType(void) const;
+    inline eOperation getOperationType() const;
 
     /**
      * \brief   The XML element name for this operation kind.
      **/
-    const char* getElementName(void) const;
+    const char* getElementName() const;
 
     /**
      * \brief   Deep-copies this operation, preserving its concrete type.
      **/
-    virtual SMOperationBase* clone(void) const = 0;
+    virtual SMOperationBase* clone() const = 0;
 
     /**
      * \brief   The primary referenced name (action/attribute/timer/event); used as the
      *          element display name. Empty for InlineCode.
      **/
-    virtual QString getName(void) const = 0;
+    virtual QString getName() const = 0;
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 protected:
     eOperation  mKind;      //!< The operation kind.
@@ -191,18 +191,18 @@ public:
     SMActionCall(uint32_t id, const QString& action, ElementBase* parent = nullptr);
     SMActionCall(const SMActionCall& src);
 
-    inline const QString& getAction(void) const;
+    inline const QString& getAction() const;
     inline void setAction(const QString& action);
-    inline const QList<SMArgumentEntry>& getArguments(void) const;
-    inline QList<SMArgumentEntry>& getArguments(void);
+    inline const QList<SMArgumentEntry>& getArguments() const;
+    inline QList<SMArgumentEntry>& getArguments();
 
     /**
      * \brief   Appends an argument mapping, allocating its ID from the document counter.
      **/
     SMArgumentEntry* addArgument(const QString& name, SMArgumentEntry::eValueSource source, const QString& value);
 
-    virtual SMOperationBase* clone(void) const override;
-    virtual QString getName(void) const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString                     mAction;        //!< The action method name.
@@ -220,17 +220,17 @@ public:
     SMAttributeSet(uint32_t id, const QString& attribute, ElementBase* parent = nullptr);
     SMAttributeSet(const SMAttributeSet& src);
 
-    inline const QString& getAttribute(void) const;
+    inline const QString& getAttribute() const;
     inline void setAttribute(const QString& attribute);
-    inline SMArgumentEntry::eValueSource getSource(void) const;
+    inline SMArgumentEntry::eValueSource getSource() const;
     inline void setSource(SMArgumentEntry::eValueSource source);
-    inline const QString& getValue(void) const;
+    inline const QString& getValue() const;
     inline void setValue(const QString& value);
-    inline const QString& getExpression(void) const;
+    inline const QString& getExpression() const;
     inline void setExpression(const QString& expression);
 
-    virtual SMOperationBase* clone(void) const override;
-    virtual QString getName(void) const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString                         mAttribute;     //!< The target attribute name.
@@ -250,19 +250,19 @@ public:
     SMTimerStart(uint32_t id, const QString& timer, ElementBase* parent = nullptr);
     SMTimerStart(const SMTimerStart& src);
 
-    inline const QString& getTimer(void) const;
+    inline const QString& getTimer() const;
     inline void setTimer(const QString& timer);
-    inline bool hasTimeoutOverride(void) const;
-    inline uint32_t getTimeout(void) const;
+    inline bool hasTimeoutOverride() const;
+    inline uint32_t getTimeout() const;
     void setTimeout(uint32_t timeout);
-    void clearTimeout(void);
-    inline bool hasRepeatOverride(void) const;
-    inline uint32_t getRepeat(void) const;
+    void clearTimeout();
+    inline bool hasRepeatOverride() const;
+    inline uint32_t getRepeat() const;
     void setRepeat(uint32_t repeat);
-    void clearRepeat(void);
+    void clearRepeat();
 
-    virtual SMOperationBase* clone(void) const override;
-    virtual QString getName(void) const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString     mTimer;         //!< The timer name.
@@ -283,11 +283,11 @@ public:
     SMTimerStop(uint32_t id, const QString& timer, ElementBase* parent = nullptr);
     SMTimerStop(const SMTimerStop& src);
 
-    inline const QString& getTimer(void) const;
+    inline const QString& getTimer() const;
     inline void setTimer(const QString& timer);
 
-    virtual SMOperationBase* clone(void) const override;
-    virtual QString getName(void) const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString     mTimer;     //!< The timer name.
@@ -304,15 +304,15 @@ public:
     SMEventSend(uint32_t id, const QString& event, ElementBase* parent = nullptr);
     SMEventSend(const SMEventSend& src);
 
-    inline const QString& getEvent(void) const;
+    inline const QString& getEvent() const;
     inline void setEvent(const QString& event);
-    inline const QList<SMArgumentEntry>& getArguments(void) const;
-    inline QList<SMArgumentEntry>& getArguments(void);
+    inline const QList<SMArgumentEntry>& getArguments() const;
+    inline QList<SMArgumentEntry>& getArguments();
 
     SMArgumentEntry* addArgument(const QString& name, SMArgumentEntry::eValueSource source, const QString& value);
 
-    virtual SMOperationBase* clone(void) const override;
-    virtual QString getName(void) const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString                     mEvent;         //!< The event name.
@@ -330,11 +330,11 @@ public:
     SMInlineCode(uint32_t id, const QString& body, ElementBase* parent = nullptr);
     SMInlineCode(const SMInlineCode& src);
 
-    inline const QString& getBody(void) const;
+    inline const QString& getBody() const;
     inline void setBody(const QString& body);
 
-    virtual SMOperationBase* clone(void) const override;
-    virtual QString getName(void) const override;
+    SMOperationBase* clone() const override;
+    QString getName() const override;
 
 private:
     QString     mBody;      //!< The verbatim C++ body (CDATA on write).
@@ -358,7 +358,7 @@ public:
     SMOperationList(ElementBase* parent = nullptr);
     SMOperationList(const SMOperationList& src);
     SMOperationList(SMOperationList&& src) noexcept;
-    ~SMOperationList(void);
+    ~SMOperationList();
 
     SMOperationList& operator = (const SMOperationList& other);
     SMOperationList& operator = (SMOperationList&& other) noexcept;
@@ -368,7 +368,7 @@ public:
      *          allocation delegates to the document counter.
      **/
     void setParent(ElementBase* parent);
-    inline ElementBase* getParent(void) const;
+    inline ElementBase* getParent() const;
 
     /**
      * \brief   Appends an operation, taking ownership and allocating its ID from the
@@ -390,15 +390,15 @@ public:
      **/
     bool readFromXml(QXmlStreamReader& xml, const char* wrapperName);
 
-    inline const QList<SMOperationBase*>& getOperations(void) const;
-    inline int getCount(void) const;
-    inline bool isEmpty(void) const;
+    inline const QList<SMOperationBase*>& getOperations() const;
+    inline int getCount() const;
+    inline bool isEmpty() const;
     inline SMOperationBase* at(int index) const;
 
     /**
      * \brief   Deletes and removes every owned operation.
      **/
-    void clear(void);
+    void clear();
 
 private:
     ElementBase*                mParent;        //!< The owning element (for ID delegation).
@@ -409,7 +409,7 @@ private:
 // Inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& SMArgumentEntry::getName(void) const
+inline const QString& SMArgumentEntry::getName() const
 {
     return mName;
 }
@@ -419,7 +419,7 @@ inline void SMArgumentEntry::setName(const QString& name)
     mName = name;
 }
 
-inline SMArgumentEntry::eValueSource SMArgumentEntry::getSource(void) const
+inline SMArgumentEntry::eValueSource SMArgumentEntry::getSource() const
 {
     return mSource;
 }
@@ -429,7 +429,7 @@ inline void SMArgumentEntry::setSource(SMArgumentEntry::eValueSource source)
     mSource = source;
 }
 
-inline const QString& SMArgumentEntry::getValue(void) const
+inline const QString& SMArgumentEntry::getValue() const
 {
     return mValue;
 }
@@ -439,7 +439,7 @@ inline void SMArgumentEntry::setValue(const QString& value)
     mValue = value;
 }
 
-inline const QString& SMArgumentEntry::getExpression(void) const
+inline const QString& SMArgumentEntry::getExpression() const
 {
     return mExpression;
 }
@@ -449,12 +449,12 @@ inline void SMArgumentEntry::setExpression(const QString& expression)
     mExpression = expression;
 }
 
-inline SMOperationBase::eOperation SMOperationBase::getOperationType(void) const
+inline SMOperationBase::eOperation SMOperationBase::getOperationType() const
 {
     return mKind;
 }
 
-inline const QString& SMActionCall::getAction(void) const
+inline const QString& SMActionCall::getAction() const
 {
     return mAction;
 }
@@ -464,17 +464,17 @@ inline void SMActionCall::setAction(const QString& action)
     mAction = action;
 }
 
-inline const QList<SMArgumentEntry>& SMActionCall::getArguments(void) const
+inline const QList<SMArgumentEntry>& SMActionCall::getArguments() const
 {
     return mArguments;
 }
 
-inline QList<SMArgumentEntry>& SMActionCall::getArguments(void)
+inline QList<SMArgumentEntry>& SMActionCall::getArguments()
 {
     return mArguments;
 }
 
-inline const QString& SMAttributeSet::getAttribute(void) const
+inline const QString& SMAttributeSet::getAttribute() const
 {
     return mAttribute;
 }
@@ -484,7 +484,7 @@ inline void SMAttributeSet::setAttribute(const QString& attribute)
     mAttribute = attribute;
 }
 
-inline SMArgumentEntry::eValueSource SMAttributeSet::getSource(void) const
+inline SMArgumentEntry::eValueSource SMAttributeSet::getSource() const
 {
     return mSource;
 }
@@ -494,7 +494,7 @@ inline void SMAttributeSet::setSource(SMArgumentEntry::eValueSource source)
     mSource = source;
 }
 
-inline const QString& SMAttributeSet::getValue(void) const
+inline const QString& SMAttributeSet::getValue() const
 {
     return mValue;
 }
@@ -504,7 +504,7 @@ inline void SMAttributeSet::setValue(const QString& value)
     mValue = value;
 }
 
-inline const QString& SMAttributeSet::getExpression(void) const
+inline const QString& SMAttributeSet::getExpression() const
 {
     return mExpression;
 }
@@ -514,7 +514,7 @@ inline void SMAttributeSet::setExpression(const QString& expression)
     mExpression = expression;
 }
 
-inline const QString& SMTimerStart::getTimer(void) const
+inline const QString& SMTimerStart::getTimer() const
 {
     return mTimer;
 }
@@ -524,27 +524,27 @@ inline void SMTimerStart::setTimer(const QString& timer)
     mTimer = timer;
 }
 
-inline bool SMTimerStart::hasTimeoutOverride(void) const
+inline bool SMTimerStart::hasTimeoutOverride() const
 {
     return mHasTimeout;
 }
 
-inline uint32_t SMTimerStart::getTimeout(void) const
+inline uint32_t SMTimerStart::getTimeout() const
 {
     return mTimeout;
 }
 
-inline bool SMTimerStart::hasRepeatOverride(void) const
+inline bool SMTimerStart::hasRepeatOverride() const
 {
     return mHasRepeat;
 }
 
-inline uint32_t SMTimerStart::getRepeat(void) const
+inline uint32_t SMTimerStart::getRepeat() const
 {
     return mRepeat;
 }
 
-inline const QString& SMTimerStop::getTimer(void) const
+inline const QString& SMTimerStop::getTimer() const
 {
     return mTimer;
 }
@@ -554,7 +554,7 @@ inline void SMTimerStop::setTimer(const QString& timer)
     mTimer = timer;
 }
 
-inline const QString& SMEventSend::getEvent(void) const
+inline const QString& SMEventSend::getEvent() const
 {
     return mEvent;
 }
@@ -564,17 +564,17 @@ inline void SMEventSend::setEvent(const QString& event)
     mEvent = event;
 }
 
-inline const QList<SMArgumentEntry>& SMEventSend::getArguments(void) const
+inline const QList<SMArgumentEntry>& SMEventSend::getArguments() const
 {
     return mArguments;
 }
 
-inline QList<SMArgumentEntry>& SMEventSend::getArguments(void)
+inline QList<SMArgumentEntry>& SMEventSend::getArguments()
 {
     return mArguments;
 }
 
-inline const QString& SMInlineCode::getBody(void) const
+inline const QString& SMInlineCode::getBody() const
 {
     return mBody;
 }
@@ -584,22 +584,22 @@ inline void SMInlineCode::setBody(const QString& body)
     mBody = body;
 }
 
-inline ElementBase* SMOperationList::getParent(void) const
+inline ElementBase* SMOperationList::getParent() const
 {
     return mParent;
 }
 
-inline const QList<SMOperationBase*>& SMOperationList::getOperations(void) const
+inline const QList<SMOperationBase*>& SMOperationList::getOperations() const
 {
     return mOperations;
 }
 
-inline int SMOperationList::getCount(void) const
+inline int SMOperationList::getCount() const
 {
     return static_cast<int>(mOperations.size());
 }
 
-inline bool SMOperationList::isEmpty(void) const
+inline bool SMOperationList::isEmpty() const
 {
     return mOperations.isEmpty();
 }

@@ -91,31 +91,31 @@ public:
 public:
 
     //!< Returns the tool button for match case.
-    inline QToolButton* buttonMatchCase(void) const;
+    inline QToolButton* buttonMatchCase() const;
 
     //!< Returns the tool button for match word.
-    inline QToolButton* buttonMatchWord(void) const;
+    inline QToolButton* buttonMatchWord() const;
 
     //!< Returns the tool button for wild card.
-    inline QToolButton* buttonWildCard(void) const;
+    inline QToolButton* buttonWildCard() const;
 
     //!< Returns the tool button for search backward.
-    inline QToolButton* buttonSearchBackward(void) const;
+    inline QToolButton* buttonSearchBackward() const;
 
     //!< Returns the tool button for search next.
-    inline QToolButton* buttonSearch(void) const;
+    inline QToolButton* buttonSearch() const;
 
     //!< Returns true if match case tool-button exists and checked.
-    inline bool isMatchCaseChecked(void) const;
+    inline bool isMatchCaseChecked() const;
 
     //!< Returns true if match word tool-button exists and checked.
-    inline bool isMatchWordChecked(void) const;
+    inline bool isMatchWordChecked() const;
 
     //!< Returns true if wild card tool-button exists and checked.
-    inline bool isWildCardChecked(void) const;
+    inline bool isWildCardChecked() const;
 
     //!< Returns true if search backward tool-button exists and checked.
-    inline bool isBackwardChecked(void) const;
+    inline bool isBackwardChecked() const;
 
 //////////////////////////////////////////////////////////////////////////
 // SearchLineEdit class signals
@@ -186,13 +186,13 @@ protected:
     /**
      * \brief   QLineEdit event triggered when the search line edit is resized.
      **/
-    virtual void resizeEvent(QResizeEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
     /**
      * \brief   Override keyPressEvent to handle search shortcuts.
      * \param   event   The key press event.
      **/
-    virtual void keyPressEvent(QKeyEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -219,47 +219,47 @@ private:
 // SearchLineEdit inline methods implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline QToolButton* SearchLineEdit::buttonMatchCase(void) const
+inline QToolButton* SearchLineEdit::buttonMatchCase() const
 {
     return mBtnMatchCase;
 }
 
-inline QToolButton* SearchLineEdit::buttonMatchWord(void) const
+inline QToolButton* SearchLineEdit::buttonMatchWord() const
 {
     return mBtnMatchWord;
 }
 
-inline QToolButton* SearchLineEdit::buttonWildCard(void) const
+inline QToolButton* SearchLineEdit::buttonWildCard() const
 {
     return mBtnWildCard;
 }
 
-inline QToolButton* SearchLineEdit::buttonSearchBackward(void) const
+inline QToolButton* SearchLineEdit::buttonSearchBackward() const
 {
     return mBtnBackward;
 }
 
-inline QToolButton* SearchLineEdit::buttonSearch(void) const
+inline QToolButton* SearchLineEdit::buttonSearch() const
 {
     return mBtnSearch;
 }
 
-inline bool SearchLineEdit::isMatchCaseChecked(void) const
+inline bool SearchLineEdit::isMatchCaseChecked() const
 {
     return (mBtnMatchCase != nullptr) && mBtnMatchCase->isChecked();
 }
 
-inline bool SearchLineEdit::isMatchWordChecked(void) const
+inline bool SearchLineEdit::isMatchWordChecked() const
 {
     return (mBtnMatchWord != nullptr) && mBtnMatchWord->isChecked();
 }
 
-inline bool SearchLineEdit::isWildCardChecked(void) const
+inline bool SearchLineEdit::isWildCardChecked() const
 {
     return (mBtnWildCard != nullptr) && mBtnWildCard->isChecked();
 }
 
-inline bool SearchLineEdit::isBackwardChecked(void) const
+inline bool SearchLineEdit::isBackwardChecked() const
 {
     return (mBtnBackward != nullptr) && mBtnBackward->isChecked();
 }

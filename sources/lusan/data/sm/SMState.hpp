@@ -86,7 +86,7 @@ public:
     SMStateEntry(uint32_t id, const QString& name, eStateKind kind, ElementBase* parent = nullptr);
     SMStateEntry(const SMStateEntry& src);
     SMStateEntry(SMStateEntry&& src) noexcept;
-    virtual ~SMStateEntry(void);
+    virtual ~SMStateEntry();
 
     SMStateEntry& operator = (const SMStateEntry& other);
     SMStateEntry& operator = (SMStateEntry&& other) noexcept;
@@ -95,60 +95,60 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
     inline void setName(const QString& name);
 
-    inline eStateKind getKind(void) const;
+    inline eStateKind getKind() const;
     inline void setKind(eStateKind kind);
 
-    inline eHistory getHistory(void) const;
+    inline eHistory getHistory() const;
     inline void setHistory(eHistory history);
 
     /**
      * \brief   The imported-submachine alias (empty when not imported). Setting it clears
      *          any painted nested StateList — the two are mutually exclusive.
      **/
-    inline const QString& getSubmachine(void) const;
+    inline const QString& getSubmachine() const;
     void setSubmachine(const QString& alias);
-    inline bool isImportedSubmachine(void) const;
+    inline bool isImportedSubmachine() const;
 
-    inline const QString& getOnFinal(void) const;
+    inline const QString& getOnFinal() const;
     inline void setOnFinal(const QString& event);
 
-    inline const QString& getDescription(void) const;
+    inline const QString& getDescription() const;
     inline void setDescription(const QString& description);
 
-    inline const SMOperationList& getEntryList(void) const;
-    inline SMOperationList& getEntryList(void);
-    inline const SMOperationList& getExitList(void) const;
-    inline SMOperationList& getExitList(void);
-    inline const SMTransitionData& getTransitions(void) const;
-    inline SMTransitionData& getTransitions(void);
+    inline const SMOperationList& getEntryList() const;
+    inline SMOperationList& getEntryList();
+    inline const SMOperationList& getExitList() const;
+    inline SMOperationList& getExitList();
+    inline const SMTransitionData& getTransitions() const;
+    inline SMTransitionData& getTransitions();
 
     /**
      * \brief   True if the state owns a painted nested StateList.
      **/
-    inline bool hasNestedStates(void) const;
+    inline bool hasNestedStates() const;
 
     /**
      * \brief   Returns the painted nested StateList, or nullptr if none.
      **/
-    inline const SMStateData* getNestedStates(void) const;
-    inline SMStateData* getNestedStates(void);
+    inline const SMStateData* getNestedStates() const;
+    inline SMStateData* getNestedStates();
 
     /**
      * \brief   Creates (if needed) and returns the painted nested StateList. Clears any
      *          imported-submachine alias — the two are mutually exclusive.
      **/
-    SMStateData* getOrCreateNestedStates(void);
+    SMStateData* getOrCreateNestedStates();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -183,7 +183,7 @@ public:
     SMStateData(ElementBase* parent = nullptr);
     SMStateData(const SMStateData& src);
     SMStateData(SMStateData&& src) noexcept;
-    virtual ~SMStateData(void);
+    virtual ~SMStateData();
 
     SMStateData& operator = (const SMStateData& other);
     SMStateData& operator = (SMStateData&& other) noexcept;
@@ -210,21 +210,21 @@ public:
     /**
      * \brief   Returns the single Start state of this level, or nullptr if none.
      **/
-    SMStateEntry* getStartState(void) const;
+    SMStateEntry* getStartState() const;
 
     /**
      * \brief   Counts the states in this level and all nested levels.
      **/
-    int countStatesRecursive(void) const;
+    int countStatesRecursive() const;
 
     /**
      * \brief   Deletes and removes all states of this level (recursively via ownership).
      **/
-    void removeAll(void);
+    void removeAll();
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 private:
     //!< Deep-copies the states of \p src into this (empty) level, re-parenting them.
@@ -235,7 +235,7 @@ private:
 // SMStateEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& SMStateEntry::getName(void) const
+inline const QString& SMStateEntry::getName() const
 {
     return mName;
 }
@@ -245,7 +245,7 @@ inline void SMStateEntry::setName(const QString& name)
     mName = name;
 }
 
-inline SMStateEntry::eStateKind SMStateEntry::getKind(void) const
+inline SMStateEntry::eStateKind SMStateEntry::getKind() const
 {
     return mKind;
 }
@@ -255,7 +255,7 @@ inline void SMStateEntry::setKind(eStateKind kind)
     mKind = kind;
 }
 
-inline SMStateEntry::eHistory SMStateEntry::getHistory(void) const
+inline SMStateEntry::eHistory SMStateEntry::getHistory() const
 {
     return mHistory;
 }
@@ -265,17 +265,17 @@ inline void SMStateEntry::setHistory(eHistory history)
     mHistory = history;
 }
 
-inline const QString& SMStateEntry::getSubmachine(void) const
+inline const QString& SMStateEntry::getSubmachine() const
 {
     return mSubmachine;
 }
 
-inline bool SMStateEntry::isImportedSubmachine(void) const
+inline bool SMStateEntry::isImportedSubmachine() const
 {
     return (mSubmachine.isEmpty() == false);
 }
 
-inline const QString& SMStateEntry::getOnFinal(void) const
+inline const QString& SMStateEntry::getOnFinal() const
 {
     return mOnFinal;
 }
@@ -285,7 +285,7 @@ inline void SMStateEntry::setOnFinal(const QString& event)
     mOnFinal = event;
 }
 
-inline const QString& SMStateEntry::getDescription(void) const
+inline const QString& SMStateEntry::getDescription() const
 {
     return mDescription;
 }
@@ -295,47 +295,47 @@ inline void SMStateEntry::setDescription(const QString& description)
     mDescription = description;
 }
 
-inline const SMOperationList& SMStateEntry::getEntryList(void) const
+inline const SMOperationList& SMStateEntry::getEntryList() const
 {
     return mEntryList;
 }
 
-inline SMOperationList& SMStateEntry::getEntryList(void)
+inline SMOperationList& SMStateEntry::getEntryList()
 {
     return mEntryList;
 }
 
-inline const SMOperationList& SMStateEntry::getExitList(void) const
+inline const SMOperationList& SMStateEntry::getExitList() const
 {
     return mExitList;
 }
 
-inline SMOperationList& SMStateEntry::getExitList(void)
+inline SMOperationList& SMStateEntry::getExitList()
 {
     return mExitList;
 }
 
-inline const SMTransitionData& SMStateEntry::getTransitions(void) const
+inline const SMTransitionData& SMStateEntry::getTransitions() const
 {
     return mTransitions;
 }
 
-inline SMTransitionData& SMStateEntry::getTransitions(void)
+inline SMTransitionData& SMStateEntry::getTransitions()
 {
     return mTransitions;
 }
 
-inline bool SMStateEntry::hasNestedStates(void) const
+inline bool SMStateEntry::hasNestedStates() const
 {
     return (mNested != nullptr);
 }
 
-inline const SMStateData* SMStateEntry::getNestedStates(void) const
+inline const SMStateData* SMStateEntry::getNestedStates() const
 {
     return mNested;
 }
 
-inline SMStateData* SMStateEntry::getNestedStates(void)
+inline SMStateData* SMStateEntry::getNestedStates()
 {
     return mNested;
 }

@@ -123,7 +123,7 @@ void WorkspaceFileDialog::setFileFilters(const QStringList& filters)
     }
 }
 
-QString WorkspaceFileDialog::getSelectedFileRelativePath(void) const
+QString WorkspaceFileDialog::getSelectedFileRelativePath() const
 {
     QStringList selected{ selectedFiles() };
     QString result = selected.first();
@@ -148,7 +148,7 @@ QString WorkspaceFileDialog::getSelectedFileRelativePath(void) const
     return result;
 }
 
-QString WorkspaceFileDialog::getSelectedFilePath(void) const
+QString WorkspaceFileDialog::getSelectedFilePath() const
 {
     QStringList selected{ selectedFiles() };
     return selected.first();

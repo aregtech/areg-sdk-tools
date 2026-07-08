@@ -50,6 +50,8 @@
         <file alias="log-prio-scope-exit">icons/log-prio-scope-exit.svg</file>
         <file alias="open-file">icons/open-file.svg</file>
         <file alias="workflow-algorithm">icons/workflow-algorithm.svg</file>
+        <file alias="sm-event">icons/sm-event.svg</file>
+        <file alias="sm-timer">icons/sm-timer.svg</file>
     </qresource>
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>

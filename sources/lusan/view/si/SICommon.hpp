@@ -24,12 +24,6 @@
 
 namespace SICommon
 {
-    constexpr unsigned int FRAME_WIDTH      = 1080;
-    constexpr unsigned int FRAME_HEIGHT     = 650;
-
-    constexpr unsigned int  WIDGET_WIDTH    = 540;
-    constexpr unsigned int  WIDGET_HEIGHT   = 600;
-
     /**
      * \brief   The template function to enable or disable the deprication flag and deprecated hint.
      **/

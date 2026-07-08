@@ -70,7 +70,7 @@ public:
 
     OutputDock(MdiMainWindow* parent);
     
-    virtual ~OutputDock(void);
+    virtual ~OutputDock();
 
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes
@@ -79,12 +79,12 @@ public:
     /**
      * \brief   Returns the tab widget of the navigation.
      **/
-    inline QTabWidget& getTabWidget(void);
+    inline QTabWidget& getTabWidget();
 
     /**
      * \brief   Returns the scope output viewer.
      **/
-    inline ScopeOutputViewer& getScopeLogsView(void);
+    inline ScopeOutputViewer& getScopeLogsView();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -92,7 +92,7 @@ public:
 private:
 
     //!< Initializes the size of the output dock.
-    void initSize(void);
+    void initSize();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -113,12 +113,12 @@ private:
 // OutputDock class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QTabWidget& OutputDock::getTabWidget(void)
+inline QTabWidget& OutputDock::getTabWidget()
 {
     return mTabs;
 }
 
-inline ScopeOutputViewer& OutputDock::getScopeLogsView(void)
+inline ScopeOutputViewer& OutputDock::getScopeLogsView()
 {
     return mScopeOutput;
 }

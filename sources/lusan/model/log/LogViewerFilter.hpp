@@ -53,7 +53,7 @@ public:
      **/
     explicit LogViewerFilter(LoggingModelBase* model = nullptr);
 
-    virtual ~LogViewerFilter(void);
+    virtual ~LogViewerFilter();
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -81,7 +81,7 @@ protected:
     /**
      * \brief   Clears all filters.
      **/
-    virtual void clearFilters(void);
+    virtual void clearFilters();
 
     /**
      * \brief   Returns true if the given source row has exact match of the filters.
@@ -99,7 +99,7 @@ protected:
      * \param   parent   The parent index in the source model.
      * \return  True if the row should be included, false otherwise.
      **/
-    virtual bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
+    bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -181,7 +181,7 @@ private:
     inline void prepareReExpression(const QString& wildcardPattern, bool isCaseSensitive, bool isWholeWord, bool isWildCard);
 
     //!< Clear filter data/
-    inline void _clearData(void);
+    inline void _clearData();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -196,7 +196,7 @@ protected:
 // Forbidden call
 //////////////////////////////////////////////////////////////////////////
 private:
-    LogViewerFilter(void) = delete;
+    LogViewerFilter() = delete;
     AREG_NOCOPY_NOMOVE(LogViewerFilter);
 };
 

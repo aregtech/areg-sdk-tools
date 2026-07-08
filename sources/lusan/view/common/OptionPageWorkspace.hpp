@@ -76,7 +76,7 @@ public:
     /**
      * \brief   Call when the option should apply the changes.
      **/
-    virtual void applyChanges(void) override;
+    void applyChanges() override;
     
     /**
      * \brief   Called when the workspace directories in option pages are updated.
@@ -85,7 +85,7 @@ public:
      * \param   delivery   The delivery directory.
      * \param   logs       The logs directory.
      **/
-    virtual void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
+    void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -165,22 +165,22 @@ private:
      **/
     void deleteSelectedWorkspaceItem() const;
     void setupThemeControls();
-    int selectedTheme(void) const;
+    int selectedTheme() const;
     
     //!< Returns root path edit object
-    inline QLineEdit* ctrlRoot(void) const;
+    inline QLineEdit* ctrlRoot() const;
 
     //!< Returns sources path edit object
-    inline QLineEdit* ctrlSources(void) const;
+    inline QLineEdit* ctrlSources() const;
 
     //!< Returns includes path edit object
-    inline QLineEdit* ctrlIncludes(void) const;
+    inline QLineEdit* ctrlIncludes() const;
 
     //!< Returns delivery path edit object
-    inline QLineEdit* ctrlDelivery(void) const;
+    inline QLineEdit* ctrlDelivery() const;
 
     //!< Returns logs path edit object
-    inline QLineEdit* ctrlLogs(void) const;
+    inline QLineEdit* ctrlLogs() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
@@ -200,7 +200,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    OptionPageWorkspace(void) = delete;
+    OptionPageWorkspace() = delete;
     AREG_NOCOPY_NOMOVE(OptionPageWorkspace);
 };
 

@@ -27,10 +27,6 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIConstantDetails;
-}
-
 class QCheckBox;
 class QComboBox;
 class QLineEdit;
@@ -61,35 +57,43 @@ public:
     /**
      * \brief   Returns the constant name widget object.
      **/
-    QLineEdit* ctrlName(void);
+    QLineEdit* ctrlName();
 
     /**
      * \brief   Returns the constant type widget object.
      **/
-    QComboBox* ctrlTypes(void);
+    QComboBox* ctrlTypes();
 
     /**
      * \brief   Returns the constant value widget object.
      **/
-    QLineEdit* ctrlValue(void);
+    QLineEdit* ctrlValue();
 
     /**
      * \brief   Returns the constant description widget object.
      **/
-    QPlainTextEdit* ctrlDescription(void);
+    QPlainTextEdit* ctrlDescription();
 
     /**
      * \brief   Returns the constant deprecated flag widget object.
      **/
-    QCheckBox* ctrlDeprecated(void);
+    QCheckBox* ctrlDeprecated();
 
     /**
      * \brief   Returns the constant deprecation hint widget object.
      **/
-    QLineEdit* ctrlDeprecateHint(void);
+    QLineEdit* ctrlDeprecateHint();
 
 private:
-    Ui::SIConstantDetails* ui;  //!< The user interface object.
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QComboBox*      mTypes;
+    QLineEdit*      mValue;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SICONSTANTDETAILS_HPP

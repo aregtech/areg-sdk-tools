@@ -36,9 +36,9 @@ class SMIncludeData : public TEDataContainer<IncludeEntry, DocumentElem>
 public:
     SMIncludeData(ElementBase* parent = nullptr);
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Creates a new include entry appended at the end of the list.

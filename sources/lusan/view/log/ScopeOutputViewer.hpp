@@ -66,7 +66,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 public:
     ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent = nullptr);
-    virtual ~ScopeOutputViewer(void);
+    virtual ~ScopeOutputViewer();
     
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -80,7 +80,7 @@ public:
      * \param   mdiChild    The MDI child window to release
      * \return  Returns true if succeeded to release the window and returns false if the window is not bound.
      **/   
-    virtual bool releaseWindow(MdiChild& mdiChild) override;
+    bool releaseWindow(MdiChild& mdiChild) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -132,14 +132,14 @@ private slots:
      *          If the currently selected row is invalid, it selects the first log entry in the output window.
      *          If the currently selected row is the last scope message entry, moves to the end and does nothing.
      **/
-    void onShowNextLog(void);
+    void onShowNextLog();
 
     /**
      * \brief   Shows the log of the previous nearest scope of the currently selected log row in output window.
      *          If the currently selected row is invalid, it selects the last log entry in the output window.
      *          If the currently selected row is the first scope message entry, moves to the start and does nothing.
      **/
-    void onShowPrevLog(void);
+    void onShowPrevLog();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
@@ -147,7 +147,7 @@ private slots:
 private:
 
     //!< Updates the viewport of the log table.
-    inline void updateLogTable(void);
+    inline void updateLogTable();
 
     /**
      * \brief   Updates the controls, enabling or disabling them based on the current state.
@@ -164,45 +164,45 @@ private:
 
     //!< Returns the index of the selected element of the logs in the output window.
     //!< No log is selected if return value is invalid.
-    inline QModelIndex getSelectedIndex(void) const;
+    inline QModelIndex getSelectedIndex() const;
 
 private:
 
     //!< Returns the pointer to the table view control.
-    inline QTableView* ctrlTable(void) const;
+    inline QTableView* ctrlTable() const;
 
     //!< Returns the pointer to the "show logs of the session" radio button control.
-    inline QRadioButton* ctrlRadioSession(void) const;
+    inline QRadioButton* ctrlRadioSession() const;
 
     //!< Returns the pointer to the "show the session logs and sub-logs of the nested methods calls" radio button control.
-    inline QRadioButton* ctrlRadioSublogs(void) const;
+    inline QRadioButton* ctrlRadioSublogs() const;
 
     //!< Returns the pointer to the "show all logs of the scope" check box control.
-    inline QRadioButton* ctrlRadioScope(void) const;
+    inline QRadioButton* ctrlRadioScope() const;
 
     //!< Returns the pointer to the "show all logs of the thread" radio button control.
-    inline QRadioButton* ctrlRadioThread(void) const;
+    inline QRadioButton* ctrlRadioThread() const;
 
     //!< Returns the pointer to the "show all logs of the process" radio button control.
-    inline QRadioButton* ctrlRadioProcess(void) const;
+    inline QRadioButton* ctrlRadioProcess() const;
     
     //!< The read-only edit control to display scope run duration since scope message has been activated.
-    inline QLineEdit* ctrlDuration(void) const;
+    inline QLineEdit* ctrlDuration() const;
 
     //!< The tool button to show the logs of the selected entry in the log view window.
-    inline QToolButton* ctrlLogShow(void) const;
+    inline QToolButton* ctrlLogShow() const;
 
     //!< The tool button to show the first log of the activated scope in the output window.
-    inline QToolButton* ctrlScopeBegin(void) const;
+    inline QToolButton* ctrlScopeBegin() const;
 
     //!< The tool button to show the last log of the activated scope in the output window.
-    inline QToolButton* ctrlScopeEnd(void) const;
+    inline QToolButton* ctrlScopeEnd() const;
 
     //!< The tool button to show the log of the next scope in the output window.
-    inline QToolButton* ctrlScopeNext(void) const;
+    inline QToolButton* ctrlScopeNext() const;
 
     //!< The tool button to show the log of the previous scope in the output window.
-    inline QToolButton* ctrlScopePrev(void) const;
+    inline QToolButton* ctrlScopePrev() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

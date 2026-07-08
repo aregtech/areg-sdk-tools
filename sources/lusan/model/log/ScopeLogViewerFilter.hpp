@@ -44,13 +44,13 @@ private:
         T           data    { 0u };     //!< The data to filter
         bool        isSet   { false };  //!< True if the data is set, false otherwise
 
-        inline sTData(void) : data(0u), isSet(false) {}
+        inline sTData() : data(0u), isSet(false) {}
         inline sTData(const T& value) : data(value), isSet(true) {}
         inline operator const T& ( ) const  { return data; }
         inline operator bool ( ) const      { return isSet; }
-        inline void     clear(void)         { data = 0u; isSet = false; }
+        inline void     clear()         { data = 0u; isSet = false; }
         inline bool     valid() const       { return isSet; }
-        inline const T& value(void) const   { return data; }
+        inline const T& value() const   { return data; }
     };
 
     using   SessionData = sTData<uint32_t>;
@@ -86,7 +86,7 @@ public:
      **/
     ScopeLogViewerFilter(uint32_t scopeId = 0u, LoggingModelBase* model = nullptr);
 
-    virtual ~ScopeLogViewerFilter(void);
+    virtual ~ScopeLogViewerFilter();
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -168,12 +168,12 @@ public:
      *          The method clears all filters and sets the source model.
      * \param   sourceModel The pointer to the source model to filter.
      **/
-    virtual void setSourceModel(QAbstractItemModel *sourceModel) override;
+    void setSourceModel(QAbstractItemModel *sourceModel) override;
 
     /**
      * \brief   Clears all filters.
      **/
-    virtual void clearFilters(void) override;
+    void clearFilters() override;
 
     /**
      * \brief   Returns true if the given source row has exact match of the filters.
@@ -183,7 +183,7 @@ public:
      * \param   parent   The parent index in the source model.
      * \return  True if the row has exact match of the filter.
      **/
-    virtual bool filterExactMatch(const QModelIndex & index) const override;
+    bool filterExactMatch(const QModelIndex & index) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -204,7 +204,7 @@ protected:
      * \param   parent   The parent index in the source model.
      * \return  True if the row should be included, false otherwise.
      **/
-    virtual bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
+    bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -222,7 +222,7 @@ private:
      * \brief   Clears all filter data.
      *          The method resets scope ID, session IDs, instance IDs, and priority bits.
      **/
-    inline void _clearData(void);
+    inline void _clearData();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

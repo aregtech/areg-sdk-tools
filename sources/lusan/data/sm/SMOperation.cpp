@@ -155,7 +155,7 @@ SMArgumentEntry& SMArgumentEntry::operator = (SMArgumentEntry&& other) noexcept
     return *this;
 }
 
-bool SMArgumentEntry::isValid(void) const
+bool SMArgumentEntry::isValid() const
 {
     return (mName.isEmpty() == false);
 }
@@ -289,7 +289,7 @@ SMOperationBase& SMOperationBase::operator = (SMOperationBase&& other) noexcept
     return *this;
 }
 
-const char* SMOperationBase::getElementName(void) const
+const char* SMOperationBase::getElementName() const
 {
     switch (mKind)
     {
@@ -303,7 +303,7 @@ const char* SMOperationBase::getElementName(void) const
     }
 }
 
-bool SMOperationBase::isValid(void) const
+bool SMOperationBase::isValid() const
 {
     return true;
 }
@@ -493,12 +493,12 @@ SMArgumentEntry* SMActionCall::addArgument(const QString& name, SMArgumentEntry:
     return &mArguments.last();
 }
 
-SMOperationBase* SMActionCall::clone(void) const
+SMOperationBase* SMActionCall::clone() const
 {
     return new SMActionCall(*this);
 }
 
-QString SMActionCall::getName(void) const
+QString SMActionCall::getName() const
 {
     return mAction;
 }
@@ -534,12 +534,12 @@ SMAttributeSet::SMAttributeSet(const SMAttributeSet& src)
 {
 }
 
-SMOperationBase* SMAttributeSet::clone(void) const
+SMOperationBase* SMAttributeSet::clone() const
 {
     return new SMAttributeSet(*this);
 }
 
-QString SMAttributeSet::getName(void) const
+QString SMAttributeSet::getName() const
 {
     return mAttribute;
 }
@@ -584,7 +584,7 @@ void SMTimerStart::setTimeout(uint32_t timeout)
     mTimeout    = timeout;
 }
 
-void SMTimerStart::clearTimeout(void)
+void SMTimerStart::clearTimeout()
 {
     mHasTimeout = false;
     mTimeout    = 0;
@@ -596,18 +596,18 @@ void SMTimerStart::setRepeat(uint32_t repeat)
     mRepeat    = repeat;
 }
 
-void SMTimerStart::clearRepeat(void)
+void SMTimerStart::clearRepeat()
 {
     mHasRepeat = false;
     mRepeat    = 0;
 }
 
-SMOperationBase* SMTimerStart::clone(void) const
+SMOperationBase* SMTimerStart::clone() const
 {
     return new SMTimerStart(*this);
 }
 
-QString SMTimerStart::getName(void) const
+QString SMTimerStart::getName() const
 {
     return mTimer;
 }
@@ -634,12 +634,12 @@ SMTimerStop::SMTimerStop(const SMTimerStop& src)
 {
 }
 
-SMOperationBase* SMTimerStop::clone(void) const
+SMOperationBase* SMTimerStop::clone() const
 {
     return new SMTimerStop(*this);
 }
 
-QString SMTimerStop::getName(void) const
+QString SMTimerStop::getName() const
 {
     return mTimer;
 }
@@ -679,12 +679,12 @@ SMArgumentEntry* SMEventSend::addArgument(const QString& name, SMArgumentEntry::
     return &mArguments.last();
 }
 
-SMOperationBase* SMEventSend::clone(void) const
+SMOperationBase* SMEventSend::clone() const
 {
     return new SMEventSend(*this);
 }
 
-QString SMEventSend::getName(void) const
+QString SMEventSend::getName() const
 {
     return mEvent;
 }
@@ -711,12 +711,12 @@ SMInlineCode::SMInlineCode(const SMInlineCode& src)
 {
 }
 
-SMOperationBase* SMInlineCode::clone(void) const
+SMOperationBase* SMInlineCode::clone() const
 {
     return new SMInlineCode(*this);
 }
 
-QString SMInlineCode::getName(void) const
+QString SMInlineCode::getName() const
 {
     return QString();
 }
@@ -751,7 +751,7 @@ SMOperationList::SMOperationList(SMOperationList&& src) noexcept
     src.mOperations.clear();
 }
 
-SMOperationList::~SMOperationList(void)
+SMOperationList::~SMOperationList()
 {
     clear();
 }
@@ -809,7 +809,7 @@ SMOperationBase* SMOperationList::addOperation(SMOperationBase* operation)
     return operation;
 }
 
-void SMOperationList::clear(void)
+void SMOperationList::clear()
 {
     for (SMOperationBase* op : mOperations)
     {

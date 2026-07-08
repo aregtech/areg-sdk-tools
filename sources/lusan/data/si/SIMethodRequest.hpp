@@ -69,7 +69,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIMethodRequest(void);
+    virtual ~SIMethodRequest();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -98,25 +98,25 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
 
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -139,23 +139,23 @@ public:
      * \brief   Returns the connected response name.
      * \return  The connected response name.
      **/
-    const QString& getConectedResponseName(void) const;
+    const QString& getConectedResponseName() const;
 
     /**
      * \brief   Returns the connected response object.
      * \return  The connected response object.
      **/
-    const SIMethodResponse* getConectedResponse(void) const;
+    const SIMethodResponse* getConectedResponse() const;
 
     /**
      * \brief   Returns true if the connected response is valid.
      **/
-    bool hasValidResponse(void) const;
+    bool hasValidResponse() const;
 
     /**
      * \brief   Clears the connected response name.
      **/
-    void clearResponse(void);
+    void clearResponse();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables.

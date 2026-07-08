@@ -55,7 +55,7 @@ bool SIAttributeModel::deleteAttribute(uint32_t id)
     return mData.removeElement(id);
 }
 
-const QList<AttributeEntry>& SIAttributeModel::getAttributes(void) const
+const QList<AttributeEntry>& SIAttributeModel::getAttributes() const
 {
     return mData.getElements();
 }

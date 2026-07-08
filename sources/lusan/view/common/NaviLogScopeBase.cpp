@@ -84,7 +84,7 @@ void NaviLogScopeBase::setupControls(QTreeView* treeView, QToolButton* prioError
     }
 }
 
-inline void NaviLogScopeBase::validateControls(void)
+inline void NaviLogScopeBase::validateControls()
 {
     Q_ASSERT(mPrioDebug     != nullptr);
     Q_ASSERT(mPrioInfo      != nullptr);
@@ -95,7 +95,7 @@ inline void NaviLogScopeBase::validateControls(void)
     Q_ASSERT(mScopesModel   != nullptr);
 }
 
-bool NaviLogScopeBase::areRootsCollapsed(void) const
+bool NaviLogScopeBase::areRootsCollapsed() const
 {
     bool result{ false };
     if ((mNaviTree != nullptr) && (mScopesModel != nullptr))
@@ -265,7 +265,7 @@ void NaviLogScopeBase::expandChildNodesRecursive(const QModelIndex& idxNode, con
     enableButtons(idxNode);
 }
 
-void NaviLogScopeBase::collapseRoots(void)
+void NaviLogScopeBase::collapseRoots()
 {
     QTreeView* treeView = mNaviTree;
     int rowCount = mScopesModel != nullptr ? mScopesModel->rowCount(mScopesModel->getRootIndex()) : 0; // root items
@@ -332,7 +332,7 @@ void NaviLogScopeBase::setLoggingModel(LoggingModelBase* logModel)
     }
 }
 
-LoggingModelBase* NaviLogScopeBase::getLoggingModel(void) const
+LoggingModelBase* NaviLogScopeBase::getLoggingModel() const
 {
     Q_ASSERT(mScopesModel != nullptr);
     return mScopesModel->getLoggingModel();

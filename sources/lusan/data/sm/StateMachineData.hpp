@@ -110,8 +110,8 @@ private:
 // Constructors / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    StateMachineData(void);
-    virtual ~StateMachineData(void) = default;
+    StateMachineData();
+    virtual ~StateMachineData() = default;
 
     /**
      * \brief   Creates the spec-14 skeleton for a new document:
@@ -125,47 +125,47 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline const QString& getFilePath(void) const;
+    inline const QString& getFilePath() const;
     inline void setFilePath(const QString& filePath);
 
-    inline const VersionNumber& getFormatVersion(void) const;
+    inline const VersionNumber& getFormatVersion() const;
     inline void setFormatVersion(const VersionNumber& version);
 
-    inline bool openSucceeded(void) const;
+    inline bool openSucceeded() const;
     inline void setOpenSucceeded(bool succeeded);
 
-    inline const SMOverviewData& getOverview(void) const;
-    inline SMOverviewData& getOverview(void);
+    inline const SMOverviewData& getOverview() const;
+    inline SMOverviewData& getOverview();
 
-    inline const SMDataTypeData& getDataTypes(void) const;
-    inline SMDataTypeData& getDataTypes(void);
+    inline const SMDataTypeData& getDataTypes() const;
+    inline SMDataTypeData& getDataTypes();
 
-    inline const SMAttributeData& getAttributes(void) const;
-    inline SMAttributeData& getAttributes(void);
+    inline const SMAttributeData& getAttributes() const;
+    inline SMAttributeData& getAttributes();
 
-    inline const SMEventData& getEvents(void) const;
-    inline SMEventData& getEvents(void);
+    inline const SMEventData& getEvents() const;
+    inline SMEventData& getEvents();
 
-    inline const SMTimerData& getTimers(void) const;
-    inline SMTimerData& getTimers(void);
+    inline const SMTimerData& getTimers() const;
+    inline SMTimerData& getTimers();
 
-    inline const SMMethodData& getMethods(void) const;
-    inline SMMethodData& getMethods(void);
+    inline const SMMethodData& getMethods() const;
+    inline SMMethodData& getMethods();
 
-    inline const SMConstantData& getConstants(void) const;
-    inline SMConstantData& getConstants(void);
+    inline const SMConstantData& getConstants() const;
+    inline SMConstantData& getConstants();
 
-    inline const SMIncludeData& getIncludes(void) const;
-    inline SMIncludeData& getIncludes(void);
+    inline const SMIncludeData& getIncludes() const;
+    inline SMIncludeData& getIncludes();
 
-    inline const SMImportData& getImports(void) const;
-    inline SMImportData& getImports(void);
+    inline const SMImportData& getImports() const;
+    inline SMImportData& getImports();
 
-    inline const SMStateData& getStates(void) const;
-    inline SMStateData& getStates(void);
+    inline const SMStateData& getStates() const;
+    inline SMStateData& getStates();
 
-    inline const SMLayoutData& getLayout(void) const;
-    inline SMLayoutData& getLayout(void);
+    inline const SMLayoutData& getLayout() const;
+    inline SMLayoutData& getLayout();
 
 //////////////////////////////////////////////////////////////////////////
 // XML persistence
@@ -251,18 +251,21 @@ public:
     /**
      * \brief   The total number of states across every machine level.
      **/
-    int getStateCount(void) const;
+    int getStateCount() const;
 
 //////////////////////////////////////////////////////////////////////////
 // hidden methods
 //////////////////////////////////////////////////////////////////////////
 private:
     bool writeToPathAtomic(const QString& path, bool updateFilePath);
+    
     bool writeToPathAtomicConst(const QString& path) const;
+    
     bool migrateFromVersion(const VersionNumber& sourceVersion);
+    
     bool migrateTo100(const VersionNumber& sourceVersion);
 
-    void clearUnknownContent(void);
+    void clearUnknownContent();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -291,7 +294,7 @@ private:
 // StateMachineData inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& StateMachineData::getFilePath(void) const
+inline const QString& StateMachineData::getFilePath() const
 {
     return mFilePath;
 }
@@ -301,7 +304,7 @@ inline void StateMachineData::setFilePath(const QString& filePath)
     mFilePath = filePath;
 }
 
-inline const VersionNumber& StateMachineData::getFormatVersion(void) const
+inline const VersionNumber& StateMachineData::getFormatVersion() const
 {
     return mFormatVersion;
 }
@@ -311,7 +314,7 @@ inline void StateMachineData::setFormatVersion(const VersionNumber& version)
     mFormatVersion = version;
 }
 
-inline bool StateMachineData::openSucceeded(void) const
+inline bool StateMachineData::openSucceeded() const
 {
     return mOpenSuccess;
 }
@@ -321,112 +324,112 @@ inline void StateMachineData::setOpenSucceeded(bool succeeded)
     mOpenSuccess = succeeded;
 }
 
-inline const SMOverviewData& StateMachineData::getOverview(void) const
+inline const SMOverviewData& StateMachineData::getOverview() const
 {
     return mOverview;
 }
 
-inline SMOverviewData& StateMachineData::getOverview(void)
+inline SMOverviewData& StateMachineData::getOverview()
 {
     return mOverview;
 }
 
-inline const SMDataTypeData& StateMachineData::getDataTypes(void) const
+inline const SMDataTypeData& StateMachineData::getDataTypes() const
 {
     return mDataTypes;
 }
 
-inline SMDataTypeData& StateMachineData::getDataTypes(void)
+inline SMDataTypeData& StateMachineData::getDataTypes()
 {
     return mDataTypes;
 }
 
-inline const SMAttributeData& StateMachineData::getAttributes(void) const
+inline const SMAttributeData& StateMachineData::getAttributes() const
 {
     return mAttributes;
 }
 
-inline SMAttributeData& StateMachineData::getAttributes(void)
+inline SMAttributeData& StateMachineData::getAttributes()
 {
     return mAttributes;
 }
 
-inline const SMEventData& StateMachineData::getEvents(void) const
+inline const SMEventData& StateMachineData::getEvents() const
 {
     return mEvents;
 }
 
-inline SMEventData& StateMachineData::getEvents(void)
+inline SMEventData& StateMachineData::getEvents()
 {
     return mEvents;
 }
 
-inline const SMTimerData& StateMachineData::getTimers(void) const
+inline const SMTimerData& StateMachineData::getTimers() const
 {
     return mTimers;
 }
 
-inline SMTimerData& StateMachineData::getTimers(void)
+inline SMTimerData& StateMachineData::getTimers()
 {
     return mTimers;
 }
 
-inline const SMMethodData& StateMachineData::getMethods(void) const
+inline const SMMethodData& StateMachineData::getMethods() const
 {
     return mMethods;
 }
 
-inline SMMethodData& StateMachineData::getMethods(void)
+inline SMMethodData& StateMachineData::getMethods()
 {
     return mMethods;
 }
 
-inline const SMConstantData& StateMachineData::getConstants(void) const
+inline const SMConstantData& StateMachineData::getConstants() const
 {
     return mConstants;
 }
 
-inline SMConstantData& StateMachineData::getConstants(void)
+inline SMConstantData& StateMachineData::getConstants()
 {
     return mConstants;
 }
 
-inline const SMIncludeData& StateMachineData::getIncludes(void) const
+inline const SMIncludeData& StateMachineData::getIncludes() const
 {
     return mIncludes;
 }
 
-inline SMIncludeData& StateMachineData::getIncludes(void)
+inline SMIncludeData& StateMachineData::getIncludes()
 {
     return mIncludes;
 }
 
-inline const SMImportData& StateMachineData::getImports(void) const
+inline const SMImportData& StateMachineData::getImports() const
 {
     return mImports;
 }
 
-inline SMImportData& StateMachineData::getImports(void)
+inline SMImportData& StateMachineData::getImports()
 {
     return mImports;
 }
 
-inline const SMStateData& StateMachineData::getStates(void) const
+inline const SMStateData& StateMachineData::getStates() const
 {
     return mStates;
 }
 
-inline SMStateData& StateMachineData::getStates(void)
+inline SMStateData& StateMachineData::getStates()
 {
     return mStates;
 }
 
-inline const SMLayoutData& StateMachineData::getLayout(void) const
+inline const SMLayoutData& StateMachineData::getLayout() const
 {
     return mLayout;
 }
 
-inline SMLayoutData& StateMachineData::getLayout(void)
+inline SMLayoutData& StateMachineData::getLayout()
 {
     return mLayout;
 }

@@ -61,7 +61,7 @@ public:
      **/
     explicit OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer & liveLogs, QWidget* parent = nullptr);
 
-    virtual ~OfflineLogViewer(void);
+    virtual ~OfflineLogViewer();
 
 /************************************************************************
  * MdiChild overrides
@@ -72,13 +72,13 @@ protected:
      * \brief   Called when the MDI child window is closed.
      * \param   isActive    Indicates whether the window is active or not.
      **/
-    virtual void onWindowClosing(bool isActive) override;
+    void onWindowClosing(bool isActive) override;
 
     /**
      * \brief   Called when the MDI child window is activated.
      *          This method can be overridden to handle window activation events.
      **/
-    virtual void onWindowActivated(void) override;
+    void onWindowActivated() override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots.
@@ -97,7 +97,7 @@ private slots:
     
 private:
     //!< Returns Logging File name label widget.
-    QLabel* ctrlFile(void);
+    QLabel* ctrlFile();
     
     /**
      * \brief   Sets up or clears the offline log viewer signals.
@@ -109,7 +109,7 @@ private:
      * \brief   Cleans up resources used by the offline log viewer.
      *          This method is called when the viewer is closed or no longer needed.
      **/
-    void cleanResources(void);
+    void cleanResources();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables

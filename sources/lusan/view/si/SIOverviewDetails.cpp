@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -13,75 +13,159 @@
  *  \file        lusan/view/si/SIOverviewDetails.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface overview details editor.
  *
  ************************************************************************/
 #include "lusan/view/si/SIOverviewDetails.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIOverviewDetails.h"
 #include "lusan/model/si/SIOverviewModel.hpp"
 
+#include <QCheckBox>
+#include <QFormLayout>
+#include <QGridLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QRadioButton>
+#include <QVBoxLayout>
+
+namespace
+{
+    QLineEdit* makeVersionEdit(QWidget* parent)
+    {
+        QLineEdit* edit = new QLineEdit(parent);
+        edit->setLayoutDirection(Qt::RightToLeft);
+        edit->setInputMask(QStringLiteral("99999"));
+        edit->setAlignment(Qt::AlignRight | Qt::AlignTrailing | Qt::AlignVCenter);
+        return edit;
+    }
+}
 
 SIOverviewDetails::SIOverviewDetails(QWidget* parent)
-    : QWidget(parent)
-    , ui(new Ui::SIOverviewDetails)
+    : QWidget           (parent)
+    , mName             (nullptr)
+    , mPublic           (nullptr)
+    , mPrivate          (nullptr)
+    , mInternet         (nullptr)
+    , mMajor            (nullptr)
+    , mMinor            (nullptr)
+    , mPatch            (nullptr)
+    , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
-    QFont font{ this->font() };
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    buildUi();
 }
 
-QLineEdit* SIOverviewDetails::ctrlMajor(void)
+void SIOverviewDetails::buildUi()
 {
-    return ui->editVersionMajor;
+    QVBoxLayout* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* details = new QGroupBox(tr("Details :"), this);
+    QFormLayout* form = new QFormLayout(details);
+    form->setRowWrapPolicy(QFormLayout::DontWrapRows);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+    mName = new QLineEdit(details);
+    mName->setReadOnly(true);
+    form->addRow(tr("Name:"), mName);
+
+    // Category
+    QGroupBox* categoryGroup = new QGroupBox(tr("Service Category:"), details);
+    categoryGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    QHBoxLayout* categoryLayout = new QHBoxLayout(categoryGroup);
+    mPublic   = new QRadioButton(tr("Public"), categoryGroup);
+    mPrivate  = new QRadioButton(tr("Private"), categoryGroup);
+    mInternet = new QRadioButton(tr("Internet"), categoryGroup);
+    mInternet->setEnabled(false);
+    categoryLayout->addWidget(mPublic);
+    categoryLayout->addWidget(mPrivate);
+    categoryLayout->addWidget(mInternet);
+    categoryLayout->addStretch(1);
+    form->addRow(tr("Category:"), categoryGroup);
+
+    // Version
+    QGroupBox* versionGroup = new QGroupBox(tr("Interface Version:"), details);
+    QGridLayout* versionGrid = new QGridLayout(versionGroup);
+    QLabel* majorLabel = new QLabel(tr("Major"), versionGroup);
+    QLabel* minorLabel = new QLabel(tr("Minor"), versionGroup);
+    QLabel* patchLabel = new QLabel(tr("Patch"), versionGroup);
+    mMajor = makeVersionEdit(versionGroup);
+    mMinor = makeVersionEdit(versionGroup);
+    mPatch = makeVersionEdit(versionGroup);
+    QLabel* dot1 = new QLabel(QStringLiteral("."), versionGroup);
+    QLabel* dot2 = new QLabel(QStringLiteral("."), versionGroup);
+    versionGrid->addWidget(majorLabel, 0, 0);
+    versionGrid->addWidget(minorLabel, 0, 2);
+    versionGrid->addWidget(patchLabel, 0, 4);
+    versionGrid->addWidget(mMajor, 1, 0);
+    versionGrid->addWidget(dot1  , 1, 1);
+    versionGrid->addWidget(mMinor, 1, 2);
+    versionGrid->addWidget(dot2  , 1, 3);
+    versionGrid->addWidget(mPatch, 1, 4);
+    form->addRow(tr("Version:"), versionGroup);
+
+    mDescription = new QPlainTextEdit(details);
+    mDescription->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    mDescription->setPlaceholderText(tr("Describe service interface here"));
+    form->addRow(tr("Description:"), mDescription);
+
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    form->addRow(mDeprecated, mDeprecateHint);
+
+    root->addWidget(details);
 }
 
-QLineEdit* SIOverviewDetails::ctrlMinor(void)
+QLineEdit* SIOverviewDetails::ctrlMajor()
 {
-    return ui->editVersionMinor;
+    return mMajor;
 }
 
-QLineEdit* SIOverviewDetails::ctrlPatch(void)
+QLineEdit* SIOverviewDetails::ctrlMinor()
 {
-    return ui->editVersionPatch;
+    return mMinor;
 }
 
-QLineEdit* SIOverviewDetails::ctrlName(void)
+QLineEdit* SIOverviewDetails::ctrlPatch()
 {
-    return ui->editServiceName;
+    return mPatch;
 }
 
-QRadioButton* SIOverviewDetails::ctrlPublic(void)
+QLineEdit* SIOverviewDetails::ctrlName()
 {
-    return ui->radioPublic;
+    return mName;
 }
 
-QRadioButton* SIOverviewDetails::ctrlPrivate(void)
+QRadioButton* SIOverviewDetails::ctrlPublic()
 {
-    return ui->radioPrivate;
+    return mPublic;
 }
 
-QRadioButton* SIOverviewDetails::ctrlInternet(void)
+QRadioButton* SIOverviewDetails::ctrlPrivate()
 {
-    return ui->radioInternet;
+    return mPrivate;
 }
 
-QPlainTextEdit* SIOverviewDetails::ctrlDescription(void)
+QRadioButton* SIOverviewDetails::ctrlInternet()
 {
-    return ui->textDescribe;
+    return mInternet;
 }
 
-QCheckBox* SIOverviewDetails::ctrlDeprecated(void)
+QPlainTextEdit* SIOverviewDetails::ctrlDescription()
 {
-    return ui->checkDeprecated;
+    return mDescription;
 }
 
-QLineEdit* SIOverviewDetails::ctrlDeprecateHint(void)
+QCheckBox* SIOverviewDetails::ctrlDeprecated()
 {
-    return ui->editDeprecated;
+    return mDeprecated;
+}
+
+QLineEdit* SIOverviewDetails::ctrlDeprecateHint()
+{
+    return mDeprecateHint;
 }

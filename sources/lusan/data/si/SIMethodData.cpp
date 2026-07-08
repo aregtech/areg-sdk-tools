@@ -66,7 +66,7 @@ SIMethodData::SIMethodData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-SIMethodData::~SIMethodData(void)
+SIMethodData::~SIMethodData()
 {
     removeAll();
 }
@@ -268,7 +268,7 @@ void SIMethodData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
-void SIMethodData::removeAll(void)
+void SIMethodData::removeAll()
 {
     QList<SIMethodBase *>& allMethods = getElements();
     qDeleteAll(allMethods);

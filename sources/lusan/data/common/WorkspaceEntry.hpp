@@ -45,7 +45,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    WorkspaceEntry(void);
+    WorkspaceEntry();
 
     /**
      * \brief   Parameterized constructor.
@@ -140,7 +140,7 @@ public:
      * \brief   Gets the root directory of the workspace.
      * \return  The root directory.
      **/
-    inline const QString& getWorkspaceRoot(void) const;
+    inline const QString& getWorkspaceRoot() const;
 
     /**
      * \brief   Sets the description of the workspace.
@@ -152,7 +152,7 @@ public:
      * \brief   Gets the description of the workspace.
      * \return  The description.
      **/
-    inline const QString& getWorkspaceDescription(void) const;
+    inline const QString& getWorkspaceDescription() const;
 
     /**
      * \brief   Sets the sources directory of the workspace.
@@ -164,7 +164,7 @@ public:
      * \brief   Gets the sources directory of the workspace.
      * \return  The sources directory.
      **/
-    inline const QString& getDirSources(void) const;
+    inline const QString& getDirSources() const;
 
     /**
      * \brief   Sets the includes directory of the workspace.
@@ -176,7 +176,7 @@ public:
      * \brief   Gets the includes directory of the workspace.
      * \return  The includes directory.
      **/
-    inline const QString& getDirIncludes(void) const;
+    inline const QString& getDirIncludes() const;
 
     /**
      * \brief   Sets the delivery directory of the workspace.
@@ -188,7 +188,7 @@ public:
      * \brief   Gets the delivery directory of the workspace.
      * \return  The delivery directory.
      **/
-    inline const QString& getDirDelivery(void) const;
+    inline const QString& getDirDelivery() const;
 
     /**
      * \brief   Sets the directory to save logging files.
@@ -199,13 +199,13 @@ public:
     /**
      * \brief   Gets the directory to save logging files.
      **/
-    inline const QString& getDirLogs(void) const;
+    inline const QString& getDirLogs() const;
 
     /**
      * \brief   Gets the ID of the workspace.
      * \return  The ID of the workspace.
      **/
-    inline uint32_t getId(void) const;
+    inline uint32_t getId() const;
 
     /**
      * \brief   Sets the ID of the workspace.
@@ -217,25 +217,25 @@ public:
      * \brief   Gets the last accessed timestamp of the workspace.
      * \return  The last accessed timestamp.
      **/
-    inline uint64_t getLastAccessed(void) const;
+    inline uint64_t getLastAccessed() const;
 
     /**
      * \brief   Activates the workspace by updating the last accessed timestamp.
      * \return  The updated last accessed timestamp.
      **/
-    inline uint64_t activate(void);
+    inline uint64_t activate();
 
     /**
      * \brief   Gets the key of the workspace, which is the last accessed timestamp.
      * \return  The last accessed timestamp.
      **/
-    inline uint64_t getKey(void) const;
+    inline uint64_t getKey() const;
 
     /**
      * \brief   Checks if the workspace entry is valid.
      * \return  True if the workspace entry is valid, false otherwise.
      **/
-    inline bool isValid(void) const;
+    inline bool isValid() const;
 
 ////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -288,7 +288,7 @@ inline void WorkspaceEntry::setWorkspaceRoot(const QString& root)
     mWorkspaceRoot = NELusanCommon::fixPath(root);
 }
 
-inline const QString& WorkspaceEntry::getWorkspaceRoot(void) const
+inline const QString& WorkspaceEntry::getWorkspaceRoot() const
 {
     return mWorkspaceRoot;
 }
@@ -298,7 +298,7 @@ inline void WorkspaceEntry::setWorkspaceDescription(const QString& description)
     mDescription = description;
 }
 
-inline const QString& WorkspaceEntry::getWorkspaceDescription(void) const
+inline const QString& WorkspaceEntry::getWorkspaceDescription() const
 {
     return mDescription;
 }
@@ -308,7 +308,7 @@ inline void WorkspaceEntry::setDirSources(const QString& sources)
     mSources = NELusanCommon::fixPath(sources);
 }
 
-inline const QString& WorkspaceEntry::getDirSources(void) const
+inline const QString& WorkspaceEntry::getDirSources() const
 {
     return mSources;
 }
@@ -318,7 +318,7 @@ inline void WorkspaceEntry::setDirIncludes(const QString& includes)
     mIncludes = NELusanCommon::fixPath(includes);
 }
 
-inline const QString& WorkspaceEntry::getDirIncludes(void) const
+inline const QString& WorkspaceEntry::getDirIncludes() const
 {
     return mIncludes;
 }
@@ -328,7 +328,7 @@ inline void WorkspaceEntry::setDirDelivery(const QString& delivery)
     mDelivery = NELusanCommon::fixPath(delivery);
 }
 
-inline const QString& WorkspaceEntry::getDirDelivery(void) const
+inline const QString& WorkspaceEntry::getDirDelivery() const
 {
     return mDelivery;
 }
@@ -338,12 +338,12 @@ inline void WorkspaceEntry::setDirLogs(const QString& logs)
     mLogFiles = NELusanCommon::fixPath(logs);
 }
 
-inline const QString& WorkspaceEntry::getDirLogs(void) const
+inline const QString& WorkspaceEntry::getDirLogs() const
 {
     return mLogFiles;
 }
 
-inline uint32_t WorkspaceEntry::getId(void) const
+inline uint32_t WorkspaceEntry::getId() const
 {
     return mId;
 }
@@ -353,23 +353,23 @@ inline void WorkspaceEntry::setId(uint32_t id)
     mId = id;
 }
 
-inline uint64_t WorkspaceEntry::getLastAccessed(void) const
+inline uint64_t WorkspaceEntry::getLastAccessed() const
 {
     return mLastAccessed;
 }
 
-inline uint64_t WorkspaceEntry::activate(void)
+inline uint64_t WorkspaceEntry::activate()
 {
     mLastAccessed = NELusanCommon::getTimestamp();
     return mLastAccessed;
 }
 
-inline uint64_t WorkspaceEntry::getKey(void) const
+inline uint64_t WorkspaceEntry::getKey() const
 {
     return mLastAccessed;
 }
 
-inline bool WorkspaceEntry::isValid(void) const
+inline bool WorkspaceEntry::isValid() const
 {
     return (mId != 0) && (mLastAccessed != 0);
 }

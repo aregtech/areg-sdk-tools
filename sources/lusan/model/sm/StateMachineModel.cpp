@@ -29,8 +29,17 @@ namespace
 StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     : QObject        (parent)
     , mData          (std::make_unique<StateMachineData>())
+    , mNotifier      (this)
     , mUndoStack     (this)
     , mAutosaveTimer (this)
+    , mOverviewModel (*this)
+    , mDataTypeModel (*this)
+    , mAttributeModel(*this)
+    , mEventModel    (*this)
+    , mTimerModel    (*this)
+    , mMethodModel   (*this)
+    , mConstantModel (*this)
+    , mIncludeModel  (*this)
     , mOpenSuccess   (false)
 {
     mUndoStack.setUndoLimit(100);
@@ -52,6 +61,7 @@ bool StateMachineModel::createNewDocument(const QString& machineName)
 
     mUndoStack.clear();
     mUndoStack.setClean();
+    mNotifier.notifyDocumentReloaded();
     markDirty();
     updateAutosaveTimer();
     return true;
@@ -78,6 +88,7 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
 
     mUndoStack.clear();
     mUndoStack.setClean();
+    mNotifier.notifyDocumentReloaded();
     if (sourcePath.isEmpty() == false)
     {
         markDirty();
@@ -107,7 +118,7 @@ bool StateMachineModel::saveToFile(const QString& filePath /*= QString()*/)
     return true;
 }
 
-bool StateMachineModel::writeAutosave(void)
+bool StateMachineModel::writeAutosave()
 {
     if ((mData == nullptr) || mUndoStack.isClean())
     {
@@ -123,12 +134,12 @@ bool StateMachineModel::writeAutosave(void)
     return mData->writeToAutosaveFile(StateMachineData::autosavePathForDocument(documentPath));
 }
 
-bool StateMachineModel::removeAutosave(void)
+bool StateMachineModel::removeAutosave()
 {
     return (mData != nullptr ? StateMachineData::removeAutosave(mData->getFilePath()) : true);
 }
 
-void StateMachineModel::onAutosaveTimeout(void)
+void StateMachineModel::onAutosaveTimeout()
 {
     writeAutosave();
 }
@@ -144,7 +155,7 @@ void StateMachineModel::onUndoCleanChanged(bool clean)
     updateAutosaveTimer();
 }
 
-void StateMachineModel::markDirty(void)
+void StateMachineModel::markDirty()
 {
     if (mUndoStack.isClean())
     {
@@ -152,7 +163,7 @@ void StateMachineModel::markDirty(void)
     }
 }
 
-void StateMachineModel::updateAutosaveTimer(void)
+void StateMachineModel::updateAutosaveTimer()
 {
     const bool enableTimer = (mData != nullptr)
                            && (mUndoStack.isClean() == false)

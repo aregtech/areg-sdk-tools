@@ -25,7 +25,7 @@
 #include "areg/base/File.hpp"
 
 
-QString LiveLogsModel::generateFileName(void)
+QString LiveLogsModel::generateFileName()
 {
     QString result{ "log_%time%.sqlog" };
 
@@ -42,7 +42,7 @@ QString LiveLogsModel::generateFileName(void)
     return QString::fromStdString(areg::File::normalize_path(result.toStdString()).as_string());
 }
 
-QString LiveLogsModel::newFileName(void)
+QString LiveLogsModel::newFileName()
 {
     QString result;
     
@@ -83,7 +83,7 @@ LiveLogsModel::LiveLogsModel(QObject *parent)
 {
 }
 
-LiveLogsModel::~LiveLogsModel(void)
+LiveLogsModel::~LiveLogsModel()
 {
     _setupSignals(false);
 }
@@ -93,16 +93,16 @@ bool LiveLogsModel::connectService(const QString& hostName /*= ""*/, unsigned sh
     return false;
 }
 
-void LiveLogsModel::disconnectService(void)
+void LiveLogsModel::disconnectService()
 {
 }
 
-void LiveLogsModel::setupModel(void)
+void LiveLogsModel::setupModel()
 {
     _setupSignals(true);
 }
 
-void LiveLogsModel::releaseModel(void)
+void LiveLogsModel::releaseModel()
 {
     _setupSignals(false);
 }
@@ -121,17 +121,17 @@ void LiveLogsModel::serviceConnected(bool isConnected, const QString& address, u
     openDatabase(dbPath, true);
 }
 
-void LiveLogsModel::pauseLogging(void)
+void LiveLogsModel::pauseLogging()
 {
     LogObserver::pause();
 }
 
-void LiveLogsModel::resumeLogging(void)
+void LiveLogsModel::resumeLogging()
 {
     LogObserver::resume();
 }
 
-void LiveLogsModel::stopLogging(void)
+void LiveLogsModel::stopLogging()
 {
     LogObserver::stop();
 }

@@ -106,7 +106,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIMethodBase(void);
+    virtual ~SIMethodBase();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -159,7 +159,7 @@ public:
     /**
      * \brief   Return the type of method as a string.
      **/
-    QString getType(void) const;
+    QString getType() const;
     
     bool checkMethodType(const QString & methodType) const;
     
@@ -182,7 +182,7 @@ public:
      * \brief   Checks if the method is deprecated.
      * \return  True if the method is deprecated, false otherwise.
      **/
-    bool getIsDeprecated(void) const;
+    bool getIsDeprecated() const;
 
     /**
      * \brief   Sets the hint, why method is deprecated.
@@ -194,7 +194,7 @@ public:
      * \brief   Returns the hint, why method is deprecated.
      * \return  The hint, why method is deprecated.
      **/
-    const QString& getDeprecateHint(void) const;
+    const QString& getDeprecateHint() const;
 
     /**
      * \brief   Checks and returns parameter has default value flag.

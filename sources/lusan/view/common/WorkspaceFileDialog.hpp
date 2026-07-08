@@ -65,7 +65,7 @@ public:
                         , const QString& caption
                         , QWidget* parent);
 
-    virtual ~WorkspaceFileDialog(void) = default;
+    virtual ~WorkspaceFileDialog() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -87,12 +87,12 @@ public:
     /**
      * \brief   Returns the selected file relative path.
      **/
-    QString getSelectedFileRelativePath(void) const;
+    QString getSelectedFileRelativePath() const;
 
     /**
      * \brief   Returns the selected file path.
      **/
-    QString getSelectedFilePath(void) const;
+    QString getSelectedFilePath() const;
 
     /**
      * \brief   Clears the history.
@@ -110,7 +110,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    WorkspaceFileDialog(void) = delete;
+    WorkspaceFileDialog() = delete;
     WorkspaceFileDialog(const WorkspaceFileDialog& src) = delete;
     WorkspaceFileDialog(WorkspaceFileDialog&& src) = delete;
     WorkspaceFileDialog& operator = (const WorkspaceFileDialog& src) = delete;

@@ -82,6 +82,25 @@ QToolButton:pressed, QToolButton:checked
     background: ${pressed};
 }
 
+/* Split buttons (MenuButtonPopup): keep the drop-down zone on the same background as the
+   button itself, otherwise Fusion paints it as a darker sunken bevel that hides the arrow.
+   A thin left divider and a wider zone separate the arrow from the button icon so it does
+   not crowd the icon. */
+QToolButton::menu-button
+{
+    background: transparent;
+    border: none;
+    border-left: 1px solid ${border};
+    width: 18px;
+}
+
+QToolButton::menu-arrow
+{
+    image: url(${arrow});
+    width: 10px;
+    height: 10px;
+}
+
 /* ---- Text inputs ---- */
 
 QLineEdit, QPlainTextEdit, QTextEdit
@@ -113,6 +132,10 @@ QComboBox
     border-radius: 6px;
     padding: 3px 8px;
     min-height: 18px;
+    /* Force the list-view drop-down. The default menu-mode popup ignores the ::item rules
+       below (highlight becomes unreadable) and anchors itself to the row last hovered,
+       shifting position on every reopen. */
+    combobox-popup: 0;
 }
 
 QComboBox:hover, QComboBox:focus
@@ -147,6 +170,25 @@ QComboBox QAbstractItemView
     selection-background-color: ${accent};
     selection-color: ${onAccent};
     outline: none;
+}
+
+QComboBox QAbstractItemView::item
+{
+    background-color: ${base};
+    color: ${text};
+    padding: 3px 8px;
+}
+
+QComboBox QAbstractItemView::item:hover
+{
+    background-color: ${hover};
+    color: ${text};
+}
+
+QComboBox QAbstractItemView::item:selected
+{
+    background-color: ${accent};
+    color: ${onAccent};
 }
 
 /* ---- Tabs ---- */
@@ -350,10 +392,13 @@ QScrollBar::add-page, QScrollBar::sub-page
     background: transparent;
 }
 
-/* ---- Service interface overview quick links ---- */
+/* ---- Service interface / state machine overview quick links ---- */
 
 QPushButton#linkDataTypes, QPushButton#linkAttributes, QPushButton#linkMethods,
-QPushButton#linkConstants, QPushButton#linkIncludes
+QPushButton#linkConstants, QPushButton#linkIncludes,
+QPushButton#smLinkDataTypes, QPushButton#smLinkAttributes, QPushButton#smLinkEvents,
+QPushButton#smLinkMethods, QPushButton#smLinkConstants, QPushButton#smLinkIncludes,
+QPushButton#smLinkDesign
 {
     background: transparent;
     border: none;
@@ -363,7 +408,10 @@ QPushButton#linkConstants, QPushButton#linkIncludes
 }
 
 QPushButton#linkDataTypes:hover, QPushButton#linkAttributes:hover, QPushButton#linkMethods:hover,
-QPushButton#linkConstants:hover, QPushButton#linkIncludes:hover
+QPushButton#linkConstants:hover, QPushButton#linkIncludes:hover,
+QPushButton#smLinkDataTypes:hover, QPushButton#smLinkAttributes:hover, QPushButton#smLinkEvents:hover,
+QPushButton#smLinkMethods:hover, QPushButton#smLinkConstants:hover, QPushButton#smLinkIncludes:hover,
+QPushButton#smLinkDesign:hover
 {
     color: ${accentHover};
 }

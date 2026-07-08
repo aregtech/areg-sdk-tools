@@ -164,7 +164,7 @@ namespace
     }
 
     //!< Minimal stylesheet used with the system default theme, keeps overview links consistent.
-    QString baseStyleSheet(void)
+    QString baseStyleSheet()
     {
         return QString::fromUtf8(
             "QPushButton#linkDataTypes, QPushButton#linkAttributes, QPushButton#linkMethods,"
@@ -172,14 +172,14 @@ namespace
             "{ background: transparent; border: none; color: palette(link); text-align: left; padding: 2px 4px; }");
     }
 
-    const QString& defaultStyleName(void)
+    const QString& defaultStyleName()
     {
         static const QString _styleName{ QApplication::style() != nullptr ? QApplication::style()->objectName() : QString() };
         return _styleName;
     }
 }
 
-QList<OptionsManager::eAppTheme> NEAppThemes::allThemes(void)
+QList<OptionsManager::eAppTheme> NEAppThemes::allThemes()
 {
     return QList<OptionsManager::eAppTheme>
     {

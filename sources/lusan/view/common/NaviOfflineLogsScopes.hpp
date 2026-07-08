@@ -88,7 +88,7 @@ public:
      **/
     NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~NaviOfflineLogsScopes(void);
+    virtual ~NaviOfflineLogsScopes();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -98,7 +98,7 @@ public:
     /**
      * \brief   Returns the currently opened database file path.
      **/
-    QString getOpenedDatabasePath(void) const;
+    QString getOpenedDatabasePath() const;
 
     /**
      * \brief   Opens a log database file for offline analysis.
@@ -110,12 +110,12 @@ public:
     /**
      * \brief   Closes the currently opened database.
      **/
-    void closeDatabase(void);
+    void closeDatabase();
 
     /**
      * \brief   Returns true if a database is currently open.
      **/
-    bool isDatabaseOpen(void) const;
+    bool isDatabaseOpen() const;
 
     /**
      * \brief   Sets the currently active logging model object.
@@ -124,7 +124,7 @@ public:
      * \param   model   The offline logging data model to read log data.
      *                  If null or database is not opened, it resets the scope explorer.
      **/
-    virtual void setLoggingModel(LoggingModelBase * model) override;
+    void setLoggingModel(LoggingModelBase * model) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -133,19 +133,19 @@ public:
     /**
      * \brief   This method is called when the options dialog is opened.
      **/
-    virtual void optionOpenning(void) override;
+    void optionOpenning() override;
 
     /**
      * \brief   This method is called when the apply button in options dialog is pressed.
      *          It can be used to apply changes made in the options dialog.
      **/
-    virtual void optionApplied(void) override;
+    void optionApplied() override;
 
     /**
      * \brief   This method is called when the options dialog is closed.
      * \param   OKpressed   True if OK button was pressed, false if Cancel button was pressed.
      **/
-    virtual void optionClosed(bool OKpressed) override;
+    void optionClosed(bool OKpressed) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
@@ -153,88 +153,88 @@ public:
 private:
 
     //!< Returns the control object to expand or collapse entries of scopes.
-    QToolButton* ctrlCollapse(void) const;
+    QToolButton* ctrlCollapse() const;
 
     //!< Returns the control object to open database files.
-    QToolButton* ctrlOpenDatabase(void) const;
+    QToolButton* ctrlOpenDatabase() const;
 
     //!< Returns the control object to close the current database.
-    QToolButton* ctrlCloseDatabase(void) const;
+    QToolButton* ctrlCloseDatabase() const;
 
     //!< Returns the control object to refresh the current database.
-    QToolButton* ctrlRefreshDatabase(void) const;
+    QToolButton* ctrlRefreshDatabase() const;
 
     //!< Returns the control object to find a string.
-    QToolButton* ctrlFind(void) const;
+    QToolButton* ctrlFind() const;
 
     //!< Returns the control object to set error level of the logs
-    QToolButton* ctrlLogError(void) const;
+    QToolButton* ctrlLogError() const;
 
     //!< Returns the control object to set warning level of the logs
-    QToolButton* ctrlLogWarning(void) const;
+    QToolButton* ctrlLogWarning() const;
 
     //!< Returns the control object to set information level of the logs
-    QToolButton* ctrlLogInfo(void) const;
+    QToolButton* ctrlLogInfo() const;
 
     //!< Returns the control object to set debug level of the logs
-    QToolButton* ctrlLogDebug(void) const;
+    QToolButton* ctrlLogDebug() const;
 
     //!< Returns the control object to enable log scopes of the logs
-    QToolButton* ctrlLogScopes(void) const;
+    QToolButton* ctrlLogScopes() const;
 
     //!< Returns the control object to move to the top of log window.
-    QToolButton* ctrlMoveTop(void) const;
+    QToolButton* ctrlMoveTop() const;
 
     //!< Returns the control object to move to the bottom of log window.
-    QToolButton* ctrlMoveBottom(void) const;
+    QToolButton* ctrlMoveBottom() const;
 
     //!< Returns the control object of the log messages
-    QTreeView* ctrlTable(void) const;
+    QTreeView* ctrlTable() const;
 
     /**
      * \brief   Initializes the widgets.
      **/
-    void setupWidgets(void);
+    void setupWidgets();
 
     /**
      * \brief   Initializes the signals.
      **/
-    void setupSignals(void);
+    void setupSignals();
 
     /**
      * \brief   Updates the UI controls based on database state.
      **/
-    void updateControls(void);
+    void updateControls();
 
     /**
      * \brief   Shows database information and available log data.
      **/
-    void showDatabaseInfo(void);
+    void showDatabaseInfo();
 
     /**
      * \brief   Updates the data of the scope tree, restores the view from the data like expanded and
      *          selected nodes set in the logging model.
      **/
-    void restoreView(void);
+    void restoreView();
 
     //!< Returns the accumulated selected priorities.
-    uint32_t getSelectedPrios(void) const;
+    uint32_t getSelectedPrios() const;
 
 private slots:
     /**
      * \brief   The slot is triggered when the open database tool button is clicked.
      **/
-    void onOpenDatabaseClicked(void);
+    void onOpenDatabaseClicked();
 
     /**
      * \brief   The slot is triggered when the close database tool button is clicked.
      **/
-    void onCloseDatabaseClicked(void);
+    void onCloseDatabaseClicked();
 
     /**
      * \brief   The slot is triggered when the refresh database tool button is clicked.
      **/
-    void onRefreshDatabaseClicked(void);
+    void onRefreshDatabaseClicked();
 
     /**
      * \brief   The signal triggered when receive the list of connected instances that make logs.

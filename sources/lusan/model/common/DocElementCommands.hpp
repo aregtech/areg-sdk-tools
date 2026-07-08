@@ -60,7 +60,7 @@ protected:
     {
     }
 
-    virtual ~TDocElementCommand(void) override
+    ~TDocElementCommand() override
     {
         if constexpr (std::is_pointer_v<Data>)
         {
@@ -72,7 +72,7 @@ protected:
     }
 
     //!< The element as its ID-bearing base, whether stored by value or by pointer.
-    ElementBase* elem(void) const
+    ElementBase* elem() const
     {
         if constexpr (std::is_pointer_v<Data>)
         {
@@ -84,7 +84,7 @@ protected:
         }
     }
 
-    void doInsert(void)
+    void doInsert()
     {
         if (mIndex < 0)
         {
@@ -101,7 +101,7 @@ protected:
         notifier().notifyElementAdded(mId, mKind);
     }
 
-    void doRemove(void)
+    void doRemove()
     {
         mIndex = mContainer.findIndex(mId);
         mContainer.removeElement(mId, &mElement);
@@ -135,8 +135,8 @@ public:
         this->mOwned   = true;
     }
 
-    virtual void redo(void) override { this->doInsert(); }
-    virtual void undo(void) override { this->doRemove(); }
+    void redo() override { this->doInsert(); }
+    void undo() override { this->doRemove(); }
 };
 
 /**
@@ -155,8 +155,8 @@ public:
         this->mId = id;
     }
 
-    virtual void redo(void) override { this->doRemove(); }
-    virtual void undo(void) override { this->doInsert(); }
+    void redo() override { this->doRemove(); }
+    void undo() override { this->doInsert(); }
 };
 
 /**
@@ -169,7 +169,7 @@ template<typename Value>
 class TDocSetPropertyCommand : public DocCommand
 {
 public:
-    using Getter = std::function<Value(void)>;
+    using Getter = std::function<Value()>;
     using Setter = std::function<void(const Value&)>;
 
     TDocSetPropertyCommand(DocModelNotifier& notifier, uint32_t id, eDocElementKind kind, Getter getter, Setter setter, Value newValue, const QString& text, QUndoCommand* parent = nullptr)
@@ -183,14 +183,14 @@ public:
     {
     }
 
-    virtual void redo(void) override
+    void redo() override
     {
         mOld = mGet();
         mSet(mNew);
         notifier().notifyElementChanged(mId, mKind);
     }
 
-    virtual void undo(void) override
+    void undo() override
     {
         mSet(mOld);
         notifier().notifyElementChanged(mId, mKind);
@@ -225,11 +225,11 @@ public:
     {
     }
 
-    virtual void redo(void) override { apply(); }
-    virtual void undo(void) override { apply(); }
+    void redo() override { apply(); }
+    void undo() override { apply(); }
 
 private:
-    void apply(void)
+    void apply()
     {
         mContainer.swapElements(mIndex1, mIndex2);
         notifier().notifyListReordered(mOwnerId, mKind);
@@ -242,5 +242,49 @@ private:
     uint32_t                            mOwnerId;
     eDocElementKind                     mKind;
 };
+
+/**
+ * \brief   Builds a composite that inserts a pre-built element at an explicit position
+ *          without ever renumbering siblings. A direct TEDataContainer::insertElement()
+ *          mid-list calls reorderIds(), which reassigns every sibling's ID by its new list
+ *          position — harmless for a fresh redo, but that broadcast renumbering is not
+ *          itself undone by removing the inserted element, so undo would leave siblings
+ *          with the wrong IDs. This builds the safe equivalent instead: append (a no-op for
+ *          reorderIds(), since the appended element already sorts last) and then bubble it
+ *          down to \p position via a chain of adjacent TDocReorderCommand swaps, each of
+ *          which is its own exact inverse and touches only the two swapped entries.
+ * \param   position    The target index; the composite is a plain append if position is at
+ *                       or past \p appendIndex.
+ * \param   appendIndex The index the append will actually land at when this composite's Add
+ *                       child runs its redo(). Equal to the container's current element count
+ *                       when this is the only command touching the container; the caller must
+ *                       pass the count as it will be *after* any sibling command that removes
+ *                       from the same container runs first (e.g. a category-conversion
+ *                       composite's remove-then-insert), since that sibling has not run yet
+ *                       at the point this composite is built.
+ **/
+template<typename Data, typename ElemBase>
+QUndoCommand* buildInsertCommandAt(DocModelNotifier& notifier, TEDataContainer<Data, ElemBase>& container, Data element, int position, int appendIndex, uint32_t ownerId, eDocElementKind kind, const QString& text, QUndoCommand* parent = nullptr)
+{
+    DocCompositeCommand* composite = new DocCompositeCommand(notifier, text, parent);
+    new TDocAddCommand<Data, ElemBase>(notifier, container, std::move(element), kind, text, composite);
+    for (int i = appendIndex; i > position; --i)
+    {
+        new TDocReorderCommand<Data, ElemBase>(notifier, container, i, i - 1, ownerId, kind, text, composite);
+    }
+
+    return composite;
+}
+
+/**
+ * \brief   Convenience over buildInsertCommandAt() for the common case: no sibling command in
+ *          the same composite mutates \p container first, so the append index is simply the
+ *          container's current element count.
+ **/
+template<typename Data, typename ElemBase>
+QUndoCommand* buildInsertCommand(DocModelNotifier& notifier, TEDataContainer<Data, ElemBase>& container, Data element, int position, uint32_t ownerId, eDocElementKind kind, const QString& text, QUndoCommand* parent = nullptr)
+{
+    return buildInsertCommandAt(notifier, container, std::move(element), position, container.getElementCount(), ownerId, kind, text, parent);
+}
 
 #endif  // LUSAN_MODEL_COMMON_DOCELEMENTCOMMANDS_HPP

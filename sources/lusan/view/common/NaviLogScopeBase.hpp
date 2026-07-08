@@ -42,7 +42,7 @@ class NaviLogScopeBase : public NavigationWindow
 {
 public:
     NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidget* parent = nullptr);
-    virtual ~NaviLogScopeBase(void) = default;
+    virtual ~NaviLogScopeBase() = default;
 
 public:
 
@@ -67,7 +67,7 @@ public:
     /**
      * \brief   Returns true if root entries are collapsed.
      **/
-    bool areRootsCollapsed(void) const;
+    bool areRootsCollapsed() const;
 
     //!< Sets up the model for the log scopes navigation.
     void setupModel(LoggingScopesModelBase* model);
@@ -117,7 +117,7 @@ public:
     /**
      * \brief   Collapses the root entries.
      **/
-    virtual void collapseRoots(void);
+    virtual void collapseRoots();
 
     /**
      * \brief   Sets the pointer of associated live logs model.
@@ -130,7 +130,7 @@ public:
      * \brief   Returns the pointer to the live logs model used by live logging scope navigation view.
      *          If no live logs are available, returns nullptr.
      **/
-    virtual LoggingModelBase* getLoggingModel(void) const;
+    virtual LoggingModelBase* getLoggingModel() const;
 
     // Call to collapse and expand nodes.
     virtual void onCollapseClicked(bool checked, QToolButton* button);
@@ -158,7 +158,7 @@ protected:
 
 private:
     //!< Validates the object by checking with assertions.
-    inline void validateControls(void);
+    inline void validateControls();
 
 protected:
     LoggingScopesModelBase* mScopesModel;   //!< The model of the log scopes

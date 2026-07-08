@@ -21,7 +21,7 @@
  ************************************************************************/
 #include "lusan/data/log/ScopeNodeBase.hpp"
 
-ScopeNodeBase::ScopeNodeBase(void)
+ScopeNodeBase::ScopeNodeBase()
     : mNodeType     ( ScopeNodeBase::eNode::Invalid )
     , mNodeState    ( ScopeNodeBase::eNodeState::NodeCollapsed )
     , mParent       ( nullptr )
@@ -112,7 +112,7 @@ bool ScopeNodeBase::operator < (const ScopeNodeBase& other) const
     return (mNodeType == other.mNodeType ? (mNodeName < other.mNodeName) : (mNodeType < other.mNodeType));
 }
 
-unsigned int ScopeNodeBase::getPriority( void ) const
+unsigned int ScopeNodeBase::getPriority() const
 {
     return mPrioStates;
 }
@@ -230,7 +230,7 @@ ScopeNodeBase* ScopeNodeBase::makeChildNode(QStringList& nodeNames, uint32_t pri
     return nullptr;
 }
 
-QString ScopeNodeBase::makePath(void) const
+QString ScopeNodeBase::makePath() const
 {
     QString result(mParent != nullptr ? mParent->makePath() : getPathString());
 
@@ -245,7 +245,7 @@ QString ScopeNodeBase::makePath(void) const
     return result;
 }
 
-QString ScopeNodeBase::getPathString(void) const
+QString ScopeNodeBase::getPathString() const
 {
     return mNodeName;
 }
@@ -281,17 +281,17 @@ ScopeNodeBase* ScopeNodeBase::getChildAt(int pos) const
     return nullptr;
 }
 
-int ScopeNodeBase::getChildCount(void) const
+int ScopeNodeBase::getChildCount() const
 {
     return 0;
 }
 
-int ScopeNodeBase::getChildNodesCount(void) const
+int ScopeNodeBase::getChildNodesCount() const
 {
     return 0;
 }
 
-int ScopeNodeBase::getChildLeafsCount(void) const
+int ScopeNodeBase::getChildLeafsCount() const
 {
     return 0;
 }
@@ -353,12 +353,12 @@ void ScopeNodeBase::removeChildPriorityRecursive(QStringList& pathList, uint32_t
     }
 }
 
-bool ScopeNodeBase::hasNodes(void) const
+bool ScopeNodeBase::hasNodes() const
 {
     return false;
 }
 
-bool ScopeNodeBase::hasLeafs(void) const
+bool ScopeNodeBase::hasLeafs() const
 {
     return false;
 }
@@ -384,11 +384,11 @@ void ScopeNodeBase::resetPrioritiesRecursive(bool skipLeafs)
         resetPriority();
 }
 
-void ScopeNodeBase::refreshPrioritiesRecursive(void)
+void ScopeNodeBase::refreshPrioritiesRecursive()
 {
 }
 
-QList<ScopeNodeBase*> ScopeNodeBase::getNodesWithPriority(void) const
+QList<ScopeNodeBase*> ScopeNodeBase::getNodesWithPriority() const
 {
     QList<ScopeNodeBase*> result;
     if (hasPrioValid() && (hasPrioNotset() == false))
@@ -466,12 +466,12 @@ int ScopeNodeBase::splitScopePath(QString& scopePath, QStringList& nodeNames) co
     return static_cast<int>(nodeNames.size());
 }
 
-QString ScopeNodeBase::getDisplayName(void) const
+QString ScopeNodeBase::getDisplayName() const
 {
     return getNodeName();
 }
 
-std::vector<ScopeNodeBase*> ScopeNodeBase::extractNodeLeafs(void) const
+std::vector<ScopeNodeBase*> ScopeNodeBase::extractNodeLeafs() const
 {
     return (std::vector<ScopeNodeBase*>());
 }
@@ -485,7 +485,7 @@ void ScopeNodeBase::setScopeId(uint32_t /*scopeId*/)
 {
 }
 
-uint32_t ScopeNodeBase::getScopeId(void) const
+uint32_t ScopeNodeBase::getScopeId() const
 {
     return areg::LOG_SCOPE_ID_NONE;
 }

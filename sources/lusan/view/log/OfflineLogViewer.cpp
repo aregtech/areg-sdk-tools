@@ -80,7 +80,7 @@ OfflineLogViewer::OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer& liveLo
     }
 }
 
-OfflineLogViewer::~OfflineLogViewer(void)
+OfflineLogViewer::~OfflineLogViewer()
 {
     cleanResources();
 }
@@ -99,7 +99,7 @@ void OfflineLogViewer::onWindowClosing(bool isActive)
     cleanResources();
 }
 
-void OfflineLogViewer::onWindowActivated(void)
+void OfflineLogViewer::onWindowActivated()
 {
     Q_ASSERT(mMainWindow != nullptr);
     if (mMainWindow->getNaviOfflineScopes().getLoggingModel() != mLogModel)
@@ -148,7 +148,7 @@ void OfflineLogViewer::onDatabaseClosed(const QString& dbPath)
     }
 }
 
-QLabel* OfflineLogViewer::ctrlFile(void)
+QLabel* OfflineLogViewer::ctrlFile()
 {
     return ui->labelFile;
 }
@@ -172,7 +172,7 @@ void OfflineLogViewer::setupSignals(bool doSetup)
     }
 }
 
-void OfflineLogViewer::cleanResources(void)
+void OfflineLogViewer::cleanResources()
 {
     if (ui == nullptr)
     {

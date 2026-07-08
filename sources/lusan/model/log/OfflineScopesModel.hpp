@@ -71,7 +71,7 @@ public:
      */
     OfflineScopesModel(QObject* parent = nullptr);
 
-    virtual ~OfflineScopesModel(void);
+    virtual ~OfflineScopesModel();
 
 //////////////////////////////////////////////////////////////////////////
 // LoggingScopesModelBase overrides
@@ -89,7 +89,7 @@ public:
      * \param   prio    The new priority to set for the log scope on target.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool setLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool setLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -99,7 +99,7 @@ public:
      * \param   prio    The log priority to add to the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool addLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool addLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Removes the specified log priority from the log scope at the given index.
@@ -109,7 +109,7 @@ public:
      * \param   prio    The log priority to remove from the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool removLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool removLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Saves the log scope priority for the given target index.
@@ -117,14 +117,14 @@ public:
      * \param   target  The target index to save log scope priority. If invalid, saves for root index.
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
-    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
+    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
 
     /**
      * \brief   Sets the logging model object used to retrieve logging scopes data.
      * \param   model   The logging model to set. This can be `nullptr` to reset the model.
      *                  If can be either live logging model or offline logging model.
      **/
-    virtual void setLoggingModel(LoggingModelBase* model) override;
+    void setLoggingModel(LoggingModelBase* model) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Internal overrides
@@ -134,7 +134,7 @@ protected:
     /**
      * \brief   Build scopes from a single scope path
      **/
-    virtual void buildScope(ScopeRoot& root, QString& scopePath, uint32_t scopePrio, uint32_t scopeId) override;
+    void buildScope(ScopeRoot& root, QString& scopePath, uint32_t scopePrio, uint32_t scopeId) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -144,7 +144,7 @@ private:
     /**
      * \brief   Builds the scope tree from offline model data.
      **/
-    void _buildScopeTree(void);
+    void _buildScopeTree();
 
     //!< Returns the combined allowed log priority for the given priority.
     uint32_t _logFilterPrio(uint32_t prio) const;

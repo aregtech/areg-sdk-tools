@@ -110,29 +110,29 @@ class SMLayoutData : public DocumentElem
 //////////////////////////////////////////////////////////////////////////
 public:
     SMLayoutData(ElementBase* parent = nullptr);
-    virtual ~SMLayoutData(void) = default;
+    virtual ~SMLayoutData() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline int getGridSize(void) const;
+    inline int getGridSize() const;
     inline void setGridSize(int gridSize);
-    inline bool isGridVisible(void) const;
+    inline bool isGridVisible() const;
     inline void setGridVisible(bool visible);
 
-    inline const QList<SMLayoutView>& getViews(void) const;
-    inline const QList<SMLayoutNode>& getNodes(void) const;
-    inline const QList<SMLayoutEdge>& getEdges(void) const;
-    inline const QList<SMLayoutNote>& getNotes(void) const;
+    inline const QList<SMLayoutView>& getViews() const;
+    inline const QList<SMLayoutNode>& getNodes() const;
+    inline const QList<SMLayoutEdge>& getEdges() const;
+    inline const QList<SMLayoutNote>& getNotes() const;
 
     SMLayoutView& addView(uint32_t owner);
     SMLayoutNode& addNode(uint32_t owner);
@@ -174,7 +174,7 @@ private:
 // SMLayoutData inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline int SMLayoutData::getGridSize(void) const
+inline int SMLayoutData::getGridSize() const
 {
     return mGridSize;
 }
@@ -184,7 +184,7 @@ inline void SMLayoutData::setGridSize(int gridSize)
     mGridSize = gridSize;
 }
 
-inline bool SMLayoutData::isGridVisible(void) const
+inline bool SMLayoutData::isGridVisible() const
 {
     return mGridVisible;
 }
@@ -194,22 +194,22 @@ inline void SMLayoutData::setGridVisible(bool visible)
     mGridVisible = visible;
 }
 
-inline const QList<SMLayoutView>& SMLayoutData::getViews(void) const
+inline const QList<SMLayoutView>& SMLayoutData::getViews() const
 {
     return mViews;
 }
 
-inline const QList<SMLayoutNode>& SMLayoutData::getNodes(void) const
+inline const QList<SMLayoutNode>& SMLayoutData::getNodes() const
 {
     return mNodes;
 }
 
-inline const QList<SMLayoutEdge>& SMLayoutData::getEdges(void) const
+inline const QList<SMLayoutEdge>& SMLayoutData::getEdges() const
 {
     return mEdges;
 }
 
-inline const QList<SMLayoutNote>& SMLayoutData::getNotes(void) const
+inline const QList<SMLayoutNote>& SMLayoutData::getNotes() const
 {
     return mNotes;
 }

@@ -122,7 +122,7 @@ public:
      * \brief   Checks if the parameter is valid.
      * \return  True if the parameter is valid, false otherwise.
      **/
-    virtual bool isValid() const override;
+    bool isValid() const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -139,7 +139,7 @@ public:
     /**
      * \brief   Invalidates the parameter type object.
      **/
-    void invalidate(void);
+    void invalidate();
 
     /**
      * \brief   Gets the name of the parameter.
@@ -181,7 +181,7 @@ public:
     /**
      * \brief   Returns the parameter data type object.
      **/
-    DataTypeBase* getParamType(void) const;
+    DataTypeBase* getParamType() const;
 
     /**
      * \brief   Returns the deprecated flag of the parameter.

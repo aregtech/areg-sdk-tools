@@ -25,31 +25,35 @@ class QComboBox;
 class QLineEdit;
 class QPlainTextEdit;
 
-namespace Ui {
-    class SIDataTypeFieldDetails;
-}
-
 class SIDataTypeFieldDetails : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit SIDataTypeFieldDetails(QWidget* parent = nullptr);
-    
-    QLineEdit* ctrlName(void) const;
-    
-    QComboBox* ctrlTypes(void) const;
-    
-    QLineEdit* ctrlValue(void) const;
-    
-    QPlainTextEdit* ctrlDescription(void) const;
-    
-    QCheckBox* ctrlDeprecated(void) const;
-    
-    QLineEdit* ctrlDeprecateHint(void) const;
-    
+
+    QLineEdit* ctrlName() const;
+
+    QComboBox* ctrlTypes() const;
+
+    QLineEdit* ctrlValue() const;
+
+    QPlainTextEdit* ctrlDescription() const;
+
+    QCheckBox* ctrlDeprecated() const;
+
+    QLineEdit* ctrlDeprecateHint() const;
+
 private:
-    Ui::SIDataTypeFieldDetails* ui;
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QComboBox*      mType;
+    QLineEdit*      mValue;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIDATATYPEFIELDDETAILS_HPP

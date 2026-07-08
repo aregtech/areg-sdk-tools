@@ -65,7 +65,7 @@ protected:
 protected:
 
     //!< The default constructor. Creates an empty node with no priority.
-    ScopeNodeBase(void);
+    ScopeNodeBase();
 
     /**
      * \brief   Creates and empty node with no priority.
@@ -89,7 +89,7 @@ protected:
     
 public:
 
-    virtual ~ScopeNodeBase(void) = default;
+    virtual ~ScopeNodeBase() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -118,7 +118,7 @@ public:
     /**
      * \brief   Returns node name.
      **/
-    inline const QString& getNodeName(void) const;
+    inline const QString& getNodeName() const;
 
     /**
      * \brief   Sets node name.
@@ -128,67 +128,67 @@ public:
     /**
      * \brief   Returns true if the object is the root. The root does not have a parent
      **/
-    inline bool isRoot(void) const;
+    inline bool isRoot() const;
 
     /**
      * \brief   Returns true if the object is a node. Nodes have a parent, it may have child leafs and child nodes.
      **/
-    inline bool isNode(void) const;
+    inline bool isNode() const;
 
     /**
      * \brief   Returns true if the object is a leaf. Leafs have parent, but cannot have children nodes.
      **/
-    inline bool isLeaf(void) const;
+    inline bool isLeaf() const;
 
     /**
      * \brief   Returns true if the node is valid.
      **/
-    inline bool isValid(void) const;
+    inline bool isValid() const;
 
     /**
      * \brief   Returns true if contains a bit indicating `PrioNotset` priority.
      **/
-    inline bool hasPrioNotset(void) const;
+    inline bool hasPrioNotset() const;
 
     /**
      * \brief   Returns true if the logging priority has debug priority bit set.
      **/
-    inline bool hasPrioDebug(void) const;
+    inline bool hasPrioDebug() const;
 
     /**
      * \brief   Returns true if the logging priority has info priority bit set.
      **/
-    inline bool hasPrioInfo(void) const;
+    inline bool hasPrioInfo() const;
 
     /**
      * \brief   Returns true if the logging priority has warning priority bit set.
      **/
-    inline bool hasPrioWarning(void) const;
+    inline bool hasPrioWarning() const;
 
     /**
      * \brief   Returns true if the logging priority has error priority bit set.
      **/
-    inline bool hasPrioError(void) const;
+    inline bool hasPrioError() const;
 
     /**
      * \brief   Returns true if the logging priority has fatal error priority bit set.
      **/
-    inline bool hasPrioFatal(void) const;
+    inline bool hasPrioFatal() const;
 
     /**
      * \brief   Returns true if any logging priority bit is set.
      **/
-    inline bool hasLogsEneabled(void) const;
+    inline bool hasLogsEneabled() const;
 
     /**
      * \brief   Returns true if the logging scopes priority bit set.
      **/
-    inline bool hasScopeEntries(void) const;
+    inline bool hasScopeEntries() const;
 
     /**
      * \brief   Returns true if the node has any valid priority bits set.
      **/
-    inline bool hasPrioValid(void) const;
+    inline bool hasPrioValid() const;
 
     /**
      * \brief   Returns true if the node has multiple priorities.
@@ -199,7 +199,7 @@ public:
     /**
      * \brief   Returns the pointer to parent node. The root nodes have no parent.
      **/
-    inline ScopeNodeBase* getParent(void) const;
+    inline ScopeNodeBase* getParent() const;
 
     /**
      * \brief   Sets the pointer to the parent node. All parents except root should have a parent.
@@ -210,7 +210,7 @@ public:
     /**
      * \brief   Resets the priority bits of the node.
      **/
-    inline void resetPriority(void);
+    inline void resetPriority();
 
     /**
      * \brief   Updates priority bits of the parent node.
@@ -222,13 +222,13 @@ public:
     /**
      * \brief   Returns true if node has children.
      **/
-    inline bool hasChildren(void) const;
+    inline bool hasChildren() const;
 
     /**
      * \brief   Returns the root of the tree, where this node is located.
      *          If the node is root, returns itself.
      **/
-    inline ScopeNodeBase* getTreeRoot(void) const;
+    inline ScopeNodeBase* getTreeRoot() const;
 
     /**
      * \brief   Checks and returns true if can add the specified prio to the node.
@@ -251,22 +251,22 @@ public:
     /**
      * \brief   Returns the node's expanded or collapsed state.
      **/
-    inline ScopeNodeBase::eNodeState getNodeState(void) const;
+    inline ScopeNodeBase::eNodeState getNodeState() const;
 
     /**
      * \brief   Returns true if the node is expanded.
      **/
-    inline bool isNodeExpanded(void) const;
+    inline bool isNodeExpanded() const;
     
     /**
      * \brief   Sets the node and all child nodes tree in the expanded state.
      **/
-    inline void setNodeTreeExpanded(void);
+    inline void setNodeTreeExpanded();
     
     /**
      * \brief   Sets the node and all child nodes tree in the collapsed state.
      **/
-    inline void setNodeTreeCollapsed(void);
+    inline void setNodeTreeCollapsed();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -276,7 +276,7 @@ public:
     /**
      * \brief   Returns the node priority flag.
      **/
-    virtual unsigned int getPriority(void) const;
+    virtual unsigned int getPriority() const;
 
     /**
      * \brief   Sets the node priority flag.
@@ -383,12 +383,12 @@ public:
     /**
      * \brief   Creates and returns the path of the node, where each name of the node is separated by `_`.
      **/
-    virtual QString makePath(void) const;
+    virtual QString makePath() const;
 
     /**
      * \brief   Returns the string used to create the path. Root nodes should return empty string.
      **/
-    virtual QString getPathString(void) const;
+    virtual QString getPathString() const;
 
     /**
      * \brief   Returns child node object that contains the specified name.
@@ -422,17 +422,17 @@ public:
     /**
      * \brief   Returns the total number of children.
      **/
-    virtual int getChildCount(void) const;
+    virtual int getChildCount() const;
 
     /**
      * \brief   Returns the total number of child nodes.
      **/
-    virtual int getChildNodesCount(void) const;
+    virtual int getChildNodesCount() const;
 
     /**
      * \brief   Returns the total number of child leafs.
      **/
-    virtual int getChildLeafsCount(void) const;
+    virtual int getChildLeafsCount() const;
 
     /**
      * \brief   Adds the priority recursively to the child nodes.
@@ -469,12 +469,12 @@ public:
     /**
      * \brief   Returns true if the current node has other node objects with children.
      **/
-    virtual bool hasNodes(void) const;
+    virtual bool hasNodes() const;
 
     /**
      * \brief   Returns true if the current node has leafs.
      **/
-    virtual bool hasLeafs(void) const;
+    virtual bool hasLeafs() const;
 
     /**
      * \brief   Returns true if the node has a leaf with the specified name.
@@ -503,12 +503,12 @@ public:
     /**
      * \brief   Refreshes the priorities by keeping the priority of leafs and refreshing the priorities of the nodes.
      **/
-    virtual void refreshPrioritiesRecursive(void);
+    virtual void refreshPrioritiesRecursive();
 
     /**
      * \brief   Returns the list of nodes with log priority. The node should not have NotSet priority flag.
      **/
-    virtual QList<ScopeNodeBase*> getNodesWithPriority(void) const;
+    virtual QList<ScopeNodeBase*> getNodesWithPriority() const;
 
     /**
      * \brief   Extracts nodes with log priority.
@@ -539,12 +539,12 @@ public:
     /**
      * \brief   Returns the string to display on screen.
      **/
-    virtual QString getDisplayName(void) const;
+    virtual QString getDisplayName() const;
 
     /**
      * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
      **/
-    virtual std::vector<ScopeNodeBase*> extractNodeLeafs(void) const;
+    virtual std::vector<ScopeNodeBase*> extractNodeLeafs() const;
 
     /**
      * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
@@ -562,7 +562,7 @@ public:
     /**
      * \brief   Returns scope ID of the leaf or 0 in case of other nodes.
      **/
-    virtual uint32_t getScopeId(void) const;
+    virtual uint32_t getScopeId() const;
 
 private:
     //!< Return true if the prio is an exact match
@@ -588,7 +588,7 @@ protected:
 // ScopeNodeBase class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString & ScopeNodeBase::getNodeName( void ) const
+inline const QString & ScopeNodeBase::getNodeName() const
 {
     return mNodeName;
 }
@@ -598,67 +598,67 @@ inline void ScopeNodeBase::setNodeName( const QString newName )
     mNodeName = newName;
 }
 
-inline bool ScopeNodeBase::isRoot( void ) const
+inline bool ScopeNodeBase::isRoot() const
 {
     return (mNodeType == ScopeNodeBase::eNode::Root);
 }
 
-inline bool ScopeNodeBase::isNode( void ) const
+inline bool ScopeNodeBase::isNode() const
 {
     return (mNodeType == ScopeNodeBase::eNode::Node);
 }
 
-inline bool ScopeNodeBase::isLeaf( void ) const
+inline bool ScopeNodeBase::isLeaf() const
 {
     return (mNodeType == ScopeNodeBase::eNode::Leaf);
 }
 
-inline bool ScopeNodeBase::isValid( void ) const
+inline bool ScopeNodeBase::isValid() const
 {
     return (mNodeType != ScopeNodeBase::eNode::Invalid);
 }
 
-inline bool ScopeNodeBase::hasPrioNotset( void ) const
+inline bool ScopeNodeBase::hasPrioNotset() const
 {
     return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioNotset)) != 0;
 }
 
-inline bool ScopeNodeBase::hasPrioDebug(void) const
+inline bool ScopeNodeBase::hasPrioDebug() const
 {
     return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioDebug)) != 0;
 }
 
-inline bool ScopeNodeBase::hasPrioInfo( void ) const
+inline bool ScopeNodeBase::hasPrioInfo() const
 {
     return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioInfo)) != 0;
 }
 
-inline bool ScopeNodeBase::hasPrioWarning( void ) const
+inline bool ScopeNodeBase::hasPrioWarning() const
 {
     return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioWarning)) != 0;
 }
 
-inline bool ScopeNodeBase::hasPrioError( void ) const
+inline bool ScopeNodeBase::hasPrioError() const
 {
     return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioError)) != 0;
 }
 
-inline bool ScopeNodeBase::hasPrioFatal( void ) const
+inline bool ScopeNodeBase::hasPrioFatal() const
 {
     return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioFatal)) != 0;
 }
 
-inline bool ScopeNodeBase::hasLogsEneabled( void ) const
+inline bool ScopeNodeBase::hasLogsEneabled() const
 {
     return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioLogs)) != 0;
 }
 
-inline bool ScopeNodeBase::hasScopeEntries( void ) const
+inline bool ScopeNodeBase::hasScopeEntries() const
 {
     return (mPrioStates & static_cast<uint32_t>(areg::LogPriority::PrioScope)) != 0;
 }
 
-inline bool ScopeNodeBase::hasPrioValid( void ) const
+inline bool ScopeNodeBase::hasPrioValid() const
 {
     return (mPrioStates != static_cast<uint32_t>(areg::LogPriority::PrioInvalid));
 }
@@ -684,7 +684,7 @@ inline bool ScopeNodeBase::hasMultiPrio(uint32_t prioIgnore) const
     }
 }
 
-inline ScopeNodeBase* ScopeNodeBase::getParent(void) const
+inline ScopeNodeBase* ScopeNodeBase::getParent() const
 {
     return mParent;
 }
@@ -694,7 +694,7 @@ inline void ScopeNodeBase::setParent(ScopeNodeBase* parent)
     mParent = parent;
 }
 
-inline void ScopeNodeBase::resetPriority(void)
+inline void ScopeNodeBase::resetPriority()
 {
     mPrioStates = static_cast<uint32_t>(areg::LogPriority::PrioInvalid);
 }
@@ -711,12 +711,12 @@ inline void ScopeNodeBase::updateParentPrio(uint32_t prio, bool recursive)
     }
 }
 
-inline bool ScopeNodeBase::hasChildren(void) const
+inline bool ScopeNodeBase::hasChildren() const
 {
     return (getChildCount() != 0);
 }
 
-inline ScopeNodeBase* ScopeNodeBase::getTreeRoot(void) const
+inline ScopeNodeBase* ScopeNodeBase::getTreeRoot() const
 {
     if (isRoot())
     {
@@ -792,17 +792,17 @@ inline void ScopeNodeBase::setNodeState(bool isExpanded)
     }
 }
 
-inline ScopeNodeBase::eNodeState ScopeNodeBase::getNodeState(void) const
+inline ScopeNodeBase::eNodeState ScopeNodeBase::getNodeState() const
 {
     return mNodeState;
 }
 
-inline bool ScopeNodeBase::isNodeExpanded(void) const
+inline bool ScopeNodeBase::isNodeExpanded() const
 {
     return (mNodeState == ScopeNodeBase::eNodeState::NodeExpanded);
 }
 
-inline void ScopeNodeBase::setNodeTreeExpanded(void)
+inline void ScopeNodeBase::setNodeTreeExpanded()
 {
     mNodeState = ScopeNodeBase::eNodeState::NodeExpanded;
     std::vector<ScopeNodeBase*> children;
@@ -816,7 +816,7 @@ inline void ScopeNodeBase::setNodeTreeExpanded(void)
     }
 }
 
-inline void ScopeNodeBase::setNodeTreeCollapsed(void)
+inline void ScopeNodeBase::setNodeTreeCollapsed()
 {
     mNodeState = ScopeNodeBase::eNodeState::NodeCollapsed;
     std::vector<ScopeNodeBase*> children;

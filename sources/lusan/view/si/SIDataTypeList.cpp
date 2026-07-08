@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -13,80 +13,159 @@
  *  \file        lusan/view/si/SIDataTypeList.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface data type list panel.
  *
  ************************************************************************/
 #include "lusan/view/si/SIDataTypeList.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIDataTypeList.h"
 
 #include <QAbstractItemView>
+#include <QFrame>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QToolButton>
+#include <QTreeWidget>
+#include <QVBoxLayout>
 
 SIDataTypeList::SIDataTypeList(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::SIDataTypeList)
+    : QWidget               (parent)
+    , mTable                (nullptr)
+    , mButtonAdd            (nullptr)
+    , mButtonInsert         (nullptr)
+    , mButtonRemove         (nullptr)
+    , mButtonMoveUp         (nullptr)
+    , mButtonMoveDown       (nullptr)
+    , mButtonAddField       (nullptr)
+    , mButtonRemoveField    (nullptr)
+    , mButtonInsertField    (nullptr)
 {
-    QFont font{this->font()};
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    QTreeWidget* table = ui->treeTypes;
-    table->setSelectionMode(QAbstractItemView::SingleSelection);
-    table->setSelectionBehavior(QAbstractItemView::SelectRows);
-    table->header()->setSectionResizeMode(QHeaderView::Stretch);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    
-    QHeaderView* header = table->header();
-    Q_ASSERT(header != nullptr);
+    buildUi();
+}
+
+QToolButton* SIDataTypeList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
+{
+    QToolButton* button = new QToolButton(parent);
+    button->setMaximumSize(24, 24);
+    button->setCursor(Qt::PointingHandCursor);
+    button->setMouseTracking(true);
+    button->setToolTip(toolTip);
+    button->setIcon(QIcon(iconName));
+    button->setIconSize(QSize(25, 25));
+    button->setShortcut(shortcut);
+    return button;
+}
+
+void SIDataTypeList::buildUi()
+{
+    QVBoxLayout* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* group = new QGroupBox(tr("Data Types List:"), this);
+    QVBoxLayout* groupLayout = new QVBoxLayout(group);
+
+    QWidget* toolbar = new QWidget(group);
+    QHBoxLayout* toolbarLayout = new QHBoxLayout(toolbar);
+    toolbarLayout->setSpacing(5);
+    toolbarLayout->setContentsMargins(2, 2, 2, 2);
+
+    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new data type entry"), QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected data type entry")   , QKeySequence(Qt::CTRL | Qt::Key_D));
+    mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new data type")   , QKeySequence(Qt::CTRL | Qt::Key_T));
+
+    QFrame* sep1 = new QFrame(toolbar);
+    sep1->setFrameShape(QFrame::VLine);
+    sep1->setMaximumSize(24, 24);
+
+    mButtonAddField    = createToolButton(toolbar, QStringLiteral(":/icons/field add")   , tr("Create and add new field entry")   , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    mButtonRemoveField = createToolButton(toolbar, QStringLiteral(":/icons/field delete"), tr("Delete selected field entry")      , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
+    mButtonInsertField = createToolButton(toolbar, QStringLiteral(":/icons/field insert"), tr("Create and insert new field entry"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
+
+    QFrame* sep2 = new QFrame(toolbar);
+    sep2->setFrameShape(QFrame::VLine);
+    sep2->setMaximumSize(24, 24);
+
+    mButtonMoveUp   = createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
+    mButtonMoveDown = createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
+
+    toolbarLayout->addWidget(mButtonAdd);
+    toolbarLayout->addWidget(mButtonRemove);
+    toolbarLayout->addWidget(mButtonInsert);
+    toolbarLayout->addWidget(sep1);
+    toolbarLayout->addWidget(mButtonAddField);
+    toolbarLayout->addWidget(mButtonRemoveField);
+    toolbarLayout->addWidget(mButtonInsertField);
+    toolbarLayout->addWidget(sep2);
+    toolbarLayout->addWidget(mButtonMoveUp);
+    toolbarLayout->addWidget(mButtonMoveDown);
+    toolbarLayout->addStretch(1);
+
+    mTable = new QTreeWidget(group);
+    mTable->setCursor(Qt::PointingHandCursor);
+    mTable->setMouseTracking(true);
+    mTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
+    mTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    mTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    mTable->setDropIndicatorShown(false);
+    mTable->setIconSize(QSize(16, 16));
+    mTable->setSortingEnabled(false);
+    mTable->setAnimated(true);
+    mTable->setAllColumnsShowFocus(false);
+    mTable->setColumnCount(3);
+    mTable->header()->setCascadingSectionResizes(false);
+    mTable->header()->setMinimumSectionSize(50);
+    mTable->setHeaderLabels(QStringList{ tr("Name:"), tr("Data Type:"), tr("Default Value:") });
+
+    QHeaderView* header = mTable->header();
     header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     header->setSectionResizeMode(2, QHeaderView::Stretch);
+
+    groupLayout->addWidget(toolbar);
+    groupLayout->addWidget(mTable);
+    root->addWidget(group);
 }
 
-QTreeWidget* SIDataTypeList::ctrlTableList(void) const
+QTreeWidget* SIDataTypeList::ctrlTableList() const
 {
-    return ui->treeTypes;
+    return mTable;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonAdd(void) const
+QToolButton* SIDataTypeList::ctrlButtonAdd() const
 {
-    return ui->toolAddType;
+    return mButtonAdd;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonInsert(void) const
+QToolButton* SIDataTypeList::ctrlButtonInsert() const
 {
-    return ui->toolInsertType;
+    return mButtonInsert;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonRemove(void) const
+QToolButton* SIDataTypeList::ctrlButtonRemove() const
 {
-    return ui->toolDeleteType;
+    return mButtonRemove;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonMoveUp(void) const
+QToolButton* SIDataTypeList::ctrlButtonMoveUp() const
 {
-    return ui->toolMoveUp;
+    return mButtonMoveUp;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonMoveDown(void) const
+QToolButton* SIDataTypeList::ctrlButtonMoveDown() const
 {
-    return ui->toolMoveDown;
+    return mButtonMoveDown;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonAddField(void) const
+QToolButton* SIDataTypeList::ctrlButtonAddField() const
 {
-    return ui->toolFieldAdd;
+    return mButtonAddField;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonRemoveField(void) const
+QToolButton* SIDataTypeList::ctrlButtonRemoveField() const
 {
-    return ui->toolFieldDelete;
+    return mButtonRemoveField;
 }
 
-QToolButton* SIDataTypeList::ctrlButtonInsertField(void) const
+QToolButton* SIDataTypeList::ctrlButtonInsertField() const
 {
-    return ui->toolFieldInsert;
+    return mButtonInsertField;
 }

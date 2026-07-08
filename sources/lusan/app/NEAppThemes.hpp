@@ -33,7 +33,7 @@ namespace NEAppThemes
     /**
      * \brief   Returns the list of all available application themes.
      **/
-    QList<OptionsManager::eAppTheme> allThemes(void);
+    QList<OptionsManager::eAppTheme> allThemes();
 
     /**
      * \brief   Returns the human readable name of the given theme.

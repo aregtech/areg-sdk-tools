@@ -44,7 +44,7 @@ public:
      **/
     OutputWindow(int outWindow, MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~OutputWindow(void) = default;
+    virtual ~OutputWindow() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -54,13 +54,13 @@ public:
     /**
      * \brief   This method is called when the options dialog is opened.
      **/
-    virtual void optionOpenning(void);
+    virtual void optionOpenning();
 
     /**
      * \brief   This method is called when the apply button in options dialog is pressed.
      *          It can be used to apply changes made in the options dialog.
      **/
-    virtual void optionApplied(void);
+    virtual void optionApplied();
 
     /**
      * \brief   This method is called when the options dialog is closed.
@@ -91,12 +91,12 @@ public:
     /**
      * \brief   Returns the type of the output window.
      **/
-    inline int getOutputWindowType(void) const;
+    inline int getOutputWindowType() const;
 
     /**
      * \brief   Returns true if output window is for scopes logs output.
      **/
-    bool isScopesOutputWindow(void) const;
+    bool isScopesOutputWindow() const;
     
 //////////////////////////////////////////////////////////////////////////
 // OutputWindow class inline methods
@@ -112,7 +112,7 @@ protected:
 // OutputWindow class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline int OutputWindow::getOutputWindowType(void) const
+inline int OutputWindow::getOutputWindowType() const
 {
     return mOutWindowType;
 }

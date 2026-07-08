@@ -67,13 +67,13 @@ Workspace::Workspace(OptionsManager& options, QWidget * parent /*= nullptr*/)
     }
 }
 
-Workspace::~Workspace(void)
+Workspace::~Workspace()
 {
     delete mWorkspace;
     mWorkspace = nullptr;
 }
 
-void Workspace::onAccept(void)
+void Workspace::onAccept()
 {
     QString path { mWorkspace->comboboxWorkspacePath->currentText() };
     QString describe { mWorkspace->editWorkspaceDescription->toPlainText() };
@@ -95,7 +95,7 @@ void Workspace::onAccept(void)
     done(static_cast<int>(QDialog::DialogCode::Accepted));
 }
 
-void Workspace::onReject(void)
+void Workspace::onReject()
 {
     done(static_cast<int>(QDialog::DialogCode::Rejected));
 }

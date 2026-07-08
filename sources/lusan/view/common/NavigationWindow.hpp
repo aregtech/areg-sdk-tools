@@ -43,7 +43,7 @@ public:
      **/
     NavigationWindow(int naviWindow, MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~NavigationWindow(void) = default;
+    virtual ~NavigationWindow() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -53,13 +53,13 @@ public:
     /**
      * \brief   This method is called when the options dialog is opened.
      **/
-    virtual void optionOpenning(void);
+    virtual void optionOpenning();
 
     /**
      * \brief   This method is called when the apply button in options dialog is pressed.
      *          It can be used to apply changes made in the options dialog.
      **/
-    virtual void optionApplied(void);
+    virtual void optionApplied();
 
     /**
      * \brief   This method is called when the options dialog is closed.
@@ -75,25 +75,25 @@ public:
      * \brief   Returns the type of the navigation window.
      * \return  The type of the navigation window.
      **/
-    inline int getNaviWindowType(void) const;
+    inline int getNaviWindowType() const;
 
     /**
      * \brief   Checks if the navigation window is a workspace.
      * \return  True if the navigation window is a workspace, false otherwise.
      **/
-    bool isNaviWorkspace(void) const;
+    bool isNaviWorkspace() const;
 
     /**
      * \brief   Checks if the navigation window is for live logs.
      * \return  True if the navigation window is for live logs, false otherwise.
      **/
-    bool isNaviLiveLogs(void) const;
+    bool isNaviLiveLogs() const;
 
     /**
      * \brief   Checks if the navigation window is for offline logs.
      * \return  True if the navigation window is for offline logs, false otherwise.
      **/
-    bool isNaviOfflineLogs(void) const;
+    bool isNaviOfflineLogs() const;
 
 //////////////////////////////////////////////////////////////////////////
 // NavigationWindow class inline methods
@@ -108,7 +108,7 @@ protected:
 // NavigationWindow class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline int NavigationWindow::getNaviWindowType(void) const
+inline int NavigationWindow::getNaviWindowType() const
 {
     return mNaviWindowType;
 }

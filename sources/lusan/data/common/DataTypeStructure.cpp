@@ -191,7 +191,7 @@ bool DataTypeStructure::validate(const QList<DataTypeCustom*>& customTypes)
     return result;
 }
 
-void DataTypeStructure::invalidate(void)
+void DataTypeStructure::invalidate()
 {
     for (FieldEntry& entry : mElementList)
     {

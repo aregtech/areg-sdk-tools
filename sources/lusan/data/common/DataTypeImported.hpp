@@ -83,25 +83,25 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
 
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes, operations
@@ -111,7 +111,7 @@ public:
     /**
      * \brief   Returns the namespace name of the imported data type.
      **/
-    inline const QString& getNamespace(void) const;
+    inline const QString& getNamespace() const;
 
     /**
      * \brief   Sets the namespace name of the imported data type.
@@ -122,7 +122,7 @@ public:
     /**
      * \brief   Returns the location of the imported data type.
      **/
-    inline const QString& getLocation(void) const;
+    inline const QString& getLocation() const;
 
     /**
      * \brief   Sets the location of the imported data type.
@@ -133,7 +133,7 @@ public:
     /**
      * \brief   Returns the object name of the imported data type.
      **/
-    inline const QString& getObject(void) const;
+    inline const QString& getObject() const;
 
     /**
      * \brief   Sets the object name of the imported data type.
@@ -145,7 +145,7 @@ private:
     /**
      * \brief   Returns the string to display as imported type,
      **/
-    QString toTypeString(void) const;
+    QString toTypeString() const;
         
 private:
     QString mNamespace; //!< The namespace of the imported data type.
@@ -157,7 +157,7 @@ private:
 // DataTypeImported class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& DataTypeImported::getNamespace(void) const
+inline const QString& DataTypeImported::getNamespace() const
 {
     return mNamespace;
 }
@@ -167,7 +167,7 @@ inline void DataTypeImported::setNamespace(const QString& space)
     mNamespace = space;
 }
 
-inline const QString& DataTypeImported::getLocation(void) const
+inline const QString& DataTypeImported::getLocation() const
 {
     return mLocation;
 }
@@ -177,7 +177,7 @@ inline void DataTypeImported::setLocation(const QString& location)
     mLocation = location;
 }
 
-inline const QString& DataTypeImported::getObject(void) const
+inline const QString& DataTypeImported::getObject() const
 {
     return mObject;
 }

@@ -42,9 +42,9 @@ class WorkspaceSetupDialog : public QDialog
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    WorkspaceSetupDialog(void);
+    WorkspaceSetupDialog();
 
-    virtual ~WorkspaceSetupDialog(void);
+    virtual ~WorkspaceSetupDialog();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
@@ -53,7 +53,7 @@ public:
     /**
      * \brief   Applies the directories set in the workspace setup dialog.
      **/
-    void applyDirectories(void);
+    void applyDirectories();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables

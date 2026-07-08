@@ -119,31 +119,31 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
     
     /**
      * \brief   Checks if the parameter is valid.
      * \return  True if the parameter is valid, false otherwise.
      **/
-    virtual bool isValid() const override;
+    bool isValid() const override;
     
     /**
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
 
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
@@ -176,7 +176,7 @@ public:
     /**
      * \brief   Returns the description of the enum entry.
      **/
-    const QString getDescription(void) const;
+    const QString getDescription() const;
 
     /**
      * \brief   Sets the description of the enum entry.
@@ -193,7 +193,7 @@ public:
     /**
      * \brief   Returns true if the enum entry is deprecated.
      **/
-    inline bool getIsDeprecated(void) const;
+    inline bool getIsDeprecated() const;
   
     /**
      * \brief   Sets the deprecation hint of the enum entry.
@@ -204,7 +204,7 @@ public:
     /**
      * \brief   Returns the deprecation hint of the enum entry.
      **/
-    inline const QString& getDeprecateHint(void) const;
+    inline const QString& getDeprecateHint() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables.
@@ -226,7 +226,7 @@ inline void EnumEntry::setIsDeprecated(bool isDeprecated)
     mIsDeprecated = isDeprecated;
 }
 
-inline bool EnumEntry::getIsDeprecated(void) const
+inline bool EnumEntry::getIsDeprecated() const
 {
     return mIsDeprecated;
 }
@@ -236,7 +236,7 @@ inline void EnumEntry::setDeprecateHint(const QString & hint)
     mDeprecateHint = mIsDeprecated ? hint : QString();
 }
 
-inline const QString& EnumEntry::getDeprecateHint(void) const
+inline const QString& EnumEntry::getDeprecateHint() const
 {
     return (mIsDeprecated ? mDeprecateHint : EmptyString);
 }

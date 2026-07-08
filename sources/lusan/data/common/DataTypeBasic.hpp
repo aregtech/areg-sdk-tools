@@ -36,7 +36,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeBasicObject(void);
+    DataTypeBasicObject();
 
     /**
      * \brief   Copy constructor.
@@ -84,13 +84,13 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -106,7 +106,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypeBasicContainer(void);
+    DataTypeBasicContainer();
 
     /**
      * \brief   Copy constructor.
@@ -159,20 +159,20 @@ public:
      * \brief   Checks if the data type has a key.
      * \return  True if the data type has a key, false otherwise.
      **/
-    bool hasKey(void) const;
+    bool hasKey() const;
 
     /**
      * \brief   Reads data from an XML stream.
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 private:
     bool    mHasKey;    //!< The flag, indicating whether the data type has a key.

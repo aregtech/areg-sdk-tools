@@ -110,7 +110,20 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMCommand.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
+    ${LUSAN}/model/sm/SMOverviewModel.cpp
+    ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/sm/SMAttributeModel.cpp
+    ${LUSAN}/model/sm/SMEventModel.cpp
+    ${LUSAN}/model/sm/SMTimerModel.cpp
+    ${LUSAN}/model/sm/SMMethodModel.cpp
+    ${LUSAN}/model/sm/SMConstantModel.cpp
+    ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
+    # Container tests need the real basic-container catalog (Array/HashMap/Map/...): it is
+    # loaded from the "Predefined Types" resource at runtime (DataTypeFactory::_initPredefined),
+    # not hardcoded, so the .qrc must be compiled in or DataTypeContainer::canHaveKey() sees an
+    # empty catalog and every container looks non-keyed.
+    ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_sm_command_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
 target_compile_definitions(lusan_sm_command_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)

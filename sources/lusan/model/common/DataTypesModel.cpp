@@ -381,7 +381,7 @@ bool DataTypesModel::dataTypeUpdated(DataTypeCustom* dataType)
     return (mDataTypeList.indexOf(dataType) != -1);
 }
 
-void DataTypesModel::updateDataTypeLists(void)
+void DataTypesModel::updateDataTypeLists()
 {
     mDataTypeList.clear();
     mCountPredef = 0;

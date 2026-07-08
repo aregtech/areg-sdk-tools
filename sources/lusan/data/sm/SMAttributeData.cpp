@@ -18,7 +18,9 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSM.hpp"
+#include "lusan/data/sm/SMDataTypeData.hpp"
 
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -77,9 +79,37 @@ SMAttributeEntry& SMAttributeEntry::operator = (SMAttributeEntry&& other) noexce
     return *this;
 }
 
-bool SMAttributeEntry::isValid(void) const
+bool SMAttributeEntry::isValid() const
 {
     return (getName().isEmpty() == false) && (getType().isEmpty() == false);
+}
+
+QIcon SMAttributeEntry::getIcon(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return NELusanCommon::iconAttribute(NELusanCommon::SizeSmall);
+    case ElementBase::eDisplay::DisplayType:
+        return (mParamType.isValid() ? QIcon() : NELusanCommon::iconWarning(NELusanCommon::SizeSmall));
+    default:
+        return QIcon();
+    }
+}
+
+QString SMAttributeEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return getType();
+    case ElementBase::eDisplay::DisplayValue:
+        return mValue;
+    default:
+        return QString();
+    }
 }
 
 bool SMAttributeEntry::readFromXml(QXmlStreamReader& xml)
@@ -92,12 +122,22 @@ bool SMAttributeEntry::readFromXml(QXmlStreamReader& xml)
     setName(attributes.value(XmlSM::xmlSMAttributeName).toString());
     setType(attributes.value(XmlSM::xmlSMAttributeDataType).toString());
     mValue = attributes.value(XmlSM::xmlSMAttributeValue).toString();
+    setIsDeprecated(attributes.hasAttribute(XmlSM::xmlSMAttributeIsDeprecated)
+        && (attributes.value(XmlSM::xmlSMAttributeIsDeprecated).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0));
+    setDeprecateHint(QString());
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementAttribute))
     {
-        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
-            setDescription(xml.readElementText());
+            if (xml.name() == XmlSM::xmlSMElementDeprecateHint)
+            {
+                setDeprecateHint(xml.readElementText());
+            }
+            else if (xml.name() == XmlSM::xmlSMElementDescription)
+            {
+                setDescription(xml.readElementText());
+            }
         }
 
         xml.readNext();
@@ -113,6 +153,11 @@ void SMAttributeEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSM::xmlSMAttributeName, getName());
     xml.writeAttribute(XmlSM::xmlSMAttributeDataType, getType());
     xml.writeAttribute(XmlSM::xmlSMAttributeValue, mValue);
+    if (getIsDeprecated())
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeIsDeprecated, XmlSM::xmlSMValueTrue);
+        writeTextElem(xml, XmlSM::xmlSMElementDeprecateHint, getDeprecateHint(), true);
+    }
     writeTextElem(xml, XmlSM::xmlSMElementDescription, getDescription(), true);
     xml.writeEndElement();
 }
@@ -131,7 +176,7 @@ SMAttributeData::SMAttributeData(const QList<SMAttributeEntry>& entries, Element
 {
 }
 
-bool SMAttributeData::isValid(void) const
+bool SMAttributeData::isValid() const
 {
     return true;
 }
@@ -182,4 +227,13 @@ SMAttributeEntry* SMAttributeData::createAttribute(const QString& name)
     SMAttributeEntry entry(getNextId(), name, "bool", QString(), this);
     addElement(std::move(entry), true);
     return findElement(name);
+}
+
+void SMAttributeData::validate(const SMDataTypeData& dataTypes)
+{
+    const QList<DataTypeCustom*>& customTypes = dataTypes.getCustomDataTypes();
+    for (SMAttributeEntry& entry : getElements())
+    {
+        entry.validate(customTypes);
+    }
 }

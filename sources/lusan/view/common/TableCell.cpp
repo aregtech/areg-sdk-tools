@@ -179,7 +179,7 @@ void TableCell::onEditorTextChanged(const QString & newText)
     }
 }
 
-void TableCell::onEditorTextChangeFinished(void)
+void TableCell::onEditorTextChangeFinished()
 {
     if (mWaitEnd && mSelIndex.isValid() && (mNewText.isEmpty() == false))
     {

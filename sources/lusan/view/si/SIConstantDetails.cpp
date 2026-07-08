@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -10,56 +10,92 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/si/SIConstantDetails.hpp
+ *  \file        lusan/view/si/SIConstantDetails.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface constant editor.
  *
  ************************************************************************/
 #include "lusan/view/si/SIConstantDetails.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIConstantDetails.h"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QVBoxLayout>
 
 SIConstantDetails::SIConstantDetails(QWidget* parent)
-    : QWidget(parent)
-    , ui(new Ui::SIConstantDetails)
+    : QWidget           (parent)
+    , mName             (nullptr)
+    , mTypes            (nullptr)
+    , mValue            (nullptr)
+    , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
-    QFont font{ this->font() };
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    buildUi();
 }
 
-QLineEdit* SIConstantDetails::ctrlName(void)
+void SIConstantDetails::buildUi()
 {
-    return ui->editName;
+    QVBoxLayout* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* details = new QGroupBox(tr("Details:"), this);
+    QFormLayout* form = new QFormLayout(details);
+    form->setRowWrapPolicy(QFormLayout::DontWrapRows);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+    mName = new QLineEdit(details);
+    form->addRow(tr("Name:"), mName);
+
+    mTypes = new QComboBox(details);
+    form->addRow(tr("Type:"), mTypes);
+
+    mValue = new QLineEdit(details);
+    form->addRow(tr("Value:"), mValue);
+
+    mDescription = new QPlainTextEdit(details);
+    mDescription->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    mDescription->setPlaceholderText(tr("Describe constant here"));
+    form->addRow(tr("Description:"), mDescription);
+
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    form->addRow(mDeprecated, mDeprecateHint);
+
+    root->addWidget(details);
 }
 
-QComboBox* SIConstantDetails::ctrlTypes(void)
+QLineEdit* SIConstantDetails::ctrlName()
 {
-    return ui->comboTypes;
+    return mName;
 }
 
-QLineEdit* SIConstantDetails::ctrlValue(void)
+QComboBox* SIConstantDetails::ctrlTypes()
 {
-    return ui->editValue;
+    return mTypes;
 }
 
-QPlainTextEdit* SIConstantDetails::ctrlDescription(void)
+QLineEdit* SIConstantDetails::ctrlValue()
 {
-    return ui->textDescribe;
+    return mValue;
 }
 
-QCheckBox* SIConstantDetails::ctrlDeprecated(void)
+QPlainTextEdit* SIConstantDetails::ctrlDescription()
 {
-    return ui->checkDeprecated;
+    return mDescription;
 }
 
-QLineEdit* SIConstantDetails::ctrlDeprecateHint(void)
+QCheckBox* SIConstantDetails::ctrlDeprecated()
 {
-    return ui->editDeprecated;
+    return mDeprecated;
+}
+
+QLineEdit* SIConstantDetails::ctrlDeprecateHint()
+{
+    return mDeprecateHint;
 }

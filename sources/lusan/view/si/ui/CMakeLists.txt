@@ -1,22 +1,2 @@
-﻿list(APPEND LUSAN_UI
-    ${LUSAN}/view/si/ui/SIAttribute.ui
-    ${LUSAN}/view/si/ui/SIAttributeDetails.ui
-    ${LUSAN}/view/si/ui/SIAttributeList.ui
-    ${LUSAN}/view/si/ui/SIConstant.ui
-    ${LUSAN}/view/si/ui/SIConstantDetails.ui
-    ${LUSAN}/view/si/ui/SIConstantList.ui
-    ${LUSAN}/view/si/ui/SIDataType.ui
-    ${LUSAN}/view/si/ui/SIDataTypeDetails.ui
-    ${LUSAN}/view/si/ui/SIDataTypeFieldDetails.ui
-    ${LUSAN}/view/si/ui/SIDataTypeList.ui
-    ${LUSAN}/view/si/ui/SIInclude.ui
-    ${LUSAN}/view/si/ui/SIIncludeDetails.ui
-    ${LUSAN}/view/si/ui/SIIncludeList.ui
-    ${LUSAN}/view/si/ui/SIMethodDetails.ui
-    ${LUSAN}/view/si/ui/SIMethodParamDetails.ui
-    ${LUSAN}/view/si/ui/SIMethod.ui
-    ${LUSAN}/view/si/ui/SIMethodList.ui
-    ${LUSAN}/view/si/ui/SIOverview.ui
-    ${LUSAN}/view/si/ui/SIOverviewDetails.ui
-    ${LUSAN}/view/si/ui/SIOverviewLinks.ui
-)
+# All Service Interface pages are now code-built (no .ui files).
+# This list is intentionally empty; kept for build-structure compatibility.

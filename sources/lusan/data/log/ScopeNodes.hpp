@@ -72,7 +72,7 @@ public:
     ScopeLeaf( const ScopeLeaf & src );    
     ScopeLeaf( ScopeLeaf && src ) noexcept;
 
-    virtual ~ScopeLeaf( void ) = default;
+    virtual ~ScopeLeaf() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -96,7 +96,7 @@ public:
     /**
      * \brief   Adds log priority bits.
      **/
-    virtual void addPriority(unsigned int prio) override;
+    void addPriority(unsigned int prio) override;
 
     /**
      * \brief   Builds the full scope path for this leaf.
@@ -104,18 +104,18 @@ public:
      *          trailing '_' with '.' so the path matches the new areg syntax:
      *          e.g. "areg_path_node.leaf_name".
      **/
-    virtual QString makePath(void) const override;
+    QString makePath() const override;
 
     /**
      * \brief   Sets the scope ID for the node. Valid only for leafs. Ignored in case of other nodes.
      * \param   scopeId     The scope ID to set.
      **/
-    virtual void setScopeId(uint32_t scopeId) override;
+    void setScopeId(uint32_t scopeId) override;
 
     /**
      * \brief   Returns scope ID of the leaf or 0 in case of other nodes.
      **/
-    virtual uint32_t getScopeId(void) const override;
+    uint32_t getScopeId() const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -172,7 +172,7 @@ public:
     ScopeNode( const ScopeNode & src );    
     ScopeNode( ScopeNode && src ) noexcept;
     
-    virtual ~ScopeNode( void );
+    virtual ~ScopeNode();
 
 //////////////////////////////////////////////////////////////////////////
 // Protected constructor
@@ -207,17 +207,17 @@ public:
     /**
      * \brief   Sets the node priority flag.
      **/
-    virtual void setPriority(uint32_t prio) override;
+    void setPriority(uint32_t prio) override;
 
     /**
      * \brief   Adds log priority bits.
      **/
-    virtual void addPriority(unsigned int prio) override;
+    void addPriority(unsigned int prio) override;
 
     /**
      * \brief   Adds log priority bits.
      **/
-    virtual void removePriority(unsigned int prio) override;
+    void removePriority(unsigned int prio) override;
 
     /**
      * \brief   Creates a child node. The child node is not added to the parent.
@@ -229,7 +229,7 @@ public:
      * \param   prio        The logging priority to set.
      * \return  The node object created.
      **/
-    virtual ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio) override;
+    ScopeNodeBase* makeChildNode(QStringList& nodeNames, uint32_t prio) override;
 
     /**
      * \brief   Adds a child node to the parent if the node does not exist.
@@ -237,113 +237,113 @@ public:
      * \param   childNode   The child node to add to the parent.
      * \return  The pointer to the added child node.
      **/
-    virtual ScopeNodeBase* addChildNode(ScopeNodeBase* childNode) override;
+    ScopeNodeBase* addChildNode(ScopeNodeBase* childNode) override;
 
     /**
      * \brief   Returns child node object that contains the specified name.
      *          Returns nullptr if no child with specified name exists.
      * \param   childName   The name of the child node to find.
      **/
-    virtual ScopeNodeBase* findChild(const QString& childName) const override;
+    ScopeNodeBase* findChild(const QString& childName) const override;
 
     /**
      * \brief   Returns the position of the child node in the list of child nodes.
      *          Returns NECommon::INVALID_INDEX if no child with specified name exists.
      * \param   childName   The name of the child node to find.
      **/
-    virtual int getChildPosition(const QString& childName) const override;
+    int getChildPosition(const QString& childName) const override;
     
     /**
      * \brief   Returns the child node at the given position.
      * \param   pos     The position of the child.
      * \return  Valid pointer of the child node or leaf, if position is valid. Otherwise, returns nullptr.
      **/
-    virtual ScopeNodeBase* getChildAt(int pos) const override;
+    ScopeNodeBase* getChildAt(int pos) const override;
     
     /**
      * \brief   Returns the total number of children.
      **/
-    virtual int getChildCount(void) const override;
+    int getChildCount() const override;
 
     /**
      * \brief   Returns the total number of child nodes.
      **/
-    virtual int getChildNodesCount(void) const override;
+    int getChildNodesCount() const override;
 
     /**
      * \brief   Returns the total number of child leafs.
      **/
-    virtual int getChildLeafsCount(void) const override;
+    int getChildLeafsCount() const override;
 
     /**
      * \brief   Returns true if the current node has other node objects with children.
      **/
-    virtual bool hasNodes(void) const override;
+    bool hasNodes() const override;
 
     /**
      * \brief   Returns true if the current node has leafs.
      **/
-    virtual bool hasLeafs(void) const override;
+    bool hasLeafs() const override;
 
     /**
      * \brief   Returns true if the node has a leaf with the specified name.
      **/
-    virtual bool containsLeaf(const QString& leafName) const override;
+    bool containsLeaf(const QString& leafName) const override;
 
     /**
      * \brief   Returns true if the node has a node with the specified name.
      **/
-    virtual bool containsNode(const QString& nodeName) const override;
+    bool containsNode(const QString& nodeName) const override;
 
     /**
      * \brief   On output, the `children` parameter contains the list of child nodes.
      * \param   children    The list of child nodes to fill.
      * \return  The number of child nodes in the list.
      **/
-    virtual int getChildren(std::vector<ScopeNodeBase*>& children) const override;
+    int getChildren(std::vector<ScopeNodeBase*>& children) const override;
     
     /**
      * \brief   Resets and invalidates the priorities of the node and all child nodes.
      * \param   skipLeafs   If true, skips resetting the priority of the leafs and resets the priority only nodes.
      *                      Otherwise, it resets the priority of the leafs and nodes.
      **/
-    virtual void resetPrioritiesRecursive(bool skipLeafs) override;
+    void resetPrioritiesRecursive(bool skipLeafs) override;
 
     /**
      * \brief   Refreshes the priorities by keeping the priority of leafs and refreshing the priorities of the nodes.
      **/
-    virtual void refreshPrioritiesRecursive(void) override;
+    void refreshPrioritiesRecursive() override;
 
     /**
      * \brief   Returns the list of nodes with log priority. The node should not have NotSet priority flag.
      **/
-    virtual QList<ScopeNodeBase*> getNodesWithPriority(void) const override;
+    QList<ScopeNodeBase*> getNodesWithPriority() const override;
 
     /**
      * \brief   Extracts nodes with log priority. The node should not have NotSet priority flag.
      * \param   list    The list to add nodes with priority.
      * \return  Returns number of new added nodes.
      **/
-    virtual int extractNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
+    int extractNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
 
     /**
      * \brief   Extracts child nodes with log priority.
      * \param   list    The list to add nodes with priority.
      * \return  Returns number of new added nodes.
      **/
-    virtual int extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
+    int extractChildNodesWithPriority(QList<ScopeNodeBase*>& list) const override;
 
     /**
      * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
      **/
-    virtual std::vector<ScopeNodeBase*> extractNodeLeafs(void) const override;
+    std::vector<ScopeNodeBase*> extractNodeLeafs() const override;
 
     /**
      * \brief   Retrieves all relevant leaf nodes, including leafs of the child nodes, under the current node.
      * \param   leafs    The vector to fill with leaf nodes.
      * \return  The number of leaf nodes found.
      **/
-    virtual uint32_t extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const override;
+    uint32_t extractNodeLeafs(std::vector<ScopeNodeBase*>& leafs) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -352,17 +352,17 @@ public:
     /**
      * \brief   Returns the list of child nodes.
      **/
-    inline const ScopeNode::NodeList & getNodes( void ) const;
+    inline const ScopeNode::NodeList & getNodes() const;
 
     /**
      * \brief   Returns the list of child leafs.
      **/
-    inline const ScopeNode::LeafList & getLeafs( void ) const;
+    inline const ScopeNode::LeafList & getLeafs() const;
 
     /**
      * \brief   Returns the total number of children.
      **/
-    inline unsigned int childNodeCount( void ) const;
+    inline unsigned int childNodeCount() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -372,12 +372,12 @@ protected:
     /**
      * \brief   Resets the priority of the nodes.
      **/
-    inline void resetPrioNodes(void);
+    inline void resetPrioNodes();
 
     /**
      * \brief   Resets the priority of the leafs.
      **/
-    inline void resetPrioLeafs(void);
+    inline void resetPrioLeafs();
 
 //////////////////////////////////////////////////////////////////////////
 // Protected members
@@ -405,7 +405,7 @@ public:
     /**
      * \brief   Default constructor. Creates an empty root node.
      **/
-    ScopeRoot(void);
+    ScopeRoot();
 
     /**
      * \brief   Creates a root node and sets the root ID, which is unique within the system.
@@ -432,7 +432,7 @@ public:
     ScopeRoot( const ScopeRoot & src );
     ScopeRoot( ScopeRoot && src ) noexcept;
     
-    virtual ~ScopeRoot( void ) = default;
+    virtual ~ScopeRoot() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Assigning operators
@@ -456,12 +456,12 @@ public:
     /**
      * \brief   Returns the string used to create the path. Root nodes should return empty string.
      **/
-    virtual QString getPathString(void) const override;
+    QString getPathString() const override;
     
     /**
      * \brief   Returns the string to display on screen.
      **/
-    virtual QString getDisplayName(void) const override;
+    QString getDisplayName() const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -470,7 +470,7 @@ public:
     /**
      * \brief   Returns the ID of the root.
      **/
-    inline ITEM_ID getRootId( void ) const;
+    inline ITEM_ID getRootId() const;
 
     /**
      * \brief   Sets root ID
@@ -480,7 +480,7 @@ public:
     /**
      * \brief   Returns the root node name.
      **/
-    inline const QString & getRootName(void) const;
+    inline const QString & getRootName() const;
 
     /**
      * \brief   Sets root node name
@@ -500,22 +500,22 @@ private:
 // ScopeNode class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const ScopeNode::NodeList& ScopeNode::getNodes(void) const
+inline const ScopeNode::NodeList& ScopeNode::getNodes() const
 {
     return mChildNodes;
 }
 
-inline const ScopeNode::LeafList& ScopeNode::getLeafs(void) const
+inline const ScopeNode::LeafList& ScopeNode::getLeafs() const
 {
     return mChildLeafs;
 }
 
-inline unsigned int ScopeNode::childNodeCount(void) const
+inline unsigned int ScopeNode::childNodeCount() const
 {
     return (mChildLeafs.size() + mChildNodes.size());
 }
 
-inline void ScopeNode::resetPrioNodes(void)
+inline void ScopeNode::resetPrioNodes()
 {
     resetPriority();
     for (const auto& node : mChildNodes)
@@ -524,7 +524,7 @@ inline void ScopeNode::resetPrioNodes(void)
     }
 }
 
-inline void ScopeNode::resetPrioLeafs(void)
+inline void ScopeNode::resetPrioLeafs()
 {
     resetPriority();
     for (const auto& leaf : mChildLeafs)
@@ -537,7 +537,7 @@ inline void ScopeNode::resetPrioLeafs(void)
 // ScopeRoot class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline ITEM_ID ScopeRoot::getRootId(void) const
+inline ITEM_ID ScopeRoot::getRootId() const
 {
     return mRootId;
 }
@@ -547,7 +547,7 @@ inline void ScopeRoot::setRootId(const ITEM_ID rootId)
     mRootId = rootId;
 }
 
-inline const QString& ScopeRoot::getRootName(void) const
+inline const QString& ScopeRoot::getRootName() const
 {
     return mNodeName;
 }

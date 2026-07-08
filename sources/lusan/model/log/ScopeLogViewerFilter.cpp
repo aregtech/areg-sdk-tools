@@ -42,7 +42,7 @@ ScopeLogViewerFilter::ScopeLogViewerFilter(uint32_t scopeId /*= 0u*/, LoggingMod
 {
 }
 
-ScopeLogViewerFilter::~ScopeLogViewerFilter(void)
+ScopeLogViewerFilter::~ScopeLogViewerFilter()
 {
     _clearData();
 }
@@ -175,7 +175,7 @@ void ScopeLogViewerFilter::setSourceModel(QAbstractItemModel *sourceModel)
     LogViewerFilter::setSourceModel(sourceModel);
 }
 
-void ScopeLogViewerFilter::clearFilters(void)
+void ScopeLogViewerFilter::clearFilters()
 {
     _clearData();
     LogViewerFilter::clearFilters();
@@ -348,7 +348,7 @@ void ScopeLogViewerFilter::filterData(ScopeLogViewerFilter::eDataFilter dataFilt
     invalidateFilter();
 }
 
-inline void ScopeLogViewerFilter::_clearData(void)
+inline void ScopeLogViewerFilter::_clearData()
 {
     mSelScopeData.clear();
     mScopeData.clear();

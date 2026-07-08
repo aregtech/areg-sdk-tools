@@ -20,10 +20,6 @@
  ************************************************************************/
 #include <QWidget>
 
-namespace Ui {
-    class SIOverviewDetails;
-}
-    
 class QCheckBox;
 class QLineEdit;
 class QPlainTextEdit;
@@ -37,28 +33,40 @@ class SIOverviewDetails : public QWidget
 public:
     explicit SIOverviewDetails(QWidget* parent = nullptr);
         
-    QLineEdit* ctrlMajor(void);
+    QLineEdit* ctrlMajor();
     
-    QLineEdit* ctrlMinor(void);
+    QLineEdit* ctrlMinor();
     
-    QLineEdit* ctrlPatch(void);
+    QLineEdit* ctrlPatch();
     
-    QLineEdit* ctrlName(void);
+    QLineEdit* ctrlName();
     
-    QRadioButton* ctrlPublic(void);
+    QRadioButton* ctrlPublic();
     
-    QRadioButton* ctrlPrivate(void);
+    QRadioButton* ctrlPrivate();
     
-    QRadioButton* ctrlInternet(void);
+    QRadioButton* ctrlInternet();
     
-    QPlainTextEdit* ctrlDescription(void);
+    QPlainTextEdit* ctrlDescription();
     
-    QCheckBox* ctrlDeprecated(void);
+    QCheckBox* ctrlDeprecated();
     
-    QLineEdit* ctrlDeprecateHint(void);
+    QLineEdit* ctrlDeprecateHint();
 
 private:
-    Ui::SIOverviewDetails*  ui;
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QRadioButton*   mPublic;
+    QRadioButton*   mPrivate;
+    QRadioButton*   mInternet;
+    QLineEdit*      mMajor;
+    QLineEdit*      mMinor;
+    QLineEdit*      mPatch;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIOVERVIEWDETAILS_HPP

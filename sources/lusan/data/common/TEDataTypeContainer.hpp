@@ -107,7 +107,7 @@ public:
      * \brief   Checks if the object is valid.
      * \return  True if the object is valid, false otherwise.
      **/
-    virtual bool isValid() const override;
+    bool isValid() const override;
 
     /**
      * \brief   Invalidates the object.

@@ -55,7 +55,7 @@ public:
      */
     explicit LoggingScopesModelBase(QObject* parent = nullptr);
 
-    virtual ~LoggingScopesModelBase(void);
+    virtual ~LoggingScopesModelBase();
 
 //////////////////////////////////////////////////////////////////////////
 // Common operations
@@ -71,12 +71,12 @@ public:
     /**
      * \brief   Returns root index.
      **/
-    inline const QModelIndex& getRootIndex(void) const;
+    inline const QModelIndex& getRootIndex() const;
 
     /**
      * \brief   Returns the logging model associated with this scopes model. Returns `nullptr` if not set.
      **/
-    inline LoggingModelBase* getLoggingModel(void) const;
+    inline LoggingModelBase* getLoggingModel() const;
 
     /**
      * \brief   Call to set the index of the expanded scope node.
@@ -193,22 +193,22 @@ public:
     /**
      * \brief   Refreshes the model, clearing all data and rebuilding the scope tree.
      **/
-    virtual void refresh(void);
+    virtual void refresh();
 
     /**
      * \brief   Builds the scopes tree for the model.
      **/
-    virtual void buildScopes(void);
+    virtual void buildScopes();
 
     /**
      * \brief   Sets up the model.
      **/
-    virtual void setupModel(void);
+    virtual void setupModel();
 
     /**
      * \brief   Releases the model.
      **/
-    virtual void releaseModel(void);
+    virtual void releaseModel();
 
 //////////////////////////////////////////////////////////////////////////
 // QAbstractItemModel overrides
@@ -225,28 +225,28 @@ public:
      * \param   parent  The parent index.
      * \return  The index of the item.
      **/
-    virtual QModelIndex index(int row, int column, const QModelIndex& parent) const override;
+    QModelIndex index(int row, int column, const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the parent index of the given child index.
      * \param   child   The child index.
      * \return  The parent index.
      **/
-    virtual QModelIndex parent(const QModelIndex& child) const override;
+    QModelIndex parent(const QModelIndex& child) const override;
 
     /**
      * \brief   Returns the number of rows under the given parent.
      * \param   parent  The parent index.
      * \return  The number of rows.
      **/
-    virtual int rowCount(const QModelIndex& parent) const override;
+    int rowCount(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the number of columns for the children of the given parent.
      * \param   parent  The parent index.
      * \return  The number of columns.
      **/
-    virtual int columnCount(const QModelIndex& parent) const override;
+    int columnCount(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the data stored under the given role for the item referred to by the index.
@@ -254,7 +254,7 @@ public:
      * \param   role    The role for which data is requested.
      * \return  The data for the given role and section.
      **/
-    virtual QVariant data(const QModelIndex& index, int role) const override;
+    QVariant data(const QModelIndex& index, int role) const override;
 
     /**
      * \brief   Returns the data for the given role and section in the header with the specified orientation.
@@ -263,14 +263,14 @@ public:
      * \param   role        The role for which data is requested.
      * \return  The data for the given role and section.
      **/
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     /**
      * \brief   Returns the flags for the item at the given index.
      * \param   index   The index of the item.
      * \return  The flags of the item.
      **/
-    virtual Qt::ItemFlags flags(const QModelIndex& index) const override;
+    Qt::ItemFlags flags(const QModelIndex& index) const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Internal overrides
@@ -322,12 +322,12 @@ protected slots:
     /**
      * \brief   Triggered, when connected to the logging service.
      */
-    virtual void slotLogServiceConnected(void);
+    virtual void slotLogServiceConnected();
 
     /**
      * \brief   Triggered, when disconnected to the logging service.
      */
-    virtual void slotLogServiceDisconnected(void);
+    virtual void slotLogServiceDisconnected();
 
     /**
      * \brief   Triggered, when one or more instances are available.
@@ -407,12 +407,12 @@ inline bool LoggingScopesModelBase::isValidIndex(const QModelIndex& index) const
     return (index.isValid() && (index.row() >= 0) && (index.column() == 0) && (index.model() == this));
 }
 
-inline const QModelIndex& LoggingScopesModelBase::getRootIndex(void) const
+inline const QModelIndex& LoggingScopesModelBase::getRootIndex() const
 {
     return mRootIndex;
 }
 
-inline LoggingModelBase* LoggingScopesModelBase::getLoggingModel(void) const
+inline LoggingModelBase* LoggingScopesModelBase::getLoggingModel() const
 {
     return mLoggingModel;
 }

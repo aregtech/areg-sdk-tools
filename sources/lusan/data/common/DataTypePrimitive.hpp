@@ -93,13 +93,13 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Converts the value to the string representation.
@@ -115,7 +115,7 @@ private:
     /**
      * \brief   Default constructor.
      **/
-    DataTypePrimitive(void) = delete;
+    DataTypePrimitive() = delete;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -135,7 +135,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypePrimitiveInt(void);
+    DataTypePrimitiveInt();
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
@@ -181,7 +181,7 @@ public:
      * \param   value   The value to convert.
      * \return  The string representation of the value.
      **/
-    virtual QString convertValue(const QString& value) const override;
+    QString convertValue(const QString& value) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -201,7 +201,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypePrimitiveUint(void);
+    DataTypePrimitiveUint();
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
@@ -247,7 +247,7 @@ public:
      * \param   value   The value to convert.
      * \return  The string representation of the value.
      **/
-    virtual QString convertValue(const QString& value) const override;
+    QString convertValue(const QString& value) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -267,7 +267,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    DataTypePrimitiveFloat(void);
+    DataTypePrimitiveFloat();
     /**
      * \brief   Constructor with name initialization.
      * \param   name    The name of the data type.
@@ -313,7 +313,7 @@ public:
      * \param   value   The value to convert.
      * \return  The string representation of the value.
      **/
-    virtual QString convertValue(const QString& value) const override;
+    QString convertValue(const QString& value) const override;
 
 };
 

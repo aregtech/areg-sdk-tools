@@ -51,7 +51,7 @@ SIMethodRequest::SIMethodRequest(SIMethodRequest&& src) noexcept
 {
 }
 
-SIMethodRequest::~SIMethodRequest(void)
+SIMethodRequest::~SIMethodRequest()
 {
 }
 
@@ -87,22 +87,22 @@ void SIMethodRequest::connectResponse(SIMethodResponse* respMethod)
     mResponse.setType(respMethod);
 }
 
-const QString& SIMethodRequest::getConectedResponseName(void) const
+const QString& SIMethodRequest::getConectedResponseName() const
 {
     return mResponse.getName();
 }
 
-const SIMethodResponse* SIMethodRequest::getConectedResponse(void) const
+const SIMethodResponse* SIMethodRequest::getConectedResponse() const
 {
     return mResponse.getType();
 }
 
-bool SIMethodRequest::hasValidResponse(void) const
+bool SIMethodRequest::hasValidResponse() const
 {
     return mResponse.isValid();
 }
 
-void SIMethodRequest::clearResponse(void)
+void SIMethodRequest::clearResponse()
 {
     mResponse.invalidate();
     mResponse.setName(QString());

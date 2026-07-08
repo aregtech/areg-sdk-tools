@@ -78,7 +78,7 @@ SIMethodBase::SIMethodBase(SIMethodBase&& src) noexcept
 {
 }
 
-SIMethodBase::~SIMethodBase(void)
+SIMethodBase::~SIMethodBase()
 {
 }
 
@@ -128,7 +128,7 @@ void SIMethodBase::setMethodType(eMethodType methodType)
     mMethodType = methodType;
 }
 
-QString SIMethodBase::getType(void) const
+QString SIMethodBase::getType() const
 {
     return SIMethodBase::toString(mMethodType);
 }
@@ -168,7 +168,7 @@ void SIMethodBase::setIsDeprecated(bool isDeprecated)
     }
 }
 
-bool SIMethodBase::getIsDeprecated(void) const
+bool SIMethodBase::getIsDeprecated() const
 {
     return mIsDeprecated;
 }
@@ -178,7 +178,7 @@ void SIMethodBase::setDeprecateHint(const QString& hint)
     mDeprecateHint = mIsDeprecated ? hint : "";
 }
 
-const QString& SIMethodBase::getDeprecateHint(void) const
+const QString& SIMethodBase::getDeprecateHint() const
 {
     return mDeprecateHint;
 }

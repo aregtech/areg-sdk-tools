@@ -43,13 +43,13 @@ class LogTextHighlight : public QStyledItemDelegate
 //////////////////////////////////////////////////////////////////////////
 public:
     LogTextHighlight(const LogSearchModel::sFoundPos& foundPos, QObject* parent = nullptr);
-    virtual ~LogTextHighlight(void) = default;
+    virtual ~LogTextHighlight() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
-    virtual void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

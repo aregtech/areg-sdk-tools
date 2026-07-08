@@ -18,7 +18,10 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIConstant.hpp"
-#include "ui/ui_SIConstant.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QVBoxLayout>
 
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
@@ -40,11 +43,20 @@
 
 SIConstantWidget::SIConstantWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui     (new Ui::SIConstant)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Constants Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
@@ -53,19 +65,17 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
     , mDetails  (new SIConstantDetails(this))
     , mList     (new SIConstantList(this))
     , mWidget   (new SIConstantWidget(this))
-    , ui        (*mWidget->ui)
     , mTypeModel(new DataTypesModel(model.getDataTypeData(), false))
     , mTableCell(nullptr)
     , mCount    (0)
 {
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mDetails->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(mDetails, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -75,10 +85,10 @@ SIConstant::SIConstant(SIConstantModel& model, QWidget* parent)
     updateDetails(nullptr, true);
 }
 
-SIConstant::~SIConstant(void)
+SIConstant::~SIConstant()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mDetails);
 }
 
 void SIConstant::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType)
@@ -162,7 +172,7 @@ void SIConstant::dataTypeUpdated(DataTypeCustom* dataType)
     blockBasicSignals(false);
 }
 
-int SIConstant::getColumnCount(void) const
+int SIConstant::getColumnCount() const
 {
     return mList->ctrlTableList()->columnCount();
 }
@@ -185,7 +195,7 @@ void SIConstant::onCurCellChanged(int currentRow, int currentColumn, int previou
     blockBasicSignals(false);
 }
 
-void SIConstant::onAddClicked(void)
+void SIConstant::onAddClicked()
 {
     QString name(genName());
     QTableWidget* table = mList->ctrlTableList();
@@ -217,7 +227,7 @@ void SIConstant::onAddClicked(void)
     blockBasicSignals(false);
 }
 
-void SIConstant::onRemoveClicked(void)
+void SIConstant::onRemoveClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -254,7 +264,7 @@ void SIConstant::onRemoveClicked(void)
     blockBasicSignals(false);
 }
 
-void SIConstant::onInsertClicked(void)
+void SIConstant::onInsertClicked()
 {
     QString name(genName());
     QTableWidget* table = mList->ctrlTableList();
@@ -296,7 +306,7 @@ void SIConstant::onInsertClicked(void)
     blockBasicSignals(false);
 }
 
-void SIConstant::onMoveUpClicked(void)
+void SIConstant::onMoveUpClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -311,7 +321,7 @@ void SIConstant::onMoveUpClicked(void)
     }
 }
 
-void SIConstant::onMoveDownClicked(void)
+void SIConstant::onMoveDownClicked()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -401,7 +411,7 @@ void SIConstant::onDeprecateHintChanged(const QString& newText)
     }
 }
 
-void SIConstant::onDescriptionChanged(void)
+void SIConstant::onDescriptionChanged()
 {
     QTableWidget* table = mList->ctrlTableList();
     int row = table->currentRow();
@@ -454,7 +464,7 @@ void SIConstant::cellChanged(int row, int col, const QString& newValue)
     }
 }
 
-void SIConstant::updateData(void)
+void SIConstant::updateData()
 {
     QTableWidget* table = mList->ctrlTableList();
     const QList<ConstantEntry>& list = mModel.getConstants();
@@ -469,7 +479,7 @@ void SIConstant::updateData(void)
     }
 }
 
-void SIConstant::updateWidgets(void)
+void SIConstant::updateWidgets()
 {
     QTableWidget* table = mList->ctrlTableList();
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
@@ -488,7 +498,7 @@ void SIConstant::updateWidgets(void)
     mDetails->ctrlValue()->setEnabled(false);
 }
 
-void SIConstant::setupSignals(void)
+void SIConstant::setupSignals()
 {
     Q_ASSERT(mDetails != nullptr);
     Q_ASSERT(mList != nullptr);
@@ -680,7 +690,7 @@ inline void SIConstant::updateToolBottons(int row, int rowCount)
     }
 }
 
-inline QString SIConstant::genName(void)
+inline QString SIConstant::genName()
 {
     static const QString _defName("NewConstant");
 

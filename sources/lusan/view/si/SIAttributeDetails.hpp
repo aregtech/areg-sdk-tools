@@ -20,10 +20,6 @@
  ************************************************************************/
 #include <QWidget>
 
-namespace Ui {
-    class SIAttributeDetails;
-}
-
 class QCheckBox;
 class QComboBox;
 class QLineEdit;
@@ -38,20 +34,28 @@ public:
 
     // Getters to access controls
 
-    QLineEdit* ctrlName(void);
+    QLineEdit* ctrlName();
 
-    QComboBox* ctrlTypes(void);
+    QComboBox* ctrlTypes();
 
-    QComboBox* ctrlNotification(void);
+    QComboBox* ctrlNotification();
 
-    QPlainTextEdit* ctrlDescription(void);
+    QPlainTextEdit* ctrlDescription();
 
-    QCheckBox* ctrlDeprecated(void);
+    QCheckBox* ctrlDeprecated();
 
-    QLineEdit* ctrlDeprecateHint(void);
+    QLineEdit* ctrlDeprecateHint();
 
 private:
-    Ui::SIAttributeDetails* ui;
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QComboBox*      mTypes;
+    QComboBox*      mNotify;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIATTRIBUTEDETAILS_HPP

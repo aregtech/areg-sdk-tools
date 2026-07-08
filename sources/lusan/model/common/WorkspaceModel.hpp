@@ -44,7 +44,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~WorkspaceModel(void);
+    virtual ~WorkspaceModel();
 
     /**
      * \brief   Adds a workspace item to the model.
@@ -92,7 +92,7 @@ public:
      * \param   parent  The parent QModelIndex.
      * \return  The number of rows.
      **/
-    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 
     /**
      * \brief   Returns the data for a given index and role.
@@ -100,19 +100,19 @@ public:
      * \param   role    The role for which data is requested.
      * \return  The data for the given index and role.
      **/
-    virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
     /**
      * \brief   Returns the role names for the model.
      * \return  A hash of role names.
      **/
-    virtual QHash<int, QByteArray> roleNames() const override;
+    QHash<int, QByteArray> roleNames() const override;
     
     /**
      * \brief   Gets the list of workspace entries.
      * \return  The list of workspace entries.
      **/
-    inline const std::vector<WorkspaceEntry>& getEntries(void) const;
+    inline const std::vector<WorkspaceEntry>& getEntries() const;
     
     /**
      * \brief   Gets the workspace entry at the specified row.
@@ -138,13 +138,13 @@ public:
     /**
      * \brief   Returns true if the workspace has new entry.
      **/
-    inline bool hasNewWorkspace(void) const;
+    inline bool hasNewWorkspace() const;
 
     /**
      * \brief   Returns the directory of the new workspace entry.
      *          Returns empty string if there is no new workspace entry.
      **/
-    inline const WorkspaceEntry& getNewWorkspace(void) const;
+    inline const WorkspaceEntry& getNewWorkspace() const;
 
     /**
      * \brief   Checks if the workspace root is the default workspace.
@@ -163,18 +163,18 @@ public:
     /**
      * \brief   Returns true if there is a default workspace set.
      **/
-    bool hasDefaultWorkspace(void) const;
+    bool hasDefaultWorkspace() const;
 
     /**
      * \brief   Activates the default workspace entry, if there is any, and returns the activation key.
      *          Returns 0 if no default workspace entry is set.
      **/
-    uint64_t activateDefaultWorkspace(void);
+    uint64_t activateDefaultWorkspace();
 
     /**
      * \brief   Returns the default workspace entry. Returns an invalid workspace entry if no default workspace is set.
      **/
-    const WorkspaceEntry& getDefaultWorkspace(void) const;
+    const WorkspaceEntry& getDefaultWorkspace() const;
     
     /**
      * \brief   Sets the default workspace by root directory.
@@ -208,17 +208,17 @@ private:
 // WorkspaceModel inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const std::vector<WorkspaceEntry>& WorkspaceModel::getEntries(void) const
+inline const std::vector<WorkspaceEntry>& WorkspaceModel::getEntries() const
 {
     return mItems;
 }
 
-inline bool WorkspaceModel::hasNewWorkspace(void) const
+inline bool WorkspaceModel::hasNewWorkspace() const
 {
     return mNewItem.isValid();
 }
 
-inline const WorkspaceEntry& WorkspaceModel::getNewWorkspace(void) const
+inline const WorkspaceEntry& WorkspaceModel::getNewWorkspace() const
 {
     return mNewItem;
 }

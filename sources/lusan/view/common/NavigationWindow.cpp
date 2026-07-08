@@ -28,11 +28,11 @@ NavigationWindow::NavigationWindow(int naviWindow, MdiMainWindow * wndMain, QWid
 {
 }
 
-void NavigationWindow::optionOpenning(void)
+void NavigationWindow::optionOpenning()
 {
 }
 
-void NavigationWindow::optionApplied(void)
+void NavigationWindow::optionApplied()
 {
 }
 
@@ -40,17 +40,17 @@ void NavigationWindow::optionClosed(bool OKpressed)
 {
 }
 
-bool NavigationWindow::isNaviWorkspace(void) const
+bool NavigationWindow::isNaviWorkspace() const
 {
     return (mNaviWindowType == static_cast<int>(NavigationDock::eNaviWindow::NaviWorkspace));
 }
 
-bool NavigationWindow::isNaviLiveLogs(void) const
+bool NavigationWindow::isNaviLiveLogs() const
 {
     return (mNaviWindowType == static_cast<int>(NavigationDock::eNaviWindow::NaviLiveLogs));
 }
 
-bool NavigationWindow::isNaviOfflineLogs(void) const
+bool NavigationWindow::isNaviOfflineLogs() const
 {
     return (mNaviWindowType == static_cast<int>(NavigationDock::eNaviWindow::NaviOfflineLogs));
 }

@@ -85,31 +85,31 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Checks if the parameter is valid.
      * \return  True if the parameter is valid, false otherwise.
      **/
-    virtual bool isValid() const override;
+    bool isValid() const override;
 
     /**
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
 
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -131,7 +131,7 @@ public:
      **/
     EnumEntry* insertField(int position, const QString& name);
     
-    inline const QString& getDerived(void) const;
+    inline const QString& getDerived() const;
 
     /**
      * \brief   Sets the type name of values. The type names can be primitive signed or unsigned integers like 'uint32', 'int16', etc.
@@ -147,7 +147,7 @@ private:
 // DataTypeEnum class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& DataTypeEnum::getDerived(void) const
+inline const QString& DataTypeEnum::getDerived() const
 {
     return mDerived;
 }

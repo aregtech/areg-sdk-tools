@@ -48,6 +48,8 @@ SMOverviewData::SMOverviewData(ElementBase* parent /*= nullptr*/)
     , mVersion      (1, 0, 0)
     , mThreading    (eThreading::Shared)
     , mDescription  ( )
+    , mIsDeprecated (false)
+    , mDeprecateHint( )
 {
 }
 
@@ -57,10 +59,12 @@ SMOverviewData::SMOverviewData(uint32_t id, const QString& name, ElementBase* pa
     , mVersion      (1, 0, 0)
     , mThreading    (eThreading::Shared)
     , mDescription  ( )
+    , mIsDeprecated (false)
+    , mDeprecateHint( )
 {
 }
 
-bool SMOverviewData::isValid(void) const
+bool SMOverviewData::isValid() const
 {
     return (mName.isEmpty() == false);
 }
@@ -75,13 +79,20 @@ bool SMOverviewData::readFromXml(QXmlStreamReader& xml)
     mName = attributes.value(XmlSM::xmlSMAttributeName).toString();
     mVersion = VersionNumber(attributes.value(XmlSM::xmlSMAttributeVersion).toString());
     mThreading = fromThreadingString(attributes.value(XmlSM::xmlSMAttributeThreading).toString());
+    mIsDeprecated = attributes.hasAttribute(XmlSM::xmlSMAttributeIsDeprecated)
+                    && (attributes.value(XmlSM::xmlSMAttributeIsDeprecated).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0);
     mDescription.clear();
+    mDeprecateHint.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementOverview))
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
         {
             mDescription = xml.readElementText();
+        }
+        else if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDeprecateHint)
+        {
+            mDeprecateHint = xml.readElementText();
         }
 
         xml.readNext();
@@ -97,6 +108,12 @@ void SMOverviewData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSM::xmlSMAttributeName, mName);
     xml.writeAttribute(XmlSM::xmlSMAttributeVersion, mVersion.toString());
     xml.writeAttribute(XmlSM::xmlSMAttributeThreading, SMOverviewData::toString(mThreading));
+    if (mIsDeprecated)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeIsDeprecated, XmlSM::xmlSMValueTrue);
+        writeTextElem(xml, XmlSM::xmlSMElementDeprecateHint, mDeprecateHint, true);
+    }
+
     writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
     xml.writeEndElement();
 }

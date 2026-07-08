@@ -55,7 +55,7 @@ bool SIConstantModel::deleteConstant(uint32_t id)
     return mData.removeElement(id);
 }
 
-const QList<ConstantEntry>& SIConstantModel::getConstants(void) const
+const QList<ConstantEntry>& SIConstantModel::getConstants() const
 {
     return mData.getElements();
 }

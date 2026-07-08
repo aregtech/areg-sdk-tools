@@ -51,7 +51,7 @@ bool LogSearchModel::isValidPosition(const LogSearchModel::sFoundPos& pos) const
     return isValidPosition(pos.rowFound);
 }
 
-QString LogSearchModel::getFoundPhrase(void) const
+QString LogSearchModel::getFoundPhrase() const
 {
     QString result;
     if ((mCurrentText.isEmpty() == false) && (mPosStart != static_cast<int>(InvalidPos)))
@@ -63,7 +63,7 @@ QString LogSearchModel::getFoundPhrase(void) const
     return result;
 }
 
-void LogSearchModel::resetSearch(void)
+void LogSearchModel::resetSearch()
 {
     mSearchPhrase.clear();
     mCurrentText.clear();
@@ -211,7 +211,7 @@ bool LogSearchModel::wildcardMatch(const QString& text, const QRegularExpression
     }
 }
 
-QRegularExpression LogSearchModel::createRegex(void)
+QRegularExpression LogSearchModel::createRegex()
 {
     // Escape regex special characters except * and ?
     QString regexPattern = QRegularExpression::escape(mSearchPhrase);

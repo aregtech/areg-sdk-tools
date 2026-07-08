@@ -48,7 +48,7 @@ ElementBase::ElementBase(ElementBase&& src)
     src.mParent = nullptr;
 }
 
-ElementBase::~ElementBase(void)
+ElementBase::~ElementBase()
 {
     mParent = nullptr;
 }
@@ -78,7 +78,7 @@ bool ElementBase::operator != (const ElementBase& src) const
     return (mId != src.mId);
 }
 
-unsigned int ElementBase::getNextId(void) const
+unsigned int ElementBase::getNextId() const
 {
     return (mParent != nullptr ? mParent->getNextId() : ++mId);
 }

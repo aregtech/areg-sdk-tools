@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
@@ -52,6 +53,14 @@ namespace
             {
                 xml.writeAttribute(XmlSM::xmlSMAttributeDefault, param.getValue());
             }
+            if (param.getIsDeprecated())
+            {
+                xml.writeAttribute(XmlSM::xmlSMAttributeIsDeprecated, XmlSM::xmlSMValueTrue);
+                if (param.getDeprecateHint().isEmpty() == false)
+                {
+                    xml.writeTextElement(XmlSM::xmlSMElementDeprecateHint, param.getDeprecateHint());
+                }
+            }
             if (param.getDescription().isEmpty() == false)
             {
                 xml.writeTextElement(XmlSM::xmlSMElementDescription, param.getDescription());
@@ -80,12 +89,21 @@ namespace
                     param.setValue(attributes.value(XmlSM::xmlSMAttributeDefault).toString());
                     param.setDefault(true);
                 }
+                param.setIsDeprecated(attributes.hasAttribute(XmlSM::xmlSMAttributeIsDeprecated)
+                    && (attributes.value(XmlSM::xmlSMAttributeIsDeprecated).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0));
 
                 while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementParameter))
                 {
-                    if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+                    if (xml.tokenType() == QXmlStreamReader::StartElement)
                     {
-                        param.setDescription(xml.readElementText());
+                        if (xml.name() == XmlSM::xmlSMElementDeprecateHint)
+                        {
+                            param.setDeprecateHint(xml.readElementText());
+                        }
+                        else if (xml.name() == XmlSM::xmlSMElementDescription)
+                        {
+                            param.setDescription(xml.readElementText());
+                        }
                     }
 
                     xml.readNext();
@@ -156,6 +174,8 @@ SMMethodEntry::SMMethodEntry(ElementBase* parent /*= nullptr*/)
     , mReturn       (SMMethodEntry::DEFAULT_RETURN)
     , mImplement    (eImplement::Handler)
     , mBody         ( )
+    , mIsDeprecated (false)
+    , mDeprecateHint( )
 {
 }
 
@@ -165,6 +185,8 @@ SMMethodEntry::SMMethodEntry(uint32_t id, const QString& name, eMethodType type,
     , mReturn       (SMMethodEntry::DEFAULT_RETURN)
     , mImplement    (eImplement::Handler)
     , mBody         ( )
+    , mIsDeprecated (false)
+    , mDeprecateHint( )
 {
 }
 
@@ -174,6 +196,8 @@ SMMethodEntry::SMMethodEntry(const SMMethodEntry& src)
     , mReturn       (src.mReturn)
     , mImplement    (src.mImplement)
     , mBody         (src.mBody)
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDeprecateHint(src.mDeprecateHint)
 {
 }
 
@@ -183,6 +207,8 @@ SMMethodEntry::SMMethodEntry(SMMethodEntry&& src) noexcept
     , mReturn       (std::move(src.mReturn))
     , mImplement    (src.mImplement)
     , mBody         (std::move(src.mBody))
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDeprecateHint(std::move(src.mDeprecateHint))
 {
 }
 
@@ -191,10 +217,12 @@ SMMethodEntry& SMMethodEntry::operator = (const SMMethodEntry& other)
     if (this != &other)
     {
         MethodBase::operator = (other);
-        mMethodType = other.mMethodType;
-        mReturn     = other.mReturn;
-        mImplement  = other.mImplement;
-        mBody       = other.mBody;
+        mMethodType    = other.mMethodType;
+        mReturn        = other.mReturn;
+        mImplement     = other.mImplement;
+        mBody          = other.mBody;
+        mIsDeprecated  = other.mIsDeprecated;
+        mDeprecateHint = other.mDeprecateHint;
     }
 
     return *this;
@@ -205,18 +233,55 @@ SMMethodEntry& SMMethodEntry::operator = (SMMethodEntry&& other) noexcept
     if (this != &other)
     {
         MethodBase::operator = (std::move(other));
-        mMethodType = other.mMethodType;
-        mReturn     = std::move(other.mReturn);
-        mImplement  = other.mImplement;
-        mBody       = std::move(other.mBody);
+        mMethodType    = other.mMethodType;
+        mReturn        = std::move(other.mReturn);
+        mImplement     = other.mImplement;
+        mBody          = std::move(other.mBody);
+        mIsDeprecated  = other.mIsDeprecated;
+        mDeprecateHint = std::move(other.mDeprecateHint);
     }
 
     return *this;
 }
 
-bool SMMethodEntry::isValid(void) const
+bool SMMethodEntry::isValid() const
 {
     return (getName().isEmpty() == false);
+}
+
+QIcon SMMethodEntry::getIcon(ElementBase::eDisplay display) const
+{
+    if (display != ElementBase::eDisplay::DisplayName)
+        return QIcon();
+
+    switch (mMethodType)
+    {
+    case eMethodType::Action:
+        return NELusanCommon::iconMethodBroadcast(NELusanCommon::SizeSmall);
+    case eMethodType::Condition:
+        return NELusanCommon::iconMethodResponse(NELusanCommon::SizeSmall);
+    case eMethodType::Trigger:
+    default:
+        return NELusanCommon::iconMethodRequest(NELusanCommon::SizeSmall);
+    }
+}
+
+QString SMMethodEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayType:
+        return QString::fromLatin1(SMMethodEntry::toString(mMethodType));
+    case ElementBase::eDisplay::DisplayValue:
+        // Conditions are defined by their return type; the others by their parameter count.
+        return (mMethodType == eMethodType::Condition)
+            ? mReturn
+            : ((getElementCount() > 0) ? QStringLiteral("%1 param(s)").arg(getElementCount()) : QString());
+    default:
+        return QString();
+    }
 }
 
 bool SMMethodEntry::readFromXml(QXmlStreamReader& xml)
@@ -238,12 +303,19 @@ bool SMMethodEntry::readFromXml(QXmlStreamReader& xml)
     }
     setDescription(QString());
     mBody.clear();
+    mIsDeprecated = attributes.hasAttribute(XmlSM::xmlSMAttributeIsDeprecated)
+        && (attributes.value(XmlSM::xmlSMAttributeIsDeprecated).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0);
+    mDeprecateHint.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementMethod))
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
-            if (xml.name() == XmlSM::xmlSMElementDescription)
+            if (xml.name() == XmlSM::xmlSMElementDeprecateHint)
+            {
+                mDeprecateHint = xml.readElementText();
+            }
+            else if (xml.name() == XmlSM::xmlSMElementDescription)
             {
                 setDescription(xml.readElementText());
             }
@@ -277,6 +349,11 @@ void SMMethodEntry::writeToXml(QXmlStreamWriter& xml) const
         }
         xml.writeAttribute(XmlSM::xmlSMAttributeImplement, SMMethodEntry::toString(mImplement));
     }
+    if (mIsDeprecated)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeIsDeprecated, XmlSM::xmlSMValueTrue);
+        writeTextElem(xml, XmlSM::xmlSMElementDeprecateHint, mDeprecateHint, true);
+    }
 
     writeTextElem(xml, XmlSM::xmlSMElementDescription, getDescription(), true);
     writeParamList(xml, *this);
@@ -298,12 +375,12 @@ SMMethodData::SMMethodData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-SMMethodData::~SMMethodData(void)
+SMMethodData::~SMMethodData()
 {
     removeAll();
 }
 
-bool SMMethodData::isValid(void) const
+bool SMMethodData::isValid() const
 {
     return true;
 }
@@ -366,13 +443,19 @@ SMMethodEntry* SMMethodData::findMethod(const QString& name) const
     return (found != nullptr) ? *found : nullptr;
 }
 
+SMMethodEntry* SMMethodData::findMethod(uint32_t id) const
+{
+    SMMethodEntry* const* found = findElement(id);
+    return (found != nullptr) ? *found : nullptr;
+}
+
 SMMethodEntry* SMMethodData::findTrigger(const QString& name) const
 {
     SMMethodEntry* method = findMethod(name);
     return ((method != nullptr) && method->isTrigger()) ? method : nullptr;
 }
 
-void SMMethodData::removeAll(void)
+void SMMethodData::removeAll()
 {
     for (SMMethodEntry* entry : getElements())
     {

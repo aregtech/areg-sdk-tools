@@ -40,7 +40,7 @@
 #include <filesystem>
 
 NaviLiveLogsScopes* _explorer{ nullptr };
-void NaviLiveLogsScopes::_logObserverStarted(void)
+void NaviLiveLogsScopes::_logObserverStarted()
 {
     if (_explorer != nullptr)
     {
@@ -75,13 +75,13 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     setupSignals();
 }
 
-NaviLiveLogsScopes::~NaviLiveLogsScopes(void)
+NaviLiveLogsScopes::~NaviLiveLogsScopes()
 {
     _explorer = nullptr;
     delete ui;
 }
 
-const QString& NaviLiveLogsScopes::getLogCollectorAddress(void) const
+const QString& NaviLiveLogsScopes::getLogCollectorAddress() const
 {
     return mAddress;
 }
@@ -91,7 +91,7 @@ void NaviLiveLogsScopes::setLogCollectorAddress(const QString& address)
     mAddress = address;
 }
 
-uint16_t NaviLiveLogsScopes::getLogCollectorPort(void) const
+uint16_t NaviLiveLogsScopes::getLogCollectorPort() const
 {
     return mPort;
 }
@@ -107,71 +107,71 @@ void NaviLiveLogsScopes::setLogCollectorConnection(const QString& address, uint1
     mPort = port;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlCollapse(void)
+QToolButton* NaviLiveLogsScopes::ctrlCollapse()
 {
     return ui->toolCollapse;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlConnect(void)
+QToolButton* NaviLiveLogsScopes::ctrlConnect()
 {
     return ui->toolConnect;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlSettings(void)
+QToolButton* NaviLiveLogsScopes::ctrlSettings()
 {
     return ui->toolSettings;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlSaveSettings(void)
+QToolButton* NaviLiveLogsScopes::ctrlSaveSettings()
 {
     return ui->toolSaveSettings;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlFind(void)
+QToolButton* NaviLiveLogsScopes::ctrlFind()
 {
     return ui->toolFind;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlLogError(void)
+QToolButton* NaviLiveLogsScopes::ctrlLogError()
 {
     return ui->toolError;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlLogWarning(void)
+QToolButton* NaviLiveLogsScopes::ctrlLogWarning()
 {
     return ui->toolWarning;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlLogInfo(void)
+QToolButton* NaviLiveLogsScopes::ctrlLogInfo()
 {
     return ui->toolInformation;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlLogDebug(void)
+QToolButton* NaviLiveLogsScopes::ctrlLogDebug()
 {
     return ui->toolDebug;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlLogScopes(void)
+QToolButton* NaviLiveLogsScopes::ctrlLogScopes()
 {
     return ui->toolScopes;
 }
 
-QToolButton* NaviLiveLogsScopes::ctrlMoveBottom(void)
+QToolButton* NaviLiveLogsScopes::ctrlMoveBottom()
 {
     return ui->toolMoveBottom;
 }
 
-QTreeView* NaviLiveLogsScopes::ctrlTable(void)
+QTreeView* NaviLiveLogsScopes::ctrlTable()
 {
     return ui->treeView;
 }
 
-void NaviLiveLogsScopes::updateData(void)
+void NaviLiveLogsScopes::updateData()
 {
 }
 
-void NaviLiveLogsScopes::setupWidgets(void)
+void NaviLiveLogsScopes::setupWidgets()
 {
     ctrlCollapse()->setEnabled(true);
     ctrlConnect()->setEnabled(true);
@@ -189,7 +189,7 @@ void NaviLiveLogsScopes::setupWidgets(void)
     ctrlTable()->setAlternatingRowColors(false);
 }
 
-void NaviLiveLogsScopes::setupSignals(void)
+void NaviLiveLogsScopes::setupSignals()
 {
     connect(ctrlConnect()       , &QToolButton::clicked, this, &NaviLiveLogsScopes::onConnectClicked);
     connect(ctrlMoveBottom()    , &QToolButton::clicked, this, &NaviLiveLogsScopes::onMoveBottomClicked);
@@ -472,7 +472,7 @@ void NaviLiveLogsScopes::onScopesDataChanged(const QModelIndex &topLeft, const Q
     updateExpanded(ctrlTable()->rootIndex());
 }
 
-void NaviLiveLogsScopes::optionOpenning(void)
+void NaviLiveLogsScopes::optionOpenning()
 {
     if (isConnected())
     {
@@ -492,7 +492,7 @@ void NaviLiveLogsScopes::optionOpenning(void)
     enableButtons(QModelIndex());
 }
 
-void NaviLiveLogsScopes::optionApplied(void)
+void NaviLiveLogsScopes::optionApplied()
 {
     if (isPaused())
     {

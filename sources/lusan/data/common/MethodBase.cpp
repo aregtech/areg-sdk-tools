@@ -48,7 +48,7 @@ MethodBase::MethodBase(MethodBase&& src) noexcept
 {
 }
 
-MethodBase::~MethodBase(void)
+MethodBase::~MethodBase()
 {
 }
 
@@ -169,7 +169,7 @@ bool MethodBase::validate(const QList<DataTypeCustom*>& customTypes)
     return result;
 }
 
-void MethodBase::invalidate(void)
+void MethodBase::invalidate()
 {
     for (MethodParameter& param : getElements())
     {
@@ -215,7 +215,7 @@ bool MethodBase::canHaveDefaultValue(const QString& name) const
     return canHaveDefaultValue(pos);
 }
 
-int MethodBase::firsPositionWithDefault(void) const
+int MethodBase::firsPositionWithDefault() const
 {
     for (int i = 0; i < mElementList.size(); ++i)
     {

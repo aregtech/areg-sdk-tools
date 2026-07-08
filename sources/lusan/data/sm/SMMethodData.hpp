@@ -92,29 +92,50 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    inline eMethodType getMethodType(void) const;
+    inline eMethodType getMethodType() const;
     inline void setMethodType(eMethodType type);
 
-    inline bool isTrigger(void) const;
-    inline bool isAction(void) const;
-    inline bool isCondition(void) const;
+    inline bool isTrigger() const;
+    inline bool isAction() const;
+    inline bool isCondition() const;
 
-    inline const QString& getReturn(void) const;
+    inline const QString& getReturn() const;
     inline void setReturn(const QString& type);
 
-    inline eImplement getImplement(void) const;
+    inline eImplement getImplement() const;
     inline void setImplement(eImplement implement);
 
-    inline const QString& getBody(void) const;
+    inline const QString& getBody() const;
     inline void setBody(const QString& body);
+
+    //!< Returns true if the method is marked deprecated.
+    inline bool getIsDeprecated() const;
+    //!< Marks (or clears) the method as deprecated.
+    inline void setIsDeprecated(bool isDeprecated);
+    //!< Returns the hint explaining why the method is deprecated.
+    inline const QString& getDeprecateHint() const;
+    //!< Sets the hint explaining why the method is deprecated.
+    inline void setDeprecateHint(const QString& hint);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief   Returns the icon to display for the given classification (kind-specific icon
+     *          for Name, none otherwise).
+     **/
+    QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief   Returns the display string: the name for Name, the method kind for Type, and
+     *          the parameter count (or the return type for conditions) for Value.
+     **/
+    QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -124,6 +145,8 @@ private:
     QString     mReturn;        //!< The condition return type (conditions only; default bool).
     eImplement  mImplement;     //!< The condition implementation mode (conditions only).
     QString     mBody;          //!< The verbatim embedded-condition body (CDATA on write).
+    bool        mIsDeprecated;  //!< Flag, indicating whether the method is deprecated.
+    QString     mDeprecateHint; //!< The hint, why the method is deprecated.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -140,11 +163,11 @@ class SMMethodData : public TEDataContainer<SMMethodEntry*, DocumentElem>
 {
 public:
     SMMethodData(ElementBase* parent = nullptr);
-    virtual ~SMMethodData(void);
+    virtual ~SMMethodData();
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Creates a new method appended at the end of the list.
@@ -160,6 +183,11 @@ public:
     SMMethodEntry* findMethod(const QString& name) const;
 
     /**
+     * \brief   Finds a method by ID.
+     **/
+    SMMethodEntry* findMethod(uint32_t id) const;
+
+    /**
      * \brief   Finds a method by name only if it is a Trigger (used by the shared
      *          stimulus name space.
      * \param   name    The trigger name to look up.
@@ -170,14 +198,14 @@ public:
     /**
      * \brief   Deletes and removes all methods.
      **/
-    void removeAll(void);
+    void removeAll();
 };
 
 //////////////////////////////////////////////////////////////////////////
 // SMMethodEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline SMMethodEntry::eMethodType SMMethodEntry::getMethodType(void) const
+inline SMMethodEntry::eMethodType SMMethodEntry::getMethodType() const
 {
     return mMethodType;
 }
@@ -187,22 +215,22 @@ inline void SMMethodEntry::setMethodType(SMMethodEntry::eMethodType type)
     mMethodType = type;
 }
 
-inline bool SMMethodEntry::isTrigger(void) const
+inline bool SMMethodEntry::isTrigger() const
 {
     return (mMethodType == eMethodType::Trigger);
 }
 
-inline bool SMMethodEntry::isAction(void) const
+inline bool SMMethodEntry::isAction() const
 {
     return (mMethodType == eMethodType::Action);
 }
 
-inline bool SMMethodEntry::isCondition(void) const
+inline bool SMMethodEntry::isCondition() const
 {
     return (mMethodType == eMethodType::Condition);
 }
 
-inline const QString& SMMethodEntry::getReturn(void) const
+inline const QString& SMMethodEntry::getReturn() const
 {
     return mReturn;
 }
@@ -212,7 +240,7 @@ inline void SMMethodEntry::setReturn(const QString& type)
     mReturn = type;
 }
 
-inline SMMethodEntry::eImplement SMMethodEntry::getImplement(void) const
+inline SMMethodEntry::eImplement SMMethodEntry::getImplement() const
 {
     return mImplement;
 }
@@ -222,7 +250,7 @@ inline void SMMethodEntry::setImplement(SMMethodEntry::eImplement implement)
     mImplement = implement;
 }
 
-inline const QString& SMMethodEntry::getBody(void) const
+inline const QString& SMMethodEntry::getBody() const
 {
     return mBody;
 }
@@ -230,6 +258,30 @@ inline const QString& SMMethodEntry::getBody(void) const
 inline void SMMethodEntry::setBody(const QString& body)
 {
     mBody = body;
+}
+
+inline bool SMMethodEntry::getIsDeprecated() const
+{
+    return mIsDeprecated;
+}
+
+inline void SMMethodEntry::setIsDeprecated(bool isDeprecated)
+{
+    mIsDeprecated = isDeprecated;
+    if (isDeprecated == false)
+    {
+        mDeprecateHint.clear();
+    }
+}
+
+inline const QString& SMMethodEntry::getDeprecateHint() const
+{
+    return mDeprecateHint;
+}
+
+inline void SMMethodEntry::setDeprecateHint(const QString& hint)
+{
+    mDeprecateHint = hint;
 }
 
 #endif  // LUSAN_DATA_SM_SMMETHODDATA_HPP

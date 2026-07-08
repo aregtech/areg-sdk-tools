@@ -33,7 +33,7 @@ LiveScopesModel::LiveScopesModel(QObject* parent)
 {
 }
 
-LiveScopesModel::~LiveScopesModel(void)
+LiveScopesModel::~LiveScopesModel()
 {
 }
 

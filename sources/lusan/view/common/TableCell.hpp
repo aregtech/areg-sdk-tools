@@ -46,8 +46,8 @@ class IETableHelper
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 protected:
-    IETableHelper(void) = default;
-    virtual ~IETableHelper(void) = default;
+    IETableHelper() = default;
+    virtual ~IETableHelper() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -57,7 +57,7 @@ public:
     /**
      * \brief   Returns the number of columns in the table.
      **/
-    virtual int getColumnCount(void) const = 0;
+    virtual int getColumnCount() const = 0;
 
     /**
      * \brief   Returns the text of the cell.
@@ -132,14 +132,14 @@ public:
      * \param   index       The index of the table cell.
      * \return  Returns the created editor widget.
      **/
-    virtual QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
     /**
      * \brief   Sets the data to the editor widget.
      * \param   editor      The editor widget.
      * \param   index       The index of the table cell.
      **/
-    virtual void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
 
     /**
      * \brief   Sets the data to the model.
@@ -147,7 +147,7 @@ public:
      * \param   model       The model to set the data.
      * \param   index       The index of the table cell.
      **/
-    virtual void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -182,7 +182,7 @@ private slots:
      *          This slot is used to handle the event when the user has finished editing the text
      *          in the editor widget. It validates the new text and updates the model accordingly.
      **/
-    void onEditorTextChangeFinished(void);
+    void onEditorTextChangeFinished();
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

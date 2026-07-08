@@ -56,13 +56,13 @@ OutputDock::OutputDock(MdiMainWindow* parent)
     initSize();
 }
 
-OutputDock::~OutputDock(void)
+OutputDock::~OutputDock()
 {
     mTabs.removeTab(0);
     mTabs.setParent(nullptr);    
 }
 
-void OutputDock::initSize(void)
+void OutputDock::initSize()
 {
     QSize szSO{mScopeOutput.size()};
     int maxWidth = szSO.width();

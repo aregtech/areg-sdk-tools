@@ -69,7 +69,7 @@ public:
     /**
      * \brief   Visualize the filter widgets
      **/
-    void showFilters(void);
+    void showFilters();
 
     /**
      * \brief   Sets the filter string for line edit filter control.
@@ -94,17 +94,17 @@ public:
     /**
      * \brief   Returns true if header object can be visualized in the pop-up widget.
      **/
-    inline bool canPopupFilter(void) const;
+    inline bool canPopupFilter() const;
 
     /**
      * \brief   Resets filter data.
      **/
-    void resetFilter(void);
+    void resetFilter();
 
     /**
      * \brief   Returns the filter data.
      **/
-    QList<NELusanCommon::FilterData> getFilterData(void) const;
+    QList<NELusanCommon::FilterData> getFilterData() const;
 
 private:
 /************************************************************************
@@ -113,7 +113,7 @@ private:
 
     //!< Returns the logical index of the column.
     //!< Returns `-1` if the column is not active.
-    inline int fromColumnToIndex(void) const;
+    inline int fromColumnToIndex() const;
 
     //!< Returns the column from the index.
     //!< Return LogColumnInvalid value if index is invalid.
@@ -134,7 +134,7 @@ private:
 // Inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline bool LogHeaderItem::canPopupFilter(void) const
+inline bool LogHeaderItem::canPopupFilter() const
 {
     return (mType != None);    
 }

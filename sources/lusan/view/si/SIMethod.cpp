@@ -18,7 +18,9 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIMethod.hpp"
-#include "ui/ui_SIMethod.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
 
 #include "lusan/view/si/SIMethodDetails.hpp"
 #include "lusan/view/si/SIMethodParamDetails.hpp"
@@ -44,16 +46,26 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QVBoxLayout>
 
 #include "lusan/view/si/SICommon.hpp"
 
 SIMethodWidget::SIMethodWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui(new Ui::SIMethod)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Methods Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
@@ -65,36 +77,39 @@ SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
     , mWidget       (new SIMethodWidget(this))
     , mParamTypes   (new DataTypesModel(model.getDataTypeData(), false))
     , mReplyModel   (new ReplyMethodModel(model.getMethodData()))
-    , ui            (*mWidget->ui)
     , mCount        (0)
 {
     mParams->setHidden(true);
 
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
-    ui.horizontalLayout->addWidget(mParams, 1);
-    
+    // Two equal-width panels: the list on the left, and the swapped details/parameter forms
+    // wrapped in a single right panel. Both columns use an Ignored horizontal size policy so
+    // the row splits exactly 50/50 regardless of either side's size hint.
+    QWidget* rightPanel = new QWidget(mWidget);
+    QVBoxLayout* rightLayout = new QVBoxLayout(rightPanel);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->addWidget(mDetails);
+    rightLayout->addWidget(mParams);
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    rightPanel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(rightPanel, 1);
+
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
 
-    setWidgetResizable(true);
-    setWidget(mWidget);
-    
     updateData();
     updateWidgets();
     setupSignals();
 }
 
-SIMethod::~SIMethod(void)
+SIMethod::~SIMethod()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
-    ui.horizontalLayout->removeWidget(mParams);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mParams);
 }
 
 void SIMethod::dataTypeCreated(DataTypeCustom* dataType)
@@ -367,7 +382,7 @@ void SIMethod::onDeprecateHintChanged(const QString& newText)
     SICommon::setDeprecateHint<SIMethodDetails, SIMethodBase>(mDetails, method, newText);
 }
 
-void SIMethod::onDescriptionChanged(void)
+void SIMethod::onDescriptionChanged()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -391,7 +406,7 @@ void SIMethod::onConnectedResponseChanged(const QString& newText)
     }
 }
 
-void SIMethod::onAddClicked(void)
+void SIMethod::onAddClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QString name = genName();
@@ -416,7 +431,7 @@ void SIMethod::onAddClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onInsertClicked(void)
+void SIMethod::onInsertClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QString name = genName();
@@ -445,7 +460,7 @@ void SIMethod::onInsertClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onRemoveClicked(void)
+void SIMethod::onRemoveClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -491,7 +506,7 @@ void SIMethod::onRemoveClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onParamAddClicked(void)
+void SIMethod::onParamAddClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
@@ -529,7 +544,7 @@ void SIMethod::onParamAddClicked(void)
     }
 }
 
-void SIMethod::onParamRemoveClicked(void)
+void SIMethod::onParamRemoveClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -605,7 +620,7 @@ void SIMethod::onParamRemoveClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onParamInsertClicked(void)
+void SIMethod::onParamInsertClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
@@ -653,7 +668,7 @@ void SIMethod::onParamInsertClicked(void)
     }
 }
 
-void SIMethod::onMoveUpClicked(void)
+void SIMethod::onMoveUpClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -674,7 +689,7 @@ void SIMethod::onMoveUpClicked(void)
     blockBasicSignals(false);
 }
 
-void SIMethod::onMoveDownClicked(void)
+void SIMethod::onMoveDownClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -807,7 +822,7 @@ void SIMethod::onParamDefaultChanged(const QString& newText)
     setNodeText(item, param);
 }
 
-void SIMethod::onParamDescriptionChanged(void)
+void SIMethod::onParamDescriptionChanged()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -852,7 +867,7 @@ void SIMethod::onParamDeprecateHintChanged(const QString& newText)
     SICommon::setDeprecateHint<SIMethodParamDetails, MethodParameter>(mParams, param, newText);
 }
 
-void SIMethod::updateData(void)
+void SIMethod::updateData()
 {
     mParamTypes->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mParamTypes->updateDataTypeLists();
@@ -871,13 +886,13 @@ void SIMethod::updateData(void)
     mDetails->ctrlConnectedResponse()->setModel(mReplyModel);
 }
 
-void SIMethod::updateWidgets(void)
+void SIMethod::updateWidgets()
 {
     showMethodDetails(nullptr);
     updateToolButtonsForMethod(-1, 0);
 }
 
-void SIMethod::setupSignals(void)
+void SIMethod::setupSignals()
 {
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged       , this, &SIMethod::onNameChanged);
     connect(mDetails->ctrlRequest()         , &QRadioButton::toggled        , this, &SIMethod::onRequestSelected);
@@ -1292,7 +1307,7 @@ inline void SIMethod::updateToolButtonsForParams(SIMethodBase * method, int row)
     }
 }
 
-inline QString SIMethod::genName(void)
+inline QString SIMethod::genName()
 {
     static const QString _defName("NewMethod");
     QString name;

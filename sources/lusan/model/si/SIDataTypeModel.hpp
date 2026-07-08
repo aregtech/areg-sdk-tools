@@ -57,17 +57,17 @@ public:
     /**
      * \brief Returns instance of data type data object.
      */
-    inline SIDataTypeData& getDataTypeData(void);
+    inline SIDataTypeData& getDataTypeData();
 
     /**
      * \brief   Returns the list of basic container data types objects.
      **/
-    const QList<DataTypeBasicContainer*>& getContainerDatTypes(void) const;
+    const QList<DataTypeBasicContainer*>& getContainerDatTypes() const;
 
     /**
      * \brief   Returns the list of custom data types objects.
      **/
-    const QList<DataTypeCustom *>& getCustomDataTypes(void) const;
+    const QList<DataTypeCustom *>& getCustomDataTypes() const;
 
     /**
      * \brief   Gets list of data types of specified categories and returns number of data types copied.
@@ -81,12 +81,12 @@ public:
     /**
      * \brief   Returns the list of custom data types.
      **/
-    const QList<DataTypeCustom*>& getDataTypes(void) const;
+    const QList<DataTypeCustom*>& getDataTypes() const;
 
     /**
      * \brief   Returns the size of custom data type objects.
      **/
-    int getDataTypeCount(void) const;
+    int getDataTypeCount() const;
 
     /**
      * \brief   Creates new data type object with specified name and category.
@@ -424,7 +424,7 @@ private:
 // SIDataTypeModel class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline SIDataTypeData& SIDataTypeModel::getDataTypeData(void)
+inline SIDataTypeData& SIDataTypeModel::getDataTypeData()
 {
     return mData;
 }

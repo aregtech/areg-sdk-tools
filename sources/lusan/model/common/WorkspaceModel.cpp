@@ -37,7 +37,7 @@ WorkspaceModel::WorkspaceModel(OptionsManager &options, QObject* parent)
     }
 }
 
-WorkspaceModel::~WorkspaceModel(void)
+WorkspaceModel::~WorkspaceModel()
 {
 }
 
@@ -221,12 +221,12 @@ bool WorkspaceModel::isDefaultWorkspace(uint32_t row) const
     return ((row < mItems.size()) && (mItems[row].getId() == mDefWorkspace) && (mDefWorkspace != 0));
 }
 
-bool WorkspaceModel::hasDefaultWorkspace(void) const
+bool WorkspaceModel::hasDefaultWorkspace() const
 {
     return (mDefWorkspace != 0) && (_findById(mDefWorkspace) != static_cast<int>(areg::INVALID_INDEX));
 }
 
-uint64_t WorkspaceModel::activateDefaultWorkspace(void)
+uint64_t WorkspaceModel::activateDefaultWorkspace()
 {
     uint64_t result{ 0u };
     int index = (mDefWorkspace != 0 ? _findById(mDefWorkspace) : static_cast<int>(areg::INVALID_INDEX));
@@ -238,7 +238,7 @@ uint64_t WorkspaceModel::activateDefaultWorkspace(void)
     return result;
 }
 
-const WorkspaceEntry& WorkspaceModel::getDefaultWorkspace(void) const
+const WorkspaceEntry& WorkspaceModel::getDefaultWorkspace() const
 {
     int index = (mDefWorkspace != 0 ? _findById(mDefWorkspace) : static_cast<int>(areg::INVALID_INDEX));
     return (index != static_cast<int>(areg::INVALID_INDEX) ? mItems[index] : WorkspaceEntry::InvalidWorkspace);

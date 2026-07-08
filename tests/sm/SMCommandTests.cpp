@@ -18,6 +18,11 @@
  *               serialization, so element IDs are compared too), that redo restores original
  *               IDs with no duplicates, that a composite delete is a single step, that layout
  *               drags coalesce, and that 100+ step histories navigate without corruption.
+ *               Also covers SM-07 (SMDataTypeModel): the full data-type/field lifecycle
+ *               (create/insert/rename/convert/reorder/delete) through the same undo stack.
+ *               SM-07-02 extends this with container data types: basic-container object,
+ *               key and value type mutations, keyed/non-keyed switching, through the same
+ *               undo stack.
  *
  *  Self-contained (no external test framework), matching SMModelTests.cpp.
  *
@@ -29,6 +34,17 @@
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/sm/SMEventModel.hpp"
+#include "lusan/model/sm/SMTimerModel.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
+#include "lusan/data/common/DataTypeEnum.hpp"
+#include "lusan/data/common/DataTypeImported.hpp"
+#include "lusan/data/common/DataTypeContainer.hpp"
+#include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/data/common/FieldEntry.hpp"
+#include "lusan/data/common/EnumEntry.hpp"
 
 #include <QUndoStack>
 #include <QXmlStreamWriter>
@@ -77,7 +93,7 @@ namespace
 
 namespace
 {
-    void testScriptedSequence(void)
+    void testScriptedSequence()
     {
         StateMachineData    doc;
         DocModelNotifier    notifier;
@@ -113,7 +129,7 @@ namespace
 
         {
             const uint32_t overviewId = doc.getOverview().getId();
-            auto getter = [&doc](void) -> QString { return doc.getOverview().getName(); };
+            auto getter = [&doc]() -> QString { return doc.getOverview().getName(); };
             auto setter = [&doc](const QString& value) { doc.getOverview().setName(value); };
             pushAndSnap(new TDocSetPropertyCommand<QString>(notifier, overviewId, eDocElementKind::Overview, getter, setter, QString("Machine2"), "Rename machine"));
         }
@@ -162,7 +178,7 @@ namespace
 
 namespace
 {
-    void testCoalescedLayoutDrag(void)
+    void testCoalescedLayoutDrag()
     {
         StateMachineData    doc;
         DocModelNotifier    notifier;
@@ -204,7 +220,7 @@ namespace
 
 namespace
 {
-    void testCompositeDelete(void)
+    void testCompositeDelete()
     {
         StateMachineData    doc;
         DocModelNotifier    notifier;
@@ -241,7 +257,7 @@ namespace
 
 namespace
 {
-    void testDeepHistory(void)
+    void testDeepHistory()
     {
         StateMachineData    doc;
         DocModelNotifier    notifier;
@@ -281,6 +297,331 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Scenario E: SM-07 Data Types page model — enumeration/structure/imported
+// lifecycle through SMDataTypeModel exactly as SMDataType (the view) drives it,
+// undo/redo round-trip, and a category conversion composite.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testDataTypeLifecycle()
+    {
+        StateMachineModel model;
+        SMDataTypeModel&  dt = model.getDataTypeModel();
+
+        QStringList checkpoints;
+        checkpoints << serialize(model.getData());
+        auto snap = [&]() { checkpoints << serialize(model.getData()); };
+
+        DataTypeCustom* point = dt.createDataType("Point", DataTypeBase::eCategory::Structure);
+        CHECK(point != nullptr);
+        snap();
+
+        ElementBase* fx = dt.createField(point, "x");
+        CHECK(fx != nullptr);
+        const uint32_t fxId = fx->getId();
+        snap();
+        ElementBase* fy = dt.createField(point, "y");
+        CHECK(fy != nullptr);
+        const uint32_t fyId = fy->getId();
+        snap();
+
+        dt.setFieldType(static_cast<DataTypeStructure*>(point), fxId, QStringLiteral("uint32"));
+        snap();
+        dt.setFieldValue(point, fxId, "1");
+        snap();
+        dt.setDescription(point, "A 2D point");
+        snap();
+        dt.setDeprecated(point, true);
+        snap();
+        dt.setDeprecateHint(point, "use Point2D instead");
+        snap();
+
+        DataTypeCustom* color = dt.createDataType("Color", DataTypeBase::eCategory::Enumeration);
+        CHECK(color != nullptr);
+        snap();
+        ElementBase* red = dt.createField(color, "Red");
+        CHECK(red != nullptr);
+        const uint32_t redId = red->getId();
+        snap();
+        dt.setFieldValue(color, redId, "0");
+        snap();
+        dt.setEnumDerived(static_cast<DataTypeEnum*>(color), "uint16");
+        snap();
+
+        DataTypeCustom* foo = dt.createDataType("Foo", DataTypeBase::eCategory::Imported);
+        CHECK(foo != nullptr);
+        snap();
+        dt.setImportLocation(static_cast<DataTypeImported*>(foo), "foo.hpp");
+        snap();
+        dt.setImportNamespace(static_cast<DataTypeImported*>(foo), "ns");
+        snap();
+        dt.setImportObject(static_cast<DataTypeImported*>(foo), "Foo");
+        snap();
+
+        dt.renameDataType(point, "Point2D");
+        CHECK(point->getName() == QStringLiteral("Point2D"));
+        snap();
+
+        dt.swapDataTypes(point->getId(), color->getId());
+        CHECK(dt.findIndex(point) == 1);
+        snap();
+
+        DataTypeCustom* converted = dt.convertDataType(color, DataTypeBase::eCategory::Structure);
+        CHECK((converted != nullptr) && (converted->getCategory() == DataTypeBase::eCategory::Structure));
+        CHECK(converted->getName() == QStringLiteral("Color"));
+        snap();
+
+        dt.deleteField(point, fyId);
+        CHECK(dt.getChildCount(point) == 1);
+        snap();
+
+        dt.deleteDataType(foo);
+        CHECK(dt.findDataType(QStringLiteral("Foo")) == nullptr);
+        snap();
+
+        DataTypeCustom* first = dt.insertDataType(0, "First", DataTypeBase::eCategory::Structure);
+        CHECK((first != nullptr) && (dt.findIndex(first) == 0));
+        snap();
+
+        const int steps = static_cast<int>(checkpoints.size()) - 1;
+        const QString built = serialize(model.getData());
+
+        bool undoExact = true;
+        for (int k = steps; k >= 1; --k)
+        {
+            model.getUndoStack().undo();
+            undoExact = undoExact && (serialize(model.getData()) == checkpoints[k - 1]);
+        }
+        CHECK(undoExact);
+        CHECK(serialize(model.getData()) == checkpoints[0]);
+        CHECK(dt.getDataTypeCount() == 0);
+
+        bool redoExact = true;
+        for (int k = 1; k <= steps; ++k)
+        {
+            model.getUndoStack().redo();
+            redoExact = redoExact && (serialize(model.getData()) == checkpoints[k]);
+        }
+        CHECK(redoExact);
+        CHECK(serialize(model.getData()) == built);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Scenario F (SM-07-02): container data types — direct creation and conversion-from-
+// existing both seed sensible defaults, switching basic container enables/disables and
+// clears the key, key/value are set by name through SMDataTypeModel, undo/redo round-trip.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testContainerLifecycle()
+    {
+        StateMachineModel model;
+        SMDataTypeModel&  dt = model.getDataTypeModel();
+
+        QStringList checkpoints;
+        checkpoints << serialize(model.getData());
+        auto snap = [&]() { checkpoints << serialize(model.getData()); };
+
+        DataTypeCustom* itemType = dt.createDataType("Item", DataTypeBase::eCategory::Structure);
+        CHECK(itemType != nullptr);
+        snap();
+
+        // Direct creation seeds the default basic container ("Array") and value ("bool").
+        DataTypeCustom* listType = dt.createDataType("List", DataTypeBase::eCategory::Container);
+        CHECK(listType != nullptr);
+        DataTypeContainer* list = static_cast<DataTypeContainer*>(listType);
+        CHECK(list->getContainer() == QStringLiteral("Array"));
+        CHECK(list->getValue() == QStringLiteral("bool"));
+        CHECK(list->canHaveKey() == false);
+        snap();
+
+        dt.setContainerValue(list, QStringLiteral("Item"));
+        CHECK(list->getValue() == QStringLiteral("Item"));
+        snap();
+
+        // Switching to a keyed basic container enables the key with a non-empty default.
+        dt.setContainerObject(list, QStringLiteral("HashMap"));
+        CHECK(list->getContainer() == QStringLiteral("HashMap"));
+        CHECK(list->canHaveKey());
+        CHECK(list->getKey().isEmpty() == false);
+        snap();
+
+        dt.setContainerKey(list, QStringLiteral("uint32"));
+        CHECK(list->getKey() == QStringLiteral("uint32"));
+        snap();
+
+        // Switching back to a non-keyed basic container clears the key.
+        dt.setContainerObject(list, QStringLiteral("Array"));
+        CHECK(list->canHaveKey() == false);
+        CHECK(list->getKey().isEmpty());
+        snap();
+
+        // Conversion-from-existing (Structure -> Container) also seeds sensible defaults.
+        DataTypeCustom* converted = dt.convertDataType(itemType, DataTypeBase::eCategory::Container);
+        CHECK((converted != nullptr) && (converted->getCategory() == DataTypeBase::eCategory::Container));
+        DataTypeContainer* dict = static_cast<DataTypeContainer*>(converted);
+        CHECK(dict->getContainer() == QStringLiteral("Array"));
+        snap();
+
+        dt.setContainerObject(dict, QStringLiteral("Map"));
+        snap();
+        dt.setContainerKey(dict, QStringLiteral("int32"));
+        snap();
+        dt.setContainerValue(dict, QStringLiteral("List"));
+        CHECK(dict->getValue() == QStringLiteral("List"));
+        snap();
+
+        const int steps = static_cast<int>(checkpoints.size()) - 1;
+        const QString built = serialize(model.getData());
+
+        bool undoExact = true;
+        for (int k = steps; k >= 1; --k)
+        {
+            model.getUndoStack().undo();
+            undoExact = undoExact && (serialize(model.getData()) == checkpoints[k - 1]);
+        }
+        CHECK(undoExact);
+        CHECK(serialize(model.getData()) == checkpoints[0]);
+        CHECK(dt.getDataTypeCount() == 0);
+
+        bool redoExact = true;
+        for (int k = 1; k <= steps; ++k)
+        {
+            model.getUndoStack().redo();
+            redoExact = redoExact && (serialize(model.getData()) == checkpoints[k]);
+        }
+        CHECK(redoExact);
+        CHECK(serialize(model.getData()) == built);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Scenario G (SM-09): Events page model (SMEventModel) — event and payload-parameter
+// lifecycle, and Timers page model (SMTimerModel) — timer lifecycle, both through the same
+// undo stack, plus the shared stimulus name-space collision check (StateMachineData::
+// findStimulus) that the pages use for live "name already used" feedback.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testEventTimerLifecycle()
+    {
+        StateMachineModel model;
+        SMEventModel&     ev = model.getEventModel();
+        SMTimerModel&     tm = model.getTimerModel();
+
+        QStringList checkpoints;
+        checkpoints << serialize(model.getData());
+        auto snap = [&]() { checkpoints << serialize(model.getData()); };
+
+        SMEventEntry* started = ev.createEvent("Started");
+        CHECK(started != nullptr);
+        snap();
+
+        MethodParameter* speed = ev.createParam(started, "speed");
+        CHECK(speed != nullptr);
+        const uint32_t speedId = speed->getId();
+        snap();
+
+        ev.setParamType(started, speedId, "uint32");
+        snap();
+        ev.setParamDefault(started, speedId, true, "0");
+        snap();
+        MethodParameter* speedNow = ev.findParam(started, speedId);
+        CHECK((speedNow != nullptr) && speedNow->hasDefault() && (speedNow->getValue() == QStringLiteral("0")));
+
+        MethodParameter* code = ev.createParam(started, "code");
+        CHECK(code != nullptr);
+        const uint32_t codeId = code->getId();
+        snap();
+
+        ev.setDescription(started->getId(), "Machine started");
+        snap();
+
+        SMEventEntry* stopped = ev.createEvent("Stopped");
+        CHECK(stopped != nullptr);
+        snap();
+
+        ev.renameEvent(stopped->getId(), "Halted");
+        CHECK(ev.findEvent("Halted") == stopped);
+        snap();
+
+        ev.swapEvents(started->getId(), stopped->getId());
+        CHECK(ev.findIndex(stopped) == 0);
+        snap();
+
+        ev.deleteParam(started, codeId);
+        CHECK(ev.getParamCount(started) == 1);
+        snap();
+
+        SMTimerEntry* t1 = tm.createTimer("T1");
+        CHECK(t1 != nullptr);
+        snap();
+        tm.setTimeout(t1->getId(), 500u);
+        snap();
+        tm.setRepeat(t1->getId(), 3u);
+        snap();
+
+        SMTimerEntry* t2 = tm.createTimer("T2");
+        CHECK(t2 != nullptr);
+        snap();
+        // The Continuous checkbox writes Repeat=0 (spec 6.10); 0xFFFFFFFF is also continuous.
+        tm.setRepeat(t2->getId(), 0u);
+        CHECK(tm.findTimer(t2->getId())->isContinuous());
+        snap();
+        tm.setDescription(t2->getId(), "Heartbeat");
+        snap();
+
+        tm.swapTimers(t1->getId(), t2->getId());
+        CHECK(tm.findIndex(t2->getId()) == 0);
+        snap();
+
+        SMTimerEntry* t0 = tm.insertTimer(0, "T0");
+        CHECK((t0 != nullptr) && (tm.findIndex(t0->getId()) == 0));
+        snap();
+
+        tm.deleteTimer(t1->getId());
+        CHECK(tm.findTimer("T1") == nullptr);
+        snap();
+
+        // Shared stimulus name space (spec 6.10): an event and a timer must not share a name.
+        CHECK(model.getData().isStimulusName("Halted"));
+        CHECK(model.getData().isStimulusName("T2"));
+        CHECK(model.getData().isStimulusName("NoSuchStimulus") == false);
+        const StateMachineData::StimulusRef eventRef = model.getData().findStimulus("Halted");
+        CHECK(eventRef.type == StateMachineData::eStimulusType::Event);
+        const StateMachineData::StimulusRef timerRef = model.getData().findStimulus("T2");
+        CHECK(timerRef.type == StateMachineData::eStimulusType::Timer);
+
+        const int steps = static_cast<int>(checkpoints.size()) - 1;
+        const QString built = serialize(model.getData());
+
+        bool undoExact = true;
+        for (int k = steps; k >= 1; --k)
+        {
+            model.getUndoStack().undo();
+            undoExact = undoExact && (serialize(model.getData()) == checkpoints[k - 1]);
+        }
+        CHECK(undoExact);
+        CHECK(serialize(model.getData()) == checkpoints[0]);
+        CHECK(ev.getEventCount() == 0);
+        CHECK(tm.getTimerCount() == 0);
+
+        bool redoExact = true;
+        for (int k = 1; k <= steps; ++k)
+        {
+            model.getUndoStack().redo();
+            redoExact = redoExact && (serialize(model.getData()) == checkpoints[k]);
+        }
+        CHECK(redoExact);
+        CHECK(serialize(model.getData()) == built);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -291,6 +632,9 @@ int main(int /*argc*/, char* /*argv*/[])
     testCoalescedLayoutDrag();
     testCompositeDelete();
     testDeepHistory();
+    testDataTypeLifecycle();
+    testContainerLifecycle();
+    testEventTimerLifecycle();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

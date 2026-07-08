@@ -46,15 +46,15 @@ class SMDataTypeData : public TEDataContainer<DataTypeCustom*, DocumentElem>
 //////////////////////////////////////////////////////////////////////////
 public:
     SMDataTypeData(ElementBase* parent = nullptr);
-    virtual ~SMDataTypeData(void);
+    virtual ~SMDataTypeData();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -63,7 +63,7 @@ public:
     /**
      * \brief   Returns the list of custom data types (document order).
      **/
-    const QList<DataTypeCustom*>& getCustomDataTypes(void) const;
+    const QList<DataTypeCustom*>& getCustomDataTypes() const;
 
     /**
      * \brief   Creates a custom data type of the given category and appends it.
@@ -77,7 +77,9 @@ public:
      * \brief   Convenience creators for the FSM-relevant custom categories.
      **/
     DataTypeCustom* addEnum(const QString& name);
+
     DataTypeCustom* addStructure(const QString& name);
+    
     DataTypeCustom* addImported(const QString& name);
 
     /**
@@ -93,7 +95,23 @@ public:
     /**
      * \brief   Deletes and removes all custom data types.
      **/
-    void removeAll(void);
+    void removeAll();
+
+    /**
+     * \brief   Resolves every structure field's and container key/value's declared type
+     *          against the registry, so a freshly loaded document reflects the same
+     *          resolved state as one edited interactively (a parsed entry only has the
+     *          type name until resolved).
+     * \param   dataTypes   The document's data type registry (itself, passed explicitly to
+     *                      mirror `SIDataTypeData::validate`).
+     **/
+    void validate(const SMDataTypeData& dataTypes);
+
+private:
+
+    //!< Resolves one custom type's nested type references (structure fields, container
+    //!< key/value) against the registry; no-op for enumeration and imported types.
+    void normalizeType(DataTypeCustom* dataType) const;
 };
 
 #endif  // LUSAN_DATA_SM_SMDATATYPEDATA_HPP

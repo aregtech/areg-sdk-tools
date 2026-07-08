@@ -42,10 +42,70 @@ public:
     SMEventEntry& operator = (const SMEventEntry& other);
     SMEventEntry& operator = (SMEventEntry&& other) noexcept;
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief Returns the icon to display for specific display type.
+     * \param display   The classification to display.
+     */
+    QIcon getIcon(ElementBase::eDisplay display) const override;
+
+    /**
+     * \brief Returns the string to display for specific display type.
+     * \param display   The classification to display.
+     */
+    QString getString(ElementBase::eDisplay display) const override;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes and operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    //!< Returns true if the event is marked deprecated.
+    inline bool getIsDeprecated() const;
+    //!< Marks (or clears) the event as deprecated.
+    inline void setIsDeprecated(bool isDeprecated);
+    //!< Returns the hint explaining why the event is deprecated.
+    inline const QString& getDeprecateHint() const;
+    //!< Sets the hint explaining why the event is deprecated.
+    inline void setDeprecateHint(const QString& hint);
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    bool    mIsDeprecated;  //!< Flag, indicating whether the event is deprecated.
+    QString mDeprecateHint; //!< The hint, why the event is deprecated.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// SMEventEntry inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline bool SMEventEntry::getIsDeprecated() const
+{
+    return mIsDeprecated;
+}
+
+inline void SMEventEntry::setIsDeprecated(bool isDeprecated)
+{
+    mIsDeprecated = isDeprecated;
+    if (isDeprecated == false)
+    {
+        mDeprecateHint.clear();
+    }
+}
+
+inline const QString& SMEventEntry::getDeprecateHint() const
+{
+    return mDeprecateHint;
+}
+
+inline void SMEventEntry::setDeprecateHint(const QString& hint)
+{
+    mDeprecateHint = hint;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // SMEventData class declaration
@@ -61,11 +121,11 @@ class SMEventData : public TEDataContainer<SMEventEntry*, DocumentElem>
 {
 public:
     SMEventData(ElementBase* parent = nullptr);
-    virtual ~SMEventData(void);
+    virtual ~SMEventData();
 
-    virtual bool isValid(void) const override;
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    bool isValid() const override;
+    bool readFromXml(QXmlStreamReader& xml) override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Creates a new event appended at the end of the list.
@@ -80,9 +140,14 @@ public:
     SMEventEntry* findEvent(const QString& name) const;
 
     /**
+     * \brief   Finds an event by ID.
+     **/
+    SMEventEntry* findEvent(uint32_t id) const;
+
+    /**
      * \brief   Deletes and removes all events.
      **/
-    void removeAll(void);
+    void removeAll();
 };
 
 #endif  // LUSAN_DATA_SM_SMEVENTDATA_HPP

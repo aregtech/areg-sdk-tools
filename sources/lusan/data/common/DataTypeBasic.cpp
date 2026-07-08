@@ -23,7 +23,7 @@
  // DataTypeBasicObject class implementation
  //////////////////////////////////////////////////////////////////////////
 
-DataTypeBasicObject::DataTypeBasicObject(void)
+DataTypeBasicObject::DataTypeBasicObject()
     : DataTypeBase  (eCategory::BasicObject)
 {
 }
@@ -68,7 +68,7 @@ void DataTypeBasicObject::writeToXml(QXmlStreamWriter& xml) const
 // DataTypeBasicContainer class implementation
 //////////////////////////////////////////////////////////////////////////
 
-DataTypeBasicContainer::DataTypeBasicContainer(void)
+DataTypeBasicContainer::DataTypeBasicContainer()
     : DataTypeBase  (eCategory::BasicContainer)
     , mHasKey       (false)
 {
@@ -111,7 +111,7 @@ void DataTypeBasicContainer::setKey(bool hasKey)
     mHasKey = hasKey;
 }
 
-bool DataTypeBasicContainer::hasKey(void) const
+bool DataTypeBasicContainer::hasKey() const
 {
     return mHasKey;
 }

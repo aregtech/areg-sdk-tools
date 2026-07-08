@@ -92,7 +92,7 @@ protected:
     
 public:
     
-    virtual ~DataTypeCustom(void);
+    virtual ~DataTypeCustom();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -120,7 +120,7 @@ public:
      * \brief   Checks if the parameter is valid.
      * \return  True if the parameter is valid, false otherwise.
      **/
-    virtual bool isValid() const override;
+    bool isValid() const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -130,7 +130,7 @@ public:
     /**
      * \brief   Returns description string of the custom data type.
      **/
-    const QString& getDescription(void) const;
+    const QString& getDescription() const;
 
     /**
      * \brief   Sets the description of the data type.
@@ -138,11 +138,11 @@ public:
      **/
     void setDescription(const QString& description);
 
-    bool getIsDeprecated(void) const;
+    bool getIsDeprecated() const;
 
     void setIsDeprecated(bool isDeprecated);
 
-    const QString& getDeprecateHint(void) const;
+    const QString& getDeprecateHint() const;
 
     void setDeprecateHint(const QString& hint);
 
@@ -151,7 +151,7 @@ public:
     /**
      * \brief   Returns the name of the custom data type.
      **/
-    QString getType(void) const;
+    QString getType() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

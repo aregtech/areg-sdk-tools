@@ -20,10 +20,8 @@
  ************************************************************************/
 #include <QWidget>
 
-namespace Ui {
-    class SIDataTypeList;
-}
-
+class QKeySequence;
+class QString;
 class QTreeWidget;
 class QToolButton;
 
@@ -35,26 +33,38 @@ class SIDataTypeList : public QWidget
 public:
     explicit SIDataTypeList(QWidget *parent = nullptr);
 
-    QTreeWidget* ctrlTableList(void) const;
+    QTreeWidget* ctrlTableList() const;
 
-    QToolButton* ctrlButtonAdd(void) const;
-    
-    QToolButton* ctrlButtonInsert(void) const;
-    
-    QToolButton* ctrlButtonRemove(void) const;
+    QToolButton* ctrlButtonAdd() const;
 
-    QToolButton* ctrlButtonMoveUp(void) const;
+    QToolButton* ctrlButtonInsert() const;
 
-    QToolButton* ctrlButtonMoveDown(void) const;
+    QToolButton* ctrlButtonRemove() const;
 
-    QToolButton* ctrlButtonAddField(void) const;
+    QToolButton* ctrlButtonMoveUp() const;
 
-    QToolButton* ctrlButtonRemoveField(void) const;
+    QToolButton* ctrlButtonMoveDown() const;
 
-    QToolButton* ctrlButtonInsertField(void) const;
+    QToolButton* ctrlButtonAddField() const;
+
+    QToolButton* ctrlButtonRemoveField() const;
+
+    QToolButton* ctrlButtonInsertField() const;
 
 private:
-    Ui::SIDataTypeList* ui;
+    void buildUi();
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+
+private:
+    QTreeWidget* mTable;
+    QToolButton* mButtonAdd;
+    QToolButton* mButtonInsert;
+    QToolButton* mButtonRemove;
+    QToolButton* mButtonMoveUp;
+    QToolButton* mButtonMoveDown;
+    QToolButton* mButtonAddField;
+    QToolButton* mButtonRemoveField;
+    QToolButton* mButtonInsertField;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIDATATYPELIST_HPP

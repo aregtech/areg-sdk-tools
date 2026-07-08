@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMEventData.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
@@ -43,6 +44,14 @@ namespace
             if (param.hasDefault())
             {
                 xml.writeAttribute(XmlSM::xmlSMAttributeDefault, param.getValue());
+            }
+            if (param.getIsDeprecated())
+            {
+                xml.writeAttribute(XmlSM::xmlSMAttributeIsDeprecated, XmlSM::xmlSMValueTrue);
+                if (param.getDeprecateHint().isEmpty() == false)
+                {
+                    xml.writeTextElement(XmlSM::xmlSMElementDeprecateHint, param.getDeprecateHint());
+                }
             }
             if (param.getDescription().isEmpty() == false)
             {
@@ -72,12 +81,21 @@ namespace
                     param.setValue(attributes.value(XmlSM::xmlSMAttributeDefault).toString());
                     param.setDefault(true);
                 }
+                param.setIsDeprecated(attributes.hasAttribute(XmlSM::xmlSMAttributeIsDeprecated)
+                    && (attributes.value(XmlSM::xmlSMAttributeIsDeprecated).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0));
 
                 while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementParameter))
                 {
-                    if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementDescription)
+                    if (xml.tokenType() == QXmlStreamReader::StartElement)
                     {
-                        param.setDescription(xml.readElementText());
+                        if (xml.name() == XmlSM::xmlSMElementDeprecateHint)
+                        {
+                            param.setDeprecateHint(xml.readElementText());
+                        }
+                        else if (xml.name() == XmlSM::xmlSMElementDescription)
+                        {
+                            param.setDescription(xml.readElementText());
+                        }
                     }
 
                     xml.readNext();
@@ -96,22 +114,30 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 
 SMEventEntry::SMEventEntry(ElementBase* parent /*= nullptr*/)
-    : MethodBase(parent)
+    : MethodBase    (parent)
+    , mIsDeprecated (false)
+    , mDeprecateHint( )
 {
 }
 
 SMEventEntry::SMEventEntry(uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
-    : MethodBase(id, name, QString(), parent)
+    : MethodBase    (id, name, QString(), parent)
+    , mIsDeprecated (false)
+    , mDeprecateHint( )
 {
 }
 
 SMEventEntry::SMEventEntry(const SMEventEntry& src)
-    : MethodBase(src)
+    : MethodBase    (src)
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDeprecateHint(src.mDeprecateHint)
 {
 }
 
 SMEventEntry::SMEventEntry(SMEventEntry&& src) noexcept
-    : MethodBase(std::move(src))
+    : MethodBase    (std::move(src))
+    , mIsDeprecated (src.mIsDeprecated)
+    , mDeprecateHint(std::move(src.mDeprecateHint))
 {
 }
 
@@ -120,6 +146,8 @@ SMEventEntry& SMEventEntry::operator = (const SMEventEntry& other)
     if (this != &other)
     {
         MethodBase::operator = (other);
+        mIsDeprecated  = other.mIsDeprecated;
+        mDeprecateHint = other.mDeprecateHint;
     }
 
     return *this;
@@ -130,14 +158,36 @@ SMEventEntry& SMEventEntry::operator = (SMEventEntry&& other) noexcept
     if (this != &other)
     {
         MethodBase::operator = (std::move(other));
+        mIsDeprecated  = other.mIsDeprecated;
+        mDeprecateHint = std::move(other.mDeprecateHint);
     }
 
     return *this;
 }
 
-bool SMEventEntry::isValid(void) const
+bool SMEventEntry::isValid() const
 {
     return (getName().isEmpty() == false);
+}
+
+QIcon SMEventEntry::getIcon(ElementBase::eDisplay display) const
+{
+    return (display == ElementBase::eDisplay::DisplayName)
+        ? NELusanCommon::iconEvent(NELusanCommon::SizeSmall)
+        : QIcon();
+}
+
+QString SMEventEntry::getString(ElementBase::eDisplay display) const
+{
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayValue:
+        return (getElementCount() > 0) ? QStringLiteral("%1 param(s)").arg(getElementCount()) : QString();
+    default:
+        return QString();
+    }
 }
 
 bool SMEventEntry::readFromXml(QXmlStreamReader& xml)
@@ -149,12 +199,19 @@ bool SMEventEntry::readFromXml(QXmlStreamReader& xml)
     setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
     setName(attributes.value(XmlSM::xmlSMAttributeName).toString());
     setDescription(QString());
+    mIsDeprecated = attributes.hasAttribute(XmlSM::xmlSMAttributeIsDeprecated)
+        && (attributes.value(XmlSM::xmlSMAttributeIsDeprecated).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0);
+    mDeprecateHint.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementEvent))
     {
         if (xml.tokenType() == QXmlStreamReader::StartElement)
         {
-            if (xml.name() == XmlSM::xmlSMElementDescription)
+            if (xml.name() == XmlSM::xmlSMElementDeprecateHint)
+            {
+                mDeprecateHint = xml.readElementText();
+            }
+            else if (xml.name() == XmlSM::xmlSMElementDescription)
             {
                 setDescription(xml.readElementText());
             }
@@ -175,6 +232,11 @@ void SMEventEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeStartElement(XmlSM::xmlSMElementEvent);
     xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSM::xmlSMAttributeName, getName());
+    if (mIsDeprecated)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeIsDeprecated, XmlSM::xmlSMValueTrue);
+        writeTextElem(xml, XmlSM::xmlSMElementDeprecateHint, mDeprecateHint, true);
+    }
     writeTextElem(xml, XmlSM::xmlSMElementDescription, getDescription(), true);
     writeParamList(xml, *this);
     xml.writeEndElement();
@@ -189,12 +251,12 @@ SMEventData::SMEventData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-SMEventData::~SMEventData(void)
+SMEventData::~SMEventData()
 {
     removeAll();
 }
 
-bool SMEventData::isValid(void) const
+bool SMEventData::isValid() const
 {
     return true;
 }
@@ -257,7 +319,13 @@ SMEventEntry* SMEventData::findEvent(const QString& name) const
     return (found != nullptr) ? *found : nullptr;
 }
 
-void SMEventData::removeAll(void)
+SMEventEntry* SMEventData::findEvent(uint32_t id) const
+{
+    SMEventEntry* const* found = findElement(id);
+    return (found != nullptr) ? *found : nullptr;
+}
+
+void SMEventData::removeAll()
 {
     for (SMEventEntry* entry : getElements())
     {

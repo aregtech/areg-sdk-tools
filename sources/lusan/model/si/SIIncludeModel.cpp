@@ -39,7 +39,7 @@ bool SIIncludeModel::deleteInclude(uint32_t id)
     return mData.removeElement(id);
 }
 
-const QList<IncludeEntry>& SIIncludeModel::getIncludes(void) const
+const QList<IncludeEntry>& SIIncludeModel::getIncludes() const
 {
     return mData.getElements();
 }

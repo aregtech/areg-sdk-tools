@@ -58,7 +58,7 @@ public:
     /**
      * \brief   Resets filter data of all columns.
      **/
-    void resetFilters(void);
+    void resetFilters();
 
     /**
      * \brief   Returns the logical index of the column.
@@ -107,17 +107,17 @@ protected:
     /**
      * \brief   Triggered when the section is painted.
      **/
-    virtual void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const override;
+    void paintSection(QPainter* painter, const QRect& rect, int logicalIndex) const override;
 
     /**
      * \brief   Triggered when the mouse is pressed on the header section.
      **/
-    virtual void mousePressEvent(QMouseEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
     
     /**
      * \brief   Triggered when the mouse is moved.
      **/
-    virtual void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
 
 /************************************************************************
  * Hidden methods

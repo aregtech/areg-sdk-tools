@@ -23,10 +23,8 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIIncludeList;
-}
-
+class QKeySequence;
+class QString;
 class QTableWidget;
 class QToolButton;
 class SIIncludeModel;
@@ -56,38 +54,47 @@ protected:
     /**
      * \brief   Returns the control of the add entry tool button.
      **/
-    QToolButton* ctrlButtonAdd(void) const;
+    QToolButton* ctrlButtonAdd() const;
 
     /**
      * \brief   Returns the control of the remove entry tool button.
      **/
-    QToolButton* ctrlButtonRemove(void) const;
+    QToolButton* ctrlButtonRemove() const;
 
     /**
      * \brief   Returns the control of the up entry tool button.
      **/
-    QToolButton* ctrlButtonMoveUp(void) const;
+    QToolButton* ctrlButtonMoveUp() const;
 
     /**
      * \brief   Returns the control of the down entry tool button.
      **/
-    QToolButton* ctrlButtonMoveDown(void) const;
+    QToolButton* ctrlButtonMoveDown() const;
 
     /**
      * \brief   Returns the control of the insert entry tool button.
      **/
-    QToolButton* ctrlButtonInsert(void) const;
+    QToolButton* ctrlButtonInsert() const;
 
     /**
      * \brief   Returns the control of the includes table widget.
      **/
-    QTableWidget* ctrlTableList(void) const;
+    QTableWidget* ctrlTableList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIIncludeList*  ui;     //!< The user interface object.
+    void buildUi();
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+
+private:
+    QTableWidget* mTable;
+    QToolButton*  mButtonAdd;
+    QToolButton*  mButtonRemove;
+    QToolButton*  mButtonInsert;
+    QToolButton*  mButtonMoveUp;
+    QToolButton*  mButtonMoveDown;
     SIIncludeModel&     mModel; //!< The model of the include list.
 
 //////////////////////////////////////////////////////////////////////////

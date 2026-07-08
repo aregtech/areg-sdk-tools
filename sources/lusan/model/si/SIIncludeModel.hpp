@@ -75,7 +75,7 @@ public:
     /**
      * \brief   Returns the list of include objects.
      **/
-    const QList<IncludeEntry>& getIncludes(void) const;
+    const QList<IncludeEntry>& getIncludes() const;
 
     /**
      * \brief   Searches the include entry in the list by given unique ID.

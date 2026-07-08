@@ -35,14 +35,14 @@ namespace
     constexpr int TabInitStartDelayMs{ 200 };
     constexpr int TabInitDelayMs{ 50 };
 
-    const QIcon& tabIcon(void)
+    const QIcon& tabIcon()
     {
         static const QIcon _icon{ NELusanCommon::iconServiceInterfaceTab(NELusanCommon::SizeSmall) };
         return _icon;
     }
 }
 
-const QString& ServiceInterface::fileExtension(void)
+const QString& ServiceInterface::fileExtension()
 {
     static const QString _extSI{ "siml" };
     return _extSI;
@@ -87,6 +87,7 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
@@ -105,41 +106,41 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
     }
 }
 
-ServiceInterface::~ServiceInterface(void)
+ServiceInterface::~ServiceInterface()
 {
 }
 
-bool ServiceInterface::openSucceeded(void) const
+bool ServiceInterface::openSucceeded() const
 {
     return mModel.openSucceeded();
 }
 
-QString ServiceInterface::newDocumentName(void)
+QString ServiceInterface::newDocumentName()
 {
     static uint32_t _seqNr{0};
     mDocName = newDocument() + QString::number(++_seqNr);
     return mDocName + newDocumentExt();
 }
 
-const QString& ServiceInterface::newDocument(void) const
+const QString& ServiceInterface::newDocument() const
 {
     static const QString _newSIDoc{"NewServiceInterface"};
     return _newSIDoc;
 }
 
-const QString& ServiceInterface::newDocumentExt(void) const
+const QString& ServiceInterface::newDocumentExt() const
 {
     static const QString _extSI {".siml"};
     return _extSI;
 }
 
-const QString& ServiceInterface::fileSuffix(void) const
+const QString& ServiceInterface::fileSuffix() const
 {
     static const QString _suffixSI{ "siml" };
     return _suffixSI;
 }
 
-const QString& ServiceInterface::fileFilter(void) const
+const QString& ServiceInterface::fileFilter() const
 {
     static const QString _filterSI{ "Service Interface document (*.siml)\nAll Files (*.*)" };
     return _filterSI;
@@ -242,7 +243,7 @@ QString ServiceInterface::tabTitle(int index) const
     }
 }
 
-void ServiceInterface::processQueuedTabInitialization(void)
+void ServiceInterface::processQueuedTabInitialization()
 {
     if (mPendingInitTabs.isEmpty())
         return;

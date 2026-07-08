@@ -19,8 +19,10 @@
 
 #include "lusan/data/sm/SMDataTypeData.hpp"
 
+#include "lusan/data/common/DataTypeContainer.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
@@ -31,12 +33,12 @@ SMDataTypeData::SMDataTypeData(ElementBase* parent /*= nullptr*/)
 {
 }
 
-SMDataTypeData::~SMDataTypeData(void)
+SMDataTypeData::~SMDataTypeData()
 {
     removeAll();
 }
 
-bool SMDataTypeData::isValid(void) const
+bool SMDataTypeData::isValid() const
 {
     return true;
 }
@@ -92,7 +94,7 @@ void SMDataTypeData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
-const QList<DataTypeCustom*>& SMDataTypeData::getCustomDataTypes(void) const
+const QList<DataTypeCustom*>& SMDataTypeData::getCustomDataTypes() const
 {
     return getElements();
 }
@@ -144,7 +146,7 @@ DataTypeCustom* SMDataTypeData::findCustomDataType(uint32_t id) const
     return (found != nullptr) ? *found : nullptr;
 }
 
-void SMDataTypeData::removeAll(void)
+void SMDataTypeData::removeAll()
 {
     for (DataTypeCustom* dataType : getElements())
     {
@@ -152,4 +154,25 @@ void SMDataTypeData::removeAll(void)
     }
 
     removeAllElements();
+}
+
+void SMDataTypeData::validate(const SMDataTypeData& dataTypes)
+{
+    for (DataTypeCustom* dataType : getElements())
+    {
+        dataTypes.normalizeType(dataType);
+    }
+}
+
+void SMDataTypeData::normalizeType(DataTypeCustom* dataType) const
+{
+    const QList<DataTypeCustom*>& customTypes{ getCustomDataTypes() };
+    if (dataType->isStructure())
+    {
+        static_cast<DataTypeStructure*>(dataType)->validate(customTypes);
+    }
+    else if (dataType->isContainer())
+    {
+        static_cast<DataTypeContainer*>(dataType)->validate(customTypes);
+    }
 }

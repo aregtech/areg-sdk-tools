@@ -18,7 +18,6 @@
  ************************************************************************/
 
 #include "lusan/view/si/SIDataType.hpp"
-#include "ui/ui_SIDataType.h"
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/common/DataTypeBasic.hpp"
@@ -36,8 +35,10 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QFormLayout>
 #include <QGroupBox>
 #include <QHeaderView>
+#include <QLabel>
 #include <QLineEdit>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -45,19 +46,31 @@
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFont>
 
 #include "lusan/view/si/SICommon.hpp"
 
 SIDataTypeWidget::SIDataTypeWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui     (new Ui::SIDataType)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Data Type Editor ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
-const QList<DataTypeBasicContainer *> & SIDataType::_getContainerTypes(void)
+const QList<DataTypeBasicContainer *> & SIDataType::_getContainerTypes()
 {
     static QList<DataTypeBasicContainer *> _result;
     if (_result.isEmpty())
@@ -68,7 +81,7 @@ const QList<DataTypeBasicContainer *> & SIDataType::_getContainerTypes(void)
     return _result;
 }
 
-const QList<DataTypeBase *>& SIDataType::_getIntegerTypes(void)
+const QList<DataTypeBase *>& SIDataType::_getIntegerTypes()
 {
     static QList<DataTypeBase *> _result;
     if (_result.isEmpty())
@@ -79,7 +92,7 @@ const QList<DataTypeBase *>& SIDataType::_getIntegerTypes(void)
     return _result;
 }
 
-const QList<DataTypeBase *>& SIDataType::_getPredefinedTypes(void)
+const QList<DataTypeBase *>& SIDataType::_getPredefinedTypes()
 {
     static QList<DataTypeBase *> _result;
     if (_result.isEmpty())
@@ -102,8 +115,8 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mDetails  (new SIDataTypeDetails(this))
     , mList     (new SIDataTypeList(this))
     , mFields   (new SIDataTypeFieldDetails(this))
+    , mRightPanel(new QWidget(this))
     , mWidget   (new SIDataTypeWidget(this))
-    , ui        (*mWidget->ui)
     , mModel    (model)
     , mTypeModel(new DataTypesModel(model.getDataTypeData(), true))
     , mValueModel(new DataTypesModel(model.getDataTypeData(), false))
@@ -115,16 +128,21 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     , mCount    (0)
 {
     mFields->setHidden(true);
-    
-    ui.horizontalLayout->addWidget(mList, 1);
-    ui.horizontalLayout->addWidget(mDetails, 1);
-    ui.horizontalLayout->addWidget(mFields, 1);
+
+    QVBoxLayout* rightLayout = new QVBoxLayout(mRightPanel);
+    rightLayout->setContentsMargins(0, 0, 0, 0);
+    rightLayout->addWidget(mDetails);
+    rightLayout->addWidget(mFields);
+
+    // Ignored so the row splits by stretch alone, not by each child's size hint —
+    // see .claude/memory/equal-split-two-panels.md.
+    mList->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mRightPanel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mWidget->mPanels->addWidget(mList, 1);
+    mWidget->mPanels->addWidget(mRightPanel, 1);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -133,11 +151,10 @@ SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     setupSignals();
 }
 
-SIDataType::~SIDataType(void)
+SIDataType::~SIDataType()
 {
-    ui.horizontalLayout->removeWidget(mList);
-    ui.horizontalLayout->removeWidget(mDetails);
-    ui.horizontalLayout->removeWidget(mFields);
+    mWidget->mPanels->removeWidget(mList);
+    mWidget->mPanels->removeWidget(mRightPanel);
 }
 
 void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
@@ -200,7 +217,7 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
     blockBasicSignals(false);
 }
 
-void SIDataType::onAddClicked(void)
+void SIDataType::onAddClicked()
 {
     QString name(genName());
     QTreeWidget* table = mList->ctrlTableList();
@@ -226,7 +243,7 @@ void SIDataType::onAddClicked(void)
     blockBasicSignals(false);
 }
 
-void SIDataType::onInsertClicked(void)
+void SIDataType::onInsertClicked()
 {
     QString name(genName());
     QTreeWidget* table = mList->ctrlTableList();
@@ -255,7 +272,7 @@ void SIDataType::onInsertClicked(void)
     blockBasicSignals(false);
 }
 
-void SIDataType::onAddFieldClicked(void)
+void SIDataType::onAddFieldClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
@@ -304,7 +321,7 @@ void SIDataType::onAddFieldClicked(void)
     }
 }
 
-void SIDataType::onInsertFieldClicked(void)
+void SIDataType::onInsertFieldClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* cur = table->currentItem();
@@ -376,7 +393,7 @@ void SIDataType::onInsertFieldClicked(void)
     }
 }
 
-void SIDataType::onRemoveClicked(void)
+void SIDataType::onRemoveClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -410,7 +427,7 @@ void SIDataType::onRemoveClicked(void)
     updateToolButtons(row, rowCount);
 }
 
-void SIDataType::onRemoveFieldClicked(void)
+void SIDataType::onRemoveFieldClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -449,7 +466,7 @@ void SIDataType::onRemoveFieldClicked(void)
     updateToolButtons(row, rowCount);
 }
 
-void SIDataType::onMoveUpClicked(void)
+void SIDataType::onMoveUpClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -470,7 +487,7 @@ void SIDataType::onMoveUpClicked(void)
     blockBasicSignals(false);
 }
 
-void SIDataType::onMoveDownClicked(void)
+void SIDataType::onMoveDownClicked()
 {
     QTreeWidget* table = mList->ctrlTableList();
     QTreeWidgetItem* item = table->currentItem();
@@ -524,7 +541,7 @@ void SIDataType::onDeprecateHintChanged(const QString& newText)
     SICommon::setDeprecateHint<SIDataTypeDetails, DataTypeCustom>(mDetails, entry, newText);
 }
 
-void SIDataType::onDescriptionChanged(void)
+void SIDataType::onDescriptionChanged()
 {
     QTreeWidgetItem * item = mList->ctrlTableList()->currentItem();
     if (item == nullptr)
@@ -871,7 +888,7 @@ void SIDataType::onImportObjectChanged(const QString& newText)
     blockBasicSignals(false);
 }
 
-void SIDataType::onImportLocationBrowse(void)
+void SIDataType::onImportLocationBrowse()
 {
     WorkspaceFileDialog dialog(  true
                                , false
@@ -973,7 +990,7 @@ void SIDataType::onFieldValueChanged(const QString& newValue)
     }
 }
 
-void SIDataType::onFieldDescriptionChanged(void)
+void SIDataType::onFieldDescriptionChanged()
 {
     QString descr{mFields->ctrlDescription()->toPlainText()};
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
@@ -1038,32 +1055,29 @@ void SIDataType::onFieldDeprecateHint(const QString& newText)
 
 void SIDataType::showEnumDetails(bool show)
 {
-    static constexpr int _space{180};
     SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsEnum()};
-    mDetails->changeSpace((show ? -1 : 1) * _space);
-    item.first->setHidden(!show);
-    item.second->setHidden(!show);
+    QFormLayout* form = mDetails->ctrlLayout();
+    form->setRowVisible(item.first, show);
+    form->setRowVisible(item.second, show);
 }
 
 void SIDataType::showImportDetails(bool show)
 {
-    static constexpr int _space{120};
     SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsImport()};
-    mDetails->changeSpace((show ? -1 : 1) * _space);
-    item.first->setHidden(!show);
-    item.second->setHidden(!show);
+    QFormLayout* form = mDetails->ctrlLayout();
+    form->setRowVisible(item.first, show);
+    form->setRowVisible(item.second, show);
 }
 
 void SIDataType::showContainerDetails(bool show)
 {
-    static constexpr int _space{60};
     SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsContainer()};
-    mDetails->changeSpace((show ? -1 : 1) * _space);
-    item.first->setHidden(!show);
-    item.second->setHidden(!show);
+    QFormLayout* form = mDetails->ctrlLayout();
+    form->setRowVisible(item.first, show);
+    form->setRowVisible(item.second, show);
 }
 
-void SIDataType::updateData(void)
+void SIDataType::updateData()
 {
     const QList<DataTypeCustom*>& list = mModel.getDataTypes();
     QTreeWidget* table = mList->ctrlTableList();
@@ -1100,7 +1114,7 @@ void SIDataType::updateData(void)
     }
 }
 
-void SIDataType::updateWidgets(void)
+void SIDataType::updateWidgets()
 {
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
@@ -1133,7 +1147,7 @@ void SIDataType::updateWidgets(void)
     showClean();
 }
 
-void SIDataType::setupSignals(void)
+void SIDataType::setupSignals()
 {
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged  , this, &SIDataType::onCurCellChanged);
     connect(mList->ctrlButtonAdd()          , &QToolButton::clicked             , this, &SIDataType::onAddClicked);
@@ -1549,7 +1563,7 @@ void SIDataType::updateImportNames(QTreeWidgetItem* node, DataTypeImported* data
     setNodeText(node, dataType);
 }
 
-inline ElementBase* SIDataType::getSelectedField(void) const
+inline ElementBase* SIDataType::getSelectedField() const
 {
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
     if (item == nullptr)
@@ -1627,7 +1641,7 @@ inline void SIDataType::setNodeText(QTreeWidgetItem* node, DocumentElem * elem) 
     }
 }
 
-inline void SIDataType::showClean(void)
+inline void SIDataType::showClean()
 {
     SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, nullptr, false);
     SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, nullptr, false);
@@ -1772,7 +1786,7 @@ inline void SIDataType::updateToolButtons(int row, int rowCount)
     }
 }
 
-inline QString SIDataType::genName(void)
+inline QString SIDataType::genName()
 {
     static const QString _defName("NewDataType");
 
