@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QColor>
+#include <QList>
 #include <QPointF>
 #include <QRectF>
 
@@ -96,6 +97,56 @@ namespace NESMDesign
     constexpr double    HandleSize          { 7.0 };
     //!< The darkening factor applied to the body color to derive the header shade.
     constexpr int       HeaderShadeFactor   { 145 };
+
+    //!< The radius of the begin dot drawn on the source state border.
+    constexpr double    EdgeBeginDotRadius  { 3.5 };
+    //!< The arrowhead length and half-width at the target border.
+    constexpr double    EdgeArrowLength     { 12.0 };
+    constexpr double    EdgeArrowHalfWidth  { 5.0 };
+    //!< The drawn width of an edge line.
+    constexpr double    EdgeLineWidth       { 1.6 };
+    //!< The side length of a waypoint handle drawn on a selected edge.
+    constexpr double    WaypointHandleSize  { 7.0 };
+    //!< The pick radius for grabbing an endpoint or waypoint with the mouse.
+    constexpr double    EndpointPickRadius  { 8.0 };
+    //!< The pick radius within which a double-click merges (removes) a waypoint.
+    constexpr double    WaypointMergeRadius { 7.0 };
+    //!< The maximum distance from a segment at which a double-click inserts a waypoint.
+    constexpr double    SegmentPickTolerance{ 6.0 };
+    //!< The number of straight sections an arc edge is sampled into for drawing and hit test.
+    constexpr int       EdgeArcSamples      { 28 };
+    //!< The gap kept between the label and the edge line.
+    constexpr double    EdgeLabelGap        { 4.0 };
+    //!< The band around a state box border from which a transition drag can be started.
+    constexpr double    EdgeBorderDragMargin{ 6.0 };
+
+    /**
+     * \brief   Returns the default transition edge color of the given palette.
+     **/
+    QColor edgeColor(const QPalette& palette);
+
+    /**
+     * \brief   Returns the highlight color for an incoming edge (enters a selected state).
+     **/
+    QColor edgeIncomingColor(const QPalette& palette);
+
+    /**
+     * \brief   Returns the highlight color for an outgoing edge (leaves a selected state).
+     **/
+    QColor edgeOutgoingColor(const QPalette& palette);
+
+    /**
+     * \brief   Returns the point on a rectangle's border along the ray from its center
+     *          toward \p towards. Used to anchor an edge endpoint on a state box border.
+     **/
+    QPointF borderPoint(const QRectF& rect, const QPointF& towards);
+
+    /**
+     * \brief   Samples a circular arc through \p begin and \p end with the given signed
+     *          bulge (arc height over half chord; sign picks the bowing side, 1 = semicircle)
+     *          into a polyline. Returns the plain chord when the bulge is ~0 or degenerate.
+     **/
+    QList<QPointF> arcPolyline(const QPointF& begin, const QPointF& end, double bulge, int samples);
 
     /**
      * \brief   Returns the default state body fill color of the given palette.

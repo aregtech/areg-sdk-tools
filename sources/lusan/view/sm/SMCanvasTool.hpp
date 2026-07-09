@@ -24,11 +24,15 @@
  ************************************************************************/
 #include "lusan/view/sm/NESMDesign.hpp"
 
+#include <QList>
+#include <QPointF>
+#include <cstdint>
 #include <memory>
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QGraphicsPathItem;
 class QGraphicsSceneMouseEvent;
 class QKeyEvent;
 class SMScene;
@@ -139,6 +143,74 @@ private:
 
 private:
     const bool  mFinal; //!< True to place Final states.
+};
+
+/**
+ * \class   SMTransitionTool
+ * \brief   The Add Transition tool: click the source state then the target state to create
+ *          an external transition (same state = self-transition; Enter on the source = an
+ *          internal transition; Esc cancels). It also supports the drag gesture: press on a
+ *          source, paint the edge live to the cursor, drop a waypoint on each intermediate
+ *          click, and release on the target; a release on empty canvas offers an internal
+ *          transition. The same drag can be started from a state border with the Select tool
+ *          via beginDragFrom().
+ **/
+class SMTransitionTool : public SMCanvasTool
+{
+public:
+    explicit SMTransitionTool(SMScene& scene);
+    virtual ~SMTransitionTool();
+
+    virtual NESMDesign::eCanvasTool getKind() const override;
+    virtual void activate() override;
+    virtual void cancelGesture() override;
+    virtual bool mousePress(QGraphicsSceneMouseEvent* event) override;
+    virtual bool mouseMove(QGraphicsSceneMouseEvent* event) override;
+    virtual bool mouseRelease(QGraphicsSceneMouseEvent* event) override;
+    virtual bool mouseDoubleClick(QGraphicsSceneMouseEvent* event) override;
+    virtual bool keyPress(QKeyEvent* event) override;
+
+    /**
+     * \brief   Starts the drag gesture from a state border (Select-tool border drag).
+     * \param   sourceId    The source state's element ID.
+     * \param   scenePos    The press position in scene coordinates.
+     **/
+    void beginDragFrom(uint32_t sourceId, const QPointF& scenePos);
+
+private:
+    void createPreview();
+    void clearPreview();
+    void updatePreview(const QPointF& cursor);
+    void resetGesture();
+
+    /**
+     * \brief   Completes the gesture as an external/self transition to the target state.
+     **/
+    void completeExternal(uint32_t targetId);
+
+    /**
+     * \brief   Completes the gesture as an internal transition on the source state.
+     **/
+    void completeInternal();
+
+    /**
+     * \brief   Offers an internal transition when the drag is released on empty canvas.
+     **/
+    void offerInternalOnEmpty();
+
+    /**
+     * \brief   The source state's current box geometry in scene coordinates.
+     **/
+    QRectF sourceRect() const;
+
+private:
+    bool                mArmed;         //!< A source has been picked.
+    bool                mDragging;      //!< The gesture is a drag (past the move threshold).
+    bool                mFromBorder;    //!< The gesture was started from a state border (Select tool).
+    uint32_t            mSourceId;      //!< The picked source state ID.
+    QPointF             mPressPos;      //!< The initial press position.
+    QList<QPointF>      mWaypoints;     //!< The dropped intermediate waypoints.
+    QGraphicsPathItem*  mPreview;       //!< The live edge preview, or nullptr.
 };
 
 /**

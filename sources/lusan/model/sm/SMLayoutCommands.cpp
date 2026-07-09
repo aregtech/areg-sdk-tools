@@ -20,6 +20,7 @@
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/data/sm/SMState.hpp"
+#include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
 //////////////////////////////////////////////////////////////////////////
@@ -132,6 +133,111 @@ void SMAttachNodeCommand::undo()
     const uint32_t owner = mState.getId();
     data().getLayout().removeOwned(QList<uint32_t>{ owner });
     notifier().notifyLayoutChanged(QList<uint32_t>{ owner });
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMAttachEdgeCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMAttachEdgeCommand::SMAttachEdgeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                         , const SMTransitionEntry& transition, const SMLayoutEdge& geometry
+                                         , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand   (data, notifier, text, parent)
+    , mTransition (transition)
+    , mGeometry   (geometry)
+{
+}
+
+void SMAttachEdgeCommand::redo()
+{
+    const uint32_t owner = mTransition.getId();
+    SMLayoutEdge* edge = data().getLayout().findEdge(owner);
+    if (edge == nullptr)
+    {
+        edge = &data().getLayout().addEdge(owner);
+    }
+
+    *edge = mGeometry;
+    edge->owner = owner;
+    notifier().notifyLayoutChanged(QList<uint32_t>{ owner });
+}
+
+void SMAttachEdgeCommand::undo()
+{
+    const uint32_t owner = mTransition.getId();
+    data().getLayout().removeOwned(QList<uint32_t>{ owner });
+    notifier().notifyLayoutChanged(QList<uint32_t>{ owner });
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetEdgeGeometryCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetEdgeGeometryCommand::SMSetEdgeGeometryCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                                   , uint32_t owner, uint32_t gestureId, const SMLayoutEdge& geometry
+                                                   , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mOwner    (owner)
+    , mGesture  (gestureId)
+    , mNew      (geometry)
+{
+    mNew.owner = owner;
+}
+
+void SMSetEdgeGeometryCommand::applyTo(const SMLayoutEdge& geometry, bool present)
+{
+    if (present)
+    {
+        SMLayoutEdge* edge = data().getLayout().findEdge(mOwner);
+        if (edge == nullptr)
+        {
+            edge = &data().getLayout().addEdge(mOwner);
+        }
+
+        *edge = geometry;
+        edge->owner = mOwner;
+    }
+    else
+    {
+        data().getLayout().removeOwned(QList<uint32_t>{ mOwner });
+    }
+
+    notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
+}
+
+void SMSetEdgeGeometryCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        const SMLayoutEdge* edge = data().getLayout().findEdge(mOwner);
+        mHadOld = (edge != nullptr);
+        mOld    = (edge != nullptr ? *edge : mNew);
+        mCaptured = true;
+    }
+
+    applyTo(mNew, true);
+}
+
+void SMSetEdgeGeometryCommand::undo()
+{
+    applyTo(mOld, mHadOld);
+}
+
+int SMSetEdgeGeometryCommand::id() const
+{
+    return CMD_ID;
+}
+
+bool SMSetEdgeGeometryCommand::mergeWith(const QUndoCommand* other)
+{
+    const SMSetEdgeGeometryCommand* set = static_cast<const SMSetEdgeGeometryCommand*>(other);
+    if ((set->mOwner != mOwner) || (set->mGesture != mGesture))
+    {
+        return false;
+    }
+
+    mNew = set->mNew;   // absorb the latest geometry; the original mOld is kept
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////

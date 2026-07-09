@@ -215,6 +215,40 @@ QRectF SMStateItem::getBoxGeometry() const
     return QRectF(pos(), mSize);
 }
 
+bool SMStateItem::isBorderDragZone(const QPointF& scenePos) const
+{
+    if (isRenameActive())
+    {
+        return false;
+    }
+
+    const QPointF p = mapFromScene(scenePos);
+    if (hitHandle(p) != eHandle::None)
+    {
+        return false;
+    }
+
+    if ((hasBodyContent() || (mExpanded == false)) && chevronRect().contains(p))
+    {
+        return false;
+    }
+
+    const QRectF box{ 0.0, 0.0, mSize.width(), visibleHeight() };
+    const double m = NESMDesign::EdgeBorderDragMargin;
+    const QRectF outer = box.adjusted(-m, -m, m, m);
+    const QRectF inner = box.adjusted(m, m, -m, -m);
+    return outer.contains(p) && (inner.contains(p) == false);
+}
+
+void SMStateItem::notifyEdgesOfGeometry()
+{
+    SMScene* canvas = getCanvas();
+    if (canvas != nullptr)
+    {
+        canvas->updateEdgesForState(getElementId());
+    }
+}
+
 double SMStateItem::visibleHeight() const
 {
     return (mExpanded ? mSize.height() : NESMDesign::StateHeaderHeight);
@@ -731,6 +765,11 @@ QVariant SMStateItem::itemChange(GraphicsItemChange change, const QVariant& valu
             closeRenameEditor();
         }
     }
+    else if (change == QGraphicsItem::ItemPositionHasChanged)
+    {
+        // Live gluing: connected transition endpoints follow the moving box.
+        notifyEdgesOfGeometry();
+    }
 
     return SMCanvasItem::itemChange(change, value);
 }
@@ -777,6 +816,7 @@ void SMStateItem::applyResizeDrag(const QPointF& scenePos)
     setPos(rect.topLeft());
     mSize = rect.size();
     update();
+    notifyEdgesOfGeometry();
 }
 
 void SMStateItem::commitResize()

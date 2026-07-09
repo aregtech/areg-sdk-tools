@@ -465,6 +465,28 @@ SMStateEntry* SMStateData::getStartState() const
     return nullptr;
 }
 
+SMStateEntry* SMStateData::findTransitionOwnerRecursive(uint32_t transitionId) const
+{
+    for (SMStateEntry* state : getElements())
+    {
+        if (state->getTransitions().findElement(transitionId) != nullptr)
+        {
+            return state;
+        }
+
+        if (state->hasNestedStates())
+        {
+            SMStateEntry* found = state->getNestedStates()->findTransitionOwnerRecursive(transitionId);
+            if (found != nullptr)
+            {
+                return found;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
 int SMStateData::countStatesRecursive() const
 {
     int count = getElementCount();

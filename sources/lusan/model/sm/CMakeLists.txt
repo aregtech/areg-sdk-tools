@@ -13,6 +13,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
+    ${LUSAN}/model/sm/SMTransitionCommands.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -30,4 +31,5 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMSelectionModel.hpp
     ${LUSAN}/model/sm/SMStateCommands.hpp
     ${LUSAN}/model/sm/SMTimerModel.hpp
+    ${LUSAN}/model/sm/SMTransitionCommands.hpp
 )

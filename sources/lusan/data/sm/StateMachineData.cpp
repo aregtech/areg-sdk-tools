@@ -590,6 +590,23 @@ SMStateEntry* StateMachineData::findStateById(uint32_t id) const
     return mStates.findStateByIdRecursive(id);
 }
 
+SMStateEntry* StateMachineData::findTransitionOwner(uint32_t transitionId) const
+{
+    return mStates.findTransitionOwnerRecursive(transitionId);
+}
+
+SMTransitionEntry* StateMachineData::findTransitionById(uint32_t transitionId) const
+{
+    SMStateEntry* owner = mStates.findTransitionOwnerRecursive(transitionId);
+    if (owner != nullptr)
+    {
+        SMTransitionEntry** slot = owner->getTransitions().findElement(transitionId);
+        return (slot != nullptr ? *slot : nullptr);
+    }
+
+    return nullptr;
+}
+
 SMStateData* StateMachineData::findLevel(uint32_t levelId)
 {
     if (levelId == mOverview.getId())

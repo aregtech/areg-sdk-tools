@@ -223,6 +223,12 @@ public:
     SMStateEntry* getStartState() const;
 
     /**
+     * \brief   Finds the state whose transition list owns the transition with the given
+     *          ID, searching this level and every nested level.
+     **/
+    SMStateEntry* findTransitionOwnerRecursive(uint32_t transitionId) const;
+
+    /**
      * \brief   Counts the states in this level and all nested levels.
      **/
     int countStatesRecursive() const;

@@ -35,6 +35,7 @@
  * Dependencies
  ************************************************************************/
 class SMCanvasItem;
+class SMEdgeItem;
 class SMStateItem;
 class StateMachineModel;
 enum class eDocElementKind;
@@ -151,6 +152,39 @@ public:
     QList<SMStateItem*> selectedStateItems() const;
 
     /**
+     * \brief   Returns the selected transition edge items of this level.
+     **/
+    QList<SMEdgeItem*> selectedEdgeItems() const;
+
+    /**
+     * \brief   Returns the state box item of an element, or nullptr.
+     **/
+    SMStateItem* stateItem(uint32_t stateId) const;
+
+    /**
+     * \brief   Returns the topmost state box item at a scene position, or nullptr.
+     **/
+    SMStateItem* stateAt(const QPointF& scenePos) const;
+
+    /**
+     * \brief   Re-anchors every edge connected to a state after its box moved or resized.
+     **/
+    void updateEdgesForState(uint32_t stateId);
+
+    /**
+     * \brief   Applies a target-endpoint reconnection: retargets the transition to the state
+     *          under the drop (empty drop offers making it internal). Deferred by the edge
+     *          item so the resulting command may recreate the edge safely.
+     **/
+    void reconnectTransitionTarget(uint32_t transitionId, uint32_t targetStateId);
+
+    /**
+     * \brief   Applies a begin-endpoint reconnection: moves the transition to a new source
+     *          state. A zero or unchanged source is ignored.
+     **/
+    void reparentTransition(uint32_t transitionId, uint32_t newSourceStateId);
+
+    /**
      * \brief   Opens the in-place name editor when exactly one state is selected (F2).
      **/
     void startRenameOfSelection();
@@ -196,6 +230,7 @@ private slots:
     void onElementAdded(uint32_t id, eDocElementKind kind);
     void onElementRemoved(uint32_t id, eDocElementKind kind);
     void onElementChanged(uint32_t id, eDocElementKind kind);
+    void onListReordered(uint32_t ownerId, eDocElementKind kind);
     void onNameChanged(uint32_t id, const QString& oldName, const QString& newName);
     void onLayoutChanged(const QList<uint32_t>& ownerIds);
 
@@ -216,6 +251,22 @@ private:
      * \brief   Creates the box item of one state (no-op when it already exists).
      **/
     void createStateItem(uint32_t stateId);
+
+    /**
+     * \brief   Creates the edge item of one external transition (no-op when it already
+     *          exists or the transition is not external and on this level).
+     **/
+    void createEdgeItem(uint32_t transitionId);
+
+    /**
+     * \brief   Returns the edge item of a transition, or nullptr.
+     **/
+    SMEdgeItem* edgeItem(uint32_t transitionId) const;
+
+    /**
+     * \brief   Re-reads every state box body (behaviour rows change when transitions do).
+     **/
+    void refreshStateBodies();
 
     /**
      * \brief   True when the state is a direct child of this scene's level.

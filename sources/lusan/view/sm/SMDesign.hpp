@@ -81,13 +81,21 @@ public:
      **/
     inline QAction* actionAddState() const;
     inline QAction* actionAddFinalState() const;
+    inline QAction* actionAddTransition() const;
     inline QAction* actionDelete() const;
     inline QAction* actionRename() const;
 
     /**
-     * \brief   Deletes the selected states after confirmation: painted substates go
-     *          recursively, transitions targeting a deleted state go with it, and the
-     *          whole selection is one undo step. Start states are never deleted.
+     * \brief   The transition editing actions: stimulus picker and priority reorder.
+     **/
+    inline QAction* actionSetStimulus() const;
+    inline QAction* actionRaisePriority() const;
+    inline QAction* actionLowerPriority() const;
+
+    /**
+     * \brief   Deletes the current selection after confirmation: selected states (with
+     *          painted substates and connected transitions), or selected transitions, as
+     *          one undo step. Start states are never deleted.
      **/
     void deleteSelection();
 
@@ -109,6 +117,23 @@ private slots:
 
 private:
     void setupActions();
+
+    /**
+     * \brief   Deletes the selected transition edges after confirmation, one undo step.
+     **/
+    void deleteSelectedEdges();
+
+    /**
+     * \brief   Reorders the single selected transition by one step in document order
+     *          (priority); \p raise moves it earlier (higher priority).
+     **/
+    void reorderSelectedTransition(bool raise);
+
+    /**
+     * \brief   Opens a picker over the shared registries to set the selected transition's
+     *          stimulus (kind + name).
+     **/
+    void setStimulusOfSelection();
 
     /**
      * \brief   Returns the page action bound to the pressed key, or nullptr.
@@ -147,8 +172,12 @@ private:
     QAction*            mActSelectAll;  //!< Select every element on the level.
     QAction*            mActAddState;   //!< Activate the Add State tool.
     QAction*            mActAddFinal;   //!< Activate the Add Final State tool.
+    QAction*            mActAddTransition; //!< Activate the Add Transition tool.
     QAction*            mActDelete;     //!< Delete the selection with confirmation.
     QAction*            mActRename;     //!< Rename the selected state in place.
+    QAction*            mActSetStimulus;//!< Set the selected transition's stimulus.
+    QAction*            mActRaisePriority; //!< Raise the selected transition's priority.
+    QAction*            mActLowerPriority; //!< Lower the selected transition's priority.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -210,6 +239,11 @@ inline QAction* SMDesign::actionAddFinalState() const
     return mActAddFinal;
 }
 
+inline QAction* SMDesign::actionAddTransition() const
+{
+    return mActAddTransition;
+}
+
 inline QAction* SMDesign::actionDelete() const
 {
     return mActDelete;
@@ -218,6 +252,21 @@ inline QAction* SMDesign::actionDelete() const
 inline QAction* SMDesign::actionRename() const
 {
     return mActRename;
+}
+
+inline QAction* SMDesign::actionSetStimulus() const
+{
+    return mActSetStimulus;
+}
+
+inline QAction* SMDesign::actionRaisePriority() const
+{
+    return mActRaisePriority;
+}
+
+inline QAction* SMDesign::actionLowerPriority() const
+{
+    return mActLowerPriority;
 }
 
 #endif  // LUSAN_VIEW_SM_SMDESIGN_HPP

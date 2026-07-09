@@ -22,14 +22,17 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMCanvasItem.hpp"
+#include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QCoreApplication>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QKeyEvent>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPalette>
 #include <QSet>
@@ -62,6 +65,7 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     connect(&notifier, &DocModelNotifier::elementAdded, this, &SMScene::onElementAdded);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMScene::onElementRemoved);
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMScene::onElementChanged);
+    connect(&notifier, &DocModelNotifier::listReordered, this, &SMScene::onListReordered);
     connect(&notifier, &DocModelNotifier::nameChanged, this, &SMScene::onNameChanged);
     connect(&notifier, &DocModelNotifier::layoutChanged, this, &SMScene::onLayoutChanged);
 
@@ -242,6 +246,23 @@ void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
     if (event->button() == Qt::LeftButton)
     {
         mMouseDrag = true;
+
+        // Select-tool border drag: a press in a state's border band starts a transition.
+        if ((mTool != nullptr) && (mTool->getKind() == NESMDesign::eCanvasTool::Select))
+        {
+            SMStateItem* source = stateAt(event->scenePos());
+            if ((source != nullptr) && source->isBorderDragZone(event->scenePos()))
+            {
+                setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+                SMTransitionTool* tool = dynamic_cast<SMTransitionTool*>(mTool.get());
+                if (tool != nullptr)
+                {
+                    tool->beginDragFrom(source->getElementId(), event->scenePos());
+                    event->accept();
+                    return;
+                }
+            }
+        }
     }
 
     if ((mTool == nullptr) || (mTool->mousePress(event) == false))
@@ -390,6 +411,13 @@ void SMScene::onElementAdded(uint32_t id, eDocElementKind kind)
         createStateItem(id);
     }
 
+    if (kind == eDocElementKind::Transition)
+    {
+        createEdgeItem(id);
+        // A new internal transition adds a body row; refresh the owner box.
+        refreshStateBodies();
+    }
+
     if ((kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
     {
         updateConnHighlights();
@@ -402,16 +430,65 @@ void SMScene::onElementRemoved(uint32_t id, eDocElementKind kind)
     {
         // The destructor removes the item from the scene and the ID hash.
         delete findCanvasItem(id);
+        if (kind == eDocElementKind::Transition)
+        {
+            refreshStateBodies();
+        }
+
         updateConnHighlights();
     }
 }
 
-void SMScene::onElementChanged(uint32_t id, eDocElementKind /*kind*/)
+void SMScene::onElementChanged(uint32_t id, eDocElementKind kind)
 {
+    if (kind == eDocElementKind::Transition)
+    {
+        const SMTransitionEntry* transition = mModel.getData().findTransitionById(id);
+        SMEdgeItem* edge = edgeItem(id);
+        if ((transition != nullptr) && transition->isExternal())
+        {
+            if (edge != nullptr)
+            {
+                edge->updateFromModel();
+            }
+            else
+            {
+                createEdgeItem(id);     // became external
+            }
+        }
+        else if (edge != nullptr)
+        {
+            delete edge;                // became internal (or gone)
+        }
+
+        refreshStateBodies();
+        updateConnHighlights();
+        return;
+    }
+
     SMCanvasItem* item = findCanvasItem(id);
     if (item != nullptr)
     {
         item->updateFromModel();
+    }
+}
+
+void SMScene::onListReordered(uint32_t /*ownerId*/, eDocElementKind kind)
+{
+    if (kind == eDocElementKind::Transition)
+    {
+        // Transition IDs are position-keyed, so a reorder can reassign what each edge shows.
+        for (SMCanvasItem* item : std::as_const(mItems))
+        {
+            SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item);
+            if (edge != nullptr)
+            {
+                edge->updateFromModel();
+            }
+        }
+
+        refreshStateBodies();
+        updateConnHighlights();
     }
 }
 
@@ -423,7 +500,16 @@ void SMScene::onNameChanged(uint32_t id, const QString& /*oldName*/, const QStri
         item->updateFromModel();
     }
 
-    // Transition targets reference states by name; the connection map may shift.
+    // Transition targets reference states by name; refresh edges and the connection map.
+    for (SMCanvasItem* edgeItem : std::as_const(mItems))
+    {
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(edgeItem);
+        if (edge != nullptr)
+        {
+            edge->updateFromModel();
+        }
+    }
+
     updateConnHighlights();
 }
 
@@ -435,6 +521,12 @@ void SMScene::onLayoutChanged(const QList<uint32_t>& ownerIds)
         if (item != nullptr)
         {
             item->updateFromModel();
+        }
+
+        // A state box move/resize re-anchors its connected edges.
+        if (stateItem(id) != nullptr)
+        {
+            updateEdgesForState(id);
         }
     }
 }
@@ -452,6 +544,82 @@ QList<SMStateItem*> SMScene::selectedStateItems() const
     }
 
     return result;
+}
+
+QList<SMEdgeItem*> SMScene::selectedEdgeItems() const
+{
+    QList<SMEdgeItem*> result;
+    for (QGraphicsItem* item : selectedItems())
+    {
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item);
+        if (edge != nullptr)
+        {
+            result.append(edge);
+        }
+    }
+
+    return result;
+}
+
+void SMScene::reconnectTransitionTarget(uint32_t transitionId, uint32_t targetStateId)
+{
+    StateMachineData& data = mModel.getData();
+    const SMTransitionEntry* transition = data.findTransitionById(transitionId);
+    if (transition == nullptr)
+    {
+        return;
+    }
+
+    if (targetStateId != 0)
+    {
+        const SMStateEntry* target = data.findStateById(targetStateId);
+        if ((target == nullptr) || (target->getName() == transition->getTo()))
+        {
+            return;
+        }
+
+        mModel.getUndoStack().push(new SMSetTransitionTargetCommand(  data, mModel.getNotifier()
+                                                                   , transitionId, target->getName()
+                                                                   , QCoreApplication::translate("SMScene", "Reconnect transition")));
+        return;
+    }
+
+    // Dropped on empty canvas: offer to make the transition internal (no target).
+    QWidget* parent = (views().isEmpty() == false) ? views().first() : nullptr;
+    const QMessageBox::StandardButton answer =
+            QMessageBox::question(parent, tr("Internal Transition")
+                                  , tr("Make this transition internal (no target)?")
+                                  , QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (answer != QMessageBox::Yes)
+    {
+        return;
+    }
+
+    const QString text = tr("Make transition internal");
+    SMCompositeCommand* composite = new SMCompositeCommand(data, mModel.getNotifier(), text);
+    new SMSetTransitionTargetCommand(data, mModel.getNotifier(), transitionId, QString(), text, composite);
+    new SMRemoveLayoutCommand(data, mModel.getNotifier(), QList<uint32_t>{ transitionId }, text, composite);
+    mModel.getUndoStack().push(composite);
+}
+
+void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateId)
+{
+    if (newSourceStateId == 0)
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    SMStateEntry* newSource = data.findStateById(newSourceStateId);
+    SMStateEntry* oldSource = data.findTransitionOwner(transitionId);
+    if ((newSource == nullptr) || (oldSource == nullptr) || (newSource == oldSource))
+    {
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMReparentTransitionCommand(  data, mModel.getNotifier()
+                                                              , *oldSource, *newSource, transitionId
+                                                              , QCoreApplication::translate("SMScene", "Reconnect transition source")));
 }
 
 void SMScene::startRenameOfSelection()
@@ -472,6 +640,18 @@ void SMScene::populateFromModel()
         {
             createStateItem(state->getId());
         }
+
+        // Edges after all boxes exist, so both endpoints resolve to a box.
+        for (const SMStateEntry* state : level->getElements())
+        {
+            for (const SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                if (transition->isExternal())
+                {
+                    createEdgeItem(transition->getId());
+                }
+            }
+        }
     }
 }
 
@@ -482,6 +662,74 @@ void SMScene::createStateItem(uint32_t stateId)
         SMStateItem* item = new SMStateItem(stateId);
         addItem(item);
         item->updateFromModel();
+    }
+}
+
+void SMScene::createEdgeItem(uint32_t transitionId)
+{
+    if (findCanvasItem(transitionId) != nullptr)
+    {
+        return;
+    }
+
+    const SMTransitionEntry* transition = mModel.getData().findTransitionById(transitionId);
+    const SMStateEntry* owner = mModel.getData().findTransitionOwner(transitionId);
+    if ((transition == nullptr) || (transition->isExternal() == false) || (owner == nullptr) || (isOnThisLevel(owner->getId()) == false))
+    {
+        return;     // internal transitions are shown as a state-body row, not an edge
+    }
+
+    SMEdgeItem* item = new SMEdgeItem(transitionId);
+    addItem(item);
+    item->updateFromModel();
+}
+
+SMEdgeItem* SMScene::edgeItem(uint32_t transitionId) const
+{
+    return dynamic_cast<SMEdgeItem*>(findCanvasItem(transitionId));
+}
+
+SMStateItem* SMScene::stateItem(uint32_t stateId) const
+{
+    return dynamic_cast<SMStateItem*>(findCanvasItem(stateId));
+}
+
+SMStateItem* SMScene::stateAt(const QPointF& scenePos) const
+{
+    const QList<QGraphicsItem*> hit = items(scenePos);
+    for (QGraphicsItem* item : hit)
+    {
+        SMStateItem* state = dynamic_cast<SMStateItem*>(item);
+        if (state != nullptr)
+        {
+            return state;
+        }
+    }
+
+    return nullptr;
+}
+
+void SMScene::updateEdgesForState(uint32_t stateId)
+{
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item);
+        if ((edge != nullptr) && ((edge->getSourceId() == stateId) || (edge->getTargetId() == stateId)))
+        {
+            edge->refreshAnchors();
+        }
+    }
+}
+
+void SMScene::refreshStateBodies()
+{
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        SMStateItem* state = dynamic_cast<SMStateItem*>(item);
+        if (state != nullptr)
+        {
+            state->updateFromModel();
+        }
     }
 }
 

@@ -254,6 +254,17 @@ public:
     SMStateEntry* findStateById(uint32_t id) const;
 
     /**
+     * \brief   Finds the state that owns the transition with the given ID (a transition is
+     *          nested inside its source state), anywhere in the document; nullptr if none.
+     **/
+    SMStateEntry* findTransitionOwner(uint32_t transitionId) const;
+
+    /**
+     * \brief   Finds a transition by element ID anywhere in the document; nullptr if none.
+     **/
+    SMTransitionEntry* findTransitionById(uint32_t transitionId) const;
+
+    /**
      * \brief   Returns the StateList of a machine level: the root list when \p levelId is
      *          the Overview ID, otherwise the nested list of the composite state with that
      *          ID; nullptr when the ID names no level.

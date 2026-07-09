@@ -24,11 +24,16 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMLayoutData.hpp"
+#include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/common/DocElementCommands.hpp"
+#include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
+#include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
+#include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
@@ -40,6 +45,7 @@
 #include <QMouseEvent>
 #include <QUndoStack>
 
+#include <cmath>
 #include <cstdio>
 
 namespace
@@ -110,6 +116,22 @@ namespace
         QApplication::sendEvent(target, &press);
         QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, text);
         QApplication::sendEvent(target, &release);
+        QApplication::processEvents();
+    }
+
+    //!< Posts a double-click sequence (press, release, dbl-click, release) at a scene point.
+    void dblClickScene(SMGraphicsView& view, const QPointF& scenePos)
+    {
+        const QPoint vp = view.mapFromScene(scenePos);
+        const QPointF global = view.viewport()->mapToGlobal(vp);
+        QMouseEvent press(QEvent::MouseButtonPress, QPointF(vp), global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(view.viewport(), &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(vp), global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(view.viewport(), &release);
+        QMouseEvent dbl(QEvent::MouseButtonDblClick, QPointF(vp), global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(view.viewport(), &dbl);
+        QMouseEvent release2(QEvent::MouseButtonRelease, QPointF(vp), global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(view.viewport(), &release2);
         QApplication::processEvents();
     }
 }
@@ -290,6 +312,138 @@ int main(int argc, char* argv[])
     clickScene(view, offItem->pos() + QPointF(20.0, 10.0));
     CHECK(model.getSelectionModel().isSelected(lightOff->getId()));
     grab(design, "g6-selected");
+
+    std::printf("sect: SM-14 edges render\n");
+    // --- Edge items exist for the root-level external transitions ---
+    SMStateEntry* onState = data.findState("LightOn");
+    CHECK(onState != nullptr);
+    SMTransitionEntry* t27 = data.findTransitionById(27);
+    CHECK((t27 != nullptr) && t27->isExternal());
+    SMEdgeItem* edgeItem27 = dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(27));
+    CHECK(edgeItem27 != nullptr);                                            // has stored layout
+    CHECK(dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(29)) != nullptr);   // auto-anchored (no layout)
+    grab(design, "g7-edges");
+
+    std::printf("sect: SM-14 waypoints\n");
+    // --- Waypoint insert then remove on edge 27, double-clicking its true midpoint ---
+    // Raise it above the antiparallel edge 29 so the double-click routes to it.
+    edgeItem27->setZValue(10.0);
+    CHECK(edgeItem27->getPath().size() == 2);
+    const QPointF edgeMid = (edgeItem27->getPath().first() + edgeItem27->getPath().last()) / 2.0;
+    CHECK(data.getLayout().findEdge(27)->points.size() == 2);
+
+    dblClickScene(view, edgeMid);
+    CHECK(data.getLayout().findEdge(27)->points.size() == 3);               // waypoint inserted
+    model.getUndoStack().undo();
+    CHECK(data.getLayout().findEdge(27)->points.size() == 2);               // insert is undoable
+    model.getUndoStack().redo();
+    CHECK(data.getLayout().findEdge(27)->points.size() == 3);
+
+    const QPointF inserted = data.getLayout().findEdge(27)->points.at(1);
+    dblClickScene(view, inserted);
+    CHECK(data.getLayout().findEdge(27)->points.size() == 2);               // waypoint removed
+    model.getUndoStack().undo();
+    CHECK(data.getLayout().findEdge(27)->points.size() == 3);               // remove is undoable
+    model.getUndoStack().redo();
+    CHECK(data.getLayout().findEdge(27)->points.size() == 2);
+    edgeItem27->setZValue(-1.0);
+    grab(design, "g9-waypoints");
+
+    std::printf("sect: SM-14 create transition\n");
+    // --- Add Transition tool: click source, click target ---
+    scene.clearSelection();
+    QApplication::processEvents();
+    SMStateItem* onItem = scene.stateItem(onState->getId());
+    offItem = scene.stateItem(lightOff->getId());
+    CHECK((onItem != nullptr) && (offItem != nullptr));
+    const int undoBeforeTx = model.getUndoStack().count();
+    const int offTxBefore  = lightOff->getTransitions().getElementCount();
+    scene.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+    clickScene(view, offItem->getBoxGeometry().center());
+    clickScene(view, onItem->getBoxGeometry().center());
+    CHECK(lightOff->getTransitions().getElementCount() == offTxBefore + 1);
+    CHECK(model.getUndoStack().count() == undoBeforeTx + 1);
+    CHECK(scene.getActiveTool() == NESMDesign::eCanvasTool::Select);         // single-shot
+    const uint32_t newTx = lightOff->getTransitions().getElements().last()->getId();
+    CHECK(dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(newTx)) != nullptr);
+    model.getUndoStack().undo();
+    CHECK(lightOff->getTransitions().getElementCount() == offTxBefore);
+    CHECK(scene.findCanvasItem(newTx) == nullptr);                           // edge removed with it
+    model.getUndoStack().redo();
+    grab(design, "g8-created");
+
+    // Self-transition: click the same state as source and target.
+    const int selfBefore = onState->getTransitions().getElementCount();
+    scene.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+    clickScene(view, onItem->getBoxGeometry().center());
+    clickScene(view, onItem->getBoxGeometry().center());
+    CHECK(onState->getTransitions().getElementCount() == selfBefore + 1);
+    const uint32_t selfTx = onState->getTransitions().getElements().last()->getId();
+    const SMTransitionEntry* self = data.findTransitionById(selfTx);
+    CHECK((self != nullptr) && self->isExternal() && (self->getTo() == onState->getName()));
+    CHECK(dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(selfTx)) != nullptr);
+    model.getUndoStack().undo();
+
+    // Internal transition (no target): the path the tool takes on Enter / empty drop.
+    model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *onState
+                                                           , SMTransitionEntry::eStimulusKind::Trigger, QString(), QString()
+                                                           , QList<QPointF>(), QStringLiteral("internal")));
+    const uint32_t internalTx = onState->getTransitions().getElements().last()->getId();
+    CHECK(data.findTransitionById(internalTx)->isExternal() == false);
+    CHECK(scene.findCanvasItem(internalTx) == nullptr);                      // no edge for an internal
+    model.getUndoStack().undo();
+
+    std::printf("sect: SM-14 stimulus\n");
+    // --- Stimulus assignment over the shared registry ---
+    const uint32_t createdTx = lightOff->getTransitions().getElements().last()->getId();
+    model.getUndoStack().push(new SMSetStimulusCommand(  data, model.getNotifier(), createdTx
+                                                       , SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("PowerOn")
+                                                       , QStringLiteral("set stimulus")));
+    CHECK(data.findTransitionById(createdTx)->getStimulus() == QStringLiteral("PowerOn"));
+
+    std::printf("sect: SM-14 arc geometry\n");
+    // --- Arc renders from two points + bulge (apex bows off the chord) ---
+    const QList<QPointF> arc = NESMDesign::arcPolyline(QPointF(0.0, 0.0), QPointF(100.0, 0.0), 0.4, NESMDesign::EdgeArcSamples);
+    CHECK(arc.size() == NESMDesign::EdgeArcSamples + 1);
+    CHECK(std::abs(arc.at(arc.size() / 2).y()) > 1.0);
+
+    std::printf("sect: SM-14 priority round-trip\n");
+    // --- Priority reorder changes document order and survives save/load ---
+    SMStateEntry* yellow = data.findState("Yellow");
+    CHECK((yellow != nullptr) && (yellow->getTransitions().getElementCount() >= 2));
+    const QString firstToBefore = yellow->getTransitions().getElements().at(0)->getTo();
+    model.getUndoStack().push(new TDocReorderCommand<SMTransitionEntry*, DocumentElem>(  model.getNotifier(), yellow->getTransitions()
+                                                                                       , 0, 1, yellow->getId(), eDocElementKind::Transition
+                                                                                       , QStringLiteral("reorder")));
+    const QString firstToAfter = yellow->getTransitions().getElements().at(0)->getTo();
+    CHECK(firstToAfter != firstToBefore);
+    const QString roundtripPath = QDir::tempPath() + QStringLiteral("/sm14_roundtrip.fsml");
+    CHECK(model.saveToFile(roundtripPath));
+    StateMachineModel reloaded;
+    CHECK(reloaded.loadFromFile(roundtripPath));
+    SMStateEntry* yellowReloaded = reloaded.getData().findState("Yellow");
+    CHECK((yellowReloaded != nullptr) && (yellowReloaded->getTransitions().getElements().at(0)->getTo() == firstToAfter));
+
+    std::printf("sect: SM-14 reconnect (target + source)\n");
+    // --- Target-endpoint reconnection retargets `To`, undoable ---
+    const QString to27Before = data.findTransitionById(27)->getTo();
+    model.getUndoStack().push(new SMSetTransitionTargetCommand(  data, model.getNotifier(), 27
+                                                              , QStringLiteral("LightOff"), QStringLiteral("retarget")));
+    CHECK(data.findTransitionById(27)->getTo() == QStringLiteral("LightOff"));
+    model.getUndoStack().undo();
+    CHECK(data.findTransitionById(27)->getTo() == to27Before);
+    model.getUndoStack().redo();
+    model.getUndoStack().undo();     // leave 27 as it was
+
+    // --- Source-endpoint reconnection moves the transition to a new owner, undoable ---
+    const int onCountBefore = onState->getTransitions().getElementCount();
+    model.getUndoStack().push(new SMReparentTransitionCommand(  data, model.getNotifier()
+                                                             , *lightOff, *onState, createdTx, QStringLiteral("reparent")));
+    CHECK(lightOff->getTransitions().findElement(createdTx) == nullptr);         // left the old owner
+    CHECK(onState->getTransitions().getElementCount() == onCountBefore + 1);     // joined the new owner
+    model.getUndoStack().undo();
+    CHECK(lightOff->getTransitions().findElement(createdTx) != nullptr);         // restored under its old ID
+    CHECK(onState->getTransitions().getElementCount() == onCountBefore);
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

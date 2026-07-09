@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 QColor NESMDesign::canvasBackground(const QPalette& palette)
 {
@@ -65,6 +66,97 @@ QColor NESMDesign::contrastTextColor(const QColor& fill)
     // Rec. 601 luma decides between near-white and near-black text.
     const double luma = 0.299 * fill.redF() + 0.587 * fill.greenF() + 0.114 * fill.blueF();
     return (luma < 0.5 ? QColor(0xF2, 0xF2, 0xF2) : QColor(0x1A, 0x1A, 0x1A));
+}
+
+QColor NESMDesign::edgeColor(const QPalette& palette)
+{
+    QColor result{ palette.color(QPalette::WindowText) };
+    result.setAlphaF(0.8);
+    return result;
+}
+
+QColor NESMDesign::edgeIncomingColor(const QPalette& palette)
+{
+    return palette.color(QPalette::Highlight);
+}
+
+QColor NESMDesign::edgeOutgoingColor(const QPalette& palette)
+{
+    // A warmer accent so the incoming/outgoing direction is distinguishable at a glance.
+    QColor result{ palette.color(QPalette::Highlight) };
+    return QColor::fromHsv((result.hue() + 150) % 360, result.saturation(), result.value());
+}
+
+QPointF NESMDesign::borderPoint(const QRectF& rect, const QPointF& towards)
+{
+    const QPointF center = rect.center();
+    QPointF dir = towards - center;
+    const double halfW = rect.width() / 2.0;
+    const double halfH = rect.height() / 2.0;
+    if ((halfW <= 0.0) || (halfH <= 0.0))
+    {
+        return center;
+    }
+
+    // Scale the direction so it just reaches the nearer of the vertical/horizontal borders.
+    const double sx = (std::abs(dir.x()) > 1e-6) ? halfW / std::abs(dir.x()) : std::numeric_limits<double>::max();
+    const double sy = (std::abs(dir.y()) > 1e-6) ? halfH / std::abs(dir.y()) : std::numeric_limits<double>::max();
+    const double scale = std::min(sx, sy);
+    if (scale >= std::numeric_limits<double>::max())
+    {
+        return QPointF(rect.right(), center.y());
+    }
+
+    return center + dir * scale;
+}
+
+QList<QPointF> NESMDesign::arcPolyline(const QPointF& begin, const QPointF& end, double bulge, int samples)
+{
+    constexpr double Pi = 3.14159265358979323846;
+    QList<QPointF> points;
+    const QPointF chord = end - begin;
+    const double c = std::hypot(chord.x(), chord.y());
+    if ((c < 1e-6) || (std::abs(bulge) < 1e-6) || (samples < 1))
+    {
+        points << begin << end;
+        return points;
+    }
+
+    const double  h    = bulge * c / 2.0;                      // signed sagitta (arc height)
+    const QPointF nrm  { -chord.y() / c, chord.x() / c };      // unit left perpendicular
+    const QPointF mid  = (begin + end) / 2.0;
+    const QPointF apex = mid + nrm * h;
+    const double  r    = (c * c / 4.0 + h * h) / (2.0 * std::abs(h));
+    const QPointF signedNrm = nrm * (h >= 0.0 ? 1.0 : -1.0);
+    const QPointF center    = apex - signedNrm * r;
+
+    const double a0 = std::atan2(begin.y() - center.y(), begin.x() - center.x());
+    const double a1 = std::atan2(end.y() - center.y(), end.x() - center.x());
+    const double aApex = std::atan2(apex.y() - center.y(), apex.x() - center.x());
+
+    const auto wrap = [Pi](double a) -> double
+    {
+        while (a <= -Pi) a += 2.0 * Pi;
+        while (a > Pi)   a -= 2.0 * Pi;
+        return a;
+    };
+
+    double sweep  = wrap(a1 - a0);
+    const double toApex = wrap(aApex - a0);
+    // The drawn sweep must pass through the apex; flip direction when it does not.
+    if (((sweep >= 0.0) != (toApex >= 0.0)) || (std::abs(toApex) > std::abs(sweep)))
+    {
+        sweep += (sweep >= 0.0 ? -2.0 * Pi : 2.0 * Pi);
+    }
+
+    points.reserve(samples + 1);
+    for (int i = 0; i <= samples; ++i)
+    {
+        const double a = a0 + sweep * (static_cast<double>(i) / samples);
+        points << QPointF(center.x() + r * std::cos(a), center.y() + r * std::sin(a));
+    }
+
+    return points;
 }
 
 qreal NESMDesign::snapValue(qreal value, int gridSize)

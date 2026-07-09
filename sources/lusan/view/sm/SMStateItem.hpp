@@ -124,6 +124,13 @@ public:
      **/
     QRectF getBoxGeometry() const;
 
+    /**
+     * \brief   True when a scene position lies in the border band of the box (and not on a
+     *          resize handle, the chevron, or the rename editor): the zone from which a
+     *          transition drag starts with the Select tool.
+     **/
+    bool isBorderDragZone(const QPointF& scenePos) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -248,6 +255,11 @@ private:
      * \brief   Toggles the body collapse through an undo command.
      **/
     void toggleExpanded();
+
+    /**
+     * \brief   Re-anchors the transitions connected to this box after it moved or resized.
+     **/
+    void notifyEdgesOfGeometry();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

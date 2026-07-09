@@ -149,6 +149,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMCommand.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
+    ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/sm/SMDataTypeModel.cpp
     ${LUSAN}/model/sm/SMAttributeModel.cpp
@@ -163,6 +164,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMCanvasItem.cpp
     ${LUSAN}/view/sm/SMCanvasTool.cpp
     ${LUSAN}/view/sm/SMDesign.cpp
+    ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
     ${LUSAN}/view/sm/SMScene.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
