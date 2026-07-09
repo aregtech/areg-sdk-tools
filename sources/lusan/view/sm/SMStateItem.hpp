@@ -189,6 +189,12 @@ private:
     void paintBodyRows(QPainter* painter, const QRectF& box, const QColor& bodyColor);
 
     /**
+     * \brief   Paints the submachine miniature hint of a composite state into the
+     *          bottom-right body corner: the nested level's node boxes, scaled to fit.
+     **/
+    void paintMiniature(QPainter* painter, const QRectF& box, const QColor& bodyColor);
+
+    /**
      * \brief   Paints the resize handles of the selected box.
      **/
     void paintHandles(QPainter* painter, const QPalette& palette);
@@ -275,6 +281,7 @@ private:
     QString                     mColorName;     //!< The persisted body color (empty = theme).
     QString                     mHeaderColorName; //!< The persisted header color (empty = derived).
     QList<BodyRow>              mRows;          //!< The behavior rows, in display order.
+    QList<QRectF>               mMiniature;     //!< The nested level's node boxes (scene units).
     eHandle                     mResizeHandle;  //!< The handle grabbed by the resize drag.
     QRectF                      mResizeStart;   //!< The box scene geometry at resize start.
     QGraphicsProxyWidget*       mRenameProxy;   //!< The open in-place name editor, or nullptr.

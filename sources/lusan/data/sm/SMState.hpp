@@ -142,6 +142,21 @@ public:
      **/
     SMStateData* getOrCreateNestedStates();
 
+    /**
+     * \brief   Detaches the painted nested StateList and transfers its ownership to the
+     *          caller; the state becomes non-composite.
+     * \return  The detached list, or nullptr if the state had none.
+     **/
+    SMStateData* takeNestedStates();
+
+    /**
+     * \brief   Attaches a painted nested StateList, taking ownership. Replaces any
+     *          existing list and clears the imported-submachine alias.
+     * \param   nested  The list to attach; nullptr detaches nothing and leaves the
+     *                  state non-composite.
+     **/
+    void attachNestedStates(SMStateData* nested);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////

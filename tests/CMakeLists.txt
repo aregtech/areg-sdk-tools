@@ -167,6 +167,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
     ${LUSAN}/view/sm/SMScene.cpp
+    ${LUSAN}/view/sm/SMSceneManager.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
     ${LUSAN_ROOT}/tests/sm/SMCanvasSmokeTests.cpp
     ${LUSAN}/res/lusan.qrc

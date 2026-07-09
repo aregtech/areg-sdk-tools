@@ -23,6 +23,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 
 #include <QSet>
+#include <memory>
 
 namespace
 {
@@ -142,6 +143,95 @@ void SMRenameStateCommand::redo()
 void SMRenameStateCommand::undo()
 {
     apply(mOld, mNew);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMConvertToCompositeCommand
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    /**
+     * \class   SMAttachNestedCommand
+     * \brief   Toggles the ownership of a composite state's nested StateList between the
+     *          state (applied) and this command (undone), so undo/redo reuse the same
+     *          list object and every ID inside it survives history navigation.
+     **/
+    class SMAttachNestedCommand : public SMCommand
+    {
+    public:
+        SMAttachNestedCommand(  StateMachineData& data, DocModelNotifier& notifier
+                              , uint32_t stateId, SMStateData* nested
+                              , const QString& text, QUndoCommand* parent)
+            : SMCommand (data, notifier, text, parent)
+            , mStateId  (stateId)
+            , mNested   (nested)
+        {
+        }
+
+        void redo() override
+        {
+            SMStateEntry* state = data().findStateById(mStateId);
+            if (state != nullptr)
+            {
+                state->attachNestedStates(mNested.release());
+                notifier().notifyElementChanged(mStateId, eDocElementKind::State);
+            }
+        }
+
+        void undo() override
+        {
+            SMStateEntry* state = data().findStateById(mStateId);
+            if (state != nullptr)
+            {
+                mNested.reset(state->takeNestedStates());
+                notifier().notifyElementChanged(mStateId, eDocElementKind::State);
+            }
+        }
+
+    private:
+        uint32_t                        mStateId;   //!< The converted state's ID.
+        std::unique_ptr<SMStateData>    mNested;    //!< Owned while the command is undone.
+    };
+}
+
+SMConvertToCompositeCommand::SMConvertToCompositeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                                         , uint32_t stateId, const QString& startName
+                                                         , const QRectF& startGeometry, const QString& text
+                                                         , QUndoCommand* parent /*= nullptr*/)
+    : SMCompositeCommand(data, notifier, text, parent)
+    , mStart            (nullptr)
+{
+    SMStateEntry* state = data.findStateById(stateId);
+    const bool convertible = (state != nullptr)
+            && (state->getKind() == SMStateEntry::eStateKind::Normal)
+            && (state->isImportedSubmachine() == false)
+            && (state->hasNestedStates() == false);
+    if (convertible == false)
+    {
+        return;
+    }
+
+    // The list is parented to the state up front so the Start insertion allocates its ID
+    // from the document counter even before the attach child has run.
+    SMStateData* nested = new SMStateData(state);
+    mStart = new SMStateEntry(0, startName, SMStateEntry::eStateKind::Start, nested);
+
+    // Children run in order on redo: attach the list, insert Start (allocates its ID),
+    // then create Start's Node layout entry from that ID.
+    new SMAttachNestedCommand(data, notifier, stateId, nested, text, this);
+    new TDocAddCommand<SMStateEntry*, DocumentElem>(notifier, *nested, mStart, eDocElementKind::State, text, this);
+    new SMAttachNodeCommand(data, notifier, *mStart, startGeometry, text, this);
+}
+
+bool SMConvertToCompositeCommand::isEffective() const
+{
+    return (mStart != nullptr);
+}
+
+uint32_t SMConvertToCompositeCommand::getStartId() const
+{
+    return (mStart != nullptr ? mStart->getId() : 0u);
 }
 
 //////////////////////////////////////////////////////////////////////////

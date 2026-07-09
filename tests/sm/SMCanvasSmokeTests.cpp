@@ -31,11 +31,13 @@
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
 #include "lusan/view/sm/SMScene.hpp"
+#include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QApplication>
@@ -43,6 +45,7 @@
 #include <QGraphicsProxyWidget>
 #include <QLineEdit>
 #include <QMouseEvent>
+#include <QToolButton>
 #include <QUndoStack>
 
 #include <cmath>
@@ -120,18 +123,28 @@ namespace
     }
 
     //!< Posts a double-click sequence (press, release, dbl-click, release) at a scene point.
-    void dblClickScene(SMGraphicsView& view, const QPointF& scenePos)
+    void dblClickScene(SMGraphicsView& view, const QPointF& scenePos, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
     {
         const QPoint vp = view.mapFromScene(scenePos);
         const QPointF global = view.viewport()->mapToGlobal(vp);
-        QMouseEvent press(QEvent::MouseButtonPress, QPointF(vp), global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent press(QEvent::MouseButtonPress, QPointF(vp), global, Qt::LeftButton, Qt::LeftButton, modifiers);
         QApplication::sendEvent(view.viewport(), &press);
-        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(vp), global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(vp), global, Qt::LeftButton, Qt::NoButton, modifiers);
         QApplication::sendEvent(view.viewport(), &release);
-        QMouseEvent dbl(QEvent::MouseButtonDblClick, QPointF(vp), global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent dbl(QEvent::MouseButtonDblClick, QPointF(vp), global, Qt::LeftButton, Qt::LeftButton, modifiers);
         QApplication::sendEvent(view.viewport(), &dbl);
-        QMouseEvent release2(QEvent::MouseButtonRelease, QPointF(vp), global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QMouseEvent release2(QEvent::MouseButtonRelease, QPointF(vp), global, Qt::LeftButton, Qt::NoButton, modifiers);
         QApplication::sendEvent(view.viewport(), &release2);
+        QApplication::processEvents();
+    }
+
+    //!< Posts a key press/release pair directly to a graphics scene.
+    void keyClickScene(SMScene& scene, Qt::Key key)
+    {
+        QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier);
+        QApplication::sendEvent(&scene, &press);
+        QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier);
+        QApplication::sendEvent(&scene, &release);
         QApplication::processEvents();
     }
 }
@@ -444,6 +457,151 @@ int main(int argc, char* argv[])
     model.getUndoStack().undo();
     CHECK(lightOff->getTransitions().findElement(createdTx) != nullptr);         // restored under its old ID
     CHECK(onState->getTransitions().getElementCount() == onCountBefore);
+
+    std::printf("sect: SM-15 level path\n");
+    SMSceneManager& manager = design.getSceneManager();
+    const uint32_t rootLevel = manager.getRootLevel();
+    CHECK(manager.getCurrentLevel() == rootLevel);
+    SMStateEntry* function = data.findState("Function");
+    CHECK(function != nullptr);
+    CHECK(data.getLevelPath(rootLevel) == (QList<uint32_t>{ rootLevel }));
+    CHECK(data.getLevelPath(function->getId()) == (QList<uint32_t>{ rootLevel, onState->getId(), function->getId() }));
+    CHECK(data.getLevelPath(9999u).isEmpty());
+
+    std::printf("sect: SM-15 enter via double-click\n");
+    // --- Double-click a painted composite descends; the breadcrumb shows the path ---
+    design.getScene().clearSelection();
+    SMStateItem* compositeItem = design.getScene().stateItem(onState->getId());
+    CHECK(compositeItem != nullptr);
+    dblClickScene(view, compositeItem->getBoxGeometry().center());
+    CHECK(manager.getCurrentLevel() == onState->getId());
+    CHECK(&design.getScene() != &scene);                                     // level scene swapped in
+    CHECK(model.getSelectionModel().getActiveLevel() == onState->getId());
+    SMStateEntry* initialize = data.findState("Initialize");
+    CHECK((initialize != nullptr) && (design.getScene().stateItem(initialize->getId()) != nullptr));
+    QList<QToolButton*> crumbs = design.findChildren<QToolButton*>();
+    CHECK(crumbs.size() == 1);                                               // one clickable ancestor
+    CHECK(crumbs.first()->text() == QStringLiteral("TrafficLight"));
+    grab(design, "g10-sublevel");
+
+    std::printf("sect: SM-15 enter via Enter key\n");
+    design.getScene().clearSelection();
+    SMStateItem* functionItem = design.getScene().stateItem(function->getId());
+    CHECK(functionItem != nullptr);
+    functionItem->setSelected(true);
+    keyClickScene(design.getScene(), Qt::Key_Return);
+    CHECK(manager.getCurrentLevel() == function->getId());
+    CHECK(design.findChildren<QToolButton*>().size() == 2);                  // two clickable ancestors
+
+    std::printf("sect: SM-15 per-level viewport\n");
+    // --- The zoom set here persists into the level's View entry and restores on re-entry ---
+    view.setZoom(150);
+    QApplication::processEvents();
+    SMLayoutView* functionView = data.getLayout().findView(function->getId());
+    CHECK((functionView != nullptr) && (functionView->zoom == 150));
+
+    keyClickScene(design.getScene(), Qt::Key_Backspace);                     // to LightOn
+    CHECK(manager.getCurrentLevel() == onState->getId());
+    CHECK(view.getZoom() == 100);                                            // LightOn's own View entry
+
+    CHECK(manager.navigateTo(function->getId()));
+    CHECK(view.getZoom() == 150);                                            // restored on re-entry
+
+    // Persisted across save/reload.
+    const QString viewportPath = QDir::tempPath() + QStringLiteral("/sm15_viewport.fsml");
+    CHECK(model.saveToFile(viewportPath));
+    {
+        StateMachineData reopened;
+        CHECK(reopened.readFromFile(viewportPath));
+        SMLayoutView* reopenedView = reopened.getLayout().findView(function->getId());
+        CHECK((reopenedView != nullptr) && (reopenedView->zoom == 150));
+    }
+
+    std::printf("sect: SM-15 leave via Alt+double-click and breadcrumb\n");
+    dblClickScene(view, QPointF(-4000.0, -4000.0), Qt::AltModifier);         // empty canvas
+    CHECK(manager.getCurrentLevel() == onState->getId());
+    QList<QToolButton*> rootCrumbs = design.findChildren<QToolButton*>();
+    CHECK(rootCrumbs.size() == 1);
+    rootCrumbs.first()->click();                                             // ancestor click
+    QApplication::processEvents();
+    CHECK(manager.getCurrentLevel() == rootLevel);
+    CHECK(design.actionGoToParent()->isEnabled() == false);                  // root has no parent
+
+    std::printf("sect: SM-15 add substate (painted)\n");
+    // --- Convert a plain state: nested list + auto Start + Node layout, one undo step ---
+    // Start and Final states can never become composite.
+    design.getScene().clearSelection();
+    design.getScene().stateItem(lightOff->getId())->setSelected(true);      // the Start state
+    CHECK(design.actionAddSubstate()->isEnabled() == false);
+
+    SMStateEntry* standby = data.findState("Standby");
+    CHECK((standby != nullptr) && (standby->hasNestedStates() == false));
+    design.getScene().clearSelection();
+    design.getScene().stateItem(standby->getId())->setSelected(true);
+    CHECK(design.actionAddSubstate()->isEnabled());
+    CHECK(design.actionEnterSubmachine()->isEnabled() == false);             // not composite yet
+
+    const int undoBeforeConvert = model.getUndoStack().count();
+    design.actionAddSubstate()->trigger();
+    CHECK(model.getUndoStack().count() == undoBeforeConvert + 1);            // one undo step
+    CHECK(standby->hasNestedStates());
+    CHECK(standby->getNestedStates()->getElementCount() == 1);               // exactly one state
+    SMStateEntry* standbyStart = standby->getNestedStates()->getStartState();
+    CHECK((standbyStart != nullptr) && (standbyStart->getKind() == SMStateEntry::eStateKind::Start));
+    CHECK(data.findState(standbyStart->getName()) == standbyStart);          // document-unique name
+    CHECK(data.getLayout().findNode(standbyStart->getId()) != nullptr);      // placed on the new level
+    CHECK(manager.getCurrentLevel() == standby->getId());                    // entered the new level
+
+    // Undo while inside: the level dies, navigation falls back to the parent.
+    const uint32_t standbyStartId = standbyStart->getId();
+    model.getUndoStack().undo();
+    CHECK(standby->hasNestedStates() == false);
+    CHECK(manager.getCurrentLevel() == rootLevel);
+    model.getUndoStack().redo();
+    CHECK(standby->hasNestedStates());
+    CHECK(standby->getNestedStates()->getStartState()->getId() == standbyStartId); // same ID replayed
+
+    std::printf("sect: SM-15 arbitrary depth\n");
+    // --- Convert a state inside the new submachine: depth grows, one Start per level ---
+    manager.enterSubmachine(standby->getId());
+    SMCreateStateCommand* createDeep = new SMCreateStateCommand(  data, model.getNotifier(), *standby->getNestedStates()
+                                                                , QStringLiteral("DeepChild"), SMStateEntry::eStateKind::Normal
+                                                                , QRectF(320.0, 140.0, 160.0, 96.0), QStringLiteral("add"));
+    model.getUndoStack().push(createDeep);
+    const uint32_t deepId = createDeep->getStateId();
+    model.getSelectionModel().setSelection(QList<uint32_t>{ deepId });
+    CHECK(design.actionAddSubstate()->isEnabled());
+    design.actionAddSubstate()->trigger();
+    SMStateEntry* deep = data.findStateById(deepId);
+    CHECK((deep != nullptr) && deep->hasNestedStates());
+    CHECK(manager.getCurrentLevel() == deepId);
+    CHECK(data.getLevelPath(deepId).size() == 3);                            // root → Standby → DeepChild
+    SMStateEntry* deepStart = deep->getNestedStates()->getStartState();
+    CHECK((deepStart != nullptr) && (deepStart->getName() != standbyStart->getName()));
+    CHECK(design.findChildren<QToolButton*>().size() == 2);
+    CHECK(design.actionGoToParent()->isEnabled());
+    grab(design, "g11-deep-level");
+
+    std::printf("sect: SM-15 recursive composite delete\n");
+    // --- Deleting the composite removes its painted subtree as one undo step ---
+    manager.navigateTo(rootLevel);
+    const int statesBefore = data.getStateCount();
+    const uint32_t deepStartId = deepStart->getId();
+    const int undoBeforeDelete = model.getUndoStack().count();
+    model.getUndoStack().push(new SMRemoveStateCommand(  data, model.getNotifier(), data.getStates()
+                                                       , standby->getId(), QStringLiteral("delete composite")));
+    CHECK(model.getUndoStack().count() == undoBeforeDelete + 1);             // one undo step
+    CHECK(data.findState("Standby") == nullptr);
+    CHECK(data.findStateById(deepId) == nullptr);                            // recursive
+    CHECK(data.findStateById(deepStartId) == nullptr);
+    CHECK(data.getLayout().findNode(standbyStartId) == nullptr);             // subtree layout gone
+    model.getUndoStack().undo();
+    CHECK(data.getStateCount() == statesBefore);
+    CHECK(data.findState("Standby") != nullptr);
+    CHECK(data.findStateById(deepId) != nullptr);
+    CHECK(data.findStateById(deepStartId) != nullptr);
+    CHECK(data.getLayout().findNode(standbyStartId) != nullptr);
+    grab(design, "g12-root-after-levels");
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

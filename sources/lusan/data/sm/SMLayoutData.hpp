@@ -36,8 +36,8 @@ struct SMLayoutView
 {
     uint32_t    owner   { 0 };       //!< The owning element ID.
     int         zoom    { 100 };     //!< The zoom percentage.
-    double      x       { 0.0 };     //!< The horizontal scroll offset.
-    double      y       { 0.0 };     //!< The vertical scroll offset.
+    double      x       { 0.0 };     //!< The scene point shown at the viewport center (X).
+    double      y       { 0.0 };     //!< The scene point shown at the viewport center (Y).
 };
 
 /**
@@ -149,6 +149,12 @@ public:
     SMLayoutNode* findNode(uint32_t owner);
     SMLayoutEdge* findEdge(uint32_t owner);
     SMLayoutNote* findNote(uint32_t id);
+
+    /**
+     * \brief   Removes the View entry of a level owner, if present.
+     * \return  True if an entry was removed.
+     **/
+    bool removeView(uint32_t owner);
 
     /**
      * \brief   Removes every View/Node/Edge owned by any of the given element IDs. Used

@@ -318,6 +318,7 @@ void SMStateItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opt
     if (mExpanded)
     {
         paintBodyRows(painter, box, bodyColor);
+        paintMiniature(painter, box, bodyColor);
     }
 
     if (isSelected())
@@ -458,6 +459,48 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
     }
 }
 
+void SMStateItem::paintMiniature(QPainter* painter, const QRectF& box, const QColor& bodyColor)
+{
+    const double maxW = NESMDesign::MiniatureMaxWidth;
+    const double maxH = NESMDesign::MiniatureMaxHeight;
+    const double pad  = NESMDesign::MiniaturePadding;
+    if (mMiniature.isEmpty() || (box.height() < NESMDesign::StateHeaderHeight + maxH + 2.0 * pad))
+    {
+        return;
+    }
+
+    QRectF bounds = mMiniature.first();
+    for (const QRectF& rect : mMiniature)
+    {
+        bounds = bounds.united(rect);
+    }
+
+    if ((bounds.width() <= 0.0) || (bounds.height() <= 0.0))
+    {
+        return;
+    }
+
+    const double scale = std::min(maxW / bounds.width(), maxH / bounds.height());
+    const QRectF avail{ box.width() - pad - maxW, box.height() - pad - maxH, maxW, maxH };
+    const QPointF origin{ avail.center().x() - bounds.width() * scale / 2.0
+                        , avail.center().y() - bounds.height() * scale / 2.0 };
+
+    painter->save();
+    painter->setOpacity(painter->opacity() * 0.55);
+    painter->setPen(QPen(NESMDesign::contrastTextColor(bodyColor), 1.0));
+    painter->setBrush(Qt::NoBrush);
+    for (const QRectF& rect : mMiniature)
+    {
+        const QRectF scaled{ origin.x() + (rect.x() - bounds.x()) * scale
+                           , origin.y() + (rect.y() - bounds.y()) * scale
+                           , std::max(rect.width() * scale, 2.0)
+                           , std::max(rect.height() * scale, 2.0) };
+        painter->drawRoundedRect(scaled, 1.5, 1.5);
+    }
+
+    painter->restore();
+}
+
 void SMStateItem::paintHandles(QPainter* painter, const QPalette& palette)
 {
     painter->setPen(QPen(palette.color(QPalette::Base), 1.0));
@@ -576,6 +619,19 @@ void SMStateItem::updateFromModel()
     mComposite = state->hasNestedStates();
     mImported  = state->isImportedSubmachine();
     rebuildRows(*state);
+
+    mMiniature.clear();
+    if (mComposite)
+    {
+        for (const SMStateEntry* child : state->getNestedStates()->getElements())
+        {
+            const SMLayoutNode* childNode = data.getLayout().findNode(child->getId());
+            if (childNode != nullptr)
+            {
+                mMiniature.append(QRectF(childNode->x, childNode->y, childNode->width, childNode->height));
+            }
+        }
+    }
 
     const SMLayoutNode* node = data.getLayout().findNode(getElementId());
     if (node != nullptr)
@@ -743,7 +799,16 @@ void SMStateItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton)
     {
-        if (isRenameActive() == false)
+        // A painted composite opens its submachine; plain states open the rename editor.
+        if (mComposite)
+        {
+            SMScene* canvas = getCanvas();
+            if (canvas != nullptr)
+            {
+                canvas->requestEnterSubmachine(getElementId());
+            }
+        }
+        else if (isRenameActive() == false)
         {
             startInlineRename();
         }

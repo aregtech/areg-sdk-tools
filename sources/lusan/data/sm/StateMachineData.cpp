@@ -623,6 +623,43 @@ const SMStateData* StateMachineData::findLevel(uint32_t levelId) const
     return const_cast<StateMachineData*>(this)->findLevel(levelId);
 }
 
+namespace
+{
+    //!< Depth-first search for the composite-state chain leading to a level owner.
+    bool buildLevelPath(const SMStateData& level, uint32_t levelId, QList<uint32_t>& path)
+    {
+        for (const SMStateEntry* state : level.getElements())
+        {
+            const SMStateData* nested = state->getNestedStates();
+            if (nested == nullptr)
+            {
+                continue;
+            }
+
+            path.append(state->getId());
+            if ((state->getId() == levelId) || buildLevelPath(*nested, levelId, path))
+            {
+                return true;
+            }
+
+            path.removeLast();
+        }
+
+        return false;
+    }
+}
+
+QList<uint32_t> StateMachineData::getLevelPath(uint32_t levelId) const
+{
+    QList<uint32_t> path{ mOverview.getId() };
+    if (levelId == mOverview.getId())
+    {
+        return path;
+    }
+
+    return buildLevelPath(mStates, levelId, path) ? path : QList<uint32_t>{};
+}
+
 bool StateMachineData::isValidIdentifier(const QString& name)
 {
     static const QRegularExpression _identifier{ QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$") };

@@ -273,6 +273,13 @@ public:
     const SMStateData* findLevel(uint32_t levelId) const;
 
     /**
+     * \brief   Returns the level owner IDs from the root level down to the given level,
+     *          both inclusive; the root level is the Overview ID, every deeper entry is
+     *          a composite state ID. Empty when the ID names no level.
+     **/
+    QList<uint32_t> getLevelPath(uint32_t levelId) const;
+
+    /**
      * \brief   True if the name is a valid element identifier: a letter or underscore
      *          followed by letters, digits, or underscores.
      **/

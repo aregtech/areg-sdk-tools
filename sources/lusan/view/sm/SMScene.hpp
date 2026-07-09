@@ -189,6 +189,12 @@ public:
      **/
     void startRenameOfSelection();
 
+    /**
+     * \brief   Requests descending into a state's painted submachine (double-click,
+     *          Enter, context menu); ignored when the state owns none.
+     **/
+    void requestEnterSubmachine(uint32_t stateId);
+
 //////////////////////////////////////////////////////////////////////////
 // Internal: item registry (called by SMCanvasItem on scene changes)
 //////////////////////////////////////////////////////////////////////////
@@ -209,6 +215,17 @@ signals:
      * \brief   Emitted when the active tool mode changed.
      **/
     void signalToolChanged(NESMDesign::eCanvasTool tool);
+
+    /**
+     * \brief   Emitted to descend into a composite state's painted submachine.
+     * \param   stateId The composite state's element ID.
+     **/
+    void signalEnterSubmachine(uint32_t stateId);
+
+    /**
+     * \brief   Emitted to ascend to the parent machine level (Backspace, Alt+double-click).
+     **/
+    void signalGoToParent();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -267,6 +284,12 @@ private:
      * \brief   Re-reads every state box body (behaviour rows change when transitions do).
      **/
     void refreshStateBodies();
+
+    /**
+     * \brief   Re-reads every composite state box (the submachine miniature goes stale
+     *          when elements of a nested level change).
+     **/
+    void refreshCompositeBoxes();
 
     /**
      * \brief   True when the state is a direct child of this scene's level.

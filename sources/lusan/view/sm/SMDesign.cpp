@@ -23,6 +23,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
+#include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -31,16 +32,23 @@
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
 #include "lusan/view/sm/SMScene.hpp"
+#include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QAction>
+#include <QHBoxLayout>
 #include <QInputDialog>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPair>
+#include <QScrollBar>
 #include <QStringList>
+#include <QToolButton>
 #include <QVBoxLayout>
+
+#include <cmath>
 
 namespace
 {
@@ -95,7 +103,10 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     : QWidget       (parent)
     , mModel        (model)
     , mView         (new SMGraphicsView(this))
+    , mSceneManager (nullptr)
     , mScene        (nullptr)
+    , mBreadcrumb   (nullptr)
+    , mBreadcrumbLayout(nullptr)
     , mActZoomIn    (nullptr)
     , mActZoomOut   (nullptr)
     , mActZoomReset (nullptr)
@@ -111,10 +122,30 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActSetStimulus(nullptr)
     , mActRaisePriority(nullptr)
     , mActLowerPriority(nullptr)
+    , mActAddSubstate(nullptr)
+    , mActEnterSubmachine(nullptr)
+    , mActGoToParent(nullptr)
+    , mShownLevel   (0u)
+    , mViewGesture  (0u)
+    , mRestoringView(false)
 {
+    mSceneManager = new SMSceneManager(model, this);
+
+    mBreadcrumb = new QWidget(this);
+    mBreadcrumbLayout = new QHBoxLayout(mBreadcrumb);
+    mBreadcrumbLayout->setContentsMargins(8, 4, 8, 4);
+    mBreadcrumbLayout->setSpacing(4);
+
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(mBreadcrumb);
     layout->addWidget(mView);
+
+    connect(mSceneManager, &SMSceneManager::signalLevelChanged, this, &SMDesign::onLevelChanged);
+    connect(mView->horizontalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
+    connect(mView->verticalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
+    connect(mView, &SMGraphicsView::signalZoomChanged, this, &SMDesign::onViewportChanged);
 
     rebuildScene();
     setupActions();
@@ -127,18 +158,51 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     separator1->setSeparator(true);
     QAction* separator2 = new QAction(this);
     separator2->setSeparator(true);
+    QAction* separator3 = new QAction(this);
+    separator3->setSeparator(true);
     mView->addActions({ mActAddState, mActAddFinal, mActAddTransition, separator1
                       , mActSetStimulus, mActRaisePriority, mActLowerPriority, separator2
+                      , mActAddSubstate, mActEnterSubmachine, mActGoToParent, separator3
                       , mActRename, mActDelete });
 
-    connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMDesign::onDocumentReloaded);
+    DocModelNotifier& notifier = mModel.getNotifier();
+    connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMDesign::onDocumentReloaded);
+    connect(&notifier, &DocModelNotifier::layoutChanged, this, &SMDesign::onModelLayoutChanged);
+    connect(&notifier, &DocModelNotifier::nameChanged, this, [this](uint32_t, const QString&, const QString&) {
+        rebuildBreadcrumb();
+    });
+    connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) {
+        if (kind == eDocElementKind::Overview)
+        {
+            rebuildBreadcrumb();
+        }
+        else if (kind == eDocElementKind::State)
+        {
+            updateNavActions();
+        }
+    });
+    connect(&mModel.getSelectionModel(), &SMSelectionModel::signalSelectionChanged, this, [this](const QList<uint32_t>&) {
+        updateNavActions();
+    });
+
+    updateNavActions();
 }
 
 bool SMDesign::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == mView)
     {
-        if (event->type() == QEvent::ShortcutOverride)
+        if (event->type() == QEvent::Resize)
+        {
+            // The resize's scrollbar churn is not a viewport edit: suppress persisting
+            // and re-pin the stored center once the view has finished the resize.
+            mRestoringView = true;
+            QMetaObject::invokeMethod(this, [this]() {
+                mRestoringView = false;
+                restoreViewport(mShownLevel, false);
+            }, Qt::QueuedConnection);
+        }
+        else if (event->type() == QEvent::ShortcutOverride)
         {
             if (matchAction(*static_cast<QKeyEvent*>(event)) != nullptr)
             {
@@ -268,10 +332,24 @@ void SMDesign::setupActions()
         getScene().startRenameOfSelection();
     });
 
+    mActAddSubstate = new QAction(tr("Add Substate (Painted)"), this);
+    connect(mActAddSubstate, &QAction::triggered, this, &SMDesign::addSubstateToSelection);
+
+    // Enter also descends: the scene handles the key itself, after the active tool.
+    mActEnterSubmachine = new QAction(tr("Enter Submachine"), this);
+    connect(mActEnterSubmachine, &QAction::triggered, this, &SMDesign::enterSelectedSubmachine);
+
+    mActGoToParent = new QAction(tr("Go to Parent"), this);
+    mActGoToParent->setShortcut(QKeySequence(Qt::Key_Backspace));
+    connect(mActGoToParent, &QAction::triggered, this, [this]() {
+        mSceneManager->goToParent();
+    });
+
     const QList<QAction*> actions{ mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit
                                  , mActToggleGrid, mActToggleSnap, mActSelectAll
                                  , mActAddState, mActAddFinal, mActAddTransition, mActDelete, mActRename
-                                 , mActSetStimulus, mActRaisePriority, mActLowerPriority };
+                                 , mActSetStimulus, mActRaisePriority, mActLowerPriority
+                                 , mActAddSubstate, mActEnterSubmachine, mActGoToParent };
     for (QAction* action : actions)
     {
         action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -539,30 +617,226 @@ void SMDesign::setStimulusOfSelection()
 
 void SMDesign::rebuildScene()
 {
-    SMScene* previous = mScene;
-    const uint32_t rootLevel = mModel.getData().getOverview().getId();
-
-    mScene = new SMScene(mModel, rootLevel, this);
-    applyGridSettings();
-    populateStressContent();
-    mView->setScene(mScene);
-    mModel.getSelectionModel().setActiveLevel(rootLevel);
-    mView->zoomReset();
-
     if (mActToggleGrid != nullptr)
     {
-        mActToggleGrid->setChecked(mScene->isGridVisible());
-        mActToggleSnap->setChecked(mScene->isSnapToGrid());
+        // A (re)loaded document brings its own grid settings.
+        mActToggleGrid->setChecked(mModel.getData().getLayout().isGridVisible());
     }
 
-    delete previous;
+    mSceneManager->reset();
+    populateStressContent();
 }
 
-void SMDesign::applyGridSettings()
+void SMDesign::onLevelChanged(uint32_t levelId)
 {
+    mScene = mSceneManager->getCurrentScene();
+
+    mRestoringView = true;
+    mView->setScene(mScene);
+
+    // The grid settings are per document; the checked actions are the session's source
+    // of truth once they exist, the persisted layout before that (page construction).
     const SMLayoutData& layout = mModel.getData().getLayout();
     mScene->setGridSize(layout.getGridSize());
-    mScene->setGridVisible(layout.isGridVisible());
+    mScene->setGridVisible(mActToggleGrid != nullptr ? mActToggleGrid->isChecked() : layout.isGridVisible());
+    if (mActToggleSnap != nullptr)
+    {
+        mScene->setSnapToGrid(mActToggleSnap->isChecked());
+    }
+
+    restoreViewport(levelId, true);
+    mRestoringView = false;
+
+    mShownLevel  = levelId;
+    mViewGesture = SMMoveNodeCommand::takeNextGesture();
+    rebuildBreadcrumb();
+    updateNavActions();
+}
+
+void SMDesign::restoreViewport(uint32_t levelId, bool applyDefault)
+{
+    if (levelId == 0u)
+    {
+        return;
+    }
+
+    const bool guard = mRestoringView;
+    mRestoringView = true;
+
+    SMLayoutView* entry = mModel.getData().getLayout().findView(levelId);
+    if (entry != nullptr)
+    {
+        mView->setZoom(entry->zoom);
+        mView->centerOn(entry->x, entry->y);
+    }
+    else if (applyDefault)
+    {
+        mView->zoomReset();
+        const QRectF bounds = (mScene != nullptr ? mScene->contentBounds() : QRectF());
+        mView->centerOn(bounds.isNull() ? QPointF(0.0, 0.0) : bounds.center());
+    }
+
+    mRestoringView = guard;
+}
+
+void SMDesign::onViewportChanged()
+{
+    if (mRestoringView || (mShownLevel == 0u) || (mScene == nullptr))
+    {
+        return;
+    }
+
+    const QPointF center = mView->mapToScene(mView->viewport()->rect().center());
+    SMLayoutView value;
+    value.owner = mShownLevel;
+    value.zoom  = mView->getZoom();
+    value.x     = center.x();
+    value.y     = center.y();
+
+    SMLayoutView* entry = mModel.getData().getLayout().findView(mShownLevel);
+    if ((entry != nullptr) && (entry->zoom == value.zoom)
+        && (std::abs(entry->x - value.x) < 1.0) && (std::abs(entry->y - value.y) < 1.0))
+    {
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMSetViewCommand(  mModel.getData(), mModel.getNotifier()
+                                                    , mShownLevel, mViewGesture, value
+                                                    , tr("Change level view")));
+}
+
+void SMDesign::onModelLayoutChanged(const QList<uint32_t>& ownerIds)
+{
+    if (mRestoringView || (mShownLevel == 0u) || (ownerIds.contains(mShownLevel) == false))
+    {
+        return;
+    }
+
+    // An undo/redo rewrote the displayed level's View entry: bring the viewport along.
+    SMLayoutView* entry = mModel.getData().getLayout().findView(mShownLevel);
+    if (entry == nullptr)
+    {
+        return;
+    }
+
+    const QPointF center = mView->mapToScene(mView->viewport()->rect().center());
+    if ((entry->zoom != mView->getZoom())
+        || (std::abs(entry->x - center.x()) >= 1.0) || (std::abs(entry->y - center.y()) >= 1.0))
+    {
+        restoreViewport(mShownLevel, false);
+    }
+}
+
+void SMDesign::rebuildBreadcrumb()
+{
+    if (mBreadcrumbLayout == nullptr)
+    {
+        return;
+    }
+
+    while (QLayoutItem* item = mBreadcrumbLayout->takeAt(0))
+    {
+        delete item->widget();
+        delete item;
+    }
+
+    const QList<uint32_t> path{ mSceneManager->getCurrentPath() };
+    for (int i = 0; i < path.size(); ++i)
+    {
+        const uint32_t levelId = path.at(i);
+        const QString  title   = mSceneManager->levelTitle(levelId);
+        if (i + 1 < path.size())
+        {
+            QToolButton* crumb = new QToolButton(mBreadcrumb);
+            crumb->setText(title);
+            crumb->setAutoRaise(true);
+            crumb->setCursor(Qt::PointingHandCursor);
+            crumb->setToolTip(tr("Go to level '%1'").arg(title));
+            connect(crumb, &QToolButton::clicked, this, [this, levelId]() {
+                mSceneManager->navigateTo(levelId);
+            });
+
+            mBreadcrumbLayout->addWidget(crumb);
+            mBreadcrumbLayout->addWidget(new QLabel(QStringLiteral("›"), mBreadcrumb));
+        }
+        else
+        {
+            // The bold tail is the current-level indicator.
+            QLabel* current = new QLabel(title, mBreadcrumb);
+            QFont font{ current->font() };
+            font.setBold(true);
+            current->setFont(font);
+            current->setToolTip(tr("Current level"));
+            mBreadcrumbLayout->addWidget(current);
+        }
+    }
+
+    mBreadcrumbLayout->addStretch(1);
+}
+
+void SMDesign::updateNavActions()
+{
+    if (mActGoToParent == nullptr)
+    {
+        return;
+    }
+
+    mActGoToParent->setEnabled(mSceneManager->getCurrentPath().size() > 1);
+
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    const SMStateEntry* single = (selection.size() == 1 ? mModel.getData().findStateById(selection.first()) : nullptr);
+    mActEnterSubmachine->setEnabled((single != nullptr) && single->hasNestedStates());
+    mActAddSubstate->setEnabled((single != nullptr)
+                                && (single->getKind() == SMStateEntry::eStateKind::Normal)
+                                && (single->isImportedSubmachine() == false)
+                                && (single->hasNestedStates() == false));
+}
+
+void SMDesign::addSubstateToSelection()
+{
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    if (selection.size() != 1)
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const uint32_t stateId = selection.first();
+    const SMStateEntry* state = data.findStateById(stateId);
+    if ((state == nullptr) || (state->getKind() != SMStateEntry::eStateKind::Normal)
+        || state->isImportedSubmachine() || state->hasNestedStates())
+    {
+        return;
+    }
+
+    const QString base{ QStringLiteral("Start") };
+    QString name{ base };
+    for (int i = 2; data.findState(name) != nullptr; ++i)
+    {
+        name = base + QString::number(i);
+    }
+
+    const QRectF geometry{ 80.0, 140.0, NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight };
+    SMConvertToCompositeCommand* command =
+            new SMConvertToCompositeCommand(  data, mModel.getNotifier(), stateId, name, geometry
+                                            , tr("Add substate to %1").arg(state->getName()));
+    if (command->isEffective() == false)
+    {
+        delete command;
+        return;
+    }
+
+    mModel.getUndoStack().push(command);
+    mSceneManager->enterSubmachine(stateId);
+}
+
+void SMDesign::enterSelectedSubmachine()
+{
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    if (selection.size() == 1)
+    {
+        mSceneManager->enterSubmachine(selection.first());
+    }
 }
 
 void SMDesign::populateStressContent()

@@ -120,6 +120,12 @@ namespace NESMDesign
     //!< The band around a state box border from which a transition drag can be started.
     constexpr double    EdgeBorderDragMargin{ 6.0 };
 
+    //!< The largest size of the submachine miniature hint in a composite state's body.
+    constexpr double    MiniatureMaxWidth   { 46.0 };
+    constexpr double    MiniatureMaxHeight  { 30.0 };
+    //!< The gap between the miniature and the state box border.
+    constexpr double    MiniaturePadding    { 5.0 };
+
     /**
      * \brief   Returns the default transition edge color of the given palette.
      **/
