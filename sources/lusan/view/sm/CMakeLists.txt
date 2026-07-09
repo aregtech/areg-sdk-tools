@@ -21,6 +21,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMCanvasItem.cpp
     ${LUSAN}/view/sm/SMCanvasTool.cpp
     ${LUSAN}/view/sm/SMDesign.cpp
+    ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
     ${LUSAN}/view/sm/SMMethodDetails.cpp
@@ -55,6 +56,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMCanvasItem.hpp
     ${LUSAN}/view/sm/SMCanvasTool.hpp
     ${LUSAN}/view/sm/SMDesign.hpp
+    ${LUSAN}/view/sm/SMEdgeItem.hpp
     ${LUSAN}/view/sm/SMGraphicsView.hpp
     ${LUSAN}/view/sm/SMMethod.hpp
     ${LUSAN}/view/sm/SMMethodDetails.hpp

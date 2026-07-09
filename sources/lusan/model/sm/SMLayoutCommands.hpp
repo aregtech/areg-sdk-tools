@@ -32,6 +32,7 @@
  * Dependencies
  ************************************************************************/
 class SMStateEntry;
+class SMTransitionEntry;
 
 /**
  * \class   SMMoveNodeCommand
@@ -125,6 +126,60 @@ private:
     bool        mOldExpanded { true };  //!< The previous expanded flag.
     bool        mOldHas      { false }; //!< Whether the flag was present before.
     bool        mCaptured    { false };
+};
+
+/**
+ * \class   SMAttachEdgeCommand
+ * \brief   Creates the Edge layout entry of a freshly added transition. The owner ID is
+ *          read from the transition at redo time, because the ID is allocated only when the
+ *          sibling add-transition command inserts the entry — so this command always runs as
+ *          the child following that insertion inside one composite.
+ **/
+class SMAttachEdgeCommand : public SMCommand
+{
+public:
+    SMAttachEdgeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                        , const SMTransitionEntry& transition, const SMLayoutEdge& geometry
+                        , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    const SMTransitionEntry&    mTransition;    //!< The transition owning the Edge entry.
+    SMLayoutEdge                mGeometry;      //!< The initial edge geometry (owner set at redo).
+};
+
+/**
+ * \class   SMSetEdgeGeometryCommand
+ * \brief   Sets a transition's Edge layout (points, shape, bulge, color, label). Interactive
+ *          waypoint/endpoint/label drags push one command per step; they coalesce via
+ *          mergeWith() keyed by a gesture ID so the whole drag is a single undo step.
+ **/
+class SMSetEdgeGeometryCommand : public SMCommand
+{
+public:
+    static constexpr int CMD_ID { 0x5402 };
+
+    SMSetEdgeGeometryCommand(  StateMachineData& data, DocModelNotifier& notifier
+                             , uint32_t owner, uint32_t gestureId, const SMLayoutEdge& geometry
+                             , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+
+private:
+    void applyTo(const SMLayoutEdge& geometry, bool present);
+
+private:
+    uint32_t        mOwner;
+    uint32_t        mGesture;
+    SMLayoutEdge    mNew;
+    SMLayoutEdge    mOld;
+    bool            mHadOld { false };  //!< Whether an Edge entry existed before the first redo.
+    bool            mCaptured { false };
 };
 
 /**

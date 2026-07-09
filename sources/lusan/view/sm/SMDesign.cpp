@@ -19,19 +19,27 @@
 
 #include "lusan/view/sm/SMDesign.hpp"
 
+#include "lusan/data/sm/SMState.hpp"
+#include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
+#include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMCanvasItem.hpp"
+#include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QAction>
+#include <QInputDialog>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QPainter>
+#include <QPair>
+#include <QStringList>
 #include <QVBoxLayout>
 
 namespace
@@ -97,8 +105,12 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActSelectAll (nullptr)
     , mActAddState  (nullptr)
     , mActAddFinal  (nullptr)
+    , mActAddTransition(nullptr)
     , mActDelete    (nullptr)
     , mActRename    (nullptr)
+    , mActSetStimulus(nullptr)
+    , mActRaisePriority(nullptr)
+    , mActLowerPriority(nullptr)
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -111,9 +123,13 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // Minimal canvas context menu over the same action set; the full toolbar and
     // Design menu surfaces replace nothing here, they reuse these actions.
     mView->setContextMenuPolicy(Qt::ActionsContextMenu);
-    QAction* separator = new QAction(this);
-    separator->setSeparator(true);
-    mView->addActions({ mActAddState, mActAddFinal, separator, mActRename, mActDelete });
+    QAction* separator1 = new QAction(this);
+    separator1->setSeparator(true);
+    QAction* separator2 = new QAction(this);
+    separator2->setSeparator(true);
+    mView->addActions({ mActAddState, mActAddFinal, mActAddTransition, separator1
+                      , mActSetStimulus, mActRaisePriority, mActLowerPriority, separator2
+                      , mActRename, mActDelete });
 
     connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMDesign::onDocumentReloaded);
 }
@@ -228,6 +244,20 @@ void SMDesign::setupActions()
         getScene().setActiveTool(NESMDesign::eCanvasTool::AddFinalState);
     });
 
+    mActAddTransition = new QAction(tr("Add Transition"), this);
+    connect(mActAddTransition, &QAction::triggered, this, [this]() {
+        getScene().setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+    });
+
+    mActSetStimulus = new QAction(tr("Set Stimulus…"), this);
+    connect(mActSetStimulus, &QAction::triggered, this, &SMDesign::setStimulusOfSelection);
+
+    mActRaisePriority = new QAction(tr("Raise Priority"), this);
+    connect(mActRaisePriority, &QAction::triggered, this, [this]() { reorderSelectedTransition(true); });
+
+    mActLowerPriority = new QAction(tr("Lower Priority"), this);
+    connect(mActLowerPriority, &QAction::triggered, this, [this]() { reorderSelectedTransition(false); });
+
     mActDelete = new QAction(tr("Delete"), this);
     mActDelete->setShortcut(QKeySequence::Delete);
     connect(mActDelete, &QAction::triggered, this, &SMDesign::deleteSelection);
@@ -240,7 +270,8 @@ void SMDesign::setupActions()
 
     const QList<QAction*> actions{ mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit
                                  , mActToggleGrid, mActToggleSnap, mActSelectAll
-                                 , mActAddState, mActAddFinal, mActDelete, mActRename };
+                                 , mActAddState, mActAddFinal, mActAddTransition, mActDelete, mActRename
+                                 , mActSetStimulus, mActRaisePriority, mActLowerPriority };
     for (QAction* action : actions)
     {
         action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
@@ -257,6 +288,7 @@ void SMDesign::deleteSelection()
     const QList<SMStateItem*> selection{ scene.selectedStateItems() };
     if (selection.isEmpty())
     {
+        deleteSelectedEdges();
         return;
     }
 
@@ -339,6 +371,169 @@ void SMDesign::deleteSelection()
         }
 
         model.getUndoStack().push(composite);
+    }
+}
+
+void SMDesign::deleteSelectedEdges()
+{
+    SMScene& scene = getScene();
+    const QList<SMEdgeItem*> edges{ scene.selectedEdgeItems() };
+    if (edges.isEmpty())
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+
+    // Pair each edge's transition with its owning state.
+    QList<QPair<SMStateEntry*, uint32_t>> targets;
+    for (const SMEdgeItem* edge : edges)
+    {
+        SMStateEntry* owner = data.findTransitionOwner(edge->getElementId());
+        if (owner != nullptr)
+        {
+            targets.append(qMakePair(owner, edge->getElementId()));
+        }
+    }
+
+    if (targets.isEmpty())
+    {
+        return;
+    }
+
+    const QString question = (targets.size() == 1)
+            ? tr("Delete the selected transition?")
+            : tr("Delete %1 selected transitions?").arg(targets.size());
+    if (QMessageBox::question(this, tr("Delete Transitions"), question
+                              , QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+    {
+        return;
+    }
+
+    const QString text = (targets.size() == 1) ? tr("Delete transition") : tr("Delete %1 transitions").arg(targets.size());
+    if (targets.size() == 1)
+    {
+        mModel.getUndoStack().push(new SMRemoveTransitionCommand(data, mModel.getNotifier(), *targets.first().first, targets.first().second, text));
+    }
+    else
+    {
+        SMCompositeCommand* composite = new SMCompositeCommand(data, mModel.getNotifier(), text);
+        for (const QPair<SMStateEntry*, uint32_t>& target : targets)
+        {
+            new SMRemoveTransitionCommand(data, mModel.getNotifier(), *target.first, target.second, text, composite);
+        }
+
+        mModel.getUndoStack().push(composite);
+    }
+}
+
+void SMDesign::reorderSelectedTransition(bool raise)
+{
+    const QList<SMEdgeItem*> edges{ getScene().selectedEdgeItems() };
+    if (edges.size() != 1)
+    {
+        return;
+    }
+
+    const uint32_t transitionId = edges.first()->getElementId();
+    StateMachineData& data = mModel.getData();
+    SMStateEntry* owner = data.findTransitionOwner(transitionId);
+    if (owner == nullptr)
+    {
+        return;
+    }
+
+    SMTransitionData& list = owner->getTransitions();
+    const int index = list.findIndex(transitionId);
+    const int other = (raise ? index - 1 : index + 1);
+    if ((index < 0) || (other < 0) || (other >= list.getElementCount()))
+    {
+        return;
+    }
+
+    // The swap keeps IDs position-keyed; the moved content ends up under the other slot's
+    // ID, so re-select that ID to keep the selection on the transition the user moved.
+    const uint32_t followId = list.getElements().at(other)->getId();
+    const QString text = raise ? tr("Raise transition priority") : tr("Lower transition priority");
+    mModel.getUndoStack().push(new TDocReorderCommand<SMTransitionEntry*, DocumentElem>(  mModel.getNotifier(), list
+                                                                                        , index, other, owner->getId()
+                                                                                        , eDocElementKind::Transition, text));
+    mModel.getSelectionModel().setSelection(QList<uint32_t>{ followId });
+}
+
+void SMDesign::setStimulusOfSelection()
+{
+    const QList<SMEdgeItem*> edges{ getScene().selectedEdgeItems() };
+    if (edges.size() != 1)
+    {
+        return;
+    }
+
+    const uint32_t transitionId = edges.first()->getElementId();
+    StateMachineData& data = mModel.getData();
+    const SMTransitionEntry* transition = data.findTransitionById(transitionId);
+    if (transition == nullptr)
+    {
+        return;
+    }
+
+    // Gather the shared stimulus name space: triggers, events, timers.
+    QStringList labels;
+    QList<QPair<SMTransitionEntry::eStimulusKind, QString>> options;
+    const auto add = [&labels, &options](SMTransitionEntry::eStimulusKind kind, const QString& name)
+    {
+        labels.append(QString::fromLatin1(SMTransitionEntry::toString(kind)) + QStringLiteral(" — ") + name);
+        options.append(qMakePair(kind, name));
+    };
+
+    for (const SMMethodEntry* method : data.getMethods().getElements())
+    {
+        if (method->getMethodType() == SMMethodEntry::eMethodType::Trigger)
+        {
+            add(SMTransitionEntry::eStimulusKind::Trigger, method->getName());
+        }
+    }
+
+    for (const SMEventEntry* event : data.getEvents().getElements())
+    {
+        add(SMTransitionEntry::eStimulusKind::Event, event->getName());
+    }
+
+    for (const SMTimerEntry& timer : data.getTimers().getElements())
+    {
+        add(SMTransitionEntry::eStimulusKind::Timer, timer.getName());
+    }
+
+    if (options.isEmpty())
+    {
+        QMessageBox::information(this, tr("Set Stimulus")
+                                 , tr("Declare a trigger, event, or timer first — the stimulus is picked from those registries."));
+        return;
+    }
+
+    int current = 0;
+    for (int i = 0; i < options.size(); ++i)
+    {
+        if ((options.at(i).first == transition->getStimulusKind()) && (options.at(i).second == transition->getStimulus()))
+        {
+            current = i;
+            break;
+        }
+    }
+
+    bool accepted = false;
+    const QString chosen = QInputDialog::getItem(this, tr("Set Stimulus"), tr("Stimulus:"), labels, current, false, &accepted);
+    if (accepted == false)
+    {
+        return;
+    }
+
+    const int index = labels.indexOf(chosen);
+    if (index >= 0)
+    {
+        mModel.getUndoStack().push(new SMSetStimulusCommand(  data, mModel.getNotifier(), transitionId
+                                                           , options.at(index).first, options.at(index).second
+                                                           , tr("Set stimulus")));
     }
 }
 
