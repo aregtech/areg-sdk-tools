@@ -31,10 +31,9 @@ class SMConstantModel;
 
 /**
  * \brief   The FSM Constants page: named typed literals — the direct counterpart of the
- *          Service Interface Constants page (spec 6.9/6.10, no behavioral difference). Every
- *          edit is committed through SMConstantModel's undo commands; the page mutates no
- *          model state directly, and refreshes by rebuilding the list from the live model on
- *          every relevant DocModelNotifier signal (self-triggered or external/undo alike)
+ *          Service Interface Constants page. Every edit is committed through SMConstantModel's
+ *          undo commands; the page mutates no model state directly, and refreshes by rebuilding
+ *          the list from the live model on every relevant DocModelNotifier signal
  *          rather than patching individual rows.
  **/
 class SMConstant : public QScrollArea

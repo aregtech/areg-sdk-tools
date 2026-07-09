@@ -28,10 +28,10 @@ class QPlainTextEdit;
 
 /**
  * \brief   The selected event editor: a "Details:" group with label-beside-control rows —
- *          Name, Description. Events carry no literal type/value of their own (spec 6.5/6.10
- *          — only their optional payload parameters are typed); the payload grid is edited
- *          in the sibling SMEventParamDetails panel. An inline hint below Name flags a
- *          stimulus-name collision with an existing trigger method, timer or another event.
+ *          Name, Description. Events carry no literal type/value of their own;
+ *          the payload grid is edited in the sibling SMEventParamDetails panel.
+ *          An inline hint below Name flags a stimulus-name collision with an existing
+ *          trigger method, timer or another event.
  **/
 class SMEventDetails : public QWidget
 {

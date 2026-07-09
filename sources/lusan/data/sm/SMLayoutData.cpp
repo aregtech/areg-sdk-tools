@@ -384,6 +384,20 @@ SMLayoutNote* SMLayoutData::findNote(uint32_t id)
     return nullptr;
 }
 
+bool SMLayoutData::removeView(uint32_t owner)
+{
+    for (int i = 0; i < mViews.size(); ++i)
+    {
+        if (mViews.at(i).owner == owner)
+        {
+            mViews.removeAt(i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 int SMLayoutData::removeOwned(const QList<uint32_t>& ownerIds)
 {
     int removed = 0;

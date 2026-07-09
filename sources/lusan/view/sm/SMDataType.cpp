@@ -353,12 +353,7 @@ void SMDataType::selectedContainer(DataTypeContainer* dataType)
         const QSignalBlocker blockKey(mDetails->ctrlContainerKey());
         const QSignalBlocker blockValue(mDetails->ctrlContainerValue());
 
-        // Self-excluding: neither key nor value may reference the container's own type (spec
-        // 6.9 — no self-reference), mirroring populateTypeCombo's use for structure fields.
-        // Must run under the signal blockers above: combo->clear()/addItem() fire live
-        // currentIndexChanged signals that would otherwise re-enter the model mid-selection
-        // (onContainerKeyChanged/onContainerValueChanged -> a command -> notifier ->
-        // refreshAll() rebuilding the QTreeWidget while this very selection is in progress).
+        // Self-excluding: neither key nor value may reference the container's own type
         populateTypeCombo(mDetails->ctrlContainerKey(), dataType);
         populateTypeCombo(mDetails->ctrlContainerValue(), dataType);
 
@@ -928,8 +923,8 @@ void SMDataType::onContainerSelected(bool checked)
 
     if (DataTypeCustom* dataType = currentDataType())
     {
-        // DataTypeContainer's default constructor already seeds "Array"/"bool" (spec 6.9's
-        // default basic container + value), so no extra seeding is needed after conversion.
+        // DataTypeContainer's default constructor already seeds "Array"/"bool",
+        // no extra seeding is needed after conversion
         DataTypeCustom* converted = mModel.convertDataType(dataType, DataTypeBase::eCategory::Container);
         selectDataType(converted->getId());
     }

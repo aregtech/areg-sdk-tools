@@ -236,6 +236,28 @@ SMStateData* SMStateEntry::getOrCreateNestedStates()
     return mNested;
 }
 
+SMStateData* SMStateEntry::takeNestedStates()
+{
+    SMStateData* result = mNested;
+    mNested = nullptr;
+    return result;
+}
+
+void SMStateEntry::attachNestedStates(SMStateData* nested)
+{
+    if (mNested != nested)
+    {
+        delete mNested;
+        mNested = nested;
+    }
+
+    if (mNested != nullptr)
+    {
+        mNested->setParent(this);
+        mSubmachine.clear();
+    }
+}
+
 bool SMStateEntry::isValid() const
 {
     return (mName.isEmpty() == false);

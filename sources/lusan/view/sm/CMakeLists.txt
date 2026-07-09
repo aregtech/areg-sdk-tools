@@ -28,6 +28,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMMethodList.cpp
     ${LUSAN}/view/sm/SMOverview.cpp
     ${LUSAN}/view/sm/SMScene.cpp
+    ${LUSAN}/view/sm/SMSceneManager.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
     ${LUSAN}/view/sm/SMTimerDetails.cpp
     ${LUSAN}/view/sm/StateMachine.cpp
@@ -63,6 +64,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMMethodList.hpp
     ${LUSAN}/view/sm/SMOverview.hpp
     ${LUSAN}/view/sm/SMScene.hpp
+    ${LUSAN}/view/sm/SMSceneManager.hpp
     ${LUSAN}/view/sm/SMStateItem.hpp
     ${LUSAN}/view/sm/SMTimerDetails.hpp
     ${LUSAN}/view/sm/StateMachine.hpp

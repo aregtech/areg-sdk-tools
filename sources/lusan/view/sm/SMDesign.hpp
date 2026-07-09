@@ -24,21 +24,28 @@
  ************************************************************************/
 #include <QWidget>
 
+#include <QList>
+#include <cstdint>
+
 /************************************************************************
  * Dependencies
  ************************************************************************/
 class QAction;
+class QHBoxLayout;
 class QKeyEvent;
 class SMGraphicsView;
 class SMScene;
+class SMSceneManager;
 class StateMachineModel;
 
 /**
  * \class   SMDesign
- * \brief   The Design page: the graphics viewport over the machine-level scene, plus
- *          the viewport and grid commands with their keyboard shortcuts. The commands
- *          are exposed as actions so the toolbar, Design menu, and context menus can
- *          dispatch to the same set.
+ * \brief   The Design page: the breadcrumb of the machine-level path and the graphics
+ *          viewport over the displayed level's scene, plus the viewport, grid, editing,
+ *          and level-navigation commands with their keyboard shortcuts. The commands are
+ *          exposed as actions so the toolbar, Design menu, and context menus can dispatch
+ *          to the same set. Each level's zoom and scroll is persisted in its View layout
+ *          entry and restored when the level is shown again.
  **/
 class SMDesign : public QWidget
 {
@@ -64,6 +71,11 @@ public:
      * \brief   Returns the canvas viewport.
      **/
     inline SMGraphicsView& getView() const;
+
+    /**
+     * \brief   Returns the machine-level scene manager (navigation and scene cache).
+     **/
+    inline SMSceneManager& getSceneManager() const;
 
     /**
      * \brief   The viewport and grid command actions.
@@ -93,6 +105,13 @@ public:
     inline QAction* actionLowerPriority() const;
 
     /**
+     * \brief   The hierarchy actions: convert to composite, descend, and ascend.
+     **/
+    inline QAction* actionAddSubstate() const;
+    inline QAction* actionEnterSubmachine() const;
+    inline QAction* actionGoToParent() const;
+
+    /**
      * \brief   Deletes the current selection after confirmation: selected states (with
      *          painted substates and connected transitions), or selected transitions, as
      *          one undo step. Start states are never deleted.
@@ -115,8 +134,56 @@ protected:
 private slots:
     void onDocumentReloaded();
 
+    /**
+     * \brief   Reacts to a level switch: swaps the view's scene, applies the grid
+     *          settings, restores the level's viewport, and refreshes the breadcrumb.
+     **/
+    void onLevelChanged(uint32_t levelId);
+
+    /**
+     * \brief   Persists the displayed level's zoom/scroll into its View layout entry
+     *          through a coalesced undo command; no-op while a restore is in progress
+     *          or when the stored entry already matches.
+     **/
+    void onViewportChanged();
+
+    /**
+     * \brief   Re-applies the persisted viewport when an undo/redo changed the displayed
+     *          level's View entry.
+     **/
+    void onModelLayoutChanged(const QList<uint32_t>& ownerIds);
+
 private:
     void setupActions();
+
+    /**
+     * \brief   Rebuilds the breadcrumb from the current level path: clickable ancestor
+     *          buttons and the bold current-level label.
+     **/
+    void rebuildBreadcrumb();
+
+    /**
+     * \brief   Updates the enabled state of the hierarchy actions from the selection
+     *          and the current level.
+     **/
+    void updateNavActions();
+
+    /**
+     * \brief   Applies a level's persisted View entry to the viewport; without an entry
+     *          falls back to 100% zoom centered on the content when \p applyDefault.
+     **/
+    void restoreViewport(uint32_t levelId, bool applyDefault);
+
+    /**
+     * \brief   Converts the single selected Normal state into a painted composite
+     *          (nested StateList with its Start state) and enters the new level.
+     **/
+    void addSubstateToSelection();
+
+    /**
+     * \brief   Descends into the single selected composite state's submachine.
+     **/
+    void enterSelectedSubmachine();
 
     /**
      * \brief   Deletes the selected transition edges after confirmation, one undo step.
@@ -141,14 +208,9 @@ private:
     QAction* matchAction(const QKeyEvent& event) const;
 
     /**
-     * \brief   Creates the scene of the document's root level and attaches it to the view.
+     * \brief   Rebuilds the scene cache for a (re)loaded document and shows its root level.
      **/
     void rebuildScene();
-
-    /**
-     * \brief   Applies the document's persisted grid settings to the scene.
-     **/
-    void applyGridSettings();
 
     /**
      * \brief   Fills the scene with synthetic nodes when the
@@ -162,7 +224,10 @@ private:
 private:
     StateMachineModel&  mModel;         //!< The document facade.
     SMGraphicsView*     mView;          //!< The canvas viewport.
+    SMSceneManager*     mSceneManager;  //!< The level navigation and scene cache.
     SMScene*            mScene;         //!< The displayed level's scene.
+    QWidget*            mBreadcrumb;    //!< The level-path bar above the viewport.
+    QHBoxLayout*        mBreadcrumbLayout; //!< The breadcrumb content layout.
     QAction*            mActZoomIn;     //!< Zoom one step in.
     QAction*            mActZoomOut;    //!< Zoom one step out.
     QAction*            mActZoomReset;  //!< Zoom to 100%.
@@ -178,6 +243,12 @@ private:
     QAction*            mActSetStimulus;//!< Set the selected transition's stimulus.
     QAction*            mActRaisePriority; //!< Raise the selected transition's priority.
     QAction*            mActLowerPriority; //!< Lower the selected transition's priority.
+    QAction*            mActAddSubstate;   //!< Convert the selected state to a composite.
+    QAction*            mActEnterSubmachine; //!< Descend into the selected submachine.
+    QAction*            mActGoToParent;    //!< Ascend to the parent level.
+    uint32_t            mShownLevel;    //!< The level the viewport currently shows.
+    uint32_t            mViewGesture;   //!< The coalescing key of this level visit's viewport writes.
+    bool                mRestoringView; //!< A viewport restore is in progress; do not persist.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -192,6 +263,11 @@ inline SMScene& SMDesign::getScene() const
 inline SMGraphicsView& SMDesign::getView() const
 {
     return *mView;
+}
+
+inline SMSceneManager& SMDesign::getSceneManager() const
+{
+    return *mSceneManager;
 }
 
 inline QAction* SMDesign::actionZoomIn() const
@@ -267,6 +343,21 @@ inline QAction* SMDesign::actionRaisePriority() const
 inline QAction* SMDesign::actionLowerPriority() const
 {
     return mActLowerPriority;
+}
+
+inline QAction* SMDesign::actionAddSubstate() const
+{
+    return mActAddSubstate;
+}
+
+inline QAction* SMDesign::actionEnterSubmachine() const
+{
+    return mActEnterSubmachine;
+}
+
+inline QAction* SMDesign::actionGoToParent() const
+{
+    return mActGoToParent;
 }
 
 #endif  // LUSAN_VIEW_SM_SMDESIGN_HPP

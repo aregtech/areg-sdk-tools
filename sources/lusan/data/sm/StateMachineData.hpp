@@ -114,7 +114,7 @@ public:
     virtual ~StateMachineData() = default;
 
     /**
-     * \brief   Creates the spec-14 skeleton for a new document:
+     * \brief   Creates the skeleton for a new document:
      *          Overview with machine name, one root Start state and default layout entries.
      * \param   machineName  The machine name to set in Overview.
      * \return  A newly initialized document root.
@@ -220,8 +220,7 @@ public:
     bool readFromXml(QXmlStreamReader& xml);
 
     /**
-     * \brief   Writes the `StateMachine` root element and every non-empty section in the
-     *          fixed spec-7.7 order.
+     * \brief   Writes the `StateMachine` root element and every non-empty section in the fixed order.
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
 
@@ -271,6 +270,13 @@ public:
      **/
     SMStateData* findLevel(uint32_t levelId);
     const SMStateData* findLevel(uint32_t levelId) const;
+
+    /**
+     * \brief   Returns the level owner IDs from the root level down to the given level,
+     *          both inclusive; the root level is the Overview ID, every deeper entry is
+     *          a composite state ID. Empty when the ID names no level.
+     **/
+    QList<uint32_t> getLevelPath(uint32_t levelId) const;
 
     /**
      * \brief   True if the name is a valid element identifier: a letter or underscore

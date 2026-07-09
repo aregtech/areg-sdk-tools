@@ -15,7 +15,7 @@
  *  \file        lusan/data/sm/SMCondition.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM transition conditions (spec 6.7).
+ *  \brief       Lusan application, FSM transition conditions
  *
  ************************************************************************/
 
@@ -44,7 +44,7 @@ public:
 
     /**
      * \enum    eOperator
-     * \brief   The comparison operator (spec 6.7). `None` marks a boolean-test or
+     * \brief   The comparison operator. `None` marks a boolean-test or
      *          expression row that carries no operator.
      **/
     enum class eOperator

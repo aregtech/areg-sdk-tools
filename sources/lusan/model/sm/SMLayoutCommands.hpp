@@ -183,6 +183,39 @@ private:
 };
 
 /**
+ * \class   SMSetViewCommand
+ * \brief   Sets a machine level's View layout entry: the zoom and the scene point at the
+ *          viewport center. Continuous viewport changes push one command per update; they
+ *          coalesce via mergeWith() keyed by a gesture ID, so one visit of a level stays a
+ *          single undo step. Undo removes the entry again when none existed before.
+ **/
+class SMSetViewCommand : public SMCommand
+{
+public:
+    static constexpr int CMD_ID { 0x5403 };
+
+    SMSetViewCommand(  StateMachineData& data, DocModelNotifier& notifier
+                     , uint32_t owner, uint32_t gestureId, const SMLayoutView& view
+                     , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+
+private:
+    void applyTo(const SMLayoutView& view, bool present);
+
+private:
+    uint32_t        mOwner;
+    uint32_t        mGesture;
+    SMLayoutView    mNew;
+    SMLayoutView    mOld;
+    bool            mHadOld   { false };    //!< Whether a View entry existed before the first redo.
+    bool            mCaptured { false };
+};
+
+/**
  * \class   SMRemoveLayoutCommand
  * \brief   Removes the View/Node/Edge layout entries owned by a set of element IDs and
  *          restores them on undo. Used as a child of the delete-state composite so a

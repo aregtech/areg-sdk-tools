@@ -33,9 +33,8 @@ class QStringListModel;
  * \brief   The selected constant editor, code-built to mirror SIConstantDetails: a
  *          "Details:" group with label-beside-control rows — Name, Type, Value (a plain
  *          line edit: free text for a primitive type, completion of enumerator names for
- *          an enumeration type, disabled for a structure/container/imported type — spec 6.9
- *          has no literal form for those), an inline validation hint below the value,
- *          Description, Deprecated.
+ *          an enumeration type, disabled for a structure/container/imported type),
+ *          an inline validation hint below the value, Description, Deprecated.
  **/
 class SMConstantDetails : public QWidget
 {

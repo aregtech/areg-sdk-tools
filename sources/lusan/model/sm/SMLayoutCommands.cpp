@@ -241,6 +241,77 @@ bool SMSetEdgeGeometryCommand::mergeWith(const QUndoCommand* other)
 }
 
 //////////////////////////////////////////////////////////////////////////
+// SMSetViewCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetViewCommand::SMSetViewCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                   , uint32_t owner, uint32_t gestureId, const SMLayoutView& view
+                                   , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mOwner    (owner)
+    , mGesture  (gestureId)
+    , mNew      (view)
+{
+    mNew.owner = owner;
+}
+
+void SMSetViewCommand::applyTo(const SMLayoutView& view, bool present)
+{
+    if (present)
+    {
+        SMLayoutView* entry = data().getLayout().findView(mOwner);
+        if (entry == nullptr)
+        {
+            entry = &data().getLayout().addView(mOwner);
+        }
+
+        *entry = view;
+        entry->owner = mOwner;
+    }
+    else
+    {
+        data().getLayout().removeView(mOwner);
+    }
+
+    notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
+}
+
+void SMSetViewCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        const SMLayoutView* entry = data().getLayout().findView(mOwner);
+        mHadOld = (entry != nullptr);
+        mOld    = (entry != nullptr ? *entry : mNew);
+        mCaptured = true;
+    }
+
+    applyTo(mNew, true);
+}
+
+void SMSetViewCommand::undo()
+{
+    applyTo(mOld, mHadOld);
+}
+
+int SMSetViewCommand::id() const
+{
+    return CMD_ID;
+}
+
+bool SMSetViewCommand::mergeWith(const QUndoCommand* other)
+{
+    const SMSetViewCommand* set = static_cast<const SMSetViewCommand*>(other);
+    if ((set->mOwner != mOwner) || (set->mGesture != mGesture))
+    {
+        return false;
+    }
+
+    mNew = set->mNew;   // absorb the latest viewport; the original mOld is kept
+    return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
 // SMSetNodeExpandedCommand
 //////////////////////////////////////////////////////////////////////////
 

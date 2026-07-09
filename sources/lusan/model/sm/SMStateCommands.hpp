@@ -32,7 +32,7 @@
  * \class   SMAddStateCommand
  * \brief   Adds a new state to a machine level. A convenience over the shared add command
  *          that builds the state entry so the caller supplies only name and kind. The name
- *          is assumed unique — paste-time de-duplication (spec 9.8.2) is a caller concern.
+ *          is assumed unique — paste-time de-duplication is a caller concern.
  **/
 class SMAddStateCommand : public TDocAddCommand<SMStateEntry*, DocumentElem>
 {
@@ -88,6 +88,47 @@ private:
     QString     mNew;                   //!< The new name.
     QString     mOld;                   //!< The previous name, captured on first redo.
     bool        mCaptured { false };
+};
+
+/**
+ * \class   SMConvertToCompositeCommand
+ * \brief   Converts a Normal state into a painted composite as one undo step: attaches a
+ *          new nested StateList, adds the level's mandatory Start state, and creates that
+ *          state's Node layout entry. Built empty (no effect) when the state cannot become
+ *          composite: Start/Final kind, imported submachine, or already composite. Undo
+ *          detaches the list and restores the plain state; redo re-attaches the identical
+ *          subtree, so IDs never change.
+ **/
+class SMConvertToCompositeCommand : public SMCompositeCommand
+{
+public:
+    /**
+     * \brief   Creates the command.
+     * \param   data            The document root.
+     * \param   notifier        The change-notification hub.
+     * \param   stateId         The state to convert.
+     * \param   startName       The document-unique name of the new Start state.
+     * \param   startGeometry   The Start state's initial box geometry on the new level.
+     * \param   text            The undo-stack display text.
+     * \param   parent          The owning composite command.
+     **/
+    SMConvertToCompositeCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                , uint32_t stateId, const QString& startName
+                                , const QRectF& startGeometry, const QString& text
+                                , QUndoCommand* parent = nullptr);
+
+    /**
+     * \brief   True when the state can be converted and the command has an effect.
+     **/
+    bool isEffective() const;
+
+    /**
+     * \brief   The created Start state's element ID; valid after the first redo (push).
+     **/
+    uint32_t getStartId() const;
+
+private:
+    SMStateEntry*   mStart;     //!< The created Start entry (owned by the add child / list).
 };
 
 /**

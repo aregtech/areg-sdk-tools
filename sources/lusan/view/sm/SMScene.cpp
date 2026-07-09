@@ -295,6 +295,13 @@ void SMScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
 {
+    if (event->modifiers().testFlag(Qt::AltModifier))
+    {
+        emit signalGoToParent();
+        event->accept();
+        return;
+    }
+
     if ((mTool == nullptr) || (mTool->mouseDoubleClick(event) == false))
     {
         QGraphicsScene::mouseDoubleClickEvent(event);
@@ -317,6 +324,24 @@ void SMScene::keyPressEvent(QKeyEvent* event)
 
     case Qt::Key_F2:
         startRenameOfSelection();
+        event->accept();
+        return;
+
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
+    {
+        const QList<SMStateItem*> selection{ selectedStateItems() };
+        if (selection.size() == 1)
+        {
+            requestEnterSubmachine(selection.first()->getElementId());
+            event->accept();
+            return;
+        }
+        break;
+    }
+
+    case Qt::Key_Backspace:
+        emit signalGoToParent();
         event->accept();
         return;
 
@@ -406,9 +431,16 @@ void SMScene::onModelSelectionChanged(const QList<uint32_t>& selected)
 
 void SMScene::onElementAdded(uint32_t id, eDocElementKind kind)
 {
-    if ((kind == eDocElementKind::State) && isOnThisLevel(id))
+    if (kind == eDocElementKind::State)
     {
-        createStateItem(id);
+        if (isOnThisLevel(id))
+        {
+            createStateItem(id);
+        }
+        else
+        {
+            refreshCompositeBoxes();    // a nested-level change affects a miniature here
+        }
     }
 
     if (kind == eDocElementKind::Transition)
@@ -429,10 +461,16 @@ void SMScene::onElementRemoved(uint32_t id, eDocElementKind kind)
     if ((kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
     {
         // The destructor removes the item from the scene and the ID hash.
-        delete findCanvasItem(id);
+        SMCanvasItem* item = findCanvasItem(id);
+        const bool foreign = (item == nullptr);
+        delete item;
         if (kind == eDocElementKind::Transition)
         {
             refreshStateBodies();
+        }
+        else if (foreign)
+        {
+            refreshCompositeBoxes();    // a nested-level change affects a miniature here
         }
 
         updateConnHighlights();
@@ -515,6 +553,7 @@ void SMScene::onNameChanged(uint32_t id, const QString& /*oldName*/, const QStri
 
 void SMScene::onLayoutChanged(const QList<uint32_t>& ownerIds)
 {
+    bool foreign{ false };
     for (uint32_t id : ownerIds)
     {
         SMCanvasItem* item = findCanvasItem(id);
@@ -522,12 +561,21 @@ void SMScene::onLayoutChanged(const QList<uint32_t>& ownerIds)
         {
             item->updateFromModel();
         }
+        else
+        {
+            foreign = true;
+        }
 
         // A state box move/resize re-anchors its connected edges.
         if (stateItem(id) != nullptr)
         {
             updateEdgesForState(id);
         }
+    }
+
+    if (foreign)
+    {
+        refreshCompositeBoxes();    // a nested node moved: the owner's miniature is stale
     }
 }
 
@@ -631,6 +679,15 @@ void SMScene::startRenameOfSelection()
     }
 }
 
+void SMScene::requestEnterSubmachine(uint32_t stateId)
+{
+    const SMStateEntry* state = mModel.getData().findStateById(stateId);
+    if ((state != nullptr) && state->hasNestedStates())
+    {
+        emit signalEnterSubmachine(stateId);
+    }
+}
+
 void SMScene::populateFromModel()
 {
     const SMStateData* level = mModel.getData().findLevel(mLevelId);
@@ -729,6 +786,24 @@ void SMScene::refreshStateBodies()
         if (state != nullptr)
         {
             state->updateFromModel();
+        }
+    }
+}
+
+void SMScene::refreshCompositeBoxes()
+{
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        SMStateItem* box = dynamic_cast<SMStateItem*>(item);
+        if (box == nullptr)
+        {
+            continue;
+        }
+
+        const SMStateEntry* state = mModel.getData().findStateById(box->getElementId());
+        if ((state != nullptr) && state->hasNestedStates())
+        {
+            box->updateFromModel();
         }
     }
 }
