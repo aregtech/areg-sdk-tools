@@ -229,7 +229,7 @@ QString SMMethod::nameCollisionReason(const SMMethodEntry* method, const QString
     if ((other != nullptr) && (other->getId() != selfId))
         return tr("'%1' is already used by another method").arg(name);
 
-    // Only trigger methods participate in the shared stimulus name space (spec 6.10).
+    // Only trigger methods participate in the shared stimulus name space
     if ((method != nullptr) && method->isTrigger())
     {
         const StateMachineData::StimulusRef ref = mModel.findStimulus(name);

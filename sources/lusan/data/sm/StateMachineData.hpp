@@ -114,7 +114,7 @@ public:
     virtual ~StateMachineData() = default;
 
     /**
-     * \brief   Creates the spec-14 skeleton for a new document:
+     * \brief   Creates the skeleton for a new document:
      *          Overview with machine name, one root Start state and default layout entries.
      * \param   machineName  The machine name to set in Overview.
      * \return  A newly initialized document root.
@@ -220,8 +220,7 @@ public:
     bool readFromXml(QXmlStreamReader& xml);
 
     /**
-     * \brief   Writes the `StateMachine` root element and every non-empty section in the
-     *          fixed spec-7.7 order.
+     * \brief   Writes the `StateMachine` root element and every non-empty section in the fixed order.
      **/
     void writeToXml(QXmlStreamWriter& xml) const;
 

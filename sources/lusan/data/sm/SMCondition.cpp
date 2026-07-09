@@ -13,7 +13,7 @@
  *  \file        lusan/data/sm/SMCondition.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM transition conditions (spec 6.7).
+ *  \brief       Lusan application, FSM transition conditions.
  *
  ************************************************************************/
 

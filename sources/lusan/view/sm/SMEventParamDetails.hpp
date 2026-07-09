@@ -30,7 +30,7 @@ class QPlainTextEdit;
 /**
  * \brief   The selected event payload parameter editor: a "Details:" group with
  *          label-beside-control rows — Name, Type, an optional Default (a check-box next to
- *          the literal value field, disabled until checked — spec 6.10: `ParamList` entries
+ *          the literal value field, disabled until checked: `ParamList` entries
  *          carry an optional `Default`), Description and a Deprecated row (a check-box next to
  *          its hint field). The deprecated flag and hint are round-tripped in the `.fsml`
  *          `Parameter` (`IsDeprecated` attribute + `DeprecateHint` child).

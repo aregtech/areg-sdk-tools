@@ -34,7 +34,7 @@ class QRadioButton;
 /**
  * \brief   The selected data type editor, code-built to mirror SIDataTypeDetails: a
  *          "Details:" group with label-beside-control rows — Name, a "Type Definition:"
- *          radio group (Structure/Enumeration/Imported/Container, spec 6.9/6.10), an
+ *          radio group (Structure/Enumeration/Imported/Container), an
  *          "Enumeration Details:" group (Derived), an "Import Details:" group
  *          (Location/Browse, Namespace, Object), a "Container Details:" group (Object,
  *          Key, Value), Description, Deprecated.

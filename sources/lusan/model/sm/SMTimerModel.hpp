@@ -65,7 +65,7 @@ public:
 
     DocModelNotifier& getNotifier() const;
 
-    //!< Resolves a name in the document-wide stimulus name space (spec 6.10) so the page
+    //!< Resolves a name in the document-wide stimulus name space so the page
     //!< can flag a collision as the user types, without waiting for commit.
     StateMachineData::StimulusRef findStimulus(const QString& name) const;
 
@@ -79,7 +79,7 @@ public:
     void swapTimers(uint32_t firstId, uint32_t secondId);
 
     void renameTimer(uint32_t id, const QString& newName);
-    //!< Timeout in milliseconds; minimum 1 (spec 6.10 — a zero timeout is invalid).
+    //!< Timeout in milliseconds; minimum 1 (a zero timeout is invalid).
     void setTimeout(uint32_t id, uint32_t timeout);
     //!< Repeat count; 0 (or 0xFFFFFFFF) means continuous.
     void setRepeat(uint32_t id, uint32_t repeat);

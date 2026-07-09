@@ -38,8 +38,7 @@ class SMDataTypeModel;
 
 /**
  * \brief   The FSM Data Types page: enumerations, structures, imported types and containers
- *          (spec 6.9/6.10 — identical vocabulary and editing UX to the Service Interface
- *          page). Every edit is committed through SMDataTypeModel's undo commands; the page
+ *          Every edit is committed through SMDataTypeModel's undo commands; the page
  *          mutates no model state directly, and refreshes by rebuilding the tree from the
  *          live model on every relevant DocModelNotifier signal (self-triggered or
  *          external/undo alike) rather than patching individual tree nodes.

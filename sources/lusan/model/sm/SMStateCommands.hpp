@@ -32,7 +32,7 @@
  * \class   SMAddStateCommand
  * \brief   Adds a new state to a machine level. A convenience over the shared add command
  *          that builds the state entry so the caller supplies only name and kind. The name
- *          is assumed unique — paste-time de-duplication (spec 9.8.2) is a caller concern.
+ *          is assumed unique — paste-time de-duplication is a caller concern.
  **/
 class SMAddStateCommand : public TDocAddCommand<SMStateEntry*, DocumentElem>
 {

@@ -32,7 +32,7 @@ class SMIncludeModel;
 
 /**
  * \brief   The FSM Includes page: header include locations, the counterpart of the Service
- *          Interface Includes page (spec 4/6.10). The page splits into two equal-width
+ *          Interface Includes page. The page splits into two equal-width
  *          panels — the multi-column include list (Location, Type, Name, Version) on the
  *          left and the selected-include details editor on the right. Every edit is
  *          committed through SMIncludeModel's undo commands; the page mutates no model state

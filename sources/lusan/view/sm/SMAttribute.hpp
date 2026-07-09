@@ -31,8 +31,7 @@ class SMAttributeModel;
 
 /**
  * \brief   The FSM Attributes page: typed internal machine variables with a default value
- *          and no update subscriptions (spec 6.9/6.10 — the one behavioral difference from
- *          the Service Interface Attributes page, which the SI Attribute editor still owns).
+ *          and no update subscriptions.
  *          Every edit is committed through SMAttributeModel's undo commands; the page
  *          mutates no model state directly, and refreshes by rebuilding the list from the
  *          live model on every relevant DocModelNotifier signal (self-triggered or

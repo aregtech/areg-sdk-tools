@@ -660,8 +660,7 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         mRows.append(BodyRow{ eRowIcon::Entry, operationText(*op) });
     }
 
-    // Timer and event-send reactions from the state's transitions, then the internal
-    // transitions themselves — the spec-fixed body grouping.
+    // Timer and event-send reactions from the state's transitions, then the internal transitions themselves.
     for (const SMTransitionEntry* transition : state.getTransitions().getElements())
     {
         for (const SMOperationBase* op : transition->getOperations().getOperations())

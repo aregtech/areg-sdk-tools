@@ -165,7 +165,7 @@ namespace NESMDesign
     QColor stateBorderColor(const QPalette& palette);
 
     /**
-     * \brief   Derives the header shade of a body color (always darker, spec-fixed).
+     * \brief   Derives the header shade of a body color (always darker).
      **/
     QColor deriveHeaderShade(const QColor& bodyColor);
 
