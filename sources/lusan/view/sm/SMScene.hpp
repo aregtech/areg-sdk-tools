@@ -91,6 +91,12 @@ public:
     void setGridVisible(bool visible);
 
     /**
+     * \brief   The grid rendering style: lines (cell squares) or dots at the crossings.
+     **/
+    inline NESMDesign::eGridStyle getGridStyle() const;
+    void setGridStyle(NESMDesign::eGridStyle style);
+
+    /**
      * \brief   The snap-to-grid mode applied to interactive moves and resizes.
      **/
     inline bool isSnapToGrid() const;
@@ -316,6 +322,7 @@ private:
     bool                            mToolSticky;    //!< Keep the tool after a finished gesture.
     int                             mGridSize;      //!< The grid cell size in scene units.
     bool                            mGridVisible;   //!< The grid visibility.
+    NESMDesign::eGridStyle          mGridStyle;     //!< The grid rendering style (lines or dots).
     bool                            mSnapToGrid;    //!< Snap interactive moves to the grid.
     bool                            mMouseDrag;     //!< A mouse drag is in progress.
     bool                            mSyncSelection; //!< Guards the two-way selection sync.
@@ -343,6 +350,11 @@ inline int SMScene::getGridSize() const
 inline bool SMScene::isGridVisible() const
 {
     return mGridVisible;
+}
+
+inline NESMDesign::eGridStyle SMScene::getGridStyle() const
+{
+    return mGridStyle;
 }
 
 inline bool SMScene::isSnapToGrid() const

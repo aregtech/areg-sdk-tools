@@ -32,7 +32,6 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QKeyEvent>
-#include <QMessageBox>
 #include <QPainter>
 #include <QPalette>
 #include <QSet>
@@ -50,6 +49,7 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     , mToolSticky   (false)
     , mGridSize     (NESMDesign::GridSizeDefault)
     , mGridVisible  (true)
+    , mGridStyle    (NESMDesign::eGridStyle::Lines)
     , mSnapToGrid   (true)
     , mMouseDrag    (false)
     , mSyncSelection(false)
@@ -100,6 +100,16 @@ void SMScene::setGridVisible(bool visible)
     if (visible != mGridVisible)
     {
         mGridVisible = visible;
+        invalidate(sceneRect(), QGraphicsScene::BackgroundLayer);
+        emit signalGridChanged();
+    }
+}
+
+void SMScene::setGridStyle(NESMDesign::eGridStyle style)
+{
+    if (style != mGridStyle)
+    {
+        mGridStyle = style;
         invalidate(sceneRect(), QGraphicsScene::BackgroundLayer);
         emit signalGridChanged();
     }
@@ -223,6 +233,26 @@ void SMScene::drawBackground(QPainter* painter, const QRectF& rect)
     const qreal left = std::floor(rect.left() / grid) * grid;
     const qreal top  = std::floor(rect.top() / grid) * grid;
 
+    if (mGridStyle == NESMDesign::eGridStyle::Dots)
+    {
+        QVarLengthArray<QPointF, 1024> dots;
+        for (qreal x = left; x <= rect.right(); x += grid)
+        {
+            for (qreal y = top; y <= rect.bottom(); y += grid)
+            {
+                dots.append(QPointF(x, y));
+            }
+        }
+
+        QPen pen{ NESMDesign::gridColor(palette, opacity) };
+        pen.setCosmetic(true);
+        pen.setWidthF(2.0);
+        pen.setCapStyle(Qt::RoundCap);
+        painter->setPen(pen);
+        painter->drawPoints(dots.constData(), dots.size());
+        return;
+    }
+
     QVarLengthArray<QLineF, 256> lines;
     for (qreal x = left; x <= rect.right(); x += grid)
     {
@@ -247,10 +277,22 @@ void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
     {
         mMouseDrag = true;
 
-        // Select-tool border drag: a press in a state's border band starts a transition.
+        // Select-tool border drag: a press in a state's border band starts a transition —
+        // unless a selected edge's grab handle lies under the cursor: endpoint and
+        // waypoint drags on the edge win over the border band.
         if ((mTool != nullptr) && (mTool->getKind() == NESMDesign::eCanvasTool::Select))
         {
-            SMStateItem* source = stateAt(event->scenePos());
+            bool onEdgeHandle = false;
+            for (SMEdgeItem* edge : selectedEdgeItems())
+            {
+                if (edge->hitsHandle(event->scenePos()))
+                {
+                    onEdgeHandle = true;
+                    break;
+                }
+            }
+
+            SMStateItem* source = (onEdgeHandle ? nullptr : stateAt(event->scenePos()));
             if ((source != nullptr) && source->isBorderDragZone(event->scenePos()))
             {
                 setActiveTool(NESMDesign::eCanvasTool::AddTransition);
@@ -618,36 +660,15 @@ void SMScene::reconnectTransitionTarget(uint32_t transitionId, uint32_t targetSt
         return;
     }
 
-    if (targetStateId != 0)
-    {
-        const SMStateEntry* target = data.findStateById(targetStateId);
-        if ((target == nullptr) || (target->getName() == transition->getTo()))
-        {
-            return;
-        }
-
-        mModel.getUndoStack().push(new SMSetTransitionTargetCommand(  data, mModel.getNotifier()
-                                                                   , transitionId, target->getName()
-                                                                   , QCoreApplication::translate("SMScene", "Reconnect transition")));
-        return;
-    }
-
-    // Dropped on empty canvas: offer to make the transition internal (no target).
-    QWidget* parent = (views().isEmpty() == false) ? views().first() : nullptr;
-    const QMessageBox::StandardButton answer =
-            QMessageBox::question(parent, tr("Internal Transition")
-                                  , tr("Make this transition internal (no target)?")
-                                  , QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-    if (answer != QMessageBox::Yes)
+    const SMStateEntry* target = (targetStateId != 0 ? data.findStateById(targetStateId) : nullptr);
+    if ((target == nullptr) || (target->getName() == transition->getTo()))
     {
         return;
     }
 
-    const QString text = tr("Make transition internal");
-    SMCompositeCommand* composite = new SMCompositeCommand(data, mModel.getNotifier(), text);
-    new SMSetTransitionTargetCommand(data, mModel.getNotifier(), transitionId, QString(), text, composite);
-    new SMRemoveLayoutCommand(data, mModel.getNotifier(), QList<uint32_t>{ transitionId }, text, composite);
-    mModel.getUndoStack().push(composite);
+    mModel.getUndoStack().push(new SMSetTransitionTargetCommand(  data, mModel.getNotifier()
+                                                               , transitionId, target->getName()
+                                                               , QCoreApplication::translate("SMScene", "Reconnect transition")));
 }
 
 void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateId)

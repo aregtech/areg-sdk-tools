@@ -360,6 +360,51 @@ void SMSetNodeExpandedCommand::undo()
 }
 
 //////////////////////////////////////////////////////////////////////////
+// SMAutoPlaceNodesCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMAutoPlaceNodesCommand::SMAutoPlaceNodesCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                                 , const QList<SMLayoutNode>& nodes
+                                                 , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mNodes    (nodes)
+    , mIds      ( )
+{
+    for (const SMLayoutNode& node : mNodes)
+    {
+        mIds.append(node.owner);
+    }
+}
+
+void SMAutoPlaceNodesCommand::redo()
+{
+    SMLayoutData& layout = data().getLayout();
+    for (const SMLayoutNode& node : mNodes)
+    {
+        SMLayoutNode* entry = layout.findNode(node.owner);
+        if (entry == nullptr)
+        {
+            entry = &layout.addNode(node.owner);
+        }
+
+        *entry = node;
+    }
+
+    notifier().notifyLayoutChanged(mIds);
+}
+
+void SMAutoPlaceNodesCommand::undo()
+{
+    SMLayoutData& layout = data().getLayout();
+    for (const uint32_t owner : mIds)
+    {
+        layout.removeNode(owner);
+    }
+
+    notifier().notifyLayoutChanged(mIds);
+}
+
+//////////////////////////////////////////////////////////////////////////
 // SMRemoveLayoutCommand
 //////////////////////////////////////////////////////////////////////////
 

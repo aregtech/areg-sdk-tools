@@ -18,6 +18,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMIncludeDetails.cpp
     ${LUSAN}/view/sm/SMIncludeList.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
+    ${LUSAN}/view/sm/SMAutoPlacer.cpp
     ${LUSAN}/view/sm/SMCanvasItem.cpp
     ${LUSAN}/view/sm/SMCanvasTool.cpp
     ${LUSAN}/view/sm/SMDesign.cpp
@@ -54,6 +55,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMIncludeDetails.hpp
     ${LUSAN}/view/sm/SMIncludeList.hpp
     ${LUSAN}/view/sm/NESMDesign.hpp
+    ${LUSAN}/view/sm/SMAutoPlacer.hpp
     ${LUSAN}/view/sm/SMCanvasItem.hpp
     ${LUSAN}/view/sm/SMCanvasTool.hpp
     ${LUSAN}/view/sm/SMDesign.hpp

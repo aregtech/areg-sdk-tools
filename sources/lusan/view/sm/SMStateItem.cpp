@@ -31,6 +31,7 @@
 
 #include <QCoreApplication>
 #include <QCursor>
+#include <QFontMetricsF>
 #include <QGraphicsProxyWidget>
 #include <QGraphicsSceneHoverEvent>
 #include <QGraphicsSceneMouseEvent>
@@ -228,16 +229,28 @@ bool SMStateItem::isBorderDragZone(const QPointF& scenePos) const
         return false;
     }
 
-    if ((hasBodyContent() || (mExpanded == false)) && chevronRect().contains(p))
+    if ((hasBodyContent() || (mExpanded == false)) && (isMarker() == false) && chevronRect().contains(p))
     {
         return false;
     }
 
     const QRectF box{ 0.0, 0.0, mSize.width(), visibleHeight() };
+    if (isMarker())
+    {
+        // The pill border band: within the drag margin of the drawn rounded border.
+        const QPointF nearest = NESMDesign::nearestBorderPoint(box, boxCornerRadius(), p);
+        return (std::hypot(p.x() - nearest.x(), p.y() - nearest.y()) <= NESMDesign::EdgeBorderDragMargin);
+    }
+
     const double m = NESMDesign::EdgeBorderDragMargin;
     const QRectF outer = box.adjusted(-m, -m, m, m);
     const QRectF inner = box.adjusted(m, m, -m, -m);
     return outer.contains(p) && (inner.contains(p) == false);
+}
+
+double SMStateItem::boxCornerRadius() const
+{
+    return (isMarker() ? std::min(visibleHeight(), mSize.width()) / 2.0 : NESMDesign::StateCornerRadius);
 }
 
 void SMStateItem::notifyEdgesOfGeometry()
@@ -263,9 +276,10 @@ QRectF SMStateItem::boundingRect() const
 QPainterPath SMStateItem::shape() const
 {
     QPainterPath path;
-    const double grow = (isSelected() ? NESMDesign::HandleSize / 2.0 : 0.0);
+    const double grow   = (isSelected() ? NESMDesign::HandleSize / 2.0 : 0.0);
+    const double radius = boxCornerRadius() + grow;
     path.addRoundedRect(QRectF(-grow, -grow, mSize.width() + 2.0 * grow, visibleHeight() + 2.0 * grow)
-                        , NESMDesign::StateCornerRadius, NESMDesign::StateCornerRadius);
+                        , radius, radius);
     return path;
 }
 
@@ -273,52 +287,54 @@ void SMStateItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opt
 {
     const QPalette palette{ (widget != nullptr) ? widget->palette() : QPalette() };
     const QRectF   box{ 0.0, 0.0, mSize.width(), visibleHeight() };
-    const double   radius  = NESMDesign::StateCornerRadius;
-    const double   headerH = NESMDesign::StateHeaderHeight;
-
-    QColor bodyColor{ mColorName };
-    if (bodyColor.isValid() == false)
-    {
-        bodyColor = NESMDesign::stateBodyColor(palette);
-    }
-
-    QColor headerColor{ mHeaderColorName };
-    if (headerColor.isValid() == false)
-    {
-        headerColor = NESMDesign::deriveHeaderShade(bodyColor);
-    }
 
     painter->setRenderHint(QPainter::Antialiasing, true);
 
-    QPainterPath path;
-    path.addRoundedRect(box, radius, radius);
-    painter->fillPath(path, bodyColor);
-
-    painter->save();
-    painter->setClipPath(path);
-    painter->fillRect(QRectF(0.0, 0.0, box.width(), headerH), headerColor);
-    painter->restore();
-
-    const QColor borderColor = NESMDesign::stateBorderColor(palette);
-    painter->setPen(QPen(borderColor, 1.2));
-    painter->setBrush(Qt::NoBrush);
-    if (mExpanded && (box.height() > headerH))
+    if (isMarker())
     {
-        painter->drawLine(QPointF(0.0, headerH), QPointF(box.width(), headerH));
+        paintMarker(painter, box, palette);
     }
-
-    painter->drawPath(path);
-    if (mKind == SMStateEntry::eStateKind::Final)
+    else
     {
-        const QRectF inner = box.adjusted(3.0, 3.0, -3.0, -3.0);
-        painter->drawRoundedRect(inner, std::max(radius - 3.0, 2.0), std::max(radius - 3.0, 2.0));
-    }
+        const double radius  = NESMDesign::StateCornerRadius;
+        const double headerH = NESMDesign::StateHeaderHeight;
 
-    paintHeaderContent(painter, box, headerColor);
-    if (mExpanded)
-    {
-        paintBodyRows(painter, box, bodyColor);
-        paintMiniature(painter, box, bodyColor);
+        QColor bodyColor{ mColorName };
+        if (bodyColor.isValid() == false)
+        {
+            bodyColor = NESMDesign::stateBodyColor(palette);
+        }
+
+        QColor headerColor{ mHeaderColorName };
+        if (headerColor.isValid() == false)
+        {
+            headerColor = NESMDesign::deriveHeaderShade(bodyColor);
+        }
+
+        QPainterPath path;
+        path.addRoundedRect(box, radius, radius);
+        painter->fillPath(path, bodyColor);
+
+        painter->save();
+        painter->setClipPath(path);
+        painter->fillRect(QRectF(0.0, 0.0, box.width(), headerH), headerColor);
+        painter->restore();
+
+        const QColor borderColor = NESMDesign::stateBorderColor(palette);
+        painter->setPen(QPen(borderColor, 1.2));
+        painter->setBrush(Qt::NoBrush);
+        if (mExpanded && (box.height() > headerH))
+        {
+            painter->drawLine(QPointF(0.0, headerH), QPointF(box.width(), headerH));
+        }
+
+        painter->drawPath(path);
+        paintHeaderContent(painter, box, headerColor);
+        if (mExpanded)
+        {
+            paintBodyRows(painter, box, bodyColor);
+            paintMiniature(painter, box, bodyColor);
+        }
     }
 
     if (isSelected())
@@ -327,6 +343,78 @@ void SMStateItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opt
         NESMDesign::paintSelectionFrame(painter, frame, palette, hasFocus());
         paintHandles(painter, palette);
     }
+}
+
+void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalette& palette)
+{
+    const bool start = (mKind == SMStateEntry::eStateKind::Start);
+
+    QColor fill{ mColorName };
+    if (fill.isValid() == false)
+    {
+        fill = (start ? NESMDesign::startStateColor(palette) : NESMDesign::finalStateColor(palette));
+    }
+
+    const double radius = boxCornerRadius();
+    QPainterPath path;
+    path.addRoundedRect(box, radius, radius);
+    painter->fillPath(path, fill);
+    painter->setPen(QPen(NESMDesign::stateBorderColor(palette), 1.2));
+    painter->setBrush(Qt::NoBrush);
+    painter->drawPath(path);
+
+    const QColor textColor = NESMDesign::contrastTextColor(fill);
+    if (start == false)
+    {
+        // Final: the classic double border (an inner ring inside the pill).
+        QColor ring{ textColor };
+        ring.setAlphaF(0.85);
+        painter->setPen(QPen(ring, 1.4));
+        const QRectF inner = box.adjusted(3.5, 3.5, -3.5, -3.5);
+        const double ir = std::max(radius - 3.5, 2.0);
+        painter->drawRoundedRect(inner, ir, ir);
+    }
+
+    // The glyph and the name, centered together: Start = play triangle, Final = bullseye.
+    QFont nameFont = painter->font();
+    nameFont.setBold(true);
+    const QFontMetricsF metrics{ nameFont };
+
+    const double glyphW  = 12.0;
+    const double gap     = 6.0;
+    const double padding = NESMDesign::StatePadding + radius / 2.0;
+    const double availW  = std::max(box.width() - 2.0 * padding - glyphW - gap, 10.0);
+    const QString elided = metrics.elidedText(mName, Qt::ElideRight, availW);
+    const double textW   = metrics.horizontalAdvance(elided);
+    const double left    = box.center().x() - (glyphW + gap + textW) / 2.0;
+    const double midY    = box.center().y();
+
+    if (start)
+    {
+        QPainterPath glyph;
+        glyph.moveTo(left, midY - 6.0);
+        glyph.lineTo(left + glyphW, midY);
+        glyph.lineTo(left, midY + 6.0);
+        glyph.closeSubpath();
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(textColor);
+        painter->drawPath(glyph);
+    }
+    else
+    {
+        const QPointF center{ left + glyphW / 2.0, midY };
+        painter->setPen(QPen(textColor, 1.4));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawEllipse(center, glyphW / 2.0, glyphW / 2.0);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(textColor);
+        painter->drawEllipse(center, glyphW / 4.0, glyphW / 4.0);
+    }
+
+    painter->setFont(nameFont);
+    painter->setPen(textColor);
+    const QRectF nameRect{ left + glyphW + gap, box.top(), textW + 2.0, box.height() };
+    painter->drawText(nameRect, Qt::AlignVCenter | Qt::AlignLeft, elided);
 }
 
 void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const QColor& headerColor)
@@ -394,15 +482,6 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
         }
 
         right = badge.left() - 4.0;
-    }
-
-    if (mKind == SMStateEntry::eStateKind::Start)
-    {
-        // The UML-style initial marker: a filled disc before the name.
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(textColor);
-        painter->drawEllipse(QPointF(left + 4.5, headerH / 2.0), 4.5, 4.5);
-        left += 14.0;
     }
 
     QFont nameFont = painter->font();
@@ -638,7 +717,8 @@ void SMStateItem::updateFromModel()
     {
         mSize = QSizeF(  std::max(node->width, NESMDesign::StateMinWidth)
                        , std::max(node->height, NESMDesign::StateMinHeight));
-        mExpanded        = (node->hasExpanded ? node->expanded : true);
+        // Marker boxes have no collapsible body; they always paint at full height.
+        mExpanded        = (isMarker() ? true : (node->hasExpanded ? node->expanded : true));
         mColorName       = node->color;
         mHeaderColorName = node->headerColor;
 
@@ -1011,7 +1091,9 @@ void SMStateItem::startInlineRename()
 
     mRenameProxy = new QGraphicsProxyWidget(this);
     mRenameProxy->setWidget(edit);
-    mRenameProxy->setGeometry(QRectF(2.0, 1.0, mSize.width() - 4.0, NESMDesign::StateHeaderHeight - 2.0));
+    const double editH = NESMDesign::StateHeaderHeight - 2.0;
+    const double editY = (isMarker() ? (visibleHeight() - editH) / 2.0 : 1.0);
+    mRenameProxy->setGeometry(QRectF(2.0, editY, mSize.width() - 4.0, editH));
     mRenameProxy->setZValue(1.0);
 
     QObject::connect(edit, &QLineEdit::textChanged, edit, [this, edit](const QString& text)

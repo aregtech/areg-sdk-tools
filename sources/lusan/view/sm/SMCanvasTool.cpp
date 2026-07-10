@@ -32,13 +32,14 @@
 
 #include <QCoreApplication>
 #include <QGraphicsPathItem>
+#include <QGraphicsRectItem>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QKeyEvent>
-#include <QMessageBox>
 #include <QPainterPath>
 #include <QPen>
 
+#include <algorithm>
 #include <cmath>
 
 namespace
@@ -103,12 +104,62 @@ NESMDesign::eCanvasTool SMSelectTool::getKind() const
 SMPlaceStateTool::SMPlaceStateTool(SMScene& scene, bool finalState)
     : SMCanvasTool  (scene)
     , mFinal        (finalState)
+    , mPressed      (false)
+    , mDragging     (false)
+    , mPressPos     ( )
+    , mPreview      (nullptr)
 {
+}
+
+SMPlaceStateTool::~SMPlaceStateTool()
+{
+    clearPreview();
 }
 
 NESMDesign::eCanvasTool SMPlaceStateTool::getKind() const
 {
     return (mFinal ? NESMDesign::eCanvasTool::AddFinalState : NESMDesign::eCanvasTool::AddState);
+}
+
+void SMPlaceStateTool::cancelGesture()
+{
+    clearPreview();
+    mPressed  = false;
+    mDragging = false;
+}
+
+void SMPlaceStateTool::createPreview()
+{
+    if (mPreview == nullptr)
+    {
+        mPreview = new QGraphicsRectItem();
+        QPen pen{ NESMDesign::selectionColor(QPalette()), 1.0 };
+        pen.setStyle(Qt::DashLine);
+        pen.setCosmetic(true);
+        mPreview->setPen(pen);
+        mPreview->setBrush(Qt::NoBrush);
+        mPreview->setZValue(1000.0);
+        getScene().addItem(mPreview);
+    }
+}
+
+void SMPlaceStateTool::clearPreview()
+{
+    if (mPreview != nullptr)
+    {
+        getScene().removeItem(mPreview);
+        delete mPreview;
+        mPreview = nullptr;
+    }
+}
+
+QRectF SMPlaceStateTool::dragRect(const QPointF& cursor) const
+{
+    SMScene& canvas = getScene();
+    QRectF rect{ QRectF(canvas.snappedPosition(mPressPos), canvas.snappedPosition(cursor)).normalized() };
+    rect.setWidth(std::max(rect.width(), NESMDesign::StateMinWidth));
+    rect.setHeight(std::max(rect.height(), NESMDesign::StateMinHeight));
+    return rect;
 }
 
 bool SMPlaceStateTool::mousePress(QGraphicsSceneMouseEvent* event)
@@ -118,16 +169,60 @@ bool SMPlaceStateTool::mousePress(QGraphicsSceneMouseEvent* event)
         return false;
     }
 
-    placeState(event->scenePos());
+    mPressed  = true;
+    mDragging = false;
+    mPressPos = event->scenePos();
+    event->accept();
+    return true;
+}
+
+bool SMPlaceStateTool::mouseMove(QGraphicsSceneMouseEvent* event)
+{
+    if (mPressed == false)
+    {
+        return false;
+    }
+
+    if ((mDragging == false) && (toolDistance(event->scenePos(), mPressPos) > DragThreshold))
+    {
+        mDragging = true;
+        createPreview();
+    }
+
+    if (mDragging)
+    {
+        mPreview->setRect(dragRect(event->scenePos()));
+    }
+
     event->accept();
     return true;
 }
 
 bool SMPlaceStateTool::mouseRelease(QGraphicsSceneMouseEvent* event)
 {
-    if (event->button() != Qt::LeftButton)
+    if ((mPressed == false) || (event->button() != Qt::LeftButton))
     {
         return false;
+    }
+
+    const bool    dragged = mDragging;
+    const QPointF cursor  = event->scenePos();
+    mPressed  = false;
+    mDragging = false;
+    clearPreview();
+
+    if (dragged)
+    {
+        // The user drew the box: press-to-release rectangle, minimum size enforced.
+        placeState(dragRect(cursor));
+    }
+    else
+    {
+        // A plain click: a default-sized box centered on the click position.
+        const QSizeF size = mFinal ? QSizeF(NESMDesign::MarkerStateWidth, NESMDesign::MarkerStateHeight)
+                                   : QSizeF(NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight);
+        const QPointF topLeft = getScene().snappedPosition(cursor - QPointF(size.width() / 2.0, size.height() / 2.0));
+        placeState(QRectF(topLeft, size));
     }
 
     event->accept();
@@ -141,7 +236,7 @@ bool SMPlaceStateTool::mouseDoubleClick(QGraphicsSceneMouseEvent* event)
     return true;
 }
 
-void SMPlaceStateTool::placeState(const QPointF& scenePos)
+void SMPlaceStateTool::placeState(const QRectF& box)
 {
     SMScene& canvas = getScene();
     StateMachineModel& model = canvas.getModel();
@@ -159,12 +254,9 @@ void SMPlaceStateTool::placeState(const QPointF& scenePos)
         name = base + QString::number(i);
     }
 
-    const QSizeF  size{ NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight };
-    const QPointF topLeft = canvas.snappedPosition(scenePos - QPointF(size.width() / 2.0, size.height() / 2.0));
-
     const SMStateEntry::eStateKind kind = (mFinal ? SMStateEntry::eStateKind::Final : SMStateEntry::eStateKind::Normal);
     SMCreateStateCommand* command = new SMCreateStateCommand(  data, model.getNotifier(), *level, name, kind
-                                                             , QRectF(topLeft, size)
+                                                             , box
                                                              , QCoreApplication::translate("SMCanvasTool", "Add state %1").arg(name));
     model.getUndoStack().push(command);
 
@@ -188,6 +280,7 @@ void SMPlaceStateTool::placeState(const QPointF& scenePos)
 SMTransitionTool::SMTransitionTool(SMScene& scene)
     : SMCanvasTool  (scene)
     , mArmed        (false)
+    , mButtonDown   (false)
     , mDragging     (false)
     , mFromBorder   (false)
     , mSourceId     (0)
@@ -221,6 +314,7 @@ void SMTransitionTool::cancelGesture()
 void SMTransitionTool::resetGesture()
 {
     mArmed      = false;
+    mButtonDown = false;
     mDragging   = false;
     mFromBorder = false;
     mSourceId   = 0;
@@ -281,9 +375,11 @@ void SMTransitionTool::updatePreview(const QPointF& cursor)
         return;
     }
 
+    SMStateItem* sourceItem = getScene().stateItem(mSourceId);
+    const double srcRadius = (sourceItem != nullptr ? sourceItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
     const QPointF ref = (mWaypoints.isEmpty() ? cursor : mWaypoints.first());
     QPainterPath path;
-    path.moveTo(NESMDesign::borderPoint(src, ref));
+    path.moveTo(NESMDesign::borderPoint(src, srcRadius, ref));
     for (const QPointF& wp : mWaypoints)
     {
         path.lineTo(wp);
@@ -301,17 +397,19 @@ bool SMTransitionTool::mousePress(QGraphicsSceneMouseEvent* event)
     }
 
     SMStateItem* state = getScene().stateAt(event->scenePos());
+    mButtonDown = true;
+    mPressPos   = event->scenePos();
     if (mArmed == false)
     {
         if (state == nullptr)
         {
+            mButtonDown = false;
             return false;
         }
 
         mArmed    = true;
         mDragging = false;
         mSourceId = state->getElementId();
-        mPressPos = event->scenePos();
         mWaypoints.clear();
         createPreview();
         updatePreview(event->scenePos());
@@ -319,12 +417,16 @@ bool SMTransitionTool::mousePress(QGraphicsSceneMouseEvent* event)
         return true;
     }
 
+    // Any follow-up press continues the gesture deliberately; the border-started
+    // "plain click selects the state" fallback no longer applies.
+    mFromBorder = false;
     if (state != nullptr)
     {
         completeExternal(state->getElementId());
     }
     else
     {
+        // A click on empty canvas drops a polyline waypoint; the gesture continues.
         mWaypoints.append(getScene().snappedPosition(event->scenePos()));
         updatePreview(event->scenePos());
     }
@@ -340,7 +442,9 @@ bool SMTransitionTool::mouseMove(QGraphicsSceneMouseEvent* event)
         return false;
     }
 
-    if ((mDragging == false) && (toolDistance(event->scenePos(), mPressPos) > DragThreshold))
+    // Only a button held past the threshold is a drag; the scene delivers tracking moves
+    // with the button up too, and those must never promote the gesture into a drag.
+    if (mButtonDown && (mDragging == false) && (toolDistance(event->scenePos(), mPressPos) > DragThreshold))
     {
         mDragging = true;
     }
@@ -357,7 +461,11 @@ bool SMTransitionTool::mouseRelease(QGraphicsSceneMouseEvent* event)
         return false;
     }
 
-    if (mDragging)
+    const bool dragged = mDragging;
+    mButtonDown = false;
+    mDragging   = false;
+
+    if (dragged)
     {
         SMStateItem* state = getScene().stateAt(event->scenePos());
         if (state != nullptr)
@@ -366,7 +474,11 @@ bool SMTransitionTool::mouseRelease(QGraphicsSceneMouseEvent* event)
         }
         else
         {
-            offerInternalOnEmpty();
+            // Released on empty canvas: drop a waypoint there and continue the gesture
+            // click by click until a state is picked (Enter = internal, Esc cancels).
+            mFromBorder = false;
+            mWaypoints.append(getScene().snappedPosition(event->scenePos()));
+            updatePreview(event->scenePos());
         }
 
         event->accept();
@@ -414,6 +526,7 @@ bool SMTransitionTool::keyPress(QKeyEvent* event)
 void SMTransitionTool::beginDragFrom(uint32_t sourceId, const QPointF& scenePos)
 {
     mArmed      = true;
+    mButtonDown = true;
     mDragging   = false;
     mFromBorder = true;
     mSourceId   = sourceId;
@@ -460,11 +573,15 @@ void SMTransitionTool::completeExternal(uint32_t targetId)
     QList<QPointF> points;
     if ((srcRect.width() > 0.0) && (tgtRect.width() > 0.0))
     {
+        SMStateItem* sourceItem = canvas.stateItem(mSourceId);
+        SMStateItem* targetItem = canvas.stateItem(targetId);
+        const double srcRadius = (sourceItem != nullptr ? sourceItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
+        const double tgtRadius = (targetItem != nullptr ? targetItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
         const QPointF beginRef = waypoints.isEmpty() ? tgtRect.center() : waypoints.first();
         const QPointF endRef   = waypoints.isEmpty() ? srcRect.center() : waypoints.last();
-        points.append(NESMDesign::borderPoint(srcRect, beginRef));
+        points.append(NESMDesign::borderPoint(srcRect, srcRadius, beginRef));
         points.append(waypoints);
-        points.append(NESMDesign::borderPoint(tgtRect, endRef));
+        points.append(NESMDesign::borderPoint(tgtRect, tgtRadius, endRef));
     }
 
     const QString text = QCoreApplication::translate("SMTransitionTool", "Add transition");
@@ -498,25 +615,6 @@ void SMTransitionTool::completeInternal()
     clearPreview();
     resetGesture();
     canvas.finishToolGesture();
-}
-
-void SMTransitionTool::offerInternalOnEmpty()
-{
-    SMScene& canvas = getScene();
-    QWidget* parent = (canvas.views().isEmpty() == false) ? canvas.views().first() : nullptr;
-    const QMessageBox::StandardButton answer =
-            QMessageBox::question(parent, QCoreApplication::translate("SMTransitionTool", "Internal Transition")
-                                  , QCoreApplication::translate("SMTransitionTool", "Create an internal transition (no target) on the source state?")
-                                  , QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-    if (answer == QMessageBox::Yes)
-    {
-        completeInternal();
-    }
-    else
-    {
-        cancelGesture();
-        canvas.finishToolGesture();
-    }
 }
 
 std::unique_ptr<SMCanvasTool> createCanvasTool(NESMDesign::eCanvasTool tool, SMScene& scene)

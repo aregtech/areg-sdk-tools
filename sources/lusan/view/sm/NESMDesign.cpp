@@ -49,6 +49,20 @@ QColor NESMDesign::stateBodyColor(const QPalette& palette)
     return palette.color(QPalette::AlternateBase);
 }
 
+QColor NESMDesign::startStateColor(const QPalette& palette)
+{
+    // A green "go" fill; brighter on dark themes so it stays vivid.
+    const bool dark = (palette.color(QPalette::Base).lightnessF() < 0.5);
+    return (dark ? QColor(0x2E, 0x9E, 0x4F) : QColor(0x2E, 0x7D, 0x32));
+}
+
+QColor NESMDesign::finalStateColor(const QPalette& palette)
+{
+    // A deep red "stop" fill clearly distinct from normal state bodies.
+    const bool dark = (palette.color(QPalette::Base).lightnessF() < 0.5);
+    return (dark ? QColor(0xB5, 0x4A, 0x45) : QColor(0x9A, 0x31, 0x2F));
+}
+
 QColor NESMDesign::stateBorderColor(const QPalette& palette)
 {
     QColor result{ palette.color(QPalette::WindowText) };
@@ -108,6 +122,113 @@ QPointF NESMDesign::borderPoint(const QRectF& rect, const QPointF& towards)
     }
 
     return center + dir * scale;
+}
+
+QPointF NESMDesign::borderPoint(const QRectF& rect, double radius, const QPointF& towards)
+{
+    const QPointF plain = borderPoint(rect, towards);
+    const double  rad   = std::clamp(radius, 0.0, std::min(rect.width(), rect.height()) / 2.0);
+    if (rad <= 1e-6)
+    {
+        return plain;
+    }
+
+    // Only the four corner squares differ from the plain rectangle border.
+    const bool nearLeft   = (plain.x() < rect.left() + rad);
+    const bool nearRight  = (plain.x() > rect.right() - rad);
+    const bool nearTop    = (plain.y() < rect.top() + rad);
+    const bool nearBottom = (plain.y() > rect.bottom() - rad);
+    if (((nearLeft || nearRight) && (nearTop || nearBottom)) == false)
+    {
+        return plain;
+    }
+
+    const double kx = (nearLeft ? rect.left() + rad : rect.right() - rad);
+    const double ky = (nearTop  ? rect.top() + rad  : rect.bottom() - rad);
+
+    // Intersect the center ray with the corner circle (exit point = larger root).
+    const QPointF center = rect.center();
+    QPointF dir = towards - center;
+    const double len = std::hypot(dir.x(), dir.y());
+    if (len < 1e-6)
+    {
+        return plain;
+    }
+
+    dir /= len;
+    const QPointF toCorner{ kx - center.x(), ky - center.y() };
+    const double b    = toCorner.x() * dir.x() + toCorner.y() * dir.y();
+    const double c0   = toCorner.x() * toCorner.x() + toCorner.y() * toCorner.y() - rad * rad;
+    const double disc = b * b - c0;
+    if (disc < 0.0)
+    {
+        return plain;
+    }
+
+    const double t = b + std::sqrt(disc);
+    return center + dir * t;
+}
+
+QPointF NESMDesign::nearestBorderPoint(const QRectF& rect, double radius, const QPointF& point)
+{
+    if ((rect.width() <= 0.0) || (rect.height() <= 0.0))
+    {
+        return rect.center();
+    }
+
+    // Clamp into the rectangle, then push to the closest side: the nearest point on
+    // the plain rectangle border, valid for points inside and outside alike.
+    QPointF q{ std::clamp(point.x(), rect.left(), rect.right())
+             , std::clamp(point.y(), rect.top(), rect.bottom()) };
+    const double dl = q.x() - rect.left();
+    const double dr = rect.right() - q.x();
+    const double dt = q.y() - rect.top();
+    const double db = rect.bottom() - q.y();
+    const double dm = std::min({ dl, dr, dt, db });
+    if (dm == dl)
+    {
+        q.setX(rect.left());
+    }
+    else if (dm == dr)
+    {
+        q.setX(rect.right());
+    }
+    else if (dm == dt)
+    {
+        q.setY(rect.top());
+    }
+    else
+    {
+        q.setY(rect.bottom());
+    }
+
+    const double rad = std::clamp(radius, 0.0, std::min(rect.width(), rect.height()) / 2.0);
+    if (rad <= 1e-6)
+    {
+        return q;
+    }
+
+    // In a corner square the border is the corner arc: project onto the corner circle.
+    const bool nearLeft   = (q.x() < rect.left() + rad);
+    const bool nearRight  = (q.x() > rect.right() - rad);
+    const bool nearTop    = (q.y() < rect.top() + rad);
+    const bool nearBottom = (q.y() > rect.bottom() - rad);
+    if (((nearLeft || nearRight) && (nearTop || nearBottom)) == false)
+    {
+        return q;
+    }
+
+    const double kx = (nearLeft ? rect.left() + rad : rect.right() - rad);
+    const double ky = (nearTop  ? rect.top() + rad  : rect.bottom() - rad);
+
+    QPointF out = point - QPointF(kx, ky);
+    const double len = std::hypot(out.x(), out.y());
+    if (len < 1e-6)
+    {
+        return q;
+    }
+
+    return QPointF(kx, ky) + out * (rad / len);
 }
 
 QList<QPointF> NESMDesign::arcPolyline(const QPointF& begin, const QPointF& end, double bulge, int samples)

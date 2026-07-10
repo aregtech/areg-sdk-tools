@@ -28,6 +28,7 @@
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
+#include "lusan/view/sm/SMAutoPlacer.hpp"
 #include "lusan/view/sm/SMCanvasItem.hpp"
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
@@ -44,6 +45,7 @@
 #include <QPainter>
 #include <QPair>
 #include <QScrollBar>
+#include <QSettings>
 #include <QStringList>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -112,6 +114,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActZoomReset (nullptr)
     , mActZoomFit   (nullptr)
     , mActToggleGrid(nullptr)
+    , mActGridDots  (nullptr)
     , mActToggleSnap(nullptr)
     , mActSelectAll (nullptr)
     , mActAddState  (nullptr)
@@ -119,6 +122,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActAddTransition(nullptr)
     , mActDelete    (nullptr)
     , mActRename    (nullptr)
+    , mActAddInternal(nullptr)
     , mActSetStimulus(nullptr)
     , mActRaisePriority(nullptr)
     , mActLowerPriority(nullptr)
@@ -160,9 +164,12 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     separator2->setSeparator(true);
     QAction* separator3 = new QAction(this);
     separator3->setSeparator(true);
-    mView->addActions({ mActAddState, mActAddFinal, mActAddTransition, separator1
+    QAction* separator4 = new QAction(this);
+    separator4->setSeparator(true);
+    mView->addActions({ mActAddState, mActAddFinal, mActAddTransition, mActAddInternal, separator1
                       , mActSetStimulus, mActRaisePriority, mActLowerPriority, separator2
                       , mActAddSubstate, mActEnterSubmachine, mActGoToParent, separator3
+                      , mActToggleGrid, mActGridDots, mActToggleSnap, separator4
                       , mActRename, mActDelete });
 
     DocModelNotifier& notifier = mModel.getNotifier();
@@ -285,6 +292,20 @@ void SMDesign::setupActions()
         getScene().setGridVisible(checked);
     });
 
+    // The grid style is an application-level display preference (the document persists
+    // only the grid size and visibility, spec 7.6).
+    mActGridDots = new QAction(tr("Dotted Grid"), this);
+    mActGridDots->setCheckable(true);
+    {
+        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+        mActGridDots->setChecked(settings.value(QStringLiteral("smDesign/gridDots"), false).toBool());
+    }
+    connect(mActGridDots, &QAction::toggled, this, [this](bool checked) {
+        getScene().setGridStyle(checked ? NESMDesign::eGridStyle::Dots : NESMDesign::eGridStyle::Lines);
+        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+        settings.setValue(QStringLiteral("smDesign/gridDots"), checked);
+    });
+
     mActToggleSnap = new QAction(tr("Snap to Grid"), this);
     mActToggleSnap->setCheckable(true);
     mActToggleSnap->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_G));
@@ -312,6 +333,11 @@ void SMDesign::setupActions()
     connect(mActAddTransition, &QAction::triggered, this, [this]() {
         getScene().setActiveTool(NESMDesign::eCanvasTool::AddTransition);
     });
+
+    // An internal transition runs its operations on the stimulus without exit/entry
+    // and no state change; it is shown as a row in the state body, not as an edge.
+    mActAddInternal = new QAction(tr("Add Internal Transition"), this);
+    connect(mActAddInternal, &QAction::triggered, this, &SMDesign::addInternalToSelection);
 
     mActSetStimulus = new QAction(tr("Set Stimulus…"), this);
     connect(mActSetStimulus, &QAction::triggered, this, &SMDesign::setStimulusOfSelection);
@@ -346,8 +372,8 @@ void SMDesign::setupActions()
     });
 
     const QList<QAction*> actions{ mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit
-                                 , mActToggleGrid, mActToggleSnap, mActSelectAll
-                                 , mActAddState, mActAddFinal, mActAddTransition, mActDelete, mActRename
+                                 , mActToggleGrid, mActGridDots, mActToggleSnap, mActSelectAll
+                                 , mActAddState, mActAddFinal, mActAddTransition, mActAddInternal, mActDelete, mActRename
                                  , mActSetStimulus, mActRaisePriority, mActLowerPriority
                                  , mActAddSubstate, mActEnterSubmachine, mActGoToParent };
     for (QAction* action : actions)
@@ -615,16 +641,53 @@ void SMDesign::setStimulusOfSelection()
     }
 }
 
+void SMDesign::addInternalToSelection()
+{
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    if (selection.size() != 1)
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    SMStateEntry* state = data.findStateById(selection.first());
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    // No target and no edge geometry: internal transitions render as a state-body row.
+    mModel.getUndoStack().push(new SMCreateTransitionCommand(  data, mModel.getNotifier(), *state
+                                                             , SMTransitionEntry::eStimulusKind::Trigger, QString()
+                                                             , QString(), QList<QPointF>()
+                                                             , tr("Add internal transition to %1").arg(state->getName())));
+}
+
 void SMDesign::rebuildScene()
 {
+    // No level is shown until the manager settles on one; the auto-placement below must
+    // not be mistaken for a viewport edit of the previously shown level.
+    mShownLevel = 0u;
+
     if (mActToggleGrid != nullptr)
     {
         // A (re)loaded document brings its own grid settings.
         mActToggleGrid->setChecked(mModel.getData().getLayout().isGridVisible());
     }
 
+    autoPlaceMissingNodes();
     mSceneManager->reset();
     populateStressContent();
+}
+
+void SMDesign::autoPlaceMissingNodes()
+{
+    const QList<SMLayoutNode> nodes{ SMAutoPlacer::missingNodes(mModel.getData()) };
+    if (nodes.isEmpty() == false)
+    {
+        mModel.getUndoStack().push(new SMAutoPlaceNodesCommand(  mModel.getData(), mModel.getNotifier()
+                                                               , nodes, tr("Auto-place elements")));
+    }
 }
 
 void SMDesign::onLevelChanged(uint32_t levelId)
@@ -639,6 +702,11 @@ void SMDesign::onLevelChanged(uint32_t levelId)
     const SMLayoutData& layout = mModel.getData().getLayout();
     mScene->setGridSize(layout.getGridSize());
     mScene->setGridVisible(mActToggleGrid != nullptr ? mActToggleGrid->isChecked() : layout.isGridVisible());
+    if (mActGridDots != nullptr)
+    {
+        mScene->setGridStyle(mActGridDots->isChecked() ? NESMDesign::eGridStyle::Dots : NESMDesign::eGridStyle::Lines);
+    }
+
     if (mActToggleSnap != nullptr)
     {
         mScene->setSnapToGrid(mActToggleSnap->isChecked());
@@ -790,6 +858,20 @@ void SMDesign::updateNavActions()
                                 && (single->getKind() == SMStateEntry::eStateKind::Normal)
                                 && (single->isImportedSubmachine() == false)
                                 && (single->hasNestedStates() == false));
+
+    // Internal transitions run operations without leaving the state; Final states have
+    // no outgoing transitions at all, so they cannot carry one either.
+    mActAddInternal->setEnabled((single != nullptr) && (single->getKind() != SMStateEntry::eStateKind::Final));
+
+    // The transition actions apply to a single selected edge; priority moves need a
+    // neighbour in the owner's document order to swap with.
+    const SMTransitionEntry* transition = (selection.size() == 1 ? mModel.getData().findTransitionById(selection.first()) : nullptr);
+    const SMStateEntry* owner = (transition != nullptr ? mModel.getData().findTransitionOwner(transition->getId()) : nullptr);
+    const int index = (owner != nullptr ? owner->getTransitions().findIndex(transition->getId()) : -1);
+    const int count = (owner != nullptr ? owner->getTransitions().getElementCount() : 0);
+    mActSetStimulus->setEnabled(transition != nullptr);
+    mActRaisePriority->setEnabled((index > 0));
+    mActLowerPriority->setEnabled((index >= 0) && (index < count - 1));
 }
 
 void SMDesign::addSubstateToSelection()
