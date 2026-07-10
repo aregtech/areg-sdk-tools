@@ -56,6 +56,17 @@ namespace NESMDesign
         , ColorApply    //!< Apply a color swatch to the selection.
     };
 
+    /**
+     * \brief   The grid rendering styles: full cell lines or dots at the crossings.
+     *          An application-level display preference; the document persists only
+     *          the grid size and visibility (spec 7.6).
+     **/
+    enum class eGridStyle
+    {
+          Lines //!< Grid lines forming cell squares (default).
+        , Dots  //!< A dot at each grid crossing.
+    };
+
     //!< The default grid cell size in scene units (pixels at 100% zoom).
     constexpr int       GridSizeDefault { 16 };
     //!< The smallest allowed grid cell size.
@@ -82,6 +93,9 @@ namespace NESMDesign
     //!< The default box size of a newly placed state.
     constexpr double    StateDefaultWidth   { 160.0 };
     constexpr double    StateDefaultHeight  { 96.0 };
+    //!< The default box size of a Start / Final marker state (compact pill box).
+    constexpr double    MarkerStateWidth    { 112.0 };
+    constexpr double    MarkerStateHeight   { 48.0 };
     //!< The smallest box a state can be resized to.
     constexpr double    StateMinWidth       { 64.0 };
     constexpr double    StateMinHeight      { 48.0 };
@@ -148,6 +162,19 @@ namespace NESMDesign
     QPointF borderPoint(const QRectF& rect, const QPointF& towards);
 
     /**
+     * \brief   Returns the point on a rounded rectangle's border along the ray from its
+     *          center toward \p towards. With \p radius 0 this equals borderPoint().
+     **/
+    QPointF borderPoint(const QRectF& rect, double radius, const QPointF& towards);
+
+    /**
+     * \brief   Returns the point on a rounded rectangle's border closest to \p point.
+     *          Works for points inside and outside the rectangle; used to glue a
+     *          user-placed edge endpoint to the state box border.
+     **/
+    QPointF nearestBorderPoint(const QRectF& rect, double radius, const QPointF& point);
+
+    /**
      * \brief   Samples a circular arc through \p begin and \p end with the given signed
      *          bulge (arc height over half chord; sign picks the bowing side, 1 = semicircle)
      *          into a polyline. Returns the plain chord when the bulge is ~0 or degenerate.
@@ -158,6 +185,16 @@ namespace NESMDesign
      * \brief   Returns the default state body fill color of the given palette.
      **/
     QColor stateBodyColor(const QPalette& palette);
+
+    /**
+     * \brief   Returns the fill color of a Start state's marker box ("go" green).
+     **/
+    QColor startStateColor(const QPalette& palette);
+
+    /**
+     * \brief   Returns the fill color of a Final state's marker box ("stop" red).
+     **/
+    QColor finalStateColor(const QPalette& palette);
 
     /**
      * \brief   Returns the state border color of the given palette.

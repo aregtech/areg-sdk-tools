@@ -161,6 +161,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
+    ${LUSAN}/view/sm/SMAutoPlacer.cpp
     ${LUSAN}/view/sm/SMCanvasItem.cpp
     ${LUSAN}/view/sm/SMCanvasTool.cpp
     ${LUSAN}/view/sm/SMDesign.cpp

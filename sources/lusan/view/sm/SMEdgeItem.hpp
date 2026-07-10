@@ -102,6 +102,13 @@ public:
      **/
     inline const QList<QPointF>& getPath() const;
 
+    /**
+     * \brief   True when a scene position lands on one of the selected edge's grab
+     *          handles (endpoints, waypoints, or the label). The scene consults this
+     *          before starting a border-band transition drag: the handle wins.
+     **/
+    bool hitsHandle(const QPointF& scenePos) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -121,6 +128,7 @@ protected:
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent* event) override;
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent* event) override;
     virtual void mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event) override;
+    virtual QVariant itemChange(GraphicsItemChange change, const QVariant& value) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -136,6 +144,12 @@ private:
      *          otherwise its Node layout entry); an empty rect when unresolved.
      **/
     QRectF stateRect(uint32_t stateId) const;
+
+    /**
+     * \brief   Returns the drawn corner radius of a state's box: the pill radius for
+     *          Start / Final marker boxes, the standard corner radius otherwise.
+     **/
+    double stateRadius(uint32_t stateId, const QRectF& rect) const;
 
     /**
      * \brief   Rebuilds the drawn path and anchors from the cached model state, optionally
@@ -194,6 +208,9 @@ private:
     QString                 mColorName;     //!< The persisted edge color (empty = theme).
     QString                 mStimulusText;  //!< The stimulus label text.
     QList<QPointF>          mWaypoints;     //!< The interior waypoints, in order.
+    bool                    mHasAnchors;    //!< Persisted begin/end anchor points exist.
+    QPointF                 mAnchorBegin;   //!< The persisted begin anchor (projected onto the live border).
+    QPointF                 mAnchorEnd;     //!< The persisted end anchor (projected onto the live border).
     QPointF                 mBegin;         //!< The begin anchor on the source border.
     QPointF                 mEnd;           //!< The end anchor on the target border.
     QList<QPointF>          mPath;          //!< The full drawn polyline (begin, waypoints, end).

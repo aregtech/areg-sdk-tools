@@ -84,6 +84,9 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mColorName    ( )
     , mStimulusText ( )
     , mWaypoints    ( )
+    , mHasAnchors   (false)
+    , mAnchorBegin  ( )
+    , mAnchorEnd    ( )
     , mBegin        ( )
     , mEnd          ( )
     , mPath         ( )
@@ -134,6 +137,25 @@ QRectF SMEdgeItem::stateRect(uint32_t stateId) const
     return QRectF();
 }
 
+double SMEdgeItem::stateRadius(uint32_t stateId, const QRectF& rect) const
+{
+    SMScene* canvas = getCanvas();
+    if ((canvas == nullptr) || (stateId == 0))
+    {
+        return NESMDesign::StateCornerRadius;
+    }
+
+    SMStateItem* item = canvas->stateItem(stateId);
+    if (item != nullptr)
+    {
+        return item->boxCornerRadius();
+    }
+
+    const SMStateEntry* state = canvas->getModel().getData().findStateById(stateId);
+    const bool marker = (state != nullptr) && (state->getKind() != SMStateEntry::eStateKind::Normal);
+    return (marker ? std::min(rect.width(), rect.height()) / 2.0 : NESMDesign::StateCornerRadius);
+}
+
 void SMEdgeItem::updateFromModel()
 {
     SMScene* canvas = getCanvas();
@@ -172,6 +194,15 @@ void SMEdgeItem::updateFromModel()
         {
             mWaypoints.append(edge->points.at(i));
         }
+    }
+
+    // The persisted first/last points are the user-placed border anchors; the drawn
+    // begin/end are these projected onto the live border, so a state move keeps them glued.
+    mHasAnchors = (edge != nullptr) && (edge->points.size() >= 2);
+    if (mHasAnchors)
+    {
+        mAnchorBegin = edge->points.first();
+        mAnchorEnd   = edge->points.last();
     }
 
     mValid = (mSourceId != 0);
@@ -222,18 +253,29 @@ void SMEdgeItem::rebuildPath()
         mWaypoints.append(QPointF(src.center().x() + 22.0, src.top() - off));
     }
 
+    const double srcRad = stateRadius(mSourceId, src);
+    const double tgtRad = (mSelfLoop ? srcRad : stateRadius(mTargetId, tgt));
+
     if ((mShape == SMLayoutEdge::eShape::Arc) && (mSelfLoop == false))
     {
-        mBegin = (mDrag == eDrag::Begin) ? mDragPoint : NESMDesign::borderPoint(src, tc);
-        mEnd   = (mDrag == eDrag::End)   ? mDragPoint : NESMDesign::borderPoint(tgt, sc);
+        mBegin = (mDrag == eDrag::Begin) ? mDragPoint
+               : mHasAnchors ? NESMDesign::nearestBorderPoint(src, srcRad, mAnchorBegin)
+                             : NESMDesign::borderPoint(src, srcRad, tc);
+        mEnd   = (mDrag == eDrag::End)   ? mDragPoint
+               : mHasAnchors ? NESMDesign::nearestBorderPoint(tgt, tgtRad, mAnchorEnd)
+                             : NESMDesign::borderPoint(tgt, tgtRad, sc);
         mPath  = NESMDesign::arcPolyline(mBegin, mEnd, mBulge, NESMDesign::EdgeArcSamples);
     }
     else
     {
         const QPointF beginRef = mWaypoints.isEmpty() ? tc : mWaypoints.first();
         const QPointF endRef   = mWaypoints.isEmpty() ? sc : mWaypoints.last();
-        mBegin = (mDrag == eDrag::Begin) ? mDragPoint : NESMDesign::borderPoint(src, beginRef);
-        mEnd   = (mDrag == eDrag::End)   ? mDragPoint : NESMDesign::borderPoint(tgt, endRef);
+        mBegin = (mDrag == eDrag::Begin) ? mDragPoint
+               : mHasAnchors ? NESMDesign::nearestBorderPoint(src, srcRad, mAnchorBegin)
+                             : NESMDesign::borderPoint(src, srcRad, beginRef);
+        mEnd   = (mDrag == eDrag::End)   ? mDragPoint
+               : mHasAnchors ? NESMDesign::nearestBorderPoint(tgt, tgtRad, mAnchorEnd)
+                             : NESMDesign::borderPoint(tgt, tgtRad, endRef);
 
         mPath.append(mBegin);
         mPath.append(mWaypoints);
@@ -499,6 +541,35 @@ void SMEdgeItem::commitGeometry(const QString& text)
                                                           , getElementId(), mGesture, buildGeometry(), text));
 }
 
+bool SMEdgeItem::hitsHandle(const QPointF& scenePos) const
+{
+    if ((mValid == false) || (isSelected() == false))
+    {
+        return false;
+    }
+
+    const QPointF p = mapFromScene(scenePos);
+    if ((distance(p, mBegin) <= NESMDesign::EndpointPickRadius)
+        || (distance(p, mEnd) <= NESMDesign::EndpointPickRadius))
+    {
+        return true;
+    }
+
+    return (hitWaypoint(p) >= 0) || labelRect().contains(p);
+}
+
+QVariant SMEdgeItem::itemChange(GraphicsItemChange change, const QVariant& value)
+{
+    if (change == QGraphicsItem::ItemSelectedHasChanged)
+    {
+        // A selected edge raises above the state boxes so its endpoint and waypoint
+        // handles stay grabbable where they overlap a box.
+        setZValue(value.toBool() ? 1.0 : -1.0);
+    }
+
+    return SMCanvasItem::itemChange(change, value);
+}
+
 void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
     if ((event->button() == Qt::LeftButton) && isSelected())
@@ -565,10 +636,20 @@ void SMEdgeItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 
     case eDrag::Begin:
     case eDrag::End:
-        // Free follow for reconnection feedback (endpoints do not grid-snap).
-        mDragPoint = event->scenePos();
+    {
+        // Free follow for reconnection feedback; near a state box the endpoint snaps
+        // to the nearest point of that box's border.
+        QPointF point = event->scenePos();
+        SMStateItem* over = (canvas != nullptr ? canvas->stateAt(point) : nullptr);
+        if (over != nullptr)
+        {
+            point = NESMDesign::nearestBorderPoint(over->getBoxGeometry(), over->boxCornerRadius(), point);
+        }
+
+        mDragPoint = point;
         rebuildPath();
         break;
+    }
 
     case eDrag::Label:
         mLabelPos = snapped;
@@ -612,17 +693,55 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
         {
             SMStateItem* over = canvas->stateAt(event->scenePos());
             const uint32_t overId = (over != nullptr ? over->getElementId() : 0);
-            const uint32_t tid = getElementId();
-            // Revert the drag feedback; the scene applies the reconnection deferred so
-            // this item can be safely deleted/recreated by the resulting command.
-            updateFromModel();
-            if (drag == eDrag::End)
+            const uint32_t ownId  = (drag == eDrag::End ? mTargetId : mSourceId);
+            const uint32_t tid    = getElementId();
+            const QRectF   ownBox = stateRect(ownId);
+            if ((overId != 0) && (overId != ownId))
             {
-                QTimer::singleShot(0, canvas, [canvas, tid, overId]() { canvas->reconnectTransitionTarget(tid, overId); });
+                // Dropped on another state: reconnect. Revert the drag feedback first;
+                // the scene applies the reconnection deferred so this item can be
+                // safely deleted/recreated by the resulting command.
+                updateFromModel();
+                if (drag == eDrag::End)
+                {
+                    QTimer::singleShot(0, canvas, [canvas, tid, overId]() { canvas->reconnectTransitionTarget(tid, overId); });
+                }
+                else
+                {
+                    QTimer::singleShot(0, canvas, [canvas, tid, overId]() { canvas->reparentTransition(tid, overId); });
+                }
+            }
+            else if ((ownBox.width() > 0.0) && (ownBox.height() > 0.0))
+            {
+                // Dropped on the own state or empty canvas: glue the endpoint to the
+                // nearest point of its own state's border and persist the move.
+                const QPointF glued = NESMDesign::nearestBorderPoint(  ownBox, stateRadius(ownId, ownBox)
+                                                                     , canvas->snappedPosition(event->scenePos()));
+                prepareGeometryChange();
+                if (mHasAnchors == false)
+                {
+                    // First manual endpoint move: seed both anchors from the drawn path.
+                    mAnchorBegin = mBegin;
+                    mAnchorEnd   = mEnd;
+                }
+
+                mHasAnchors = true;
+                if (drag == eDrag::End)
+                {
+                    mAnchorEnd = glued;
+                }
+                else
+                {
+                    mAnchorBegin = glued;
+                }
+
+                rebuildPath();
+                update();
+                commitGeometry(translate("Move endpoint"));
             }
             else
             {
-                QTimer::singleShot(0, canvas, [canvas, tid, overId]() { canvas->reparentTransition(tid, overId); });
+                updateFromModel();
             }
         }
         break;

@@ -131,6 +131,13 @@ public:
      **/
     bool isBorderDragZone(const QPointF& scenePos) const;
 
+    /**
+     * \brief   The drawn corner radius of the box: the pill radius for Start / Final
+     *          marker boxes, the standard state corner radius otherwise. Edge anchors
+     *          use it to sit exactly on the drawn border.
+     **/
+    double boxCornerRadius() const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -226,6 +233,18 @@ private:
     inline bool hasBodyContent() const;
 
     /**
+     * \brief   True for the compact Start / Final marker boxes (pill rendering,
+     *          no header band, no body rows).
+     **/
+    inline bool isMarker() const;
+
+    /**
+     * \brief   Paints the compact Start / Final marker box: a pill with the kind's
+     *          fill color, a glyph, and the centered name (Final adds an inner ring).
+     **/
+    void paintMarker(QPainter* painter, const QRectF& box, const QPalette& palette);
+
+    /**
      * \brief   Applies an interactive resize drag to the given scene position.
      **/
     void applyResizeDrag(const QPointF& scenePos);
@@ -299,7 +318,12 @@ inline bool SMStateItem::isRenameActive() const
 
 inline bool SMStateItem::hasBodyContent() const
 {
-    return (mRows.isEmpty() == false);
+    return (mRows.isEmpty() == false) && (isMarker() == false);
+}
+
+inline bool SMStateItem::isMarker() const
+{
+    return (mKind != SMStateEntry::eStateKind::Normal);
 }
 
 #endif  // LUSAN_VIEW_SM_SMSTATEITEM_HPP

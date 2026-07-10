@@ -216,6 +216,35 @@ private:
 };
 
 /**
+ * \class   SMAutoPlaceNodesCommand
+ * \brief   Adds the Node entries a document is missing, computed once when it is loaded.
+ *          Missing layout is legal in the file format, so the placement is applied as an
+ *          ordinary undoable edit: the user can undo it, and saving makes it permanent.
+ **/
+class SMAutoPlaceNodesCommand : public SMCommand
+{
+public:
+    /**
+     * \brief   Creates the command.
+     * \param   data        The document root.
+     * \param   notifier    The change-notification hub.
+     * \param   nodes       The Node entries to add; each owner must have no entry yet.
+     * \param   text        The undo-stack display text.
+     * \param   parent      The owning composite command, if any.
+     **/
+    SMAutoPlaceNodesCommand(  StateMachineData& data, DocModelNotifier& notifier
+                            , const QList<SMLayoutNode>& nodes
+                            , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    QList<SMLayoutNode> mNodes;     //!< The placed Node entries.
+    QList<uint32_t>     mIds;       //!< The owners of the placed entries.
+};
+
+/**
  * \class   SMRemoveLayoutCommand
  * \brief   Removes the View/Node/Edge layout entries owned by a set of element IDs and
  *          restores them on undo. Used as a child of the delete-state composite so a

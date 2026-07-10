@@ -33,6 +33,7 @@
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
+#include "lusan/view/sm/SMAutoPlacer.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
@@ -42,6 +43,7 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QFile>
 #include <QGraphicsProxyWidget>
 #include <QLineEdit>
 #include <QMouseEvent>
@@ -146,6 +148,61 @@ namespace
         QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier);
         QApplication::sendEvent(&scene, &release);
         QApplication::processEvents();
+    }
+
+    QByteArray fileBytes(const QString& path)
+    {
+        QFile file(path);
+        return (file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray());
+    }
+
+    bool writeBytes(const QString& path, const QByteArray& content)
+    {
+        QFile file(path);
+        return file.open(QIODevice::WriteOnly) && (file.write(content) == content.size());
+    }
+
+    //!< The box a state occupies, with the minimum size the canvas enforces.
+    QRectF nodeBox(const SMLayoutNode& node)
+    {
+        return QRectF(  node.x, node.y
+                      , std::max(node.width, NESMDesign::StateMinWidth)
+                      , std::max(node.height, NESMDesign::StateMinHeight));
+    }
+
+    //!< True when every state of every level has a Node entry and no two boxes of one level overlap.
+    bool levelsArePlaced(const SMStateData& level, const SMLayoutData& layout)
+    {
+        QList<QRectF> boxes;
+        for (const SMStateEntry* state : level.getElements())
+        {
+            const SMLayoutNode* node = layout.findNode(state->getId());
+            if (node == nullptr)
+            {
+                return false;
+            }
+
+            const QRectF box{ nodeBox(*node) };
+            for (const QRectF& other : boxes)
+            {
+                if (other.intersects(box))
+                {
+                    return false;
+                }
+            }
+
+            boxes.append(box);
+        }
+
+        for (const SMStateEntry* state : level.getElements())
+        {
+            if (state->hasNestedStates() && (levelsArePlaced(*state->getNestedStates(), layout) == false))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
@@ -304,19 +361,30 @@ int main(int argc, char* argv[])
 
     std::printf("sect: collapse\n");
     // --- Collapse ---
-    const SMLayoutNode* offNode = data.getLayout().findNode(lightOff->getId());
-    CHECK((offNode != nullptr));
+    // Start/Final marker boxes have no body rows and no chevron; collapse the placed
+    // Normal state instead, after giving it a body row (an internal transition).
+    SMStateEntry* standby = data.findState("Standby");
+    CHECK(standby != nullptr);
+    model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *standby
+                                                            , SMTransitionEntry::eStimulusKind::Trigger, QString()
+                                                            , QString(), QList<QPointF>(), QStringLiteral("internal row")));
+    QApplication::processEvents();
+    placedItem = dynamic_cast<SMStateItem*>(scene.findCanvasItem(standby->getId()));
+    CHECK(placedItem != nullptr);
+    const SMLayoutNode* rowNode = data.getLayout().findNode(standby->getId());
+    CHECK((rowNode != nullptr));
     const int undoBeforeCollapse = model.getUndoStack().count();
-    const QRectF offBox{ offItem->pos(), QSizeF(offNode->width, offNode->height) };
+    const QRectF colBox{ placedItem->pos(), QSizeF(rowNode->width, rowNode->height) };
     // The chevron sits 18..6 px left of the box's right edge in the header band.
-    clickScene(view, QPointF(offBox.right() - 12.0, offBox.top() + 12.0));
-    const SMLayoutNode* collapsed = data.getLayout().findNode(lightOff->getId());
+    clickScene(view, QPointF(colBox.right() - 12.0, colBox.top() + 12.0));
+    const SMLayoutNode* collapsed = data.getLayout().findNode(standby->getId());
     CHECK((collapsed != nullptr) && collapsed->hasExpanded && (collapsed->expanded == false));
     CHECK(model.getUndoStack().count() == undoBeforeCollapse + 1);
     grab(design, "g5-collapsed");
     model.getUndoStack().undo();
-    const SMLayoutNode* expanded = data.getLayout().findNode(lightOff->getId());
+    const SMLayoutNode* expanded = data.getLayout().findNode(standby->getId());
     CHECK((expanded != nullptr) && (expanded->expanded || (expanded->hasExpanded == false)));
+    model.getUndoStack().undo();    // remove the temporary internal row again
 
     std::printf("sect: selection\n");
     // --- Selection sync ---
@@ -405,6 +473,64 @@ int main(int argc, char* argv[])
     CHECK(data.findTransitionById(internalTx)->isExternal() == false);
     CHECK(scene.findCanvasItem(internalTx) == nullptr);                      // no edge for an internal
     model.getUndoStack().undo();
+
+    std::printf("sect: fix-514 waypoint clicks while creating\n");
+    // --- Add Transition: each click on empty canvas drops a polyline waypoint; the
+    // gesture continues until a state is clicked (no dialog on empty-canvas clicks) ---
+    const int wpTxBefore = lightOff->getTransitions().getElementCount();
+    scene.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+    clickScene(view, offItem->getBoxGeometry().center());
+    clickScene(view, offItem->getBoxGeometry().center() + QPointF(0.0, 240.0));  // waypoint 1
+    clickScene(view, onItem->getBoxGeometry().center() + QPointF(0.0, 240.0));   // waypoint 2
+    clickScene(view, onItem->getBoxGeometry().center());
+    CHECK(lightOff->getTransitions().getElementCount() == wpTxBefore + 1);
+    const uint32_t polyTx = lightOff->getTransitions().getElements().last()->getId();
+    const SMLayoutEdge* polyEdge = data.getLayout().findEdge(polyTx);
+    CHECK((polyEdge != nullptr) && (polyEdge->points.size() == 4));          // begin + 2 waypoints + end
+    model.getUndoStack().undo();
+    CHECK(lightOff->getTransitions().getElementCount() == wpTxBefore);
+
+    std::printf("sect: fix-514 draw state by drag\n");
+    // --- Add State: press-drag-release draws the box between press and release ---
+    const int drawnBefore = level->getElementCount();
+    scene.setActiveTool(NESMDesign::eCanvasTool::AddState);
+    const QPointF drawFrom = offItem->getBoxGeometry().center() + QPointF(-320.0, 320.0);
+    dragScene(view, drawFrom, drawFrom + QPointF(200.0, 120.0));
+    CHECK(level->getElementCount() == drawnBefore + 1);
+    CHECK(scene.getActiveTool() == NESMDesign::eCanvasTool::Select);         // single-shot
+    const SMStateEntry* drawn = level->getElements().last();
+    const SMLayoutNode* drawnNode = data.getLayout().findNode(drawn->getId());
+    CHECK(drawnNode != nullptr);
+    CHECK((drawnNode->width >= 184.0) && (drawnNode->height >= 104.0));      // drawn size (snapped)
+    clickScene(view, drawFrom + QPointF(-120.0, -120.0));                    // close the rename editor
+    model.getUndoStack().undo();
+    CHECK(level->getElementCount() == drawnBefore);
+
+    std::printf("sect: fix-514 endpoint glue\n");
+    // --- Dragging an endpoint and releasing on empty canvas glues it to the nearest
+    // point of its own state's border (no dialog, no revert), one undoable step ---
+    SMEdgeItem* glueEdge = dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(27));
+    CHECK(glueEdge != nullptr);
+    scene.clearSelection();
+    glueEdge->setSelected(true);        // selection raises the edge above the boxes
+    QApplication::processEvents();
+    const QPointF endBefore = glueEdge->getPath().last();
+    const QPointF storedEndBefore = data.getLayout().findEdge(27)->points.last();
+    // Press just inside the target box: within the endpoint pick radius AND inside the
+    // state's border-drag band — the edge handle must win over the border drag.
+    dragScene(view, endBefore + QPointF(2.0, 0.0), endBefore + QPointF(60.0, 200.0));
+    const SMLayoutEdge* gluedEdge = data.getLayout().findEdge(27);
+    CHECK(gluedEdge != nullptr);
+    const QPointF endAfter = gluedEdge->points.last();
+    CHECK(endAfter != endBefore);                                            // the endpoint moved
+    const QRectF tgtBox = scene.stateItem(onState->getId())->getBoxGeometry();
+    const QPointF onBorder = NESMDesign::nearestBorderPoint(tgtBox, NESMDesign::StateCornerRadius, endAfter);
+    CHECK(std::hypot(endAfter.x() - onBorder.x(), endAfter.y() - onBorder.y()) < 0.5); // glued to the border
+    model.getUndoStack().undo();
+    const SMLayoutEdge* revertedEdge = data.getLayout().findEdge(27);
+    CHECK((revertedEdge != nullptr) && (revertedEdge->points.last() == storedEndBefore));  // undoable
+    scene.clearSelection();
+    QApplication::processEvents();
 
     std::printf("sect: SM-14 stimulus\n");
     // --- Stimulus assignment over the shared registry ---
@@ -534,7 +660,7 @@ int main(int argc, char* argv[])
     design.getScene().stateItem(lightOff->getId())->setSelected(true);      // the Start state
     CHECK(design.actionAddSubstate()->isEnabled() == false);
 
-    SMStateEntry* standby = data.findState("Standby");
+    standby = data.findState("Standby");
     CHECK((standby != nullptr) && (standby->hasNestedStates() == false));
     design.getScene().clearSelection();
     design.getScene().stateItem(standby->getId())->setSelected(true);
@@ -602,6 +728,133 @@ int main(int argc, char* argv[])
     CHECK(data.findStateById(deepStartId) != nullptr);
     CHECK(data.getLayout().findNode(standbyStartId) != nullptr);
     grab(design, "g12-root-after-levels");
+
+    const QString sourcePath{ QString::fromLocal8Bit(argv[1]) };
+
+    std::printf("sect: SM-16 layout round-trip\n");
+    {
+        const QString savedOnce{ QDir::tempPath() + QStringLiteral("/sm16_once.fsml") };
+        const QString savedTwice{ QDir::tempPath() + QStringLiteral("/sm16_twice.fsml") };
+
+        StateMachineModel first;
+        CHECK(first.loadFromFile(sourcePath));
+        CHECK(SMAutoPlacer::missingNodes(first.getData()).isEmpty());        // reference doc is fully laid out
+        CHECK(first.saveToFile(savedOnce));
+
+        StateMachineModel second;
+        CHECK(second.loadFromFile(savedOnce));
+        CHECK(second.saveToFile(savedTwice));
+        CHECK(fileBytes(savedOnce) == fileBytes(savedTwice));
+
+        const SMLayoutData& source = first.getData().getLayout();
+        const SMLayoutData& reread = second.getData().getLayout();
+        CHECK(source.getGridSize() == reread.getGridSize());
+        CHECK(source.isGridVisible() == reread.isGridVisible());
+
+        bool nodesMatch = (source.getNodes().size() == reread.getNodes().size());
+        for (const SMLayoutNode& node : source.getNodes())
+        {
+            const SMLayoutNode* other = reread.findNode(node.owner);
+            nodesMatch = nodesMatch && (other != nullptr)
+                         && (other->x == node.x) && (other->y == node.y)
+                         && (other->width == node.width) && (other->height == node.height)
+                         && (other->color == node.color) && (other->headerColor == node.headerColor)
+                         && (other->hasExpanded == node.hasExpanded) && (other->expanded == node.expanded);
+        }
+        CHECK(nodesMatch);
+
+        bool edgesMatch = (source.getEdges().size() == reread.getEdges().size());
+        for (const SMLayoutEdge& edge : source.getEdges())
+        {
+            const SMLayoutEdge* other = reread.findEdge(edge.owner);
+            edgesMatch = edgesMatch && (other != nullptr)
+                         && (other->shape == edge.shape) && (other->bulge == edge.bulge)
+                         && (other->color == edge.color) && (other->points == edge.points)
+                         && (other->hasLabel == edge.hasLabel) && (other->label == edge.label);
+        }
+        CHECK(edgesMatch);
+
+        bool viewsMatch = (source.getViews().size() == reread.getViews().size());
+        for (const SMLayoutView& entry : source.getViews())
+        {
+            const SMLayoutView* other = reread.findView(entry.owner);
+            viewsMatch = viewsMatch && (other != nullptr) && (other->zoom == entry.zoom)
+                         && (other->x == entry.x) && (other->y == entry.y);
+        }
+        CHECK(viewsMatch);
+    }
+
+    std::printf("sect: SM-16 auto-placement of a stripped document\n");
+    {
+        QByteArray text{ fileBytes(sourcePath) };
+        const int begin = text.indexOf("<Layout");
+        const int end   = text.indexOf("</Layout>");
+        CHECK((begin > 0) && (end > begin));
+        text.remove(begin, end + 9 - begin);
+
+        const QString strippedPath{ QDir::tempPath() + QStringLiteral("/sm16_stripped.fsml") };
+        CHECK(writeBytes(strippedPath, text));
+
+        StateMachineModel stripped;
+        CHECK(stripped.loadFromFile(strippedPath));
+        CHECK(stripped.getData().getLayout().getNodes().isEmpty());
+        CHECK(stripped.getData().getLayout().getEdges().isEmpty());
+
+        SMDesign page(stripped);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& blank = stripped.getData();
+        CHECK(levelsArePlaced(blank.getStates(), blank.getLayout()));
+        CHECK(stripped.getUndoStack().count() >= 1);
+
+        // Every root box exists, is non-empty, and sits where its Node entry says.
+        SMScene& blankScene = page.getScene();
+        const SMStateData* rootStates = blank.findLevel(blankScene.getLevelId());
+        CHECK(rootStates != nullptr);
+        bool boxesVisible = true;
+        for (const SMStateEntry* state : rootStates->getElements())
+        {
+            SMStateItem* box = dynamic_cast<SMStateItem*>(blankScene.findCanvasItem(state->getId()));
+            const SMLayoutNode* node = blank.getLayout().findNode(state->getId());
+            boxesVisible = boxesVisible && (box != nullptr) && (node != nullptr)
+                           && (box->getBoxGeometry().isEmpty() == false)
+                           && (box->pos() == QPointF(node->x, node->y));
+        }
+        CHECK(boxesVisible);
+        grab(page, "g13-auto-placed");
+
+        // The placement is an ordinary edit: rolling the stack back leaves the document bare.
+        stripped.getUndoStack().setIndex(0);
+        CHECK(blank.getLayout().getNodes().isEmpty());
+    }
+
+    std::printf("sect: SM-16 delete/undo layout identity\n");
+    {
+        const QString baseline{ QDir::tempPath() + QStringLiteral("/sm16_baseline.fsml") };
+        const QString resaved{ QDir::tempPath() + QStringLiteral("/sm16_resaved.fsml") };
+
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        CHECK(doc.saveToFile(baseline));
+
+        StateMachineData& docData = doc.getData();
+        SMStateEntry* victim = docData.findState("LightOn");
+        CHECK(victim != nullptr);
+        const uint32_t victimId = victim->getId();
+
+        doc.getUndoStack().push(new SMRemoveStateCommand(  docData, doc.getNotifier(), docData.getStates()
+                                                         , victimId, QStringLiteral("delete state")));
+        CHECK(docData.getLayout().findNode(victimId) == nullptr);
+        CHECK(docData.getLayout().findView(victimId) == nullptr);           // its sublevel viewport too
+
+        doc.getUndoStack().undo();
+        CHECK(docData.getLayout().findNode(victimId) != nullptr);
+        CHECK(docData.getLayout().findView(victimId) != nullptr);
+        CHECK(doc.saveToFile(resaved));
+        CHECK(fileBytes(baseline) == fileBytes(resaved));
+    }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

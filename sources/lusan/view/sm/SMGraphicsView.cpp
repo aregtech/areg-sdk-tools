@@ -40,7 +40,8 @@ SMGraphicsView::SMGraphicsView(QWidget* parent /*= nullptr*/)
     setRubberBandSelectionMode(Qt::IntersectsItemShape);
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setResizeAnchor(QGraphicsView::AnchorViewCenter);
-    setCacheMode(QGraphicsView::CacheBackground);
+    // No CacheBackground: scrolling blits the cached pixmap and repaints only the exposed
+    // strip, which misaligns the grid lines by a subpixel at non-integer zoom levels.
     setFocusPolicy(Qt::StrongFocus);
 }
 

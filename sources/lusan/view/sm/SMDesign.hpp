@@ -85,6 +85,7 @@ public:
     inline QAction* actionZoomReset() const;
     inline QAction* actionZoomFit() const;
     inline QAction* actionToggleGrid() const;
+    inline QAction* actionGridDots() const;
     inline QAction* actionToggleSnap() const;
     inline QAction* actionSelectAll() const;
 
@@ -98,8 +99,10 @@ public:
     inline QAction* actionRename() const;
 
     /**
-     * \brief   The transition editing actions: stimulus picker and priority reorder.
+     * \brief   The transition editing actions: internal transition, stimulus picker,
+     *          and priority reorder.
      **/
+    inline QAction* actionAddInternal() const;
     inline QAction* actionSetStimulus() const;
     inline QAction* actionRaisePriority() const;
     inline QAction* actionLowerPriority() const;
@@ -203,6 +206,12 @@ private:
     void setStimulusOfSelection();
 
     /**
+     * \brief   Adds an internal transition (no target; runs its operations without
+     *          exit/entry) to the single selected state.
+     **/
+    void addInternalToSelection();
+
+    /**
      * \brief   Returns the page action bound to the pressed key, or nullptr.
      **/
     QAction* matchAction(const QKeyEvent& event) const;
@@ -211,6 +220,12 @@ private:
      * \brief   Rebuilds the scene cache for a (re)loaded document and shows its root level.
      **/
     void rebuildScene();
+
+    /**
+     * \brief   Gives every state that carries no Node layout entry a free, non-overlapping
+     *          place on its level, as one undoable edit; no-op when the layout is complete.
+     **/
+    void autoPlaceMissingNodes();
 
     /**
      * \brief   Fills the scene with synthetic nodes when the
@@ -233,6 +248,7 @@ private:
     QAction*            mActZoomReset;  //!< Zoom to 100%.
     QAction*            mActZoomFit;    //!< Zoom to fit the level content.
     QAction*            mActToggleGrid; //!< Show / hide the grid.
+    QAction*            mActGridDots;   //!< Render the grid as dots instead of lines.
     QAction*            mActToggleSnap; //!< Toggle snap-to-grid.
     QAction*            mActSelectAll;  //!< Select every element on the level.
     QAction*            mActAddState;   //!< Activate the Add State tool.
@@ -240,6 +256,7 @@ private:
     QAction*            mActAddTransition; //!< Activate the Add Transition tool.
     QAction*            mActDelete;     //!< Delete the selection with confirmation.
     QAction*            mActRename;     //!< Rename the selected state in place.
+    QAction*            mActAddInternal;//!< Add an internal transition to the selected state.
     QAction*            mActSetStimulus;//!< Set the selected transition's stimulus.
     QAction*            mActRaisePriority; //!< Raise the selected transition's priority.
     QAction*            mActLowerPriority; //!< Lower the selected transition's priority.
@@ -295,6 +312,11 @@ inline QAction* SMDesign::actionToggleGrid() const
     return mActToggleGrid;
 }
 
+inline QAction* SMDesign::actionGridDots() const
+{
+    return mActGridDots;
+}
+
 inline QAction* SMDesign::actionToggleSnap() const
 {
     return mActToggleSnap;
@@ -328,6 +350,11 @@ inline QAction* SMDesign::actionDelete() const
 inline QAction* SMDesign::actionRename() const
 {
     return mActRename;
+}
+
+inline QAction* SMDesign::actionAddInternal() const
+{
+    return mActAddInternal;
 }
 
 inline QAction* SMDesign::actionSetStimulus() const

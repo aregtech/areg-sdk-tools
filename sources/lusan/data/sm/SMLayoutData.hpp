@@ -101,7 +101,8 @@ struct SMLayoutNote
  * \brief   The `Layout` section: editor-only geometry. It owns four keyed
  *          lists (View/Node/Edge by owner element ID; Note by its own ID). Logical
  *          elements never reference layout; layout references logical elements by ID
- *          only, so pure renames never touch it.
+ *          only, so pure renames never touch it. Entries are written in ascending key
+ *          order, so a saved file does not depend on the order edits created the entries.
  **/
 class SMLayoutData : public DocumentElem
 {
@@ -150,11 +151,24 @@ public:
     SMLayoutEdge* findEdge(uint32_t owner);
     SMLayoutNote* findNote(uint32_t id);
 
+    const SMLayoutView* findView(uint32_t owner) const;
+    const SMLayoutNode* findNode(uint32_t owner) const;
+    const SMLayoutEdge* findEdge(uint32_t owner) const;
+    const SMLayoutNote* findNote(uint32_t id) const;
+
     /**
      * \brief   Removes the View entry of a level owner, if present.
      * \return  True if an entry was removed.
      **/
     bool removeView(uint32_t owner);
+
+    /**
+     * \brief   Removes the Node entry of a state, if present. A composite state owns both
+     *          a Node and the View of its sublevel, so node-only edits must not use
+     *          removeOwned(), which drops every entry of the owner.
+     * \return  True if an entry was removed.
+     **/
+    bool removeNode(uint32_t owner);
 
     /**
      * \brief   Removes every View/Node/Edge owned by any of the given element IDs. Used
