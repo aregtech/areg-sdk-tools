@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMDataType.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -84,6 +84,11 @@ SMDataType::SMDataType(SMDataTypeModel& model, QWidget* parent /*= nullptr*/)
     buildUi();
     setupSignals();
     refreshAll();
+}
+
+SMDataTypeList* SMDataType::getList() const
+{
+    return mList;
 }
 
 void SMDataType::buildUi()
@@ -433,7 +438,7 @@ void SMDataType::selectedEnumField(DataTypeEnum* parent, uint32_t fieldId)
         mFields->ctrlDescription()->setPlainText(field->getDescription());
     }
     // The enumerator's own literal (its ordinal/derived-type value) is a different concern
-    // from a structure field's typed default — not validated here; just clear any stale hint.
+    // from a structure field's typed default - not validated here; just clear any stale hint.
     mFields->showValueHint(QString());
     applyDeprecatedDisplay(mFields->ctrlDeprecated(), mFields->ctrlDeprecateHint(), field);
 
@@ -538,7 +543,7 @@ QTreeWidgetItem* SMDataType::createNode(DataTypeCustom* dataType) const
 QString SMDataType::validateFieldValue(const QString& typeName, const QString& value) const
 {
     // No default is always valid, and a declared (enum/structure/container/imported) type is
-    // ignored — its literal form, if any, is not this validator's concern.
+    // ignored - its literal form, if any, is not this validator's concern.
     if (value.isEmpty() || (mModel.findDataType(typeName) != nullptr))
         return QString();
 

@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/sm/SMLayoutData.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -83,7 +83,8 @@ struct SMLayoutEdge
 struct SMLayoutNote
 {
     uint32_t    id      { 0 };       //!< The note's own document ID.
-    uint32_t    level   { 0 };       //!< The owning level's element ID (0 = root level).
+    uint32_t    level   { 0 };       //!< The owning level's element ID (the Overview ID at the root level).
+    uint32_t    owner   { 0 };       //!< The bound state/transition ID, or 0 for a free (unowned) note.
     double      x       { 0.0 };
     double      y       { 0.0 };
     double      width   { 0.0 };
@@ -142,19 +143,27 @@ public:
     /**
      * \brief   Adds a note at the given level, allocating its ID from the document counter.
      * \param   level   The owning level's element ID (0 for the root level).
+     * \param   owner   The bound state/transition ID, or 0 for a free (unowned) note.
      * \return  Reference to the created note.
      **/
-    SMLayoutNote& addNote(uint32_t level);
+    SMLayoutNote& addNote(uint32_t level, uint32_t owner = 0);
 
     SMLayoutView* findView(uint32_t owner);
     SMLayoutNode* findNode(uint32_t owner);
     SMLayoutEdge* findEdge(uint32_t owner);
     SMLayoutNote* findNote(uint32_t id);
 
+    /**
+     * \brief   Returns the note bound to the given state/transition owner ID, or nullptr.
+     *          A zero owner never matches (free notes have no owner).
+     **/
+    SMLayoutNote* findNoteByOwner(uint32_t owner);
+
     const SMLayoutView* findView(uint32_t owner) const;
     const SMLayoutNode* findNode(uint32_t owner) const;
     const SMLayoutEdge* findEdge(uint32_t owner) const;
     const SMLayoutNote* findNote(uint32_t id) const;
+    const SMLayoutNote* findNoteByOwner(uint32_t owner) const;
 
     /**
      * \brief   Removes the View entry of a level owner, if present.
@@ -169,6 +178,19 @@ public:
      * \return  True if an entry was removed.
      **/
     bool removeNode(uint32_t owner);
+
+    /**
+     * \brief   Removes the note with the given ID, if present.
+     * \return  True if a note was removed.
+     **/
+    bool removeNote(uint32_t id);
+
+    /**
+     * \brief   Re-inserts a previously removed note exactly as captured (its own ID
+     *          included); never allocates a new ID. Used to undo a note removal.
+     * \return  Reference to the re-inserted note.
+     **/
+    SMLayoutNote& restoreNote(const SMLayoutNote& note);
 
     /**
      * \brief   Removes every View/Node/Edge owned by any of the given element IDs. Used

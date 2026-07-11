@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMEvent.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -70,6 +70,16 @@ private:
 public:
     explicit SMEvent(SMEventModel& eventModel, SMTimerModel& timerModel, QWidget* parent = nullptr);
     virtual ~SMEvent() = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Returns the list panel (its Add-dropdown actions let a caller start a new
+     *          event or timer, e.g. from the Design page's Declare dropdown).
+     **/
+    SMEventList* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

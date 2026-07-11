@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/sm/SMLayoutCommands.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -56,7 +56,7 @@ void SMMoveNodeCommand::applyTo(const SMLayoutNode& geometry)
         node = &data().getLayout().addNode(mOwner);
     }
 
-    // Geometry only — color/expanded state belong to their own edits.
+    // Geometry only - color/expanded state belong to their own edits.
     node->x      = geometry.x;
     node->y      = geometry.y;
     node->width  = geometry.width;
@@ -443,11 +443,30 @@ void SMRemoveLayoutCommand::redo()
             }
         }
 
+        // A deleted composite's sublevel is one of the removed IDs; its notes go with it.
+        // A note bound to a deleted state/transition (its owner) goes with it too.
+        for (const SMLayoutNote& note : layout.getNotes())
+        {
+            if (mIds.contains(note.level) || ((note.owner != 0) && mIds.contains(note.owner)))
+            {
+                mNotes.append(note);
+            }
+        }
+
         mCaptured = true;
     }
 
     layout.removeOwned(mIds);
+    for (const SMLayoutNote& note : mNotes)
+    {
+        layout.removeNote(note.id);
+    }
+
     notifier().notifyLayoutChanged(mIds);
+    for (const SMLayoutNote& note : mNotes)
+    {
+        notifier().notifyElementRemoved(note.id, eDocElementKind::Note);
+    }
 }
 
 void SMRemoveLayoutCommand::undo()
@@ -468,5 +487,345 @@ void SMRemoveLayoutCommand::undo()
         layout.addEdge(edge.owner) = edge;
     }
 
+    for (const SMLayoutNote& note : mNotes)
+    {
+        layout.restoreNote(note);
+    }
+
     notifier().notifyLayoutChanged(mIds);
+    for (const SMLayoutNote& note : mNotes)
+    {
+        notifier().notifyElementAdded(note.id, eDocElementKind::Note);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetGridSizeCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetGridSizeCommand::SMSetGridSizeCommand(StateMachineData& data, DocModelNotifier& notifier, int gridSize, const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mNew      (gridSize)
+{
+}
+
+void SMSetGridSizeCommand::redo()
+{
+    mOld = data().getLayout().getGridSize();
+    data().getLayout().setGridSize(mNew);
+    notifier().notifyLayoutChanged(QList<uint32_t>());
+}
+
+void SMSetGridSizeCommand::undo()
+{
+    data().getLayout().setGridSize(mOld);
+    notifier().notifyLayoutChanged(QList<uint32_t>());
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetGridVisibleCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetGridVisibleCommand::SMSetGridVisibleCommand(StateMachineData& data, DocModelNotifier& notifier, bool visible, const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mNew      (visible)
+{
+}
+
+void SMSetGridVisibleCommand::redo()
+{
+    mOld = data().getLayout().isGridVisible();
+    data().getLayout().setGridVisible(mNew);
+    notifier().notifyLayoutChanged(QList<uint32_t>());
+}
+
+void SMSetGridVisibleCommand::undo()
+{
+    data().getLayout().setGridVisible(mOld);
+    notifier().notifyLayoutChanged(QList<uint32_t>());
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetNodeColorCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetNodeColorCommand::SMSetNodeColorCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                             , uint32_t owner, const QString& color
+                                             , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mOwner    (owner)
+    , mNew      (color)
+{
+}
+
+void SMSetNodeColorCommand::redo()
+{
+    SMLayoutNode* node = data().getLayout().findNode(mOwner);
+    if (node == nullptr)
+    {
+        node = &data().getLayout().addNode(mOwner);
+    }
+
+    mOld = node->color;
+    node->color = mNew;
+    notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
+}
+
+void SMSetNodeColorCommand::undo()
+{
+    SMLayoutNode* node = data().getLayout().findNode(mOwner);
+    if (node != nullptr)
+    {
+        node->color = mOld;
+        notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetEdgeColorCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetEdgeColorCommand::SMSetEdgeColorCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                             , uint32_t owner, const QString& color
+                                             , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mOwner    (owner)
+    , mNew      (color)
+{
+}
+
+void SMSetEdgeColorCommand::redo()
+{
+    SMLayoutEdge* edge = data().getLayout().findEdge(mOwner);
+    if (edge == nullptr)
+    {
+        edge = &data().getLayout().addEdge(mOwner);
+    }
+
+    mOld = edge->color;
+    edge->color = mNew;
+    notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
+}
+
+void SMSetEdgeColorCommand::undo()
+{
+    SMLayoutEdge* edge = data().getLayout().findEdge(mOwner);
+    if (edge != nullptr)
+    {
+        edge->color = mOld;
+        notifier().notifyLayoutChanged(QList<uint32_t>{ mOwner });
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMAddNoteCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMAddNoteCommand::SMAddNoteCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                    , uint32_t level, const QRectF& geometry, const QString& text
+                                    , const QString& undoText, QUndoCommand* parent /*= nullptr*/)
+    : SMAddNoteCommand(data, notifier, level, 0u, geometry, text, undoText, parent)
+{
+}
+
+SMAddNoteCommand::SMAddNoteCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                    , uint32_t level, uint32_t owner, const QRectF& geometry, const QString& text
+                                    , const QString& undoText, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, undoText, parent)
+{
+    mNote.level  = level;
+    mNote.owner  = owner;
+    mNote.x      = geometry.x();
+    mNote.y      = geometry.y();
+    mNote.width  = geometry.width();
+    mNote.height = geometry.height();
+    mNote.text   = text;
+}
+
+void SMAddNoteCommand::redo()
+{
+    if (mAllocated == false)
+    {
+        SMLayoutNote& note = data().getLayout().addNote(mNote.level, mNote.owner);
+        mNote.id = note.id;
+        note = mNote;
+        mAllocated = true;
+    }
+    else
+    {
+        data().getLayout().restoreNote(mNote);
+    }
+
+    notifier().notifyElementAdded(mNote.id, eDocElementKind::Note);
+}
+
+void SMAddNoteCommand::undo()
+{
+    data().getLayout().removeNote(mNote.id);
+    notifier().notifyElementRemoved(mNote.id, eDocElementKind::Note);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMMoveNoteCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMMoveNoteCommand::SMMoveNoteCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                     , uint32_t noteId, uint32_t gestureId
+                                     , double x, double y, double width, double height
+                                     , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand   (data, notifier, text, parent)
+    , mNoteId     (noteId)
+    , mGesture    (gestureId)
+    , mNewX       (x)
+    , mNewY       (y)
+    , mNewWidth   (width)
+    , mNewHeight  (height)
+{
+}
+
+void SMMoveNoteCommand::applyTo(double x, double y, double width, double height)
+{
+    SMLayoutNote* note = data().getLayout().findNote(mNoteId);
+    if (note != nullptr)
+    {
+        note->x      = x;
+        note->y      = y;
+        note->width  = width;
+        note->height = height;
+        notifier().notifyElementChanged(mNoteId, eDocElementKind::Note);
+    }
+}
+
+void SMMoveNoteCommand::redo()
+{
+    if (mCaptured == false)
+    {
+        const SMLayoutNote* note = data().getLayout().findNote(mNoteId);
+        if (note != nullptr)
+        {
+            mOldX = note->x; mOldY = note->y; mOldWidth = note->width; mOldHeight = note->height;
+        }
+
+        mCaptured = true;
+    }
+
+    applyTo(mNewX, mNewY, mNewWidth, mNewHeight);
+}
+
+void SMMoveNoteCommand::undo()
+{
+    applyTo(mOldX, mOldY, mOldWidth, mOldHeight);
+}
+
+int SMMoveNoteCommand::id() const
+{
+    return CMD_ID;
+}
+
+bool SMMoveNoteCommand::mergeWith(const QUndoCommand* other)
+{
+    const SMMoveNoteCommand* move = static_cast<const SMMoveNoteCommand*>(other);
+    if ((move->mNoteId != mNoteId) || (move->mGesture != mGesture))
+    {
+        return false;
+    }
+
+    mNewX = move->mNewX; mNewY = move->mNewY; mNewWidth = move->mNewWidth; mNewHeight = move->mNewHeight;
+    return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetNoteTextCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetNoteTextCommand::SMSetNoteTextCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                            , uint32_t noteId, const QString& text
+                                            , const QString& undoText, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, undoText, parent)
+    , mNoteId   (noteId)
+    , mNew      (text)
+{
+}
+
+void SMSetNoteTextCommand::redo()
+{
+    SMLayoutNote* note = data().getLayout().findNote(mNoteId);
+    if (note != nullptr)
+    {
+        mOld = note->text;
+        note->text = mNew;
+        notifier().notifyElementChanged(mNoteId, eDocElementKind::Note);
+    }
+}
+
+void SMSetNoteTextCommand::undo()
+{
+    SMLayoutNote* note = data().getLayout().findNote(mNoteId);
+    if (note != nullptr)
+    {
+        note->text = mOld;
+        notifier().notifyElementChanged(mNoteId, eDocElementKind::Note);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMSetNoteColorCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMSetNoteColorCommand::SMSetNoteColorCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                              , uint32_t noteId, const QString& color
+                                              , const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mNoteId   (noteId)
+    , mNew      (color)
+{
+}
+
+void SMSetNoteColorCommand::redo()
+{
+    SMLayoutNote* note = data().getLayout().findNote(mNoteId);
+    if (note != nullptr)
+    {
+        mOld = note->color;
+        note->color = mNew;
+        notifier().notifyElementChanged(mNoteId, eDocElementKind::Note);
+    }
+}
+
+void SMSetNoteColorCommand::undo()
+{
+    SMLayoutNote* note = data().getLayout().findNote(mNoteId);
+    if (note != nullptr)
+    {
+        note->color = mOld;
+        notifier().notifyElementChanged(mNoteId, eDocElementKind::Note);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMRemoveNoteCommand
+//////////////////////////////////////////////////////////////////////////
+
+SMRemoveNoteCommand::SMRemoveNoteCommand(  StateMachineData& data, DocModelNotifier& notifier
+                                          , uint32_t noteId, const QString& text, QUndoCommand* parent /*= nullptr*/)
+    : SMCommand (data, notifier, text, parent)
+    , mNoteId   (noteId)
+{
+}
+
+void SMRemoveNoteCommand::redo()
+{
+    const SMLayoutNote* note = data().getLayout().findNote(mNoteId);
+    if (note != nullptr)
+    {
+        mCaptured = *note;
+        data().getLayout().removeNote(mNoteId);
+        notifier().notifyElementRemoved(mNoteId, eDocElementKind::Note);
+    }
+}
+
+void SMRemoveNoteCommand::undo()
+{
+    data().getLayout().restoreNote(mCaptured);
+    notifier().notifyElementAdded(mNoteId, eDocElementKind::Note);
 }

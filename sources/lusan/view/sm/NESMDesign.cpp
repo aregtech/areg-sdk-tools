@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/NESMDesign.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -36,6 +36,13 @@ QColor NESMDesign::gridColor(const QPalette& palette, double opacity /*= 1.0*/)
 {
     QColor result{ palette.color(QPalette::WindowText) };
     result.setAlphaF(0.16 * std::clamp(opacity, 0.0, 1.0));
+    return result;
+}
+
+QColor NESMDesign::gridDotColor(const QPalette& palette, double opacity /*= 1.0*/)
+{
+    QColor result{ palette.color(QPalette::WindowText) };
+    result.setAlphaF(0.38 * std::clamp(opacity, 0.0, 1.0));
     return result;
 }
 
@@ -68,6 +75,13 @@ QColor NESMDesign::stateBorderColor(const QPalette& palette)
     QColor result{ palette.color(QPalette::WindowText) };
     result.setAlphaF(0.6);
     return result;
+}
+
+QColor NESMDesign::noteColor(const QPalette& palette)
+{
+    // A soft sticky-note yellow, muted on dark themes so it does not glare.
+    const bool dark = (palette.color(QPalette::Base).lightnessF() < 0.5);
+    return (dark ? QColor(0x6B, 0x5D, 0x2E) : QColor(0xFB, 0xF3, 0xB9));
 }
 
 QColor NESMDesign::deriveHeaderShade(const QColor& bodyColor)

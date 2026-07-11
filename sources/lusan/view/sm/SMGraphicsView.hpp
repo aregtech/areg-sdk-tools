@@ -80,6 +80,16 @@ signals:
      **/
     void signalZoomChanged(int percent);
 
+    /**
+     * \brief   Emitted on a right-click / menu-key context-menu request, carrying the
+     *          viewport-relative position. A QGraphicsView routes context-menu events
+     *          through contextMenuEvent(), so a Qt::CustomContextMenu policy on the
+     *          viewport never fires customContextMenuRequested; this signal is the
+     *          reliable hook the Design page listens on.
+     * \param   viewportPos The request position in viewport coordinates.
+     **/
+    void signalContextMenuRequested(const QPoint& viewportPos);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -88,6 +98,7 @@ protected:
     virtual void mousePressEvent(QMouseEvent* event) override;
     virtual void mouseMoveEvent(QMouseEvent* event) override;
     virtual void mouseReleaseEvent(QMouseEvent* event) override;
+    virtual void contextMenuEvent(QContextMenuEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMScene.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -36,6 +36,7 @@
  ************************************************************************/
 class SMCanvasItem;
 class SMEdgeItem;
+class SMNoteItem;
 class SMStateItem;
 class StateMachineModel;
 enum class eDocElementKind;
@@ -95,6 +96,13 @@ public:
      **/
     inline NESMDesign::eGridStyle getGridStyle() const;
     void setGridStyle(NESMDesign::eGridStyle style);
+
+    /**
+     * \brief   The dot diameter (device pixels) of the dotted grid style; clamped to the
+     *          allowed range.
+     **/
+    inline int getGridDotSize() const;
+    void setGridDotSize(int dotSize);
 
     /**
      * \brief   The snap-to-grid mode applied to interactive moves and resizes.
@@ -161,6 +169,24 @@ public:
      * \brief   Returns the selected transition edge items of this level.
      **/
     QList<SMEdgeItem*> selectedEdgeItems() const;
+
+    /**
+     * \brief   Returns the selected note items of this level.
+     **/
+    QList<SMNoteItem*> selectedNoteItems() const;
+
+    /**
+     * \brief   Returns the note item of an element, or nullptr.
+     **/
+    SMNoteItem* noteItem(uint32_t noteId) const;
+
+    /**
+     * \brief   Pushes one undo step moving/resizing every selected state box and note whose
+     *          item position/size differs from its layout entry - the finished drag gesture
+     *          of a (possibly mixed) multi-selection. Called by SMStateItem/SMNoteItem on a
+     *          plain (non-resize) drag release.
+     **/
+    void commitSelectionMove(const QString& text);
 
     /**
      * \brief   Returns the state box item of an element, or nullptr.
@@ -282,6 +308,18 @@ private:
     void createEdgeItem(uint32_t transitionId);
 
     /**
+     * \brief   Creates the box item of one free note (no-op when it already exists, is not
+     *          on this level, or is bound to an owner - owned notes are drawn as badges).
+     **/
+    void createNoteItem(uint32_t noteId);
+
+    /**
+     * \brief   Re-reads every state box and transition edge so their note badges reflect a
+     *          note add/remove/change on the owner (the note's own ID never names the owner).
+     **/
+    void refreshNoteBadges();
+
+    /**
      * \brief   Returns the edge item of a transition, or nullptr.
      **/
     SMEdgeItem* edgeItem(uint32_t transitionId) const;
@@ -323,6 +361,7 @@ private:
     int                             mGridSize;      //!< The grid cell size in scene units.
     bool                            mGridVisible;   //!< The grid visibility.
     NESMDesign::eGridStyle          mGridStyle;     //!< The grid rendering style (lines or dots).
+    int                             mGridDotSize;   //!< The dotted-grid dot diameter (device pixels).
     bool                            mSnapToGrid;    //!< Snap interactive moves to the grid.
     bool                            mMouseDrag;     //!< A mouse drag is in progress.
     bool                            mSyncSelection; //!< Guards the two-way selection sync.
@@ -355,6 +394,11 @@ inline bool SMScene::isGridVisible() const
 inline NESMDesign::eGridStyle SMScene::getGridStyle() const
 {
     return mGridStyle;
+}
+
+inline int SMScene::getGridDotSize() const
+{
+    return mGridDotSize;
 }
 
 inline bool SMScene::isSnapToGrid() const

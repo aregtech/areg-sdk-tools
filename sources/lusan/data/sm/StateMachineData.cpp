@@ -206,16 +206,18 @@ std::unique_ptr<StateMachineData> StateMachineData::createNewDocument(const QStr
     SMStateEntry* start = result->mStates.createState(QStringLiteral("Start"), SMStateEntry::eStateKind::Start);
     if (start != nullptr)
     {
-        SMLayoutView& view = result->mLayout.addView(result->mOverview.getId());
-        view.zoom = 100;
-        view.x    = 0.0;
-        view.y    = 0.0;
-
+        // The Start state is a compact marker box placed at the top-left of the level so it
+        // reads as the machine's entry point. The geometry mirrors the view-layer marker
+        // size (NESMDesign::MarkerStateWidth/Height) and auto-placement origin (64;64); the
+        // data layer cannot include the view constants, so the values are spelled out here.
+        // No View entry is persisted for a fresh document: the Design page anchors the first
+        // view to the top-left content itself (a stored center of 0;0 would otherwise push
+        // the single Start state into the middle of the viewport).
         SMLayoutNode& node = result->mLayout.addNode(start->getId());
-        node.x      = 80.0;
-        node.y      = 140.0;
-        node.width  = 160.0;
-        node.height = 64.0;
+        node.x      = 64.0;
+        node.y      = 64.0;
+        node.width  = 64.0;
+        node.height = 32.0;
     }
 
     return result;

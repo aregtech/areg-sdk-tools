@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/NESMDesign.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -72,6 +72,13 @@ namespace NESMDesign
     //!< The smallest allowed grid cell size.
     constexpr int       GridSizeMin     { 4 };
 
+    //!< The dot diameter of the dotted grid style, in device pixels. Configurable per the
+    //!< user's display preference; a small default that still reads clearly on the canvas.
+    constexpr int       GridDotSizeDefault { 3 };
+    //!< The allowed dot-diameter range (device pixels).
+    constexpr int       GridDotSizeMin     { 1 };
+    constexpr int       GridDotSizeMax     { 10 };
+
     //!< The zoom range in percent.
     constexpr int       ZoomMin         { 10 };
     constexpr int       ZoomMax         { 800 };
@@ -93,9 +100,14 @@ namespace NESMDesign
     //!< The default box size of a newly placed state.
     constexpr double    StateDefaultWidth   { 160.0 };
     constexpr double    StateDefaultHeight  { 96.0 };
-    //!< The default box size of a Start / Final marker state (compact pill box).
-    constexpr double    MarkerStateWidth    { 112.0 };
-    constexpr double    MarkerStateHeight   { 48.0 };
+    //!< The default box size of a Start / Final marker state (compact pill box):
+    //!< 4 x 2 default grid cells (issue #514), so the marker spans whole grid squares.
+    constexpr double    MarkerStateWidth    { 64.0 };
+    constexpr double    MarkerStateHeight   { 32.0 };
+    //!< The smallest box a marker (Start / Final) can be resized to (a marker pill is
+    //!< intentionally compact, so it may go smaller than a normal state box).
+    constexpr double    MarkerStateMinWidth { 52.0 };
+    constexpr double    MarkerStateMinHeight{ 26.0 };
     //!< The smallest box a state can be resized to.
     constexpr double    StateMinWidth       { 64.0 };
     constexpr double    StateMinHeight      { 48.0 };
@@ -139,6 +151,18 @@ namespace NESMDesign
     constexpr double    MiniatureMaxHeight  { 30.0 };
     //!< The gap between the miniature and the state box border.
     constexpr double    MiniaturePadding    { 5.0 };
+
+    //!< The default box size of a newly placed note.
+    constexpr double    NoteDefaultWidth    { 140.0 };
+    constexpr double    NoteDefaultHeight   { 90.0 };
+    //!< The smallest box a note can be resized to.
+    constexpr double    NoteMinWidth        { 48.0 };
+    constexpr double    NoteMinHeight       { 32.0 };
+    //!< The note box corner radius and text padding.
+    constexpr double    NoteCornerRadius    { 4.0 };
+    constexpr double    NotePadding         { 6.0 };
+    //!< The side length of the single bottom-right resize handle.
+    constexpr double    NoteHandleSize      { 9.0 };
 
     /**
      * \brief   Returns the default transition edge color of the given palette.
@@ -202,6 +226,12 @@ namespace NESMDesign
     QColor stateBorderColor(const QPalette& palette);
 
     /**
+     * \brief   Returns the default note fill color of the given palette (a soft, sticky-note
+     *          tint distinct from the state body color).
+     **/
+    QColor noteColor(const QPalette& palette);
+
+    /**
      * \brief   Derives the header shade of a body color (always darker).
      **/
     QColor deriveHeaderShade(const QColor& bodyColor);
@@ -222,6 +252,14 @@ namespace NESMDesign
      * \param   opacity The grid opacity factor in range [0.0, 1.0].
      **/
     QColor gridColor(const QPalette& palette, double opacity = 1.0);
+
+    /**
+     * \brief   Returns the grid dot color of the given palette. Stronger than the line
+     *          color (dots are sparse, so they need more contrast to read at a small size).
+     * \param   palette The active palette.
+     * \param   opacity The grid opacity factor in range [0.0, 1.0].
+     **/
+    QColor gridDotColor(const QPalette& palette, double opacity = 1.0);
 
     /**
      * \brief   Returns the selection highlight color of the given palette.

@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMDesign.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -32,24 +32,31 @@
 #include "lusan/view/sm/SMCanvasItem.hpp"
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
+#include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
+#include "lusan/view/sm/SMToolIcons.hpp"
 
 #include <QAction>
+#include <QColorDialog>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QMenu>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPair>
 #include <QScrollBar>
 #include <QSettings>
 #include <QStringList>
+#include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <cmath>
 
 namespace
@@ -99,6 +106,69 @@ namespace
     private:
         QString mName;  //!< The displayed node name.
     };
+
+    /**
+     * \brief   One movable box (state or note) participating in align/distribute.
+     **/
+    struct SelectionBox
+    {
+        bool        isNote; //!< True for a note, false for a state.
+        uint32_t    id;     //!< The element ID.
+        QRectF      rect;   //!< The current box geometry (scene coordinates).
+    };
+
+    //!< Collects the selected state and note boxes eligible for align/distribute.
+    QList<SelectionBox> collectSelectionBoxes(SMScene& scene)
+    {
+        QList<SelectionBox> boxes;
+        for (SMStateItem* item : scene.selectedStateItems())
+        {
+            boxes.append(SelectionBox{ false, item->getElementId(), item->getBoxGeometry() });
+        }
+
+        for (SMNoteItem* item : scene.selectedNoteItems())
+        {
+            boxes.append(SelectionBox{ true, item->getElementId(), item->getBoxGeometry() });
+        }
+
+        return boxes;
+    }
+
+    //!< Pushes the moved boxes (state/note) as one undo step (single command or composite).
+    void pushMoveChanges(  StateMachineModel& model, const QList<QPair<SelectionBox, QRectF>>& changed
+                         , const QString& text)
+    {
+        if (changed.isEmpty())
+        {
+            return;
+        }
+
+        StateMachineData& data    = model.getData();
+        DocModelNotifier& notifier= model.getNotifier();
+        const uint32_t    gesture = SMMoveNodeCommand::takeNextGesture();
+        const bool        single  = (changed.size() == 1);
+        QUndoCommand*     parent  = single ? nullptr : new SMCompositeCommand(data, notifier, text);
+
+        for (const QPair<SelectionBox, QRectF>& entry : changed)
+        {
+            const SelectionBox& box  = entry.first;
+            const QRectF&       rect = entry.second;
+            QUndoCommand* command = box.isNote
+                    ? static_cast<QUndoCommand*>(new SMMoveNoteCommand(  data, notifier, box.id, gesture
+                                                                       , rect.x(), rect.y(), rect.width(), rect.height(), text, parent))
+                    : static_cast<QUndoCommand*>(new SMMoveNodeCommand(  data, notifier, box.id, gesture
+                                                                       , rect.x(), rect.y(), rect.width(), rect.height(), text, parent));
+            if (single)
+            {
+                model.getUndoStack().push(command);
+            }
+        }
+
+        if (single == false)
+        {
+            model.getUndoStack().push(parent);
+        }
+    }
 }
 
 SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
@@ -115,13 +185,28 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActZoomFit   (nullptr)
     , mActToggleGrid(nullptr)
     , mActGridDots  (nullptr)
+    , mActGridDotSize(nullptr)
     , mActToggleSnap(nullptr)
+    , mActGridSize  (nullptr)
     , mActSelectAll (nullptr)
+    , mActUndo      (nullptr)
+    , mActRedo      (nullptr)
     , mActAddState  (nullptr)
     , mActAddFinal  (nullptr)
     , mActAddTransition(nullptr)
+    , mActAddNote   (nullptr)
     , mActDelete    (nullptr)
     , mActRename    (nullptr)
+    , mActStateColor(nullptr)
+    , mActEdgeColor (nullptr)
+    , mActNoteColor (nullptr)
+    , mActSetColor  (nullptr)
+    , mActAlignLeft (nullptr)
+    , mActAlignRight(nullptr)
+    , mActAlignTop  (nullptr)
+    , mActAlignBottom(nullptr)
+    , mActDistributeH(nullptr)
+    , mActDistributeV(nullptr)
     , mActAddInternal(nullptr)
     , mActSetStimulus(nullptr)
     , mActRaisePriority(nullptr)
@@ -129,9 +214,20 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActAddSubstate(nullptr)
     , mActEnterSubmachine(nullptr)
     , mActGoToParent(nullptr)
+    , mActCenterMachine(nullptr)
+    , mActNewTrigger(nullptr)
+    , mActNewAction (nullptr)
+    , mActNewCondition(nullptr)
+    , mActNewEvent  (nullptr)
+    , mActNewTimer  (nullptr)
+    , mActNewAttribute(nullptr)
+    , mActNewConstant(nullptr)
+    , mActNewDataType(nullptr)
+    , mToolbarVisible(true)
     , mShownLevel   (0u)
     , mViewGesture  (0u)
     , mRestoringView(false)
+    , mSyncingGrid  (false)
 {
     mSceneManager = new SMSceneManager(model, this);
 
@@ -140,6 +236,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mBreadcrumbLayout->setContentsMargins(8, 4, 8, 4);
     mBreadcrumbLayout->setSpacing(4);
 
+    // The drawing toolbar lives in the navigation dock's FSM Toolbar tab (bound to the active
+    // State Machine), not above the canvas; the Design page only owns the actions.
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
@@ -155,22 +253,12 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     setupActions();
     mView->installEventFilter(this);
 
-    // Minimal canvas context menu over the same action set; the full toolbar and
-    // Design menu surfaces replace nothing here, they reuse these actions.
-    mView->setContextMenuPolicy(Qt::ActionsContextMenu);
-    QAction* separator1 = new QAction(this);
-    separator1->setSeparator(true);
-    QAction* separator2 = new QAction(this);
-    separator2->setSeparator(true);
-    QAction* separator3 = new QAction(this);
-    separator3->setSeparator(true);
-    QAction* separator4 = new QAction(this);
-    separator4->setSeparator(true);
-    mView->addActions({ mActAddState, mActAddFinal, mActAddTransition, mActAddInternal, separator1
-                      , mActSetStimulus, mActRaisePriority, mActLowerPriority, separator2
-                      , mActAddSubstate, mActEnterSubmachine, mActGoToParent, separator3
-                      , mActToggleGrid, mActGridDots, mActToggleSnap, separator4
-                      , mActRename, mActDelete });
+    // Context-sensitive canvas/state/transition/note menus (spec 9.3 rule 2), built on
+    // demand from the same action set the toolbar and Design menu reuse. A QGraphicsView
+    // routes context-menu events through contextMenuEvent(), so a Qt::CustomContextMenu
+    // policy never fires customContextMenuRequested; the view's own signal (emitted from its
+    // contextMenuEvent override, viewport coordinates) is the reliable hook.
+    connect(mView, &SMGraphicsView::signalContextMenuRequested, this, &SMDesign::onViewContextMenuRequested);
 
     DocModelNotifier& notifier = mModel.getNotifier();
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMDesign::onDocumentReloaded);
@@ -206,7 +294,12 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
             mRestoringView = true;
             QMetaObject::invokeMethod(this, [this]() {
                 mRestoringView = false;
-                restoreViewport(mShownLevel, false);
+                // Re-anchor the default (top-left) view when the level has no stored viewport
+                // yet: the first onLevelChanged ran before the page was shown at full size, so
+                // the initial anchor used a placeholder viewport rect. Once a View entry exists
+                // (the user scrolled/zoomed), the resize just re-pins that stored center.
+                const bool hasEntry = (mModel.getData().getLayout().findView(mShownLevel) != nullptr);
+                restoreViewport(mShownLevel, hasEntry == false);
             }, Qt::QueuedConnection);
         }
         else if (event->type() == QEvent::ShortcutOverride)
@@ -289,7 +382,28 @@ void SMDesign::setupActions()
     mActToggleGrid = new QAction(tr("Show Grid"), this);
     mActToggleGrid->setCheckable(true);
     connect(mActToggleGrid, &QAction::toggled, this, [this](bool checked) {
-        getScene().setGridVisible(checked);
+        if (mSyncingGrid)
+        {
+            return;
+        }
+
+        // The scene/action are re-synced from the command's notification (onModelLayoutChanged),
+        // so undo/redo of this toggle keeps the canvas and the checked action consistent.
+        mModel.getUndoStack().push(new SMSetGridVisibleCommand(  mModel.getData(), mModel.getNotifier()
+                                                               , checked, tr("Toggle grid visibility")));
+    });
+
+    mActGridSize = new QAction(tr("Grid Size..."), this);
+    connect(mActGridSize, &QAction::triggered, this, [this]() {
+        const int current = mModel.getData().getLayout().getGridSize();
+        bool ok = false;
+        const int value = QInputDialog::getInt(  this, tr("Grid Size"), tr("Grid size (px):")
+                                               , current, NESMDesign::GridSizeMin, 200, 1, &ok);
+        if (ok && (value != current))
+        {
+            mModel.getUndoStack().push(new SMSetGridSizeCommand(  mModel.getData(), mModel.getNotifier()
+                                                                , value, tr("Change grid size")));
+        }
     });
 
     // The grid style is an application-level display preference (the document persists
@@ -306,6 +420,33 @@ void SMDesign::setupActions()
         settings.setValue(QStringLiteral("smDesign/gridDots"), checked);
     });
 
+    // The stored checked state was seeded before the connect (no toggled signal fired), so
+    // push it to the scene explicitly - the canvas and the checked button must agree from
+    // the very first paint (issue #514).
+    getScene().setGridStyle(mActGridDots->isChecked() ? NESMDesign::eGridStyle::Dots : NESMDesign::eGridStyle::Lines);
+
+    // The dot diameter is likewise an application-level display preference (spec 7.6 keeps
+    // only grid size/visibility in the document). Seed the scene from the stored value.
+    {
+        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+        const int dotSize = settings.value(QStringLiteral("smDesign/gridDotSize"), NESMDesign::GridDotSizeDefault).toInt();
+        getScene().setGridDotSize(dotSize);
+    }
+
+    mActGridDotSize = new QAction(tr("Dot Size..."), this);
+    connect(mActGridDotSize, &QAction::triggered, this, [this]() {
+        const int current = getScene().getGridDotSize();
+        bool ok = false;
+        const int value = QInputDialog::getInt(  this, tr("Dot Size"), tr("Dotted grid dot size (px):")
+                                               , current, NESMDesign::GridDotSizeMin, NESMDesign::GridDotSizeMax, 1, &ok);
+        if (ok && (value != current))
+        {
+            getScene().setGridDotSize(value);
+            QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+            settings.setValue(QStringLiteral("smDesign/gridDotSize"), value);
+        }
+    });
+
     mActToggleSnap = new QAction(tr("Snap to Grid"), this);
     mActToggleSnap->setCheckable(true);
     mActToggleSnap->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_G));
@@ -319,27 +460,75 @@ void SMDesign::setupActions()
         getScene().selectAll();
     });
 
+    // No shortcut of their own: Ctrl+Z/Ctrl+Y are the global Edit-menu shortcut
+    // (MdiMainWindow), forwarded to the active document's undo stack.
+    mActUndo = new QAction(tr("Undo"), this);
+    connect(mActUndo, &QAction::triggered, this, [this]() { mModel.getUndoStack().undo(); });
+
+    mActRedo = new QAction(tr("Redo"), this);
+    connect(mActRedo, &QAction::triggered, this, [this]() { mModel.getUndoStack().redo(); });
+
     mActAddState = new QAction(tr("Add State"), this);
+    mActAddState->setShortcut(QKeySequence(Qt::Key_S));
     connect(mActAddState, &QAction::triggered, this, [this]() {
         getScene().setActiveTool(NESMDesign::eCanvasTool::AddState);
     });
 
     mActAddFinal = new QAction(tr("Add Final State"), this);
+    mActAddFinal->setShortcut(QKeySequence(Qt::Key_F));
     connect(mActAddFinal, &QAction::triggered, this, [this]() {
         getScene().setActiveTool(NESMDesign::eCanvasTool::AddFinalState);
     });
 
     mActAddTransition = new QAction(tr("Add Transition"), this);
+    mActAddTransition->setShortcut(QKeySequence(Qt::Key_T));
     connect(mActAddTransition, &QAction::triggered, this, [this]() {
         getScene().setActiveTool(NESMDesign::eCanvasTool::AddTransition);
     });
+
+    mActAddNote = new QAction(tr("Add Note"), this);
+    mActAddNote->setShortcut(QKeySequence(Qt::Key_N));
+    connect(mActAddNote, &QAction::triggered, this, [this]() {
+        getScene().setActiveTool(NESMDesign::eCanvasTool::AddNote);
+    });
+
+    mActStateColor = new QAction(tr("State Color..."), this);
+    connect(mActStateColor, &QAction::triggered, this, [this]() { applyColorToSelection(eColorTarget::State); });
+
+    mActEdgeColor = new QAction(tr("Transition Color..."), this);
+    connect(mActEdgeColor, &QAction::triggered, this, [this]() { applyColorToSelection(eColorTarget::Edge); });
+
+    mActNoteColor = new QAction(tr("Note Color..."), this);
+    connect(mActNoteColor, &QAction::triggered, this, [this]() { applyColorToSelection(eColorTarget::Note); });
+
+    // A single color action for the toolbar: colors whatever is selected, of any kind.
+    mActSetColor = new QAction(tr("Set Color..."), this);
+    connect(mActSetColor, &QAction::triggered, this, [this]() { applyColorToCurrentSelection(); });
+
+    mActAlignLeft = new QAction(tr("Align Left"), this);
+    connect(mActAlignLeft, &QAction::triggered, this, [this]() { alignSelection(eAlign::Left); });
+
+    mActAlignRight = new QAction(tr("Align Right"), this);
+    connect(mActAlignRight, &QAction::triggered, this, [this]() { alignSelection(eAlign::Right); });
+
+    mActAlignTop = new QAction(tr("Align Top"), this);
+    connect(mActAlignTop, &QAction::triggered, this, [this]() { alignSelection(eAlign::Top); });
+
+    mActAlignBottom = new QAction(tr("Align Bottom"), this);
+    connect(mActAlignBottom, &QAction::triggered, this, [this]() { alignSelection(eAlign::Bottom); });
+
+    mActDistributeH = new QAction(tr("Distribute Horizontally"), this);
+    connect(mActDistributeH, &QAction::triggered, this, [this]() { distributeSelection(eDistribute::Horizontal); });
+
+    mActDistributeV = new QAction(tr("Distribute Vertically"), this);
+    connect(mActDistributeV, &QAction::triggered, this, [this]() { distributeSelection(eDistribute::Vertical); });
 
     // An internal transition runs its operations on the stimulus without exit/entry
     // and no state change; it is shown as a row in the state body, not as an edge.
     mActAddInternal = new QAction(tr("Add Internal Transition"), this);
     connect(mActAddInternal, &QAction::triggered, this, &SMDesign::addInternalToSelection);
 
-    mActSetStimulus = new QAction(tr("Set Stimulus…"), this);
+    mActSetStimulus = new QAction(tr("Set Stimulus..."), this);
     connect(mActSetStimulus, &QAction::triggered, this, &SMDesign::setStimulusOfSelection);
 
     mActRaisePriority = new QAction(tr("Raise Priority"), this);
@@ -371,19 +560,340 @@ void SMDesign::setupActions()
         mSceneManager->goToParent();
     });
 
+    // Scrolling far from the diagram easily "loses" it; this brings it back into view
+    // without changing the zoom (issue #514).
+    mActCenterMachine = new QAction(tr("Center Machine"), this);
+    mActCenterMachine->setShortcut(QKeySequence(Qt::Key_Home));
+    connect(mActCenterMachine, &QAction::triggered, this, &SMDesign::centerMachine);
+
+    // The Declare dropdown: each entry asks the owning MDI window to switch to the right
+    // page and start a new entry there (SMDesign does not know about sibling pages).
+    const auto declare = [this](eDeclareKind kind) { emit signalDeclareRequested(kind); };
+    mActNewTrigger = new QAction(tr("New Trigger"), this);
+    connect(mActNewTrigger, &QAction::triggered, this, [declare]() { declare(eDeclareKind::Trigger); });
+    mActNewAction = new QAction(tr("New Action"), this);
+    connect(mActNewAction, &QAction::triggered, this, [declare]() { declare(eDeclareKind::Action); });
+    mActNewCondition = new QAction(tr("New Condition"), this);
+    connect(mActNewCondition, &QAction::triggered, this, [declare]() { declare(eDeclareKind::Condition); });
+    mActNewEvent = new QAction(tr("New Event"), this);
+    connect(mActNewEvent, &QAction::triggered, this, [declare]() { declare(eDeclareKind::Event); });
+    mActNewTimer = new QAction(tr("New Timer"), this);
+    connect(mActNewTimer, &QAction::triggered, this, [declare]() { declare(eDeclareKind::Timer); });
+    mActNewAttribute = new QAction(tr("New Attribute"), this);
+    connect(mActNewAttribute, &QAction::triggered, this, [declare]() { declare(eDeclareKind::Attribute); });
+    mActNewConstant = new QAction(tr("New Constant"), this);
+    connect(mActNewConstant, &QAction::triggered, this, [declare]() { declare(eDeclareKind::Constant); });
+    mActNewDataType = new QAction(tr("New Data Type"), this);
+    connect(mActNewDataType, &QAction::triggered, this, [declare]() { declare(eDeclareKind::DataType); });
+
+    // Vector glyph icons so the (relocated, icon-only by default) toolbar is usable; the
+    // icons also show in the Design menu and context menus alongside the labels.
+    using SMToolIcons::eIcon;
+    mActAddState->setIcon(SMToolIcons::icon(eIcon::AddState));
+    mActAddFinal->setIcon(SMToolIcons::icon(eIcon::AddFinalState));
+    mActAddTransition->setIcon(SMToolIcons::icon(eIcon::AddTransition));
+    mActAddNote->setIcon(SMToolIcons::icon(eIcon::AddNote));
+    mActStateColor->setIcon(SMToolIcons::icon(eIcon::StateColor));
+    mActEdgeColor->setIcon(SMToolIcons::icon(eIcon::EdgeColor));
+    mActNoteColor->setIcon(SMToolIcons::icon(eIcon::NoteColor));
+    mActSetColor->setIcon(SMToolIcons::icon(eIcon::StateColor));
+    mActAlignLeft->setIcon(SMToolIcons::icon(eIcon::AlignLeft));
+    mActAlignRight->setIcon(SMToolIcons::icon(eIcon::AlignRight));
+    mActAlignTop->setIcon(SMToolIcons::icon(eIcon::AlignTop));
+    mActAlignBottom->setIcon(SMToolIcons::icon(eIcon::AlignBottom));
+    mActDistributeH->setIcon(SMToolIcons::icon(eIcon::DistributeHorizontal));
+    mActDistributeV->setIcon(SMToolIcons::icon(eIcon::DistributeVertical));
+    mActToggleSnap->setIcon(SMToolIcons::icon(eIcon::ToggleSnap));
+    mActToggleGrid->setIcon(SMToolIcons::icon(eIcon::ToggleGrid));
+    mActGridDots->setIcon(SMToolIcons::icon(eIcon::GridDots));
+    mActGridDotSize->setIcon(SMToolIcons::icon(eIcon::GridDotSize));
+    mActGridSize->setIcon(SMToolIcons::icon(eIcon::GridSize));
+    mActEnterSubmachine->setIcon(SMToolIcons::icon(eIcon::EnterSubmachine));
+    mActGoToParent->setIcon(SMToolIcons::icon(eIcon::GoToParent));
+    mActCenterMachine->setIcon(SMToolIcons::icon(eIcon::CenterMachine));
+    mActZoomIn->setIcon(SMToolIcons::icon(eIcon::ZoomIn));
+    mActZoomOut->setIcon(SMToolIcons::icon(eIcon::ZoomOut));
+    mActZoomReset->setIcon(SMToolIcons::icon(eIcon::ZoomReset));
+    mActZoomFit->setIcon(SMToolIcons::icon(eIcon::ZoomFit));
+    mActUndo->setIcon(SMToolIcons::icon(eIcon::Undo));
+    mActRedo->setIcon(SMToolIcons::icon(eIcon::Redo));
+    mActSelectAll->setIcon(SMToolIcons::icon(eIcon::SelectAll));
+    mActNewTrigger->setIcon(SMToolIcons::icon(eIcon::NewTrigger));
+    mActNewAction->setIcon(SMToolIcons::icon(eIcon::NewAction));
+    mActNewCondition->setIcon(SMToolIcons::icon(eIcon::NewCondition));
+    mActNewEvent->setIcon(SMToolIcons::icon(eIcon::NewEvent));
+    mActNewTimer->setIcon(SMToolIcons::icon(eIcon::NewTimer));
+    mActNewAttribute->setIcon(SMToolIcons::icon(eIcon::NewAttribute));
+    mActNewConstant->setIcon(SMToolIcons::icon(eIcon::NewConstant));
+    mActNewDataType->setIcon(SMToolIcons::icon(eIcon::NewDataType));
+
     const QList<QAction*> actions{ mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit
-                                 , mActToggleGrid, mActGridDots, mActToggleSnap, mActSelectAll
-                                 , mActAddState, mActAddFinal, mActAddTransition, mActAddInternal, mActDelete, mActRename
+                                 , mActToggleGrid, mActGridDots, mActGridDotSize, mActToggleSnap, mActGridSize, mActSelectAll
+                                 , mActUndo, mActRedo
+                                 , mActAddState, mActAddFinal, mActAddTransition, mActAddNote, mActAddInternal
+                                 , mActDelete, mActRename
+                                 , mActStateColor, mActEdgeColor, mActNoteColor, mActSetColor
+                                 , mActAlignLeft, mActAlignRight, mActAlignTop, mActAlignBottom
+                                 , mActDistributeH, mActDistributeV
                                  , mActSetStimulus, mActRaisePriority, mActLowerPriority
-                                 , mActAddSubstate, mActEnterSubmachine, mActGoToParent };
+                                 , mActAddSubstate, mActEnterSubmachine, mActGoToParent, mActCenterMachine
+                                 , mActNewTrigger, mActNewAction, mActNewCondition, mActNewEvent, mActNewTimer
+                                 , mActNewAttribute, mActNewConstant, mActNewDataType };
     for (QAction* action : actions)
     {
         action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         addAction(action);
     }
 
+    // Seeding the checked state must not push a grid command for simply opening the page.
+    mSyncingGrid = true;
     mActToggleGrid->setChecked(getScene().isGridVisible());
+    mSyncingGrid = false;
     mActToggleSnap->setChecked(getScene().isSnapToGrid());
+}
+
+QList<QAction*> SMDesign::declareActions() const
+{
+    return { mActNewTrigger, mActNewAction, mActNewCondition, mActNewEvent, mActNewTimer
+           , mActNewAttribute, mActNewConstant, mActNewDataType };
+}
+
+void SMDesign::setToolbarVisible(bool visible)
+{
+    // The toolbar now lives in the navigation dock (global), shown/raised from the View menu;
+    // this per-child flag is kept only for the MdiChild contract.
+    mToolbarVisible = visible;
+}
+
+bool SMDesign::isToolbarVisible() const
+{
+    return mToolbarVisible;
+}
+
+QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
+{
+    // Every tool's tooltip shows its shortcut alongside the label (spec 9.2). Refresh here so
+    // the tooltip is present whichever way the toolbar is (re)built.
+    for (QAction* action : actions())
+    {
+        if (action->shortcut().isEmpty() == false)
+        {
+            action->setToolTip(QStringLiteral("%1 (%2)").arg(action->text(), action->shortcut().toString(QKeySequence::NativeText)));
+        }
+    }
+
+    // Ordered by importance (spec 9.2 / issue #514): the design/placement operations first,
+    // the declarations right after them, then alignment, level navigation, color, grid,
+    // edit, and zoom. The Design group order matches the canvas context menu.
+    QList<ToolGroup> groups;
+    groups.append(ToolGroup{ tr("Design"),    { mActAddState, mActAddTransition, mActAddNote, mActAddFinal } });
+    groups.append(ToolGroup{ tr("Declare"),   declareActions() });
+    groups.append(ToolGroup{ tr("Alignment"), { mActAlignLeft, mActAlignRight, mActAlignTop, mActAlignBottom
+                                               , mActDistributeH, mActDistributeV } });
+    groups.append(ToolGroup{ tr("Navigate"),  { mActEnterSubmachine, mActGoToParent, mActCenterMachine } });
+    groups.append(ToolGroup{ tr("Color"),     { mActSetColor } });
+    groups.append(ToolGroup{ tr("Grid"),      { mActToggleGrid, mActGridDots, mActGridDotSize, mActGridSize, mActToggleSnap } });
+    groups.append(ToolGroup{ tr("Edit"),      { mActUndo, mActRedo, mActSelectAll } });
+    groups.append(ToolGroup{ tr("Zoom"),      { mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit } });
+    return groups;
+}
+
+QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
+{
+    using SMToolIcons::eIcon;
+
+    // Display-only stand-ins: same titles, order, icons, and labels as toolGroups(), but
+    // disabled - the Design Toolbar tab always shows its buttons, they just do not act
+    // until a State Machine's Design page is open (issue #514). Keep in sync with
+    // toolGroups() above.
+    const auto make = [&owner](eIcon glyph, const QString& text) -> QAction*
+    {
+        QAction* action = new QAction(SMToolIcons::icon(glyph), text, &owner);
+        action->setEnabled(false);
+        return action;
+    };
+
+    QList<ToolGroup> groups;
+    groups.append(ToolGroup{ tr("Design"),    { make(eIcon::AddState, tr("Add State"))
+                                              , make(eIcon::AddTransition, tr("Add Transition"))
+                                              , make(eIcon::AddNote, tr("Add Note"))
+                                              , make(eIcon::AddFinalState, tr("Add Final State")) } });
+    groups.append(ToolGroup{ tr("Declare"),   { make(eIcon::NewTrigger, tr("New Trigger"))
+                                              , make(eIcon::NewAction, tr("New Action"))
+                                              , make(eIcon::NewCondition, tr("New Condition"))
+                                              , make(eIcon::NewEvent, tr("New Event"))
+                                              , make(eIcon::NewTimer, tr("New Timer"))
+                                              , make(eIcon::NewAttribute, tr("New Attribute"))
+                                              , make(eIcon::NewConstant, tr("New Constant"))
+                                              , make(eIcon::NewDataType, tr("New Data Type")) } });
+    groups.append(ToolGroup{ tr("Alignment"), { make(eIcon::AlignLeft, tr("Align Left"))
+                                              , make(eIcon::AlignRight, tr("Align Right"))
+                                              , make(eIcon::AlignTop, tr("Align Top"))
+                                              , make(eIcon::AlignBottom, tr("Align Bottom"))
+                                              , make(eIcon::DistributeHorizontal, tr("Distribute Horizontally"))
+                                              , make(eIcon::DistributeVertical, tr("Distribute Vertically")) } });
+    groups.append(ToolGroup{ tr("Navigate"),  { make(eIcon::EnterSubmachine, tr("Enter Submachine"))
+                                              , make(eIcon::GoToParent, tr("Go to Parent"))
+                                              , make(eIcon::CenterMachine, tr("Center Machine")) } });
+    groups.append(ToolGroup{ tr("Color"),     { make(eIcon::StateColor, tr("Set Color...")) } });
+    groups.append(ToolGroup{ tr("Grid"),      { make(eIcon::ToggleGrid, tr("Show Grid"))
+                                              , make(eIcon::GridDots, tr("Dotted Grid"))
+                                              , make(eIcon::GridDotSize, tr("Dot Size..."))
+                                              , make(eIcon::GridSize, tr("Grid Size..."))
+                                              , make(eIcon::ToggleSnap, tr("Snap to Grid")) } });
+    groups.append(ToolGroup{ tr("Edit"),      { make(eIcon::Undo, tr("Undo"))
+                                              , make(eIcon::Redo, tr("Redo"))
+                                              , make(eIcon::SelectAll, tr("Select All")) } });
+    groups.append(ToolGroup{ tr("Zoom"),      { make(eIcon::ZoomIn, tr("Zoom In"))
+                                              , make(eIcon::ZoomOut, tr("Zoom Out"))
+                                              , make(eIcon::ZoomReset, tr("Zoom 100%"))
+                                              , make(eIcon::ZoomFit, tr("Zoom to Fit")) } });
+    return groups;
+}
+
+bool SMDesign::placementToolFor(QAction* action, NESMDesign::eCanvasTool& toolOut) const
+{
+    if (action == mActAddState)           { toolOut = NESMDesign::eCanvasTool::AddState;      return true; }
+    if (action == mActAddFinal)           { toolOut = NESMDesign::eCanvasTool::AddFinalState; return true; }
+    if (action == mActAddTransition)      { toolOut = NESMDesign::eCanvasTool::AddTransition; return true; }
+    if (action == mActAddNote)            { toolOut = NESMDesign::eCanvasTool::AddNote;       return true; }
+    return false;
+}
+
+void SMDesign::armStickyTool(NESMDesign::eCanvasTool tool)
+{
+    // The single click already activated the tool single-shot; re-activating it sticky just
+    // flips the flag (SMScene::setActiveTool early-exits when the kind is unchanged).
+    getScene().setActiveTool(tool, true);
+}
+
+void SMDesign::onViewContextMenuRequested(const QPoint& pos)
+{
+    SMScene& scene = getScene();
+    const QPointF scenePos = mView->mapToScene(pos);
+
+    SMStateItem* state = scene.stateAt(scenePos);
+    SMEdgeItem*  edge   = nullptr;
+    SMNoteItem*  note   = nullptr;
+    if (state == nullptr)
+    {
+        for (QGraphicsItem* item : scene.items(scenePos))
+        {
+            if (edge == nullptr)
+            {
+                edge = dynamic_cast<SMEdgeItem*>(item);
+            }
+
+            if (note == nullptr)
+            {
+                note = dynamic_cast<SMNoteItem*>(item);
+            }
+        }
+    }
+
+    // Undo/Redo carry no shortcut of their own; reflect the document stack's state each
+    // time the menu opens so the shared group shows them enabled only when they act.
+    mActUndo->setEnabled(mModel.getUndoStack().canUndo());
+    mActRedo->setEnabled(mModel.getUndoStack().canRedo());
+
+    QMenu menu(this);
+    if (state != nullptr)
+    {
+        if (state->isSelected() == false)
+        {
+            scene.clearSelection();
+            state->setSelected(true);
+        }
+
+        menu.addAction(mActAddInternal);
+        menu.addAction(mActAddSubstate);
+        menu.addAction(mActEnterSubmachine);
+        menu.addSeparator();
+        menu.addAction(mActStateColor);
+        addNoteMenuEntries(menu, state->getElementId(), true);
+        menu.addSeparator();
+        menu.addAction(mActRename);
+        menu.addAction(mActDelete);
+    }
+    else if (edge != nullptr)
+    {
+        if (edge->isSelected() == false)
+        {
+            scene.clearSelection();
+            edge->setSelected(true);
+        }
+
+        menu.addAction(mActSetStimulus);
+        menu.addAction(mActRaisePriority);
+        menu.addAction(mActLowerPriority);
+        menu.addSeparator();
+        menu.addAction(mActEdgeColor);
+        addNoteMenuEntries(menu, edge->getElementId(), false);
+        menu.addSeparator();
+        menu.addAction(mActDelete);
+    }
+    else if (note != nullptr)
+    {
+        if (note->isSelected() == false)
+        {
+            scene.clearSelection();
+            note->setSelected(true);
+        }
+
+        menu.addAction(mActNoteColor);
+        menu.addSeparator();
+        menu.addAction(mActDelete);
+    }
+    else
+    {
+        // The empty-canvas menu mirrors the Design Toolbar tab's group order (issue #514):
+        // the Design group on top (same action order as the toolbar), then alignment,
+        // then navigation; the grid/view helpers follow, "Show Design Toolbar" closes.
+        menu.addAction(mActAddState);
+        menu.addAction(mActAddTransition);
+        menu.addAction(mActAddNote);
+        menu.addAction(mActAddFinal);
+        menu.addSeparator();
+        menu.addAction(mActAlignLeft);
+        menu.addAction(mActAlignRight);
+        menu.addAction(mActAlignTop);
+        menu.addAction(mActAlignBottom);
+        menu.addAction(mActDistributeH);
+        menu.addAction(mActDistributeV);
+        menu.addSeparator();
+        menu.addAction(mActEnterSubmachine);
+        menu.addAction(mActGoToParent);
+        menu.addAction(mActCenterMachine);
+        menu.addSeparator();
+        menu.addAction(mActSelectAll);
+        menu.addAction(mActZoomFit);
+        menu.addAction(mActToggleGrid);
+        menu.addAction(mActGridDots);
+        menu.addAction(mActGridSize);
+        menu.addSeparator();
+        menu.addAction(mActUndo);
+        menu.addAction(mActRedo);
+    }
+
+    if ((state != nullptr) || (edge != nullptr) || (note != nullptr))
+    {
+        // The shared command group (spec 9.3): present in every element context so the four
+        // core actions stay reachable (the canvas menu above already leads with them).
+        menu.addSeparator();
+        menu.addAction(mActAddState);
+        menu.addAction(mActAddTransition);
+        menu.addAction(mActUndo);
+        menu.addAction(mActRedo);
+    }
+
+    // The user is on the Design page (this menu only opens over the canvas): offer a quick
+    // way to bring the drawing toolbar tab to the front (spec issue #514).
+    menu.addSeparator();
+    QAction* showTools = menu.addAction(tr("Show Design Toolbar"));
+    showTools->setIcon(NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeSmall));
+    connect(showTools, &QAction::triggered, this, [this]() { emit signalShowDesignTools(); });
+
+    menu.exec(mView->viewport()->mapToGlobal(pos));
 }
 
 void SMDesign::deleteSelection()
@@ -392,7 +902,15 @@ void SMDesign::deleteSelection()
     const QList<SMStateItem*> selection{ scene.selectedStateItems() };
     if (selection.isEmpty())
     {
-        deleteSelectedEdges();
+        if (scene.selectedNoteItems().isEmpty() == false)
+        {
+            deleteSelectedNotes();
+        }
+        else
+        {
+            deleteSelectedEdges();
+        }
+
         return;
     }
 
@@ -434,7 +952,7 @@ void SMDesign::deleteSelection()
     if (deletable.isEmpty())
     {
         QMessageBox::information(this, tr("Delete States")
-                                 , tr("The Start state cannot be deleted — every machine level needs exactly one."));
+                                 , tr("The Start state cannot be deleted - every machine level needs exactly one."));
         return;
     }
 
@@ -449,7 +967,7 @@ void SMDesign::deleteSelection()
     message += QStringLiteral("\n") + tr("Transitions from and to the deleted state(s) are deleted too.");
     if (skippedStart)
     {
-        message += QStringLiteral("\n") + tr("The selected Start state is kept — every level needs one.");
+        message += QStringLiteral("\n") + tr("The selected Start state is kept - every level needs one.");
     }
 
     const QMessageBox::StandardButton answer =
@@ -531,6 +1049,32 @@ void SMDesign::deleteSelectedEdges()
     }
 }
 
+void SMDesign::deleteSelectedNotes()
+{
+    const QList<SMNoteItem*> notes{ getScene().selectedNoteItems() };
+    if (notes.isEmpty())
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const QString text = (notes.size() == 1) ? tr("Delete note") : tr("Delete %1 notes").arg(notes.size());
+    if (notes.size() == 1)
+    {
+        mModel.getUndoStack().push(new SMRemoveNoteCommand(data, mModel.getNotifier(), notes.first()->getElementId(), text));
+    }
+    else
+    {
+        SMCompositeCommand* composite = new SMCompositeCommand(data, mModel.getNotifier(), text);
+        for (SMNoteItem* note : notes)
+        {
+            new SMRemoveNoteCommand(data, mModel.getNotifier(), note->getElementId(), text, composite);
+        }
+
+        mModel.getUndoStack().push(composite);
+    }
+}
+
 void SMDesign::reorderSelectedTransition(bool raise)
 {
     const QList<SMEdgeItem*> edges{ getScene().selectedEdgeItems() };
@@ -586,7 +1130,7 @@ void SMDesign::setStimulusOfSelection()
     QList<QPair<SMTransitionEntry::eStimulusKind, QString>> options;
     const auto add = [&labels, &options](SMTransitionEntry::eStimulusKind kind, const QString& name)
     {
-        labels.append(QString::fromLatin1(SMTransitionEntry::toString(kind)) + QStringLiteral(" — ") + name);
+        labels.append(QString::fromLatin1(SMTransitionEntry::toString(kind)) + QStringLiteral(" - ") + name);
         options.append(qMakePair(kind, name));
     };
 
@@ -611,7 +1155,7 @@ void SMDesign::setStimulusOfSelection()
     if (options.isEmpty())
     {
         QMessageBox::information(this, tr("Set Stimulus")
-                                 , tr("Declare a trigger, event, or timer first — the stimulus is picked from those registries."));
+                                 , tr("Declare a trigger, event, or timer first - the stimulus is picked from those registries."));
         return;
     }
 
@@ -663,6 +1207,280 @@ void SMDesign::addInternalToSelection()
                                                              , tr("Add internal transition to %1").arg(state->getName())));
 }
 
+void SMDesign::addNoteMenuEntries(QMenu& menu, uint32_t ownerId, bool isState)
+{
+    const bool hasNote = (mModel.getData().getLayout().findNoteByOwner(ownerId) != nullptr);
+    if (hasNote)
+    {
+        QAction* edit = menu.addAction(tr("Edit Note"));
+        connect(edit, &QAction::triggered, this, [this, ownerId]() { editOwnedNote(ownerId); });
+        QAction* remove = menu.addAction(tr("Remove Note"));
+        connect(remove, &QAction::triggered, this, [this, ownerId]() { removeOwnedNote(ownerId); });
+    }
+    else
+    {
+        QAction* add = menu.addAction(tr("Add Note"));
+        connect(add, &QAction::triggered, this, [this, ownerId, isState]() { addOwnedNote(ownerId, isState); });
+    }
+}
+
+void SMDesign::addOwnedNote(uint32_t ownerId, bool isState)
+{
+    StateMachineData& data = mModel.getData();
+    if (data.getLayout().findNoteByOwner(ownerId) != nullptr)
+    {
+        editOwnedNote(ownerId);
+        return;
+    }
+
+    // The note geometry is a reference box over the owner: the owner's box for a state, a
+    // small box near the transition for an edge. Owned notes render as a badge, not a box.
+    QRectF box{ 0.0, 0.0, NESMDesign::NoteDefaultWidth, NESMDesign::NoteDefaultHeight };
+    SMStateItem* state = getScene().stateItem(ownerId);
+    if (isState && (state != nullptr))
+    {
+        box = state->getBoxGeometry();
+    }
+
+    mModel.getUndoStack().push(new SMAddNoteCommand(  data, mModel.getNotifier()
+                                                    , getScene().getLevelId(), ownerId, box, QString()
+                                                    , tr("Add note")));
+    editOwnedNote(ownerId);
+}
+
+void SMDesign::editOwnedNote(uint32_t ownerId)
+{
+    if (SMStateItem* state = getScene().stateItem(ownerId))
+    {
+        state->startNoteEdit();
+        return;
+    }
+
+    if (SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(getScene().findCanvasItem(ownerId)))
+    {
+        edge->startNoteEdit();
+    }
+}
+
+void SMDesign::removeOwnedNote(uint32_t ownerId)
+{
+    const SMLayoutNote* note = mModel.getData().getLayout().findNoteByOwner(ownerId);
+    if (note != nullptr)
+    {
+        mModel.getUndoStack().push(new SMRemoveNoteCommand(  mModel.getData(), mModel.getNotifier()
+                                                           , note->id, tr("Remove note")));
+    }
+}
+
+void SMDesign::applyColorToSelection(eColorTarget target)
+{
+    SMScene& scene = getScene();
+    QList<uint32_t> ids;
+    switch (target)
+    {
+    case eColorTarget::State:
+        for (SMStateItem* item : scene.selectedStateItems())
+        {
+            ids.append(item->getElementId());
+        }
+        break;
+
+    case eColorTarget::Edge:
+        for (SMEdgeItem* item : scene.selectedEdgeItems())
+        {
+            ids.append(item->getElementId());
+        }
+        break;
+
+    case eColorTarget::Note:
+        for (SMNoteItem* item : scene.selectedNoteItems())
+        {
+            ids.append(item->getElementId());
+        }
+        break;
+    }
+
+    if (ids.isEmpty())
+    {
+        return;
+    }
+
+    const QColor chosen = QColorDialog::getColor(Qt::white, this, tr("Choose Color"));
+    if (chosen.isValid() == false)
+    {
+        return;
+    }
+
+    const QString      colorName = chosen.name(QColor::HexRgb);
+    StateMachineData&  data      = mModel.getData();
+    DocModelNotifier&  notifier  = mModel.getNotifier();
+    const QString       text     = tr("Change color");
+    const bool           single  = (ids.size() == 1);
+    QUndoCommand*        parent  = single ? nullptr : new SMCompositeCommand(data, notifier, text);
+
+    for (uint32_t id : ids)
+    {
+        QUndoCommand* command = nullptr;
+        switch (target)
+        {
+        case eColorTarget::State: command = new SMSetNodeColorCommand(data, notifier, id, colorName, text, parent); break;
+        case eColorTarget::Edge:  command = new SMSetEdgeColorCommand(data, notifier, id, colorName, text, parent); break;
+        case eColorTarget::Note:  command = new SMSetNoteColorCommand(data, notifier, id, colorName, text, parent); break;
+        }
+
+        if (single)
+        {
+            mModel.getUndoStack().push(command);
+        }
+    }
+
+    if (single == false)
+    {
+        mModel.getUndoStack().push(parent);
+    }
+}
+
+void SMDesign::applyColorToCurrentSelection()
+{
+    SMScene& scene = getScene();
+
+    // Every selected item, tagged with the command that colors its kind.
+    QList<QPair<uint32_t, eColorTarget>> targets;
+    for (SMStateItem* item : scene.selectedStateItems())
+    {
+        targets.append(qMakePair(item->getElementId(), eColorTarget::State));
+    }
+    for (SMEdgeItem* item : scene.selectedEdgeItems())
+    {
+        targets.append(qMakePair(item->getElementId(), eColorTarget::Edge));
+    }
+    for (SMNoteItem* item : scene.selectedNoteItems())
+    {
+        targets.append(qMakePair(item->getElementId(), eColorTarget::Note));
+    }
+
+    if (targets.isEmpty())
+    {
+        return;
+    }
+
+    const QColor chosen = QColorDialog::getColor(Qt::white, this, tr("Choose Color"));
+    if (chosen.isValid() == false)
+    {
+        return;
+    }
+
+    const QString      colorName = chosen.name(QColor::HexRgb);
+    StateMachineData&  data      = mModel.getData();
+    DocModelNotifier&  notifier  = mModel.getNotifier();
+    const QString      text      = tr("Change color");
+    const bool         single    = (targets.size() == 1);
+    QUndoCommand*      parent    = single ? nullptr : new SMCompositeCommand(data, notifier, text);
+
+    for (const QPair<uint32_t, eColorTarget>& target : targets)
+    {
+        QUndoCommand* command = nullptr;
+        switch (target.second)
+        {
+        case eColorTarget::State: command = new SMSetNodeColorCommand(data, notifier, target.first, colorName, text, parent); break;
+        case eColorTarget::Edge:  command = new SMSetEdgeColorCommand(data, notifier, target.first, colorName, text, parent); break;
+        case eColorTarget::Note:  command = new SMSetNoteColorCommand(data, notifier, target.first, colorName, text, parent); break;
+        }
+
+        if (single)
+        {
+            mModel.getUndoStack().push(command);
+        }
+    }
+
+    if (single == false)
+    {
+        mModel.getUndoStack().push(parent);
+    }
+}
+
+void SMDesign::alignSelection(eAlign align)
+{
+    const QList<SelectionBox> boxes{ collectSelectionBoxes(getScene()) };
+    if (boxes.size() < 2)
+    {
+        return;
+    }
+
+    double target = boxes.first().rect.left();
+    for (const SelectionBox& box : boxes)
+    {
+        switch (align)
+        {
+        case eAlign::Left:   target = std::min(target, box.rect.left());   break;
+        case eAlign::Right:  target = std::max(target, box.rect.right());  break;
+        case eAlign::Top:    target = std::min(target, box.rect.top());    break;
+        case eAlign::Bottom: target = std::max(target, box.rect.bottom()); break;
+        }
+    }
+
+    QList<QPair<SelectionBox, QRectF>> changed;
+    for (const SelectionBox& box : boxes)
+    {
+        QRectF rect{ box.rect };
+        switch (align)
+        {
+        case eAlign::Left:   rect.moveLeft(target);   break;
+        case eAlign::Right:  rect.moveRight(target);  break;
+        case eAlign::Top:    rect.moveTop(target);    break;
+        case eAlign::Bottom: rect.moveBottom(target); break;
+        }
+
+        if (rect.topLeft() != box.rect.topLeft())
+        {
+            changed.append(qMakePair(box, rect));
+        }
+    }
+
+    pushMoveChanges(mModel, changed, tr("Align selection"));
+}
+
+void SMDesign::distributeSelection(eDistribute axis)
+{
+    QList<SelectionBox> boxes{ collectSelectionBoxes(getScene()) };
+    if (boxes.size() < 3)
+    {
+        return;
+    }
+
+    const bool horizontal = (axis == eDistribute::Horizontal);
+    std::sort(boxes.begin(), boxes.end(), [horizontal](const SelectionBox& a, const SelectionBox& b) {
+        return horizontal ? (a.rect.center().x() < b.rect.center().x()) : (a.rect.center().y() < b.rect.center().y());
+    });
+
+    const double firstCenter = horizontal ? boxes.first().rect.center().x() : boxes.first().rect.center().y();
+    const double lastCenter  = horizontal ? boxes.last().rect.center().x()  : boxes.last().rect.center().y();
+    const double step        = (lastCenter - firstCenter) / static_cast<double>(boxes.size() - 1);
+
+    QList<QPair<SelectionBox, QRectF>> changed;
+    for (int i = 1; i + 1 < boxes.size(); ++i)
+    {
+        const SelectionBox& box          = boxes.at(i);
+        const double        targetCenter = firstCenter + step * static_cast<double>(i);
+        QRectF               rect{ box.rect };
+        if (horizontal)
+        {
+            rect.moveCenter(QPointF(targetCenter, box.rect.center().y()));
+        }
+        else
+        {
+            rect.moveCenter(QPointF(box.rect.center().x(), targetCenter));
+        }
+
+        if (rect.topLeft() != box.rect.topLeft())
+        {
+            changed.append(qMakePair(box, rect));
+        }
+    }
+
+    pushMoveChanges(mModel, changed, tr("Distribute selection"));
+}
+
 void SMDesign::rebuildScene()
 {
     // No level is shown until the manager settles on one; the auto-placement below must
@@ -707,6 +1525,13 @@ void SMDesign::onLevelChanged(uint32_t levelId)
         mScene->setGridStyle(mActGridDots->isChecked() ? NESMDesign::eGridStyle::Dots : NESMDesign::eGridStyle::Lines);
     }
 
+    {
+        // The dot size is an app-level preference; a freshly created scene starts at the
+        // default, so re-apply the stored value on every level switch.
+        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+        mScene->setGridDotSize(settings.value(QStringLiteral("smDesign/gridDotSize"), NESMDesign::GridDotSizeDefault).toInt());
+    }
+
     if (mActToggleSnap != nullptr)
     {
         mScene->setSnapToGrid(mActToggleSnap->isChecked());
@@ -741,7 +1566,20 @@ void SMDesign::restoreViewport(uint32_t levelId, bool applyDefault)
     {
         mView->zoomReset();
         const QRectF bounds = (mScene != nullptr ? mScene->contentBounds() : QRectF());
-        mView->centerOn(bounds.isNull() ? QPointF(0.0, 0.0) : bounds.center());
+        if (bounds.isValid() && (bounds.isEmpty() == false))
+        {
+            // Anchor the content's top-left near the viewport's top-left corner (a small
+            // margin in) rather than centering it: a level with a single Start state must
+            // show that state as the top-left entry point, not floating in the middle.
+            const QRectF viewRect = mView->mapToScene(mView->viewport()->rect()).boundingRect();
+            const double margin   = 48.0;
+            mView->centerOn(  bounds.left() - margin + viewRect.width()  / 2.0
+                            , bounds.top()  - margin + viewRect.height() / 2.0);
+        }
+        else
+        {
+            mView->centerOn(0.0, 0.0);
+        }
     }
 
     mRestoringView = guard;
@@ -775,6 +1613,27 @@ void SMDesign::onViewportChanged()
 
 void SMDesign::onModelLayoutChanged(const QList<uint32_t>& ownerIds)
 {
+    // Grid settings are document-wide (not owned by any element), so re-sync on every
+    // layout change regardless of ownerIds - this is what makes undo/redo of a grid
+    // change (and reopening the document) keep the canvas and the checked action correct.
+    const SMLayoutData& layout = mModel.getData().getLayout();
+    if ((mScene != nullptr) && (mScene->isGridVisible() != layout.isGridVisible()))
+    {
+        mScene->setGridVisible(layout.isGridVisible());
+    }
+
+    if ((mScene != nullptr) && (mScene->getGridSize() != layout.getGridSize()))
+    {
+        mScene->setGridSize(layout.getGridSize());
+    }
+
+    if ((mActToggleGrid != nullptr) && (mActToggleGrid->isChecked() != layout.isGridVisible()))
+    {
+        mSyncingGrid = true;
+        mActToggleGrid->setChecked(layout.isGridVisible());
+        mSyncingGrid = false;
+    }
+
     if (mRestoringView || (mShownLevel == 0u) || (ownerIds.contains(mShownLevel) == false))
     {
         return;
@@ -825,7 +1684,7 @@ void SMDesign::rebuildBreadcrumb()
             });
 
             mBreadcrumbLayout->addWidget(crumb);
-            mBreadcrumbLayout->addWidget(new QLabel(QStringLiteral("›"), mBreadcrumb));
+            mBreadcrumbLayout->addWidget(new QLabel(QStringLiteral(">"), mBreadcrumb));
         }
         else
         {
@@ -853,7 +1712,11 @@ void SMDesign::updateNavActions()
 
     const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
     const SMStateEntry* single = (selection.size() == 1 ? mModel.getData().findStateById(selection.first()) : nullptr);
-    mActEnterSubmachine->setEnabled((single != nullptr) && single->hasNestedStates());
+    // Enter Submachine descends into an existing submachine, or (for a plain normal state)
+    // creates one on the fly, so it is enabled for any non-imported normal/composite state.
+    mActEnterSubmachine->setEnabled((single != nullptr)
+                                    && (single->isImportedSubmachine() == false)
+                                    && (single->hasNestedStates() || (single->getKind() == SMStateEntry::eStateKind::Normal)));
     mActAddSubstate->setEnabled((single != nullptr)
                                 && (single->getKind() == SMStateEntry::eStateKind::Normal)
                                 && (single->isImportedSubmachine() == false)
@@ -872,6 +1735,27 @@ void SMDesign::updateNavActions()
     mActSetStimulus->setEnabled(transition != nullptr);
     mActRaisePriority->setEnabled((index > 0));
     mActLowerPriority->setEnabled((index >= 0) && (index < count - 1));
+
+    // Appearance: color swatches enable per selected kind; align/distribute need a
+    // multi-selection of movable boxes (states and/or notes).
+    const bool hasStates = (getScene().selectedStateItems().isEmpty() == false);
+    const bool hasEdges  = (getScene().selectedEdgeItems().isEmpty() == false);
+    const bool hasNotes  = (getScene().selectedNoteItems().isEmpty() == false);
+    mActStateColor->setEnabled(hasStates);
+    mActEdgeColor->setEnabled(hasEdges);
+    mActNoteColor->setEnabled(hasNotes);
+    // The single toolbar "Set Color" acts on any selected element; disabled when nothing is selected.
+    mActSetColor->setEnabled(hasStates || hasEdges || hasNotes);
+
+    const int boxCount = getScene().selectedStateItems().size() + getScene().selectedNoteItems().size();
+    const bool canAlign = (boxCount > 1);
+    const bool canDistribute = (boxCount > 2);
+    mActAlignLeft->setEnabled(canAlign);
+    mActAlignRight->setEnabled(canAlign);
+    mActAlignTop->setEnabled(canAlign);
+    mActAlignBottom->setEnabled(canAlign);
+    mActDistributeH->setEnabled(canDistribute);
+    mActDistributeV->setEnabled(canDistribute);
 }
 
 void SMDesign::addSubstateToSelection()
@@ -915,10 +1799,61 @@ void SMDesign::addSubstateToSelection()
 void SMDesign::enterSelectedSubmachine()
 {
     const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
-    if (selection.size() == 1)
+    if (selection.size() != 1)
     {
-        mSceneManager->enterSubmachine(selection.first());
+        return;
     }
+
+    const uint32_t id = selection.first();
+    const SMStateEntry* state = mModel.getData().findStateById(id);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    if (state->hasNestedStates())
+    {
+        mSceneManager->enterSubmachine(id);
+    }
+    else if ((state->getKind() == SMStateEntry::eStateKind::Normal) && (state->isImportedSubmachine() == false))
+    {
+        // The state has no submachine yet: create a painted composite (with its Start state)
+        // and descend into it, so "Enter Submachine" doubles as "start designing one here".
+        // (Follow-up: an auto-created submachine left with only its Start state should revert
+        // to a plain state when the user leaves it; that needs an undoable revert command.)
+        addSubstateToSelection();
+    }
+}
+
+void SMDesign::centerMachine()
+{
+    if (mScene == nullptr)
+    {
+        return;
+    }
+
+    const QRectF bounds = mScene->contentBounds();
+    if ((bounds.isValid() == false) || bounds.isEmpty())
+    {
+        mView->centerOn(0.0, 0.0);
+        return;
+    }
+
+    const QRect   viewport = mView->viewport()->rect();
+    const QRectF  viewRect = mView->mapToScene(viewport).boundingRect();
+    if ((viewRect.width() >= bounds.width()) && (viewRect.height() >= bounds.height()))
+    {
+        // The whole diagram fits at the current zoom: center it.
+        mView->centerOn(bounds.center());
+        return;
+    }
+
+    // Too large to fit: anchor the diagram's top-left (the Start state region) about
+    // 64 device pixels in from the viewport's top-left corner, keeping the zoom.
+    const double marginX = 64.0 * viewRect.width()  / static_cast<double>(std::max(viewport.width(), 1));
+    const double marginY = 64.0 * viewRect.height() / static_cast<double>(std::max(viewport.height(), 1));
+    mView->centerOn(  bounds.left() - marginX + viewRect.width()  / 2.0
+                    , bounds.top()  - marginY + viewRect.height() / 2.0);
 }
 
 void SMDesign::populateStressContent()

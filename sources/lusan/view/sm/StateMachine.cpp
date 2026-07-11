@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/StateMachine.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -19,18 +19,27 @@
 
 #include "lusan/view/sm/StateMachine.hpp"
 
+#include "lusan/view/common/MdiMainWindow.hpp"
+#include "lusan/view/common/NavigationDock.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
+#include "lusan/view/sm/SMAttributeList.hpp"
 #include "lusan/view/sm/SMConstant.hpp"
+#include "lusan/view/sm/SMConstantList.hpp"
 #include "lusan/view/sm/SMDataType.hpp"
+#include "lusan/view/sm/SMDataTypeList.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEvent.hpp"
+#include "lusan/view/sm/SMEventList.hpp"
 #include "lusan/view/sm/SMInclude.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
+#include "lusan/view/sm/SMMethodList.hpp"
 #include "lusan/view/sm/SMOverview.hpp"
 
+#include <QAction>
 #include <QLabel>
 #include <QMessageBox>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 namespace
@@ -52,6 +61,7 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
     , mOverview          (nullptr)
     , mPages             (pageCount(), nullptr)
     , mPendingInitTabs   ( )
+    , mToolbarVisible    (true)
 {
     if (filePath.isEmpty() == false)
     {
@@ -78,6 +88,12 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
 
     connect(&mTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
         ensureTabInitialized(index);
+        // The drawing toolbar is only active on the Design page; refresh its bound page and
+        // active state whenever the inner tab changes (a no-op when this document is inactive).
+        if (mMainWindow != nullptr)
+        {
+            mMainWindow->updateFsmToolbar();
+        }
     });
 
     ensureTabInitialized(static_cast<int>(PageOverview));
@@ -89,6 +105,8 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
     setLayout(layout);
 
     connect(&mModel, &StateMachineModel::signalDirtyChanged, this, &MdiChild::setModified);
+    connect(&mModel.getUndoStack(), &QUndoStack::canUndoChanged, this, &MdiChild::signalCanUndoChanged);
+    connect(&mModel.getUndoStack(), &QUndoStack::canRedoChanged, this, &MdiChild::signalCanRedoChanged);
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -114,6 +132,132 @@ void StateMachine::undo()
 void StateMachine::redo()
 {
     mModel.getUndoStack().redo();
+}
+
+bool StateMachine::canUndo() const
+{
+    return mModel.getUndoStack().canUndo();
+}
+
+bool StateMachine::canRedo() const
+{
+    return mModel.getUndoStack().canRedo();
+}
+
+void StateMachine::setToolbarVisible(bool visible)
+{
+    mToolbarVisible = visible;
+    if (isTabInitialized(static_cast<int>(PageDesign)))
+    {
+        SMDesign* design = qobject_cast<SMDesign*>(mPages.at(static_cast<int>(PageDesign)));
+        if (design != nullptr)
+        {
+            design->setToolbarVisible(visible);
+        }
+    }
+}
+
+bool StateMachine::isToolbarVisible() const
+{
+    return mToolbarVisible;
+}
+
+SMDesign* StateMachine::designPageIfBuilt() const
+{
+    return isTabInitialized(static_cast<int>(PageDesign))
+            ? qobject_cast<SMDesign*>(mPages.at(static_cast<int>(PageDesign)))
+            : nullptr;
+}
+
+bool StateMachine::isDesignPageCurrent() const
+{
+    return (mTabWidget.currentIndex() == static_cast<int>(PageDesign));
+}
+
+void StateMachine::onDeclareRequested(SMDesign::eDeclareKind kind)
+{
+    int pageIndex = static_cast<int>(PageOverview);
+    switch (kind)
+    {
+    case SMDesign::eDeclareKind::Trigger:
+    case SMDesign::eDeclareKind::Action:
+    case SMDesign::eDeclareKind::Condition:
+        pageIndex = static_cast<int>(PageMethods);
+        break;
+
+    case SMDesign::eDeclareKind::Event:
+    case SMDesign::eDeclareKind::Timer:
+        pageIndex = static_cast<int>(PageEvents);
+        break;
+
+    case SMDesign::eDeclareKind::Attribute:
+        pageIndex = static_cast<int>(PageAttributes);
+        break;
+
+    case SMDesign::eDeclareKind::Constant:
+        pageIndex = static_cast<int>(PageConstants);
+        break;
+
+    case SMDesign::eDeclareKind::DataType:
+        pageIndex = static_cast<int>(PageDataTypes);
+        break;
+    }
+
+    ensureTabInitialized(pageIndex);
+    mTabWidget.setCurrentIndex(pageIndex);
+
+    QWidget* page = mPages.at(pageIndex);
+    switch (kind)
+    {
+    case SMDesign::eDeclareKind::Trigger:
+    {
+        SMMethodList* list = static_cast<SMMethod*>(page)->getList();
+        if (list->actionNewTrigger() != nullptr) list->actionNewTrigger()->trigger();
+        break;
+    }
+    case SMDesign::eDeclareKind::Action:
+    {
+        SMMethodList* list = static_cast<SMMethod*>(page)->getList();
+        if (list->actionNewAction() != nullptr) list->actionNewAction()->trigger();
+        break;
+    }
+    case SMDesign::eDeclareKind::Condition:
+    {
+        SMMethodList* list = static_cast<SMMethod*>(page)->getList();
+        if (list->actionNewCondition() != nullptr) list->actionNewCondition()->trigger();
+        break;
+    }
+    case SMDesign::eDeclareKind::Event:
+    {
+        SMEventList* list = static_cast<SMEvent*>(page)->getList();
+        if (list->actionNewEvent() != nullptr) list->actionNewEvent()->trigger();
+        break;
+    }
+    case SMDesign::eDeclareKind::Timer:
+    {
+        SMEventList* list = static_cast<SMEvent*>(page)->getList();
+        if (list->actionNewTimer() != nullptr) list->actionNewTimer()->trigger();
+        break;
+    }
+    case SMDesign::eDeclareKind::Attribute:
+    {
+        QToolButton* button = static_cast<SMAttribute*>(page)->getList()->ctrlButtonAdd();
+        if (button != nullptr) button->click();
+        break;
+    }
+    case SMDesign::eDeclareKind::Constant:
+    {
+        QToolButton* button = static_cast<SMConstant*>(page)->getList()->ctrlButtonAdd();
+        if (button != nullptr) button->click();
+        break;
+    }
+    case SMDesign::eDeclareKind::DataType:
+    {
+        QToolButton* button = static_cast<SMDataType*>(page)->getList()->ctrlButtonAdd();
+        if (button != nullptr) button->click();
+        break;
+    }
+    }
 }
 
 QString StateMachine::newDocumentName()
@@ -274,7 +418,16 @@ void StateMachine::ensureTabInitialized(int index)
     }
     else if (index == static_cast<int>(PageDesign))
     {
-        page = new SMDesign(mModel, &mTabWidget);
+        SMDesign* design = new SMDesign(mModel, &mTabWidget);
+        design->setToolbarVisible(mToolbarVisible);
+        connect(design, &SMDesign::signalDeclareRequested, this, &StateMachine::onDeclareRequested);
+        connect(design, &SMDesign::signalShowDesignTools, this, [this]() {
+            if (mMainWindow != nullptr)
+            {
+                mMainWindow->showNaviTab(NavigationDock::eNaviWindow::NaviDesignToolbar);
+            }
+        });
+        page = design;
     }
     else
     {
@@ -284,6 +437,15 @@ void StateMachine::ensureTabInitialized(int index)
 
     mPages[index] = page;
     attachPage(index, page);
+
+    // The drawing toolbar lives in the navigation dock, bound to the active document's Design
+    // page. It could not bind until this page existed and was registered in mPages (so that
+    // designPageIfBuilt() returns it); refresh it now that the registration is complete (a
+    // no-op when this document is not the active one).
+    if ((index == static_cast<int>(PageDesign)) && (mMainWindow != nullptr))
+    {
+        mMainWindow->updateFsmToolbar();
+    }
 }
 
 void StateMachine::attachPage(int index, QWidget* page)

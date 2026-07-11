@@ -9,12 +9,12 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        tests/sm/SMCanvasSmokeTests.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       SM-13 smoke tests: drives the design canvas offscreen with synthetic
- *               mouse/key events through the real SMDesign/SMScene/SMStateItem stack —
+ *               mouse/key events through the real SMDesign/SMScene/SMStateItem stack --
  *               state rendering, placement tool, inline rename validation, move,
  *               resize, collapse, and undo of each. Saves widget grabs as PNG when an
  *               output directory is passed as the second argument.
@@ -28,6 +28,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -37,16 +38,21 @@
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
+#include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QApplication>
+#include <QContextMenuEvent>
 #include <QDir>
 #include <QFile>
+#include <QFocusEvent>
 #include <QGraphicsProxyWidget>
 #include <QLineEdit>
 #include <QMouseEvent>
+#include <QPlainTextEdit>
+#include <QSettings>
 #include <QToolButton>
 #include <QUndoStack>
 
@@ -517,7 +523,7 @@ int main(int argc, char* argv[])
     const QPointF endBefore = glueEdge->getPath().last();
     const QPointF storedEndBefore = data.getLayout().findEdge(27)->points.last();
     // Press just inside the target box: within the endpoint pick radius AND inside the
-    // state's border-drag band — the edge handle must win over the border drag.
+    // state's border-drag band - the edge handle must win over the border drag.
     dragScene(view, endBefore + QPointF(2.0, 0.0), endBefore + QPointF(60.0, 200.0));
     const SMLayoutEdge* gluedEdge = data.getLayout().findEdge(27);
     CHECK(gluedEdge != nullptr);
@@ -605,7 +611,7 @@ int main(int argc, char* argv[])
     CHECK(model.getSelectionModel().getActiveLevel() == onState->getId());
     SMStateEntry* initialize = data.findState("Initialize");
     CHECK((initialize != nullptr) && (design.getScene().stateItem(initialize->getId()) != nullptr));
-    QList<QToolButton*> crumbs = design.findChildren<QToolButton*>();
+    QList<QToolButton*> crumbs = design.getBreadcrumb()->findChildren<QToolButton*>();
     CHECK(crumbs.size() == 1);                                               // one clickable ancestor
     CHECK(crumbs.first()->text() == QStringLiteral("TrafficLight"));
     grab(design, "g10-sublevel");
@@ -617,7 +623,7 @@ int main(int argc, char* argv[])
     functionItem->setSelected(true);
     keyClickScene(design.getScene(), Qt::Key_Return);
     CHECK(manager.getCurrentLevel() == function->getId());
-    CHECK(design.findChildren<QToolButton*>().size() == 2);                  // two clickable ancestors
+    CHECK(design.getBreadcrumb()->findChildren<QToolButton*>().size() == 2); // two clickable ancestors
 
     std::printf("sect: SM-15 per-level viewport\n");
     // --- The zoom set here persists into the level's View entry and restores on re-entry ---
@@ -646,7 +652,7 @@ int main(int argc, char* argv[])
     std::printf("sect: SM-15 leave via Alt+double-click and breadcrumb\n");
     dblClickScene(view, QPointF(-4000.0, -4000.0), Qt::AltModifier);         // empty canvas
     CHECK(manager.getCurrentLevel() == onState->getId());
-    QList<QToolButton*> rootCrumbs = design.findChildren<QToolButton*>();
+    QList<QToolButton*> rootCrumbs = design.getBreadcrumb()->findChildren<QToolButton*>();
     CHECK(rootCrumbs.size() == 1);
     rootCrumbs.first()->click();                                             // ancestor click
     QApplication::processEvents();
@@ -665,7 +671,7 @@ int main(int argc, char* argv[])
     design.getScene().clearSelection();
     design.getScene().stateItem(standby->getId())->setSelected(true);
     CHECK(design.actionAddSubstate()->isEnabled());
-    CHECK(design.actionEnterSubmachine()->isEnabled() == false);             // not composite yet
+    CHECK(design.actionEnterSubmachine()->isEnabled());                      // fix #514: enter creates a submachine on the fly
 
     const int undoBeforeConvert = model.getUndoStack().count();
     design.actionAddSubstate()->trigger();
@@ -701,10 +707,10 @@ int main(int argc, char* argv[])
     SMStateEntry* deep = data.findStateById(deepId);
     CHECK((deep != nullptr) && deep->hasNestedStates());
     CHECK(manager.getCurrentLevel() == deepId);
-    CHECK(data.getLevelPath(deepId).size() == 3);                            // root → Standby → DeepChild
+    CHECK(data.getLevelPath(deepId).size() == 3);                            // root -> Standby -> DeepChild
     SMStateEntry* deepStart = deep->getNestedStates()->getStartState();
     CHECK((deepStart != nullptr) && (deepStart->getName() != standbyStart->getName()));
-    CHECK(design.findChildren<QToolButton*>().size() == 2);
+    CHECK(design.getBreadcrumb()->findChildren<QToolButton*>().size() == 2);
     CHECK(design.actionGoToParent()->isEnabled());
     grab(design, "g11-deep-level");
 
@@ -854,6 +860,498 @@ int main(int argc, char* argv[])
         CHECK(docData.getLayout().findView(victimId) != nullptr);
         CHECK(doc.saveToFile(resaved));
         CHECK(fileBytes(baseline) == fileBytes(resaved));
+    }
+
+    std::printf("sect: SM-17 notes\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& pageData  = doc.getData();
+        SMScene&          pageScene = page.getScene();
+        SMGraphicsView&   pageView  = page.getView();
+
+        // --- Place: click with the Add Note tool creates a note and opens inline edit ---
+        const int notesBefore = pageData.getLayout().getNotes().size();
+        const int undoBase    = doc.getUndoStack().count();
+        pageScene.setActiveTool(NESMDesign::eCanvasTool::AddNote);
+        const QPointF dropPos{ pageScene.contentBounds().left() - 260.0, pageScene.contentBounds().top() };
+        clickScene(pageView, dropPos);
+
+        CHECK(pageData.getLayout().getNotes().size() == notesBefore + 1);
+        CHECK(doc.getUndoStack().count() == undoBase + 1);                      // one undo step
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::Select);     // single-shot
+
+        const uint32_t noteId = pageData.getLayout().getNotes().last().id;
+        SMNoteItem* noteItem = pageScene.noteItem(noteId);
+        CHECK((noteItem != nullptr) && noteItem->isEditActive());
+
+        // --- Inline (multi-line) text edit: commits on focus-out, not Enter ---
+        QPlainTextEdit* editor = nullptr;
+        for (QGraphicsItem* item : pageScene.items())
+        {
+            QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
+            if ((proxy != nullptr) && (editor = qobject_cast<QPlainTextEdit*>(proxy->widget())) != nullptr)
+            {
+                break;
+            }
+        }
+
+        CHECK(editor != nullptr);
+        if (editor != nullptr)
+        {
+            editor->setPlainText(QStringLiteral("line one\nline two"));
+            // A proxy-embedded widget's Qt-focus-chain interaction with clearFocus() is not
+            // reliable offscreen; deliver the FocusOut event directly, exactly as a real
+            // focus change would, to exercise NoteEdit::focusOutEvent deterministically.
+            QFocusEvent focusOut(QEvent::FocusOut, Qt::OtherFocusReason);
+            QApplication::sendEvent(editor, &focusOut);
+            QApplication::processEvents();
+        }
+
+        CHECK((noteItem != nullptr) && (noteItem->isEditActive() == false));
+        const SMLayoutNote* committed = pageData.getLayout().findNote(noteId);
+        CHECK((committed != nullptr) && (committed->text == QStringLiteral("line one\nline two")));
+        CHECK(doc.getUndoStack().count() == undoBase + 2);                      // place + text commit
+
+        // --- Move ---
+        const QRectF beforeMove = noteItem->getBoxGeometry();
+        dragScene(pageView, beforeMove.center(), beforeMove.center() + QPointF(90.0, 60.0));
+        const SMLayoutNote* movedNote = pageData.getLayout().findNote(noteId);
+        CHECK((movedNote != nullptr) && (QPointF(movedNote->x, movedNote->y) != beforeMove.topLeft()));
+
+        // --- Resize via the single corner handle (only hit-testable while selected) ---
+        pageScene.clearSelection();
+        noteItem->setSelected(true);
+        QApplication::processEvents();
+        CHECK(noteItem->isSelected());
+        const QRectF beforeResize = noteItem->getBoxGeometry();
+        const QPointF handlePos = beforeResize.bottomRight() - QPointF(2.0, 2.0);
+        dragScene(pageView, handlePos, handlePos + QPointF(48.0, 32.0));
+        CHECK(noteItem->getBoxGeometry().size() != beforeResize.size());        // diagnostic: item-level resize
+        const SMLayoutNote* resizedNote = pageData.getLayout().findNote(noteId);
+        CHECK((resizedNote != nullptr) && (resizedNote->width > beforeResize.width())
+              && (resizedNote->height > beforeResize.height()));
+
+        // --- Color ---
+        const int undoBeforeColor = doc.getUndoStack().count();
+        doc.getUndoStack().push(new SMSetNoteColorCommand(  pageData, doc.getNotifier()
+                                                           , noteId, QStringLiteral("#FFCC00"), QStringLiteral("note color")));
+        CHECK(pageData.getLayout().findNote(noteId)->color == QStringLiteral("#FFCC00"));
+        CHECK(doc.getUndoStack().count() == undoBeforeColor + 1);
+        doc.getUndoStack().undo();
+        CHECK(pageData.getLayout().findNote(noteId)->color.isEmpty());
+
+        // --- Delete + undo, round-trip ---
+        // (Not asserting stack count here: the preceding undo() left a pending redo entry
+        // that this push legitimately truncates - QUndoStack::count() never shrinks on its
+        // own from undo(), only a following push() can change it.)
+        doc.getUndoStack().push(new SMRemoveNoteCommand(pageData, doc.getNotifier(), noteId, QStringLiteral("delete note")));
+        CHECK(pageData.getLayout().findNote(noteId) == nullptr);
+        doc.getUndoStack().undo();
+        const SMLayoutNote* restoredNote = pageData.getLayout().findNote(noteId);
+        CHECK((restoredNote != nullptr) && (restoredNote->text == QStringLiteral("line one\nline two")));
+
+        const QString savedNotes{ QDir::tempPath() + QStringLiteral("/sm17_notes.fsml") };
+        CHECK(doc.saveToFile(savedNotes));
+        StateMachineModel reloadedNotes;
+        CHECK(reloadedNotes.loadFromFile(savedNotes));
+        const SMLayoutNote* reread = reloadedNotes.getData().getLayout().findNote(noteId);
+        CHECK((reread != nullptr) && (reread->text == QStringLiteral("line one\nline two"))
+              && (reread->level == restoredNote->level));
+
+        grab(page, "g14-note");
+
+        // --- Deleting a composite state removes the notes drawn on its sublevel too ---
+        SMStateEntry* composite = pageData.findState(QStringLiteral("LightOn"));
+        CHECK((composite != nullptr) && composite->hasNestedStates());
+        if ((composite != nullptr) && composite->hasNestedStates())
+        {
+            const uint32_t compositeId = composite->getId();
+            page.getSceneManager().enterSubmachine(compositeId);
+            SMScene& subScene = page.getScene();
+            subScene.setActiveTool(NESMDesign::eCanvasTool::AddNote);
+            clickScene(page.getView(), subScene.contentBounds().topLeft() - QPointF(160.0, 0.0));
+            const uint32_t subNoteId = pageData.getLayout().getNotes().last().id;
+            CHECK(pageData.getLayout().findNote(subNoteId) != nullptr);
+
+            page.getSceneManager().navigateTo(page.getSceneManager().getRootLevel());
+            StateMachineData& rootData = pageData;
+            SMStateData* rootLevelPtr = rootData.findLevel(page.getScene().getLevelId());
+            CHECK(rootLevelPtr != nullptr);
+            doc.getUndoStack().push(new SMRemoveStateCommand(  rootData, doc.getNotifier(), *rootLevelPtr
+                                                             , compositeId, QStringLiteral("delete composite")));
+            CHECK(pageData.getLayout().findNote(subNoteId) == nullptr);         // sublevel note deleted with it
+            doc.getUndoStack().undo();
+            CHECK(pageData.getLayout().findNote(subNoteId) != nullptr);         // restored with the composite
+        }
+    }
+
+    std::printf("sect: SM-17 colors\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        StateMachineData& pageData = doc.getData();
+
+        const SMStateData* rootLevel2 = pageData.findLevel(pageData.getOverview().getId());
+        CHECK((rootLevel2 != nullptr) && (rootLevel2->getElementCount() >= 2));
+        QList<uint32_t> stateIds;
+        for (const SMStateEntry* st : rootLevel2->getElements())
+        {
+            stateIds.append(st->getId());
+        }
+
+        // Multi-selection color-apply is one undo step; header shade stays derived
+        // (SMStateItem::updateFromModel already reads Color and derives the header).
+        const int undoBase = doc.getUndoStack().count();
+        SMCompositeCommand* composite = new SMCompositeCommand(pageData, doc.getNotifier(), QStringLiteral("color"));
+        new SMSetNodeColorCommand(pageData, doc.getNotifier(), stateIds.at(0), QStringLiteral("#3366CC"), QStringLiteral("color"), composite);
+        new SMSetNodeColorCommand(pageData, doc.getNotifier(), stateIds.at(1), QStringLiteral("#3366CC"), QStringLiteral("color"), composite);
+        doc.getUndoStack().push(composite);
+        CHECK(doc.getUndoStack().count() == undoBase + 1);                      // one undo step
+        CHECK(pageData.getLayout().findNode(stateIds.at(0))->color == QStringLiteral("#3366CC"));
+        CHECK(pageData.getLayout().findNode(stateIds.at(1))->color == QStringLiteral("#3366CC"));
+        CHECK(pageData.getLayout().findNode(stateIds.at(0))->headerColor.isEmpty()); // derived, not stored
+        doc.getUndoStack().undo();
+        CHECK(pageData.getLayout().findNode(stateIds.at(0))->color.isEmpty());
+
+        // Edge color, analogous.
+        SMTransitionEntry* transition = nullptr;
+        for (const SMStateEntry* st : rootLevel2->getElements())
+        {
+            for (SMTransitionEntry* tr : st->getTransitions().getElements())
+            {
+                if (tr->isExternal())
+                {
+                    transition = tr;
+                    break;
+                }
+            }
+            if (transition != nullptr)
+            {
+                break;
+            }
+        }
+
+        CHECK(transition != nullptr);
+        if (transition != nullptr)
+        {
+            const uint32_t transitionId = transition->getId();
+            doc.getUndoStack().push(new SMSetEdgeColorCommand(  pageData, doc.getNotifier()
+                                                               , transitionId, QStringLiteral("#CC3333"), QStringLiteral("edge color")));
+            CHECK(pageData.getLayout().findEdge(transitionId)->color == QStringLiteral("#CC3333"));
+            doc.getUndoStack().undo();
+            CHECK(pageData.getLayout().findEdge(transitionId)->color.isEmpty());
+        }
+    }
+
+    std::printf("sect: SM-17 align and distribute\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& pageData = doc.getData();
+
+        // The root level only has two states (LightOff/LightOn); descend to "Function"
+        // (StartCycle/Yellow/Red/Green) for a level with enough states to distribute.
+        SMStateEntry* lightOn = pageData.findState(QStringLiteral("LightOn"));
+        CHECK((lightOn != nullptr) && lightOn->hasNestedStates());
+        page.getSceneManager().enterSubmachine(lightOn->getId());
+        SMStateEntry* function = pageData.findState(QStringLiteral("Function"));
+        CHECK((function != nullptr) && function->hasNestedStates());
+        page.getSceneManager().enterSubmachine(function->getId());
+
+        SMScene& pageScene = page.getScene();
+        const SMStateData* funcLevel = pageData.findLevel(function->getId());
+        CHECK((funcLevel != nullptr) && (funcLevel->getElementCount() >= 3));
+
+        QList<uint32_t> ids;
+        for (const SMStateEntry* st : funcLevel->getElements())
+        {
+            ids.append(st->getId());
+            if (ids.size() == 3)
+            {
+                break;
+            }
+        }
+        CHECK(ids.size() == 3);
+
+        pageScene.clearSelection();
+        for (uint32_t id : ids)
+        {
+            SMStateItem* item = pageScene.stateItem(id);
+            if (item != nullptr)
+            {
+                item->setSelected(true);
+            }
+        }
+
+        QList<double> originalX;
+        for (uint32_t id : ids)
+        {
+            originalX.append(pageData.getLayout().findNode(id)->x);
+        }
+
+        CHECK(page.actionAlignLeft()->isEnabled());
+        const int undoBase = doc.getUndoStack().count();
+        page.actionAlignLeft()->trigger();
+        CHECK(doc.getUndoStack().count() == undoBase + 1);                      // one undo step
+        const double leftX = pageData.getLayout().findNode(ids.first())->x;
+        bool allAligned = true;
+        for (uint32_t id : ids)
+        {
+            allAligned = allAligned && (pageData.getLayout().findNode(id)->x == leftX);
+        }
+        CHECK(allAligned);
+        doc.getUndoStack().undo();
+        bool restored = true;
+        for (int i = 0; i < ids.size(); ++i)
+        {
+            restored = restored && (pageData.getLayout().findNode(ids.at(i))->x == originalX.at(i));
+        }
+        CHECK(restored);                                                        // undo restores each original X
+
+        // Distribute horizontally: first/last keep their center, one undo step overall.
+        pageScene.clearSelection();
+        for (uint32_t id : ids)
+        {
+            SMStateItem* item = pageScene.stateItem(id);
+            if (item != nullptr)
+            {
+                item->setSelected(true);
+            }
+        }
+
+        CHECK(page.actionDistributeHorizontal()->isEnabled());
+        const int undoBeforeDistribute = doc.getUndoStack().count();
+        page.actionDistributeHorizontal()->trigger();
+        CHECK(doc.getUndoStack().count() <= undoBeforeDistribute + 1);          // zero or one undo step
+        grab(page, "g15-aligned");
+    }
+
+    std::printf("sect: SM-17 grid settings persist\n");
+    {
+        const QString savedGrid{ QDir::tempPath() + QStringLiteral("/sm17_grid.fsml") };
+
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        const int  originalSize    = doc.getData().getLayout().getGridSize();
+        const bool originalVisible = doc.getData().getLayout().isGridVisible();
+        const int  newSize         = (originalSize == 24 ? 32 : 24);
+
+        doc.getUndoStack().push(new SMSetGridSizeCommand(doc.getData(), doc.getNotifier(), newSize, QStringLiteral("grid size")));
+        doc.getUndoStack().push(new SMSetGridVisibleCommand(doc.getData(), doc.getNotifier(), !originalVisible, QStringLiteral("grid visible")));
+        CHECK(doc.getData().getLayout().getGridSize() == newSize);
+        CHECK(doc.getData().getLayout().isGridVisible() == !originalVisible);
+        CHECK(doc.saveToFile(savedGrid));
+
+        StateMachineModel reloaded;
+        CHECK(reloaded.loadFromFile(savedGrid));
+        CHECK(reloaded.getData().getLayout().getGridSize() == newSize);
+        CHECK(reloaded.getData().getLayout().isGridVisible() == !originalVisible);
+
+        // Undo restores the original settings.
+        doc.getUndoStack().undo();
+        CHECK(doc.getData().getLayout().isGridVisible() == originalVisible);
+        doc.getUndoStack().undo();
+        CHECK(doc.getData().getLayout().getGridSize() == originalSize);
+
+        // SMDesign re-syncs the scene and the checked action from the document on every
+        // layout change (grid commands included) - this is what makes undo/redo of a grid
+        // change keep the canvas and the toolbar's Show Grid state correct.
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+        doc.getUndoStack().redo();
+        doc.getUndoStack().redo();
+        CHECK(page.getScene().getGridSize() == newSize);
+        CHECK(page.actionToggleGrid()->isChecked() == !originalVisible);
+    }
+
+    std::printf("sect: SM-18 toolbar/menu/shortcut parity\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        // Every canvas action exists exactly once and is reachable without the toolbar:
+        // hiding it must not remove any action from the page (spec 9.3 rule 3).
+        CHECK(page.isToolbarVisible());
+        page.setToolbarVisible(false);
+        CHECK(page.isToolbarVisible() == false);
+        const QList<QAction*> allActions = page.actions();
+        CHECK(allActions.contains(page.actionAddState()));
+        CHECK(allActions.contains(page.actionAddNote()));
+        CHECK(allActions.contains(page.actionStateColor()));
+        CHECK(allActions.contains(page.actionAlignLeft()));
+        CHECK(allActions.contains(page.actionUndo()));
+        CHECK(page.declareActions().size() == 8);
+        page.setToolbarVisible(true);
+        CHECK(page.isToolbarVisible());
+
+        // Shortcuts S/F/T/N activate the placement tools while the canvas has focus.
+        SMGraphicsView& pageView = page.getView();
+        pageView.setFocus();
+        QApplication::processEvents();
+        keyClick(&pageView, Qt::Key_N);
+        CHECK(page.getScene().getActiveTool() == NESMDesign::eCanvasTool::AddNote);
+        keyClick(&pageView, Qt::Key_Escape);
+        CHECK(page.getScene().getActiveTool() == NESMDesign::eCanvasTool::Select);
+
+        // Context-sensitive menus are built on demand from SMGraphicsView::contextMenuEvent,
+        // which emits signalContextMenuRequested (a QGraphicsView routes context-menu events
+        // through contextMenuEvent(), so a viewport CustomContextMenu policy never fires). The
+        // page's menu is modal (QMenu::exec), so verify the view's plumbing on a standalone view
+        // instead of the shown content.
+        {
+            // Expose the protected override so the emission is tested deterministically,
+            // free of the view/viewport event-routing that delivers it in the live app.
+            struct ProbeView : SMGraphicsView { using SMGraphicsView::contextMenuEvent; };
+            ProbeView probe;
+            bool emitted = false;
+            QPoint at;
+            QObject::connect(&probe, &SMGraphicsView::signalContextMenuRequested, &probe,
+                             [&emitted, &at](const QPoint& pos) { emitted = true; at = pos; });
+            QContextMenuEvent ctx(QContextMenuEvent::Mouse, QPoint(10, 12));
+            probe.contextMenuEvent(&ctx);
+            CHECK(emitted);
+            CHECK(at == QPoint(10, 12));         // the viewport position is forwarded verbatim
+            CHECK(ctx.isAccepted());
+        }
+    }
+
+    std::printf("sect: SM-19 issue #514 toolbar order, markers, center machine\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        // Toolbar groups: Design first (state -> transition -> note -> final, the same
+        // order as the canvas context menu), Declare second with icons on every entry.
+        const QList<SMDesign::ToolGroup> groups = page.toolGroups();
+        CHECK(groups.size() == 8);
+        CHECK(groups.at(0).title == QStringLiteral("Design"));
+        const QList<QAction*> designOrder{ page.actionAddState(), page.actionAddTransition()
+                                         , page.actionAddNote(), page.actionAddFinalState() };
+        CHECK(groups.at(0).actions == designOrder);
+        CHECK(groups.at(1).title == QStringLiteral("Declare"));
+        CHECK(groups.at(1).actions == page.declareActions());
+        bool declareIcons = true;
+        for (QAction* action : groups.at(1).actions)
+        {
+            declareIcons = declareIcons && (action->icon().isNull() == false);
+        }
+        CHECK(declareIcons);
+        CHECK(groups.at(3).title == QStringLiteral("Navigate"));
+        CHECK(groups.at(3).actions.contains(page.actionCenterMachine()));
+
+        // The unbound Design Toolbar tab shows the same structure as disabled stand-ins.
+        QObject owner;
+        const QList<SMDesign::ToolGroup> standIns = SMDesign::placeholderToolGroups(owner);
+        CHECK(standIns.size() == groups.size());
+        bool mirrored = true;
+        bool inactive = true;
+        bool withIcon = true;
+        for (int i = 0; i < standIns.size(); ++i)
+        {
+            mirrored = mirrored && (standIns.at(i).title == groups.at(i).title)
+                                && (standIns.at(i).actions.size() == groups.at(i).actions.size());
+            for (QAction* action : standIns.at(i).actions)
+            {
+                inactive = inactive && (action->isEnabled() == false);
+                withIcon = withIcon && (action->icon().isNull() == false);
+            }
+        }
+        CHECK(mirrored);
+        CHECK(inactive);
+        CHECK(withIcon);
+
+        // A placed final state is a 4x2-grid-cell marker named Final, the next one Final2.
+        SMScene& pageScene = page.getScene();
+        const auto cancelRename = [&pageScene]()
+        {
+            for (QGraphicsItem* item : pageScene.items())
+            {
+                QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
+                QLineEdit* editor = (proxy != nullptr ? qobject_cast<QLineEdit*>(proxy->widget()) : nullptr);
+                if (editor != nullptr)
+                {
+                    keyClick(editor, Qt::Key_Escape);
+                    break;
+                }
+            }
+        };
+
+        pageScene.setActiveTool(NESMDesign::eCanvasTool::AddFinalState);
+        clickScene(page.getView(), QPointF(600.0, 420.0));
+        cancelRename();
+        const SMStateEntry* final1 = doc.getData().findState("Final");
+        CHECK(final1 != nullptr);
+        const SMLayoutNode* finalNode = (final1 != nullptr ? doc.getData().getLayout().findNode(final1->getId()) : nullptr);
+        CHECK(finalNode != nullptr);
+        CHECK((finalNode != nullptr) && (finalNode->width  == 4.0 * NESMDesign::GridSizeDefault));
+        CHECK((finalNode != nullptr) && (finalNode->height == 2.0 * NESMDesign::GridSizeDefault));
+
+        pageScene.setActiveTool(NESMDesign::eCanvasTool::AddFinalState);
+        clickScene(page.getView(), QPointF(760.0, 420.0));
+        cancelRename();
+        CHECK(doc.getData().findState("Final2") != nullptr);
+
+        // Center Machine brings a lost diagram back into the viewport, zoom unchanged.
+        SMGraphicsView& pageView = page.getView();
+        pageView.centerOn(6000.0, 6000.0);
+        QApplication::processEvents();
+        const QRectF lost = pageView.mapToScene(pageView.viewport()->rect()).boundingRect();
+        CHECK(lost.intersects(pageScene.contentBounds()) == false);
+        page.actionCenterMachine()->trigger();
+        QApplication::processEvents();
+        const QRectF found = pageView.mapToScene(pageView.viewport()->rect()).boundingRect();
+        CHECK(found.intersects(pageScene.contentBounds()));
+    }
+
+    std::printf("sect: SM-19 grid dots startup sync\n");
+    {
+        // The stored dotted-grid preference must reach the scene at page construction, so
+        // the canvas and the checked Dotted Grid button agree from the very first paint.
+        QCoreApplication::setOrganizationName(QStringLiteral("LusanSmokeTest"));
+        QCoreApplication::setApplicationName(QStringLiteral("Issue514"));
+        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+        settings.setValue(QStringLiteral("smDesign/gridDots"), true);
+        settings.sync();
+
+        {
+            StateMachineModel doc;
+            CHECK(doc.loadFromFile(sourcePath));
+            SMDesign page(doc);
+            page.resize(1400, 900);
+            page.show();
+            QApplication::processEvents();
+            CHECK(page.actionGridDots()->isChecked());
+            CHECK(page.getScene().getGridStyle() == NESMDesign::eGridStyle::Dots);
+
+            page.actionGridDots()->setChecked(false);
+            CHECK(page.getScene().getGridStyle() == NESMDesign::eGridStyle::Lines);
+        }
+
+        settings.clear();
+        settings.sync();
+        QCoreApplication::setOrganizationName(QString());
+        QCoreApplication::setApplicationName(QString());
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

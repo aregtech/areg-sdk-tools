@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP
+#ifndef LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP
 #define LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/MdiMainWindow.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -157,6 +157,13 @@ public:
      * \param   naviTab     The navigation tab to show.
      **/
     void showNaviTab(NavigationDock::eNaviWindow naviTab);
+
+    /**
+     * \brief   Re-binds the navigation dock's FSM Toolbar tab to the active State Machine's
+     *          Design page (or clears it when none is active/built). Called on document
+     *          activation and when a State Machine builds its Design page.
+     **/
+    void updateFsmToolbar();
 
     /**
      * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
@@ -321,6 +328,31 @@ private slots:
      * \brief   Slot for pasting text.
      **/
     void onEditPaste();
+
+    /**
+     * \brief   Slot forwarding Undo/Redo to the active MDI child's document.
+     **/
+    void onEditUndo();
+    void onEditRedo();
+
+    /**
+     * \brief   Shows and raises the FSM Toolbar tab in the navigation dock (spec 9.2/9.3:
+     *          the drawing toolbar is hosted there, bound to the active State Machine).
+     **/
+    void onViewDesignToolbar(bool visible);
+
+    /**
+     * \brief   Applies (and persists) the FSM toolbar's toolbutton display style chosen in
+     *          the View menu's Toolbutton Mode submenu.
+     **/
+    void onFsmToolbarStyle(QAction* action);
+
+    /**
+     * \brief   Rebuilds the Design menu from the active StateMachine window's Design page
+     *          actions; shows a disabled placeholder when none is active/built (the Design
+     *          page is never built eagerly).
+     **/
+    void onShowMenuDesign();
 
     /**
      * \brief   Slot for showing the tools options dialog.
@@ -532,6 +564,8 @@ private:
     QMenu*          mWindowMenu;    //!< The window menu.
     QMenu*          mHelpMenu;      //!< The help menu.
     QActionGroup*   mThemeActions;  //!< The exclusive group of theme selection actions.
+    QMetaObject::Connection mCanUndoConn; //!< The active child's canUndo-changed connection.
+    QMetaObject::Connection mCanRedoConn; //!< The active child's canRedo-changed connection.
 
     QToolBar*       mFileToolBar;   //!< The file toolbar.
     QToolBar*       mEditToolBar;   //!< The edit toolbar.
@@ -556,6 +590,8 @@ private:
     QAction         mActEditCut;
     QAction         mActEditCopy;
     QAction         mActEditPaste;
+    QAction         mActEditUndo;   //!< Undo, forwarded to the active child (inert for SI/log windows).
+    QAction         mActEditRedo;   //!< Redo, forwarded to the active child (inert for SI/log windows).
 
     //!< Actions for View sub-menus.
     QAction         mActViewNavigator;
@@ -563,6 +599,7 @@ private:
     QAction         mActViewLogs;
     QAction         mActOffViewLogs;
     QAction         mActViewOutput;
+    QAction         mActViewDesignToolbar; //!< Shows/hides the active FSM Design page's toolbar.
 
     //!< Actions for Tools sub-menus.
     QAction         mActToolsOptions;

@@ -25,6 +25,7 @@
 #include "lusan/view/sm/SMCanvasItem.hpp"
 
 #include "lusan/data/sm/SMLayoutData.hpp"
+#include "lusan/view/sm/SMNoteEditor.hpp"
 
 #include <QList>
 #include <QPointF>
@@ -109,6 +110,18 @@ public:
      **/
     bool hitsHandle(const QPointF& scenePos) const;
 
+    /**
+     * \brief   Opens the in-place note editor near the edge label for the note bound to this
+     *          transition; commit (focus-out) pushes an undoable text change. No-op with no
+     *          bound note.
+     **/
+    void startNoteEdit();
+
+    /**
+     * \brief   True when a note is bound to this transition (a note badge is shown).
+     **/
+    inline bool hasNote() const;
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -174,6 +187,12 @@ private:
     QRectF labelRect() const;
 
     /**
+     * \brief   The note-badge rectangle (item/scene coordinates), just right of the label;
+     *          valid only when the transition has a bound note.
+     **/
+    QRectF noteBadgeRect() const;
+
+    /**
      * \brief   Paints the arrowhead pointing from \p from to \p tip.
      **/
     void paintArrowHead(QPainter* painter, const QPointF& from, const QPointF& tip, const QColor& color);
@@ -207,6 +226,8 @@ private:
     double                  mBulge;         //!< The arc bulge factor.
     QString                 mColorName;     //!< The persisted edge color (empty = theme).
     QString                 mStimulusText;  //!< The stimulus label text.
+    bool                    mHasNote;       //!< A note is bound to this transition (badge shown).
+    SMNoteEditor            mNoteEditor;    //!< The open in-place note editor (if any).
     QList<QPointF>          mWaypoints;     //!< The interior waypoints, in order.
     bool                    mHasAnchors;    //!< Persisted begin/end anchor points exist.
     QPointF                 mAnchorBegin;   //!< The persisted begin anchor (projected onto the live border).
@@ -225,6 +246,11 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // SMEdgeItem inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline bool SMEdgeItem::hasNote() const
+{
+    return mHasNote;
+}
 
 inline uint32_t SMEdgeItem::getSourceId() const
 {

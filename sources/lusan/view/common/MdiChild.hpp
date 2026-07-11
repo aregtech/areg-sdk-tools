@@ -1,4 +1,4 @@
-﻿#ifndef LUSAN_VIEW_COMMON_MDICHILD_HPP
+#ifndef LUSAN_VIEW_COMMON_MDICHILD_HPP
 #define LUSAN_VIEW_COMMON_MDICHILD_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/MdiChild.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -148,6 +148,22 @@ public:
     virtual void undo();
     virtual void redo();
 
+    /**
+     * \brief   Whether the document's undo/redo history currently has a step to apply.
+     *          The empty default (false) keeps documents without an undo framework (SI,
+     *          log viewers) inert; StateMachine overrides these from its command stack.
+     **/
+    virtual bool canUndo() const;
+    virtual bool canRedo() const;
+
+    /**
+     * \brief   Shows or hides the document's own command toolbar (if it has one), and
+     *          reports whether it is currently visible. The empty default (always
+     *          visible, no-op to hide) keeps documents without such a toolbar inert.
+     **/
+    virtual void setToolbarVisible(bool visible);
+    virtual bool isToolbarVisible() const;
+
     inline bool isModified() const;
     virtual void setModified(bool modified);
 
@@ -206,7 +222,14 @@ signals:
      * \param   mdiChild    The MDI child window that is created.
      **/
     void signalMdiChildCreating(MdiChild * mdiChild);
-    
+
+    /**
+     * \brief   Emitted when canUndo()/canRedo() changed, so MdiMainWindow can keep the
+     *          global Edit menu's Undo/Redo actions in sync with the active child.
+     **/
+    void signalCanUndoChanged(bool canUndo);
+    void signalCanRedoChanged(bool canRedo);
+
 /************************************************************************
  * MdiChild overrides
  ************************************************************************/

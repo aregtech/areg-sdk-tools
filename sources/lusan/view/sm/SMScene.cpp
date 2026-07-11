@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMScene.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -26,6 +26,7 @@
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMCanvasItem.hpp"
 #include "lusan/view/sm/SMEdgeItem.hpp"
+#include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QCoreApplication>
@@ -50,6 +51,7 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     , mGridSize     (NESMDesign::GridSizeDefault)
     , mGridVisible  (true)
     , mGridStyle    (NESMDesign::eGridStyle::Lines)
+    , mGridDotSize  (NESMDesign::GridDotSizeDefault)
     , mSnapToGrid   (true)
     , mMouseDrag    (false)
     , mSyncSelection(false)
@@ -111,6 +113,21 @@ void SMScene::setGridStyle(NESMDesign::eGridStyle style)
     {
         mGridStyle = style;
         invalidate(sceneRect(), QGraphicsScene::BackgroundLayer);
+        emit signalGridChanged();
+    }
+}
+
+void SMScene::setGridDotSize(int dotSize)
+{
+    dotSize = std::clamp(dotSize, NESMDesign::GridDotSizeMin, NESMDesign::GridDotSizeMax);
+    if (dotSize != mGridDotSize)
+    {
+        mGridDotSize = dotSize;
+        if (mGridVisible && (mGridStyle == NESMDesign::eGridStyle::Dots))
+        {
+            invalidate(sceneRect(), QGraphicsScene::BackgroundLayer);
+        }
+
         emit signalGridChanged();
     }
 }
@@ -244,9 +261,9 @@ void SMScene::drawBackground(QPainter* painter, const QRectF& rect)
             }
         }
 
-        QPen pen{ NESMDesign::gridColor(palette, opacity) };
+        QPen pen{ NESMDesign::gridDotColor(palette, opacity) };
         pen.setCosmetic(true);
-        pen.setWidthF(2.0);
+        pen.setWidthF(static_cast<qreal>(mGridDotSize));
         pen.setCapStyle(Qt::RoundCap);
         painter->setPen(pen);
         painter->drawPoints(dots.constData(), dots.size());
@@ -277,7 +294,7 @@ void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
     {
         mMouseDrag = true;
 
-        // Select-tool border drag: a press in a state's border band starts a transition —
+        // Select-tool border drag: a press in a state's border band starts a transition --
         // unless a selected edge's grab handle lies under the cursor: endpoint and
         // waypoint drags on the edge win over the border band.
         if ((mTool != nullptr) && (mTool->getKind() == NESMDesign::eCanvasTool::Select))
@@ -492,6 +509,12 @@ void SMScene::onElementAdded(uint32_t id, eDocElementKind kind)
         refreshStateBodies();
     }
 
+    if (kind == eDocElementKind::Note)
+    {
+        createNoteItem(id);     // free note only; owned notes update their owner's badge
+        refreshNoteBadges();
+    }
+
     if ((kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
     {
         updateConnHighlights();
@@ -500,7 +523,7 @@ void SMScene::onElementAdded(uint32_t id, eDocElementKind kind)
 
 void SMScene::onElementRemoved(uint32_t id, eDocElementKind kind)
 {
-    if ((kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
+    if ((kind == eDocElementKind::State) || (kind == eDocElementKind::Transition) || (kind == eDocElementKind::Note))
     {
         // The destructor removes the item from the scene and the ID hash.
         SMCanvasItem* item = findCanvasItem(id);
@@ -510,12 +533,19 @@ void SMScene::onElementRemoved(uint32_t id, eDocElementKind kind)
         {
             refreshStateBodies();
         }
-        else if (foreign)
+        else if ((kind == eDocElementKind::State) && foreign)
         {
             refreshCompositeBoxes();    // a nested-level change affects a miniature here
         }
 
-        updateConnHighlights();
+        if (kind != eDocElementKind::Note)
+        {
+            updateConnHighlights();
+        }
+        else
+        {
+            refreshNoteBadges();    // an owned note left its state/transition
+        }
     }
 }
 
@@ -550,6 +580,12 @@ void SMScene::onElementChanged(uint32_t id, eDocElementKind kind)
     if (item != nullptr)
     {
         item->updateFromModel();
+    }
+    else if (kind == eDocElementKind::Note)
+    {
+        // An owned note's text/color changed: it has no item of its own, so re-read the
+        // owner items whose badge reflects it.
+        refreshNoteBadges();
     }
 }
 
@@ -651,6 +687,21 @@ QList<SMEdgeItem*> SMScene::selectedEdgeItems() const
     return result;
 }
 
+QList<SMNoteItem*> SMScene::selectedNoteItems() const
+{
+    QList<SMNoteItem*> result;
+    for (QGraphicsItem* item : selectedItems())
+    {
+        SMNoteItem* note = dynamic_cast<SMNoteItem*>(item);
+        if (note != nullptr)
+        {
+            result.append(note);
+        }
+    }
+
+    return result;
+}
+
 void SMScene::reconnectTransitionTarget(uint32_t transitionId, uint32_t targetStateId)
 {
     StateMachineData& data = mModel.getData();
@@ -731,6 +782,14 @@ void SMScene::populateFromModel()
             }
         }
     }
+
+    for (const SMLayoutNote& note : mModel.getData().getLayout().getNotes())
+    {
+        if (note.level == mLevelId)
+        {
+            createNoteItem(note.id);
+        }
+    }
 }
 
 void SMScene::createStateItem(uint32_t stateId)
@@ -765,6 +824,43 @@ void SMScene::createEdgeItem(uint32_t transitionId)
 SMEdgeItem* SMScene::edgeItem(uint32_t transitionId) const
 {
     return dynamic_cast<SMEdgeItem*>(findCanvasItem(transitionId));
+}
+
+void SMScene::createNoteItem(uint32_t noteId)
+{
+    if (findCanvasItem(noteId) != nullptr)
+    {
+        return;
+    }
+
+    const SMLayoutNote* note = mModel.getData().getLayout().findNote(noteId);
+    // Owned notes are drawn as a badge on their state/transition, not as a free canvas box.
+    if ((note == nullptr) || (note->level != mLevelId) || (note->owner != 0))
+    {
+        return;
+    }
+
+    SMNoteItem* item = new SMNoteItem(noteId);
+    addItem(item);
+    item->updateFromModel();
+}
+
+void SMScene::refreshNoteBadges()
+{
+    // A note bound to a state/transition owner is painted by that owner as a badge, so any
+    // note add/remove/change must re-read the owner items (their own ID never names it).
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        if ((dynamic_cast<SMStateItem*>(item) != nullptr) || (dynamic_cast<SMEdgeItem*>(item) != nullptr))
+        {
+            item->updateFromModel();
+        }
+    }
+}
+
+SMNoteItem* SMScene::noteItem(uint32_t noteId) const
+{
+    return dynamic_cast<SMNoteItem*>(findCanvasItem(noteId));
 }
 
 SMStateItem* SMScene::stateItem(uint32_t stateId) const
@@ -904,6 +1000,7 @@ bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)
     const QPointF delta{ step * dx, step * dy };
 
     QList<SMStateItem*> states;
+    QList<SMNoteItem*>  notes;
     for (QGraphicsItem* item : selection)
     {
         if (item->flags().testFlag(QGraphicsItem::ItemIsMovable) == false)
@@ -931,9 +1028,14 @@ bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)
         }
 
         SMStateItem* stateItem = dynamic_cast<SMStateItem*>(item);
+        SMNoteItem*  notePick  = dynamic_cast<SMNoteItem*>(item);
         if ((stateItem != nullptr) && (mModel.getData().getLayout().findNode(stateItem->getElementId()) != nullptr))
         {
             states.append(stateItem);
+        }
+        else if ((notePick != nullptr) && (mModel.getData().getLayout().findNote(notePick->getElementId()) != nullptr))
+        {
+            notes.append(notePick);
         }
         else
         {
@@ -941,34 +1043,111 @@ bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)
         }
     }
 
-    if (states.isEmpty() == false)
+    if ((states.isEmpty() == false) || (notes.isEmpty() == false))
     {
         // One undo step per key press; a fresh gesture ID keeps presses separate.
         const uint32_t gesture = SMMoveNodeCommand::takeNextGesture();
-        const QString  text    = QCoreApplication::translate("SMScene", "Move state", nullptr, states.size());
-        if (states.size() == 1)
-        {
-            const QRectF geometry = states.first()->getBoxGeometry().translated(delta);
-            mModel.getUndoStack().push(new SMMoveNodeCommand(  mModel.getData(), mModel.getNotifier()
-                                                             , states.first()->getElementId(), gesture
-                                                             , geometry.x(), geometry.y(), geometry.width(), geometry.height()
-                                                             , text));
-        }
-        else
-        {
-            SMCompositeCommand* composite = new SMCompositeCommand(mModel.getData(), mModel.getNotifier(), text);
-            for (SMStateItem* stateItem : states)
-            {
-                const QRectF geometry = stateItem->getBoxGeometry().translated(delta);
-                new SMMoveNodeCommand(  mModel.getData(), mModel.getNotifier()
-                                      , stateItem->getElementId(), gesture
-                                      , geometry.x(), geometry.y(), geometry.width(), geometry.height()
-                                      , text, composite);
-            }
+        const QString  text    = QCoreApplication::translate("SMScene", "Move selection");
+        const bool     single  = ((states.size() + notes.size()) == 1);
+        QUndoCommand*  parent  = single ? nullptr : new SMCompositeCommand(mModel.getData(), mModel.getNotifier(), text);
 
-            mModel.getUndoStack().push(composite);
+        for (SMStateItem* stateItem : states)
+        {
+            const QRectF geometry = stateItem->getBoxGeometry().translated(delta);
+            QUndoCommand* command = new SMMoveNodeCommand(  mModel.getData(), mModel.getNotifier()
+                                                          , stateItem->getElementId(), gesture
+                                                          , geometry.x(), geometry.y(), geometry.width(), geometry.height()
+                                                          , text, parent);
+            if (single)
+            {
+                mModel.getUndoStack().push(command);
+            }
+        }
+
+        for (SMNoteItem* noteItem : notes)
+        {
+            const QRectF geometry = noteItem->getBoxGeometry().translated(delta);
+            QUndoCommand* command = new SMMoveNoteCommand(  mModel.getData(), mModel.getNotifier()
+                                                          , noteItem->getElementId(), gesture
+                                                          , geometry.x(), geometry.y(), geometry.width(), geometry.height()
+                                                          , text, parent);
+            if (single)
+            {
+                mModel.getUndoStack().push(command);
+            }
+        }
+
+        if (single == false)
+        {
+            mModel.getUndoStack().push(parent);
         }
     }
 
     return true;
+}
+
+void SMScene::commitSelectionMove(const QString& text)
+{
+    SMLayoutData& layout = mModel.getData().getLayout();
+
+    // Every selected state box / note whose item position differs from its layout entry.
+    QList<SMStateItem*> movedStates;
+    for (SMStateItem* item : selectedStateItems())
+    {
+        const SMLayoutNode* node = layout.findNode(item->getElementId());
+        if ((node != nullptr) && (QPointF(node->x, node->y) != item->pos()))
+        {
+            movedStates.append(item);
+        }
+    }
+
+    QList<SMNoteItem*> movedNotes;
+    for (SMNoteItem* item : selectedNoteItems())
+    {
+        const SMLayoutNote* note = layout.findNote(item->getElementId());
+        if ((note != nullptr) && (QPointF(note->x, note->y) != item->pos()))
+        {
+            movedNotes.append(item);
+        }
+    }
+
+    if (movedStates.isEmpty() && movedNotes.isEmpty())
+    {
+        return;
+    }
+
+    const uint32_t gesture = SMMoveNodeCommand::takeNextGesture();
+    const bool     single  = ((movedStates.size() + movedNotes.size()) == 1);
+    QUndoCommand*  parent  = single ? nullptr : new SMCompositeCommand(mModel.getData(), mModel.getNotifier(), text);
+
+    for (SMStateItem* item : movedStates)
+    {
+        const QRectF geometry = item->getBoxGeometry();
+        QUndoCommand* command = new SMMoveNodeCommand(  mModel.getData(), mModel.getNotifier()
+                                                      , item->getElementId(), gesture
+                                                      , geometry.x(), geometry.y(), geometry.width(), geometry.height()
+                                                      , text, parent);
+        if (single)
+        {
+            mModel.getUndoStack().push(command);
+        }
+    }
+
+    for (SMNoteItem* item : movedNotes)
+    {
+        const QRectF geometry = item->getBoxGeometry();
+        QUndoCommand* command = new SMMoveNoteCommand(  mModel.getData(), mModel.getNotifier()
+                                                      , item->getElementId(), gesture
+                                                      , geometry.x(), geometry.y(), geometry.width(), geometry.height()
+                                                      , text, parent);
+        if (single)
+        {
+            mModel.getUndoStack().push(command);
+        }
+    }
+
+    if (single == false)
+    {
+        mModel.getUndoStack().push(parent);
+    }
 }

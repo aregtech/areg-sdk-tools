@@ -21,6 +21,7 @@
 
 #include "lusan/view/sm/NESMDesign.hpp"
 
+#include <QContextMenuEvent>
 #include <QMouseEvent>
 #include <QScrollBar>
 #include <QWheelEvent>
@@ -161,4 +162,12 @@ void SMGraphicsView::mouseReleaseEvent(QMouseEvent* event)
     }
 
     QGraphicsView::mouseReleaseEvent(event);
+}
+
+void SMGraphicsView::contextMenuEvent(QContextMenuEvent* event)
+{
+    // event->pos() is already in viewport coordinates: the Design page maps it to the
+    // scene (mapToScene) and to the global position (viewport()->mapToGlobal).
+    emit signalContextMenuRequested(event->pos());
+    event->accept();
 }

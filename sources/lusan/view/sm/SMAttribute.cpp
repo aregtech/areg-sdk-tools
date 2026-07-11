@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMAttribute.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -71,6 +71,11 @@ SMAttribute::SMAttribute(SMAttributeModel& model, QWidget* parent /*= nullptr*/)
     buildUi();
     setupSignals();
     refreshAll();
+}
+
+SMAttributeList* SMAttribute::getList() const
+{
+    return mList;
 }
 
 void SMAttribute::buildUi()
@@ -229,7 +234,7 @@ void SMAttribute::updateValueControl(const SMAttributeEntry* entry)
 
 QString SMAttribute::valueValidationReason(const QString& typeName, const QString& value) const
 {
-    // No default is always valid — a missing value simply means "not set", not "invalid".
+    // No default is always valid - a missing value simply means "not set", not "invalid".
     if (value.isEmpty())
         return QString();
 
@@ -244,7 +249,7 @@ QString SMAttribute::valueValidationReason(const QString& typeName, const QStrin
             }
         }
         // Structure/Container: the value control is disabled, never reaches here.
-        // Imported: the type is opaque to Lusan — accept any literal as-is.
+        // Imported: the type is opaque to Lusan - accept any literal as-is.
         return QString();
     }
 
@@ -417,7 +422,7 @@ void SMAttribute::onMoveUpClicked()
     if (index > 0)
     {
         // The swap keeps IDs attached to list position, so the moved entry's new ID is the
-        // neighbor's old ID — reselect that to keep the moved row highlighted.
+        // neighbor's old ID - reselect that to keep the moved row highlighted.
         const uint32_t neighborId = mModel.getAttributes().at(index - 1).getId();
         mModel.swapAttributes(id, neighborId);
         selectAttribute(neighborId);

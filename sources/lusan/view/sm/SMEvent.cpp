@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMEvent.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -82,6 +82,11 @@ SMEvent::SMEvent(SMEventModel& eventModel, SMTimerModel& timerModel, QWidget* pa
     buildUi();
     setupSignals();
     refreshAll();
+}
+
+SMEventList* SMEvent::getList() const
+{
+    return mList;
 }
 
 void SMEvent::buildUi()

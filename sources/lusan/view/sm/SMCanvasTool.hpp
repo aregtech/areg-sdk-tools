@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMCanvasTool.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -225,6 +225,22 @@ private:
     QPointF             mPressPos;      //!< The position of the most recent press.
     QList<QPointF>      mWaypoints;     //!< The dropped intermediate waypoints.
     QGraphicsPathItem*  mPreview;       //!< The live edge preview, or nullptr.
+};
+
+/**
+ * \class   SMPlaceNoteTool
+ * \brief   The Add Note tool: a click places a default-sized note (grid-snapped, centered
+ *          on the click) and opens its inline text editor. One undo step; the scene's
+ *          single-shot/sticky policy decides whether the tool stays active afterwards.
+ **/
+class SMPlaceNoteTool : public SMCanvasTool
+{
+public:
+    explicit SMPlaceNoteTool(SMScene& scene);
+    virtual ~SMPlaceNoteTool() = default;
+
+    virtual NESMDesign::eCanvasTool getKind() const override;
+    virtual bool mousePress(QGraphicsSceneMouseEvent* event) override;
 };
 
 /**

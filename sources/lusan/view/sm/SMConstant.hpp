@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMConstant.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -30,7 +30,7 @@ class SMConstantList;
 class SMConstantModel;
 
 /**
- * \brief   The FSM Constants page: named typed literals — the direct counterpart of the
+ * \brief   The FSM Constants page: named typed literals - the direct counterpart of the
  *          Service Interface Constants page. Every edit is committed through SMConstantModel's
  *          undo commands; the page mutates no model state directly, and refreshes by rebuilding
  *          the list from the live model on every relevant DocModelNotifier signal
@@ -46,6 +46,16 @@ class SMConstant : public QScrollArea
 public:
     explicit SMConstant(SMConstantModel& model, QWidget* parent = nullptr);
     virtual ~SMConstant() = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Returns the list panel (its Add button lets a caller start a new constant,
+     *          e.g. from the Design page's Declare dropdown).
+     **/
+    SMConstantList* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

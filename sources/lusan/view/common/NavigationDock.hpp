@@ -30,6 +30,7 @@
 #include "OutputDock.hpp"
 
 class MdiMainWindow;
+class NaviFsmToolbar;
 
 class NavigationDock : public QDockWidget
 {
@@ -45,11 +46,13 @@ public:
         , NaviWorkspace         //!< Workspace navigation window type
         , NaviLiveLogs          //!< Live logs navigation window type
         , NaviOfflineLogs       //!< Offline logs navigation window type
+        , NaviDesignToolbar     //!< FSM design toolbar navigation window type
     };
 
     static QString  TabNameFileSystem;      //!< The name of the tab for workspace explorer.
     static QString  TabLiveLogsExplorer;    //!< The name of the tab for live logs explorer.
     static QString  TabOfflineLogsExplorer; //!< The name of the tab for offline logs explorer.
+    static QString  TabFsmToolbar;          //!< The name of the tab for the FSM design toolbar.
 
     //!< Returns the tab name of the specified navigation window
     static const QString& getTabName(NavigationDock::eNaviWindow navi);
@@ -88,6 +91,11 @@ public:
      * \brief   Returns the offline log explorer widget.
      **/
     inline NaviOfflineLogsScopes& getOfflineScopes();
+
+    /**
+     * \brief   Returns the FSM design toolbar widget.
+     **/
+    inline NaviFsmToolbar& getFsmToolbar();
 
     /**
      * \brief   Adds a new tab with the widget to the tab-control.
@@ -165,6 +173,7 @@ private:
     NaviLiveLogsScopes      mLiveScopes;    //!< The log explorer widget.
     NaviOfflineLogsScopes   mOfflineScopes; //!< The offline scopes explorer.
     NaviFileSystem          mFileSystem;    //!< The file system widget.
+    NaviFsmToolbar*         mFsmToolbar;    //!< The FSM design toolbar widget (owned by the tab widget).
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -189,6 +198,11 @@ inline NaviLiveLogsScopes& NavigationDock::getLiveScopes()
 inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes()
 {
     return mOfflineScopes;
+}
+
+inline NaviFsmToolbar& NavigationDock::getFsmToolbar()
+{
+    return *mFsmToolbar;
 }
 
 inline int NavigationDock::addTab(NavigationWindow& widget, const QString& tabName)
