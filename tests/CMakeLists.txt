@@ -67,7 +67,7 @@ target_link_libraries(lusan_sm_tests PRIVATE
     aregsqlite3
 )
 
-# A console test, not a windowed app — keep stdout for the harness.
+# A console test, not a windowed app - keep stdout for the harness.
 set_target_properties(lusan_sm_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # SM-02: deterministic XML round-trip + parse robustness. Reuses the same headless
@@ -167,9 +167,12 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMDesign.cpp
     ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
+    ${LUSAN}/view/sm/SMNoteEditor.cpp
+    ${LUSAN}/view/sm/SMNoteItem.cpp
     ${LUSAN}/view/sm/SMScene.cpp
     ${LUSAN}/view/sm/SMSceneManager.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
+    ${LUSAN}/view/sm/SMToolIcons.cpp
     ${LUSAN_ROOT}/tests/sm/SMCanvasSmokeTests.cpp
     ${LUSAN}/res/lusan.qrc
 )

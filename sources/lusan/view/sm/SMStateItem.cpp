@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMStateItem.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -104,7 +104,7 @@ namespace
         case SMOperationBase::eOperation::ActionCall:
             return op.getName() + QStringLiteral("()");
         case SMOperationBase::eOperation::AttributeSet:
-            return op.getName() + QStringLiteral(" = …");
+            return op.getName() + QStringLiteral(" = ...");
         case SMOperationBase::eOperation::TimerStart:
             return QStringLiteral("start ") + op.getName();
         case SMOperationBase::eOperation::TimerStop:
@@ -113,7 +113,7 @@ namespace
             return QStringLiteral("send ") + op.getName();
         case SMOperationBase::eOperation::InlineCode:
         default:
-            return QStringLiteral("{ … }");
+            return QStringLiteral("{ ... }");
         }
     }
 
@@ -196,6 +196,7 @@ SMStateItem::SMStateItem(uint32_t stateId, QGraphicsItem* parent /*= nullptr*/)
     , mColorName        ( )
     , mHeaderColorName  ( )
     , mRows             ( )
+    , mHasNote          (false)
     , mResizeHandle     (eHandle::None)
     , mResizeStart      ( )
     , mRenameProxy      (nullptr)
@@ -276,10 +277,19 @@ QRectF SMStateItem::boundingRect() const
 QPainterPath SMStateItem::shape() const
 {
     QPainterPath path;
-    const double grow   = (isSelected() ? NESMDesign::HandleSize / 2.0 : 0.0);
-    const double radius = boxCornerRadius() + grow;
-    path.addRoundedRect(QRectF(-grow, -grow, mSize.width() + 2.0 * grow, visibleHeight() + 2.0 * grow)
-                        , radius, radius);
+    if (isSelected())
+    {
+        // Cover the full resize-handle band with a plain rectangle so every handle -- the
+        // corner ones too -- is hit-testable. A rounded shape leaves the corner handles of a
+        // compact marker pill in the rounded-away region, which made the Start / Final state
+        // impossible to grab and resize.
+        const double m = NESMDesign::HandleSize;
+        path.addRect(QRectF(-m / 2.0, -m / 2.0, mSize.width() + m, visibleHeight() + m));
+        return path;
+    }
+
+    const double radius = boxCornerRadius();
+    path.addRoundedRect(QRectF(0.0, 0.0, mSize.width(), visibleHeight()), radius, radius);
     return path;
 }
 
@@ -293,6 +303,17 @@ void SMStateItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opt
     if (isMarker())
     {
         paintMarker(painter, box, palette);
+        if (mHasNote)
+        {
+            QColor fill{ mColorName };
+            if (fill.isValid() == false)
+            {
+                fill = (mKind == SMStateEntry::eStateKind::Start)
+                        ? NESMDesign::startStateColor(palette) : NESMDesign::finalStateColor(palette);
+            }
+
+            paintNoteBadge(painter, NESMDesign::contrastTextColor(fill));
+        }
     }
     else
     {
@@ -330,6 +351,11 @@ void SMStateItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opt
 
         painter->drawPath(path);
         paintHeaderContent(painter, box, headerColor);
+        if (mHasNote)
+        {
+            paintNoteBadge(painter, NESMDesign::contrastTextColor(headerColor));
+        }
+
         if (mExpanded)
         {
             paintBodyRows(painter, box, bodyColor);
@@ -376,13 +402,18 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
     }
 
     // The glyph and the name, centered together: Start = play triangle, Final = bullseye.
+    // The marker pill is compact, so its label uses a slightly smaller font than the header.
     QFont nameFont = painter->font();
     nameFont.setBold(true);
+    nameFont.setPointSizeF(std::max(nameFont.pointSizeF() * 0.85, 6.5));
     const QFontMetricsF metrics{ nameFont };
 
-    const double glyphW  = 12.0;
-    const double gap     = 6.0;
-    const double padding = NESMDesign::StatePadding + radius / 2.0;
+    const double glyphW  = 9.0;
+    const double gap     = 4.0;
+    // The default marker pill is only 4 grid cells wide (issue #514); a tight padding keeps
+    // "Start" / "Final" un-elided. The vertically centered text never reaches the rounded
+    // corners, so the inset can be much smaller than the corner radius.
+    const double padding = 4.0 + radius * 0.25;
     const double availW  = std::max(box.width() - 2.0 * padding - glyphW - gap, 10.0);
     const QString elided = metrics.elidedText(mName, Qt::ElideRight, availW);
     const double textW   = metrics.horizontalAdvance(elided);
@@ -391,10 +422,11 @@ void SMStateItem::paintMarker(QPainter* painter, const QRectF& box, const QPalet
 
     if (start)
     {
+        const double gh = glyphW * 0.6;
         QPainterPath glyph;
-        glyph.moveTo(left, midY - 6.0);
+        glyph.moveTo(left, midY - gh);
         glyph.lineTo(left + glyphW, midY);
-        glyph.lineTo(left, midY + 6.0);
+        glyph.lineTo(left, midY + gh);
         glyph.closeSubpath();
         painter->setPen(Qt::NoPen);
         painter->setBrush(textColor);
@@ -516,7 +548,7 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
         {
             painter->setFont(rowFont);
             painter->setPen(color);
-            painter->drawText(QRectF(padding, y, box.width() - 2.0 * padding, rowH), Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("…"));
+            painter->drawText(QRectF(padding, y, box.width() - 2.0 * padding, rowH), Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("..."));
             break;
         }
 
@@ -662,7 +694,51 @@ SMStateItem::eHandle SMStateItem::hitHandle(const QPointF& position) const
 QRectF SMStateItem::chevronRect() const
 {
     const double headerH = NESMDesign::StateHeaderHeight;
-    return QRectF(mSize.width() - 18.0, (headerH - 12.0) / 2.0, 12.0, 12.0);
+    // Shift left to make room for the corner note badge when the state carries a note.
+    const double shift = (mHasNote ? 17.0 : 0.0);
+    return QRectF(mSize.width() - 18.0 - shift, (headerH - 12.0) / 2.0, 12.0, 12.0);
+}
+
+QRectF SMStateItem::noteBadgeRect() const
+{
+    const double headerH = NESMDesign::StateHeaderHeight;
+    return QRectF(mSize.width() - 17.0, (headerH - 14.0) / 2.0, 13.0, 14.0);
+}
+
+void SMStateItem::paintNoteBadge(QPainter* painter, const QColor& color)
+{
+    const QRectF badge = noteBadgeRect();
+
+    // A small folded-page glyph: the page outline with a dog-eared top-right corner and
+    // two short text lines, signalling "this element has a note".
+    const double fold = 4.0;
+    QPainterPath page;
+    page.moveTo(badge.left(), badge.top());
+    page.lineTo(badge.right() - fold, badge.top());
+    page.lineTo(badge.right(), badge.top() + fold);
+    page.lineTo(badge.right(), badge.bottom());
+    page.lineTo(badge.left(), badge.bottom());
+    page.closeSubpath();
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    QColor fill{ color };
+    fill.setAlphaF(0.14);
+    painter->setBrush(fill);
+    QPen pen{ color, 1.0 };
+    painter->setPen(pen);
+    painter->drawPath(page);
+
+    // The folded corner.
+    painter->drawLine(QPointF(badge.right() - fold, badge.top()), QPointF(badge.right() - fold, badge.top() + fold));
+    painter->drawLine(QPointF(badge.right() - fold, badge.top() + fold), QPointF(badge.right(), badge.top() + fold));
+
+    // Two text lines.
+    const double lx = badge.left() + 2.5;
+    const double rx = badge.right() - 2.5;
+    painter->drawLine(QPointF(lx, badge.top() + 6.0), QPointF(rx, badge.top() + 6.0));
+    painter->drawLine(QPointF(lx, badge.top() + 9.5), QPointF(rx - 2.0, badge.top() + 9.5));
+    painter->restore();
 }
 
 SMScene* SMStateItem::getCanvas() const
@@ -697,6 +773,7 @@ void SMStateItem::updateFromModel()
     mHistory   = state->getHistory();
     mComposite = state->hasNestedStates();
     mImported  = state->isImportedSubmachine();
+    mHasNote   = (data.getLayout().findNoteByOwner(getElementId()) != nullptr);
     rebuildRows(*state);
 
     mMiniature.clear();
@@ -715,8 +792,11 @@ void SMStateItem::updateFromModel()
     const SMLayoutNode* node = data.getLayout().findNode(getElementId());
     if (node != nullptr)
     {
-        mSize = QSizeF(  std::max(node->width, NESMDesign::StateMinWidth)
-                       , std::max(node->height, NESMDesign::StateMinHeight));
+        // Markers (Start / Final) are compact pills and clamp to a smaller minimum than a
+        // normal state box; mKind is already set above, so isMarker() is valid here.
+        const double minW = (isMarker() ? NESMDesign::MarkerStateMinWidth : NESMDesign::StateMinWidth);
+        const double minH = (isMarker() ? NESMDesign::MarkerStateMinHeight : NESMDesign::StateMinHeight);
+        mSize = QSizeF(std::max(node->width, minW), std::max(node->height, minH));
         // Marker boxes have no collapsible body; they always paint at full height.
         mExpanded        = (isMarker() ? true : (node->hasExpanded ? node->expanded : true));
         mColorName       = node->color;
@@ -821,6 +901,13 @@ void SMStateItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton)
     {
+        if (mHasNote && noteBadgeRect().contains(event->pos()))
+        {
+            startNoteEdit();
+            event->accept();
+            return;
+        }
+
         if ((hasBodyContent() || (mExpanded == false)) && chevronRect().contains(event->pos()))
         {
             toggleExpanded();
@@ -870,7 +957,11 @@ void SMStateItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
     SMCanvasItem::mouseReleaseEvent(event);
     if (event->button() == Qt::LeftButton)
     {
-        commitMoveGesture();
+        SMScene* canvas = getCanvas();
+        if (canvas != nullptr)
+        {
+            canvas->commitSelectionMove(translate("Move selection"));
+        }
     }
 }
 
@@ -938,22 +1029,26 @@ void SMStateItem::applyResizeDrag(const QPointF& scenePos)
     const bool top    = (mResizeHandle == eHandle::TopLeft) || (mResizeHandle == eHandle::Top) || (mResizeHandle == eHandle::TopRight);
     const bool bottom = (mResizeHandle == eHandle::BottomLeft) || (mResizeHandle == eHandle::Bottom) || (mResizeHandle == eHandle::BottomRight);
 
+    // Markers (Start / Final) are compact pills and may be resized smaller than a normal box.
+    const double minW = (isMarker() ? NESMDesign::MarkerStateMinWidth : NESMDesign::StateMinWidth);
+    const double minH = (isMarker() ? NESMDesign::MarkerStateMinHeight : NESMDesign::StateMinHeight);
+
     if (left)
     {
-        rect.setLeft(std::min(point.x(), rect.right() - NESMDesign::StateMinWidth));
+        rect.setLeft(std::min(point.x(), rect.right() - minW));
     }
     else if (right)
     {
-        rect.setRight(std::max(point.x(), rect.left() + NESMDesign::StateMinWidth));
+        rect.setRight(std::max(point.x(), rect.left() + minW));
     }
 
     if (top)
     {
-        rect.setTop(std::min(point.y(), rect.bottom() - NESMDesign::StateMinHeight));
+        rect.setTop(std::min(point.y(), rect.bottom() - minH));
     }
     else if (bottom)
     {
-        rect.setBottom(std::max(point.y(), rect.top() + NESMDesign::StateMinHeight));
+        rect.setBottom(std::max(point.y(), rect.top() + minH));
     }
 
     prepareGeometryChange();
@@ -977,66 +1072,6 @@ void SMStateItem::commitResize()
                                                     , getElementId(), SMMoveNodeCommand::takeNextGesture()
                                                     , geometry.x(), geometry.y(), geometry.width(), geometry.height()
                                                     , translate("Resize state")));
-}
-
-void SMStateItem::commitMoveGesture()
-{
-    SMScene* canvas = getCanvas();
-    if (canvas == nullptr)
-    {
-        return;
-    }
-
-    StateMachineModel& model = canvas->getModel();
-    SMLayoutData& layout = model.getData().getLayout();
-
-    // Every selected state box moved by this drag: item position differs from its node.
-    QList<SMStateItem*> moved;
-    for (QGraphicsItem* item : canvas->selectedItems())
-    {
-        SMStateItem* stateItem = dynamic_cast<SMStateItem*>(item);
-        if (stateItem == nullptr)
-        {
-            continue;
-        }
-
-        const SMLayoutNode* node = layout.findNode(stateItem->getElementId());
-        if ((node != nullptr) && (QPointF(node->x, node->y) != stateItem->pos()))
-        {
-            moved.append(stateItem);
-        }
-    }
-
-    if (moved.isEmpty())
-    {
-        return;
-    }
-
-    const uint32_t gesture = SMMoveNodeCommand::takeNextGesture();
-    const QString  text    = (moved.size() == 1 ? translate("Move state") : translate("Move states"));
-    if (moved.size() == 1)
-    {
-        SMStateItem* item = moved.first();
-        const QRectF geometry = item->getBoxGeometry();
-        model.getUndoStack().push(new SMMoveNodeCommand(  model.getData(), model.getNotifier()
-                                                        , item->getElementId(), gesture
-                                                        , geometry.x(), geometry.y(), geometry.width(), geometry.height()
-                                                        , text));
-    }
-    else
-    {
-        SMCompositeCommand* composite = new SMCompositeCommand(model.getData(), model.getNotifier(), text);
-        for (SMStateItem* item : moved)
-        {
-            const QRectF geometry = item->getBoxGeometry();
-            new SMMoveNodeCommand(  model.getData(), model.getNotifier()
-                                  , item->getElementId(), gesture
-                                  , geometry.x(), geometry.y(), geometry.width(), geometry.height()
-                                  , text, composite);
-        }
-
-        model.getUndoStack().push(composite);
-    }
 }
 
 void SMStateItem::toggleExpanded()
@@ -1121,6 +1156,43 @@ void SMStateItem::startInlineRename()
 
     edit->selectAll();
     edit->setFocus();
+}
+
+void SMStateItem::startNoteEdit()
+{
+    SMScene* canvas = getCanvas();
+    if ((canvas == nullptr) || mNoteEditor.isActive())
+    {
+        return;
+    }
+
+    StateMachineData& data = canvas->getModel().getData();
+    const SMLayoutNote* note = data.getLayout().findNoteByOwner(getElementId());
+    if (note == nullptr)
+    {
+        return;
+    }
+
+    const uint32_t noteId = note->id;
+
+    // The editor is shown on top of the state box so the note text is edited over its owner
+    // (spec: "display the note on top of the State"); focus-out commits and collapses to the
+    // corner badge again.
+    const QRectF area{ 2.0, 2.0, mSize.width() - 4.0, std::max(visibleHeight() - 4.0, 40.0) };
+    mNoteEditor.open(this, area, note->text, [this, noteId](const QString& text) {
+        SMScene* c = getCanvas();
+        if (c == nullptr)
+        {
+            return;
+        }
+
+        const SMLayoutNote* n = c->getModel().getData().getLayout().findNote(noteId);
+        if ((n != nullptr) && (n->text != text))
+        {
+            c->getModel().getUndoStack().push(new SMSetNoteTextCommand(  c->getModel().getData(), c->getModel().getNotifier()
+                                                                       , noteId, text, translate("Edit note")));
+        }
+    });
 }
 
 void SMStateItem::commitRename(const QString& name)

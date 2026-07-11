@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMMethod.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -38,7 +38,7 @@ class SMMethodModel;
  *          left panel is one tree whose top-level rows are methods and whose child rows are
  *          the method parameters, under a single toolbar; the right panel swaps between the
  *          method and parameter detail forms. Conditions additionally carry a return type, an
- *          implementation mode and — when embedded — a verbatim C++ body. Every edit goes
+ *          implementation mode and - when embedded - a verbatim C++ body. Every edit goes
  *          through the page model's undo commands; the page refreshes by rebuilding the tree
  *          from the live model on every relevant DocModelNotifier signal and restoring the
  *          selection by element ID.
@@ -66,6 +66,16 @@ private:
 public:
     explicit SMMethod(SMMethodModel& model, QWidget* parent = nullptr);
     virtual ~SMMethod() = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Returns the list panel (its Add-dropdown actions let a caller start a new
+     *          method of a specific kind, e.g. from the Design page's Declare dropdown).
+     **/
+    SMMethodList* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -135,7 +145,7 @@ private:
     void populateParamTypeCombo();
     void populateReturnCombo();
 
-    //!< Empty string if the name is free, otherwise a short, user-facing collision reason —
+    //!< Empty string if the name is free, otherwise a short, user-facing collision reason --
     //!< another method with the same name, or (for triggers) an event/timer stimulus clash.
     QString nameCollisionReason(const SMMethodEntry* method, const QString& name, uint32_t selfId) const;
     QString paramNameCollisionReason(const SMMethodEntry* owner, const QString& name, uint32_t selfId) const;

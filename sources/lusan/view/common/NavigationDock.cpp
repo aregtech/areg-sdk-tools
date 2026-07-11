@@ -20,12 +20,14 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/view/common/NaviFsmToolbar.hpp"
 #include <algorithm>
 
 
 QString  NavigationDock::TabNameFileSystem      {tr("Workspace")};
 QString  NavigationDock::TabLiveLogsExplorer    {tr("Live Logs")};
 QString  NavigationDock::TabOfflineLogsExplorer {tr("Offline Logs")};
+QString  NavigationDock::TabFsmToolbar          {tr("Design Toolbar")};
 
 const QString& NavigationDock::getTabName(NavigationDock::eNaviWindow navi)
 {
@@ -38,6 +40,8 @@ const QString& NavigationDock::getTabName(NavigationDock::eNaviWindow navi)
             return NavigationDock::TabLiveLogsExplorer;
         case NavigationDock::eNaviWindow::NaviOfflineLogs:
             return NavigationDock::TabOfflineLogsExplorer;
+        case NavigationDock::eNaviWindow::NaviDesignToolbar:
+            return NavigationDock::TabFsmToolbar;
         default:
             return _empty;
     }
@@ -51,6 +55,8 @@ NavigationDock::eNaviWindow NavigationDock::getNaviWindow(const QString& tabName
         return NavigationDock::eNaviWindow::NaviOfflineLogs;
     else if (tabName == NavigationDock::TabNameFileSystem)
         return NavigationDock::eNaviWindow::NaviWorkspace;
+    else if (tabName == NavigationDock::TabFsmToolbar)
+        return NavigationDock::eNaviWindow::NaviDesignToolbar;
     else
         return NavigationDock::eNaviWindow::NaviUnknown;
 }
@@ -64,10 +70,19 @@ NavigationDock::NavigationDock(MdiMainWindow* parent)
     , mLiveScopes   (parent, this)
     , mOfflineScopes(parent, this)
     , mFileSystem   (parent, this)
-{    
+    , mFsmToolbar   (new NaviFsmToolbar(parent, this))
+{
     mTabs.addTab(&mFileSystem   , NELusanCommon::iconViewWorkspace(NELusanCommon::SizeBig)  , NavigationDock::TabNameFileSystem);
     mTabs.addTab(&mLiveScopes   , NELusanCommon::iconViewLiveLogs(NELusanCommon::SizeBig)   , NavigationDock::TabLiveLogsExplorer);
     mTabs.addTab(&mOfflineScopes, NELusanCommon::iconViewOfflineLogs(NELusanCommon::SizeBig), NavigationDock::TabOfflineLogsExplorer);
+    mTabs.addTab(mFsmToolbar    , NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeBig)  , NavigationDock::TabFsmToolbar);
+
+    // Tooltips shown on every tab when hovered with the mouse.
+    mTabs.setTabToolTip(0, tr("Workspace file explorer"));
+    mTabs.setTabToolTip(1, tr("Live logs scope explorer"));
+    mTabs.setTabToolTip(2, tr("Offline logs scope explorer"));
+    mTabs.setTabToolTip(3, tr("State Machine design drawing tools"));
+
     mTabs.setTabPosition(QTabWidget::South);
     mTabs.setUsesScrollButtons(true);
     mTabs.setElideMode(Qt::ElideRight);

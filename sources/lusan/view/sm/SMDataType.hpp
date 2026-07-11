@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMDataType.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -53,6 +53,16 @@ class SMDataType : public QScrollArea
 public:
     explicit SMDataType(SMDataTypeModel& model, QWidget* parent = nullptr);
     virtual ~SMDataType() = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Returns the list panel (its Add button lets a caller start a new data type,
+     *          e.g. from the Design page's Declare dropdown).
+     **/
+    SMDataTypeList* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

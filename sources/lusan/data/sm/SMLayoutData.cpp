@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/sm/SMLayoutData.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -177,6 +177,7 @@ bool SMLayoutData::readFromXml(QXmlStreamReader& xml)
                         SMLayoutNote note;
                         note.id     = a.value(XmlSM::xmlSMAttributeID).toUInt();
                         note.level  = a.value(XmlSM::xmlSMAttributeLevel).toUInt();
+                        note.owner  = a.value(XmlSM::xmlSMAttributeOwner).toUInt();
                         note.x      = a.value(XmlSM::xmlSMAttributeX).toDouble();
                         note.y      = a.value(XmlSM::xmlSMAttributeY).toDouble();
                         note.width  = a.value(XmlSM::xmlSMAttributeWidth).toDouble();
@@ -309,6 +310,10 @@ void SMLayoutData::writeToXml(QXmlStreamWriter& xml) const
             xml.writeStartElement(XmlSM::xmlSMElementNote);
             xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(note.id));
             xml.writeAttribute(XmlSM::xmlSMAttributeLevel, QString::number(note.level));
+            if (note.owner != 0)
+            {
+                xml.writeAttribute(XmlSM::xmlSMAttributeOwner, QString::number(note.owner));
+            }
             xml.writeAttribute(XmlSM::xmlSMAttributeX, QString::number(note.x));
             xml.writeAttribute(XmlSM::xmlSMAttributeY, QString::number(note.y));
             xml.writeAttribute(XmlSM::xmlSMAttributeWidth, QString::number(note.width));
@@ -350,11 +355,12 @@ SMLayoutEdge& SMLayoutData::addEdge(uint32_t owner)
     return mEdges.last();
 }
 
-SMLayoutNote& SMLayoutData::addNote(uint32_t level)
+SMLayoutNote& SMLayoutData::addNote(uint32_t level, uint32_t owner /*= 0*/)
 {
     SMLayoutNote note;
     note.id    = getNextId();
     note.level = level;
+    note.owner = owner;
     mNotes.append(note);
     return mNotes.last();
 }
@@ -411,6 +417,29 @@ SMLayoutNote* SMLayoutData::findNote(uint32_t id)
     return nullptr;
 }
 
+SMLayoutNote* SMLayoutData::findNoteByOwner(uint32_t owner)
+{
+    if (owner == 0)
+    {
+        return nullptr;
+    }
+
+    for (SMLayoutNote& note : mNotes)
+    {
+        if (note.owner == owner)
+        {
+            return &note;
+        }
+    }
+
+    return nullptr;
+}
+
+const SMLayoutNote* SMLayoutData::findNoteByOwner(uint32_t owner) const
+{
+    return const_cast<SMLayoutData*>(this)->findNoteByOwner(owner);
+}
+
 const SMLayoutView* SMLayoutData::findView(uint32_t owner) const
 {
     return const_cast<SMLayoutData*>(this)->findView(owner);
@@ -457,6 +486,26 @@ bool SMLayoutData::removeNode(uint32_t owner)
     }
 
     return false;
+}
+
+bool SMLayoutData::removeNote(uint32_t id)
+{
+    for (int i = 0; i < mNotes.size(); ++i)
+    {
+        if (mNotes.at(i).id == id)
+        {
+            mNotes.removeAt(i);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+SMLayoutNote& SMLayoutData::restoreNote(const SMLayoutNote& note)
+{
+    mNotes.append(note);
+    return mNotes.last();
 }
 
 int SMLayoutData::removeOwned(const QList<uint32_t>& ownerIds)

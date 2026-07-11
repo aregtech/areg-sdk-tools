@@ -83,6 +83,7 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mBulge        (0.0)
     , mColorName    ( )
     , mStimulusText ( )
+    , mHasNote      (false)
     , mWaypoints    ( )
     , mHasAnchors   (false)
     , mAnchorBegin  ( )
@@ -179,6 +180,7 @@ void SMEdgeItem::updateFromModel()
     mTargetId    = (target != nullptr ? target->getId() : 0);
     mSelfLoop    = (mTargetId != 0) && (mTargetId == mSourceId);
     mStimulusText = transition->getStimulus();
+    mHasNote     = (data.getLayout().findNoteByOwner(getElementId()) != nullptr);
 
     const SMLayoutEdge* edge = data.getLayout().findEdge(getElementId());
     mShape     = (edge != nullptr ? edge->shape : SMLayoutEdge::eShape::Line);
@@ -326,6 +328,17 @@ QRectF SMEdgeItem::labelRect() const
     return QRectF(anchor - QPointF(size.width() / 2.0, size.height() / 2.0), size);
 }
 
+QRectF SMEdgeItem::noteBadgeRect() const
+{
+    const QRectF label = labelRect();
+    if (label.isNull())
+    {
+        return QRectF();
+    }
+
+    return QRectF(label.right() + 3.0, label.center().y() - 7.0, 13.0, 14.0);
+}
+
 QRectF SMEdgeItem::boundingRect() const
 {
     if (mPath.isEmpty())
@@ -347,6 +360,10 @@ QRectF SMEdgeItem::boundingRect() const
 
     QRectF rect{ QPointF(minX, minY), QPointF(maxX, maxY) };
     rect = rect.united(labelRect());
+    if (mHasNote)
+    {
+        rect = rect.united(noteBadgeRect());
+    }
 
     const double margin = std::max({ NESMDesign::EdgeArrowLength, NESMDesign::WaypointHandleSize, NESMDesign::EndpointPickRadius }) + 2.0;
     return rect.adjusted(-margin, -margin, margin, margin);
@@ -368,6 +385,10 @@ QPainterPath SMEdgeItem::shape() const
     stroker.setWidth(8.0);
     QPainterPath result = stroker.createStroke(path);
     result.addRect(labelRect());
+    if (mHasNote)
+    {
+        result.addRect(noteBadgeRect());
+    }
     result.addEllipse(mBegin, NESMDesign::EndpointPickRadius, NESMDesign::EndpointPickRadius);
     result.addEllipse(mEnd, NESMDesign::EndpointPickRadius, NESMDesign::EndpointPickRadius);
     for (const QPointF& wp : mWaypoints)
@@ -464,6 +485,30 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
     painter->setBrush(Qt::NoBrush);
     painter->drawText(label, Qt::AlignCenter, mStimulusText.isEmpty() ? translate("<stimulus>") : mStimulusText);
 
+    // Note badge just right of the label: a small folded-page glyph signalling a bound note.
+    if (mHasNote)
+    {
+        const QRectF badge = noteBadgeRect();
+        const double fold = 4.0;
+        QPainterPath page;
+        page.moveTo(badge.left(), badge.top());
+        page.lineTo(badge.right() - fold, badge.top());
+        page.lineTo(badge.right(), badge.top() + fold);
+        page.lineTo(badge.right(), badge.bottom());
+        page.lineTo(badge.left(), badge.bottom());
+        page.closeSubpath();
+
+        QColor fill{ color };
+        fill.setAlphaF(0.16);
+        painter->setBrush(fill);
+        painter->setPen(QPen(color, 1.0));
+        painter->drawPath(page);
+        painter->drawLine(QPointF(badge.right() - fold, badge.top()), QPointF(badge.right() - fold, badge.top() + fold));
+        painter->drawLine(QPointF(badge.right() - fold, badge.top() + fold), QPointF(badge.right(), badge.top() + fold));
+        painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 6.0), QPointF(badge.right() - 2.5, badge.top() + 6.0));
+        painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 9.5), QPointF(badge.right() - 4.5, badge.top() + 9.5));
+    }
+
     if (isSelected())
     {
         painter->setPen(QPen(palette.color(QPalette::Base), 1.0));
@@ -541,6 +586,43 @@ void SMEdgeItem::commitGeometry(const QString& text)
                                                           , getElementId(), mGesture, buildGeometry(), text));
 }
 
+void SMEdgeItem::startNoteEdit()
+{
+    SMScene* canvas = getCanvas();
+    if ((canvas == nullptr) || mNoteEditor.isActive())
+    {
+        return;
+    }
+
+    StateMachineData& data = canvas->getModel().getData();
+    const SMLayoutNote* note = data.getLayout().findNoteByOwner(getElementId());
+    if (note == nullptr)
+    {
+        return;
+    }
+
+    const uint32_t noteId = note->id;
+
+    // The editor floats near the label (item-local coordinates are scene coordinates for an
+    // edge); focus-out commits and collapses back to the label note badge.
+    const QRectF label = labelRect();
+    const QRectF area{ label.center().x() - 75.0, label.bottom() + 4.0, 150.0, 80.0 };
+    mNoteEditor.open(this, area, note->text, [this, noteId](const QString& text) {
+        SMScene* c = getCanvas();
+        if (c == nullptr)
+        {
+            return;
+        }
+
+        const SMLayoutNote* n = c->getModel().getData().getLayout().findNote(noteId);
+        if ((n != nullptr) && (n->text != text))
+        {
+            c->getModel().getUndoStack().push(new SMSetNoteTextCommand(  c->getModel().getData(), c->getModel().getNotifier()
+                                                                       , noteId, text, translate("Edit note")));
+        }
+    });
+}
+
 bool SMEdgeItem::hitsHandle(const QPointF& scenePos) const
 {
     if ((mValid == false) || (isSelected() == false))
@@ -572,6 +654,13 @@ QVariant SMEdgeItem::itemChange(GraphicsItemChange change, const QVariant& value
 
 void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
+    if ((event->button() == Qt::LeftButton) && mHasNote && noteBadgeRect().contains(event->pos()))
+    {
+        startNoteEdit();
+        event->accept();
+        return;
+    }
+
     if ((event->button() == Qt::LeftButton) && isSelected())
     {
         const QPointF p = event->pos();

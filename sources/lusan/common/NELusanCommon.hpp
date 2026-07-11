@@ -498,9 +498,12 @@ namespace NELusanCommon
     //<! Loads offline logs navigation tab icon and sets the specified size
     inline QIcon iconViewOfflineLogs(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads FSM design toolbar navigation tab icon and sets the specified size
+    inline QIcon iconViewFsmDesign(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads output / status window tab icon and sets the specified size
     inline QIcon iconViewOutputWindow(const QSize & size = QSize{ 32, 32 });
-
+    
     //<! Loads application options / settings icon and sets the specified size
     inline QIcon iconSettings(const QSize & size = QSize{ 32, 32 });
 
@@ -627,6 +630,12 @@ namespace NELusanCommon
     //<! Loads service interface tab icon and sets the specified size
     inline QIcon iconServiceInterfaceTab(const QSize & size = QSize{ 32, 32 });
     
+    //!< Loads Undo icon
+    inline QIcon iconEditUndo(const QSize& size = QSize{32, 32});
+    
+    //!< Loads Undo icon
+    inline QIcon iconEditRedo(const QSize& size = QSize{32, 32});
+    
     //!< Crate a tool button object.    
     QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
     
@@ -730,6 +739,20 @@ inline QIcon NELusanCommon::iconRecord(const QSize & size)
 inline QIcon NELusanCommon::iconClear(const QSize & size)
 {
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::EditClear) };
+    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconEditUndo(const QSize& size)
+{
+    QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditUndo)};
+    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconEditRedo(const QSize& size)
+{
+    QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditRedo)};
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
@@ -883,6 +906,11 @@ inline QIcon NELusanCommon::iconViewOutputWindow(const QSize & size /*= QSize{32
 inline QIcon NELusanCommon::iconViewOfflineLogs(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/view-offline-logs", size);
+}
+
+inline QIcon NELusanCommon::iconViewFsmDesign(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/view-fsm-design", size);
 }
 
 inline QIcon NELusanCommon::iconViewLiveLogs(const QSize & size /*= QSize{32, 32}*/)

@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/sm/SMLayoutCommands.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -76,7 +76,7 @@ private:
  * \class   SMAttachNodeCommand
  * \brief   Creates the Node layout entry of a freshly added state. The owner ID is read
  *          from the state at redo time, because the ID is allocated only when the sibling
- *          add-state command inserts the entry — so this command always runs as the child
+ *          add-state command inserts the entry - so this command always runs as the child
  *          following that insertion inside one composite.
  **/
 class SMAttachNodeCommand : public SMCommand
@@ -132,7 +132,7 @@ private:
  * \class   SMAttachEdgeCommand
  * \brief   Creates the Edge layout entry of a freshly added transition. The owner ID is
  *          read from the transition at redo time, because the ID is allocated only when the
- *          sibling add-transition command inserts the entry — so this command always runs as
+ *          sibling add-transition command inserts the entry - so this command always runs as
  *          the child following that insertion inside one composite.
  **/
 class SMAttachEdgeCommand : public SMCommand
@@ -246,9 +246,10 @@ private:
 
 /**
  * \class   SMRemoveLayoutCommand
- * \brief   Removes the View/Node/Edge layout entries owned by a set of element IDs and
- *          restores them on undo. Used as a child of the delete-state composite so a
- *          logical element and its layout are deleted (and undeleted) in one step.
+ * \brief   Removes the View/Node/Edge layout entries owned by a set of element IDs, and the
+ *          notes drawn on any of those IDs (a deleted composite's sublevel), restoring all of
+ *          them on undo. Used as a child of the delete-state composite so a logical element
+ *          and its layout are deleted (and undeleted) in one step.
  **/
 class SMRemoveLayoutCommand : public SMCommand
 {
@@ -263,7 +264,218 @@ private:
     QList<SMLayoutView>     mViews;
     QList<SMLayoutNode>     mNodes;
     QList<SMLayoutEdge>     mEdges;
+    QList<SMLayoutNote>     mNotes;
     bool                    mCaptured { false };
 };
+
+/**
+ * \class   SMSetGridSizeCommand
+ * \brief   Sets the document's grid cell size (`Layout@GridSize`, spec 7.6/9.8).
+ **/
+class SMSetGridSizeCommand : public SMCommand
+{
+public:
+    SMSetGridSizeCommand(StateMachineData& data, DocModelNotifier& notifier, int gridSize, const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    int     mNew;
+    int     mOld { 0 };
+};
+
+/**
+ * \class   SMSetGridVisibleCommand
+ * \brief   Sets the document's grid visibility (`Layout@GridVisible`, spec 7.6/9.8).
+ **/
+class SMSetGridVisibleCommand : public SMCommand
+{
+public:
+    SMSetGridVisibleCommand(StateMachineData& data, DocModelNotifier& notifier, bool visible, const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    bool    mNew;
+    bool    mOld { true };
+};
+
+/**
+ * \class   SMSetNodeColorCommand
+ * \brief   Sets (or clears, with an empty string) a state's body color (`Node@Color`); the
+ *          header shade stays derived unless the state also has a `HeaderColor`.
+ **/
+class SMSetNodeColorCommand : public SMCommand
+{
+public:
+    SMSetNodeColorCommand(  StateMachineData& data, DocModelNotifier& notifier
+                          , uint32_t owner, const QString& color
+                          , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    uint32_t    mOwner;
+    QString     mNew;
+    QString     mOld;
+};
+
+/**
+ * \class   SMSetEdgeColorCommand
+ * \brief   Sets (or clears, with an empty string) a transition edge's display color
+ *          (`Edge@Color`); analogous to SMSetNodeColorCommand.
+ **/
+class SMSetEdgeColorCommand : public SMCommand
+{
+public:
+    SMSetEdgeColorCommand(  StateMachineData& data, DocModelNotifier& notifier
+                          , uint32_t owner, const QString& color
+                          , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    uint32_t    mOwner;
+    QString     mNew;
+    QString     mOld;
+};
+
+/**
+ * \class   SMAddNoteCommand
+ * \brief   Creates a diagram note (spec 7.6): allocates its document-unique ID on first
+ *          redo and re-inserts it under that exact ID on later redo (history navigation
+ *          never allocates new IDs).
+ **/
+class SMAddNoteCommand : public SMCommand
+{
+public:
+    SMAddNoteCommand(  StateMachineData& data, DocModelNotifier& notifier
+                      , uint32_t level, const QRectF& geometry, const QString& text
+                      , const QString& undoText, QUndoCommand* parent = nullptr);
+
+    /**
+     * \brief   Creates a note bound to a state/transition owner (0 for a free note). A
+     *          bound note is drawn as a badge on its owner, not as a free canvas box.
+     **/
+    SMAddNoteCommand(  StateMachineData& data, DocModelNotifier& notifier
+                      , uint32_t level, uint32_t owner, const QRectF& geometry, const QString& text
+                      , const QString& undoText, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+    /**
+     * \brief   The created note's element ID; valid after the first redo (the constructor
+     *          runs before the initial push).
+     **/
+    inline uint32_t getNoteId() const;
+
+private:
+    SMLayoutNote    mNote;
+    bool            mAllocated { false };
+};
+
+/**
+ * \class   SMMoveNoteCommand
+ * \brief   Moves/resizes a note. Interactive drags push one command per step; they coalesce
+ *          via mergeWith() keyed by a gesture ID (shared with SMMoveNodeCommand's counter) so
+ *          the whole drag is a single undo step.
+ **/
+class SMMoveNoteCommand : public SMCommand
+{
+public:
+    static constexpr int CMD_ID { 0x5404 };
+
+    SMMoveNoteCommand(  StateMachineData& data, DocModelNotifier& notifier
+                      , uint32_t noteId, uint32_t gestureId
+                      , double x, double y, double width, double height
+                      , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+    int id() const override;
+    bool mergeWith(const QUndoCommand* other) override;
+
+private:
+    void applyTo(double x, double y, double width, double height);
+
+private:
+    uint32_t    mNoteId;
+    uint32_t    mGesture;
+    double      mNewX, mNewY, mNewWidth, mNewHeight;
+    double      mOldX { 0.0 }, mOldY { 0.0 }, mOldWidth { 0.0 }, mOldHeight { 0.0 };
+    bool        mCaptured { false };
+};
+
+/**
+ * \class   SMSetNoteTextCommand
+ * \brief   Sets a note's text; committed once when the inline editor loses focus.
+ **/
+class SMSetNoteTextCommand : public SMCommand
+{
+public:
+    SMSetNoteTextCommand(  StateMachineData& data, DocModelNotifier& notifier
+                         , uint32_t noteId, const QString& text
+                         , const QString& undoText, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    uint32_t    mNoteId;
+    QString     mNew;
+    QString     mOld;
+};
+
+/**
+ * \class   SMSetNoteColorCommand
+ * \brief   Sets (or clears, with an empty string) a note's display color.
+ **/
+class SMSetNoteColorCommand : public SMCommand
+{
+public:
+    SMSetNoteColorCommand(  StateMachineData& data, DocModelNotifier& notifier
+                          , uint32_t noteId, const QString& color
+                          , const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    uint32_t    mNoteId;
+    QString     mNew;
+    QString     mOld;
+};
+
+/**
+ * \class   SMRemoveNoteCommand
+ * \brief   Removes one note, restoring it under its original ID on undo.
+ **/
+class SMRemoveNoteCommand : public SMCommand
+{
+public:
+    SMRemoveNoteCommand(  StateMachineData& data, DocModelNotifier& notifier
+                        , uint32_t noteId, const QString& text, QUndoCommand* parent = nullptr);
+
+    void redo() override;
+    void undo() override;
+
+private:
+    uint32_t        mNoteId;
+    SMLayoutNote    mCaptured;
+};
+
+//////////////////////////////////////////////////////////////////////////
+// SMAddNoteCommand inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline uint32_t SMAddNoteCommand::getNoteId() const
+{
+    return mNote.id;
+}
 
 #endif  // LUSAN_MODEL_SM_SMLAYOUTCOMMANDS_HPP

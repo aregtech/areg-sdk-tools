@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/MdiMainWindow.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -27,6 +27,7 @@
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/sm/StateMachine.hpp"
+#include "lusan/view/common/NaviFsmToolbar.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
@@ -46,6 +47,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QStatusBar>
 #include <QTimer>
 #include <QToolBar>
@@ -139,11 +141,14 @@ MdiMainWindow::MdiMainWindow()
     , mActEditCut   (this)
     , mActEditCopy  (this)
     , mActEditPaste (this)
+    , mActEditUndo  (this)
+    , mActEditRedo  (this)
     , mActViewNavigator(this)
     , mActViewWokspace(this)
     , mActViewLogs  (this)
     , mActOffViewLogs(this)
     , mActViewOutput(this)
+    , mActViewDesignToolbar(this)
     , mActWindowsTile(this)
     , mActWindowsCascade(this)
     , mActWindowsNext(this)
@@ -486,6 +491,110 @@ void MdiMainWindow::onEditPaste()
     }
 }
 
+void MdiMainWindow::onEditUndo()
+{
+    MdiChild* active = activeMdiChild();
+    if (active != nullptr)
+    {
+        active->undo();
+    }
+}
+
+void MdiMainWindow::onEditRedo()
+{
+    MdiChild* active = activeMdiChild();
+    if (active != nullptr)
+    {
+        active->redo();
+    }
+}
+
+void MdiMainWindow::onViewDesignToolbar(bool /*visible*/)
+{
+    // The drawing toolbar lives in the navigation dock's FSM Toolbar tab, bound to the active
+    // State Machine; show and raise it.
+    updateFsmToolbar();
+    mNaviDock.show();
+    mNaviDock.raise();
+    mNaviDock.showTab(NavigationDock::eNaviWindow::NaviDesignToolbar);
+}
+
+void MdiMainWindow::updateFsmToolbar()
+{
+    StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
+    SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
+    mNaviDock.getFsmToolbar().bindDesign(design);
+
+    // The tools are shown whenever a State Machine document is active, but stay active only
+    // while its Design page is the current inner tab (they act on the canvas).
+    mNaviDock.getFsmToolbar().setToolsActive((stateMachine != nullptr) && stateMachine->isDesignPageCurrent());
+}
+
+void MdiMainWindow::onFsmToolbarStyle(QAction* action)
+{
+    if (action == nullptr)
+    {
+        return;
+    }
+
+    const Qt::ToolButtonStyle style = static_cast<Qt::ToolButtonStyle>(action->data().toInt());
+    mNaviDock.getFsmToolbar().setDisplayStyle(style);
+
+    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    settings.setValue(QStringLiteral("smDesign/toolbarStyle"), static_cast<int>(style));
+}
+
+void MdiMainWindow::onShowMenuDesign()
+{
+    mDesignMenu->clear();
+
+    StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
+    SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
+    if (design == nullptr)
+    {
+        QAction* placeholder = mDesignMenu->addAction(tr("(Open the Design tab to use these commands)"));
+        placeholder->setEnabled(false);
+        return;
+    }
+
+    mDesignMenu->addAction(design->actionAddState());
+    mDesignMenu->addAction(design->actionAddFinalState());
+    mDesignMenu->addAction(design->actionAddTransition());
+    mDesignMenu->addAction(design->actionAddNote());
+    mDesignMenu->addSeparator();
+    mDesignMenu->addAction(design->actionStateColor());
+    mDesignMenu->addAction(design->actionEdgeColor());
+    mDesignMenu->addAction(design->actionNoteColor());
+    mDesignMenu->addSeparator();
+    mDesignMenu->addAction(design->actionAlignLeft());
+    mDesignMenu->addAction(design->actionAlignRight());
+    mDesignMenu->addAction(design->actionAlignTop());
+    mDesignMenu->addAction(design->actionAlignBottom());
+    mDesignMenu->addAction(design->actionDistributeHorizontal());
+    mDesignMenu->addAction(design->actionDistributeVertical());
+    mDesignMenu->addSeparator();
+    mDesignMenu->addAction(design->actionToggleGrid());
+    mDesignMenu->addAction(design->actionGridDots());
+    mDesignMenu->addAction(design->actionToggleSnap());
+    mDesignMenu->addAction(design->actionGridSize());
+    mDesignMenu->addSeparator();
+    QMenu* declareMenu = mDesignMenu->addMenu(tr("Add &Declaration"));
+    declareMenu->addActions(design->declareActions());
+    mDesignMenu->addSeparator();
+    mDesignMenu->addAction(design->actionAddSubstate());
+    mDesignMenu->addAction(design->actionEnterSubmachine());
+    mDesignMenu->addAction(design->actionGoToParent());
+    mDesignMenu->addSeparator();
+    mDesignMenu->addAction(design->actionZoomIn());
+    mDesignMenu->addAction(design->actionZoomOut());
+    mDesignMenu->addAction(design->actionZoomReset());
+    mDesignMenu->addAction(design->actionZoomFit());
+    mDesignMenu->addSeparator();
+    mDesignMenu->addAction(design->actionSelectAll());
+    mDesignMenu->addAction(design->actionRename());
+    mDesignMenu->addAction(design->actionDelete());
+}
+
 void MdiMainWindow::onToolsOptions()
 {
     ProjectSettings settings(this);
@@ -622,6 +731,25 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
     bool hasSelection = false;
     mActEditCut.setEnabled(hasSelection);
     mActEditCopy.setEnabled(hasSelection);
+
+    // Undo/Redo enablement follows the active child's own stack state; re-wire the live
+    // connection on every activation (inert for SI/log windows, which keep the base default).
+    disconnect(mCanUndoConn);
+    disconnect(mCanRedoConn);
+    mActEditUndo.setEnabled(hasMdiChild && mdiActive->canUndo());
+    mActEditRedo.setEnabled(hasMdiChild && mdiActive->canRedo());
+    if (hasMdiChild)
+    {
+        mCanUndoConn = connect(mdiActive, &MdiChild::signalCanUndoChanged, &mActEditUndo, &QAction::setEnabled);
+        mCanRedoConn = connect(mdiActive, &MdiChild::signalCanRedoChanged, &mActEditRedo, &QAction::setEnabled);
+    }
+
+    // The Design toolbar toggle only applies to (and is only enabled for) an FSM window.
+    const bool isFSM = hasMdiChild && mdiActive->isStateMachineWindow();
+    mActViewDesignToolbar.setEnabled(isFSM);
+
+    // Reflect the active State Machine's Design page in the navigation dock's FSM Toolbar tab.
+    updateFsmToolbar();
 
     if (mdiActive != nullptr)
     {
@@ -869,7 +997,19 @@ void MdiMainWindow::_createActions()
     mActEditPaste.setShortcuts(QKeySequence::Paste);
     mActEditPaste.setStatusTip(tr("Paste the clipboard's contents into the current selection"));
     connect(&mActEditPaste, &QAction::triggered, this, &MdiMainWindow::onEditPaste);
+
+    initAction(mActEditUndo, NELusanCommon::iconEditUndo(NELusanCommon::SizeBig), tr("&Undo"));
+    mActEditUndo.setShortcuts(QKeySequence::Undo);
+    mActEditUndo.setStatusTip(tr("Undo the last edit"));
+    mActEditUndo.setEnabled(false);
+    connect(&mActEditUndo, &QAction::triggered, this, &MdiMainWindow::onEditUndo);
     
+    initAction(mActEditRedo, NELusanCommon::iconEditRedo(NELusanCommon::SizeBig), tr("&Redo"));
+    mActEditRedo.setShortcuts(QKeySequence::Redo);
+    mActEditRedo.setStatusTip(tr("Redo the last undone edit"));
+    mActEditRedo.setEnabled(false);
+    connect(&mActEditRedo, &QAction::triggered, this, &MdiMainWindow::onEditRedo);
+
     initAction(mActViewNavigator, NELusanCommon::iconViewNavigationWindow(NELusanCommon::SizeBig), tr("&Navigation Window"));
     mActViewNavigator.setStatusTip(tr("View Navigation Window"));
     connect(&mActViewNavigator, &QAction::triggered, this, [this](){
@@ -903,6 +1043,11 @@ void MdiMainWindow::_createActions()
     connect(&mActViewOutput, &QAction::triggered, this, [this](){
         if (mOutputDock.isHidden()) mOutputDock.show();
     });
+
+    initAction(mActViewDesignToolbar, NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeBig), tr("&Design Toolbar"));
+    mActViewDesignToolbar.setEnabled(false);
+    mActViewDesignToolbar.setStatusTip(tr("Show the State Machine drawing toolbar in the navigation window"));
+    connect(&mActViewDesignToolbar, &QAction::triggered, this, &MdiMainWindow::onViewDesignToolbar);
 
     initAction(mActToolsOptions, NELusanCommon::iconSettings(NELusanCommon::SizeBig), tr("&Options"));
     mActToolsOptions.setStatusTip(tr("View Workspace Options"));
@@ -956,6 +1101,9 @@ void MdiMainWindow::_createMenus()
     mFileMenu->addAction(&mActFileExit);
 
     mEditMenu = menuBar()->addMenu(tr("&Edit"));
+    mEditMenu->addAction(&mActEditUndo);
+    mEditMenu->addAction(&mActEditRedo);
+    mEditMenu->addSeparator();
     mEditMenu->addAction(&mActEditCut);
     mEditMenu->addAction(&mActEditCopy);
     mEditMenu->addAction(&mActEditPaste);
@@ -965,6 +1113,34 @@ void MdiMainWindow::_createMenus()
     mViewMenu->addAction(&mActViewWokspace);
     mViewMenu->addAction(&mActViewLogs);
     mViewMenu->addAction(&mActViewOutput);
+    mViewMenu->addSeparator();
+    mViewMenu->addAction(&mActViewDesignToolbar);
+
+    // Toolbutton Mode: how the FSM drawing toolbar renders its buttons (default Icon Only).
+    QSettings toolbarSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    const Qt::ToolButtonStyle savedStyle = static_cast<Qt::ToolButtonStyle>(
+            toolbarSettings.value(QStringLiteral("smDesign/toolbarStyle"), static_cast<int>(Qt::ToolButtonIconOnly)).toInt());
+
+    QMenu* modeMenu = mViewMenu->addMenu(tr("Toolbutton &Mode"));
+    QActionGroup* modeGroup = new QActionGroup(this);
+    modeGroup->setExclusive(true);
+    const QList<QPair<QString, Qt::ToolButtonStyle>> modes{
+          { tr("&Icon Only"),     Qt::ToolButtonIconOnly }
+        , { tr("&Text Only"),     Qt::ToolButtonTextOnly }
+        , { tr("Icon &and Text"), Qt::ToolButtonTextBesideIcon }
+    };
+    for (const QPair<QString, Qt::ToolButtonStyle>& mode : modes)
+    {
+        QAction* modeAction = modeMenu->addAction(mode.first);
+        modeAction->setCheckable(true);
+        modeAction->setData(static_cast<int>(mode.second));
+        modeAction->setChecked(mode.second == savedStyle);
+        modeGroup->addAction(modeAction);
+    }
+
+    connect(modeGroup, &QActionGroup::triggered, this, &MdiMainWindow::onFsmToolbarStyle);
+    mNaviDock.getFsmToolbar().setDisplayStyle(savedStyle);
+
     mViewMenu->addSeparator();
     mThemeMenu = mViewMenu->addMenu(tr("&Theme"));
     mThemeActions = new QActionGroup(this);
@@ -980,6 +1156,9 @@ void MdiMainWindow::_createMenus()
 
     connect(mThemeActions, &QActionGroup::triggered, this, &MdiMainWindow::onThemeSelected);
     connect(mThemeMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuTheme);
+
+    mDesignMenu = menuBar()->addMenu(tr("&Design"));
+    connect(mDesignMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuDesign);
 
     mToolsMenu = menuBar()->addMenu(tr("&Tools"));
     mToolsMenu->addAction(&mActToolsOptions);
@@ -1005,6 +1184,9 @@ void MdiMainWindow::_createToolBars()
     mFileToolBar->addSeparator();
 
     mEditToolBar = addToolBar(tr("Edit"));
+    mEditToolBar->addAction(&mActEditUndo);
+    mEditToolBar->addAction(&mActEditRedo);
+    mEditToolBar->addSeparator();
     mEditToolBar->addAction(&mActEditCut);
     mEditToolBar->addAction(&mActEditCopy);
     mEditToolBar->addAction(&mActEditPaste);

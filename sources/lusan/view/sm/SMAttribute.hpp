@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMAttribute.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -47,6 +47,16 @@ class SMAttribute : public QScrollArea
 public:
     explicit SMAttribute(SMAttributeModel& model, QWidget* parent = nullptr);
     virtual ~SMAttribute() = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Returns the list panel (its Add button lets a caller start a new attribute,
+     *          e.g. from the Design page's Declare dropdown).
+     **/
+    SMAttributeList* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

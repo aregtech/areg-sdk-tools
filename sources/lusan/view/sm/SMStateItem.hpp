@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMStateItem.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -25,6 +25,7 @@
 #include "lusan/view/sm/SMCanvasItem.hpp"
 
 #include "lusan/data/sm/SMState.hpp"
+#include "lusan/view/sm/SMNoteEditor.hpp"
 
 #include <QColor>
 #include <QList>
@@ -118,6 +119,18 @@ public:
      * \brief   True while the in-place name editor is open.
      **/
     inline bool isRenameActive() const;
+
+    /**
+     * \brief   Opens the in-place note editor over the box for the note bound to this state;
+     *          commit (focus-out) pushes an undoable text change, then collapses back to the
+     *          corner note badge. No-op when the state has no bound note.
+     **/
+    void startNoteEdit();
+
+    /**
+     * \brief   True when a note is bound to this state (a note badge is shown).
+     **/
+    inline bool hasNote() const;
 
     /**
      * \brief   The box geometry (position and size) in scene coordinates.
@@ -228,6 +241,17 @@ private:
     QRectF chevronRect() const;
 
     /**
+     * \brief   The note-badge rectangle in the top-right corner (valid only when the state
+     *          has a bound note); used for painting and click-to-edit hit testing.
+     **/
+    QRectF noteBadgeRect() const;
+
+    /**
+     * \brief   Paints the note badge (a small folded-page glyph) in the top-right corner.
+     **/
+    void paintNoteBadge(QPainter* painter, const QColor& color);
+
+    /**
      * \brief   True when the body has rows to show (the chevron is useful).
      **/
     inline bool hasBodyContent() const;
@@ -253,12 +277,6 @@ private:
      * \brief   Pushes the finished resize gesture as one undo command.
      **/
     void commitResize();
-
-    /**
-     * \brief   Pushes one undo step moving every selected state box whose item position
-     *          differs from its Node layout entry (the finished drag gesture).
-     **/
-    void commitMoveGesture();
 
     /**
      * \brief   Validates a candidate name: identifier syntax and document-wide
@@ -301,10 +319,12 @@ private:
     QString                     mHeaderColorName; //!< The persisted header color (empty = derived).
     QList<BodyRow>              mRows;          //!< The behavior rows, in display order.
     QList<QRectF>               mMiniature;     //!< The nested level's node boxes (scene units).
+    bool                        mHasNote;       //!< A note is bound to this state (badge shown).
     eHandle                     mResizeHandle;  //!< The handle grabbed by the resize drag.
     QRectF                      mResizeStart;   //!< The box scene geometry at resize start.
     QGraphicsProxyWidget*       mRenameProxy;   //!< The open in-place name editor, or nullptr.
     bool                        mClosingRename; //!< Guards re-entrant editor teardown.
+    SMNoteEditor                mNoteEditor;    //!< The open in-place note editor (if any).
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -314,6 +334,11 @@ private:
 inline bool SMStateItem::isRenameActive() const
 {
     return (mRenameProxy != nullptr);
+}
+
+inline bool SMStateItem::hasNote() const
+{
+    return mHasNote;
 }
 
 inline bool SMStateItem::hasBodyContent() const

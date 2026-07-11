@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMCanvasTool.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -22,15 +22,18 @@
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
+#include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QGraphicsPathItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsSceneMouseEvent>
@@ -38,6 +41,7 @@
 #include <QKeyEvent>
 #include <QPainterPath>
 #include <QPen>
+#include <QToolTip>
 
 #include <algorithm>
 #include <cmath>
@@ -247,7 +251,9 @@ void SMPlaceStateTool::placeState(const QRectF& box)
         return;
     }
 
-    const QString base = (mFinal ? QStringLiteral("NewFinal") : QStringLiteral("NewState"));
+    // Final states read as terminals, so they are named plainly "Final" (then Final2,
+    // Final3, ...), not "NewFinalN" (issue #514).
+    const QString base = (mFinal ? QStringLiteral("Final") : QStringLiteral("NewState"));
     QString name{ base };
     for (int i = 2; data.findState(name) != nullptr; ++i)
     {
@@ -551,6 +557,18 @@ void SMTransitionTool::completeExternal(uint32_t targetId)
         return;
     }
 
+    // A Start state is the entry point of its machine level: no transition may enter it
+    // (same for a submachine's own Start). Reject the target and keep the gesture armed so
+    // the user can pick a valid target; give a brief hint at the cursor.
+    if (target->getKind() == SMStateEntry::eStateKind::Start)
+    {
+        const QList<QGraphicsView*> views = canvas.views();
+        QToolTip::showText(QCursor::pos()
+                         , QCoreApplication::translate("SMTransitionTool", "A transition cannot enter a Start state.")
+                         , (views.isEmpty() ? nullptr : views.first()));
+        return;
+    }
+
     const bool selfLoop = (targetId == mSourceId);
     QRectF srcRect = sourceRect();
     QRectF tgtRect = selfLoop ? srcRect : QRectF();
@@ -617,6 +635,83 @@ void SMTransitionTool::completeInternal()
     canvas.finishToolGesture();
 }
 
+//////////////////////////////////////////////////////////////////////////
+// SMPlaceNoteTool
+//////////////////////////////////////////////////////////////////////////
+
+SMPlaceNoteTool::SMPlaceNoteTool(SMScene& scene)
+    : SMCanvasTool(scene)
+{
+}
+
+NESMDesign::eCanvasTool SMPlaceNoteTool::getKind() const
+{
+    return NESMDesign::eCanvasTool::AddNote;
+}
+
+bool SMPlaceNoteTool::mousePress(QGraphicsSceneMouseEvent* event)
+{
+    if (event->button() != Qt::LeftButton)
+    {
+        return false;
+    }
+
+    SMScene& canvas = getScene();
+    StateMachineModel& model = canvas.getModel();
+
+    // Clicking on a state binds the note to that state (badge + popup editor over the box);
+    // clicking empty canvas drops a free note box. Only one note per state, so an existing
+    // state note is edited instead of creating a second.
+    SMStateItem* state = canvas.stateAt(event->scenePos());
+    if (state != nullptr)
+    {
+        const uint32_t stateId = state->getElementId();
+        if (model.getData().getLayout().findNoteByOwner(stateId) == nullptr)
+        {
+            const QRectF box = state->getBoxGeometry();
+            SMAddNoteCommand* command = new SMAddNoteCommand(  model.getData(), model.getNotifier()
+                                                            , canvas.getLevelId(), stateId, box, QString()
+                                                            , QCoreApplication::translate("SMCanvasTool", "Add note"));
+            model.getUndoStack().push(command);
+        }
+
+        // May retire this tool (single-shot); only stack locals are used afterwards.
+        canvas.finishToolGesture();
+        SMStateItem* item = canvas.stateItem(stateId);
+        if (item != nullptr)
+        {
+            item->startNoteEdit();
+        }
+
+        event->accept();
+        return true;
+    }
+
+    const QSizeF size{ NESMDesign::NoteDefaultWidth, NESMDesign::NoteDefaultHeight };
+    const QPointF topLeft = canvas.snappedPosition(event->scenePos() - QPointF(size.width() / 2.0, size.height() / 2.0));
+    const QRectF  box{ topLeft, size };
+
+    SMAddNoteCommand* command = new SMAddNoteCommand(  model.getData(), model.getNotifier()
+                                                     , canvas.getLevelId(), box, QString()
+                                                     , QCoreApplication::translate("SMCanvasTool", "Add note"));
+    model.getUndoStack().push(command);
+
+    const uint32_t noteId = command->getNoteId();
+    model.getSelectionModel().setSelection(QList<uint32_t>{ noteId });
+
+    SMNoteItem* item = dynamic_cast<SMNoteItem*>(canvas.findCanvasItem(noteId));
+
+    // May retire this tool (single-shot); only stack locals are used afterwards.
+    canvas.finishToolGesture();
+    if (item != nullptr)
+    {
+        item->startInlineEdit();
+    }
+
+    event->accept();
+    return true;
+}
+
 std::unique_ptr<SMCanvasTool> createCanvasTool(NESMDesign::eCanvasTool tool, SMScene& scene)
 {
     switch (tool)
@@ -629,6 +724,8 @@ std::unique_ptr<SMCanvasTool> createCanvasTool(NESMDesign::eCanvasTool tool, SMS
         return std::make_unique<SMPlaceStateTool>(scene, true);
     case NESMDesign::eCanvasTool::AddTransition:
         return std::make_unique<SMTransitionTool>(scene);
+    case NESMDesign::eCanvasTool::AddNote:
+        return std::make_unique<SMPlaceNoteTool>(scene);
     default:
         return nullptr;
     }
