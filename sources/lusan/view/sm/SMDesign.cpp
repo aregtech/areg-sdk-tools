@@ -35,11 +35,14 @@
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
+#include "lusan/view/sm/SMOutlinePanel.hpp"
+#include "lusan/view/sm/SMPropertiesPanel.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
 
 #include <QAction>
 #include <QColorDialog>
+#include <QDockWidget>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QKeyEvent>
@@ -51,6 +54,7 @@
 #include <QPair>
 #include <QScrollBar>
 #include <QSettings>
+#include <QSize>
 #include <QStringList>
 #include <QToolBar>
 #include <QToolButton>
@@ -172,13 +176,18 @@ namespace
 }
 
 SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
-    : QWidget       (parent)
+    : QMainWindow   (parent)
     , mModel        (model)
     , mView         (new SMGraphicsView(this))
     , mSceneManager (nullptr)
     , mScene        (nullptr)
     , mBreadcrumb   (nullptr)
     , mBreadcrumbLayout(nullptr)
+    , mToolBar      (nullptr)
+    , mPropertiesDock(nullptr)
+    , mOutlineDock  (nullptr)
+    , mProperties   (nullptr)
+    , mOutline      (nullptr)
     , mActZoomIn    (nullptr)
     , mActZoomOut   (nullptr)
     , mActZoomReset (nullptr)
@@ -236,13 +245,17 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mBreadcrumbLayout->setContentsMargins(8, 4, 8, 4);
     mBreadcrumbLayout->setSpacing(4);
 
-    // The drawing toolbar lives in the navigation dock's FSM Toolbar tab (bound to the active
-    // State Machine), not above the canvas; the Design page only owns the actions.
-    QVBoxLayout* layout = new QVBoxLayout(this);
+    // The Design page is a QMainWindow: its central widget is the canvas (breadcrumb + viewport),
+    // and its own drawing toolbar, Properties, and Outline panels dock to the page's edges
+    // (issue #516). They live inside this page and can be moved to the Navigation Window; they are
+    // only present while this Design page is the shown tab of the active document.
+    QWidget* central = new QWidget(this);
+    QVBoxLayout* layout = new QVBoxLayout(central);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     layout->addWidget(mBreadcrumb);
     layout->addWidget(mView);
+    setCentralWidget(central);
 
     connect(mSceneManager, &SMSceneManager::signalLevelChanged, this, &SMDesign::onLevelChanged);
     connect(mView->horizontalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
@@ -251,6 +264,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
     rebuildScene();
     setupActions();
+    buildDesignToolbar();   // the toolbar reads the actions created by setupActions()
+    buildDesignPanels();
     mView->installEventFilter(this);
 
     // Context-sensitive canvas/state/transition/note menus (spec 9.3 rule 2), built on
@@ -281,6 +296,18 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     });
 
     updateNavActions();
+}
+
+SMDesign::~SMDesign()
+{
+    // Child destruction (the view detaching its scene changes the scrollbars) can emit signals
+    // wired to this page's slots; stop receiving them before the derived object is gone.
+    mModel.getNotifier().disconnect(this);
+    mModel.getSelectionModel().disconnect(this);
+    mSceneManager->disconnect(this);
+    mView->disconnect(this);
+    mView->horizontalScrollBar()->disconnect(this);
+    mView->verticalScrollBar()->disconnect(this);
 }
 
 bool SMDesign::eventFilter(QObject* watched, QEvent* event)
@@ -321,7 +348,7 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
         }
     }
 
-    return QWidget::eventFilter(watched, event);
+    return QMainWindow::eventFilter(watched, event);
 }
 
 QAction* SMDesign::matchAction(const QKeyEvent& event) const
@@ -660,14 +687,92 @@ QList<QAction*> SMDesign::declareActions() const
 
 void SMDesign::setToolbarVisible(bool visible)
 {
-    // The toolbar now lives in the navigation dock (global), shown/raised from the View menu;
-    // this per-child flag is kept only for the MdiChild contract.
     mToolbarVisible = visible;
+    if (mToolBar != nullptr)
+    {
+        mToolBar->setVisible(visible);
+    }
 }
 
 bool SMDesign::isToolbarVisible() const
 {
-    return mToolbarVisible;
+    return (mToolBar != nullptr) ? mToolBar->isVisible() : mToolbarVisible;
+}
+
+void SMDesign::setToolbarStyle(Qt::ToolButtonStyle style)
+{
+    if (mToolBar != nullptr)
+    {
+        mToolBar->setToolButtonStyle(style);
+    }
+}
+
+void SMDesign::buildDesignToolbar()
+{
+    mToolBar = new QToolBar(tr("Design Tools"), this);
+    mToolBar->setObjectName(QStringLiteral("SMDesignToolBar"));
+    mToolBar->setMovable(true);
+    mToolBar->setFloatable(false);
+    mToolBar->setAllowedAreas(Qt::AllToolBarAreas);
+    mToolBar->setIconSize(QSize(16, 16));
+
+    // Icon-only by default (spec issue #516); the View menu's Toolbutton Mode submenu can switch
+    // this and the choice is persisted, so seed the toolbar from the stored style.
+    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    const Qt::ToolButtonStyle style = static_cast<Qt::ToolButtonStyle>(
+            settings.value(QStringLiteral("smDesign/toolbarStyle"), static_cast<int>(Qt::ToolButtonIconOnly)).toInt());
+    mToolBar->setToolButtonStyle(style);
+
+    // One button per action of toolGroups(), a separator between groups. The actions are this
+    // page's own (added in setupActions()), so they act on this canvas and enable/disable with it.
+    bool firstGroup = true;
+    for (const ToolGroup& group : toolGroups())
+    {
+        if (group.actions.isEmpty())
+        {
+            continue;
+        }
+
+        if (firstGroup == false)
+        {
+            mToolBar->addSeparator();
+        }
+
+        firstGroup = false;
+        for (QAction* action : group.actions)
+        {
+            mToolBar->addAction(action);
+        }
+    }
+
+    addToolBar(Qt::TopToolBarArea, mToolBar);
+    mToolBar->setVisible(mToolbarVisible);
+}
+
+void SMDesign::buildDesignPanels()
+{
+    // Properties on the right, top; Outline on the right, below it. Both bound to this page's
+    // model/scene manager (issue #516) and dockable to any of the page's four edges.
+    mProperties = new SMPropertiesPanel(mModel);
+    mPropertiesDock = new QDockWidget(tr("Properties"), this);
+    mPropertiesDock->setObjectName(QStringLiteral("SMPropertiesDock"));
+    mPropertiesDock->setWidget(mProperties);
+    addDockWidget(Qt::RightDockWidgetArea, mPropertiesDock);
+
+    mOutline = new SMOutlinePanel(mModel, *mSceneManager);
+    // The outline's context-menu Rename/Delete delegate to this page's own actions.
+    connect(mOutline, &SMOutlinePanel::signalRenameRequested, this, [this](uint32_t) {
+        if (mActRename != nullptr) mActRename->trigger();
+    });
+    connect(mOutline, &SMOutlinePanel::signalDeleteRequested, this, [this]() {
+        deleteSelection();
+    });
+    mOutlineDock = new QDockWidget(tr("Outline"), this);
+    mOutlineDock->setObjectName(QStringLiteral("SMOutlineDock"));
+    mOutlineDock->setWidget(mOutline);
+    addDockWidget(Qt::RightDockWidgetArea, mOutlineDock);
+
+    splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
 }
 
 QList<SMDesign::ToolGroup> SMDesign::toolGroups() const

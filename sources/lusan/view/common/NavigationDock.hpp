@@ -24,7 +24,7 @@
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 
-#include <QDockWidget>
+#include <QWidget>
 #include <QSize>
 #include <QTabWidget>
 #include "OutputDock.hpp"
@@ -32,7 +32,13 @@
 class MdiMainWindow;
 class NaviFsmToolbar;
 
-class NavigationDock : public QDockWidget
+/**
+ * \brief   The navigation window content (a tab widget of the workspace/log/FSM explorers).
+ *          It is a plain content widget hosted inside a Qt-Advanced-Docking-System dock widget
+ *          (issue #516), so it no longer derives from QDockWidget; the ADS dock provides the
+ *          title bar, floating, and cross-window drag/tab behavior.
+ **/
+class NavigationDock : public QWidget
 {
 //////////////////////////////////////////////////////////////////////////
 // Constants, types and static methods
@@ -91,11 +97,6 @@ public:
      * \brief   Returns the offline log explorer widget.
      **/
     inline NaviOfflineLogsScopes& getOfflineScopes();
-
-    /**
-     * \brief   Returns the FSM design toolbar widget.
-     **/
-    inline NaviFsmToolbar& getFsmToolbar();
 
     /**
      * \brief   Adds a new tab with the widget to the tab-control.
@@ -173,7 +174,6 @@ private:
     NaviLiveLogsScopes      mLiveScopes;    //!< The log explorer widget.
     NaviOfflineLogsScopes   mOfflineScopes; //!< The offline scopes explorer.
     NaviFileSystem          mFileSystem;    //!< The file system widget.
-    NaviFsmToolbar*         mFsmToolbar;    //!< The FSM design toolbar widget (owned by the tab widget).
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -198,11 +198,6 @@ inline NaviLiveLogsScopes& NavigationDock::getLiveScopes()
 inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes()
 {
     return mOfflineScopes;
-}
-
-inline NaviFsmToolbar& NavigationDock::getFsmToolbar()
-{
-    return *mFsmToolbar;
 }
 
 inline int NavigationDock::addTab(NavigationWindow& widget, const QString& tabName)

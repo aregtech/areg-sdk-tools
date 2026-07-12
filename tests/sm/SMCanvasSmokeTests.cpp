@@ -23,7 +23,11 @@
  *
  ************************************************************************/
 
+#include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMLayoutData.hpp"
+#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMState.hpp"
+#include "lusan/data/sm/SMTimerData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
@@ -39,17 +43,22 @@
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
 #include "lusan/view/sm/SMNoteItem.hpp"
+#include "lusan/view/sm/SMOutlinePanel.hpp"
+#include "lusan/view/sm/SMPropertiesPanel.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QApplication>
+#include <QComboBox>
 #include <QContextMenuEvent>
 #include <QDir>
 #include <QFile>
 #include <QFocusEvent>
 #include <QGraphicsProxyWidget>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QTreeWidget>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
 #include <QSettings>
@@ -1352,6 +1361,152 @@ int main(int argc, char* argv[])
         settings.sync();
         QCoreApplication::setOrganizationName(QString());
         QCoreApplication::setApplicationName(QString());
+    }
+
+    std::printf("sect: SM-19 outline and properties panels\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+
+        // The Outline and Properties panels are now global ADS docks the main window creates for
+        // the active Design page (issue #516); they are no longer owned by SMDesign. A headless
+        // test drives standalone instances bound to the same document + scene manager -- exactly
+        // what MdiMainWindow::updateDesignPanels() constructs per active Design page.
+        SMOutlinePanel outlinePanel(doc, page.getSceneManager());
+        SMPropertiesPanel propsPanel(doc);
+        outlinePanel.resize(320, 600);
+        outlinePanel.show();
+        propsPanel.resize(320, 600);
+        propsPanel.show();
+        QApplication::processEvents();
+        SMOutlinePanel* outline = &outlinePanel;
+        SMPropertiesPanel* props = &propsPanel;
+        CHECK(outline != nullptr);
+        CHECK(props != nullptr);
+
+        // Pick a Normal state and the first state that owns a transition.
+        const SMStateData* root = d.findLevel(page.getScene().getLevelId());
+        CHECK(root != nullptr);
+        const SMStateEntry* normal = nullptr;
+        uint32_t ownerWithTxId = 0;
+        uint32_t firstTxId = 0;
+        for (const SMStateEntry* s : root->getElements())
+        {
+            if ((normal == nullptr) && (s->getKind() == SMStateEntry::eStateKind::Normal))
+            {
+                normal = s;
+            }
+
+            if ((firstTxId == 0) && (s->getTransitions().getElementCount() >= 1))
+            {
+                firstTxId = s->getTransitions().getElements().first()->getId();
+                ownerWithTxId = s->getId();
+            }
+        }
+        CHECK(normal != nullptr);
+        CHECK(firstTxId != 0);
+
+        // AC1: selecting a state is reflected in the properties page and the outline.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ normal->getId() });
+        QApplication::processEvents();
+        grab(page, "g19-panels");
+        CHECK(props->currentPage() == SMPropertiesPanel::PageState);
+        CHECK(props->currentElementId() == normal->getId());
+        CHECK(props->stateNameEdit()->text() == normal->getName());
+        CHECK(outline->getTree()->selectedItems().isEmpty() == false);
+
+        // AC3: editing the name in properties is the same atomic, undoable rename as canvas F2.
+        const int undoBeforeRename = doc.getUndoStack().count();
+        props->stateNameEdit()->setText(QStringLiteral("RenamedByPanel"));
+        QMetaObject::invokeMethod(props->stateNameEdit(), "editingFinished");
+        CHECK(d.findState("RenamedByPanel") != nullptr);
+        CHECK(doc.getUndoStack().count() == undoBeforeRename + 1);
+        doc.getUndoStack().undo();
+        CHECK(d.findState("RenamedByPanel") == nullptr);
+
+        // AC3: an invalid identifier is rejected inline (no command, the field reverts).
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ normal->getId() });
+        const int undoBeforeReject = doc.getUndoStack().count();
+        props->stateNameEdit()->setText(QStringLiteral("9 invalid"));
+        QMetaObject::invokeMethod(props->stateNameEdit(), "editingFinished");
+        CHECK(doc.getUndoStack().count() == undoBeforeReject);
+        CHECK(props->stateNameEdit()->text() == normal->getName());
+
+        // The state page lists the owner's transitions.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ ownerWithTxId });
+        QApplication::processEvents();
+        CHECK(props->transitionList()->count() == d.findStateById(ownerWithTxId)->getTransitions().getElementCount());
+
+        // AC1: selecting a transition switches the properties page to the transition editor.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ firstTxId });
+        QApplication::processEvents();
+        CHECK(props->currentPage() == SMPropertiesPanel::PageTransition);
+        CHECK(props->currentElementId() == firstTxId);
+
+        // AC2: a priority reorder keeps the properties list in sync and is undoable. (The drag
+        // gesture builds the same reorder command; here it is issued directly.)
+        if (d.findStateById(ownerWithTxId)->getTransitions().getElementCount() >= 2)
+        {
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ ownerWithTxId });
+            QApplication::processEvents();
+            SMTransitionData& list = d.findStateById(ownerWithTxId)->getTransitions();
+            const uint32_t topId = list.getElements().first()->getId();
+            const int rowsBefore = props->transitionList()->count();
+            doc.getUndoStack().push(new TDocReorderCommand<SMTransitionEntry*, DocumentElem>(doc.getNotifier(), list, 0, 1, ownerWithTxId, eDocElementKind::Transition, QStringLiteral("Reorder")));
+            QApplication::processEvents();
+            CHECK(props->transitionList()->count() == rowsBefore);
+            CHECK(list.getElements().at(1)->getId() == topId);
+            doc.getUndoStack().undo();
+            QApplication::processEvents();
+            CHECK(list.getElements().first()->getId() == topId);
+        }
+
+        // The stimulus picker is a fixed list of triggers/events/timers (each row carries its
+        // real name at Qt::UserRole+1). Picking a listed entry sets it undoably; a value that is
+        // not on the list is rejected - the panel never creates or renames a registry entry.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ firstTxId });
+        QApplication::processEvents();
+        QComboBox* stim = props->stimulusNameCombo();
+
+        const QString curStim = d.findTransitionById(firstTxId)->getStimulus();
+        int pickRow = -1;
+        for (int i = 0; i < stim->count(); ++i)
+        {
+            if (stim->itemData(i, Qt::UserRole + 1).toString() != curStim)
+            {
+                pickRow = i;
+                break;
+            }
+        }
+
+        if (pickRow >= 0)
+        {
+            const QString pickName = stim->itemData(pickRow, Qt::UserRole + 1).toString();
+            const int indexBeforePick = doc.getUndoStack().index();  // index, not count: prior undo left a redoable
+            stim->setEditText(stim->itemText(pickRow));
+            QMetaObject::invokeMethod(stim->lineEdit(), "editingFinished");
+            CHECK(d.findTransitionById(firstTxId)->getStimulus() == pickName);
+            CHECK(doc.getUndoStack().index() == indexBeforePick + 1);
+            doc.getUndoStack().undo();
+            CHECK(d.findTransitionById(firstTxId)->getStimulus() == curStim);
+        }
+
+        // A name that is not on the list is rejected: no registry entry created, no change pushed.
+        const QString notListed = QStringLiteral("NotAListedStimulus");
+        CHECK(d.isStimulusName(notListed) == false);
+        const int indexBeforeReject = doc.getUndoStack().index();
+        const QString beforeReject = d.findTransitionById(firstTxId)->getStimulus();
+        stim->setEditText(notListed);
+        QMetaObject::invokeMethod(stim->lineEdit(), "editingFinished");
+        CHECK(d.isStimulusName(notListed) == false);
+        CHECK(d.findTransitionById(firstTxId)->getStimulus() == beforeReject);
+        CHECK(doc.getUndoStack().index() == indexBeforeReject);
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

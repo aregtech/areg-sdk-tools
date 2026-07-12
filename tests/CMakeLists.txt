@@ -169,6 +169,8 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMGraphicsView.cpp
     ${LUSAN}/view/sm/SMNoteEditor.cpp
     ${LUSAN}/view/sm/SMNoteItem.cpp
+    ${LUSAN}/view/sm/SMOutlinePanel.cpp
+    ${LUSAN}/view/sm/SMPropertiesPanel.cpp
     ${LUSAN}/view/sm/SMScene.cpp
     ${LUSAN}/view/sm/SMSceneManager.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp

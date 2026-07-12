@@ -88,12 +88,8 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
 
     connect(&mTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
         ensureTabInitialized(index);
-        // The drawing toolbar is only active on the Design page; refresh its bound page and
-        // active state whenever the inner tab changes (a no-op when this document is inactive).
-        if (mMainWindow != nullptr)
-        {
-            mMainWindow->updateFsmToolbar();
-        }
+        // The drawing toolbar and the Properties/Outline panels live inside the Design page
+        // (issue #516), so they appear and hide together with that tab -- nothing to refresh here.
     });
 
     ensureTabInitialized(static_cast<int>(PageOverview));
@@ -421,11 +417,8 @@ void StateMachine::ensureTabInitialized(int index)
         SMDesign* design = new SMDesign(mModel, &mTabWidget);
         design->setToolbarVisible(mToolbarVisible);
         connect(design, &SMDesign::signalDeclareRequested, this, &StateMachine::onDeclareRequested);
-        connect(design, &SMDesign::signalShowDesignTools, this, [this]() {
-            if (mMainWindow != nullptr)
-            {
-                mMainWindow->showNaviTab(NavigationDock::eNaviWindow::NaviDesignToolbar);
-            }
+        connect(design, &SMDesign::signalShowDesignTools, this, [design]() {
+            design->setToolbarVisible(true);    // the toolbar lives in the page (issue #516)
         });
         page = design;
     }
@@ -437,15 +430,6 @@ void StateMachine::ensureTabInitialized(int index)
 
     mPages[index] = page;
     attachPage(index, page);
-
-    // The drawing toolbar lives in the navigation dock, bound to the active document's Design
-    // page. It could not bind until this page existed and was registered in mPages (so that
-    // designPageIfBuilt() returns it); refresh it now that the registration is complete (a
-    // no-op when this document is not the active one).
-    if ((index == static_cast<int>(PageDesign)) && (mMainWindow != nullptr))
-    {
-        mMainWindow->updateFsmToolbar();
-    }
 }
 
 void StateMachine::attachPage(int index, QWidget* page)

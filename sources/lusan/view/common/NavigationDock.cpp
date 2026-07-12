@@ -21,6 +21,8 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/common/NaviFsmToolbar.hpp"
+
+#include <QVBoxLayout>
 #include <algorithm>
 
 
@@ -63,31 +65,36 @@ NavigationDock::eNaviWindow NavigationDock::getNaviWindow(const QString& tabName
 
 
 NavigationDock::NavigationDock(MdiMainWindow* parent)
-    : QDockWidget   (tr("Navigation"), parent)
+    : QWidget       (parent)
 
     , mMainWindow   (parent)
     , mTabs         (this)
     , mLiveScopes   (parent, this)
     , mOfflineScopes(parent, this)
     , mFileSystem   (parent, this)
-    , mFsmToolbar   (new NaviFsmToolbar(parent, this))
 {
+    // The FSM drawing toolbar is no longer a navigation tab; it is a global ADS dock owned by
+    // the main window (issue #516), reachable near the Design page or dragged to tab in here.
     mTabs.addTab(&mFileSystem   , NELusanCommon::iconViewWorkspace(NELusanCommon::SizeBig)  , NavigationDock::TabNameFileSystem);
     mTabs.addTab(&mLiveScopes   , NELusanCommon::iconViewLiveLogs(NELusanCommon::SizeBig)   , NavigationDock::TabLiveLogsExplorer);
     mTabs.addTab(&mOfflineScopes, NELusanCommon::iconViewOfflineLogs(NELusanCommon::SizeBig), NavigationDock::TabOfflineLogsExplorer);
-    mTabs.addTab(mFsmToolbar    , NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeBig)  , NavigationDock::TabFsmToolbar);
 
     // Tooltips shown on every tab when hovered with the mouse.
     mTabs.setTabToolTip(0, tr("Workspace file explorer"));
     mTabs.setTabToolTip(1, tr("Live logs scope explorer"));
     mTabs.setTabToolTip(2, tr("Offline logs scope explorer"));
-    mTabs.setTabToolTip(3, tr("State Machine design drawing tools"));
 
     mTabs.setTabPosition(QTabWidget::South);
     mTabs.setUsesScrollButtons(true);
     mTabs.setElideMode(Qt::ElideRight);
     mTabs.setSizePolicy(QSizePolicy::Policy::Ignored, QSizePolicy::Policy::Expanding);
-    setWidget(&mTabs);
+
+    // The tab widget is this content widget's whole body; the hosting ADS dock provides the
+    // title bar and frame (issue #516).
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(&mTabs);
 
     initSize();
 
@@ -163,25 +170,30 @@ bool NavigationDock::showTab(NavigationDock::eNaviWindow navi)
 
 void NavigationDock::initSize()
 {
-    const int minWidth = static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH);
+    // The user may shrink the dock down to the absolute minimum width (issue #516), while the
+    // default/preferred width stays at MIN_NAVI_WIDTH. The tab widget must accept the same floor,
+    // otherwise its own minimum would keep the dock from getting narrow.
+    const int absMinWidth = static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH_ABS);
+    const int defWidth = static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH);
     const int minHeight = static_cast<int>(NELusanCommon::MIN_NAVI_HEIGHT);
-    setMinimumWidth(minWidth);
+    setMinimumWidth(absMinWidth);
     setMinimumHeight(minHeight);
-    resize(QSize { minWidth, std::max(minHeight, height()) });
+    mTabs.setMinimumWidth(absMinWidth);
+    resize(QSize { defWidth, std::max(minHeight, height()) });
     setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Expanding);
 }
 
 QSize NavigationDock::sizeHint() const
 {
-    QSize result{ QDockWidget::sizeHint() };
+    QSize result{ QWidget::sizeHint() };
     result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
     return result;
 }
 
 QSize NavigationDock::minimumSizeHint() const
 {
-    QSize result{ QDockWidget::minimumSizeHint() };
-    result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH));
+    QSize result{ QWidget::minimumSizeHint() };
+    result.setWidth(static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH_ABS));
     result.setHeight(std::max(result.height(), static_cast<int>(NELusanCommon::MIN_NAVI_HEIGHT)));
     return result;
 }

@@ -33,6 +33,7 @@
 class MdiChild;
 class ServiceInterface;
 class StateMachine;
+class SMDesign;
 class LiveLogsModel;
 class NaviFileSystem;
 class LiveLogViewer;
@@ -50,6 +51,13 @@ class QTabWidget;
 class QToolBar;
 class QTreeView;
 QT_END_NAMESPACE
+
+namespace ads
+{
+    class CDockManager;
+    class CDockWidget;
+    class CDockAreaWidget;
+}
 
 /**
  * \brief   The main window class for the Lusan application.
@@ -157,13 +165,6 @@ public:
      * \param   naviTab     The navigation tab to show.
      **/
     void showNaviTab(NavigationDock::eNaviWindow naviTab);
-
-    /**
-     * \brief   Re-binds the navigation dock's FSM Toolbar tab to the active State Machine's
-     *          Design page (or clears it when none is active/built). Called on document
-     *          activation and when a State Machine builds its Design page.
-     **/
-    void updateFsmToolbar();
 
     /**
      * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
@@ -475,6 +476,12 @@ private:
     void _createDockWindows();
 
     /**
+     * \brief   Opens (if closed) and raises the given ADS dock widget. Replaces the plain
+     *          QWidget show()/raise() used before the navigation/output docks moved to ADS.
+     **/
+    void showDock(ads::CDockWidget* dock);
+
+    /**
      * \brief   Creates the MDI area for managing sub-windows.
      **/
     void _createMdiArea();
@@ -549,8 +556,14 @@ private:
     QString         mLastFile;      //!< The current file name.
     
     MdiArea         mMdiArea;       //!< The MDI area for managing sub-windows.
-    NavigationDock  mNaviDock;      //!< The navigation dock widget.
-    OutputDock      mOutputDock;    //!< The output dock widget.
+    NavigationDock  mNaviDock;      //!< The navigation content (hosted in an ADS dock, issue #516).
+    OutputDock      mOutputDock;    //!< The output content (hosted in an ADS dock, issue #516).
+
+    ads::CDockManager* mDockManager;    //!< The single ADS dock manager; hosts every dock (issue #516).
+    ads::CDockWidget*  mCentralDock;    //!< Wraps the MDI area as the non-closable central dock.
+    ads::CDockAreaWidget* mCentralArea; //!< The central dock area (anchor for the design-panel docks).
+    ads::CDockWidget*  mNaviDockWidget; //!< The ADS dock hosting the Navigation content.
+    ads::CDockWidget*  mOutputDockWidget; //!< The ADS dock hosting the Output content.
     LiveLogViewer*  mLogViewer;     //!< The log viewer for displaying live logs. There should be only one instance of this viewer.
     QMdiSubWindow*  mLiveLogWnd;    //!< The MDI sub-window for the live log viewer. There should be only one instance of this window.
 

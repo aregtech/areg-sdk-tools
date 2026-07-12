@@ -73,10 +73,15 @@ namespace NELusanCommon
     extern const QString    INIT_FILE;
 
     /**
-     * \brief   The minimal width of navigation window.
+     * \brief   The default (preferred) width of the navigation window.
      **/
     constexpr const uint32_t  MIN_NAVI_WIDTH    { 280 };
-    
+
+    /**
+     * \brief   The absolute minimum width the navigation window can be shrunk to (issue #516).
+     **/
+    constexpr const uint32_t  MIN_NAVI_WIDTH_ABS { 64 };
+
     /**
      * \brief   The minimal height of navigation window.
      **/

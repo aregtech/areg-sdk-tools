@@ -26,14 +26,18 @@
 #include "lusan/model/log/LiveLogsModel.hpp"
 #include "lusan/model/log/OfflineLogsModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
+#include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/StateMachine.hpp"
-#include "lusan/view/common/NaviFsmToolbar.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
 #include "lusan/view/log/OfflineLogViewer.hpp"
 
 #include "areg/base/SocketDefs.hpp"
+
+#include <DockAreaWidget.h>
+#include <DockManager.h>
+#include <DockWidget.h>
 
 #include <QAction>
 #include <QActionGroup>
@@ -42,6 +46,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QLabel>
 #include <QMdiSubWindow>
 #include <QMenu>
 #include <QMenuBar>
@@ -108,6 +113,11 @@ MdiMainWindow::MdiMainWindow()
     , mMdiArea      ( this )
     , mNaviDock     ( this )
     , mOutputDock   ( this )
+    , mDockManager  ( nullptr )
+    , mCentralDock  ( nullptr )
+    , mCentralArea  ( nullptr )
+    , mNaviDockWidget ( nullptr )
+    , mOutputDockWidget ( nullptr )
     , mLogViewer    ( nullptr )
     , mLiveLogWnd   ( nullptr )
 
@@ -161,9 +171,9 @@ MdiMainWindow::MdiMainWindow()
     _createMenus();
     _createToolBars();
     _createStatusBar();
-    _createDockWindows();
-    _createMdiArea();
-    
+    _createMdiArea();       // creates the ADS dock manager + central widget first
+    _createDockWindows();   // then adds the navigation/output/design docks to it
+
     onShowMenuWindow();
     onSubWindowActivated(nullptr);
     readSettings();
@@ -345,6 +355,7 @@ int MdiMainWindow::showOptionPageLogging(const QString& address, const QString& 
 
 void MdiMainWindow::showNaviTab(NavigationDock::eNaviWindow naviTab)
 {
+    showDock(mNaviDockWidget);
     mNaviDock.showTab(naviTab);
 }
 
@@ -511,23 +522,14 @@ void MdiMainWindow::onEditRedo()
 
 void MdiMainWindow::onViewDesignToolbar(bool /*visible*/)
 {
-    // The drawing toolbar lives in the navigation dock's FSM Toolbar tab, bound to the active
-    // State Machine; show and raise it.
-    updateFsmToolbar();
-    mNaviDock.show();
-    mNaviDock.raise();
-    mNaviDock.showTab(NavigationDock::eNaviWindow::NaviDesignToolbar);
-}
-
-void MdiMainWindow::updateFsmToolbar()
-{
+    // The drawing toolbar now lives inside the active State Machine's Design page (issue #516);
+    // the View-menu entry toggles that page's in-page toolbar.
     StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
-    mNaviDock.getFsmToolbar().bindDesign(design);
-
-    // The tools are shown whenever a State Machine document is active, but stay active only
-    // while its Design page is the current inner tab (they act on the canvas).
-    mNaviDock.getFsmToolbar().setToolsActive((stateMachine != nullptr) && stateMachine->isDesignPageCurrent());
+    if (design != nullptr)
+    {
+        design->setToolbarVisible(design->isToolbarVisible() == false);
+    }
 }
 
 void MdiMainWindow::onFsmToolbarStyle(QAction* action)
@@ -537,11 +539,18 @@ void MdiMainWindow::onFsmToolbarStyle(QAction* action)
         return;
     }
 
+    // Persist the choice and apply it to the active Design page's in-page toolbar; every Design
+    // page seeds its toolbar from this stored style when built (issue #516).
     const Qt::ToolButtonStyle style = static_cast<Qt::ToolButtonStyle>(action->data().toInt());
-    mNaviDock.getFsmToolbar().setDisplayStyle(style);
-
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     settings.setValue(QStringLiteral("smDesign/toolbarStyle"), static_cast<int>(style));
+
+    StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
+    SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
+    if (design != nullptr)
+    {
+        design->setToolbarStyle(style);
+    }
 }
 
 void MdiMainWindow::onShowMenuDesign()
@@ -552,8 +561,27 @@ void MdiMainWindow::onShowMenuDesign()
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
     if (design == nullptr)
     {
-        QAction* placeholder = mDesignMenu->addAction(tr("(Open the Design tab to use these commands)"));
-        placeholder->setEnabled(false);
+        // No Design page yet: present the full command set as grouped, disabled stand-ins so the
+        // user sees every available command (and that it is inactive) instead of a lone note
+        // (issue #516). Undo/Redo belong to the Edit menu and are not repeated here. The stand-in
+        // actions are parented to the menu, so the next clear() disposes of them.
+        const QList<SMDesign::ToolGroup> groups = SMDesign::placeholderToolGroups(*mDesignMenu);
+        const QString undoText = SMDesign::tr("Undo");
+        const QString redoText = SMDesign::tr("Redo");
+        for (const SMDesign::ToolGroup& group : groups)
+        {
+            mDesignMenu->addSection(group.title);
+            for (QAction* action : group.actions)
+            {
+                if ((action->text() == undoText) || (action->text() == redoText))
+                {
+                    continue;
+                }
+
+                mDesignMenu->addAction(action);
+            }
+        }
+
         return;
     }
 
@@ -744,12 +772,11 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
         mCanRedoConn = connect(mdiActive, &MdiChild::signalCanRedoChanged, &mActEditRedo, &QAction::setEnabled);
     }
 
-    // The Design toolbar toggle only applies to (and is only enabled for) an FSM window.
+    // The Design toolbar toggle only applies to (and is only enabled for) an FSM window. The
+    // toolbar and the Properties/Outline panels live inside the Design page itself (issue #516),
+    // so they follow the active document/tab automatically -- no global rebind needed here.
     const bool isFSM = hasMdiChild && mdiActive->isStateMachineWindow();
     mActViewDesignToolbar.setEnabled(isFSM);
-
-    // Reflect the active State Machine's Design page in the navigation dock's FSM Toolbar tab.
-    updateFsmToolbar();
 
     if (mdiActive != nullptr)
     {
@@ -1013,35 +1040,35 @@ void MdiMainWindow::_createActions()
     initAction(mActViewNavigator, NELusanCommon::iconViewNavigationWindow(NELusanCommon::SizeBig), tr("&Navigation Window"));
     mActViewNavigator.setStatusTip(tr("View Navigation Window"));
     connect(&mActViewNavigator, &QAction::triggered, this, [this](){
-        if (mNaviDock.isHidden()) mNaviDock.show();
+        showDock(mNaviDockWidget);
     });
-    
+
     initAction(mActViewWokspace, NELusanCommon::iconViewWorkspace(NELusanCommon::SizeBig), tr("&Workspace Explorer"));
     mActViewWokspace.setStatusTip(tr("View Workspace Navigator Window"));
     connect(&mActViewWokspace, &QAction::triggered, this, [this]() {
-        if (mNaviDock.isHidden()) mNaviDock.show();
+        showDock(mNaviDockWidget);
         mNaviDock.showTab(NavigationDock::TabNameFileSystem);
     });
-    
+
     initAction(mActViewLogs, NELusanCommon::iconViewLiveLogs(NELusanCommon::SizeBig), tr("Live &Logs Navigator"));
     mActViewLogs.setStatusTip(tr("View Live Logs Navigator Window"));
     connect(&mActViewLogs, &QAction::triggered, this, [this] () {
-        if (mNaviDock.isHidden()) mNaviDock.show();
+        showDock(mNaviDockWidget);
         mNaviDock.showTab(NavigationDock::TabLiveLogsExplorer);
         if (mLiveLogWnd != nullptr) mLiveLogWnd->activateWindow();
     });
-    
+
     initAction(mActOffViewLogs, NELusanCommon::iconViewOfflineLogs(NELusanCommon::SizeBig), tr("Offline &Logs Navigator"));
     mActOffViewLogs.setStatusTip(tr("View Offline Logs Navigator Window"));
     connect(&mActOffViewLogs, &QAction::triggered, this, [this] () {
-        if (mNaviDock.isHidden()) mNaviDock.show();
+        showDock(mNaviDockWidget);
         mNaviDock.showTab(NavigationDock::TabOfflineLogsExplorer);
     });
-    
+
     initAction(mActViewOutput, NELusanCommon::iconViewOutputWindow(NELusanCommon::SizeBig), tr("&Output Window"));
     mActViewOutput.setStatusTip(tr("View Output Window"));
     connect(&mActViewOutput, &QAction::triggered, this, [this](){
-        if (mOutputDock.isHidden()) mOutputDock.show();
+        showDock(mOutputDockWidget);
     });
 
     initAction(mActViewDesignToolbar, NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeBig), tr("&Design Toolbar"));
@@ -1138,8 +1165,9 @@ void MdiMainWindow::_createMenus()
         modeGroup->addAction(modeAction);
     }
 
+    // The chosen style is persisted; each Design page seeds its in-page toolbar from it when
+    // built, and onFsmToolbarStyle() applies a change to the active page's toolbar (issue #516).
     connect(modeGroup, &QActionGroup::triggered, this, &MdiMainWindow::onFsmToolbarStyle);
-    mNaviDock.getFsmToolbar().setDisplayStyle(savedStyle);
 
     mViewMenu->addSeparator();
     mThemeMenu = mViewMenu->addMenu(tr("&Theme"));
@@ -1204,17 +1232,55 @@ void MdiMainWindow::_createStatusBar()
 
 void MdiMainWindow::_createDockWindows()
 {
-    mNaviDock.setAllowedAreas(Qt::LeftDockWidgetArea);
-    addDockWidget(Qt::LeftDockWidgetArea    , &mNaviDock,  Qt::Orientation::Vertical);
-    
-    mOutputDock.setAllowedAreas(Qt::BottomDockWidgetArea);
-    addDockWidget(Qt::BottomDockWidgetArea  , &mOutputDock);
+    // The navigation and output contents are hosted in ADS dock widgets on the shared manager
+    // (issue #516), so they float, tab, and drag together with the State Machine design panels.
+    mNaviDockWidget = new ads::CDockWidget(tr("Navigation"), mDockManager);
+    mNaviDockWidget->setObjectName(QStringLiteral("NavigationDock"));
+    // Insert the content directly (ForceNoScrollArea): the default AutoScrollArea wraps the
+    // content in a QScrollArea whose own size hints hide NavigationDock's overrides, so ADS
+    // sizes the dock generically (~half the window) and it will not narrow. Inserted directly,
+    // NavigationDock's sizeHint (MIN_NAVI_WIDTH) and minimumSize (MIN_NAVI_WIDTH_ABS) govern the
+    // dock width, so it opens at the preferred width and shrinks down to 64 px (issue #516).
+    mNaviDockWidget->setWidget(&mNaviDock, ads::CDockWidget::ForceNoScrollArea);
+    mNaviDockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContentMinimumSize);
+    mDockManager->addDockWidget(ads::LeftDockWidgetArea, mNaviDockWidget);
+
+    mOutputDockWidget = new ads::CDockWidget(tr("Output"), mDockManager);
+    mOutputDockWidget->setObjectName(QStringLiteral("OutputDock"));
+    mOutputDockWidget->setWidget(&mOutputDock, ads::CDockWidget::ForceNoScrollArea);
+    mDockManager->addDockWidget(ads::BottomDockWidgetArea, mOutputDockWidget);
+
+    // The editor area starts empty: only Navigation (left) and Output (bottom) surround it. The
+    // State Machine drawing toolbar and the Properties/Outline panels are NOT global docks; each
+    // Design page hosts its own inside itself and they appear only while that page is shown
+    // (issue #516).
 }
 
 void MdiMainWindow::_createMdiArea()
 {
-    setCentralWidget(&mMdiArea);
+    // One ADS dock manager owns the whole window (issue #516): the MDI area is its non-closable
+    // central widget, and every panel (navigation, output, and the State Machine design panels)
+    // is an ADS dock that can float, tab, or dock anywhere against it.
+    ads::CDockManager::setConfigFlag(ads::CDockManager::OpaqueSplitterResize, true);
+    ads::CDockManager::setConfigFlag(ads::CDockManager::FocusHighlighting, true);
+    mDockManager = new ads::CDockManager(this);
+
+    mCentralDock = new ads::CDockWidget(tr("Editor"), mDockManager);
+    mCentralDock->setObjectName(QStringLiteral("EditorCentral"));
+    mCentralDock->setWidget(&mMdiArea);
+    mCentralDock->setFeature(ads::CDockWidget::NoTab, true);
+    mCentralArea = mDockManager->setCentralWidget(mCentralDock);
+
     connect(&mMdiArea, &QMdiArea::subWindowActivated, this, &MdiMainWindow::onSubWindowActivated);
+}
+
+void MdiMainWindow::showDock(ads::CDockWidget* dock)
+{
+    if (dock != nullptr)
+    {
+        dock->toggleView(true);     // opens the dock if it was closed; no-op when already open
+        dock->raise();              // brings it to the front of its tab group
+    }
 }
 
 void MdiMainWindow::readSettings()
