@@ -67,6 +67,10 @@ namespace SMToolIcons
         , Undo
         , Redo
         , SelectAll
+        , Cut
+        , Copy
+        , Paste
+        , Duplicate
         , Declare
         , NewTrigger
         , NewAction

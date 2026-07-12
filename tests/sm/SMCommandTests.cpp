@@ -28,10 +28,12 @@
  *
  ************************************************************************/
 
+#include "lusan/data/sm/SMClipboard.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
+#include "lusan/model/sm/SMPasteCommand.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -53,6 +55,7 @@
 #include <QList>
 #include <QSet>
 #include <cstdio>
+#include <memory>
 
 //////////////////////////////////////////////////////////////////////////
 // Minimal assertion harness
@@ -682,6 +685,178 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Scenario I: SM-20 copy/paste/duplicate -- subtree paste with ID re-allocation and
+// name-collision suffixes, cross-document registry merge, one-step undo/redo.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< Builds the SM-20 source document: registries, a composite state with nested
+    //!< states, referencing transitions and operations, plus layout and a bound note.
+    void buildPasteSource(StateMachineData& doc)
+    {
+        doc.getEvents().createEvent("evGo");
+        SMTimerEntry* timer = doc.getTimers().createTimer("tmPoll");
+        timer->setTimeout(500u);
+        doc.getMethods().createMethod("doWork", SMMethodEntry::eMethodType::Action);
+
+        SMStateData& root = doc.getStates();
+        root.createState("Start", SMStateEntry::eStateKind::Start);
+        SMStateEntry* worker = root.createState("Worker", SMStateEntry::eStateKind::Normal);
+        root.createState("Idle", SMStateEntry::eStateKind::Normal);
+
+        SMStateData* nested = worker->getOrCreateNestedStates();
+        SMStateEntry* wstart = nested->createState("WStart", SMStateEntry::eStateKind::Start);
+        nested->createState("Inner", SMStateEntry::eStateKind::Normal);
+
+        worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evGo", "Idle");
+        wstart->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "tmPoll", "Inner");
+        worker->getEntryList().addOperation(new SMActionCall(0u, "doWork"));
+        worker->getEntryList().addOperation(new SMEventSend(0u, "evGo"));
+        worker->getExitList().addOperation(new SMTimerStart(0u, "tmPoll"));
+
+        SMLayoutData& layout = doc.getLayout();
+        SMLayoutNode& node = layout.addNode(worker->getId());
+        node.x = 100.0; node.y = 100.0; node.width = 180.0; node.height = 120.0;
+        SMLayoutEdge& edge = layout.addEdge(worker->getTransitions().getElements().first()->getId());
+        edge.points = { QPointF(10.0, 10.0), QPointF(50.0, 50.0) };
+        SMLayoutNote& note = layout.addNote(doc.getOverview().getId(), worker->getId());
+        note.x = 40.0; note.y = 40.0; note.width = 80.0; note.height = 40.0;
+        note.text = QStringLiteral("worker note");
+    }
+
+    //!< The IDs of every state and transition of a subtree, for uniqueness checks.
+    QSet<uint32_t> ownedIdSet(const SMStateEntry& state)
+    {
+        QList<uint32_t> ids;
+        SMClipboard::collectOwnedIds(state, ids);
+        return QSet<uint32_t>(ids.constBegin(), ids.constEnd());
+    }
+
+    void testCopyPasteDuplicate()
+    {
+        StateMachineData    doc;
+        DocModelNotifier    notifier;
+        QUndoStack          stack;
+
+        buildPasteSource(doc);
+        SMStateEntry* worker = doc.findState("Worker");
+        const uint32_t rootLevel = doc.getOverview().getId();
+
+        // --- Same-document paste of a composite subtree (AC1/AC2/AC4). ---
+        const QString xml = SMClipboard::serialize(doc, QList<uint32_t>{ worker->getId() });
+        CHECK(xml.isEmpty() == false);
+        std::unique_ptr<SMClipboardContent> content = SMClipboard::parse(xml);
+        CHECK(content != nullptr);
+
+        const QString before = serialize(doc);
+        SMPasteCommand* paste = new SMPasteCommand(doc, notifier, std::move(content), rootLevel, QPointF(16.0, 16.0), "Paste");
+        CHECK(paste->isEffective());
+        stack.push(paste);
+        const QString after = serialize(doc);
+        CHECK(after != before);
+
+        CHECK(paste->getPastedIds().size() == 1);
+        const uint32_t copyId = paste->getPastedIds().first();
+        SMStateEntry* copy = doc.findStateById(copyId);
+        CHECK(copy != nullptr);
+        CHECK(copy->getName() == (QStringLiteral("Worker_") + QString::number(copyId)));
+        CHECK(copy->hasNestedStates() && (copy->getNestedStates()->getElementCount() == 2));
+
+        // Fresh, non-overlapping IDs across the whole subtree.
+        CHECK(ownedIdSet(*worker).intersects(ownedIdSet(*copy)) == false);
+
+        // The internal transition follows its renamed copied sibling; references leaving
+        // the copied set (target Idle, stimulus evGo) are kept.
+        SMStateEntry* wstartCopy = copy->getNestedStates()->getStartState();
+        CHECK((wstartCopy != nullptr) && (wstartCopy->getName() != QStringLiteral("WStart")));
+        SMStateEntry* innerCopy = copy->getNestedStates()->getElements().last();
+        CHECK(innerCopy->getName() != QStringLiteral("Inner"));
+        CHECK(wstartCopy->getTransitions().getElements().first()->getTo() == innerCopy->getName());
+        SMTransitionEntry* outTx = copy->getTransitions().getElements().first();
+        CHECK(outTx->getTo() == QStringLiteral("Idle"));
+        CHECK(outTx->getStimulus() == QStringLiteral("evGo"));
+
+        // Registries merged in place: nothing duplicated within the same document.
+        CHECK(doc.getEvents().getElementCount() == 1);
+        CHECK(doc.getTimers().getElementCount() == 1);
+        CHECK(doc.getMethods().getElementCount() == 1);
+
+        // Layout pasted with the offset; the bound note followed its owner.
+        const SMLayoutNode* nodeCopy = doc.getLayout().findNode(copyId);
+        CHECK((nodeCopy != nullptr) && (nodeCopy->x == 116.0) && (nodeCopy->y == 116.0));
+        CHECK(doc.getLayout().findNoteByOwner(copyId) != nullptr);
+
+        // One undo step restores the exact prior state; redo restores identical IDs.
+        stack.undo();
+        CHECK(serialize(doc) == before);
+        stack.redo();
+        CHECK(serialize(doc) == after);
+
+        // --- Cross-document paste: conflicting event copied+renamed, identical timer
+        // reused, missing method added under its own name (AC3). ---
+        StateMachineData    docB;
+        DocModelNotifier    notifierB;
+        QUndoStack          stackB;
+
+        SMEventEntry* eventB = docB.getEvents().createEvent("evGo");
+        eventB->addParam("payload");                            // different payload: conflict
+        SMTimerEntry* timerB = docB.getTimers().createTimer("tmPoll");
+        timerB->setTimeout(500u);                               // identical: reused
+
+        std::unique_ptr<SMClipboardContent> contentB = SMClipboard::parse(xml);
+        CHECK(contentB != nullptr);
+        const QString beforeB = serialize(docB);
+        SMPasteCommand* pasteB = new SMPasteCommand(  docB, notifierB, std::move(contentB)
+                                                    , docB.getOverview().getId(), QPointF(16.0, 16.0), "Paste");
+        CHECK(pasteB->isEffective());
+        stackB.push(pasteB);
+        const QString afterB = serialize(docB);
+
+        CHECK(docB.getEvents().getElementCount() == 2);
+        QString renamedEvent;
+        for (const SMEventEntry* entry : docB.getEvents().getElements())
+        {
+            if (entry->getName() != QStringLiteral("evGo"))
+            {
+                renamedEvent = entry->getName();
+            }
+        }
+        CHECK(renamedEvent.startsWith(QStringLiteral("evGo_")));
+
+        SMStateEntry* copyB = docB.findState("Worker");         // no collision: name kept
+        CHECK(copyB != nullptr);
+        CHECK(copyB->getTransitions().getElements().first()->getStimulus() == renamedEvent);
+
+        CHECK(docB.getTimers().getElementCount() == 1);         // reused, not copied
+        CHECK(docB.getMethods().getElementCount() == 1);
+        CHECK(docB.getMethods().findMethod(QString("doWork")) != nullptr);
+
+        stackB.undo();
+        CHECK(serialize(docB) == beforeB);
+        stackB.redo();
+        CHECK(serialize(docB) == afterB);
+
+        // --- Explicit registry-entry copy: always a new, ID-suffixed entry. ---
+        const uint32_t eventId = doc.getEvents().findEvent(QString("evGo"))->getId();
+        const QString xmlEvent = SMClipboard::serialize(doc, QList<uint32_t>{ eventId });
+        CHECK(xmlEvent.isEmpty() == false);
+        std::unique_ptr<SMClipboardContent> contentE = SMClipboard::parse(xmlEvent);
+        CHECK(contentE != nullptr);
+        SMPasteCommand* pasteE = new SMPasteCommand(doc, notifier, std::move(contentE), rootLevel, QPointF(16.0, 16.0), "Paste");
+        CHECK(pasteE->isEffective());
+        stack.push(pasteE);
+        CHECK(doc.getEvents().getElementCount() == 2);
+        CHECK(pasteE->getPastedIds().size() == 1);
+        const SMEventEntry* eventCopy = doc.getEvents().findEvent(pasteE->getPastedIds().first());
+        CHECK((eventCopy != nullptr)
+              && (eventCopy->getName() == (QStringLiteral("evGo_") + QString::number(eventCopy->getId()))));
+        stack.undo();
+        CHECK(doc.getEvents().getElementCount() == 1);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -696,6 +871,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testContainerLifecycle();
     testEventTimerLifecycle();
     testCanvasStateLifecycle();
+    testCopyPasteDuplicate();
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);

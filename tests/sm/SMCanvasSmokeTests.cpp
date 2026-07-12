@@ -25,6 +25,7 @@
 
 #include "lusan/data/sm/SMLayoutData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
+#include "lusan/data/sm/SMClipboard.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
@@ -44,12 +45,14 @@
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QApplication>
+#include <QClipboard>
 #include <QContextMenuEvent>
 #include <QDir>
 #include <QFile>
 #include <QFocusEvent>
 #include <QGraphicsProxyWidget>
 #include <QLineEdit>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
 #include <QSettings>
@@ -1352,6 +1355,82 @@ int main(int argc, char* argv[])
         settings.sync();
         QCoreApplication::setOrganizationName(QString());
         QCoreApplication::setApplicationName(QString());
+    }
+
+    std::printf("sect: SM-20 copy/paste/duplicate/cut\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& pageScene = page.getScene();
+        SMStateData* level = doc.getData().findLevel(pageScene.getLevelId());
+        SMStateEntry* source = nullptr;
+        for (SMStateEntry* state : level->getElements())
+        {
+            if (state->getKind() == SMStateEntry::eStateKind::Normal)
+            {
+                source = state;
+                break;
+            }
+        }
+        CHECK(source != nullptr);
+
+        // Copy fills the clipboard with the FSM payload.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ source->getId() });
+        QApplication::processEvents();
+        page.actionCopy()->trigger();
+        const QMimeData* mime = QGuiApplication::clipboard()->mimeData();
+        CHECK((mime != nullptr) && mime->hasFormat(QString::fromLatin1(SMClipboard::MIME_TYPE)));
+
+        // Paste: new state under a fresh ID, ID-suffixed name, node offset by one grid
+        // step, item on the scene, and the pasted element selected.
+        const int stateCount = level->getElementCount();
+        page.actionPaste()->trigger();
+        QApplication::processEvents();
+        CHECK(level->getElementCount() == (stateCount + 1));
+        const QList<uint32_t> pastedSel = doc.getSelectionModel().getSelection();
+        CHECK((pastedSel.size() == 1) && (pastedSel.first() != source->getId()));
+        const uint32_t pastedId = pastedSel.isEmpty() ? 0u : pastedSel.first();
+        CHECK(pageScene.stateItem(pastedId) != nullptr);
+        const SMStateEntry* pasted = doc.getData().findStateById(pastedId);
+        CHECK((pasted != nullptr)
+              && (pasted->getName() == (source->getName() + QStringLiteral("_") + QString::number(pastedId))));
+        const SMLayoutNode* sourceNode = doc.getData().getLayout().findNode(source->getId());
+        const SMLayoutNode* pastedNode = doc.getData().getLayout().findNode(pastedId);
+        const double grid = static_cast<double>(pageScene.getGridSize());
+        CHECK((sourceNode != nullptr) && (pastedNode != nullptr)
+              && (pastedNode->x == sourceNode->x + grid) && (pastedNode->y == sourceNode->y + grid));
+
+        // Paste is one undo step; redo restores the identical ID and its item.
+        doc.getUndoStack().undo();
+        QApplication::processEvents();
+        CHECK(level->getElementCount() == stateCount);
+        CHECK(pageScene.stateItem(pastedId) == nullptr);
+        doc.getUndoStack().redo();
+        QApplication::processEvents();
+        CHECK(pageScene.stateItem(pastedId) != nullptr);
+
+        // Duplicate works without touching the clipboard payload.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ source->getId() });
+        page.actionDuplicate()->trigger();
+        QApplication::processEvents();
+        CHECK(level->getElementCount() == (stateCount + 2));
+        grab(page, "g20-paste");
+
+        // Cut copies and deletes in one step, without confirmation.
+        const int beforeCut = level->getElementCount();
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ source->getId() });
+        page.actionCut()->trigger();
+        QApplication::processEvents();
+        CHECK(level->getElementCount() == (beforeCut - 1));
+        CHECK(doc.getData().findStateById(source->getId()) == nullptr);
+        doc.getUndoStack().undo();
+        QApplication::processEvents();
+        CHECK(doc.getData().findStateById(source->getId()) != nullptr);
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

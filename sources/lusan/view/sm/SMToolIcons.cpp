@@ -281,6 +281,35 @@ namespace
             break;
         }
 
+        case SMToolIcons::eIcon::Cut:
+            // Scissors: crossed blades with the handle rings at the bottom.
+            p.drawLine(QPointF(10.5, 7.0), QPointF(21.0, 22.0));
+            p.drawLine(QPointF(21.5, 7.0), QPointF(11.0, 22.0));
+            p.drawEllipse(QPointF(9.5, 24.5), 2.6, 2.6);
+            p.drawEllipse(QPointF(22.5, 24.5), 2.6, 2.6);
+            break;
+
+        case SMToolIcons::eIcon::Copy:
+            // Two offset pages.
+            p.drawRect(QRectF(7.0, 6.0, 13.0, 15.0));
+            p.drawRect(QRectF(12.0, 11.0, 13.0, 15.0));
+            break;
+
+        case SMToolIcons::eIcon::Paste:
+            // A clipboard with its clip and a pasted page.
+            p.drawRoundedRect(QRectF(7.0, 7.0, 15.0, 19.0), 2.0, 2.0);
+            p.drawRect(QRectF(11.0, 4.5, 7.0, 4.0));
+            p.drawRect(QRectF(14.0, 14.0, 11.0, 12.0));
+            break;
+
+        case SMToolIcons::eIcon::Duplicate:
+            // Two offset pages plus the add marker.
+            p.drawRect(QRectF(6.0, 6.0, 12.0, 14.0));
+            p.drawRect(QRectF(11.0, 11.0, 12.0, 14.0));
+            p.drawLine(QPointF(26.0, 20.0), QPointF(26.0, 28.0));
+            p.drawLine(QPointF(22.0, 24.0), QPointF(30.0, 24.0));
+            break;
+
         case SMToolIcons::eIcon::Declare:
             p.drawLine(QPointF(7.0, 9.0), QPointF(19.0, 9.0));
             p.drawLine(QPointF(7.0, 15.0), QPointF(19.0, 15.0));
