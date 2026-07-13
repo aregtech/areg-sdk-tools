@@ -3,6 +3,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMAttributeDetails.cpp
     ${LUSAN}/view/sm/SMAttributeList.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
+    ${LUSAN}/view/sm/SMConditionEditor.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
     ${LUSAN}/view/sm/SMConstantDetails.cpp
     ${LUSAN}/view/sm/SMConstantList.cpp
@@ -45,6 +46,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMAttributeDetails.hpp
     ${LUSAN}/view/sm/SMAttributeList.hpp
     ${LUSAN}/view/sm/SMCodeEditor.hpp
+    ${LUSAN}/view/sm/SMConditionEditor.hpp
     ${LUSAN}/view/sm/SMConstant.hpp
     ${LUSAN}/view/sm/SMConstantDetails.hpp
     ${LUSAN}/view/sm/SMConstantList.hpp

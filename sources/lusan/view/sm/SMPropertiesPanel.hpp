@@ -36,6 +36,7 @@ class QLineEdit;
 class QListWidget;
 class QPlainTextEdit;
 class QStackedWidget;
+class SMConditionEditor;
 class StateMachineModel;
 enum class eDocElementKind;
 
@@ -178,6 +179,7 @@ private:
                                         //!< timers; editing is search-only, no free rename).
     QComboBox*          mTarget;        //!< The target sibling state (or internal).
     QPlainTextEdit*     mTransDesc;     //!< The transition description (multi-line).
+    SMConditionEditor*  mConditions;    //!< The Conditions tab guard builder.
 
     // Registry page.
     QLabel*             mRegistryInfo;  //!< The selected registry entry summary (read-only).

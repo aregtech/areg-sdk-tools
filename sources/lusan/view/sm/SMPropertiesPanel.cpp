@@ -32,6 +32,7 @@
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/sm/SMConditionEditor.hpp"
 
 #include <QComboBox>
 #include <QCompleter>
@@ -43,6 +44,7 @@
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QStackedWidget>
+#include <QTabWidget>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -153,6 +155,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mStimulusName (nullptr)
     , mTarget       (nullptr)
     , mTransDesc    (nullptr)
+    , mConditions   (nullptr)
     , mRegistryInfo (nullptr)
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
@@ -224,6 +227,8 @@ void SMPropertiesPanel::buildStatePage()
 
 void SMPropertiesPanel::buildTransitionPage()
 {
+    // The stimulus/target/description form becomes the General tab; a Conditions tab hosts the
+    // guard builder. The stimulus/target/list accessors keep pointing at the same widgets.
     QWidget* page = new QWidget(this);
     QFormLayout* form = new QFormLayout(page);
 
@@ -256,7 +261,12 @@ void SMPropertiesPanel::buildTransitionPage()
     connect(mTarget, &QComboBox::activated, this, &SMPropertiesPanel::onTargetCommit);
     connect(mTarget->lineEdit(), &QLineEdit::editingFinished, this, &SMPropertiesPanel::onTargetCommit);
 
-    mStack->insertWidget(PageTransition, page);
+    QTabWidget* tabs = new QTabWidget(this);
+    tabs->addTab(page, tr("General"));
+    mConditions = new SMConditionEditor(mModel, this);
+    tabs->addTab(mConditions, tr("Conditions"));
+
+    mStack->insertWidget(PageTransition, tabs);
 }
 
 void SMPropertiesPanel::buildRegistryPage()
@@ -330,6 +340,11 @@ void SMPropertiesPanel::showEmpty()
 {
     mPage = PageEmpty;
     mCurrentId = 0u;
+    if (mConditions != nullptr)
+    {
+        mConditions->setTransition(0u);
+    }
+
     mStack->setCurrentIndex(PageEmpty);
 }
 
@@ -416,6 +431,8 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
 
     mTarget->setEditText(transition->isExternal() ? transition->getTo() : internalLabel());
     mTransDesc->setPlainText(transition->getDescription());
+
+    mConditions->setTransition(transitionId);
 
     mStack->setCurrentIndex(PageTransition);
     mUpdating = false;

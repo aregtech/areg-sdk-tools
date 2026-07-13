@@ -77,6 +77,7 @@ namespace XmlSM
     constexpr const char* const xmlSMElementTransitionList  { "TransitionList" };
     constexpr const char* const xmlSMElementTransition      { "Transition" };
     constexpr const char* const xmlSMElementConditionList   { "ConditionList" };
+    constexpr const char* const xmlSMElementConditionGroup  { "ConditionGroup" };
     constexpr const char* const xmlSMElementCondition       { "Condition" };
     constexpr const char* const xmlSMElementOperationList   { "OperationList" };
     constexpr const char* const xmlSMElementExpression      { "Expression" };

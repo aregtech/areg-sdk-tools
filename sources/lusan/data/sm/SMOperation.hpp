@@ -49,6 +49,7 @@ public:
         , Constant      //!< A declared constant.
         , Condition     //!< A parameterless Condition-method call.
         , Expression    //!< Verbatim C++ (the `Expression` child).
+        , Lambda        //!< Verbatim multi-statement boolean body (condition LHS only; `Body` child).
     };
 
     static constexpr const char* const  STR_SRC_VALUE       { "Value"      };
@@ -57,6 +58,7 @@ public:
     static constexpr const char* const  STR_SRC_CONSTANT    { "Constant"   };
     static constexpr const char* const  STR_SRC_CONDITION   { "Condition"  };
     static constexpr const char* const  STR_SRC_EXPRESSION  { "Expression" };
+    static constexpr const char* const  STR_SRC_LAMBDA      { "Lambda"     };
 
     static SMArgumentEntry::eValueSource fromSourceString(const QString& source);
     static const char* toString(SMArgumentEntry::eValueSource source);

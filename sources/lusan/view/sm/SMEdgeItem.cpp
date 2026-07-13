@@ -23,6 +23,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/SMConditionText.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMScene.hpp"
@@ -202,7 +203,25 @@ void SMEdgeItem::updateFromModel()
     const SMStateEntry* target = data.findState(mTargetName);
     mTargetId    = (target != nullptr ? target->getId() : 0);
     mSelfLoop    = (mTargetId != 0) && (mTargetId == mSourceId);
-    mStimulusText = transition->getStimulus();
+
+    // Show the guard next to the stimulus (`stimulus[summary]`); the full guard is the tooltip.
+    // No conditions -> the stimulus alone (no empty brackets). Summary only, never rotated.
+    const QString summary = SMConditionText::summary(transition->getConditions());
+    if (summary.isEmpty())
+    {
+        mStimulusText = transition->getStimulus();
+        setToolTip(QString());
+    }
+    else
+    {
+        constexpr int MAX_SUMMARY = 24;
+        const QString shortSummary = (summary.length() > MAX_SUMMARY)
+                ? (summary.left(MAX_SUMMARY - 3) + QStringLiteral("..."))
+                : summary;
+        mStimulusText = transition->getStimulus() + QChar('[') + shortSummary + QChar(']');
+        setToolTip(transition->getStimulus() + QChar('[') + summary + QChar(']'));
+    }
+
     mHasNote     = (data.getLayout().findNoteByOwner(getElementId()) != nullptr);
 
     const SMLayoutEdge* edge = data.getLayout().findEdge(getElementId());

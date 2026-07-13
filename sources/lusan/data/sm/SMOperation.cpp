@@ -69,6 +69,8 @@ SMArgumentEntry::eValueSource SMArgumentEntry::fromSourceString(const QString& s
         return eValueSource::Condition;
     else if (source.compare(STR_SRC_EXPRESSION, Qt::CaseInsensitive) == 0)
         return eValueSource::Expression;
+    else if (source.compare(STR_SRC_LAMBDA, Qt::CaseInsensitive) == 0)
+        return eValueSource::Lambda;
     else
         return eValueSource::Value;
 }
@@ -82,6 +84,7 @@ const char* SMArgumentEntry::toString(SMArgumentEntry::eValueSource source)
     case eValueSource::Constant:    return STR_SRC_CONSTANT;
     case eValueSource::Condition:   return STR_SRC_CONDITION;
     case eValueSource::Expression:  return STR_SRC_EXPRESSION;
+    case eValueSource::Lambda:      return STR_SRC_LAMBDA;
     case eValueSource::Value:
     default:                        return STR_SRC_VALUE;
     }
