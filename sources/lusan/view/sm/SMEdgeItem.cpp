@@ -55,6 +55,28 @@ namespace
         return std::hypot(a.x() - b.x(), a.y() - b.y());
     }
 
+    //!< Moves one coordinate by a single keyboard step. A pixel-wise step moves exactly one
+    //!< unit; otherwise the result snaps to the next multiple of \a base strictly beyond the
+    //!< current value in the \a dir direction (e.g. base 5: 3 -> 5 -> 10, or 3 -> 0 -> -5).
+    double nudgeAxis(double value, int dir, int base, bool pixelWise)
+    {
+        if (dir == 0)
+        {
+            return value;
+        }
+
+        if (pixelWise)
+        {
+            return value + static_cast<double>(dir);
+        }
+
+        constexpr double eps = 1e-6;
+        const double cells = value / static_cast<double>(base);
+        const double target = (dir > 0) ? (std::floor(cells + eps) + 1.0)
+                                        : (std::ceil (cells - eps) - 1.0);
+        return target * static_cast<double>(base);
+    }
+
     //!< The distance from a point to a segment, and the closest point on it.
     double segmentDistance(const QPointF& p, const QPointF& a, const QPointF& b, QPointF& closest)
     {
@@ -95,6 +117,7 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mLabelPos     ( )
     , mDrag         (eDrag::None)
     , mDragIndex    (-1)
+    , mSelectedPoint(-1)
     , mDragPoint    ( )
     , mGesture      (0)
 {
@@ -205,6 +228,12 @@ void SMEdgeItem::updateFromModel()
     {
         mAnchorBegin = edge->points.first();
         mAnchorEnd   = edge->points.last();
+    }
+
+    // A removed/merged waypoint (or a re-read that shrank the list) invalidates the active point.
+    if (mSelectedPoint >= mWaypoints.size())
+    {
+        mSelectedPoint = -1;
     }
 
     mValid = (mSourceId != 0);
@@ -511,18 +540,44 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
 
     if (isSelected())
     {
-        painter->setPen(QPen(palette.color(QPalette::Base), 1.0));
-        painter->setBrush(NESMDesign::selectionColor(palette));
         const double h = NESMDesign::WaypointHandleSize;
-        for (const QPointF& wp : mWaypoints)
+        for (int i = 0; i < mWaypoints.size(); ++i)
         {
-            painter->drawRect(QRectF(wp.x() - h / 2.0, wp.y() - h / 2.0, h, h));
+            const QPointF& wp = mWaypoints.at(i);
+            if (i == mSelectedPoint)
+            {
+                // The active (keyboard-movable) waypoint: a larger filled marker so the user
+                // sees which point the arrow keys move.
+                painter->setPen(QPen(NESMDesign::selectionColor(palette), 1.4));
+                painter->setBrush(palette.color(QPalette::Base));
+                painter->drawRect(QRectF(wp.x() - h / 2.0 - 1.5, wp.y() - h / 2.0 - 1.5, h + 3.0, h + 3.0));
+            }
+            else
+            {
+                painter->setPen(QPen(palette.color(QPalette::Base), 1.0));
+                painter->setBrush(NESMDesign::selectionColor(palette));
+                painter->drawRect(QRectF(wp.x() - h / 2.0, wp.y() - h / 2.0, h, h));
+            }
         }
 
         painter->setBrush(palette.color(QPalette::Base));
         painter->setPen(QPen(NESMDesign::selectionColor(palette), 1.4));
         painter->drawEllipse(mBegin, h / 2.0, h / 2.0);
         painter->drawEllipse(mEnd, h / 2.0, h / 2.0);
+    }
+}
+
+void SMEdgeItem::setSelectedPoint(int index)
+{
+    if (index >= mWaypoints.size())
+    {
+        index = -1;
+    }
+
+    if (index != mSelectedPoint)
+    {
+        mSelectedPoint = index;
+        update();
     }
 }
 
@@ -586,6 +641,34 @@ void SMEdgeItem::commitGeometry(const QString& text)
                                                           , getElementId(), mGesture, buildGeometry(), text));
 }
 
+bool SMEdgeItem::nudgeSelectedPoint(int dx, int dy, bool coarse, bool pixelWise)
+{
+    if ((mSelectedPoint < 0) || (mSelectedPoint >= mWaypoints.size()))
+    {
+        return false;
+    }
+
+    // Shift => exact single-pixel step; Ctrl => 10-unit coarse step; otherwise 5-unit step.
+    const int base = (coarse ? 10 : 5);
+    QPointF point = mWaypoints.at(mSelectedPoint);
+    point.setX(nudgeAxis(point.x(), dx, base, pixelWise));
+    point.setY(nudgeAxis(point.y(), dy, base, pixelWise));
+    if (point == mWaypoints.at(mSelectedPoint))
+    {
+        return true;    // consumed, but the point did not move
+    }
+
+    prepareGeometryChange();
+    mWaypoints[mSelectedPoint] = point;
+    rebuildPath();
+    update();
+
+    // One undo step per key press (a fresh gesture keeps consecutive presses separate).
+    mGesture = SMMoveNodeCommand::takeNextGesture();
+    commitGeometry(translate("Move waypoint"));
+    return true;
+}
+
 void SMEdgeItem::startNoteEdit()
 {
     SMScene* canvas = getCanvas();
@@ -647,6 +730,10 @@ QVariant SMEdgeItem::itemChange(GraphicsItemChange change, const QVariant& value
         // A selected edge raises above the state boxes so its endpoint and waypoint
         // handles stay grabbable where they overlap a box.
         setZValue(value.toBool() ? 1.0 : -1.0);
+        if (value.toBool() == false)
+        {
+            setSelectedPoint(-1);   // a deselected edge has no active point to nudge
+        }
     }
 
     return SMCanvasItem::itemChange(change, value);
@@ -668,6 +755,7 @@ void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
         {
             mDrag = eDrag::Begin;
             mDragPoint = mBegin;
+            setSelectedPoint(-1);
             mGesture = SMMoveNodeCommand::takeNextGesture();
             event->accept();
             return;
@@ -677,6 +765,7 @@ void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
         {
             mDrag = eDrag::End;
             mDragPoint = mEnd;
+            setSelectedPoint(-1);
             mGesture = SMMoveNodeCommand::takeNextGesture();
             event->accept();
             return;
@@ -687,6 +776,8 @@ void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
         {
             mDrag = eDrag::Waypoint;
             mDragIndex = wp;
+            // Grabbing a waypoint also makes it the active point for keyboard nudging.
+            setSelectedPoint(wp);
             mGesture = SMMoveNodeCommand::takeNextGesture();
             event->accept();
             return;
@@ -695,12 +786,15 @@ void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
         if (labelRect().contains(p))
         {
             mDrag = eDrag::Label;
+            setSelectedPoint(-1);
             mGesture = SMMoveNodeCommand::takeNextGesture();
             event->accept();
             return;
         }
     }
 
+    // A press elsewhere on the edge (selecting the line) drops the active-point highlight.
+    setSelectedPoint(-1);
     SMCanvasItem::mousePressEvent(event);
 }
 

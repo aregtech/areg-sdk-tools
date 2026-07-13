@@ -355,7 +355,7 @@ QToolButton* NaviFsmToolbar::buildToolButton(QAction* action)
     }
     else
     {
-        button->setIconSize(QSize(20, 20));
+        button->setIconSize(QSize(16, 16));     // small tool icons (issue #516)
         button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     }
 

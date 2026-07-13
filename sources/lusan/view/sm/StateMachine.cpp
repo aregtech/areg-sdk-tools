@@ -88,11 +88,12 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
 
     connect(&mTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
         ensureTabInitialized(index);
-        // The drawing toolbar is only active on the Design page; refresh its bound page and
-        // active state whenever the inner tab changes (a no-op when this document is inactive).
+        // The toolbar and the Properties/Outline panels are active only on the Design page
+        // (issue #516). When they are hosted in the Navigation Window they must bind/unbind as
+        // the user enters or leaves the Design tab, so let the main window re-sync them.
         if (mMainWindow != nullptr)
         {
-            mMainWindow->updateFsmToolbar();
+            mMainWindow->syncDesignWidgets();
         }
     });
 
@@ -448,10 +449,13 @@ void StateMachine::ensureTabInitialized(int index)
         SMDesign* design = new SMDesign(mModel, &mTabWidget);
         design->setToolbarVisible(mToolbarVisible);
         connect(design, &SMDesign::signalDeclareRequested, this, &StateMachine::onDeclareRequested);
-        connect(design, &SMDesign::signalShowDesignTools, this, [this]() {
+        // The canvas View submenu moves the toolbar / Properties / Outline between the Design
+        // page and the Navigation Window; the main window owns that global placement (issue #516).
+        connect(design, &SMDesign::signalPlaceDesignWidget, this, [this](int widget, int place) {
             if (mMainWindow != nullptr)
             {
-                mMainWindow->showNaviTab(NavigationDock::eNaviWindow::NaviDesignToolbar);
+                mMainWindow->setDesignWidgetPlacement(static_cast<MdiMainWindow::eDesignWidget>(widget)
+                                                    , static_cast<MdiMainWindow::eDesignPlace>(place));
             }
         });
         page = design;
@@ -464,15 +468,6 @@ void StateMachine::ensureTabInitialized(int index)
 
     mPages[index] = page;
     attachPage(index, page);
-
-    // The drawing toolbar lives in the navigation dock, bound to the active document's Design
-    // page. It could not bind until this page existed and was registered in mPages (so that
-    // designPageIfBuilt() returns it); refresh it now that the registration is complete (a
-    // no-op when this document is not the active one).
-    if ((index == static_cast<int>(PageDesign)) && (mMainWindow != nullptr))
-    {
-        mMainWindow->updateFsmToolbar();
-    }
 }
 
 void StateMachine::attachPage(int index, QWidget* page)

@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include <QWidget>
+#include <QMainWindow>
 
 #include "lusan/view/sm/NESMDesign.hpp"
 
@@ -36,26 +36,30 @@
  * Dependencies
  ************************************************************************/
 class QAction;
+class QDockWidget;
 class QHBoxLayout;
 class QKeyEvent;
 class QToolBar;
 class QToolButton;
 class SMClipboardContent;
 class SMGraphicsView;
+class SMOutlinePanel;
+class SMPropertiesPanel;
 class SMScene;
 class SMSceneManager;
 class StateMachineModel;
 
 /**
  * \class   SMDesign
- * \brief   The Design page: the breadcrumb of the machine-level path and the graphics
- *          viewport over the displayed level's scene, plus the viewport, grid, editing,
- *          and level-navigation commands with their keyboard shortcuts. The commands are
- *          exposed as actions so the toolbar, Design menu, and context menus can dispatch
- *          to the same set. Each level's zoom and scroll is persisted in its View layout
- *          entry and restored when the level is shown again.
+ * \brief   The Design page: a QMainWindow whose central widget is the breadcrumb of the
+ *          machine-level path and the graphics viewport over the displayed level's scene.
+ *          It hosts, inside the page, its own drawing toolbar (a real QToolBar, movable to
+ *          the page's edges) plus the Properties and Outline dock panels (issue #516). The
+ *          viewport, grid, editing, and level-navigation commands are exposed as actions so
+ *          the toolbar, Design menu, and context menus dispatch to the same set. Each level's
+ *          zoom and scroll is persisted in its View layout entry and restored on return.
  **/
-class SMDesign : public QWidget
+class SMDesign : public QMainWindow
 {
     Q_OBJECT
 
@@ -97,19 +101,46 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit SMDesign(StateMachineModel& model, QWidget* parent = nullptr);
-    virtual ~SMDesign() = default;
+    virtual ~SMDesign();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Shows or hides the drawing toolbar (spec 9.2/9.3: hideable via the
+     * \brief   Shows or hides the in-page drawing toolbar (spec 9.2/9.3: hideable via the
      *          application View menu; every toolbar command remains reachable via the
      *          Design menu, context menus, and shortcuts).
      **/
     void setToolbarVisible(bool visible);
     bool isToolbarVisible() const;
+
+    /**
+     * \brief   Shows or hides the in-page Properties / Outline dock panels. Driven by the
+     *          global widget placement (issue #516): when a panel is moved to the Navigation
+     *          Window or hidden, its in-page dock is hidden so it never shows in both places.
+     **/
+    void setPropertiesVisible(bool visible);
+    bool isPropertiesVisible() const;
+    void setOutlineVisible(bool visible);
+    bool isOutlineVisible() const;
+
+    /**
+     * \brief   Records where each of the three design widgets (toolbar, Properties, Outline)
+     *          currently lives, so the canvas context menu's View submenu can show the correct
+     *          check marks. Values match MdiMainWindow's eDesignWidget / eDesignPlace ints.
+     * \param   toolbar     Placement of the drawing toolbar (0 hidden, 1 in design, 2 in nav).
+     * \param   properties  Placement of the Properties panel.
+     * \param   outline     Placement of the Outline panel.
+     **/
+    void setPlacementState(int toolbar, int properties, int outline);
+
+    /**
+     * \brief   Applies the toolbutton display style (icon only / text beside / text under) to
+     *          the in-page drawing toolbar. Driven by the application View menu's Toolbutton
+     *          Mode submenu; the chosen style is persisted and seeded on the next page's toolbar.
+     **/
+    void setToolbarStyle(Qt::ToolButtonStyle style);
     /**
      * \brief   Returns the scene of the displayed machine level.
      **/
@@ -124,6 +155,12 @@ public:
      * \brief   Returns the machine-level scene manager (navigation and scene cache).
      **/
     inline SMSceneManager& getSceneManager() const;
+
+    /**
+     * \brief   Returns the document facade. Exposed so the main window can bind the global
+     *          Outline/Properties docks to the active Design page's model (issue #516).
+     **/
+    inline StateMachineModel& getModel() const;
 
     /**
      * \brief   Returns the breadcrumb bar widget (the clickable ancestor buttons and the
@@ -285,10 +322,12 @@ signals:
     void signalDeclareRequested(SMDesign::eDeclareKind kind);
 
     /**
-     * \brief   Emitted by the canvas context menu's "Show Design Tools" entry; the owning
-     *          window brings the navigation dock's Design Toolbar tab to the front.
+     * \brief   Emitted by the canvas context menu's View submenu; the owning window moves the
+     *          given design widget to the requested home (issue #516). The arguments match
+     *          MdiMainWindow's eDesignWidget / eDesignPlace ints (widget: 0 toolbar, 1
+     *          Properties, 2 Outline; place: 1 in Design page, 2 in Navigation Window).
      **/
-    void signalShowDesignTools();
+    void signalPlaceDesignWidget(int widget, int place);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -333,6 +372,20 @@ private slots:
 
 private:
     void setupActions();
+
+    /**
+     * \brief   Builds the in-page drawing toolbar: a real QToolBar (icon-only by default,
+     *          seeded from the persisted style), one button per action of toolGroups() with
+     *          a separator between groups, movable to any of the page's four edges.
+     **/
+    void buildDesignToolbar();
+
+    /**
+     * \brief   Builds the in-page Properties (right, top) and Outline (right, below) dock
+     *          panels, bound to this page's model and scene manager, and wires the outline's
+     *          rename/delete context actions to this page's own actions (issue #516).
+     **/
+    void buildDesignPanels();
 
     /**
      * \brief   Rebuilds the breadcrumb from the current level path: clickable ancestor
@@ -505,6 +558,11 @@ private:
     SMScene*            mScene;         //!< The displayed level's scene.
     QWidget*            mBreadcrumb;    //!< The level-path bar above the viewport.
     QHBoxLayout*        mBreadcrumbLayout; //!< The breadcrumb content layout.
+    QToolBar*           mToolBar;       //!< The in-page drawing toolbar (movable to the page edges).
+    QDockWidget*        mPropertiesDock;//!< The Properties dock (right, top) inside the Design page.
+    QDockWidget*        mOutlineDock;   //!< The Outline dock (right, below Properties) inside the Design page.
+    SMPropertiesPanel*  mProperties;    //!< The Properties editor hosted in mPropertiesDock.
+    SMOutlinePanel*     mOutline;       //!< The Outline tree hosted in mOutlineDock.
     QAction*            mActZoomIn;     //!< Zoom one step in.
     QAction*            mActZoomOut;    //!< Zoom one step out.
     QAction*            mActZoomReset;  //!< Zoom to 100%.
@@ -553,8 +611,10 @@ private:
     QAction*            mActNewAttribute; //!< Declare dropdown: new attribute.
     QAction*            mActNewConstant;  //!< Declare dropdown: new constant.
     QAction*            mActNewDataType;  //!< Declare dropdown: new data type.
-    bool                mToolbarVisible;//!< Requested toolbar visibility (the toolbar now lives
-                                        //!< in the navigation dock; kept for the MdiChild contract).
+    bool                mToolbarVisible;//!< Requested visibility of the in-page drawing toolbar.
+    int                 mPlaceToolbar;  //!< Cached toolbar placement (for the context menu check marks).
+    int                 mPlaceProperties; //!< Cached Properties placement (for the context menu check marks).
+    int                 mPlaceOutline;  //!< Cached Outline placement (for the context menu check marks).
     uint32_t            mShownLevel;    //!< The level the viewport currently shows.
     uint32_t            mViewGesture;   //!< The coalescing key of this level visit's viewport writes.
     bool                mRestoringView; //!< A viewport restore is in progress; do not persist.
@@ -578,6 +638,11 @@ inline SMGraphicsView& SMDesign::getView() const
 inline SMSceneManager& SMDesign::getSceneManager() const
 {
     return *mSceneManager;
+}
+
+inline StateMachineModel& SMDesign::getModel() const
+{
+    return mModel;
 }
 
 inline QWidget* SMDesign::getBreadcrumb() const

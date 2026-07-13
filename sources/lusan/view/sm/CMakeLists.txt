@@ -29,7 +29,9 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMMethodList.cpp
     ${LUSAN}/view/sm/SMNoteEditor.cpp
     ${LUSAN}/view/sm/SMNoteItem.cpp
+    ${LUSAN}/view/sm/SMOutlinePanel.cpp
     ${LUSAN}/view/sm/SMOverview.cpp
+    ${LUSAN}/view/sm/SMPropertiesPanel.cpp
     ${LUSAN}/view/sm/SMScene.cpp
     ${LUSAN}/view/sm/SMSceneManager.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
@@ -69,7 +71,9 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMMethodList.hpp
     ${LUSAN}/view/sm/SMNoteEditor.hpp
     ${LUSAN}/view/sm/SMNoteItem.hpp
+    ${LUSAN}/view/sm/SMOutlinePanel.hpp
     ${LUSAN}/view/sm/SMOverview.hpp
+    ${LUSAN}/view/sm/SMPropertiesPanel.hpp
     ${LUSAN}/view/sm/SMScene.hpp
     ${LUSAN}/view/sm/SMSceneManager.hpp
     ${LUSAN}/view/sm/SMStateItem.hpp

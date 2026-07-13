@@ -55,6 +55,25 @@ endif()
 include(${AREG_CMAKE})
 set(AREG_RESOURCES "${AREG_FRAMEWORK}/areg/resources")
 
+# ##################################################################
+# Qt Advanced Docking System (ADS): dockable Outline/Properties/Toolbar
+# that drag/float/tab across the Navigation Window and Design page
+# (issue #516). Fetched from GitHub and built as a static library so no
+# extra runtime DLL has to be deployed alongside lusan.
+# ##################################################################
+set(ADS_VERSION       "4.4.1")
+set(BUILD_STATIC      ON  CACHE BOOL "Build ADS as a static library" FORCE)
+set(BUILD_EXAMPLES    OFF CACHE BOOL "Do not build ADS examples"     FORCE)
+set(ADS_BUILD_STATIC  ON  CACHE BOOL "Build ADS as a static library" FORCE)
+FetchContent_Declare(
+    ads
+    GIT_REPOSITORY https://github.com/githubuser0xFFFF/Qt-Advanced-Docking-System.git
+    GIT_TAG "4.4.1"
+)
+FetchContent_MakeAvailable(ads)
+set(LUSAN_ADS_TARGET "qtadvanceddocking-qt${QT_VERSION_MAJOR}")
+message(STATUS ">>> Fetched Qt-Advanced-Docking-System ${ADS_VERSION}; target '${LUSAN_ADS_TARGET}'")
+
 message(STATUS "-------------------- CMakeLists Status Report Begin --------------------")
 message(STATUS "LUSAN: >>> Qt Version = \'${QT_VERSION_MAJOR}\'")
 message(STATUS "LUSAN: >>> CMAKE_PREFIX_PATH = ${CMAKE_PREFIX_PATH}")

@@ -122,6 +122,26 @@ public:
      **/
     inline bool hasNote() const;
 
+    /**
+     * \brief   True when one interior waypoint is the active (keyboard-movable) point.
+     **/
+    inline bool hasSelectedPoint() const;
+
+    /**
+     * \brief   Moves the active interior waypoint by one keyboard step and commits it as one
+     *          undo step. The begin/end anchors stay glued to the state borders and are never
+     *          moved this way. Steps snap the moved coordinate to a grid of the step size: a
+     *          normal step is 5 units (lands on the next multiple of 5 in the key direction),
+     *          a coarse step (Ctrl) is 10 units (next multiple of 10), and a pixel step (Shift)
+     *          moves exactly one unit without snapping (issue #516 bug 4).
+     * \param   dx          The horizontal direction: -1, 0, or +1.
+     * \param   dy          The vertical direction: -1, 0, or +1.
+     * \param   coarse      True for the 10-unit coarse step (Ctrl held).
+     * \param   pixelWise   True for the exact 1-unit step (Shift held); overrides \p coarse.
+     * \return  True when an active waypoint was moved (the event is consumed).
+     **/
+    bool nudgeSelectedPoint(int dx, int dy, bool coarse, bool pixelWise);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -203,6 +223,12 @@ private:
     QColor strokeColor(const QPalette& palette) const;
 
     /**
+     * \brief   Sets the active interior waypoint for keyboard nudging (or -1 to clear) and
+     *          repaints when it changed.
+     **/
+    void setSelectedPoint(int index);
+
+    /**
      * \brief   Finds the interior waypoint within pick range of \p point, or -1.
      **/
     int hitWaypoint(const QPointF& point) const;
@@ -239,6 +265,7 @@ private:
     QPointF                 mLabelPos;      //!< The persisted label anchor.
     eDrag                   mDrag;          //!< The active drag part.
     int                     mDragIndex;     //!< The dragged waypoint index.
+    int                     mSelectedPoint; //!< The active interior waypoint for keyboard nudging, or -1.
     QPointF                 mDragPoint;     //!< The live free position of the dragged endpoint.
     uint32_t                mGesture;       //!< The coalescing gesture ID of the active drag.
 };
@@ -250,6 +277,11 @@ private:
 inline bool SMEdgeItem::hasNote() const
 {
     return mHasNote;
+}
+
+inline bool SMEdgeItem::hasSelectedPoint() const
+{
+    return (mSelectedPoint >= 0);
 }
 
 inline uint32_t SMEdgeItem::getSourceId() const

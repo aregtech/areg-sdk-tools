@@ -24,7 +24,7 @@
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 
-#include <QDockWidget>
+#include <QWidget>
 #include <QSize>
 #include <QTabWidget>
 #include "OutputDock.hpp"
@@ -32,7 +32,13 @@
 class MdiMainWindow;
 class NaviFsmToolbar;
 
-class NavigationDock : public QDockWidget
+/**
+ * \brief   The navigation window content (a tab widget of the workspace/log/FSM explorers).
+ *          It is a plain content widget hosted inside a Qt-Advanced-Docking-System dock widget
+ *          (issue #516), so it no longer derives from QDockWidget; the ADS dock provides the
+ *          title bar, floating, and cross-window drag/tab behavior.
+ **/
+class NavigationDock : public QWidget
 {
 //////////////////////////////////////////////////////////////////////////
 // Constants, types and static methods
@@ -47,12 +53,16 @@ public:
         , NaviLiveLogs          //!< Live logs navigation window type
         , NaviOfflineLogs       //!< Offline logs navigation window type
         , NaviDesignToolbar     //!< FSM design toolbar navigation window type
+        , NaviDesignProperties  //!< FSM design Properties panel navigation window type
+        , NaviDesignOutline     //!< FSM design Outline panel navigation window type
     };
 
     static QString  TabNameFileSystem;      //!< The name of the tab for workspace explorer.
     static QString  TabLiveLogsExplorer;    //!< The name of the tab for live logs explorer.
     static QString  TabOfflineLogsExplorer; //!< The name of the tab for offline logs explorer.
     static QString  TabFsmToolbar;          //!< The name of the tab for the FSM design toolbar.
+    static QString  TabDesignProperties;    //!< The name of the tab for the FSM design Properties panel.
+    static QString  TabDesignOutline;       //!< The name of the tab for the FSM design Outline panel.
 
     //!< Returns the tab name of the specified navigation window
     static const QString& getTabName(NavigationDock::eNaviWindow navi);
@@ -93,11 +103,6 @@ public:
     inline NaviOfflineLogsScopes& getOfflineScopes();
 
     /**
-     * \brief   Returns the FSM design toolbar widget.
-     **/
-    inline NaviFsmToolbar& getFsmToolbar();
-
-    /**
      * \brief   Adds a new tab with the widget to the tab-control.
      * \param   widget      The widget to add to the tab-control.
      * \brief   tabName     The name of the tab to add.
@@ -131,7 +136,39 @@ public:
      **/
     bool showTab(const QString& tabName);
     bool showTab(NavigationDock::eNaviWindow navi);
-    
+
+    /**
+     * \brief   Adds (if absent) and shows the movable FSM design widget tab (Design Toolbar,
+     *          State Machine Properties, or State Machine Outline) hosting the given content
+     *          window; the content stays owned by the main window (issue #516). The tab is
+     *          raised only the first time it is added, so re-syncs do not steal focus.
+     * \param   navi        One of NaviDesignToolbar / NaviDesignProperties / NaviDesignOutline.
+     * \param   content     The navigation window to host (NaviFsmToolbar or NaviDesignPanel).
+     **/
+    void showDesignTab(NavigationDock::eNaviWindow navi, NavigationWindow* content);
+
+    /**
+     * \brief   Removes the FSM design widget tab, detaching (not deleting) its content so it
+     *          can be re-hosted in the Design page or shown again later.
+     **/
+    void hideDesignTab(NavigationDock::eNaviWindow navi);
+
+    /**
+     * \brief   True when the given FSM design widget tab is currently present in the dock.
+     **/
+    bool isDesignTabShown(NavigationDock::eNaviWindow navi) const;
+
+    /**
+     * \brief   Shows or hides an existing navigation tab (Workspace / Live Logs / Offline
+     *          Logs) without removing it, backing the View menu's Navigation submenu.
+     **/
+    void setNaviTabVisible(NavigationDock::eNaviWindow navi, bool visible);
+
+    /**
+     * \brief   True when the given navigation tab exists and is currently visible.
+     **/
+    bool isNaviTabVisible(NavigationDock::eNaviWindow navi) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -145,6 +182,11 @@ private:
      * \brief   Initializes the size of tab widgets.
      **/
     void initSize();
+
+    /**
+     * \brief   Returns the tab index whose text matches the given navigation window, or -1.
+     **/
+    int indexOfNavi(NavigationDock::eNaviWindow navi) const;
 
 private slots:
 
@@ -173,7 +215,6 @@ private:
     NaviLiveLogsScopes      mLiveScopes;    //!< The log explorer widget.
     NaviOfflineLogsScopes   mOfflineScopes; //!< The offline scopes explorer.
     NaviFileSystem          mFileSystem;    //!< The file system widget.
-    NaviFsmToolbar*         mFsmToolbar;    //!< The FSM design toolbar widget (owned by the tab widget).
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -198,11 +239,6 @@ inline NaviLiveLogsScopes& NavigationDock::getLiveScopes()
 inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes()
 {
     return mOfflineScopes;
-}
-
-inline NaviFsmToolbar& NavigationDock::getFsmToolbar()
-{
-    return *mFsmToolbar;
 }
 
 inline int NavigationDock::addTab(NavigationWindow& widget, const QString& tabName)

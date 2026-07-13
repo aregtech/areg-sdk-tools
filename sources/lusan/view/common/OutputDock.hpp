@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include <QDockWidget>
+#include <QWidget>
 #include "areg/base/areg_global.h"
 
 #include "lusan/view/log/ScopeOutputViewer.hpp"
@@ -35,9 +35,11 @@
 class MdiMainWindow;
 
 /**
- * \brief   The OutputDock class is a dockable widget that contains windows for analyzes
+ * \brief   The OutputDock class is the output-window content (a tab widget of analysis views).
+ *          It is a plain content widget hosted inside a Qt-Advanced-Docking-System dock widget
+ *          (issue #516); the ADS dock provides the title bar, floating, and drag/tab behavior.
  **/
-class OutputDock : public QDockWidget
+class OutputDock : public QWidget
 {
     Q_OBJECT
 

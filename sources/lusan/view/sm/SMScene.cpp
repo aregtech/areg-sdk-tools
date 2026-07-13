@@ -405,36 +405,23 @@ void SMScene::keyPressEvent(QKeyEvent* event)
         return;
 
     case Qt::Key_Left:
-        if (nudgeSelection(-1, 0, event->modifiers().testFlag(Qt::ShiftModifier)))
-        {
-            event->accept();
-            return;
-        }
-        break;
-
     case Qt::Key_Right:
-        if (nudgeSelection(1, 0, event->modifiers().testFlag(Qt::ShiftModifier)))
-        {
-            event->accept();
-            return;
-        }
-        break;
-
     case Qt::Key_Up:
-        if (nudgeSelection(0, -1, event->modifiers().testFlag(Qt::ShiftModifier)))
-        {
-            event->accept();
-            return;
-        }
-        break;
-
     case Qt::Key_Down:
-        if (nudgeSelection(0, 1, event->modifiers().testFlag(Qt::ShiftModifier)))
+    {
+        const int dx = (event->key() == Qt::Key_Left) ? -1 : (event->key() == Qt::Key_Right) ? 1 : 0;
+        const int dy = (event->key() == Qt::Key_Up)   ? -1 : (event->key() == Qt::Key_Down)  ? 1 : 0;
+        const bool coarse = event->modifiers().testFlag(Qt::ControlModifier);
+        const bool pixel  = event->modifiers().testFlag(Qt::ShiftModifier);
+        // An active transition waypoint wins the arrow keys; otherwise nudge the box selection.
+        if (nudgeSelectedEdgePoint(dx, dy, coarse, pixel) || nudgeSelection(dx, dy, pixel))
         {
             event->accept();
             return;
         }
+
         break;
+    }
 
     default:
         break;
@@ -986,6 +973,17 @@ void SMScene::updateConnHighlights()
                                : in        ? SMCanvasItem::eConnHighlight::Incoming
                                            : SMCanvasItem::eConnHighlight::None);
     }
+}
+
+bool SMScene::nudgeSelectedEdgePoint(int dx, int dy, bool coarse, bool pixel)
+{
+    const QList<SMEdgeItem*> edges{ selectedEdgeItems() };
+    if ((edges.size() != 1) || (edges.first()->hasSelectedPoint() == false))
+    {
+        return false;
+    }
+
+    return edges.first()->nudgeSelectedPoint(dx, dy, coarse, pixel);
 }
 
 bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)

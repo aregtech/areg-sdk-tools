@@ -21,6 +21,8 @@
 
 #include "lusan/view/common/MdiMainWindow.hpp"
 
+#include <QVBoxLayout>
+
 const QString   OutputDock::TabNameLogging{ tr("Log analyzes") };
 
 const QString& OutputDock::getTabName(OutputDock::eOutputDock wndOutput)
@@ -44,15 +46,21 @@ OutputDock::eOutputDock OutputDock::getOutputDock(const QString& tabName)
 }
 
 OutputDock::OutputDock(MdiMainWindow* parent)
-    : QDockWidget   (tr("Output"), parent)
+    : QWidget       (parent)
     , mMainWindow   (parent)
     , mTabs         (this)
     , mScopeOutput  (parent, this)
 {
     mTabs.addTab(&mScopeOutput, QIcon(), tr("Scopes Analyzes"));
     mTabs.setTabPosition(QTabWidget::South);
-    setWidget(&mTabs);
-    
+
+    // The tab widget is this content widget's whole body; the hosting ADS dock provides the
+    // title bar and frame (issue #516).
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    layout->addWidget(&mTabs);
+
     initSize();
 }
 

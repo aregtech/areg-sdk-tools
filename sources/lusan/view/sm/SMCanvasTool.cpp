@@ -507,9 +507,18 @@ bool SMTransitionTool::mouseRelease(QGraphicsSceneMouseEvent* event)
 
 bool SMTransitionTool::mouseDoubleClick(QGraphicsSceneMouseEvent* event)
 {
-    // Swallow the repeat of a click pair while a gesture is in progress.
     if (mArmed)
     {
+        // A double-click away from any state abandons the unfinished transition and cleans up
+        // the preview (issue #516 bug 3): without a valid target the user would otherwise be
+        // stuck with a pending gesture. A double-click on a state was already completed as a
+        // transition by the first click, so there only the repeat is swallowed.
+        if (getScene().stateAt(event->scenePos()) == nullptr)
+        {
+            cancelGesture();
+            getScene().finishToolGesture();
+        }
+
         event->accept();
         return true;
     }
@@ -522,6 +531,16 @@ bool SMTransitionTool::keyPress(QKeyEvent* event)
     if (mArmed && ((event->key() == Qt::Key_Return) || (event->key() == Qt::Key_Enter)))
     {
         completeInternal();
+        event->accept();
+        return true;
+    }
+
+    // Esc abandons the unfinished transition and cleans up the preview (issue #516 bug 3).
+    // The scene also maps Esc to cancelActiveGesture(), but handling it here guarantees the
+    // pending gesture is dropped even if the key is routed to the active tool first.
+    if (mArmed && (event->key() == Qt::Key_Escape))
+    {
+        getScene().cancelActiveGesture();
         event->accept();
         return true;
     }
