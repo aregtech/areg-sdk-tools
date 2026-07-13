@@ -36,6 +36,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/common/FieldEntry.cpp
     # data/sm (the model under test)
     ${LUSAN}/data/sm/SMAttributeData.cpp
+    ${LUSAN}/data/sm/SMClipboard.cpp
     ${LUSAN}/data/sm/SMCondition.cpp
     ${LUSAN}/data/sm/SMConstantData.cpp
     ${LUSAN}/data/sm/SMDataTypeData.cpp
@@ -109,6 +110,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
+    ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/sm/SMDataTypeModel.cpp
@@ -148,6 +150,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
+    ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp

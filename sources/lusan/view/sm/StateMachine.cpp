@@ -145,6 +145,33 @@ bool StateMachine::canRedo() const
     return mModel.getUndoStack().canRedo();
 }
 
+void StateMachine::cut()
+{
+    SMDesign* design = designPageIfBuilt();
+    if ((design != nullptr) && isDesignPageCurrent())
+    {
+        design->cutSelection();
+    }
+}
+
+void StateMachine::copy()
+{
+    SMDesign* design = designPageIfBuilt();
+    if ((design != nullptr) && isDesignPageCurrent())
+    {
+        design->copySelection();
+    }
+}
+
+void StateMachine::paste()
+{
+    SMDesign* design = designPageIfBuilt();
+    if ((design != nullptr) && isDesignPageCurrent())
+    {
+        design->pasteClipboard();
+    }
+}
+
 void StateMachine::setToolbarVisible(bool visible)
 {
     mToolbarVisible = visible;

@@ -67,6 +67,14 @@ public:
     void redo() override;
     bool canUndo() const override;
     bool canRedo() const override;
+
+    /**
+     * \brief   Clipboard commands, forwarded to the Design page while it is the
+     *          selected tab; the other pages keep the default no-op.
+     **/
+    void cut() override;
+    void copy() override;
+    void paste() override;
     void setToolbarVisible(bool visible) override;
     bool isToolbarVisible() const override;
 

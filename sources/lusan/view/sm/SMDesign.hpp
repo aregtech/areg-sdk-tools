@@ -30,6 +30,7 @@
 #include <QList>
 #include <QPoint>
 #include <cstdint>
+#include <memory>
 
 /************************************************************************
  * Dependencies
@@ -40,6 +41,7 @@ class QHBoxLayout;
 class QKeyEvent;
 class QToolBar;
 class QToolButton;
+class SMClipboardContent;
 class SMGraphicsView;
 class SMOutlinePanel;
 class SMPropertiesPanel;
@@ -200,6 +202,14 @@ public:
     inline QAction* actionRename() const;
 
     /**
+     * \brief   The clipboard actions: cut, copy, paste, and duplicate.
+     **/
+    inline QAction* actionCut() const;
+    inline QAction* actionCopy() const;
+    inline QAction* actionPaste() const;
+    inline QAction* actionDuplicate() const;
+
+    /**
      * \brief   The appearance actions: color swatches, alignment, and distribution.
      **/
     inline QAction* actionStateColor() const;
@@ -241,6 +251,32 @@ public:
      *          one undo step. Start states are never deleted.
      **/
     void deleteSelection();
+
+    /**
+     * \brief   Copies the selection (states with their subtrees, notes, registry
+     *          entries) to the system clipboard; no-op when nothing is copyable.
+     **/
+    void copySelection();
+
+    /**
+     * \brief   Copies the selection to the clipboard and deletes the copied states and
+     *          notes as one undo step, without confirmation. Registry entries are
+     *          copied but never deleted here.
+     **/
+    void cutSelection();
+
+    /**
+     * \brief   Pastes the clipboard payload into the displayed level as one undo step:
+     *          fresh IDs, `Name_<id>` collision renames, registry merge by name, and a
+     *          grid-step position offset. The pasted elements become the selection.
+     **/
+    void pasteClipboard();
+
+    /**
+     * \brief   Duplicates the selection in place (copy + paste in one step, without
+     *          touching the system clipboard).
+     **/
+    void duplicateSelection();
 
     /**
      * \brief   The "Add Declaration" dropdown entries, in display order, each requesting
@@ -485,6 +521,12 @@ private:
     void distributeSelection(eDistribute axis);
 
     /**
+     * \brief   Builds and pushes the paste command for a parsed clipboard payload and
+     *          selects the pasted elements.
+     **/
+    void pushPaste(std::unique_ptr<SMClipboardContent> content, const QString& text);
+
+    /**
      * \brief   Returns the page action bound to the pressed key, or nullptr.
      **/
     QAction* matchAction(const QKeyEvent& event) const;
@@ -539,6 +581,10 @@ private:
     QAction*            mActAddNote;    //!< Activate the Add Note tool.
     QAction*            mActDelete;     //!< Delete the selection with confirmation.
     QAction*            mActRename;     //!< Rename the selected state in place.
+    QAction*            mActCut;        //!< Cut the selection to the clipboard.
+    QAction*            mActCopy;       //!< Copy the selection to the clipboard.
+    QAction*            mActPaste;      //!< Paste the clipboard into the shown level.
+    QAction*            mActDuplicate;  //!< Duplicate the selection in place.
     QAction*            mActStateColor; //!< Apply a picked color to the selected states.
     QAction*            mActEdgeColor;  //!< Apply a picked color to the selected transitions.
     QAction*            mActNoteColor;  //!< Apply a picked color to the selected notes.
@@ -692,6 +738,26 @@ inline QAction* SMDesign::actionDelete() const
 inline QAction* SMDesign::actionRename() const
 {
     return mActRename;
+}
+
+inline QAction* SMDesign::actionCut() const
+{
+    return mActCut;
+}
+
+inline QAction* SMDesign::actionCopy() const
+{
+    return mActCopy;
+}
+
+inline QAction* SMDesign::actionPaste() const
+{
+    return mActPaste;
+}
+
+inline QAction* SMDesign::actionDuplicate() const
+{
+    return mActDuplicate;
 }
 
 inline QAction* SMDesign::actionStateColor() const

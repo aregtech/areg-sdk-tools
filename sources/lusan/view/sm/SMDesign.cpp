@@ -19,11 +19,13 @@
 
 #include "lusan/view/sm/SMDesign.hpp"
 
+#include "lusan/data/sm/SMClipboard.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/SMPasteCommand.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -41,7 +43,9 @@
 #include "lusan/view/sm/SMToolIcons.hpp"
 
 #include <QAction>
+#include <QClipboard>
 #include <QColorDialog>
+#include <QGuiApplication>
 #include <QDockWidget>
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -49,6 +53,7 @@
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPair>
@@ -206,6 +211,10 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActAddNote   (nullptr)
     , mActDelete    (nullptr)
     , mActRename    (nullptr)
+    , mActCut       (nullptr)
+    , mActCopy      (nullptr)
+    , mActPaste     (nullptr)
+    , mActDuplicate (nullptr)
     , mActStateColor(nullptr)
     , mActEdgeColor (nullptr)
     , mActNoteColor (nullptr)
@@ -592,6 +601,29 @@ void SMDesign::setupActions()
         getScene().startRenameOfSelection();
     });
 
+    // Cut/Copy/Paste keep Qt::WidgetShortcut: the page itself never has focus, so the
+    // registration stays inert and cannot turn the main window's Edit actions (which
+    // carry the same key sequences and call back into this page) ambiguous. While the
+    // canvas has focus the eventFilter dispatches the keys to these actions directly.
+    mActCut = new QAction(tr("Cut"), this);
+    mActCut->setShortcut(QKeySequence::Cut);
+    mActCut->setShortcutContext(Qt::WidgetShortcut);
+    connect(mActCut, &QAction::triggered, this, &SMDesign::cutSelection);
+
+    mActCopy = new QAction(tr("Copy"), this);
+    mActCopy->setShortcut(QKeySequence::Copy);
+    mActCopy->setShortcutContext(Qt::WidgetShortcut);
+    connect(mActCopy, &QAction::triggered, this, &SMDesign::copySelection);
+
+    mActPaste = new QAction(tr("Paste"), this);
+    mActPaste->setShortcut(QKeySequence::Paste);
+    mActPaste->setShortcutContext(Qt::WidgetShortcut);
+    connect(mActPaste, &QAction::triggered, this, &SMDesign::pasteClipboard);
+
+    mActDuplicate = new QAction(tr("Duplicate"), this);
+    mActDuplicate->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
+    connect(mActDuplicate, &QAction::triggered, this, &SMDesign::duplicateSelection);
+
     mActAddSubstate = new QAction(tr("Add Substate (Painted)"), this);
     connect(mActAddSubstate, &QAction::triggered, this, &SMDesign::addSubstateToSelection);
 
@@ -663,6 +695,10 @@ void SMDesign::setupActions()
     mActUndo->setIcon(SMToolIcons::icon(eIcon::Undo));
     mActRedo->setIcon(SMToolIcons::icon(eIcon::Redo));
     mActSelectAll->setIcon(SMToolIcons::icon(eIcon::SelectAll));
+    mActCut->setIcon(SMToolIcons::icon(eIcon::Cut));
+    mActCopy->setIcon(SMToolIcons::icon(eIcon::Copy));
+    mActPaste->setIcon(SMToolIcons::icon(eIcon::Paste));
+    mActDuplicate->setIcon(SMToolIcons::icon(eIcon::Duplicate));
     mActNewTrigger->setIcon(SMToolIcons::icon(eIcon::NewTrigger));
     mActNewAction->setIcon(SMToolIcons::icon(eIcon::NewAction));
     mActNewCondition->setIcon(SMToolIcons::icon(eIcon::NewCondition));
@@ -676,7 +712,7 @@ void SMDesign::setupActions()
                                  , mActToggleGrid, mActGridDots, mActGridDotSize, mActToggleSnap, mActGridSize, mActSelectAll
                                  , mActUndo, mActRedo
                                  , mActAddState, mActAddFinal, mActAddTransition, mActAddNote, mActAddInternal
-                                 , mActDelete, mActRename
+                                 , mActDelete, mActRename, mActDuplicate
                                  , mActStateColor, mActEdgeColor, mActNoteColor, mActSetColor
                                  , mActAlignLeft, mActAlignRight, mActAlignTop, mActAlignBottom
                                  , mActDistributeH, mActDistributeV
@@ -689,6 +725,11 @@ void SMDesign::setupActions()
         action->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         addAction(action);
     }
+
+    // Registered for matchAction() dispatch; their WidgetShortcut context stays as set.
+    addAction(mActCut);
+    addAction(mActCopy);
+    addAction(mActPaste);
 
     // Seeding the checked state must not push a grid command for simply opening the page.
     mSyncingGrid = true;
@@ -849,7 +890,7 @@ QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
     groups.append(ToolGroup{ tr("Navigate"),  { mActEnterSubmachine, mActGoToParent, mActCenterMachine } });
     groups.append(ToolGroup{ tr("Color"),     { mActSetColor } });
     groups.append(ToolGroup{ tr("Grid"),      { mActToggleGrid, mActGridDots, mActGridDotSize, mActGridSize, mActToggleSnap } });
-    groups.append(ToolGroup{ tr("Edit"),      { mActUndo, mActRedo, mActSelectAll } });
+    groups.append(ToolGroup{ tr("Edit"),      { mActUndo, mActRedo, mActCut, mActCopy, mActPaste, mActSelectAll } });
     groups.append(ToolGroup{ tr("Zoom"),      { mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit } });
     return groups;
 }
@@ -899,6 +940,9 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
                                               , make(eIcon::ToggleSnap, tr("Snap to Grid")) } });
     groups.append(ToolGroup{ tr("Edit"),      { make(eIcon::Undo, tr("Undo"))
                                               , make(eIcon::Redo, tr("Redo"))
+                                              , make(eIcon::Cut, tr("Cut"))
+                                              , make(eIcon::Copy, tr("Copy"))
+                                              , make(eIcon::Paste, tr("Paste"))
                                               , make(eIcon::SelectAll, tr("Select All")) } });
     groups.append(ToolGroup{ tr("Zoom"),      { make(eIcon::ZoomIn, tr("Zoom In"))
                                               , make(eIcon::ZoomOut, tr("Zoom Out"))
@@ -965,6 +1009,10 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActAddSubstate);
         menu.addAction(mActEnterSubmachine);
         menu.addSeparator();
+        menu.addAction(mActCut);
+        menu.addAction(mActCopy);
+        menu.addAction(mActDuplicate);
+        menu.addSeparator();
         menu.addAction(mActStateColor);
         addNoteMenuEntries(menu, state->getElementId(), true);
         menu.addSeparator();
@@ -998,6 +1046,10 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
 
         menu.addAction(mActNoteColor);
         menu.addSeparator();
+        menu.addAction(mActCut);
+        menu.addAction(mActCopy);
+        menu.addAction(mActDuplicate);
+        menu.addSeparator();
         menu.addAction(mActDelete);
     }
     else
@@ -1009,6 +1061,8 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActAddTransition);
         menu.addAction(mActAddNote);
         menu.addAction(mActAddFinal);
+        menu.addSeparator();
+        menu.addAction(mActPaste);
         menu.addSeparator();
         menu.addAction(mActAlignLeft);
         menu.addAction(mActAlignRight);
@@ -1250,6 +1304,130 @@ void SMDesign::deleteSelectedNotes()
 
         mModel.getUndoStack().push(composite);
     }
+}
+
+void SMDesign::copySelection()
+{
+    const QString xml = SMClipboard::serialize(mModel.getData(), mModel.getSelectionModel().getSelection());
+    if (xml.isEmpty())
+    {
+        return;
+    }
+
+    QMimeData* mime = new QMimeData();
+    mime->setData(QString::fromLatin1(SMClipboard::MIME_TYPE), xml.toUtf8());
+    mime->setText(xml);
+    QGuiApplication::clipboard()->setMimeData(mime);
+}
+
+void SMDesign::cutSelection()
+{
+    StateMachineData& data = mModel.getData();
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    const QString xml = SMClipboard::serialize(data, selection);
+    if (xml.isEmpty())
+    {
+        return;
+    }
+
+    QMimeData* mime = new QMimeData();
+    mime->setData(QString::fromLatin1(SMClipboard::MIME_TYPE), xml.toUtf8());
+    mime->setText(xml);
+    QGuiApplication::clipboard()->setMimeData(mime);
+
+    // Cut deletes only what the clipboard carries as canvas content: the copied states
+    // and free notes. Registry entries are copied but stay; their pages own deletion.
+    QList<uint32_t> stateIds;
+    QList<uint32_t> noteIds;
+    for (uint32_t id : selection)
+    {
+        const SMStateEntry* state = data.findStateById(id);
+        if (state != nullptr)
+        {
+            if (state->getKind() != SMStateEntry::eStateKind::Start)
+            {
+                stateIds.append(id);
+            }
+        }
+        else if (data.getLayout().findNote(id) != nullptr)
+        {
+            noteIds.append(id);
+        }
+    }
+
+    if (stateIds.isEmpty() && noteIds.isEmpty())
+    {
+        return;
+    }
+
+    SMStateData* level = data.findLevel(getScene().getLevelId());
+    if ((level == nullptr) && (stateIds.isEmpty() == false))
+    {
+        return;
+    }
+
+    const QString text = tr("Cut selection");
+    SMCompositeCommand* composite = new SMCompositeCommand(data, mModel.getNotifier(), text);
+    for (uint32_t stateId : stateIds)
+    {
+        new SMRemoveStateCommand(data, mModel.getNotifier(), *level, stateId, text, composite);
+    }
+
+    for (uint32_t noteId : noteIds)
+    {
+        new SMRemoveNoteCommand(data, mModel.getNotifier(), noteId, text, composite);
+    }
+
+    mModel.getUndoStack().push(composite);
+}
+
+void SMDesign::pasteClipboard()
+{
+    const QMimeData* mime = QGuiApplication::clipboard()->mimeData();
+    if ((mime == nullptr) || (mime->hasFormat(QString::fromLatin1(SMClipboard::MIME_TYPE)) == false))
+    {
+        return;
+    }
+
+    std::unique_ptr<SMClipboardContent> content =
+            SMClipboard::parse(QString::fromUtf8(mime->data(QString::fromLatin1(SMClipboard::MIME_TYPE))));
+    if (content != nullptr)
+    {
+        pushPaste(std::move(content), tr("Paste"));
+    }
+}
+
+void SMDesign::duplicateSelection()
+{
+    const QString xml = SMClipboard::serialize(mModel.getData(), mModel.getSelectionModel().getSelection());
+    if (xml.isEmpty())
+    {
+        return;
+    }
+
+    std::unique_ptr<SMClipboardContent> content = SMClipboard::parse(xml);
+    if (content != nullptr)
+    {
+        pushPaste(std::move(content), tr("Duplicate"));
+    }
+}
+
+void SMDesign::pushPaste(std::unique_ptr<SMClipboardContent> content, const QString& text)
+{
+    const double offset = static_cast<double>(getScene().getGridSize());
+    SMPasteCommand* command = new SMPasteCommand(  mModel.getData(), mModel.getNotifier(), std::move(content)
+                                                 , getScene().getLevelId(), QPointF(offset, offset), text);
+    if (command->isEffective() == false)
+    {
+        delete command;
+        return;
+    }
+
+    // No ensureVisible here: scrolling would push a viewport command on top of the
+    // paste and Ctrl+Z would undo the scroll instead of the paste. The offset keeps
+    // the copy next to its (visible) original anyway.
+    mModel.getUndoStack().push(command);
+    mModel.getSelectionModel().setSelection(command->getPastedIds());
 }
 
 void SMDesign::reorderSelectedTransition(bool raise)
