@@ -1509,6 +1509,222 @@ int main(int argc, char* argv[])
         CHECK(doc.getUndoStack().index() == indexBeforeReject);
     }
 
+    std::printf("sect: SM-issue516 substate marker size + transition point nudge\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        SMScene&        scene = page.getScene();
+
+        // --- Bug 1: a substate's auto-created Start is a compact marker box (same size as the
+        // root level's Start marker), not a full normal-state box. Add a plain Normal state to
+        // convert, so the check does not depend on the fixture already having one. ---
+        SMStateData* rootLevel = d.findLevel(scene.getLevelId());
+        CHECK(rootLevel != nullptr);
+        SMCreateStateCommand* addParent = new SMCreateStateCommand(  d, doc.getNotifier(), *rootLevel
+                                                                  , QStringLiteral("NudgeParent"), SMStateEntry::eStateKind::Normal
+                                                                  , QRectF(320.0, 320.0, NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight)
+                                                                  , QStringLiteral("Add parent"));
+        doc.getUndoStack().push(addParent);
+        const uint32_t plainId = addParent->getStateId();
+        CHECK(plainId != 0);
+
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ plainId });
+        QApplication::processEvents();
+        CHECK(page.actionAddSubstate()->isEnabled());
+        page.actionAddSubstate()->trigger();
+        QApplication::processEvents();
+
+        const SMStateEntry* composite = d.findStateById(plainId);
+        CHECK((composite != nullptr) && composite->hasNestedStates());
+        const SMStateData*  nested      = (composite != nullptr ? composite->getNestedStates() : nullptr);
+        const SMStateEntry* nestedStart = (nested != nullptr ? nested->getStartState() : nullptr);
+        CHECK(nestedStart != nullptr);
+        const SMLayoutNode* startNode = (nestedStart != nullptr ? d.getLayout().findNode(nestedStart->getId()) : nullptr);
+        CHECK(startNode != nullptr);
+        if (startNode != nullptr)
+        {
+            CHECK(startNode->width  == NESMDesign::MarkerStateWidth);
+            CHECK(startNode->height == NESMDesign::MarkerStateHeight);
+        }
+    }
+
+    std::printf("sect: SM-issue516 transition/internal action enablement\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1200, 800);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        SMScene& scene = page.getScene();
+
+        // Bug 5: Add Internal Transition is disabled for a Start state (no entry/exit/internal
+        // behaviour), enabled for a Normal state.
+        const SMStateData* root = d.findLevel(scene.getLevelId());
+        CHECK(root != nullptr);
+        const SMStateEntry* start = (root != nullptr ? root->getStartState() : nullptr);
+        CHECK(start != nullptr);
+        if (start != nullptr)
+        {
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ start->getId() });
+            QApplication::processEvents();
+            CHECK(page.actionAddInternal()->isEnabled() == false);
+            // Bug 2: a level that also has non-Start states can still draw a transition.
+            CHECK(page.actionAddTransition()->isEnabled());
+        }
+
+        const SMStateEntry* normal = nullptr;
+        for (const SMStateEntry* s : root->getElements())
+        {
+            if (s->getKind() == SMStateEntry::eStateKind::Normal) { normal = s; break; }
+        }
+
+        if (normal != nullptr)
+        {
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ normal->getId() });
+            QApplication::processEvents();
+            CHECK(page.actionAddInternal()->isEnabled());
+        }
+
+        // Bug 2: a brand-new level that holds only its Start offers no transition target, so
+        // Add Transition is disabled until a non-Start state exists.
+        StateMachineModel fresh;
+        CHECK(fresh.createNewDocument(QStringLiteral("Fresh")));
+        SMDesign freshPage(fresh);
+        freshPage.resize(1000, 700);
+        freshPage.show();
+        QApplication::processEvents();
+        StateMachineData& fd = fresh.getData();
+        SMScene& freshScene = freshPage.getScene();
+        const SMStateData* freshRoot = fd.findLevel(freshScene.getLevelId());
+        CHECK(freshRoot != nullptr);
+        // A default new document holds exactly its Start state.
+        int nonStart = 0;
+        for (const SMStateEntry* s : freshRoot->getElements())
+        {
+            if (s->getKind() != SMStateEntry::eStateKind::Start) { ++nonStart; }
+        }
+
+        if (nonStart == 0)
+        {
+            CHECK(freshPage.actionAddTransition()->isEnabled() == false);
+
+            // Adding a Normal state enables it.
+            SMStateData* level = fd.findLevel(freshScene.getLevelId());
+            SMCreateStateCommand* addState = new SMCreateStateCommand(  fd, fresh.getNotifier(), *level
+                                                                     , QStringLiteral("S1"), SMStateEntry::eStateKind::Normal
+                                                                     , QRectF(240.0, 240.0, NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight)
+                                                                     , QStringLiteral("Add S1"));
+            fresh.getUndoStack().push(addState);
+            QApplication::processEvents();
+            CHECK(freshPage.actionAddTransition()->isEnabled());
+        }
+    }
+
+    std::printf("sect: SM-issue516 transition waypoint keyboard nudge\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        SMScene&        scene = page.getScene();
+        SMGraphicsView& view  = page.getView();
+
+        // The modulo-snap expectation must mirror SMEdgeItem's nudgeAxis exactly.
+        auto expectAxis = [](double v, int dir, int base, bool pixel) -> double {
+            if (pixel) { return v + static_cast<double>(dir); }
+            const double cells = v / static_cast<double>(base);
+            const double t = (dir > 0) ? (std::floor(cells + 1e-6) + 1.0) : (std::ceil(cells - 1e-6) - 1.0);
+            return t * static_cast<double>(base);
+        };
+        auto sendArrow = [&scene](Qt::Key key, Qt::KeyboardModifiers mods) {
+            QKeyEvent press(QEvent::KeyPress, key, mods);
+            QApplication::sendEvent(&scene, &press);
+            QApplication::processEvents();
+        };
+
+        // Find a straight external transition (a 2-point layout edge with a live edge item).
+        const SMStateData* root = d.findLevel(scene.getLevelId());
+        CHECK(root != nullptr);
+        uint32_t edgeTxId = 0;
+        for (const SMStateEntry* s : root->getElements())
+        {
+            for (const SMTransitionEntry* t : s->getTransitions().getElements())
+            {
+                const SMLayoutEdge* le = d.getLayout().findEdge(t->getId());
+                SMEdgeItem* ei = dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(t->getId()));
+                if ((ei != nullptr) && (le != nullptr) && (le->points.size() == 2))
+                {
+                    edgeTxId = t->getId();
+                    break;
+                }
+            }
+
+            if (edgeTxId != 0) { break; }
+        }
+        CHECK(edgeTxId != 0);
+
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(edgeTxId));
+        CHECK(edge != nullptr);
+        if (edge != nullptr)
+        {
+            // Raise the edge so a double-click at its midpoint routes to it, then insert a waypoint.
+            edge->setZValue(10.0);
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ edgeTxId });
+            QApplication::processEvents();
+            CHECK(edge->isSelected());
+
+            const QPointF mid = (edge->getPath().first() + edge->getPath().last()) / 2.0;
+            dblClickScene(view, mid);
+            QApplication::processEvents();
+            CHECK(d.getLayout().findEdge(edgeTxId)->points.size() == 3);     // waypoint inserted
+
+            // Click the waypoint to make it the active (keyboard-movable) point.
+            const QPointF wp = d.getLayout().findEdge(edgeTxId)->points.at(1);
+            clickScene(view, wp);
+            QApplication::processEvents();
+            CHECK(edge->hasSelectedPoint());
+
+            // Normal step (5, modulo 5): x snaps to the next multiple of 5, y unchanged.
+            const QPointF p0 = d.getLayout().findEdge(edgeTxId)->points.at(1);
+            sendArrow(Qt::Key_Right, Qt::NoModifier);
+            const QPointF p1 = d.getLayout().findEdge(edgeTxId)->points.at(1);
+            CHECK(p1.x() == expectAxis(p0.x(), 1, 5, false));
+            CHECK(p1.y() == p0.y());
+
+            // Coarse step (Ctrl, modulo 10) upward.
+            sendArrow(Qt::Key_Up, Qt::ControlModifier);
+            const QPointF p2 = d.getLayout().findEdge(edgeTxId)->points.at(1);
+            CHECK(p2.y() == expectAxis(p1.y(), -1, 10, false));
+            CHECK(p2.x() == p1.x());
+
+            // Pixel step (Shift): exactly one unit left, no snapping.
+            sendArrow(Qt::Key_Left, Qt::ShiftModifier);
+            const QPointF p3 = d.getLayout().findEdge(edgeTxId)->points.at(1);
+            CHECK(p3.x() == p2.x() - 1.0);
+            CHECK(p3.y() == p2.y());
+
+            // Each nudge is its own undo step; undo restores the pre-nudge waypoint position.
+            doc.getUndoStack().undo();
+            CHECK(d.getLayout().findEdge(edgeTxId)->points.at(1) == p2);
+
+            // The endpoints stayed glued to the state borders (never moved by the nudge).
+            CHECK(d.getLayout().findEdge(edgeTxId)->points.size() == 3);
+        }
+    }
+
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);
 }

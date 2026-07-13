@@ -88,8 +88,13 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
 
     connect(&mTabWidget, &QTabWidget::currentChanged, this, [this](int index) {
         ensureTabInitialized(index);
-        // The drawing toolbar and the Properties/Outline panels live inside the Design page
-        // (issue #516), so they appear and hide together with that tab -- nothing to refresh here.
+        // The toolbar and the Properties/Outline panels are active only on the Design page
+        // (issue #516). When they are hosted in the Navigation Window they must bind/unbind as
+        // the user enters or leaves the Design tab, so let the main window re-sync them.
+        if (mMainWindow != nullptr)
+        {
+            mMainWindow->syncDesignWidgets();
+        }
     });
 
     ensureTabInitialized(static_cast<int>(PageOverview));
@@ -417,8 +422,14 @@ void StateMachine::ensureTabInitialized(int index)
         SMDesign* design = new SMDesign(mModel, &mTabWidget);
         design->setToolbarVisible(mToolbarVisible);
         connect(design, &SMDesign::signalDeclareRequested, this, &StateMachine::onDeclareRequested);
-        connect(design, &SMDesign::signalShowDesignTools, this, [design]() {
-            design->setToolbarVisible(true);    // the toolbar lives in the page (issue #516)
+        // The canvas View submenu moves the toolbar / Properties / Outline between the Design
+        // page and the Navigation Window; the main window owns that global placement (issue #516).
+        connect(design, &SMDesign::signalPlaceDesignWidget, this, [this](int widget, int place) {
+            if (mMainWindow != nullptr)
+            {
+                mMainWindow->setDesignWidgetPlacement(static_cast<MdiMainWindow::eDesignWidget>(widget)
+                                                    , static_cast<MdiMainWindow::eDesignPlace>(place));
+            }
         });
         page = design;
     }

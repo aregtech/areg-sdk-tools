@@ -233,6 +233,9 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActNewConstant(nullptr)
     , mActNewDataType(nullptr)
     , mToolbarVisible(true)
+    , mPlaceToolbar (1)     // eDesignPlace::InDesign
+    , mPlaceProperties(1)   // eDesignPlace::InDesign
+    , mPlaceOutline (1)     // eDesignPlace::InDesign
     , mShownLevel   (0u)
     , mViewGesture  (0u)
     , mRestoringView(false)
@@ -287,6 +290,21 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
             rebuildBreadcrumb();
         }
         else if (kind == eDocElementKind::State)
+        {
+            updateNavActions();
+        }
+    });
+    // Adding or removing a state changes whether the current level has a transition target, so
+    // the Add Transition tool must re-evaluate its enabled state on add/remove too - not only on
+    // selection change (issue #516 bug 2; also covers undo/redo of a state create/delete).
+    connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) {
+        if (kind == eDocElementKind::State)
+        {
+            updateNavActions();
+        }
+    });
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) {
+        if (kind == eDocElementKind::State)
         {
             updateNavActions();
         }
@@ -707,6 +725,39 @@ void SMDesign::setToolbarStyle(Qt::ToolButtonStyle style)
     }
 }
 
+void SMDesign::setPropertiesVisible(bool visible)
+{
+    if (mPropertiesDock != nullptr)
+    {
+        mPropertiesDock->setVisible(visible);
+    }
+}
+
+bool SMDesign::isPropertiesVisible() const
+{
+    return (mPropertiesDock != nullptr) && mPropertiesDock->isVisible();
+}
+
+void SMDesign::setOutlineVisible(bool visible)
+{
+    if (mOutlineDock != nullptr)
+    {
+        mOutlineDock->setVisible(visible);
+    }
+}
+
+bool SMDesign::isOutlineVisible() const
+{
+    return (mOutlineDock != nullptr) && mOutlineDock->isVisible();
+}
+
+void SMDesign::setPlacementState(int toolbar, int properties, int outline)
+{
+    mPlaceToolbar    = toolbar;
+    mPlaceProperties = properties;
+    mPlaceOutline    = outline;
+}
+
 void SMDesign::buildDesignToolbar()
 {
     mToolBar = new QToolBar(tr("Design Tools"), this);
@@ -777,7 +828,7 @@ void SMDesign::buildDesignPanels()
 
 QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
 {
-    // Every tool's tooltip shows its shortcut alongside the label (spec 9.2). Refresh here so
+    // Every tool's tooltip shows its shortcut alongside the label. Refresh here so
     // the tooltip is present whichever way the toolbar is (re)built.
     for (QAction* action : actions())
     {
@@ -787,7 +838,7 @@ QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
         }
     }
 
-    // Ordered by importance (spec 9.2 / issue #514): the design/placement operations first,
+    // Ordered by importance: the design/placement operations first,
     // the declarations right after them, then alignment, level navigation, color, grid,
     // edit, and zoom. The Design group order matches the canvas context menu.
     QList<ToolGroup> groups;
@@ -991,12 +1042,33 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActRedo);
     }
 
-    // The user is on the Design page (this menu only opens over the canvas): offer a quick
-    // way to bring the drawing toolbar tab to the front (spec issue #514).
     menu.addSeparator();
-    QAction* showTools = menu.addAction(tr("Show Design Toolbar"));
-    showTools->setIcon(NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeSmall));
-    connect(showTools, &QAction::triggered, this, [this]() { emit signalShowDesignTools(); });
+    QMenu* viewMenu = menu.addMenu(tr("View"));
+    // viewMenu->setIcon(NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeSmall));
+
+    const auto addPair = [this, viewMenu](const QString& designText, const QString& naviText, int widget, int place)
+    {
+        QAction* inDesign = viewMenu->addAction(designText);
+        inDesign->setCheckable(true);
+        inDesign->setChecked(place == 1);
+        connect(inDesign, &QAction::triggered, this, [this, widget]() { emit signalPlaceDesignWidget(widget, 1); });
+
+        QAction* inNavi = viewMenu->addAction(naviText);
+        inNavi->setCheckable(true);
+        inNavi->setChecked(place == 2);
+        connect(inNavi, &QAction::triggered, this, [this, widget]() { emit signalPlaceDesignWidget(widget, 2); });
+    };
+
+    addPair(tr("Show Toolbar in Design"), tr("Show Toolbar in Navigation"), 0, mPlaceToolbar);
+    viewMenu->addSeparator();
+    addPair(tr("Show Properties in Design"), tr("Show Properties in Navigation"), 1, mPlaceProperties);
+    viewMenu->addSeparator();
+    addPair(tr("Show Outline in Design"), tr("Show Outline in Navigation"), 2, mPlaceOutline);
+
+    // Refresh the shared actions' enabled state against the (possibly just changed) selection
+    // and current level so entries like Add Transition / Add Internal Transition open correctly
+    // enabled or greyed (issue #516 bugs 2 and 5).
+    updateNavActions();
 
     menu.exec(mView->viewport()->mapToGlobal(pos));
 }
@@ -1827,9 +1899,34 @@ void SMDesign::updateNavActions()
                                 && (single->isImportedSubmachine() == false)
                                 && (single->hasNestedStates() == false));
 
-    // Internal transitions run operations without leaving the state; Final states have
-    // no outgoing transitions at all, so they cannot carry one either.
-    mActAddInternal->setEnabled((single != nullptr) && (single->getKind() != SMStateEntry::eStateKind::Final));
+    // Internal transitions run operations without leaving the state; only a Normal (possibly
+    // composite) state can carry them. A Start state is a pure entry marker with no entry /
+    // exit / internal behaviour, and a Final state has no outgoing transitions at all, so
+    // both exclude the action (issue #516 bug 5).
+    mActAddInternal->setEnabled((single != nullptr) && (single->getKind() == SMStateEntry::eStateKind::Normal));
+
+    // Add Transition needs at least one valid target on the current level. A Start state can
+    // never be a transition target, so a level that holds only its Start (no other state)
+    // offers nowhere to draw a transition: disable the tool button and the menu entry until a
+    // non-Start state exists (issue #516 bug 2).
+    bool hasTargetState = false;
+    const SMStateData* level = mModel.getData().findLevel(getScene().getLevelId());
+    if (level != nullptr)
+    {
+        for (const SMStateEntry* entry : level->getElements())
+        {
+            if ((entry != nullptr) && (entry->getKind() != SMStateEntry::eStateKind::Start))
+            {
+                hasTargetState = true;
+                break;
+            }
+        }
+    }
+
+    if (mActAddTransition != nullptr)
+    {
+        mActAddTransition->setEnabled(hasTargetState);
+    }
 
     // The transition actions apply to a single selected edge; priority moves need a
     // neighbour in the owner's document order to swap with.
@@ -1887,7 +1984,9 @@ void SMDesign::addSubstateToSelection()
         name = base + QString::number(i);
     }
 
-    const QRectF geometry{ 80.0, 140.0, NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight };
+    // The nested Start is a compact marker box (same size as the root level's Start), not a
+    // full normal-state box: it must match the topmost Start/Final marker size (issue #516).
+    const QRectF geometry{ 64.0, 64.0, NESMDesign::MarkerStateWidth, NESMDesign::MarkerStateHeight };
     SMConvertToCompositeCommand* command =
             new SMConvertToCompositeCommand(  data, mModel.getNotifier(), stateId, name, geometry
                                             , tr("Add substate to %1").arg(state->getName()));

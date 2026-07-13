@@ -114,6 +114,26 @@ public:
     bool isToolbarVisible() const;
 
     /**
+     * \brief   Shows or hides the in-page Properties / Outline dock panels. Driven by the
+     *          global widget placement (issue #516): when a panel is moved to the Navigation
+     *          Window or hidden, its in-page dock is hidden so it never shows in both places.
+     **/
+    void setPropertiesVisible(bool visible);
+    bool isPropertiesVisible() const;
+    void setOutlineVisible(bool visible);
+    bool isOutlineVisible() const;
+
+    /**
+     * \brief   Records where each of the three design widgets (toolbar, Properties, Outline)
+     *          currently lives, so the canvas context menu's View submenu can show the correct
+     *          check marks. Values match MdiMainWindow's eDesignWidget / eDesignPlace ints.
+     * \param   toolbar     Placement of the drawing toolbar (0 hidden, 1 in design, 2 in nav).
+     * \param   properties  Placement of the Properties panel.
+     * \param   outline     Placement of the Outline panel.
+     **/
+    void setPlacementState(int toolbar, int properties, int outline);
+
+    /**
      * \brief   Applies the toolbutton display style (icon only / text beside / text under) to
      *          the in-page drawing toolbar. Driven by the application View menu's Toolbutton
      *          Mode submenu; the chosen style is persisted and seeded on the next page's toolbar.
@@ -266,10 +286,12 @@ signals:
     void signalDeclareRequested(SMDesign::eDeclareKind kind);
 
     /**
-     * \brief   Emitted by the canvas context menu's "Show Design Tools" entry; the owning
-     *          window brings the navigation dock's Design Toolbar tab to the front.
+     * \brief   Emitted by the canvas context menu's View submenu; the owning window moves the
+     *          given design widget to the requested home (issue #516). The arguments match
+     *          MdiMainWindow's eDesignWidget / eDesignPlace ints (widget: 0 toolbar, 1
+     *          Properties, 2 Outline; place: 1 in Design page, 2 in Navigation Window).
      **/
-    void signalShowDesignTools();
+    void signalPlaceDesignWidget(int widget, int place);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -544,6 +566,9 @@ private:
     QAction*            mActNewConstant;  //!< Declare dropdown: new constant.
     QAction*            mActNewDataType;  //!< Declare dropdown: new data type.
     bool                mToolbarVisible;//!< Requested visibility of the in-page drawing toolbar.
+    int                 mPlaceToolbar;  //!< Cached toolbar placement (for the context menu check marks).
+    int                 mPlaceProperties; //!< Cached Properties placement (for the context menu check marks).
+    int                 mPlaceOutline;  //!< Cached Outline placement (for the context menu check marks).
     uint32_t            mShownLevel;    //!< The level the viewport currently shows.
     uint32_t            mViewGesture;   //!< The coalescing key of this level visit's viewport writes.
     bool                mRestoringView; //!< A viewport restore is in progress; do not persist.

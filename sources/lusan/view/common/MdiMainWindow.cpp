@@ -28,6 +28,8 @@
 #include "lusan/view/si/ServiceInterface.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/StateMachine.hpp"
+#include "lusan/view/common/NaviDesignPanel.hpp"
+#include "lusan/view/common/NaviFsmToolbar.hpp"
 #include "lusan/view/common/ProjectSettings.hpp"
 #include "lusan/view/common/OptionPageLogging.hpp"
 #include "lusan/view/log/LiveLogViewer.hpp"
@@ -118,12 +120,20 @@ MdiMainWindow::MdiMainWindow()
     , mCentralArea  ( nullptr )
     , mNaviDockWidget ( nullptr )
     , mOutputDockWidget ( nullptr )
+    , mNaviToolbar  ( nullptr )
+    , mNaviProperties ( nullptr )
+    , mNaviOutline  ( nullptr )
+    , mPlaceToolbar ( eDesignPlace::InDesign )
+    , mPlaceProperties ( eDesignPlace::InDesign )
+    , mPlaceOutline ( eDesignPlace::InDesign )
     , mLogViewer    ( nullptr )
     , mLiveLogWnd   ( nullptr )
 
     , mFileMenu     (nullptr)
     , mEditMenu     (nullptr)
     , mViewMenu     (nullptr)
+    , mNavigationMenu(nullptr)
+    , mViewDesignMenu(nullptr)
     , mThemeMenu    (nullptr)
     , mDesignMenu   (nullptr)
     , mLoggingMenu  (nullptr)
@@ -158,7 +168,16 @@ MdiMainWindow::MdiMainWindow()
     , mActViewLogs  (this)
     , mActOffViewLogs(this)
     , mActViewOutput(this)
-    , mActViewDesignToolbar(this)
+    , mActNavWindow (nullptr)
+    , mActNavWorkspace(nullptr)
+    , mActNavLiveLogs(nullptr)
+    , mActNavOfflineLogs(nullptr)
+    , mActNavToolbar(nullptr)
+    , mActNavProperties(nullptr)
+    , mActNavOutline(nullptr)
+    , mActDsgToolbar(nullptr)
+    , mActDsgProperties(nullptr)
+    , mActDsgOutline(nullptr)
     , mActWindowsTile(this)
     , mActWindowsCascade(this)
     , mActWindowsNext(this)
@@ -172,10 +191,12 @@ MdiMainWindow::MdiMainWindow()
     _createToolBars();
     _createStatusBar();
     _createMdiArea();       // creates the ADS dock manager + central widget first
-    _createDockWindows();   // then adds the navigation/output/design docks to it
+    _createDockWindows();   // then adds the navigation/output docks to it
+    createDesignNavHosts(); // the Navigation Window hosts for the movable design widgets
+    loadDesignPlacements(); // restore where the toolbar / Properties / Outline last lived
 
     onShowMenuWindow();
-    onSubWindowActivated(nullptr);
+    onSubWindowActivated(nullptr);  // also runs the first syncDesignWidgets()
     readSettings();
 
     setWindowTitle(tr("Lusan"));
@@ -520,16 +541,192 @@ void MdiMainWindow::onEditRedo()
     }
 }
 
-void MdiMainWindow::onViewDesignToolbar(bool /*visible*/)
+void MdiMainWindow::onShowMenuNavigation()
 {
-    // The drawing toolbar now lives inside the active State Machine's Design page (issue #516);
-    // the View-menu entry toggles that page's in-page toolbar.
+    // Refresh the checkable View submenus from the live state each time they open, so the marks
+    // stay right after the user closes the dock via its title bar or moves a widget elsewhere.
+    const auto set = [](QAction* act, bool checked) {
+        if (act != nullptr)
+        {
+            QSignalBlocker block(act);
+            act->setChecked(checked);
+        }
+    };
+
+    set(mActNavWindow, (mNaviDockWidget != nullptr) && (mNaviDockWidget->isClosed() == false));
+    set(mActNavWorkspace, mNaviDock.isNaviTabVisible(NavigationDock::NaviWorkspace));
+    set(mActNavLiveLogs, mNaviDock.isNaviTabVisible(NavigationDock::NaviLiveLogs));
+    set(mActNavOfflineLogs, mNaviDock.isNaviTabVisible(NavigationDock::NaviOfflineLogs));
+    updatePlacementActions();
+}
+
+MdiMainWindow::eDesignPlace& MdiMainWindow::placementRef(MdiMainWindow::eDesignWidget widget)
+{
+    switch (widget)
+    {
+    case eDesignWidget::Toolbar:    return mPlaceToolbar;
+    case eDesignWidget::Properties: return mPlaceProperties;
+    default:                        return mPlaceOutline;
+    }
+}
+
+MdiMainWindow::eDesignPlace MdiMainWindow::designWidgetPlacement(MdiMainWindow::eDesignWidget widget) const
+{
+    return const_cast<MdiMainWindow*>(this)->placementRef(widget);
+}
+
+void MdiMainWindow::setDesignWidgetPlacement(MdiMainWindow::eDesignWidget widget, MdiMainWindow::eDesignPlace place)
+{
+    placementRef(widget) = place;
+
+    // Persist so the chosen home survives restarts (issue #516).
+    static const char* const keys[] = { "smDesign/placeToolbar", "smDesign/placeProperties", "smDesign/placeOutline" };
+    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    settings.setValue(QLatin1String(keys[static_cast<int>(widget)]), static_cast<int>(place));
+
+    if (place == eDesignPlace::InNavigation)
+    {
+        showDock(mNaviDockWidget);      // make sure the just-moved widget is actually visible
+    }
+
+    syncDesignWidgets();
+}
+
+void MdiMainWindow::createDesignNavHosts()
+{
+    // The Navigation Window hosts for the movable design widgets are owned by the main window,
+    // reparented into a navigation tab only while their widget is placed there (issue #516).
+    mNaviToolbar = new NaviFsmToolbar(this, this);
+    mNaviToolbar->hide();
+    mNaviProperties = new NaviDesignPanel(NaviDesignPanel::eKind::Properties, this, this);
+    mNaviProperties->hide();
+    mNaviOutline = new NaviDesignPanel(NaviDesignPanel::eKind::Outline, this, this);
+    mNaviOutline->hide();
+}
+
+void MdiMainWindow::loadDesignPlacements()
+{
+    QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    const auto load = [&settings](const QString& key) {
+        // Default: all three inside the Design page, matching the Phase 1 layout (issue #516).
+        return static_cast<eDesignPlace>(settings.value(key, static_cast<int>(eDesignPlace::InDesign)).toInt());
+    };
+
+    mPlaceToolbar    = load(QStringLiteral("smDesign/placeToolbar"));
+    mPlaceProperties = load(QStringLiteral("smDesign/placeProperties"));
+    mPlaceOutline    = load(QStringLiteral("smDesign/placeOutline"));
+    updatePlacementActions();
+}
+
+void MdiMainWindow::updatePlacementActions()
+{
+    const auto set = [](QAction* act, bool checked) {
+        if (act != nullptr)
+        {
+            QSignalBlocker block(act);
+            act->setChecked(checked);
+        }
+    };
+
+    set(mActDsgToolbar,    mPlaceToolbar    == eDesignPlace::InDesign);
+    set(mActNavToolbar,    mPlaceToolbar    == eDesignPlace::InNavigation);
+    set(mActDsgProperties, mPlaceProperties == eDesignPlace::InDesign);
+    set(mActNavProperties, mPlaceProperties == eDesignPlace::InNavigation);
+    set(mActDsgOutline,    mPlaceOutline    == eDesignPlace::InDesign);
+    set(mActNavOutline,    mPlaceOutline    == eDesignPlace::InNavigation);
+}
+
+void MdiMainWindow::syncDesignWidgets()
+{
+    if (mNaviToolbar == nullptr)
+    {
+        return;     // the navigation hosts are not created yet (very early startup)
+    }
+
     StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
+    const bool designCurrent = (stateMachine != nullptr) && (design != nullptr) && stateMachine->isDesignPageCurrent();
+
+    // Let the active Design page's context menu render the correct check marks.
     if (design != nullptr)
     {
-        design->setToolbarVisible(design->isToolbarVisible() == false);
+        design->setPlacementState(static_cast<int>(mPlaceToolbar), static_cast<int>(mPlaceProperties), static_cast<int>(mPlaceOutline));
     }
+
+    // Toolbar: the drawing toolbar always shows its buttons in the Navigation Window (disabled
+    // off the Design page), matching the Phase 1 stand-in behavior.
+    switch (mPlaceToolbar)
+    {
+    case eDesignPlace::InDesign:
+        mNaviDock.hideDesignTab(NavigationDock::NaviDesignToolbar);
+        if (design != nullptr) { design->setToolbarVisible(true); }
+        break;
+
+    case eDesignPlace::InNavigation:
+        if (design != nullptr) { design->setToolbarVisible(false); }
+        {
+            // The Navigation Window form of the toolbar defaults to Icon and Text (its custom
+            // vector icons are hard to tell apart at nav width), independent of the in-page
+            // toolbar's Icon Only default. Once the user picks any Toolbutton Mode the choice is
+            // stored and honored here too (issue #516 bug 6).
+            QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+            const Qt::ToolButtonStyle style = settings.contains(QStringLiteral("smDesign/naviToolbarStyle"))
+                    ? static_cast<Qt::ToolButtonStyle>(settings.value(QStringLiteral("smDesign/naviToolbarStyle")).toInt())
+                    : Qt::ToolButtonTextBesideIcon;
+            mNaviToolbar->setDisplayStyle(style);
+        }
+        mNaviToolbar->bindDesign(design);
+        mNaviToolbar->setToolsActive(designCurrent);
+        mNaviDock.showDesignTab(NavigationDock::NaviDesignToolbar, mNaviToolbar);
+        break;
+
+    case eDesignPlace::Hidden:
+        mNaviDock.hideDesignTab(NavigationDock::NaviDesignToolbar);
+        if (design != nullptr) { design->setToolbarVisible(false); }
+        break;
+    }
+
+    // Properties: empty in the Navigation Window unless the Design page is the current tab.
+    switch (mPlaceProperties)
+    {
+    case eDesignPlace::InDesign:
+        mNaviDock.hideDesignTab(NavigationDock::NaviDesignProperties);
+        if (design != nullptr) { design->setPropertiesVisible(true); }
+        break;
+
+    case eDesignPlace::InNavigation:
+        if (design != nullptr) { design->setPropertiesVisible(false); }
+        mNaviProperties->bindDesign(designCurrent ? design : nullptr);
+        mNaviDock.showDesignTab(NavigationDock::NaviDesignProperties, mNaviProperties);
+        break;
+
+    case eDesignPlace::Hidden:
+        mNaviDock.hideDesignTab(NavigationDock::NaviDesignProperties);
+        if (design != nullptr) { design->setPropertiesVisible(false); }
+        break;
+    }
+
+    // Outline: same rule as Properties.
+    switch (mPlaceOutline)
+    {
+    case eDesignPlace::InDesign:
+        mNaviDock.hideDesignTab(NavigationDock::NaviDesignOutline);
+        if (design != nullptr) { design->setOutlineVisible(true); }
+        break;
+
+    case eDesignPlace::InNavigation:
+        if (design != nullptr) { design->setOutlineVisible(false); }
+        mNaviOutline->bindDesign(designCurrent ? design : nullptr);
+        mNaviDock.showDesignTab(NavigationDock::NaviDesignOutline, mNaviOutline);
+        break;
+
+    case eDesignPlace::Hidden:
+        mNaviDock.hideDesignTab(NavigationDock::NaviDesignOutline);
+        if (design != nullptr) { design->setOutlineVisible(false); }
+        break;
+    }
+
+    updatePlacementActions();
 }
 
 void MdiMainWindow::onFsmToolbarStyle(QAction* action)
@@ -539,17 +736,26 @@ void MdiMainWindow::onFsmToolbarStyle(QAction* action)
         return;
     }
 
-    // Persist the choice and apply it to the active Design page's in-page toolbar; every Design
-    // page seeds its toolbar from this stored style when built (issue #516).
+    // Persist the choice and apply it to the active Design page's in-page toolbar and the
+    // Navigation Window toolbar host; every Design page seeds its toolbar from this stored
+    // style when built (issue #516).
     const Qt::ToolButtonStyle style = static_cast<Qt::ToolButtonStyle>(action->data().toInt());
     QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     settings.setValue(QStringLiteral("smDesign/toolbarStyle"), static_cast<int>(style));
+    // An explicit menu choice governs the Navigation Window toolbar too, replacing its Icon
+    // and Text default (issue #516 bug 6).
+    settings.setValue(QStringLiteral("smDesign/naviToolbarStyle"), static_cast<int>(style));
 
     StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
     if (design != nullptr)
     {
         design->setToolbarStyle(style);
+    }
+
+    if (mNaviToolbar != nullptr)
+    {
+        mNaviToolbar->setDisplayStyle(style);
     }
 }
 
@@ -772,16 +978,15 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
         mCanRedoConn = connect(mdiActive, &MdiChild::signalCanRedoChanged, &mActEditRedo, &QAction::setEnabled);
     }
 
-    // The Design toolbar toggle only applies to (and is only enabled for) an FSM window. The
-    // toolbar and the Properties/Outline panels live inside the Design page itself (issue #516),
-    // so they follow the active document/tab automatically -- no global rebind needed here.
-    const bool isFSM = hasMdiChild && mdiActive->isStateMachineWindow();
-    mActViewDesignToolbar.setEnabled(isFSM);
-
     if (mdiActive != nullptr)
     {
         mdiActive->onWindowActivated();
     }
+
+    // Re-apply the design-widget placement to the newly active document: show/hide each widget's
+    // Design-page dock and bind or empty its Navigation Window host, so the toolbar, Properties,
+    // and Outline are populated only while an FSM Design page is current (issue #516).
+    syncDesignWidgets();
 }
 
 void MdiMainWindow::onWarmupServiceInterface()
@@ -1071,11 +1276,6 @@ void MdiMainWindow::_createActions()
         showDock(mOutputDockWidget);
     });
 
-    initAction(mActViewDesignToolbar, NELusanCommon::iconViewFsmDesign(NELusanCommon::SizeBig), tr("&Design Toolbar"));
-    mActViewDesignToolbar.setEnabled(false);
-    mActViewDesignToolbar.setStatusTip(tr("Show the State Machine drawing toolbar in the navigation window"));
-    connect(&mActViewDesignToolbar, &QAction::triggered, this, &MdiMainWindow::onViewDesignToolbar);
-
     initAction(mActToolsOptions, NELusanCommon::iconSettings(NELusanCommon::SizeBig), tr("&Options"));
     mActToolsOptions.setStatusTip(tr("View Workspace Options"));
     connect(&mActToolsOptions, &QAction::triggered, this, &MdiMainWindow::onToolsOptions);
@@ -1136,12 +1336,87 @@ void MdiMainWindow::_createMenus()
     mEditMenu->addAction(&mActEditPaste);
 
     mViewMenu = menuBar()->addMenu(tr("&View"));
-    mViewMenu->addAction(&mActViewNavigator);
-    mViewMenu->addAction(&mActViewWokspace);
-    mViewMenu->addAction(&mActViewLogs);
+
+    // View > Navigation: the navigation dock, its explorer tabs, and the three State Machine
+    // design widgets when they are moved to the Navigation Window (issue #516). Every entry is
+    // checkable; onShowMenuNavigation() refreshes the check marks from the live state on open.
+    mNavigationMenu = mViewMenu->addMenu(tr("&Navigation"));
+    connect(mNavigationMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuNavigation);
+
+    mActNavWindow = mNavigationMenu->addAction(tr("Navigation &Window"));
+    mActNavWindow->setCheckable(true);
+    connect(mActNavWindow, &QAction::toggled, this, [this](bool on) {
+        if (mNaviDockWidget != nullptr)
+        {
+            mNaviDockWidget->toggleView(on);
+        }
+    });
+
+    mActNavWorkspace = mNavigationMenu->addAction(tr("Wor&kspace Explorer"));
+    mActNavWorkspace->setCheckable(true);
+    connect(mActNavWorkspace, &QAction::toggled, this, [this](bool on) {
+        mNaviDock.setNaviTabVisible(NavigationDock::NaviWorkspace, on);
+    });
+
+    mActNavLiveLogs = mNavigationMenu->addAction(tr("&Live Logs"));
+    mActNavLiveLogs->setCheckable(true);
+    connect(mActNavLiveLogs, &QAction::toggled, this, [this](bool on) {
+        mNaviDock.setNaviTabVisible(NavigationDock::NaviLiveLogs, on);
+    });
+
+    mActNavOfflineLogs = mNavigationMenu->addAction(tr("&Offline Logs"));
+    mActNavOfflineLogs->setCheckable(true);
+    connect(mActNavOfflineLogs, &QAction::toggled, this, [this](bool on) {
+        mNaviDock.setNaviTabVisible(NavigationDock::NaviOfflineLogs, on);
+    });
+
+    mNavigationMenu->addSeparator();
+
+    mActNavToolbar = mNavigationMenu->addAction(tr("&Design Toolbar"));
+    mActNavToolbar->setCheckable(true);
+    connect(mActNavToolbar, &QAction::toggled, this, [this](bool on) {
+        setDesignWidgetPlacement(eDesignWidget::Toolbar, on ? eDesignPlace::InNavigation : eDesignPlace::Hidden);
+    });
+
+    mActNavProperties = mNavigationMenu->addAction(tr("State Machine &Properties"));
+    mActNavProperties->setCheckable(true);
+    connect(mActNavProperties, &QAction::toggled, this, [this](bool on) {
+        setDesignWidgetPlacement(eDesignWidget::Properties, on ? eDesignPlace::InNavigation : eDesignPlace::Hidden);
+    });
+
+    mActNavOutline = mNavigationMenu->addAction(tr("State Machine &Outline"));
+    mActNavOutline->setCheckable(true);
+    connect(mActNavOutline, &QAction::toggled, this, [this](bool on) {
+        setDesignWidgetPlacement(eDesignWidget::Outline, on ? eDesignPlace::InNavigation : eDesignPlace::Hidden);
+    });
+
+    // View > Design: the same three widgets when docked inside the active FSM Design page. Each
+    // Design entry is mutually exclusive with its Navigation counterpart (handled in
+    // setDesignWidgetPlacement); unchecking a widget hides it from both homes.
+    mViewDesignMenu = mViewMenu->addMenu(tr("&Design"));
+    connect(mViewDesignMenu, &QMenu::aboutToShow, this, &MdiMainWindow::onShowMenuNavigation);
+
+    mActDsgToolbar = mViewDesignMenu->addAction(tr("&Toolbar"));
+    mActDsgToolbar->setCheckable(true);
+    connect(mActDsgToolbar, &QAction::toggled, this, [this](bool on) {
+        setDesignWidgetPlacement(eDesignWidget::Toolbar, on ? eDesignPlace::InDesign : eDesignPlace::Hidden);
+    });
+
+    mActDsgProperties = mViewDesignMenu->addAction(tr("&Properties"));
+    mActDsgProperties->setCheckable(true);
+    connect(mActDsgProperties, &QAction::toggled, this, [this](bool on) {
+        setDesignWidgetPlacement(eDesignWidget::Properties, on ? eDesignPlace::InDesign : eDesignPlace::Hidden);
+    });
+
+    mActDsgOutline = mViewDesignMenu->addAction(tr("&Outline"));
+    mActDsgOutline->setCheckable(true);
+    connect(mActDsgOutline, &QAction::toggled, this, [this](bool on) {
+        setDesignWidgetPlacement(eDesignWidget::Outline, on ? eDesignPlace::InDesign : eDesignPlace::Hidden);
+    });
+
+    mViewMenu->addSeparator();
     mViewMenu->addAction(&mActViewOutput);
     mViewMenu->addSeparator();
-    mViewMenu->addAction(&mActViewDesignToolbar);
 
     // Toolbutton Mode: how the FSM drawing toolbar renders its buttons (default Icon Only).
     QSettings toolbarSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName());

@@ -292,6 +292,17 @@ private:
     bool nudgeSelection(int dx, int dy, bool pixelWise);
 
     /**
+     * \brief   When a single transition edge is selected and one of its interior waypoints is
+     *          the active point, moves that waypoint by one keyboard step (issue #516 bug 4).
+     * \param   dx      The horizontal direction: -1, 0, or +1.
+     * \param   dy      The vertical direction: -1, 0, or +1.
+     * \param   coarse  True for the 10-unit coarse step (Ctrl held).
+     * \param   pixel   True for the exact 1-unit step (Shift held).
+     * \return  True when an edge waypoint was moved (arrow keys are consumed by the edge).
+     **/
+    bool nudgeSelectedEdgePoint(int dx, int dy, bool coarse, bool pixel);
+
+    /**
      * \brief   Creates the graphics items of every state of this level.
      **/
     void populateFromModel();
