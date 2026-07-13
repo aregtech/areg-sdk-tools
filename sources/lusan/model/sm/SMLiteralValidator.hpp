@@ -15,14 +15,14 @@
  *  \file        lusan/model/sm/SMLiteralValidator.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM literal value syntax validator (spec 6.9).
+ *  \brief       Lusan application, FSM literal value syntax validator
  *
  ************************************************************************/
 
 #include <QString>
 
 /**
- * \brief   Validates a literal against a primitive data type's syntax (spec 6.9): bool,
+ * \brief   Validates a literal against a primitive data type's syntax: bool,
  *          char, signed/unsigned integers (decimal or `0x` hexadecimal, range-checked per
  *          bit width), float/double, and String (unrestricted). Enumeration, structure,
  *          container and imported types have no literal syntax of their own — callers

@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/sm/SMMethodList.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
 #include <QAction>
 #include <QFrame>
@@ -45,19 +46,6 @@ SMMethodList::SMMethodList(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-QToolButton* SMMethodList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
-{
-    QToolButton* button = new QToolButton(parent);
-    button->setMaximumSize(24, 24);
-    button->setCursor(Qt::PointingHandCursor);
-    button->setMouseTracking(true);
-    button->setToolTip(toolTip);
-    button->setIcon(QIcon(iconName));
-    button->setIconSize(QSize(25, 25));
-    button->setShortcut(shortcut);
-    return button;
-}
-
 void SMMethodList::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
@@ -71,9 +59,9 @@ void SMMethodList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new method (a trigger by default)"), QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected entry")            , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new entry above"), QKeySequence(Qt::CTRL | Qt::Key_T));
+    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new method (a trigger by default)"), QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected entry")            , QKeySequence(Qt::CTRL | Qt::Key_D));
+    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new entry above"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
     // The Add split button: a plain click creates the default (a trigger method), the
     // drop-down offers the three method kinds explicitly. Adding a parameter is a separate
@@ -85,24 +73,20 @@ void SMMethodList::buildUi()
     addMenu->addAction(mActNewTrigger);
     addMenu->addAction(mActNewAction);
     addMenu->addAction(mActNewCondition);
-    mButtonAdd->setMenu(addMenu);
-    mButtonAdd->setPopupMode(QToolButton::MenuButtonPopup);
-    // A smaller icon plus extra width give the drop-down arrow room so it never crowds the icon.
-    mButtonAdd->setIconSize(QSize(20, 20));
-    mButtonAdd->setMaximumSize(56, 24);
+    NELusanCommon::decorateToolButton(mButtonAdd, addMenu);
 
     QFrame* sepParam = new QFrame(toolbar);
     sepParam->setFrameShape(QFrame::VLine);
     sepParam->setMaximumSize(24, 24);
 
-    mButtonAddParam = createToolButton(toolbar, QStringLiteral(":/icons/field add"), tr("Create and add new parameter to the selected method"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    mButtonAddParam = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field add"), tr("Create and add new parameter to the selected method"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
 
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
     sep->setMaximumSize(24, 24);
 
-    mButtonMoveUp   = createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
-    mButtonMoveDown = createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
+    mButtonMoveUp   = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
+    mButtonMoveDown = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
 
     toolbarLayout->addWidget(mButtonAdd);
     toolbarLayout->addWidget(mButtonRemove);

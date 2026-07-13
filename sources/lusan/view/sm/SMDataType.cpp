@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMDataType.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -84,6 +84,11 @@ SMDataType::SMDataType(SMDataTypeModel& model, QWidget* parent /*= nullptr*/)
     buildUi();
     setupSignals();
     refreshAll();
+}
+
+SMDataTypeList* SMDataType::getList() const
+{
+    return mList;
 }
 
 void SMDataType::buildUi()
@@ -353,12 +358,7 @@ void SMDataType::selectedContainer(DataTypeContainer* dataType)
         const QSignalBlocker blockKey(mDetails->ctrlContainerKey());
         const QSignalBlocker blockValue(mDetails->ctrlContainerValue());
 
-        // Self-excluding: neither key nor value may reference the container's own type (spec
-        // 6.9 — no self-reference), mirroring populateTypeCombo's use for structure fields.
-        // Must run under the signal blockers above: combo->clear()/addItem() fire live
-        // currentIndexChanged signals that would otherwise re-enter the model mid-selection
-        // (onContainerKeyChanged/onContainerValueChanged -> a command -> notifier ->
-        // refreshAll() rebuilding the QTreeWidget while this very selection is in progress).
+        // Self-excluding: neither key nor value may reference the container's own type
         populateTypeCombo(mDetails->ctrlContainerKey(), dataType);
         populateTypeCombo(mDetails->ctrlContainerValue(), dataType);
 
@@ -438,7 +438,7 @@ void SMDataType::selectedEnumField(DataTypeEnum* parent, uint32_t fieldId)
         mFields->ctrlDescription()->setPlainText(field->getDescription());
     }
     // The enumerator's own literal (its ordinal/derived-type value) is a different concern
-    // from a structure field's typed default — not validated here; just clear any stale hint.
+    // from a structure field's typed default - not validated here; just clear any stale hint.
     mFields->showValueHint(QString());
     applyDeprecatedDisplay(mFields->ctrlDeprecated(), mFields->ctrlDeprecateHint(), field);
 
@@ -543,7 +543,7 @@ QTreeWidgetItem* SMDataType::createNode(DataTypeCustom* dataType) const
 QString SMDataType::validateFieldValue(const QString& typeName, const QString& value) const
 {
     // No default is always valid, and a declared (enum/structure/container/imported) type is
-    // ignored — its literal form, if any, is not this validator's concern.
+    // ignored - its literal form, if any, is not this validator's concern.
     if (value.isEmpty() || (mModel.findDataType(typeName) != nullptr))
         return QString();
 
@@ -928,8 +928,8 @@ void SMDataType::onContainerSelected(bool checked)
 
     if (DataTypeCustom* dataType = currentDataType())
     {
-        // DataTypeContainer's default constructor already seeds "Array"/"bool" (spec 6.9's
-        // default basic container + value), so no extra seeding is needed after conversion.
+        // DataTypeContainer's default constructor already seeds "Array"/"bool",
+        // no extra seeding is needed after conversion
         DataTypeCustom* converted = mModel.convertDataType(dataType, DataTypeBase::eCategory::Container);
         selectDataType(converted->getId());
     }

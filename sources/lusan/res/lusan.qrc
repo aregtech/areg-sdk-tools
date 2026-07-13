@@ -52,6 +52,7 @@
         <file alias="workflow-algorithm">icons/workflow-algorithm.svg</file>
         <file alias="sm-event">icons/sm-event.svg</file>
         <file alias="sm-timer">icons/sm-timer.svg</file>
+        <file alias="view-fsm-design">icons/view-fsm-design.svg</file>
     </qresource>
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>

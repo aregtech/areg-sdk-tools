@@ -236,6 +236,28 @@ SMStateData* SMStateEntry::getOrCreateNestedStates()
     return mNested;
 }
 
+SMStateData* SMStateEntry::takeNestedStates()
+{
+    SMStateData* result = mNested;
+    mNested = nullptr;
+    return result;
+}
+
+void SMStateEntry::attachNestedStates(SMStateData* nested)
+{
+    if (mNested != nested)
+    {
+        delete mNested;
+        mNested = nested;
+    }
+
+    if (mNested != nullptr)
+    {
+        mNested->setParent(this);
+        mSubmachine.clear();
+    }
+}
+
 bool SMStateEntry::isValid() const
 {
     return (mName.isEmpty() == false);
@@ -424,6 +446,34 @@ SMStateEntry* SMStateData::findStateRecursive(const QString& name) const
     return nullptr;
 }
 
+SMStateEntry* SMStateData::findStateById(uint32_t id) const
+{
+    SMStateEntry* const* found = findElement(id);
+    return (found != nullptr) ? *found : nullptr;
+}
+
+SMStateEntry* SMStateData::findStateByIdRecursive(uint32_t id) const
+{
+    for (SMStateEntry* state : getElements())
+    {
+        if (state->getId() == id)
+        {
+            return state;
+        }
+
+        if (state->hasNestedStates())
+        {
+            SMStateEntry* found = state->getNestedStates()->findStateByIdRecursive(id);
+            if (found != nullptr)
+            {
+                return found;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
 SMStateEntry* SMStateData::getStartState() const
 {
     for (SMStateEntry* state : getElements())
@@ -431,6 +481,28 @@ SMStateEntry* SMStateData::getStartState() const
         if (state->getKind() == SMStateEntry::eStateKind::Start)
         {
             return state;
+        }
+    }
+
+    return nullptr;
+}
+
+SMStateEntry* SMStateData::findTransitionOwnerRecursive(uint32_t transitionId) const
+{
+    for (SMStateEntry* state : getElements())
+    {
+        if (state->getTransitions().findElement(transitionId) != nullptr)
+        {
+            return state;
+        }
+
+        if (state->hasNestedStates())
+        {
+            SMStateEntry* found = state->getNestedStates()->findTransitionOwnerRecursive(transitionId);
+            if (found != nullptr)
+            {
+                return found;
+            }
         }
     }
 

@@ -15,7 +15,7 @@
  *  \file        lusan/data/sm/SMAttributeData.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM machine attributes registry (spec 6.10).
+ *  \brief       Lusan application, FSM machine attributes registry.
  *
  ************************************************************************/
 
@@ -29,7 +29,7 @@ class SMDataTypeData;
 
 /**
  * \class   SMAttributeEntry
- * \brief   One machine attribute (spec 6.10): a typed internal variable with a default
+ * \brief   One machine attribute: a typed internal variable with a default
  *          value. Deliberately derives ParamBase (name/type/value/description) rather
  *          than the Service-Interface AttributeEntry, because the FSM model must not
  *          carry SI pub-sub notification state.

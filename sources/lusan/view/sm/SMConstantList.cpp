@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/view/sm/SMConstantList.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
 #include <QFrame>
 #include <QGroupBox>
@@ -39,19 +40,6 @@ SMConstantList::SMConstantList(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-QToolButton* SMConstantList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
-{
-    QToolButton* button = new QToolButton(parent);
-    button->setMaximumSize(24, 24);
-    button->setCursor(Qt::PointingHandCursor);
-    button->setMouseTracking(true);
-    button->setToolTip(toolTip);
-    button->setIcon(QIcon(iconName));
-    button->setIconSize(QSize(25, 25));
-    button->setShortcut(shortcut);
-    return button;
-}
-
 void SMConstantList::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
@@ -65,16 +53,16 @@ void SMConstantList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new constant entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected constant entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new constant entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
+    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new constant entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected constant entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
+    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new constant entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
     sep->setMaximumSize(24, 24);
 
-    mButtonMoveUp   = createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
-    mButtonMoveDown = createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
+    mButtonMoveUp   = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
+    mButtonMoveDown = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
 
     toolbarLayout->addWidget(mButtonAdd);
     toolbarLayout->addWidget(mButtonRemove);

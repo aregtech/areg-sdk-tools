@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMDataType.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -38,8 +38,7 @@ class SMDataTypeModel;
 
 /**
  * \brief   The FSM Data Types page: enumerations, structures, imported types and containers
- *          (spec 6.9/6.10 — identical vocabulary and editing UX to the Service Interface
- *          page). Every edit is committed through SMDataTypeModel's undo commands; the page
+ *          Every edit is committed through SMDataTypeModel's undo commands; the page
  *          mutates no model state directly, and refreshes by rebuilding the tree from the
  *          live model on every relevant DocModelNotifier signal (self-triggered or
  *          external/undo alike) rather than patching individual tree nodes.
@@ -54,6 +53,16 @@ class SMDataType : public QScrollArea
 public:
     explicit SMDataType(SMDataTypeModel& model, QWidget* parent = nullptr);
     virtual ~SMDataType() = default;
+
+//////////////////////////////////////////////////////////////////////////
+// Attributes
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Returns the list panel (its Add button lets a caller start a new data type,
+     *          e.g. from the Design page's Declare dropdown).
+     **/
+    SMDataTypeList* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots

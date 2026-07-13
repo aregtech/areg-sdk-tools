@@ -48,8 +48,7 @@ class SMDataTypeData;
  * \brief   The Data Types page model. Reads the live `DataTypeList` section through the
  *          facade and routes every edit through an undo command, so the page never mutates
  *          `DataTypeCustom`/`FieldEntry`/`EnumEntry` objects directly. Enumeration, Structure,
- *          Imported and Container categories are supported (spec 6.9/6.10 — same vocabulary
- *          as the `.siml` Data Types page).
+ *          Imported and Container categories are supported.
  *
  *          Field-level commands re-resolve the field by owner pointer + ID inside the
  *          command's getter/setter, never by a captured `FieldEntry*`/`EnumEntry*`: those

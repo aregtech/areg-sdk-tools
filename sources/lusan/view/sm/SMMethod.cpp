@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMMethod.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -77,6 +77,11 @@ SMMethod::SMMethod(SMMethodModel& model, QWidget* parent /*= nullptr*/)
     buildUi();
     setupSignals();
     refreshAll();
+}
+
+SMMethodList* SMMethod::getList() const
+{
+    return mList;
 }
 
 void SMMethod::buildUi()
@@ -229,7 +234,7 @@ QString SMMethod::nameCollisionReason(const SMMethodEntry* method, const QString
     if ((other != nullptr) && (other->getId() != selfId))
         return tr("'%1' is already used by another method").arg(name);
 
-    // Only trigger methods participate in the shared stimulus name space (spec 6.10).
+    // Only trigger methods participate in the shared stimulus name space
     if ((method != nullptr) && method->isTrigger())
     {
         const StateMachineData::StimulusRef ref = mModel.findStimulus(name);

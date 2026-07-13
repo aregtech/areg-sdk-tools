@@ -33,6 +33,7 @@
 #include "lusan/view/si/SIDataTypeFieldDetails.hpp"
 #include "lusan/view/si/SIDataTypeList.hpp"
 
+#include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QFormLayout>
@@ -219,26 +220,70 @@ void SIDataType::onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *pre
 
 void SIDataType::onAddClicked()
 {
+    addNewType(DataTypeBase::eCategory::Structure);
+}
+
+void SIDataType::addNewType(DataTypeBase::eCategory category)
+{
     QString name(genName());
     QTreeWidget* table = mList->ctrlTableList();
-    
+
     blockBasicSignals(true);
-    
-    DataTypeCustom* oldType  = nullptr;    
-    DataTypeCustom* dataType = mModel.createDataType(name, DataTypeBase::eCategory::Structure);
+
+    DataTypeCustom* oldType  = nullptr;
+    DataTypeCustom* dataType = mModel.createDataType(name, category);
+    Q_ASSERT(dataType != nullptr);
+
     int pos = table->topLevelItemCount();
-    QTreeWidgetItem * item = createNodeStructure(static_cast<DataTypeStructure *>(dataType));
+    QTreeWidgetItem* item{ nullptr };
+    switch (category)
+    {
+    case DataTypeBase::eCategory::Structure:
+        item = createNodeStructure(static_cast<DataTypeStructure*>(dataType));
+        break;
+    case DataTypeBase::eCategory::Enumeration:
+        item = createNodeEnum(static_cast<DataTypeEnum*>(dataType));
+        break;
+    case DataTypeBase::eCategory::Imported:
+        item = createNodeImported(static_cast<DataTypeImported*>(dataType));
+        break;
+    case DataTypeBase::eCategory::Container:
+        item = createNodeContainer(static_cast<DataTypeContainer*>(dataType));
+        break;
+    default:
+        break;
+    }
+    Q_ASSERT(item != nullptr);
+
     table->addTopLevelItem(item);
-    QTreeWidgetItem * cur = table->currentItem();
+    QTreeWidgetItem* cur = table->currentItem();
     if (cur != nullptr)
     {
-        oldType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom *>();
+        oldType = cur->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
         cur->setSelected(false);
     }
-    
+
     item->setSelected(true);
     table->setCurrentItem(item);
-    selectedStruct(oldType, static_cast<DataTypeStructure*>(dataType));
+
+    switch (category)
+    {
+    case DataTypeBase::eCategory::Structure:
+        selectedStruct(oldType, static_cast<DataTypeStructure*>(dataType));
+        break;
+    case DataTypeBase::eCategory::Enumeration:
+        selectedEnum(oldType, static_cast<DataTypeEnum*>(dataType));
+        break;
+    case DataTypeBase::eCategory::Imported:
+        selectedImport(oldType, static_cast<DataTypeImported*>(dataType));
+        break;
+    case DataTypeBase::eCategory::Container:
+        selectedContainer(oldType, static_cast<DataTypeContainer*>(dataType));
+        break;
+    default:
+        break;
+    }
+
     updateToolButtons(pos, table->topLevelItemCount());
     blockBasicSignals(false);
 }
@@ -1158,6 +1203,10 @@ void SIDataType::setupSignals()
     connect(mList->ctrlButtonRemoveField()  , &QToolButton::clicked             , this, &SIDataType::onRemoveFieldClicked);
     connect(mList->ctrlButtonMoveUp()       , &QToolButton::clicked             , this, &SIDataType::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown()     , &QToolButton::clicked             , this, &SIDataType::onMoveDownClicked);
+    connect(mList->actionNewStruct()        , &QAction::triggered               , this, [this]() { addNewType(DataTypeBase::eCategory::Structure); });
+    connect(mList->actionNewEnum()          , &QAction::triggered               , this, [this]() { addNewType(DataTypeBase::eCategory::Enumeration); });
+    connect(mList->actionNewImport()        , &QAction::triggered               , this, [this]() { addNewType(DataTypeBase::eCategory::Imported); });
+    connect(mList->actionNewContainer()     , &QAction::triggered               , this, [this]() { addNewType(DataTypeBase::eCategory::Container); });
 
     connect(mDetails->ctrlName()            , &QLineEdit::textChanged           , this, &SIDataType::onTypeNameChanged);
     connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked            , this, &SIDataType::onStructSelected);

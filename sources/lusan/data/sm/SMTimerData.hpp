@@ -82,7 +82,7 @@ public:
     inline void setDeprecateHint(const QString& hint);
 
     /**
-     * \brief   True if the repeat count means "continuous" (0 or 0xFFFFFFFF, spec 6.10).
+     * \brief   True if the repeat count means "continuous" (0 or 0xFFFFFFFF).
      **/
     inline bool isContinuous() const;
 

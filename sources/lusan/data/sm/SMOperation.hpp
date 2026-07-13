@@ -63,7 +63,7 @@ public:
 
     /**
      * \brief   Writes an `ArgumentList` wrapper with one `Argument` per entry. Writes
-     *          nothing when the list is empty (empty lists are omitted, spec 7.7).
+     *          nothing when the list is empty (empty lists are omitted).
      **/
     static void writeArgumentList(QXmlStreamWriter& xml, const QList<SMArgumentEntry>& args);
 

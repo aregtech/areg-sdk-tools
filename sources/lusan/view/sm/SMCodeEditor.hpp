@@ -26,7 +26,7 @@ class QLabel;
 class QPlainTextEdit;
 
 /**
- * \brief   The embedded-code editor (spec 9.6): a read-only signature line above a
+ * \brief   The embedded-code editor: a read-only signature line above a
  *          monospaced body editor with basic C++ syntax highlighting, and a fixed note below
  *          reminding that the machine instance is always captured (attributes, constants and
  *          accessors are in scope) and — for conditions — that the body must end in

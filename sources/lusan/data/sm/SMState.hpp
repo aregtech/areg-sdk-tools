@@ -142,6 +142,21 @@ public:
      **/
     SMStateData* getOrCreateNestedStates();
 
+    /**
+     * \brief   Detaches the painted nested StateList and transfers its ownership to the
+     *          caller; the state becomes non-composite.
+     * \return  The detached list, or nullptr if the state had none.
+     **/
+    SMStateData* takeNestedStates();
+
+    /**
+     * \brief   Attaches a painted nested StateList, taking ownership. Replaces any
+     *          existing list and clears the imported-submachine alias.
+     * \param   nested  The list to attach; nullptr detaches nothing and leaves the
+     *                  state non-composite.
+     **/
+    void attachNestedStates(SMStateData* nested);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -208,9 +223,25 @@ public:
     SMStateEntry* findStateRecursive(const QString& name) const;
 
     /**
+     * \brief   Finds a state by element ID in this level only.
+     **/
+    SMStateEntry* findStateById(uint32_t id) const;
+
+    /**
+     * \brief   Finds a state by element ID across this level and every nested level.
+     **/
+    SMStateEntry* findStateByIdRecursive(uint32_t id) const;
+
+    /**
      * \brief   Returns the single Start state of this level, or nullptr if none.
      **/
     SMStateEntry* getStartState() const;
+
+    /**
+     * \brief   Finds the state whose transition list owns the transition with the given
+     *          ID, searching this level and every nested level.
+     **/
+    SMStateEntry* findTransitionOwnerRecursive(uint32_t transitionId) const;
 
     /**
      * \brief   Counts the states in this level and all nested levels.

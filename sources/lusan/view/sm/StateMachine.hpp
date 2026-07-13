@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/StateMachine.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -21,6 +21,7 @@
 
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/common/MdiChild.hpp"
+#include "lusan/view/sm/SMDesign.hpp"
 
 #include <QList>
 #include <QTabWidget>
@@ -64,6 +65,31 @@ public:
     bool openSucceeded() const override;
     void undo() override;
     void redo() override;
+    bool canUndo() const override;
+    bool canRedo() const override;
+
+    /**
+     * \brief   Clipboard commands, forwarded to the Design page while it is the
+     *          selected tab; the other pages keep the default no-op.
+     **/
+    void cut() override;
+    void copy() override;
+    void paste() override;
+    void setToolbarVisible(bool visible) override;
+    bool isToolbarVisible() const override;
+
+    /**
+     * \brief   Returns the Design page if it has already been built, or nullptr - never
+     *          forces its (expensive) construction just to be queried (used by
+     *          MdiMainWindow to populate the Design menu).
+     **/
+    SMDesign* designPageIfBuilt() const;
+
+    /**
+     * \brief   True when the Design page is the currently selected inner tab. The drawing
+     *          toolbar's commands are only active on the Design page (they act on the canvas).
+     **/
+    bool isDesignPageCurrent() const;
 
 protected:
     QString newDocumentName() override;
@@ -74,6 +100,13 @@ protected:
     bool writeToFile(const QString& filePath) override;
     bool maybeSave() override;
     void onWindowClosing(bool isActive) override;
+
+private slots:
+    /**
+     * \brief   Switches to the page owning the requested declaration kind (building it if
+     *          not built yet) and starts a new entry there (spec 9.2 Declare dropdown).
+     **/
+    void onDeclareRequested(SMDesign::eDeclareKind kind);
 
 private:
     bool loadDocument(const QString& documentPath, const QString& sourcePath = QString());
@@ -99,6 +132,8 @@ private:
     SMOverview*         mOverview;
     QVector<QWidget*>   mPages;             //!< Built page widget per tab index (nullptr until built).
     QList<int>          mPendingInitTabs;   //!< Background initialization queue.
+    bool                mToolbarVisible;    //!< The Design page toolbar's requested visibility;
+                                            //!< applied immediately if built, or on its construction.
 };
 
 #endif  // LUSAN_VIEW_SM_STATEMACHINE_HPP

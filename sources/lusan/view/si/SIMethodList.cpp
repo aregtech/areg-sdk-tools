@@ -17,12 +17,15 @@
  *
  ************************************************************************/
 #include "lusan/view/si/SIMethodList.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
+#include <QAction>
 #include <QAbstractItemView>
 #include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QMenu>
 #include <QToolButton>
 #include <QTreeWidget>
 #include <QVBoxLayout>
@@ -38,21 +41,11 @@ SIMethodList::SIMethodList(QWidget* parent)
     , mButtonParamInsert(nullptr)
     , mButtonMoveUp     (nullptr)
     , mButtonMoveDown   (nullptr)
+    , mActNewRequest    (nullptr)
+    , mActNewResponse   (nullptr)
+    , mActNewBroadcast  (nullptr)
 {
     buildUi();
-}
-
-QToolButton* SIMethodList::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
-{
-    QToolButton* button = new QToolButton(parent);
-    button->setMaximumSize(24, 24);
-    button->setCursor(Qt::PointingHandCursor);
-    button->setMouseTracking(true);
-    button->setToolTip(toolTip);
-    button->setIcon(QIcon(iconName));
-    button->setIconSize(QSize(25, 25));
-    button->setShortcut(shortcut);
-    return button;
 }
 
 void SIMethodList::buildUi()
@@ -68,24 +61,33 @@ void SIMethodList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new method entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected method entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new method entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
+    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new method entry (a request by default)"), QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected method entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
+    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new method entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
+
+    mActNewRequest   = new QAction(tr("Request"), this);
+    mActNewResponse  = new QAction(tr("Response"), this);
+    mActNewBroadcast = new QAction(tr("Broadcast"), this);
+    QMenu* addMenu = new QMenu(mButtonAdd);
+    addMenu->addAction(mActNewRequest);
+    addMenu->addAction(mActNewResponse);
+    addMenu->addAction(mActNewBroadcast);
+    NELusanCommon::decorateToolButton(mButtonAdd, addMenu);
 
     QFrame* sep1 = new QFrame(toolbar);
     sep1->setFrameShape(QFrame::VLine);
     sep1->setMaximumSize(24, 24);
 
-    mButtonParamAdd    = createToolButton(toolbar, QStringLiteral(":/icons/field add")   , tr("Create and add new method parameter entry")   , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
-    mButtonParamRemove = createToolButton(toolbar, QStringLiteral(":/icons/field delete"), tr("Delete selected method parameter entry")      , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
-    mButtonParamInsert = createToolButton(toolbar, QStringLiteral(":/icons/field insert"), tr("Create and insert new method parameter entry"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
+    mButtonParamAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field add")   , tr("Create and add new method parameter entry")   , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    mButtonParamRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field delete"), tr("Delete selected method parameter entry")      , QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
+    mButtonParamInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/field insert"), tr("Create and insert new method parameter entry"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_T));
 
     QFrame* sep2 = new QFrame(toolbar);
     sep2->setFrameShape(QFrame::VLine);
     sep2->setMaximumSize(24, 24);
 
-    mButtonMoveUp   = createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
-    mButtonMoveDown = createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
+    mButtonMoveUp   = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move up")  , tr("Move selection up.")  , QKeySequence(Qt::CTRL | Qt::Key_Up));
+    mButtonMoveDown = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/move down"), tr("Move selection down."), QKeySequence(Qt::CTRL | Qt::Key_Down));
 
     toolbarLayout->addWidget(mButtonAdd);
     toolbarLayout->addWidget(mButtonRemove);
@@ -164,4 +166,19 @@ QToolButton* SIMethodList::ctrlButtonMoveDown() const
 QTreeWidget* SIMethodList::ctrlTableList() const
 {
     return mTable;
+}
+
+QAction* SIMethodList::actionNewRequest() const
+{
+    return mActNewRequest;
+}
+
+QAction* SIMethodList::actionNewResponse() const
+{
+    return mActNewResponse;
+}
+
+QAction* SIMethodList::actionNewBroadcast() const
+{
+    return mActNewBroadcast;
 }

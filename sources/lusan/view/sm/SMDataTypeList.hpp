@@ -59,9 +59,6 @@ public:
 
 private:
     void buildUi();
-    static QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
-    //!< Attaches the type menu to the Add split button and applies the shared arrow-friendly sizing.
-    static void decorateAddButton(QToolButton* button, QMenu* menu);
 
 private:
     QTreeWidget*    mTable;

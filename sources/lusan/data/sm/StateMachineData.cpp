@@ -23,6 +23,7 @@
 #include <QByteArray>
 #include <QFile>
 #include <QFileInfo>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -205,16 +206,18 @@ std::unique_ptr<StateMachineData> StateMachineData::createNewDocument(const QStr
     SMStateEntry* start = result->mStates.createState(QStringLiteral("Start"), SMStateEntry::eStateKind::Start);
     if (start != nullptr)
     {
-        SMLayoutView& view = result->mLayout.addView(result->mOverview.getId());
-        view.zoom = 100;
-        view.x    = 0.0;
-        view.y    = 0.0;
-
+        // The Start state is a compact marker box placed at the top-left of the level so it
+        // reads as the machine's entry point. The geometry mirrors the view-layer marker
+        // size (NESMDesign::MarkerStateWidth/Height) and auto-placement origin (64;64); the
+        // data layer cannot include the view constants, so the values are spelled out here.
+        // No View entry is persisted for a fresh document: the Design page anchors the first
+        // view to the top-left content itself (a stored center of 0;0 would otherwise push
+        // the single Start state into the middle of the viewport).
         SMLayoutNode& node = result->mLayout.addNode(start->getId());
-        node.x      = 80.0;
-        node.y      = 140.0;
-        node.width  = 160.0;
-        node.height = 64.0;
+        node.x      = 64.0;
+        node.y      = 64.0;
+        node.width  = 64.0;
+        node.height = 32.0;
     }
 
     return result;
@@ -582,6 +585,87 @@ bool StateMachineData::isStimulusName(const QString& name) const
 SMStateEntry* StateMachineData::findState(const QString& name) const
 {
     return mStates.findStateRecursive(name);
+}
+
+SMStateEntry* StateMachineData::findStateById(uint32_t id) const
+{
+    return mStates.findStateByIdRecursive(id);
+}
+
+SMStateEntry* StateMachineData::findTransitionOwner(uint32_t transitionId) const
+{
+    return mStates.findTransitionOwnerRecursive(transitionId);
+}
+
+SMTransitionEntry* StateMachineData::findTransitionById(uint32_t transitionId) const
+{
+    SMStateEntry* owner = mStates.findTransitionOwnerRecursive(transitionId);
+    if (owner != nullptr)
+    {
+        SMTransitionEntry** slot = owner->getTransitions().findElement(transitionId);
+        return (slot != nullptr ? *slot : nullptr);
+    }
+
+    return nullptr;
+}
+
+SMStateData* StateMachineData::findLevel(uint32_t levelId)
+{
+    if (levelId == mOverview.getId())
+    {
+        return &mStates;
+    }
+
+    SMStateEntry* state = mStates.findStateByIdRecursive(levelId);
+    return (state != nullptr ? state->getNestedStates() : nullptr);
+}
+
+const SMStateData* StateMachineData::findLevel(uint32_t levelId) const
+{
+    return const_cast<StateMachineData*>(this)->findLevel(levelId);
+}
+
+namespace
+{
+    //!< Depth-first search for the composite-state chain leading to a level owner.
+    bool buildLevelPath(const SMStateData& level, uint32_t levelId, QList<uint32_t>& path)
+    {
+        for (const SMStateEntry* state : level.getElements())
+        {
+            const SMStateData* nested = state->getNestedStates();
+            if (nested == nullptr)
+            {
+                continue;
+            }
+
+            path.append(state->getId());
+            if ((state->getId() == levelId) || buildLevelPath(*nested, levelId, path))
+            {
+                return true;
+            }
+
+            path.removeLast();
+        }
+
+        return false;
+    }
+}
+
+QList<uint32_t> StateMachineData::getLevelPath(uint32_t levelId) const
+{
+    QList<uint32_t> path{ mOverview.getId() };
+    if (levelId == mOverview.getId())
+    {
+        return path;
+    }
+
+    return buildLevelPath(mStates, levelId, path) ? path : QList<uint32_t>{};
+}
+
+bool StateMachineData::isValidIdentifier(const QString& name)
+{
+    static const QRegularExpression _identifier{ QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$") };
+    return _identifier.match(name).hasMatch();
 }
 
 int StateMachineData::getStateCount() const

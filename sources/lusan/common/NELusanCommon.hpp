@@ -31,6 +31,11 @@
 #include <filesystem>
 #include <vector>
 
+class QKeySequence;
+class QMenu;
+class QToolButton;
+class QWidget;
+
 /**
  * \namespace NELusanCommon
  * \brief     Contains common definitions and utility functions for the Lusan application.
@@ -68,10 +73,15 @@ namespace NELusanCommon
     extern const QString    INIT_FILE;
 
     /**
-     * \brief   The minimal width of navigation window.
+     * \brief   The default (preferred) width of the navigation window.
      **/
     constexpr const uint32_t  MIN_NAVI_WIDTH    { 280 };
-    
+
+    /**
+     * \brief   The absolute minimum width the navigation window can be shrunk to (issue #516).
+     **/
+    constexpr const uint32_t  MIN_NAVI_WIDTH_ABS { 64 };
+
     /**
      * \brief   The minimal height of navigation window.
      **/
@@ -493,9 +503,12 @@ namespace NELusanCommon
     //<! Loads offline logs navigation tab icon and sets the specified size
     inline QIcon iconViewOfflineLogs(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads FSM design toolbar navigation tab icon and sets the specified size
+    inline QIcon iconViewFsmDesign(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads output / status window tab icon and sets the specified size
     inline QIcon iconViewOutputWindow(const QSize & size = QSize{ 32, 32 });
-
+    
     //<! Loads application options / settings icon and sets the specified size
     inline QIcon iconSettings(const QSize & size = QSize{ 32, 32 });
 
@@ -621,6 +634,21 @@ namespace NELusanCommon
 
     //<! Loads service interface tab icon and sets the specified size
     inline QIcon iconServiceInterfaceTab(const QSize & size = QSize{ 32, 32 });
+    
+    //!< Loads Undo icon
+    inline QIcon iconEditUndo(const QSize& size = QSize{32, 32});
+    
+    //!< Loads Undo icon
+    inline QIcon iconEditRedo(const QSize& size = QSize{32, 32});
+    
+    //!< Crate a tool button object.    
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+    
+    //!< Applies the shared look to a plain toolbar button (without a split drop-down menu).
+    void decorateToolButton(QToolButton* button);
+
+    //!< Attaches the type menu to the Add split button and applies the shared arrow-friendly sizing.
+    void decorateToolButton(QToolButton* button, QMenu* menu);
 }
 
 inline QIcon NELusanCommon::iconLogDebug(const QSize & size)
@@ -716,6 +744,20 @@ inline QIcon NELusanCommon::iconRecord(const QSize & size)
 inline QIcon NELusanCommon::iconClear(const QSize & size)
 {
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::EditClear) };
+    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconEditUndo(const QSize& size)
+{
+    QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditUndo)};
+    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconEditRedo(const QSize& size)
+{
+    QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditRedo)};
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
@@ -869,6 +911,11 @@ inline QIcon NELusanCommon::iconViewOutputWindow(const QSize & size /*= QSize{32
 inline QIcon NELusanCommon::iconViewOfflineLogs(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/view-offline-logs", size);
+}
+
+inline QIcon NELusanCommon::iconViewFsmDesign(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/view-fsm-design", size);
 }
 
 inline QIcon NELusanCommon::iconViewLiveLogs(const QSize & size /*= QSize{32, 32}*/)

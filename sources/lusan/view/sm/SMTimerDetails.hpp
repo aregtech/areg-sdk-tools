@@ -31,7 +31,7 @@ class QSpinBox;
  * \brief   The selected timer editor: a "Details:" group with label-beside-control rows —
  *          Name, Timeout (ms, minimum 1), Repeat (disabled while Continuous is checked),
  *          Continuous, Description. An inline hint below Name flags a stimulus-name collision
- *          with an existing trigger method, event or another timer (spec 6.10).
+ *          with an existing trigger method, event or another timer.
  **/
 class SMTimerDetails : public QWidget
 {
