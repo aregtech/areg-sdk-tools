@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/si/SIConstantData.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Constant Data.
  *
@@ -45,7 +45,7 @@ SIDataTypeData::SIDataTypeData(QList<DataTypeCustom *>&& entries, ElementBase* p
 {
 }
 
-SIDataTypeData::~SIDataTypeData(void)
+SIDataTypeData::~SIDataTypeData()
 {
     QList<DataTypeCustom*>& list = getElements();;
     qDeleteAll(list);
@@ -148,29 +148,29 @@ void SIDataTypeData::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement();
 }
 
-void SIDataTypeData::removeAll(void)
+void SIDataTypeData::removeAll()
 {
     QList<DataTypeCustom*>& customDataTypes {getElements()};
     qDeleteAll(customDataTypes);
     customDataTypes.clear();
 }
 
-const QList<DataTypePrimitive*>& SIDataTypeData::getPrimitiveDataTypes(void) const
+const QList<DataTypePrimitive*>& SIDataTypeData::getPrimitiveDataTypes() const
 {
     return DataTypeFactory::getPrimitiveTypes();
 }
 
-const QList<DataTypeBasicObject*>& SIDataTypeData::getBasicDataTypes(void) const
+const QList<DataTypeBasicObject*>& SIDataTypeData::getBasicDataTypes() const
 {
     return DataTypeFactory::getBasicTypes();
 }
 
-const QList<DataTypeBasicContainer*>& SIDataTypeData::getContainerDatTypes(void) const
+const QList<DataTypeBasicContainer*>& SIDataTypeData::getContainerDatTypes() const
 {
     return DataTypeFactory::getContainerTypes();
 }
 
-const QList<DataTypeCustom*>& SIDataTypeData::getCustomDataTypes(void) const
+const QList<DataTypeCustom*>& SIDataTypeData::getCustomDataTypes() const
 {
     return getElements();
 }

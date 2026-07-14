@@ -38,6 +38,7 @@
 .vs/
 build*
 *claude*
+*copilot*
 
 mempalace.yaml
 entities.json

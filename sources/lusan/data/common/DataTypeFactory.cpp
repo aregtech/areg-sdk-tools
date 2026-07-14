@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeFactory.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Data Type factory.
  *
@@ -147,21 +147,21 @@ DataTypeCustom* DataTypeFactory::createCustomDataType(DataTypeBase::eCategory ca
     }
 }
 
-const QList<DataTypePrimitive*>& DataTypeFactory::getPrimitiveTypes(void)
+const QList<DataTypePrimitive*>& DataTypeFactory::getPrimitiveTypes()
 {
     if (mPredefinePrimitiveTypes.isEmpty())
         _initPredefined();
     return mPredefinePrimitiveTypes;
 }
 
-const QList<DataTypeBasicObject*>& DataTypeFactory::getBasicTypes(void)
+const QList<DataTypeBasicObject*>& DataTypeFactory::getBasicTypes()
 {
     if (mPredefinedBasicTypes.isEmpty())
         _initPredefined();
     return mPredefinedBasicTypes;
 }
 
-const QList<DataTypeBasicContainer*>& DataTypeFactory::getContainerTypes(void)
+const QList<DataTypeBasicContainer*>& DataTypeFactory::getContainerTypes()
 {
     if (mPredefinedContainerTypes.isEmpty())
         _initPredefined();
@@ -224,14 +224,14 @@ int DataTypeFactory::getPredefinedTypes(QList<DataTypeBase *>& result, const QLi
     return static_cast<int>(result.size()) - initCount;
 }
 
-void DataTypeFactory::warmup(void)
+void DataTypeFactory::warmup()
 {
-    (void)getPrimitiveTypes();
-    (void)getBasicTypes();
-    (void)getContainerTypes();
+    getPrimitiveTypes();
+    getBasicTypes();
+    getContainerTypes();
 }
 
-void DataTypeFactory::_initPredefined(void)
+void DataTypeFactory::_initPredefined()
 {
     Q_ASSERT(mPredefinePrimitiveTypes.isEmpty());
     Q_ASSERT(mPredefinedBasicTypes.isEmpty());

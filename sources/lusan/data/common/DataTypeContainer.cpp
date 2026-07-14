@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeContainer.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Container Data Type.
  *
@@ -150,7 +150,7 @@ void DataTypeContainer::writeToXml(QXmlStreamWriter& xml) const
     xml.writeEndElement(); // DataType
 }
 
-bool DataTypeContainer::canHaveKey(void) const
+bool DataTypeContainer::canHaveKey() const
 {
     bool result{ false };
     const QList<DataTypeBasicContainer*> containerTypes = DataTypeFactory::getContainerTypes();
@@ -166,7 +166,7 @@ bool DataTypeContainer::canHaveKey(void) const
     return result;
 }
 
-QString DataTypeContainer::toTypeString(void) const
+QString DataTypeContainer::toTypeString() const
 {
     if (canHaveKey())
         return getContainer() + "<" + getKey() + ", " + getValue() + ">";

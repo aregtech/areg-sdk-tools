@@ -1,17 +1,17 @@
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/log/LoggingScopesModelBase.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Base class for log scopes models.
  *
@@ -43,7 +43,7 @@ LoggingScopesModelBase::LoggingScopesModelBase(QObject* parent)
     mRootIndex = createIndex(0, 0, nullptr);
 }
 
-LoggingScopesModelBase::~LoggingScopesModelBase(void)
+LoggingScopesModelBase::~LoggingScopesModelBase()
 {
     _setupSignals(false);
     clearModel(false);
@@ -355,12 +355,12 @@ int LoggingScopesModelBase::findRoot(ITEM_ID rootId) const
     return static_cast<int>(areg::INVALID_INDEX);
 }
 
-void LoggingScopesModelBase::slotLogServiceConnected(void)
+void LoggingScopesModelBase::slotLogServiceConnected()
 {
     clearModel(false);
 }
 
-void LoggingScopesModelBase::slotLogServiceDisconnected(void)
+void LoggingScopesModelBase::slotLogServiceDisconnected()
 {
     clearModel(false);
 }
@@ -518,7 +518,7 @@ void LoggingScopesModelBase::_setupSignals(bool doSetup)
     }
 }
 
-void LoggingScopesModelBase::buildScopes(void)
+void LoggingScopesModelBase::buildScopes()
 {
     if (mLoggingModel == nullptr)
         return;
@@ -536,7 +536,7 @@ void LoggingScopesModelBase::buildScopes(void)
     endResetModel();
 }
 
-void LoggingScopesModelBase::setupModel(void)
+void LoggingScopesModelBase::setupModel()
 {
     clearModel(false);
     if (mLoggingModel != nullptr)
@@ -545,7 +545,7 @@ void LoggingScopesModelBase::setupModel(void)
     }
 }
 
-void LoggingScopesModelBase::releaseModel(void)
+void LoggingScopesModelBase::releaseModel()
 {
     clearModel(true);
     if (mLoggingModel != nullptr)
@@ -576,7 +576,7 @@ void LoggingScopesModelBase::dataTransfer(LoggingScopesModelBase& scopeModel)
     endResetModel();
 }
 
-void LoggingScopesModelBase::refresh(void)
+void LoggingScopesModelBase::refresh()
 {
     beginResetModel();
     endResetModel();

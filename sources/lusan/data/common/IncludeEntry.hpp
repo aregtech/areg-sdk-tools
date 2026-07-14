@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_COMMON_INCLUDEENTRY_HPP
 #define LUSAN_DATA_COMMON_INCLUDEENTRY_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/IncludeEntry.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Include Entry.
  *
@@ -132,30 +132,30 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the include entry data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes include entry data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief   Returns true if the entry is valid. The entry is valid if location parameter is not empty.
      **/
-    virtual bool isValid(void) const override;
+    bool isValid() const override;
 
     /**
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
 
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -165,7 +165,7 @@ public:
      * \brief   Gets the include file path location.
      * \return  The file path.
      **/
-    const QString& getLocation(void) const;
+    const QString& getLocation() const;
 
     /**
      * \brief   Sets the include file path location.
@@ -176,7 +176,7 @@ public:
     /**
      * \brief   Gets the name of the include entry, i.e. the location.
      **/
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
 
     /**
      * \brief   Sets the name of the include entry, i.e. the location.
@@ -187,7 +187,7 @@ public:
      * \brief   Gets the description.
      * \return  The description.
      **/
-    const QString& getDescription(void) const;
+    const QString& getDescription() const;
 
     /**
      * \brief   Sets the description.
@@ -199,7 +199,7 @@ public:
      * \brief   Gets the deprecated flag.
      * \return  The deprecated flag.
      **/
-    bool getIsDeprecated(void) const;
+    bool getIsDeprecated() const;
 
     /**
      * \brief   Sets the deprecated flag.
@@ -211,7 +211,7 @@ public:
      * \brief   Gets the deprecation hint.
      * \return  The deprecation hint.
      **/
-    const QString& getDeprecateHint(void) const;
+    const QString& getDeprecateHint() const;
 
     /**
      * \brief   Sets the deprecation hint.
@@ -239,7 +239,7 @@ private:
 // IncludeEntry inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& IncludeEntry::getName(void) const
+inline const QString& IncludeEntry::getName() const
 {
     return getLocation();
 }

@@ -1,86 +1,121 @@
-﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
- *  \file        lusan/view/si/SIIncludeDetails.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/si/SIIncludeDetails.cpp
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface include file editor.
  *
  ************************************************************************/
 #include "lusan/view/si/SIIncludeDetails.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIIncludeDetails.h"
+
+#include <QCheckBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QLineEdit>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QVBoxLayout>
 
 SIIncludeDetails::SIIncludeDetails(QWidget* parent)
-    : QWidget   (parent)
-    , ui        (new Ui::SIIncludeDetails)
+    : QWidget           (parent)
+    , mInclude          (nullptr)
+    , mBrowse           (nullptr)
+    , mDescription      (nullptr)
+    , mDeprecated       (nullptr)
+    , mDeprecateHint    (nullptr)
 {
-    QFont font{ this->font() };
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    buildUi();
 }
 
-SIIncludeDetails::~SIIncludeDetails(void)
+SIIncludeDetails::~SIIncludeDetails()
 {
-    delete ui;
-    ui = nullptr;
 }
 
-QString SIIncludeDetails::getSelectedFile(void) const
+void SIIncludeDetails::buildUi()
 {
-    return ui->editInclude->text();
+    QVBoxLayout* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* details = new QGroupBox(tr("Details:"), this);
+    QFormLayout* form = new QFormLayout(details);
+    form->setRowWrapPolicy(QFormLayout::DontWrapRows);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+    QWidget* includeCell = new QWidget(details);
+    QHBoxLayout* includeLayout = new QHBoxLayout(includeCell);
+    includeLayout->setContentsMargins(0, 0, 0, 0);
+    includeLayout->setSpacing(4);
+    mInclude = new QLineEdit(includeCell);
+    mBrowse = new QPushButton(tr("Browse ..."), includeCell);
+    includeLayout->addWidget(mInclude, 1);
+    includeLayout->addWidget(mBrowse);
+    form->addRow(tr("Include:"), includeCell);
+
+    mDescription = new QPlainTextEdit(details);
+    mDescription->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
+    mDescription->setPlaceholderText(tr("Describe include here"));
+    form->addRow(tr("Description:"), mDescription);
+
+    mDeprecated = new QCheckBox(tr("Deprecated:"), details);
+    mDeprecated->setLayoutDirection(Qt::RightToLeft);
+    mDeprecateHint = new QLineEdit(details);
+    form->addRow(mDeprecated, mDeprecateHint);
+
+    root->addWidget(details);
 }
 
-QString SIIncludeDetails::getDescription(void) const
+QString SIIncludeDetails::getSelectedFile() const
 {
-    return ui->textDescribe->toPlainText();
+    return mInclude->text();
 }
 
-bool SIIncludeDetails::isDeprecated(void) const
+QString SIIncludeDetails::getDescription() const
 {
-    return ui->checkDeprecated->isChecked();
+    return mDescription->toPlainText();
 }
 
-QString SIIncludeDetails::getDeprecateHint(void) const
+bool SIIncludeDetails::isDeprecated() const
 {
-    return ui->editDeprecated->text();
+    return mDeprecated->isChecked();
 }
 
-QLineEdit * SIIncludeDetails::ctrlInclude(void)
+QString SIIncludeDetails::getDeprecateHint() const
 {
-    return ui->editInclude;
+    return mDeprecateHint->text();
 }
 
-QLineEdit * SIIncludeDetails::ctrlDeprecateHint(void)
+QLineEdit * SIIncludeDetails::ctrlInclude()
 {
-    return ui->editDeprecated;
+    return mInclude;
 }
 
-QCheckBox * SIIncludeDetails::ctrlDeprecated(void)
+QLineEdit * SIIncludeDetails::ctrlDeprecateHint()
 {
-    return ui->checkDeprecated;
+    return mDeprecateHint;
 }
 
-QPlainTextEdit * SIIncludeDetails::ctrlDescription(void)
+QCheckBox * SIIncludeDetails::ctrlDeprecated()
 {
-    return ui->textDescribe;
+    return mDeprecated;
 }
 
-QPushButton * SIIncludeDetails::ctrlBrowseButton(void)
+QPlainTextEdit * SIIncludeDetails::ctrlDescription()
 {
-    return ui->buttonBrowse;
+    return mDescription;
+}
+
+QPushButton * SIIncludeDetails::ctrlBrowseButton()
+{
+    return mBrowse;
 }

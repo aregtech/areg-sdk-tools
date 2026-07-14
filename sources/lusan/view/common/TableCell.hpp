@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_COMMON_TABLECELL_HPP
 #define LUSAN_VIEW_COMMON_TABLECELL_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/TableCell.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, ComboBox for the table cell.
  *
@@ -46,8 +46,8 @@ class IETableHelper
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 protected:
-    IETableHelper(void) = default;
-    virtual ~IETableHelper(void) = default;
+    IETableHelper() = default;
+    virtual ~IETableHelper() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -57,7 +57,7 @@ public:
     /**
      * \brief   Returns the number of columns in the table.
      **/
-    virtual int getColumnCount(void) const = 0;
+    virtual int getColumnCount() const = 0;
 
     /**
      * \brief   Returns the text of the cell.
@@ -132,14 +132,14 @@ public:
      * \param   index       The index of the table cell.
      * \return  Returns the created editor widget.
      **/
-    virtual QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
     /**
      * \brief   Sets the data to the editor widget.
      * \param   editor      The editor widget.
      * \param   index       The index of the table cell.
      **/
-    virtual void setEditorData(QWidget* editor, const QModelIndex& index) const override;
+    void setEditorData(QWidget* editor, const QModelIndex& index) const override;
 
     /**
      * \brief   Sets the data to the model.
@@ -147,7 +147,7 @@ public:
      * \param   model       The model to set the data.
      * \param   index       The index of the table cell.
      **/
-    virtual void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -182,7 +182,7 @@ private slots:
      *          This slot is used to handle the event when the user has finished editing the text
      *          in the editor widget. It validates the new text and updates the model accordingly.
      **/
-    void onEditorTextChangeFinished(void);
+    void onEditorTextChangeFinished();
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

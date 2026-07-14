@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_MODEL_SI_SIMETHODMODEL_HPP
 #define LUSAN_MODEL_SI_SIMETHODMODEL_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/si/SIMethodModel.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Method Model.
  *
@@ -44,7 +44,7 @@ public:
      */
     SIMethodModel(SIMethodData& data, SIDataTypeData& dataType);
 
-    ~SIMethodModel(void) = default;
+    ~SIMethodModel() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and Operations
@@ -54,14 +54,14 @@ public:
     /**
      * \brief Returns instance of data type data object.
      **/
-    inline SIDataTypeData& getDataTypeData(void);
-    inline const SIDataTypeData& getDataTypeData(void) const;
+    inline SIDataTypeData& getDataTypeData();
+    inline const SIDataTypeData& getDataTypeData() const;
 
     /**
      * \brief Returns instance of method data object.
      **/
-    inline SIMethodData& getMethodData(void);
-    inline const SIMethodData& getMethodData(void) const;
+    inline SIMethodData& getMethodData();
+    inline const SIMethodData& getMethodData() const;
 
     /**
      * \brief Creates a new method object with specified name and type.
@@ -119,22 +119,22 @@ public:
     /**
      * \brief   Gets the list of methods.
      **/
-    const QList<SIMethodBase*>& getMethodList(void) const;
+    const QList<SIMethodBase*>& getMethodList() const;
 
     /**
      * \brief   Gets the list of broadcast methods.
      **/
-    const QList<SIMethodBroadcast*>& getBroadcastMethods(void) const;
+    const QList<SIMethodBroadcast*>& getBroadcastMethods() const;
 
     /**
      * \brief   Gets the list of request methods.
      **/
-    const QList<SIMethodRequest*>& getRequestMethods(void) const;
+    const QList<SIMethodRequest*>& getRequestMethods() const;
 
     /**
      * \brief   Gets the list of response methods.
      **/
-    const QList<SIMethodResponse*>& getResponseMethods(void) const;
+    const QList<SIMethodResponse*>& getResponseMethods() const;
 
     /**
      * \brief Gets the list of parameters of the method by ID.
@@ -234,22 +234,22 @@ private:
 // SIMethodModel class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline SIDataTypeData& SIMethodModel::getDataTypeData(void)
+inline SIDataTypeData& SIMethodModel::getDataTypeData()
 {
     return mDataType;
 }
 
-inline const SIDataTypeData& SIMethodModel::getDataTypeData(void) const
+inline const SIDataTypeData& SIMethodModel::getDataTypeData() const
 {
     return mDataType;
 }
 
-inline SIMethodData& SIMethodModel::getMethodData(void)
+inline SIMethodData& SIMethodModel::getMethodData()
 {
     return mData;
 }
 
-inline const SIMethodData& SIMethodModel::getMethodData(void) const
+inline const SIMethodData& SIMethodModel::getMethodData() const
 {
     return mData;
 }

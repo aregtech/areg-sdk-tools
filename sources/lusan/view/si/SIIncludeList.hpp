@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APPLICATION_SI_SIINCLUDELIST_HPP
 #define LUSAN_APPLICATION_SI_SIINCLUDELIST_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIIncludeList.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface, Data Attribute section.
  *
@@ -23,10 +23,8 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIIncludeList;
-}
-
+class QKeySequence;
+class QString;
 class QTableWidget;
 class QToolButton;
 class SIIncludeModel;
@@ -56,38 +54,46 @@ protected:
     /**
      * \brief   Returns the control of the add entry tool button.
      **/
-    QToolButton* ctrlButtonAdd(void) const;
+    QToolButton* ctrlButtonAdd() const;
 
     /**
      * \brief   Returns the control of the remove entry tool button.
      **/
-    QToolButton* ctrlButtonRemove(void) const;
+    QToolButton* ctrlButtonRemove() const;
 
     /**
      * \brief   Returns the control of the up entry tool button.
      **/
-    QToolButton* ctrlButtonMoveUp(void) const;
+    QToolButton* ctrlButtonMoveUp() const;
 
     /**
      * \brief   Returns the control of the down entry tool button.
      **/
-    QToolButton* ctrlButtonMoveDown(void) const;
+    QToolButton* ctrlButtonMoveDown() const;
 
     /**
      * \brief   Returns the control of the insert entry tool button.
      **/
-    QToolButton* ctrlButtonInsert(void) const;
+    QToolButton* ctrlButtonInsert() const;
 
     /**
      * \brief   Returns the control of the includes table widget.
      **/
-    QTableWidget* ctrlTableList(void) const;
+    QTableWidget* ctrlTableList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIIncludeList*  ui;     //!< The user interface object.
+    void buildUi();
+
+private:
+    QTableWidget* mTable;
+    QToolButton*  mButtonAdd;
+    QToolButton*  mButtonRemove;
+    QToolButton*  mButtonInsert;
+    QToolButton*  mButtonMoveUp;
+    QToolButton*  mButtonMoveDown;
     SIIncludeModel&     mModel; //!< The model of the include list.
 
 //////////////////////////////////////////////////////////////////////////

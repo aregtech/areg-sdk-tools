@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_COMMON_NAVIGATIONWINDOW_HPP
 #define LUSAN_VIEW_COMMON_NAVIGATIONWINDOW_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/NavigationWindow.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       The navigation windows elements.
  *
@@ -43,7 +43,7 @@ public:
      **/
     NavigationWindow(int naviWindow, MdiMainWindow* wndMain, QWidget* parent = nullptr);
 
-    virtual ~NavigationWindow(void) = default;
+    virtual ~NavigationWindow() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -53,13 +53,13 @@ public:
     /**
      * \brief   This method is called when the options dialog is opened.
      **/
-    virtual void optionOpenning(void);
+    virtual void optionOpenning();
 
     /**
      * \brief   This method is called when the apply button in options dialog is pressed.
      *          It can be used to apply changes made in the options dialog.
      **/
-    virtual void optionApplied(void);
+    virtual void optionApplied();
 
     /**
      * \brief   This method is called when the options dialog is closed.
@@ -75,25 +75,25 @@ public:
      * \brief   Returns the type of the navigation window.
      * \return  The type of the navigation window.
      **/
-    inline int getNaviWindowType(void) const;
+    inline int getNaviWindowType() const;
 
     /**
      * \brief   Checks if the navigation window is a workspace.
      * \return  True if the navigation window is a workspace, false otherwise.
      **/
-    bool isNaviWorkspace(void) const;
+    bool isNaviWorkspace() const;
 
     /**
      * \brief   Checks if the navigation window is for live logs.
      * \return  True if the navigation window is for live logs, false otherwise.
      **/
-    bool isNaviLiveLogs(void) const;
+    bool isNaviLiveLogs() const;
 
     /**
      * \brief   Checks if the navigation window is for offline logs.
      * \return  True if the navigation window is for offline logs, false otherwise.
      **/
-    bool isNaviOfflineLogs(void) const;
+    bool isNaviOfflineLogs() const;
 
 //////////////////////////////////////////////////////////////////////////
 // NavigationWindow class inline methods
@@ -108,7 +108,7 @@ protected:
 // NavigationWindow class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline int NavigationWindow::getNaviWindowType(void) const
+inline int NavigationWindow::getNaviWindowType() const
 {
     return mNaviWindowType;
 }

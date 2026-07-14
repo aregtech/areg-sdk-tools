@@ -1,19 +1,19 @@
 #ifndef LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP
 #define LUSAN_VIEW_COMMON_OPTIONPAGEPROJECTDIRS_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/OptionPageProjectDirs.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Tamas Csillag
  *  \brief       Lusan application, project settings widget.
  *
@@ -57,7 +57,7 @@ public:
     /**
      * \brief   Call when the option should apply the changes.
      **/
-    virtual void applyChanges(void) override;
+    void applyChanges() override;
     
     /**
      * \brief   Called when the workspace directories in option pages are updated.
@@ -66,7 +66,7 @@ public:
      * \param   delivery   The delivery directory.
      * \param   logs       The logs directory.
      **/
-    virtual void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
+    void updateWorkspaceDirectories(const sWorkspaceDir& sources, const sWorkspaceDir& includes, const sWorkspaceDir& delivery, const sWorkspaceDir& logs) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -104,19 +104,19 @@ private:
     void initializePathsWithCurrentWorkspaceData() const;
 
     //!< Returns root path edit object
-    inline QLineEdit* ctrlRoot(void) const;
+    inline QLineEdit* ctrlRoot() const;
     
     //!< Returns sources path edit object
-    inline QLineEdit* ctrlSources(void) const;
+    inline QLineEdit* ctrlSources() const;
     
     //!< Returns includes path edit object
-    inline QLineEdit* ctrlIncludes(void) const;
+    inline QLineEdit* ctrlIncludes() const;
     
     //!< Returns delivery path edit object
-    inline QLineEdit* ctrlDelivery(void) const;
+    inline QLineEdit* ctrlDelivery() const;
     
     //!< Returns logs path edit object
-    inline QLineEdit* ctrlLogs(void) const;
+    inline QLineEdit* ctrlLogs() const;
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
@@ -128,7 +128,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    OptionPageProjectDirs(void) = delete;
+    OptionPageProjectDirs() = delete;
     AREG_NOCOPY_NOMOVE(OptionPageProjectDirs);
 };
 

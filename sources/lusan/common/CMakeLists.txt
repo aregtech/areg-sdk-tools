@@ -12,4 +12,5 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/common/NELusanCommon.hpp
     ${LUSAN}/common/VersionNumber.hpp
     ${LUSAN}/common/XmlSI.hpp
+    ${LUSAN}/common/XmlSM.hpp
 )

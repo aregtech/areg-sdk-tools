@@ -1,17 +1,17 @@
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/log/OfflineLogsModel.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Offline Log Navigation Model.
  *
@@ -79,7 +79,7 @@ uint32_t OfflineLogsModel::setupLogStatement(ITEM_ID instId /*= areg::TARGET_ALL
     return mDatabase.setup_statement_read_filter_logs(mStatement, instId);
 }
 
-void OfflineLogsModel::closeDatabase(void)
+void OfflineLogsModel::closeDatabase()
 {
     _closeDatabase();
     emit signalDatabaseIsClosed(QString::fromStdString(mDatabase.database_path().data()));

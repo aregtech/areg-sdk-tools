@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/common/NELusanCommon.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Dialog to select folder.
  *
@@ -26,10 +26,13 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QStandardPaths>
+#include <QToolButton>
+#include <QMenu>
 
 const QStringList NELusanCommon::FILTERS
 {
       QStringLiteral("Service Interface Files (*.siml)")
+    , QStringLiteral("State Machine Files (*.fsml)")
     , QStringLiteral("Log Files (*.logs)")
     , QStringLiteral("All Files (*.*)")
 };
@@ -98,12 +101,12 @@ void NELusanCommon::setIconsForDarkTheme(bool isDark)
     _darkThemeIcons = isDark;
 }
 
-bool NELusanCommon::iconsForDarkTheme(void)
+bool NELusanCommon::iconsForDarkTheme()
 {
     return _darkThemeIcons;
 }
 
-QString NELusanCommon::getOptionsFile(void)
+QString NELusanCommon::getOptionsFile()
 {
     return getUserProfileFile(OPTIONS);
 }
@@ -113,19 +116,19 @@ QString NELusanCommon::getUserProfileFile(const QString& fileName)
     return QString("%1/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation), fileName);
 }
 
-uint32_t NELusanCommon::getId(void)
+uint32_t NELusanCommon::getId()
 {
     static uint32_t _id = 0;
     return (++_id != 0 ? _id : ++_id);
 }
 
 
-uint64_t NELusanCommon::getTimestamp(void)
+uint64_t NELusanCommon::getTimestamp()
 {
     return static_cast<uint64_t>(QDateTime::currentMSecsSinceEpoch());
 }
 
-const QString& NELusanCommon::getStyleToolbutton(void)
+const QString& NELusanCommon::getStyleToolbutton()
 {
     static const QString& _style(QString::fromUtf8(NELusanCommon::StyleToolbuttonChecked.data(), NELusanCommon::StyleToolbuttonChecked.length()));
     return _style;
@@ -171,3 +174,41 @@ QIcon NELusanCommon::mergeIcons(const QIcon& icon1, double scale1, const QIcon& 
     return QIcon(result);
 }
 
+QToolButton* NELusanCommon::createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut)
+{
+    QToolButton* button = new QToolButton(parent);
+    button->setMaximumSize(24, 24);
+    button->setCursor(Qt::PointingHandCursor);
+    button->setMouseTracking(true);
+    button->setToolTip(toolTip);
+    button->setIcon(QIcon(iconName));
+    button->setIconSize(QSize(25, 25));
+    button->setShortcut(shortcut);
+    return button;
+}
+
+void NELusanCommon::decorateToolButton(QToolButton* button)
+{
+    if (button == nullptr)
+        return;
+
+    button->setMenu(nullptr);
+    button->setPopupMode(QToolButton::DelayedPopup);
+    button->setIconSize(QSize(24, 24));
+    button->setMaximumSize(24, 24);
+}
+
+void NELusanCommon::decorateToolButton(QToolButton* button, QMenu* menu)
+{
+    if ((button == nullptr) || (menu == nullptr))
+    {
+        decorateToolButton(button);
+        return;
+    }
+
+    button->setMenu(menu);
+    button->setPopupMode(QToolButton::MenuButtonPopup);
+    // Keep a dedicated right-side drop-down zone so the menu arrow never crowds the icon.
+    button->setIconSize(QSize(20, 20));
+    button->setFixedSize(48, 24);
+}

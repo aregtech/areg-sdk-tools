@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/si/ServiceInterfaceModel.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Model.
  *
@@ -42,7 +42,7 @@ class ServiceInterfaceModel
 public:
     ServiceInterfaceModel(const QString& filePath = QString());
 
-    virtual ~ServiceInterfaceModel(void) = default;
+    virtual ~ServiceInterfaceModel() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -51,32 +51,32 @@ public:
     /**
      * \brief   Returns the overview model.
      **/
-    inline SIOverviewModel& getOverviewModel(void);
+    inline SIOverviewModel& getOverviewModel();
 
     /**
      * \brief   Returns the data attributes model.
      **/
-    inline SIAttributeModel& getAttributeModel(void);
+    inline SIAttributeModel& getAttributeModel();
 
     /**
      * \brief   Returns the constant model.
      **/
-    inline SIConstantModel& getConstantsModel(void);
+    inline SIConstantModel& getConstantsModel();
     
     /**
      * \brief   Returns the include model.
      **/
-    inline SIIncludeModel & getIncludesModel(void);
+    inline SIIncludeModel & getIncludesModel();
 
     /**
      * \brief   Returns the data type model.
      **/
-    inline SIDataTypeModel& getDataTypeModel(void);
+    inline SIDataTypeModel& getDataTypeModel();
 
     /**
      * \brief   Returns the methods model.
      **/
-    inline SIMethodModel& getMethodsModel(void);
+    inline SIMethodModel& getMethodsModel();
 
     /**
      * \brief   Saves the service interface data to the file.
@@ -89,7 +89,7 @@ public:
      * \brief   Returns the file format version.
      * \return  The file format version.
      **/
-    inline QString getFileFormatVersion(void) const;
+    inline QString getFileFormatVersion() const;
 
     /**
      * \brief   Gets the name of the service interface.
@@ -112,11 +112,11 @@ public:
     /**
      * \brief   Returns the file open operation success flag.
      **/
-    inline bool openSucceeded(void) const;
+    inline bool openSucceeded() const;
 
-    inline ServiceInterfaceData& getData(void);
+    inline ServiceInterfaceData& getData();
 
-    inline const ServiceInterfaceData& getData(void) const;
+    inline const ServiceInterfaceData& getData() const;
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden class members
@@ -144,32 +144,32 @@ private:
 // ServiceInterfaceModel class inline functions
 //////////////////////////////////////////////////////////////////////////
 
-inline SIOverviewModel& ServiceInterfaceModel::getOverviewModel(void)
+inline SIOverviewModel& ServiceInterfaceModel::getOverviewModel()
 {
     return mModelOverview;
 }
 
-inline SIDataTypeModel& ServiceInterfaceModel::getDataTypeModel(void)
+inline SIDataTypeModel& ServiceInterfaceModel::getDataTypeModel()
 {
     return mModelDataType;
 }
 
-inline SIAttributeModel& ServiceInterfaceModel::getAttributeModel(void)
+inline SIAttributeModel& ServiceInterfaceModel::getAttributeModel()
 {
     return mModelAttributes;
 }
 
-inline SIMethodModel& ServiceInterfaceModel::getMethodsModel(void)
+inline SIMethodModel& ServiceInterfaceModel::getMethodsModel()
 {
     return mModelMethods;
 }
 
-inline SIConstantModel& ServiceInterfaceModel::getConstantsModel(void)
+inline SIConstantModel& ServiceInterfaceModel::getConstantsModel()
 {
     return mModelConstant;
 }
 
-inline SIIncludeModel & ServiceInterfaceModel::getIncludesModel(void)
+inline SIIncludeModel & ServiceInterfaceModel::getIncludesModel()
 {
     return mModelInclude;
 }
@@ -179,7 +179,7 @@ inline bool ServiceInterfaceModel::saveToFile(const QString& filePath)
     return mSIData.writeToFile(filePath);
 }
 
-inline QString ServiceInterfaceModel::getFileFormatVersion(void) const
+inline QString ServiceInterfaceModel::getFileFormatVersion() const
 {
     return mSIData.getFileFormatVersion();
 }
@@ -199,17 +199,17 @@ inline SIOverviewData::eCategory ServiceInterfaceModel::getCategory() const
     return mModelOverview.getCategory();
 }
 
-inline bool ServiceInterfaceModel::openSucceeded(void) const
+inline bool ServiceInterfaceModel::openSucceeded() const
 {
     return mSIData.openSucceeded();
 }
 
-inline ServiceInterfaceData& ServiceInterfaceModel::getData(void)
+inline ServiceInterfaceData& ServiceInterfaceModel::getData()
 {
     return mSIData;
 }
 
-inline const ServiceInterfaceData& ServiceInterfaceModel::getData(void) const
+inline const ServiceInterfaceData& ServiceInterfaceModel::getData() const
 {
     return mSIData;
 }

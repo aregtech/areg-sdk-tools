@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_LOG_LOGVIEWER_HPP
 #define LUSAN_VIEW_LOG_LOGVIEWER_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/LiveLogViewer.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, log view widget.
  *
@@ -52,13 +52,13 @@ public:
     /**
      * \brief   Returns the file extension of the service interface document.
      **/
-    static const QString& fileExtension(void);
+    static const QString& fileExtension();
 
     /**
      * \brief   Returns the file name of the log viewer.
      *          The file name is generated based on the current date and time.
      **/
-    static QString generateFileName(void);
+    static QString generateFileName();
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor
@@ -72,7 +72,7 @@ public:
      **/
     explicit LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent = nullptr);
     
-    virtual ~LiveLogViewer(void);
+    virtual ~LiveLogViewer();
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -95,22 +95,22 @@ public:
     /**
      * \brief   Returns true if application is connected to the logging service.
      **/
-    bool isServiceConnected(void) const;
+    bool isServiceConnected() const;
 
     /**
      * \brief   Called to check whether log viewer has log entries.
      **/
-    bool isEmpty(void) const;
+    bool isEmpty() const;
 
     /**
      * \brief   Called to detach the log viewer and stop receiving messages.
      **/
-    void detachLiveLog(void);
+    void detachLiveLog();
 
     /**
      * \brief   Returns the database path of the live logs database.
      **/
-    QString getDatabasePath(void) const;
+    QString getDatabasePath() const;
 
 /************************************************************************
  * MdiChild overrides
@@ -121,12 +121,12 @@ protected:
      * \brief   Called when the MDI child window is closed.
      * \param   isActive    Indicates whether the window is active or not.
      **/
-    virtual void onWindowClosing(bool isActive) override;
+    void onWindowClosing(bool isActive) override;
 
     /**
      * \brief   Slot. which triggered when the selection in the log scopes navigation is changed.
      **/
-    virtual void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous) override;
+    void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous) override;
     
 //////////////////////////////////////////////////////////////////////////
 // Slots.
@@ -155,20 +155,20 @@ private slots:
     /**
      * \brief   Slot, triggered when Clear logging window button is clicked.
      **/
-    void onClearClicked(void);
+    void onClearClicked();
 
 private:
     //!< Returns Pause / Resume toolbutton
-    QToolButton* ctrlPause(void);
+    QToolButton* ctrlPause();
 
     //!< Returns Stop / Restart toolbutton
-    QToolButton* ctrlStop(void);
+    QToolButton* ctrlStop();
 
     //!< Returns Clear logs toolbutton
-    QToolButton* ctrlClear(void);
+    QToolButton* ctrlClear();
 
     //!< Returns Logging File name label widget.
-    QLabel* ctrlFile(void);
+    QLabel* ctrlFile();
         
     /**
      * \brief   Resets the order of the columns.
@@ -192,7 +192,7 @@ private:
      * \brief   Cleans up resources used by the offline log viewer.
      *          This method is called when the viewer is closed or no longer needed.
      **/
-    void cleanResources(void);
+    void cleanResources();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables

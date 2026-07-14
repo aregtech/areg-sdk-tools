@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
 #define LUSAN_DATA_SI_SERVICEINTERFACEDATA_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/si/ServiceInterfaceData.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Data.
  *
@@ -33,7 +33,8 @@
  * \class   ServiceInterfaceData
  * \brief   Represents the service interface data in the Lusan application.
  **/
-class ServiceInterfaceData  : public ElementBase
+class ServiceInterfaceData  : protected QObject
+                            , public    ElementBase
 {
 //////////////////////////////////////////////////////////////////////////
 // Internal types and constants
@@ -60,7 +61,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~ServiceInterfaceData(void) = default;
+    virtual ~ServiceInterfaceData() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -71,7 +72,7 @@ public:
      * \brief   Returns the file format version.
      * \return  The file format version.
      **/
-    inline QString getFileFormatVersion(void) const;
+    inline QString getFileFormatVersion() const;
 
     /**
      * \brief   Reads data from a file.
@@ -104,59 +105,59 @@ public:
      * \brief   Returns the file path of the service interface data.
      * \return  The file path of the service interface data.
      **/
-    inline const QString& getFilePath(void) const;
+    inline const QString& getFilePath() const;
 
     /**
      * \brief   Gets the overview data.
      * \return  The overview data.
      **/
-    inline const SIOverviewData& getOverviewData(void) const;
-    inline SIOverviewData& getOverviewData(void);
+    inline const SIOverviewData& getOverviewData() const;
+    inline SIOverviewData& getOverviewData();
 
     /**
      * \brief   Gets the data type data.
      * \return  The data type data.
      **/
-    inline const SIDataTypeData& getDataTypeData(void) const;
-    inline SIDataTypeData& getDataTypeData(void);
+    inline const SIDataTypeData& getDataTypeData() const;
+    inline SIDataTypeData& getDataTypeData();
 
     /**
      * \brief   Gets the attribute data.
      * \return  The attribute data.
      **/
-    inline const SIAttributeData& getAttributeData(void) const;
-    inline SIAttributeData& getAttributeData(void);
+    inline const SIAttributeData& getAttributeData() const;
+    inline SIAttributeData& getAttributeData();
 
     /**
      * \brief   Gets the method data.
      * \return  The method data.
      **/
-    inline const SIMethodData& getMethodData(void) const;
-    inline SIMethodData& getMethodData(void);
+    inline const SIMethodData& getMethodData() const;
+    inline SIMethodData& getMethodData();
 
     /**
      * \brief   Gets the constant data.
      * \return  The constant data.
      **/
-    inline const SIConstantData& getConstantData(void) const;
-    inline SIConstantData& getConstantData(void);
+    inline const SIConstantData& getConstantData() const;
+    inline SIConstantData& getConstantData();
 
     /**
      * \brief   Gets the include data.
      * \return  The include data.
      **/
-    inline const SIIncludeData& getIncludeData(void) const;
-    inline SIIncludeData& getIncludeData(void);
+    inline const SIIncludeData& getIncludeData() const;
+    inline SIIncludeData& getIncludeData();
 
     /**
      * \brief   Returns true if the file was successfully opened.
      **/
-    inline bool openSucceeded(void) const;
+    inline bool openSucceeded() const;
 
     /**
      * \brief   Returns the current document version.
      **/
-    inline const VersionNumber& getCurrentDocumentVersion(void) const;
+    inline const VersionNumber& getCurrentDocumentVersion() const;
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -177,82 +178,82 @@ private:
 // ServiceInterfaceData inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QString ServiceInterfaceData::getFileFormatVersion(void) const
+inline QString ServiceInterfaceData::getFileFormatVersion() const
 {
     return ServiceInterfaceData::XML_FORMAT_DEFAULT;
 }
 
-inline const QString& ServiceInterfaceData::getFilePath(void) const
+inline const QString& ServiceInterfaceData::getFilePath() const
 {
     return mFilePath;
 }
 
-inline const SIOverviewData& ServiceInterfaceData::getOverviewData(void) const
+inline const SIOverviewData& ServiceInterfaceData::getOverviewData() const
 {
     return mOverviewData;
 }
 
-inline SIOverviewData& ServiceInterfaceData::getOverviewData(void)
+inline SIOverviewData& ServiceInterfaceData::getOverviewData()
 {
     return mOverviewData;
 }
 
-inline const SIDataTypeData& ServiceInterfaceData::getDataTypeData(void) const
+inline const SIDataTypeData& ServiceInterfaceData::getDataTypeData() const
 {
     return mDataTypeData;
 }
 
-inline SIDataTypeData& ServiceInterfaceData::getDataTypeData(void)
+inline SIDataTypeData& ServiceInterfaceData::getDataTypeData()
 {
     return mDataTypeData;
 }
 
-inline const SIAttributeData& ServiceInterfaceData::getAttributeData(void) const
+inline const SIAttributeData& ServiceInterfaceData::getAttributeData() const
 {
     return mAttributeData;
 }
 
-inline SIAttributeData& ServiceInterfaceData::getAttributeData(void)
+inline SIAttributeData& ServiceInterfaceData::getAttributeData()
 {
     return mAttributeData;
 }
 
-inline const SIMethodData& ServiceInterfaceData::getMethodData(void) const
+inline const SIMethodData& ServiceInterfaceData::getMethodData() const
 {
     return mMethodData;
 }
 
-inline SIMethodData& ServiceInterfaceData::getMethodData(void)
+inline SIMethodData& ServiceInterfaceData::getMethodData()
 {
     return mMethodData;
 }
 
-inline const SIConstantData& ServiceInterfaceData::getConstantData(void) const
+inline const SIConstantData& ServiceInterfaceData::getConstantData() const
 {
     return mConstantData;
 }
 
-inline SIConstantData& ServiceInterfaceData::getConstantData(void)
+inline SIConstantData& ServiceInterfaceData::getConstantData()
 {
     return mConstantData;
 }
 
-inline const SIIncludeData& ServiceInterfaceData::getIncludeData(void) const
+inline const SIIncludeData& ServiceInterfaceData::getIncludeData() const
 {
     return mIncludeData;
 }
 
-inline SIIncludeData& ServiceInterfaceData::getIncludeData(void)
+inline SIIncludeData& ServiceInterfaceData::getIncludeData()
 {
     return mIncludeData;
 }
 
-inline bool ServiceInterfaceData::openSucceeded(void) const
+inline bool ServiceInterfaceData::openSucceeded() const
 {
     return mOpenSuccess;
 }
 
-inline const VersionNumber& ServiceInterfaceData::getCurrentDocumentVersion(void) const
+inline const VersionNumber& ServiceInterfaceData::getCurrentDocumentVersion() const
 {
     return mXmlVersion;
 }

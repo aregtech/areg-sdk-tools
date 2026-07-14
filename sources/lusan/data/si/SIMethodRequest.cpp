@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/si/SIMethodRequest.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Method Request.
  *
@@ -51,7 +51,7 @@ SIMethodRequest::SIMethodRequest(SIMethodRequest&& src) noexcept
 {
 }
 
-SIMethodRequest::~SIMethodRequest(void)
+SIMethodRequest::~SIMethodRequest()
 {
 }
 
@@ -87,22 +87,22 @@ void SIMethodRequest::connectResponse(SIMethodResponse* respMethod)
     mResponse.setType(respMethod);
 }
 
-const QString& SIMethodRequest::getConectedResponseName(void) const
+const QString& SIMethodRequest::getConectedResponseName() const
 {
     return mResponse.getName();
 }
 
-const SIMethodResponse* SIMethodRequest::getConectedResponse(void) const
+const SIMethodResponse* SIMethodRequest::getConectedResponse() const
 {
     return mResponse.getType();
 }
 
-bool SIMethodRequest::hasValidResponse(void) const
+bool SIMethodRequest::hasValidResponse() const
 {
     return mResponse.isValid();
 }
 
-void SIMethodRequest::clearResponse(void)
+void SIMethodRequest::clearResponse()
 {
     mResponse.invalidate();
     mResponse.setName(QString());

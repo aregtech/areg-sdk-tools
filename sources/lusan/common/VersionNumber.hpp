@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/common/VersionNumber.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, VersionNumber class.
  *
@@ -36,7 +36,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    VersionNumber(void);
+    VersionNumber();
 
     /**
      * \brief   Constructor with initialization.
@@ -61,7 +61,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~VersionNumber(void) = default;
+    virtual ~VersionNumber() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -124,7 +124,7 @@ public:
      * \brief   Converts the version to a string in the format <major>.<minor>.<patch>.
      * \return  The string representation of the version.
      **/
-    QString toString(void) const;
+    QString toString() const;
 
     /**
      * \brief   Parses a string to extract the version numbers.
@@ -137,7 +137,7 @@ public:
      * \brief   Checks if the version is valid.
      * \return  True if the version is valid, false otherwise.
      **/
-    bool isValid(void) const;
+    bool isValid() const;
 
     /**
      * \brief   Checks if this version is compatible with another version.
@@ -149,7 +149,7 @@ public:
     /**
      * \brief   Returns the major number of the version.
      **/
-    inline uint32_t getMajor(void) const;
+    inline uint32_t getMajor() const;
 
     /**
      * \brief   Sets the major number of the version.
@@ -160,7 +160,7 @@ public:
     /**
      * \brief   Returns the minor number of the version.
      **/
-    inline uint32_t getMinor(void) const;
+    inline uint32_t getMinor() const;
 
     /**
      * \brief   Sets the minor number of the version.
@@ -171,7 +171,7 @@ public:
     /**
      * \brief   Returns the patch number of the version.
      **/
-    inline uint32_t getPatch(void) const;
+    inline uint32_t getPatch() const;
 
     /**
      * \brief   Sets the patch number of the version.
@@ -190,7 +190,7 @@ private:
 // VersionNumber class inline function implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline uint32_t VersionNumber::getMajor(void) const
+inline uint32_t VersionNumber::getMajor() const
 {
     return static_cast<uint32_t>(mVersion.majorVersion());
 }
@@ -200,7 +200,7 @@ inline void VersionNumber::setMajor(uint32_t major)
     mVersion = QVersionNumber(major, mVersion.minorVersion(), mVersion.microVersion());
 }
 
-inline uint32_t VersionNumber::getMinor(void) const
+inline uint32_t VersionNumber::getMinor() const
 {
     return static_cast<uint32_t>(mVersion.minorVersion());
 }
@@ -210,7 +210,7 @@ inline void VersionNumber::setMinor(uint32_t minor)
     mVersion = QVersionNumber(mVersion.majorVersion(), minor, mVersion.microVersion());
 }
 
-inline uint32_t VersionNumber::getPatch(void) const
+inline uint32_t VersionNumber::getPatch() const
 {
     return static_cast<uint32_t>(mVersion.microVersion());
 }

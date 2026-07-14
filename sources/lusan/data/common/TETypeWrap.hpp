@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_COMMON_TETYPEWRAP_HPP
 #define LUSAN_DATA_COMMON_TETYPEWRAP_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/TETypeWrap.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Template Data Container.
  *
@@ -35,8 +35,8 @@ template<typename TypeBase, typename Type = TypeBase>
 class TETypeFind
 {
 public:
-    TETypeFind(void) = default;
-    ~TETypeFind(void) = default;
+    TETypeFind() = default;
+    ~TETypeFind() = default;
 
 public:
     /**
@@ -83,7 +83,7 @@ public:
     /**
      * \brief   Default constructor.
      **/
-    inline TETypeWrap(void);
+    inline TETypeWrap();
 
     /**
      * \brief   Move constructor.
@@ -119,7 +119,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    ~TETypeWrap(void) = default;
+    ~TETypeWrap() = default;
 
     /**
      * \brief   Copy assignment operator.
@@ -202,19 +202,19 @@ public:
      * \brief   Conversion operator to QString.
      * \return  The name of the type.
      **/
-    inline operator const QString& (void) const;
+    inline operator const QString& () const;
 
     /**
      * \brief   Conversion operator to const Type*.
      * \return  The type object.
      **/
-    inline operator const Type* (void) const;
+    inline operator const Type* () const;
 
     /**
      * \brief   Conversion operator to Type*.
      * \return  The type object.
      **/
-    inline operator Type* (void);
+    inline operator Type* ();
 
 ////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -224,13 +224,13 @@ public:
      * \brief   Gets the type object.
      * \return  The type object.
      **/
-    inline const Type* getType(void) const;
+    inline const Type* getType() const;
 
     /**
      * \brief   Gets the type object.
      * \return  The type object.
      **/
-    inline Type* getType(void);
+    inline Type* getType();
 
     /**
      * \brief   Sets the type object.
@@ -261,19 +261,19 @@ public:
      * \brief   Gets the type name.
      * \return  The name of the type.
      **/
-    inline const QString& getName(void) const;
+    inline const QString& getName() const;
 
     /**
      * \brief   Checks if the type name is empty.
      * \return  True if empty, false otherwise.
      **/
-    inline bool isEmpty(void) const;
+    inline bool isEmpty() const;
 
     /**
      * \brief   Checks if the type object is valid.
      * \return  True if valid, false otherwise.
      **/
-    inline bool isValid(void) const;
+    inline bool isValid() const;
 
     /**
      * \brief   Invalidates the type object.
@@ -300,7 +300,7 @@ protected:
 ////////////////////////////////////////////////////////////////////////
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline TETypeWrap<Type, TypeSearch, Finder>::TETypeWrap(void)
+inline TETypeWrap<Type, TypeSearch, Finder>::TETypeWrap()
     : mTypeName ()
     , mTypeObj  (nullptr)
 {
@@ -442,31 +442,31 @@ bool TETypeWrap<Type, TypeSearch, Finder>::operator != (const QString& typeName)
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline TETypeWrap<Type, TypeSearch, Finder>::operator const QString& (void) const
+inline TETypeWrap<Type, TypeSearch, Finder>::operator const QString& () const
 {
     return mTypeName;
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline TETypeWrap<Type, TypeSearch, Finder>::operator const Type* (void) const
+inline TETypeWrap<Type, TypeSearch, Finder>::operator const Type* () const
 {
     return mTypeObj;
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline TETypeWrap<Type, TypeSearch, Finder>::operator Type* (void)
+inline TETypeWrap<Type, TypeSearch, Finder>::operator Type* ()
 {
     return mTypeObj;
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline const Type* TETypeWrap<Type, TypeSearch, Finder>::getType(void) const
+inline const Type* TETypeWrap<Type, TypeSearch, Finder>::getType() const
 {
     return mTypeObj;
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline Type* TETypeWrap<Type, TypeSearch, Finder>::getType(void)
+inline Type* TETypeWrap<Type, TypeSearch, Finder>::getType()
 {
     return mTypeObj;
 }
@@ -518,19 +518,19 @@ inline void TETypeWrap<Type, TypeSearch, Finder>::setName(const QString& typeNam
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline const QString& TETypeWrap<Type, TypeSearch, Finder>::getName(void) const
+inline const QString& TETypeWrap<Type, TypeSearch, Finder>::getName() const
 {
     return (mTypeObj != nullptr ? mTypeObj->getName() : mTypeName);
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline bool TETypeWrap<Type, TypeSearch, Finder>::isEmpty(void) const
+inline bool TETypeWrap<Type, TypeSearch, Finder>::isEmpty() const
 {
     return getName().isEmpty();
 }
 
 template<typename Type, typename TypeSearch /*= Type*/, class Finder /*= TETypeFind<TypeSearch>*/>
-inline bool TETypeWrap<Type, TypeSearch, Finder>::isValid(void) const
+inline bool TETypeWrap<Type, TypeSearch, Finder>::isValid() const
 {
     return (mTypeObj != nullptr);
 }

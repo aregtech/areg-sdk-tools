@@ -1,60 +1,105 @@
-﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIOverviewLinks.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface Overview section.
+ *  \brief       Lusan application, Service Interface overview quick links.
  *
  ************************************************************************/
 #include "lusan/view/si/SIOverviewLinks.hpp"
-#include "lusan/view/si/SICommon.hpp"
-#include "ui/ui_SIOverviewLinks.h"
+
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QPushButton>
+#include <QVBoxLayout>
+
+namespace
+{
+    QPushButton* makeLink(QWidget* parent, const QString& objectName, const QString& text, const QString& toolTip)
+    {
+        QPushButton* button = new QPushButton(text, parent);
+        button->setObjectName(objectName);
+        QFont font{ button->font() };
+        font.setBold(true);
+        font.setUnderline(true);
+        button->setFont(font);
+        button->setCursor(Qt::PointingHandCursor);
+        button->setMouseTracking(true);
+        button->setToolTip(toolTip);
+        button->setFlat(true);
+        return button;
+    }
+}
 
 SIOverviewLinks::SIOverviewLinks(QWidget* parent)
-    : QWidget(parent)
-    , ui(new Ui::SIOverviewLinks)
+    : QWidget       (parent)
+    , mDataTypes    (nullptr)
+    , mAttributes   (nullptr)
+    , mMethods      (nullptr)
+    , mConstants    (nullptr)
+    , mIncludes     (nullptr)
 {
-    QFont font{ this->font() };
-    font.setBold(false);
-    font.setItalic(false);
-    font.setPointSize(10);
-    this->setFont(font);
-    ui->setupUi(this);
-    setBaseSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
-    setMinimumSize(SICommon::WIDGET_WIDTH, SICommon::WIDGET_HEIGHT);
+    buildUi();
 }
 
-QPushButton* SIOverviewLinks::linkDataTypes(void) const
+void SIOverviewLinks::buildUi()
 {
-    return ui->linkDataTypes;
+    QVBoxLayout* root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    QGroupBox* group = new QGroupBox(tr("Quick Links:"), this);
+    QFormLayout* form = new QFormLayout(group);
+    form->setRowWrapPolicy(QFormLayout::DontWrapRows);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+
+    mDataTypes  = makeLink(group, QStringLiteral("linkDataTypes") , tr("Data Types ..."), tr("Click to open Interface Data Types page"));
+    mAttributes = makeLink(group, QStringLiteral("linkAttributes"), tr("Attributes ..."), tr("Click to open Interface Attributes page"));
+    mMethods    = makeLink(group, QStringLiteral("linkMethods")   , tr("Methods ...")   , tr("Click to open Interface Method page"));
+    mConstants  = makeLink(group, QStringLiteral("linkConstants") , tr("Constants ...") , tr("Click to open Interface available Constants"));
+    mIncludes   = makeLink(group, QStringLiteral("linkIncludes")  , tr("Includes ...")  , tr("Click to open Interface additional Includes"));
+
+    form->addRow(mDataTypes , new QLabel(tr("Open Service Interface Data Types Page ..."), group));
+    form->addRow(mAttributes, new QLabel(tr("Open Service Interface Data Attributes Page ..."), group));
+    form->addRow(mMethods   , new QLabel(tr("Open Service Interface Methods Page ..."), group));
+    form->addRow(mConstants , new QLabel(tr("Open Service Interface Constants Page ..."), group));
+    form->addRow(mIncludes  , new QLabel(tr("Open Service Interface Includes Page ..."), group));
+
+    root->addWidget(group);
+    root->addStretch(1);
 }
 
-QPushButton* SIOverviewLinks::linkAttributes(void) const
+QPushButton* SIOverviewLinks::linkDataTypes() const
 {
-    return ui->linkAttributes;
+    return mDataTypes;
 }
 
-QPushButton* SIOverviewLinks::linkMethods(void) const
+QPushButton* SIOverviewLinks::linkAttributes() const
 {
-    return ui->linkMethods;
+    return mAttributes;
 }
 
-QPushButton* SIOverviewLinks::linkConstants(void) const
+QPushButton* SIOverviewLinks::linkMethods() const
 {
-    return ui->linkConstants;
+    return mMethods;
 }
 
-QPushButton* SIOverviewLinks::linkIncludes(void) const
+QPushButton* SIOverviewLinks::linkConstants() const
 {
-    return ui->linkIncludes;
+    return mConstants;
+}
+
+QPushButton* SIOverviewLinks::linkIncludes() const
+{
+    return mIncludes;
 }

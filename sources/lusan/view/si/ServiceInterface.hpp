@@ -2,19 +2,19 @@
 #define LUSAN_APPLICATION_SI_SERVICEINTERFACE_HPP
 
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/ServiceInterface.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface main window.
  *
@@ -61,7 +61,7 @@ public:
     /**
      * \brief   Returns the file extension of the service interface document.
      **/
-    static const QString& fileExtension(void);
+    static const QString& fileExtension();
     
     /**
      * \brief   The list of pages in the service interface
@@ -88,7 +88,7 @@ public:
      **/
     ServiceInterface(MdiMainWindow *wndMain, const QString & filePath = QString(), QWidget *parent = nullptr);
 
-    virtual ~ServiceInterface(void);
+    virtual ~ServiceInterface();
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -134,41 +134,41 @@ public:
     /**
      * \brief   Returns the file open operation success flag.
      **/
-    virtual bool openSucceeded(void) const override;
+    bool openSucceeded() const override;
     
 protected:
     
     /**
      * \brief   Returns the default file name of new created document.
      **/
-    virtual QString newDocumentName(void) override;
+    QString newDocumentName() override;
 
     /**
      * \brief   Returns the default name of new created document.
      **/
-    virtual const QString& newDocument(void) const override;
+    const QString& newDocument() const override;
 
     /**
      * \brief   Returns the default extension of new created document.
      **/
-    virtual const QString& newDocumentExt(void) const override;
+    const QString& newDocumentExt() const override;
 
     /**
      * \brief   Returns the default file suffix.
      **/
-    virtual const QString& fileSuffix(void) const override;
+    const QString& fileSuffix() const override;
 
     /**
      * \brief   Returns the default file filter.
      **/
-    virtual const QString& fileFilter(void) const override;
+    const QString& fileFilter() const override;
 
     /**
      * \brief   Reads the document from the file.
      * \param   filePath    The path of the file to read.
      * \return  True if the document was successfully read, false otherwise.
      **/
-    virtual bool writeToFile(const QString& filePath) override;
+    bool writeToFile(const QString& filePath) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
@@ -181,7 +181,7 @@ private:
     //!< Returns the tab title of the page at given index.
     QString tabTitle(int index) const;
     //!< Initializes next queued page and re-schedules itself while queue is not empty.
-    void processQueuedTabInitialization(void);
+    void processQueuedTabInitialization();
     //!< Creates the page at given index if it does not exist yet.
     void ensureTabInitialized(int index);
     //!< Places the created page into the tab holder widget at given index.

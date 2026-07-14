@@ -1,19 +1,19 @@
 #ifndef LUSAN_VIEW_COMMON_OUTPUTDOCK_HPP
 #define LUSAN_VIEW_COMMON_OUTPUTDOCK_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/OutputDock.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Output docking window.
  *
@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include <QDockWidget>
+#include <QWidget>
 #include "areg/base/areg_global.h"
 
 #include "lusan/view/log/ScopeOutputViewer.hpp"
@@ -35,9 +35,11 @@
 class MdiMainWindow;
 
 /**
- * \brief   The OutputDock class is a dockable widget that contains windows for analyzes
+ * \brief   The OutputDock class is the output-window content (a tab widget of analysis views).
+ *          It is a plain content widget hosted inside a Qt-Advanced-Docking-System dock widget
+ *          (issue #516); the ADS dock provides the title bar, floating, and drag/tab behavior.
  **/
-class OutputDock : public QDockWidget
+class OutputDock : public QWidget
 {
     Q_OBJECT
 
@@ -70,7 +72,7 @@ public:
 
     OutputDock(MdiMainWindow* parent);
     
-    virtual ~OutputDock(void);
+    virtual ~OutputDock();
 
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes
@@ -79,12 +81,12 @@ public:
     /**
      * \brief   Returns the tab widget of the navigation.
      **/
-    inline QTabWidget& getTabWidget(void);
+    inline QTabWidget& getTabWidget();
 
     /**
      * \brief   Returns the scope output viewer.
      **/
-    inline ScopeOutputViewer& getScopeLogsView(void);
+    inline ScopeOutputViewer& getScopeLogsView();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -92,7 +94,7 @@ public:
 private:
 
     //!< Initializes the size of the output dock.
-    void initSize(void);
+    void initSize();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -113,12 +115,12 @@ private:
 // OutputDock class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QTabWidget& OutputDock::getTabWidget(void)
+inline QTabWidget& OutputDock::getTabWidget()
 {
     return mTabs;
 }
 
-inline ScopeOutputViewer& OutputDock::getScopeLogsView(void)
+inline ScopeOutputViewer& OutputDock::getScopeLogsView()
 {
     return mScopeOutput;
 }

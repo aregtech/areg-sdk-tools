@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeBase.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Data Type Base.
  *
@@ -81,7 +81,7 @@ bool DataTypeBase::operator != (const DataTypeBase& other) const
     return  (mCategory != other.mCategory) || (mName != other.mName);
 }
 
-const QString& DataTypeBase::getName(void) const
+const QString& DataTypeBase::getName() const
 {
     return mName;
 }
@@ -91,82 +91,82 @@ void DataTypeBase::setName(const QString& name)
     mName = name;
 }
 
-DataTypeBase::eCategory DataTypeBase::getCategory(void) const
+DataTypeBase::eCategory DataTypeBase::getCategory() const
 {
     return mCategory;
 }
 
-bool DataTypeBase::isValid(void) const
+bool DataTypeBase::isValid() const
 {
     return !mName.isEmpty() && (mCategory != eCategory::Undefined);
 }
 
-bool DataTypeBase::isPrimitive(void) const
+bool DataTypeBase::isPrimitive() const
 {
     return ((static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::Primitive)) != 0);
 }
 
-bool DataTypeBase::isCustomDefined(void) const
+bool DataTypeBase::isCustomDefined() const
 {
     return ((static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::CustomDefined)) != 0);
 }
 
-bool DataTypeBase::isPredefined(void) const
+bool DataTypeBase::isPredefined() const
 {
     return ((static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::Primitive)) != 0) || (mCategory == eCategory::BasicObject);
 }
 
-bool DataTypeBase::isPrimitiveBool(void) const
+bool DataTypeBase::isPrimitiveBool() const
 {
     return (mCategory == eCategory::Primitive);
 }
 
-bool DataTypeBase::isPrimitiveInt(void) const
+bool DataTypeBase::isPrimitiveInt() const
 {
     return (static_cast<uint16_t>(mCategory) & static_cast<uint16_t>(eCategory::PrimitiveSint)) != 0;
 }
 
-bool DataTypeBase::isPrimitiveSint(void) const
+bool DataTypeBase::isPrimitiveSint() const
 {
     return (mCategory == eCategory::PrimitiveSint);
 }
 
-bool DataTypeBase::isPrimitiveUint(void) const
+bool DataTypeBase::isPrimitiveUint() const
 {
     return (mCategory == eCategory::PrimitiveUint);
 }
 
-bool DataTypeBase::isPrimitiveFloat(void) const
+bool DataTypeBase::isPrimitiveFloat() const
 {
     return (mCategory == eCategory::PrimitiveFloat);
 }
 
-bool DataTypeBase::isBasicObject(void) const
+bool DataTypeBase::isBasicObject() const
 {
     return (mCategory == eCategory::BasicObject);
 }
 
-bool DataTypeBase::isBasicContainer(void) const
+bool DataTypeBase::isBasicContainer() const
 {
     return (mCategory == eCategory::BasicContainer);
 }
 
-bool DataTypeBase::isEnumeration(void) const
+bool DataTypeBase::isEnumeration() const
 {
     return (mCategory == eCategory::Enumeration);
 }
 
-bool DataTypeBase::isStructure(void) const
+bool DataTypeBase::isStructure() const
 {
     return (mCategory == eCategory::Structure);
 }
 
-bool DataTypeBase::isImported(void) const
+bool DataTypeBase::isImported() const
 {
     return (mCategory == eCategory::Imported);
 }
 
-bool DataTypeBase::isContainer(void) const
+bool DataTypeBase::isContainer() const
 {
     return (mCategory == eCategory::Container);
 }

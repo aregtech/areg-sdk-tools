@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/NaviFileSystem.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       The view of the workspace related file system.
  *
@@ -51,57 +51,57 @@ NaviFileSystem::NaviFileSystem(MdiMainWindow* wndMain, QWidget* parent /*= nullp
     setupSignals();
 }
 
-QTreeView* NaviFileSystem::ctrlTable(void) const
+QTreeView* NaviFileSystem::ctrlTable() const
 {
     return ui->treeView;
 }
 
-QToolButton* NaviFileSystem::ctrlToolRefresh(void) const
+QToolButton* NaviFileSystem::ctrlToolRefresh() const
 {
     return ui->toolRefresh;
 }
 
-QToolButton* NaviFileSystem::ctrlToolShowAll(void) const
+QToolButton* NaviFileSystem::ctrlToolShowAll() const
 {
     return ui->toolShowAll;
 }
 
-QToolButton* NaviFileSystem::ctrlToolNaviRoot(void) const
+QToolButton* NaviFileSystem::ctrlToolNaviRoot() const
 {
     return ui->toolNaviRoot;
 }
 
-QToolButton* NaviFileSystem::ctrlToolCollapse(void) const
+QToolButton* NaviFileSystem::ctrlToolCollapse() const
 {
     return ui->toolCollapseAll;
 }
 
-QToolButton* NaviFileSystem::ctrlToolNewFolder(void) const
+QToolButton* NaviFileSystem::ctrlToolNewFolder() const
 {
     return ui->toolNewFolder;
 }
 
-QToolButton* NaviFileSystem::ctrlToolNewFile(void) const
+QToolButton* NaviFileSystem::ctrlToolNewFile() const
 {
     return ui->toolNewFile;
 }
 
-QToolButton* NaviFileSystem::ctrlToolOpen(void) const
+QToolButton* NaviFileSystem::ctrlToolOpen() const
 {
     return ui->toolOpenSelected;
 }
 
-QToolButton* NaviFileSystem::ctrlToolEdit(void) const
+QToolButton* NaviFileSystem::ctrlToolEdit() const
 {
     return ui->toolEditSelected;
 }
 
-QToolButton* NaviFileSystem::ctrlToolDelete(void) const
+QToolButton* NaviFileSystem::ctrlToolDelete() const
 {
     return ui->toolDeleteSelected;
 }
 
-int NaviFileSystem::getColumnCount(void) const
+int NaviFileSystem::getColumnCount() const
 {
     return 1;
 }
@@ -111,7 +111,7 @@ QString NaviFileSystem::getCellText(const QModelIndex& cell) const
     return (mNaviModel != nullptr ? mNaviModel->getFileInfo(cell).fileName() : QString());
 }
 
-void NaviFileSystem::optionApplied(void)
+void NaviFileSystem::optionApplied()
 {
     NavigationWindow::optionApplied();
 }
@@ -190,8 +190,8 @@ void NaviFileSystem::onToolNewFolderClicked(bool checked)
 
 void NaviFileSystem::onToolNewFileClicked(bool checked)
 {
-    static QString _defName("NewService");
-    static QString _defExt(".siml");
+    static QString _defName("NewStateMachine");
+    static QString _defExt(".fsml");
 
     if (mNaviModel == nullptr)
         return;
@@ -368,7 +368,7 @@ void NaviFileSystem::onEditorDataChanged(const QModelIndex& index, const QString
     }
 }
 
-void NaviFileSystem::updateData(void)
+void NaviFileSystem::updateData()
 {
     mRootPaths = setupRootPaths(LusanApplication::getOptions().getActiveWorkspace());
     QStringList filters{ LusanApplication::InternalExts };
@@ -376,7 +376,7 @@ void NaviFileSystem::updateData(void)
     mNaviModel->setFileFilter(filters);
 }
 
-void NaviFileSystem::setupWidgets(void)
+void NaviFileSystem::setupWidgets()
 {
     QModelIndex idxRoot = mNaviModel->setRootPaths(mRootPaths);
     mTableCell = new TableCell(ctrlTable(), this, true);
@@ -396,7 +396,7 @@ void NaviFileSystem::setupWidgets(void)
     ctrlToolEdit()->setEnabled(false);
 }
 
-void NaviFileSystem::setupSignals(void)
+void NaviFileSystem::setupSignals()
 {
     connect(ctrlToolRefresh()       , &QToolButton::clicked,      this, &NaviFileSystem::onToolRefreshClicked);
     connect(ctrlToolShowAll()       , &QToolButton::toggled,      this, &NaviFileSystem::onToolShowAllToggled);

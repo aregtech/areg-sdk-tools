@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_LOG_LOGOBSERVEREVENT_HPP
 #define LUSAN_DATA_LOG_LOGOBSERVEREVENT_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/log/LogObserverEvent.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log observer event.
  *
@@ -52,21 +52,21 @@ public:
     };
 
 public:
-    inline LogObserverEventData(void);
+    inline LogObserverEventData();
     inline LogObserverEventData(LogObserverCommand event);
     inline LogObserverEventData(LogObserverCommand event, const areg::SharedBuffer& data);
     inline LogObserverEventData(const LogObserverEventData& src);
     inline LogObserverEventData(LogObserverEventData && src);
 
-    inline LogObserverEventData::LogObserverCommand getEvent(void) const;
+    inline LogObserverEventData::LogObserverCommand getEvent() const;
 
-    inline areg::SharedBuffer& getBuffer(void);
+    inline areg::SharedBuffer& getBuffer();
 
-    inline const areg::SharedBuffer& getBuffer(void) const;
+    inline const areg::SharedBuffer& getBuffer() const;
 
-    inline operator const areg::InStream& (void) const;
+    inline operator const areg::InStream& () const;
 
-    inline operator areg::OutStream& (void);
+    inline operator areg::OutStream& ();
 
 private:
     LogObserverCommand  mEvent;     //!< The event type
@@ -82,7 +82,7 @@ AREG_DECLARE_EVENT(LogObserverEventData, LogObserverEvent, LogObserverEventConsu
 //////////////////////////////////////////////////////////////////////////
 // LogObserverEventData inline methods.
 //////////////////////////////////////////////////////////////////////////
-LogObserverEventData::LogObserverEventData(void)
+LogObserverEventData::LogObserverEventData()
     : mEvent(LogObserverEventData::LogObserverCommand::CMD_Unknown)
     , mBuffer()
 {
@@ -113,27 +113,27 @@ inline LogObserverEventData::LogObserverEventData(LogObserverEventData&& src)
     src.mEvent = LogObserverCommand::CMD_Unknown;
 }
 
-inline LogObserverEventData::LogObserverCommand LogObserverEventData::getEvent(void) const
+inline LogObserverEventData::LogObserverCommand LogObserverEventData::getEvent() const
 {
     return mEvent;
 }
 
-inline areg::SharedBuffer& LogObserverEventData::getBuffer(void)
+inline areg::SharedBuffer& LogObserverEventData::getBuffer()
 {
     return mBuffer;
 }
 
-inline const areg::SharedBuffer& LogObserverEventData::getBuffer(void) const
+inline const areg::SharedBuffer& LogObserverEventData::getBuffer() const
 {
     return mBuffer;
 }
 
-inline LogObserverEventData::operator const areg::InStream& (void) const
+inline LogObserverEventData::operator const areg::InStream& () const
 {
     return static_cast<const areg::InStream&>(mBuffer);
 }
 
-inline LogObserverEventData::operator areg::OutStream& (void)
+inline LogObserverEventData::operator areg::OutStream& ()
 {
     return static_cast<areg::OutStream&>(mBuffer);
 }

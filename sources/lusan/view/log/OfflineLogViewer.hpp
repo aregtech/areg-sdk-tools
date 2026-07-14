@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_LOG_OFFLINELOGVIEWER_HPP
 #define LUSAN_VIEW_LOG_OFFLINELOGVIEWER_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/OfflineLogViewer.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, offline log viewer widget.
  *
@@ -61,7 +61,7 @@ public:
      **/
     explicit OfflineLogViewer(MdiMainWindow* wndMain, LiveLogViewer & liveLogs, QWidget* parent = nullptr);
 
-    virtual ~OfflineLogViewer(void);
+    virtual ~OfflineLogViewer();
 
 /************************************************************************
  * MdiChild overrides
@@ -72,13 +72,13 @@ protected:
      * \brief   Called when the MDI child window is closed.
      * \param   isActive    Indicates whether the window is active or not.
      **/
-    virtual void onWindowClosing(bool isActive) override;
+    void onWindowClosing(bool isActive) override;
 
     /**
      * \brief   Called when the MDI child window is activated.
      *          This method can be overridden to handle window activation events.
      **/
-    virtual void onWindowActivated(void) override;
+    void onWindowActivated() override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots.
@@ -97,7 +97,7 @@ private slots:
     
 private:
     //!< Returns Logging File name label widget.
-    QLabel* ctrlFile(void);
+    QLabel* ctrlFile();
     
     /**
      * \brief   Sets up or clears the offline log viewer signals.
@@ -109,7 +109,7 @@ private:
      * \brief   Cleans up resources used by the offline log viewer.
      *          This method is called when the viewer is closed or no longer needed.
      **/
-    void cleanResources(void);
+    void cleanResources();
     
 //////////////////////////////////////////////////////////////////////////
 // Member variables

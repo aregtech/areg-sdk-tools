@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_COMMON_DATATYPECUSTOM_HPP
 #define LUSAN_DATA_COMMON_DATATYPECUSTOM_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeCustom.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Custom Data Type.
  *
@@ -92,7 +92,7 @@ protected:
     
 public:
     
-    virtual ~DataTypeCustom(void);
+    virtual ~DataTypeCustom();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -120,7 +120,7 @@ public:
      * \brief   Checks if the parameter is valid.
      * \return  True if the parameter is valid, false otherwise.
      **/
-    virtual bool isValid() const override;
+    bool isValid() const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -130,7 +130,7 @@ public:
     /**
      * \brief   Returns description string of the custom data type.
      **/
-    const QString& getDescription(void) const;
+    const QString& getDescription() const;
 
     /**
      * \brief   Sets the description of the data type.
@@ -138,11 +138,11 @@ public:
      **/
     void setDescription(const QString& description);
 
-    bool getIsDeprecated(void) const;
+    bool getIsDeprecated() const;
 
     void setIsDeprecated(bool isDeprecated);
 
-    const QString& getDeprecateHint(void) const;
+    const QString& getDeprecateHint() const;
 
     void setDeprecateHint(const QString& hint);
 
@@ -151,7 +151,7 @@ public:
     /**
      * \brief   Returns the name of the custom data type.
      **/
-    QString getType(void) const;
+    QString getType() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

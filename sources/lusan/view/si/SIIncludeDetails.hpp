@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APPLICATION_SI_SIINCLUDEDETAILS_HPP
 #define LUSAN_APPLICATION_SI_SIINCLUDEDETAILS_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIIncludeDetails.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
@@ -23,10 +23,6 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIIncludeDetails;
-}
-    
 class QPushButton;
 class QCheckBox;
 class QLineEdit;
@@ -53,7 +49,7 @@ public:
      **/
     explicit SIIncludeDetails(QWidget* parent = nullptr);
 
-    virtual ~SIIncludeDetails(void);
+    virtual ~SIIncludeDetails();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes
@@ -63,53 +59,60 @@ public:
     /**
      * \brief   Returns the selected file.
      **/
-    QString getSelectedFile(void) const;
+    QString getSelectedFile() const;
 
     /**
      * \brief   Returns the description of the selected file.
      **/
-    QString getDescription(void) const;
+    QString getDescription() const;
 
     /**
      * \brief   Returns true if the selected file is deprecated.
      **/
-    bool isDeprecated(void) const;
+    bool isDeprecated() const;
 
     /**
      * \brief   Returns the hint of the deprecated file.
      **/
-    QString getDeprecateHint(void) const;
+    QString getDeprecateHint() const;
 
     /**
      * \brief   Returns the control of the include file path.
      **/
-    QLineEdit * ctrlInclude(void);
+    QLineEdit * ctrlInclude();
 
     /**
      * \brief   Returns the control of the deprecation hint.
      **/
-    QLineEdit * ctrlDeprecateHint(void);
+    QLineEdit * ctrlDeprecateHint();
 
     /**
      * \brief   Returns the control of the deprecation flag.
      **/
-    QCheckBox * ctrlDeprecated(void);
+    QCheckBox * ctrlDeprecated();
 
     /**
      * \brief   Returns the control of the description.
      **/
-    QPlainTextEdit * ctrlDescription(void);
+    QPlainTextEdit * ctrlDescription();
 
     /**
      * \brief   Returns the control of the browse button.
      **/
-    QPushButton * ctrlBrowseButton(void);
-    
+    QPushButton * ctrlBrowseButton();
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    Ui::SIIncludeDetails*   ui; //!< The user interface object.
+    void buildUi();
+
+private:
+    QLineEdit*      mInclude;       //!< The include file path editor.
+    QPushButton*    mBrowse;        //!< The browse button.
+    QPlainTextEdit* mDescription;   //!< The description editor.
+    QCheckBox*      mDeprecated;    //!< The deprecated flag.
+    QLineEdit*      mDeprecateHint; //!< The deprecation hint editor.
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls

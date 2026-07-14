@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/OptionsManager.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Dialog to select folder.
  *
@@ -61,7 +61,7 @@ namespace
     }
 }
 
-OptionsManager::OptionsManager(void)
+OptionsManager::OptionsManager()
     : mActiveKey    ( 0 )
     , mDefWorkspace ( 0 )
     , mWorkspaces   ( )
@@ -183,7 +183,7 @@ WorkspaceEntry OptionsManager::activateWorkspace(const QString& root, const QStr
     return result;
 }
 
-WorkspaceEntry OptionsManager::getActiveWorkspace(void) const
+WorkspaceEntry OptionsManager::getActiveWorkspace() const
 {
     WorkspaceEntry result;
     if (mActiveKey == 0)
@@ -216,7 +216,7 @@ bool OptionsManager::existsWorkspace(const QString& root) const
     return result;
 }
 
-bool OptionsManager::readOptions(void)
+bool OptionsManager::readOptions()
 {
     QString fileOptions{ NELusanCommon::getOptionsFile() };
     QFile file(fileOptions);
@@ -250,7 +250,7 @@ bool OptionsManager::readOptions(void)
     return result;
 }
 
-void OptionsManager::writeOptions(void)
+void OptionsManager::writeOptions()
 {
     QString fileOptions{ NELusanCommon::getOptionsFile() };
     QFile file(fileOptions);
@@ -292,7 +292,7 @@ void OptionsManager::writeOptions(void)
     file.close();
 }
 
-bool OptionsManager::hasDefaultWorkspace(void) const
+bool OptionsManager::hasDefaultWorkspace() const
 {
     return ((mDefWorkspace != 0) && _existWorkspaceId(mDefWorkspace));
 }
@@ -307,22 +307,22 @@ bool OptionsManager::isDefaultWorkspace(const QString& workspaceRoot) const
     return (workspaceRoot.isEmpty() == false) && (workspaceRoot == getDefaultWorkspaceRoot());
 }
 
-uint64_t OptionsManager::getDefaultWorkspaceId(void) const
+uint64_t OptionsManager::getDefaultWorkspaceId() const
 {
     return getDefaultWorkspace().getId();
 }
 
-const QString& OptionsManager::getDefaultWorkspaceRoot(void) const
+const QString& OptionsManager::getDefaultWorkspaceRoot() const
 {
     return getDefaultWorkspace().getWorkspaceRoot();
 }
 
-const WorkspaceEntry& OptionsManager::getDefaultWorkspace(void) const
+const WorkspaceEntry& OptionsManager::getDefaultWorkspace() const
 {
     return (mDefWorkspace != 0 ? _findWorkspace(mDefWorkspace) : WorkspaceEntry::InvalidWorkspace);
 }
 
-uint64_t OptionsManager::activateDefaultWorkspace(void)
+uint64_t OptionsManager::activateDefaultWorkspace()
 {
     uint32_t id     = mDefWorkspace;
     mActiveKey      = 0u;

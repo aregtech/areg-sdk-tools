@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_MODEL_COMMON_REPLYMETHODMODEL_HPP
 #define LUSAN_MODEL_COMMON_REPLYMETHODMODEL_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/common/ReplyMethodModel.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Reply Method Model.
  *
@@ -53,7 +53,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~ReplyMethodModel(void) = default;
+    virtual ~ReplyMethodModel() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -128,7 +128,7 @@ public:
      * \brief   Updates the list of SIMethodResponse objects.
      *          The data is taken from the SIMethodData object.
      **/
-    void updateList(void);
+    void updateList();
 
     /**
      * \brief   Finds the SIMethodResponse object by name.
@@ -155,7 +155,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    ReplyMethodModel(void) = delete;
+    ReplyMethodModel() = delete;
     ReplyMethodModel(const ReplyMethodModel& /*src*/) = delete;
 };
 

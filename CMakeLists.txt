@@ -9,7 +9,7 @@ set(APP_NAME lusan)
 
 project("${PROJECT_NAME}" 
         VERSION "${PROJECT_VERSION}" 
-        DESCRIPTION "The user interface tools for AREG communication framework" 
+        DESCRIPTION "The user interface tools for Areg communication framework" 
         HOMEPAGE_URL "https://areg.tech" 
         LANGUAGES CXX
 )
@@ -47,7 +47,7 @@ list(APPEND PROJECT_SOURCES "${LUSAN_TRANS}" "${LUSAN_RES}" "${LUSAN_UI}" "${LUS
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
 qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
 target_compile_definitions(${APP_NAME} PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
-target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets areg::areg areg::aregextend areg::areglogger aregsqlite3)
+target_link_libraries(${APP_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets areg::areg areg::aregextend areg::areglogger aregsqlite3 ${LUSAN_ADS_TARGET})
 
 # copying log and router init files to 'bin/config'
 add_custom_command( TARGET ${APP_NAME} POST_BUILD 
@@ -102,4 +102,10 @@ endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(${APP_NAME})
+endif()
+
+# Opt-in unit tests (additive; the default application build is unaffected).
+option(LUSAN_BUILD_TESTS "Build Lusan unit tests" OFF)
+if(LUSAN_BUILD_TESTS)
+    include("${LUSAN_ROOT}/tests/CMakeLists.txt")
 endif()

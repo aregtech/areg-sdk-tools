@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APPLICATION_SI_SIOVERVIEWLINKS_HPP
 #define LUSAN_APPLICATION_SI_SIOVERVIEWLINKS_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIOverviewLinks.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
@@ -21,9 +21,6 @@
 #include <QWidget>
 
 class QPushButton;
-namespace Ui {
-    class SIOverviewLinks;
-}
 
 class SIOverviewLinks : public QWidget
 {
@@ -35,30 +32,37 @@ public:
     /**
      * \brief   Link to the data types tabbed page.
      **/
-    QPushButton* linkDataTypes(void) const;
+    QPushButton* linkDataTypes() const;
 
     /**
      * \brief   Link to the attributes tabbed page.
      **/
-    QPushButton* linkAttributes(void) const;
+    QPushButton* linkAttributes() const;
 
     /**
      * \brief   Link to the methods tabbed page.
      **/
-    QPushButton* linkMethods(void) const;
+    QPushButton* linkMethods() const;
 
     /**
      * \brief   Link to the constants tabbed page.
      **/
-    QPushButton* linkConstants(void) const;
+    QPushButton* linkConstants() const;
 
     /**
      * \brief   Link to the includes tabbed page.
      **/
-    QPushButton* linkIncludes(void) const;
+    QPushButton* linkIncludes() const;
 
 private:
-    Ui::SIOverviewLinks* ui;
+    void buildUi();
+
+private:
+    QPushButton* mDataTypes;
+    QPushButton* mAttributes;
+    QPushButton* mMethods;
+    QPushButton* mConstants;
+    QPushButton* mIncludes;
 };
 
 #endif // LUSAN_APPLICATION_SI_SIOVERVIEWLINKS_HPP

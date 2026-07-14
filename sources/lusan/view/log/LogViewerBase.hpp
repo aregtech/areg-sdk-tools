@@ -1,19 +1,19 @@
 #ifndef LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP
 #define LUSAN_VIEW_LOG_LOGVIEWERBASE_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/LogViewerBase.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, log viewer base widget.
  *
@@ -54,7 +54,7 @@ public:
     /**
      * \brief   Returns the file extension of the offline log files.
      **/
-    static const QString& fileExtension(void);
+    static const QString& fileExtension();
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor
@@ -70,7 +70,7 @@ protected:
      **/
     explicit LogViewerBase(MdiChild::eMdiWindow windowType, LoggingModelBase* logModel, MdiMainWindow *wndMain, QWidget *parent = nullptr);
 
-    virtual ~LogViewerBase(void);
+    virtual ~LogViewerBase();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -80,17 +80,17 @@ public:
     /**
      * \brief   Returns the logging model used by the log viewer.
      **/
-    inline LoggingModelBase* getLoggingModel(void) const;
+    inline LoggingModelBase* getLoggingModel() const;
 
     /**
      * \brief   Returns the logging table object.
      **/
-    inline QTableView* getLoggingTable(void) const;
+    inline QTableView* getLoggingTable() const;
 
     /**
      * \brief   Returns true if the offline log database is successfully opened.
      **/
-    bool isDatabaseOpen(void) const;
+    bool isDatabaseOpen() const;
 
     /**
      * \brief   Opens the offline log database file.
@@ -133,32 +133,32 @@ protected:
       * \brief   Override keyPressEvent to handle search shortcuts.
       * \param   event   The key press event.
       **/
-    virtual void keyPressEvent(QKeyEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     
     /**
      * \brief   Sets up the widgets of the log viewer.
      *          This method initializes the user interface components.
      **/
-    virtual void setupWidgets(void);
+    virtual void setupWidgets();
     
     /**
      * \brief   Called when the MDI child window is closing.
      *          This method can be overridden to handle window closing events.
      * \param   isActive    Indicates whether the window is active or not.
      **/
-    virtual void onWindowClosing(bool isActive) override;
+    void onWindowClosing(bool isActive) override;
 
     /**
      * \brief   Returns the default file filter.
      **/
-    virtual const QString& fileFilter(void) const override;
+    const QString& fileFilter() const override;
 
     /**
      * \brief   Reads the document from the file.
      * \param   filePath    The path of the file to read.
      * \return  True if the document was successfully read, false otherwise.
      **/
-    virtual bool writeToFile(const QString& filePath) override;
+    bool writeToFile(const QString& filePath) override;
 
     /**
      * \brief   Saves the file with the specified name.
@@ -210,12 +210,12 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 protected:
     //!< Resets the order of the columns in the log viewer.
-    void resetColumnOrder(void);
+    void resetColumnOrder();
 
     /**
      * \brief   Resets filters.
      **/
-    void resetFilters(void);
+    void resetFilters();
 
 //////////////////////////////////////////////////////////////////////////
 // attributes
@@ -223,28 +223,28 @@ protected:
 protected:
     
     //!< Returns the pointer to the log table object.
-    QTableView* ctrlTable(void);
+    QTableView* ctrlTable();
 
     //!< Returns the pointer to the header object.
-    LogTableHeader* ctrlHeader(void);
+    LogTableHeader* ctrlHeader();
 
     //!< Returns the pointer to the search line edit control.
-    SearchLineEdit* ctrlSearchText(void);
+    SearchLineEdit* ctrlSearchText();
 
     //!< Returns the pointer to the search next button of the search line edit control.
-    QToolButton* ctrlButtonSearch(void);
+    QToolButton* ctrlButtonSearch();
 
     //!< Returns the pointer to the search case sensitive button of the search line edit control.
-    QToolButton* ctrlButtonCaseSensitive(void);
+    QToolButton* ctrlButtonCaseSensitive();
 
     //!< Returns the pointer to the search match word button of the search line edit control.
-    QToolButton* ctrlButtonWholeWords(void);
+    QToolButton* ctrlButtonWholeWords();
 
     //!< Returns the pointer to the search wild card button of the search line edit control.
-    QToolButton* ctrlSearchWildcard(void);
+    QToolButton* ctrlSearchWildcard();
 
     //!< Returns the pointer to the search backward button of the search line edit control.
-    QToolButton* ctrlSearchBackward(void);
+    QToolButton* ctrlSearchBackward();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -252,7 +252,7 @@ protected:
 private:
 
     //!< Clears the resources used by the log viewer.
-    inline void _clearResources(void);
+    inline void _clearResources();
 
     /**
      * \brief   Populates menu and sets the action handlers.
@@ -262,12 +262,12 @@ private:
     /**
      * \brief   Updates the current logical index of the "Message" column.
      **/
-    void _updateHighlightColumn(void);
+    void _updateHighlightColumn();
 
     /**
      * \brief   Resets the search result in the log viewer.
      **/
-    inline void _resetSearchResult(void);
+    inline void _resetSearchResult();
 
     /**
      * \brief   Selects the source log entry based on the source index.
@@ -309,12 +309,12 @@ private:
 // LogViewerBase inline methods implementation
 //////////////////////////////////////////////////////////////////////////
 
-inline LoggingModelBase* LogViewerBase::getLoggingModel(void) const
+inline LoggingModelBase* LogViewerBase::getLoggingModel() const
 {
     return mLogModel;
 }
 
-inline QTableView* LogViewerBase::getLoggingTable(void) const
+inline QTableView* LogViewerBase::getLoggingTable() const
 {
     return mLogTable;
 }

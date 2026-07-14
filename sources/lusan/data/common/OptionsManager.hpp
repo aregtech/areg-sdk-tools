@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_MODEL_COMMON_OPTIONSMANAGER_HPP
 #define LUSAN_MODEL_COMMON_OPTIONSMANAGER_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/OptionsManager.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Dialog to select folder.
  *
@@ -50,7 +50,7 @@ public:
     /**
      * \brief   Constructor.
      **/
-    OptionsManager(void);
+    OptionsManager();
 
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -69,13 +69,13 @@ public:
      * \brief   Gets the active workspace key.
      * \return  The active workspace key.
      **/
-    inline uint64_t getActiveKey(void) const;
+    inline uint64_t getActiveKey() const;
 
     /**
      * \brief   Gets the list of workspace entries.
      * \return  The list of workspace entries.
      **/
-    inline const std::vector<WorkspaceEntry>& getWorkspaceList(void) const;
+    inline const std::vector<WorkspaceEntry>& getWorkspaceList() const;
 
     /**
      * \brief   Adds a new workspace entry.
@@ -125,7 +125,7 @@ public:
      * \brief   Gets the active workspace entry.
      * \return  The active workspace entry.
      **/
-    WorkspaceEntry getActiveWorkspace(void) const;
+    WorkspaceEntry getActiveWorkspace() const;
 
     /**
      * \brief   Checks if a workspace exists by root directory.
@@ -138,17 +138,17 @@ public:
      * \brief   Reads options from the options file.
      * \return  True if the options were successfully read, false otherwise.
      **/
-    bool readOptions(void);
+    bool readOptions();
 
     /**
      * \brief   Writes options to the options file.
      **/
-    void writeOptions(void);
+    void writeOptions();
 
     /**
      * \brief   Returns true if there is a default workspace set.
      **/
-    bool hasDefaultWorkspace(void) const;
+    bool hasDefaultWorkspace() const;
 
     /**
      * \brief   Checks if the workspace ID is the default workspace.
@@ -167,23 +167,23 @@ public:
     /**
      * \brief   Returns the default workspace ID. Returns 0 if no default workspace is set.
      **/
-    uint64_t getDefaultWorkspaceId(void) const;
+    uint64_t getDefaultWorkspaceId() const;
 
     /**
      * \brief   Returns the default workspace root directory. Returns an empty string if no default workspace is set.
      **/
-    const QString& getDefaultWorkspaceRoot(void) const;
+    const QString& getDefaultWorkspaceRoot() const;
 
     /**
      * \brief   Returns the default workspace entry. Returns an invalid workspace entry if no default workspace is set.
      **/
-    const WorkspaceEntry & getDefaultWorkspace(void) const;
+    const WorkspaceEntry & getDefaultWorkspace() const;
 
     /**
      * \brief   Activates the default workspace entry, if there is any, and returns the activation key.
      *          Returns 0 if no default workspace entry is set.
      **/
-    uint64_t activateDefaultWorkspace(void);
+    uint64_t activateDefaultWorkspace();
 
     /**
      * \brief   Sets the default workspace by ID.
@@ -209,7 +209,7 @@ public:
     /**
      * \brief   Returns currently configured application theme.
      **/
-    inline eAppTheme getTheme(void) const;
+    inline eAppTheme getTheme() const;
 
     /**
      * \brief   Sets currently configured application theme.
@@ -278,12 +278,12 @@ private:
 // Inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline uint64_t OptionsManager::getActiveKey(void) const
+inline uint64_t OptionsManager::getActiveKey() const
 {
     return mActiveKey;
 }
 
-inline const std::vector<WorkspaceEntry>& OptionsManager::getWorkspaceList(void) const
+inline const std::vector<WorkspaceEntry>& OptionsManager::getWorkspaceList() const
 {
     return mWorkspaces;
 }
@@ -293,7 +293,7 @@ inline void OptionsManager::_sort()
     std::sort(mWorkspaces.begin(), mWorkspaces.end(), std::greater<WorkspaceEntry>());
 }
 
-inline OptionsManager::eAppTheme OptionsManager::getTheme(void) const
+inline OptionsManager::eAppTheme OptionsManager::getTheme() const
 {
     return mTheme;
 }

@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_MODEL_LOG_LIVESCOPESMODEL_HPP
 #define LUSAN_MODEL_LOG_LIVESCOPESMODEL_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/log/LiveScopesModel.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log scopes model.
  *
@@ -56,7 +56,7 @@ public:
      */
     LiveScopesModel(QObject * parent = nullptr);
 
-    virtual ~LiveScopesModel(void);
+    virtual ~LiveScopesModel();
 
 public:
 /************************************************************************
@@ -69,7 +69,7 @@ public:
      *          If `nullptr`, resets the model and clears the data.
      * \param   model   The logging model to set.
      **/
-    virtual void setLoggingModel(LoggingModelBase* model) override;
+    void setLoggingModel(LoggingModelBase* model) override;
         
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -79,7 +79,7 @@ public:
      * \param   prio    The new priority to set for the log scope on target.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool setLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool setLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Adds the specified log priority to the log scope at the given index.
@@ -89,7 +89,7 @@ public:
      * \param   prio    The log priority to add to the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool addLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool addLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Removes the specified log priority from the log scope at the given index.
@@ -99,7 +99,7 @@ public:
      * \param   prio    The log priority to remove from the log scope.
      * \return  True if succeeded to sent the request to update log priority on target module.
      **/
-    virtual bool removLogPriority(const QModelIndex& index, uint32_t prio) override;
+    bool removLogPriority(const QModelIndex& index, uint32_t prio) override;
 
     /**
      * \brief   Saves the log scope priority for the given target index.
@@ -107,7 +107,7 @@ public:
      * \param   target  The target index to save log scope priority. If invalid, saves for root index.
      * \return  True if succeeded to save log scope priority, false otherwise.
      **/
-    virtual bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
+    bool saveLogScopePriority(const QModelIndex& target = QModelIndex()) const override;
     
 protected:
     
@@ -119,7 +119,7 @@ protected:
      * \param   instances   The list of instances available.
      * \return  Returns true if the instance was added to the root element.
      **/
-    virtual bool slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances) override;
+    bool slotInstancesAvailable(const std::vector<areg::ConnectedInstance> & instances) override;
     
 private:
 

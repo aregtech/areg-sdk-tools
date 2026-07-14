@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APPLICATION_SI_SIDATATYPE_HPP
 #define LUSAN_APPLICATION_SI_SIDATATYPE_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIDataType.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
@@ -47,10 +47,7 @@ class SIDataTypeFieldDetails;
 class SIDataTypeModel;
 class TableCell;
 class QTreeWidgetItem;
-
-namespace Ui {
-    class SIDataType;
-}
+class QHBoxLayout;
 
 class SIDataTypeWidget : public QWidget
 {
@@ -62,7 +59,7 @@ public:
     explicit SIDataTypeWidget(QWidget* parent);
 
 private:
-    Ui::SIDataType * ui;
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the list and details panels.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -79,7 +76,7 @@ class SIDataType    : public QScrollArea
 public:
     explicit SIDataType(SIDataTypeModel & model, QWidget *parent = nullptr);
 
-    virtual ~SIDataType(void);
+    virtual ~SIDataType();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -91,7 +88,7 @@ protected:
      * \param   dataType    New created data type object.
      * \return  Returns true if new created data type is in the list. Otherwise, returns false.
      **/
-    virtual void dataTypeCreated(DataTypeCustom* dataType) override;
+    void dataTypeCreated(DataTypeCustom* dataType) override;
 
     /**
      * \brief   Triggered when the data type is converted.
@@ -99,21 +96,21 @@ protected:
      * \param   newType     The new data type object.
      * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
      **/
-    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
+    void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
 
     /**
      * \brief   Triggered when the data type is deleted and invalidated.
      * \param   dataType    The data type object to be deleted.
      * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
      **/
-    virtual void dataTypeDeleted(DataTypeCustom* dataType) override;
+    void dataTypeDeleted(DataTypeCustom* dataType) override;
 
     /**
      * \brief   Triggered when the data type is updated.
      * \param   dataType    The data type object to update.
      * \return  Returns true if the data type is updated. Otherwise, returns false.
      **/
-    virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
+    void dataTypeUpdated(DataTypeCustom* dataType) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -132,42 +129,42 @@ protected:
     /**
      * \brief Triggered when the add button is clicked.
      */
-    void onAddClicked(void);
+    void onAddClicked();
 
     /**
      * \brief Triggered when the insert button is clicked.
      */
-    void onInsertClicked(void);
+    void onInsertClicked();
     
     /**
      * \brief Triggered when the add field button is clicked.
      */
-    void onAddFieldClicked(void);
+    void onAddFieldClicked();
 
     /**
      * \brief Triggered when the insert field button is clicked.
      */
-    void onInsertFieldClicked(void);
+    void onInsertFieldClicked();
     
     /**
      * \brief Triggered when the remove button is clicked.
      */
-    void onRemoveClicked(void);
+    void onRemoveClicked();
 
     /**
      * \brief Triggered when the remove field button is clicked.
      */
-    void onRemoveFieldClicked(void);
+    void onRemoveFieldClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked.
      **/
-    void onMoveUpClicked(void);
+    void onMoveUpClicked();
 
     /**
      * \brief   Triggered when the move down button is clicked.
      **/
-    void onMoveDownClicked(void);
+    void onMoveDownClicked();
 
     /**
      * \brief Triggered when the data type name is changed.
@@ -190,7 +187,7 @@ protected:
     /**
      * \brief   Triggered when the description is changed.
      **/
-    void onDescriptionChanged(void);
+    void onDescriptionChanged();
 
     /**
      * \brief   Triggered when the struct is selected.
@@ -262,7 +259,7 @@ protected:
     /**
      * \brief   Triggered when the import location browse button is clicked.
      **/
-    void onImportLocationBrowse(void);
+    void onImportLocationBrowse();
 
     /**
      * \brief   Triggered when the field name is changed.
@@ -285,7 +282,7 @@ protected:
     /**
      * \brief   Triggered when the field description is changed.
      **/
-    void onFieldDescriptionChanged(void);
+    void onFieldDescriptionChanged();
 
     /**
      * \brief   Triggered when the field deprecated flag is changed.
@@ -303,6 +300,12 @@ protected:
 // Operations and attributes
 //////////////////////////////////////////////////////////////////////////
 private:
+
+    /**
+     * \brief   Adds a new data type using the specified category.
+     * \param   category    Category of the created data type.
+     **/
+    void addNewType(DataTypeBase::eCategory category);
 
     /**
      * \brief   Called to convert the data type saved in specified tree node.
@@ -335,17 +338,17 @@ private:
     /**
      * \brief Updates the data in the table.
      */
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief Updates the widgets.
      */
-    void updateWidgets(void);
+    void updateWidgets();
 
     /**
      * \brief Initializes the signals.
      */
-    void setupSignals(void);
+    void setupSignals();
 
     /**
      * \brief Blocks the basic signals.
@@ -493,7 +496,7 @@ private:
     /**
      * \brief   Gets the field object of structure or enumeration of selected node of tree table.
      **/
-    inline ElementBase* getSelectedField(void) const;
+    inline ElementBase* getSelectedField() const;
 
     /**
      * \brief   Disables or enables the radio buttons to select data type object.
@@ -516,7 +519,7 @@ private:
     /**
      * \brief   Called when no item is selected in the list or the list is empty.
      **/
-    inline void showClean(void);
+    inline void showClean();
 
     /**
      * \brief   Moves the data type up in the list.
@@ -569,7 +572,7 @@ private:
     /**
      * \brief   Returns generated unique name for the data type.
      **/
-    inline QString genName(void);
+    inline QString genName();
 
     /**
      * \brief   Returns generated unique name for the data type field.
@@ -580,17 +583,17 @@ private:
     /**
      * \brief   Returns list of basic container data type objects.
      **/
-    static const QList<DataTypeBasicContainer *> & _getContainerTypes(void);
+    static const QList<DataTypeBasicContainer *> & _getContainerTypes();
 
     /**
      * \brief   Returns list of custom data type objects.
      **/
-    static const QList<DataTypeBase *>& _getIntegerTypes(void);
+    static const QList<DataTypeBase *>& _getIntegerTypes();
 
     /**
      * \brief   Returns list of predefined data type objects.
      **/
-    static const QList<DataTypeBase *>& _getPredefinedTypes(void);
+    static const QList<DataTypeBase *>& _getPredefinedTypes();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -599,8 +602,8 @@ private:
     SIDataTypeDetails*      mDetails;   //!< The data type details widget.
     SIDataTypeList*         mList;      //!< The data type list (tree table) widget.
     SIDataTypeFieldDetails* mFields;    //!< The data type field details widget.
+    QWidget*                mRightPanel;//!< Holds mDetails/mFields so the row is exactly 2 equal-width panels.
     SIDataTypeWidget*       mWidget;    //!< The helper widget.
-    Ui::SIDataType &        ui;         //!< The UI helper object.
     SIDataTypeModel&        mModel;     //!< The data type main model object.
     DataTypesModel*         mTypeModel; //!< The model to display data types in the type combo-box.
     DataTypesModel*         mValueModel;//!< The model to display data types in the value combo-box.

@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APPLICATION_SI_SIOVERVIEW_HPP
 #define LUSAN_APPLICATION_SI_SIOVERVIEW_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIOverview.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
@@ -33,10 +33,7 @@ class SIOverviewDetails;
 class SIOverviewLinks;
 class SIOverviewParamDetails;
 class SIOverviewModel;
-
-namespace Ui {
-    class SIOverview;
-}
+class QHBoxLayout;
 
 /************************************************************************
  * \brief   The helper widget.
@@ -51,7 +48,7 @@ public:
     explicit SIOverviewWidget(QWidget* parent);
 
 private:
-    Ui::SIOverview* ui;
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the details and links panels.
 };
 
 /**
@@ -70,7 +67,7 @@ class SIOverview : public QScrollArea
 public:
     explicit SIOverview(SIOverviewModel & model, QWidget* parent = nullptr);
 
-    virtual ~SIOverview(void);
+    virtual ~SIOverview();
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -119,7 +116,7 @@ protected:
     /**
      * \brief   The slot is triggered when the service interface description is changed.
      **/
-    void onDescriptionChanged(void);
+    void onDescriptionChanged();
 
     /**
      * \brief   The slot is triggered when the deprecation hint is changed.
@@ -182,17 +179,17 @@ private:
     /**
      * \brief   Initializes the SIConstant object.
      **/
-    void updateWidgets(void);
+    void updateWidgets();
 
     /**
      * \brief   Initializes the SIInclude object.
      **/
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief   Initializes the signals.
      **/
-    void setupSignals(void);
+    void setupSignals();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
@@ -202,7 +199,6 @@ private:
     SIOverviewDetails*  mDetails;   //!< The details of the service interface overview.
     SIOverviewLinks*    mLinks;     //!< The links of the service interface overview.
     SIOverviewWidget*   mWidget;    //!< The widget of the service interface overview.
-    Ui::SIOverview&     ui;         //!< The user interface of the service interface overview.
     QIntValidator       mVersionValidator; //!< The validator to validate the version number.
 };
 

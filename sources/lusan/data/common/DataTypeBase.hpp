@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_COMMON_DATATYPEBASE_HPP
 #define LUSAN_DATA_COMMON_DATATYPEBASE_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeBase.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Data Type Base.
  *
@@ -129,19 +129,19 @@ public:
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
     
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
     
     /**
      * \brief   Checks if the data type is valid.
      * \return  True if the data type is valid, false otherwise.
      **/
-    virtual bool isValid(void) const override;
+    bool isValid() const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -151,7 +151,7 @@ public:
      * \brief   Gets the name of the data type.
      * \return  The name of the data type.
      **/
-    const QString& getName(void) const;
+    const QString& getName() const;
 
     /**
      * \brief   Sets the name of the data type.
@@ -163,91 +163,91 @@ public:
      * \brief   Gets the category of the data type.
      * \return  The category of the data type.
      **/
-    eCategory getCategory(void) const;
+    eCategory getCategory() const;
 
     /**
      * \brief   Checks if the data type is a primitive type.
      * \return  True if the data type is a primitive type, false otherwise.
      **/
-    bool isPrimitive(void) const;
+    bool isPrimitive() const;
 
     /**
      * \brief   Checks if the data type is a custom defined type.
      * \return  True if the data type is a custom defined type, false otherwise.
      **/
-    bool isCustomDefined(void) const;
+    bool isCustomDefined() const;
 
     /**
      * \brief   Checks if the data type is a predefined type.
      * \return  True if the data type is a predefined type, false otherwise.
      **/
-    bool isPredefined(void) const;
+    bool isPredefined() const;
 
     /**
      * \brief   Checks if the data type is a boolean type.
      * \return  True if the data type is a boolean type, false otherwise.
      **/
-    bool isPrimitiveBool(void) const;
+    bool isPrimitiveBool() const;
 
     /**
      * \brief   Checks if the data type is a primitive signed integer type.
      * \return  True if the data type is a primitive integer type, false otherwise.
      **/
-    bool isPrimitiveInt(void) const;
+    bool isPrimitiveInt() const;
 
     /**
      * \brief   Checks if the data type is a primitive signed integer type.
      * \return  True if the data type is a primitive integer type, false otherwise.
      **/
-    bool isPrimitiveSint(void) const;
+    bool isPrimitiveSint() const;
 
     /**
      * \brief   Checks if the data type is a primitive unsigned integer type.
      * \return  True if the data type is a primitive unsigned integer type, false otherwise.
      **/
-    bool isPrimitiveUint(void) const;
+    bool isPrimitiveUint() const;
 
     /**
      * \brief   Checks if the data type is a primitive float type.
      * \return  True if the data type is a primitive float type, false otherwise.
      **/
-    bool isPrimitiveFloat(void) const;
+    bool isPrimitiveFloat() const;
 
     /**
      * \brief   Checks if the data type is a basic object.
      * \return  True if the data type is a basic object, false otherwise.
      **/
-    bool isBasicObject(void) const;
+    bool isBasicObject() const;
 
     /**
      * \brief   Checks if the data type is a basic container.
      * \return  True if the data type is a basic container, false otherwise.
      **/
-    bool isBasicContainer(void) const;
+    bool isBasicContainer() const;
 
     /**
      * \brief   Checks if the data type is an enumeration.
      * \return  True if the data type is an enumeration, false otherwise.
      **/
-    bool isEnumeration(void) const;
+    bool isEnumeration() const;
 
     /**
      * \brief   Checks if the data type is a structure.
      * \return  True if the data type is a structure, false otherwise.
      **/
-    bool isStructure(void) const;
+    bool isStructure() const;
 
     /**
      * \brief   Checks if the data type is imported.
      * \return  True if the data type is imported, false otherwise.
      **/
-    bool isImported(void) const;
+    bool isImported() const;
 
     /**
      * \brief   Checks if the data type is a container.
      * \return  True if the data type is a container, false otherwise.
      **/
-    bool isContainer(void) const;
+    bool isContainer() const;
 
     /**
      * \brief   Checks if the data type matches the specified type.

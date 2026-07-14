@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_COMMON_WORKSPACE_HPP
 #define LUSAN_VIEW_COMMON_WORKSPACE_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/Workspace.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application Workspace setup dialog.
  *
@@ -49,23 +49,23 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~Workspace(void);
+    virtual ~Workspace();
 
     /**
      * \brief   Returns true if the workspace has new entry.
      **/
-    inline bool hasNewWorkspaceEntry(void) const;
+    inline bool hasNewWorkspaceEntry() const;
     
 protected slots:
     /**
      * \brief   Slot called when the dialog is accepted.
      **/
-    void onAccept(void);
+    void onAccept();
     
     /**
      * \brief   Slot called when the dialog is rejected.
      **/
-    void onReject(void);
+    void onReject();
     
     /**
      * \brief   Slot called when the workspace path is changed.
@@ -111,7 +111,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // Workspace inline functions implementation
 //////////////////////////////////////////////////////////////////////////
-inline bool Workspace::hasNewWorkspaceEntry(void) const
+inline bool Workspace::hasNewWorkspaceEntry() const
 {
     return mModel.hasNewWorkspace();
 }

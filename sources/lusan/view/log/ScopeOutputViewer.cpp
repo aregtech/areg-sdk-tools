@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/ScopeOutputViewer.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Scope output viewer widget.
  *
@@ -64,7 +64,7 @@ ScopeOutputViewer::ScopeOutputViewer(MdiMainWindow* wndMain, QWidget* parent)
     updateControls(true);
 }
 
-ScopeOutputViewer::~ScopeOutputViewer(void)
+ScopeOutputViewer::~ScopeOutputViewer()
 {
     ctrlTable()->setModel(nullptr);
     if (mFilter != nullptr)
@@ -178,67 +178,67 @@ void ScopeOutputViewer::onFilterChanged(const QModelIndex & indexStart, const QM
     }
 }
 
-inline QTableView* ScopeOutputViewer::ctrlTable(void) const
+inline QTableView* ScopeOutputViewer::ctrlTable() const
 {
     return ui->logTable;
 }
 
-inline QRadioButton* ScopeOutputViewer::ctrlRadioSession(void) const
+inline QRadioButton* ScopeOutputViewer::ctrlRadioSession() const
 {
     return ui->radioSession;
 }
 
-inline QRadioButton* ScopeOutputViewer::ctrlRadioSublogs(void) const
+inline QRadioButton* ScopeOutputViewer::ctrlRadioSublogs() const
 {
     return ui->radioSublogs;
 }
 
-inline QRadioButton* ScopeOutputViewer::ctrlRadioScope(void) const
+inline QRadioButton* ScopeOutputViewer::ctrlRadioScope() const
 {
     return ui->radioScope;
 }
 
-inline QRadioButton* ScopeOutputViewer::ctrlRadioThread(void) const
+inline QRadioButton* ScopeOutputViewer::ctrlRadioThread() const
 {
     return ui->radioThread;
 }
 
-inline QRadioButton* ScopeOutputViewer::ctrlRadioProcess(void) const
+inline QRadioButton* ScopeOutputViewer::ctrlRadioProcess() const
 {
     return ui->radioProcess;
 }
 
-inline QLineEdit* ScopeOutputViewer::ctrlDuration(void) const
+inline QLineEdit* ScopeOutputViewer::ctrlDuration() const
 {
     return ui->editDuration;
 }
 
-inline QToolButton* ScopeOutputViewer::ctrlLogShow(void) const
+inline QToolButton* ScopeOutputViewer::ctrlLogShow() const
 {
     return ui->toolLogShow;
 }
 
-inline QToolButton* ScopeOutputViewer::ctrlScopeBegin(void) const
+inline QToolButton* ScopeOutputViewer::ctrlScopeBegin() const
 {
     return ui->toolScopeBegin;
 }
 
-inline QToolButton* ScopeOutputViewer::ctrlScopeEnd(void) const
+inline QToolButton* ScopeOutputViewer::ctrlScopeEnd() const
 {
     return ui->toolScopeEnd;
 }
 
-inline QToolButton* ScopeOutputViewer::ctrlScopeNext(void) const
+inline QToolButton* ScopeOutputViewer::ctrlScopeNext() const
 {
     return ui->toolScopeNext;
 }
 
-inline QToolButton* ScopeOutputViewer::ctrlScopePrev(void) const
+inline QToolButton* ScopeOutputViewer::ctrlScopePrev() const
 {
     return ui->toolScopePrev;
 }
 
-inline void ScopeOutputViewer::updateLogTable(void)
+inline void ScopeOutputViewer::updateLogTable()
 {
     QTableView *logTable = mMdiChild != nullptr ? static_cast<LogViewerBase *>(mMdiChild)->getLoggingTable() : nullptr;
     if (logTable != nullptr)
@@ -318,21 +318,21 @@ void ScopeOutputViewer::onShowLog(const QModelIndex& idxTarget)
     }
 }
 
-void ScopeOutputViewer::onShowNextLog(void)
+void ScopeOutputViewer::onShowNextLog()
 {
     QModelIndex idxTarget = getSelectedIndex();
     idxTarget = mFilter->getIndexNextScope(idxTarget, false);
     onShowLog(idxTarget.isValid() ? idxTarget : mFilter->index(mFilter->rowCount() - 1, 0));
 }
 
-void ScopeOutputViewer::onShowPrevLog(void)
+void ScopeOutputViewer::onShowPrevLog()
 {
     QModelIndex idxTarget = getSelectedIndex();
     idxTarget = mFilter->getIndexPrevScope(idxTarget, false);
     onShowLog(idxTarget.isValid() ? idxTarget : mFilter->index(0, 0));
 }
 
-inline QModelIndex ScopeOutputViewer::getSelectedIndex(void) const
+inline QModelIndex ScopeOutputViewer::getSelectedIndex() const
 {
     return ctrlTable()->selectionModel()->currentIndex();
 }

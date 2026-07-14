@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_COMMON_DATATYPEFACTORY_HPP
 #define LUSAN_DATA_COMMON_DATATYPEFACTORY_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeFactory.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Data Type factory.
  *
@@ -73,17 +73,17 @@ public:
     /**
      * \brief   Returns the list of primitive data type objects.
      **/
-    static const QList<DataTypePrimitive*>& getPrimitiveTypes(void);
+    static const QList<DataTypePrimitive*>& getPrimitiveTypes();
 
     /**
      * \brief   Returns the list of basic data type objects.
      **/
-    static const QList<DataTypeBasicObject*>& getBasicTypes(void);
+    static const QList<DataTypeBasicObject*>& getBasicTypes();
 
     /**
      * \brief   Returns the list of container data type objects.
      **/
-    static const QList<DataTypeBasicContainer*>& getContainerTypes(void);
+    static const QList<DataTypeBasicContainer*>& getContainerTypes();
 
     /**
      * \brief   Returns the list of predefined data types.
@@ -96,7 +96,7 @@ public:
     /**
      * \brief   Warms up predefined type cache to avoid first-use latency.
      **/
-    static void warmup(void);
+    static void warmup();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -106,7 +106,7 @@ private:
     /**
      * \brief   Initializes the predefined data types.
      **/
-    static void _initPredefined(void);
+    static void _initPredefined();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden objects

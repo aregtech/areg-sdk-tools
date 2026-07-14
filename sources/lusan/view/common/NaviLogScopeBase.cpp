@@ -1,17 +1,17 @@
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/NaviLogScopeBase.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       The base class of the log explorer view.
  *
@@ -84,7 +84,7 @@ void NaviLogScopeBase::setupControls(QTreeView* treeView, QToolButton* prioError
     }
 }
 
-inline void NaviLogScopeBase::validateControls(void)
+inline void NaviLogScopeBase::validateControls()
 {
     Q_ASSERT(mPrioDebug     != nullptr);
     Q_ASSERT(mPrioInfo      != nullptr);
@@ -95,7 +95,7 @@ inline void NaviLogScopeBase::validateControls(void)
     Q_ASSERT(mScopesModel   != nullptr);
 }
 
-bool NaviLogScopeBase::areRootsCollapsed(void) const
+bool NaviLogScopeBase::areRootsCollapsed() const
 {
     bool result{ false };
     if ((mNaviTree != nullptr) && (mScopesModel != nullptr))
@@ -265,7 +265,7 @@ void NaviLogScopeBase::expandChildNodesRecursive(const QModelIndex& idxNode, con
     enableButtons(idxNode);
 }
 
-void NaviLogScopeBase::collapseRoots(void)
+void NaviLogScopeBase::collapseRoots()
 {
     QTreeView* treeView = mNaviTree;
     int rowCount = mScopesModel != nullptr ? mScopesModel->rowCount(mScopesModel->getRootIndex()) : 0; // root items
@@ -332,7 +332,7 @@ void NaviLogScopeBase::setLoggingModel(LoggingModelBase* logModel)
     }
 }
 
-LoggingModelBase* NaviLogScopeBase::getLoggingModel(void) const
+LoggingModelBase* NaviLogScopeBase::getLoggingModel() const
 {
     Q_ASSERT(mScopesModel != nullptr);
     return mScopesModel->getLoggingModel();

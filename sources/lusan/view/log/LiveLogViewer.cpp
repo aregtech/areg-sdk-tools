@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/LiveLogViewer.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, log view widget.
  *
@@ -54,7 +54,7 @@ LiveLogViewer::LiveLogViewer(MdiMainWindow *wndMain, QWidget *parent)
     setupSignals(true);
 }
 
-LiveLogViewer::~LiveLogViewer(void)
+LiveLogViewer::~LiveLogViewer()
 {
     cleanResources();
 }
@@ -97,19 +97,19 @@ void LiveLogViewer::logDatabaseCreated(const QString& dbPath)
     }
 }
 
-bool LiveLogViewer::isServiceConnected(void) const
+bool LiveLogViewer::isServiceConnected() const
 {
     Q_ASSERT(mLogModel != nullptr);
     return static_cast<LiveLogsModel *>(mLogModel)->isConnected();
 }
 
-bool LiveLogViewer::isEmpty(void) const
+bool LiveLogViewer::isEmpty() const
 {
     Q_ASSERT(mLogModel != nullptr);
     return mLogModel->isEmpty();
 }
 
-void LiveLogViewer::detachLiveLog(void)
+void LiveLogViewer::detachLiveLog()
 {
     Q_ASSERT(mLogModel != nullptr);
     if (mMdiSubWindow != nullptr)
@@ -144,22 +144,22 @@ void LiveLogViewer::onCurrentRowChanged(const QModelIndex &current, const QModel
     mLogModel->setSelectedLog(current);
 }
 
-QToolButton* LiveLogViewer::ctrlPause(void)
+QToolButton* LiveLogViewer::ctrlPause()
 {
     return ui->toolPause;
 }
 
-QToolButton* LiveLogViewer::ctrlStop(void)
+QToolButton* LiveLogViewer::ctrlStop()
 {
     return ui->toolStop;
 }
 
-QToolButton* LiveLogViewer::ctrlClear(void)
+QToolButton* LiveLogViewer::ctrlClear()
 {
     return ui->toolClear;
 }
 
-QLabel* LiveLogViewer::ctrlFile(void)
+QLabel* LiveLogViewer::ctrlFile()
 {
     return ui->labelFile;
 }
@@ -244,13 +244,13 @@ void LiveLogViewer::onStopClicked(bool checked)
     }
 }
 
-void LiveLogViewer::onClearClicked(void)
+void LiveLogViewer::onClearClicked()
 {
     Q_ASSERT(mLogModel != nullptr);
     mLogModel->dataReset();
 }
 
-QString LiveLogViewer::getDatabasePath(void) const
+QString LiveLogViewer::getDatabasePath() const
 {
     Q_ASSERT(mLogModel != nullptr);
     return mLogModel->getDatabasePath();
@@ -288,7 +288,7 @@ void LiveLogViewer::setupSignals(bool doSetup)
     }
 }
 
-void LiveLogViewer::cleanResources(void)
+void LiveLogViewer::cleanResources()
 {
     if (ui == nullptr)
     {

@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_MODEL_LOG_OFFLINELOGSMODEL_HPP
 #define LUSAN_MODEL_LOG_OFFLINELOGSMODEL_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/log/OfflineLogsModel.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Offline Log Navigation Model.
  *
@@ -27,7 +27,7 @@
 /**
  * \brief   The offline log navigation model for reading log data from local database files.
  *          This model provides offline access to historical log data stored in database files
- *          using the LogSqliteDatabase class from the AREG Framework.
+ *          using the LogSqliteDatabase class from the Areg Framework.
  **/
 class OfflineLogsModel : public LoggingModelBase
 {
@@ -55,12 +55,12 @@ public:
      * \param   dbPath      The path to the database.
      * \param   readOnly    If true, the database is opened in read-only mode.
      **/
-    virtual void openDatabase(const QString& dbPath, bool readOnly) override;
+    void openDatabase(const QString& dbPath, bool readOnly) override;
 
     /**
      * \brief   Closes the currently opened database.
      **/
-    virtual void closeDatabase(void) override;
+    void closeDatabase() override;
 
     /**
      * \brief   Sets up the logging query to run. By default, it reads all logs without filter.
@@ -68,7 +68,7 @@ public:
      * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `areg::TARGET_ALL`.
      * \return  Number or log entries to read.
      **/
-    virtual uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL) override;
+    uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Signals

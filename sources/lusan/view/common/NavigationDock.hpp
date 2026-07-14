@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP
 #define LUSAN_VIEW_COMMON_NAVIGATIONDOCK_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/NavigationDock.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       The navigation docking widget of lusan.
  *
@@ -24,14 +24,21 @@
 #include "lusan/view/common/NaviLiveLogsScopes.hpp"
 #include "lusan/view/common/NaviOfflineLogsScopes.hpp"
 
-#include <QDockWidget>
+#include <QWidget>
 #include <QSize>
 #include <QTabWidget>
 #include "OutputDock.hpp"
 
 class MdiMainWindow;
+class NaviFsmToolbar;
 
-class NavigationDock : public QDockWidget
+/**
+ * \brief   The navigation window content (a tab widget of the workspace/log/FSM explorers).
+ *          It is a plain content widget hosted inside a Qt-Advanced-Docking-System dock widget
+ *          (issue #516), so it no longer derives from QDockWidget; the ADS dock provides the
+ *          title bar, floating, and cross-window drag/tab behavior.
+ **/
+class NavigationDock : public QWidget
 {
 //////////////////////////////////////////////////////////////////////////
 // Constants, types and static methods
@@ -45,11 +52,17 @@ public:
         , NaviWorkspace         //!< Workspace navigation window type
         , NaviLiveLogs          //!< Live logs navigation window type
         , NaviOfflineLogs       //!< Offline logs navigation window type
+        , NaviDesignToolbar     //!< FSM design toolbar navigation window type
+        , NaviDesignProperties  //!< FSM design Properties panel navigation window type
+        , NaviDesignOutline     //!< FSM design Outline panel navigation window type
     };
 
     static QString  TabNameFileSystem;      //!< The name of the tab for workspace explorer.
     static QString  TabLiveLogsExplorer;    //!< The name of the tab for live logs explorer.
     static QString  TabOfflineLogsExplorer; //!< The name of the tab for offline logs explorer.
+    static QString  TabFsmToolbar;          //!< The name of the tab for the FSM design toolbar.
+    static QString  TabDesignProperties;    //!< The name of the tab for the FSM design Properties panel.
+    static QString  TabDesignOutline;       //!< The name of the tab for the FSM design Outline panel.
 
     //!< Returns the tab name of the specified navigation window
     static const QString& getTabName(NavigationDock::eNaviWindow navi);
@@ -62,8 +75,8 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     NavigationDock(MdiMainWindow* parent);
-    virtual QSize sizeHint(void) const override;
-    virtual QSize minimumSizeHint(void) const override;
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Actions and attributes
@@ -72,22 +85,22 @@ public:
     /**
      * \brief   Returns the tab widget of the navigation.
      **/
-    inline QTabWidget& getTabWidget(void);
+    inline QTabWidget& getTabWidget();
 
     /**
      * \brief   Returns the file system widget.
      **/
-    inline NaviFileSystem& getFileSystem(void);
+    inline NaviFileSystem& getFileSystem();
 
     /**
      * \brief   Returns the live mode log explorer widget.
      **/
-    inline NaviLiveLogsScopes& getLiveScopes(void);
+    inline NaviLiveLogsScopes& getLiveScopes();
 
     /**
      * \brief   Returns the offline log explorer widget.
      **/
-    inline NaviOfflineLogsScopes& getOfflineScopes(void);
+    inline NaviOfflineLogsScopes& getOfflineScopes();
 
     /**
      * \brief   Adds a new tab with the widget to the tab-control.
@@ -123,7 +136,39 @@ public:
      **/
     bool showTab(const QString& tabName);
     bool showTab(NavigationDock::eNaviWindow navi);
-    
+
+    /**
+     * \brief   Adds (if absent) and shows the movable FSM design widget tab (Design Toolbar,
+     *          State Machine Properties, or State Machine Outline) hosting the given content
+     *          window; the content stays owned by the main window (issue #516). The tab is
+     *          raised only the first time it is added, so re-syncs do not steal focus.
+     * \param   navi        One of NaviDesignToolbar / NaviDesignProperties / NaviDesignOutline.
+     * \param   content     The navigation window to host (NaviFsmToolbar or NaviDesignPanel).
+     **/
+    void showDesignTab(NavigationDock::eNaviWindow navi, NavigationWindow* content);
+
+    /**
+     * \brief   Removes the FSM design widget tab, detaching (not deleting) its content so it
+     *          can be re-hosted in the Design page or shown again later.
+     **/
+    void hideDesignTab(NavigationDock::eNaviWindow navi);
+
+    /**
+     * \brief   True when the given FSM design widget tab is currently present in the dock.
+     **/
+    bool isDesignTabShown(NavigationDock::eNaviWindow navi) const;
+
+    /**
+     * \brief   Shows or hides an existing navigation tab (Workspace / Live Logs / Offline
+     *          Logs) without removing it, backing the View menu's Navigation submenu.
+     **/
+    void setNaviTabVisible(NavigationDock::eNaviWindow navi, bool visible);
+
+    /**
+     * \brief   True when the given navigation tab exists and is currently visible.
+     **/
+    bool isNaviTabVisible(NavigationDock::eNaviWindow navi) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -131,24 +176,29 @@ private:
     /**
      * \brief   Returns the instance of NavigationDock window.
      **/
-    inline NavigationDock& self(void);
+    inline NavigationDock& self();
 
     /**
      * \brief   Initializes the size of tab widgets.
      **/
     void initSize();
 
+    /**
+     * \brief   Returns the tab index whose text matches the given navigation window, or -1.
+     **/
+    int indexOfNavi(NavigationDock::eNaviWindow navi) const;
+
 private slots:
 
     /**
      * \brief   Slot is triggered when options dialog is opened.
      **/
-    void onOptionsOpening(void);
+    void onOptionsOpening();
 
     /**
      * \brief   Slot is triggered when apply button in options dialog is pressed.
      **/
-    void onOptionsApplied(void);
+    void onOptionsApplied();
 
     /**
      * \brief   Slot is triggered when options dialog is closed.
@@ -171,22 +221,22 @@ private:
 // NavigationDock class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QTabWidget& NavigationDock::getTabWidget(void)
+inline QTabWidget& NavigationDock::getTabWidget()
 {
     return mTabs;
 }
 
-inline NaviFileSystem& NavigationDock::getFileSystem(void)
+inline NaviFileSystem& NavigationDock::getFileSystem()
 {
     return mFileSystem;
 }
 
-inline NaviLiveLogsScopes& NavigationDock::getLiveScopes(void)
+inline NaviLiveLogsScopes& NavigationDock::getLiveScopes()
 {
     return mLiveScopes;
 }
 
-inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes(void)
+inline NaviOfflineLogsScopes& NavigationDock::getOfflineScopes()
 {
     return mOfflineScopes;
 }
@@ -201,7 +251,7 @@ inline int NavigationDock::addTab(NavigationWindow& widget, NavigationDock::eNav
     return (navi != NavigationDock::eNaviWindow::NaviUnknown ? addTab(widget, NavigationDock::getTabName(navi)) : -1);
 }
 
-inline NavigationDock& NavigationDock::self(void)
+inline NavigationDock& NavigationDock::self()
 {
     return (*this);
 }

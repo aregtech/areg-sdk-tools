@@ -1,19 +1,19 @@
 #ifndef LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP
 #define LUSAN_MODEL_LOG_LOGGINGMODELBASE_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/log/LoggingModelBase.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Logging model base class.
  *
@@ -113,18 +113,18 @@ public:
     /**
      * \brief   Returns the fixed list of header names.
      **/
-    static const QStringList&  getHeaderList(void);
+    static const QStringList&  getHeaderList();
 
     /**
      * \brief   Returns the fixed list of header sizes.
      *          The sizes are in pixels and correspond to the header names.
      **/
-    static const QList<int>& getHeaderWidths(void);
+    static const QList<int>& getHeaderWidths();
     
     /**
      * \brief   Returns the default list of header names.
      **/
-    static const QList<LoggingModelBase::eColumn>& getDefaultColumns(void);
+    static const QList<LoggingModelBase::eColumn>& getDefaultColumns();
 
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
@@ -138,19 +138,19 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     // Header:
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     // Basic functionality:
-    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-    virtual int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
     // Add/Remove data:
-    virtual bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
-    virtual bool insertColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
-    virtual bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
-    virtual bool removeColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool insertColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+    bool removeColumns(int column, int count, const QModelIndex& parent = QModelIndex()) override;
 
-    virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Operations and attributes
@@ -179,18 +179,18 @@ public:
     /**
      * \brief   Returns maximum number of columns that is possible to set in the log viewer.
      **/
-    inline int getMaxColumCount(void) const;
+    inline int getMaxColumCount() const;
 
     /**
      * \brief   Returns true if the model is empty, i.e. contains no log messages.
      **/
-    inline bool isEmpty(void) const;
+    inline bool isEmpty() const;
 
     /**
      * \brief   Resets the data in the model.
      *          Clears the list of log messages and resets the model.
      **/
-    inline void dataReset(void);
+    inline void dataReset();
 
     /**
      * \brief   Converts the column to its index in the active columns list.
@@ -229,61 +229,61 @@ public:
     /**
      * \brief   Return the file name of the log database to set as a title of the log viewer window.
      **/
-    inline QString getLogFileName(void) const;
+    inline QString getLogFileName() const;
 
     /**
      * \brief   Returns the full path to the log file.
      *          If the log file is not set, returns an empty string.
      **/
-    inline QString getLogFilePath(void) const;
+    inline QString getLogFilePath() const;
 
     /**
      * \brief   Marks the logging model as disconnected logging.
      *          It should be called the live logging is disconnected
      *          from the log collector service.
      **/
-    inline void markDisconnected( void );
+    inline void markDisconnected();
 
     /**
      * \brief   Returns the type of logging.
      *          It can be either live, offline or disconnected logging.
      **/
-    inline LoggingModelBase::eLogging getLoggingType(void) const;
+    inline LoggingModelBase::eLogging getLoggingType() const;
 
     /**
      * \brief   Returns true if logging type is live logging.
      *          It means that the log collector service is connected to the log collector service.
      **/
-    inline bool isLiveLogging(void) const;
+    inline bool isLiveLogging() const;
 
     /**
      * \brief   Returns true if logging type is offline logging.
      *          It means that the log database is opened and ready to read.
      **/
-    inline bool isOfflineLogging(void) const;
+    inline bool isOfflineLogging() const;
 
     /**
      * \brief   Returns true if logging type is disconnected logging.
      *          It means that the log collector service was connected, but now it is disconnected.
      *          The model is still connected to the log database and can read logs from it.
      **/
-    inline bool isDisconnectedLogging(void) const;
+    inline bool isDisconnectedLogging() const;
 
     /**
      * \brief   Returns the list of root nodes of scopes.
      **/
-    inline LoggingModelBase::RootList& getRootList(void);
-    inline const LoggingModelBase::RootList& getRootList(void) const;
+    inline LoggingModelBase::RootList& getRootList();
+    inline const LoggingModelBase::RootList& getRootList() const;
 
     /**
      * \brief   Returns the number of root nodes in the list.
      **/
-    inline int rootCount(void) const;
+    inline int rootCount() const;
 
     /**
      * \brief   Returns the index of the currently selected scope node.
      **/
-    inline const QModelIndex& getSelectedScope(void) const;
+    inline const QModelIndex& getSelectedScope() const;
 
     /**
      * \brief   Sets the index of the currently selected scope node.
@@ -294,7 +294,7 @@ public:
     /**
      * \brief   Returns the index of the currently selected log message.
      **/
-    inline const QModelIndex& getSelectedLog(void) const;
+    inline const QModelIndex& getSelectedLog() const;
 
     /**
      * \brief   Sets the index of the currently selected log message.
@@ -305,12 +305,12 @@ public:
     /**
      * \brief   Selects the bottom log message in the model.
      **/
-    inline void selectBottom(void);
+    inline void selectBottom();
 
     /**
      * \brief   Selects the top log message in the model.
      **/
-    inline void selectTop(void);
+    inline void selectTop();
 
     /**
      * \brief   Returns the logging message structure of specified row.
@@ -340,14 +340,14 @@ signals:
      *          This signal is emitted during live mode.
      *          Ignore in case of offline or disconnected modes.
      **/
-    void signalLogServiceConnected(void);
+    void signalLogServiceConnected();
 
     /**
      * \brief   Signal emitted when disconnected from the logging service.
      *          This signal is emitted during live mode.
      *          Ignore in case of offline or disconnected modes.
      **/
-    void signalLogServiceDisconnected(void);
+    void signalLogServiceDisconnected();
 
     /**
      * \brief   Signal emitted when one or more instances are available.
@@ -393,17 +393,17 @@ public:
     /**
      * \brief   Resets the model to refresh the view.
      **/
-    virtual void refresh(void);
+    virtual void refresh();
     
     /**
      * \brief   Setup logging model.
      **/    
-    virtual void setupModel(void);
+    virtual void setupModel();
     
     /**
      * \brief   Release logging model.
      **/    
-    virtual void releaseModel(void);
+    virtual void releaseModel();
 
     /**
      * \brief   Opens logging database file.
@@ -415,17 +415,17 @@ public:
     /**
      * \brief   Returns the path to the log data database.
      **/
-    virtual QString getDatabasePath(void) const;
+    virtual QString getDatabasePath() const;
 
     /**
      * \brief   Closes the currently opened database.
      **/
-    virtual void closeDatabase(void);
+    virtual void closeDatabase();
 
     /**
      * \brief   Returns true if the model is operable, i.e. it can perform operations like querying log messages.
      **/
-    virtual bool isOperable(void) const;
+    virtual bool isOperable() const;
 
     /**
      * \brief   Call to query and get list of names of connected instances from log database.
@@ -481,7 +481,7 @@ public:
      * \brief   Call to query and get information of connected instances from log database.
      *          This query will receive list of all registered instances.
      **/
-    virtual const std::vector<areg::ConnectedInstance> & getLogInstances(void);
+    virtual const std::vector<areg::ConnectedInstance> & getLogInstances();
 
     /**
      * \brief   Call to query and get information of log scopes of specified instance from log database.
@@ -493,7 +493,7 @@ public:
     /**
      * \brief   Call to get all log messages from log database.
      **/
-    virtual const std::vector<areg::SharedBuffer>& getLogMessages(void);
+    virtual const std::vector<areg::SharedBuffer>& getLogMessages();
 
     /**
      * \brief   Call to get log messages of the specified instance from log database.
@@ -632,12 +632,12 @@ protected:
     /**
      * \brief   Closes currently opened log database file without triggering signal.
      **/
-    inline void _closeDatabase(void);
+    inline void _closeDatabase();
 
     /**
      * \brief   Quits the worker thread, which reads log messages from database.
      **/
-    inline void _quitThread(void);
+    inline void _quitThread();
 
     /**
      * \brief   Helper to get display data for a log message and column.
@@ -667,7 +667,7 @@ protected:
     /**
      * \brief   Call to clean logs and set the number of actual initialized logs objects to 0. 
      **/
-    inline void cleanLogs(void);
+    inline void cleanLogs();
 
 /************************************************************************/
 // areg::ThreadConsumer interface overrides
@@ -681,7 +681,7 @@ protected:
      *          the thread will complete work. To restart thread running, 
      *          createThread() method should be called again.
      **/
-    virtual void on_run( void ) override;
+    void on_run() override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -689,9 +689,9 @@ protected:
 private:
 
     //!< Cleans the nodes of root list and deletes them.
-    inline void _cleanNodes(void);
+    inline void _cleanNodes();
 
-    inline LoggingModelBase& self(void);
+    inline LoggingModelBase& self();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -730,17 +730,17 @@ inline const QList<LoggingModelBase::eColumn>& LoggingModelBase::getActiveColumn
     return mActiveColumns;
 }
 
-inline int LoggingModelBase::getMaxColumCount(void) const
+inline int LoggingModelBase::getMaxColumCount() const
 {
     return static_cast<int>(eColumn::LogColumnCount);
 }
 
-inline bool LoggingModelBase::isEmpty(void) const
+inline bool LoggingModelBase::isEmpty() const
 {
     return mLogs.empty();
 }
 
-inline void LoggingModelBase::dataReset(void)
+inline void LoggingModelBase::dataReset()
 {
     beginResetModel();
     cleanLogs();
@@ -757,13 +757,13 @@ inline LoggingModelBase::eColumn LoggingModelBase::fromIndexToColumn(int logical
     return ((logicalIndex >= 0) && (logicalIndex < static_cast<int>(mActiveColumns.size())) ? mActiveColumns[logicalIndex] : LoggingModelBase::eColumn::LogColumnInvalid);
 }
 
-inline QString LoggingModelBase::getLogFileName(void) const
+inline QString LoggingModelBase::getLogFileName() const
 {
     areg::String dbPath = mDatabase.database_path();
     return QString(!dbPath.is_empty() ? areg::File::name_with_extension(dbPath).as_string() : "");
 }
 
-inline QString LoggingModelBase::getLogFilePath(void) const
+inline QString LoggingModelBase::getLogFilePath() const
 {
     return QString::fromStdString(mDatabase.database_path().data());
 }
@@ -773,42 +773,42 @@ inline void LoggingModelBase::markDisconnected()
     mLoggingType = LoggingModelBase::eLogging::LoggingDisconneced;
 }
 
-inline LoggingModelBase::eLogging LoggingModelBase::getLoggingType(void) const
+inline LoggingModelBase::eLogging LoggingModelBase::getLoggingType() const
 {
     return mLoggingType;
 }
 
-inline bool LoggingModelBase::isLiveLogging(void) const
+inline bool LoggingModelBase::isLiveLogging() const
 {
     return (mLoggingType == eLogging::LoggingLive);
 }
 
-inline bool LoggingModelBase::isOfflineLogging(void) const
+inline bool LoggingModelBase::isOfflineLogging() const
 {
     return (mLoggingType == eLogging::LoggingOffline);
 }
 
-inline bool LoggingModelBase::isDisconnectedLogging(void) const
+inline bool LoggingModelBase::isDisconnectedLogging() const
 {
     return (mLoggingType == eLogging::LoggingDisconneced);
 }
 
-inline LoggingModelBase::RootList& LoggingModelBase::getRootList(void)
+inline LoggingModelBase::RootList& LoggingModelBase::getRootList()
 {
     return mRootList;
 }
 
-inline const LoggingModelBase::RootList& LoggingModelBase::getRootList(void) const
+inline const LoggingModelBase::RootList& LoggingModelBase::getRootList() const
 {
     return mRootList;
 }
 
-inline int LoggingModelBase::rootCount(void) const
+inline int LoggingModelBase::rootCount() const
 {
     return static_cast<int>(mRootList.size());
 }
 
-inline const QModelIndex& LoggingModelBase::getSelectedScope(void) const
+inline const QModelIndex& LoggingModelBase::getSelectedScope() const
 {
     return  mSelectedScope;
 }
@@ -818,7 +818,7 @@ inline void LoggingModelBase::setSelectedScope(const QModelIndex& idxScope)
     mSelectedScope = idxScope;
 }
 
-inline const QModelIndex& LoggingModelBase::getSelectedLog(void) const
+inline const QModelIndex& LoggingModelBase::getSelectedLog() const
 {
     return mSelectedLog;
 }
@@ -828,13 +828,13 @@ inline void LoggingModelBase::setSelectedLog(const QModelIndex& idxLog)
     mSelectedLog = idxLog;
 }
 
-inline void LoggingModelBase::selectBottom(void)
+inline void LoggingModelBase::selectBottom()
 {
     int rows = rowCount();
     mSelectedLog = rows > 0 ? index(rows - 1, 0) : QModelIndex();
 }
 
-inline void LoggingModelBase::selectTop(void)
+inline void LoggingModelBase::selectTop()
 {
     int rows = rowCount();
     mSelectedLog = rows > 0 ? index(0, 0) : QModelIndex();
@@ -855,13 +855,13 @@ inline void LoggingModelBase::setScopeFiler(ScopeLogViewerFilter* filter)
     mScopeFilter = filter;
 }
 
-inline void LoggingModelBase::_closeDatabase(void)
+inline void LoggingModelBase::_closeDatabase()
 {
     mDatabase.disconnect();
     dataReset();
 }
 
-inline void LoggingModelBase::_quitThread(void)
+inline void LoggingModelBase::_quitThread()
 {
     if (mReadThread.is_valid())
     {
@@ -871,7 +871,7 @@ inline void LoggingModelBase::_quitThread(void)
     }
 }
 
-inline void LoggingModelBase::cleanLogs(void)
+inline void LoggingModelBase::cleanLogs()
 {
     mLogCount = 0;
     mLogs.clear();
@@ -887,7 +887,7 @@ inline const areg::ext::LogSqliteDatabase& LoggingModelBase::getDatabase() const
     return mDatabase;
 }
 
-inline LoggingModelBase& LoggingModelBase::self(void)
+inline LoggingModelBase& LoggingModelBase::self()
 {
     return (*this);
 }

@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APPLICATION_SI_SIMETHOD_HPP
 #define LUSAN_APPLICATION_SI_SIMETHOD_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIMethod.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QScrollArea>
+#include "lusan/data/si/SIMethodBase.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
 
 /************************************************************************
@@ -42,9 +43,7 @@ class MethodParameter;
 class DataTypesModel;
 class ReplyMethodModel;
 
-namespace Ui {
-    class SIMethod;
-}
+class QHBoxLayout;
 
 class SIMethodWidget : public QWidget
 {
@@ -56,7 +55,7 @@ public:
     explicit SIMethodWidget(QWidget* parent);
 
 private:
-    Ui::SIMethod* ui;
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the list and details panels.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -73,7 +72,7 @@ class SIMethod  : public QScrollArea
 public:
     explicit SIMethod(SIMethodModel & model, QWidget* parent = nullptr);
 
-    virtual ~SIMethod(void);
+    virtual ~SIMethod();
     
 //////////////////////////////////////////////////////////////////////////
 // override
@@ -85,7 +84,7 @@ protected:
      * \param   dataType    New created data type object.
      * \return  Returns true if new created data type is in the list. Otherwise, returns false.
      **/
-    virtual void dataTypeCreated(DataTypeCustom* dataType) override;
+    void dataTypeCreated(DataTypeCustom* dataType) override;
 
     /**
      * \brief   Triggered when the data type is converted.
@@ -93,21 +92,21 @@ protected:
      * \param   newType     The new data type object.
      * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
      **/
-    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
+    void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
 
     /**
      * \brief   Triggered when the data type is deleted and invalidated.
      * \param   dataType    The data type object to be deleted.
      * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
      **/
-    virtual void dataTypeDeleted(DataTypeCustom* dataType) override;
+    void dataTypeDeleted(DataTypeCustom* dataType) override;
 
     /**
      * \brief   Triggered when the data type is updated.
      * \param   dataType    The data type object to update.
      * \return  Returns true if the data type is updated. Otherwise, returns false.
      **/
-    virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
+    void dataTypeUpdated(DataTypeCustom* dataType) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -153,7 +152,7 @@ protected:
     /**
      * \brief   Triggered when the description is changed.
      **/
-    void onDescriptionChanged(void);
+    void onDescriptionChanged();
 
     /**
      * \brief   Triggered when the request connected new response is selected.
@@ -164,42 +163,42 @@ protected:
     /**
      * \brief   Triggered when the add button is clicked to add new method.
      **/
-    void onAddClicked(void);
+    void onAddClicked();
     
     /**
      * \brief   Triggered when the insert button is clicked to insert new method.
      **/
-    void onInsertClicked(void);
+    void onInsertClicked();
     
     /**
      * \brief   Triggered when the remove button is clicked to remove selected method.
      **/
-    void onRemoveClicked(void);
+    void onRemoveClicked();
 
     /**
      * \brief   Triggered when the add parameter button is clicked to add new parameter.
      **/
-    void onParamAddClicked(void);
+    void onParamAddClicked();
 
     /**
      * \brief   Triggered when the remove parameter button is clicked to remove selected parameter.
      **/
-    void onParamRemoveClicked(void);
+    void onParamRemoveClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked to insert new method parameter.
      **/
-    void onParamInsertClicked(void);
+    void onParamInsertClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked to move a method up in the list.
      **/
-    void onMoveUpClicked(void);
+    void onMoveUpClicked();
 
     /**
      * \brief   Triggered when the move down button is clicked to move a method down in the list.
      **/
-    void onMoveDownClicked(void);
+    void onMoveDownClicked();
 
     /**
      * \brief   Triggered when the current cell is changed in the tree table.
@@ -235,7 +234,7 @@ protected:
     /**
      * \brief   Triggered when the description of the parameter is changed.
      **/
-    void onParamDescriptionChanged(void);
+    void onParamDescriptionChanged();
 
     /**
      * \brief   Triggered when the deprecated flag of the parameter is changed.
@@ -254,19 +253,25 @@ protected:
 //////////////////////////////////////////////////////////////////////////
 private:
     /**
+     * \brief   Adds a new method of the specified type and selects it in the list.
+     * \param   type    Type of the created method.
+     **/
+    void addNewMethod(SIMethodBase::eMethodType type);
+
+    /**
      * \brief Updates the data in the table.
      */
-    void updateData(void);
+    void updateData();
 
     /**
      * \brief Updates the widgets.
      */
-    void updateWidgets(void);
+    void updateWidgets();
 
     /**
      * \brief Initializes the signals.
      */
-    void setupSignals(void);
+    void setupSignals();
 
     /**
      * \brief Blocks the basic signals.
@@ -378,7 +383,7 @@ private:
     /**
      * \brief   Generates and returns new method name.
      **/
-    inline QString genName(void);
+    inline QString genName();
 
     /**
      * \brief   Generates and returns new parameter name of the method.
@@ -397,7 +402,6 @@ private:
     SIMethodWidget*         mWidget;        //!< The helper widget object.
     DataTypesModel*         mParamTypes;    //!< The parameter data type model object.
     ReplyMethodModel*       mReplyModel;    //!< The reply (response) method model object.
-    Ui::SIMethod&           ui;             //!< The UI helper object.
 
     uint32_t                mCount;         //!< The counter to generate new method names.
 };

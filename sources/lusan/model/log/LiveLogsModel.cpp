@@ -1,17 +1,17 @@
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/log/LiveLogsModel.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log Viewer Model.
  *
@@ -25,7 +25,7 @@
 #include "areg/base/File.hpp"
 
 
-QString LiveLogsModel::generateFileName(void)
+QString LiveLogsModel::generateFileName()
 {
     QString result{ "log_%time%.sqlog" };
 
@@ -42,7 +42,7 @@ QString LiveLogsModel::generateFileName(void)
     return QString::fromStdString(areg::File::normalize_path(result.toStdString()).as_string());
 }
 
-QString LiveLogsModel::newFileName(void)
+QString LiveLogsModel::newFileName()
 {
     QString result;
     
@@ -83,7 +83,7 @@ LiveLogsModel::LiveLogsModel(QObject *parent)
 {
 }
 
-LiveLogsModel::~LiveLogsModel(void)
+LiveLogsModel::~LiveLogsModel()
 {
     _setupSignals(false);
 }
@@ -93,16 +93,16 @@ bool LiveLogsModel::connectService(const QString& hostName /*= ""*/, unsigned sh
     return false;
 }
 
-void LiveLogsModel::disconnectService(void)
+void LiveLogsModel::disconnectService()
 {
 }
 
-void LiveLogsModel::setupModel(void)
+void LiveLogsModel::setupModel()
 {
     _setupSignals(true);
 }
 
-void LiveLogsModel::releaseModel(void)
+void LiveLogsModel::releaseModel()
 {
     _setupSignals(false);
 }
@@ -121,17 +121,17 @@ void LiveLogsModel::serviceConnected(bool isConnected, const QString& address, u
     openDatabase(dbPath, true);
 }
 
-void LiveLogsModel::pauseLogging(void)
+void LiveLogsModel::pauseLogging()
 {
     LogObserver::pause();
 }
 
-void LiveLogsModel::resumeLogging(void)
+void LiveLogsModel::resumeLogging()
 {
     LogObserver::resume();
 }
 
-void LiveLogsModel::stopLogging(void)
+void LiveLogsModel::stopLogging()
 {
     LogObserver::stop();
 }

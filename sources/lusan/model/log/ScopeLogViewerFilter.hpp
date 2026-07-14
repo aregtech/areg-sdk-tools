@@ -1,19 +1,19 @@
 #ifndef LUSAN_MODEL_LOG_SCOPELOGVIEWERFILTER_HPP
 #define LUSAN_MODEL_LOG_SCOPELOGVIEWERFILTER_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/log/ScopeLogViewerFilter.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log Scope Output Viewer Filter Proxy Model.
  *
@@ -44,13 +44,13 @@ private:
         T           data    { 0u };     //!< The data to filter
         bool        isSet   { false };  //!< True if the data is set, false otherwise
 
-        inline sTData(void) : data(0u), isSet(false) {}
+        inline sTData() : data(0u), isSet(false) {}
         inline sTData(const T& value) : data(value), isSet(true) {}
         inline operator const T& ( ) const  { return data; }
         inline operator bool ( ) const      { return isSet; }
-        inline void     clear(void)         { data = 0u; isSet = false; }
+        inline void     clear()         { data = 0u; isSet = false; }
         inline bool     valid() const       { return isSet; }
-        inline const T& value(void) const   { return data; }
+        inline const T& value() const   { return data; }
     };
 
     using   SessionData = sTData<uint32_t>;
@@ -86,7 +86,7 @@ public:
      **/
     ScopeLogViewerFilter(uint32_t scopeId = 0u, LoggingModelBase* model = nullptr);
 
-    virtual ~ScopeLogViewerFilter(void);
+    virtual ~ScopeLogViewerFilter();
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
@@ -168,12 +168,12 @@ public:
      *          The method clears all filters and sets the source model.
      * \param   sourceModel The pointer to the source model to filter.
      **/
-    virtual void setSourceModel(QAbstractItemModel *sourceModel) override;
+    void setSourceModel(QAbstractItemModel *sourceModel) override;
 
     /**
      * \brief   Clears all filters.
      **/
-    virtual void clearFilters(void) override;
+    void clearFilters() override;
 
     /**
      * \brief   Returns true if the given source row has exact match of the filters.
@@ -183,7 +183,7 @@ public:
      * \param   parent   The parent index in the source model.
      * \return  True if the row has exact match of the filter.
      **/
-    virtual bool filterExactMatch(const QModelIndex & index) const override;
+    bool filterExactMatch(const QModelIndex & index) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -204,7 +204,7 @@ protected:
      * \param   parent   The parent index in the source model.
      * \return  True if the row should be included, false otherwise.
      **/
-    virtual bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
+    bool filterAcceptsRow(int row, const QModelIndex& parent) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -222,7 +222,7 @@ private:
      * \brief   Clears all filter data.
      *          The method resets scope ID, session IDs, instance IDs, and priority bits.
      **/
-    inline void _clearData(void);
+    inline void _clearData();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

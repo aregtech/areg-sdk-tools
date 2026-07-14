@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_LOG_LOGFILTERWIDGETS_HPP
 #define LUSAN_VIEW_LOG_LOGFILTERWIDGETS_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/LogFilterWidgets.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, log view table header filter widgets.
  *
@@ -71,22 +71,22 @@ public:
     /**
      * \brief   Clears filter data.
      **/
-    virtual void clearFilter(void);
+    virtual void clearFilter();
 
     /**
      * \brief   Shows the filter widget and set focus on the list widget.
      **/
-    virtual void showFilter(void);
+    virtual void showFilter();
 
     /**
      * \brief   Returns the list of filter data items.
      **/
-    inline const QList<NELusanCommon::FilterData>& getData(void) const;
+    inline const QList<NELusanCommon::FilterData>& getData() const;
 
     /**
      * \brief   Returns the list of filter data items.
      **/
-    inline QWidget* getWidget(void) const;
+    inline QWidget* getWidget() const;
 
 /************************************************************************
  * Signals
@@ -124,24 +124,24 @@ public:
      * \brief   Updates and sets the filter data of widget
      * \param   data    The data to set in the widget.
      **/
-    virtual void setDataString(const QString& data) override;
+    void setDataString(const QString& data) override;
 
     /**
      * \brief   Updates and sets the items widget.
      *          Mainly required for combo-boxes.
      * \param   data    The list of data to set in combo-box
      **/
-    virtual void setDataList(const std::vector<NELusanCommon::FilterData>& data) override;
+    void setDataList(const std::vector<NELusanCommon::FilterData>& data) override;
 
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 
     /**
      * \brief   Clears filter data.
      **/
-    virtual void clearFilter(void) override;
+    void clearFilter() override;
 
 protected:
     /**
@@ -165,36 +165,36 @@ public:
      * \brief   Updates and sets the filter data of widget
      * \param   data    The data to set in the widget.
      **/
-    virtual void setDataString(const QString& data) override;
+    void setDataString(const QString& data) override;
 
     /**
      * \brief   Updates and sets the items widget.
      *          Mainly required for combo-boxes.
      * \param   data    The list of data to set in combo-box
      **/
-    virtual void setDataList(const std::vector<NELusanCommon::FilterData>& data) override;
+    void setDataList(const std::vector<NELusanCommon::FilterData>& data) override;
 
     /**
      * \brief   Updates and sets the items of combo-box
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 
     /**
      * \brief   Clears filter data.
      **/
-    virtual void clearFilter(void) override;
+    void clearFilter() override;
 
     /**
      * \brief   Shows the filter widget and set focus on the list widget.
      **/
-    virtual void showFilter(void) override;
+    void showFilter() override;
 
 protected:
 
@@ -223,12 +223,12 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -246,7 +246,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
 };
 
@@ -265,7 +265,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
 };
 
@@ -284,7 +284,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
 };
 
@@ -303,7 +303,7 @@ public:
      * \param   items   The list of entries to set in combo-box
      * \param   data    The list of data to set in combo-box.
      **/
-    virtual void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
+    void setDataItems(const QStringList& items, const NELusanCommon::AnyList& data) override;
 
 };
 
@@ -321,7 +321,7 @@ public:
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -338,18 +338,18 @@ public:
     /**
      * \brief   Returns list of selected (checked) entries.
      **/
-    virtual QList<NELusanCommon::FilterData> getSelectedData() const override;
+    QList<NELusanCommon::FilterData> getSelectedData() const override;
 };
 
 //////////////////////////////////////////////////////////////////////////
 // inline methods
 //////////////////////////////////////////////////////////////////////////
-inline const QList<NELusanCommon::FilterData>& LogFilterBase::getData(void) const
+inline const QList<NELusanCommon::FilterData>& LogFilterBase::getData() const
 {
     return mData;
 }
 
-inline QWidget* LogFilterBase::getWidget(void) const
+inline QWidget* LogFilterBase::getWidget() const
 {
     return mWidget;
 }

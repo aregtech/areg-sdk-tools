@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/OptionPageLogging.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Tamas Csillag, Artak Avetyan
  *  \brief       Lusan application, implementation of Log Settings page of options dialog.
  *
@@ -171,7 +171,7 @@ void OptionPageLogging::closingOptions(bool OKpressed)
     OptionPageBase::closingOptions(OKpressed);
 }
 
-void OptionPageLogging::warnMessage(void)
+void OptionPageLogging::warnMessage()
 {
     QMessageBox::critical(static_cast<QWidget *>(this), tr("Error"), tr("The endpoint must be tested and must be working before saving the changes!"));
 }
@@ -254,22 +254,22 @@ void OptionPageLogging::saveData() const
     LogObserver::saveLoggerConfig();
 }
 
-inline QString OptionPageLogging::getLogLocation(void) const
+inline QString OptionPageLogging::getLogLocation() const
 {
     return textLogLocation()->text();
 }
 
-inline QString OptionPageLogging::getLogFileName(void) const
+inline QString OptionPageLogging::getLogFileName() const
 {
     return textLogFileName()->text();
 }
 
-inline QString OptionPageLogging::getServiceAddress(void) const
+inline QString OptionPageLogging::getServiceAddress() const
 {
     return textIpAddress()->text();
 }
 
-inline uint16_t OptionPageLogging::getServicePort(void) const
+inline uint16_t OptionPageLogging::getServicePort() const
 {
     return static_cast<uint16_t>(textPortNumber()->text().toUInt());
 }
@@ -352,11 +352,11 @@ void OptionPageLogging::onDataChanged()
     setDataModified(true);
 }
 
-void OptionPageLogging::onLogLocationChanged(void)
+void OptionPageLogging::onLogLocationChanged()
 {
 }
 
-void OptionPageLogging::onLogFileNameChanged(void)
+void OptionPageLogging::onLogFileNameChanged()
 {
 }
 
@@ -407,37 +407,37 @@ void OptionPageLogging::onLogInstancesConnected(const std::vector< areg::Connect
     mTestTriggered = false;
 }
 
-inline QLineEdit* OptionPageLogging::textLogLocation(void) const
+inline QLineEdit* OptionPageLogging::textLogLocation() const
 {
     return ui->editLogLocation;
 }
 
-inline QLineEdit* OptionPageLogging::textLogFileName(void) const
+inline QLineEdit* OptionPageLogging::textLogFileName() const
 {
     return ui->editLogFileName;
 }
 
-inline QLineEdit* OptionPageLogging::textIpAddress(void) const
+inline QLineEdit* OptionPageLogging::textIpAddress() const
 {
     return ui->editLogAddres;
 }
 
-inline QLineEdit* OptionPageLogging::textPortNumber(void) const
+inline QLineEdit* OptionPageLogging::textPortNumber() const
 {
     return ui->editLogPort;
 }
 
-inline QTextEdit* OptionPageLogging::textConnectionStatus(void) const
+inline QTextEdit* OptionPageLogging::textConnectionStatus() const
 {
     return ui->textConnectStatus;
 }
 
-inline QPushButton* OptionPageLogging::buttonBrowseDirs(void) const
+inline QPushButton* OptionPageLogging::buttonBrowseDirs() const
 {
     return ui->buttonBrowseDirs;
 }
 
-inline QPushButton* OptionPageLogging::buttonTestConnection(void) const
+inline QPushButton* OptionPageLogging::buttonTestConnection() const
 {
     return ui->buttonTestConnect;
 }

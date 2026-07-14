@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/common/LogCollectorClient.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log observer client object.
  *
@@ -21,13 +21,13 @@
 #include "areglogger/client/LogObserverApi.h"
 #include "areg/base/SharedBuffer.hpp"
 
-LogCollectorClient& LogCollectorClient::getInstance(void)
+LogCollectorClient& LogCollectorClient::getInstance()
 {
     static LogCollectorClient _instance;
     return _instance;
 }
 
-LogCollectorClient::LogCollectorClient(void)
+LogCollectorClient::LogCollectorClient()
     : QObject ( )
     , areg::logger::LogObserverBase   ( )
 {
@@ -67,7 +67,7 @@ void LogCollectorClient::on_log_db_created(const std::string& dbLocation)
     emit signalLogDbCreated(dbLocation);
 }
 
-void LogCollectorClient::on_log_messaging_failed(void)
+void LogCollectorClient::on_log_messaging_failed()
 {
     emit signalLogMessagingFailed();
 }
@@ -82,7 +82,7 @@ void LogCollectorClient::on_log_instances_disconnect(const std::vector<areg::Con
     emit signalLogInstancesDisconnect(instances);
 }
 
-void LogCollectorClient::on_log_service_disconnected(void)
+void LogCollectorClient::on_log_service_disconnected()
 {
     emit signalLogServiceDisconnected();
 }

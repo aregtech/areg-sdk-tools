@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APPLICATION_SI_SIATTRIBUTE_HPP
 #define LUSAN_APPLICATION_SI_SIATTRIBUTE_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIAttribute.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
@@ -32,15 +32,12 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-class SIAttribute;
-}
-
 class DataTypesModel;
 class SIAttributeDetails;
 class SIAttributeList;
 class SIAttributeModel;
 class TableCell;
+class QHBoxLayout;
 
 //////////////////////////////////////////////////////////////////////////
 // SIAttributeNotifyModel class declaration
@@ -69,7 +66,7 @@ public:
      * \param parent The parent index.
      * \return The number of rows.
      */
-    virtual int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     
     /**
      * \brief Returns the data for the given role and section in the model.
@@ -77,7 +74,7 @@ public:
      * \param role The role for which data is requested.
      * \return The data for the given role and section.
      */
-    virtual QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 };
 
 /**
@@ -87,18 +84,18 @@ public:
 class SIAttributeWidget : public QWidget
 {
     friend class SIAttribute;
-    
+
     Q_OBJECT
-    
+
 public:
     /**
      * \brief Constructor with initialization.
      * \param parent The parent widget.
      */
     explicit SIAttributeWidget(QWidget* parent);
-    
+
 private:
-    Ui::SIAttribute* ui; //!< The user interface of the data attribute.
+    QHBoxLayout* mPanels;   //!< The horizontal layout hosting the list and details panels.
 };
 
 
@@ -140,7 +137,7 @@ public:
     /**
      * \brief Destructor.
      */
-    virtual ~SIAttribute(void);
+    virtual ~SIAttribute();
     
 protected:
     
@@ -149,7 +146,7 @@ protected:
      * \param   dataType    New created data type object.
      * \return  Returns true if new created data type is in the list. Otherwise, returns false.
      **/
-    virtual void dataTypeCreated(DataTypeCustom* dataType) override;
+    void dataTypeCreated(DataTypeCustom* dataType) override;
     
     /**
      * \brief   Triggered when the data type is converted.
@@ -157,32 +154,32 @@ protected:
      * \param   newType     The new data type object.
      * \return  Returns true if the old data type is converted to the new data type. Otherwise, returns false.
      **/
-    virtual void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
+    void dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* newType) override;
     
     /**
      * \brief   Triggered when the data type is deleted and invalidated.
      * \param   dataType    The data type object to be deleted.
      * \return  Returns true if the data type is removed from the list. Otherwise, returns false.
      **/
-    virtual void dataTypeDeleted(DataTypeCustom* dataType) override;
+    void dataTypeDeleted(DataTypeCustom* dataType) override;
     
     /**
      * \brief   Triggered when the data type is updated.
      * \param   dataType    The data type object to update.
      * \return  Returns true if the data type is updated. Otherwise, returns false.
      **/
-    virtual void dataTypeUpdated(DataTypeCustom* dataType) override;
+    void dataTypeUpdated(DataTypeCustom* dataType) override;
 
     /**
      * \brief   Returns the number of columns in the table.
      **/
-    virtual int getColumnCount(void) const override;
+    int getColumnCount() const override;
 
     /**
      * \brief   Returns the text of the cell.
      * \param   cell    The index of the cell.
      **/
-    virtual QString getCellText(const QModelIndex& cell) const override;
+    QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -201,27 +198,27 @@ protected slots:
     /**
      * \brief   Triggered when the add button is clicked.
      **/
-    void onAddClicked(void);
+    void onAddClicked();
     
     /**
      * \brief   Triggered when the remove button is clicked.
      **/
-    void onRemoveClicked(void);
+    void onRemoveClicked();
     
     /**
      * \brief   Triggered when the insert button is clicked.
      **/
-    void onInsertClicked(void);
+    void onInsertClicked();
 
     /**
      * \brief   Triggered when the move up button is clicked.
      **/
-    void onMoveUpClicked(void);
+    void onMoveUpClicked();
 
     /**
      * \brief   Triggered when the move down button is clicked.
      **/
-    void onMoveDownClicked(void);
+    void onMoveDownClicked();
     
     /**
      * \brief   Triggered when the move up button is clicked.
@@ -263,7 +260,7 @@ protected slots:
     /**
      * \brief   Triggered when the description is changed.
      **/
-    void onDescriptionChanged(void);
+    void onDescriptionChanged();
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -273,17 +270,17 @@ private:
     /**
      * \brief   Initializes the SIAttribute object.
      **/
-    void updateData(void);
+    void updateData();
     
     /**
      * \brief   Updates the widgets.
      **/
-    void updateWidgets(void);
+    void updateWidgets();
     
     /**
      * \brief   Initializes the signals.
      **/
-    void setupSignals(void);
+    void setupSignals();
     
     /**
      * \brief   Blocks the basic signals.
@@ -347,7 +344,7 @@ private:
      * \brief   Generates the name of the attribute.
      * \return  The generated name of the attribute.
      **/
-    inline QString genName(void);
+    inline QString genName();
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
@@ -357,7 +354,6 @@ private:
     SIAttributeDetails*     mDetails;       //!< The details widget of the data attribute.
     SIAttributeList*        mList;          //!< The list widget of the data attribute.
     SIAttributeWidget*      mWidget;        //!< The widget of the data attribute.
-    Ui::SIAttribute&        ui;             //!< The user interface of the data attribute.
     DataTypesModel*         mTypeModel;     //!< The model of the data types.
     SIAttributeNotifyModel* mNotifyModel;   //!< The model of the notification types.
     TableCell*              mTableCell;     //!< The table cell object.

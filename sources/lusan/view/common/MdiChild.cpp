@@ -1,17 +1,17 @@
-﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/MdiChild.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application Multi-document interface (MDI) child window.
  *
@@ -50,41 +50,41 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     emit wndMain->signalMdiWindowCreated(this);
 }
 
-MdiChild::~MdiChild(void)
+MdiChild::~MdiChild()
 {
 }
 
-bool MdiChild::openSucceeded(void) const
+bool MdiChild::openSucceeded() const
 {
     return false;
 }
 
-QString MdiChild::newDocumentName(void)
+QString MdiChild::newDocumentName()
 {
     static uint32_t _seqNr{0};
     mDocName = newDocument() + QString::number(++_seqNr);
     return (mDocName + newDocumentExt());
 }
 
-const QString& MdiChild::newDocument(void) const
+const QString& MdiChild::newDocument() const
 {
     static const QString _newDoc{"document"};
     return _newDoc;
 }
 
-const QString& MdiChild::newDocumentExt(void) const
+const QString& MdiChild::newDocumentExt() const
 {
     static const QString _newExt("");
     return _newExt;
 }
 
-const QString& MdiChild::fileSuffix(void) const
+const QString& MdiChild::fileSuffix() const
 {
     static const QString _suffix("");
     return _suffix;
 }
 
-const QString& MdiChild::fileFilter(void) const
+const QString& MdiChild::fileFilter() const
 {
     static const QString _filter("All Files (*.*)");
     return _filter;
@@ -94,6 +94,7 @@ void MdiChild::newFile()
 {
     mIsUntitled = true;
     mCurFile = newDocumentName();
+    mIsModified = true;
     setWindowTitle(mCurFile + "[*]");
     setWindowModified(true);
 #if 0
@@ -139,6 +140,7 @@ bool MdiChild::saveFile(const QString& fileName)
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     if (writeToFile(fileName) )
     {
+        mIsModified = false;
         mIsUntitled = false;
         setCurrentFile(fileName);
         saved = true;
@@ -160,31 +162,27 @@ QString MdiChild::userFriendlyCurrentFile()
 
 void MdiChild::closeEvent(QCloseEvent* event)
 {
-#if 0
     if (maybeSave())
     {
+        onWindowClosing(isActiveWindow());
+        emit signalMdiChildClosed(this);
         event->accept();
     }
     else
     {
         event->ignore();
     }
-#else
-    onWindowClosing(isActiveWindow());
-    emit signalMdiChildClosed(this);
-    event->accept();
-#endif
 }
 
 void MdiChild::onWindowClosing(bool /*isActive*/)
 {
 }
 
-void MdiChild::onWindowActivated(void)
+void MdiChild::onWindowActivated()
 {
 }
 
-void MdiChild::onWindowCreated(void)
+void MdiChild::onWindowCreated()
 {
     
 }
@@ -196,8 +194,8 @@ void MdiChild::onDocumentModified()
 
 bool MdiChild::maybeSave()
 {
-//    if (!document()->isModified())
-//        return true;
+    if (mIsModified == false)
+        return true;
 
     const QMessageBox::StandardButton ret
         = QMessageBox::warning(this, tr("MDI"),
@@ -216,6 +214,18 @@ bool MdiChild::maybeSave()
     }
 
     return true;
+}
+
+void MdiChild::setModified(bool modified)
+{
+    mIsModified = modified;
+    if (mMdiSubWindow != nullptr)
+    {
+        mMdiSubWindow->setWindowModified(modified);
+        bool showWarning{ (mIsUntitled == false) && (mCurFile.isEmpty() == false) && (LusanApplication::isWorkpacePath(mCurFile) == false) };
+        QString title{ QString("%1%2%3").arg(showWarning ? "[!] " : "", userFriendlyCurrentFile(), mIsUntitled || mIsModified ? "[*]" : "") };
+        mMdiSubWindow->setWindowTitle(title);
+    }
 }
 
 void MdiChild::setCurrentFile(const QString& fileName)
@@ -281,6 +291,25 @@ void MdiChild::redo()
 {
     // Implement redo functionality
     // document()->redo();
+}
+
+bool MdiChild::canUndo() const
+{
+    return false;
+}
+
+bool MdiChild::canRedo() const
+{
+    return false;
+}
+
+void MdiChild::setToolbarVisible(bool /*visible*/)
+{
+}
+
+bool MdiChild::isToolbarVisible() const
+{
+    return true;
 }
 
 void MdiChild::clear()

@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeCustom.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Custom Data Type.
  *
@@ -67,7 +67,7 @@ DataTypeCustom::DataTypeCustom(DataTypeCustom&& src) noexcept
 {
 }
 
-DataTypeCustom::~DataTypeCustom(void)
+DataTypeCustom::~DataTypeCustom()
 {
 }
 
@@ -97,7 +97,7 @@ DataTypeCustom& DataTypeCustom::operator = (DataTypeCustom&& other) noexcept
     return *this;
 }
 
-const QString& DataTypeCustom::getDescription(void) const
+const QString& DataTypeCustom::getDescription() const
 {
     return mDescription;
 }
@@ -107,12 +107,12 @@ void DataTypeCustom::setDescription(const QString& description)
     mDescription = description;
 }
 
-bool DataTypeCustom::isValid(void) const
+bool DataTypeCustom::isValid() const
 {
     return (getId() != 0) && DataTypeBase::isValid();
 }
 
-bool DataTypeCustom::getIsDeprecated(void) const
+bool DataTypeCustom::getIsDeprecated() const
 {
     return mIsDeprecated;
 }
@@ -122,7 +122,7 @@ void DataTypeCustom::setIsDeprecated(bool isDeprecated)
     mIsDeprecated = isDeprecated;
 }
 
-const QString& DataTypeCustom::getDeprecateHint(void) const
+const QString& DataTypeCustom::getDeprecateHint() const
 {
     return mIsDeprecated ? mDeprecateHint : ElementBase::EmptyString;
 }
@@ -138,7 +138,7 @@ void DataTypeCustom::setIsDeprecated(bool isDeprecated, const QString& reason)
     mDeprecateHint = reason;
 }
 
-QString DataTypeCustom::getType(void) const
+QString DataTypeCustom::getType() const
 {
     return DataTypeCustom::getType(mCategory);
 }

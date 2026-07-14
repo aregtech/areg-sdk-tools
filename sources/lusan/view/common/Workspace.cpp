@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/Workspace.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application Workspace setup dialog.
  *
@@ -67,13 +67,13 @@ Workspace::Workspace(OptionsManager& options, QWidget * parent /*= nullptr*/)
     }
 }
 
-Workspace::~Workspace(void)
+Workspace::~Workspace()
 {
     delete mWorkspace;
     mWorkspace = nullptr;
 }
 
-void Workspace::onAccept(void)
+void Workspace::onAccept()
 {
     QString path { mWorkspace->comboboxWorkspacePath->currentText() };
     QString describe { mWorkspace->editWorkspaceDescription->toPlainText() };
@@ -95,7 +95,7 @@ void Workspace::onAccept(void)
     done(static_cast<int>(QDialog::DialogCode::Accepted));
 }
 
-void Workspace::onReject(void)
+void Workspace::onReject()
 {
     done(static_cast<int>(QDialog::DialogCode::Rejected));
 }

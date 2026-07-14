@@ -1,19 +1,19 @@
 #ifndef LUSAN_VIEW_COMMON_PROJECTSETTINGS_HPP
 #define LUSAN_VIEW_COMMON_PROJECTSETTINGS_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/ProjectSettings.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Tamas Csillag
  *  \brief       Lusan application, options dialog.
  *
@@ -70,7 +70,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     explicit ProjectSettings(MdiMainWindow *parent);
-    virtual ~ProjectSettings(void);
+    virtual ~ProjectSettings();
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -80,17 +80,17 @@ public:
     /**
      * \brief   Returns the pointer to project settings widget.
      **/
-    inline OptionPageProjectDirs * getSettingProjectDirs(void);
+    inline OptionPageProjectDirs * getSettingProjectDirs();
 
     /**
      * \brief   Returns the pointer to workspace settings widget.
      **/
-    inline OptionPageWorkspace* getSettingWorkspace(void);
+    inline OptionPageWorkspace* getSettingWorkspace();
 
     /**
      * \brief   Returns the pointer to log settings widget.
      **/
-    inline OptionPageLogging* getSettingLog(void);
+    inline OptionPageLogging* getSettingLog();
 
     /**
      * \brief   Activates the page in the settings dialog.
@@ -118,7 +118,7 @@ private slots:
     /**
      * \brief   Slot, triggered when OK button in the button box is clicked.
      **/
-    void onAcceptClicked(void);
+    void onAcceptClicked();
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden calls
@@ -170,17 +170,17 @@ private:
 // ProjectSettings inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline OptionPageProjectDirs * ProjectSettings::getSettingProjectDirs(void)
+inline OptionPageProjectDirs * ProjectSettings::getSettingProjectDirs()
 {
     return mOptionProjectDirs;
 }
 
-inline OptionPageWorkspace * ProjectSettings::getSettingWorkspace(void)
+inline OptionPageWorkspace * ProjectSettings::getSettingWorkspace()
 {
     return mOptionPageWorkspace;
 }
 
-inline OptionPageLogging * ProjectSettings::getSettingLog(void)
+inline OptionPageLogging * ProjectSettings::getSettingLog()
 {
     return mOptionPageLogging;
 }

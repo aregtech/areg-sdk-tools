@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/si/SIDataTypeModel.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Custom Data Type Model.
  *
@@ -36,12 +36,12 @@ int SIDataTypeModel::getDataTypes(QList<DataTypeBase *> & result, const QList<Da
     return mData.getDataTypes(result, categories, makeSorting);
 }
 
-const QList<DataTypeBasicContainer*>& SIDataTypeModel::getContainerDatTypes(void) const
+const QList<DataTypeBasicContainer*>& SIDataTypeModel::getContainerDatTypes() const
 {
     return mData.getContainerDatTypes();
 }
 
-const QList<DataTypeCustom *>& SIDataTypeModel::getCustomDataTypes(void) const
+const QList<DataTypeCustom *>& SIDataTypeModel::getCustomDataTypes() const
 {
     return mData.getCustomDataTypes();
 }
@@ -141,12 +141,12 @@ void SIDataTypeModel::sortById(bool ascending)
     mData.sortById(ascending);
 }
 
-const QList<DataTypeCustom*>& SIDataTypeModel::getDataTypes(void) const
+const QList<DataTypeCustom*>& SIDataTypeModel::getDataTypes() const
 {
     return mData.getCustomDataTypes();
 }
 
-int SIDataTypeModel::getDataTypeCount(void) const
+int SIDataTypeModel::getDataTypeCount() const
 {
     return static_cast<int>(mData.getCustomDataTypes().size());
 }

@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_MODEL_COMMON_FILESYSTEMMODEL_HPP
 #define LUSAN_MODEL_COMMON_FILESYSTEMMODEL_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/common/FileSystemModel.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, File System Model for QTreeView.
  *
@@ -71,28 +71,28 @@ public:
      * \param   parent  The parent index.
      * \return  The index of the item.
      **/
-    virtual QModelIndex index(int row, int column, const QModelIndex& parent) const override;
+    QModelIndex index(int row, int column, const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the parent index of the given child index.
      * \param   child   The child index.
      * \return  The parent index.
      **/
-    virtual QModelIndex parent(const QModelIndex& child) const override;
+    QModelIndex parent(const QModelIndex& child) const override;
 
     /**
      * \brief   Returns the number of rows under the given parent.
      * \param   parent  The parent index.
      * \return  The number of rows.
      **/
-    virtual int rowCount(const QModelIndex& parent) const override;
+    int rowCount(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the number of columns for the children of the given parent.
      * \param   parent  The parent index.
      * \return  The number of columns.
      **/
-    virtual int columnCount(const QModelIndex& parent) const override;
+    int columnCount(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the data stored under the given role for the item referred to by the index.
@@ -100,7 +100,7 @@ public:
      * \param   role    The role for which data is requested.
      * \return  The data for the given role and section.
      **/
-    virtual QVariant data(const QModelIndex& index, int role) const override;
+    QVariant data(const QModelIndex& index, int role) const override;
 
     /**
      * \brief   Returns the data for the given role and section in the header with the specified orientation.
@@ -109,27 +109,27 @@ public:
      * \param   role        The role for which data is requested.
      * \return  The data for the given role and section.
      **/
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
     /**
      * \brief   Fetches more data for the given parent index.
      * \param   parent  The parent index.
      **/
-    virtual void fetchMore(const QModelIndex& parent) override;
+    void fetchMore(const QModelIndex& parent) override;
 
     /**
      * \brief   Checks if more data can be fetched for the given parent index.
      * \param   parent  The parent index.
      * \return  True if more data can be fetched, false otherwise.
      **/
-    virtual bool canFetchMore(const QModelIndex& parent) const override;
+    bool canFetchMore(const QModelIndex& parent) const override;
 
     /**
      * \brief   Returns the flags for the item at the given index.
      * \param   index   The index of the item.
      * \return  The flags of the item.
      **/
-    virtual Qt::ItemFlags flags(const QModelIndex &index) const override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
@@ -161,7 +161,7 @@ public:
      * \brief   Returns the root paths of the file system model.
      * \return  The map of root paths.
      **/
-    const WorkspaceElem& getRootPaths(void) const;
+    const WorkspaceElem& getRootPaths() const;
 
     /**
      * \brief   Returns the file path for the given index.
@@ -173,7 +173,7 @@ public:
     /**
      * \brief   Resets the model and refreshes the model starting from root entry.
      **/
-    void refresh(void);
+    void refresh();
 
     /**
      * \brief   Resets and refreshes the entries of specified index.
@@ -201,7 +201,7 @@ public:
     /**
      * \brief   Cleans the file filter to display all file system data.
      **/
-    void cleanFilters(void);
+    void cleanFilters();
 
     /**
      * \brief   Deletes a file system entry for the given index.
@@ -213,7 +213,7 @@ public:
     /**
      * \brief   Returns the root index of the file system model.
      **/
-    QModelIndex getRootIndex(void) const;
+    QModelIndex getRootIndex() const;
     
     /**
      * \brief   Inserts a new directory into the file system model.
@@ -389,7 +389,7 @@ private:
     /**
      * \brief   Resets the root entry of the file system.
      **/
-    void resetRoot(void);
+    void resetRoot();
 
     /**
      * \brief   Compares the current workspace root paths with the given ones.
@@ -430,7 +430,7 @@ class GeneralFileSystemModel    : public QFileSystemModel
 public:
     GeneralFileSystemModel(QObject* parent = nullptr);
 
-    virtual ~GeneralFileSystemModel(void) = default;
+    virtual ~GeneralFileSystemModel() = default;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -442,7 +442,7 @@ public:
      * \param   parent  The parent index.
      * \return  The number of columns.
      **/
-    virtual int columnCount(const QModelIndex& parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
     /**
      * \brief   Returns the header data stored under the given role.
@@ -451,7 +451,7 @@ public:
      * \param   role        The role for which data is requested.
      * \return  The header data for the given role and section.
      **/
-    virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -1,19 +1,19 @@
 #ifndef LUSAN_DATA_LOG_LOGOBSERVER_HPP
 #define LUSAN_DATA_LOG_LOGOBSERVER_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/log/LogObserver.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Log observer component with empty service provider.
  *
@@ -83,52 +83,52 @@ public:
      * \brief   Stops the log observer component.
      *          The function stops the log observer component and unloads the model.
      **/
-    static void releaseLogObserver(void);
+    static void releaseLogObserver();
 
     /**
      * \brief   Returns the `SocketAddress` object of the connected log collector service.
      **/
-    static const areg::SocketAddress& getLogServiceAddress(void);
+    static const areg::SocketAddress& getLogServiceAddress();
 
     /**
      * \brief   Returns the IP-address of connected log collector.
      **/
-    static QString getConnectedAddress(void);
+    static QString getConnectedAddress();
 
     /**
      * \brief   Returns the host name of connected log collector service.
      *          If the host name is not set or was not able to resolve,
      *          returns IP-address of the log collector service.
      **/
-    static QString getConnectedHostName(void);
+    static QString getConnectedHostName();
 
     /**
      * \brief   Returns the port number of connected log collector.
      **/
-    static uint16_t getConnectedPort(void);
+    static uint16_t getConnectedPort();
 
     /**
      *\brief    The function returns the path to the database, which is used to log messages.
      **/
-    static QString getActiveDatabase(void);
+    static QString getActiveDatabase();
 
     /**
      * \brief   Returns the path to the database, which is set in the initialization file.
      *          The path may contain a mask.
      **/
-    static QString getInitDatabase(void);
+    static QString getInitDatabase();
 
     /**
      * \brief   Returns the name of the database, which is set in the initialization file.
      *          The name may contain a mask.
      **/
-    static QString getConfigDatabaseName(void);
+    static QString getConfigDatabaseName();
 
     /**
      * \brief   Returns the location of the database, which is set in the initialization file.
      *          The location may contain a mask.
      **/
-    static QString getConfigDatabaseLocation(void);
+    static QString getConfigDatabaseLocation();
 
     /**
      * \brief   Sets the name of the database to set in the initialization file.
@@ -149,7 +149,7 @@ public:
     /**
      * \brief   Returns true if log observer is connected to the log collector.
      **/
-    static bool isConnected(void);
+    static bool isConnected();
 
     /**
      * \brief   Connects to the log collector service.
@@ -163,26 +163,26 @@ public:
     /**
      * \brief   Disconnects from the log collector service. The log observer component remains connected.
      **/
-    static void disconnect(void);
+    static void disconnect();
 
     /**
      * \brief   Pauses running log observer component. It stops logging messages, but keeps database active.
      *          On resume it will continue log messages in the active database.
      * \return  Returns true if operation succeeds. Otherwise, returns false.
      **/
-    static bool pause(void);
+    static bool pause();
 
     /**
      * \brief   Resumes the log observer component. It starts logging messages in the active database.
      * \return  Returns true if operation succeeds. Otherwise, returns false.
      **/
-    static bool resume(void);
+    static bool resume();
 
     /**
      * \brief   Stops the log observer component. It stops logging messages and closes the database.
      *          On next start it will create new database.
      **/
-    static void stop(void);
+    static void stop();
 
     /**
      * \brief   Restarts stopped log observer component. On start it creates new logging database.
@@ -195,7 +195,7 @@ public:
      * \brief   Requests the list of connected instances that make logs.
      * \return  Returns true if processed with success. Otherwise, returns false.
      **/
-    static bool requestInstances(void);
+    static bool requestInstances();
     
     /**
      * \brief   Requests the list of registered scopes of the specified connected instance.
@@ -232,7 +232,7 @@ public:
     /**
      * \brief   Saves the configuration of the log observer in the configuration file.
      **/
-    static void saveLoggerConfig(void);
+    static void saveLoggerConfig();
     
     /**
      * \brief   Called by system to instantiate the component.
@@ -252,7 +252,7 @@ public:
     /**
      * \brief   Returns the pointer of log observer component if loaded. Otherwise, returns null.
      **/
-    static LogObserver* getComponent(void);
+    static LogObserver* getComponent();
     
     /**
      * \brief   Call to query and get list of names of connected instances from log database.
@@ -346,7 +346,7 @@ private:
      **/
     LogObserver(const areg::ComponentEntry & entry, areg::ComponentThread & ownerThread);
     
-    virtual ~LogObserver(void);
+    virtual ~LogObserver();
     
 //////////////////////////////////////////////////////////////////////////
 // Static methods
@@ -355,7 +355,7 @@ private:
     /**
      * \brief   Returns instance of the client. The log observer component should be already loaded.
      **/
-    static LogCollectorClient& getClient(void);
+    static LogCollectorClient& getClient();
 
 //////////////////////////////////////////////////////////////////////////
 // Signals
@@ -402,7 +402,7 @@ signals:
     /**
      * \brief   The signal is triggered when fails to send or receive message.
      **/
-    void signalLogMessagingFailed(void);
+    void signalLogMessagingFailed();
 
     /**
      * \brief   The signal is triggered when receive the list of connected instances that make logs.
@@ -421,7 +421,7 @@ signals:
      * \brief   The signal is triggered when connection with the log collector service is lost.
      * \param   instances   The list of disconnected instances.
      **/
-    void signalLogServiceDisconnected(void);
+    void signalLogServiceDisconnected();
 
     /**
      * \brief   The signal is triggered when receive the list of the scopes registered in an application.
@@ -456,7 +456,7 @@ signals:
 // IELogObserverEventConsumer overrides
 /************************************************************************/
 protected:
-    virtual void process_event(const LogObserverEventData & data) override;
+    void process_event(const LogObserverEventData & data) override;
 
 /************************************************************************/
 // StubBase overrides. Triggered by Component on startup.
@@ -466,31 +466,31 @@ protected:
      * \brief   This function is triggered by Component when starts up.
      * \param   holder  The holder component of service interface of Stub.
      **/
-    virtual void startup_service_interface( areg::Component & holder ) override;
+    void startup_service_interface( areg::Component & holder ) override;
 
     /**
      * \brief   This function is triggered by Component when shuts down.
      * \param   holder  The holder component of service interface of Stub.
      **/
-    virtual void shutdown_service_interface( areg::Component & holder ) noexcept override;
+    void shutdown_service_interface( areg::Component & holder ) noexcept override;
 
 //////////////////////////////////////////////////////////////////////////
 // These methods must exist, but can have empty body
 //////////////////////////////////////////////////////////////////////////
 protected:
 /************************************************************************/
-// StubBase overrides. Public pure virtual methods
+// StubBase overrides. Public pure methods
 /************************************************************************/
 
     /**
      * \brief   Sends update notification message to all clients.
      **/
-    virtual void send_notification(unsigned int /*msgId*/) override;
+    void send_notification(unsigned int /*msgId*/) override;
 
     /**
      * \brief   Sends error message to clients.
      **/
-    virtual void error_request(unsigned int /*msgId*/, bool /*msgCancel*/) override;
+    void error_request(unsigned int /*msgId*/, bool /*msgCancel*/) override;
 
 /************************************************************************/
 // IEStubEventConsumer interface overrides.
@@ -499,12 +499,12 @@ protected:
     /**
      * \brief   Triggered to process service request event.
      **/
-    virtual void process_request_event(areg::ServiceRequestEvent& /*eventElem*/) override;
+    void process_request_event(areg::ServiceRequestEvent& /*eventElem*/) override;
 
     /**
      * \brief   Triggered to process attribute update notification event.
      **/
-    virtual void process_attribute_event(areg::ServiceRequestEvent& /*eventElem*/) override;
+    void process_attribute_event(areg::ServiceRequestEvent& /*eventElem*/) override;
 
 //////////////////////////////////////////////////////////////////////////
 // slots
@@ -560,7 +560,7 @@ private slots:
     /**
      * \brief   The callback of the event triggered when fails to send or receive message.
      **/
-    void slotLogMessagingFailed(void);
+    void slotLogMessagingFailed();
 
     /**
      * \brief   The callback of the event triggered when receive the list of connected instances that make logs.
@@ -579,7 +579,7 @@ private slots:
      * \brief   The callback of the event triggered when connection with the log collector service is lost.
      * \param   instances   The list of disconnected instances.
      **/
-    void slotLogServiceDisconnected(void);
+    void slotLogServiceDisconnected();
 
     /**
      * \brief   The callback of the event triggered when receive the list of the scopes registered in an application.
@@ -604,7 +604,7 @@ private slots:
     void slotLogMessage(const areg::MessageEnvelope & logMessage);
 
 private:
-    inline LogObserver& self(void);
+    inline LogObserver& self();
 
 private:
     LogCollectorClient& mLogClient;     //!< Log observer client.
@@ -614,7 +614,7 @@ private:
 // Forbidden calls
 //////////////////////////////////////////////////////////////////////////
 private:
-    LogObserver( void ) = delete;
+    LogObserver() = delete;
     AREG_NOCOPY_NOMOVE( LogObserver );
 };
 
@@ -622,7 +622,7 @@ private:
 // LogObserver class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline LogObserver& LogObserver::self(void)
+inline LogObserver& LogObserver::self()
 {
     return (*this);
 }

@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APP_LUSANAPPLICATION_HPP
 #define LUSAN_APP_LUSANAPPLICATION_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/app/LusanApplication.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application object for managing GUI-related functionality.
  *
@@ -54,7 +54,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~LusanApplication(void);
+    virtual ~LusanApplication();
     
 //////////////////////////////////////////////////////////////////////////
 // Static methods
@@ -64,94 +64,94 @@ public:
      * \brief   Gets the singleton instance of the application.
      * \return  Reference to the LusanApplication instance.
      **/
-    static LusanApplication& getApplication(void);
+    static LusanApplication& getApplication();
     
     /**
      * \brief   Gets the options manager.
      * \return  Reference to the OptionsManager instance.
      **/
-    static OptionsManager& getOptions(void);
+    static OptionsManager& getOptions();
     
     /**
      * \brief   Gets the active workspace.
      * \return  The active WorkspaceEntry.
      **/
-    static WorkspaceEntry getActiveWorkspace(void);
+    static WorkspaceEntry getActiveWorkspace();
     
     /**
      * \brief   Checks if the application is initialized.
      * \return  True if the application is initialized, false otherwise.
      **/
-    static bool isInitialized(void);
+    static bool isInitialized();
 
     /**
      * \brief   Returns the list of supported file extensions.
      * \return  The list of supported file extensions.
      **/
-    static QStringList getSupportedFileExtensions(void);
+    static QStringList getSupportedFileExtensions();
 
     /**
      * \brief   Returns the list of external file extensions.
      * \return  The list of external file extensions.
      **/
-    static QStringList getExternalFileExtensions(void);
+    static QStringList getExternalFileExtensions();
 
     /**
      * \brief   Returns the list of internal file extensions.
      * \return  The list of internal file extensions.
      **/
-    static QStringList getInternalFileExtensions(void);
+    static QStringList getInternalFileExtensions();
 
     /**
      * \brief   Returns the list of workspace directories.
      * \return  The list of workspace directories.
      **/
-    static QStringList getWorkspaceDirectories(void);
+    static QStringList getWorkspaceDirectories();
 
     /**
      * \brief   Returns the workspace root directory.
      **/
-    static QString getWorkspaceRoot(void);
+    static QString getWorkspaceRoot();
 
     /**
      * \brief   Returns the workspace sources directory.
      **/
-    static QString getWorkspaceSources(void);
+    static QString getWorkspaceSources();
 
     /**
      * \brief   Returns the workspace includes directory.
      **/
-    static QString getWorkspaceIncludes(void);
+    static QString getWorkspaceIncludes();
 
     /**
      * \brief   Returns the workspace delivery directory.
      **/
-    static QString getWorkspaceDelivery(void);
+    static QString getWorkspaceDelivery();
 
     /**
      * \brief   Returns the directory of workspace to save log files.
      **/
-    static QString getWorkspaceLogs(void);
+    static QString getWorkspaceLogs();
 
     /**
      * \brief   Returns the instance of the log observer client.
      **/
-    static LogCollectorClient& getLogCollectorClient(void);
+    static LogCollectorClient& getLogCollectorClient();
     
     /**
      * \brief   Returns the main window of the application.
      **/
-    static MdiMainWindow* getMainWindow(void);
+    static MdiMainWindow* getMainWindow();
 
     /**
      * \brief   Call to restart the application by creating new workspace
      **/
-    static void newWorkspace(void);
+    static void newWorkspace();
 
     /**
      * \brief   Applies configured application theme from options.
      **/
-    static void applyConfiguredTheme(void);
+    static void applyConfiguredTheme();
 
     /**
      * \brief   Checks if the given path is a valid workspace path.
@@ -169,7 +169,7 @@ public:
      * \brief   Starts the application and initializes the main window.
      * \return  The exit code of the application.
      **/
-    int runApplication(void);
+    int runApplication();
 
 signals:
 /************************************************************************
@@ -178,7 +178,7 @@ signals:
     /**
      * \brief   Signal emitted when the application is up and running, and ready to operate.
      **/
-    void signalApplicationRunning(void);
+    void signalApplicationRunning();
 
 private:
 

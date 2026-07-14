@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/common/FileSystemModel.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, File System Model implementation.
  *
@@ -202,7 +202,7 @@ bool FileSystemModel::updateRootPaths(const WorkspaceElem& paths)
     return result;
 }
 
-const WorkspaceElem& FileSystemModel::getRootPaths(void) const
+const WorkspaceElem& FileSystemModel::getRootPaths() const
 {
     return mWorkspaceDirs;
 }
@@ -216,7 +216,7 @@ QString FileSystemModel::filePath(const QModelIndex& index)
     return (entry != nullptr ? entry->getPath() : QString());
 }
 
-void FileSystemModel::refresh(void)
+void FileSystemModel::refresh()
 {
     refresh(&mRootEntry);
 }
@@ -276,7 +276,7 @@ void FileSystemModel::setFileFilter(const QStringList& filterList)
     }
 }
 
-void FileSystemModel::cleanFilters(void)
+void FileSystemModel::cleanFilters()
 {
     mFileFilter.clear();
     if (mRootEntry.hasFetched())
@@ -287,7 +287,7 @@ void FileSystemModel::cleanFilters(void)
     }
 }
 
-QModelIndex FileSystemModel::getRootIndex(void) const
+QModelIndex FileSystemModel::getRootIndex() const
 {
     return (mRootEntry.hasValidChildren() ? mRootIndex : QModelIndex());
 }
@@ -598,7 +598,7 @@ bool FileSystemModel::checkWorkspaceEntry(const QModelIndex& index) const
     return false;
 }
 
-void FileSystemModel::resetRoot(void)
+void FileSystemModel::resetRoot()
 {
     resetEntry(&mRootEntry);
 }

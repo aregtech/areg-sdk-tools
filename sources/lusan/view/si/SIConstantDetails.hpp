@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_APPLICATION_SI_SICONSTANTDETAILS_HPP
 #define LUSAN_APPLICATION_SI_SICONSTANTDETAILS_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIConstantDetails.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
@@ -27,10 +27,6 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-namespace Ui {
-    class SIConstantDetails;
-}
-
 class QCheckBox;
 class QComboBox;
 class QLineEdit;
@@ -61,35 +57,43 @@ public:
     /**
      * \brief   Returns the constant name widget object.
      **/
-    QLineEdit* ctrlName(void);
+    QLineEdit* ctrlName();
 
     /**
      * \brief   Returns the constant type widget object.
      **/
-    QComboBox* ctrlTypes(void);
+    QComboBox* ctrlTypes();
 
     /**
      * \brief   Returns the constant value widget object.
      **/
-    QLineEdit* ctrlValue(void);
+    QLineEdit* ctrlValue();
 
     /**
      * \brief   Returns the constant description widget object.
      **/
-    QPlainTextEdit* ctrlDescription(void);
+    QPlainTextEdit* ctrlDescription();
 
     /**
      * \brief   Returns the constant deprecated flag widget object.
      **/
-    QCheckBox* ctrlDeprecated(void);
+    QCheckBox* ctrlDeprecated();
 
     /**
      * \brief   Returns the constant deprecation hint widget object.
      **/
-    QLineEdit* ctrlDeprecateHint(void);
+    QLineEdit* ctrlDeprecateHint();
 
 private:
-    Ui::SIConstantDetails* ui;  //!< The user interface object.
+    void buildUi();
+
+private:
+    QLineEdit*      mName;
+    QComboBox*      mTypes;
+    QLineEdit*      mValue;
+    QPlainTextEdit* mDescription;
+    QCheckBox*      mDeprecated;
+    QLineEdit*      mDeprecateHint;
 };
 
 #endif // LUSAN_APPLICATION_SI_SICONSTANTDETAILS_HPP

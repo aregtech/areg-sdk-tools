@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeEmpty.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Empty Data Type.
  *
@@ -19,17 +19,17 @@
 
 #include "lusan/data/common/DataTypeEmpty.hpp"
 
-DataTypeEmpty::DataTypeEmpty(void)
+DataTypeEmpty::DataTypeEmpty()
     : DataTypeBase(DataTypeBase::eCategory::Undefined, QString(), 0, nullptr)
 {
 }
 
-inline unsigned int DataTypeEmpty::getId(void) const
+inline unsigned int DataTypeEmpty::getId() const
 {
     return 0;
 }
 
-bool DataTypeEmpty::isValid(void) const
+bool DataTypeEmpty::isValid() const
 {
     return false;
 }
@@ -43,7 +43,7 @@ void DataTypeEmpty::writeToXml(QXmlStreamWriter& xml) const
 {
 }
 
-unsigned int DataTypeEmpty::getNextId(void) const
+unsigned int DataTypeEmpty::getNextId() const
 {
     return 0;
 }

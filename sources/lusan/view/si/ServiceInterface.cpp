@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/ServiceInterface.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface main window.
  *
@@ -35,14 +35,14 @@ namespace
     constexpr int TabInitStartDelayMs{ 200 };
     constexpr int TabInitDelayMs{ 50 };
 
-    const QIcon& tabIcon(void)
+    const QIcon& tabIcon()
     {
         static const QIcon _icon{ NELusanCommon::iconServiceInterfaceTab(NELusanCommon::SizeSmall) };
         return _icon;
     }
 }
 
-const QString& ServiceInterface::fileExtension(void)
+const QString& ServiceInterface::fileExtension()
 {
     static const QString _extSI{ "siml" };
     return _extSI;
@@ -87,6 +87,7 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
 
     // Set the layout
     QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(&mTabWidget);
     setLayout(layout);
     
@@ -105,41 +106,41 @@ ServiceInterface::ServiceInterface(MdiMainWindow *wndMain, const QString & fileP
     }
 }
 
-ServiceInterface::~ServiceInterface(void)
+ServiceInterface::~ServiceInterface()
 {
 }
 
-bool ServiceInterface::openSucceeded(void) const
+bool ServiceInterface::openSucceeded() const
 {
     return mModel.openSucceeded();
 }
 
-QString ServiceInterface::newDocumentName(void)
+QString ServiceInterface::newDocumentName()
 {
     static uint32_t _seqNr{0};
     mDocName = newDocument() + QString::number(++_seqNr);
     return mDocName + newDocumentExt();
 }
 
-const QString& ServiceInterface::newDocument(void) const
+const QString& ServiceInterface::newDocument() const
 {
     static const QString _newSIDoc{"NewServiceInterface"};
     return _newSIDoc;
 }
 
-const QString& ServiceInterface::newDocumentExt(void) const
+const QString& ServiceInterface::newDocumentExt() const
 {
     static const QString _extSI {".siml"};
     return _extSI;
 }
 
-const QString& ServiceInterface::fileSuffix(void) const
+const QString& ServiceInterface::fileSuffix() const
 {
     static const QString _suffixSI{ "siml" };
     return _suffixSI;
 }
 
-const QString& ServiceInterface::fileFilter(void) const
+const QString& ServiceInterface::fileFilter() const
 {
     static const QString _filterSI{ "Service Interface document (*.siml)\nAll Files (*.*)" };
     return _filterSI;
@@ -242,7 +243,7 @@ QString ServiceInterface::tabTitle(int index) const
     }
 }
 
-void ServiceInterface::processQueuedTabInitialization(void)
+void ServiceInterface::processQueuedTabInitialization()
 {
     if (mPendingInitTabs.isEmpty())
         return;

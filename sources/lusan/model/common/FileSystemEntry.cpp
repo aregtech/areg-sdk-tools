@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/common/FileSystemEntry.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, File System Model implementation.
  *
@@ -285,7 +285,7 @@ bool FileSystemEntry::operator > (const FileSystemEntry& other) const
         return (mFilePath.compare(other.mFilePath, Qt::CaseSensitivity::CaseInsensitive) > 0);
 }
 
-uint32_t FileSystemEntry::getNextId(void) const
+uint32_t FileSystemEntry::getNextId() const
 {
     return (mParent != nullptr ? mParent->getNextId() : 0);
 }
@@ -324,7 +324,7 @@ bool FileSystemEntry::containsEntryName(const QString& fileName) const
     return false;
 }
 
-void FileSystemEntry::deleteEntries(void)
+void FileSystemEntry::deleteEntries()
 {
     if (mChildren.size() == 1)
     {
@@ -378,7 +378,7 @@ FileSystemEntry* FileSystemEntry::createChildEntry(const QFileInfo& fileInfo) co
     return new FileSystemEntry(fileInfo, const_cast<FileSystemEntry *>(this));
 }
 
-bool FileSystemEntry::hasFetched(void) const
+bool FileSystemEntry::hasFetched() const
 {
     return ((mChildren.size() != 1) || mChildren[0]->isValid());
 }
@@ -405,7 +405,7 @@ QFileInfoList FileSystemEntry::fetchData(const QStringList & filter /*= QStringL
     return QFileInfoList();    
 }
 
-bool FileSystemEntry::hasValidChildren(void) const
+bool FileSystemEntry::hasValidChildren() const
 {
     if (mChildren.size() == 1)
     {
@@ -541,7 +541,7 @@ QString FileSystemRootEntry::findDisplayName(const QString & dirPath) const
     return QString();
 }
 
-uint32_t FileSystemRootEntry::getNextId(void) const
+uint32_t FileSystemRootEntry::getNextId() const
 {
     return (mParent != nullptr ? mParent->getNextId() : ++ mNextId);
 }

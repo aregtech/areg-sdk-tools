@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_LOG_LOGHEADERITEM_HPP
 #define LUSAN_VIEW_LOG_LOGHEADERITEM_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/log/LogHeaderItem.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, log view table header item.
  *
@@ -69,7 +69,7 @@ public:
     /**
      * \brief   Visualize the filter widgets
      **/
-    void showFilters(void);
+    void showFilters();
 
     /**
      * \brief   Sets the filter string for line edit filter control.
@@ -94,17 +94,17 @@ public:
     /**
      * \brief   Returns true if header object can be visualized in the pop-up widget.
      **/
-    inline bool canPopupFilter(void) const;
+    inline bool canPopupFilter() const;
 
     /**
      * \brief   Resets filter data.
      **/
-    void resetFilter(void);
+    void resetFilter();
 
     /**
      * \brief   Returns the filter data.
      **/
-    QList<NELusanCommon::FilterData> getFilterData(void) const;
+    QList<NELusanCommon::FilterData> getFilterData() const;
 
 private:
 /************************************************************************
@@ -113,7 +113,7 @@ private:
 
     //!< Returns the logical index of the column.
     //!< Returns `-1` if the column is not active.
-    inline int fromColumnToIndex(void) const;
+    inline int fromColumnToIndex() const;
 
     //!< Returns the column from the index.
     //!< Return LogColumnInvalid value if index is invalid.
@@ -134,7 +134,7 @@ private:
 // Inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline bool LogHeaderItem::canPopupFilter(void) const
+inline bool LogHeaderItem::canPopupFilter() const
 {
     return (mType != None);    
 }

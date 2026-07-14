@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_SI_SIMETHODBASE_HPP
 #define LUSAN_DATA_SI_SIMETHODBASE_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/si/SIMethodBase.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Method Base.
  *
@@ -106,7 +106,7 @@ public:
     /**
      * \brief   Destructor.
      **/
-    virtual ~SIMethodBase(void);
+    virtual ~SIMethodBase();
 
 //////////////////////////////////////////////////////////////////////////
 // Operators
@@ -159,7 +159,7 @@ public:
     /**
      * \brief   Return the type of method as a string.
      **/
-    QString getType(void) const;
+    QString getType() const;
     
     bool checkMethodType(const QString & methodType) const;
     
@@ -182,7 +182,7 @@ public:
      * \brief   Checks if the method is deprecated.
      * \return  True if the method is deprecated, false otherwise.
      **/
-    bool getIsDeprecated(void) const;
+    bool getIsDeprecated() const;
 
     /**
      * \brief   Sets the hint, why method is deprecated.
@@ -194,7 +194,7 @@ public:
      * \brief   Returns the hint, why method is deprecated.
      * \return  The hint, why method is deprecated.
      **/
-    const QString& getDeprecateHint(void) const;
+    const QString& getDeprecateHint() const;
 
     /**
      * \brief   Checks and returns parameter has default value flag.

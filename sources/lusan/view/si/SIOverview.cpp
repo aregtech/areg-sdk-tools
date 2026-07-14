@@ -1,24 +1,27 @@
 ﻿/************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIOverview.cpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Overview section.
  *
  ************************************************************************/
 
 #include "lusan/view/si/SIOverview.hpp"
-#include "ui/ui_SIOverview.h"
+#include <QFont>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QVBoxLayout>
 
 #include "lusan/model/si/SIOverviewModel.hpp"
 #include "lusan/view/si/ServiceInterface.hpp"
@@ -35,11 +38,20 @@
 
 SIOverviewWidget::SIOverviewWidget(QWidget* parent)
     : QWidget{ parent }
-    , ui(new Ui::SIOverview)
+    , mPanels(nullptr)
 {
-    ui->setupUi(this);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    setMinimumSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
+    QVBoxLayout* root = new QVBoxLayout(this);
+
+    QLabel* headline = new QLabel(tr("Service Interface Overview ..."), this);
+    QFont headlineFont{ headline->font() };
+    headlineFont.setPointSize(20);
+    headlineFont.setBold(true);
+    headlineFont.setItalic(true);
+    headline->setFont(headlineFont);
+    root->addWidget(headline);
+
+    mPanels = new QHBoxLayout();
+    root->addLayout(mPanels, 1);
 }
 
 SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
@@ -48,18 +60,15 @@ SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     , mDetails  (new SIOverviewDetails(this))
     , mLinks    (new SIOverviewLinks(this))
     , mWidget   (new SIOverviewWidget(this))
-    , ui        (*mWidget->ui)
     , mVersionValidator(0, 999999, this)
 {
-    ui.horizontalLayout->addWidget(mDetails, 1);
-    ui.horizontalLayout->addWidget(mLinks, 1);
+    mDetails->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mLinks->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    mWidget->mPanels->addWidget(mDetails, 1);
+    mWidget->mPanels->addWidget(mLinks, 1);
 
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSizeAdjustPolicy(QScrollArea::SizeAdjustPolicy::AdjustIgnored);
-    setBaseSize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT);
-    resize(SICommon::FRAME_WIDTH, SICommon::FRAME_HEIGHT / 2);
-    
+    // Clamp the content to the viewport width so the two Ignored columns split it 50/50
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setWidgetResizable(true);
     setWidget(mWidget);
 
@@ -68,10 +77,10 @@ SIOverview::SIOverview(SIOverviewModel& model, QWidget* parent)
     setupSignals();
 }
 
-SIOverview::~SIOverview(void)
+SIOverview::~SIOverview()
 {
-    ui.horizontalLayout->removeWidget(mLinks);
-    ui.horizontalLayout->removeWidget(mDetails);
+    mWidget->mPanels->removeWidget(mLinks);
+    mWidget->mPanels->removeWidget(mDetails);
 }
 
 void SIOverview::setServiceInterfaceName(const QString & siName)
@@ -108,7 +117,7 @@ void SIOverview::onDeprecatedChecked(bool isChecked)
     SICommon::checkedDeprecated<SIOverviewDetails, SIOverviewModel>(mDetails, &mModel, isChecked);
 }
 
-void SIOverview::onDescriptionChanged(void)
+void SIOverview::onDescriptionChanged()
 {
     mModel.setDescription(mDetails->ctrlDescription()->toPlainText());
 }
@@ -158,7 +167,7 @@ void SIOverview::onLinkAttributesClicked(bool /*checked*/)
     emit signalPageLinkClicked(static_cast<int>(ServiceInterface::eSIPages::PageAttributes));
 }
 
-void SIOverview::updateWidgets(void)
+void SIOverview::updateWidgets()
 {
     mDetails->ctrlMajor()->setValidator(&mVersionValidator);
     mDetails->ctrlMinor()->setValidator(&mVersionValidator);
@@ -167,7 +176,7 @@ void SIOverview::updateWidgets(void)
     mDetails->ctrlInternet()->setEnabled(false);
 }
 
-void SIOverview::updateData(void)
+void SIOverview::updateData()
 {
     const VersionNumber& version{ mModel.getVersion() };
 
@@ -200,7 +209,7 @@ void SIOverview::updateData(void)
     }
 }
 
-void SIOverview::setupSignals(void)
+void SIOverview::setupSignals()
 {
     connect(mDetails->ctrlMajor()       , &QLineEdit::textEdited    , this, &SIOverview::onMajorChanged);
     connect(mDetails->ctrlMinor()       , &QLineEdit::textEdited    , this, &SIOverview::onMinorChanged);

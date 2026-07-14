@@ -1,12 +1,15 @@
 ﻿include("${LUSAN}/view/common//ui/CMakeLists.txt")
 
 list(APPEND LUSAN_SRC
+    ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/common/DirSelectionDialog.cpp
     ${LUSAN}/view/common/IEDataTypeConsumer.cpp
     ${LUSAN}/view/common/MdiArea.cpp
     ${LUSAN}/view/common/MdiChild.cpp
     ${LUSAN}/view/common/MdiMainWindow.cpp
+    ${LUSAN}/view/common/NaviDesignPanel.cpp
     ${LUSAN}/view/common/NaviFileSystem.cpp
+    ${LUSAN}/view/common/NaviFsmToolbar.cpp
     ${LUSAN}/view/common/NavigationDock.cpp
     ${LUSAN}/view/common/NavigationWindow.cpp
     ${LUSAN}/view/common/NaviLiveLogsScopes.cpp
@@ -27,12 +30,15 @@ list(APPEND LUSAN_SRC
 )
 
 list(APPEND LUSAN_HDR
+    ${LUSAN}/view/common/CppSyntaxHighlighter.hpp
     ${LUSAN}/view/common/DirSelectionDialog.hpp
     ${LUSAN}/view/common/IEDataTypeConsumer.hpp
     ${LUSAN}/view/common/MdiArea.hpp
     ${LUSAN}/view/common/MdiChild.hpp
     ${LUSAN}/view/common/MdiMainWindow.hpp
+    ${LUSAN}/view/common/NaviDesignPanel.hpp
     ${LUSAN}/view/common/NaviFileSystem.hpp
+    ${LUSAN}/view/common/NaviFsmToolbar.hpp
     ${LUSAN}/view/common/NavigationDock.hpp
     ${LUSAN}/view/common/NavigationWindow.hpp
     ${LUSAN}/view/common/NaviLiveLogsScopes.hpp

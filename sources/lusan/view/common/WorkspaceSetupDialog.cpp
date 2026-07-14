@@ -1,17 +1,17 @@
 ﻿/************************************************************************
- * This file is part of the Lusan project, an official component of the AREG SDK.
+ * This file is part of the Lusan project, an official component of the Areg SDK.
  * Lusan is a graphical user interface (GUI) tool designed to support the development,
- * debugging, and testing of applications built with the AREG Framework.
+ * debugging, and testing of applications built with the Areg Framework.
  *
- * Lusan is available as free and open-source software under the MIT License,
+ * Lusan is available as free and open-source software under the Apache version 2.0 License,
  * providing essential features for developers.
  *
- * For detailed licensing terms, please refer to the LICENSE.txt file included
+ * For detailed licensing terms, please refer to the LICENSE file included
  * with this distribution or contact us at info[at]areg.tech.
  *
- * \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ * \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  * \file        lusan/view/common/WorkspaceSetupDialog.cpp
- * \ingroup     Lusan - GUI Tool for AREG SDK
+ * \ingroup     Lusan - GUI Tool for Areg SDK
  * \author      Artak Avetyan
  * \brief       Lusan application, the new workspace setup dialog.
  *
@@ -24,7 +24,7 @@
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 
-WorkspaceSetupDialog::WorkspaceSetupDialog(void)
+WorkspaceSetupDialog::WorkspaceSetupDialog()
     : QDialog           (nullptr)
     , mUi               (new Ui::WorkspaceSetupDialog())
     , mOptionProjectDirs(nullptr)
@@ -46,7 +46,7 @@ WorkspaceSetupDialog::WorkspaceSetupDialog(void)
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
-WorkspaceSetupDialog::~WorkspaceSetupDialog(void)
+WorkspaceSetupDialog::~WorkspaceSetupDialog()
 {
     delete mUi;
     mUi = nullptr;
@@ -58,7 +58,7 @@ WorkspaceSetupDialog::~WorkspaceSetupDialog(void)
     }
 }
 
-void WorkspaceSetupDialog::applyDirectories(void)
+void WorkspaceSetupDialog::applyDirectories()
 {
     if (mOptionProjectDirs != nullptr)
     {

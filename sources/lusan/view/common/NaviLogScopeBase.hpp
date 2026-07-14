@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_VIEW_COMMON_NAVILOGSCOPEBASE_HPP
 #define LUSAN_VIEW_COMMON_NAVILOGSCOPEBASE_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/NaviLogScopeBase.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       The base class of the log explorer view.
  *
@@ -42,7 +42,7 @@ class NaviLogScopeBase : public NavigationWindow
 {
 public:
     NaviLogScopeBase(int naviWindow, MdiMainWindow* wndMain, QWidget* parent = nullptr);
-    virtual ~NaviLogScopeBase(void) = default;
+    virtual ~NaviLogScopeBase() = default;
 
 public:
 
@@ -67,7 +67,7 @@ public:
     /**
      * \brief   Returns true if root entries are collapsed.
      **/
-    bool areRootsCollapsed(void) const;
+    bool areRootsCollapsed() const;
 
     //!< Sets up the model for the log scopes navigation.
     void setupModel(LoggingScopesModelBase* model);
@@ -117,7 +117,7 @@ public:
     /**
      * \brief   Collapses the root entries.
      **/
-    virtual void collapseRoots(void);
+    virtual void collapseRoots();
 
     /**
      * \brief   Sets the pointer of associated live logs model.
@@ -130,7 +130,7 @@ public:
      * \brief   Returns the pointer to the live logs model used by live logging scope navigation view.
      *          If no live logs are available, returns nullptr.
      **/
-    virtual LoggingModelBase* getLoggingModel(void) const;
+    virtual LoggingModelBase* getLoggingModel() const;
 
     // Call to collapse and expand nodes.
     virtual void onCollapseClicked(bool checked, QToolButton* button);
@@ -158,7 +158,7 @@ protected:
 
 private:
     //!< Validates the object by checking with assertions.
-    inline void validateControls(void);
+    inline void validateControls();
 
 protected:
     LoggingScopesModelBase* mScopesModel;   //!< The model of the log scopes

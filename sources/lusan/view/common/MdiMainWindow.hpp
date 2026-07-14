@@ -1,19 +1,19 @@
-﻿#ifndef LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP
+#ifndef LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP
 #define LUSAN_VIEW_COMMON_MDIMAINWINDOW_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/common/MdiMainWindow.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application MdiMainWindow setup.
  *
@@ -32,8 +32,12 @@
  ************************************************************************/
 class MdiChild;
 class ServiceInterface;
+class StateMachine;
+class SMDesign;
 class LiveLogsModel;
 class NaviFileSystem;
+class NaviFsmToolbar;
+class NaviDesignPanel;
 class LiveLogViewer;
 class OfflineLogViewer;
 class ScopeOutputViewer;
@@ -50,6 +54,13 @@ class QToolBar;
 class QTreeView;
 QT_END_NAMESPACE
 
+namespace ads
+{
+    class CDockManager;
+    class CDockWidget;
+    class CDockAreaWidget;
+}
+
 /**
  * \brief   The main window class for the Lusan application.
  *          This class manages the main window of the Lusan application,
@@ -60,17 +71,45 @@ class MdiMainWindow : public QMainWindow
 {
     friend class MdiChild;
     Q_OBJECT
-    
+
+//////////////////////////////////////////////////////////////////////////
+// Public types
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   The three movable State Machine design widgets (issue #516).
+     **/
+    enum class eDesignWidget
+    {
+          Toolbar       = 0     //!< The drawing toolbar.
+        , Properties    = 1     //!< The Properties panel.
+        , Outline       = 2     //!< The Outline panel.
+    };
+
+    /**
+     * \brief   Where a design widget currently lives. The Design page and Navigation Window
+     *          homes are mutually exclusive; a widget can also be hidden from both.
+     **/
+    enum class eDesignPlace
+    {
+          Hidden        = 0     //!< Not shown anywhere.
+        , InDesign      = 1     //!< Docked inside the active FSM Design page.
+        , InNavigation  = 2     //!< Hosted as a tab in the Navigation Window.
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden static methods.
 //////////////////////////////////////////////////////////////////////////
 private:
     
     //!< Returns the filters to display when opening service interface files.
-    inline static QString _filterServiceFiles(void);
+    inline static QString _filterServiceFiles();
+
+    //!< Returns the filters to display when opening state machine files.
+    inline static QString _filterStateMachineFiles();
     
     //!< Returns the filter to display when opening log database files.
-    inline static QString _filterLoggingFiles(void);
+    inline static QString _filterLoggingFiles();
     
 //////////////////////////////////////////////////////////////////////////
 // Public methods
@@ -113,12 +152,12 @@ public:
      * \brief   Gets the workspace root directory.
      * \return  The path to the workspace root.
      **/
-    inline const QString& getWorkspaceRoot(void) const;
+    inline const QString& getWorkspaceRoot() const;
 
     /**
      * \brief   Returns the last file opened or saved.
      **/
-    inline const QString getLastFile(void) const;
+    inline const QString getLastFile() const;
 
     /**
      * \brief   Sets the last file opened or saved.
@@ -130,12 +169,12 @@ public:
      * \brief   Returns a pointer to the live log viewer window.
      *          Returns nullptr if does not receive logs in live mode.
      **/
-    inline LiveLogViewer* getLiveLogViewer(void) const;
+    inline LiveLogViewer* getLiveLogViewer() const;
 
     /**
      * \brief   Returns the active MDI child window.
      **/
-    inline MdiChild* getActiveWindow(void) const;
+    inline MdiChild* getActiveWindow() const;
 
     /**
      * \brief   Call to show the options dialog with active log setting page.
@@ -155,39 +194,60 @@ public:
     void showNaviTab(NavigationDock::eNaviWindow naviTab);
 
     /**
+     * \brief   Moves one State Machine design widget (toolbar / Properties / Outline) to the
+     *          requested home and re-syncs everything (issue #516). Setting a widget to the
+     *          Design page or the Navigation Window automatically clears the other home; the
+     *          menu check marks and the active Design page follow.
+     **/
+    void setDesignWidgetPlacement(MdiMainWindow::eDesignWidget widget, MdiMainWindow::eDesignPlace place);
+
+    /**
+     * \brief   The current home of the given design widget.
+     **/
+    MdiMainWindow::eDesignPlace designWidgetPlacement(MdiMainWindow::eDesignWidget widget) const;
+
+    /**
+     * \brief   Re-applies the current design-widget placement to the active document: shows or
+     *          hides each widget's Design-page dock and binds or empties its Navigation Window
+     *          host, so the widgets are populated only while the FSM Design page is current.
+     *          Called on document / inner-tab activation and after a placement change.
+     **/
+    void syncDesignWidgets();
+
+    /**
      * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
      **/
-    QString openLogFile(void);
+    QString openLogFile();
 
     /**
      * \brief   Called to setup live logging models.
      **/
-    LiveLogsModel* setupLiveLogging(void);
+    LiveLogsModel* setupLiveLogging();
 
     /**
      * \brief   Returns the live logging model.
      **/
-    LiveLogsModel* getLiveLogging(void) const;
+    LiveLogsModel* getLiveLogging() const;
 
     /**
      * \brief   Returns the File System navigation window.
      **/
-    NaviFileSystem& getNaviFileSystem(void);
+    NaviFileSystem& getNaviFileSystem();
 
     /**
      * \brief   Returns the Live Logging Scopes Navigation window.
      **/
-    NaviLiveLogsScopes& getNaviLiveScopes(void);
+    NaviLiveLogsScopes& getNaviLiveScopes();
 
     /**
      * \brief   Returns the Offline Logging Scopes Navigation window.
      **/
-    NaviOfflineLogsScopes& getNaviOfflineScopes(void);
+    NaviOfflineLogsScopes& getNaviOfflineScopes();
 
     /**
      * \brief   Returns the Output Window for scopes logs.
      **/
-    ScopeOutputViewer& getOutputScopeLogs(void);
+    ScopeOutputViewer& getOutputScopeLogs();
 
     /**
      * \brief   Sets the tooltip text for the tab bar of the given MDI sub-window.
@@ -220,12 +280,12 @@ signals:
     /**
      * \brief   The signal triggered when the options dialog is opened.
      **/
-    void signalOptionsOpening(void);
+    void signalOptionsOpening();
 
     /**
      * \brief   The signal triggered when the options dialog is applied.
      **/
-    void signalOptionsApplied(void);
+    void signalOptionsApplied();
 
     /**
      * \brief   The signal triggered when the options dialog is closed.
@@ -237,17 +297,17 @@ signals:
      * \brief   The signal triggered when the main window is about to close.
      *          This signal is used to notify other components that the main window is closing.
      **/
-    void signalMainwindowClosing(void);
+    void signalMainwindowClosing();
 
     /**
      * \brief   The signal triggered when a new live log file is created.
      **/
-    void signalNewLiveLog(void);
+    void signalNewLiveLog();
 
     /**
      * \brief   The signal triggered when to open offline log file.
      **/
-    void signalOpenOfflineLog(void);
+    void signalOpenOfflineLog();
     
 //////////////////////////////////////////////////////////////////////////
 // protected methods
@@ -266,32 +326,37 @@ private slots:
     /**
      * \brief   Slot for creating a new SI file.
      **/
-    void onFileNewSI(void);
+    void onFileNewSI();
+
+    /**
+     * \brief   Slot for creating a new FSM file.
+     **/
+    void onFileNewFSM();
 
     /**
      * \brief   Slot for creating a new log file.
      **/
-    void onFileNewLiveLog(void);
+    void onFileNewLiveLog();
 
     /**
      * \brief   Slot for saving the current file.
      **/
-    void onFileSave(void);
+    void onFileSave();
 
     /**
      * \brief   Slot for saving the current file with a new name.
      **/
-    void onFileSaveAs(void);
+    void onFileSaveAs();
 
     /**
      * \brief   Slot for opening a file.
      **/
-    void onFileOpen(void);
+    void onFileOpen();
 
     /**
      * \brief   Slot for exiting the application.
      **/
-    void onFileExit(void);
+    void onFileExit();
 
     /**
      * \brief   Slot for opening a recent file.
@@ -314,9 +379,34 @@ private slots:
     void onEditPaste();
 
     /**
+     * \brief   Slot forwarding Undo/Redo to the active MDI child's document.
+     **/
+    void onEditUndo();
+    void onEditRedo();
+
+    /**
+     * \brief   Refreshes the check marks of the View menu's Navigation and Design submenus
+     *          from the live dock / tab visibility and the current widget placement.
+     **/
+    void onShowMenuNavigation();
+
+    /**
+     * \brief   Applies (and persists) the FSM toolbar's toolbutton display style chosen in
+     *          the View menu's Toolbutton Mode submenu.
+     **/
+    void onFsmToolbarStyle(QAction* action);
+
+    /**
+     * \brief   Rebuilds the Design menu from the active StateMachine window's Design page
+     *          actions; shows a disabled placeholder when none is active/built (the Design
+     *          page is never built eagerly).
+     **/
+    void onShowMenuDesign();
+
+    /**
      * \brief   Slot for showing the tools options dialog.
      **/
-    void onToolsOptions(void);
+    void onToolsOptions();
 
     /**
      * \brief   Slot for showing the about dialog.
@@ -376,6 +466,12 @@ private:
     ServiceInterface* createServiceInterfaceView(const QString& filePath = QString());
 
     /**
+     * \brief   Creates a new State Machine View.
+     * \return  A pointer to the new State Machine View.
+     **/
+    StateMachine* createStateMachineView(const QString& filePath = QString());
+
+    /**
      * \brief   Creates a new Log Viewer View.
      * \param   filePath   The path to the log file to view.
      * \return  A pointer to the new Log Viewer View.
@@ -394,7 +490,7 @@ private:
      * \brief   Returns the file filter string, which contains the list of supported extensions.
      *          The string is used to open files supported by lusan application.
      **/
-    const QString& fileFilters(void) const;
+    const QString& fileFilters() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -426,6 +522,35 @@ private:
      * \brief   Creates the dock windows for the main window.
      **/
     void _createDockWindows();
+
+    /**
+     * \brief   Opens (if closed) and raises the given ADS dock widget. Replaces the plain
+     *          QWidget show()/raise() used before the navigation/output docks moved to ADS.
+     **/
+    void showDock(ads::CDockWidget* dock);
+
+    /**
+     * \brief   Creates the three Navigation Window host widgets (drawing toolbar, Properties,
+     *          Outline stand-ins) owned by the main window and shown only while their widget
+     *          is placed in the Navigation Window (issue #516).
+     **/
+    void createDesignNavHosts();
+
+    /**
+     * \brief   Loads the persisted design-widget placements (default: all inside the Design
+     *          page, matching the Phase 1 layout) into the placement members.
+     **/
+    void loadDesignPlacements();
+
+    /**
+     * \brief   Syncs the check marks of the six placement menu actions to the placement members.
+     **/
+    void updatePlacementActions();
+
+    /**
+     * \brief   Returns a modifiable reference to the placement member of the given widget.
+     **/
+    MdiMainWindow::eDesignPlace& placementRef(MdiMainWindow::eDesignWidget widget);
 
     /**
      * \brief   Creates the MDI area for managing sub-windows.
@@ -484,7 +609,7 @@ private:
      * \brief   Returns a reference to the current instance of MdiMainWindow.
      * \return  A reference to the current instance of MdiMainWindow.
      **/
-    inline MdiMainWindow& self(void);
+    inline MdiMainWindow& self();
 
     /**
      * \brief   Initializes an action with the given parameters.
@@ -502,14 +627,30 @@ private:
     QString         mLastFile;      //!< The current file name.
     
     MdiArea         mMdiArea;       //!< The MDI area for managing sub-windows.
-    NavigationDock  mNaviDock;      //!< The navigation dock widget.
-    OutputDock      mOutputDock;    //!< The output dock widget.
+    NavigationDock  mNaviDock;      //!< The navigation content (hosted in an ADS dock, issue #516).
+    OutputDock      mOutputDock;    //!< The output content (hosted in an ADS dock, issue #516).
+
+    ads::CDockManager* mDockManager;    //!< The single ADS dock manager; hosts every dock (issue #516).
+    ads::CDockWidget*  mCentralDock;    //!< Wraps the MDI area as the non-closable central dock.
+    ads::CDockAreaWidget* mCentralArea; //!< The central dock area (anchor for the design-panel docks).
+    ads::CDockWidget*  mNaviDockWidget; //!< The ADS dock hosting the Navigation content.
+    ads::CDockWidget*  mOutputDockWidget; //!< The ADS dock hosting the Output content.
+
+    //!< The Navigation Window host widgets for the movable FSM design widgets (issue #516).
+    NaviFsmToolbar*    mNaviToolbar;    //!< Toolbar host (grouped toolbuttons) while placed in nav.
+    NaviDesignPanel*   mNaviProperties; //!< Properties host while placed in nav.
+    NaviDesignPanel*   mNaviOutline;    //!< Outline host while placed in nav.
+    eDesignPlace       mPlaceToolbar;   //!< Where the drawing toolbar currently lives.
+    eDesignPlace       mPlaceProperties;//!< Where the Properties panel currently lives.
+    eDesignPlace       mPlaceOutline;   //!< Where the Outline panel currently lives.
     LiveLogViewer*  mLogViewer;     //!< The log viewer for displaying live logs. There should be only one instance of this viewer.
     QMdiSubWindow*  mLiveLogWnd;    //!< The MDI sub-window for the live log viewer. There should be only one instance of this window.
 
     QMenu*          mFileMenu;      //!< The file menu.
     QMenu*          mEditMenu;      //!< The edit menu.
     QMenu*          mViewMenu;      //!< The view menu.
+    QMenu*          mNavigationMenu;//!< The View menu's Navigation submenu (dock/tab visibility).
+    QMenu*          mViewDesignMenu;//!< The View menu's Design submenu (in-page toolbar/panels).
     QMenu*          mThemeMenu;     //!< The theme selection submenu of the view menu.
     QMenu*          mDesignMenu;    //!< The design top level menu.
     QMenu*          mLoggingMenu;   //!< The logging menu.
@@ -517,6 +658,8 @@ private:
     QMenu*          mWindowMenu;    //!< The window menu.
     QMenu*          mHelpMenu;      //!< The help menu.
     QActionGroup*   mThemeActions;  //!< The exclusive group of theme selection actions.
+    QMetaObject::Connection mCanUndoConn; //!< The active child's canUndo-changed connection.
+    QMetaObject::Connection mCanRedoConn; //!< The active child's canRedo-changed connection.
 
     QToolBar*       mFileToolBar;   //!< The file toolbar.
     QToolBar*       mEditToolBar;   //!< The edit toolbar.
@@ -525,6 +668,7 @@ private:
     //!< Actions for File sub-menus.
     QAction         mActNewWorkspace;
     QAction         mActFileNewSI;
+    QAction         mActFileNewFSM;
     QAction         mActFileNewLog;
     QAction         mActFileOfflineLog;
     QAction         mActFileOpen;
@@ -540,6 +684,8 @@ private:
     QAction         mActEditCut;
     QAction         mActEditCopy;
     QAction         mActEditPaste;
+    QAction         mActEditUndo;   //!< Undo, forwarded to the active child (inert for SI/log windows).
+    QAction         mActEditRedo;   //!< Redo, forwarded to the active child (inert for SI/log windows).
 
     //!< Actions for View sub-menus.
     QAction         mActViewNavigator;
@@ -547,6 +693,20 @@ private:
     QAction         mActViewLogs;
     QAction         mActOffViewLogs;
     QAction         mActViewOutput;
+
+    //!< View > Navigation submenu: dock and tab visibility (checkable). Created in _createMenus.
+    QAction*        mActNavWindow;      //!< Shows/hides the whole Navigation dock.
+    QAction*        mActNavWorkspace;   //!< Shows/hides the Workspace Explorer tab.
+    QAction*        mActNavLiveLogs;    //!< Shows/hides the Live Logs tab.
+    QAction*        mActNavOfflineLogs; //!< Shows/hides the Offline Logs tab.
+    QAction*        mActNavToolbar;     //!< Places the drawing toolbar in the Navigation Window.
+    QAction*        mActNavProperties;  //!< Places the Properties panel in the Navigation Window.
+    QAction*        mActNavOutline;     //!< Places the Outline panel in the Navigation Window.
+
+    //!< View > Design submenu: the in-page design widgets (checkable). Created in _createMenus.
+    QAction*        mActDsgToolbar;     //!< Places the drawing toolbar in the Design page.
+    QAction*        mActDsgProperties;  //!< Places the Properties panel in the Design page.
+    QAction*        mActDsgOutline;     //!< Places the Outline panel in the Design page.
 
     //!< Actions for Tools sub-menus.
     QAction         mActToolsOptions;
@@ -574,17 +734,17 @@ inline void MdiMainWindow::setWorkspaceRoot(const QString& workspace)
     mWorkspaceRoot = workspace;
 }
 
-inline const QString& MdiMainWindow::getWorkspaceRoot(void) const
+inline const QString& MdiMainWindow::getWorkspaceRoot() const
 {
     return mWorkspaceRoot;
 }
 
-inline MdiMainWindow& MdiMainWindow::self(void)
+inline MdiMainWindow& MdiMainWindow::self()
 {
     return (*this);
 }
 
-inline const QString MdiMainWindow::getLastFile(void) const
+inline const QString MdiMainWindow::getLastFile() const
 {
     return mLastFile;
 }
@@ -594,12 +754,12 @@ inline void MdiMainWindow::setLastFile(const QString& lastFile)
     mLastFile = lastFile;
 }
 
-inline LiveLogViewer* MdiMainWindow::getLiveLogViewer(void) const
+inline LiveLogViewer* MdiMainWindow::getLiveLogViewer() const
 {
     return mLogViewer;
 }
 
-inline MdiChild* MdiMainWindow::getActiveWindow(void) const
+inline MdiChild* MdiMainWindow::getActiveWindow() const
 {
     return activeMdiChild();
 }

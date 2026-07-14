@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_SI_SIDATATYPEDATA_HPP
 #define LUSAN_DATA_SI_SIDATATYPEDATA_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/si/SIDataTypeData.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Service Interface Data Type Data.
  *
@@ -70,7 +70,7 @@ public:
      **/
     SIDataTypeData(QList<DataTypeCustom *>&& entries, ElementBase* parent = nullptr) noexcept;
 
-    virtual ~SIDataTypeData(void);
+    virtual ~SIDataTypeData();
     
 signals:
 
@@ -165,28 +165,28 @@ public:
     /**
      * \brief   remove all entries and frees resources.
      **/
-    void removeAll(void);
+    void removeAll();
 
     /**
      * \brief   Returns the list of primitive data types objects.
      **/
-    const QList<DataTypePrimitive*>& getPrimitiveDataTypes(void) const;
+    const QList<DataTypePrimitive*>& getPrimitiveDataTypes() const;
 
     /**
      * \brief   Returns the list of basic data types objects.
      **/
-    const QList<DataTypeBasicObject*>& getBasicDataTypes(void) const;
+    const QList<DataTypeBasicObject*>& getBasicDataTypes() const;
 
     /**
      * \brief   Returns the list of basic container data types objects.
      **/
-    const QList<DataTypeBasicContainer*>& getContainerDatTypes(void) const;
+    const QList<DataTypeBasicContainer*>& getContainerDatTypes() const;
 
     /**
      * \brief   Gets the list of data types.
      * \return  The list of data types.
      **/
-    const QList<DataTypeCustom*>& getCustomDataTypes(void) const;
+    const QList<DataTypeCustom*>& getCustomDataTypes() const;
 
     /**
      * \brief   Sets the list of data types.

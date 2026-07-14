@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_MODEL_COMMON_FILESYSTEMFILTER_HPP
 #define LUSAN_MODEL_COMMON_FILESYSTEMFILTER_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/common/FileSystemFilter.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, File System filter to display supported files.
  *
@@ -45,7 +45,7 @@ protected:
      * \param   source_right    The right side index to compare.
      * \return  True if the left side index element is greater than the right side index.
      **/
-    virtual bool lessThan(const QModelIndex& source_left, const QModelIndex& source_right) const override;
+    bool lessThan(const QModelIndex& source_left, const QModelIndex& source_right) const override;
 };
 
 #endif // LUSAN_MODEL_COMMON_FILESYSTEMFILTER_HPP

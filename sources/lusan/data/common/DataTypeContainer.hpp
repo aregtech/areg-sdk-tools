@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_DATA_COMMON_DATATYPECONTAINER_HPP
 #define LUSAN_DATA_COMMON_DATATYPECONTAINER_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/common/DataTypeContainer.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Container Data Type.
  *
@@ -87,25 +87,25 @@ public:
      * \param   xml     The XML stream reader.
      * \return  True if the data was successfully read, false otherwise.
      **/
-    virtual bool readFromXml(QXmlStreamReader& xml) override;
+    bool readFromXml(QXmlStreamReader& xml) override;
 
     /**
      * \brief   Writes data to an XML stream.
      * \param   xml     The XML stream writer.
      **/
-    virtual void writeToXml(QXmlStreamWriter& xml) const override;
+    void writeToXml(QXmlStreamWriter& xml) const override;
 
     /**
      * \brief Returns the icon to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QIcon getIcon(ElementBase::eDisplay display) const override;
+    QIcon getIcon(ElementBase::eDisplay display) const override;
     
     /**
      * \brief Returns the string to display for specific display type.
      * \param display   The classification to display.
      */
-    virtual QString getString(ElementBase::eDisplay display) const override;
+    QString getString(ElementBase::eDisplay display) const override;
     
 //////////////////////////////////////////////////////////////////////////
 // Attributes, operations
@@ -114,12 +114,12 @@ public:
     /**
      * \brief   Returns true if the container can have a key.
      **/
-    bool canHaveKey(void) const;
+    bool canHaveKey() const;
 
     /**
      * \brief   Returns the name of basic container type.
      **/
-    inline const QString& getContainer(void) const;
+    inline const QString& getContainer() const;
 
     /**
      * \brief   Sets the name of basic container type.
@@ -130,12 +130,12 @@ public:
     /**
      * \brief   Returns true if the container has a key.
      **/
-    inline bool hasKey(void) const;
+    inline bool hasKey() const;
 
     /**
      * \brief   Returns the name of basic container key type.
      **/
-    inline const QString& getKey(void) const;
+    inline const QString& getKey() const;
 
     /**
      * \brief   Sets the name of basic container key type.
@@ -153,7 +153,7 @@ public:
     /**
      * \brief   Returns the data type of basic container key.
      **/
-    inline DataTypeBase* getKeyDataType(void) const;
+    inline DataTypeBase* getKeyDataType() const;
 
     /**
      * \brief   Sets the data type of basic container key.
@@ -164,7 +164,7 @@ public:
     /**
      * \brief   Returns the name of basic container value type.
      **/
-    inline const QString& getValue(void) const;
+    inline const QString& getValue() const;
 
     /**
      * \brief   Sets the name of basic container value type.
@@ -182,7 +182,7 @@ public:
     /**
      * \brief   Returns the data type of basic container value.
      **/
-    inline DataTypeBase* getValueDataType(void) const;
+    inline DataTypeBase* getValueDataType() const;
 
     /**
      * \brief   Sets the data type of basic container value.
@@ -200,14 +200,14 @@ public:
     /**
      * \brief   Invalidates the data type.
      **/
-    void invalidate(void);
+    void invalidate();
     
 private:
 
     /**
      * \brief   Returns the string to display as basic container type.
      **/
-    QString toTypeString(void) const;
+    QString toTypeString() const;
         
 private:
     QString     mContainer; //!< The container type.
@@ -219,7 +219,7 @@ private:
 // DataTypeContainer class inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline const QString& DataTypeContainer::getContainer(void) const
+inline const QString& DataTypeContainer::getContainer() const
 {
     return mContainer;
 }
@@ -238,12 +238,12 @@ inline void DataTypeContainer::setContainer(const QString& valContainer)
     }
 }
 
-inline bool DataTypeContainer::hasKey(void) const
+inline bool DataTypeContainer::hasKey() const
 {
     return mKeyType.isEmpty() == false;
 }
 
-inline const QString& DataTypeContainer::getKey(void) const
+inline const QString& DataTypeContainer::getKey() const
 {
     return mKeyType.getName();
 }
@@ -258,7 +258,7 @@ inline void DataTypeContainer::setKey(const QString& key, const QList<DataTypeCu
     mKeyType.setName(key, customTypes);
 }
 
-inline DataTypeBase* DataTypeContainer::getKeyDataType(void) const
+inline DataTypeBase* DataTypeContainer::getKeyDataType() const
 {
     return const_cast<ParamType &>(mKeyType).getType();
 }
@@ -268,7 +268,7 @@ inline void DataTypeContainer::setKeyDataType(DataTypeBase* dataType)
     mKeyType.setType(dataType);
 }
 
-inline const QString& DataTypeContainer::getValue(void) const
+inline const QString& DataTypeContainer::getValue() const
 {
     return mValueType.getName();
 }
@@ -283,7 +283,7 @@ inline void DataTypeContainer::setValue(const QString& value, const QList<DataTy
     mValueType.setName(value, customTypes);
 }
 
-inline DataTypeBase* DataTypeContainer::getValueDataType(void) const
+inline DataTypeBase* DataTypeContainer::getValueDataType() const
 {
     return const_cast<ParamType &>(mValueType).getType();
 }
@@ -306,7 +306,7 @@ inline bool DataTypeContainer::validate(const QList<DataTypeCustom*>& customType
     }
 }
 
-inline void DataTypeContainer::invalidate(void)
+inline void DataTypeContainer::invalidate()
 {
     mValueType.invalidate();
     mKeyType.invalidate();

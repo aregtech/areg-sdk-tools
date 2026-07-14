@@ -1,17 +1,17 @@
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/model/log/LoggingModelBase.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Logging model base class.
  *
@@ -33,7 +33,7 @@
 #include <QIcon>
 #include <QSize>
 
-const QStringList& LoggingModelBase::getHeaderList(void)
+const QStringList& LoggingModelBase::getHeaderList()
 {
     static QStringList _headers
     {
@@ -52,13 +52,13 @@ const QStringList& LoggingModelBase::getHeaderList(void)
     return _headers;
 }
 
-const QList<int>& LoggingModelBase::getHeaderWidths(void)
+const QList<int>& LoggingModelBase::getHeaderWidths()
 {
     static QList<int>  _widths{ 50, 100, 100, 50, 100, 50, 50, 200 };
     return _widths;
 }
 
-const QList<LoggingModelBase::eColumn>& LoggingModelBase::getDefaultColumns(void)
+const QList<LoggingModelBase::eColumn>& LoggingModelBase::getDefaultColumns()
 {
     static QList<LoggingModelBase::eColumn>   _columnIds
     {
@@ -100,7 +100,7 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
 {
 }
 
-LoggingModelBase::~LoggingModelBase(void)
+LoggingModelBase::~LoggingModelBase()
 {
     _cleanNodes();
 }
@@ -267,17 +267,17 @@ void LoggingModelBase::setActiveColumns(const QList<LoggingModelBase::eColumn>& 
     endResetModel();
 }
 
-void LoggingModelBase::refresh(void)
+void LoggingModelBase::refresh()
 {
     beginResetModel();
     endResetModel();
 }
 
-void LoggingModelBase::setupModel(void)
+void LoggingModelBase::setupModel()
 {
 }
 
-void LoggingModelBase::releaseModel(void)
+void LoggingModelBase::releaseModel()
 {
 }
 
@@ -319,17 +319,17 @@ void LoggingModelBase::slideWindow(uint32_t newStartRow)
     endResetModel();
 }
 
-QString LoggingModelBase::getDatabasePath(void) const
+QString LoggingModelBase::getDatabasePath() const
 {
     return QString::fromStdString(mDatabase.database_path().data());
 }
 
-void LoggingModelBase::closeDatabase(void)
+void LoggingModelBase::closeDatabase()
 {
     _closeDatabase();
 }
 
-bool LoggingModelBase::isOperable(void) const
+bool LoggingModelBase::isOperable() const
 {
     return mDatabase.is_operable();
 }
@@ -400,7 +400,7 @@ void LoggingModelBase::getPriorityValues(std::vector<areg::String>& names, std::
     }
 }
 
-const std::vector< areg::ConnectedInstance> & LoggingModelBase::getLogInstances(void)
+const std::vector< areg::ConnectedInstance> & LoggingModelBase::getLogInstances()
 {
     if (isOfflineLogging() && mInstances.empty())
     {
@@ -714,7 +714,7 @@ int LoggingModelBase::getAlignmentData(eColumn column) const
     }
 }
 
-inline void LoggingModelBase::_cleanNodes(void)
+inline void LoggingModelBase::_cleanNodes()
 {
     for (ScopeRoot* root : mRootList)
     {
@@ -725,7 +725,7 @@ inline void LoggingModelBase::_cleanNodes(void)
     mRootList.clear();
 }
 
-void LoggingModelBase::on_run(void)
+void LoggingModelBase::on_run()
 {
     uint32_t    nextStart   { 0 };
     int         readCount   { 0 };

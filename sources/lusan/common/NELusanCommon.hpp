@@ -1,19 +1,19 @@
 ﻿#ifndef LUSAN_COMMON_NELUSANCOMMON_HPP
 #define LUSAN_COMMON_NELUSANCOMMON_HPP
 /************************************************************************
- *  This file is part of the Lusan project, an official component of the AREG SDK.
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
- *  debugging, and testing of applications built with the AREG Framework.
+ *  debugging, and testing of applications built with the Areg Framework.
  *
- *  Lusan is available as free and open-source software under the MIT License,
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
  *  providing essential features for developers.
  *
- *  For detailed licensing terms, please refer to the LICENSE.txt file included
+ *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2024 Aregtech UG. All rights reserved.
+ *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/common/NELusanCommon.hpp
- *  \ingroup     Lusan - GUI Tool for AREG SDK
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, Dialog to select folder.
  *
@@ -30,6 +30,11 @@
 #include <any>
 #include <filesystem>
 #include <vector>
+
+class QKeySequence;
+class QMenu;
+class QToolButton;
+class QWidget;
 
 /**
  * \namespace NELusanCommon
@@ -68,10 +73,15 @@ namespace NELusanCommon
     extern const QString    INIT_FILE;
 
     /**
-     * \brief   The minimal width of navigation window.
+     * \brief   The default (preferred) width of the navigation window.
      **/
     constexpr const uint32_t  MIN_NAVI_WIDTH    { 280 };
-    
+
+    /**
+     * \brief   The absolute minimum width the navigation window can be shrunk to (issue #516).
+     **/
+    constexpr const uint32_t  MIN_NAVI_WIDTH_ABS { 64 };
+
     /**
      * \brief   The minimal height of navigation window.
      **/
@@ -91,7 +101,7 @@ namespace NELusanCommon
      * \brief   Gets the options file path.
      * \return  The options file path.
      **/
-    QString getOptionsFile(void);
+    QString getOptionsFile();
 
     /**
      * \brief   Gets the user profile file path.
@@ -104,13 +114,13 @@ namespace NELusanCommon
      * \brief   Generates a unique ID.
      * \return  A unique ID.
      **/
-    uint32_t getId(void);
+    uint32_t getId();
 
     /**
      * \brief   Gets the current timestamp.
      * \return  The current timestamp.
      **/
-    uint64_t getTimestamp(void);
+    uint64_t getTimestamp();
 
     /**
      * \brief   Stylesheet for QToolButton when it is checked.
@@ -120,7 +130,7 @@ namespace NELusanCommon
     /**
      * \brief   Returns QToolButton stylesheet when it is checked.
      **/
-    const QString& getStyleToolbutton(void);
+    const QString& getStyleToolbutton();
     
     /**
      * \brief   XML workspace version.
@@ -429,13 +439,16 @@ namespace NELusanCommon
     /**
      * \brief   Returns true if icons are adapted for dark themes.
      **/
-    bool iconsForDarkTheme(void);
+    bool iconsForDarkTheme();
 
     //!< Loads new workspace icon and sets the specified size
     inline QIcon iconNewWorkspace(const QSize & size = QSize{ 32, 32 });
 
     //<! Loads service interface icon and sets the specified size
     inline QIcon iconServiceInterface(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads state-machine icon and sets the specified size
+    inline QIcon iconStateMachine(const QSize & size = QSize{ 32, 32 });
 
     //<! Loads live logging connected icon and sets the specified size
     inline QIcon iconLiveLogConnected(const QSize & size = QSize{ 32, 32 });
@@ -490,9 +503,12 @@ namespace NELusanCommon
     //<! Loads offline logs navigation tab icon and sets the specified size
     inline QIcon iconViewOfflineLogs(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads FSM design toolbar navigation tab icon and sets the specified size
+    inline QIcon iconViewFsmDesign(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads output / status window tab icon and sets the specified size
     inline QIcon iconViewOutputWindow(const QSize & size = QSize{ 32, 32 });
-
+    
     //<! Loads application options / settings icon and sets the specified size
     inline QIcon iconSettings(const QSize & size = QSize{ 32, 32 });
 
@@ -507,6 +523,12 @@ namespace NELusanCommon
 
     //<! Loads constant icon and sets the specified size
     inline QIcon iconConstant(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads state-machine event icon and sets the specified size
+    inline QIcon iconEvent(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads state-machine timer icon and sets the specified size
+    inline QIcon iconTimer(const QSize & size = QSize{ 32, 32 });
 
     //<! Loads container icon and sets the specified size
     inline QIcon iconContainer(const QSize & size = QSize{ 32, 32 });
@@ -612,6 +634,21 @@ namespace NELusanCommon
 
     //<! Loads service interface tab icon and sets the specified size
     inline QIcon iconServiceInterfaceTab(const QSize & size = QSize{ 32, 32 });
+    
+    //!< Loads Undo icon
+    inline QIcon iconEditUndo(const QSize& size = QSize{32, 32});
+    
+    //!< Loads Undo icon
+    inline QIcon iconEditRedo(const QSize& size = QSize{32, 32});
+    
+    //!< Crate a tool button object.    
+    QToolButton* createToolButton(QWidget* parent, const QString& iconName, const QString& toolTip, const QKeySequence& shortcut);
+    
+    //!< Applies the shared look to a plain toolbar button (without a split drop-down menu).
+    void decorateToolButton(QToolButton* button);
+
+    //!< Attaches the type menu to the Add split button and applies the shared arrow-friendly sizing.
+    void decorateToolButton(QToolButton* button, QMenu* menu);
 }
 
 inline QIcon NELusanCommon::iconLogDebug(const QSize & size)
@@ -707,6 +744,20 @@ inline QIcon NELusanCommon::iconRecord(const QSize & size)
 inline QIcon NELusanCommon::iconClear(const QSize & size)
 {
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::EditClear) };
+    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconEditUndo(const QSize& size)
+{
+    QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditUndo)};
+    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
+}
+
+inline QIcon NELusanCommon::iconEditRedo(const QSize& size)
+{
+    QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditRedo)};
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
@@ -821,6 +872,16 @@ inline QIcon NELusanCommon::iconAttribute(const QSize & size /*= QSize{32, 32}*/
     return loadIcon(":/icons/data-attribute", size);
 }
 
+inline QIcon NELusanCommon::iconEvent(const QSize & size)
+{
+    return loadIcon(":/icons/sm-event", size);
+}
+
+inline QIcon NELusanCommon::iconTimer(const QSize & size)
+{
+    return loadIcon(":/icons/sm-timer", size);
+}
+
 inline QIcon NELusanCommon::iconWarning(const QSize & size)
 {
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning) };
@@ -850,6 +911,11 @@ inline QIcon NELusanCommon::iconViewOutputWindow(const QSize & size /*= QSize{32
 inline QIcon NELusanCommon::iconViewOfflineLogs(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/view-offline-logs", size);
+}
+
+inline QIcon NELusanCommon::iconViewFsmDesign(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/view-fsm-design", size);
 }
 
 inline QIcon NELusanCommon::iconViewLiveLogs(const QSize & size /*= QSize{32, 32}*/)
@@ -946,6 +1012,11 @@ inline QIcon NELusanCommon::iconNewLiveLogs(const QSize & size /*= QSize{32, 32}
 inline QIcon NELusanCommon::iconServiceInterface(const QSize & size /*= QSize{32, 32}*/)
 {
     return loadIcon(":/icons/new-service", size);
+}
+
+inline QIcon NELusanCommon::iconStateMachine(const QSize & size /*= QSize{32, 32}*/)
+{
+    return loadIcon(":/icons/workflow-algorithm", size);
 }
 
 inline QIcon NELusanCommon::iconLiveLogConnected(const QSize & size)
