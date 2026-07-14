@@ -73,6 +73,9 @@ public:
     SMDataTypeModel& getDataTypeModel() const;
     DocModelNotifier& getNotifier() const;
 
+    //!< The document model, so the page can read the machine's registries (e.g. code completion).
+    const StateMachineData& getData() const;
+
     //!< Resolves a name in the document-wide stimulus name space so the page can
     //!< flag a trigger-method collision as the user types, without waiting for commit.
     StateMachineData::StimulusRef findStimulus(const QString& name) const;

@@ -16,6 +16,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
+    ${LUSAN}/model/sm/SMSymbolIndex.cpp
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
@@ -39,6 +40,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMPasteCommand.hpp
     ${LUSAN}/model/sm/SMSelectionModel.hpp
     ${LUSAN}/model/sm/SMStateCommands.hpp
+    ${LUSAN}/model/sm/SMSymbolIndex.hpp
     ${LUSAN}/model/sm/SMTimerModel.hpp
     ${LUSAN}/model/sm/SMTransitionCommands.hpp
     ${LUSAN}/model/sm/SMTypeCompat.hpp

@@ -35,6 +35,7 @@
 #include "lusan/model/sm/SMConditionText.hpp"
 #include "lusan/model/sm/SMConditionToken.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/model/sm/SMSymbolIndex.hpp"
 #include "lusan/model/sm/SMTypeCompat.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 
@@ -396,6 +397,8 @@ void SMConditionEditor::buildLeaf(QVBoxLayout* parentLayout, SMConditionEntry& l
         SMCodeEditor* code = new SMCodeEditor(cell);
         code->setSignature(leaf.isLambdaRow() ? tr("lambda:: boolean body (must return bool)") : tr("expr:: boolean expression"));
         code->setNote(tr("Verbatim C++; the machine instance is captured. Never parsed."));
+        // A condition row is transition-scoped, so the stimulus parameters are in scope too.
+        code->setCompletions(SMSymbolIndex::completionWords(mModel.getData(), mTransitionId, true));
         code->ctrlBody()->setPlainText(leaf.isLambdaRow() ? leaf.getBody() : leaf.getExpression());
         row->code = code->ctrlBody();
         row->code->installEventFilter(this);

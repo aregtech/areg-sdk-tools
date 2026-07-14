@@ -39,6 +39,8 @@ class QAction;
 class QDockWidget;
 class QHBoxLayout;
 class QKeyEvent;
+class QLabel;
+class QLineEdit;
 class QToolBar;
 class QToolButton;
 class SMClipboardContent;
@@ -47,6 +49,7 @@ class SMOutlinePanel;
 class SMPropertiesPanel;
 class SMScene;
 class SMSceneManager;
+class SMStateData;
 class StateMachineModel;
 
 /**
@@ -548,6 +551,47 @@ private:
      **/
     void populateStressContent();
 
+    /**
+     * \struct  SearchHit
+     * \brief   One canvas-search match: the machine level that draws it and the matched
+     *          element (a state box or a transition edge).
+     **/
+    struct SearchHit
+    {
+        uint32_t    level;      //!< The level owner ID the element is drawn on.
+        uint32_t    elementId;  //!< The matched state / transition element ID.
+        bool        isState;    //!< True for a state, false for a transition.
+    };
+
+    /**
+     * \brief   Recomputes the canvas-search matches for the current query and jumps to the
+     *          first (SM-21-08). Empty query clears the affordance; no match leaves the
+     *          canvas unchanged with a "No match" note.
+     **/
+    void onSearchTextChanged();
+
+    /**
+     * \brief   Cycles to the next match (Enter / repeated search), recomputing first when
+     *          the cache is empty.
+     **/
+    void advanceSearch();
+
+    /**
+     * \brief   Navigates to the match's level, selects it (reusing the highlight/selection
+     *          path), and centers the viewport on it.
+     **/
+    void focusSearchHit(int index);
+
+    //!< Updates the "current / total" match counter next to the search box.
+    void updateSearchStatus();
+
+    /**
+     * \brief   Collects the matches of \p query over state names, transition stimuli, and
+     *          transition targets, recursing into painted submachines. A local name scan
+     *          until SM-26's shared search index lands (one index, two surfaces).
+     **/
+    void collectSearchHits(const QString& query, const SMStateData& level, uint32_t levelId, QList<SearchHit>& out) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -558,6 +602,10 @@ private:
     SMScene*            mScene;         //!< The displayed level's scene.
     QWidget*            mBreadcrumb;    //!< The level-path bar above the viewport.
     QHBoxLayout*        mBreadcrumbLayout; //!< The breadcrumb content layout.
+    QLineEdit*          mSearchEdit;    //!< The canvas search box (find state / transition).
+    QLabel*             mSearchStatus;  //!< The "current / total" match counter (or "No match").
+    QList<SearchHit>    mSearchHits;    //!< The current query's matches, in document order.
+    int                 mSearchIndex;   //!< The focused match index, or -1.
     QToolBar*           mToolBar;       //!< The in-page drawing toolbar (movable to the page edges).
     QDockWidget*        mPropertiesDock;//!< The Properties dock (right, top) inside the Design page.
     QDockWidget*        mOutlineDock;   //!< The Outline dock (right, below Properties) inside the Design page.

@@ -30,6 +30,7 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMMethodModel.hpp"
+#include "lusan/model/sm/SMSymbolIndex.hpp"
 #include "lusan/view/sm/SMCodeEditor.hpp"
 #include "lusan/view/sm/SMEventParamDetails.hpp"
 #include "lusan/view/sm/SMMethodDetails.hpp"
@@ -504,6 +505,8 @@ void SMMethod::updateBodyEditor(SMMethodEntry* method)
     mDetails->ctrlBody()->setSignature(QStringLiteral("%1 %2(%3)").arg(ret, method->getName(), params));
     mDetails->ctrlBody()->setNote(tr("The machine instance is always captured: attributes, constants and accessors are in scope. "
                                      "The body must end in 'return <value>;' of the declared type."));
+    // An embedded condition body is not transition-scoped: no stimulus parameters in scope.
+    mDetails->ctrlBody()->setCompletions(SMSymbolIndex::completionWords(mModel.getData(), 0, false));
 }
 
 void SMMethod::selectedMethod(SMMethodEntry* method)

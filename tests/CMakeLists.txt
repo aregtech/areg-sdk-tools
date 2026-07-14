@@ -187,6 +187,26 @@ target_link_libraries(lusan_sm_condition_command_tests PRIVATE
 set_target_properties(lusan_sm_condition_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
+# SM-21-06: verbatim-code symbol assistance. Headless: the data layer plus the
+# symbol-index helper (known symbols, used-symbols scan, verbatim where-used).
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_sm_symbol_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN}/model/sm/SMSymbolIndex.cpp
+    ${LUSAN_ROOT}/tests/sm/SMSymbolIndexTests.cpp
+)
+target_include_directories(lusan_sm_symbol_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_symbol_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_symbol_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_symbol_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
 # SM-13: design-canvas smoke test. Drives the real SMDesign/SMScene/SMStateItem
 # stack with synthetic mouse/key events on the Qt offscreen platform, so the
 # canvas interactions are verifiable without a display or input injection.
@@ -213,6 +233,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMConstantModel.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
+    ${LUSAN}/model/sm/SMSymbolIndex.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
@@ -308,5 +329,6 @@ add_test(NAME sm_model_tests COMMAND lusan_sm_tests)
 add_test(NAME sm_serialization_tests COMMAND lusan_sm_serialization_tests)
 add_test(NAME sm_condition_tests COMMAND lusan_sm_condition_tests)
 add_test(NAME sm_condition_command_tests COMMAND lusan_sm_condition_command_tests)
+add_test(NAME sm_symbol_tests COMMAND lusan_sm_symbol_tests)
 add_test(NAME sm_command_tests COMMAND lusan_sm_command_tests)
 add_test(NAME si_command_tests COMMAND lusan_si_command_tests)

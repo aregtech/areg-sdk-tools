@@ -663,6 +663,90 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// SM-21-07: layout and logic are independently diffable
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< The trailing '<Layout ...</Layout>' block of a serialized document, or empty.
+    QByteArray layoutBlock(const QByteArray& xml)
+    {
+        const int start = xml.indexOf("<Layout");
+        const int end   = xml.indexOf("</Layout>");
+        if ((start < 0) || (end < 0))
+        {
+            return QByteArray();
+        }
+
+        return xml.mid(start, (end + 9) - start);
+    }
+
+    //!< Everything before the trailing Layout block: the logic sections.
+    QByteArray logicPart(const QByteArray& xml)
+    {
+        const int start = xml.indexOf("<Layout");
+        return (start < 0) ? xml : xml.left(start);
+    }
+
+    void testLayoutLogicSeparation()
+    {
+        std::printf("[SM-21-07] layout and logic are independently diffable\n");
+
+        const QString refPath = dataFile("TrafficLight.fsml");
+
+        StateMachineData base;
+        CHECK(base.readFromFile(refPath));
+        const QString basePath = outFile("sm2107_base.fsml");
+        CHECK(base.writeToFile(basePath));
+        const QByteArray baseBytes = readAllBytes(basePath);
+        CHECK(layoutBlock(baseBytes).isEmpty() == false);   // the reference carries geometry
+
+        // Moving a state box changes only the Layout block: a drag-to-tidy never rewrites logic.
+        StateMachineData moved;
+        CHECK(moved.readFromFile(refPath));
+        SMStateEntry* off = moved.findState("LightOff");
+        CHECK(off != nullptr);
+        SMLayoutNode* node = (off != nullptr) ? moved.getLayout().findNode(off->getId()) : nullptr;
+        CHECK(node != nullptr);
+        if (node != nullptr)
+        {
+            node->x += 64.0;
+            node->y += 32.0;
+        }
+        const QString movePath = outFile("sm2107_move.fsml");
+        CHECK(moved.writeToFile(movePath));
+        const QByteArray moveBytes = readAllBytes(movePath);
+
+        CHECK(logicPart(moveBytes)   == logicPart(baseBytes));      // logic untouched by a move
+        CHECK(layoutBlock(moveBytes) != layoutBlock(baseBytes));    // only geometry changed
+
+        // Renaming a state changes only logic: layout keys by ID, so it is byte-identical.
+        StateMachineData renamed;
+        CHECK(renamed.readFromFile(refPath));
+        SMStateEntry* on = renamed.findState("LightOn");
+        CHECK(on != nullptr);
+        if (on != nullptr)
+        {
+            on->setName(QStringLiteral("LightOnRenamed"));
+        }
+        const QString renamePath = outFile("sm2107_rename.fsml");
+        CHECK(renamed.writeToFile(renamePath));
+        const QByteArray renameBytes = readAllBytes(renamePath);
+
+        CHECK(layoutBlock(renameBytes) == layoutBlock(baseBytes));  // geometry untouched by a rename
+        CHECK(logicPart(renameBytes)   != logicPart(baseBytes));    // only logic changed
+
+        // Geometry survives a full round-trip byte-exactly and deterministically.
+        StateMachineData reread;
+        CHECK(reread.readFromFile(movePath));
+        CHECK(reread.openSucceeded());
+        const QString movePath2 = outFile("sm2107_move2.fsml");
+        CHECK(reread.writeToFile(movePath2));
+        CHECK(readAllBytes(movePath) == readAllBytes(movePath2));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Entry point
 //////////////////////////////////////////////////////////////////////////
 
@@ -671,6 +755,7 @@ int main(int /*argc*/, char** /*argv*/)
     std::printf("==== SM serialization/versioning tests ====\n");
 
     testRoundTrip();
+    testLayoutLogicSeparation();
     testCData();
     testNestedConditions();
     testFlatGuardStaysLegacy();

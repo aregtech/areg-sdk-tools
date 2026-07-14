@@ -58,6 +58,8 @@
 #include <QFile>
 #include <QFocusEvent>
 #include <QGraphicsProxyWidget>
+#include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QTreeWidget>
@@ -1802,6 +1804,74 @@ int main(int argc, char* argv[])
         doc.getUndoStack().undo();
         QApplication::processEvents();
         CHECK(doc.getData().findStateById(source->getId()) != nullptr);
+    }
+
+    std::printf("sect: SM-21-08 canvas search / go-to\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        QLineEdit* box = page.findChild<QLineEdit*>(QStringLiteral("smCanvasSearch"));
+        QLabel* status = page.findChild<QLabel*>(QStringLiteral("smCanvasSearchStatus"));
+        CHECK(box != nullptr);
+        CHECK(status != nullptr);
+
+        SMStateEntry* off = d.findState("LightOff");
+        SMStateEntry* on  = d.findState("LightOn");
+        CHECK((off != nullptr) && (on != nullptr));
+
+        if ((box != nullptr) && (off != nullptr) && (on != nullptr))
+        {
+            // A state-name match selects the state and reveals it (highlight/selection path).
+            box->setText(QStringLiteral("LightOff"));
+            QApplication::processEvents();
+            CHECK(doc.getSelectionModel().getSelection().contains(off->getId()));
+
+            // A broad query matches several states; Enter cycles to a different match.
+            box->setText(QStringLiteral("Light"));
+            QApplication::processEvents();
+            const uint32_t firstHit = doc.getSelectionModel().getSelection().isEmpty()
+                                        ? 0u : doc.getSelectionModel().getSelection().first();
+            CHECK((firstHit == off->getId()) || (firstHit == on->getId()));
+            QKeyEvent enterPress(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QApplication::sendEvent(box, &enterPress);
+            QApplication::processEvents();
+            const uint32_t secondHit = doc.getSelectionModel().getSelection().isEmpty()
+                                        ? 0u : doc.getSelectionModel().getSelection().first();
+            CHECK((secondHit != 0u) && (secondHit != firstHit));    // cycled to the next match
+
+            // A transition stimulus matches its transition.
+            box->setText(QStringLiteral("PowerOn"));
+            QApplication::processEvents();
+            SMStateEntry* offOwner = d.findState("LightOff");
+            uint32_t powerOnId = 0;
+            for (const SMTransitionEntry* t : offOwner->getTransitions().getElements())
+            {
+                if (t->getStimulus() == QStringLiteral("PowerOn")) { powerOnId = t->getId(); break; }
+            }
+            CHECK(powerOnId != 0);
+            CHECK(doc.getSelectionModel().getSelection().contains(powerOnId));
+
+            // No match leaves the selection unchanged and shows a clear affordance.
+            const QList<uint32_t> before = doc.getSelectionModel().getSelection();
+            box->setText(QStringLiteral("Nonexistent_zzz"));
+            QApplication::processEvents();
+            CHECK((status == nullptr) || (status->text() == QStringLiteral("No match")));
+            CHECK(doc.getSelectionModel().getSelection() == before);
+
+            // Esc abandons the search box.
+            box->setText(QStringLiteral("Light"));
+            QApplication::processEvents();
+            QKeyEvent escPress(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+            QApplication::sendEvent(box, &escPress);
+            QApplication::processEvents();
+            CHECK(box->text().isEmpty());
+        }
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

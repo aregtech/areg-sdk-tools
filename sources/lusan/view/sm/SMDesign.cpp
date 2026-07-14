@@ -51,6 +51,7 @@
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMimeData>
@@ -59,6 +60,7 @@
 #include <QPair>
 #include <QScrollBar>
 #include <QSettings>
+#include <QShortcut>
 #include <QSize>
 #include <QStringList>
 #include <QToolBar>
@@ -188,6 +190,9 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mScene        (nullptr)
     , mBreadcrumb   (nullptr)
     , mBreadcrumbLayout(nullptr)
+    , mSearchEdit   (nullptr)
+    , mSearchStatus (nullptr)
+    , mSearchIndex  (-1)
     , mToolBar      (nullptr)
     , mPropertiesDock(nullptr)
     , mOutlineDock  (nullptr)
@@ -257,6 +262,27 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mBreadcrumbLayout->setContentsMargins(8, 4, 8, 4);
     mBreadcrumbLayout->setSpacing(4);
 
+    // The top bar carries the breadcrumb (left, cleared/rebuilt on level change) and the
+    // canvas search box (right, persistent) so navigating large machines stays cheap (SM-21-08).
+    QWidget* topBar = new QWidget(this);
+    QHBoxLayout* topLayout = new QHBoxLayout(topBar);
+    topLayout->setContentsMargins(0, 0, 8, 0);
+    topLayout->setSpacing(4);
+    topLayout->addWidget(mBreadcrumb, 1);
+
+    mSearchEdit = new QLineEdit(topBar);
+    mSearchEdit->setObjectName(QStringLiteral("smCanvasSearch"));
+    mSearchEdit->setPlaceholderText(tr("Find state / transition (Ctrl+F)"));
+    mSearchEdit->setClearButtonEnabled(true);
+    mSearchEdit->setMaximumWidth(240);
+    mSearchEdit->installEventFilter(this);
+    topLayout->addWidget(mSearchEdit);
+
+    mSearchStatus = new QLabel(topBar);
+    mSearchStatus->setObjectName(QStringLiteral("smCanvasSearchStatus"));
+    mSearchStatus->setMinimumWidth(72);
+    topLayout->addWidget(mSearchStatus);
+
     // The Design page is a QMainWindow: its central widget is the canvas (breadcrumb + viewport),
     // and its own drawing toolbar, Properties, and Outline panels dock to the page's edges
     // (issue #516). They live inside this page and can be moved to the Navigation Window; they are
@@ -265,9 +291,18 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     QVBoxLayout* layout = new QVBoxLayout(central);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
-    layout->addWidget(mBreadcrumb);
+    layout->addWidget(topBar);
     layout->addWidget(mView);
     setCentralWidget(central);
+
+    connect(mSearchEdit, &QLineEdit::textChanged, this, &SMDesign::onSearchTextChanged);
+    connect(mSearchEdit, &QLineEdit::returnPressed, this, &SMDesign::advanceSearch);
+    QShortcut* findShortcut = new QShortcut(QKeySequence::Find, this);
+    findShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(findShortcut, &QShortcut::activated, this, [this]() {
+        mSearchEdit->setFocus();
+        mSearchEdit->selectAll();
+    });
 
     connect(mSceneManager, &SMSceneManager::signalLevelChanged, this, &SMDesign::onLevelChanged);
     connect(mView->horizontalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
@@ -339,6 +374,19 @@ SMDesign::~SMDesign()
 
 bool SMDesign::eventFilter(QObject* watched, QEvent* event)
 {
+    if (watched == mSearchEdit)
+    {
+        // Esc abandons the search and hands focus back to the canvas (SM-21-08).
+        if ((event->type() == QEvent::KeyPress) && (static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape))
+        {
+            mSearchEdit->clear();   // clears the match cache and status via textChanged
+            mView->setFocus();
+            return true;
+        }
+
+        return QMainWindow::eventFilter(watched, event);
+    }
+
     if (watched == mView)
     {
         if (event->type() == QEvent::Resize)
@@ -2054,6 +2102,116 @@ void SMDesign::rebuildBreadcrumb()
     }
 
     mBreadcrumbLayout->addStretch(1);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Canvas search / go-to (SM-21-08)
+//////////////////////////////////////////////////////////////////////////
+
+void SMDesign::onSearchTextChanged()
+{
+    const QString query = mSearchEdit->text().trimmed();
+    mSearchHits.clear();
+    mSearchIndex = -1;
+
+    if (query.isEmpty())
+    {
+        mSearchStatus->clear();
+        return;
+    }
+
+    collectSearchHits(query, mModel.getData().getStates(), mSceneManager->getRootLevel(), mSearchHits);
+
+    if (mSearchHits.isEmpty())
+    {
+        // No match: leave the canvas untouched, show a clear affordance.
+        mSearchStatus->setText(tr("No match"));
+        return;
+    }
+
+    mSearchIndex = 0;
+    focusSearchHit(0);
+    updateSearchStatus();
+}
+
+void SMDesign::advanceSearch()
+{
+    if (mSearchEdit->text().trimmed().isEmpty())
+    {
+        mSearchStatus->clear();
+        return;
+    }
+
+    if (mSearchHits.isEmpty())
+    {
+        onSearchTextChanged();
+        return;
+    }
+
+    mSearchIndex = (mSearchIndex + 1) % mSearchHits.size();
+    focusSearchHit(mSearchIndex);
+    updateSearchStatus();
+}
+
+void SMDesign::focusSearchHit(int index)
+{
+    if ((index < 0) || (index >= mSearchHits.size()))
+    {
+        return;
+    }
+
+    const SearchHit hit = mSearchHits.at(index);
+
+    // navigateTo swaps the shown scene and sets the active level (which clears the
+    // selection), so select the element afterwards; the scene highlights it through the
+    // shared selection path (SMCanvasItem/SMEdgeItem).
+    mSceneManager->navigateTo(hit.level);
+    mModel.getSelectionModel().setSelection(QList<uint32_t>{ hit.elementId });
+
+    if (SMCanvasItem* item = getScene().findCanvasItem(hit.elementId))
+    {
+        mView->centerOn(item);
+    }
+}
+
+void SMDesign::updateSearchStatus()
+{
+    mSearchStatus->setText(tr("%1 / %2").arg(mSearchIndex + 1).arg(mSearchHits.size()));
+}
+
+void SMDesign::collectSearchHits(const QString& query, const SMStateData& level, uint32_t levelId, QList<SearchHit>& out) const
+{
+    for (const SMStateEntry* state : level.getElements())
+    {
+        if (state == nullptr)
+        {
+            continue;
+        }
+
+        if (state->getName().contains(query, Qt::CaseInsensitive))
+        {
+            out.append({ levelId, state->getId(), true });
+        }
+
+        for (const SMTransitionEntry* transition : state->getTransitions().getElements())
+        {
+            if (transition == nullptr)
+            {
+                continue;
+            }
+
+            if (transition->getStimulus().contains(query, Qt::CaseInsensitive)
+                || transition->getTo().contains(query, Qt::CaseInsensitive))
+            {
+                out.append({ levelId, transition->getId(), false });
+            }
+        }
+
+        if (state->hasNestedStates())
+        {
+            collectSearchHits(query, *state->getNestedStates(), state->getId(), out);
+        }
+    }
 }
 
 void SMDesign::updateNavActions()

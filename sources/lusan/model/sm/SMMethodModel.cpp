@@ -85,6 +85,11 @@ DocModelNotifier& SMMethodModel::getNotifier() const
     return mFacade.getNotifier();
 }
 
+const StateMachineData& SMMethodModel::getData() const
+{
+    return mFacade.getData();
+}
+
 StateMachineData::StimulusRef SMMethodModel::findStimulus(const QString& name) const
 {
     return mFacade.getData().findStimulus(name);
