@@ -36,7 +36,8 @@ class QLineEdit;
 class QListWidget;
 class QPlainTextEdit;
 class QStackedWidget;
-class SMConditionEditor;
+class QTabWidget;
+class SMGuardBar;
 class StateMachineModel;
 enum class eDocElementKind;
 
@@ -109,6 +110,7 @@ private slots:
     void onNameChanged(uint32_t id, const QString& oldName, const QString& newName);
     void onListReordered(uint32_t ownerId, eDocElementKind kind);
     void onDocumentReloaded();
+    void onGuardBadgeChanged(bool isDraft, bool hasWarnings);
 
     void onStateNameCommit();
     void onStateDescriptionCommit();
@@ -179,7 +181,8 @@ private:
                                         //!< timers; editing is search-only, no free rename).
     QComboBox*          mTarget;        //!< The target sibling state (or internal).
     QPlainTextEdit*     mTransDesc;     //!< The transition description (multi-line).
-    SMConditionEditor*  mConditions;    //!< The Conditions tab guard builder.
+    SMGuardBar*         mConditions;    //!< The Conditions tab guard bar.
+    QTabWidget*         mTransTabs;     //!< The General / Conditions tab host (for the badge).
 
     // Registry page.
     QLabel*             mRegistryInfo;  //!< The selected registry entry summary (read-only).

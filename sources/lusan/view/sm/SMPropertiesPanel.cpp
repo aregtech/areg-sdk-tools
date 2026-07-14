@@ -32,7 +32,7 @@
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
-#include "lusan/view/sm/SMConditionEditor.hpp"
+#include "lusan/view/sm/SMGuardBar.hpp"
 
 #include <QComboBox>
 #include <QCompleter>
@@ -156,6 +156,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mTarget       (nullptr)
     , mTransDesc    (nullptr)
     , mConditions   (nullptr)
+    , mTransTabs    (nullptr)
     , mRegistryInfo (nullptr)
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
@@ -261,12 +262,36 @@ void SMPropertiesPanel::buildTransitionPage()
     connect(mTarget, &QComboBox::activated, this, &SMPropertiesPanel::onTargetCommit);
     connect(mTarget->lineEdit(), &QLineEdit::editingFinished, this, &SMPropertiesPanel::onTargetCommit);
 
-    QTabWidget* tabs = new QTabWidget(this);
-    tabs->addTab(page, tr("General"));
-    mConditions = new SMConditionEditor(mModel, this);
-    tabs->addTab(mConditions, tr("Conditions"));
+    mTransTabs = new QTabWidget(this);
+    mTransTabs->setObjectName(QStringLiteral("smTransTabs"));
+    mTransTabs->addTab(page, tr("General"));
+    mConditions = new SMGuardBar(mModel, this);
+    mTransTabs->addTab(mConditions, tr("Conditions"));
+    connect(mConditions, &SMGuardBar::badgeChanged, this, &SMPropertiesPanel::onGuardBadgeChanged);
 
-    mStack->insertWidget(PageTransition, tabs);
+    mStack->insertWidget(PageTransition, mTransTabs);
+}
+
+void SMPropertiesPanel::onGuardBadgeChanged(bool isDraft, bool hasWarnings)
+{
+    if (mTransTabs == nullptr)
+    {
+        return;
+    }
+
+    // The Conditions tab is the second page; a draft adds `*`, a warning adds the `(!)` glyph.
+    QString label = tr("Conditions");
+    if (isDraft)
+    {
+        label += QStringLiteral(" *");
+    }
+
+    if (hasWarnings)
+    {
+        label += QStringLiteral(" (!)");
+    }
+
+    mTransTabs->setTabText(1, label);
 }
 
 void SMPropertiesPanel::buildRegistryPage()

@@ -41,6 +41,7 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMConstantData.cpp
     ${LUSAN}/data/sm/SMDataTypeData.cpp
     ${LUSAN}/data/sm/SMEventData.cpp
+    ${LUSAN}/data/sm/SMGuardTree.cpp
     ${LUSAN}/data/sm/SMImportData.cpp
     ${LUSAN}/data/sm/SMIncludeData.cpp
     ${LUSAN}/data/sm/SMLayoutData.cpp
@@ -187,6 +188,34 @@ target_link_libraries(lusan_sm_condition_command_tests PRIVATE
 set_target_properties(lusan_sm_condition_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
+# SM-21 (U1): the deterministic guard core. Headless: the data layer + shared command
+# framework + the guard model (tree/parser/render/codegen preview/commands + symbols)
+# and the legacy condition renderer used by the read-shim.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_sm_guard_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN_CMD_COMMON_SRC}
+    ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMConditionText.cpp
+    ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
+    ${LUSAN}/model/sm/SMGuardCommands.cpp
+    ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
+    ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN_ROOT}/tests/sm/SMGuardTests.cpp
+)
+target_include_directories(lusan_sm_guard_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_guard_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_guard_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_guard_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
 # SM-21-06: verbatim-code symbol assistance. Headless: the data layer plus the
 # symbol-index helper (known symbols, used-symbols scan, verbatim where-used).
 # ---------------------------------------------------------------------------
@@ -205,6 +234,32 @@ target_link_libraries(lusan_sm_symbol_tests PRIVATE
     aregsqlite3
 )
 set_target_properties(lusan_sm_symbol_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
+# SM-21 (U2): the guard editing-surface symbol catalog + the did-you-mean
+# edit-distance helper. Headless: the catalog builder and nearestName are
+# model-facing (no widgets), so they compile against the data layer only.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_sm_guard_catalog_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN}/model/sm/SMConditionText.cpp
+    ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
+    ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/view/sm/NEGuardStyle.cpp
+    ${LUSAN}/view/sm/SMGuardCatalog.cpp
+    ${LUSAN_ROOT}/tests/sm/SMGuardCatalogTests.cpp
+)
+target_include_directories(lusan_sm_guard_catalog_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_guard_catalog_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_guard_catalog_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_guard_catalog_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # ---------------------------------------------------------------------------
 # SM-13: design-canvas smoke test. Drives the real SMDesign/SMScene/SMStateItem
@@ -242,6 +297,21 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMCanvasTool.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
     ${LUSAN}/view/sm/SMConditionEditor.cpp
+    ${LUSAN}/view/sm/NEGuardStyle.cpp
+    ${LUSAN}/view/sm/SMFixBar.cpp
+    ${LUSAN}/view/sm/SMGuardBar.cpp
+    ${LUSAN}/view/sm/SMGuardCatalog.cpp
+    ${LUSAN}/view/sm/SMGuardField.cpp
+    ${LUSAN}/view/sm/SMGuardHelpCard.cpp
+    ${LUSAN}/view/sm/SMGuardHighlighter.cpp
+    ${LUSAN}/view/sm/SMGuardStatusLine.cpp
+    ${LUSAN}/view/sm/SMSignatureCard.cpp
+    ${LUSAN}/view/sm/SMSymbolPopup.cpp
+    ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
+    ${LUSAN}/model/sm/SMGuardCommands.cpp
+    ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
+    ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/view/sm/SMDesign.cpp
     ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
@@ -329,6 +399,8 @@ add_test(NAME sm_model_tests COMMAND lusan_sm_tests)
 add_test(NAME sm_serialization_tests COMMAND lusan_sm_serialization_tests)
 add_test(NAME sm_condition_tests COMMAND lusan_sm_condition_tests)
 add_test(NAME sm_condition_command_tests COMMAND lusan_sm_condition_command_tests)
+add_test(NAME sm_guard_tests COMMAND lusan_sm_guard_tests)
+add_test(NAME sm_guard_catalog_tests COMMAND lusan_sm_guard_catalog_tests)
 add_test(NAME sm_symbol_tests COMMAND lusan_sm_symbol_tests)
 add_test(NAME sm_command_tests COMMAND lusan_sm_command_tests)
 add_test(NAME si_command_tests COMMAND lusan_si_command_tests)
