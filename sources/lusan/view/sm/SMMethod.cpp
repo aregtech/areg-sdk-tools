@@ -29,8 +29,12 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/sm/SMGuardCodegenPreview.hpp"
+#include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/SMMethodModel.hpp"
+#include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMSymbolIndex.hpp"
+#include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMCodeEditor.hpp"
 #include "lusan/view/sm/SMEventParamDetails.hpp"
 #include "lusan/view/sm/SMMethodDetails.hpp"
@@ -44,6 +48,8 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QRadioButton>
 #include <QShortcut>
@@ -160,6 +166,46 @@ void SMMethod::setupSignals()
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMMethod::onMethodDeprecateHintCommitted);
     mDetails->ctrlBody()->ctrlBody()->installEventFilter(this);
     mDetails->ctrlDescription()->installEventFilter(this);
+
+    // S14: the `used by N guards` navigation and the per-kind row actions.
+    connect(mDetails->ctrlGuardInfo(), &QLabel::linkActivated, this, [this](const QString& link)
+    {
+        const QString prefix = QStringLiteral("uses:");
+        if (link.startsWith(prefix))
+        {
+            showMethodWhereUsed(link.mid(prefix.length()).toUInt());
+        }
+    });
+
+    table->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(table, &QTreeWidget::customContextMenuRequested, this, [this, table](const QPoint& pos)
+    {
+        QTreeWidgetItem* item = table->itemAt(pos);
+        if (item == nullptr)
+        {
+            return;
+        }
+
+        table->setCurrentItem(item);
+        SMMethodEntry* method = currentMethod();
+        if ((method == nullptr) || (method->isCondition() == false))
+        {
+            return;
+        }
+
+        QMenu menu(this);
+        QAction* editBody = method->isLambdaCondition() ? menu.addAction(tr("Edit body")) : nullptr;
+        QAction* whereUsed = menu.addAction(tr("Where used"));
+        QAction* chosen = menu.exec(table->viewport()->mapToGlobal(pos));
+        if ((editBody != nullptr) && (chosen == editBody))
+        {
+            mDetails->ctrlBody()->ctrlBody()->setFocus();
+        }
+        else if (chosen == whereUsed)
+        {
+            showMethodWhereUsed(method->getId());
+        }
+    });
 
     connect(mParamDetails->ctrlName()      , &QLineEdit::textChanged        , this, &SMMethod::onParamNameTextChanged);
     connect(mParamDetails->ctrlName()      , &QLineEdit::editingFinished    , this, &SMMethod::onParamNameCommitted);
@@ -331,6 +377,16 @@ QTreeWidgetItem* SMMethod::createMethodNode(SMMethodEntry* method) const
 {
     QTreeWidgetItem* item = new QTreeWidgetItem();
     setNodeText(item, method);
+    if (method->isCondition())
+    {
+        // The D8 kind split (S14): the type column shows the kind as glyph + word.
+        const bool isLambda = method->isLambdaCondition();
+        item->setText(1, isLambda ? tr("{} lambda") : tr("h handler"));
+        item->setToolTip(1, isLambda
+                         ? tr("condition -- body written in Lusan, generated as a std::function member")
+                         : tr("condition -- implemented by your handler"));
+    }
+
     const QString reason = nameCollisionReason(method, method->getName(), method->getId());
     if (reason.isEmpty() == false)
     {
@@ -485,6 +541,22 @@ void SMMethod::showMethodForm(SMMethodEntry* method)
 
     mDetails->setConditionVisible(isCondition);
     mDetails->setBodyVisible(isCondition && isEmbedded);
+    if (isCondition)
+    {
+        // S14: the kind, the generated call form, and the where-used navigation.
+        const int uses = SMGuardWhereUsed::useCount(mModel.getData(), method->getId());
+        const QString call = isEmbedded
+                             ? QString::fromLatin1(SMGuardCodegenPreview::LAMBDA_MEMBER_PREFIX) + method->getName() + QStringLiteral("(...)")
+                             : QString::fromLatin1(SMGuardCodegenPreview::HANDLER_ACCESSOR) + QLatin1Char('.') + method->getName() + QStringLiteral("(...)");
+        mDetails->ctrlGuardInfo()->setText(tr("%1 -- called as <tt>%2</tt> -- <a href=\"uses:%3\">used by %4 guard%5</a>")
+                                           .arg(isEmbedded ? QStringLiteral("{} lambda") : QStringLiteral("h handler"))
+                                           .arg(call.toHtmlEscaped())
+                                           .arg(method->getId())
+                                           .arg(uses)
+                                           .arg((uses == 1) ? QString() : QStringLiteral("s")));
+    }
+
+    mDetails->setGuardInfoVisible(isCondition);
     updateBodyEditor(method);
 
     applyDeprecatedDisplay(mDetails->ctrlDeprecated(), mDetails->ctrlDeprecateHint(), method->getIsDeprecated(), method->getDeprecateHint());
@@ -658,6 +730,29 @@ void SMMethod::onInsertClicked()
     }
 }
 
+void SMMethod::showMethodWhereUsed(uint32_t methodId)
+{
+    const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getData(), methodId);
+    if (uses.isEmpty())
+    {
+        QMessageBox::information(this, tr("Where used"), tr("No guard references this condition."));
+        return;
+    }
+
+    QMenu menu(this);
+    for (const SMGuardWhereUsed::Use& use : uses)
+    {
+        QAction* action = menu.addAction(use.location);
+        const uint32_t transitionId = use.transitionId;
+        connect(action, &QAction::triggered, this, [this, transitionId]()
+        {
+            mModel.getSelectionModel().setSelection({ transitionId });
+        });
+    }
+
+    menu.exec(QCursor::pos());
+}
+
 void SMMethod::onRemoveClicked()
 {
     switch (currentKind())
@@ -667,6 +762,29 @@ void SMMethod::onRemoveClicked()
         SMMethodEntry* method = currentMethod();
         if (method == nullptr)
             break;
+
+        // Deleting a condition still referenced by guards is refused with the where-used
+        // list (S14/S15): the ID-bound trees would dangle otherwise.
+        if (method->isCondition())
+        {
+            const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getData(), method->getId());
+            if (uses.isEmpty() == false)
+            {
+                QStringList places;
+                for (const SMGuardWhereUsed::Use& use : uses)
+                {
+                    places.append(QStringLiteral("  - ") + use.location);
+                }
+
+                QMessageBox::warning(this, tr("Cannot delete '%1'").arg(method->getName())
+                                    , tr("'%1' is used by %2 guard%3:\n%4\n\nRemove it from those guards first.")
+                                      .arg(method->getName())
+                                      .arg(uses.size())
+                                      .arg((uses.size() == 1) ? QString() : QStringLiteral("s"))
+                                      .arg(places.join(QLatin1Char('\n'))));
+                break;
+            }
+        }
 
         const QList<SMMethodEntry*>& list = mModel.getMethods();
         const int index = mModel.findIndex(method);

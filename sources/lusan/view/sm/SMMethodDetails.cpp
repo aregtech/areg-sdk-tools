@@ -44,6 +44,7 @@ SMMethodDetails::SMMethodDetails(QWidget* parent /*= nullptr*/)
     , mEmbedded         (nullptr)
     , mReturnRow        (nullptr)
     , mImplementRow     (nullptr)
+    , mGuardInfo        (nullptr)
     , mBody             (nullptr)
     , mDescription      (nullptr)
     , mDeprecated       (nullptr)
@@ -104,6 +105,12 @@ void SMMethodDetails::buildUi()
     implLayout->addStretch(1);
     mForm->addRow(tr("Implement:"), mImplementRow);
 
+    mGuardInfo = new QLabel(details);
+    mGuardInfo->setObjectName(QStringLiteral("smMethodGuardInfo"));
+    mGuardInfo->setTextFormat(Qt::RichText);
+    mGuardInfo->setWordWrap(true);
+    mForm->addRow(tr("Guard use:"), mGuardInfo);
+
     mBody = new SMCodeEditor(details);
     mBody->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::MinimumExpanding);
     mForm->addRow(tr("Body:"), mBody);
@@ -122,6 +129,7 @@ void SMMethodDetails::buildUi()
 
     setConditionVisible(false);
     setBodyVisible(false);
+    setGuardInfoVisible(false);
 }
 
 QLineEdit* SMMethodDetails::ctrlName() const
@@ -195,4 +203,14 @@ void SMMethodDetails::setConditionVisible(bool visible)
 void SMMethodDetails::setBodyVisible(bool visible)
 {
     mForm->setRowVisible(mBody, visible);
+}
+
+QLabel* SMMethodDetails::ctrlGuardInfo() const
+{
+    return mGuardInfo;
+}
+
+void SMMethodDetails::setGuardInfoVisible(bool visible)
+{
+    mForm->setRowVisible(mGuardInfo, visible);
 }

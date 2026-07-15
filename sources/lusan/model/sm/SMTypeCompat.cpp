@@ -55,6 +55,27 @@ namespace
     }
 }
 
+SMTypeCompat::eRank SMTypeCompat::rank(const QString& fromType, const QString& toType)
+{
+    if (fromType.isEmpty() || toType.isEmpty())
+        return eRank::Unknown;
+
+    if (fromType == toType)
+        return eRank::Exact;
+
+    // A non-primitive (declared) type matches by exact name only.
+    if ((isPrimitive(fromType) == false) || (isPrimitive(toType) == false))
+        return eRank::Mismatch;
+
+    if (widensTo(fromType, toType))
+        return eRank::Converts;
+
+    if (widensTo(toType, fromType))
+        return eRank::Narrows;
+
+    return eRank::Mismatch;
+}
+
 bool SMTypeCompat::isBoolOrString(const QString& typeName)
 {
     return (typeName == "bool") || (typeName == "String");

@@ -162,6 +162,9 @@ private:
     QString genMethodName();
     QString genParamName(const SMMethodEntry* method) const;
 
+    //!< The `used by N guards` popup (S14): pick a guard, select its transition.
+    void showMethodWhereUsed(uint32_t methodId);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////

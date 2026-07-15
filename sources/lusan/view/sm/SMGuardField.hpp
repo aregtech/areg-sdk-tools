@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include <QPlainTextEdit>
+#include <QTextEdit>
 
 #include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/view/sm/SMFixBar.hpp"
@@ -40,6 +40,8 @@
 class QTimer;
 class StateMachineModel;
 class SMGuardHighlighter;
+class SMHoverCard;
+class SMInlineToken;
 class SMSymbolPopup;
 class SMSignatureCard;
 enum class eDocElementKind;
@@ -56,12 +58,14 @@ enum class eDocElementKind;
  *          them to this field's signals. Rebuild-from-model is deferred (0 ms) so an undo /
  *          redo / rename never rebuilds inside the emitting command.
  *
- *          Derives QPlainTextEdit directly (a documented deviation from v7's literal "derives
+ *          Derives QTextEdit directly (a documented deviation from v7's literal "derives
  *          SMCodeEditor": that class is a composite widget with its own signature/note labels
  *          and completer, unsuited to a single inline field that must own its document for the
- *          highlighter and slot spans).
+ *          highlighter and slot spans). U2 used QPlainTextEdit; U3 moved the base to QTextEdit
+ *          because QPlainTextDocumentLayout never paints QTextObjectInterface objects -- the
+ *          folded island tokens (E4) require the rich-text layout.
  **/
-class SMGuardField : public QPlainTextEdit
+class SMGuardField : public QTextEdit
 {
     Q_OBJECT
 
@@ -90,6 +94,38 @@ public:
     //!< Applies a quick-fix chosen in the fix bar.
     void applyFix(const QString& id, const QString& payload);
 
+    //!< The shared hover card (owned by the bar; nullptr disables symbol hovers).
+    void setHoverCard(SMHoverCard* card);
+
+    //!< Selects the span [start, start+length) of the CANONICAL text (lens pill click).
+    void selectSpan(int start, int length);
+
+    /**
+     * \brief   The clause-popover path (B7): visibly inserts `<combiner> <clauseText>` at
+     *          the end of the field, then commits shortly after -- the novice path that
+     *          teaches the syntax by showing the text it builds.
+     **/
+    void appendClause(const QString& combiner, const QString& clauseText);
+
+    //!< Appends a new empty island (`+ lambda`) and requests its editor.
+    void appendIsland();
+
+    //!< Commits the current text now (the bar's ladder steps need a committed tree).
+    void commitNow();
+
+    //!< The committable (expanded, slot-stripped) text -- the grid's live-refresh input.
+    QString committableText() const;
+
+    // ---- islands (E4) ----------------------------------------------------
+    //!< The number of island tokens in the field, in text order.
+    int islandCount() const;
+
+    //!< The body of island \p index (empty when out of range).
+    QString islandBody(int index) const;
+
+    //!< Rewrites the body of island \p index (the island editor's apply path).
+    void setIslandBody(int index, const QString& body);
+
 signals:
     //!< The status changed; the container updates the status line.
     void statusUpdated(int severity, const QString& verdict, const QString& preview, const QStringList& handlerChips);
@@ -97,6 +133,10 @@ signals:
     void fixesUpdated(const QString& message, const QList<SMFixBar::Fix>& fixes);
     //!< The tab badge state changed (draft => `*`, warnings => warn glyph).
     void badgeUpdated(bool isDraft, bool hasWarnings);
+    //!< An island token wants its editor (S4): click, caret entry, `{`, or `+ lambda`.
+    void islandEditRequested(int islandIndex, const QString& body);
+    //!< The `Map arguments...` quick-fix: the bar opens the grid for the first call.
+    void mapArgumentsRequested();
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -105,6 +145,10 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
     void insertFromMimeData(const QMimeData* source) override;
+    QMimeData* createMimeDataFromSelection() const override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void leaveEvent(QEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -130,8 +174,28 @@ private:
     //!< Reverts the field to the last committed text (Esc).
     void revert();
 
-    //!< The plain text with slot placeholders and newlines removed (never commits slot text).
-    QString committableText() const;
+    // ---- islands (E4) ----------------------------------------------------
+    //!< The document positions of every island token, in text order.
+    QList<int> islandPositions() const;
+
+    //!< Inserts an island token carrying \p body at the caret; returns its island index.
+    int insertIslandAtCaret(const QString& body);
+
+    /**
+     * \brief   The expanded text: island tokens replaced by `{body}`. \p docStarts maps
+     *          each document position to its expanded offset (size = doc length + 1), so
+     *          parser diagnostics and lens spans translate both ways.
+     **/
+    QString expandedText(QList<int>& docStarts) const;
+
+    //!< The document position of expanded offset \p expandedPos.
+    int expandedToDoc(int expandedPos) const;
+
+    //!< Folds every textual `{...}` block of the document into an island token.
+    void foldIslands();
+
+    //!< Opens the island editor when the character at \p docPos is an island token.
+    bool maybeOpenIslandAt(int docPos);
 
     //!< Caps the widget height to at most four visual lines.
     void updateHeight();
@@ -179,6 +243,12 @@ private:
     int                     mErrorStart;    //!< The first error span start (fix target), or -1.
     int                     mErrorLength;   //!< The first error span length.
     QHash<QString, int>     mOwnerByName;   //!< Symbol name -> NEGuardStyle::eOwner (for coloring).
+
+    SMInlineToken*          mTokenHandler;  //!< The registered island text-object painter.
+    SMHoverCard*            mHover;         //!< The shared hover card (not owned; may be nullptr).
+    QTimer*                 mHoverTimer;    //!< The 300 ms symbol-hover delay.
+    QString                 mHoverWord;     //!< The word under the pending hover.
+    int                     mLastCursorPos; //!< The previous caret position (island caret-entry).
 };
 
 //////////////////////////////////////////////////////////////////////////

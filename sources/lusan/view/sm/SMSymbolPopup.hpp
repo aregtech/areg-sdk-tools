@@ -40,7 +40,7 @@ class QStandardItemModel;
  *          universe, opened by typing or Ctrl+Space. Group headers (STIMULUS / FSM / HANDLER)
  *          are non-selectable; the rows filter as the user types; Enter accepts. It never
  *          steals focus from the field (shown without activation) -- the field forwards the
- *          navigation keys. The `New lambda here...` row is present but disabled (Session U3).
+ *          navigation keys. The `New lambda here...` row inserts an island at the caret (E4).
  **/
 class SMSymbolPopup : public QWidget
 {
@@ -78,6 +78,8 @@ public:
 signals:
     //!< A real symbol row was accepted.
     void accepted(const SMGuardSymbol& symbol);
+    //!< The `New lambda here...` row was accepted: create an island at the caret (E4).
+    void newLambdaRequested();
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

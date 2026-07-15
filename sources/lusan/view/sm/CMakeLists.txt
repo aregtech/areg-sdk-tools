@@ -6,13 +6,20 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMConditionEditor.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMFixBar.cpp
+    ${LUSAN}/view/sm/SMFlowLayout.cpp
     ${LUSAN}/view/sm/SMGuardBar.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
     ${LUSAN}/view/sm/SMGuardStatusLine.cpp
+    ${LUSAN}/view/sm/SMHoverCard.cpp
+    ${LUSAN}/view/sm/SMInlineToken.cpp
+    ${LUSAN}/view/sm/SMIslandEditor.cpp
+    ${LUSAN}/view/sm/SMMappingGrid.cpp
+    ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
+    ${LUSAN}/view/sm/SMStructureLens.cpp
     ${LUSAN}/view/sm/SMSymbolPopup.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
     ${LUSAN}/view/sm/SMConstantDetails.cpp
@@ -59,13 +66,20 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMConditionEditor.hpp
     ${LUSAN}/view/sm/NEGuardStyle.hpp
     ${LUSAN}/view/sm/SMFixBar.hpp
+    ${LUSAN}/view/sm/SMFlowLayout.hpp
     ${LUSAN}/view/sm/SMGuardBar.hpp
     ${LUSAN}/view/sm/SMGuardCatalog.hpp
     ${LUSAN}/view/sm/SMGuardField.hpp
     ${LUSAN}/view/sm/SMGuardHelpCard.hpp
     ${LUSAN}/view/sm/SMGuardHighlighter.hpp
     ${LUSAN}/view/sm/SMGuardStatusLine.hpp
+    ${LUSAN}/view/sm/SMHoverCard.hpp
+    ${LUSAN}/view/sm/SMInlineToken.hpp
+    ${LUSAN}/view/sm/SMIslandEditor.hpp
+    ${LUSAN}/view/sm/SMMappingGrid.hpp
+    ${LUSAN}/view/sm/SMOperandField.hpp
     ${LUSAN}/view/sm/SMSignatureCard.hpp
+    ${LUSAN}/view/sm/SMStructureLens.hpp
     ${LUSAN}/view/sm/SMSymbolPopup.hpp
     ${LUSAN}/view/sm/SMConstant.hpp
     ${LUSAN}/view/sm/SMConstantDetails.hpp

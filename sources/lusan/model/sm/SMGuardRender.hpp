@@ -83,6 +83,20 @@ public:
         QList<Span>     spans;
     };
 
+    /**
+     * \struct  NodeSpan
+     * \brief   The full text range one tree node occupies in the rendered text (including
+     *          its wrapping parentheses), addressed by its child-index path from the root.
+     *          The structure lens and mapping grid use it to map a node to a caret span --
+     *          from the same render walk, so the two views can never disagree on offsets.
+     **/
+    struct NodeSpan
+    {
+        QList<int>  path;       //!< The child-index path from the root (empty = the root).
+        int         start;      //!< The 0-based start offset in the rendered text.
+        int         length;     //!< The span length.
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////
@@ -92,6 +106,9 @@ public:
 
     //!< The canonical text plus span list of a node sub-tree.
     static Rendered render(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node);
+
+    //!< The text range of every node of the sub-tree in the canonical rendered text.
+    static QList<NodeSpan> nodeSpans(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node);
 
     /**
      * \brief   The display text of a whole guard: the rendered tree (ok), the raw draft text

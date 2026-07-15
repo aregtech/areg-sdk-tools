@@ -66,8 +66,10 @@ namespace
         {
         }
 
-        QString                 mOut;
-        QList<Span>             mSpans;
+        QString                             mOut;
+        QList<Span>                         mSpans;
+        QList<SMGuardRender::NodeSpan>*     mNodeSpans { nullptr };
+        QList<int>                          mPath;
 
         void append(const QString& s)
         {
@@ -83,10 +85,23 @@ namespace
         //!< Renders \p node, wrapping it in parentheses when its precedence is below \p ctx.
         void render(const SMGuardNode& node, int ctx)
         {
+            const int spanStart = static_cast<int>(mOut.size());
             const bool wrap = (precedence(node) < ctx);
             if (wrap) { append(QStringLiteral("(")); }
             renderBare(node);
             if (wrap) { append(QStringLiteral(")")); }
+            if (mNodeSpans != nullptr)
+            {
+                mNodeSpans->append({ mPath, spanStart, static_cast<int>(mOut.size()) - spanStart });
+            }
+        }
+
+        //!< Renders child \p index of the current node, tracking the node path.
+        void renderChild(const SMGuardNode& child, int index, int ctx)
+        {
+            mPath.append(index);
+            render(child, ctx);
+            mPath.removeLast();
         }
 
     private:
@@ -115,7 +130,7 @@ namespace
             for (int i = 0; i < kids.size(); ++i)
             {
                 if (i > 0) { appendRole(joiner, eRole::Operator); }
-                render(*kids.at(i), childCtx);
+                renderChild(*kids.at(i), i, childCtx);
             }
         }
 
@@ -124,7 +139,7 @@ namespace
             appendRole(QStringLiteral("!"), eRole::Operator);
             if (node.getCount() == 1)
             {
-                render(*node.childAt(0), 4);
+                renderChild(*node.childAt(0), 0, 4);
             }
         }
 
@@ -132,11 +147,11 @@ namespace
         {
             if (node.getCount() == 2)
             {
-                render(*node.childAt(0), 4);
+                renderChild(*node.childAt(0), 0, 4);
                 append(QStringLiteral(" "));
                 appendRole(QString::fromLatin1(cmpText(node.getOp())), eRole::Operator);
                 append(QStringLiteral(" "));
-                render(*node.childAt(1), 4);
+                renderChild(*node.childAt(1), 1, 4);
             }
         }
 
@@ -152,7 +167,7 @@ namespace
             for (int i = 0; i < args.size(); ++i)
             {
                 if (i > 0) { appendRole(QStringLiteral(", "), eRole::Punct); }
-                render(*args.at(i), 1);
+                renderChild(*args.at(i), i, 1);
             }
             append(QStringLiteral(")"));
         }
@@ -182,6 +197,15 @@ SMGuardRender::Rendered SMGuardRender::render(const StateMachineData& data, uint
     result.text  = builder.mOut;
     result.spans = builder.mSpans;
     return result;
+}
+
+QList<SMGuardRender::NodeSpan> SMGuardRender::nodeSpans(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node)
+{
+    QList<NodeSpan> spans;
+    Builder builder(data, transitionId);
+    builder.mNodeSpans = &spans;
+    builder.render(node, 1);
+    return spans;
 }
 
 QString SMGuardRender::guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard)

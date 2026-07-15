@@ -37,6 +37,27 @@ class SMTypeCompat
 {
 public:
     /**
+     * \enum    eRank
+     * \brief   How well a source expression type fits a declared target type. The
+     *          argument-mapping grid (v7 B6) shows one status per row from this rank.
+     **/
+    enum class eRank
+    {
+          Exact     //!< The same type: `ok`.
+        , Converts  //!< A lossless widening: `ok, converts`.
+        , Narrows   //!< A lossy narrowing: `(!) narrows`.
+        , Mismatch  //!< Not convertible: `type mismatch`.
+        , Unknown   //!< At least one side cannot be judged: treated as ok.
+    };
+
+    /**
+     * \brief   Ranks passing an expression of \p fromType where \p toType is declared.
+     *          Judges the `.siml` primitive vocabulary; a non-primitive (declared) type
+     *          matches by exact name only, and an empty/opaque type is \ref eRank::Unknown.
+     **/
+    static eRank rank(const QString& fromType, const QString& toType);
+
+    /**
      * \brief   Decides whether `lhsType op rhsType` is a valid condition comparison.
      * \param   lhsType     The declared type name of the LHS operand.
      * \param   op          The comparison operator (`None` for a boolean-test row).

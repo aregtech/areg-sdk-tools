@@ -10,9 +10,11 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
+    ${LUSAN}/model/sm/SMGuardLadder.cpp
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
@@ -39,9 +41,11 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMEventModel.hpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.hpp
     ${LUSAN}/model/sm/SMGuardCommands.hpp
+    ${LUSAN}/model/sm/SMGuardLadder.hpp
     ${LUSAN}/model/sm/SMGuardParser.hpp
     ${LUSAN}/model/sm/SMGuardRender.hpp
     ${LUSAN}/model/sm/SMGuardSymbols.hpp
+    ${LUSAN}/model/sm/SMGuardWhereUsed.hpp
     ${LUSAN}/model/sm/SMIncludeModel.hpp
     ${LUSAN}/model/sm/SMLayoutCommands.hpp
     ${LUSAN}/model/sm/SMLiteralValidator.hpp

@@ -148,10 +148,16 @@ SMSymbolPopup::SMSymbolPopup(QWidget* parent /*= nullptr*/)
 
     connect(mView, &QListView::clicked, this, [this](const QModelIndex& index)
     {
-        if (index.data(RoleKind).toInt() == 1)
+        const int kind = index.data(RoleKind).toInt();
+        if (kind == 1)
         {
             mView->setCurrentIndex(index);
             acceptCurrent();
+        }
+        else if (kind == 2)
+        {
+            hide();
+            emit newLambdaRequested();
         }
     });
 }
@@ -205,7 +211,7 @@ int SMSymbolPopup::rebuild(const QString& prefix)
         ++entries;
     }
 
-    // The New-lambda row: present, disabled (Session U3).
+    // The New-lambda row: inserts an island at the caret (E4) and opens its editor.
     QStandardItem* sep = new QStandardItem();
     sep->setData(0, RoleKind);
     sep->setData(QStringLiteral("--"), RoleName);
@@ -217,8 +223,8 @@ int SMSymbolPopup::rebuild(const QString& prefix)
     lambda->setData(QStringLiteral("{}"), RoleGlyph);
     lambda->setData(NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Fsm), RoleColor);
     lambda->setData(QStringLiteral("New lambda here..."), RoleName);
-    lambda->setToolTip(QStringLiteral("Session U3"));
-    lambda->setFlags(Qt::ItemIsSelectable);   // selectable but not enabled -> disabled look
+    lambda->setToolTip(QStringLiteral("write a small boolean body inline"));
+    lambda->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
     mModel->appendRow(lambda);
 
     return entries;
@@ -280,11 +286,12 @@ void SMSymbolPopup::moveCurrent(int delta)
     const int step = (delta >= 0) ? 1 : -1;
     int guard = 0;
 
-    // Find the next selectable entry row (kind == 1) in the requested direction.
+    // Find the next selectable row (a symbol entry or the new-lambda row) in direction.
     row += (delta == 0) ? 1 : step;
     while ((row >= 0) && (row < rows) && (guard <= rows))
     {
-        if (mModel->item(row)->data(RoleKind).toInt() == 1)
+        const int kind = mModel->item(row)->data(RoleKind).toInt();
+        if ((kind == 1) || (kind == 2))
         {
             mView->setCurrentIndex(mModel->index(row, 0));
             return;
@@ -303,6 +310,14 @@ const SMGuardSymbol* SMSymbolPopup::currentSymbol() const
 
 void SMSymbolPopup::acceptCurrent()
 {
+    const QModelIndex index = mView->currentIndex();
+    if (index.isValid() && (index.data(RoleKind).toInt() == 2))
+    {
+        hide();
+        emit newLambdaRequested();
+        return;
+    }
+
     const SMGuardSymbol* symbol = currentSymbol();
     if (symbol != nullptr)
     {

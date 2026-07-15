@@ -56,6 +56,9 @@ public:
     QCheckBox* ctrlDeprecated() const;
     QLineEdit* ctrlDeprecateHint() const;
 
+    //!< The condition guard-use line: kind, generated call form, `used by N guards` link.
+    QLabel* ctrlGuardInfo() const;
+
     //!< Shows the given reason below the name field; an empty reason hides the hint.
     void showNameHint(const QString& reason);
 
@@ -63,6 +66,8 @@ public:
     void setConditionVisible(bool visible);
     //!< Shows or hides the embedded-condition Body editor row.
     void setBodyVisible(bool visible);
+    //!< Shows or hides the guard-use row (conditions only, v7 S14).
+    void setGuardInfoVisible(bool visible);
 
 private:
     void buildUi();
@@ -78,6 +83,7 @@ private:
     QRadioButton*   mEmbedded;
     QWidget*        mReturnRow;     //!< The Return field cell (row toggled with the mode).
     QWidget*        mImplementRow;  //!< The Implement field cell (row toggled with the mode).
+    QLabel*         mGuardInfo;     //!< The guard-use line (kind, call form, where-used link).
     SMCodeEditor*   mBody;
     QPlainTextEdit* mDescription;
     QCheckBox*      mDeprecated;
