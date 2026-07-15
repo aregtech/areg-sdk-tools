@@ -30,6 +30,7 @@
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QCoreApplication>
+#include <QGraphicsProxyWidget>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QKeyEvent>
@@ -40,6 +41,14 @@
 
 #include <algorithm>
 #include <cmath>
+
+namespace
+{
+    bool hasInlineEditorFocus(const QGraphicsScene& scene)
+    {
+        return (qgraphicsitem_cast<QGraphicsProxyWidget*>(scene.focusItem()) != nullptr);
+    }
+}
 
 SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*= nullptr*/)
     : QGraphicsScene(parent)
@@ -369,6 +378,14 @@ void SMScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::keyPressEvent(QKeyEvent* event)
 {
+    if (hasInlineEditorFocus(*this))
+    {
+        // A canvas-owned key must never win while a proxy-backed inline editor is active:
+        // the focused editor (rename/note) owns the entire key stream until it closes.
+        QGraphicsScene::keyPressEvent(event);
+        return;
+    }
+
     if ((mTool != nullptr) && mTool->keyPress(event))
     {
         return;

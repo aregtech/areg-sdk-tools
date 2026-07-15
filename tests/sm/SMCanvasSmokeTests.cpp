@@ -305,24 +305,63 @@ int main(int argc, char* argv[])
 
     std::printf("sect: rename\n");
     // --- Inline rename ---
-    // The editor lives in a QGraphicsProxyWidget, not the widget hierarchy.
-    QLineEdit* editor = nullptr;
-    for (QGraphicsItem* item : scene.items())
+    const auto findRenameEditor = [&scene]() -> QLineEdit*
     {
-        QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
-        if (proxy != nullptr)
+        // The editor lives in a QGraphicsProxyWidget, not the widget hierarchy.
+        for (QGraphicsItem* item : scene.items())
         {
-            editor = qobject_cast<QLineEdit*>(proxy->widget());
-            if (editor != nullptr)
+            QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
+            if (proxy != nullptr)
             {
-                break;
+                QLineEdit* lineEdit = qobject_cast<QLineEdit*>(proxy->widget());
+                if (lineEdit != nullptr)
+                {
+                    return lineEdit;
+                }
             }
         }
-    }
+
+        return nullptr;
+    };
+
+    QLineEdit* editor = findRenameEditor();
 
     CHECK(editor != nullptr);
     if (editor != nullptr)
     {
+        const int renameLength = editor->text().size();
+        const auto checkRenameArrow = [&](Qt::Key key, int expectedCursor) {
+            editor->selectAll();
+            QApplication::processEvents();
+            const SMLayoutNode* before = data.getLayout().findNode(placed->getId());
+            CHECK(before != nullptr);
+            if (before == nullptr)
+            {
+                return;
+            }
+
+            const QPointF beforePos(before->x, before->y);
+            const int undoBefore = model.getUndoStack().count();
+            keyClick(&view, key);
+            editor = findRenameEditor();
+            CHECK(editor != nullptr);
+            CHECK((placedItem != nullptr) && placedItem->isRenameActive());
+            if (editor != nullptr)
+            {
+                CHECK(editor->selectedText().isEmpty());
+                CHECK(editor->cursorPosition() == expectedCursor);
+            }
+
+            const SMLayoutNode* after = data.getLayout().findNode(placed->getId());
+            CHECK((after != nullptr) && (QPointF(after->x, after->y) == beforePos));
+            CHECK(model.getUndoStack().count() == undoBefore);
+        };
+
+        checkRenameArrow(Qt::Key_Left , 0);
+        checkRenameArrow(Qt::Key_Right, renameLength);
+        checkRenameArrow(Qt::Key_Up   , 0);
+        checkRenameArrow(Qt::Key_Down , renameLength);
+
         editor->setText(QStringLiteral("LightOn"));                             // duplicate
         QApplication::processEvents();
         CHECK(editor->toolTip().isEmpty() == false);                            // rejection reason shown

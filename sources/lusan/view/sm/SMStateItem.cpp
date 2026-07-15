@@ -70,6 +70,9 @@ namespace
     protected:
         virtual void keyPressEvent(QKeyEvent* event) override
         {
+            const Qt::KeyboardModifiers navMods = event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier);
+            const bool plainOrShift = (navMods == Qt::NoModifier) || (navMods == Qt::ShiftModifier);
+
             if (event->key() == Qt::Key_Escape)
             {
                 event->accept();
@@ -78,6 +81,34 @@ namespace
                     mCancel();
                 }
 
+                return;
+            }
+
+            if ((event->key() == Qt::Key_Left) && plainOrShift && hasSelectedText())
+            {
+                home(navMods.testFlag(Qt::ShiftModifier));
+                event->accept();
+                return;
+            }
+
+            if ((event->key() == Qt::Key_Right) && plainOrShift && hasSelectedText())
+            {
+                end(navMods.testFlag(Qt::ShiftModifier));
+                event->accept();
+                return;
+            }
+
+            if (event->key() == Qt::Key_Up)
+            {
+                home(event->modifiers().testFlag(Qt::ShiftModifier));
+                event->accept();
+                return;
+            }
+
+            if (event->key() == Qt::Key_Down)
+            {
+                end(event->modifiers().testFlag(Qt::ShiftModifier));
+                event->accept();
                 return;
             }
 
