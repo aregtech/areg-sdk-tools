@@ -764,6 +764,14 @@ void SMScene::requestEnterSubmachine(uint32_t stateId)
     }
 }
 
+void SMScene::requestGuardEdit(uint32_t transitionId)
+{
+    if ((transitionId != 0u) && (mModel.getData().findTransitionById(transitionId) != nullptr))
+    {
+        emit signalGuardEditRequested(transitionId);
+    }
+}
+
 void SMScene::populateFromModel()
 {
     const SMStateData* level = mModel.getData().findLevel(mLevelId);

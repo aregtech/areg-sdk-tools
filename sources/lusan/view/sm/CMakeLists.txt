@@ -3,7 +3,6 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMAttributeDetails.cpp
     ${LUSAN}/view/sm/SMAttributeList.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
-    ${LUSAN}/view/sm/SMConditionEditor.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMFixBar.cpp
     ${LUSAN}/view/sm/SMFlowLayout.cpp
@@ -21,6 +20,8 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMSignatureCard.cpp
     ${LUSAN}/view/sm/SMStructureLens.cpp
     ${LUSAN}/view/sm/SMSymbolPopup.cpp
+    ${LUSAN}/view/sm/SMTryStrip.cpp
+    ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
     ${LUSAN}/view/sm/SMConstantDetails.cpp
     ${LUSAN}/view/sm/SMConstantList.cpp
@@ -63,7 +64,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMAttributeDetails.hpp
     ${LUSAN}/view/sm/SMAttributeList.hpp
     ${LUSAN}/view/sm/SMCodeEditor.hpp
-    ${LUSAN}/view/sm/SMConditionEditor.hpp
     ${LUSAN}/view/sm/NEGuardStyle.hpp
     ${LUSAN}/view/sm/SMFixBar.hpp
     ${LUSAN}/view/sm/SMFlowLayout.hpp
@@ -81,6 +81,8 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMSignatureCard.hpp
     ${LUSAN}/view/sm/SMStructureLens.hpp
     ${LUSAN}/view/sm/SMSymbolPopup.hpp
+    ${LUSAN}/view/sm/SMTryStrip.hpp
+    ${LUSAN}/view/sm/SMValidationPanel.hpp
     ${LUSAN}/view/sm/SMConstant.hpp
     ${LUSAN}/view/sm/SMConstantDetails.hpp
     ${LUSAN}/view/sm/SMConstantList.hpp

@@ -33,6 +33,7 @@
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
+#include "lusan/view/sm/SMGuardField.hpp"
 
 #include <QComboBox>
 #include <QCompleter>
@@ -334,6 +335,25 @@ bool SMPropertiesPanel::eventFilter(QObject* watched, QEvent* event)
 void SMPropertiesPanel::onModelSelectionChanged()
 {
     refresh();
+}
+
+void SMPropertiesPanel::focusConditions(uint32_t transitionId)
+{
+    if (mModel.getData().findTransitionById(transitionId) == nullptr)
+    {
+        return;
+    }
+
+    // Selecting refreshes synchronously to the transition page; then land on Conditions.
+    mModel.getSelectionModel().setSelection({ transitionId });
+    if (mPage == PageTransition)
+    {
+        mTransTabs->setCurrentIndex(1);
+        if (mConditions->field() != nullptr)
+        {
+            mConditions->field()->setFocus();
+        }
+    }
 }
 
 void SMPropertiesPanel::refresh()

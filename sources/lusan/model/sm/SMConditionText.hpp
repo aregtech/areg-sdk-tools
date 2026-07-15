@@ -15,7 +15,7 @@
  *  \file        lusan/model/sm/SMConditionText.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM condition tree text/codegen renderer.
+ *  \brief       Lusan application, FSM legacy condition renderer (LEGACY-LOAD-ONLY).
  *
  ************************************************************************/
 
@@ -24,13 +24,11 @@
 #include <QString>
 
 /**
- * \brief   Renders a condition tree (\ref SMConditionGroup) to a single-line string, in
- *          two modes: a human-readable **preview** (bare model names) and the **C++**
- *          guard the generator is expected to emit (attribute getters, qualified
- *          constants, condition-method calls, verbatim rows, and the lambda IIFE). Both
- *          implement the codegen mapping of the SM-21 design so the preview is a faithful,
- *          parenthesized picture of the generated `if (...)`. This is a derived view; the
- *          data tree stays canonical (nothing here parses or mutates the model).
+ * \brief   LEGACY-LOAD-ONLY (SM-21 U4 retirement). The sole remaining consumer is
+ *          \ref SMGuardParser::fromLegacy, which renders a loaded SM-21-02
+ *          `<ConditionList>` tree to text so it can be kept as a `<Draft>` guard.
+ *          Do not add new callers; the guard classes (SMGuardRender /
+ *          SMGuardCodegenPreview) own every live rendering path.
  **/
 class SMConditionText
 {
@@ -40,23 +38,6 @@ public:
      *          `WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode`.
      **/
     static QString preview(const SMConditionGroup& root);
-
-    /**
-     * \brief   Renders the tree as the generated C++ guard, e.g.
-     *          `walkRequested() && (hasWaiting(count) || count >= <Data>::MIN_WAITING) && !isNightMode()`.
-     * \param   dataClass   Qualifier used for constants (`<qualifier>::NAME`). Defaults to
-     *                      the `<Data>` placeholder; the generator substitutes the machine's
-     *                      data class name.
-     **/
-    static QString cpp(const SMConditionGroup& root, const QString& dataClass = QString("<Data>"));
-
-    /**
-     * \brief   The compact guard summary shown next to the stimulus on a canvas edge label
-     *          (`stimulus[summary]`). It is the readable preview; the caller truncates it to
-     *          fit and keeps the full text in the tooltip. Empty for an empty guard (so the
-     *          canvas shows the stimulus alone, with no brackets).
-     **/
-    static QString summary(const SMConditionGroup& root);
 
 private:
     enum class eMode

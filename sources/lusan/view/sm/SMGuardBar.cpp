@@ -38,6 +38,7 @@
 #include "lusan/view/sm/SMIslandEditor.hpp"
 #include "lusan/view/sm/SMMappingGrid.hpp"
 #include "lusan/view/sm/SMStructureLens.hpp"
+#include "lusan/view/sm/SMTryStrip.hpp"
 
 #include <QApplication>
 #include <QClipboard>
@@ -46,6 +47,7 @@
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
+#include <QShortcut>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -147,6 +149,7 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mFixBar   (nullptr)
     , mIsland   (nullptr)
     , mLens     (nullptr)
+    , mTry      (nullptr)
     , mGrid     (nullptr)
     , mHover    (nullptr)
     , mHelp     (nullptr)
@@ -195,14 +198,9 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mLens = new SMStructureLens(mModel, this);
     outer->addWidget(mLens);
 
-    // Reserved: the Try-it strip lands in U4.
-    QToolButton* tryIt = new QToolButton(this);
-    tryIt->setObjectName(QStringLiteral("smGuardTry"));
-    tryIt->setText(tr("> Try it"));
-    tryIt->setAutoRaise(true);
-    tryIt->setEnabled(false);
-    tryIt->setToolTip(tr("Try-it strip -- Session U4"));
-    outer->addWidget(tryIt);
+    // S6: the Try-it strip (collapsed by default).
+    mTry = new SMTryStrip(mModel, this);
+    outer->addWidget(mTry);
 
     outer->addStretch(1);
 
@@ -219,6 +217,11 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     connect(mFixBar, &SMFixBar::triggered, mField, &SMGuardField::applyFix);
     connect(mClear, &QToolButton::clicked, this, &SMGuardBar::onClearClicked);
     connect(mHelpBtn, &QToolButton::clicked, this, &SMGuardBar::onHelpClicked);
+
+    // F1 anywhere in the Conditions tab opens the help card (B16).
+    QShortcut* helpKey = new QShortcut(QKeySequence(Qt::Key_F1), this);
+    helpKey->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(helpKey, &QShortcut::activated, this, &SMGuardBar::onHelpClicked);
 
     // ---- U3 wiring: islands ------------------------------------------------
     connect(mField, &SMGuardField::islandEditRequested, this, [this](int islandIndex, const QString& body)
@@ -292,6 +295,9 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     {
         showWhereUsed(symbolId);
     });
+
+    // ---- U4 wiring: Try-it truth tints the lens pills while the strip is open ----
+    connect(mTry, &SMTryStrip::truthTintsChanged, mLens, &SMStructureLens::setTruthTints);
 }
 
 void SMGuardBar::setTransition(uint32_t transitionId)
@@ -302,6 +308,7 @@ void SMGuardBar::setTransition(uint32_t transitionId)
     mHover->hide();
     mField->setTransition(transitionId);
     mLens->setTransition(transitionId);
+    mTry->setTransition(transitionId);
 }
 
 //////////////////////////////////////////////////////////////////////////

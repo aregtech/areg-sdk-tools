@@ -47,6 +47,7 @@ class SMClipboardContent;
 class SMGraphicsView;
 class SMOutlinePanel;
 class SMPropertiesPanel;
+class SMValidationPanel;
 class SMScene;
 class SMSceneManager;
 class SMStateData;
@@ -609,8 +610,10 @@ private:
     QToolBar*           mToolBar;       //!< The in-page drawing toolbar (movable to the page edges).
     QDockWidget*        mPropertiesDock;//!< The Properties dock (right, top) inside the Design page.
     QDockWidget*        mOutlineDock;   //!< The Outline dock (right, below Properties) inside the Design page.
+    QDockWidget*        mValidationDock;//!< The Validation results dock (bottom, S15) inside the Design page.
     SMPropertiesPanel*  mProperties;    //!< The Properties editor hosted in mPropertiesDock.
     SMOutlinePanel*     mOutline;       //!< The Outline tree hosted in mOutlineDock.
+    SMValidationPanel*  mValidation;    //!< The validation results list hosted in mValidationDock.
     QAction*            mActZoomIn;     //!< Zoom one step in.
     QAction*            mActZoomOut;    //!< Zoom one step out.
     QAction*            mActZoomReset;  //!< Zoom to 100%.

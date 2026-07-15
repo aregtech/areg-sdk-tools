@@ -29,7 +29,9 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMAttributeModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMAttributeDetails.hpp"
 #include "lusan/view/sm/SMAttributeList.hpp"
 
@@ -39,6 +41,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QSignalBlocker>
 #include <QToolButton>
@@ -395,6 +398,29 @@ void SMAttribute::onRemoveClicked()
     const uint32_t id = currentAttributeId();
     if (id == 0)
         return;
+
+    // Deleting an attribute still referenced by guards is refused with the where-used list
+    // (v6 3.3); `Delete anyway` breaks the references VISIBLY (validation reports ERR).
+    const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getFacade().getData(), id);
+    if (uses.isEmpty() == false)
+    {
+        QStringList places;
+        for (const SMGuardWhereUsed::Use& use : uses)
+        {
+            places.append(QStringLiteral("  - ") + use.location);
+        }
+
+        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Attribute is used by guards")
+                            , tr("This attribute is used by %1 guard%2:\n%3\n\nDelete anyway? The affected guards break and are listed by validation.")
+                              .arg(uses.size())
+                              .arg((uses.size() == 1) ? QString() : QStringLiteral("s"))
+                              .arg(places.join(QLatin1Char('\n')))
+                            , QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (choice != QMessageBox::Yes)
+        {
+            return;
+        }
+    }
 
     const QList<SMAttributeEntry>& list = mModel.getAttributes();
     const int index = mModel.findIndex(id);

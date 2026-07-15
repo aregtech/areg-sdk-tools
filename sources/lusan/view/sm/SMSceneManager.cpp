@@ -151,6 +151,7 @@ SMScene* SMSceneManager::sceneForLevel(uint32_t levelId)
         mScenes.insert(levelId, scene);
         connect(scene, &SMScene::signalEnterSubmachine, this, &SMSceneManager::enterSubmachine);
         connect(scene, &SMScene::signalGoToParent, this, &SMSceneManager::goToParent);
+        connect(scene, &SMScene::signalGuardEditRequested, this, &SMSceneManager::signalGuardEditRequested);
     }
 
     return scene;

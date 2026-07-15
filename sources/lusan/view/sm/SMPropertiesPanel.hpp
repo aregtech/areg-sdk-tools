@@ -84,6 +84,12 @@ public:
 public:
     inline ePage currentPage() const;
     inline uint32_t currentElementId() const;
+
+    /**
+     * \brief   Selects the transition and focuses the Conditions tab's guard field
+     *          (edge-label double-click, B13; validation-entry navigation, S15).
+     **/
+    void focusConditions(uint32_t transitionId);
     inline QLineEdit* stateNameEdit() const;
     inline QListWidget* transitionList() const;
     inline QComboBox* stimulusNameCombo() const;

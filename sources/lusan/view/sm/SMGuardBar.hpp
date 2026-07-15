@@ -42,6 +42,7 @@ class SMHoverCard;
 class SMIslandEditor;
 class SMMappingGrid;
 class SMStructureLens;
+class SMTryStrip;
 
 /**
  * \class   SMGuardBar
@@ -81,6 +82,9 @@ public:
 
     //!< The island editor (tests).
     inline SMIslandEditor* islandEditor() const;
+
+    //!< The Try-it strip (tests).
+    inline SMTryStrip* tryStrip() const;
 
 signals:
     //!< The Conditions tab badge state changed (draft => `*`, warnings => warn glyph).
@@ -130,6 +134,7 @@ private:
     SMFixBar*           mFixBar;    //!< The quick-fix bar.
     SMIslandEditor*     mIsland;    //!< The island editor (S4, hidden until an island opens).
     SMStructureLens*    mLens;      //!< The structure lens (S5).
+    SMTryStrip*         mTry;       //!< The Try-it strip (S6).
     SMMappingGrid*      mGrid;      //!< The mapping grid popover (S9).
     SMHoverCard*        mHover;     //!< The shared hover card (S10).
     SMGuardHelpCard*    mHelp;      //!< The help card (lazily shown).
@@ -159,6 +164,11 @@ inline SMMappingGrid* SMGuardBar::grid() const
 inline SMIslandEditor* SMGuardBar::islandEditor() const
 {
     return mIsland;
+}
+
+inline SMTryStrip* SMGuardBar::tryStrip() const
+{
+    return mTry;
 }
 
 #endif  // LUSAN_VIEW_SM_SMGUARDBAR_HPP

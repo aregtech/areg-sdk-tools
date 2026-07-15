@@ -453,10 +453,10 @@ void SMStructureLens::addPill(const SMGuardNode& node, const QList<int>& path)
     pill->setFocusPolicy(Qt::StrongFocus);
     pill->setContextMenuPolicy(Qt::CustomContextMenu);
     pill->setProperty("class", qssClass);
-    stylePill(pill, owner, qssClass);
 
     // The node's caret span in the canonical text, from the same render walk.
     Pill info;
+    info.owner = owner;
     info.path = path;
     info.kind = node.getKind();
     info.symbolId = node.getSymbolId();
@@ -496,6 +496,8 @@ void SMStructureLens::addPill(const SMGuardNode& node, const QList<int>& path)
             }
         }
     }
+
+    applyPillStyle(pill, info);
 
     mPills.append(info);
     mPillIndex.insert(pill, static_cast<int>(mPills.size()) - 1);
@@ -545,6 +547,36 @@ void SMStructureLens::stylePill(QToolButton* pill, int owner, const QString& /*q
                         .arg(hue.red()).arg(hue.green()).arg(hue.blue())
                         .arg(border.alphaF()).arg(fill.alphaF())
                         .arg(hue.name()));
+}
+
+void SMStructureLens::applyPillStyle(QToolButton* pill, const Pill& info) const
+{
+    const auto it = mTruthTints.constFind(pathName(info.path));
+    if (it == mTruthTints.constEnd())
+    {
+        stylePill(pill, info.owner, QString());
+        return;
+    }
+
+    // Try-it truth tint (B9): the severity hue replaces the owner hue while the strip is open.
+    const QColor hue = NEGuardStyle::severityColor((it.value() != 0) ? NEGuardStyle::eSeverity::Ok : NEGuardStyle::eSeverity::Err);
+    pill->setStyleSheet(QStringLiteral("QToolButton { border: 1px solid rgba(%1,%2,%3,0.8); border-radius: 4px;"
+                                       " background: rgba(%1,%2,%3,0.22); padding: 2px 6px; color: %4; }")
+                        .arg(hue.red()).arg(hue.green()).arg(hue.blue())
+                        .arg(hue.name()));
+}
+
+void SMStructureLens::setTruthTints(const QHash<QString, int>& tints)
+{
+    mTruthTints = tints;
+    for (auto it = mPillIndex.constBegin(); it != mPillIndex.constEnd(); ++it)
+    {
+        QToolButton* pill = qobject_cast<QToolButton*>(it.key());
+        if ((pill != nullptr) && (it.value() >= 0) && (it.value() < mPills.size()))
+        {
+            applyPillStyle(pill, mPills.at(it.value()));
+        }
+    }
 }
 
 int SMStructureLens::clauseOwner(const SMGuardNode& node) const

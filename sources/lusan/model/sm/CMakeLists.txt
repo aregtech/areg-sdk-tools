@@ -2,18 +2,18 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN}/model/sm/SMAttributeModel.cpp
     ${LUSAN}/model/sm/SMCommand.cpp
-    ${LUSAN}/model/sm/SMConditionCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
-    ${LUSAN}/model/sm/SMConditionToken.cpp
     ${LUSAN}/model/sm/SMConstantModel.cpp
     ${LUSAN}/model/sm/SMDataTypeModel.cpp
     ${LUSAN}/model/sm/SMEventModel.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
+    ${LUSAN}/model/sm/SMGuardEval.cpp
     ${LUSAN}/model/sm/SMGuardLadder.cpp
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
@@ -33,18 +33,18 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/StateMachineModel.hpp
     ${LUSAN}/model/sm/SMAttributeModel.hpp
     ${LUSAN}/model/sm/SMCommand.hpp
-    ${LUSAN}/model/sm/SMConditionCommands.hpp
     ${LUSAN}/model/sm/SMConditionText.hpp
-    ${LUSAN}/model/sm/SMConditionToken.hpp
     ${LUSAN}/model/sm/SMConstantModel.hpp
     ${LUSAN}/model/sm/SMDataTypeModel.hpp
     ${LUSAN}/model/sm/SMEventModel.hpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.hpp
     ${LUSAN}/model/sm/SMGuardCommands.hpp
+    ${LUSAN}/model/sm/SMGuardEval.hpp
     ${LUSAN}/model/sm/SMGuardLadder.hpp
     ${LUSAN}/model/sm/SMGuardParser.hpp
     ${LUSAN}/model/sm/SMGuardRender.hpp
     ${LUSAN}/model/sm/SMGuardSymbols.hpp
+    ${LUSAN}/model/sm/SMGuardValidation.hpp
     ${LUSAN}/model/sm/SMGuardWhereUsed.hpp
     ${LUSAN}/model/sm/SMIncludeModel.hpp
     ${LUSAN}/model/sm/SMLayoutCommands.hpp

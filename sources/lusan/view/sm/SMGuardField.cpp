@@ -1344,6 +1344,18 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
 
     if (event->key() == Qt::Key_Escape)
     {
+        // The Esc chain (B16): an open card/slot session closes first; the next Esc reverts.
+        if (mSlotMode || ((mSignature != nullptr) && mSignature->isVisible()))
+        {
+            if (mSignature != nullptr)
+            {
+                mSignature->hide();
+            }
+
+            clearSlotMode();
+            return;
+        }
+
         revert();
         return;
     }

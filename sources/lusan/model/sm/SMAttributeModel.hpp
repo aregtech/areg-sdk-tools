@@ -68,6 +68,9 @@ public:
     SMDataTypeModel& getDataTypeModel() const;
     DocModelNotifier& getNotifier() const;
 
+    //!< The document facade (the page's guard where-used check on delete).
+    StateMachineModel& getFacade() const;
+
 //////////////////////////////////////////////////////////////////////////
 // Mutations
 //////////////////////////////////////////////////////////////////////////

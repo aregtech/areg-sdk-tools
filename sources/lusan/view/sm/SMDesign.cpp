@@ -39,6 +39,7 @@
 #include "lusan/view/sm/SMSceneManager.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
+#include "lusan/view/sm/SMValidationPanel.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
 
@@ -196,8 +197,10 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mToolBar      (nullptr)
     , mPropertiesDock(nullptr)
     , mOutlineDock  (nullptr)
+    , mValidationDock(nullptr)
     , mProperties   (nullptr)
     , mOutline      (nullptr)
+    , mValidation   (nullptr)
     , mActZoomIn    (nullptr)
     , mActZoomOut   (nullptr)
     , mActZoomReset (nullptr)
@@ -305,6 +308,22 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     });
 
     connect(mSceneManager, &SMSceneManager::signalLevelChanged, this, &SMDesign::onLevelChanged);
+    connect(mSceneManager, &SMSceneManager::signalGuardEditRequested, this, [this](uint32_t transitionId)
+    {
+        // Edge-label double-click (B13): surface the Properties panel and focus the guard field.
+        if (mProperties == nullptr)
+        {
+            return;
+        }
+
+        if ((mPropertiesDock != nullptr) && (mPropertiesDock->widget() == mProperties) && (mPropertiesDock->isVisible() == false))
+        {
+            mPropertiesDock->show();
+            mPropertiesDock->raise();
+        }
+
+        mProperties->focusConditions(transitionId);
+    });
     connect(mView->horizontalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
     connect(mView->verticalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
     connect(mView, &SMGraphicsView::signalZoomChanged, this, &SMDesign::onViewportChanged);
@@ -913,6 +932,28 @@ void SMDesign::buildDesignPanels()
     addDockWidget(Qt::RightDockWidgetArea, mOutlineDock);
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
+
+    // Validation results (S15): a bottom dock, hidden until the user opens it; every guard
+    // entry navigates to its transition's Conditions tab.
+    mValidation = new SMValidationPanel(mModel);
+    mValidationDock = new QDockWidget(tr("Validation"), this);
+    mValidationDock->setObjectName(QStringLiteral("SMValidationDock"));
+    mValidationDock->setWidget(mValidation);
+    addDockWidget(Qt::BottomDockWidgetArea, mValidationDock);
+    mValidationDock->hide();
+    connect(mValidation, &SMValidationPanel::navigateRequested, this, [this](uint32_t transitionId)
+    {
+        if (mProperties != nullptr)
+        {
+            if ((mPropertiesDock != nullptr) && (mPropertiesDock->widget() == mProperties) && (mPropertiesDock->isVisible() == false))
+            {
+                mPropertiesDock->show();
+                mPropertiesDock->raise();
+            }
+
+            mProperties->focusConditions(transitionId);
+        }
+    });
 }
 
 QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
@@ -1166,6 +1207,22 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
     addPair(tr("Show Properties in Design"), tr("Show Properties in Navigation"), 1, mPlaceProperties);
     viewMenu->addSeparator();
     addPair(tr("Show Outline in Design"), tr("Show Outline in Navigation"), 2, mPlaceOutline);
+
+    if (mValidationDock != nullptr)
+    {
+        viewMenu->addSeparator();
+        QAction* showValidation = viewMenu->addAction(tr("Show Validation Results"));
+        showValidation->setCheckable(true);
+        showValidation->setChecked(mValidationDock->isVisible());
+        connect(showValidation, &QAction::triggered, this, [this](bool checked)
+        {
+            mValidationDock->setVisible(checked);
+            if (checked && (mValidation != nullptr))
+            {
+                mValidation->refreshNow();
+            }
+        });
+    }
 
     // Refresh the shared actions' enabled state against the (possibly just changed) selection
     // and current level so entries like Add Transition / Add Internal Transition open correctly

@@ -13,7 +13,7 @@
  *  \file        lusan/model/sm/SMConditionText.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM condition tree text/codegen renderer.
+ *  \brief       Lusan application, FSM legacy condition renderer (LEGACY-LOAD-ONLY).
  *
  ************************************************************************/
 
@@ -24,16 +24,6 @@
 QString SMConditionText::preview(const SMConditionGroup& root)
 {
     return renderGroup(root, eMode::Preview, QString(), true);
-}
-
-QString SMConditionText::cpp(const SMConditionGroup& root, const QString& dataClass)
-{
-    return renderGroup(root, eMode::Cpp, dataClass, true);
-}
-
-QString SMConditionText::summary(const SMConditionGroup& root)
-{
-    return root.isEmpty() ? QString() : preview(root);
 }
 
 QString SMConditionText::lowerFirst(const QString& name)

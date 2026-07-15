@@ -227,6 +227,12 @@ public:
      **/
     void requestEnterSubmachine(uint32_t stateId);
 
+    /**
+     * \brief   Requests the guard editor for a transition (double-click on the edge label,
+     *          B13): the owning page selects it and focuses the Conditions tab field.
+     **/
+    void requestGuardEdit(uint32_t transitionId);
+
 //////////////////////////////////////////////////////////////////////////
 // Internal: item registry (called by SMCanvasItem on scene changes)
 //////////////////////////////////////////////////////////////////////////
@@ -258,6 +264,11 @@ signals:
      * \brief   Emitted to ascend to the parent machine level (Backspace, Alt+double-click).
      **/
     void signalGoToParent();
+
+    /**
+     * \brief   Emitted to focus a transition's Conditions tab field (edge label double-click).
+     **/
+    void signalGuardEditRequested(uint32_t transitionId);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

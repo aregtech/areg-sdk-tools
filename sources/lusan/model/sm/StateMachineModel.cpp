@@ -19,11 +19,46 @@
 
 #include "lusan/model/sm/StateMachineModel.hpp"
 
+#include "lusan/data/sm/SMState.hpp"
+#include "lusan/data/sm/SMTransition.hpp"
+#include "lusan/model/sm/SMGuardParser.hpp"
+
 #include <QUndoCommand>
 
 namespace
 {
     constexpr int AutosaveIntervalMs{ 30000 };
+
+    /**
+     * \brief   The legacy read-shim (driver decision): a transition still carrying the
+     *          SM-21-02 `<ConditionList>` renders to text and becomes a `<Draft>` guard --
+     *          the user re-resolves it in the editor; nothing is silently dropped.
+     **/
+    void convertLegacyGuards(SMStateData& level)
+    {
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+            {
+                continue;
+            }
+
+            for (SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                if ((transition != nullptr)
+                    && transition->getGuard().isEmpty()
+                    && (transition->getConditions().isEmpty() == false))
+                {
+                    transition->getGuard() = SMGuardParser::fromLegacy(transition->getConditions());
+                }
+            }
+
+            if (state->hasNestedStates())
+            {
+                convertLegacyGuards(*state->getNestedStates());
+            }
+        }
+    }
 }
 
 StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
@@ -85,6 +120,7 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
     }
 
     loaded->setFilePath(documentPath);
+    convertLegacyGuards(loaded->getStates());
     mData = std::move(loaded);
     mOpenSuccess = true;
 

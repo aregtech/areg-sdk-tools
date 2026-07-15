@@ -76,6 +76,7 @@ private:
         QList<int>          groupPath;      //!< The owning group's path (== path when root).
         int                 indexInGroup;   //!< The child index inside the group, or -1.
         int                 groupCount;     //!< The owning group's child count, or 0.
+        int                 owner;          //!< The owner hue (restored when a tint clears).
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -93,6 +94,12 @@ public:
 
     //!< The shared hover card (owned by the bar).
     void setHoverCard(SMHoverCard* card);
+
+    /**
+     * \brief   The Try-it truth overlay (B9): pill pathName -> truth (1 true, 0 false).
+     *          Pills with an entry tint green/red; an empty hash restores the owner hues.
+     **/
+    void setTruthTints(const QHash<QString, int>& tints);
 
 signals:
     //!< A pill click: select this span of the field text.
@@ -145,6 +152,9 @@ private:
     //!< The pill styling for an owner hue (border 60%, fill 12%, 4 px radius -- B15).
     void stylePill(QToolButton* pill, int owner, const QString& qssClass) const;
 
+    //!< Applies the owner style, overridden by the Try-it truth tint when one is set.
+    void applyPillStyle(QToolButton* pill, const Pill& info) const;
+
     //!< The dominant owner of a clause (the first reference leaf's owner).
     int clauseOwner(const SMGuardNode& node) const;
 
@@ -176,6 +186,7 @@ private:
     QHash<QObject*, int>    mPillIndex;     //!< Widget -> \ref mPills index.
     QList<int>              mLastClicked;   //!< The last clicked pill's path (grid-on-2nd-click).
     bool                    mRebuildPending;//!< Coalesces deferred rebuilds.
+    QHash<QString, int>     mTruthTints;    //!< The Try-it overlay (pathName -> 0/1), empty when closed.
 };
 
 #endif  // LUSAN_VIEW_SM_SMSTRUCTURELENS_HPP
