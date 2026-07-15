@@ -355,8 +355,7 @@ void SMGuardBar::onHelpClicked()
         mHelp = new SMGuardHelpCard(this);
     }
 
-    const QPoint pos = mHelpBtn->mapToGlobal(QPoint(0, mHelpBtn->height() + 2));
-    mHelp->popupAt(pos);
+    mHelp->popupAt(*mHelpBtn);
 }
 
 //////////////////////////////////////////////////////////////////////////

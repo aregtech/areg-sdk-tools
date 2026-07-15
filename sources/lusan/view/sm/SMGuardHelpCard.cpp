@@ -21,12 +21,16 @@
 
 #include "lusan/view/sm/NEGuardStyle.hpp"
 
+#include <QGuiApplication>
 #include <QGridLayout>
 #include <QLabel>
+#include <QScreen>
 #include <QVBoxLayout>
 
 namespace
 {
+    constexpr int PopupGap { 2 };
+
     //!< A glyph + description + example row of the "what can a guard use" table.
     void addUseRow(QGridLayout* grid, int row, NEGuardStyle::eOwner owner, const QString& glyph, const QString& what, const QString& example)
     {
@@ -54,13 +58,38 @@ namespace
         grid->addWidget(new QLabel(QStringLiteral("->")), row, 1);
         grid->addWidget(right, row, 2);
     }
+
+    QRect screenBoundsFor(const QWidget& anchor)
+    {
+        QScreen* screen = QGuiApplication::screenAt(anchor.mapToGlobal(anchor.rect().center()));
+        if ((screen == nullptr) && (anchor.window() != nullptr))
+        {
+            screen = anchor.window()->screen();
+        }
+        if (screen == nullptr)
+        {
+            screen = QGuiApplication::primaryScreen();
+        }
+
+        return (screen != nullptr) ? screen->availableGeometry() : QRect();
+    }
+
+    bool fitsHorizontally(int x, int width, const QRect& bounds)
+    {
+        return bounds.isValid() && (x >= bounds.left()) && ((x + width) <= (bounds.x() + bounds.width()));
+    }
+
+    bool fitsVertically(int y, int height, const QRect& bounds)
+    {
+        return bounds.isValid() && (y >= bounds.top()) && ((y + height) <= (bounds.y() + bounds.height()));
+    }
 }
 
 SMGuardHelpCard::SMGuardHelpCard(QWidget* parent /*= nullptr*/)
     : QFrame(parent)
 {
     setObjectName(QStringLiteral("smGuardHelpCard"));
-    setWindowFlags(Qt::Popup);
+    setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
     setFrameShape(QFrame::StyledPanel);
     setFrameShadow(QFrame::Raised);
     buildUi();
@@ -100,9 +129,50 @@ void SMGuardHelpCard::buildUi()
     outer->addLayout(maps);
 }
 
-void SMGuardHelpCard::popupAt(const QPoint& globalTopLeft)
+void SMGuardHelpCard::popupAt(const QWidget& anchor)
 {
     adjustSize();
-    move(globalTopLeft);
+    const QSize cardSize = size();
+    const QRect anchorRect(anchor.mapToGlobal(QPoint(0, 0)), anchor.size());
+    const QRect hostRect = (anchor.window() != nullptr) ? anchor.window()->frameGeometry() : QRect();
+    const QRect screenBounds = screenBoundsFor(anchor);
+
+    const int openRightX = anchorRect.left();
+    const int openLeftX  = anchorRect.right() - cardSize.width() + 1;
+    int x = (hostRect.isValid() && (anchorRect.center().x() > hostRect.center().x())) ? openLeftX : openRightX;
+
+    if (screenBounds.isValid())
+    {
+        const int alternateX = (x == openRightX) ? openLeftX : openRightX;
+        if (fitsHorizontally(x, cardSize.width(), screenBounds) == false
+            && fitsHorizontally(alternateX, cardSize.width(), screenBounds))
+        {
+            x = alternateX;
+        }
+
+        const int minX = screenBounds.left();
+        const int maxX = qMax(minX, screenBounds.x() + screenBounds.width() - cardSize.width());
+        x = qBound(minX, x, maxX);
+    }
+
+    const int belowY = anchorRect.bottom() + PopupGap + 1;
+    const int aboveY = anchorRect.top() - cardSize.height() - PopupGap;
+    int y = belowY;
+
+    if (screenBounds.isValid())
+    {
+        if (fitsVertically(y, cardSize.height(), screenBounds) == false
+            && fitsVertically(aboveY, cardSize.height(), screenBounds))
+        {
+            y = aboveY;
+        }
+
+        const int minY = screenBounds.top();
+        const int maxY = qMax(minY, screenBounds.y() + screenBounds.height() - cardSize.height());
+        y = qBound(minY, y, maxY);
+    }
+
+    move(x, y);
     show();
+    raise();
 }

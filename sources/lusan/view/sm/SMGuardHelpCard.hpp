@@ -38,8 +38,8 @@ class SMGuardHelpCard : public QFrame
 public:
     explicit SMGuardHelpCard(QWidget* parent = nullptr);
 
-    //!< Shows the card with its top-left at \p globalTopLeft.
-    void popupAt(const QPoint& globalTopLeft);
+    //!< Shows the card below \p anchor, opening toward the usable side and clamping to screen.
+    void popupAt(const QWidget& anchor);
 
 private:
     void buildUi();

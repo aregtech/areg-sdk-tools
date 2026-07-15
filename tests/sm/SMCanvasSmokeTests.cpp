@@ -43,6 +43,7 @@
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
+#include "lusan/view/sm/SMGuardHelpCard.hpp"
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
@@ -57,6 +58,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFocusEvent>
+#include <QHBoxLayout>
 #include <QGraphicsProxyWidget>
 #include <QKeyEvent>
 #include <QLabel>
@@ -66,7 +68,9 @@
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
+#include <QScreen>
 #include <QSettings>
+#include <QTabWidget>
 #include <QToolButton>
 #include <QUndoStack>
 
@@ -1512,6 +1516,100 @@ int main(int argc, char* argv[])
         CHECK(d.isStimulusName(notListed) == false);
         CHECK(d.findTransitionById(firstTxId)->getStimulus() == beforeReject);
         CHECK(doc.getUndoStack().index() == indexBeforeReject);
+
+        // The guard help popup must stay readable whether the Properties panel sits on the left
+        // or on the right side of its host window.
+        auto checkGuardHelpPopup = [&](bool panelOnRight)
+        {
+            const QRect screenRect = (QGuiApplication::primaryScreen() != nullptr)
+                    ? QGuiApplication::primaryScreen()->availableGeometry()
+                    : QRect(0, 0, 1200, 800);
+
+            QWidget host;
+            host.resize(  qMin(screenRect.width(), qMax(520, screenRect.width() - 80))
+                        , qMin(screenRect.height(), qMax(520, screenRect.height() - 80)));
+            host.move(  panelOnRight
+                            ? screenRect.x() + screenRect.width() - host.width()
+                            : screenRect.x()
+                      , screenRect.top() + qMax(0, (screenRect.height() - host.height()) / 2));
+
+            QHBoxLayout* layout = new QHBoxLayout(&host);
+            layout->setContentsMargins(0, 0, 0, 0);
+            layout->setSpacing(0);
+
+            SMPropertiesPanel* dockedProps = new SMPropertiesPanel(doc, &host);
+            dockedProps->setFixedWidth(qMin(360, qMax(260, host.width() / 3)));
+
+            if (panelOnRight)
+            {
+                layout->addStretch(1);
+                layout->addWidget(dockedProps);
+            }
+            else
+            {
+                layout->addWidget(dockedProps);
+                layout->addStretch(1);
+            }
+
+            host.show();
+            QApplication::processEvents();
+
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ firstTxId });
+            QApplication::processEvents();
+
+            QTabWidget* tabs = dockedProps->findChild<QTabWidget*>(QStringLiteral("smTransTabs"));
+            CHECK(tabs != nullptr);
+            if (tabs == nullptr)
+            {
+                return;
+            }
+
+            tabs->setCurrentIndex(1);
+            QApplication::processEvents();
+
+            QToolButton* helpBtn = dockedProps->findChild<QToolButton*>(QStringLiteral("smGuardHelp"));
+            CHECK((helpBtn != nullptr) && helpBtn->isVisible());
+            if (helpBtn == nullptr)
+            {
+                return;
+            }
+
+            helpBtn->click();
+            QApplication::processEvents();
+
+            SMGuardHelpCard* helpCard = dockedProps->findChild<SMGuardHelpCard*>();
+            CHECK((helpCard != nullptr) && helpCard->isVisible());
+            if (helpCard == nullptr)
+            {
+                return;
+            }
+
+            const QRect buttonRect(helpBtn->mapToGlobal(QPoint(0, 0)), helpBtn->size());
+            const QRect popupRect = helpCard->frameGeometry();
+            QScreen* screen = QGuiApplication::screenAt(buttonRect.center());
+            if (screen == nullptr)
+            {
+                screen = helpCard->screen();
+            }
+
+            CHECK(screen != nullptr);
+            if (screen != nullptr)
+            {
+                CHECK(screen->availableGeometry().contains(popupRect));
+            }
+
+            if (panelOnRight)
+            {
+                CHECK(popupRect.right() <= buttonRect.right());
+            }
+            else
+            {
+                CHECK(popupRect.left() >= buttonRect.left());
+            }
+        };
+
+        checkGuardHelpPopup(false);
+        checkGuardHelpPopup(true);
     }
 
     std::printf("sect: SM-issue516 substate marker size + transition point nudge\n");
