@@ -80,6 +80,16 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     connect(&notifier, &DocModelNotifier::nameChanged, this, &SMScene::onNameChanged);
     connect(&notifier, &DocModelNotifier::layoutChanged, this, &SMScene::onLayoutChanged);
 
+    // Live name mirroring: typing in the Properties panel name field paints onto the canvas
+    // box in real time (the reverse of SMStateItem publishing while its inline editor is open).
+    connect(&mModel, &StateMachineModel::signalStateNamePreview, this, [this](uint32_t stateId, const QString& text)
+    {
+        if (SMStateItem* item = stateItem(stateId))
+        {
+            item->setNamePreview(text);
+        }
+    });
+
     populateFromModel();
 }
 
@@ -753,6 +763,11 @@ void SMScene::startRenameOfSelection()
     {
         selection.first()->startInlineRename();
     }
+}
+
+bool SMScene::isInlineEditorActive() const
+{
+    return hasInlineEditorFocus(*this);
 }
 
 void SMScene::requestEnterSubmachine(uint32_t stateId)

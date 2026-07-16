@@ -271,6 +271,7 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     });
 
     DocModelNotifier& notifier = mModel.getNotifier();
+    connect(&notifier, &DocModelNotifier::elementAdded, this, &SMGuardField::onElementAdded);
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMGuardField::onElementChanged);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMGuardField::onElementRemoved);
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMGuardField::onDocumentReloaded);
@@ -565,6 +566,15 @@ bool SMGuardField::maybeOpenIslandAt(int docPos)
 //////////////////////////////////////////////////////////////////////////
 // Notifications
 //////////////////////////////////////////////////////////////////////////
+
+void SMGuardField::onElementAdded(uint32_t /*id*/, eDocElementKind /*kind*/)
+{
+    buildCatalog();
+    if (mSuppressAnalyze == false)
+    {
+        analyze();
+    }
+}
 
 void SMGuardField::onElementChanged(uint32_t id, eDocElementKind /*kind*/)
 {

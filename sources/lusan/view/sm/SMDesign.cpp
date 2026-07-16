@@ -425,6 +425,9 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
         }
         else if (event->type() == QEvent::ShortcutOverride)
         {
+            // Accept the override for any key that maps to a tool action so Qt's own
+            // WidgetWithChildrenShortcut actions never fire on their own; the matching
+            // KeyPress below is what actually dispatches (or, while editing, is left alone).
             if (matchAction(*static_cast<QKeyEvent*>(event)) != nullptr)
             {
                 event->accept();
@@ -433,11 +436,20 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
         }
         else if (event->type() == QEvent::KeyPress)
         {
-            QAction* action = matchAction(*static_cast<QKeyEvent*>(event));
-            if (action != nullptr)
+            // A proxy-backed inline editor (state rename / note edit) owns the whole key
+            // stream while it is open. The single-key tool shortcuts (S, F, T, N, Backspace,
+            // Delete, ...) must not steal a keystroke destined for that editor -- doing so
+            // both blocked editing keys (Backspace/Delete) and spawned stray items (S/F/T/N).
+            // While an inline editor is active, never dispatch a tool action: let the key fall
+            // through the view to the scene's focused proxy editor.
+            if (getScene().isInlineEditorActive() == false)
             {
-                action->trigger();
-                return true;
+                QAction* action = matchAction(*static_cast<QKeyEvent*>(event));
+                if (action != nullptr)
+                {
+                    action->trigger();
+                    return true;
+                }
             }
         }
     }

@@ -84,6 +84,7 @@ signals:
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private slots:
+    void onElementAdded(uint32_t id, eDocElementKind kind);
     void onElementChanged(uint32_t id, eDocElementKind kind);
     void onElementRemoved(uint32_t id, eDocElementKind kind);
     void onDocumentReloaded();

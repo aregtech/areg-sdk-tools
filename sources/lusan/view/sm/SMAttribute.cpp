@@ -123,7 +123,18 @@ void SMAttribute::setupSignals()
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMAttribute::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMAttribute::onMoveDownClicked);
 
+    mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMAttribute::onNameCommitted);
+    // Live-preview the typed name into the selected attribute's Name column; the rename commits
+    // on editingFinished. Selection sets the field under a QSignalBlocker, so this only fires
+    // for genuine user edits.
+    connect(mDetails->ctrlName()   , &QLineEdit::textChanged        , this, [this](const QString& text) {
+        if (currentAttributeId() != 0)
+        {
+            if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+                item->setText(0, text);
+        }
+    });
     connect(mDetails->ctrlTypes()  , &QComboBox::currentIndexChanged, this, &SMAttribute::onTypeChanged);
     connect(mDetails->ctrlValue()  , &QLineEdit::editingFinished    , this, &SMAttribute::onValueCommitted);
     connect(mDetails->ctrlValue()  , &QLineEdit::textChanged        , this, &SMAttribute::onValueTextChanged);

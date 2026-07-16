@@ -117,6 +117,7 @@ private slots:
     void onListReordered(uint32_t ownerId, eDocElementKind kind);
     void onDocumentReloaded();
     void onGuardBadgeChanged(bool isDraft, bool hasWarnings);
+    void onStateNamePreview(uint32_t stateId, const QString& text);
 
     void onStateNameCommit();
     void onStateDescriptionCommit();

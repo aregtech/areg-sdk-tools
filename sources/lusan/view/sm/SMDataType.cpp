@@ -148,7 +148,18 @@ void SMDataType::setupSignals()
     connect(mList->actionNewImport()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Imported); });
     connect(mList->actionNewContainer()    , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Container); });
 
+    mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
     connect(mDetails->ctrlName()            , &QLineEdit::editingFinished      , this, &SMDataType::onNameCommitted);
+    // Live-preview the typed name into the selected type's Name column (no command; the real
+    // rename commits on editingFinished). Selection sets the field under a QSignalBlocker, so
+    // this only fires for genuine user edits.
+    connect(mDetails->ctrlName()            , &QLineEdit::textChanged          , this, [this](const QString& text) {
+        if ((currentFieldId() == 0) && (currentDataType() != nullptr))
+        {
+            if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+                item->setText(0, text);
+        }
+    });
     connect(mDetails->ctrlTypeStruct()      , &QRadioButton::clicked           , this, &SMDataType::onStructSelected);
     connect(mDetails->ctrlTypeEnum()        , &QRadioButton::clicked           , this, &SMDataType::onEnumSelected);
     connect(mDetails->ctrlTypeImport()      , &QRadioButton::clicked           , this, &SMDataType::onImportSelected);
@@ -165,7 +176,15 @@ void SMDataType::setupSignals()
     connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::editingFinished      , this, &SMDataType::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
 
+    mFields->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mFields->ctrlName()));
     connect(mFields->ctrlName()             , &QLineEdit::editingFinished      , this, &SMDataType::onFieldNameCommitted);
+    connect(mFields->ctrlName()             , &QLineEdit::textChanged          , this, [this](const QString& text) {
+        if (currentFieldId() != 0)
+        {
+            if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+                item->setText(0, text);
+        }
+    });
     connect(mFields->ctrlTypes()            , &QComboBox::currentIndexChanged  , this, &SMDataType::onFieldTypeChanged);
     connect(mFields->ctrlValue()            , &QLineEdit::editingFinished      , this, &SMDataType::onFieldValueCommitted);
     connect(mFields->ctrlDeprecated()       , &QCheckBox::toggled              , this, &SMDataType::onFieldDeprecatedToggled);
@@ -706,6 +725,8 @@ void SMDataType::addNewType(DataTypeBase::eCategory category)
     if (dataType != nullptr)
     {
         selectDataType(dataType->getId());
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
     }
 }
 
@@ -718,6 +739,8 @@ void SMDataType::onInsertClicked()
     if (dataType != nullptr)
     {
         selectDataType(dataType->getId());
+        mDetails->ctrlName()->setFocus();
+        mDetails->ctrlName()->selectAll();
     }
 }
 
@@ -754,6 +777,8 @@ void SMDataType::onAddFieldClicked()
     if (field != nullptr)
     {
         selectDataType(dataType->getId(), field->getId());
+        mFields->ctrlName()->setFocus();
+        mFields->ctrlName()->selectAll();
     }
 }
 
@@ -770,6 +795,8 @@ void SMDataType::onInsertFieldClicked()
     if (field != nullptr)
     {
         selectDataType(dataType->getId(), field->getId());
+        mFields->ctrlName()->setFocus();
+        mFields->ctrlName()->selectAll();
     }
 }
 

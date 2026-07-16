@@ -153,6 +153,7 @@ void SMMethod::setupSignals()
     connect(scAdd   , &QShortcut::activated, this, &SMMethod::onAddClicked);
     connect(scRemove, &QShortcut::activated, this, &SMMethod::onRemoveClicked);
 
+    mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
     connect(mDetails->ctrlName()     , &QLineEdit::textChanged    , this, &SMMethod::onMethodNameTextChanged);
     connect(mDetails->ctrlName()     , &QLineEdit::editingFinished, this, &SMMethod::onMethodNameCommitted);
     connect(mDetails->ctrlTrigger()  , &QRadioButton::toggled     , this, &SMMethod::onMethodTypeToggled);
@@ -207,6 +208,7 @@ void SMMethod::setupSignals()
         }
     });
 
+    mParamDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mParamDetails->ctrlName()));
     connect(mParamDetails->ctrlName()      , &QLineEdit::textChanged        , this, &SMMethod::onParamNameTextChanged);
     connect(mParamDetails->ctrlName()      , &QLineEdit::editingFinished    , this, &SMMethod::onParamNameCommitted);
     connect(mParamDetails->ctrlTypes()     , &QComboBox::currentIndexChanged, this, &SMMethod::onParamTypeChanged);
@@ -914,6 +916,10 @@ void SMMethod::onMethodNameTextChanged(const QString& text)
     {
         SMMethodEntry* method = currentMethod();
         mDetails->showNameHint(nameCollisionReason(method, text, method != nullptr ? method->getId() : 0u));
+        // Live-preview the typed name into the selected method's Name column; commit is deferred
+        // to editingFinished. Selection sets the field under a QSignalBlocker.
+        if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+            item->setText(0, text);
     }
 }
 
@@ -1009,6 +1015,8 @@ void SMMethod::onParamNameTextChanged(const QString& text)
     if ((method != nullptr) && (paramId != 0))
     {
         mParamDetails->showNameHint(paramNameCollisionReason(method, text, paramId));
+        if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+            item->setText(0, text);
     }
 }
 

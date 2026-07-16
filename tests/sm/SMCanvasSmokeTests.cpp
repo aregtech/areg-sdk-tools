@@ -33,6 +33,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/sm/SMGuardCommands.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
@@ -71,6 +72,7 @@
 #include <QScreen>
 #include <QSettings>
 #include <QTabWidget>
+#include <QTextEdit>
 #include <QToolButton>
 #include <QUndoStack>
 
@@ -330,6 +332,7 @@ int main(int argc, char* argv[])
     if (editor != nullptr)
     {
         const int renameLength = editor->text().size();
+        CHECK(editor->maxLength() == StateMachineData::MAX_IDENTIFIER_LENGTH);
         const auto checkRenameArrow = [&](Qt::Key key, int expectedCursor) {
             editor->selectAll();
             QApplication::processEvents();
@@ -361,6 +364,35 @@ int main(int argc, char* argv[])
         checkRenameArrow(Qt::Key_Right, renameLength);
         checkRenameArrow(Qt::Key_Up   , 0);
         checkRenameArrow(Qt::Key_Down , renameLength);
+
+        const int stateCountBeforeDelete = data.getStateCount();
+        editor->selectAll();
+        keyClick(editor, Qt::Key_Delete);
+        QApplication::processEvents();
+        editor = findRenameEditor();
+        CHECK(editor != nullptr);
+        if (editor != nullptr)
+        {
+            CHECK(editor->text().isEmpty());
+        }
+        CHECK(data.getStateCount() == stateCountBeforeDelete);
+
+        if (editor != nullptr)
+        {
+            editor->setText(QStringLiteral("NewState"));
+            QApplication::processEvents();
+            editor->selectAll();
+            keyClick(editor, Qt::Key_Backspace);
+            QApplication::processEvents();
+            editor = findRenameEditor();
+            CHECK(editor != nullptr);
+            if (editor != nullptr)
+            {
+                CHECK(editor->text().isEmpty());
+                editor->setText(QStringLiteral("NewState"));
+                QApplication::processEvents();
+            }
+        }
 
         editor->setText(QStringLiteral("LightOn"));                             // duplicate
         QApplication::processEvents();
@@ -1467,7 +1499,42 @@ int main(int argc, char* argv[])
         CHECK(props->currentPage() == SMPropertiesPanel::PageState);
         CHECK(props->currentElementId() == normal->getId());
         CHECK(props->stateNameEdit()->text() == normal->getName());
+        CHECK(props->stateNameEdit()->maxLength() == StateMachineData::MAX_IDENTIFIER_LENGTH);
         CHECK(outline->getTree()->selectedItems().isEmpty() == false);
+
+        // Live canvas rename preview mirrors into every Properties panel instance before commit.
+        const QString originalName = normal->getName();
+        SMStateItem* normalItem = page.getScene().stateItem(normal->getId());
+        CHECK(normalItem != nullptr);
+        if (normalItem != nullptr)
+        {
+            normalItem->startInlineRename();
+            QApplication::processEvents();
+
+            QLineEdit* inlineEditor = nullptr;
+            for (QGraphicsItem* item : page.getScene().items())
+            {
+                QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
+                QLineEdit* candidate = (proxy != nullptr ? qobject_cast<QLineEdit*>(proxy->widget()) : nullptr);
+                if (candidate != nullptr)
+                {
+                    inlineEditor = candidate;
+                    break;
+                }
+            }
+
+            CHECK(inlineEditor != nullptr);
+            if (inlineEditor != nullptr)
+            {
+                CHECK(inlineEditor->maxLength() == StateMachineData::MAX_IDENTIFIER_LENGTH);
+                inlineEditor->setText(QStringLiteral("LivePreviewName"));
+                QApplication::processEvents();
+                CHECK(props->stateNameEdit()->text() == QStringLiteral("LivePreviewName"));
+                keyClick(inlineEditor, Qt::Key_Escape);
+                QApplication::processEvents();
+                CHECK(props->stateNameEdit()->text() == originalName);
+            }
+        }
 
         // AC3: editing the name in properties is the same atomic, undoable rename as canvas F2.
         const int undoBeforeRename = doc.getUndoStack().count();
@@ -1496,6 +1563,68 @@ int main(int argc, char* argv[])
         QApplication::processEvents();
         CHECK(props->currentPage() == SMPropertiesPanel::PageTransition);
         CHECK(props->currentElementId() == firstTxId);
+
+        QToolButton* structureToggle = props->findChild<QToolButton*>(QStringLiteral("smGuardLensToggle"));
+        QToolButton* tryToggle = props->findChild<QToolButton*>(QStringLiteral("smGuardTryToggle"));
+        CHECK((structureToggle != nullptr) && (structureToggle->icon().isNull() == false));
+        CHECK((tryToggle != nullptr) && (tryToggle->icon().isNull() == false));
+        CHECK((structureToggle != nullptr) && (structureToggle->text() == QStringLiteral("Structure")));
+        CHECK((tryToggle != nullptr) && (tryToggle->text() == QStringLiteral("Try it")));
+
+        QTextEdit* guardField = props->findChild<QTextEdit*>(QStringLiteral("smGuardField"));
+        QLabel* guardStatus = props->findChild<QLabel*>(QStringLiteral("smGuardStatus"));
+        CHECK((guardField != nullptr) && (guardStatus != nullptr));
+        const QString immediateAttr = QStringLiteral("ImmediateAttrSmoke");
+        CHECK(doc.getAttributeModel().findAttribute(immediateAttr) == nullptr);
+        if ((guardField != nullptr) && (guardStatus != nullptr))
+        {
+            guardField->setPlainText(immediateAttr);
+            QMetaObject::invokeMethod(guardField, "onDebounce");
+            QApplication::processEvents();
+            CHECK(guardStatus->text().contains(QStringLiteral("err")));
+
+            doc.getAttributeModel().createAttribute(immediateAttr);
+            QApplication::processEvents();
+            CHECK(guardStatus->text().contains(QStringLiteral("err")) == false);
+            CHECK(guardStatus->toolTip().contains(immediateAttr + QStringLiteral("()")));
+        }
+
+        if (SMSetGuardCommand* clearGuard = SMGuardCommands::clearGuard(doc.getData(), doc.getNotifier(), firstTxId, QStringLiteral("Clear guard")))
+        {
+            doc.getUndoStack().push(clearGuard);
+            QApplication::processEvents();
+        }
+
+        QLabel* lensEmpty = nullptr;
+        for (QLabel* label : props->findChildren<QLabel*>())
+        {
+            if (label->text() == QStringLiteral("empty guard -- the transition always fires"))
+            {
+                lensEmpty = label;
+                break;
+            }
+        }
+        CHECK(lensEmpty != nullptr);
+        if (lensEmpty != nullptr)
+        {
+            CHECK(lensEmpty->wordWrap());
+            CHECK(lensEmpty->sizePolicy().horizontalPolicy() == QSizePolicy::Ignored);
+        }
+        CHECK(tryToggle != nullptr);
+        if (tryToggle != nullptr)
+        {
+            tryToggle->click();
+            QApplication::processEvents();
+            QLabel* tryNote = props->findChild<QLabel*>(QStringLiteral("smTryNote"));
+            CHECK(tryNote != nullptr);
+            if (tryNote != nullptr)
+            {
+                CHECK(tryNote->wordWrap());
+                CHECK(tryNote->sizePolicy().horizontalPolicy() == QSizePolicy::Ignored);
+            }
+            tryToggle->click();
+            QApplication::processEvents();
+        }
 
         // AC2: a priority reorder keeps the properties list in sync and is undoable. (The drag
         // gesture builds the same reorder command; here it is issued directly.)

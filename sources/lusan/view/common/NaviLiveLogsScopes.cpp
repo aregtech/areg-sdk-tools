@@ -66,6 +66,7 @@ NaviLiveLogsScopes::NaviLiveLogsScopes(MdiMainWindow* wndMain, QWidget* parent)
     ui->setupUi(this);
     ctrlConnect()->setStyleSheet(NELusanCommon::getStyleToolbutton());
     ctrlCollapse()->setStyleSheet(NELusanCommon::getStyleToolbutton());
+    capToolButtonIconSizes();
 
     updateData();
     setupWidgets();

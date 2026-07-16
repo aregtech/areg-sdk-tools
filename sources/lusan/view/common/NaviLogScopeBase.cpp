@@ -25,6 +25,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include <QItemSelectionModel>
+#include <QSize>
 #include <QToolButton>
 #include <QTreeView>
 
@@ -81,6 +82,16 @@ void NaviLogScopeBase::setupControls(QTreeView* treeView, QToolButton* prioError
         mNaviTree->setModel(mScopesModel);
         mNaviTree->setSelectionModel(mSelModel);
         connect(mSelModel   , &QItemSelectionModel::currentRowChanged,this, [this](const QModelIndex &current, const QModelIndex &previous) {onRowChanged(current, previous);});
+    }
+}
+
+void NaviLogScopeBase::capToolButtonIconSizes(int iconExtent /*= 12*/)
+{
+    const QSize extent(iconExtent, iconExtent);
+    const QList<QToolButton*> buttons = findChildren<QToolButton*>();
+    for (QToolButton* button : buttons)
+    {
+        button->setIconSize(extent);
     }
 }
 

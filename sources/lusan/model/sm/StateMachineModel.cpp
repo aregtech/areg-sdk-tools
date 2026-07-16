@@ -178,6 +178,11 @@ bool StateMachineModel::removeAutosave()
     return (mData != nullptr ? StateMachineData::removeAutosave(mData->getFilePath()) : true);
 }
 
+void StateMachineModel::publishStateNamePreview(uint32_t stateId, const QString& text)
+{
+    emit signalStateNamePreview(stateId, text);
+}
+
 void StateMachineModel::onAutosaveTimeout()
 {
     writeAutosave();

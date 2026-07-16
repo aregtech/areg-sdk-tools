@@ -123,7 +123,17 @@ void SMConstant::setupSignals()
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMConstant::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMConstant::onMoveDownClicked);
 
+    mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMConstant::onNameCommitted);
+    // Live-preview the typed name into the selected constant's Name column; the rename commits
+    // on editingFinished. Selection sets the field under a QSignalBlocker.
+    connect(mDetails->ctrlName()   , &QLineEdit::textChanged        , this, [this](const QString& text) {
+        if (currentConstantId() != 0)
+        {
+            if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+                item->setText(0, text);
+        }
+    });
     connect(mDetails->ctrlTypes()  , &QComboBox::currentIndexChanged, this, &SMConstant::onTypeChanged);
     connect(mDetails->ctrlValue()  , &QLineEdit::editingFinished    , this, &SMConstant::onValueCommitted);
     connect(mDetails->ctrlValue()  , &QLineEdit::textChanged        , this, &SMConstant::onValueTextChanged);

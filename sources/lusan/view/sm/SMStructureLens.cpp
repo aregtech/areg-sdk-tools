@@ -19,6 +19,7 @@
 
 #include "lusan/view/sm/SMStructureLens.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
@@ -42,7 +43,9 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMenu>
+#include <QPalette>
 #include <QPushButton>
+#include <QStyle>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -129,10 +132,12 @@ SMStructureLens::SMStructureLens(StateMachineModel& model, QWidget* parent /*= n
     QHBoxLayout* header = new QHBoxLayout();
     mToggle = new QToolButton(this);
     mToggle->setObjectName(QStringLiteral("smGuardLensToggle"));
-    mToggle->setText(tr("v Structure"));
+    mToggle->setText(tr("Structure"));
+    mToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     mToggle->setAutoRaise(true);
     mToggle->setCheckable(true);
     mToggle->setChecked(true);
+    mToggle->setIcon(NELusanCommon::chevronIcon(true, mToggle->palette().color(QPalette::ButtonText), QSize(12, 12)));
     header->addWidget(mToggle);
     header->addStretch(1);
 
@@ -162,12 +167,15 @@ SMStructureLens::SMStructureLens(StateMachineModel& model, QWidget* parent /*= n
     mAddBtn->setMenu(addMenu);
 
     mEmptyNote = new QLabel(this);
+    mEmptyNote->setWordWrap(true);
+    mEmptyNote->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mEmptyNote->setVisible(false);
     outer->addWidget(mEmptyNote);
 
     mExplain = new QLabel(this);
     mExplain->setObjectName(QStringLiteral("smLensExplainList"));
     mExplain->setWordWrap(true);
+    mExplain->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mExplain->setVisible(false);
     outer->addWidget(mExplain);
 
@@ -177,7 +185,7 @@ SMStructureLens::SMStructureLens(StateMachineModel& model, QWidget* parent /*= n
 
     connect(mToggle, &QToolButton::toggled, this, [this](bool open)
     {
-        mToggle->setText(open ? tr("v Structure") : tr("> Structure"));
+        mToggle->setIcon(NELusanCommon::chevronIcon(open, mToggle->palette().color(QPalette::ButtonText), QSize(12, 12)));
         mContent->setVisible(open);
         mExplain->setVisible(open && mExplainBtn->isChecked());
     });
@@ -233,6 +241,7 @@ SMStructureLens::SMStructureLens(StateMachineModel& model, QWidget* parent /*= n
     });
 
     DocModelNotifier& notifier = mModel.getNotifier();
+    connect(&notifier, &DocModelNotifier::elementAdded, this, &SMStructureLens::onElementAdded);
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMStructureLens::onElementChanged);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMStructureLens::onElementRemoved);
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMStructureLens::onDocumentReloaded);
@@ -253,6 +262,11 @@ void SMStructureLens::setHoverCard(SMHoverCard* card)
 //////////////////////////////////////////////////////////////////////////
 // Notifications
 //////////////////////////////////////////////////////////////////////////
+
+void SMStructureLens::onElementAdded(uint32_t /*id*/, eDocElementKind /*kind*/)
+{
+    scheduleRebuild();
+}
 
 void SMStructureLens::onElementChanged(uint32_t /*id*/, eDocElementKind /*kind*/)
 {

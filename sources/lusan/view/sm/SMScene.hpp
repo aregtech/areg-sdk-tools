@@ -222,6 +222,14 @@ public:
     void startRenameOfSelection();
 
     /**
+     * \brief   True while a proxy-backed inline editor (state rename / note edit) holds the
+     *          scene focus. The Design page consults this so its single-key tool shortcuts
+     *          (S, F, T, N, Backspace, Delete, ...) never fire while the user types into the
+     *          embedded editor, which would otherwise swallow the keystroke and spawn items.
+     **/
+    bool isInlineEditorActive() const;
+
+    /**
      * \brief   Requests descending into a state's painted submachine (double-click,
      *          Enter, context menu); ignored when the state owns none.
      **/

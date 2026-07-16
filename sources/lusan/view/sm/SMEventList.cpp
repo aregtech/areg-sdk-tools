@@ -73,6 +73,10 @@ void SMEventList::buildUi()
     addMenu->addAction(mActNewEvent);
     addMenu->addAction(mActNewTimer);
     NELusanCommon::decorateToolButton(mButtonAdd, addMenu);
+    // There is no default kind here (an event and a timer are unrelated stimuli), so any click
+    // must present the choice: InstantPopup opens the menu for the whole button, not just the
+    // narrow drop-down zone of a split button.
+    mButtonAdd->setPopupMode(QToolButton::InstantPopup);
 
     QFrame* sepParam = new QFrame(toolbar);
     sepParam->setFrameShape(QFrame::VLine);

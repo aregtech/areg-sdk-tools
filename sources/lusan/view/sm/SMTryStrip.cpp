@@ -19,6 +19,7 @@
 
 #include "lusan/view/sm/SMTryStrip.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMDataTypeData.hpp"
@@ -39,6 +40,8 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPalette>
+#include <QStyle>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -106,7 +109,9 @@ SMTryStrip::SMTryStrip(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
     mToggle = new QToolButton(this);
     mToggle->setObjectName(QStringLiteral("smGuardTryToggle"));
-    mToggle->setText(tr("> Try it"));
+    mToggle->setText(tr("Try it"));
+    mToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    mToggle->setIcon(NELusanCommon::chevronIcon(false, mToggle->palette().color(QPalette::ButtonText), QSize(12, 12)));
     mToggle->setAutoRaise(true);
     mToggle->setCheckable(true);
     mToggle->setChecked(false);
@@ -118,7 +123,7 @@ SMTryStrip::SMTryStrip(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
     connect(mToggle, &QToolButton::toggled, this, [this](bool open)
     {
-        mToggle->setText(open ? tr("v Try it") : tr("> Try it"));
+        mToggle->setIcon(NELusanCommon::chevronIcon(open, mToggle->palette().color(QPalette::ButtonText), QSize(12, 12)));
         mContent->setVisible(open);
         if (open)
         {
@@ -131,6 +136,7 @@ SMTryStrip::SMTryStrip(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     });
 
     DocModelNotifier& notifier = mModel.getNotifier();
+    connect(&notifier, &DocModelNotifier::elementAdded, this, &SMTryStrip::onElementAdded);
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMTryStrip::onElementChanged);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMTryStrip::onElementRemoved);
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMTryStrip::onDocumentReloaded);
@@ -168,6 +174,11 @@ void SMTryStrip::setOpen(bool open)
 //////////////////////////////////////////////////////////////////////////
 // Model change slots
 //////////////////////////////////////////////////////////////////////////
+
+void SMTryStrip::onElementAdded(uint32_t /*id*/, eDocElementKind /*kind*/)
+{
+    scheduleRebuild();
+}
 
 void SMTryStrip::onElementChanged(uint32_t /*id*/, eDocElementKind /*kind*/)
 {
@@ -228,6 +239,8 @@ void SMTryStrip::rebuild()
     {
         mNote = new QLabel(mContent);
         mNote->setObjectName(QStringLiteral("smTryNote"));
+        mNote->setWordWrap(true);
+        mNote->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
         if ((guard != nullptr) && guard->isDraft())
         {
             // The strip refuses drafts cleanly (D9): nothing to evaluate, no guessing.
@@ -302,6 +315,7 @@ void SMTryStrip::rebuild()
     mResult = new QLabel(mContent);
     mResult->setObjectName(QStringLiteral("smTryResult"));
     mResult->setWordWrap(true);
+    mResult->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     layout->addWidget(mResult);
 
     recompute();

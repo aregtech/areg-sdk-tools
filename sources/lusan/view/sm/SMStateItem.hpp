@@ -121,6 +121,14 @@ public:
     inline bool isRenameActive() const;
 
     /**
+     * \brief   Sets the painted name to a transient preview value (no model change), used to
+     *          mirror live typing in the Properties panel name field onto the canvas box in
+     *          real time. The next updateFromModel() (on commit) or a restore preview (on
+     *          reject / cancel) makes the box authoritative again.
+     **/
+    void setNamePreview(const QString& name);
+
+    /**
      * \brief   Opens the in-place note editor over the box for the note bound to this state;
      *          commit (focus-out) pushes an undoable text change, then collapses back to the
      *          corner note badge. No-op when the state has no bound note.

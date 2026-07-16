@@ -201,8 +201,8 @@ void NavigationDock::showDesignTab(NavigationDock::eNaviWindow navi, NavigationW
     int index = indexOfNavi(navi);
     if (index < 0)
     {
-        // First placement: pick an icon per widget and raise the freshly added tab so the
-        // user immediately sees where the moved design widget landed (issue #516).
+        // First placement: pick an icon per widget, but keep the current tab unchanged so
+        // startup / document re-syncs do not steal focus from the workspace tab.
         QIcon icon;
         switch (navi)
         {
@@ -213,17 +213,28 @@ void NavigationDock::showDesignTab(NavigationDock::eNaviWindow navi, NavigationW
             icon = NELusanCommon::iconStateMachine(NELusanCommon::SizeBig);
             break;
         }
-
         index = mTabs.addTab(content, icon, NavigationDock::getTabName(navi));
         mTabs.setTabVisible(index, true);
-        mTabs.setCurrentIndex(index);
     }
     else
     {
         mTabs.setTabVisible(index, true);
     }
 
-    content->show();
+    // Do NOT force the content visible. Its widget lives in the tab widget's stacked layout,
+    // which shows it only while its tab is the current one and hides every other page. An
+    // unconditional show() painted the Design content (its "Design" toolbar, etc.) over the
+    // current tab -- e.g. bleeding through the top-left of the Workspace tab on startup, since
+    // showDesignTab deliberately keeps the current tab unchanged. Let the stacked layout own
+    // the page visibility; only mirror it when this tab already happens to be the current one.
+    if (mTabs.currentIndex() == index)
+    {
+        content->show();
+    }
+    else
+    {
+        content->hide();
+    }
 }
 
 void NavigationDock::hideDesignTab(NavigationDock::eNaviWindow navi)

@@ -20,6 +20,7 @@
 #include "lusan/view/sm/SMInclude.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
@@ -120,7 +121,21 @@ void SMInclude::setupSignals()
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMInclude::onMoveDownClicked);
     connect(mList->ctrlButtonUpdate()  , &QToolButton::clicked           , this, &SMInclude::onUpdateClicked);
 
+    mDetails->ctrlInclude()->setValidator(NELusanCommon::createPathValidator(mDetails->ctrlInclude()));
     connect(mDetails->ctrlInclude()      , &QLineEdit::editingFinished, this, &SMInclude::onLocationCommitted);
+    // Live-preview the typed path into the selected include's row (location + derived type/name
+    // columns); the change commits on editingFinished. Selection sets the field under a blocker.
+    connect(mDetails->ctrlInclude()      , &QLineEdit::textChanged    , this, [this](const QString& text) {
+        if (currentIncludeId() != 0)
+        {
+            if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+            {
+                item->setText(0, text);
+                item->setText(1, includeType(text));
+                item->setText(2, includeName(text));
+            }
+        }
+    });
     connect(mDetails->ctrlBrowseButton() , &QPushButton::clicked      , this, &SMInclude::onBrowseClicked);
     connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMInclude::onDeprecatedToggled);
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMInclude::onDeprecateHintCommitted);
