@@ -3,8 +3,6 @@
 list(APPEND LUSAN_SRC
     ${LUSAN}/view/si/ServiceInterface.cpp
     ${LUSAN}/view/si/SIAttribute.cpp
-    ${LUSAN}/view/si/SIAttributeDetails.cpp
-    ${LUSAN}/view/si/SIAttributeList.cpp
     ${LUSAN}/view/si/SIConstant.cpp
     ${LUSAN}/view/si/SIDataType.cpp
     ${LUSAN}/view/si/SIInclude.cpp
@@ -20,8 +18,6 @@ list(APPEND LUSAN_SRC
 list(APPEND LUSAN_HDR
     ${LUSAN}/view/si/ServiceInterface.hpp
     ${LUSAN}/view/si/SIAttribute.hpp
-    ${LUSAN}/view/si/SIAttributeDetails.hpp
-    ${LUSAN}/view/si/SIAttributeList.hpp
     ${LUSAN}/view/si/SIConstant.hpp
     ${LUSAN}/view/si/SIDataType.hpp
     ${LUSAN}/view/si/SIInclude.hpp

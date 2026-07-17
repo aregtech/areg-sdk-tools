@@ -1,4 +1,4 @@
-﻿/************************************************************************
+/************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
  *  debugging, and testing of applications built with the Areg Framework.
@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/si/SIAttribute.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -27,22 +27,22 @@
 #include "lusan/data/common/DataTypeCustom.hpp"
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/model/si/SIAttributeModel.hpp"
-#include "lusan/view/si/SIAttributeDetails.hpp"
-#include "lusan/view/si/SIAttributeList.hpp"
+#include "lusan/view/common/AttributeDetailsView.hpp"
+#include "lusan/view/common/AttributeListView.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
 #include <QHeaderView>
 #include <QLineEdit>
 #include <QPlainTextEdit>
-#include <QTableWidget>
-#include <QTableWidgetItem>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
 #include <QToolButton>
 
 #include "lusan/view/si/SICommon.hpp"
 
 //////////////////////////////////////////////////////////////////////////
-// SIAttributeModel class implementation
+// SIAttributeNotifyModel class implementation
 //////////////////////////////////////////////////////////////////////////
 
 SIAttributeNotifyModel::SIAttributeNotifyModel(QObject* parent /*= nullptr*/)
@@ -102,8 +102,8 @@ SIAttributeWidget::SIAttributeWidget(QWidget* parent)
 SIAttribute::SIAttribute(SIAttributeModel& model, QWidget* parent)
     : QScrollArea   (parent)
     , mModel        (model)
-    , mDetails      (new SIAttributeDetails(this))
-    , mList         (new SIAttributeList(this))
+    , mDetails      (new AttributeDetailsView(AttributeViewConfig{ false, true }, this))
+    , mList         (new AttributeListView(AttributeViewConfig{ false, true }, this))
     , mWidget       (new SIAttributeWidget(this))
     , mTypeModel    (new DataTypesModel(model.getDataTypeData(), false))
     , mNotifyModel  (new SIAttributeNotifyModel(this))
@@ -139,16 +139,16 @@ void SIAttribute::dataTypeConverted(DataTypeCustom* oldType, DataTypeCustom* new
     QList<uint32_t> list = mModel.replaceDataType(oldType, newType);
     if (list.isEmpty() == false)
     {
-        QTableWidget* table = mList->ctrlTableList();
-        int count = table->rowCount();
-        int current = table->currentRow();
+        QTreeWidget* table = mList->ctrlTableList();
+        int count = table->topLevelItemCount();
+        int current = table->indexOfTopLevelItem(table->currentItem());
         for (int i = 0; i < count; ++i)
         {
             AttributeEntry* entry = findAttribute(i);
             if ((entry != nullptr) && (list.contains(entry->getId())))
             {
-                QTableWidgetItem* col1 = table->item(i, static_cast<int>(eColumn::ColType));
-                col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(newType));
+                QTreeWidgetItem* item = table->topLevelItem(i);
+                item->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(newType));
                 if (i == current)
                 {
                     updateDetails(entry, false);
@@ -169,9 +169,9 @@ void SIAttribute::dataTypeDeleted(DataTypeCustom* dataType)
 {
     blockBasicSignals(true);
     mTypeModel->dataTypeDeleted(dataType);
-    QTableWidget* table = mList->ctrlTableList();
-    int count = table->rowCount();
-    int current = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int count = table->topLevelItemCount();
+    int current = table->indexOfTopLevelItem(table->currentItem());
     for (int i = 0; i < count; ++i)
     {
         AttributeEntry* entry = findAttribute(i);
@@ -194,9 +194,9 @@ void SIAttribute::dataTypeUpdated(DataTypeCustom* dataType)
     blockBasicSignals(true);
     Q_ASSERT(dataType != nullptr);
     mTypeModel->dataTypeUpdated(dataType);
-    QTableWidget* table = mList->ctrlTableList();
-    int count = table->rowCount();
-    int current = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int count = table->topLevelItemCount();
+    int current = table->indexOfTopLevelItem(table->currentItem());
     for (int i = 0; i < count; ++i)
     {
         AttributeEntry* entry = findAttribute(i);
@@ -220,26 +220,27 @@ int SIAttribute::getColumnCount() const
 
 QString SIAttribute::getCellText(const QModelIndex& cell) const
 {
-    QTableWidgetItem* item = mList->ctrlTableList()->item(cell.row(), cell.column());
-    return (item != nullptr ? item->text() : QString());
+    QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(cell.row());
+    return (item != nullptr ? item->text(cell.column()) : QString());
 }
 
-void SIAttribute::onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn)
+void SIAttribute::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous)
 {
-    if (currentRow == previousRow)
+    if (current == previous)
         return;
 
     blockBasicSignals(true);
-    const AttributeEntry* entry = findAttribute(currentRow);
+    const int row = mList->ctrlTableList()->indexOfTopLevelItem(current);
+    const AttributeEntry* entry = findAttribute(row);
     updateDetails(entry, true);
-    updateToolBottons(entry != nullptr ? currentRow : -1, mList->ctrlTableList()->rowCount());
+    updateToolBottons(entry != nullptr ? row : -1, mList->ctrlTableList()->topLevelItemCount());
     blockBasicSignals(false);
 }
 
 void SIAttribute::onAddClicked()
 {
     QString name(genName());
-    QTableWidget* table = mList->ctrlTableList();
+    QTreeWidget* table = mList->ctrlTableList();
 
     blockBasicSignals(true);
     AttributeEntry * entry = mModel.createAttribute(name);
@@ -249,15 +250,9 @@ void SIAttribute::onAddClicked()
         mDetails->ctrlTypes()->setEnabled(true);
         mDetails->ctrlNotification()->setEnabled(true);
 
-        QTableWidgetItem* current = table->currentItem();
-        if (current != nullptr)
-        {
-            current->setSelected(false);
-        }
-
-        int row = table->rowCount();
+        int row = table->topLevelItemCount();
         setTexts(-1, *entry);
-        table->selectRow(row);
+        table->setCurrentItem(table->topLevelItem(row));
         table->scrollToBottom();
         updateDetails(entry, true);
         mDetails->ctrlName()->setFocus();
@@ -270,48 +265,38 @@ void SIAttribute::onAddClicked()
 
 void SIAttribute::onRemoveClicked()
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     AttributeEntry* entry = findAttribute(row);
     AttributeEntry* nextEntry{ nullptr };
     if (entry == nullptr)
         return;
 
     blockBasicSignals(true);
-    int nextRow = row + 1 == table->rowCount() ? row - 1 : row + 1;
-    QTableWidgetItem* next = (nextRow >= 0) && (nextRow < table->rowCount()) ? table->item(nextRow, static_cast<int>(eColumn::ColName)) : nullptr;
+    int count = table->topLevelItemCount();
+    int nextRow = (row + 1 == count) ? row - 1 : row + 1;
+    QTreeWidgetItem* next = ((nextRow >= 0) && (nextRow < count)) ? table->topLevelItem(nextRow) : nullptr;
     if (next != nullptr)
     {
         nextEntry = findAttribute(nextRow);
         table->setCurrentItem(next);
-        next->setSelected(true);
     }
-
-    QTableWidgetItem* col0 = table->item(row, static_cast<int>(eColumn::ColName));
-    QTableWidgetItem* col1 = table->item(row, static_cast<int>(eColumn::ColType));
-    QTableWidgetItem* col2 = table->item(row, static_cast<int>(eColumn::ColNotify));
-    col0->setSelected(false);
-    col1->setSelected(false);
-    col2->setSelected(false);
 
     updateDetails(nextEntry, true);
 
-    delete col0;
-    delete col1;
-    delete col2;
-    table->removeRow(row);
+    delete table->takeTopLevelItem(row);
     mModel.deleteAttribute(entry->getId());
-    updateToolBottons(next != nullptr ? table->indexFromItem(next).row() : -1, mList->ctrlTableList()->rowCount());
+    updateToolBottons(next != nullptr ? table->indexOfTopLevelItem(table->currentItem()) : -1, table->topLevelItemCount());
     blockBasicSignals(false);
 }
 
 void SIAttribute::onInsertClicked()
 {
     QString name(genName());
-    QTableWidget* table = mList->ctrlTableList();
+    QTreeWidget* table = mList->ctrlTableList();
 
     blockBasicSignals(true);
-    int row = table->currentRow();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     row = row < 0 ? 0 : row;
     AttributeEntry* entry = mModel.insertAttribute(row, name);
     if (entry != nullptr)
@@ -320,28 +305,20 @@ void SIAttribute::onInsertClicked()
         mDetails->ctrlTypes()->setEnabled(true);
         mDetails->ctrlNotification()->setEnabled(true);
 
-        QTableWidgetItem* current = table->currentItem();
-        if (current != nullptr)
-        {
-            current->setSelected(false);
-        }
-
         setTexts(row, *entry, true);
         const QList<AttributeEntry>& list = mModel.getAttributes();
-        int rowCount = table->rowCount();
+        int rowCount = table->topLevelItemCount();
         Q_ASSERT(list.size() == rowCount);
         for (int i = row + 1; i < rowCount; ++i)
         {
-            QTableWidgetItem* col0 = table->item(i, static_cast<int>(eColumn::ColName));
-            col0->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<uint32_t>(list.at(i).getId()));
+            table->topLevelItem(i)->setData(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole, QVariant::fromValue<uint32_t>(list.at(i).getId()));
         }
 
-        table->selectRow(row);
-        table->showRow(row);
+        table->setCurrentItem(table->topLevelItem(row));
         updateDetails(entry, true);
         mDetails->ctrlName()->setFocus();
         mDetails->ctrlName()->selectAll();
-        updateToolBottons(row, table->rowCount());
+        updateToolBottons(row, table->topLevelItemCount());
     }
 
     blockBasicSignals(false);
@@ -349,13 +326,13 @@ void SIAttribute::onInsertClicked()
 
 void SIAttribute::onMoveUpClicked()
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     if (row > 0)
     {
         blockBasicSignals(true);
-        uint32_t idFirst = table->item(row, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
-        uint32_t idSecond = table->item(row - 1, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idFirst = table->topLevelItem(row)->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idSecond = table->topLevelItem(row - 1)->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).toUInt();
         mModel.swapAttributes(idFirst, idSecond);
         swapAttributes(row, row - 1);
         blockBasicSignals(false);
@@ -364,13 +341,13 @@ void SIAttribute::onMoveUpClicked()
 
 void SIAttribute::onMoveDownClicked()
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
-    if ((row >= 0) && (row < (table->rowCount() - 1)))
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
+    if ((row >= 0) && (row < (table->topLevelItemCount() - 1)))
     {
         blockBasicSignals(true);
-        uint32_t idFirst = table->item(row, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
-        uint32_t idSecond = table->item(row + 1, 0)->data(Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idFirst = table->topLevelItem(row)->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).toUInt();
+        uint32_t idSecond = table->topLevelItem(row + 1)->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).toUInt();
         mModel.swapAttributes(idFirst, idSecond);
         swapAttributes(row, row + 1);
         blockBasicSignals(false);
@@ -379,8 +356,8 @@ void SIAttribute::onMoveDownClicked()
 
 void SIAttribute::onNameChanged(const QString& newName)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     AttributeEntry* entry = findAttribute(row);
     if (entry != nullptr)
     {
@@ -393,8 +370,8 @@ void SIAttribute::onNameChanged(const QString& newName)
 
 void SIAttribute::onTypeChanged(const QString& newType)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     AttributeEntry* entry = findAttribute(row);
     if (entry != nullptr)
     {
@@ -409,8 +386,8 @@ void SIAttribute::onTypeChanged(const QString& newType)
 
 void SIAttribute::onNotificationChanged(const QString& newValue)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     AttributeEntry* entry = findAttribute(row);
     if (entry != nullptr)
     {
@@ -423,8 +400,8 @@ void SIAttribute::onNotificationChanged(const QString& newValue)
 
 void SIAttribute::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    if ((index.row() < 0) || (index.row() >= table->rowCount()) || (index.column() < 0))
+    QTreeWidget* table = mList->ctrlTableList();
+    if ((index.row() < 0) || (index.row() >= table->topLevelItemCount()) || (index.column() < 0))
         return;
 
     cellChanged(index.row(), index.column(), newValue);
@@ -432,32 +409,32 @@ void SIAttribute::onEditorDataChanged(const QModelIndex& index, const QString& n
 
 void SIAttribute::onDeprectedChecked(bool isChecked)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     if (row >= 0)
     {
         AttributeEntry* entry = findAttribute(row);
         Q_ASSERT(entry != nullptr);
-        SICommon::checkedDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, entry, isChecked);
+        SICommon::checkedDeprecated<AttributeDetailsView, AttributeEntry>(mDetails, entry, isChecked);
     }
 }
 
 void SIAttribute::onDeprecateHintChanged(const QString& newText)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     if (row >= 0)
     {
         AttributeEntry* entry = findAttribute(row);
         Q_ASSERT(entry != nullptr);
-        SICommon::setDeprecateHint<SIAttributeDetails, AttributeEntry>(mDetails, entry, newText);
+        SICommon::setDeprecateHint<AttributeDetailsView, AttributeEntry>(mDetails, entry, newText);
     }
 }
 
 void SIAttribute::onDescriptionChanged()
 {
-    QTableWidget* table = mList->ctrlTableList();
-    int row = table->currentRow();
+    QTreeWidget* table = mList->ctrlTableList();
+    int row = table->indexOfTopLevelItem(table->currentItem());
     if (row >= 0)
     {
         AttributeEntry* entry = findAttribute(row);
@@ -471,7 +448,7 @@ void SIAttribute::cellChanged(int row, int col, const QString& newValue)
     AttributeEntry* entry = findAttribute(row);
     Q_ASSERT(entry != nullptr);
 
-    if (col == 0)
+    if (col == static_cast<int>(eColumn::ColName))
     {
         if (mDetails->ctrlName()->text() != newValue)
         {
@@ -482,7 +459,7 @@ void SIAttribute::cellChanged(int row, int col, const QString& newValue)
             blockBasicSignals(false);
         }
     }
-    else if (col == 1)
+    else if (col == static_cast<int>(eColumn::ColType))
     {
         if (mDetails->ctrlTypes()->currentText() != newValue)
         {
@@ -494,7 +471,7 @@ void SIAttribute::cellChanged(int row, int col, const QString& newValue)
             blockBasicSignals(false);
         }
     }
-    else if (col == 2)
+    else if (col == static_cast<int>(eColumn::ColNotify))
     {
         if (mDetails->ctrlNotification()->currentText() != newValue)
         {
@@ -509,7 +486,7 @@ void SIAttribute::cellChanged(int row, int col, const QString& newValue)
 
 void SIAttribute::updateData()
 {
-    QTableWidget* table = mList->ctrlTableList();
+    QTreeWidget* table = mList->ctrlTableList();
     const QList<AttributeEntry>& list = mModel.getAttributes();
     if (list.isEmpty() == false)
     {
@@ -524,17 +501,23 @@ void SIAttribute::updateData()
 
 void SIAttribute::updateWidgets()
 {
-    QTableWidget* table = mList->ctrlTableList();
+    QTreeWidget* table = mList->ctrlTableList();
     mTypeModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mTypeModel->updateDataTypeLists();
 
-    mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel, mNotifyModel}, QList<int>{1, 2}, mList->ctrlTableList(), this, false);
+    mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel, mNotifyModel}, QList<int>{static_cast<int>(eColumn::ColType), static_cast<int>(eColumn::ColNotify)}, table, this, false);
+    // Forbid invalid C++ identifier characters when editing the Name column inline, exactly
+    // as the details panel's Name field does.
+    mTableCell->setColumnValidation(static_cast<int>(eColumn::ColName), TableCell::eCellValidation::Identifier);
     mDetails->ctrlTypes()->setModel(mTypeModel);
-    table->setItemDelegateForColumn(0, mTableCell);
-    table->setItemDelegateForColumn(1, mTableCell);
-    table->setItemDelegateForColumn(2, mTableCell);
+    // Drive the details Notification combo from the same model as the inline column, so both
+    // read/write the canonical "OnChange" / "Always" strings the entry stores.
+    mDetails->ctrlNotification()->setModel(mNotifyModel);
+    table->setItemDelegateForColumn(static_cast<int>(eColumn::ColName)  , mTableCell);
+    table->setItemDelegateForColumn(static_cast<int>(eColumn::ColType)  , mTableCell);
+    table->setItemDelegateForColumn(static_cast<int>(eColumn::ColNotify), mTableCell);
 
-    SICommon::enableDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, nullptr, false);
+    SICommon::enableDeprecated<AttributeDetailsView, AttributeEntry>(mDetails, nullptr, false);
 
     mDetails->ctrlName()->setEnabled(false);
     mDetails->ctrlTypes()->setEnabled(false);
@@ -546,7 +529,7 @@ void SIAttribute::setupSignals()
     Q_ASSERT(mDetails != nullptr);
     Q_ASSERT(mList != nullptr);
 
-    connect(mList->ctrlTableList(),    &QTableWidget::currentCellChanged, this, &SIAttribute::onCurCellChanged);
+    connect(mList->ctrlTableList(),    &QTreeWidget::currentItemChanged, this, &SIAttribute::onCurCellChanged);
     connect(mList->ctrlButtonAdd(),    &QToolButton::clicked, this, &SIAttribute::onAddClicked);
     connect(mList->ctrlButtonRemove(), &QToolButton::clicked, this, &SIAttribute::onRemoveClicked);
     connect(mList->ctrlButtonInsert(), &QToolButton::clicked, this, &SIAttribute::onInsertClicked);
@@ -577,41 +560,43 @@ void SIAttribute::blockBasicSignals(bool doBlock)
 
 inline void SIAttribute::setTexts(int row, const AttributeEntry& entry, bool insert /*= false*/)
 {
-    QTableWidget* table = mList->ctrlTableList();
+    QTreeWidget* table = mList->ctrlTableList();
     if ((row < 0) || insert)
     {
-        row = row < 0 ? table->rowCount() : row;
-        table->insertRow(row);
-        QTableWidgetItem * col0 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayName), entry.getString(ElementBase::eDisplay::DisplayName));
-        QTableWidgetItem * col1 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayType), entry.getString(ElementBase::eDisplay::DisplayType));
-        QTableWidgetItem * col2 = new QTableWidgetItem(entry.getIcon(ElementBase::eDisplay::DisplayValue), entry.getString(ElementBase::eDisplay::DisplayValue));
-        col0->setData(Qt::ItemDataRole::UserRole, entry.getId());
-        col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase *>(entry.getParamType()));
-        table->setItem(row, static_cast<int>(eColumn::ColName)  , col0);
-        table->setItem(row, static_cast<int>(eColumn::ColType)  , col1);
-        table->setItem(row, static_cast<int>(eColumn::ColNotify), col2);
+        row = row < 0 ? table->topLevelItemCount() : row;
+        QTreeWidgetItem* item = new QTreeWidgetItem();
+        // Editable flag lets the TableCell delegate open an inline editor on double-click.
+        item->setFlags(item->flags() | Qt::ItemIsEditable);
+        item->setIcon(static_cast<int>(eColumn::ColName)  , entry.getIcon(ElementBase::eDisplay::DisplayName));
+        item->setText(static_cast<int>(eColumn::ColName)  , entry.getString(ElementBase::eDisplay::DisplayName));
+        item->setIcon(static_cast<int>(eColumn::ColType)  , entry.getIcon(ElementBase::eDisplay::DisplayType));
+        item->setText(static_cast<int>(eColumn::ColType)  , entry.getString(ElementBase::eDisplay::DisplayType));
+        item->setIcon(static_cast<int>(eColumn::ColNotify), entry.getIcon(ElementBase::eDisplay::DisplayValue));
+        item->setText(static_cast<int>(eColumn::ColNotify), entry.getString(ElementBase::eDisplay::DisplayValue));
+        item->setData(static_cast<int>(eColumn::ColName)  , Qt::ItemDataRole::UserRole, entry.getId());
+        item->setData(static_cast<int>(eColumn::ColType)  , Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(entry.getParamType()));
+        table->insertTopLevelItem(row, item);
     }
     else
     {
-        QTableWidgetItem * col0 = table->item(row, static_cast<int>(eColumn::ColName));
-        QTableWidgetItem * col1 = table->item(row, static_cast<int>(eColumn::ColType));
-        QTableWidgetItem * col2 = table->item(row, static_cast<int>(eColumn::ColNotify));
-        
-        Q_ASSERT(col0->data(Qt::ItemDataRole::UserRole).toUInt() == entry.getId());
-        col1->setData(Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(entry.getParamType()));
+        QTreeWidgetItem* item = table->topLevelItem(row);
 
-        col0->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayName));
-        col1->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayType));
-        col2->setIcon(entry.getIcon(ElementBase::eDisplay::DisplayValue));
-        
-        col0->setText(entry.getString(ElementBase::eDisplay::DisplayName));
-        col1->setText(entry.getString(ElementBase::eDisplay::DisplayType));
-        col2->setText(entry.getString(ElementBase::eDisplay::DisplayValue));
+        Q_ASSERT(item->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).toUInt() == entry.getId());
+        item->setData(static_cast<int>(eColumn::ColType), Qt::ItemDataRole::UserRole, QVariant::fromValue<DataTypeBase*>(entry.getParamType()));
+
+        item->setIcon(static_cast<int>(eColumn::ColName)  , entry.getIcon(ElementBase::eDisplay::DisplayName));
+        item->setIcon(static_cast<int>(eColumn::ColType)  , entry.getIcon(ElementBase::eDisplay::DisplayType));
+        item->setIcon(static_cast<int>(eColumn::ColNotify), entry.getIcon(ElementBase::eDisplay::DisplayValue));
+
+        item->setText(static_cast<int>(eColumn::ColName)  , entry.getString(ElementBase::eDisplay::DisplayName));
+        item->setText(static_cast<int>(eColumn::ColType)  , entry.getString(ElementBase::eDisplay::DisplayType));
+        item->setText(static_cast<int>(eColumn::ColNotify), entry.getString(ElementBase::eDisplay::DisplayValue));
     }
 }
 
 inline void SIAttribute::updateDetails(const AttributeEntry* entry, bool updateAll /*= false*/)
 {
+    QTreeWidget* table = mList->ctrlTableList();
     if (entry != nullptr)
     {
         mDetails->ctrlName()->setEnabled(true);
@@ -628,7 +613,7 @@ inline void SIAttribute::updateDetails(const AttributeEntry* entry, bool updateA
             mDetails->ctrlTypes()->setCurrentIndex(0);
         }
 
-        if (mList->ctrlTableList()->currentRow() >= 0)
+        if (table->indexOfTopLevelItem(table->currentItem()) >= 0)
         {
             mList->ctrlButtonRemove()->setEnabled(true);
         }
@@ -636,7 +621,7 @@ inline void SIAttribute::updateDetails(const AttributeEntry* entry, bool updateA
         if (updateAll)
         {
             mDetails->ctrlDescription()->setPlainText(entry->getDescription());
-            SICommon::enableDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, entry, true);
+            SICommon::enableDeprecated<AttributeDetailsView, AttributeEntry>(mDetails, entry, true);
         }
     }
     else
@@ -646,7 +631,7 @@ inline void SIAttribute::updateDetails(const AttributeEntry* entry, bool updateA
         mDetails->ctrlNotification()->setCurrentIndex(0);
         mDetails->ctrlDescription()->setPlainText("");
 
-        SICommon::enableDeprecated<SIAttributeDetails, AttributeEntry>(mDetails, nullptr, false);
+        SICommon::enableDeprecated<AttributeDetailsView, AttributeEntry>(mDetails, nullptr, false);
 
         mDetails->ctrlName()->setEnabled(false);
         mDetails->ctrlTypes()->setEnabled(false);
@@ -660,31 +645,31 @@ inline void SIAttribute::updateDetails(const AttributeEntry* entry, bool updateA
 
 inline AttributeEntry* SIAttribute::findAttribute(int row)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    if ((row < 0) || (row >= table->rowCount()))
+    QTreeWidget* table = mList->ctrlTableList();
+    if ((row < 0) || (row >= table->topLevelItemCount()))
         return nullptr;
 
-    QTableWidgetItem* item = table->item(row, 0);
-    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
+    QTreeWidgetItem* item = table->topLevelItem(row);
+    uint32_t id = item->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).toUInt();
     return mModel.findAttribute(id);
 }
 
 inline const AttributeEntry* SIAttribute::findAttribute(int row) const
 {
-    QTableWidget* table = mList->ctrlTableList();
-    if (row < 0 || row > table->rowCount())
+    QTreeWidget* table = mList->ctrlTableList();
+    if ((row < 0) || (row >= table->topLevelItemCount()))
         return nullptr;
 
-    QTableWidgetItem* item = table->item(row, 0);
-    uint32_t id = item->data(static_cast<int>(Qt::ItemDataRole::UserRole)).toUInt();
+    QTreeWidgetItem* item = table->topLevelItem(row);
+    uint32_t id = item->data(static_cast<int>(eColumn::ColName), Qt::ItemDataRole::UserRole).toUInt();
     return mModel.findAttribute(id);
 }
 
 inline void SIAttribute::swapAttributes(int firstRow, int secondRow)
 {
-    QTableWidget* table = mList->ctrlTableList();
-    Q_ASSERT(firstRow >= 0 && firstRow < table->rowCount());
-    Q_ASSERT(secondRow >= 0 && secondRow < table->rowCount());
+    QTreeWidget* table = mList->ctrlTableList();
+    Q_ASSERT(firstRow >= 0 && firstRow < table->topLevelItemCount());
+    Q_ASSERT(secondRow >= 0 && secondRow < table->topLevelItemCount());
 
     const AttributeEntry* first = findAttribute(firstRow);
     const AttributeEntry* second = findAttribute(secondRow);
@@ -692,10 +677,8 @@ inline void SIAttribute::swapAttributes(int firstRow, int secondRow)
     Q_ASSERT((first != nullptr) && (second != nullptr));
     setTexts(firstRow, *first);
     setTexts(secondRow, *second);
-    table->item(firstRow, 0)->setSelected(false);
-    table->setCurrentItem(table->item(secondRow, 0));
-    table->selectRow(secondRow);
-    updateToolBottons(secondRow, mList->ctrlTableList()->rowCount());
+    table->setCurrentItem(table->topLevelItem(secondRow));
+    updateToolBottons(secondRow, table->topLevelItemCount());
 }
 
 inline void SIAttribute::updateToolBottons(int row, int rowCount)
@@ -737,12 +720,12 @@ inline QString SIAttribute::genName()
 {
     static const QString _defName("NewAttribute");
 
-    QTableWidget* table = mList->ctrlTableList();
+    QTreeWidget* table = mList->ctrlTableList();
     QString name;
     do
     {
         name = _defName + QString::number(++mCount);
-    } while (table->findItems(name, Qt::MatchFlag::MatchExactly).isEmpty() == false);
-    
+    } while (table->findItems(name, Qt::MatchFlag::MatchExactly, static_cast<int>(eColumn::ColName)).isEmpty() == false);
+
     return name;
 }

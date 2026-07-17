@@ -1,6 +1,8 @@
 ﻿include("${LUSAN}/view/common//ui/CMakeLists.txt")
 
 list(APPEND LUSAN_SRC
+    ${LUSAN}/view/common/AttributeDetailsView.cpp
+    ${LUSAN}/view/common/AttributeListView.cpp
     ${LUSAN}/view/common/ConstantDetailsView.cpp
     ${LUSAN}/view/common/ConstantListView.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
@@ -38,6 +40,8 @@ list(APPEND LUSAN_SRC
 )
 
 list(APPEND LUSAN_HDR
+    ${LUSAN}/view/common/AttributeDetailsView.hpp
+    ${LUSAN}/view/common/AttributeListView.hpp
     ${LUSAN}/view/common/ConstantDetailsView.hpp
     ${LUSAN}/view/common/ConstantListView.hpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.hpp

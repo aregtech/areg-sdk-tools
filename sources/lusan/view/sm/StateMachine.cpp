@@ -22,7 +22,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NavigationDock.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
-#include "lusan/view/sm/SMAttributeList.hpp"
+#include "lusan/view/common/AttributeListView.hpp"
 #include "lusan/view/sm/SMConstant.hpp"
 #include "lusan/view/common/ConstantListView.hpp"
 #include "lusan/view/sm/SMDataType.hpp"

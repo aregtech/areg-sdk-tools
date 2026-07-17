@@ -1,7 +1,5 @@
 list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMAttribute.cpp
-    ${LUSAN}/view/sm/SMAttributeDetails.cpp
-    ${LUSAN}/view/sm/SMAttributeList.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMFixBar.cpp
@@ -54,8 +52,6 @@ list(APPEND LUSAN_SRC
 
 list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMAttribute.hpp
-    ${LUSAN}/view/sm/SMAttributeDetails.hpp
-    ${LUSAN}/view/sm/SMAttributeList.hpp
     ${LUSAN}/view/sm/SMCodeEditor.hpp
     ${LUSAN}/view/sm/NEGuardStyle.hpp
     ${LUSAN}/view/sm/SMFixBar.hpp

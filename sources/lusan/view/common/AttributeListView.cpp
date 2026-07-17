@@ -9,43 +9,45 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/si/SIAttributeList.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/AttributeListView.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface attribute list panel.
+ *  \brief       Lusan application, shared "attribute list" panel implementation.
  *
  ************************************************************************/
-#include "lusan/view/si/SIAttributeList.hpp"
+
+#include "lusan/view/common/AttributeListView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
-#include <QAbstractItemView>
 #include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QTableWidget>
+#include <QStringList>
 #include <QToolButton>
+#include <QTreeWidget>
 #include <QVBoxLayout>
 
-SIAttributeList::SIAttributeList(QWidget* parent)
+AttributeListView::AttributeListView(const AttributeViewConfig& config, QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
+    , mConfig           (config)
     , mTable            (nullptr)
     , mButtonAdd        (nullptr)
-    , mButtonRemove     (nullptr)
     , mButtonInsert     (nullptr)
+    , mButtonRemove     (nullptr)
     , mButtonMoveUp     (nullptr)
     , mButtonMoveDown   (nullptr)
 {
     buildUi();
 }
 
-void SIAttributeList::buildUi()
+void AttributeListView::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
 
-    QGroupBox* group = new QGroupBox(tr("Data Attribute List:"), this);
+    QGroupBox* group = new QGroupBox(tr("Attributes List:"), this);
     QVBoxLayout* groupLayout = new QVBoxLayout(group);
 
     QWidget* toolbar = new QWidget(group);
@@ -53,10 +55,9 @@ void SIAttributeList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new attribute entry")                    , QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected attribute entry")                       , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new attribute entry at selected position"), QKeySequence(Qt::CTRL | Qt::Key_T));
-    NELusanCommon::decorateToolButton(mButtonAdd);
+    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new attribute entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected attribute entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
+    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new attribute entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
@@ -73,52 +74,65 @@ void SIAttributeList::buildUi()
     toolbarLayout->addWidget(mButtonMoveDown);
     toolbarLayout->addStretch(1);
 
-    mTable = new QTableWidget(group);
+    // The third column depends on the editor: State Machine attributes carry a default Value,
+    // Service Interface attributes carry an update Notification kind. Exactly one of the two
+    // config flags is set for the current editors, giving three columns with the differing one
+    // at index ColExtra (2).
+    QStringList headers{ tr("Name:"), tr("Data Type:") };
+    if (mConfig.hasValue)
+    {
+        headers.append(tr("Value:"));
+    }
+    if (mConfig.hasNotification)
+    {
+        headers.append(tr("Notification Type:"));
+    }
+
+    mTable = new QTreeWidget(group);
     mTable->setCursor(Qt::PointingHandCursor);
     mTable->setMouseTracking(true);
     mTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
-    mTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    mTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    mTable->setColumnCount(3);
-    mTable->verticalHeader()->setVisible(false);
-    mTable->setHorizontalHeaderLabels(QStringList{ tr("Name:"), tr("Data Type:"), tr("Notification Type:") });
-
-    QHeaderView* header = mTable->horizontalHeader();
-    header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    header->setSectionResizeMode(2, QHeaderView::Stretch);
+    mTable->setDropIndicatorShown(false);
+    mTable->setIconSize(QSize(16, 16));
+    mTable->setSortingEnabled(false);
+    mTable->setRootIsDecorated(false);
+    mTable->setAllColumnsShowFocus(false);
+    mTable->setColumnCount(headers.size());
+    mTable->header()->setCascadingSectionResizes(false);
+    mTable->header()->setMinimumSectionSize(50);
+    mTable->setHeaderLabels(headers);
 
     groupLayout->addWidget(toolbar);
     groupLayout->addWidget(mTable);
     root->addWidget(group);
 }
 
-QToolButton* SIAttributeList::ctrlButtonAdd()
+QTreeWidget* AttributeListView::ctrlTableList() const
+{
+    return mTable;
+}
+
+QToolButton* AttributeListView::ctrlButtonAdd() const
 {
     return mButtonAdd;
 }
 
-QToolButton* SIAttributeList::ctrlButtonRemove()
-{
-    return mButtonRemove;
-}
-
-QToolButton* SIAttributeList::ctrlButtonInsert()
+QToolButton* AttributeListView::ctrlButtonInsert() const
 {
     return mButtonInsert;
 }
 
-QToolButton* SIAttributeList::ctrlButtonMoveUp()
+QToolButton* AttributeListView::ctrlButtonRemove() const
+{
+    return mButtonRemove;
+}
+
+QToolButton* AttributeListView::ctrlButtonMoveUp() const
 {
     return mButtonMoveUp;
 }
 
-QToolButton* SIAttributeList::ctrlButtonMoveDown()
+QToolButton* AttributeListView::ctrlButtonMoveDown() const
 {
     return mButtonMoveDown;
-}
-
-QTableWidget* SIAttributeList::ctrlTableList()
-{
-    return mTable;
 }
