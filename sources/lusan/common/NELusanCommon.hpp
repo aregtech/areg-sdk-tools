@@ -562,6 +562,15 @@ namespace NELusanCommon
     //<! Loads broadcast type method icon and sets the specified size
     inline QIcon iconMethodBroadcast(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads FSM trigger method icon and sets the specified size
+    inline QIcon iconMethodTrigger(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads FSM action method icon and sets the specified size
+    inline QIcon iconMethodAction(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads FSM condition method icon and sets the specified size
+    inline QIcon iconMethodCondition(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads method parameter icon and sets the specified size
     inline QIcon iconMethodParam(const QSize & size = QSize{ 32, 32 });
 
@@ -864,6 +873,21 @@ inline QIcon NELusanCommon::iconMethodResponse(const QSize & size)
 inline QIcon NELusanCommon::iconMethodBroadcast(const QSize & size)
 {
     return loadIcon(":/icons/data method broadcast", size);
+}
+
+inline QIcon NELusanCommon::iconMethodTrigger(const QSize & size)
+{
+    return loadIcon(":/icons/sm method trigger", size);
+}
+
+inline QIcon NELusanCommon::iconMethodAction(const QSize & size)
+{
+    return loadIcon(":/icons/sm method action", size);
+}
+
+inline QIcon NELusanCommon::iconMethodCondition(const QSize & size)
+{
+    return loadIcon(":/icons/sm method condition", size);
 }
 
 inline QIcon NELusanCommon::iconDefaultValue(const QSize & size)

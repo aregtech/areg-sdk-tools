@@ -22,9 +22,10 @@
 #include <QHBoxLayout>
 #include <QLabel>
 
-#include "lusan/view/si/SIMethodDetails.hpp"
-#include "lusan/view/si/SIMethodParamDetails.hpp"
-#include "lusan/view/si/SIMethodList.hpp"
+#include "lusan/view/common/MethodDetailsView.hpp"
+#include "lusan/view/common/MethodParamDetailsView.hpp"
+#include "lusan/view/common/MethodListView.hpp"
+#include "lusan/view/common/TableCell.hpp"
 
 
 #include "lusan/data/si/SIMethodRequest.hpp"
@@ -37,6 +38,7 @@
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/model/common/ReplyMethodModel.hpp"
 
+#include <QAbstractItemModel>
 #include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
@@ -72,12 +74,13 @@ SIMethodWidget::SIMethodWidget(QWidget* parent)
 SIMethod::SIMethod(SIMethodModel & model, QWidget* parent)
     : QScrollArea   (parent)
     , mModel        (model)
-    , mDetails      (new SIMethodDetails(this))
-    , mList         (new SIMethodList(this))
-    , mParams       (new SIMethodParamDetails(this))
+    , mDetails      (new MethodDetailsView(MethodViewConfig{ QList<MethodTypeOption>{ { tr("Request"), QString() }, { tr("Response"), QString() }, { tr("Broadcast"), QString() } }, true, false, false, false, false }, this))
+    , mList         (new MethodListView(MethodListConfig{ tr("Service Methods List:"), tr("Data Type:"), QStringList{ tr("Request"), tr("Response"), tr("Broadcast") }, true, true }, this))
+    , mParams       (new MethodParamDetailsView(tr("Parameter Details:"), this))
     , mWidget       (new SIMethodWidget(this))
     , mParamTypes   (new DataTypesModel(model.getDataTypeData(), false))
     , mReplyModel   (new ReplyMethodModel(model.getMethodData()))
+    , mTableCell    (nullptr)
     , mCount        (0)
 {
     mParams->setHidden(true);
@@ -369,7 +372,7 @@ void SIMethod::onDeprecateChecked(bool isChecked)
         return;
     
     Q_ASSERT(item->data(1, Qt::ItemDataRole::UserRole).toUInt() == 0);
-    SICommon::checkedDeprecated<SIMethodDetails, SIMethodBase>(mDetails, method, isChecked);
+    SICommon::checkedDeprecated<MethodDetailsView, SIMethodBase>(mDetails, method, isChecked);
 }
 
 void SIMethod::onDeprecateHintChanged(const QString& newText)
@@ -380,7 +383,7 @@ void SIMethod::onDeprecateHintChanged(const QString& newText)
     if (method == nullptr)
         return;
    
-    SICommon::setDeprecateHint<SIMethodDetails, SIMethodBase>(mDetails, method, newText);
+    SICommon::setDeprecateHint<MethodDetailsView, SIMethodBase>(mDetails, method, newText);
 }
 
 void SIMethod::onDescriptionChanged()
@@ -545,7 +548,9 @@ void SIMethod::onParamAddClicked()
         table->setCurrentItem(item);
         item->setSelected(true);
         item->setExpanded(true);
-        
+
+        // The method row's Value column shows the parameter count, so refresh it after the add.
+        setNodeText(parent, method);
         showParamDetails(method, *param);
         updateToolButtonsForParams(method, pos);
         blockBasicSignals(false);
@@ -572,6 +577,9 @@ void SIMethod::onParamRemoveClicked()
     item->setSelected(false);
     parent->removeChild(item);
     method->removeElement(id);
+
+    // The method row's Value column shows the parameter count, so refresh it after the removal.
+    setNodeText(parent, method);
 
     QTreeWidgetItem* next = nullptr;
     int row = -1;
@@ -669,7 +677,9 @@ void SIMethod::onParamInsertClicked()
             Q_ASSERT(temp != nullptr);
             temp->setData(1, Qt::ItemDataRole::UserRole, list[i].getId());
         }
-        
+
+        // The method row's Value column shows the parameter count, so refresh it after the insert.
+        setNodeText(parent, method);
         showParamDetails(method, *param);
         updateToolButtonsForParams(method, row);
         blockBasicSignals(false);
@@ -795,7 +805,7 @@ void SIMethod::onParamDefaultChecked(bool isChecked)
     Q_ASSERT(method != nullptr);
     uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
     Q_ASSERT(id != 0);
-    MethodParameter* param = method->makeValueDefault(id, isChecked, mParams->ctrlParamDefaultValue()->text());
+    MethodParameter* param = method->makeValueDefault(id, isChecked, mParams->ctrlValue()->text());
     Q_ASSERT(param != nullptr);
     setNodeText(item, param);
     showParamDetails(method, *param);
@@ -803,7 +813,7 @@ void SIMethod::onParamDefaultChecked(bool isChecked)
 
     if (isChecked)
     {
-        QLineEdit* ctrlDefault = mParams->ctrlParamDefaultValue();
+        QLineEdit* ctrlDefault = mParams->ctrlValue();
         if (ctrlDefault->isEnabled())
         {
             ctrlDefault->setFocus();
@@ -825,7 +835,7 @@ void SIMethod::onParamDefaultChanged(const QString& newText)
     Q_ASSERT(method != nullptr);
     uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
     Q_ASSERT(id != 0);
-    MethodParameter* param = method->setDefaultValue(id, mParams->ctrlParamDefaultValue()->text());
+    MethodParameter* param = method->setDefaultValue(id, mParams->ctrlValue()->text());
     Q_ASSERT(param != nullptr);
     setNodeText(item, param);
 }
@@ -842,7 +852,7 @@ void SIMethod::onParamDescriptionChanged()
     Q_ASSERT(id != 0);
     MethodParameter * param = method->findElement(id);
     Q_ASSERT(param != nullptr);
-    param->setDescription(mParams->ctrlParamDescription()->toPlainText());
+    param->setDescription(mParams->ctrlDescription()->toPlainText());
 }
 
 void SIMethod::onParamDeprecateChecked(bool isChecked)
@@ -858,7 +868,7 @@ void SIMethod::onParamDeprecateChecked(bool isChecked)
     MethodParameter * param = method->findElement(id);
     Q_ASSERT(param != nullptr);
 
-    SICommon::checkedDeprecated<SIMethodParamDetails, MethodParameter>(mParams, param, isChecked);
+    SICommon::checkedDeprecated<MethodParamDetailsView, MethodParameter>(mParams, param, isChecked);
 }
 
 void SIMethod::onParamDeprecateHintChanged(const QString& newText)
@@ -872,7 +882,7 @@ void SIMethod::onParamDeprecateHintChanged(const QString& newText)
     uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
     Q_ASSERT(id != 0);
     MethodParameter * param = method->findElement(id);
-    SICommon::setDeprecateHint<SIMethodParamDetails, MethodParameter>(mParams, param, newText);
+    SICommon::setDeprecateHint<MethodParamDetailsView, MethodParameter>(mParams, param, newText);
 }
 
 void SIMethod::updateData()
@@ -890,8 +900,8 @@ void SIMethod::updateData()
         table->addTopLevelItem(item);
     }
 
-    mParams->ctrlParamTypes()->setModel(mParamTypes);
-    mDetails->ctrlConnectedResponse()->setModel(mReplyModel);
+    mParams->ctrlTypes()->setModel(mParamTypes);
+    mDetails->ctrlReply()->setModel(mReplyModel);
 }
 
 void SIMethod::updateWidgets()
@@ -902,14 +912,14 @@ void SIMethod::updateWidgets()
 
 void SIMethod::setupSignals()
 {
-    connect(mDetails->ctrlName()            , &QLineEdit::textChanged       , this, &SIMethod::onNameChanged);
-    connect(mDetails->ctrlRequest()         , &QRadioButton::toggled        , this, &SIMethod::onRequestSelected);
-    connect(mDetails->ctrlResponse()        , &QRadioButton::toggled        , this, &SIMethod::onResponseSelected);
-    connect(mDetails->ctrlBroadcast()       , &QRadioButton::toggled        , this, &SIMethod::onBroadcastSelected);
+    connect(mDetails                        , &MethodDetailsView::nameEdited, this, &SIMethod::onNameChanged);
+    connect(mDetails->ctrlType(0)           , &QRadioButton::toggled        , this, &SIMethod::onRequestSelected);
+    connect(mDetails->ctrlType(1)           , &QRadioButton::toggled        , this, &SIMethod::onResponseSelected);
+    connect(mDetails->ctrlType(2)           , &QRadioButton::toggled        , this, &SIMethod::onBroadcastSelected);
     connect(mDetails->ctrlDeprecated()      , &QCheckBox::toggled           , this, &SIMethod::onDeprecateChecked);
     connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::textEdited        , this, &SIMethod::onDeprecateHintChanged);
     connect(mDetails->ctrlDescription()     , &QPlainTextEdit::textChanged  , this, &SIMethod::onDescriptionChanged);
-    connect(mDetails->ctrlConnectedResponse(), &QComboBox::currentTextChanged, this, &SIMethod::onConnectedResponseChanged);
+    connect(mDetails->ctrlReply()           , &QComboBox::currentTextChanged, this, &SIMethod::onConnectedResponseChanged);
 
     connect(mList->ctrlButtonAdd()          , &QToolButton::clicked         , this, &SIMethod::onAddClicked);
     connect(mList->ctrlButtonInsert()       , &QToolButton::clicked         , this, &SIMethod::onInsertClicked);
@@ -919,32 +929,47 @@ void SIMethod::setupSignals()
     connect(mList->ctrlButtonParamRemove()  , &QToolButton::clicked         , this, &SIMethod::onParamRemoveClicked);
     connect(mList->ctrlButtonMoveUp()       , &QToolButton::clicked         , this, &SIMethod::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown()     , &QToolButton::clicked         , this, &SIMethod::onMoveDownClicked);
-    connect(mList->actionNewRequest()       , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodRequest); });
-    connect(mList->actionNewResponse()      , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodResponse); });
-    connect(mList->actionNewBroadcast()     , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodBroadcast); });
+    connect(mList->typeAction(0)            , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodRequest); });
+    connect(mList->typeAction(1)            , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodResponse); });
+    connect(mList->typeAction(2)            , &QAction::triggered           , this, [this]() { addNewMethod(SIMethodBase::eMethodType::MethodBroadcast); });
     connect(mList->ctrlTableList()          , &QTreeWidget::currentItemChanged, this, &SIMethod::onCurCellChanged);
 
-    connect(mParams->ctrlParamName()        , &QLineEdit::textChanged       , this, &SIMethod::onParamNameChanged);
-    connect(mParams->ctrlParamTypes()        , &QComboBox::currentTextChanged, this, &SIMethod::onParamTypeChanged);
-    connect(mParams->ctrlParamHasDefault()  , &QCheckBox::toggled           , this, &SIMethod::onParamDefaultChecked);
-    connect(mParams->ctrlParamDefaultValue(), &QLineEdit::textChanged       , this, &SIMethod::onParamDefaultChanged);
-    connect(mParams->ctrlParamDescription() , &QPlainTextEdit::textChanged  , this, &SIMethod::onParamDescriptionChanged);
+    connect(mParams                         , &MethodParamDetailsView::nameEdited, this, &SIMethod::onParamNameChanged);
+    connect(mParams->ctrlTypes()            , &QComboBox::currentTextChanged, this, &SIMethod::onParamTypeChanged);
+    connect(mParams->ctrlHasDefault()  , &QCheckBox::toggled           , this, &SIMethod::onParamDefaultChecked);
+    connect(mParams->ctrlValue(), &QLineEdit::textChanged       , this, &SIMethod::onParamDefaultChanged);
+    connect(mParams->ctrlDescription() , &QPlainTextEdit::textChanged  , this, &SIMethod::onParamDescriptionChanged);
     connect(mParams->ctrlDeprecated()       , &QCheckBox::toggled           , this, &SIMethod::onParamDeprecateChecked);
     connect(mParams->ctrlDeprecateHint()    , &QLineEdit::textEdited        , this, &SIMethod::onParamDeprecateHintChanged);
+
+    // Inline (in-table) editing: the shared TableCell delegate opens an editor per cell. The tree
+    // is heterogeneous (method rows vs parameter rows), so which cells are editable, whether a
+    // cell shows a combo or a text editor, and how it is validated are resolved per cell by the
+    // controller; the commit routes through cellChanged(), matching the details-panel validation.
+    QTreeWidget* table = mList->ctrlTableList();
+    mTableCell = new TableCell(table, this, false);
+    mTableCell->setEditableCheck([this](const QModelIndex& idx) { return isCellEditable(idx); });
+    mTableCell->setEditorModelResolver([this](const QModelIndex& idx) { return editorModelFor(idx); });
+    mTableCell->setValidationResolver([this](const QModelIndex& idx) { return validationFor(idx); });
+    for (int col = 0; col < table->columnCount(); ++col)
+    {
+        table->setItemDelegateForColumn(col, mTableCell);
+    }
+    connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SIMethod::onEditorDataChanged);
 }
 
 void SIMethod::blockBasicSignals(bool doBlock)
 {
     mDetails->ctrlName()->blockSignals(doBlock);
-    mDetails->ctrlRequest()->blockSignals(doBlock);
-    mDetails->ctrlResponse()->blockSignals(doBlock);
-    mDetails->ctrlBroadcast()->blockSignals(doBlock);
-    mDetails->ctrlConnectedResponse()->blockSignals(doBlock);
+    mDetails->ctrlType(0)->blockSignals(doBlock);
+    mDetails->ctrlType(1)->blockSignals(doBlock);
+    mDetails->ctrlType(2)->blockSignals(doBlock);
+    mDetails->ctrlReply()->blockSignals(doBlock);
     
-    mParams->ctrlParamName()->blockSignals(doBlock);
-    mParams->ctrlParamTypes()->blockSignals(doBlock);
-    mParams->ctrlParamHasDefault()->blockSignals(doBlock);
-    mParams->ctrlParamDefaultValue()->blockSignals(doBlock);
+    mParams->ctrlName()->blockSignals(doBlock);
+    mParams->ctrlTypes()->blockSignals(doBlock);
+    mParams->ctrlHasDefault()->blockSignals(doBlock);
+    mParams->ctrlValue()->blockSignals(doBlock);
 
     mList->ctrlTableList()->blockSignals(doBlock);
 }
@@ -978,9 +1003,9 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
     if (method != nullptr)
     {
         mDetails->ctrlName()->setEnabled(true);
-        mDetails->ctrlRequest()->setEnabled(true);
-        mDetails->ctrlResponse()->setEnabled(true);
-        mDetails->ctrlBroadcast()->setEnabled(true);
+        mDetails->ctrlType(0)->setEnabled(true);
+        mDetails->ctrlType(1)->setEnabled(true);
+        mDetails->ctrlType(2)->setEnabled(true);
         mList->ctrlButtonRemove()->setEnabled(true);
         mList->ctrlButtonParamAdd()->setEnabled(true);
         mList->ctrlButtonParamRemove()->setEnabled(false);
@@ -989,33 +1014,33 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
         mDetails->ctrlName()->setText(method->getName());
         mDetails->ctrlDescription()->setPlainText(method->getDescription());
 
-        SICommon::enableDeprecated<SIMethodDetails, SIMethodBase>(mDetails, method, true);
+        SICommon::enableDeprecated<MethodDetailsView, SIMethodBase>(mDetails, method, true);
 
         switch (method->getMethodType())
         {
         case SIMethodBase::eMethodType::MethodRequest:
-            mDetails->ctrlConnectedResponse()->setEnabled(true);
-            mDetails->ctrlRequest()->setChecked(true);
+            mDetails->ctrlReply()->setEnabled(true);
+            mDetails->ctrlType(0)->setChecked(true);
             if (static_cast<SIMethodRequest *>(method)->hasValidResponse())
             {
-                mDetails->ctrlConnectedResponse()->setCurrentText(static_cast<SIMethodRequest *>(method)->getConectedResponseName());
+                mDetails->ctrlReply()->setCurrentText(static_cast<SIMethodRequest *>(method)->getConectedResponseName());
             }
             else
             {
-                mDetails->ctrlConnectedResponse()->setCurrentText(QString());
+                mDetails->ctrlReply()->setCurrentText(QString());
             }
             break;
 
         case SIMethodBase::eMethodType::MethodResponse:
-            mDetails->ctrlConnectedResponse()->setEnabled(false);
-            mDetails->ctrlConnectedResponse()->setCurrentText(QString());
-            mDetails->ctrlResponse()->setChecked(true);
+            mDetails->ctrlReply()->setEnabled(false);
+            mDetails->ctrlReply()->setCurrentText(QString());
+            mDetails->ctrlType(1)->setChecked(true);
             break;
 
         case SIMethodBase::eMethodType::MethodBroadcast:
-            mDetails->ctrlConnectedResponse()->setEnabled(false);
-            mDetails->ctrlConnectedResponse()->setCurrentText(QString());
-            mDetails->ctrlBroadcast()->setChecked(true);
+            mDetails->ctrlReply()->setEnabled(false);
+            mDetails->ctrlReply()->setCurrentText(QString());
+            mDetails->ctrlType(2)->setChecked(true);
             break;
 
         default:
@@ -1029,19 +1054,19 @@ void SIMethod::showMethodDetails(SIMethodBase* method)
     {
         mDetails->ctrlName()->setText(QString());
         mDetails->ctrlName()->setEnabled(false);
-        mDetails->ctrlRequest()->setChecked(false);
-        mDetails->ctrlRequest()->setEnabled(false);
-        mDetails->ctrlResponse()->setEnabled(false);
-        mDetails->ctrlBroadcast()->setEnabled(false);
-        mDetails->ctrlConnectedResponse()->setEnabled(false);
+        mDetails->ctrlType(0)->setChecked(false);
+        mDetails->ctrlType(0)->setEnabled(false);
+        mDetails->ctrlType(1)->setEnabled(false);
+        mDetails->ctrlType(2)->setEnabled(false);
+        mDetails->ctrlReply()->setEnabled(false);
         mList->ctrlButtonRemove()->setEnabled(false);
         mList->ctrlButtonParamAdd()->setEnabled(false);
         mList->ctrlButtonParamRemove()->setEnabled(false);
         mList->ctrlButtonParamInsert()->setEnabled(false);
         
-        mDetails->ctrlConnectedResponse()->setCurrentText(QString());
+        mDetails->ctrlReply()->setCurrentText(QString());
         mDetails->ctrlDescription()->setPlainText(QString());
-        SICommon::enableDeprecated<SIMethodDetails, SIMethodBase>(mDetails, nullptr, false);
+        SICommon::enableDeprecated<MethodDetailsView, SIMethodBase>(mDetails, nullptr, false);
     }
 }
 
@@ -1051,34 +1076,34 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
     mParams->setVisible(true);
     if (method != nullptr)
     {
-        mParams->ctrlParamName()->setEnabled(true);
-        mParams->ctrlParamTypes()->setEnabled(true);
+        mParams->ctrlName()->setEnabled(true);
+        mParams->ctrlTypes()->setEnabled(true);
             
         mList->ctrlButtonRemove()->setEnabled(false);
         mList->ctrlButtonParamAdd()->setEnabled(true);
         mList->ctrlButtonParamRemove()->setEnabled(true);
         mList->ctrlButtonParamInsert()->setEnabled(true);
         
-        mParams->ctrlParamName()->setText(param.getName());
-        mParams->ctrlParamTypes()->setCurrentText(param.getType());
+        mParams->ctrlName()->setText(param.getName());
+        mParams->ctrlTypes()->setCurrentText(param.getType());
         const bool canEditDefault = method->canSwitchDefaultValue(param.getId());
         if (param.hasDefault())
         {
-            mParams->ctrlParamHasDefault()->setChecked(true);
-            mParams->ctrlParamDefaultValue()->setText(param.getValue());
-            mParams->ctrlParamDefaultValue()->setEnabled(canEditDefault);
+            mParams->ctrlHasDefault()->setChecked(true);
+            mParams->ctrlValue()->setText(param.getValue());
+            mParams->ctrlValue()->setEnabled(canEditDefault);
         }
         else
         {
-            mParams->ctrlParamHasDefault()->setChecked(false);
-            mParams->ctrlParamDefaultValue()->setText(QString());
-            mParams->ctrlParamDefaultValue()->setEnabled(false);
+            mParams->ctrlHasDefault()->setChecked(false);
+            mParams->ctrlValue()->setText(QString());
+            mParams->ctrlValue()->setEnabled(false);
         }
         
-        mParams->ctrlParamDescription()->setPlainText(param.getDescription());
-        SICommon::enableDeprecated<SIMethodParamDetails, MethodParameter>(mParams, &param, true);
-        mParams->ctrlParamName()->setFocus();
-        mParams->ctrlParamName()->selectAll();        
+        mParams->ctrlDescription()->setPlainText(param.getDescription());
+        SICommon::enableDeprecated<MethodParamDetailsView, MethodParameter>(mParams, &param, true);
+        mParams->ctrlName()->setFocus();
+        mParams->ctrlName()->selectAll();        
     }
     else
     {
@@ -1087,13 +1112,13 @@ void SIMethod::showParamDetails(SIMethodBase* method, const MethodParameter& par
         mList->ctrlButtonParamRemove()->setEnabled(false);
         mList->ctrlButtonParamInsert()->setEnabled(false);
         
-        mParams->ctrlParamName()->setText(QString());
-        mParams->ctrlParamTypes()->setCurrentText(QString());
-        mParams->ctrlParamHasDefault()->setChecked(false);
-        mParams->ctrlParamDefaultValue()->setText(QString());
-        mParams->ctrlParamDefaultValue()->setEnabled(false);
-        mParams->ctrlParamDescription()->setPlainText(QString());
-        SICommon::enableDeprecated<SIMethodParamDetails, MethodParameter>(mParams, nullptr, false);
+        mParams->ctrlName()->setText(QString());
+        mParams->ctrlTypes()->setCurrentText(QString());
+        mParams->ctrlHasDefault()->setChecked(false);
+        mParams->ctrlValue()->setText(QString());
+        mParams->ctrlValue()->setEnabled(false);
+        mParams->ctrlDescription()->setPlainText(QString());
+        SICommon::enableDeprecated<MethodParamDetailsView, MethodParameter>(mParams, nullptr, false);
     }
 }
 
@@ -1138,6 +1163,10 @@ void SIMethod::setNodeText(QTreeWidgetItem* node, const ElementBase* elem)
 {
     if ((node == nullptr) || (elem == nullptr))
         return;
+
+    // Let the TableCell delegate open an inline editor; which cells actually edit is gated per
+    // cell by isCellEditable() (tree items are non-editable by default, unlike table items).
+    node->setFlags(node->flags() | Qt::ItemIsEditable);
 
     node->setIcon(0, elem->getIcon(ElementBase::eDisplay::DisplayName));
     node->setText(0, elem->getString(ElementBase::eDisplay::DisplayName));
@@ -1341,4 +1370,191 @@ inline QString SIMethod::genName(SIMethodBase* method)
     } while (method->findElement(name) != nullptr);
 
     return name;
+}
+
+int SIMethod::getColumnCount() const
+{
+    return mList->ctrlTableList()->columnCount();
+}
+
+QString SIMethod::getCellText(const QModelIndex& cell) const
+{
+    // The display text already stored on the tree cell seeds the inline editor.
+    return cell.isValid() ? cell.data(Qt::DisplayRole).toString() : QString();
+}
+
+bool SIMethod::isCellEditable(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+        return false;
+
+    SIMethodBase* method = index.sibling(index.row(), 0).data(Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    if (method == nullptr)
+        return false;
+
+    // The id (0 for a method row, the parameter id for a child row) lives at column 1's UserRole.
+    const uint32_t id = index.sibling(index.row(), static_cast<int>(MethodListView::ColType)).data(Qt::ItemDataRole::UserRole).toUInt();
+    const int col = index.column();
+    if (id == 0)
+    {
+        // Method row: the name is always editable; the response link only for a request. The
+        // data-type and value columns are read-only (the kind is set by the details radios and
+        // the value column shows the parameter count).
+        if (col == static_cast<int>(MethodListView::ColName))
+            return true;
+        if (col == static_cast<int>(MethodListView::ColResponse))
+            return (method->getMethodType() == SIMethodBase::eMethodType::MethodRequest);
+        return false;
+    }
+
+    // Parameter row: name and data type are editable; the value only when a default is allowed
+    // (mirroring the details panel, where the value field is enabled under the same condition).
+    if (col == static_cast<int>(MethodListView::ColName))
+        return true;
+    if (col == static_cast<int>(MethodListView::ColType))
+        return true;
+    if (col == static_cast<int>(MethodListView::ColValue))
+    {
+        MethodParameter* param = method->findElement(id);
+        return (param != nullptr) && param->hasDefault() && method->canSwitchDefaultValue(id);
+    }
+
+    return false;
+}
+
+QAbstractItemModel* SIMethod::editorModelFor(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+        return nullptr;
+
+    SIMethodBase* method = index.sibling(index.row(), 0).data(Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    if (method == nullptr)
+        return nullptr;
+
+    const uint32_t id = index.sibling(index.row(), static_cast<int>(MethodListView::ColType)).data(Qt::ItemDataRole::UserRole).toUInt();
+    const int col = index.column();
+    if (id == 0)
+    {
+        // Method row: the Response column offers the responses (its blank first row = no response).
+        if ((col == static_cast<int>(MethodListView::ColResponse)) && (method->getMethodType() == SIMethodBase::eMethodType::MethodRequest))
+            return mReplyModel;
+
+        return nullptr;
+    }
+
+    // Parameter row: the Data Type column offers the parameter types (same model as the details).
+    return (col == static_cast<int>(MethodListView::ColType)) ? mParamTypes : nullptr;
+}
+
+TableCell::eCellValidation SIMethod::validationFor(const QModelIndex& index) const
+{
+    // Only the Name column is a free-text C++ identifier; the other editable columns are combos.
+    return (index.isValid() && (index.column() == static_cast<int>(MethodListView::ColName)))
+        ? TableCell::eCellValidation::Identifier
+        : TableCell::eCellValidation::NoValidation;
+}
+
+void SIMethod::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
+{
+    if (index.isValid() == false)
+        return;
+
+    // Inline editing starts on the current item, so the edited row is the current one.
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    if (item != nullptr)
+    {
+        cellChanged(item, index.column(), newValue);
+    }
+}
+
+void SIMethod::cellChanged(QTreeWidgetItem* item, int column, const QString& newValue)
+{
+    if (item == nullptr)
+        return;
+
+    SIMethodBase* method = item->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+    if (method == nullptr)
+        return;
+
+    const uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    blockBasicSignals(true);
+
+    if (id == 0)
+    {
+        if (column == static_cast<int>(MethodListView::ColName))
+        {
+            if (method->getName() != newValue)
+            {
+                method->setName(newValue);
+                mReplyModel->methodUpdated(method);
+                setNodeText(item, method);
+                mDetails->ctrlName()->setText(method->getName());
+
+                // A renamed response must refresh every request that links to it.
+                if (method->getMethodType() == SIMethodBase::eMethodType::MethodResponse)
+                {
+                    QTreeWidget* table = mList->ctrlTableList();
+                    const int count = table->topLevelItemCount();
+                    for (int i = 0; i < count; ++i)
+                    {
+                        QTreeWidgetItem* top = table->topLevelItem(i);
+                        SIMethodBase* entry = top->data(0, Qt::ItemDataRole::UserRole).value<SIMethodBase*>();
+                        if ((entry == nullptr) || (entry->getMethodType() != SIMethodBase::eMethodType::MethodRequest))
+                            continue;
+
+                        SIMethodRequest* request = static_cast<SIMethodRequest*>(entry);
+                        if (method == static_cast<const SIMethodBase*>(request->getConectedResponse()))
+                            setNodeText(top, entry);
+                    }
+                }
+            }
+        }
+        else if (column == static_cast<int>(MethodListView::ColResponse))
+        {
+            if (method->getMethodType() == SIMethodBase::eMethodType::MethodRequest)
+            {
+                SIMethodResponse* response = (newValue.isEmpty() == false) ? mReplyModel->findResponse(newValue) : nullptr;
+                static_cast<SIMethodRequest*>(method)->connectResponse(response);
+                setNodeText(item, method);
+                mDetails->ctrlReply()->setCurrentText(response != nullptr ? response->getName() : QString());
+            }
+        }
+    }
+    else
+    {
+        MethodParameter* param = method->findElement(id);
+        if (param != nullptr)
+        {
+            if (column == static_cast<int>(MethodListView::ColName))
+            {
+                if (param->getName() != newValue)
+                {
+                    param->setName(newValue);
+                    setNodeText(item, param);
+                    mParams->ctrlName()->setText(param->getName());
+                }
+            }
+            else if (column == static_cast<int>(MethodListView::ColType))
+            {
+                DataTypeBase* dataType = mModel.getDataTypeData().findDataType(newValue);
+                if ((dataType != nullptr) && (param->getParamType() != dataType))
+                {
+                    param->setParamType(dataType);
+                    setNodeText(item, param);
+                    mParams->ctrlTypes()->setCurrentText(param->getType());
+                }
+            }
+            else if (column == static_cast<int>(MethodListView::ColValue))
+            {
+                MethodParameter* updated = method->setDefaultValue(id, newValue);
+                if (updated != nullptr)
+                {
+                    setNodeText(item, updated);
+                    mParams->ctrlValue()->setText(updated->getValue());
+                }
+            }
+        }
+    }
+
+    blockBasicSignals(false);
 }

@@ -402,6 +402,11 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
+    ${LUSAN}/view/common/EditCancelFilter.cpp
+    ${LUSAN}/view/common/MethodDetailsView.cpp
+    ${LUSAN}/view/common/MethodListView.cpp
+    ${LUSAN}/view/common/MethodParamDetailsView.cpp
+    ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
     ${LUSAN}/view/sm/SMEventParamDetails.cpp
@@ -418,8 +423,6 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMIslandEditor.cpp
     ${LUSAN}/view/sm/SMMappingGrid.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
-    ${LUSAN}/view/sm/SMMethodDetails.cpp
-    ${LUSAN}/view/sm/SMMethodList.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
     ${LUSAN}/view/sm/SMStructureLens.cpp

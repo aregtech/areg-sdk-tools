@@ -257,12 +257,12 @@ QIcon SMMethodEntry::getIcon(ElementBase::eDisplay display) const
     switch (mMethodType)
     {
     case eMethodType::Action:
-        return NELusanCommon::iconMethodBroadcast(NELusanCommon::SizeSmall);
+        return NELusanCommon::iconMethodAction(NELusanCommon::SizeSmall);
     case eMethodType::Condition:
-        return NELusanCommon::iconMethodResponse(NELusanCommon::SizeSmall);
+        return NELusanCommon::iconMethodCondition(NELusanCommon::SizeSmall);
     case eMethodType::Trigger:
     default:
-        return NELusanCommon::iconMethodRequest(NELusanCommon::SizeSmall);
+        return NELusanCommon::iconMethodTrigger(NELusanCommon::SizeSmall);
     }
 }
 

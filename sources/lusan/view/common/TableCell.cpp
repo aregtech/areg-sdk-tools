@@ -21,6 +21,7 @@
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
+#include <QAbstractItemView>
 #include <QComboBox>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
@@ -162,6 +163,18 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
         QComboBox* combo = new QComboBox(parent);
         combo->setModel(model);
         combo->setProperty("index", index);
+        // The platform drop-down otherwise inherits the (often narrow) cell width and elides long
+        // entries such as "uint32_t"; widen the popup view to its longest item so every type is
+        // fully visible no matter how narrow the Type column is.
+        if (QAbstractItemView* popup = combo->view())
+        {
+            popup->setTextElideMode(Qt::ElideNone);
+            const int hint = popup->sizeHintForColumn(combo->modelColumn());
+            if (hint > 0)
+            {
+                popup->setMinimumWidth(hint + 24);
+            }
+        }
         // Commit ONLY on user activation (mouse pick or keyboard choose), never on
         // currentTextChanged. Programmatic setCurrentText() in setEditorData() must not commit:
         // when the controller updates the cell it emits the model's dataChanged, which reopens

@@ -17,6 +17,9 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/MdiArea.cpp
     ${LUSAN}/view/common/MdiChild.cpp
     ${LUSAN}/view/common/MdiMainWindow.cpp
+    ${LUSAN}/view/common/MethodDetailsView.cpp
+    ${LUSAN}/view/common/MethodListView.cpp
+    ${LUSAN}/view/common/MethodParamDetailsView.cpp
     ${LUSAN}/view/common/NaviDesignPanel.cpp
     ${LUSAN}/view/common/NaviFileSystem.cpp
     ${LUSAN}/view/common/NaviFsmToolbar.cpp
@@ -56,6 +59,9 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/MdiArea.hpp
     ${LUSAN}/view/common/MdiChild.hpp
     ${LUSAN}/view/common/MdiMainWindow.hpp
+    ${LUSAN}/view/common/MethodDetailsView.hpp
+    ${LUSAN}/view/common/MethodListView.hpp
+    ${LUSAN}/view/common/MethodParamDetailsView.hpp
     ${LUSAN}/view/common/NaviDesignPanel.hpp
     ${LUSAN}/view/common/NaviFileSystem.hpp
     ${LUSAN}/view/common/NaviFsmToolbar.hpp

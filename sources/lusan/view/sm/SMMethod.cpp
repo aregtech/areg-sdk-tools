@@ -35,11 +35,13 @@
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMSymbolIndex.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/common/MethodDetailsView.hpp"
+#include "lusan/view/common/MethodListView.hpp"
+#include "lusan/view/common/MethodParamDetailsView.hpp"
+#include "lusan/view/common/TableCell.hpp"
 #include "lusan/view/sm/SMCodeEditor.hpp"
-#include "lusan/view/sm/SMEventParamDetails.hpp"
-#include "lusan/view/sm/SMMethodDetails.hpp"
-#include "lusan/view/sm/SMMethodList.hpp"
 
+#include <QAbstractItemModel>
 #include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
@@ -76,9 +78,10 @@ namespace
 SMMethod::SMMethod(SMMethodModel& model, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
-    , mList             (new SMMethodList(this))
-    , mDetails          (new SMMethodDetails(this))
-    , mParamDetails     (new SMEventParamDetails(this))
+    , mList             (new MethodListView(MethodListConfig{ tr("Methods:"), tr("Type:"), QStringList{ tr("Trigger"), tr("Action"), tr("Condition") }, false, false }, this))
+    , mDetails          (new MethodDetailsView(MethodViewConfig{ QList<MethodTypeOption>{ { tr("Trigger"), QString() }, { tr("Action"), QString() }, { tr("Condition"), QString() } }, false, true, true, true, true }, this))
+    , mParamDetails     (new MethodParamDetailsView(tr("Details:"), this))
+    , mTableCell        (nullptr)
     , mMethodNameCounter(0)
 {
     buildUi();
@@ -86,7 +89,7 @@ SMMethod::SMMethod(SMMethodModel& model, QWidget* parent /*= nullptr*/)
     refreshAll();
 }
 
-SMMethodList* SMMethod::getList() const
+MethodListView* SMMethod::getList() const
 {
     return mList;
 }
@@ -141,10 +144,10 @@ void SMMethod::setupSignals()
     connect(mList->ctrlButtonRemove()   , &QToolButton::clicked           , this, &SMMethod::onRemoveClicked);
     connect(mList->ctrlButtonMoveUp()   , &QToolButton::clicked           , this, &SMMethod::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown() , &QToolButton::clicked           , this, &SMMethod::onMoveDownClicked);
-    connect(mList->ctrlButtonAddParam() , &QToolButton::clicked           , this, [this]() { addNewParam(); });
-    connect(mList->actionNewTrigger()   , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Trigger); });
-    connect(mList->actionNewAction()    , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Action); });
-    connect(mList->actionNewCondition() , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Condition); });
+    connect(mList->ctrlButtonParamAdd() , &QToolButton::clicked           , this, [this]() { addNewParam(); });
+    connect(mList->typeAction(0)        , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Trigger); });
+    connect(mList->typeAction(1)        , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Action); });
+    connect(mList->typeAction(2)        , &QAction::triggered             , this, [this]() { addNewMethod(SMMethodEntry::eMethodType::Condition); });
 
     QShortcut* scAdd    = new QShortcut(QKeySequence(Qt::Key_Insert), table);
     QShortcut* scRemove = new QShortcut(QKeySequence(Qt::Key_Delete), table);
@@ -153,12 +156,12 @@ void SMMethod::setupSignals()
     connect(scAdd   , &QShortcut::activated, this, &SMMethod::onAddClicked);
     connect(scRemove, &QShortcut::activated, this, &SMMethod::onRemoveClicked);
 
-    mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
-    connect(mDetails->ctrlName()     , &QLineEdit::textChanged    , this, &SMMethod::onMethodNameTextChanged);
+    // The shared MethodDetailsView installs the C++ identifier validator on the Name field.
+    connect(mDetails                 , &MethodDetailsView::nameEdited, this, &SMMethod::onMethodNameTextChanged);
     connect(mDetails->ctrlName()     , &QLineEdit::editingFinished, this, &SMMethod::onMethodNameCommitted);
-    connect(mDetails->ctrlTrigger()  , &QRadioButton::toggled     , this, &SMMethod::onMethodTypeToggled);
-    connect(mDetails->ctrlAction()   , &QRadioButton::toggled     , this, &SMMethod::onMethodTypeToggled);
-    connect(mDetails->ctrlCondition(), &QRadioButton::toggled     , this, &SMMethod::onMethodTypeToggled);
+    connect(mDetails->ctrlType(0)  , &QRadioButton::toggled     , this, &SMMethod::onMethodTypeToggled);
+    connect(mDetails->ctrlType(1)   , &QRadioButton::toggled     , this, &SMMethod::onMethodTypeToggled);
+    connect(mDetails->ctrlType(2), &QRadioButton::toggled     , this, &SMMethod::onMethodTypeToggled);
     connect(mDetails->ctrlReturn()->lineEdit(), &QLineEdit::editingFinished, this, &SMMethod::onReturnCommitted);
     connect(mDetails->ctrlReturn()   , &QComboBox::activated      , this, [this](int) { onReturnCommitted(); });
     connect(mDetails->ctrlHandler()  , &QRadioButton::toggled     , this, &SMMethod::onImplementToggled);
@@ -208,8 +211,8 @@ void SMMethod::setupSignals()
         }
     });
 
-    mParamDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mParamDetails->ctrlName()));
-    connect(mParamDetails->ctrlName()      , &QLineEdit::textChanged        , this, &SMMethod::onParamNameTextChanged);
+    // The shared MethodParamDetailsView installs the C++ identifier validator on the Name field.
+    connect(mParamDetails                  , &MethodParamDetailsView::nameEdited, this, &SMMethod::onParamNameTextChanged);
     connect(mParamDetails->ctrlName()      , &QLineEdit::editingFinished    , this, &SMMethod::onParamNameCommitted);
     connect(mParamDetails->ctrlTypes()     , &QComboBox::currentIndexChanged, this, &SMMethod::onParamTypeChanged);
     connect(mParamDetails->ctrlHasDefault(), &QCheckBox::toggled            , this, &SMMethod::onParamHasDefaultToggled);
@@ -238,6 +241,21 @@ void SMMethod::setupSignals()
     connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
     connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
     connect(&notifier, &DocModelNotifier::listReordered , this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
+
+    // Inline (in-table) editing: the shared TableCell delegate opens an editor per cell. The tree
+    // is heterogeneous (method rows vs parameter rows), so which cells are editable, whether a
+    // cell shows a combo or a text editor, and how it is validated are resolved per cell by the
+    // controller. Wait-for-end mode commits a text edit once (on editing finished) so an inline
+    // rename pushes a single undo command; the commit routes through cellChanged().
+    mTableCell = new TableCell(table, this, true);
+    mTableCell->setEditableCheck([this](const QModelIndex& idx) { return isCellEditable(idx); });
+    mTableCell->setEditorModelResolver([this](const QModelIndex& idx) { return editorModelFor(idx); });
+    mTableCell->setValidationResolver([this](const QModelIndex& idx) { return validationFor(idx); });
+    for (int col = 0; col < table->columnCount(); ++col)
+    {
+        table->setItemDelegateForColumn(col, mTableCell);
+    }
+    connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SMMethod::onEditorDataChanged);
 }
 
 bool SMMethod::eventFilter(QObject* watched, QEvent* event)
@@ -367,6 +385,10 @@ void SMMethod::populateParamTypeCombo()
 
 void SMMethod::setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const
 {
+    // Let the TableCell delegate open an inline editor; which cells actually edit is gated per
+    // cell by isCellEditable() (tree items are non-editable by default, unlike table items).
+    node->setFlags(node->flags() | Qt::ItemIsEditable);
+
     node->setIcon(0, elem->getIcon(ElementBase::eDisplay::DisplayName));
     node->setText(0, elem->getString(ElementBase::eDisplay::DisplayName));
     node->setIcon(1, elem->getIcon(ElementBase::eDisplay::DisplayType));
@@ -502,7 +524,7 @@ void SMMethod::updateToolbar(eRowKind kind)
     mList->ctrlButtonAdd()->setEnabled(true);
     mList->ctrlButtonInsert()->setEnabled(hasEntry);
     mList->ctrlButtonRemove()->setEnabled(hasEntry);
-    mList->ctrlButtonAddParam()->setEnabled(hasEntry);
+    mList->ctrlButtonParamAdd()->setEnabled(hasEntry);
 
     if (hasEntry == false)
     {
@@ -517,9 +539,9 @@ void SMMethod::showMethodForm(SMMethodEntry* method)
     const bool isEmbedded = (method->getImplement() == SMMethodEntry::eImplement::Embedded);
 
     const QSignalBlocker blockName(mDetails->ctrlName());
-    const QSignalBlocker blockTrigger(mDetails->ctrlTrigger());
-    const QSignalBlocker blockAction(mDetails->ctrlAction());
-    const QSignalBlocker blockCondition(mDetails->ctrlCondition());
+    const QSignalBlocker blockTrigger(mDetails->ctrlType(0));
+    const QSignalBlocker blockAction(mDetails->ctrlType(1));
+    const QSignalBlocker blockCondition(mDetails->ctrlType(2));
     const QSignalBlocker blockReturn(mDetails->ctrlReturn());
     const QSignalBlocker blockHandler(mDetails->ctrlHandler());
     const QSignalBlocker blockEmbedded(mDetails->ctrlEmbedded());
@@ -532,9 +554,9 @@ void SMMethod::showMethodForm(SMMethodEntry* method)
     mDetails->ctrlDescription()->setEnabled(true);
     mDetails->ctrlDescription()->setPlainText(method->getDescription());
 
-    mDetails->ctrlTrigger()->setChecked(method->isTrigger());
-    mDetails->ctrlAction()->setChecked(method->isAction());
-    mDetails->ctrlCondition()->setChecked(isCondition);
+    mDetails->ctrlType(0)->setChecked(method->isTrigger());
+    mDetails->ctrlType(1)->setChecked(method->isAction());
+    mDetails->ctrlType(2)->setChecked(isCondition);
 
     mDetails->ctrlReturn()->setCurrentText(method->getReturn());
     mDetails->ctrlHandler()->setChecked(isEmbedded == false);
@@ -967,9 +989,9 @@ void SMMethod::onMethodTypeToggled(bool checked)
         return;
 
     SMMethodEntry::eMethodType type = SMMethodEntry::eMethodType::Trigger;
-    if (mDetails->ctrlAction()->isChecked())
+    if (mDetails->ctrlType(1)->isChecked())
         type = SMMethodEntry::eMethodType::Action;
-    else if (mDetails->ctrlCondition()->isChecked())
+    else if (mDetails->ctrlType(2)->isChecked())
         type = SMMethodEntry::eMethodType::Condition;
 
     mModel.setMethodType(method->getId(), type);
@@ -1198,6 +1220,131 @@ void SMMethod::onDataTypesChanged()
         if (param != nullptr)
         {
             mParamDetails->ctrlTypes()->setCurrentText(param->getType());
+        }
+    }
+}
+
+int SMMethod::getColumnCount() const
+{
+    return mList->ctrlTableList()->columnCount();
+}
+
+QString SMMethod::getCellText(const QModelIndex& cell) const
+{
+    // The display text already stored on the tree cell seeds the inline editor.
+    return cell.isValid() ? cell.data(Qt::DisplayRole).toString() : QString();
+}
+
+bool SMMethod::isCellEditable(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+        return false;
+
+    const eRowKind kind = static_cast<eRowKind>(index.sibling(index.row(), 0).data(Qt::ItemDataRole::UserRole).toInt());
+    const int col = index.column();
+    if (kind == eRowKind::Method)
+    {
+        // Only the name is editable inline; the type is set by the details radios and the value
+        // column shows the parameter count (or, for a condition, the return type).
+        return (col == static_cast<int>(MethodListView::ColName));
+    }
+
+    if (kind == eRowKind::Param)
+    {
+        if ((col == static_cast<int>(MethodListView::ColName)) || (col == static_cast<int>(MethodListView::ColType)))
+            return true;
+        if (col == static_cast<int>(MethodListView::ColValue))
+        {
+            // The value is editable only when the parameter has a default (mirroring the details
+            // panel, where the value field is enabled under the same condition).
+            SMMethodEntry* method = mModel.findMethod(index.sibling(index.row(), static_cast<int>(MethodListView::ColType)).data(Qt::ItemDataRole::UserRole).toUInt());
+            const uint32_t paramId = index.sibling(index.row(), static_cast<int>(MethodListView::ColValue)).data(Qt::ItemDataRole::UserRole).toUInt();
+            MethodParameter* param = (method != nullptr) ? mModel.findParam(method, paramId) : nullptr;
+            return (param != nullptr) && param->hasDefault();
+        }
+    }
+
+    return false;
+}
+
+QAbstractItemModel* SMMethod::editorModelFor(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+        return nullptr;
+
+    const eRowKind kind = static_cast<eRowKind>(index.sibling(index.row(), 0).data(Qt::ItemDataRole::UserRole).toInt());
+    // Parameter Data Type column: reuse the details type combo's model so the inline list and the
+    // details list are identical and stay in sync by construction.
+    if ((kind == eRowKind::Param) && (index.column() == static_cast<int>(MethodListView::ColType)))
+        return mParamDetails->ctrlTypes()->model();
+
+    return nullptr;
+}
+
+TableCell::eCellValidation SMMethod::validationFor(const QModelIndex& index) const
+{
+    // Only the Name column is a free-text C++ identifier; the Data Type column is a combo.
+    return (index.isValid() && (index.column() == static_cast<int>(MethodListView::ColName)))
+        ? TableCell::eCellValidation::Identifier
+        : TableCell::eCellValidation::NoValidation;
+}
+
+void SMMethod::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
+{
+    if (index.isValid() == false)
+        return;
+
+    // Inline editing starts on the current item, so the edited row is the current one.
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    if (item == nullptr)
+        return;
+
+    const int kind         = item->data(0, Qt::ItemDataRole::UserRole).toInt();
+    const uint32_t methodId = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    const uint32_t paramId  = item->data(2, Qt::ItemDataRole::UserRole).toUInt();
+    const int col           = index.column();
+
+    // Committing here would rebuild the tree (via the model's notifier) while the delegate editor
+    // is still closing; defer to the next event-loop turn so the editor tears down cleanly first.
+    QMetaObject::invokeMethod(this, [this, kind, methodId, paramId, col, newValue]()
+        {
+            commitInlineEdit(kind, methodId, paramId, col, newValue);
+        }, Qt::QueuedConnection);
+}
+
+void SMMethod::commitInlineEdit(int kind, uint32_t methodId, uint32_t paramId, int column, const QString& newValue)
+{
+    SMMethodEntry* method = mModel.findMethod(methodId);
+    if (method == nullptr)
+        return;
+
+    if (static_cast<eRowKind>(kind) == eRowKind::Method)
+    {
+        if ((column == static_cast<int>(MethodListView::ColName)) && (method->getName() != newValue))
+        {
+            mModel.renameMethod(methodId, newValue);
+        }
+    }
+    else if (static_cast<eRowKind>(kind) == eRowKind::Param)
+    {
+        MethodParameter* param = mModel.findParam(method, paramId);
+        if (param == nullptr)
+            return;
+
+        if (column == static_cast<int>(MethodListView::ColName))
+        {
+            if (param->getName() != newValue)
+                mModel.setParamName(method, paramId, newValue);
+        }
+        else if (column == static_cast<int>(MethodListView::ColType))
+        {
+            if (param->getType() != newValue)
+                mModel.setParamType(method, paramId, newValue);
+        }
+        else if (column == static_cast<int>(MethodListView::ColValue))
+        {
+            if (param->hasDefault() && (param->getValue() != newValue))
+                mModel.setParamDefault(method, paramId, true, newValue);
         }
     }
 }

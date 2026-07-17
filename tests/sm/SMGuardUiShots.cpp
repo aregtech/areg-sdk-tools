@@ -34,7 +34,7 @@
 #include "lusan/view/sm/SMIslandEditor.hpp"
 #include "lusan/view/sm/SMMappingGrid.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
-#include "lusan/view/sm/SMMethodList.hpp"
+#include "lusan/view/common/MethodListView.hpp"
 #include "lusan/view/sm/SMOperandField.hpp"
 #include "lusan/view/sm/SMStructureLens.hpp"
 
