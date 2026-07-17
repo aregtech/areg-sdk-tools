@@ -1,5 +1,5 @@
-#ifndef LUSAN_VIEW_SM_SMDATATYPEDETAILS_HPP
-#define LUSAN_VIEW_SM_SMDATATYPEDETAILS_HPP
+#ifndef LUSAN_VIEW_COMMON_DATATYPEDETAILSVIEW_HPP
+#define LUSAN_VIEW_COMMON_DATATYPEDETAILSVIEW_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -11,11 +11,11 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMDataTypeDetails.hpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/DataTypeDetailsView.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Data Types page — selected data type editor.
+ *  \brief       Lusan application, shared Data Types page -- selected data type editor.
  *
  ************************************************************************/
 
@@ -32,19 +32,23 @@ class QPushButton;
 class QRadioButton;
 
 /**
- * \brief   The selected data type editor, code-built to mirror SIDataTypeDetails: a
- *          "Details:" group with label-beside-control rows — Name, a "Type Definition:"
- *          radio group (Structure/Enumeration/Imported/Container), an
- *          "Enumeration Details:" group (Derived), an "Import Details:" group
- *          (Location/Browse, Namespace, Object), a "Container Details:" group (Object,
- *          Key, Value), Description, Deprecated.
+ * \brief   The selected data type editor shared by the Service Interface (.siml), State
+ *          Machine (.fsml) and future Data Type (.dtml) documents: a "Details:" group with
+ *          label-beside-control rows -- Name, a "Type Definition:" radio group
+ *          (Structure/Enumeration/Imported/Container), an "Enumeration Details:" group
+ *          (Derived), an "Import Details:" group (Location/Browse, Namespace, Object), a
+ *          "Container Details:" group (Object, Key, Value), Description, Deprecated.
+ *
+ *          The view is controller-agnostic: it only builds widgets, installs the shared
+ *          identifier validator on the Name field, and exposes ctrl*() accessors. Each
+ *          document's page controller owns the model/tree and wires the signals.
  **/
-class SMDataTypeDetails : public QWidget
+class DataTypeDetailsView : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit SMDataTypeDetails(QWidget* parent = nullptr);
+    explicit DataTypeDetailsView(QWidget* parent = nullptr);
 
     QLineEdit* ctrlName() const;
     QRadioButton* ctrlTypeStruct() const;
@@ -99,4 +103,4 @@ private:
     QLineEdit*      mDeprecateHint;
 };
 
-#endif  // LUSAN_VIEW_SM_SMDATATYPEDETAILS_HPP
+#endif  // LUSAN_VIEW_COMMON_DATATYPEDETAILSVIEW_HPP

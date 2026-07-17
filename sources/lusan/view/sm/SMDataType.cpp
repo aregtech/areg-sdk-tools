@@ -33,10 +33,10 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
+#include "lusan/view/common/DataTypeDetailsView.hpp"
+#include "lusan/view/common/DataTypeFieldDetailsView.hpp"
+#include "lusan/view/common/DataTypeListView.hpp"
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
-#include "lusan/view/sm/SMDataTypeDetails.hpp"
-#include "lusan/view/sm/SMDataTypeFieldDetails.hpp"
-#include "lusan/view/sm/SMDataTypeList.hpp"
 
 #include <QAction>
 #include <QCheckBox>
@@ -74,9 +74,9 @@ namespace
 SMDataType::SMDataType(SMDataTypeModel& model, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
-    , mList             (new SMDataTypeList(this))
-    , mDetails          (new SMDataTypeDetails(this))
-    , mFields           (new SMDataTypeFieldDetails(this))
+    , mList             (new DataTypeListView(this))
+    , mDetails          (new DataTypeDetailsView(this))
+    , mFields           (new DataTypeFieldDetailsView(this))
     , mNameCounter      (0)
     , mCurUrl           ( )
     , mCurFile          ( )
@@ -86,7 +86,7 @@ SMDataType::SMDataType(SMDataTypeModel& model, QWidget* parent /*= nullptr*/)
     refreshAll();
 }
 
-SMDataTypeList* SMDataType::getList() const
+DataTypeListView* SMDataType::getList() const
 {
     return mList;
 }
@@ -148,7 +148,7 @@ void SMDataType::setupSignals()
     connect(mList->actionNewImport()       , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Imported); });
     connect(mList->actionNewContainer()    , &QAction::triggered              , this, [this]() { addNewType(DataTypeBase::eCategory::Container); });
 
-    mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
+    // The identifier validator is installed inside the shared DataTypeDetailsView.
     connect(mDetails->ctrlName()            , &QLineEdit::editingFinished      , this, &SMDataType::onNameCommitted);
     // Live-preview the typed name into the selected type's Name column (no command; the real
     // rename commits on editingFinished). Selection sets the field under a QSignalBlocker, so
@@ -176,7 +176,7 @@ void SMDataType::setupSignals()
     connect(mDetails->ctrlDeprecateHint()   , &QLineEdit::editingFinished      , this, &SMDataType::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
 
-    mFields->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mFields->ctrlName()));
+    // The identifier validator is installed inside the shared DataTypeFieldDetailsView.
     connect(mFields->ctrlName()             , &QLineEdit::editingFinished      , this, &SMDataType::onFieldNameCommitted);
     connect(mFields->ctrlName()             , &QLineEdit::textChanged          , this, [this](const QString& text) {
         if (currentFieldId() != 0)

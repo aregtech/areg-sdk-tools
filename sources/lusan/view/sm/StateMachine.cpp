@@ -26,7 +26,7 @@
 #include "lusan/view/sm/SMConstant.hpp"
 #include "lusan/view/common/ConstantListView.hpp"
 #include "lusan/view/sm/SMDataType.hpp"
-#include "lusan/view/sm/SMDataTypeList.hpp"
+#include "lusan/view/common/DataTypeListView.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEvent.hpp"
 #include "lusan/view/sm/SMEventList.hpp"

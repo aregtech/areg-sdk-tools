@@ -4,6 +4,9 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/common/ConstantDetailsView.cpp
     ${LUSAN}/view/common/ConstantListView.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
+    ${LUSAN}/view/common/DataTypeDetailsView.cpp
+    ${LUSAN}/view/common/DataTypeFieldDetailsView.cpp
+    ${LUSAN}/view/common/DataTypeListView.cpp
     ${LUSAN}/view/common/DirSelectionDialog.cpp
     ${LUSAN}/view/common/IEDataTypeConsumer.cpp
     ${LUSAN}/view/common/MdiArea.cpp
@@ -35,6 +38,9 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/common/ConstantDetailsView.hpp
     ${LUSAN}/view/common/ConstantListView.hpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.hpp
+    ${LUSAN}/view/common/DataTypeDetailsView.hpp
+    ${LUSAN}/view/common/DataTypeFieldDetailsView.hpp
+    ${LUSAN}/view/common/DataTypeListView.hpp
     ${LUSAN}/view/common/DirSelectionDialog.hpp
     ${LUSAN}/view/common/IEDataTypeConsumer.hpp
     ${LUSAN}/view/common/MdiArea.hpp

@@ -244,6 +244,15 @@ QValidator* NELusanCommon::createPathValidator(QObject* parent)
     return new QRegularExpressionValidator(QRegularExpression(QStringLiteral("[A-Za-z0-9_./\\\\:\\- ]*")), parent);
 }
 
+QValidator* NELusanCommon::createQualifiedNameValidator(QObject* parent)
+{
+    // A C++ qualified name: one or more identifiers joined by '::' (e.g. NameSpace::Inner).
+    // A full match is Acceptable; a prefix such as "NameSpace" or "NameSpace::" is Intermediate,
+    // so the namespace can be typed segment by segment but a leading digit or a space is rejected.
+    static const QString _pattern{ QStringLiteral("[A-Za-z_][A-Za-z0-9_]*(::[A-Za-z_][A-Za-z0-9_]*)*") };
+    return new QRegularExpressionValidator(QRegularExpression(_pattern), parent);
+}
+
 QIcon NELusanCommon::chevronIcon(bool expanded, const QColor& color, const QSize& size /*= QSize{ 16, 16 }*/)
 {
     const int w = (size.width()  > 0) ? size.width()  : 16;

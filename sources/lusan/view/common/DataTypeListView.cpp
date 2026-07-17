@@ -9,17 +9,18 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMDataTypeList.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/DataTypeListView.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Data Types page — data type list panel.
+ *  \brief       Lusan application, shared Data Types page -- data type list panel.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMDataTypeList.hpp"
+#include "lusan/view/common/DataTypeListView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
+#include <QAbstractItemView>
 #include <QAction>
 #include <QFrame>
 #include <QGroupBox>
@@ -30,7 +31,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
-SMDataTypeList::SMDataTypeList(QWidget* parent /*= nullptr*/)
+DataTypeListView::DataTypeListView(QWidget* parent /*= nullptr*/)
     : QWidget               (parent)
     , mTable                (nullptr)
     , mButtonAdd            (nullptr)
@@ -49,7 +50,7 @@ SMDataTypeList::SMDataTypeList(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMDataTypeList::buildUi()
+void DataTypeListView::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -110,6 +111,8 @@ void SMDataTypeList::buildUi()
     mTable->setCursor(Qt::PointingHandCursor);
     mTable->setMouseTracking(true);
     mTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
+    mTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    mTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     mTable->setDropIndicatorShown(false);
     mTable->setIconSize(QSize(16, 16));
     mTable->setSortingEnabled(false);
@@ -120,72 +123,77 @@ void SMDataTypeList::buildUi()
     mTable->header()->setMinimumSectionSize(50);
     mTable->setHeaderLabels(QStringList{ tr("Name:"), tr("Data Type:"), tr("Default Value:") });
 
+    QHeaderView* header = mTable->header();
+    header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(2, QHeaderView::Stretch);
+
     groupLayout->addWidget(toolbar);
     groupLayout->addWidget(mTable);
     root->addWidget(group);
 }
 
-QTreeWidget* SMDataTypeList::ctrlTableList() const
+QTreeWidget* DataTypeListView::ctrlTableList() const
 {
     return mTable;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonAdd() const
+QToolButton* DataTypeListView::ctrlButtonAdd() const
 {
     return mButtonAdd;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonInsert() const
+QToolButton* DataTypeListView::ctrlButtonInsert() const
 {
     return mButtonInsert;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonRemove() const
+QToolButton* DataTypeListView::ctrlButtonRemove() const
 {
     return mButtonRemove;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonMoveUp() const
+QToolButton* DataTypeListView::ctrlButtonMoveUp() const
 {
     return mButtonMoveUp;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonMoveDown() const
+QToolButton* DataTypeListView::ctrlButtonMoveDown() const
 {
     return mButtonMoveDown;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonAddField() const
+QToolButton* DataTypeListView::ctrlButtonAddField() const
 {
     return mButtonAddField;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonInsertField() const
+QToolButton* DataTypeListView::ctrlButtonInsertField() const
 {
     return mButtonInsertField;
 }
 
-QToolButton* SMDataTypeList::ctrlButtonRemoveField() const
+QToolButton* DataTypeListView::ctrlButtonRemoveField() const
 {
     return mButtonRemoveField;
 }
 
-QAction* SMDataTypeList::actionNewStruct() const
+QAction* DataTypeListView::actionNewStruct() const
 {
     return mActNewStruct;
 }
 
-QAction* SMDataTypeList::actionNewEnum() const
+QAction* DataTypeListView::actionNewEnum() const
 {
     return mActNewEnum;
 }
 
-QAction* SMDataTypeList::actionNewImport() const
+QAction* DataTypeListView::actionNewImport() const
 {
     return mActNewImport;
 }
 
-QAction* SMDataTypeList::actionNewContainer() const
+QAction* DataTypeListView::actionNewContainer() const
 {
     return mActNewContainer;
 }

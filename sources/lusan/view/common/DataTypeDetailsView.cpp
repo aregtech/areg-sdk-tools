@@ -9,15 +9,16 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMDataTypeDetails.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/DataTypeDetailsView.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Data Types page — selected data type editor.
+ *  \brief       Lusan application, shared Data Types page -- selected data type editor.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMDataTypeDetails.hpp"
+#include "lusan/view/common/DataTypeDetailsView.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -31,7 +32,7 @@
 #include <QRadioButton>
 #include <QVBoxLayout>
 
-SMDataTypeDetails::SMDataTypeDetails(QWidget* parent /*= nullptr*/)
+DataTypeDetailsView::DataTypeDetailsView(QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
     , mForm             (nullptr)
     , mName             (nullptr)
@@ -60,7 +61,7 @@ SMDataTypeDetails::SMDataTypeDetails(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMDataTypeDetails::buildUi()
+void DataTypeDetailsView::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -72,6 +73,9 @@ void SMDataTypeDetails::buildUi()
     mForm->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
 
     mName = new QLineEdit(details);
+    // Single source of truth for name validation: forbid invalid identifier characters at
+    // the keystroke level, so every document that reuses this view behaves identically.
+    mName->setValidator(NELusanCommon::createIdentifierValidator(mName));
     mForm->addRow(tr("Name:"), mName);
 
     QGroupBox* typeGroup = new QGroupBox(tr("Type Definition:"), details);
@@ -106,8 +110,13 @@ void SMDataTypeDetails::buildUi()
     locationLayout->addWidget(mImportBrowse);
     importForm->addRow(tr("Location:"), locationRow);
     mImportNamespace = new QLineEdit(mImportGroup);
+    // The namespace must be a valid C++ qualified name (identifiers joined by '::'); forbid
+    // any other character at the keystroke level so the table never receives invalid input.
+    mImportNamespace->setValidator(NELusanCommon::createQualifiedNameValidator(mImportNamespace));
     importForm->addRow(tr("Namespace:"), mImportNamespace);
     mImportObject = new QLineEdit(mImportGroup);
+    // The object is a single C++ identifier; forbid invalid characters as they are typed.
+    mImportObject->setValidator(NELusanCommon::createIdentifierValidator(mImportObject));
     importForm->addRow(tr("Object:"), mImportObject);
     mImportLabel = new QLabel(tr("Imported:"), details);
     mForm->addRow(mImportLabel, mImportGroup);
@@ -137,99 +146,99 @@ void SMDataTypeDetails::buildUi()
     root->addWidget(details);
 }
 
-QLineEdit* SMDataTypeDetails::ctrlName() const
+QLineEdit* DataTypeDetailsView::ctrlName() const
 {
     return mName;
 }
 
-QRadioButton* SMDataTypeDetails::ctrlTypeStruct() const
+QRadioButton* DataTypeDetailsView::ctrlTypeStruct() const
 {
     return mTypeStruct;
 }
 
-QRadioButton* SMDataTypeDetails::ctrlTypeEnum() const
+QRadioButton* DataTypeDetailsView::ctrlTypeEnum() const
 {
     return mTypeEnum;
 }
 
-QRadioButton* SMDataTypeDetails::ctrlTypeImport() const
+QRadioButton* DataTypeDetailsView::ctrlTypeImport() const
 {
     return mTypeImport;
 }
 
-QComboBox* SMDataTypeDetails::ctrlEnumDerived() const
+QComboBox* DataTypeDetailsView::ctrlEnumDerived() const
 {
     return mEnumDerived;
 }
 
-QLineEdit* SMDataTypeDetails::ctrlImportLocation() const
+QLineEdit* DataTypeDetailsView::ctrlImportLocation() const
 {
     return mImportLocation;
 }
 
-QPushButton* SMDataTypeDetails::ctrlButtonBrowse() const
+QPushButton* DataTypeDetailsView::ctrlButtonBrowse() const
 {
     return mImportBrowse;
 }
 
-QLineEdit* SMDataTypeDetails::ctrlImportNamespace() const
+QLineEdit* DataTypeDetailsView::ctrlImportNamespace() const
 {
     return mImportNamespace;
 }
 
-QLineEdit* SMDataTypeDetails::ctrlImportObject() const
+QLineEdit* DataTypeDetailsView::ctrlImportObject() const
 {
     return mImportObject;
 }
 
-QRadioButton* SMDataTypeDetails::ctrlTypeContainer() const
+QRadioButton* DataTypeDetailsView::ctrlTypeContainer() const
 {
     return mTypeContainer;
 }
 
-QComboBox* SMDataTypeDetails::ctrlContainerObject() const
+QComboBox* DataTypeDetailsView::ctrlContainerObject() const
 {
     return mContainerObject;
 }
 
-QComboBox* SMDataTypeDetails::ctrlContainerKey() const
+QComboBox* DataTypeDetailsView::ctrlContainerKey() const
 {
     return mContainerKey;
 }
 
-QComboBox* SMDataTypeDetails::ctrlContainerValue() const
+QComboBox* DataTypeDetailsView::ctrlContainerValue() const
 {
     return mContainerValue;
 }
 
-QPlainTextEdit* SMDataTypeDetails::ctrlDescription() const
+QPlainTextEdit* DataTypeDetailsView::ctrlDescription() const
 {
     return mDescription;
 }
 
-QCheckBox* SMDataTypeDetails::ctrlDeprecated() const
+QCheckBox* DataTypeDetailsView::ctrlDeprecated() const
 {
     return mDeprecated;
 }
 
-QLineEdit* SMDataTypeDetails::ctrlDeprecateHint() const
+QLineEdit* DataTypeDetailsView::ctrlDeprecateHint() const
 {
     return mDeprecateHint;
 }
 
-void SMDataTypeDetails::setEnumRowVisible(bool visible)
+void DataTypeDetailsView::setEnumRowVisible(bool visible)
 {
     mForm->setRowVisible(mEnumLabel, visible);
     mForm->setRowVisible(mEnumGroup, visible);
 }
 
-void SMDataTypeDetails::setImportRowVisible(bool visible)
+void DataTypeDetailsView::setImportRowVisible(bool visible)
 {
     mForm->setRowVisible(mImportLabel, visible);
     mForm->setRowVisible(mImportGroup, visible);
 }
 
-void SMDataTypeDetails::setContainerRowVisible(bool visible)
+void DataTypeDetailsView::setContainerRowVisible(bool visible)
 {
     mForm->setRowVisible(mContainerLabel, visible);
     mForm->setRowVisible(mContainerGroup, visible);

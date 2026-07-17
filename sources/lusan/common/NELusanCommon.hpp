@@ -684,6 +684,14 @@ namespace NELusanCommon
     QValidator* createPathValidator(QObject* parent);
 
     /**
+     * \brief   Creates a validator that filters keystrokes to a valid C++ qualified name:
+     *          one or more identifiers joined by '::' (letters, digits, '_' and '::' only).
+     *          Use for the imported-type Namespace field so only valid characters can be typed.
+     * \param   parent  The owner of the returned validator (manages its lifetime).
+     **/
+    QValidator* createQualifiedNameValidator(QObject* parent);
+
+    /**
      * \brief   Paints a crisp, theme-aware chevron icon (a stable replacement for the
      *          platform-dependent QStyle::SP_Arrow* pixmaps). Points down when expanded,
      *          right when collapsed.

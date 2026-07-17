@@ -9,15 +9,16 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMDataTypeFieldDetails.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/DataTypeFieldDetailsView.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Data Types page — structure/enumeration field editor.
+ *  \brief       Lusan application, shared Data Types page -- structure/enumeration field editor.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMDataTypeFieldDetails.hpp"
+#include "lusan/view/common/DataTypeFieldDetailsView.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -28,7 +29,7 @@
 #include <QPlainTextEdit>
 #include <QVBoxLayout>
 
-SMDataTypeFieldDetails::SMDataTypeFieldDetails(QWidget* parent /*= nullptr*/)
+DataTypeFieldDetailsView::DataTypeFieldDetailsView(QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
     , mName             (nullptr)
     , mType             (nullptr)
@@ -43,7 +44,7 @@ SMDataTypeFieldDetails::SMDataTypeFieldDetails(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMDataTypeFieldDetails::buildUi()
+void DataTypeFieldDetailsView::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -55,6 +56,9 @@ void SMDataTypeFieldDetails::buildUi()
     mFieldForm->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
 
     mName = new QLineEdit(details);
+    // Single source of truth for name validation: forbid invalid identifier characters at
+    // the keystroke level, so every document that reuses this view behaves identically.
+    mName->setValidator(NELusanCommon::createIdentifierValidator(mName));
     mFieldForm->addRow(tr("Name:"), mName);
 
     QGroupBox* typeValue = new QGroupBox(tr("Field Type && Value Details:"), details);
@@ -91,42 +95,42 @@ void SMDataTypeFieldDetails::buildUi()
     root->addWidget(details);
 }
 
-QLineEdit* SMDataTypeFieldDetails::ctrlName() const
+QLineEdit* DataTypeFieldDetailsView::ctrlName() const
 {
     return mName;
 }
 
-QComboBox* SMDataTypeFieldDetails::ctrlTypes() const
+QComboBox* DataTypeFieldDetailsView::ctrlTypes() const
 {
     return mType;
 }
 
-QLineEdit* SMDataTypeFieldDetails::ctrlValue() const
+QLineEdit* DataTypeFieldDetailsView::ctrlValue() const
 {
     return mValue;
 }
 
-QPlainTextEdit* SMDataTypeFieldDetails::ctrlDescription() const
+QPlainTextEdit* DataTypeFieldDetailsView::ctrlDescription() const
 {
     return mDescription;
 }
 
-QCheckBox* SMDataTypeFieldDetails::ctrlDeprecated() const
+QCheckBox* DataTypeFieldDetailsView::ctrlDeprecated() const
 {
     return mDeprecated;
 }
 
-QLineEdit* SMDataTypeFieldDetails::ctrlDeprecateHint() const
+QLineEdit* DataTypeFieldDetailsView::ctrlDeprecateHint() const
 {
     return mDeprecateHint;
 }
 
-void SMDataTypeFieldDetails::setTypeRowVisible(bool visible)
+void DataTypeFieldDetailsView::setTypeRowVisible(bool visible)
 {
     mTypeValueForm->setRowVisible(mType, visible);
 }
 
-void SMDataTypeFieldDetails::showValueHint(const QString& reason)
+void DataTypeFieldDetailsView::showValueHint(const QString& reason)
 {
     mValueHint->setText(reason);
     mValueHint->setVisible(reason.isEmpty() == false);

@@ -22,6 +22,8 @@
 #include "lusan/common/NELusanCommon.hpp"
 
 #include <QComboBox>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include <QStandardItemModel>
 #include <QLineEdit>
 #include <QStyleFactory>
@@ -33,6 +35,9 @@ TableCell::TableCell(QWidget* parent, IETableHelper * tableHelper, bool waitEndE
     , mModels   ( )
     , mColumns  ( )
     , mValidation( )
+    , mEditable ( )
+    , mModelOf  ( )
+    , mValidOf  ( )
     , mParent   (parent)
     , mTable    (tableHelper)
     , mWaitEnd  (waitEndEdit)
@@ -46,6 +51,9 @@ TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>&
     , mModels   (models)
     , mColumns  (columns)
     , mValidation( )
+    , mEditable ( )
+    , mModelOf  ( )
+    , mValidOf  ( )
     , mParent   (parent)
     , mTable    (tableHelper)
     , mWaitEnd  (waitEndEdit)
@@ -72,6 +80,21 @@ void TableCell::setColumnValidation(int column, eCellValidation kind)
     {
         mValidation.insert(column, kind);
     }
+}
+
+void TableCell::setEditableCheck(FuncEditable check)
+{
+    mEditable = std::move(check);
+}
+
+void TableCell::setEditorModelResolver(FuncEditorModel resolver)
+{
+    mModelOf = std::move(resolver);
+}
+
+void TableCell::setValidationResolver(FuncValidation resolver)
+{
+    mValidOf = std::move(resolver);
 }
 
 inline bool TableCell::isValidColumn(int col) const
@@ -113,16 +136,30 @@ QAbstractItemModel* TableCell::columnToModel(int col) const
 
 QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*option*/, const QModelIndex& index) const
 {
-    QAbstractItemModel* model = columnToModel(index.column());
     mNewText.clear();
     mSelIndex = QModelIndex();
+
+    // A heterogeneous tree (e.g. Data Types) suppresses editing on cells that make no sense for
+    // the row's category; when no predicate is set every valid cell stays editable.
+    if (mEditable && (mEditable(index) == false))
+    {
+        return nullptr;
+    }
+
+    // The per-cell resolver wins over the per-column model list, so one column can be a combo for
+    // some rows (struct field type) and a text editor for others (imported type, enum derived).
+    QAbstractItemModel* model = mModelOf ? mModelOf(index) : columnToModel(index.column());
     if (model != nullptr)
     {
         QComboBox* combo = new QComboBox(parent);
         combo->setModel(model);
         combo->setProperty("index", index);
-        connect(combo, &QComboBox::currentTextChanged, this, &TableCell::onComboTextChanged);
-        // Picking an item commits and dismisses the drop-down instead of leaving it open.
+        // Commit ONLY on user activation (mouse pick or keyboard choose), never on
+        // currentTextChanged. Programmatic setCurrentText() in setEditorData() must not commit:
+        // when the controller updates the cell it emits the model's dataChanged, which reopens
+        // this editor mid-commit and re-seeds it with the still-stale cell text; committing on
+        // that would revert the user's choice. The line editor commits on user-only textEdited
+        // for the same reason, so the combo mirrors it here.
         connect(combo, &QComboBox::activated, this, &TableCell::onComboActivated);
 
         return combo;
@@ -133,14 +170,23 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
         // The index must travel with the editor so the change routes back to the correct
         // row/column (a missing property yields an invalid index that is silently dropped).
         lineEdit->setProperty("index", index);
-        // Forbid invalid characters directly in the table, matching the details panel.
-        switch (mValidation.value(index.column(), eCellValidation::NoValidation))
+        // Forbid invalid characters directly in the table, matching the details panel. The
+        // per-cell resolver wins so the same column can validate differently by row category.
+        const eCellValidation kind = mValidOf ? mValidOf(index) : mValidation.value(index.column(), eCellValidation::NoValidation);
+        switch (kind)
         {
         case eCellValidation::Identifier:
             lineEdit->setValidator(NELusanCommon::createIdentifierValidator(lineEdit));
             break;
         case eCellValidation::Path:
             lineEdit->setValidator(NELusanCommon::createPathValidator(lineEdit));
+            break;
+        case eCellValidation::QualifiedName:
+            lineEdit->setValidator(NELusanCommon::createQualifiedNameValidator(lineEdit));
+            break;
+        case eCellValidation::Value:
+            // Enumeration value: letters, digits, '_' and '::' (e.g. Other::Value or 0x10).
+            lineEdit->setValidator(new QRegularExpressionValidator(QRegularExpression(QStringLiteral("[A-Za-z0-9_:]*")), lineEdit));
             break;
         default:
             break;
@@ -159,21 +205,22 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
 
 void TableCell::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
-    if (isComboWidget(index.column()))
+    // Key off the actual editor type, not the per-column registration: a combo may now be
+    // produced by the per-cell resolver on a column that is not in the combo-column list.
+    if (QComboBox* combo = qobject_cast<QComboBox*>(editor))
     {
         if (index.data(Qt::EditRole).isNull())
-            qobject_cast<QComboBox*>(editor)->setCurrentIndex(-1);
+            combo->setCurrentIndex(-1);
         else
-            qobject_cast<QComboBox*>(editor)->setCurrentText(index.model()->data(index, Qt::EditRole).toString());
+            combo->setCurrentText(index.model()->data(index, Qt::EditRole).toString());
     }
-    else if (isValidColumn(index.column()))
+    else if (QLineEdit* lineEdit = qobject_cast<QLineEdit*>(editor))
     {
-        QString text = mTable->getCellText(index);
-        qobject_cast<QLineEdit*>(editor)->setText(text);
+        lineEdit->setText(mTable->getCellText(index));
     }
 }
 
-void TableCell::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void TableCell::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& /*index*/) const
 {
     if (editor != nullptr)
     {
@@ -188,31 +235,23 @@ void TableCell::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem
         }
         rect.setWidth(rect.width() + 8);
         editor->setGeometry(rect);
-        if (isComboWidget(index.column()))
+        if (QComboBox* combo = qobject_cast<QComboBox*>(editor))
         {
-            static_cast<QComboBox*>(editor)->showPopup();
+            combo->showPopup();
         }
-    }
-}
-
-void TableCell::onComboTextChanged(const QString & newText)
-{
-    QWidget *editor = qobject_cast<QWidget *>(sender());
-    if (editor != nullptr)
-    {
-        emit signalEditorDataChanged(editor->property("index").toModelIndex(), newText);
     }
 }
 
 void TableCell::onComboActivated(int /*index*/)
 {
-    QWidget* editor = qobject_cast<QWidget*>(sender());
-    if (editor != nullptr)
+    QComboBox* combo = qobject_cast<QComboBox*>(sender());
+    if (combo != nullptr)
     {
-        // currentTextChanged already pushed the value out; commit + close so the drop-down
-        // does not stay open over the table after the user has made a choice.
-        emit commitData(editor);
-        emit closeEditor(editor);
+        // Route the user's choice through the same signal the line editor uses, then dismiss the
+        // drop-down. The owning controller updates the model and cell text (single source of
+        // truth), so the base setModelData() is intentionally not invoked.
+        emit signalEditorDataChanged(combo->property("index").toModelIndex(), combo->currentText());
+        emit closeEditor(combo);
     }
 }
 

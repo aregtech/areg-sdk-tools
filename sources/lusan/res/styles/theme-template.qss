@@ -102,6 +102,17 @@ QToolButton::menu-arrow
     height: 10px;
 }
 
+/* Text split button in the Structure lens (the [+ and v] add button). A text-only
+   MenuButtonPopup tool button does not reserve room for the drop-down arrow, so the
+   chevron paints on top of the label. Reserve right-side padding wider than the
+   menu-button zone (12px + 2px margin) so the label stays clear and the chevron
+   follows it. */
+QToolButton#smLensAdd
+{
+    padding-left: 6px;
+    padding-right: 18px;
+}
+
 /* ---- Text inputs ---- */
 
 QLineEdit, QPlainTextEdit, QTextEdit

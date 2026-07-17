@@ -24,9 +24,6 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
     ${LUSAN}/view/sm/SMDataType.cpp
-    ${LUSAN}/view/sm/SMDataTypeDetails.cpp
-    ${LUSAN}/view/sm/SMDataTypeFieldDetails.cpp
-    ${LUSAN}/view/sm/SMDataTypeList.cpp
     ${LUSAN}/view/sm/SMEvent.cpp
     ${LUSAN}/view/sm/SMEventDetails.cpp
     ${LUSAN}/view/sm/SMEventList.cpp
@@ -83,9 +80,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMValidationPanel.hpp
     ${LUSAN}/view/sm/SMConstant.hpp
     ${LUSAN}/view/sm/SMDataType.hpp
-    ${LUSAN}/view/sm/SMDataTypeDetails.hpp
-    ${LUSAN}/view/sm/SMDataTypeFieldDetails.hpp
-    ${LUSAN}/view/sm/SMDataTypeList.hpp
     ${LUSAN}/view/sm/SMEvent.hpp
     ${LUSAN}/view/sm/SMEventDetails.hpp
     ${LUSAN}/view/sm/SMEventList.hpp

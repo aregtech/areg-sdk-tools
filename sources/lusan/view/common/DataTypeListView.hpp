@@ -1,5 +1,5 @@
-#ifndef LUSAN_VIEW_SM_SMDATATYPELIST_HPP
-#define LUSAN_VIEW_SM_SMDATATYPELIST_HPP
+#ifndef LUSAN_VIEW_COMMON_DATATYPELISTVIEW_HPP
+#define LUSAN_VIEW_COMMON_DATATYPELISTVIEW_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -11,11 +11,11 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMDataTypeList.hpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/DataTypeListView.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Data Types page — data type list panel.
+ *  \brief       Lusan application, shared Data Types page -- data type list panel.
  *
  ************************************************************************/
 
@@ -29,16 +29,17 @@ class QToolButton;
 class QTreeWidget;
 
 /**
- * \brief   The data type list panel, code-built to mirror SIDataTypeList: a
- *          "Data Types List:" group holding the add/insert/delete + field add/insert/delete
- *          + move up/down toolbar above a 3-column tree (Name/Data Type/Default Value).
+ * \brief   The data type list panel shared by the Service Interface (.siml), State Machine
+ *          (.fsml) and future Data Type (.dtml) documents: a "Data Types List:" group holding
+ *          the add/insert/delete + field add/insert/delete + move up/down toolbar above a
+ *          3-column tree (Name/Data Type/Default Value).
  **/
-class SMDataTypeList : public QWidget
+class DataTypeListView : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit SMDataTypeList(QWidget* parent = nullptr);
+    explicit DataTypeListView(QWidget* parent = nullptr);
 
     QTreeWidget* ctrlTableList() const;
 
@@ -76,4 +77,4 @@ private:
     QAction*        mActNewContainer;
 };
 
-#endif  // LUSAN_VIEW_SM_SMDATATYPELIST_HPP
+#endif  // LUSAN_VIEW_COMMON_DATATYPELISTVIEW_HPP
