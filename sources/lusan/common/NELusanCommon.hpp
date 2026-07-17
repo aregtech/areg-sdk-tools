@@ -33,7 +33,9 @@
 
 class QKeySequence;
 class QMenu;
+class QObject;
 class QToolButton;
+class QValidator;
 class QWidget;
 
 /**
@@ -560,6 +562,15 @@ namespace NELusanCommon
     //<! Loads broadcast type method icon and sets the specified size
     inline QIcon iconMethodBroadcast(const QSize & size = QSize{ 32, 32 });
 
+    //<! Loads FSM trigger method icon and sets the specified size
+    inline QIcon iconMethodTrigger(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads FSM action method icon and sets the specified size
+    inline QIcon iconMethodAction(const QSize & size = QSize{ 32, 32 });
+
+    //<! Loads FSM condition method icon and sets the specified size
+    inline QIcon iconMethodCondition(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads method parameter icon and sets the specified size
     inline QIcon iconMethodParam(const QSize & size = QSize{ 32, 32 });
 
@@ -649,6 +660,55 @@ namespace NELusanCommon
 
     //!< Attaches the type menu to the Add split button and applies the shared arrow-friendly sizing.
     void decorateToolButton(QToolButton* button, QMenu* menu);
+
+    /**
+     * \brief   The canonical C++ identifier pattern used across all editor name fields:
+     *          a letter or underscore followed by letters, digits or underscores. Anchored
+     *          full matches are Acceptable, prefixes (including the empty string) Intermediate,
+     *          so a QRegularExpressionValidator built from it rejects invalid keystrokes while
+     *          still allowing the field to be cleared or start with an underscore/letter.
+     **/
+    const QString& identifierPattern();
+
+    /**
+     * \brief   Returns true if the given text is a valid, complete C++ identifier.
+     *          Empty text is not valid. Shared by SI and FSM name-commit logic.
+     **/
+    bool isValidIdentifier(const QString& name);
+
+    /**
+     * \brief   Creates a validator that filters keystrokes to valid C++ identifier characters.
+     *          Use for every type/attribute/method/constant/field/parameter/event/timer name
+     *          field so invalid characters can never be typed in the first place.
+     * \param   parent  The owner of the returned validator (manages its lifetime).
+     **/
+    QValidator* createIdentifierValidator(QObject* parent);
+
+    /**
+     * \brief   Creates a validator that filters keystrokes to characters valid in an include
+     *          path (letters, digits, '_', '.', '/', '\\', ':', '-', space). Use for the
+     *          Includes location field.
+     * \param   parent  The owner of the returned validator (manages its lifetime).
+     **/
+    QValidator* createPathValidator(QObject* parent);
+
+    /**
+     * \brief   Creates a validator that filters keystrokes to a valid C++ qualified name:
+     *          one or more identifiers joined by '::' (letters, digits, '_' and '::' only).
+     *          Use for the imported-type Namespace field so only valid characters can be typed.
+     * \param   parent  The owner of the returned validator (manages its lifetime).
+     **/
+    QValidator* createQualifiedNameValidator(QObject* parent);
+
+    /**
+     * \brief   Paints a crisp, theme-aware chevron icon (a stable replacement for the
+     *          platform-dependent QStyle::SP_Arrow* pixmaps). Points down when expanded,
+     *          right when collapsed.
+     * \param   expanded    True for the open (down) chevron, false for the closed (right) one.
+     * \param   color       The stroke color; pass a palette color so it follows the theme.
+     * \param   size        The icon size in pixels.
+     **/
+    QIcon chevronIcon(bool expanded, const QColor& color, const QSize& size = QSize{ 16, 16 });
 }
 
 inline QIcon NELusanCommon::iconLogDebug(const QSize & size)
@@ -813,6 +873,21 @@ inline QIcon NELusanCommon::iconMethodResponse(const QSize & size)
 inline QIcon NELusanCommon::iconMethodBroadcast(const QSize & size)
 {
     return loadIcon(":/icons/data method broadcast", size);
+}
+
+inline QIcon NELusanCommon::iconMethodTrigger(const QSize & size)
+{
+    return loadIcon(":/icons/sm method trigger", size);
+}
+
+inline QIcon NELusanCommon::iconMethodAction(const QSize & size)
+{
+    return loadIcon(":/icons/sm method action", size);
+}
+
+inline QIcon NELusanCommon::iconMethodCondition(const QSize & size)
+{
+    return loadIcon(":/icons/sm method condition", size);
 }
 
 inline QIcon NELusanCommon::iconDefaultValue(const QSize & size)

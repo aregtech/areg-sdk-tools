@@ -77,8 +77,30 @@ namespace XmlSM
     constexpr const char* const xmlSMElementTransitionList  { "TransitionList" };
     constexpr const char* const xmlSMElementTransition      { "Transition" };
     constexpr const char* const xmlSMElementConditionList   { "ConditionList" };
+    constexpr const char* const xmlSMElementConditionGroup  { "ConditionGroup" };
     constexpr const char* const xmlSMElementCondition       { "Condition" };
     constexpr const char* const xmlSMElementOperationList   { "OperationList" };
+
+    // Guard (SM-21 redesign): the transition's ID-bound resolved expression tree.
+    // Element name is the AST node kind; the only reference attribute is the lowercase
+    // `id` (a symbol's document ID). See fsml.xsd and the state-machine spec.
+    constexpr const char* const xmlSMElementGuard           { "Guard" };
+    constexpr const char* const xmlSMElementGuardExpr       { "Expr" };
+    constexpr const char* const xmlSMElementGuardDraft      { "Draft" };
+    constexpr const char* const xmlSMElementGuardRendered   { "Rendered" };
+    constexpr const char* const xmlSMElementGuardAnd        { "And" };
+    constexpr const char* const xmlSMElementGuardOr         { "Or" };
+    constexpr const char* const xmlSMElementGuardNot        { "Not" };
+    constexpr const char* const xmlSMElementGuardCmp        { "Cmp" };
+    constexpr const char* const xmlSMElementGuardCall       { "Call" };
+    constexpr const char* const xmlSMElementGuardArg        { "Arg" };
+    constexpr const char* const xmlSMElementGuardAttr       { "Attr" };
+    constexpr const char* const xmlSMElementGuardConst      { "Const" };
+    constexpr const char* const xmlSMElementGuardParam      { "Param" };
+    constexpr const char* const xmlSMElementGuardLit        { "Lit" };
+    constexpr const char* const xmlSMElementGuardLambda     { "Lambda" };
+    constexpr const char* const xmlSMElementGuardRaw        { "Raw" };
+
     constexpr const char* const xmlSMElementExpression      { "Expression" };
     constexpr const char* const xmlSMElementArgumentList    { "ArgumentList" };
     constexpr const char* const xmlSMElementArgument        { "Argument" };
@@ -132,6 +154,9 @@ namespace XmlSM
     constexpr const char* const xmlSMAttributeStimulus      { "Stimulus" };
     constexpr const char* const xmlSMAttributeTo            { "To" };
     constexpr const char* const xmlSMAttributeCombine       { "Combine" };
+    constexpr const char* const xmlSMAttributeGuardState    { "state" };
+    constexpr const char* const xmlSMAttributeGuardRefId    { "id" };
+    constexpr const char* const xmlSMAttributeGuardOp       { "op" };
     constexpr const char* const xmlSMAttributeLhsKind       { "LHSKind" };
     constexpr const char* const xmlSMAttributeLhs           { "LHS" };
     constexpr const char* const xmlSMAttributeOperator      { "Operator" };

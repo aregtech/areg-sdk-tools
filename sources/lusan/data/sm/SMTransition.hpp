@@ -25,6 +25,7 @@
 #include "lusan/data/common/DocumentElem.hpp"
 #include "lusan/data/common/TEDataContainer.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 
 #include <QString>
@@ -104,6 +105,14 @@ public:
     inline const SMConditionList& getConditions() const;
     inline SMConditionList& getConditions();
 
+    /**
+     * \brief   The transition's guard (SM-21 redesign): the ID-bound resolved expression
+     *          tree, a draft, or empty. This is the canonical guard storage; the legacy
+     *          `getConditions()` tree is a read-shim only (see SMGuardParser::fromLegacy).
+     **/
+    inline const SMGuard& getGuard() const;
+    inline SMGuard& getGuard();
+
     inline const SMOperationList& getOperations() const;
     inline SMOperationList& getOperations();
 
@@ -129,7 +138,8 @@ private:
     QString         mTo;            //!< The target sibling state (empty = internal).
     bool            mHasTo;         //!< Whether a target is present.
     QString         mDescription;   //!< The description text.
-    SMConditionList mConditions;    //!< The optional condition list.
+    SMConditionList mConditions;    //!< Legacy condition tree (read-shim only; not written when a guard exists).
+    SMGuard         mGuard;         //!< The canonical guard (ID-bound tree / draft / empty).
     SMOperationList mOperations;    //!< The transition operations.
 };
 
@@ -241,6 +251,16 @@ inline const SMConditionList& SMTransitionEntry::getConditions() const
 inline SMConditionList& SMTransitionEntry::getConditions()
 {
     return mConditions;
+}
+
+inline const SMGuard& SMTransitionEntry::getGuard() const
+{
+    return mGuard;
+}
+
+inline SMGuard& SMTransitionEntry::getGuard()
+{
+    return mGuard;
 }
 
 inline const SMOperationList& SMTransitionEntry::getOperations() const

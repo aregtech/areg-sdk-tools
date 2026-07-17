@@ -19,15 +19,19 @@
  *
  ************************************************************************/
 
+#include "lusan/view/common/TableCell.hpp"
+
 #include <QScrollArea>
 #include <cstdint>
 
+class AttributeDetailsView;
+class AttributeListView;
 class QEvent;
+class QModelIndex;
 class QTreeWidgetItem;
-class SMAttributeDetails;
 class SMAttributeEntry;
-class SMAttributeList;
 class SMAttributeModel;
+class TableCell;
 
 /**
  * \brief   The FSM Attributes page: typed internal machine variables with a default value
@@ -37,7 +41,8 @@ class SMAttributeModel;
  *          live model on every relevant DocModelNotifier signal (self-triggered or
  *          external/undo alike) rather than patching individual rows.
  **/
-class SMAttribute : public QScrollArea
+class SMAttribute : public    QScrollArea
+                  , protected IETableHelper
 {
     Q_OBJECT
 
@@ -56,13 +61,18 @@ public:
      * \brief   Returns the list panel (its Add button lets a caller start a new attribute,
      *          e.g. from the Design page's Declare dropdown).
      **/
-    SMAttributeList* getList() const;
+    AttributeListView* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
+
+    //!< IETableHelper: number of columns in the shared attribute list (for the inline delegate).
+    int getColumnCount() const override;
+    //!< IETableHelper: current text of the given list cell (used to seed and cancel inline edits).
+    QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -83,6 +93,11 @@ private slots:
     void onValueTextChanged(const QString& text);
     void onDeprecatedToggled(bool checked);
     void onDeprecateHintCommitted();
+
+    //!< Routes an inline (in-table) edit of the Name/Type/Value column back to the model. The
+    //!< commit is deferred to the next event-loop turn so the notifier-driven list rebuild does
+    //!< not run while the delegate editor is still closing.
+    void onEditorDataChanged(const QModelIndex& index, const QString& newValue);
 
     //!< Rebuilds the whole list on any Attribute-kind notifier signal.
     void onNotifierChanged();
@@ -120,6 +135,13 @@ private:
     void populateTypeCombo();
     void updateMoveButtons(int row, int rowCount);
 
+    //!< Installs the shared TableCell delegate on the Name/Type/Value columns so the list rows
+    //!< can be edited inline, exactly like the details panel fields.
+    void setupInlineEditing();
+    //!< Commits a single inline edit (by attribute ID) through the model's undo commands. A
+    //!< no-op edit (same value) is skipped so it does not push a redundant undo step.
+    void commitInlineEdit(uint32_t id, int col, const QString& newValue);
+
     //!< The attribute ID stored on the currently selected row, or 0 if none.
     uint32_t currentAttributeId() const;
     QString genName();
@@ -128,10 +150,11 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    SMAttributeModel&   mModel;
-    SMAttributeList*    mList;
-    SMAttributeDetails* mDetails;
-    uint32_t            mNameCounter;
+    SMAttributeModel&    mModel;
+    AttributeListView*   mList;
+    AttributeDetailsView* mDetails;
+    TableCell*           mTableCell;    //!< Inline (in-table) cell editor delegate for the list.
+    uint32_t             mNameCounter;
 };
 
 #endif  // LUSAN_VIEW_SM_SMATTRIBUTE_HPP

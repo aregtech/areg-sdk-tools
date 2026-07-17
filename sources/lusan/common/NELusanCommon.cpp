@@ -24,7 +24,10 @@
 #include <QFileInfo>
 #include <QImage>
 #include <QPainter>
+#include <QPen>
 #include <QPixmap>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include <QStandardPaths>
 #include <QToolButton>
 #include <QMenu>
@@ -211,4 +214,79 @@ void NELusanCommon::decorateToolButton(QToolButton* button, QMenu* menu)
     // Keep a dedicated right-side drop-down zone so the menu arrow never crowds the icon.
     button->setIconSize(QSize(20, 20));
     button->setFixedSize(48, 24);
+}
+
+const QString& NELusanCommon::identifierPattern()
+{
+    // A letter or underscore, then any number of letters, digits or underscores. Used to build
+    // the shared keystroke validator, so the whole editor family enforces the same C++ rule.
+    static const QString _pattern{ QStringLiteral("[A-Za-z_][A-Za-z0-9_]*") };
+    return _pattern;
+}
+
+bool NELusanCommon::isValidIdentifier(const QString& name)
+{
+    static const QRegularExpression _re{ QStringLiteral("\\A[A-Za-z_][A-Za-z0-9_]*\\z") };
+    return (name.isEmpty() == false) && _re.match(name).hasMatch();
+}
+
+QValidator* NELusanCommon::createIdentifierValidator(QObject* parent)
+{
+    // QRegularExpressionValidator treats a full match as Acceptable and a prefix (including the
+    // empty string) as Intermediate, so the field can be cleared while typing but a space or a
+    // leading digit is rejected as it is typed.
+    return new QRegularExpressionValidator(QRegularExpression(identifierPattern()), parent);
+}
+
+QValidator* NELusanCommon::createPathValidator(QObject* parent)
+{
+    // Characters valid in an include path: word characters plus '.', '/', '\', ':', '-', space.
+    return new QRegularExpressionValidator(QRegularExpression(QStringLiteral("[A-Za-z0-9_./\\\\:\\- ]*")), parent);
+}
+
+QValidator* NELusanCommon::createQualifiedNameValidator(QObject* parent)
+{
+    // A C++ qualified name: one or more identifiers joined by '::' (e.g. NameSpace::Inner).
+    // A full match is Acceptable; a prefix such as "NameSpace" or "NameSpace::" is Intermediate,
+    // so the namespace can be typed segment by segment but a leading digit or a space is rejected.
+    static const QString _pattern{ QStringLiteral("[A-Za-z_][A-Za-z0-9_]*(::[A-Za-z_][A-Za-z0-9_]*)*") };
+    return new QRegularExpressionValidator(QRegularExpression(_pattern), parent);
+}
+
+QIcon NELusanCommon::chevronIcon(bool expanded, const QColor& color, const QSize& size /*= QSize{ 16, 16 }*/)
+{
+    const int w = (size.width()  > 0) ? size.width()  : 16;
+    const int h = (size.height() > 0) ? size.height() : 16;
+
+    QPixmap pix(w, h);
+    pix.fill(Qt::transparent);
+
+    QPainter painter(&pix);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    QPen pen(color);
+    pen.setWidthF(std::max(1.5, w / 8.0));
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+
+    // Inset the glyph so the round caps stay inside the icon box.
+    const double mx = w * 0.28;
+    const double my = h * 0.28;
+    if (expanded)
+    {
+        // Downward chevron: "v"
+        const QPointF pts[3] = { QPointF(mx, my), QPointF(w / 2.0, h - my), QPointF(w - mx, my) };
+        painter.drawPolyline(pts, 3);
+    }
+    else
+    {
+        // Rightward chevron: ">"
+        const QPointF pts[3] = { QPointF(mx, my), QPointF(w - mx, h / 2.0), QPointF(mx, h - my) };
+        painter.drawPolyline(pts, 3);
+    }
+
+    painter.end();
+    return QIcon(pix);
 }

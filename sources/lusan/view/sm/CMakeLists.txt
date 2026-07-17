@@ -1,22 +1,32 @@
 list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMAttribute.cpp
-    ${LUSAN}/view/sm/SMAttributeDetails.cpp
-    ${LUSAN}/view/sm/SMAttributeList.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
+    ${LUSAN}/view/sm/NEGuardStyle.cpp
+    ${LUSAN}/view/sm/SMFixBar.cpp
+    ${LUSAN}/view/sm/SMFlowLayout.cpp
+    ${LUSAN}/view/sm/SMGuardBar.cpp
+    ${LUSAN}/view/sm/SMGuardCatalog.cpp
+    ${LUSAN}/view/sm/SMGuardField.cpp
+    ${LUSAN}/view/sm/SMGuardHelpCard.cpp
+    ${LUSAN}/view/sm/SMGuardHighlighter.cpp
+    ${LUSAN}/view/sm/SMGuardStatusLine.cpp
+    ${LUSAN}/view/sm/SMHoverCard.cpp
+    ${LUSAN}/view/sm/SMInlineToken.cpp
+    ${LUSAN}/view/sm/SMIslandEditor.cpp
+    ${LUSAN}/view/sm/SMMappingGrid.cpp
+    ${LUSAN}/view/sm/SMOperandField.cpp
+    ${LUSAN}/view/sm/SMSignatureCard.cpp
+    ${LUSAN}/view/sm/SMStructureLens.cpp
+    ${LUSAN}/view/sm/SMSymbolPopup.cpp
+    ${LUSAN}/view/sm/SMTryStrip.cpp
+    ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
-    ${LUSAN}/view/sm/SMConstantDetails.cpp
-    ${LUSAN}/view/sm/SMConstantList.cpp
     ${LUSAN}/view/sm/SMDataType.cpp
-    ${LUSAN}/view/sm/SMDataTypeDetails.cpp
-    ${LUSAN}/view/sm/SMDataTypeFieldDetails.cpp
-    ${LUSAN}/view/sm/SMDataTypeList.cpp
     ${LUSAN}/view/sm/SMEvent.cpp
     ${LUSAN}/view/sm/SMEventDetails.cpp
     ${LUSAN}/view/sm/SMEventList.cpp
     ${LUSAN}/view/sm/SMEventParamDetails.cpp
     ${LUSAN}/view/sm/SMInclude.cpp
-    ${LUSAN}/view/sm/SMIncludeDetails.cpp
-    ${LUSAN}/view/sm/SMIncludeList.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
     ${LUSAN}/view/sm/SMAutoPlacer.cpp
     ${LUSAN}/view/sm/SMCanvasItem.cpp
@@ -25,8 +35,6 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
-    ${LUSAN}/view/sm/SMMethodDetails.cpp
-    ${LUSAN}/view/sm/SMMethodList.cpp
     ${LUSAN}/view/sm/SMNoteEditor.cpp
     ${LUSAN}/view/sm/SMNoteItem.cpp
     ${LUSAN}/view/sm/SMOutlinePanel.cpp
@@ -42,23 +50,33 @@ list(APPEND LUSAN_SRC
 
 list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMAttribute.hpp
-    ${LUSAN}/view/sm/SMAttributeDetails.hpp
-    ${LUSAN}/view/sm/SMAttributeList.hpp
     ${LUSAN}/view/sm/SMCodeEditor.hpp
+    ${LUSAN}/view/sm/NEGuardStyle.hpp
+    ${LUSAN}/view/sm/SMFixBar.hpp
+    ${LUSAN}/view/sm/SMFlowLayout.hpp
+    ${LUSAN}/view/sm/SMGuardBar.hpp
+    ${LUSAN}/view/sm/SMGuardCatalog.hpp
+    ${LUSAN}/view/sm/SMGuardField.hpp
+    ${LUSAN}/view/sm/SMGuardHelpCard.hpp
+    ${LUSAN}/view/sm/SMGuardHighlighter.hpp
+    ${LUSAN}/view/sm/SMGuardStatusLine.hpp
+    ${LUSAN}/view/sm/SMHoverCard.hpp
+    ${LUSAN}/view/sm/SMInlineToken.hpp
+    ${LUSAN}/view/sm/SMIslandEditor.hpp
+    ${LUSAN}/view/sm/SMMappingGrid.hpp
+    ${LUSAN}/view/sm/SMOperandField.hpp
+    ${LUSAN}/view/sm/SMSignatureCard.hpp
+    ${LUSAN}/view/sm/SMStructureLens.hpp
+    ${LUSAN}/view/sm/SMSymbolPopup.hpp
+    ${LUSAN}/view/sm/SMTryStrip.hpp
+    ${LUSAN}/view/sm/SMValidationPanel.hpp
     ${LUSAN}/view/sm/SMConstant.hpp
-    ${LUSAN}/view/sm/SMConstantDetails.hpp
-    ${LUSAN}/view/sm/SMConstantList.hpp
     ${LUSAN}/view/sm/SMDataType.hpp
-    ${LUSAN}/view/sm/SMDataTypeDetails.hpp
-    ${LUSAN}/view/sm/SMDataTypeFieldDetails.hpp
-    ${LUSAN}/view/sm/SMDataTypeList.hpp
     ${LUSAN}/view/sm/SMEvent.hpp
     ${LUSAN}/view/sm/SMEventDetails.hpp
     ${LUSAN}/view/sm/SMEventList.hpp
     ${LUSAN}/view/sm/SMEventParamDetails.hpp
     ${LUSAN}/view/sm/SMInclude.hpp
-    ${LUSAN}/view/sm/SMIncludeDetails.hpp
-    ${LUSAN}/view/sm/SMIncludeList.hpp
     ${LUSAN}/view/sm/NESMDesign.hpp
     ${LUSAN}/view/sm/SMAutoPlacer.hpp
     ${LUSAN}/view/sm/SMCanvasItem.hpp
@@ -67,8 +85,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMEdgeItem.hpp
     ${LUSAN}/view/sm/SMGraphicsView.hpp
     ${LUSAN}/view/sm/SMMethod.hpp
-    ${LUSAN}/view/sm/SMMethodDetails.hpp
-    ${LUSAN}/view/sm/SMMethodList.hpp
     ${LUSAN}/view/sm/SMNoteEditor.hpp
     ${LUSAN}/view/sm/SMNoteItem.hpp
     ${LUSAN}/view/sm/SMOutlinePanel.hpp

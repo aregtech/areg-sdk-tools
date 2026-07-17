@@ -606,10 +606,14 @@ void SMClipboard::reallocateIds(SMStateEntry& state, const ElementBase& counter,
     for (SMTransitionEntry* transition : state.getTransitions().getElements())
     {
         realloc(*transition);
-        for (SMConditionEntry* condition : transition->getConditions().getElements())
+        for (SMConditionEntry* condition : transition->getConditions().collectLeaves())
         {
             realloc(*condition);
             reallocArgs(condition->getArguments());
+        }
+        for (SMConditionGroup* group : transition->getConditions().collectGroups())
+        {
+            realloc(*group);
         }
 
         reallocOps(transition->getOperations());
@@ -675,7 +679,7 @@ void SMClipboard::collectReferences(const SMStateEntry& state, ReferenceNames& o
             }
         }
 
-        for (const SMConditionEntry* condition : transition->getConditions().getElements())
+        for (const SMConditionEntry* condition : transition->getConditions().collectLeaves())
         {
             const auto collectOperand = [&out](SMConditionEntry::eOperandKind kind, const QString& name)
             {
@@ -736,7 +740,7 @@ void SMClipboard::remapReferences(SMStateEntry& state, const RenameMaps& renames
             _remapName(renames.states, transition->getTo(), [transition](const QString& name) { transition->setTo(name); });
         }
 
-        for (SMConditionEntry* condition : transition->getConditions().getElements())
+        for (SMConditionEntry* condition : transition->getConditions().collectLeaves())
         {
             const auto remapOperand = [&renames](SMConditionEntry::eOperandKind kind, const QString& name, const std::function<void(const QString&)>& setter)
             {

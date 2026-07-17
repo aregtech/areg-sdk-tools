@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/sm/SMCondition.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -23,6 +23,8 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+#include <utility>
+
 namespace
 {
     //!< Writes \p text as a CDATA-wrapped child element (byte-exact, never normalized).
@@ -32,6 +34,50 @@ namespace
         xml.writeCDATA(text);
         xml.writeEndElement();
     }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMConditionNode implementation
+//////////////////////////////////////////////////////////////////////////
+
+SMConditionNode::SMConditionNode(ElementBase* parent /*= nullptr*/)
+    : DocumentElem(parent)
+{
+}
+
+SMConditionNode::SMConditionNode(uint32_t id, ElementBase* parent)
+    : DocumentElem(id, parent)
+{
+}
+
+SMConditionNode::SMConditionNode(const SMConditionNode& src)
+    : DocumentElem(src)
+{
+}
+
+SMConditionNode::SMConditionNode(SMConditionNode&& src) noexcept
+    : DocumentElem(std::move(src))
+{
+}
+
+SMConditionNode& SMConditionNode::operator = (const SMConditionNode& other)
+{
+    if (this != &other)
+    {
+        DocumentElem::operator = (other);
+    }
+
+    return *this;
+}
+
+SMConditionNode& SMConditionNode::operator = (SMConditionNode&& other) noexcept
+{
+    if (this != &other)
+    {
+        DocumentElem::operator = (std::move(other));
+    }
+
+    return *this;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -76,7 +122,7 @@ const char* SMConditionEntry::toString(SMConditionEntry::eOperator op)
 //////////////////////////////////////////////////////////////////////////
 
 SMConditionEntry::SMConditionEntry(ElementBase* parent /*= nullptr*/)
-    : DocumentElem  (parent)
+    : SMConditionNode (parent)
     , mLhsKind      (eOperandKind::Attribute)
     , mLhs          ( )
     , mOperator     (eOperator::None)
@@ -84,12 +130,13 @@ SMConditionEntry::SMConditionEntry(ElementBase* parent /*= nullptr*/)
     , mRhs          ( )
     , mNegate       (false)
     , mExpression   ( )
+    , mBody         ( )
     , mArguments    ( )
 {
 }
 
 SMConditionEntry::SMConditionEntry(uint32_t id, ElementBase* parent)
-    : DocumentElem  (id, parent)
+    : SMConditionNode (id, parent)
     , mLhsKind      (eOperandKind::Attribute)
     , mLhs          ( )
     , mOperator     (eOperator::None)
@@ -97,12 +144,13 @@ SMConditionEntry::SMConditionEntry(uint32_t id, ElementBase* parent)
     , mRhs          ( )
     , mNegate       (false)
     , mExpression   ( )
+    , mBody         ( )
     , mArguments    ( )
 {
 }
 
 SMConditionEntry::SMConditionEntry(const SMConditionEntry& src)
-    : DocumentElem  (src)
+    : SMConditionNode (src)
     , mLhsKind      (src.mLhsKind)
     , mLhs          (src.mLhs)
     , mOperator     (src.mOperator)
@@ -110,6 +158,7 @@ SMConditionEntry::SMConditionEntry(const SMConditionEntry& src)
     , mRhs          (src.mRhs)
     , mNegate       (src.mNegate)
     , mExpression   (src.mExpression)
+    , mBody         (src.mBody)
     , mArguments    (src.mArguments)
 {
     for (SMArgumentEntry& arg : mArguments)
@@ -119,7 +168,7 @@ SMConditionEntry::SMConditionEntry(const SMConditionEntry& src)
 }
 
 SMConditionEntry::SMConditionEntry(SMConditionEntry&& src) noexcept
-    : DocumentElem  (std::move(src))
+    : SMConditionNode (std::move(src))
     , mLhsKind      (src.mLhsKind)
     , mLhs          (std::move(src.mLhs))
     , mOperator     (src.mOperator)
@@ -127,6 +176,7 @@ SMConditionEntry::SMConditionEntry(SMConditionEntry&& src) noexcept
     , mRhs          (std::move(src.mRhs))
     , mNegate       (src.mNegate)
     , mExpression   (std::move(src.mExpression))
+    , mBody         (std::move(src.mBody))
     , mArguments    (std::move(src.mArguments))
 {
     for (SMArgumentEntry& arg : mArguments)
@@ -139,7 +189,7 @@ SMConditionEntry& SMConditionEntry::operator = (const SMConditionEntry& other)
 {
     if (this != &other)
     {
-        DocumentElem::operator = (other);
+        SMConditionNode::operator = (other);
         mLhsKind    = other.mLhsKind;
         mLhs        = other.mLhs;
         mOperator   = other.mOperator;
@@ -147,6 +197,7 @@ SMConditionEntry& SMConditionEntry::operator = (const SMConditionEntry& other)
         mRhs        = other.mRhs;
         mNegate     = other.mNegate;
         mExpression = other.mExpression;
+        mBody       = other.mBody;
         mArguments  = other.mArguments;
         for (SMArgumentEntry& arg : mArguments)
         {
@@ -161,7 +212,7 @@ SMConditionEntry& SMConditionEntry::operator = (SMConditionEntry&& other) noexce
 {
     if (this != &other)
     {
-        DocumentElem::operator = (std::move(other));
+        SMConditionNode::operator = (std::move(other));
         mLhsKind    = other.mLhsKind;
         mLhs        = std::move(other.mLhs);
         mOperator   = other.mOperator;
@@ -169,6 +220,7 @@ SMConditionEntry& SMConditionEntry::operator = (SMConditionEntry&& other) noexce
         mRhs        = std::move(other.mRhs);
         mNegate     = other.mNegate;
         mExpression = std::move(other.mExpression);
+        mBody       = std::move(other.mBody);
         mArguments  = std::move(other.mArguments);
         for (SMArgumentEntry& arg : mArguments)
         {
@@ -185,11 +237,42 @@ SMArgumentEntry* SMConditionEntry::addArgument(const QString& name, SMArgumentEn
     return &mArguments.last();
 }
 
+void SMConditionEntry::assignContent(const SMConditionEntry& src)
+{
+    mLhsKind    = src.mLhsKind;
+    mLhs        = src.mLhs;
+    mOperator   = src.mOperator;
+    mRhsKind    = src.mRhsKind;
+    mRhs        = src.mRhs;
+    mNegate     = src.mNegate;
+    mExpression = src.mExpression;
+    mBody       = src.mBody;
+    mArguments  = src.mArguments;
+    for (SMArgumentEntry& arg : mArguments)
+    {
+        arg.setParent(this);
+    }
+}
+
+SMConditionNode::eNodeKind SMConditionEntry::getNodeKind() const
+{
+    return eNodeKind::Leaf;
+}
+
+SMConditionNode* SMConditionEntry::clone() const
+{
+    return new SMConditionEntry(*this);
+}
+
 bool SMConditionEntry::isValid() const
 {
     if (isExpressionRow())
     {
         return (mExpression.isEmpty() == false);
+    }
+    else if (isLambdaRow())
+    {
+        return (mBody.isEmpty() == false);
     }
 
     return (mLhs.isEmpty() == false);
@@ -211,6 +294,7 @@ bool SMConditionEntry::readFromXml(QXmlStreamReader& xml)
     mRhs     = attributes.value(XmlSM::xmlSMAttributeRhs).toString();
     mNegate  = (attributes.value(XmlSM::xmlSMAttributeNegate).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0);
     mExpression.clear();
+    mBody.clear();
     mArguments.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementCondition))
@@ -220,6 +304,10 @@ bool SMConditionEntry::readFromXml(QXmlStreamReader& xml)
             if (xml.name() == XmlSM::xmlSMElementExpression)
             {
                 mExpression = xml.readElementText();
+            }
+            else if (xml.name() == XmlSM::xmlSMElementBody)
+            {
+                mBody = xml.readElementText();
             }
             else if (xml.name() == XmlSM::xmlSMElementArgumentList)
             {
@@ -239,7 +327,7 @@ void SMConditionEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSM::xmlSMAttributeLhsKind, SMArgumentEntry::toString(mLhsKind));
 
-    if (isExpressionRow() == false)
+    if (isVerbatimRow() == false)
     {
         if (mLhs.isEmpty() == false)
         {
@@ -262,6 +350,10 @@ void SMConditionEntry::writeToXml(QXmlStreamWriter& xml) const
     {
         writeCDataElem(xml, XmlSM::xmlSMElementExpression, mExpression);
     }
+    else if (isLambdaRow())
+    {
+        writeCDataElem(xml, XmlSM::xmlSMElementBody, mBody);
+    }
 
     SMArgumentEntry::writeArgumentList(xml, mArguments);
 
@@ -269,17 +361,355 @@ void SMConditionEntry::writeToXml(QXmlStreamWriter& xml) const
 }
 
 //////////////////////////////////////////////////////////////////////////
-// SMConditionList static helpers
+// SMConditionGroup static helpers
 //////////////////////////////////////////////////////////////////////////
 
-SMConditionList::eCombine SMConditionList::fromCombineString(const QString& combine)
+SMConditionGroup::eCombine SMConditionGroup::fromCombineString(const QString& combine)
 {
     return (combine.compare(STR_COMBINE_OR, Qt::CaseInsensitive) == 0) ? eCombine::Or : eCombine::And;
 }
 
-const char* SMConditionList::toString(SMConditionList::eCombine combine)
+const char* SMConditionGroup::toString(SMConditionGroup::eCombine combine)
 {
     return (combine == eCombine::Or) ? STR_COMBINE_OR : STR_COMBINE_AND;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SMConditionGroup implementation
+//////////////////////////////////////////////////////////////////////////
+
+SMConditionGroup::SMConditionGroup(ElementBase* parent /*= nullptr*/)
+    : SMConditionNode (parent)
+    , mCombine      (eCombine::And)
+    , mNegate       (false)
+    , mChildren     ( )
+{
+}
+
+SMConditionGroup::SMConditionGroup(uint32_t id, ElementBase* parent)
+    : SMConditionNode (id, parent)
+    , mCombine      (eCombine::And)
+    , mNegate       (false)
+    , mChildren     ( )
+{
+}
+
+SMConditionGroup::SMConditionGroup(const SMConditionGroup& src)
+    : SMConditionNode (src)
+    , mCombine      (src.mCombine)
+    , mNegate       (src.mNegate)
+    , mChildren     ( )
+{
+    cloneChildrenFrom(src);
+}
+
+SMConditionGroup::SMConditionGroup(SMConditionGroup&& src) noexcept
+    : SMConditionNode (std::move(src))
+    , mCombine      (src.mCombine)
+    , mNegate       (src.mNegate)
+    , mChildren     (std::move(src.mChildren))
+{
+    reparentChildren();
+}
+
+SMConditionGroup::~SMConditionGroup()
+{
+    removeAll();
+}
+
+SMConditionGroup& SMConditionGroup::operator = (const SMConditionGroup& other)
+{
+    if (this != &other)
+    {
+        removeAll();
+        SMConditionNode::operator = (other);
+        mCombine = other.mCombine;
+        mNegate  = other.mNegate;
+        cloneChildrenFrom(other);
+    }
+
+    return *this;
+}
+
+SMConditionGroup& SMConditionGroup::operator = (SMConditionGroup&& other) noexcept
+{
+    if (this != &other)
+    {
+        removeAll();
+        SMConditionNode::operator = (std::move(other));
+        mCombine  = other.mCombine;
+        mNegate   = other.mNegate;
+        mChildren = std::move(other.mChildren);
+        reparentChildren();
+    }
+
+    return *this;
+}
+
+SMConditionEntry* SMConditionGroup::addCondition()
+{
+    SMConditionEntry* entry = new SMConditionEntry(getNextId(), this);
+    mChildren.append(entry);
+    return entry;
+}
+
+SMConditionGroup* SMConditionGroup::addGroup()
+{
+    SMConditionGroup* group = new SMConditionGroup(getNextId(), this);
+    mChildren.append(group);
+    return group;
+}
+
+SMConditionNode* SMConditionGroup::addChild(SMConditionNode* node)
+{
+    if (node != nullptr)
+    {
+        node->setParent(this);
+        mChildren.append(node);
+    }
+
+    return node;
+}
+
+bool SMConditionGroup::removeChild(SMConditionNode* node)
+{
+    const int index = mChildren.indexOf(node);
+    if (index < 0)
+    {
+        return false;
+    }
+
+    delete mChildren.takeAt(index);
+    return true;
+}
+
+void SMConditionGroup::removeAll()
+{
+    for (SMConditionNode* child : mChildren)
+    {
+        delete child;
+    }
+
+    mChildren.clear();
+}
+
+QList<SMConditionEntry*> SMConditionGroup::collectLeaves() const
+{
+    QList<SMConditionEntry*> out;
+    for (SMConditionNode* child : mChildren)
+    {
+        if (child->getNodeKind() == eNodeKind::Leaf)
+        {
+            out.append(static_cast<SMConditionEntry*>(child));
+        }
+        else
+        {
+            out.append(static_cast<SMConditionGroup*>(child)->collectLeaves());
+        }
+    }
+
+    return out;
+}
+
+QList<SMConditionGroup*> SMConditionGroup::collectGroups() const
+{
+    QList<SMConditionGroup*> out;
+    for (SMConditionNode* child : mChildren)
+    {
+        if (child->getNodeKind() == eNodeKind::Group)
+        {
+            SMConditionGroup* group = static_cast<SMConditionGroup*>(child);
+            out.append(group);
+            out.append(group->collectGroups());
+        }
+    }
+
+    return out;
+}
+
+SMConditionNode* SMConditionGroup::findNode(uint32_t id)
+{
+    if (getId() == id)
+    {
+        return this;
+    }
+
+    for (SMConditionNode* child : mChildren)
+    {
+        if (child->getId() == id)
+        {
+            return child;
+        }
+
+        if (child->getNodeKind() == eNodeKind::Group)
+        {
+            SMConditionNode* found = static_cast<SMConditionGroup*>(child)->findNode(id);
+            if (found != nullptr)
+            {
+                return found;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+SMConditionGroup* SMConditionGroup::findGroup(uint32_t id)
+{
+    SMConditionNode* node = findNode(id);
+    return ((node != nullptr) && node->isGroup()) ? static_cast<SMConditionGroup*>(node) : nullptr;
+}
+
+SMConditionEntry* SMConditionGroup::findLeaf(uint32_t id)
+{
+    SMConditionNode* node = findNode(id);
+    return ((node != nullptr) && node->isLeaf()) ? static_cast<SMConditionEntry*>(node) : nullptr;
+}
+
+int SMConditionGroup::indexOfChild(const SMConditionNode* node) const
+{
+    return mChildren.indexOf(const_cast<SMConditionNode*>(node));
+}
+
+SMConditionNode* SMConditionGroup::detachChild(SMConditionNode* node)
+{
+    const int index = mChildren.indexOf(node);
+    return (index >= 0) ? mChildren.takeAt(index) : nullptr;
+}
+
+void SMConditionGroup::insertChild(int index, SMConditionNode* node)
+{
+    if (node == nullptr)
+    {
+        return;
+    }
+
+    node->setParent(this);
+    mChildren.insert(qBound(0, index, static_cast<int>(mChildren.size())), node);
+}
+
+void SMConditionGroup::swapChildren(int index1, int index2)
+{
+    if ((index1 >= 0) && (index2 >= 0) && (index1 < mChildren.size()) && (index2 < mChildren.size()) && (index1 != index2))
+    {
+        mChildren.swapItemsAt(index1, index2);
+    }
+}
+
+SMConditionNode::eNodeKind SMConditionGroup::getNodeKind() const
+{
+    return eNodeKind::Group;
+}
+
+SMConditionNode* SMConditionGroup::clone() const
+{
+    return new SMConditionGroup(*this);
+}
+
+bool SMConditionGroup::isValid() const
+{
+    return true;
+}
+
+void SMConditionGroup::cloneChildrenFrom(const SMConditionGroup& src)
+{
+    for (const SMConditionNode* child : src.mChildren)
+    {
+        SMConditionNode* copy = child->clone();
+        copy->setParent(this);
+        mChildren.append(copy);
+    }
+}
+
+void SMConditionGroup::reparentChildren()
+{
+    for (SMConditionNode* child : mChildren)
+    {
+        child->setParent(this);
+    }
+}
+
+void SMConditionGroup::writeGroupBody(QXmlStreamWriter& xml) const
+{
+    if (mCombine == eCombine::Or)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeCombine, SMConditionGroup::toString(mCombine));
+    }
+
+    if (mNegate)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeNegate, XmlSM::xmlSMValueTrue);
+    }
+
+    for (const SMConditionNode* child : mChildren)
+    {
+        child->writeToXml(xml);
+    }
+}
+
+void SMConditionGroup::readGroupBody(QXmlStreamReader& xml, const char* endElem)
+{
+    const QXmlStreamAttributes attributes = xml.attributes();
+    mCombine = attributes.hasAttribute(XmlSM::xmlSMAttributeCombine)
+                    ? fromCombineString(attributes.value(XmlSM::xmlSMAttributeCombine).toString())
+                    : eCombine::And;
+    mNegate  = (attributes.value(XmlSM::xmlSMAttributeNegate).toString().compare(XmlSM::xmlSMValueTrue, Qt::CaseInsensitive) == 0);
+
+    while (!xml.atEnd())
+    {
+        xml.readNext();
+        if (xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == endElem)
+        {
+            break;
+        }
+
+        if (xml.tokenType() == QXmlStreamReader::StartElement)
+        {
+            if (xml.name() == XmlSM::xmlSMElementCondition)
+            {
+                SMConditionEntry* leaf = new SMConditionEntry(this);
+                if (leaf->readFromXml(xml))
+                {
+                    mChildren.append(leaf);
+                }
+                else
+                {
+                    delete leaf;
+                }
+            }
+            else if (xml.name() == XmlSM::xmlSMElementConditionGroup)
+            {
+                SMConditionGroup* group = new SMConditionGroup(this);
+                if (group->readFromXml(xml))
+                {
+                    mChildren.append(group);
+                }
+                else
+                {
+                    delete group;
+                }
+            }
+        }
+    }
+}
+
+bool SMConditionGroup::readFromXml(QXmlStreamReader& xml)
+{
+    if (xml.name() != XmlSM::xmlSMElementConditionGroup)
+        return false;
+
+    setId(xml.attributes().value(XmlSM::xmlSMAttributeID).toUInt());
+    removeAll();
+    readGroupBody(xml, XmlSM::xmlSMElementConditionGroup);
+    return true;
+}
+
+void SMConditionGroup::writeToXml(QXmlStreamWriter& xml) const
+{
+    xml.writeStartElement(XmlSM::xmlSMElementConditionGroup);
+    xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
+    writeGroupBody(xml);
+    xml.writeEndElement();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -287,37 +717,25 @@ const char* SMConditionList::toString(SMConditionList::eCombine combine)
 //////////////////////////////////////////////////////////////////////////
 
 SMConditionList::SMConditionList(ElementBase* parent /*= nullptr*/)
-    : TEDataContainer<SMConditionEntry*, DocumentElem>(parent)
-    , mCombine(eCombine::And)
+    : SMConditionGroup(parent)
 {
 }
 
 SMConditionList::SMConditionList(const SMConditionList& src)
-    : TEDataContainer<SMConditionEntry*, DocumentElem>(src.getParent())
-    , mCombine(src.mCombine)
+    : SMConditionGroup(src)
 {
-    cloneFrom(src);
 }
 
 SMConditionList::SMConditionList(SMConditionList&& src) noexcept
-    : TEDataContainer<SMConditionEntry*, DocumentElem>(std::move(src))
-    , mCombine(src.mCombine)
+    : SMConditionGroup(std::move(src))
 {
-}
-
-SMConditionList::~SMConditionList()
-{
-    removeAll();
 }
 
 SMConditionList& SMConditionList::operator = (const SMConditionList& other)
 {
     if (this != &other)
     {
-        removeAll();
-        setParent(other.getParent());
-        mCombine = other.mCombine;
-        cloneFrom(other);
+        SMConditionGroup::operator = (other);
     }
 
     return *this;
@@ -327,44 +745,10 @@ SMConditionList& SMConditionList::operator = (SMConditionList&& other) noexcept
 {
     if (this != &other)
     {
-        removeAll();
-        TEDataContainer<SMConditionEntry*, DocumentElem>::operator = (std::move(other));
-        mCombine = other.mCombine;
+        SMConditionGroup::operator = (std::move(other));
     }
 
     return *this;
-}
-
-void SMConditionList::cloneFrom(const SMConditionList& src)
-{
-    for (const SMConditionEntry* row : src.getElements())
-    {
-        SMConditionEntry* copy = new SMConditionEntry(*row);
-        copy->setParent(this);
-        addElement(copy, false);
-    }
-}
-
-SMConditionEntry* SMConditionList::addCondition()
-{
-    SMConditionEntry* entry = new SMConditionEntry(getNextId(), this);
-    addElement(entry, false);
-    return entry;
-}
-
-void SMConditionList::removeAll()
-{
-    for (SMConditionEntry* row : getElements())
-    {
-        delete row;
-    }
-
-    removeAllElements();
-}
-
-bool SMConditionList::isValid() const
-{
-    return true;
 }
 
 bool SMConditionList::readFromXml(QXmlStreamReader& xml)
@@ -372,46 +756,17 @@ bool SMConditionList::readFromXml(QXmlStreamReader& xml)
     if (xml.name() != XmlSM::xmlSMElementConditionList)
         return false;
 
-    mCombine = xml.attributes().hasAttribute(XmlSM::xmlSMAttributeCombine)
-                    ? fromCombineString(xml.attributes().value(XmlSM::xmlSMAttributeCombine).toString())
-                    : eCombine::And;
-
-    while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementConditionList))
-    {
-        if (xml.tokenType() == QXmlStreamReader::StartElement && xml.name() == XmlSM::xmlSMElementCondition)
-        {
-            SMConditionEntry* row = new SMConditionEntry(this);
-            if (row->readFromXml(xml))
-            {
-                addElement(row, false);
-            }
-            else
-            {
-                delete row;
-            }
-        }
-
-        xml.readNext();
-    }
-
+    removeAll();
+    readGroupBody(xml, XmlSM::xmlSMElementConditionList);
     return true;
 }
 
 void SMConditionList::writeToXml(QXmlStreamWriter& xml) const
 {
-    if (getElements().isEmpty())
+    if (getChildren().isEmpty())
         return;
 
     xml.writeStartElement(XmlSM::xmlSMElementConditionList);
-    if (mCombine == eCombine::Or)
-    {
-        xml.writeAttribute(XmlSM::xmlSMAttributeCombine, SMConditionList::toString(mCombine));
-    }
-
-    for (const SMConditionEntry* row : getElements())
-    {
-        row->writeToXml(xml);
-    }
-
+    writeGroupBody(xml);
     xml.writeEndElement();
 }

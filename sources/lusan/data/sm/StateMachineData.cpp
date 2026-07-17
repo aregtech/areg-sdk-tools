@@ -662,10 +662,16 @@ QList<uint32_t> StateMachineData::getLevelPath(uint32_t levelId) const
     return buildLevelPath(mStates, levelId, path) ? path : QList<uint32_t>{};
 }
 
+const QString& StateMachineData::identifierPattern()
+{
+    static const QString _pattern{ QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$") };
+    return _pattern;
+}
+
 bool StateMachineData::isValidIdentifier(const QString& name)
 {
-    static const QRegularExpression _identifier{ QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$") };
-    return _identifier.match(name).hasMatch();
+    static const QRegularExpression _identifier{ StateMachineData::identifierPattern() };
+    return (name.size() <= StateMachineData::MAX_IDENTIFIER_LENGTH) && _identifier.match(name).hasMatch();
 }
 
 int StateMachineData::getStateCount() const

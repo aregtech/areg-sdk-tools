@@ -165,5 +165,14 @@ QIcon SIMethodResponse::getIcon(ElementBase::eDisplay display) const
 
 QString SIMethodResponse::getString(ElementBase::eDisplay display) const
 {
-    return (display == ElementBase::eDisplay::DisplayName ? getName() : QString());
+    switch (display)
+    {
+    case ElementBase::eDisplay::DisplayName:
+        return getName();
+    case ElementBase::eDisplay::DisplayValue:
+        // The list shows the parameter count of the method (like the FSM Methods page).
+        return (getElementCount() > 0) ? QStringLiteral("%1 param(s)").arg(getElementCount()) : QString();
+    default:
+        return QString();
+    }
 }

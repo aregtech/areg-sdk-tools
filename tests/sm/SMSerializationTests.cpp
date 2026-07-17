@@ -225,16 +225,164 @@ namespace
         if ((rroot != nullptr) && (rroot->getTransitions().getElements().isEmpty() == false))
         {
             SMTransitionEntry* rtrans = rroot->getTransitions().getElements().first();
-            CHECK(rtrans->getConditions().getElements().isEmpty() == false);
-            if (rtrans->getConditions().getElements().isEmpty() == false)
+            CHECK(rtrans->getConditions().collectLeaves().isEmpty() == false);
+            if (rtrans->getConditions().collectLeaves().isEmpty() == false)
             {
-                CHECK(rtrans->getConditions().getElements().first()->getExpression() == expr);
+                CHECK(rtrans->getConditions().collectLeaves().first()->getExpression() == expr);
             }
         }
 
         // A second resave of the reloaded model must be byte-identical to the first (spec
         // 7.7.4 determinism / idempotence).
         const QString outPath2 = outFile("sm02_cdata_2.fsml");
+        CHECK(reread.writeToFile(outPath2));
+        CHECK(readAllBytes(outPath) == readAllBytes(outPath2));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SM-21-02: nested condition groups, group negate, and the Lambda leaf
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    // Navigates to the first transition's condition tree of state "Root".
+    SMConditionList* firstGuard(StateMachineData& doc)
+    {
+        SMStateEntry* root = doc.getStates().findState("Root");
+        if ((root == nullptr) || root->getTransitions().getElements().isEmpty())
+        {
+            return nullptr;
+        }
+
+        return &root->getTransitions().getElements().first()->getConditions();
+    }
+
+    void testNestedConditions()
+    {
+        std::printf("[SM-21-02] nested groups + group negate + Lambda leaf round-trip\n");
+
+        const QString lambdaBody = "int n = count;\nif (n < 0) { return false; }\nreturn n & 1;";
+
+        StateMachineData doc;
+        doc.getOverview().setName("NestedCond");
+        doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+
+        SMStateEntry* root = doc.getStates().createState("Root", SMStateEntry::eStateKind::Start);
+        CHECK(root != nullptr);
+        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go");
+        CHECK(trans != nullptr);
+
+        // Build: WalkRequested && !(HasWaiting || count >= MIN_WAITING) && !IsNightMode && lambda{..}
+        SMConditionList& conds = trans->getConditions();
+        SMConditionEntry* c0 = conds.addCondition();
+        c0->setLhsKind(SMArgumentEntry::eValueSource::Attribute);
+        c0->setLhs("WalkRequested");
+
+        SMConditionGroup* grp = conds.addGroup();
+        grp->setCombine(SMConditionGroup::eCombine::Or);
+        grp->setNegated(true);
+        SMConditionEntry* g0 = grp->addCondition();
+        g0->setLhsKind(SMArgumentEntry::eValueSource::Condition);
+        g0->setLhs("HasWaiting");
+        SMConditionEntry* g1 = grp->addCondition();
+        g1->setLhsKind(SMArgumentEntry::eValueSource::Param);
+        g1->setLhs("count");
+        g1->setOperator(SMConditionEntry::eOperator::GreaterEqual);
+        g1->setRhsKind(SMArgumentEntry::eValueSource::Constant);
+        g1->setRhs("MIN_WAITING");
+
+        SMConditionEntry* c2 = conds.addCondition();
+        c2->setLhsKind(SMArgumentEntry::eValueSource::Attribute);
+        c2->setLhs("IsNightMode");
+        c2->setNegated(true);
+
+        SMConditionEntry* c3 = conds.addCondition();
+        c3->setLhsKind(SMArgumentEntry::eValueSource::Lambda);
+        c3->setBody(lambdaBody);
+
+        const QString outPath = outFile("sm21_nested.fsml");
+        CHECK(doc.writeToFile(outPath));
+
+        // The nested form must emit a ConditionGroup element.
+        const QByteArray written = readAllBytes(outPath);
+        CHECK(written.contains("<ConditionGroup"));
+
+        // Reread and verify the tree shape.
+        StateMachineData reread;
+        CHECK(reread.readFromFile(outPath));
+        CHECK(reread.openSucceeded());
+
+        SMConditionList* rc = firstGuard(reread);
+        CHECK(rc != nullptr);
+        if (rc != nullptr)
+        {
+            CHECK(rc->getCount() == 4);
+            CHECK(rc->collectLeaves().size() == 5);
+
+            const QList<SMConditionNode*>& kids = rc->getChildren();
+            CHECK((kids.size() == 4) && kids.at(0)->isLeaf() && kids.at(1)->isGroup()
+                  && kids.at(2)->isLeaf() && kids.at(3)->isLeaf());
+
+            if ((kids.size() == 4) && kids.at(1)->isGroup())
+            {
+                SMConditionEntry* r0 = static_cast<SMConditionEntry*>(kids.at(0));
+                CHECK(r0->getLhs() == "WalkRequested");
+
+                SMConditionGroup* rg = static_cast<SMConditionGroup*>(kids.at(1));
+                CHECK(rg->getCombine() == SMConditionGroup::eCombine::Or);
+                CHECK(rg->isNegated());
+                CHECK(rg->getCount() == 2);
+
+                SMConditionEntry* r2 = static_cast<SMConditionEntry*>(kids.at(2));
+                CHECK((r2->getLhs() == "IsNightMode") && r2->isNegated());
+
+                SMConditionEntry* r3 = static_cast<SMConditionEntry*>(kids.at(3));
+                CHECK(r3->isLambdaRow());
+                CHECK(r3->getBody() == lambdaBody);
+            }
+        }
+
+        // Idempotent resave (spec 7.7.4 determinism).
+        const QString outPath2 = outFile("sm21_nested_2.fsml");
+        CHECK(reread.writeToFile(outPath2));
+        CHECK(readAllBytes(outPath) == readAllBytes(outPath2));
+    }
+
+    void testFlatGuardStaysLegacy()
+    {
+        std::printf("[SM-21-02] a flat guard still serializes as legacy ConditionList (no ConditionGroup)\n");
+
+        StateMachineData doc;
+        doc.getOverview().setName("FlatCond");
+        doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+
+        SMStateEntry* root = doc.getStates().createState("Root", SMStateEntry::eStateKind::Start);
+        CHECK(root != nullptr);
+        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go");
+        CHECK(trans != nullptr);
+
+        SMConditionEntry* c0 = trans->getConditions().addCondition();
+        c0->setLhsKind(SMArgumentEntry::eValueSource::Attribute);
+        c0->setLhs("WalkRequested");
+        SMConditionEntry* c1 = trans->getConditions().addCondition();
+        c1->setLhsKind(SMArgumentEntry::eValueSource::Attribute);
+        c1->setLhs("IsNightMode");
+
+        const QString outPath = outFile("sm21_flat.fsml");
+        CHECK(doc.writeToFile(outPath));
+
+        const QByteArray written = readAllBytes(outPath);
+        CHECK(written.contains("<ConditionList"));
+        CHECK(written.contains("<ConditionGroup") == false);
+        CHECK(written.contains("Negate=") == false);
+
+        StateMachineData reread;
+        CHECK(reread.readFromFile(outPath));
+        SMConditionList* rc = firstGuard(reread);
+        CHECK((rc != nullptr) && (rc->getCount() == 2) && (rc->collectGroups().isEmpty()));
+
+        const QString outPath2 = outFile("sm21_flat_2.fsml");
         CHECK(reread.writeToFile(outPath2));
         CHECK(readAllBytes(outPath) == readAllBytes(outPath2));
     }
@@ -515,6 +663,90 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// SM-21-07: layout and logic are independently diffable
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    //!< The trailing '<Layout ...</Layout>' block of a serialized document, or empty.
+    QByteArray layoutBlock(const QByteArray& xml)
+    {
+        const int start = xml.indexOf("<Layout");
+        const int end   = xml.indexOf("</Layout>");
+        if ((start < 0) || (end < 0))
+        {
+            return QByteArray();
+        }
+
+        return xml.mid(start, (end + 9) - start);
+    }
+
+    //!< Everything before the trailing Layout block: the logic sections.
+    QByteArray logicPart(const QByteArray& xml)
+    {
+        const int start = xml.indexOf("<Layout");
+        return (start < 0) ? xml : xml.left(start);
+    }
+
+    void testLayoutLogicSeparation()
+    {
+        std::printf("[SM-21-07] layout and logic are independently diffable\n");
+
+        const QString refPath = dataFile("TrafficLight.fsml");
+
+        StateMachineData base;
+        CHECK(base.readFromFile(refPath));
+        const QString basePath = outFile("sm2107_base.fsml");
+        CHECK(base.writeToFile(basePath));
+        const QByteArray baseBytes = readAllBytes(basePath);
+        CHECK(layoutBlock(baseBytes).isEmpty() == false);   // the reference carries geometry
+
+        // Moving a state box changes only the Layout block: a drag-to-tidy never rewrites logic.
+        StateMachineData moved;
+        CHECK(moved.readFromFile(refPath));
+        SMStateEntry* off = moved.findState("LightOff");
+        CHECK(off != nullptr);
+        SMLayoutNode* node = (off != nullptr) ? moved.getLayout().findNode(off->getId()) : nullptr;
+        CHECK(node != nullptr);
+        if (node != nullptr)
+        {
+            node->x += 64.0;
+            node->y += 32.0;
+        }
+        const QString movePath = outFile("sm2107_move.fsml");
+        CHECK(moved.writeToFile(movePath));
+        const QByteArray moveBytes = readAllBytes(movePath);
+
+        CHECK(logicPart(moveBytes)   == logicPart(baseBytes));      // logic untouched by a move
+        CHECK(layoutBlock(moveBytes) != layoutBlock(baseBytes));    // only geometry changed
+
+        // Renaming a state changes only logic: layout keys by ID, so it is byte-identical.
+        StateMachineData renamed;
+        CHECK(renamed.readFromFile(refPath));
+        SMStateEntry* on = renamed.findState("LightOn");
+        CHECK(on != nullptr);
+        if (on != nullptr)
+        {
+            on->setName(QStringLiteral("LightOnRenamed"));
+        }
+        const QString renamePath = outFile("sm2107_rename.fsml");
+        CHECK(renamed.writeToFile(renamePath));
+        const QByteArray renameBytes = readAllBytes(renamePath);
+
+        CHECK(layoutBlock(renameBytes) == layoutBlock(baseBytes));  // geometry untouched by a rename
+        CHECK(logicPart(renameBytes)   != logicPart(baseBytes));    // only logic changed
+
+        // Geometry survives a full round-trip byte-exactly and deterministically.
+        StateMachineData reread;
+        CHECK(reread.readFromFile(movePath));
+        CHECK(reread.openSucceeded());
+        const QString movePath2 = outFile("sm2107_move2.fsml");
+        CHECK(reread.writeToFile(movePath2));
+        CHECK(readAllBytes(movePath) == readAllBytes(movePath2));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Entry point
 //////////////////////////////////////////////////////////////////////////
 
@@ -523,7 +755,10 @@ int main(int /*argc*/, char** /*argv*/)
     std::printf("==== SM serialization/versioning tests ====\n");
 
     testRoundTrip();
+    testLayoutLogicSeparation();
     testCData();
+    testNestedConditions();
+    testFlatGuardStaysLegacy();
     testDeprecation();
     testRobustness();
     testVersionMigration();

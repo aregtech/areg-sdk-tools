@@ -229,6 +229,9 @@ QString SIMethodRequest::getString(ElementBase::eDisplay display) const
     {
     case ElementBase::eDisplay::DisplayName:
         return getName();
+    case ElementBase::eDisplay::DisplayValue:
+        // The list shows the parameter count of the method (like the FSM Methods page).
+        return (getElementCount() > 0) ? QStringLiteral("%1 param(s)").arg(getElementCount()) : QString();
     case ElementBase::eDisplay::DisplayLink:
         return mResponse.getName();
     default:

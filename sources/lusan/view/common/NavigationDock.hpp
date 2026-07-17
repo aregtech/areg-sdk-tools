@@ -140,8 +140,9 @@ public:
     /**
      * \brief   Adds (if absent) and shows the movable FSM design widget tab (Design Toolbar,
      *          State Machine Properties, or State Machine Outline) hosting the given content
-     *          window; the content stays owned by the main window (issue #516). The tab is
-     *          raised only the first time it is added, so re-syncs do not steal focus.
+     *          window; the content stays owned by the main window (issue #516). This keeps the
+     *          current tab unchanged; callers that explicitly moved a widget here may raise it
+     *          afterward.
      * \param   navi        One of NaviDesignToolbar / NaviDesignProperties / NaviDesignOutline.
      * \param   content     The navigation window to host (NaviFsmToolbar or NaviDesignPanel).
      **/

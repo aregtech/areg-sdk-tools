@@ -21,9 +21,13 @@
 
 #include <QWidget>
 
+#include <QStringList>
+
 class CppSyntaxHighlighter;
+class QCompleter;
 class QLabel;
 class QPlainTextEdit;
+class QStringListModel;
 
 /**
  * \brief   The embedded-code editor: a read-only signature line above a
@@ -48,14 +52,34 @@ public:
     //!< Sets the fixed reminder shown below the body (capture note and return requirement).
     void setNote(const QString& note);
 
+    /**
+     * \brief   Offers the machine's own known identifiers as popup autocomplete while
+     *          typing in the body (SM-21-06). The words are the completion universe --
+     *          attribute getters, constants, method calls, in-scope stimulus params --
+     *          produced by the model; the editor never parses the C++ it edits. An empty
+     *          list disables completion.
+     **/
+    void setCompletions(const QStringList& words);
+
 private:
     void buildUi();
+
+    //!< Shows / hides the completion popup for the identifier prefix under the cursor.
+    void updateCompletionPopup();
+
+    //!< Replaces the identifier under the cursor with the accepted completion.
+    void insertCompletion(const QString& completion);
+
+    //!< The identifier word the cursor sits on (empty when the cursor is not on one).
+    QString wordUnderCursor() const;
 
 private:
     QLabel*                 mSignature;     //!< Read-only declared signature.
     QPlainTextEdit*         mBody;          //!< Monospaced verbatim body editor.
     QLabel*                 mNote;          //!< Fixed capture / return reminder.
     CppSyntaxHighlighter*   mHighlighter;   //!< Basic C++ highlighter over the body document.
+    QCompleter*             mCompleter;     //!< Known-identifier completer (lazily created).
+    QStringListModel*       mWordModel;     //!< The completer's word model.
 };
 
 #endif  // LUSAN_VIEW_SM_SMCODEEDITOR_HPP

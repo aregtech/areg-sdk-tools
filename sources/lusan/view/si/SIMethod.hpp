@@ -25,15 +25,16 @@
 #include <QScrollArea>
 #include "lusan/data/si/SIMethodBase.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
+#include "lusan/view/common/TableCell.hpp"
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
 class ElementBase;
 class SIMethodBase;
-class SIMethodDetails;
-class SIMethodList;
-class SIMethodParamDetails;
+class MethodDetailsView;
+class MethodListView;
+class MethodParamDetailsView;
 class SIMethodModel;
 class QTreeWidgetItem;
 class SIMethodBroadcast;
@@ -43,6 +44,7 @@ class MethodParameter;
 class DataTypesModel;
 class ReplyMethodModel;
 
+class QAbstractItemModel;
 class QHBoxLayout;
 
 class SIMethodWidget : public QWidget
@@ -63,6 +65,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 class SIMethod  : public QScrollArea
                 , public IEDataTypeConsumer
+                , public IETableHelper
 {
     Q_OBJECT
 
@@ -109,9 +112,32 @@ protected:
     void dataTypeUpdated(DataTypeCustom* dataType) override;
 
 //////////////////////////////////////////////////////////////////////////
+// IETableHelper overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the number of columns in the method list tree.
+     **/
+    int getColumnCount() const override;
+
+    /**
+     * \brief   Returns the display text of the given cell, used to seed the inline editor.
+     * \param   cell    The index of the cell.
+     **/
+    QString getCellText(const QModelIndex& cell) const override;
+
+//////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
 protected:
+
+    /**
+     * \brief   Triggered when a cell is edited inline in the tree via the TableCell delegate.
+     * \param   index       The index of the edited cell.
+     * \param   newValue    The new text of the cell.
+     **/
+    void onEditorDataChanged(const QModelIndex& index, const QString& newValue);
 
     /**
      * \brief Triggered when the method name is changed.
@@ -325,6 +351,35 @@ private:
     void setNodeText(QTreeWidgetItem* node, const ElementBase* method);
 
     /**
+     * \brief   Commits an inline cell edit into the model and syncs the row and the details panel.
+     * \param   item        The edited tree item (method or parameter row).
+     * \param   column      The edited column.
+     * \param   newValue    The new text of the cell.
+     **/
+    void cellChanged(QTreeWidgetItem* item, int column, const QString& newValue);
+
+    /**
+     * \brief   Returns true if the given cell may be edited inline. Method rows edit the Name
+     *          column (and the Response column for requests only); parameter rows edit the Name,
+     *          Data Type, and (when a default is allowed) the Value column.
+     * \param   index   The index of the cell.
+     **/
+    bool isCellEditable(const QModelIndex& index) const;
+
+    /**
+     * \brief   Returns the combo-box model for the given cell, or nullptr for a plain line editor.
+     *          The parameter Data Type column and the request Response column are combo boxes.
+     * \param   index   The index of the cell.
+     **/
+    QAbstractItemModel* editorModelFor(const QModelIndex& index) const;
+
+    /**
+     * \brief   Returns the keystroke validation for the given cell (Name columns are identifiers).
+     * \param   index   The index of the cell.
+     **/
+    TableCell::eCellValidation validationFor(const QModelIndex& index) const;
+
+    /**
      * \brief   Triggered when a response is deleted, this updates the request entries connected with response object.
      * \param   response    The response object to be deleted.
      **/
@@ -396,12 +451,13 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     SIMethodModel &         mModel;         //!< The method model object.
-    SIMethodDetails*        mDetails;       //!< The method details widget object.
-    SIMethodList*           mList;          //!< The method list (tree table) widget object.
-    SIMethodParamDetails* mParams;          //!< The method parameter details widget object.
+    MethodDetailsView*      mDetails;       //!< The method details widget object.
+    MethodListView*         mList;          //!< The method list (tree table) widget object.
+    MethodParamDetailsView* mParams;        //!< The method parameter details widget object.
     SIMethodWidget*         mWidget;        //!< The helper widget object.
     DataTypesModel*         mParamTypes;    //!< The parameter data type model object.
     ReplyMethodModel*       mReplyModel;    //!< The reply (response) method model object.
+    TableCell*              mTableCell;     //!< The inline-editing delegate for the list tree.
 
     uint32_t                mCount;         //!< The counter to generate new method names.
 };

@@ -29,9 +29,11 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMAttributeModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
-#include "lusan/view/sm/SMAttributeDetails.hpp"
-#include "lusan/view/sm/SMAttributeList.hpp"
+#include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/common/AttributeDetailsView.hpp"
+#include "lusan/view/common/AttributeListView.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -39,6 +41,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QSignalBlocker>
 #include <QToolButton>
@@ -64,16 +67,18 @@ namespace
 SMAttribute::SMAttribute(SMAttributeModel& model, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
-    , mList             (new SMAttributeList(this))
-    , mDetails          (new SMAttributeDetails(this))
+    , mList             (new AttributeListView(AttributeViewConfig{ true, false }, this))
+    , mDetails          (new AttributeDetailsView(AttributeViewConfig{ true, false }, this))
+    , mTableCell        (nullptr)
     , mNameCounter      (0)
 {
     buildUi();
+    setupInlineEditing();
     setupSignals();
     refreshAll();
 }
 
-SMAttributeList* SMAttribute::getList() const
+AttributeListView* SMAttribute::getList() const
 {
     return mList;
 }
@@ -120,13 +125,28 @@ void SMAttribute::setupSignals()
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMAttribute::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMAttribute::onMoveDownClicked);
 
+    // The shared AttributeDetailsView already installs the C++ identifier validator on the Name
+    // field, so the controller only wires the commit/preview signals here.
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMAttribute::onNameCommitted);
+    // Live-preview the typed name into the selected attribute's Name column; the rename commits
+    // on editingFinished. Selection sets the field under a QSignalBlocker, so this only fires
+    // for genuine user edits.
+    connect(mDetails->ctrlName()   , &QLineEdit::textChanged        , this, [this](const QString& text) {
+        if (currentAttributeId() != 0)
+        {
+            if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+                item->setText(0, text);
+        }
+    });
     connect(mDetails->ctrlTypes()  , &QComboBox::currentIndexChanged, this, &SMAttribute::onTypeChanged);
     connect(mDetails->ctrlValue()  , &QLineEdit::editingFinished    , this, &SMAttribute::onValueCommitted);
     connect(mDetails->ctrlValue()  , &QLineEdit::textChanged        , this, &SMAttribute::onValueTextChanged);
     connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMAttribute::onDeprecatedToggled);
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMAttribute::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
+
+    // Inline (in-table) edits route through the same undo commands as the details panel.
+    connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SMAttribute::onEditorDataChanged);
 
     connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMAttribute::onNotifierChanged);
     connect(&mModel.getNotifier(), &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Attribute) onNotifierChanged(); });
@@ -138,6 +158,65 @@ void SMAttribute::setupSignals()
     connect(&mModel.getNotifier(), &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
     connect(&mModel.getNotifier(), &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
     connect(&mModel.getNotifier(), &DocModelNotifier::listReordered, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::DataType) onDataTypesChanged(); });
+}
+
+void SMAttribute::setupInlineEditing()
+{
+    QTreeWidget* table = mList->ctrlTableList();
+
+    // Wait until editing finishes before committing: unlike the Service Interface page (which
+    // mutates the entry directly), every commit here routes through an undo command that fires a
+    // notifier signal rebuilding the whole list, so a per-keystroke commit would tear down the
+    // open editor. Wait-for-end mode also gives clean Escape semantics for free: the pending text
+    // is simply discarded (TableCell::onCloseEditor), so nothing is committed.
+    mTableCell = new TableCell(table, this, true);
+
+    // Forbid invalid C++ identifier characters when editing the Name column inline, exactly as
+    // the details panel's Name field does.
+    mTableCell->setColumnValidation(static_cast<int>(AttributeListView::eColumn::ColName), TableCell::eCellValidation::Identifier);
+
+    // The Type column opens a combo populated from the SAME model as the details Type combo, so
+    // both offer the identical predefined + custom type list. The resolver path deliberately does
+    // not transfer model ownership (unlike the model-list constructor), so the details combo keeps
+    // owning its model.
+    mTableCell->setEditorModelResolver([this](const QModelIndex& index) -> QAbstractItemModel*
+        {
+            return (index.column() == static_cast<int>(AttributeListView::eColumn::ColType)) ? mDetails->ctrlTypes()->model() : nullptr;
+        });
+
+    // The Value column is editable only when the attribute's type carries a literal - Structure
+    // and Container types have none, mirroring the disabled details Value field for those types.
+    mTableCell->setEditableCheck([this](const QModelIndex& index) -> bool
+        {
+            if (index.column() != static_cast<int>(AttributeListView::eColumn::ColExtra))
+                return true;
+
+            QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(index.row());
+            const SMAttributeEntry* entry = (item != nullptr) ? mModel.findAttribute(item->data(0, Qt::ItemDataRole::UserRole).toUInt()) : nullptr;
+            if (entry == nullptr)
+                return false;
+
+            DataTypeCustom* custom = mModel.getDataTypeModel().findDataType(entry->getType());
+            const bool hasNoLiteral = (custom != nullptr)
+                && ((custom->getCategory() == DataTypeBase::eCategory::Structure)
+                 || (custom->getCategory() == DataTypeBase::eCategory::Container));
+            return (hasNoLiteral == false);
+        });
+
+    table->setItemDelegateForColumn(static_cast<int>(AttributeListView::eColumn::ColName) , mTableCell);
+    table->setItemDelegateForColumn(static_cast<int>(AttributeListView::eColumn::ColType) , mTableCell);
+    table->setItemDelegateForColumn(static_cast<int>(AttributeListView::eColumn::ColExtra), mTableCell);
+}
+
+int SMAttribute::getColumnCount() const
+{
+    return mList->ctrlTableList()->columnCount();
+}
+
+QString SMAttribute::getCellText(const QModelIndex& cell) const
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(cell.row());
+    return (item != nullptr ? item->text(cell.column()) : QString());
 }
 
 bool SMAttribute::eventFilter(QObject* watched, QEvent* event)
@@ -396,6 +475,29 @@ void SMAttribute::onRemoveClicked()
     if (id == 0)
         return;
 
+    // Deleting an attribute still referenced by guards is refused with the where-used list
+    // (v6 3.3); `Delete anyway` breaks the references VISIBLY (validation reports ERR).
+    const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getFacade().getData(), id);
+    if (uses.isEmpty() == false)
+    {
+        QStringList places;
+        for (const SMGuardWhereUsed::Use& use : uses)
+        {
+            places.append(QStringLiteral("  - ") + use.location);
+        }
+
+        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Attribute is used by guards")
+                            , tr("This attribute is used by %1 guard%2:\n%3\n\nDelete anyway? The affected guards break and are listed by validation.")
+                              .arg(uses.size())
+                              .arg((uses.size() == 1) ? QString() : QStringLiteral("s"))
+                              .arg(places.join(QLatin1Char('\n')))
+                            , QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (choice != QMessageBox::Yes)
+        {
+            return;
+        }
+    }
+
     const QList<SMAttributeEntry>& list = mModel.getAttributes();
     const int index = mModel.findIndex(id);
     uint32_t neighborId = 0;
@@ -525,6 +627,57 @@ void SMAttribute::onDeprecateHintCommitted()
     }
 }
 
+void SMAttribute::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
+{
+    if (index.isValid() == false)
+        return;
+
+    QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(index.row());
+    if (item == nullptr)
+        return;
+
+    const uint32_t id = item->data(0, Qt::ItemDataRole::UserRole).toUInt();
+    if (id == 0)
+        return;
+
+    const int col = index.column();
+    // Committing here would rebuild the list (via the model's notifier) while the delegate editor
+    // is still closing; defer to the next event-loop turn so the editor tears down cleanly first.
+    QMetaObject::invokeMethod(this, [this, id, col, newValue]()
+        {
+            commitInlineEdit(id, col, newValue);
+        }, Qt::QueuedConnection);
+}
+
+void SMAttribute::commitInlineEdit(uint32_t id, int col, const QString& newValue)
+{
+    SMAttributeEntry* entry = mModel.findAttribute(id);
+    if (entry == nullptr)
+        return;
+
+    if (col == static_cast<int>(AttributeListView::eColumn::ColName))
+    {
+        if (entry->getName() != newValue)
+        {
+            mModel.renameAttribute(id, newValue);
+        }
+    }
+    else if (col == static_cast<int>(AttributeListView::eColumn::ColType))
+    {
+        if (entry->getType() != newValue)
+        {
+            mModel.setType(id, newValue);
+        }
+    }
+    else if (col == static_cast<int>(AttributeListView::eColumn::ColExtra))
+    {
+        if (entry->getValue() != newValue)
+        {
+            mModel.setValue(id, newValue);
+        }
+    }
+}
+
 void SMAttribute::refreshAll()
 {
     QTreeWidget* table = mList->ctrlTableList();
@@ -536,6 +689,9 @@ void SMAttribute::refreshAll()
         for (const SMAttributeEntry& entry : mModel.getAttributes())
         {
             QTreeWidgetItem* item = new QTreeWidgetItem();
+            // Editable flag lets the TableCell delegate open an inline editor (tree items are
+            // non-editable by default, unlike table items).
+            item->setFlags(item->flags() | Qt::ItemIsEditable);
             setNodeText(item, entry);
             item->setData(0, Qt::ItemDataRole::UserRole, entry.getId());
             table->addTopLevelItem(item);

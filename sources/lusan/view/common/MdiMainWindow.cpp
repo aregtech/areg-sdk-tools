@@ -590,6 +590,23 @@ void MdiMainWindow::setDesignWidgetPlacement(MdiMainWindow::eDesignWidget widget
     }
 
     syncDesignWidgets();
+    if (place == eDesignPlace::InNavigation)
+    {
+        switch (widget)
+        {
+        case eDesignWidget::Toolbar:
+            mNaviDock.showTab(NavigationDock::NaviDesignToolbar);
+            break;
+
+        case eDesignWidget::Properties:
+            mNaviDock.showTab(NavigationDock::NaviDesignProperties);
+            break;
+
+        case eDesignWidget::Outline:
+            mNaviDock.showTab(NavigationDock::NaviDesignOutline);
+            break;
+        }
+    }
 }
 
 void MdiMainWindow::createDesignNavHosts()

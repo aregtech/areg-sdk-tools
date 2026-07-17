@@ -32,6 +32,8 @@
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/sm/SMGuardBar.hpp"
+#include "lusan/view/sm/SMGuardField.hpp"
 
 #include <QComboBox>
 #include <QCompleter>
@@ -42,7 +44,11 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPlainTextEdit>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
+#include <QSignalBlocker>
 #include <QStackedWidget>
+#include <QTabWidget>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -153,6 +159,8 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mStimulusName (nullptr)
     , mTarget       (nullptr)
     , mTransDesc    (nullptr)
+    , mConditions   (nullptr)
+    , mTransTabs    (nullptr)
     , mRegistryInfo (nullptr)
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
@@ -173,9 +181,20 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     DocModelNotifier& notifier = mModel.getNotifier();
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMPropertiesPanel::onElementChanged);
     connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMPropertiesPanel::onElementRemoved);
+    // A newly added trigger method / event / timer expands the stimulus vocabulary; if a
+    // transition is on screen, rebuild its stimulus picker so the new stimulus is selectable
+    // immediately (the added element's id is never mCurrentId, so onElementChanged misses it).
+    connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) {
+        if ((mPage == PageTransition) && (isEditing() == false)
+            && ((kind == eDocElementKind::Method) || (kind == eDocElementKind::Event) || (kind == eDocElementKind::Timer)))
+        {
+            refresh();
+        }
+    });
     connect(&notifier, &DocModelNotifier::nameChanged, this, &SMPropertiesPanel::onNameChanged);
     connect(&notifier, &DocModelNotifier::listReordered, this, &SMPropertiesPanel::onListReordered);
     connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMPropertiesPanel::onDocumentReloaded);
+    connect(&mModel, &StateMachineModel::signalStateNamePreview, this, &SMPropertiesPanel::onStateNamePreview);
 
     refresh();
 }
@@ -192,6 +211,10 @@ void SMPropertiesPanel::buildStatePage()
     QFormLayout* form = new QFormLayout(page);
 
     mStateName = new QLineEdit(page);
+    mStateName->setMaxLength(StateMachineData::MAX_IDENTIFIER_LENGTH);
+    // State names must be enum-friendly identifiers: reject spaces and other invalid symbols
+    // as the user types, the same rule the canvas in-place editor enforces.
+    mStateName->setValidator(new QRegularExpressionValidator(QRegularExpression(StateMachineData::identifierPattern()), mStateName));
     mStateKind = new QLabel(page);
     mStateEntry = new QLabel(page);
     mStateExit = new QLabel(page);
@@ -211,6 +234,14 @@ void SMPropertiesPanel::buildStatePage()
     form->addRow(tr("Description:"), mStateDesc);
 
     connect(mStateName, &QLineEdit::editingFinished, this, &SMPropertiesPanel::onStateNameCommit);
+    // Real-time mirror onto the canvas box while the user types here (no model change yet).
+    connect(mStateName, &QLineEdit::textEdited, this, [this](const QString& text)
+    {
+        if ((mUpdating == false) && (mPage == PageState) && (mCurrentId != 0))
+        {
+            mModel.publishStateNamePreview(mCurrentId, text);
+        }
+    });
     connect(mTransitions, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem*) { onTransitionActivated(); });
 
     static_cast<ReorderList*>(mTransitions)->mOnReorder = [this](int from, int to)
@@ -224,6 +255,8 @@ void SMPropertiesPanel::buildStatePage()
 
 void SMPropertiesPanel::buildTransitionPage()
 {
+    // The stimulus/target/description form becomes the General tab; a Conditions tab hosts the
+    // guard builder. The stimulus/target/list accessors keep pointing at the same widgets.
     QWidget* page = new QWidget(this);
     QFormLayout* form = new QFormLayout(page);
 
@@ -256,7 +289,47 @@ void SMPropertiesPanel::buildTransitionPage()
     connect(mTarget, &QComboBox::activated, this, &SMPropertiesPanel::onTargetCommit);
     connect(mTarget->lineEdit(), &QLineEdit::editingFinished, this, &SMPropertiesPanel::onTargetCommit);
 
-    mStack->insertWidget(PageTransition, page);
+    mTransTabs = new QTabWidget(this);
+    mTransTabs->setObjectName(QStringLiteral("smTransTabs"));
+    mTransTabs->addTab(page, tr("General"));
+    mConditions = new SMGuardBar(mModel, this);
+    mTransTabs->addTab(mConditions, tr("Conditions"));
+    connect(mConditions, &SMGuardBar::badgeChanged, this, &SMPropertiesPanel::onGuardBadgeChanged);
+
+    mStack->insertWidget(PageTransition, mTransTabs);
+}
+
+void SMPropertiesPanel::onGuardBadgeChanged(bool isDraft, bool hasWarnings)
+{
+    if (mTransTabs == nullptr)
+    {
+        return;
+    }
+
+    // The Conditions tab is the second page; a draft adds `*`, a warning adds the `(!)` glyph.
+    QString label = tr("Conditions");
+    if (isDraft)
+    {
+        label += QStringLiteral(" *");
+    }
+
+    if (hasWarnings)
+    {
+        label += QStringLiteral(" (!)");
+    }
+
+    mTransTabs->setTabText(1, label);
+}
+
+void SMPropertiesPanel::onStateNamePreview(uint32_t stateId, const QString& text)
+{
+    if ((mPage != PageState) || (mCurrentId != stateId) || (mStateName == nullptr) || mStateName->hasFocus())
+    {
+        return;
+    }
+
+    const QSignalBlocker block(mStateName);
+    mStateName->setText(text);
 }
 
 void SMPropertiesPanel::buildRegistryPage()
@@ -301,6 +374,25 @@ void SMPropertiesPanel::onModelSelectionChanged()
     refresh();
 }
 
+void SMPropertiesPanel::focusConditions(uint32_t transitionId)
+{
+    if (mModel.getData().findTransitionById(transitionId) == nullptr)
+    {
+        return;
+    }
+
+    // Selecting refreshes synchronously to the transition page; then land on Conditions.
+    mModel.getSelectionModel().setSelection({ transitionId });
+    if (mPage == PageTransition)
+    {
+        mTransTabs->setCurrentIndex(1);
+        if (mConditions->field() != nullptr)
+        {
+            mConditions->field()->setFocus();
+        }
+    }
+}
+
 void SMPropertiesPanel::refresh()
 {
     const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
@@ -330,6 +422,11 @@ void SMPropertiesPanel::showEmpty()
 {
     mPage = PageEmpty;
     mCurrentId = 0u;
+    if (mConditions != nullptr)
+    {
+        mConditions->setTransition(0u);
+    }
+
     mStack->setCurrentIndex(PageEmpty);
 }
 
@@ -417,6 +514,8 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
     mTarget->setEditText(transition->isExternal() ? transition->getTo() : internalLabel());
     mTransDesc->setPlainText(transition->getDescription());
 
+    mConditions->setTransition(transitionId);
+
     mStack->setCurrentIndex(PageTransition);
     mUpdating = false;
 }
@@ -474,6 +573,7 @@ void SMPropertiesPanel::onStateNameCommit()
     if ((StateMachineData::isValidIdentifier(name) == false) || ((clash != nullptr) && (clash->getId() != mCurrentId)))
     {
         mStateName->setText(state->getName());   // reject: same rule as canvas F2
+        mModel.publishStateNamePreview(mCurrentId, state->getName());   // restore the mirrored canvas box name
         return;
     }
 

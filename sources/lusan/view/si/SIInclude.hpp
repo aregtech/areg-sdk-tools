@@ -29,12 +29,13 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class IncludeDetailsView;
 class IncludeEntry;
-class SIIncludeDetails;
-class SIIncludeList;
+class IncludeListView;
 class SIIncludeModel;
 class TableCell;
 class QHBoxLayout;
+class QTreeWidgetItem;
 
 /**
  * \brief   The widget object for SIInclude page.
@@ -108,13 +109,11 @@ protected:
 protected slots:
 
     /**
-     * \brief   Triggered when the current cell is changed.
-     * \param   currentRow      The current row index.
-     * \param   currentColumn   The current column index.
-     * \param   previousRow     The previous row index.
-     * \param   previousColumn  The previous column index.
+     * \brief   Triggered when the current list row (tree item) is changed.
+     * \param   current     The newly selected item, or nullptr.
+     * \param   previous    The previously selected item, or nullptr.
      **/
-    void onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn);
+    void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
 
     /**
      * \brief   Triggered when the add button is clicked.
@@ -145,6 +144,12 @@ protected slots:
      * \brief   Triggered when the browse button is clicked.
      **/
     void onBrowseClicked();
+
+    /**
+     * \brief   Triggered when the update button is clicked.
+     *          Re-derives the Type/Name/Version columns from the current include locations.
+     **/
+    void onUpdateClicked();
 
     /**
      * \brief   Triggered when the include field is changed.
@@ -252,8 +257,8 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     SIIncludeModel&     mModel;     //!< The model of the SIInclude section.
-    SIIncludeDetails*   mDetails;   //!< The details page.
-    SIIncludeList*      mList;      //!< The list page.
+    IncludeDetailsView* mDetails;   //!< The details page.
+    IncludeListView*    mList;      //!< The list page.
     SIIncludeWidget*    mWidget;    //!< The widget object.
     TableCell*          mTableCell; //!< The table cell.
 

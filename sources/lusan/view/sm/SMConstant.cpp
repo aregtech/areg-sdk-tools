@@ -29,9 +29,11 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMConstantModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
+#include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
-#include "lusan/view/sm/SMConstantDetails.hpp"
-#include "lusan/view/sm/SMConstantList.hpp"
+#include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/common/ConstantDetailsView.hpp"
+#include "lusan/view/common/ConstantListView.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -39,6 +41,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QSignalBlocker>
 #include <QToolButton>
@@ -64,8 +67,8 @@ namespace
 SMConstant::SMConstant(SMConstantModel& model, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
-    , mList             (new SMConstantList(this))
-    , mDetails          (new SMConstantDetails(this))
+    , mList             (new ConstantListView(this))
+    , mDetails          (new ConstantDetailsView(this))
     , mNameCounter      (0)
 {
     buildUi();
@@ -73,7 +76,7 @@ SMConstant::SMConstant(SMConstantModel& model, QWidget* parent /*= nullptr*/)
     refreshAll();
 }
 
-SMConstantList* SMConstant::getList() const
+ConstantListView* SMConstant::getList() const
 {
     return mList;
 }
@@ -120,7 +123,17 @@ void SMConstant::setupSignals()
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMConstant::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMConstant::onMoveDownClicked);
 
+    // The shared view already installs the C++ identifier validator on the Name field.
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMConstant::onNameCommitted);
+    // Live-preview the typed name into the selected constant's Name column; the rename commits
+    // on editingFinished. Selection sets the field under a QSignalBlocker.
+    connect(mDetails                , &ConstantDetailsView::nameEdited, this, [this](const QString& text) {
+        if (currentConstantId() != 0)
+        {
+            if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+                item->setText(0, text);
+        }
+    });
     connect(mDetails->ctrlTypes()  , &QComboBox::currentIndexChanged, this, &SMConstant::onTypeChanged);
     connect(mDetails->ctrlValue()  , &QLineEdit::editingFinished    , this, &SMConstant::onValueCommitted);
     connect(mDetails->ctrlValue()  , &QLineEdit::textChanged        , this, &SMConstant::onValueTextChanged);
@@ -395,6 +408,29 @@ void SMConstant::onRemoveClicked()
     const uint32_t id = currentConstantId();
     if (id == 0)
         return;
+
+    // Deleting a constant still referenced by guards is refused with the where-used list
+    // (v6 3.3); `Delete anyway` breaks the references VISIBLY (validation reports ERR).
+    const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getFacade().getData(), id);
+    if (uses.isEmpty() == false)
+    {
+        QStringList places;
+        for (const SMGuardWhereUsed::Use& use : uses)
+        {
+            places.append(QStringLiteral("  - ") + use.location);
+        }
+
+        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Constant is used by guards")
+                            , tr("This constant is used by %1 guard%2:\n%3\n\nDelete anyway? The affected guards break and are listed by validation.")
+                              .arg(uses.size())
+                              .arg((uses.size() == 1) ? QString() : QStringLiteral("s"))
+                              .arg(places.join(QLatin1Char('\n')))
+                            , QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (choice != QMessageBox::Yes)
+        {
+            return;
+        }
+    }
 
     const QList<ConstantEntry>& list = mModel.getConstants();
     const int index = mModel.findIndex(id);

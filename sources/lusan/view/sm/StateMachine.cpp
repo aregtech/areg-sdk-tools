@@ -22,17 +22,17 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NavigationDock.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
-#include "lusan/view/sm/SMAttributeList.hpp"
+#include "lusan/view/common/AttributeListView.hpp"
 #include "lusan/view/sm/SMConstant.hpp"
-#include "lusan/view/sm/SMConstantList.hpp"
+#include "lusan/view/common/ConstantListView.hpp"
 #include "lusan/view/sm/SMDataType.hpp"
-#include "lusan/view/sm/SMDataTypeList.hpp"
+#include "lusan/view/common/DataTypeListView.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEvent.hpp"
 #include "lusan/view/sm/SMEventList.hpp"
 #include "lusan/view/sm/SMInclude.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
-#include "lusan/view/sm/SMMethodList.hpp"
+#include "lusan/view/common/MethodListView.hpp"
 #include "lusan/view/sm/SMOverview.hpp"
 
 #include <QAction>
@@ -239,20 +239,20 @@ void StateMachine::onDeclareRequested(SMDesign::eDeclareKind kind)
     {
     case SMDesign::eDeclareKind::Trigger:
     {
-        SMMethodList* list = static_cast<SMMethod*>(page)->getList();
-        if (list->actionNewTrigger() != nullptr) list->actionNewTrigger()->trigger();
+        MethodListView* list = static_cast<SMMethod*>(page)->getList();
+        if (list->typeAction(0) != nullptr) list->typeAction(0)->trigger();
         break;
     }
     case SMDesign::eDeclareKind::Action:
     {
-        SMMethodList* list = static_cast<SMMethod*>(page)->getList();
-        if (list->actionNewAction() != nullptr) list->actionNewAction()->trigger();
+        MethodListView* list = static_cast<SMMethod*>(page)->getList();
+        if (list->typeAction(1) != nullptr) list->typeAction(1)->trigger();
         break;
     }
     case SMDesign::eDeclareKind::Condition:
     {
-        SMMethodList* list = static_cast<SMMethod*>(page)->getList();
-        if (list->actionNewCondition() != nullptr) list->actionNewCondition()->trigger();
+        MethodListView* list = static_cast<SMMethod*>(page)->getList();
+        if (list->typeAction(2) != nullptr) list->typeAction(2)->trigger();
         break;
     }
     case SMDesign::eDeclareKind::Event:
