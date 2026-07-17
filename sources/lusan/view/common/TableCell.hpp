@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QStyledItemDelegate>
+#include <QHash>
 #include <QString>
 
 /************************************************************************
@@ -94,6 +95,20 @@ class TableCell : public QStyledItemDelegate
     Q_DISABLE_COPY(TableCell)
 
 //////////////////////////////////////////////////////////////////////////
+// Public types
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   The keystroke validation to apply to a text (line-edit) column's inline editor.
+     **/
+    enum class eCellValidation
+    {
+          NoValidation  //!< No keystroke filtering (default).
+        , Identifier    //!< C++ identifier characters only (names).
+        , Path          //!< Include-path characters only (locations).
+    };
+
+//////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -119,6 +134,20 @@ public:
      *                      Valid only for the line edit widget. Ignored for combo-box.
      **/
     explicit TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper, bool waitEndEdit);
+
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Sets the keystroke validation applied to the inline editor of a text column.
+     *          Only relevant for line-edit columns (combo columns ignore it). Lets a page
+     *          forbid invalid characters directly in the table, matching the details panel.
+     * \param   column  The column index to validate.
+     * \param   kind    The validation kind (identifier, path, or none).
+     **/
+    void setColumnValidation(int column, eCellValidation kind);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -172,6 +201,13 @@ private slots:
     void onComboTextChanged(const QString & newText);
 
     /**
+     * \brief   The slot is triggered when the user picks an item in the combo box editor.
+     *          It commits the choice and closes the editor so the drop-down does not linger.
+     * \param   index   The index of the activated item (unused).
+     **/
+    void onComboActivated(int index);
+
+    /**
      * \brief   The slot is triggered when the text in the editor widget is changed.
      * \param   newText     The new text in the editor widget.
      **/
@@ -213,6 +249,7 @@ private:
 private:
     QList<QAbstractItemModel*>  mModels;    //!< The list of models to populate the combo box.
     QList<int>                  mColumns;   //!< The list of columns to create combo box.
+    QHash<int, eCellValidation> mValidation;//!< Per text-column keystroke validation for inline editors.
     QWidget *                   mParent;    //!< The parent table widget.
     IETableHelper*              mTable;     //!< The table helper object to validate the data.
     bool                        mWaitEnd;   //!< Wait for end of editing. Valid only for line editor, no relevant to combobox.

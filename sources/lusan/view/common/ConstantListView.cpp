@@ -9,38 +9,38 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/si/SIConstantList.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/ConstantListView.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, Service Interface constant list panel.
+ *  \brief       Lusan application, shared "constant list" panel implementation.
  *
  ************************************************************************/
-#include "lusan/view/si/SIConstantList.hpp"
+
+#include "lusan/view/common/ConstantListView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
-#include <QAbstractItemView>
 #include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHeaderView>
-#include <QTableWidget>
 #include <QToolButton>
+#include <QTreeWidget>
 #include <QVBoxLayout>
 
-SIConstantList::SIConstantList(QWidget* parent)
+ConstantListView::ConstantListView(QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
     , mTable            (nullptr)
     , mButtonAdd        (nullptr)
-    , mButtonRemove     (nullptr)
     , mButtonInsert     (nullptr)
+    , mButtonRemove     (nullptr)
     , mButtonMoveUp     (nullptr)
     , mButtonMoveDown   (nullptr)
 {
     buildUi();
 }
 
-void SIConstantList::buildUi()
+void ConstantListView::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -53,10 +53,9 @@ void SIConstantList::buildUi()
     toolbarLayout->setSpacing(5);
     toolbarLayout->setContentsMargins(2, 2, 2, 2);
 
-    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new constant entry")                    , QKeySequence(Qt::CTRL | Qt::Key_A));
-    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected constant entry")                       , QKeySequence(Qt::CTRL | Qt::Key_D));
-    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new constant entry at selected position"), QKeySequence(Qt::CTRL | Qt::Key_T));
-    NELusanCommon::decorateToolButton(mButtonAdd);
+    mButtonAdd    = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry add")   , tr("Create and add new constant entry")   , QKeySequence(Qt::CTRL | Qt::Key_A));
+    mButtonRemove = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry delete"), tr("Delete selected constant entry")      , QKeySequence(Qt::CTRL | Qt::Key_D));
+    mButtonInsert = NELusanCommon::createToolButton(toolbar, QStringLiteral(":/icons/entry insert"), tr("Create and insert new constant entry"), QKeySequence(Qt::CTRL | Qt::Key_T));
 
     QFrame* sep = new QFrame(toolbar);
     sep->setFrameShape(QFrame::VLine);
@@ -73,52 +72,51 @@ void SIConstantList::buildUi()
     toolbarLayout->addWidget(mButtonMoveDown);
     toolbarLayout->addStretch(1);
 
-    mTable = new QTableWidget(group);
+    mTable = new QTreeWidget(group);
     mTable->setCursor(Qt::PointingHandCursor);
     mTable->setMouseTracking(true);
     mTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
-    mTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    mTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    mTable->setDropIndicatorShown(false);
+    mTable->setIconSize(QSize(16, 16));
+    mTable->setSortingEnabled(false);
+    mTable->setRootIsDecorated(false);
+    mTable->setAllColumnsShowFocus(false);
     mTable->setColumnCount(3);
-    mTable->verticalHeader()->setVisible(false);
-    mTable->setHorizontalHeaderLabels(QStringList{ tr("Name:"), tr("Data Type:"), tr("Value:") });
-
-    QHeaderView* header = mTable->horizontalHeader();
-    header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    header->setSectionResizeMode(2, QHeaderView::Stretch);
+    mTable->header()->setCascadingSectionResizes(false);
+    mTable->header()->setMinimumSectionSize(50);
+    mTable->setHeaderLabels(QStringList{ tr("Name:"), tr("Data Type:"), tr("Value:") });
 
     groupLayout->addWidget(toolbar);
     groupLayout->addWidget(mTable);
     root->addWidget(group);
 }
 
-QToolButton* SIConstantList::ctrlButtonAdd()
+QTreeWidget* ConstantListView::ctrlTableList() const
+{
+    return mTable;
+}
+
+QToolButton* ConstantListView::ctrlButtonAdd() const
 {
     return mButtonAdd;
 }
 
-QToolButton* SIConstantList::ctrlButtonRemove()
-{
-    return mButtonRemove;
-}
-
-QToolButton* SIConstantList::ctrlButtonInsert()
+QToolButton* ConstantListView::ctrlButtonInsert() const
 {
     return mButtonInsert;
 }
 
-QToolButton* SIConstantList::ctrlButtonMoveUp()
+QToolButton* ConstantListView::ctrlButtonRemove() const
+{
+    return mButtonRemove;
+}
+
+QToolButton* ConstantListView::ctrlButtonMoveUp() const
 {
     return mButtonMoveUp;
 }
 
-QToolButton* SIConstantList::ctrlButtonMoveDown()
+QToolButton* ConstantListView::ctrlButtonMoveDown() const
 {
     return mButtonMoveDown;
-}
-
-QTableWidget* SIConstantList::ctrlTableList()
-{
-    return mTable;
 }

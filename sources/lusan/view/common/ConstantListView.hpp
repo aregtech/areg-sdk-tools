@@ -1,5 +1,5 @@
-#ifndef LUSAN_VIEW_SM_SMCONSTANTLIST_HPP
-#define LUSAN_VIEW_SM_SMCONSTANTLIST_HPP
+#ifndef LUSAN_VIEW_COMMON_CONSTANTLISTVIEW_HPP
+#define LUSAN_VIEW_COMMON_CONSTANTLISTVIEW_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -11,11 +11,12 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMConstantList.hpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/ConstantListView.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Constants page — constant list panel.
+ *  \brief       Lusan application, shared "constant list" panel used by the Service
+ *               Interface, State Machine and (future) Data Type Constants pages.
  *
  ************************************************************************/
 
@@ -27,16 +28,21 @@ class QToolButton;
 class QTreeWidget;
 
 /**
- * \brief   The constant list panel, code-built to mirror SIConstantList: a
- *          "Constants List:" group holding the add/insert/delete + move up/down toolbar
- *          above a 3-column flat list (Name/Data Type/Value).
+ * \brief   The shared constant list panel: a "Constants List:" group holding the
+ *          add/insert/delete + move up/down toolbar above a 3-column flat list
+ *          (Name/Data Type/Value), built on a QTreeWidget.
+ *
+ *          The view is controller-agnostic: it only builds the widgets and exposes ctrl*()
+ *          accessors. The tree is intentionally a flat, non-decorated list so that direct
+ *          (inline) cell editing can be attached later via item delegates without changing
+ *          this view. The page controller owns all row population and selection logic.
  **/
-class SMConstantList : public QWidget
+class ConstantListView : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit SMConstantList(QWidget* parent = nullptr);
+    explicit ConstantListView(QWidget* parent = nullptr);
 
     QTreeWidget* ctrlTableList() const;
 
@@ -58,4 +64,4 @@ private:
     QToolButton*    mButtonMoveDown;
 };
 
-#endif  // LUSAN_VIEW_SM_SMCONSTANTLIST_HPP
+#endif  // LUSAN_VIEW_COMMON_CONSTANTLISTVIEW_HPP

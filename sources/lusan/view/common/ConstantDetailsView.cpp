@@ -9,15 +9,16 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMConstantDetails.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/ConstantDetailsView.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Constants page — selected constant editor.
+ *  \brief       Lusan application, shared "constant details" editor implementation.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMConstantDetails.hpp"
+#include "lusan/view/common/ConstantDetailsView.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -30,7 +31,7 @@
 #include <QStringListModel>
 #include <QVBoxLayout>
 
-SMConstantDetails::SMConstantDetails(QWidget* parent /*= nullptr*/)
+ConstantDetailsView::ConstantDetailsView(QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
     , mName             (nullptr)
     , mTypes            (nullptr)
@@ -45,7 +46,7 @@ SMConstantDetails::SMConstantDetails(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMConstantDetails::buildUi()
+void ConstantDetailsView::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -56,6 +57,7 @@ void SMConstantDetails::buildUi()
     form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
 
     mName = new QLineEdit(details);
+    mName->setValidator(NELusanCommon::createIdentifierValidator(mName));
     form->addRow(tr("Name:"), mName);
 
     mTypes = new QComboBox(details);
@@ -92,46 +94,50 @@ void SMConstantDetails::buildUi()
     form->addRow(mDeprecated, mDeprecateHint);
 
     root->addWidget(details);
+
+    // Re-emit the Name field edits as a controller-facing signal so the page can mirror the
+    // typed name into its list row without the view knowing about the model or the tree/table.
+    connect(mName, &QLineEdit::textChanged, this, &ConstantDetailsView::nameEdited);
 }
 
-QLineEdit* SMConstantDetails::ctrlName() const
+QLineEdit* ConstantDetailsView::ctrlName() const
 {
     return mName;
 }
 
-QComboBox* SMConstantDetails::ctrlTypes() const
+QComboBox* ConstantDetailsView::ctrlTypes() const
 {
     return mTypes;
 }
 
-QLineEdit* SMConstantDetails::ctrlValue() const
+QLineEdit* ConstantDetailsView::ctrlValue() const
 {
     return mValue;
 }
 
-QPlainTextEdit* SMConstantDetails::ctrlDescription() const
+QPlainTextEdit* ConstantDetailsView::ctrlDescription() const
 {
     return mDescription;
 }
 
-QCheckBox* SMConstantDetails::ctrlDeprecated() const
+QCheckBox* ConstantDetailsView::ctrlDeprecated() const
 {
     return mDeprecated;
 }
 
-QLineEdit* SMConstantDetails::ctrlDeprecateHint() const
+QLineEdit* ConstantDetailsView::ctrlDeprecateHint() const
 {
     return mDeprecateHint;
 }
 
-void SMConstantDetails::showValueHint(const QString& reason)
+void ConstantDetailsView::showValueHint(const QString& reason)
 {
     mValueHint->setText(reason);
     mValueHint->setVisible(reason.isEmpty() == false);
     mValue->setStyleSheet(reason.isEmpty() ? QString() : QStringLiteral("border: 1px solid #c0392b;"));
 }
 
-void SMConstantDetails::setValueChoices(const QStringList& choices)
+void ConstantDetailsView::setValueChoices(const QStringList& choices)
 {
     mValueChoices->setStringList(choices);
 }

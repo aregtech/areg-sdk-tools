@@ -19,6 +19,7 @@
 
 #include "lusan/view/common/TableCell.hpp"
 #include "lusan/app/LusanApplication.hpp"
+#include "lusan/common/NELusanCommon.hpp"
 
 #include <QComboBox>
 #include <QStandardItemModel>
@@ -31,6 +32,7 @@ TableCell::TableCell(QWidget* parent, IETableHelper * tableHelper, bool waitEndE
     : QStyledItemDelegate(parent)
     , mModels   ( )
     , mColumns  ( )
+    , mValidation( )
     , mParent   (parent)
     , mTable    (tableHelper)
     , mWaitEnd  (waitEndEdit)
@@ -43,6 +45,7 @@ TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>&
     : QStyledItemDelegate(parent)
     , mModels   (models)
     , mColumns  (columns)
+    , mValidation( )
     , mParent   (parent)
     , mTable    (tableHelper)
     , mWaitEnd  (waitEndEdit)
@@ -56,6 +59,18 @@ TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>&
         {
             model->setParent(this);
         }
+    }
+}
+
+void TableCell::setColumnValidation(int column, eCellValidation kind)
+{
+    if (kind == eCellValidation::NoValidation)
+    {
+        mValidation.remove(column);
+    }
+    else
+    {
+        mValidation.insert(column, kind);
     }
 }
 
@@ -107,18 +122,35 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
         combo->setModel(model);
         combo->setProperty("index", index);
         connect(combo, &QComboBox::currentTextChanged, this, &TableCell::onComboTextChanged);
-        
+        // Picking an item commits and dismisses the drop-down instead of leaving it open.
+        connect(combo, &QComboBox::activated, this, &TableCell::onComboActivated);
+
         return combo;
     }
     else if ( isValidColumn(index.column()) )
     {
         QLineEdit* lineEdit = new QLineEdit(parent);
+        // The index must travel with the editor so the change routes back to the correct
+        // row/column (a missing property yields an invalid index that is silently dropped).
+        lineEdit->setProperty("index", index);
+        // Forbid invalid characters directly in the table, matching the details panel.
+        switch (mValidation.value(index.column(), eCellValidation::NoValidation))
+        {
+        case eCellValidation::Identifier:
+            lineEdit->setValidator(NELusanCommon::createIdentifierValidator(lineEdit));
+            break;
+        case eCellValidation::Path:
+            lineEdit->setValidator(NELusanCommon::createPathValidator(lineEdit));
+            break;
+        default:
+            break;
+        }
         connect(lineEdit, &QLineEdit::textEdited, this, &TableCell::onEditorTextChanged);
         if (mWaitEnd)
         {
             connect(lineEdit, &QLineEdit::editingFinished, this, &TableCell::onEditorTextChangeFinished);
         }
-        
+
         return lineEdit;
     }
     
@@ -145,7 +177,17 @@ void TableCell::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem
 {
     if (editor != nullptr)
     {
-        editor->setGeometry(option.rect);
+        // A flat list row is often shorter than a comfortable edit control; grow the editor
+        // vertically (centered on the cell) and a touch wider so the text is fully visible.
+        QRect rect = option.rect;
+        const int minHeight = qMax(editor->sizeHint().height(), 24);
+        if (rect.height() < minHeight)
+        {
+            rect.setTop(rect.top() - ((minHeight - rect.height()) / 2));
+            rect.setHeight(minHeight);
+        }
+        rect.setWidth(rect.width() + 8);
+        editor->setGeometry(rect);
         if (isComboWidget(index.column()))
         {
             static_cast<QComboBox*>(editor)->showPopup();
@@ -159,6 +201,18 @@ void TableCell::onComboTextChanged(const QString & newText)
     if (editor != nullptr)
     {
         emit signalEditorDataChanged(editor->property("index").toModelIndex(), newText);
+    }
+}
+
+void TableCell::onComboActivated(int /*index*/)
+{
+    QWidget* editor = qobject_cast<QWidget*>(sender());
+    if (editor != nullptr)
+    {
+        // currentTextChanged already pushed the value out; commit + close so the drop-down
+        // does not stay open over the table after the user has made a choice.
+        emit commitData(editor);
+        emit closeEditor(editor);
     }
 }
 

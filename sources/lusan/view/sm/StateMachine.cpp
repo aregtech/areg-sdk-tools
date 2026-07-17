@@ -24,7 +24,7 @@
 #include "lusan/view/sm/SMAttribute.hpp"
 #include "lusan/view/sm/SMAttributeList.hpp"
 #include "lusan/view/sm/SMConstant.hpp"
-#include "lusan/view/sm/SMConstantList.hpp"
+#include "lusan/view/common/ConstantListView.hpp"
 #include "lusan/view/sm/SMDataType.hpp"
 #include "lusan/view/sm/SMDataTypeList.hpp"
 #include "lusan/view/sm/SMDesign.hpp"

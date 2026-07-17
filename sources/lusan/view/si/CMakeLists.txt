@@ -6,8 +6,6 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/si/SIAttributeDetails.cpp
     ${LUSAN}/view/si/SIAttributeList.cpp
     ${LUSAN}/view/si/SIConstant.cpp
-    ${LUSAN}/view/si/SIConstantDetails.cpp
-    ${LUSAN}/view/si/SIConstantList.cpp
     ${LUSAN}/view/si/SIDataType.cpp
     ${LUSAN}/view/si/SIDataTypeDetails.cpp
     ${LUSAN}/view/si/SIDataTypeFieldDetails.cpp
@@ -30,8 +28,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/si/SIAttributeDetails.hpp
     ${LUSAN}/view/si/SIAttributeList.hpp
     ${LUSAN}/view/si/SIConstant.hpp
-    ${LUSAN}/view/si/SIConstantDetails.hpp
-    ${LUSAN}/view/si/SIConstantList.hpp
     ${LUSAN}/view/si/SIDataType.hpp
     ${LUSAN}/view/si/SIDataTypeDetails.hpp
     ${LUSAN}/view/si/SIDataTypeFieldDetails.hpp

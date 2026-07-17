@@ -32,8 +32,8 @@
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
-#include "lusan/view/sm/SMConstantDetails.hpp"
-#include "lusan/view/sm/SMConstantList.hpp"
+#include "lusan/view/common/ConstantDetailsView.hpp"
+#include "lusan/view/common/ConstantListView.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -67,8 +67,8 @@ namespace
 SMConstant::SMConstant(SMConstantModel& model, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
-    , mList             (new SMConstantList(this))
-    , mDetails          (new SMConstantDetails(this))
+    , mList             (new ConstantListView(this))
+    , mDetails          (new ConstantDetailsView(this))
     , mNameCounter      (0)
 {
     buildUi();
@@ -76,7 +76,7 @@ SMConstant::SMConstant(SMConstantModel& model, QWidget* parent /*= nullptr*/)
     refreshAll();
 }
 
-SMConstantList* SMConstant::getList() const
+ConstantListView* SMConstant::getList() const
 {
     return mList;
 }
@@ -123,11 +123,11 @@ void SMConstant::setupSignals()
     connect(mList->ctrlButtonMoveUp()  , &QToolButton::clicked           , this, &SMConstant::onMoveUpClicked);
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMConstant::onMoveDownClicked);
 
-    mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
+    // The shared view already installs the C++ identifier validator on the Name field.
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished    , this, &SMConstant::onNameCommitted);
     // Live-preview the typed name into the selected constant's Name column; the rename commits
     // on editingFinished. Selection sets the field under a QSignalBlocker.
-    connect(mDetails->ctrlName()   , &QLineEdit::textChanged        , this, [this](const QString& text) {
+    connect(mDetails                , &ConstantDetailsView::nameEdited, this, [this](const QString& text) {
         if (currentConstantId() != 0)
         {
             if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())

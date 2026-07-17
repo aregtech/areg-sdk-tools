@@ -1,5 +1,5 @@
-#ifndef LUSAN_VIEW_SM_SMCONSTANTDETAILS_HPP
-#define LUSAN_VIEW_SM_SMCONSTANTDETAILS_HPP
+#ifndef LUSAN_VIEW_COMMON_CONSTANTDETAILSVIEW_HPP
+#define LUSAN_VIEW_COMMON_CONSTANTDETAILSVIEW_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -11,11 +11,12 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMConstantDetails.hpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/ConstantDetailsView.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Constants page — selected constant editor.
+ *  \brief       Lusan application, shared "constant details" editor used by the Service
+ *               Interface, State Machine and (future) Data Type Constants pages.
  *
  ************************************************************************/
 
@@ -30,18 +31,24 @@ class QPlainTextEdit;
 class QStringListModel;
 
 /**
- * \brief   The selected constant editor, code-built to mirror SIConstantDetails: a
- *          "Details:" group with label-beside-control rows — Name, Type, Value (a plain
- *          line edit: free text for a primitive type, completion of enumerator names for
- *          an enumeration type, disabled for a structure/container/imported type),
- *          an inline validation hint below the value, Description, Deprecated.
+ * \brief   The shared selected-constant editor: a "Details:" group with label-beside-control
+ *          rows -- Name, Type, Value (a plain line edit: free text for a primitive type,
+ *          completion of enumerator names for an enumeration type, disabled for a
+ *          structure/container/imported type), an inline validation hint below the value,
+ *          Description, Deprecated.
+ *
+ *          The view is controller-agnostic: it builds the widgets, wires the shared C++
+ *          identifier validator on the Name field, and exposes the same ctrl*() accessors
+ *          the former SIConstantDetails / SMConstantDetails classes exposed. Live table sync
+ *          stays in the page controller, which listens to nameEdited(); the view never
+ *          mutates a model.
  **/
-class SMConstantDetails : public QWidget
+class ConstantDetailsView : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit SMConstantDetails(QWidget* parent = nullptr);
+    explicit ConstantDetailsView(QWidget* parent = nullptr);
 
     QLineEdit* ctrlName() const;
     QComboBox* ctrlTypes() const;
@@ -56,6 +63,11 @@ public:
     //!< Sets the completion proposals of the value editor (the enumerator names of an
     //!< enumeration type); an empty list turns the completion off.
     void setValueChoices(const QStringList& choices);
+
+signals:
+    //!< Emitted while the user types in the Name field (validator-filtered text). The page
+    //!< controller uses it to mirror the name into the selected list row.
+    void nameEdited(const QString& text);
 
 private:
     void buildUi();
@@ -72,4 +84,4 @@ private:
     QLineEdit*          mDeprecateHint;
 };
 
-#endif  // LUSAN_VIEW_SM_SMCONSTANTDETAILS_HPP
+#endif  // LUSAN_VIEW_COMMON_CONSTANTDETAILSVIEW_HPP
