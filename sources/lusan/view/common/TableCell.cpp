@@ -43,7 +43,10 @@ TableCell::TableCell(QWidget* parent, IETableHelper * tableHelper, bool waitEndE
     , mWaitEnd  (waitEndEdit)
     , mNewText  ( )
     , mSelIndex ( )
+    , mEditOriginal( )
 {
+    // Escape cancels the edit: the view reports RevertModelCache when the editor closes.
+    connect(this, &QAbstractItemDelegate::closeEditor, this, &TableCell::onCloseEditor);
 }
 
 TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper, bool waitEndEdit)
@@ -59,7 +62,11 @@ TableCell::TableCell(const QList<QAbstractItemModel*>& models, const QList<int>&
     , mWaitEnd  (waitEndEdit)
     , mNewText  ( )
     , mSelIndex ( )
+    , mEditOriginal( )
 {
+    // Escape cancels the edit: the view reports RevertModelCache when the editor closes.
+    connect(this, &QAbstractItemDelegate::closeEditor, this, &TableCell::onCloseEditor);
+
     Q_ASSERT(models.size() == columns.size());
     for (QAbstractItemModel* model : models)
     {
@@ -138,6 +145,7 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
 {
     mNewText.clear();
     mSelIndex = QModelIndex();
+    mEditOriginal.clear();
 
     // A heterogeneous tree (e.g. Data Types) suppresses editing on cells that make no sense for
     // the row's category; when no predicate is set every valid cell stays editable.
@@ -170,6 +178,9 @@ QWidget* TableCell::createEditor(QWidget* parent, const QStyleOptionViewItem& /*
         // The index must travel with the editor so the change routes back to the correct
         // row/column (a missing property yields an invalid index that is silently dropped).
         lineEdit->setProperty("index", index);
+        // Remember the committed cell text so Escape can restore it (see onCloseEditor). In live
+        // mode every keystroke has already been applied, so the original is the only way back.
+        mEditOriginal = mTable->getCellText(index);
         // Forbid invalid characters directly in the table, matching the details panel. The
         // per-cell resolver wins so the same column can validate differently by row category.
         const eCellValidation kind = mValidOf ? mValidOf(index) : mValidation.value(index.column(), eCellValidation::NoValidation);
@@ -280,4 +291,28 @@ void TableCell::onEditorTextChangeFinished()
         mSelIndex = QModelIndex();
         mNewText.clear();
     }
+}
+
+void TableCell::onCloseEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint)
+{
+    // Only Escape (cancel) is handled here; a normal commit closes the editor with a different
+    // hint and its value has already been routed through signalEditorDataChanged.
+    if (hint != QAbstractItemDelegate::RevertModelCache)
+        return;
+
+    // Drop any pending wait-for-end text so the queued editingFinished (fired as the editor loses
+    // focus while it is being torn down) cannot commit the cancelled value.
+    const QModelIndex index = (editor != nullptr) ? editor->property("index").toModelIndex() : QModelIndex();
+    mSelIndex = QModelIndex();
+    mNewText.clear();
+
+    // In live mode the model, cell and details panel were updated on every keystroke; replay the
+    // pre-edit value through the same path so the owning controller rolls all of them back. In
+    // wait-for-end mode nothing was committed, so discarding the pending text above is enough.
+    if ((mWaitEnd == false) && (qobject_cast<QLineEdit*>(editor) != nullptr) && index.isValid())
+    {
+        emit signalEditorDataChanged(index, mEditOriginal);
+    }
+
+    mEditOriginal.clear();
 }

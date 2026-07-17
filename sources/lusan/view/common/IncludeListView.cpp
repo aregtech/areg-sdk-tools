@@ -9,17 +9,18 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMIncludeList.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/IncludeListView.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Includes page — include list panel.
+ *  \brief       Lusan application, shared "include list" panel implementation.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMIncludeList.hpp"
+#include "lusan/view/common/IncludeListView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
 
+#include <QFileInfo>
 #include <QFrame>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -28,8 +29,9 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
-SMIncludeList::SMIncludeList(QWidget* parent /*= nullptr*/)
+IncludeListView::IncludeListView(const IncludeTypeConfig& config, QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
+    , mConfig           (config)
     , mTable            (nullptr)
     , mButtonAdd        (nullptr)
     , mButtonInsert     (nullptr)
@@ -41,7 +43,7 @@ SMIncludeList::SMIncludeList(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMIncludeList::buildUi()
+void IncludeListView::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -84,7 +86,7 @@ void SMIncludeList::buildUi()
     mTable = new QTreeWidget(group);
     mTable->setCursor(Qt::PointingHandCursor);
     mTable->setMouseTracking(true);
-    mTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    mTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
     mTable->setDropIndicatorShown(false);
     mTable->setIconSize(QSize(16, 16));
     mTable->setSortingEnabled(false);
@@ -94,47 +96,70 @@ void SMIncludeList::buildUi()
     mTable->header()->setStretchLastSection(false);
     mTable->header()->setMinimumSectionSize(50);
     mTable->setHeaderLabels(QStringList{ tr("Location:"), tr("Type:"), tr("Name:"), tr("Version:") });
-    mTable->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-    mTable->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    mTable->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    mTable->header()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColLocation), QHeaderView::Stretch);
+    mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColType)    , QHeaderView::ResizeToContents);
+    mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColName)    , QHeaderView::ResizeToContents);
+    mTable->header()->setSectionResizeMode(static_cast<int>(eColumn::ColVersion) , QHeaderView::ResizeToContents);
 
     groupLayout->addWidget(toolbar);
     groupLayout->addWidget(mTable);
     root->addWidget(group);
 }
 
-QTreeWidget* SMIncludeList::ctrlTableList() const
+QString IncludeListView::typeForLocation(const QString& location) const
+{
+    const QString suffix = QFileInfo(location).suffix().toLower();
+    if (suffix == mConfig.docExtension.toLower())
+        return mConfig.docTypeLabel;
+    else if (suffix == QStringLiteral("dtml"))
+        return tr("Data Type");
+    else
+        return tr("Source");
+}
+
+QString IncludeListView::nameForLocation(const QString& location) const
+{
+    const QFileInfo info(location);
+    const QString suffix = info.suffix().toLower();
+    // A document or data type include carries a declared name; until the file is parsed the
+    // base name (no extension) is its best proxy. A source include is shown by its file name.
+    if ((suffix == mConfig.docExtension.toLower()) || (suffix == QStringLiteral("dtml")))
+        return info.completeBaseName();
+    else
+        return info.fileName();
+}
+
+QTreeWidget* IncludeListView::ctrlTableList() const
 {
     return mTable;
 }
 
-QToolButton* SMIncludeList::ctrlButtonAdd() const
+QToolButton* IncludeListView::ctrlButtonAdd() const
 {
     return mButtonAdd;
 }
 
-QToolButton* SMIncludeList::ctrlButtonInsert() const
+QToolButton* IncludeListView::ctrlButtonInsert() const
 {
     return mButtonInsert;
 }
 
-QToolButton* SMIncludeList::ctrlButtonRemove() const
+QToolButton* IncludeListView::ctrlButtonRemove() const
 {
     return mButtonRemove;
 }
 
-QToolButton* SMIncludeList::ctrlButtonMoveUp() const
+QToolButton* IncludeListView::ctrlButtonMoveUp() const
 {
     return mButtonMoveUp;
 }
 
-QToolButton* SMIncludeList::ctrlButtonMoveDown() const
+QToolButton* IncludeListView::ctrlButtonMoveDown() const
 {
     return mButtonMoveDown;
 }
 
-QToolButton* SMIncludeList::ctrlButtonUpdate() const
+QToolButton* IncludeListView::ctrlButtonUpdate() const
 {
     return mButtonUpdate;
 }

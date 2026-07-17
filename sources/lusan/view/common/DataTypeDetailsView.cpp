@@ -19,6 +19,7 @@
 
 #include "lusan/view/common/DataTypeDetailsView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/view/common/EditCancelFilter.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -144,6 +145,14 @@ void DataTypeDetailsView::buildUi()
 
     detailsLayout->addLayout(mForm);
     root->addWidget(details);
+
+    // Escape cancels the edit: the live-synced text fields restore their pre-edit value. The
+    // radio buttons and combos (type kind, derived, container roles) commit immediately.
+    EditCancelFilter::install(mName);
+    EditCancelFilter::install(mImportLocation);
+    EditCancelFilter::install(mImportNamespace);
+    EditCancelFilter::install(mImportObject);
+    EditCancelFilter::install(mDeprecateHint);
 }
 
 QLineEdit* DataTypeDetailsView::ctrlName() const

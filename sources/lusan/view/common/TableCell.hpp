@@ -222,7 +222,7 @@ public:
      * \param   index       The index of the table cell.
      **/
     void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Signals
 //////////////////////////////////////////////////////////////////////////
@@ -260,6 +260,17 @@ private slots:
      *          in the editor widget. It validates the new text and updates the model accordingly.
      **/
     void onEditorTextChangeFinished();
+
+    /**
+     * \brief   The slot is triggered when the view closes the editor. On Escape the view reports
+     *          RevertModelCache: the edit is cancelled instead of leaving the live per-keystroke
+     *          changes applied. In live mode (mWaitEnd == false) the pre-edit value is replayed
+     *          through signalEditorDataChanged so the owning controller restores the model, the
+     *          cell and the details panel; in wait-for-end mode the pending text is discarded.
+     * \param   editor  The editor widget being closed.
+     * \param   hint    The end-edit hint reported by the view.
+     **/
+    void onCloseEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -299,6 +310,7 @@ private:
     bool                        mWaitEnd;   //!< Wait for end of editing. Valid only for line editor, no relevant to combobox.
     mutable QString             mNewText;   //!< The changed text.
     mutable QModelIndex         mSelIndex;  //!< The index of selected item.
+    mutable QString             mEditOriginal;//!< The cell text captured when the editor opened; replayed to cancel (Esc).
 };
 
 #endif // LUSAN_VIEW_COMMON_TableCell_HPP

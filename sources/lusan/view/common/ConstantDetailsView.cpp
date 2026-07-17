@@ -19,6 +19,7 @@
 
 #include "lusan/view/common/ConstantDetailsView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/view/common/EditCancelFilter.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -98,6 +99,12 @@ void ConstantDetailsView::buildUi()
     // Re-emit the Name field edits as a controller-facing signal so the page can mirror the
     // typed name into its list row without the view knowing about the model or the tree/table.
     connect(mName, &QLineEdit::textChanged, this, &ConstantDetailsView::nameEdited);
+
+    // Escape cancels the edit: the live-synced text fields restore their pre-edit value. Combo
+    // (Type) commits immediately and needs no cancel; the multi-line Description is left as-is.
+    EditCancelFilter::install(mName);
+    EditCancelFilter::install(mValue);
+    EditCancelFilter::install(mDeprecateHint);
 }
 
 QLineEdit* ConstantDetailsView::ctrlName() const

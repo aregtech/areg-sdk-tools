@@ -19,6 +19,7 @@
 
 #include "lusan/view/common/DataTypeFieldDetailsView.hpp"
 #include "lusan/common/NELusanCommon.hpp"
+#include "lusan/view/common/EditCancelFilter.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -93,6 +94,12 @@ void DataTypeFieldDetailsView::buildUi()
 
     detailsLayout->addLayout(mFieldForm);
     root->addWidget(details);
+
+    // Escape cancels the edit: the Name and (default) Value text fields restore their pre-edit
+    // value. The Type combo commits immediately and needs no cancel.
+    EditCancelFilter::install(mName);
+    EditCancelFilter::install(mValue);
+    EditCancelFilter::install(mDeprecateHint);
 }
 
 QLineEdit* DataTypeFieldDetailsView::ctrlName() const

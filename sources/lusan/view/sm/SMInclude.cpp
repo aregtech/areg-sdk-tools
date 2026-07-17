@@ -20,21 +20,20 @@
 #include "lusan/view/sm/SMInclude.hpp"
 
 #include "lusan/app/LusanApplication.hpp"
-#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/common/IncludeEntry.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
+#include "lusan/view/common/IncludeDetailsView.hpp"
+#include "lusan/view/common/IncludeListView.hpp"
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
-#include "lusan/view/sm/SMIncludeDetails.hpp"
-#include "lusan/view/sm/SMIncludeList.hpp"
 
 #include <QCheckBox>
 #include <QEvent>
-#include <QFileInfo>
 #include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QModelIndex>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSignalBlocker>
@@ -61,8 +60,9 @@ namespace
 SMInclude::SMInclude(SMIncludeModel& model, QWidget* parent /*= nullptr*/)
     : QScrollArea       (parent)
     , mModel            (model)
-    , mList             (new SMIncludeList(this))
-    , mDetails          (new SMIncludeDetails(this))
+    , mList             (new IncludeListView(IncludeTypeConfig{ QStringLiteral("fsml"), tr("State Machine") }, this))
+    , mDetails          (new IncludeDetailsView(this))
+    , mTableCell        (nullptr)
     , mNameCounter      (0)
 {
     buildUi();
@@ -76,6 +76,17 @@ QStringList SMInclude::getSupportedExtensions()
     exts.append(LusanApplication::getExternalFileExtensions());
     exts.append(LusanApplication::getInternalFileExtensions());
     return exts;
+}
+
+int SMInclude::getColumnCount() const
+{
+    return mList->ctrlTableList()->columnCount();
+}
+
+QString SMInclude::getCellText(const QModelIndex& cell) const
+{
+    QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(cell.row());
+    return (item != nullptr ? item->text(cell.column()) : QString());
 }
 
 void SMInclude::buildUi()
@@ -109,6 +120,17 @@ void SMInclude::buildUi()
     setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     setWidgetResizable(true);
     setWidget(content);
+
+    // Inline editing of the Location column: commit once on editing-finished so a single undo
+    // command is pushed (matching the details field). Type and Name are derived from the location
+    // and must not be edited, so the delegate refuses an editor on every other column.
+    QTreeWidget* table = mList->ctrlTableList();
+    mTableCell = new TableCell(QList<QAbstractItemModel*>(), QList<int>(), table, this, true);
+    mTableCell->setColumnValidation(static_cast<int>(IncludeListView::eColumn::ColLocation), TableCell::eCellValidation::Path);
+    mTableCell->setEditableCheck([](const QModelIndex& index) {
+        return index.column() == static_cast<int>(IncludeListView::eColumn::ColLocation);
+    });
+    table->setItemDelegate(mTableCell);
 }
 
 void SMInclude::setupSignals()
@@ -121,7 +143,7 @@ void SMInclude::setupSignals()
     connect(mList->ctrlButtonMoveDown(), &QToolButton::clicked           , this, &SMInclude::onMoveDownClicked);
     connect(mList->ctrlButtonUpdate()  , &QToolButton::clicked           , this, &SMInclude::onUpdateClicked);
 
-    mDetails->ctrlInclude()->setValidator(NELusanCommon::createPathValidator(mDetails->ctrlInclude()));
+    // The include path keystroke validator lives inside the shared IncludeDetailsView.
     connect(mDetails->ctrlInclude()      , &QLineEdit::editingFinished, this, &SMInclude::onLocationCommitted);
     // Live-preview the typed path into the selected include's row (location + derived type/name
     // columns); the change commits on editingFinished. Selection sets the field under a blocker.
@@ -130,9 +152,9 @@ void SMInclude::setupSignals()
         {
             if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
             {
-                item->setText(0, text);
-                item->setText(1, includeType(text));
-                item->setText(2, includeName(text));
+                item->setText(static_cast<int>(IncludeListView::eColumn::ColLocation), text);
+                item->setText(static_cast<int>(IncludeListView::eColumn::ColType)    , mList->typeForLocation(text));
+                item->setText(static_cast<int>(IncludeListView::eColumn::ColName)    , mList->nameForLocation(text));
             }
         }
     });
@@ -140,6 +162,8 @@ void SMInclude::setupSignals()
     connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMInclude::onDeprecatedToggled);
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMInclude::onDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
+
+    connect(mTableCell, &TableCell::signalEditorDataChanged, this, &SMInclude::onInlineLocationEdited);
 
     connect(&mModel.getNotifier(), &DocModelNotifier::documentReloaded, this, &SMInclude::onNotifierChanged);
     connect(&mModel.getNotifier(), &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind kind) { if (kind == eDocElementKind::Include) onNotifierChanged(); });
@@ -162,39 +186,19 @@ bool SMInclude::eventFilter(QObject* watched, QEvent* event)
     return QScrollArea::eventFilter(watched, event);
 }
 
-QString SMInclude::includeType(const QString& location)
-{
-    const QString suffix = QFileInfo(location).suffix().toLower();
-    if (suffix == QStringLiteral("fsml"))
-        return tr("State Machine");
-    else if (suffix == QStringLiteral("dtml"))
-        return tr("Data Type");
-    else
-        return tr("Source");
-}
-
-QString SMInclude::includeName(const QString& location)
-{
-    const QFileInfo info(location);
-    const QString suffix = info.suffix().toLower();
-    // State machine / data type includes carry a declared name; until the file is parsed the
-    // base name (no extension) is its best proxy. A source include is shown by its file name.
-    if ((suffix == QStringLiteral("fsml")) || (suffix == QStringLiteral("dtml")))
-        return info.completeBaseName();
-    else
-        return info.fileName();
-}
-
 void SMInclude::setNodeText(QTreeWidgetItem* node, const IncludeEntry& entry) const
 {
     const QString location = entry.getLocation();
-    node->setIcon(0, entry.getIcon(ElementBase::eDisplay::DisplayName));
-    node->setText(0, entry.getString(ElementBase::eDisplay::DisplayName));
-    node->setText(1, includeType(location));
-    node->setText(2, includeName(location));
+    // Editable flag lets the TableCell delegate open the inline Location editor on double-click;
+    // the editable-check keeps Type/Name/Version read-only.
+    node->setFlags(node->flags() | Qt::ItemIsEditable);
+    node->setIcon(static_cast<int>(IncludeListView::eColumn::ColLocation), entry.getIcon(ElementBase::eDisplay::DisplayName));
+    node->setText(static_cast<int>(IncludeListView::eColumn::ColLocation), entry.getString(ElementBase::eDisplay::DisplayName));
+    node->setText(static_cast<int>(IncludeListView::eColumn::ColType)    , mList->typeForLocation(location));
+    node->setText(static_cast<int>(IncludeListView::eColumn::ColName)    , mList->nameForLocation(location));
     // Version is populated once state machine / data type includes are parsed; blank for now.
-    node->setText(3, QString());
-    node->setData(0, Qt::ItemDataRole::UserRole, entry.getId());
+    node->setText(static_cast<int>(IncludeListView::eColumn::ColVersion) , QString());
+    node->setData(static_cast<int>(IncludeListView::eColumn::ColLocation), Qt::ItemDataRole::UserRole, entry.getId());
 }
 
 void SMInclude::onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* /*previous*/)
@@ -370,7 +374,33 @@ void SMInclude::onLocationCommitted()
     const uint32_t id = currentIncludeId();
     if (id != 0)
     {
-        mModel.setLocation(id, mDetails->ctrlInclude()->text());
+        // Skip a no-op command: after an Escape-cancel the field already holds the model value, so
+        // a spurious editingFinished must not push an empty undo step.
+        const IncludeEntry* entry = mModel.findInclude(id);
+        const QString text = mDetails->ctrlInclude()->text();
+        if ((entry == nullptr) || (entry->getLocation() != text))
+        {
+            mModel.setLocation(id, text);
+        }
+    }
+}
+
+void SMInclude::onInlineLocationEdited(const QModelIndex& index, const QString& newValue)
+{
+    if ((index.isValid() == false) || (index.column() != static_cast<int>(IncludeListView::eColumn::ColLocation)))
+        return;
+
+    QTreeWidgetItem* item = mList->ctrlTableList()->topLevelItem(index.row());
+    if (item == nullptr)
+        return;
+
+    const uint32_t id = item->data(0, Qt::ItemDataRole::UserRole).toUInt();
+    const IncludeEntry* entry = mModel.findInclude(id);
+    if ((entry != nullptr) && (entry->getLocation() != newValue))
+    {
+        // The undo command fires an Include-kind notifier, which rebuilds the list with the
+        // re-derived Type/Name columns.
+        mModel.setLocation(id, newValue);
     }
 }
 

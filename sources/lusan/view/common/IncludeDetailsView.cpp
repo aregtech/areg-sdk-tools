@@ -9,15 +9,17 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMIncludeDetails.cpp
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/common/IncludeDetailsView.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM Includes page — selected include editor.
+ *  \brief       Lusan application, shared "include details" editor implementation.
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMIncludeDetails.hpp"
+#include "lusan/view/common/IncludeDetailsView.hpp"
+#include "lusan/common/NELusanCommon.hpp"
+#include "lusan/view/common/EditCancelFilter.hpp"
 
 #include <QCheckBox>
 #include <QFormLayout>
@@ -28,7 +30,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
-SMIncludeDetails::SMIncludeDetails(QWidget* parent /*= nullptr*/)
+IncludeDetailsView::IncludeDetailsView(QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
     , mInclude          (nullptr)
     , mBrowse           (nullptr)
@@ -39,7 +41,7 @@ SMIncludeDetails::SMIncludeDetails(QWidget* parent /*= nullptr*/)
     buildUi();
 }
 
-void SMIncludeDetails::buildUi()
+void IncludeDetailsView::buildUi()
 {
     QVBoxLayout* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
@@ -54,6 +56,7 @@ void SMIncludeDetails::buildUi()
     locationLayout->setContentsMargins(0, 0, 0, 0);
     locationLayout->setSpacing(4);
     mInclude = new QLineEdit(locationCell);
+    mInclude->setValidator(NELusanCommon::createPathValidator(mInclude));
     mBrowse = new QPushButton(tr("Browse..."), locationCell);
     locationLayout->addWidget(mInclude, 1);
     locationLayout->addWidget(mBrowse, 0);
@@ -70,29 +73,37 @@ void SMIncludeDetails::buildUi()
     form->addRow(mDeprecated, mDeprecateHint);
 
     root->addWidget(details);
+
+    // Re-emit the location field edits as a controller-facing signal so the page can mirror the
+    // typed path into its list row without the view knowing about the model or the tree/table.
+    connect(mInclude, &QLineEdit::textChanged, this, &IncludeDetailsView::nameEdited);
+
+    // Escape cancels the edit: the live-synced text fields restore their pre-edit value.
+    EditCancelFilter::install(mInclude);
+    EditCancelFilter::install(mDeprecateHint);
 }
 
-QLineEdit* SMIncludeDetails::ctrlInclude() const
+QLineEdit* IncludeDetailsView::ctrlInclude() const
 {
     return mInclude;
 }
 
-QPushButton* SMIncludeDetails::ctrlBrowseButton() const
+QPushButton* IncludeDetailsView::ctrlBrowseButton() const
 {
     return mBrowse;
 }
 
-QPlainTextEdit* SMIncludeDetails::ctrlDescription() const
+QPlainTextEdit* IncludeDetailsView::ctrlDescription() const
 {
     return mDescription;
 }
 
-QCheckBox* SMIncludeDetails::ctrlDeprecated() const
+QCheckBox* IncludeDetailsView::ctrlDeprecated() const
 {
     return mDeprecated;
 }
 
-QLineEdit* SMIncludeDetails::ctrlDeprecateHint() const
+QLineEdit* IncludeDetailsView::ctrlDeprecateHint() const
 {
     return mDeprecateHint;
 }
