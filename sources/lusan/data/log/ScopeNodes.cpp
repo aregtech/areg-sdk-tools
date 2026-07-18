@@ -34,7 +34,7 @@ ScopeLeaf::ScopeLeaf(ScopeNode* parent)
 {
 }
 
-ScopeLeaf::ScopeLeaf(const QString leafName, uint32_t prio, ScopeNode* parent)
+ScopeLeaf::ScopeLeaf(const QString& leafName, uint32_t prio, ScopeNode* parent)
     : ScopeNodeBase ( ScopeNodeBase::eNode::Leaf, leafName, prio, parent )
     , mScopeId      ( areg::LOG_SCOPE_ID_NONE )
 {
@@ -99,7 +99,7 @@ ScopeNode::ScopeNode(ScopeNode* parent)
 {
 }
 
-ScopeNode::ScopeNode(const QString nodeName, uint32_t prio, ScopeNode* parent)
+ScopeNode::ScopeNode(const QString& nodeName, uint32_t prio, ScopeNode* parent)
     : ScopeNodeBase (ScopeNodeBase::eNode::Node, nodeName, prio, parent)
     , mChildNodes   ( )
     , mChildLeafs   ( )
@@ -568,7 +568,7 @@ ScopeRoot::ScopeRoot(const areg::ConnectedInstance& instance)
 {
 }
 
-ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString rootName)
+ScopeRoot::ScopeRoot(ITEM_ID rootId, const QString& rootName)
     : ScopeNode (ScopeNodeBase::eNode::Root, rootName, static_cast<uint32_t>(areg::LogPriority::PrioNotset), nullptr)
     , mRootId   (rootId)
 {

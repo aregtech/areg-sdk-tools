@@ -37,7 +37,7 @@ namespace
 
     //!< Writes one wrapped registry section from individually selected entries.
     template<typename Entry>
-    void _writeSection(QXmlStreamWriter& xml, const char* sectionName, const QList<const Entry*>& entries)
+    void _writeSection(QXmlStreamWriter& xml, QLatin1StringView sectionName, const QList<const Entry*>& entries)
     {
         if (entries.isEmpty())
         {

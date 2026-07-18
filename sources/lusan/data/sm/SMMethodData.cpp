@@ -27,7 +27,7 @@
 namespace
 {
     //!< Writes \p text as a CDATA-wrapped child element (byte-exact, never normalized).
-    void writeCDataElem(QXmlStreamWriter& xml, const char* elemName, const QString& text)
+    void writeCDataElem(QXmlStreamWriter& xml, QLatin1StringView elemName, const QString& text)
     {
         xml.writeStartElement(elemName);
         xml.writeCDATA(text);

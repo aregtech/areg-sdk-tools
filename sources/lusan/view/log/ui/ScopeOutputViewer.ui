@@ -185,7 +185,7 @@
           <string>...</string>
          </property>
          <property name="icon">
-          <iconset theme="QIcon::ThemeIcon::GoNext"/>
+          <iconset theme="go-next"/>
          </property>
          <property name="autoRaise">
           <bool>true</bool>
@@ -207,7 +207,7 @@
           <string>...</string>
          </property>
          <property name="icon">
-          <iconset theme="QIcon::ThemeIcon::GoPrevious"/>
+          <iconset theme="go-previous"/>
          </property>
          <property name="autoRaise">
           <bool>true</bool>
@@ -223,7 +223,7 @@
           <string>...</string>
          </property>
          <property name="icon">
-          <iconset theme="QIcon::ThemeIcon::MediaSeekForward"/>
+          <iconset theme="media-seek-forward"/>
          </property>
          <property name="autoRaise">
           <bool>true</bool>
@@ -236,7 +236,7 @@
           <string>...</string>
          </property>
          <property name="icon">
-          <iconset theme="QIcon::ThemeIcon::MediaSeekBackward"/>
+          <iconset theme="media-seek-backward"/>
          </property>
          <property name="autoRaise">
           <bool>true</bool>
@@ -255,7 +255,7 @@
           <string>...</string>
          </property>
          <property name="icon">
-          <iconset theme="QIcon::ThemeIcon::WindowNew"/>
+          <iconset theme="window-new"/>
          </property>
          <property name="autoRaise">
           <bool>true</bool>

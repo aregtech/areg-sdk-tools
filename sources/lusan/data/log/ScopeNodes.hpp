@@ -59,7 +59,7 @@ public:
      * \param   prio        The log priority to set.
      * \param   parent      The pointer to the parent node object.
      **/
-    ScopeLeaf(const QString leafName, uint32_t prio = static_cast<unsigned int>(areg::LogPriority::PrioNotset), ScopeNode* parent = nullptr);
+    ScopeLeaf(const QString& leafName, uint32_t prio = static_cast<unsigned int>(areg::LogPriority::PrioNotset), ScopeNode* parent = nullptr);
 
     /**
      * \brief   Copies data from the ScopeNodeBase object. Should be called explicit.
@@ -158,7 +158,7 @@ public:
      * \param   prio        The log priority to set.
      * \param   parent      The pointer to the parent node object.
      **/
-    ScopeNode(const QString nodeName, uint32_t prio = static_cast<unsigned int>(areg::LogPriority::PrioNotset), ScopeNode* parent = nullptr);
+    ScopeNode(const QString& nodeName, uint32_t prio = static_cast<unsigned int>(areg::LogPriority::PrioNotset), ScopeNode* parent = nullptr);
 
     /**
      * \brief   Creates a node with empty list of child leafs and nodes
@@ -424,7 +424,7 @@ public:
      * \param   rootId      The ID of the root to set.
      * @param   rootName    The name of root node to set.
      */
-    ScopeRoot(ITEM_ID rootId, const QString rootName );
+    ScopeRoot(ITEM_ID rootId, const QString& rootName );
 
     /**
      * \brief   Copies or moves data from the given source

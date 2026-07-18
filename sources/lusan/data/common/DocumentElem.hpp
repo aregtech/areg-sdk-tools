@@ -117,7 +117,7 @@ protected:
      * \param   elemValue       The value of the element to write.
      * \param   skipIfEmpty     If true, the element is skipped if the value is empty.
      **/
-    void writeTextElem(QXmlStreamWriter& xml, const char* elemName, const QString elemValue, bool skipIfEmpty) const;
+    void writeTextElem(QXmlStreamWriter& xml, QLatin1StringView elemName, const QString& elemValue, bool skipIfEmpty) const;
 };
 
 #endif  // LUSAN_DATA_COMMON_DOCUMENTELEM_HPP

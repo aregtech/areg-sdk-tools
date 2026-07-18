@@ -108,7 +108,7 @@
            <string>...</string>
           </property>
           <property name="icon">
-           <iconset theme="QIcon::ThemeIcon::ListRemove"/>
+           <iconset theme="list-remove"/>
           </property>
           <property name="autoRaise">
            <bool>true</bool>

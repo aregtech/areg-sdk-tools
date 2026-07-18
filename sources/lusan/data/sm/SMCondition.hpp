@@ -391,7 +391,7 @@ protected:
      *          then reads child `Condition` / `ConditionGroup` elements until the
      *          matching \p endElem end element.
      **/
-    void readGroupBody(QXmlStreamReader& xml, const char* endElem);
+    void readGroupBody(QXmlStreamReader& xml, QLatin1StringView endElem);
 
     /**
      * \brief   Deep-copies the children of \p src into this (already empty) group.

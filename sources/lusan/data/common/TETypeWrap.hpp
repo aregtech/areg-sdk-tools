@@ -45,14 +45,14 @@ public:
      * \param   listTypes   The list to search in.
      * \return  Returns a valid pointer to the object if found, otherwise returns nullptr.
      **/
-    TypeBase* findObject(const QString name, const QList<Type*>& listTypes) const;
+    TypeBase* findObject(const QString& name, const QList<Type*>& listTypes) const;
 };
 
 ////////////////////////////////////////////////////////////////////////
 // TETypeFind class template methods
 ////////////////////////////////////////////////////////////////////////
 template<typename TypeBase, typename Type /*= TypeBase*/>
-inline TypeBase* TETypeFind<TypeBase, Type>::findObject(const QString name, const QList<Type*>& listTypes) const
+inline TypeBase* TETypeFind<TypeBase, Type>::findObject(const QString& name, const QList<Type*>& listTypes) const
 {
     for (auto obj : listTypes)
     {

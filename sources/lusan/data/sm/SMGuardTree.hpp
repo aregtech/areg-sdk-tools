@@ -75,7 +75,7 @@ public:
         , Ge        //!< >=
     };
 
-    static const char* toString(eKind kind);
+    static QLatin1StringView toString(eKind kind);
     static const char* toString(eCmpOp op);
     static bool fromKindString(const QString& text, eKind& kind);
     static bool fromOpString(const QString& text, eCmpOp& op);
