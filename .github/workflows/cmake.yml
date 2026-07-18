@@ -124,12 +124,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # qt6-base-private-dev provides the Qt6::GuiPrivate headers the ADS dependency
+      # links against; qt6-base-dev alone leaves that imported target's include path
+      # pointing at a directory that was never installed.
       - name: Install Qt 6.4 and build tools (apt)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake ninja-build git \
-            qt6-base-dev qt6-tools-dev qt6-tools-dev-tools \
+            qt6-base-dev qt6-base-private-dev qt6-tools-dev qt6-tools-dev-tools \
             libqt6svg6-dev libgl1-mesa-dev libglu1-mesa-dev \
             libxkbcommon-dev libxkbcommon-x11-dev \
             libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
