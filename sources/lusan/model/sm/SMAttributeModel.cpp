@@ -72,6 +72,11 @@ DocModelNotifier& SMAttributeModel::getNotifier() const
     return mFacade.getNotifier();
 }
 
+StateMachineModel& SMAttributeModel::getFacade() const
+{
+    return mFacade;
+}
+
 SMAttributeEntry* SMAttributeModel::createAttribute(const QString& name)
 {
     if (findAttribute(name) != nullptr)

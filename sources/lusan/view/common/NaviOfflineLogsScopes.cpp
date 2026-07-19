@@ -42,6 +42,7 @@ NaviOfflineLogsScopes::NaviOfflineLogsScopes(MdiMainWindow* wndMain, QWidget* pa
 {
     ui->setupUi(this);
     ctrlCollapse()->setStyleSheet(NELusanCommon::getStyleToolbutton());
+    capToolButtonIconSizes();
     setBaseSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
     setMinimumSize(NELusanCommon::MIN_NAVI_WIDTH, NELusanCommon::MIN_NAVI_HEIGHT);
 

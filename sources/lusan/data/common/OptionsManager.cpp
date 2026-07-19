@@ -349,7 +349,7 @@ bool OptionsManager::setDefaultWorkspace(uint64_t defWorkspaceId)
     return (mDefWorkspace != 0u);
 }
 
-bool OptionsManager::setDefaultWorkspace(const QString defWorkspaceRoot)
+bool OptionsManager::setDefaultWorkspace(const QString& defWorkspaceRoot)
 {
     mDefWorkspace = 0;
     if (defWorkspaceRoot.isEmpty())

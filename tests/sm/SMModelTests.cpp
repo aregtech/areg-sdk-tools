@@ -99,7 +99,7 @@ namespace
             for (const SMTransitionEntry* tr : state->getTransitions().getElements())
             {
                 addId(ids, tr->getId());
-                for (const SMConditionEntry* cond : tr->getConditions().getElements())
+                for (const SMConditionEntry* cond : tr->getConditions().collectLeaves())
                 {
                     addId(ids, cond->getId());
                     collectArguments(ids, cond->getArguments());

@@ -160,7 +160,7 @@
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset theme="QIcon::ThemeIcon::MediaPlaybackPause"/>
+                <iconset theme="media-playback-pause"/>
                </property>
                <property name="checkable">
                 <bool>true</bool>
@@ -191,7 +191,7 @@
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset theme="QIcon::ThemeIcon::MediaPlaybackStop"/>
+                <iconset theme="media-playback-stop"/>
                </property>
                <property name="checkable">
                 <bool>true</bool>
@@ -217,7 +217,7 @@
                 <string>...</string>
                </property>
                <property name="icon">
-                <iconset theme="QIcon::ThemeIcon::EditClear"/>
+                <iconset theme="edit-clear"/>
                </property>
               </widget>
              </item>

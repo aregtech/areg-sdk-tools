@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- FSM Trigger: a lightning bolt (a stimulus that fires a transition). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="#7c3aed">
+  <path d="M37 5 L15 35 L29 35 L26 59 L50 27 L35 27 Z"/>
+</svg>

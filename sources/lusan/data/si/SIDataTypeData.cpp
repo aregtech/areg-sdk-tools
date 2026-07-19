@@ -288,42 +288,42 @@ int SIDataTypeData::getDataTypes(QList<DataTypeBase*>& out_dataTypes, const QLis
     return static_cast<int>(out_dataTypes.size());
 }
 
-bool SIDataTypeData::existsPrimitive(const QList<DataTypePrimitive*> dataTypes, const QString& searchName) const
+bool SIDataTypeData::existsPrimitive(const QList<DataTypePrimitive*>& dataTypes, const QString& searchName) const
 {
     return exists<DataTypePrimitive>(dataTypes, searchName);
 }
 
-bool SIDataTypeData::existsPrimitive(const QList<DataTypePrimitive*> dataTypes, uint32_t id) const
+bool SIDataTypeData::existsPrimitive(const QList<DataTypePrimitive*>& dataTypes, uint32_t id) const
 {
     return exists<DataTypePrimitive>(dataTypes, id);
 }
     
-bool SIDataTypeData::existsBasic(const QList<DataTypeBasicObject*> dataTypes, const QString& searchName) const
+bool SIDataTypeData::existsBasic(const QList<DataTypeBasicObject*>& dataTypes, const QString& searchName) const
 {
     return exists<DataTypeBasicObject>(dataTypes, searchName);
 }
 
-bool SIDataTypeData::existsBasic(const QList<DataTypeBasicObject*> dataTypes, uint32_t id) const
+bool SIDataTypeData::existsBasic(const QList<DataTypeBasicObject*>& dataTypes, uint32_t id) const
 {
     return exists<DataTypeBasicObject>(dataTypes, id);
 }
 
-bool SIDataTypeData::existsContainer(const QList<DataTypeBasicContainer*> dataTypes, const QString& searchName) const
+bool SIDataTypeData::existsContainer(const QList<DataTypeBasicContainer*>& dataTypes, const QString& searchName) const
 {
     return exists<DataTypeBasicContainer>(dataTypes, searchName);
 }
 
-bool SIDataTypeData::existsContainer(const QList<DataTypeBasicContainer*> dataTypes, uint32_t id) const
+bool SIDataTypeData::existsContainer(const QList<DataTypeBasicContainer*>& dataTypes, uint32_t id) const
 {
     return exists<DataTypeBasicContainer>(dataTypes, id);
 }
 
-bool SIDataTypeData::existsCustom(const QList<DataTypeCustom*> dataTypes, const QString& searchName) const
+bool SIDataTypeData::existsCustom(const QList<DataTypeCustom*>& dataTypes, const QString& searchName) const
 {
     return exists<DataTypeCustom>(dataTypes, searchName);
 }
 
-bool SIDataTypeData::existsCustom(const QList<DataTypeCustom*> dataTypes, uint32_t id) const
+bool SIDataTypeData::existsCustom(const QList<DataTypeCustom*>& dataTypes, uint32_t id) const
 {
     return exists<DataTypeCustom>(dataTypes, id);
 }

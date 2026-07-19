@@ -1,12 +1,25 @@
 ﻿include("${LUSAN}/view/common//ui/CMakeLists.txt")
 
 list(APPEND LUSAN_SRC
+    ${LUSAN}/view/common/AttributeDetailsView.cpp
+    ${LUSAN}/view/common/AttributeListView.cpp
+    ${LUSAN}/view/common/ConstantDetailsView.cpp
+    ${LUSAN}/view/common/ConstantListView.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
+    ${LUSAN}/view/common/DataTypeDetailsView.cpp
+    ${LUSAN}/view/common/DataTypeFieldDetailsView.cpp
+    ${LUSAN}/view/common/DataTypeListView.cpp
     ${LUSAN}/view/common/DirSelectionDialog.cpp
+    ${LUSAN}/view/common/EditCancelFilter.cpp
     ${LUSAN}/view/common/IEDataTypeConsumer.cpp
+    ${LUSAN}/view/common/IncludeDetailsView.cpp
+    ${LUSAN}/view/common/IncludeListView.cpp
     ${LUSAN}/view/common/MdiArea.cpp
     ${LUSAN}/view/common/MdiChild.cpp
     ${LUSAN}/view/common/MdiMainWindow.cpp
+    ${LUSAN}/view/common/MethodDetailsView.cpp
+    ${LUSAN}/view/common/MethodListView.cpp
+    ${LUSAN}/view/common/MethodParamDetailsView.cpp
     ${LUSAN}/view/common/NaviDesignPanel.cpp
     ${LUSAN}/view/common/NaviFileSystem.cpp
     ${LUSAN}/view/common/NaviFsmToolbar.cpp
@@ -30,12 +43,25 @@ list(APPEND LUSAN_SRC
 )
 
 list(APPEND LUSAN_HDR
+    ${LUSAN}/view/common/AttributeDetailsView.hpp
+    ${LUSAN}/view/common/AttributeListView.hpp
+    ${LUSAN}/view/common/ConstantDetailsView.hpp
+    ${LUSAN}/view/common/ConstantListView.hpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.hpp
+    ${LUSAN}/view/common/DataTypeDetailsView.hpp
+    ${LUSAN}/view/common/DataTypeFieldDetailsView.hpp
+    ${LUSAN}/view/common/DataTypeListView.hpp
     ${LUSAN}/view/common/DirSelectionDialog.hpp
+    ${LUSAN}/view/common/EditCancelFilter.hpp
     ${LUSAN}/view/common/IEDataTypeConsumer.hpp
+    ${LUSAN}/view/common/IncludeDetailsView.hpp
+    ${LUSAN}/view/common/IncludeListView.hpp
     ${LUSAN}/view/common/MdiArea.hpp
     ${LUSAN}/view/common/MdiChild.hpp
     ${LUSAN}/view/common/MdiMainWindow.hpp
+    ${LUSAN}/view/common/MethodDetailsView.hpp
+    ${LUSAN}/view/common/MethodListView.hpp
+    ${LUSAN}/view/common/MethodParamDetailsView.hpp
     ${LUSAN}/view/common/NaviDesignPanel.hpp
     ${LUSAN}/view/common/NaviFileSystem.hpp
     ${LUSAN}/view/common/NaviFsmToolbar.hpp

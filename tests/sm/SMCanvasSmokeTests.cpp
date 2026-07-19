@@ -33,6 +33,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/sm/SMGuardCommands.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
@@ -43,6 +44,7 @@
 #include "lusan/view/sm/SMDesign.hpp"
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMGraphicsView.hpp"
+#include "lusan/view/sm/SMGuardHelpCard.hpp"
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
@@ -57,14 +59,20 @@
 #include <QDir>
 #include <QFile>
 #include <QFocusEvent>
+#include <QHBoxLayout>
 #include <QGraphicsProxyWidget>
+#include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QTreeWidget>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
+#include <QScreen>
 #include <QSettings>
+#include <QTabWidget>
+#include <QTextEdit>
 #include <QToolButton>
 #include <QUndoStack>
 
@@ -299,24 +307,93 @@ int main(int argc, char* argv[])
 
     std::printf("sect: rename\n");
     // --- Inline rename ---
-    // The editor lives in a QGraphicsProxyWidget, not the widget hierarchy.
-    QLineEdit* editor = nullptr;
-    for (QGraphicsItem* item : scene.items())
+    const auto findRenameEditor = [&scene]() -> QLineEdit*
     {
-        QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
-        if (proxy != nullptr)
+        // The editor lives in a QGraphicsProxyWidget, not the widget hierarchy.
+        for (QGraphicsItem* item : scene.items())
         {
-            editor = qobject_cast<QLineEdit*>(proxy->widget());
-            if (editor != nullptr)
+            QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
+            if (proxy != nullptr)
             {
-                break;
+                QLineEdit* lineEdit = qobject_cast<QLineEdit*>(proxy->widget());
+                if (lineEdit != nullptr)
+                {
+                    return lineEdit;
+                }
             }
         }
-    }
+
+        return nullptr;
+    };
+
+    QLineEdit* editor = findRenameEditor();
 
     CHECK(editor != nullptr);
     if (editor != nullptr)
     {
+        const int renameLength = editor->text().size();
+        CHECK(editor->maxLength() == StateMachineData::MAX_IDENTIFIER_LENGTH);
+        const auto checkRenameArrow = [&](Qt::Key key, int expectedCursor) {
+            editor->selectAll();
+            QApplication::processEvents();
+            const SMLayoutNode* before = data.getLayout().findNode(placed->getId());
+            CHECK(before != nullptr);
+            if (before == nullptr)
+            {
+                return;
+            }
+
+            const QPointF beforePos(before->x, before->y);
+            const int undoBefore = model.getUndoStack().count();
+            keyClick(&view, key);
+            editor = findRenameEditor();
+            CHECK(editor != nullptr);
+            CHECK((placedItem != nullptr) && placedItem->isRenameActive());
+            if (editor != nullptr)
+            {
+                CHECK(editor->selectedText().isEmpty());
+                CHECK(editor->cursorPosition() == expectedCursor);
+            }
+
+            const SMLayoutNode* after = data.getLayout().findNode(placed->getId());
+            CHECK((after != nullptr) && (QPointF(after->x, after->y) == beforePos));
+            CHECK(model.getUndoStack().count() == undoBefore);
+        };
+
+        checkRenameArrow(Qt::Key_Left , 0);
+        checkRenameArrow(Qt::Key_Right, renameLength);
+        checkRenameArrow(Qt::Key_Up   , 0);
+        checkRenameArrow(Qt::Key_Down , renameLength);
+
+        const int stateCountBeforeDelete = data.getStateCount();
+        editor->selectAll();
+        keyClick(editor, Qt::Key_Delete);
+        QApplication::processEvents();
+        editor = findRenameEditor();
+        CHECK(editor != nullptr);
+        if (editor != nullptr)
+        {
+            CHECK(editor->text().isEmpty());
+        }
+        CHECK(data.getStateCount() == stateCountBeforeDelete);
+
+        if (editor != nullptr)
+        {
+            editor->setText(QStringLiteral("NewState"));
+            QApplication::processEvents();
+            editor->selectAll();
+            keyClick(editor, Qt::Key_Backspace);
+            QApplication::processEvents();
+            editor = findRenameEditor();
+            CHECK(editor != nullptr);
+            if (editor != nullptr)
+            {
+                CHECK(editor->text().isEmpty());
+                editor->setText(QStringLiteral("NewState"));
+                QApplication::processEvents();
+            }
+        }
+
         editor->setText(QStringLiteral("LightOn"));                             // duplicate
         QApplication::processEvents();
         CHECK(editor->toolTip().isEmpty() == false);                            // rejection reason shown
@@ -1422,7 +1499,42 @@ int main(int argc, char* argv[])
         CHECK(props->currentPage() == SMPropertiesPanel::PageState);
         CHECK(props->currentElementId() == normal->getId());
         CHECK(props->stateNameEdit()->text() == normal->getName());
+        CHECK(props->stateNameEdit()->maxLength() == StateMachineData::MAX_IDENTIFIER_LENGTH);
         CHECK(outline->getTree()->selectedItems().isEmpty() == false);
+
+        // Live canvas rename preview mirrors into every Properties panel instance before commit.
+        const QString originalName = normal->getName();
+        SMStateItem* normalItem = page.getScene().stateItem(normal->getId());
+        CHECK(normalItem != nullptr);
+        if (normalItem != nullptr)
+        {
+            normalItem->startInlineRename();
+            QApplication::processEvents();
+
+            QLineEdit* inlineEditor = nullptr;
+            for (QGraphicsItem* item : page.getScene().items())
+            {
+                QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
+                QLineEdit* candidate = (proxy != nullptr ? qobject_cast<QLineEdit*>(proxy->widget()) : nullptr);
+                if (candidate != nullptr)
+                {
+                    inlineEditor = candidate;
+                    break;
+                }
+            }
+
+            CHECK(inlineEditor != nullptr);
+            if (inlineEditor != nullptr)
+            {
+                CHECK(inlineEditor->maxLength() == StateMachineData::MAX_IDENTIFIER_LENGTH);
+                inlineEditor->setText(QStringLiteral("LivePreviewName"));
+                QApplication::processEvents();
+                CHECK(props->stateNameEdit()->text() == QStringLiteral("LivePreviewName"));
+                keyClick(inlineEditor, Qt::Key_Escape);
+                QApplication::processEvents();
+                CHECK(props->stateNameEdit()->text() == originalName);
+            }
+        }
 
         // AC3: editing the name in properties is the same atomic, undoable rename as canvas F2.
         const int undoBeforeRename = doc.getUndoStack().count();
@@ -1451,6 +1563,68 @@ int main(int argc, char* argv[])
         QApplication::processEvents();
         CHECK(props->currentPage() == SMPropertiesPanel::PageTransition);
         CHECK(props->currentElementId() == firstTxId);
+
+        QToolButton* structureToggle = props->findChild<QToolButton*>(QStringLiteral("smGuardLensToggle"));
+        QToolButton* tryToggle = props->findChild<QToolButton*>(QStringLiteral("smGuardTryToggle"));
+        CHECK((structureToggle != nullptr) && (structureToggle->icon().isNull() == false));
+        CHECK((tryToggle != nullptr) && (tryToggle->icon().isNull() == false));
+        CHECK((structureToggle != nullptr) && (structureToggle->text() == QStringLiteral("Structure")));
+        CHECK((tryToggle != nullptr) && (tryToggle->text() == QStringLiteral("Try it")));
+
+        QTextEdit* guardField = props->findChild<QTextEdit*>(QStringLiteral("smGuardField"));
+        QLabel* guardStatus = props->findChild<QLabel*>(QStringLiteral("smGuardStatus"));
+        CHECK((guardField != nullptr) && (guardStatus != nullptr));
+        const QString immediateAttr = QStringLiteral("ImmediateAttrSmoke");
+        CHECK(doc.getAttributeModel().findAttribute(immediateAttr) == nullptr);
+        if ((guardField != nullptr) && (guardStatus != nullptr))
+        {
+            guardField->setPlainText(immediateAttr);
+            QMetaObject::invokeMethod(guardField, "onDebounce");
+            QApplication::processEvents();
+            CHECK(guardStatus->text().contains(QStringLiteral("err")));
+
+            doc.getAttributeModel().createAttribute(immediateAttr);
+            QApplication::processEvents();
+            CHECK(guardStatus->text().contains(QStringLiteral("err")) == false);
+            CHECK(guardStatus->toolTip().contains(immediateAttr + QStringLiteral("()")));
+        }
+
+        if (SMSetGuardCommand* clearGuard = SMGuardCommands::clearGuard(doc.getData(), doc.getNotifier(), firstTxId, QStringLiteral("Clear guard")))
+        {
+            doc.getUndoStack().push(clearGuard);
+            QApplication::processEvents();
+        }
+
+        QLabel* lensEmpty = nullptr;
+        for (QLabel* label : props->findChildren<QLabel*>())
+        {
+            if (label->text() == QStringLiteral("empty guard -- the transition always fires"))
+            {
+                lensEmpty = label;
+                break;
+            }
+        }
+        CHECK(lensEmpty != nullptr);
+        if (lensEmpty != nullptr)
+        {
+            CHECK(lensEmpty->wordWrap());
+            CHECK(lensEmpty->sizePolicy().horizontalPolicy() == QSizePolicy::Ignored);
+        }
+        CHECK(tryToggle != nullptr);
+        if (tryToggle != nullptr)
+        {
+            tryToggle->click();
+            QApplication::processEvents();
+            QLabel* tryNote = props->findChild<QLabel*>(QStringLiteral("smTryNote"));
+            CHECK(tryNote != nullptr);
+            if (tryNote != nullptr)
+            {
+                CHECK(tryNote->wordWrap());
+                CHECK(tryNote->sizePolicy().horizontalPolicy() == QSizePolicy::Ignored);
+            }
+            tryToggle->click();
+            QApplication::processEvents();
+        }
 
         // AC2: a priority reorder keeps the properties list in sync and is undoable. (The drag
         // gesture builds the same reorder command; here it is issued directly.)
@@ -1510,6 +1684,100 @@ int main(int argc, char* argv[])
         CHECK(d.isStimulusName(notListed) == false);
         CHECK(d.findTransitionById(firstTxId)->getStimulus() == beforeReject);
         CHECK(doc.getUndoStack().index() == indexBeforeReject);
+
+        // The guard help popup must stay readable whether the Properties panel sits on the left
+        // or on the right side of its host window.
+        auto checkGuardHelpPopup = [&](bool panelOnRight)
+        {
+            const QRect screenRect = (QGuiApplication::primaryScreen() != nullptr)
+                    ? QGuiApplication::primaryScreen()->availableGeometry()
+                    : QRect(0, 0, 1200, 800);
+
+            QWidget host;
+            host.resize(  qMin(screenRect.width(), qMax(520, screenRect.width() - 80))
+                        , qMin(screenRect.height(), qMax(520, screenRect.height() - 80)));
+            host.move(  panelOnRight
+                            ? screenRect.x() + screenRect.width() - host.width()
+                            : screenRect.x()
+                      , screenRect.top() + qMax(0, (screenRect.height() - host.height()) / 2));
+
+            QHBoxLayout* layout = new QHBoxLayout(&host);
+            layout->setContentsMargins(0, 0, 0, 0);
+            layout->setSpacing(0);
+
+            SMPropertiesPanel* dockedProps = new SMPropertiesPanel(doc, &host);
+            dockedProps->setFixedWidth(qMin(360, qMax(260, host.width() / 3)));
+
+            if (panelOnRight)
+            {
+                layout->addStretch(1);
+                layout->addWidget(dockedProps);
+            }
+            else
+            {
+                layout->addWidget(dockedProps);
+                layout->addStretch(1);
+            }
+
+            host.show();
+            QApplication::processEvents();
+
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ firstTxId });
+            QApplication::processEvents();
+
+            QTabWidget* tabs = dockedProps->findChild<QTabWidget*>(QStringLiteral("smTransTabs"));
+            CHECK(tabs != nullptr);
+            if (tabs == nullptr)
+            {
+                return;
+            }
+
+            tabs->setCurrentIndex(1);
+            QApplication::processEvents();
+
+            QToolButton* helpBtn = dockedProps->findChild<QToolButton*>(QStringLiteral("smGuardHelp"));
+            CHECK((helpBtn != nullptr) && helpBtn->isVisible());
+            if (helpBtn == nullptr)
+            {
+                return;
+            }
+
+            helpBtn->click();
+            QApplication::processEvents();
+
+            SMGuardHelpCard* helpCard = dockedProps->findChild<SMGuardHelpCard*>();
+            CHECK((helpCard != nullptr) && helpCard->isVisible());
+            if (helpCard == nullptr)
+            {
+                return;
+            }
+
+            const QRect buttonRect(helpBtn->mapToGlobal(QPoint(0, 0)), helpBtn->size());
+            const QRect popupRect = helpCard->frameGeometry();
+            QScreen* screen = QGuiApplication::screenAt(buttonRect.center());
+            if (screen == nullptr)
+            {
+                screen = helpCard->screen();
+            }
+
+            CHECK(screen != nullptr);
+            if (screen != nullptr)
+            {
+                CHECK(screen->availableGeometry().contains(popupRect));
+            }
+
+            if (panelOnRight)
+            {
+                CHECK(popupRect.right() <= buttonRect.right());
+            }
+            else
+            {
+                CHECK(popupRect.left() >= buttonRect.left());
+            }
+        };
+
+        checkGuardHelpPopup(false);
+        checkGuardHelpPopup(true);
     }
 
     std::printf("sect: SM-issue516 substate marker size + transition point nudge\n");
@@ -1802,6 +2070,74 @@ int main(int argc, char* argv[])
         doc.getUndoStack().undo();
         QApplication::processEvents();
         CHECK(doc.getData().findStateById(source->getId()) != nullptr);
+    }
+
+    std::printf("sect: SM-21-08 canvas search / go-to\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        QLineEdit* box = page.findChild<QLineEdit*>(QStringLiteral("smCanvasSearch"));
+        QLabel* status = page.findChild<QLabel*>(QStringLiteral("smCanvasSearchStatus"));
+        CHECK(box != nullptr);
+        CHECK(status != nullptr);
+
+        SMStateEntry* off = d.findState("LightOff");
+        SMStateEntry* on  = d.findState("LightOn");
+        CHECK((off != nullptr) && (on != nullptr));
+
+        if ((box != nullptr) && (off != nullptr) && (on != nullptr))
+        {
+            // A state-name match selects the state and reveals it (highlight/selection path).
+            box->setText(QStringLiteral("LightOff"));
+            QApplication::processEvents();
+            CHECK(doc.getSelectionModel().getSelection().contains(off->getId()));
+
+            // A broad query matches several states; Enter cycles to a different match.
+            box->setText(QStringLiteral("Light"));
+            QApplication::processEvents();
+            const uint32_t firstHit = doc.getSelectionModel().getSelection().isEmpty()
+                                        ? 0u : doc.getSelectionModel().getSelection().first();
+            CHECK((firstHit == off->getId()) || (firstHit == on->getId()));
+            QKeyEvent enterPress(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QApplication::sendEvent(box, &enterPress);
+            QApplication::processEvents();
+            const uint32_t secondHit = doc.getSelectionModel().getSelection().isEmpty()
+                                        ? 0u : doc.getSelectionModel().getSelection().first();
+            CHECK((secondHit != 0u) && (secondHit != firstHit));    // cycled to the next match
+
+            // A transition stimulus matches its transition.
+            box->setText(QStringLiteral("PowerOn"));
+            QApplication::processEvents();
+            SMStateEntry* offOwner = d.findState("LightOff");
+            uint32_t powerOnId = 0;
+            for (const SMTransitionEntry* t : offOwner->getTransitions().getElements())
+            {
+                if (t->getStimulus() == QStringLiteral("PowerOn")) { powerOnId = t->getId(); break; }
+            }
+            CHECK(powerOnId != 0);
+            CHECK(doc.getSelectionModel().getSelection().contains(powerOnId));
+
+            // No match leaves the selection unchanged and shows a clear affordance.
+            const QList<uint32_t> before = doc.getSelectionModel().getSelection();
+            box->setText(QStringLiteral("Nonexistent_zzz"));
+            QApplication::processEvents();
+            CHECK((status == nullptr) || (status->text() == QStringLiteral("No match")));
+            CHECK(doc.getSelectionModel().getSelection() == before);
+
+            // Esc abandons the search box.
+            box->setText(QStringLiteral("Light"));
+            QApplication::processEvents();
+            QKeyEvent escPress(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+            QApplication::sendEvent(box, &escPress);
+            QApplication::processEvents();
+            CHECK(box->text().isEmpty());
+        }
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

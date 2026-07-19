@@ -29,11 +29,11 @@ class DataTypeContainer;
 class DataTypeStructure;
 class DocumentElem;
 class ElementBase;
+class DataTypeDetailsView;
+class DataTypeFieldDetailsView;
+class DataTypeListView;
 class QComboBox;
 class QTreeWidgetItem;
-class SMDataTypeDetails;
-class SMDataTypeFieldDetails;
-class SMDataTypeList;
 class SMDataTypeModel;
 
 /**
@@ -62,7 +62,7 @@ public:
      * \brief   Returns the list panel (its Add button lets a caller start a new data type,
      *          e.g. from the Design page's Declare dropdown).
      **/
-    SMDataTypeList* getList() const;
+    DataTypeListView* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Slots
@@ -159,9 +159,9 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     SMDataTypeModel&        mModel;
-    SMDataTypeList*         mList;
-    SMDataTypeDetails*      mDetails;
-    SMDataTypeFieldDetails* mFields;
+    DataTypeListView*       mList;
+    DataTypeDetailsView*    mDetails;
+    DataTypeFieldDetailsView* mFields;
     uint32_t                mNameCounter;
     QString                 mCurUrl;
     QString                 mCurFile;

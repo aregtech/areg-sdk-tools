@@ -20,6 +20,9 @@
 #include "lusan/common/NELusanCommon.hpp"
 #include "lusan/common/XmlSI.hpp"
 
+QString FieldEntry::DEFAULT_TYPE    ("int32");
+QString FieldEntry::DEFAULT_VALUE   ("0");
+
 FieldEntry::FieldEntry(ElementBase* parent /*= nullptr*/)
     : ParamBase(parent)
     , mValue()
@@ -27,8 +30,8 @@ FieldEntry::FieldEntry(ElementBase* parent /*= nullptr*/)
 }
 
 FieldEntry::FieldEntry(uint32_t id, const QString& name, ElementBase* parent /*= nullptr*/)
-    : ParamBase(id, name, "bool", false, "", "", parent)
-    , mValue("false")
+    : ParamBase (id, name, FieldEntry::DEFAULT_TYPE, false, "", "", parent)
+    , mValue    (FieldEntry::DEFAULT_VALUE)
 {
 }
 

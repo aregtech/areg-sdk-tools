@@ -56,6 +56,7 @@ public:
     bool saveToFile(const QString& filePath = QString());
     bool writeAutosave();
     bool removeAutosave();
+    void publishStateNamePreview(uint32_t stateId, const QString& text);
 
     inline bool openSucceeded() const;
     inline bool isDirty() const;
@@ -78,6 +79,7 @@ public:
 
 signals:
     void signalDirtyChanged(bool dirty);
+    void signalStateNamePreview(uint32_t stateId, const QString& text);
 
 private slots:
     void onAutosaveTimeout();

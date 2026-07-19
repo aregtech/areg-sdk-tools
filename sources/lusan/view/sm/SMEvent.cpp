@@ -155,12 +155,14 @@ void SMEvent::setupSignals()
     connect(scRemove, &QShortcut::activated, this, &SMEvent::onRemoveClicked);
     connect(scRename, &QShortcut::activated, this, [this]() { focusNameField(); });
 
+    mDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mDetails->ctrlName()));
     connect(mDetails->ctrlName()   , &QLineEdit::textChanged    , this, &SMEvent::onEventNameTextChanged);
     connect(mDetails->ctrlName()   , &QLineEdit::editingFinished, this, &SMEvent::onEventNameCommitted);
     connect(mDetails->ctrlDeprecated()   , &QCheckBox::toggled        , this, &SMEvent::onEventDeprecatedToggled);
     connect(mDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMEvent::onEventDeprecateHintCommitted);
     mDetails->ctrlDescription()->installEventFilter(this);
 
+    mParamDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mParamDetails->ctrlName()));
     connect(mParamDetails->ctrlName()      , &QLineEdit::textChanged          , this, &SMEvent::onParamNameTextChanged);
     connect(mParamDetails->ctrlName()      , &QLineEdit::editingFinished      , this, &SMEvent::onParamNameCommitted);
     connect(mParamDetails->ctrlTypes()     , &QComboBox::currentIndexChanged  , this, &SMEvent::onParamTypeChanged);
@@ -170,6 +172,7 @@ void SMEvent::setupSignals()
     connect(mParamDetails->ctrlDeprecateHint(), &QLineEdit::editingFinished, this, &SMEvent::onParamDeprecateHintCommitted);
     mParamDetails->ctrlDescription()->installEventFilter(this);
 
+    mTimerDetails->ctrlName()->setValidator(NELusanCommon::createIdentifierValidator(mTimerDetails->ctrlName()));
     connect(mTimerDetails->ctrlName()      , &QLineEdit::textChanged            , this, &SMEvent::onTimerNameTextChanged);
     connect(mTimerDetails->ctrlName()      , &QLineEdit::editingFinished        , this, &SMEvent::onTimerNameCommitted);
     connect(mTimerDetails->ctrlTimeout()   , &QAbstractSpinBox::editingFinished , this, &SMEvent::onTimeoutCommitted);
@@ -664,6 +667,9 @@ void SMEvent::onAddClicked()
         addNewTimer();
         break;
     default:
+        // No actionable selection (e.g. Insert pressed with nothing selected): offer the choice
+        // between a new event and a new timer rather than silently doing nothing.
+        mList->ctrlButtonAdd()->showMenu();
         break;
     }
 }
@@ -952,6 +958,10 @@ void SMEvent::onEventNameTextChanged(const QString& text)
     {
         SMEventEntry* event = currentEvent();
         mDetails->showNameHint(stimulusCollisionReason(text, event != nullptr ? event->getId() : 0u));
+        // Live-preview the typed name into the selected event's Name column; commit deferred to
+        // editingFinished. Selection sets the field under a QSignalBlocker.
+        if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+            item->setText(0, text);
     }
 }
 
@@ -996,6 +1006,8 @@ void SMEvent::onParamNameTextChanged(const QString& text)
     if ((event != nullptr) && (paramId != 0))
     {
         mParamDetails->showNameHint(paramNameCollisionReason(event, text, paramId));
+        if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+            item->setText(0, text);
     }
 }
 
@@ -1083,6 +1095,8 @@ void SMEvent::onTimerNameTextChanged(const QString& text)
     if (currentKind() == eRowKind::Timer)
     {
         mTimerDetails->showNameHint(stimulusCollisionReason(text, currentTimerId()));
+        if (QTreeWidgetItem* item = mList->ctrlTableList()->currentItem())
+            item->setText(0, text);
     }
 }
 

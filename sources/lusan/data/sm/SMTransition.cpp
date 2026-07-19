@@ -60,6 +60,7 @@ SMTransitionEntry::SMTransitionEntry(ElementBase* parent /*= nullptr*/)
     , mHasTo        (false)
     , mDescription  ( )
     , mConditions   (this)
+    , mGuard        ( )
     , mOperations   (this)
 {
 }
@@ -75,6 +76,7 @@ SMTransitionEntry::SMTransitionEntry(  uint32_t id
     , mHasTo        (false)
     , mDescription  ( )
     , mConditions   (this)
+    , mGuard        ( )
     , mOperations   (this)
 {
 }
@@ -87,6 +89,7 @@ SMTransitionEntry::SMTransitionEntry(const SMTransitionEntry& src)
     , mHasTo        (src.mHasTo)
     , mDescription  (src.mDescription)
     , mConditions   (src.mConditions)
+    , mGuard        (src.mGuard)
     , mOperations   (src.mOperations)
 {
     mConditions.setParent(this);
@@ -101,6 +104,7 @@ SMTransitionEntry::SMTransitionEntry(SMTransitionEntry&& src) noexcept
     , mHasTo        (src.mHasTo)
     , mDescription  (std::move(src.mDescription))
     , mConditions   (std::move(src.mConditions))
+    , mGuard        (std::move(src.mGuard))
     , mOperations   (std::move(src.mOperations))
 {
     mConditions.setParent(this);
@@ -118,6 +122,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (const SMTransitionEntry& other
         mHasTo        = other.mHasTo;
         mDescription  = other.mDescription;
         mConditions   = other.mConditions;
+        mGuard        = other.mGuard;
         mOperations   = other.mOperations;
         mConditions.setParent(this);
         mOperations.setParent(this);
@@ -137,6 +142,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (SMTransitionEntry&& other) noe
         mHasTo        = other.mHasTo;
         mDescription  = std::move(other.mDescription);
         mConditions   = std::move(other.mConditions);
+        mGuard        = std::move(other.mGuard);
         mOperations   = std::move(other.mOperations);
         mConditions.setParent(this);
         mOperations.setParent(this);
@@ -181,6 +187,10 @@ bool SMTransitionEntry::readFromXml(QXmlStreamReader& xml)
             {
                 mConditions.readFromXml(xml);
             }
+            else if (xml.name() == XmlSM::xmlSMElementGuard)
+            {
+                mGuard.readFromXml(xml);
+            }
             else if (xml.name() == XmlSM::xmlSMElementOperationList)
             {
                 mOperations.readFromXml(xml, XmlSM::xmlSMElementOperationList);
@@ -205,7 +215,16 @@ void SMTransitionEntry::writeToXml(QXmlStreamWriter& xml) const
     }
 
     writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
-    mConditions.writeToXml(xml);
+    // Canonical guard when present; otherwise the untouched legacy condition tree (read-shim
+    // migration writes a <Guard> only once the guard is populated by the editor).
+    if (mGuard.hasContent())
+    {
+        mGuard.writeToXml(xml);
+    }
+    else
+    {
+        mConditions.writeToXml(xml);
+    }
     mOperations.writeToXml(xml, XmlSM::xmlSMElementOperationList);
 
     xml.writeEndElement();

@@ -23,7 +23,10 @@
  * Includes
  ************************************************************************/
 #include <QStyledItemDelegate>
+#include <QHash>
 #include <QString>
+
+#include <functional>
 
 /************************************************************************
  * Dependencies
@@ -94,6 +97,39 @@ class TableCell : public QStyledItemDelegate
     Q_DISABLE_COPY(TableCell)
 
 //////////////////////////////////////////////////////////////////////////
+// Public types
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   The keystroke validation to apply to a text (line-edit) column's inline editor.
+     **/
+    enum class eCellValidation
+    {
+          NoValidation      //!< No keystroke filtering (default).
+        , Identifier        //!< C++ identifier characters only (names).
+        , Path              //!< Include-path characters only (locations).
+        , QualifiedName     //!< C++ qualified name (identifiers joined by '::'), e.g. imported type.
+        , Value             //!< Enumeration value characters: letters, digits, '_' and '::'.
+    };
+
+    /**
+     * \brief   Predicate that answers whether the cell at the given index may be edited.
+     **/
+    using FuncEditable = std::function<bool(const QModelIndex&)>;
+
+    /**
+     * \brief   Resolver that returns the combo-box model to use for the cell at the given index,
+     *          or nullptr to use a plain line editor. Overrides the per-column model list.
+     **/
+    using FuncEditorModel = std::function<QAbstractItemModel*(const QModelIndex&)>;
+
+    /**
+     * \brief   Resolver that returns the keystroke validation to apply to the line editor of the
+     *          cell at the given index. Overrides the per-column validation map.
+     **/
+    using FuncValidation = std::function<eCellValidation(const QModelIndex&)>;
+
+//////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
 public:
@@ -119,6 +155,44 @@ public:
      *                      Valid only for the line edit widget. Ignored for combo-box.
      **/
     explicit TableCell(const QList<QAbstractItemModel*>& models, const QList<int>& columns, QWidget* parent, IETableHelper * tableHelper, bool waitEndEdit);
+
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Sets the keystroke validation applied to the inline editor of a text column.
+     *          Only relevant for line-edit columns (combo columns ignore it). Lets a page
+     *          forbid invalid characters directly in the table, matching the details panel.
+     * \param   column  The column index to validate.
+     * \param   kind    The validation kind (identifier, path, or none).
+     **/
+    void setColumnValidation(int column, eCellValidation kind);
+
+    /**
+     * \brief   Sets a predicate that decides, per cell, whether an inline editor may open. A page
+     *          with a heterogeneous tree (e.g. Data Types) uses this so only the columns that make
+     *          sense for the row's category are editable. When unset, every valid cell is editable.
+     * \param   check   The predicate; returning false suppresses the editor for that index.
+     **/
+    void setEditableCheck(FuncEditable check);
+
+    /**
+     * \brief   Sets a resolver that picks the combo-box model per cell (or nullptr for a plain
+     *          line editor), overriding the per-column model list. Lets one column show a combo
+     *          for some rows and a text editor for others (e.g. struct field type vs imported type).
+     * \param   resolver    The resolver; when unset, the per-column model list is used.
+     **/
+    void setEditorModelResolver(FuncEditorModel resolver);
+
+    /**
+     * \brief   Sets a resolver that picks the keystroke validation per cell, overriding the
+     *          per-column validation map. Lets the same column validate differently by row
+     *          category (e.g. a struct default value vs an enumeration value).
+     * \param   resolver    The resolver; when unset, the per-column validation map is used.
+     **/
+    void setValidationResolver(FuncValidation resolver);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -148,7 +222,7 @@ public:
      * \param   index       The index of the table cell.
      **/
     void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
-    
+
 //////////////////////////////////////////////////////////////////////////
 // Signals
 //////////////////////////////////////////////////////////////////////////
@@ -166,10 +240,13 @@ signals:
 //////////////////////////////////////////////////////////////////////////
 private slots:
     /**
-     * \brief   The slot is triggered when the current text in the combo box is changed.
-     * \param   newText     The new text in the combo box.
+     * \brief   The slot is triggered when the user picks an item in the combo box editor. It emits
+     *          signalEditorDataChanged with the chosen text and closes the editor so the drop-down
+     *          does not linger. It reacts to user activation only (never to programmatic combo
+     *          changes), so re-seeding the editor during a commit cannot revert the selection.
+     * \param   index   The index of the activated item (unused).
      **/
-    void onComboTextChanged(const QString & newText);
+    void onComboActivated(int index);
 
     /**
      * \brief   The slot is triggered when the text in the editor widget is changed.
@@ -183,6 +260,17 @@ private slots:
      *          in the editor widget. It validates the new text and updates the model accordingly.
      **/
     void onEditorTextChangeFinished();
+
+    /**
+     * \brief   The slot is triggered when the view closes the editor. On Escape the view reports
+     *          RevertModelCache: the edit is cancelled instead of leaving the live per-keystroke
+     *          changes applied. In live mode (mWaitEnd == false) the pre-edit value is replayed
+     *          through signalEditorDataChanged so the owning controller restores the model, the
+     *          cell and the details panel; in wait-for-end mode the pending text is discarded.
+     * \param   editor  The editor widget being closed.
+     * \param   hint    The end-edit hint reported by the view.
+     **/
+    void onCloseEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint);
     
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -213,11 +301,16 @@ private:
 private:
     QList<QAbstractItemModel*>  mModels;    //!< The list of models to populate the combo box.
     QList<int>                  mColumns;   //!< The list of columns to create combo box.
+    QHash<int, eCellValidation> mValidation;//!< Per text-column keystroke validation for inline editors.
+    FuncEditable                mEditable;  //!< Optional per-cell editability predicate (heterogeneous trees).
+    FuncEditorModel             mModelOf;   //!< Optional per-cell combo-model resolver (overrides mColumns).
+    FuncValidation              mValidOf;   //!< Optional per-cell validation resolver (overrides mValidation).
     QWidget *                   mParent;    //!< The parent table widget.
     IETableHelper*              mTable;     //!< The table helper object to validate the data.
     bool                        mWaitEnd;   //!< Wait for end of editing. Valid only for line editor, no relevant to combobox.
     mutable QString             mNewText;   //!< The changed text.
     mutable QModelIndex         mSelIndex;  //!< The index of selected item.
+    mutable QString             mEditOriginal;//!< The cell text captured when the editor opened; replayed to cancel (Esc).
 };
 
 #endif // LUSAN_VIEW_COMMON_TableCell_HPP

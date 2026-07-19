@@ -28,11 +28,13 @@
 #include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/model/common/DataTypesModel.hpp"
 #include "lusan/model/si/SIDataTypeModel.hpp"
+#include "lusan/view/common/DataTypeDetailsView.hpp"
+#include "lusan/view/common/DataTypeFieldDetailsView.hpp"
+#include "lusan/view/common/DataTypeListView.hpp"
+#include "lusan/view/common/TableCell.hpp"
 #include "lusan/view/common/WorkspaceFileDialog.hpp"
-#include "lusan/view/si/SIDataTypeDetails.hpp"
-#include "lusan/view/si/SIDataTypeFieldDetails.hpp"
-#include "lusan/view/si/SIDataTypeList.hpp"
 
+#include <QAbstractItemModel>
 #include <QAction>
 #include <QCheckBox>
 #include <QComboBox>
@@ -113,9 +115,9 @@ const QList<DataTypeBase *>& SIDataType::_getPredefinedTypes()
 
 SIDataType::SIDataType(SIDataTypeModel& model, QWidget *parent)
     : QScrollArea   (parent)
-    , mDetails  (new SIDataTypeDetails(this))
-    , mList     (new SIDataTypeList(this))
-    , mFields   (new SIDataTypeFieldDetails(this))
+    , mDetails  (new DataTypeDetailsView(this))
+    , mList     (new DataTypeListView(this))
+    , mFields   (new DataTypeFieldDetailsView(this))
     , mRightPanel(new QWidget(this))
     , mWidget   (new SIDataTypeWidget(this))
     , mModel    (model)
@@ -572,7 +574,7 @@ void SIDataType::onDeprectedChecked(bool isChecked)
 
     DataTypeCustom* entry = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
     Q_ASSERT(entry != nullptr);
-    SICommon::checkedDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, entry, isChecked);
+    SICommon::checkedDeprecated<DataTypeDetailsView, DataTypeCustom>(mDetails, entry, isChecked);
 }
 
 void SIDataType::onDeprecateHintChanged(const QString& newText)
@@ -583,7 +585,7 @@ void SIDataType::onDeprecateHintChanged(const QString& newText)
 
     DataTypeCustom* entry = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
     Q_ASSERT(entry != nullptr);
-    SICommon::setDeprecateHint<SIDataTypeDetails, DataTypeCustom>(mDetails, entry, newText);
+    SICommon::setDeprecateHint<DataTypeDetailsView, DataTypeCustom>(mDetails, entry, newText);
 }
 
 void SIDataType::onDescriptionChanged()
@@ -1063,11 +1065,11 @@ void SIDataType::onFieldDeprecatedChecked(bool isChecked)
     {
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
-            SICommon::checkedDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, static_cast<FieldEntry*>(entry), isChecked);
+            SICommon::checkedDeprecated<DataTypeFieldDetailsView, FieldEntry>(mFields, static_cast<FieldEntry*>(entry), isChecked);
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
-            SICommon::checkedDeprecated<SIDataTypeFieldDetails, EnumEntry>(mFields, static_cast<EnumEntry*>(entry), isChecked);
+            SICommon::checkedDeprecated<DataTypeFieldDetailsView, EnumEntry>(mFields, static_cast<EnumEntry*>(entry), isChecked);
         }
         else
         {
@@ -1085,11 +1087,11 @@ void SIDataType::onFieldDeprecateHint(const QString& newText)
     {
         if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
         {
-            SICommon::setDeprecateHint<SIDataTypeFieldDetails, FieldEntry>(mFields, static_cast<FieldEntry*>(field), newText);
+            SICommon::setDeprecateHint<DataTypeFieldDetailsView, FieldEntry>(mFields, static_cast<FieldEntry*>(field), newText);
         }
         else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
         {
-            SICommon::setDeprecateHint<SIDataTypeFieldDetails, EnumEntry>(mFields, static_cast<EnumEntry*>(field), newText);
+            SICommon::setDeprecateHint<DataTypeFieldDetailsView, EnumEntry>(mFields, static_cast<EnumEntry*>(field), newText);
         }
         else
         {
@@ -1100,26 +1102,17 @@ void SIDataType::onFieldDeprecateHint(const QString& newText)
 
 void SIDataType::showEnumDetails(bool show)
 {
-    SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsEnum()};
-    QFormLayout* form = mDetails->ctrlLayout();
-    form->setRowVisible(item.first, show);
-    form->setRowVisible(item.second, show);
+    mDetails->setEnumRowVisible(show);
 }
 
 void SIDataType::showImportDetails(bool show)
 {
-    SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsImport()};
-    QFormLayout* form = mDetails->ctrlLayout();
-    form->setRowVisible(item.first, show);
-    form->setRowVisible(item.second, show);
+    mDetails->setImportRowVisible(show);
 }
 
 void SIDataType::showContainerDetails(bool show)
 {
-    SIDataTypeDetails::CtrlGroup item{mDetails->ctrlDetailsContainer()};
-    QFormLayout* form = mDetails->ctrlLayout();
-    form->setRowVisible(item.first, show);
-    form->setRowVisible(item.second, show);
+    mDetails->setContainerRowVisible(show);
 }
 
 void SIDataType::updateData()
@@ -1168,8 +1161,19 @@ void SIDataType::updateWidgets()
     mKeysModel->setFilter(QList<DataTypeBase::eCategory>{DataTypeBase::eCategory::BasicContainer});
     mKeysModel->updateDataTypeLists();
     
-    // mTableCell = new TableCell(QList<QAbstractItemModel*>{mTypeModel}, QList<int>{1}, mList->ctrlTableList(), this, false);
-    
+    // Inline (in-table) editing: the shared TableCell delegate opens an editor per cell. The tree
+    // is heterogeneous (four data type categories plus struct/enum fields), so which cells are
+    // editable, whether a cell shows a combo or a text editor, and how it is validated are all
+    // resolved per cell by the controller. See cellChanged() for the commit routing.
+    QTreeWidget* treeList = mList->ctrlTableList();
+    mTableCell = new TableCell(treeList, this, false);
+    mTableCell->setEditableCheck([this](const QModelIndex& idx) { return isCellEditable(idx); });
+    mTableCell->setEditorModelResolver([this](const QModelIndex& idx) { return editorModelFor(idx); });
+    mTableCell->setValidationResolver([this](const QModelIndex& idx) { return validationFor(idx); });
+    treeList->setItemDelegateForColumn(0, mTableCell);
+    treeList->setItemDelegateForColumn(1, mTableCell);
+    treeList->setItemDelegateForColumn(2, mTableCell);
+
     QComboBox* container = mDetails->ctrlContainerObject();
     const QList<DataTypeBasicContainer*>& containers {_getContainerTypes()};
     for (auto dataType : containers)
@@ -1231,6 +1235,8 @@ void SIDataType::setupSignals()
     connect(mFields->ctrlDescription()      , &QPlainTextEdit::textChanged      , this, &SIDataType::onFieldDescriptionChanged);
     connect(mFields->ctrlDeprecated()       , &QCheckBox::toggled               , this, &SIDataType::onFieldDeprecatedChecked);
     connect(mFields->ctrlDeprecateHint()    , &QLineEdit::textChanged           , this, &SIDataType::onFieldDeprecateHint);
+
+    connect(mTableCell                      , &TableCell::signalEditorDataChanged, this, &SIDataType::onEditorDataChanged);
 }
 
 void SIDataType::blockBasicSignals(bool doBlock)
@@ -1288,7 +1294,7 @@ void SIDataType::selectedStruct(DataTypeCustom* oldType, DataTypeStructure* data
     mDetails->ctrlTypeStruct()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
 
-    SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
+    SICommon::enableDeprecated<DataTypeDetailsView, DataTypeCustom>(mDetails, dataType, true);
 
     mList->ctrlButtonRemove()->setEnabled(true);
     mList->ctrlButtonAddField()->setEnabled(true);
@@ -1324,7 +1330,7 @@ void SIDataType::selectedEnum(DataTypeCustom* oldType, DataTypeEnum* dataType)
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
     mDetails->ctrlEnumDerived()->setCurrentText(dataType->getDerived());
     
-    SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
+    SICommon::enableDeprecated<DataTypeDetailsView, DataTypeCustom>(mDetails, dataType, true);
     
     mList->ctrlButtonRemove()->setEnabled(true);
     mList->ctrlButtonAddField()->setEnabled(true);
@@ -1355,7 +1361,7 @@ void SIDataType::selectedImport(DataTypeCustom* oldType, DataTypeImported* dataT
     mDetails->ctrlTypeImport()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
     
-    SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
+    SICommon::enableDeprecated<DataTypeDetailsView, DataTypeCustom>(mDetails, dataType, true);
 
     mDetails->ctrlImportLocation()->setText(dataType->getLocation());
     mDetails->ctrlImportNamespace()->setText(dataType->getNamespace());
@@ -1396,7 +1402,7 @@ void SIDataType::selectedContainer(DataTypeCustom* oldType, DataTypeContainer* d
     mDetails->ctrlTypeContainer()->setChecked(true);
     mDetails->ctrlDescription()->setPlainText(dataType->getDescription());
     
-    SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, dataType, true);
+    SICommon::enableDeprecated<DataTypeDetailsView, DataTypeCustom>(mDetails, dataType, true);
 
     mDetails->ctrlContainerObject()->setCurrentText(dataType->getContainer());
     mDetails->ctrlContainerValue()->setCurrentText(dataType->getValue());
@@ -1446,7 +1452,7 @@ void SIDataType::selectedStructField(DataTypeCustom* oldType, const FieldEntry& 
     mFields->ctrlValue()->setText(field.getValue());
     mFields->ctrlDescription()->setPlainText(field.getDescription());
 
-    SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, &field, true);
+    SICommon::enableDeprecated<DataTypeFieldDetailsView, FieldEntry>(mFields, &field, true);
     
     mList->ctrlButtonRemove()->setEnabled(false);
     mList->ctrlButtonAddField()->setEnabled(true);
@@ -1479,7 +1485,7 @@ void SIDataType::selectedEnumField(DataTypeCustom* oldType, const EnumEntry& fie
     mFields->ctrlValue()->setText(field.getValue());
     mFields->ctrlDescription()->setPlainText(field.getDescription());
     
-    SICommon::enableDeprecated<SIDataTypeFieldDetails, EnumEntry>(mFields, &field, true);
+    SICommon::enableDeprecated<DataTypeFieldDetailsView, EnumEntry>(mFields, &field, true);
     
     mList->ctrlButtonRemove()->setEnabled(false);
     mList->ctrlButtonAddField()->setEnabled(true);
@@ -1673,7 +1679,12 @@ inline void SIDataType::setNodeText(QTreeWidgetItem* node, DocumentElem * elem) 
 {
     Q_ASSERT(node != nullptr);
     Q_ASSERT(elem != nullptr);
-    
+
+    // Tree items are not editable by default (unlike table items); set the flag so the shared
+    // TableCell delegate can open an inline editor. Which columns actually open is decided
+    // per-cell by isCellEditable().
+    node->setFlags(node->flags() | Qt::ItemIsEditable);
+
     if (elem != nullptr)
     {
         node->setIcon(0, elem->getIcon(ElementBase::eDisplay::DisplayName));
@@ -1692,8 +1703,8 @@ inline void SIDataType::setNodeText(QTreeWidgetItem* node, DocumentElem * elem) 
 
 inline void SIDataType::showClean()
 {
-    SICommon::enableDeprecated<SIDataTypeDetails, DataTypeCustom>(mDetails, nullptr, false);
-    SICommon::enableDeprecated<SIDataTypeFieldDetails, FieldEntry>(mFields, nullptr, false);
+    SICommon::enableDeprecated<DataTypeDetailsView, DataTypeCustom>(mDetails, nullptr, false);
+    SICommon::enableDeprecated<DataTypeFieldDetailsView, FieldEntry>(mFields, nullptr, false);
     
     mDetails->ctrlName()->clear();
     showEnumDetails(false);
@@ -1861,4 +1872,231 @@ inline QString SIDataType::genName(DataTypeCustom* dataType)
     } while (mModel.findChildIndex(dataType, name) != -1);
 
     return name;
+}
+
+int SIDataType::getColumnCount() const
+{
+    return mList->ctrlTableList()->columnCount();
+}
+
+QString SIDataType::getCellText(const QModelIndex& cell) const
+{
+    // The display text already stored on the tree cell seeds the inline editor.
+    return cell.isValid() ? cell.data(Qt::DisplayRole).toString() : QString();
+}
+
+bool SIDataType::isCellEditable(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+        return false;
+
+    DataTypeCustom* dataType = index.sibling(index.row(), 0).data(Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    if (dataType == nullptr)
+        return false;
+
+    const uint32_t id = index.sibling(index.row(), 1).data(Qt::ItemDataRole::UserRole).toUInt();
+    const int col = index.column();
+    if (id == 0)
+    {
+        // Top-level data type node: which columns are editable depends on the category.
+        switch (dataType->getCategory())
+        {
+        case DataTypeBase::eCategory::Structure:    return (col == 0);                   // only the name
+        case DataTypeBase::eCategory::Enumeration:  return (col == 0) || (col == 1);     // name + derived type
+        case DataTypeBase::eCategory::Imported:     return (col == 0) || (col == 1);     // name + namespace::object
+        case DataTypeBase::eCategory::Container:    return (col == 0);                   // name only (type in details)
+        default:                                    return false;
+        }
+    }
+
+    // Field node: structure fields edit name/type/value; enumeration entries edit name/value.
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        return (col == 0) || (col == 1) || (col == 2);
+    if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+        return (col == 0) || (col == 2);
+
+    return false;
+}
+
+QAbstractItemModel* SIDataType::editorModelFor(const QModelIndex& index) const
+{
+    // The Data Type column is a combo in two cases: an enumeration's derived integer type (top
+    // node) and a structure field's type. Imported type and enumeration values use a line editor.
+    if ((index.isValid() == false) || (index.column() != 1))
+        return nullptr;
+
+    DataTypeCustom* dataType = index.sibling(index.row(), 0).data(Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    if (dataType == nullptr)
+        return nullptr;
+
+    const uint32_t id = index.sibling(index.row(), 1).data(Qt::ItemDataRole::UserRole).toUInt();
+    if (id == 0)
+    {
+        // Enumeration top node: pick the derived integer type from the SAME model that backs the
+        // details Derived combo, so the inline list and the Derived list are identical and stay
+        // in sync by construction (both edit the enum's derived type).
+        if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+            return mDetails->ctrlEnumDerived()->model();
+
+        return nullptr;
+    }
+
+    // Structure field: the type combo is backed by the shared type model.
+    if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+        return mTypeModel;
+
+    return nullptr;
+}
+
+TableCell::eCellValidation SIDataType::validationFor(const QModelIndex& index) const
+{
+    if (index.isValid() == false)
+        return TableCell::eCellValidation::NoValidation;
+
+    const int col = index.column();
+    if (col == 0)
+        return TableCell::eCellValidation::Identifier;
+
+    DataTypeCustom* dataType = index.sibling(index.row(), 0).data(Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    if (dataType == nullptr)
+        return TableCell::eCellValidation::NoValidation;
+
+    const uint32_t id = index.sibling(index.row(), 1).data(Qt::ItemDataRole::UserRole).toUInt();
+    if (col == 1)
+    {
+        if (id == 0)
+        {
+            if (dataType->getCategory() == DataTypeBase::eCategory::Imported)
+                return TableCell::eCellValidation::QualifiedName;   // namespace::object
+            if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+                return TableCell::eCellValidation::Identifier;      // a derived integer type name
+        }
+        return TableCell::eCellValidation::NoValidation;            // a structure field type is a combo
+    }
+
+    // Column 2 (value): an enumeration value is restricted to C++ value characters; a structure
+    // default value stays unrestricted (it may be a number, string literal, expression, etc.).
+    if ((id != 0) && (dataType->getCategory() == DataTypeBase::eCategory::Enumeration))
+        return TableCell::eCellValidation::Value;
+
+    return TableCell::eCellValidation::NoValidation;
+}
+
+void SIDataType::onEditorDataChanged(const QModelIndex& index, const QString& newValue)
+{
+    if (index.isValid() == false)
+        return;
+
+    // The edited node is the current item (inline editing starts on the current index).
+    QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
+    if (item != nullptr)
+    {
+        cellChanged(item, index.column(), newValue);
+    }
+}
+
+void SIDataType::cellChanged(QTreeWidgetItem* item, int column, const QString& newValue)
+{
+    Q_ASSERT(item != nullptr);
+    DataTypeCustom* dataType = item->data(0, Qt::ItemDataRole::UserRole).value<DataTypeCustom*>();
+    if (dataType == nullptr)
+        return;
+
+    const uint32_t id = item->data(1, Qt::ItemDataRole::UserRole).toUInt();
+    blockBasicSignals(true);
+
+    if (id == 0)
+    {
+        // Top-level data type node.
+        if (column == 0)
+        {
+            if (dataType->getName() != newValue)
+            {
+                mModel.updateDataType(dataType, newValue);
+                setNodeText(item, dataType);
+                mDetails->ctrlName()->setText(dataType->getName());
+            }
+        }
+        else if (column == 1)
+        {
+            if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+            {
+                DataTypeEnum* typeEnum = static_cast<DataTypeEnum*>(dataType);
+                typeEnum->setDerived(newValue);
+                setNodeText(item, typeEnum);
+                mDetails->ctrlEnumDerived()->setCurrentText(newValue);
+            }
+            else if (dataType->getCategory() == DataTypeBase::eCategory::Imported)
+            {
+                DataTypeImported* typeImport = static_cast<DataTypeImported*>(dataType);
+                // Parse the "<namespace::>object" pattern typed into the Data Type column and
+                // mirror both halves into the details Namespace/Object fields.
+                QString nameSpace;
+                QString object;
+                const int pos = newValue.lastIndexOf(QStringLiteral("::"));
+                if (pos >= 0)
+                {
+                    nameSpace = newValue.left(pos);
+                    object = newValue.mid(pos + 2);
+                }
+                else
+                {
+                    object = newValue;
+                }
+
+                typeImport->setNamespace(nameSpace);
+                typeImport->setObject(object);
+                setNodeText(item, typeImport);
+                mDetails->ctrlImportNamespace()->setText(nameSpace);
+                mDetails->ctrlImportObject()->setText(object);
+            }
+        }
+    }
+    else
+    {
+        // Field node: a structure field or an enumeration entry.
+        ElementBase* field = mModel.findChild(dataType, id);
+        if (field != nullptr)
+        {
+            if (dataType->getCategory() == DataTypeBase::eCategory::Structure)
+            {
+                FieldEntry* entry = static_cast<FieldEntry*>(field);
+                if (column == 0)
+                {
+                    entry->setName(newValue);
+                    mFields->ctrlName()->setText(newValue);
+                }
+                else if (column == 1)
+                {
+                    entry->setParamType(mTypeModel->findDataType(newValue));
+                    mFields->ctrlTypes()->setCurrentText(newValue);
+                }
+                else if (column == 2)
+                {
+                    entry->setValue(newValue);
+                    mFields->ctrlValue()->setText(newValue);
+                }
+
+                setNodeText(item, entry);
+            }
+            else if (dataType->getCategory() == DataTypeBase::eCategory::Enumeration)
+            {
+                EnumEntry* entry = static_cast<EnumEntry*>(field);
+                if (column == 0)
+                {
+                    entry->setName(newValue);
+                    mFields->ctrlName()->setText(newValue);
+                }
+                else if (column == 2)
+                {
+                    entry->setValue(newValue);
+                    mFields->ctrlValue()->setText(newValue);
+                }
+
+                setNodeText(item, entry);
+            }
+        }
+    }
+
+    blockBasicSignals(false);
 }

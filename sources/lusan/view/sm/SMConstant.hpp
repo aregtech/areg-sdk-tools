@@ -22,11 +22,11 @@
 #include <QScrollArea>
 #include <cstdint>
 
+class ConstantDetailsView;
 class ConstantEntry;
+class ConstantListView;
 class QEvent;
 class QTreeWidgetItem;
-class SMConstantDetails;
-class SMConstantList;
 class SMConstantModel;
 
 /**
@@ -55,7 +55,7 @@ public:
      * \brief   Returns the list panel (its Add button lets a caller start a new constant,
      *          e.g. from the Design page's Declare dropdown).
      **/
-    SMConstantList* getList() const;
+    ConstantListView* getList() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -127,10 +127,10 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    SMConstantModel&    mModel;
-    SMConstantList*     mList;
-    SMConstantDetails*  mDetails;
-    uint32_t            mNameCounter;
+    SMConstantModel&     mModel;
+    ConstantListView*    mList;
+    ConstantDetailsView* mDetails;
+    uint32_t             mNameCounter;
 };
 
 #endif  // LUSAN_VIEW_SM_SMCONSTANT_HPP
