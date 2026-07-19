@@ -38,19 +38,6 @@ if(NOT ${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     message(FATAL_ERROR "LUSAN: >>> You should use QT version 6 or newer to compile this project")
 endif()
 
-# The fetched Areg SDK's conf/cmake/gnu.cmake (and clang.cmake) append -march=native
-# -mtune=native to this directory's COMPILE_OPTIONS for Release builds, which the
-# 'lusan' target below inherits. On GCC that has produced a host-dependent codegen
-# failure ('__m128i' does not name a type inside <wmmintrin.h>, reached transitively
-# via Qt's <qfloat16.h> -> <immintrin.h>) that varies by build-machine CPU detection.
-# Since Lusan's own sources are not performance-critical, drop these two flags for
-# this target only; the already-configured Areg framework libraries are unaffected.
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    get_directory_property(LUSAN_COMPILE_OPTS COMPILE_OPTIONS)
-    list(REMOVE_ITEM LUSAN_COMPILE_OPTS "-march=native" "-mtune=native")
-    set_directory_properties(PROPERTIES COMPILE_OPTIONS "${LUSAN_COMPILE_OPTS}")
-endif()
-
 include_directories(${LUSAN_BASE})
 include_directories(${LUSAN_THIRDPARTY})
 include("${LUSAN_BASE}/CMakeLists.txt")
