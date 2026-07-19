@@ -13,8 +13,8 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    # branches: [ main, "feature/**", "bugfix/**" ]
-    branches: [ main ]
+    branches: [ main, "feature/**", "bugfix/**" ]
+    # branches: [ main ]
   workflow_dispatch:
 
 # Cancel superseded runs on the same ref to save CI minutes.

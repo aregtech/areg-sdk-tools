@@ -1,5 +1,6 @@
 list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/StateMachineModel.cpp
+    ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMAttributeModel.cpp
     ${LUSAN}/model/sm/SMCommand.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
@@ -18,6 +19,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
@@ -31,6 +33,7 @@ list(APPEND LUSAN_SRC
 
 list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/StateMachineModel.hpp
+    ${LUSAN}/model/sm/SMArgumentCommands.hpp
     ${LUSAN}/model/sm/SMAttributeModel.hpp
     ${LUSAN}/model/sm/SMCommand.hpp
     ${LUSAN}/model/sm/SMConditionText.hpp
@@ -49,6 +52,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMIncludeModel.hpp
     ${LUSAN}/model/sm/SMLayoutCommands.hpp
     ${LUSAN}/model/sm/SMLiteralValidator.hpp
+    ${LUSAN}/model/sm/SMMappingSources.hpp
     ${LUSAN}/model/sm/SMMethodModel.hpp
     ${LUSAN}/model/sm/SMOverviewModel.hpp
     ${LUSAN}/model/sm/SMPasteCommand.hpp
