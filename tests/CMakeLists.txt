@@ -148,6 +148,52 @@ set_target_properties(lusan_sm_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 
 # ---------------------------------------------------------------------------
+# SM-22: the parameter-mapping editor. Drives the REAL SMMappingEditor widget offscreen
+# over an ActionCall's argument list -- source-kind legality, compatibility + widening,
+# resolution order, and the undoable byte-exact round-trip. Reuses the command-tests link
+# set (the full model facade) plus the mapping helpers and the widget under test.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_sm_mapping_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN_CMD_COMMON_SRC}
+    ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMConditionText.cpp
+    ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMLayoutCommands.cpp
+    ${LUSAN}/model/sm/SMPasteCommand.cpp
+    ${LUSAN}/model/sm/SMStateCommands.cpp
+    ${LUSAN}/model/sm/SMOverviewModel.cpp
+    ${LUSAN}/model/sm/SMDataTypeModel.cpp
+    ${LUSAN}/model/sm/SMAttributeModel.cpp
+    ${LUSAN}/model/sm/SMEventModel.cpp
+    ${LUSAN}/model/sm/SMTimerModel.cpp
+    ${LUSAN}/model/sm/SMMethodModel.cpp
+    ${LUSAN}/model/sm/SMConstantModel.cpp
+    ${LUSAN}/model/sm/SMIncludeModel.cpp
+    ${LUSAN}/model/sm/SMSelectionModel.cpp
+    ${LUSAN}/model/sm/StateMachineModel.cpp
+    ${LUSAN}/model/sm/SMArgumentCommands.cpp
+    ${LUSAN}/model/sm/SMMappingSources.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/view/sm/NEGuardStyle.cpp
+    ${LUSAN}/view/sm/SMMappingEditor.cpp
+    ${LUSAN_ROOT}/tests/sm/SMMappingEditorTests.cpp
+    ${LUSAN}/res/lusan.qrc
+)
+target_include_directories(lusan_sm_mapping_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_mapping_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_mapping_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_mapping_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# ---------------------------------------------------------------------------
 # SM-21 (U1): the deterministic guard core. Headless: the data layer + shared command
 # framework + the guard model (tree/parser/render/codegen preview/commands + symbols)
 # and the legacy condition renderer used by the read-shim.
@@ -537,4 +583,5 @@ add_test(NAME sm_guard_ladder_tests COMMAND lusan_sm_guard_ladder_tests)
 add_test(NAME sm_guard_eval_tests COMMAND lusan_sm_guard_eval_tests)
 add_test(NAME sm_symbol_tests COMMAND lusan_sm_symbol_tests)
 add_test(NAME sm_command_tests COMMAND lusan_sm_command_tests)
+add_test(NAME sm_mapping_tests COMMAND lusan_sm_mapping_tests)
 add_test(NAME si_command_tests COMMAND lusan_si_command_tests)

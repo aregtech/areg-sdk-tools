@@ -13,6 +13,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMHoverCard.cpp
     ${LUSAN}/view/sm/SMInlineToken.cpp
     ${LUSAN}/view/sm/SMIslandEditor.cpp
+    ${LUSAN}/view/sm/SMMappingEditor.cpp
     ${LUSAN}/view/sm/SMMappingGrid.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
@@ -63,6 +64,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMHoverCard.hpp
     ${LUSAN}/view/sm/SMInlineToken.hpp
     ${LUSAN}/view/sm/SMIslandEditor.hpp
+    ${LUSAN}/view/sm/SMMappingEditor.hpp
     ${LUSAN}/view/sm/SMMappingGrid.hpp
     ${LUSAN}/view/sm/SMOperandField.hpp
     ${LUSAN}/view/sm/SMSignatureCard.hpp
