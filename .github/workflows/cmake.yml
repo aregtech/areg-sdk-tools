@@ -1,7 +1,7 @@
 # Builds the Lusan application on three targets:
 #   1. Windows  -- MSVC 2022 + Qt 6.8 (aqt)          -> proves the modern Windows/MSVC path
 #   2. Linux    -- Ubuntu + Qt 6.8 (aqt)             -> proves the modern Linux path
-#   3. Linux    -- Ubuntu 24.04 + Qt 6.4.2 (apt)     -> proves the Qt 6.4 support (no regression)
+#   3. Linux    -- Ubuntu 24.04 + Qt 6.4.2 (apt)     -> proves the Qt 6.4 support
 #
 # Lusan fetches the Areg SDK and the Qt Advanced Docking System via CMake FetchContent,
 # so every job needs network access and a compiler toolchain; the SDK is compiled once
@@ -13,8 +13,8 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main, "feature/**", "bugfix/**" ]
-    # branches: [ main ]
+    # branches: [ main, "feature/**", "bugfix/**" ]
+    branches: [ main ]
   workflow_dispatch:
 
 # Cancel superseded runs on the same ref to save CI minutes.
@@ -23,7 +23,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Qt version used by the two "modern Qt" jobs (installed via aqt / install-qt-action).
+  # Qt version used by the two "modern Qt" jobs
   QT_MODERN_VERSION: "6.8.1"
 
 jobs:
@@ -71,10 +71,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      # aqt-provided Qt does not pull system deps; install the X11/XCB/XKB dev
-      # libraries Qt Gui/Widgets links against (otherwise find_package fails on XKB::XKB).
       - name: Install build tools and X11/XCB dev libraries
         run: |
           sudo apt-get update
@@ -122,11 +120,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      # qt6-base-private-dev provides the Qt6::GuiPrivate headers the ADS dependency
-      # links against; qt6-base-dev alone leaves that imported target's include path
-      # pointing at a directory that was never installed.
       - name: Install Qt 6.4 and build tools (apt)
         run: |
           sudo apt-get update
