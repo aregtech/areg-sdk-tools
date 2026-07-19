@@ -123,7 +123,7 @@ public:
     /**
      * \brief   Sets node name.
      **/
-    inline void setNodeName(const QString newName);
+    inline void setNodeName(const QString& newName);
 
     /**
      * \brief   Returns true if the object is the root. The root does not have a parent
@@ -593,7 +593,7 @@ inline const QString & ScopeNodeBase::getNodeName() const
     return mNodeName;
 }
 
-inline void ScopeNodeBase::setNodeName( const QString newName )
+inline void ScopeNodeBase::setNodeName( const QString& newName )
 {
     mNodeName = newName;
 }

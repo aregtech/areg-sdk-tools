@@ -199,7 +199,7 @@ public:
      *                           Unsets the default workspace if the root is empty or does not exist.
      * \return  True if the default workspace was successfully set, false otherwise.
      **/
-    bool setDefaultWorkspace(const QString defWorkspaceRoot);
+    bool setDefaultWorkspace(const QString& defWorkspaceRoot);
 
     /**
      * \brief   Checks if the given ID is the ID of active workspace.

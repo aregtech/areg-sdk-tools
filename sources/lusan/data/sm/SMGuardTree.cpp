@@ -27,7 +27,7 @@
 // SMGuardNode static helpers
 //////////////////////////////////////////////////////////////////////////
 
-const char* SMGuardNode::toString(eKind kind)
+QLatin1StringView SMGuardNode::toString(eKind kind)
 {
     switch (kind)
     {

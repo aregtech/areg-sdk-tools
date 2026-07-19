@@ -216,7 +216,7 @@ public:
      * \param   searchName  The name of the data type to search.
      * \return  Returns true if the name is found in the list of primitives. Otherwise, returns false.
      **/
-    bool existsPrimitive(const QList<DataTypePrimitive*> dataTypes, const QString& searchName) const;
+    bool existsPrimitive(const QList<DataTypePrimitive*>& dataTypes, const QString& searchName) const;
 
     /**
      * \brief   Searches for a data type by ID in the list of basic data type objects.
@@ -224,7 +224,7 @@ public:
      * \param   id          The ID of the data type to search.
      * \return  Returns true if the name is found in the list of basic data types. Otherwise, returns false.
      **/
-    bool existsPrimitive(const QList<DataTypePrimitive*> dataTypes, uint32_t id) const;
+    bool existsPrimitive(const QList<DataTypePrimitive*>& dataTypes, uint32_t id) const;
     
     /**
      * \brief   Searches for a data type by name in the list of basic data type objects.
@@ -232,7 +232,7 @@ public:
      * \param   searchName  The name of the data type to search.
      * \return  Returns true if the name is found in the list of basic data types. Otherwise, returns false.
      **/
-    bool existsBasic(const QList<DataTypeBasicObject*> dataTypes, const QString& searchName) const;
+    bool existsBasic(const QList<DataTypeBasicObject*>& dataTypes, const QString& searchName) const;
 
     /**
      * \brief   Searches for a data type by ID in the list of basic data type objects.
@@ -240,7 +240,7 @@ public:
      * \param   id          The ID of the data type to search.
      * \return  Returns true if the name is found in the list of basic data types. Otherwise, returns false.
      **/
-    bool existsBasic(const QList<DataTypeBasicObject*> dataTypes, uint32_t id) const;
+    bool existsBasic(const QList<DataTypeBasicObject*>& dataTypes, uint32_t id) const;
     
     /**
      * \brief   Searches for a data type by name in the list of basic container data type objects.
@@ -248,7 +248,7 @@ public:
      * \param   searchName  The name of the data type to search.
      * \return  Returns true if the name is found in the list of basic container data types. Otherwise, returns false.
      **/
-    bool existsContainer(const QList<DataTypeBasicContainer*> dataTypes, const QString& searchName) const;
+    bool existsContainer(const QList<DataTypeBasicContainer*>& dataTypes, const QString& searchName) const;
 
     /**
      * \brief   Searches for a data type by ID in the list of basic container data type objects.
@@ -256,7 +256,7 @@ public:
      * \param   id          The ID of the data type to search.
      * \return  Returns true if the name is found in the list of basic container data types. Otherwise, returns false.
      **/
-    bool existsContainer(const QList<DataTypeBasicContainer*> dataTypes, uint32_t id) const;
+    bool existsContainer(const QList<DataTypeBasicContainer*>& dataTypes, uint32_t id) const;
     
     /**
      * \brief   Searches for a data type by name in the list of custom data type objects.
@@ -264,7 +264,7 @@ public:
      * \param   searchName  The name of the data type to search.
      * \return  Returns true if the name is found in the list of custom data types. Otherwise, returns false.
      **/
-    bool existsCustom(const QList<DataTypeCustom*> dataTypes, const QString& searchName) const;
+    bool existsCustom(const QList<DataTypeCustom*>& dataTypes, const QString& searchName) const;
 
     /**
      * \brief   Searches for a data type by ID in the list of custom data type objects.
@@ -272,7 +272,7 @@ public:
      * \param   id          The ID of the data type to search.
      * \return  Returns true if the name is found in the list of custom data types. Otherwise, returns false.
      **/
-    bool existsCustom(const QList<DataTypeCustom*> dataTypes, uint32_t id) const;
+    bool existsCustom(const QList<DataTypeCustom*>& dataTypes, uint32_t id) const;
     
     /**
      * \brief   Searches for a data type by name in the list of data type objects.

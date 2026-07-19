@@ -383,14 +383,14 @@ public:
      * \brief   Writes this operation list wrapped in \p wrapperName (`EntryList`,
      *          `ExitList` or `OperationList`). Writes nothing when the list is empty.
      **/
-    void writeToXml(QXmlStreamWriter& xml, const char* wrapperName) const;
+    void writeToXml(QXmlStreamWriter& xml, QLatin1StringView wrapperName) const;
 
     /**
      * \brief   Reads an operation-list wrapper (`EntryList` / `ExitList` /
      *          `OperationList`); the reader must be positioned on \p wrapperName. Each
      *          child operation element is created by kind and appended in document order.
      **/
-    bool readFromXml(QXmlStreamReader& xml, const char* wrapperName);
+    bool readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapperName);
 
     inline const QList<SMOperationBase*>& getOperations() const;
     inline int getCount() const;

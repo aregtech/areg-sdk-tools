@@ -142,31 +142,31 @@ namespace NELusanCommon
     /**
      * \brief   XML element names and attributes.
      **/
-    constexpr const char * const xmlElementOptionList       { "OptionList" };
-    constexpr const char * const xmlElementOption           { "Option" };
-    constexpr const char * const xmlElementTheme            { "Theme" };
-    constexpr const char * const xmlElementWorkspaceList    { "WorspaceList" };
-    constexpr const char * const xmlElementWorkspace        { "Workspace" };
-    constexpr const char * const xmlElementSettings         { "Settings" };
-    constexpr const char * const xmlElementDirectories      { "Directories" };
+    constexpr QLatin1StringView xmlElementOptionList       { "OptionList" };
+    constexpr QLatin1StringView xmlElementOption           { "Option" };
+    constexpr QLatin1StringView xmlElementTheme            { "Theme" };
+    constexpr QLatin1StringView xmlElementWorkspaceList    { "WorspaceList" };
+    constexpr QLatin1StringView xmlElementWorkspace        { "Workspace" };
+    constexpr QLatin1StringView xmlElementSettings         { "Settings" };
+    constexpr QLatin1StringView xmlElementDirectories      { "Directories" };
 
-    constexpr const char * const xmlElementWorspaceRoot     { "WorkspaceRoot" };
-    constexpr const char * const xmlElementDescription      { "Description" };
-    constexpr const char * const xmlElementSources          { "Sources" };
-    constexpr const char * const xmlElementIncludes         { "Includes" };
-    constexpr const char * const xmlElementDelivery         { "Delivery" };
-    constexpr const char * const xmlElementLogs             { "Logs" };
+    constexpr QLatin1StringView xmlElementWorspaceRoot     { "WorkspaceRoot" };
+    constexpr QLatin1StringView xmlElementDescription      { "Description" };
+    constexpr QLatin1StringView xmlElementSources          { "Sources" };
+    constexpr QLatin1StringView xmlElementIncludes         { "Includes" };
+    constexpr QLatin1StringView xmlElementDelivery         { "Delivery" };
+    constexpr QLatin1StringView xmlElementLogs             { "Logs" };
 
-    constexpr const char * const xmlElementProject          { "Project" };
-    
-    constexpr const char * const xmlAttributeDefault        { "hasDefault" };
-    constexpr const char * const xmlAttributeLastAccessed   { "Accessed" };
-    constexpr const char * const xmlAttributeId             { "id" };
-    constexpr const char * const xmlAttributeName           { "Name" };
-    constexpr const char * const xmlAttributeVersion        { "Version" };
+    constexpr QLatin1StringView xmlElementProject          { "Project" };
 
-    constexpr const char * const xmlElementRecentFiles      { "RecentFiles" };
-    constexpr const char * const xmlElementFile             { "File" };
+    constexpr QLatin1StringView xmlAttributeDefault        { "hasDefault" };
+    constexpr QLatin1StringView xmlAttributeLastAccessed   { "Accessed" };
+    constexpr QLatin1StringView xmlAttributeId             { "id" };
+    constexpr QLatin1StringView xmlAttributeName           { "Name" };
+    constexpr QLatin1StringView xmlAttributeVersion        { "Version" };
+
+    constexpr QLatin1StringView xmlElementRecentFiles      { "RecentFiles" };
+    constexpr QLatin1StringView xmlElementFile             { "File" };
     
     constexpr char const    SCOPE_SEPRATOR                  { '_' };    //!< Node separator in scope path
     constexpr char const    SCOPE_LEAF_SEPRATOR             { '.' };    //!< Leaf separator in scope path (node.leaf_name)
@@ -768,7 +768,11 @@ inline QIcon NELusanCommon::iconSearchWildCard(const QSize & size)
 
 inline QIcon NELusanCommon::iconGoUp(const QSize & size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::GoUp) };
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("go-up")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
@@ -803,21 +807,33 @@ inline QIcon NELusanCommon::iconRecord(const QSize & size)
 
 inline QIcon NELusanCommon::iconClear(const QSize & size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::EditClear) };
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("edit-clear")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
 
 inline QIcon NELusanCommon::iconEditUndo(const QSize& size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditUndo)};
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("edit-undo")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
 
 inline QIcon NELusanCommon::iconEditRedo(const QSize& size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{QIcon::fromTheme(QIcon::ThemeIcon::EditRedo)};
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("edit-redo")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
@@ -848,14 +864,22 @@ inline QIcon NELusanCommon::iconNodeExpanded(const QSize & size)
 
 inline QIcon NELusanCommon::iconWorkspaceOpen(const QSize & size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::FolderOpen) };
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("folder-open")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
 
 inline QIcon NELusanCommon::iconSearch(const QSize & size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::EditFind) };
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("edit-find")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
@@ -892,7 +916,11 @@ inline QIcon NELusanCommon::iconMethodCondition(const QSize & size)
 
 inline QIcon NELusanCommon::iconDefaultValue(const QSize & size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::ToolsCheckSpelling) };
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("tools-check-spelling")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
@@ -959,14 +987,22 @@ inline QIcon NELusanCommon::iconTimer(const QSize & size)
 
 inline QIcon NELusanCommon::iconWarning(const QSize & size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning) };
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("dialog-warning")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }
 
 inline QIcon NELusanCommon::iconTypeWarning(const QSize & size)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
     QIcon icon{ QIcon::fromTheme(QIcon::ThemeIcon::DialogWarning) };
+#else
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("dialog-warning")) };
+#endif
     icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
     return icon;
 }

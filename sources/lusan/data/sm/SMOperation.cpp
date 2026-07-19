@@ -26,7 +26,7 @@
 namespace
 {
     //!< Writes \p text as a CDATA-wrapped child element (byte-exact, never normalized).
-    void writeCDataElem(QXmlStreamWriter& xml, const char* elemName, const QString& text)
+    void writeCDataElem(QXmlStreamWriter& xml, QLatin1StringView elemName, const QString& text)
     {
         xml.writeStartElement(elemName);
         xml.writeCDATA(text);
@@ -822,7 +822,7 @@ void SMOperationList::clear()
     mOperations.clear();
 }
 
-void SMOperationList::writeToXml(QXmlStreamWriter& xml, const char* wrapperName) const
+void SMOperationList::writeToXml(QXmlStreamWriter& xml, QLatin1StringView wrapperName) const
 {
     if (mOperations.isEmpty())
         return;
@@ -836,7 +836,7 @@ void SMOperationList::writeToXml(QXmlStreamWriter& xml, const char* wrapperName)
     xml.writeEndElement();
 }
 
-bool SMOperationList::readFromXml(QXmlStreamReader& xml, const char* wrapperName)
+bool SMOperationList::readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapperName)
 {
     if (xml.name() != QLatin1String(wrapperName))
         return false;

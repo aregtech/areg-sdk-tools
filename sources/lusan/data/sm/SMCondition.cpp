@@ -28,7 +28,7 @@
 namespace
 {
     //!< Writes \p text as a CDATA-wrapped child element (byte-exact, never normalized).
-    void writeCDataElem(QXmlStreamWriter& xml, const char* elemName, const QString& text)
+    void writeCDataElem(QXmlStreamWriter& xml, QLatin1StringView elemName, const QString& text)
     {
         xml.writeStartElement(elemName);
         xml.writeCDATA(text);
@@ -647,7 +647,7 @@ void SMConditionGroup::writeGroupBody(QXmlStreamWriter& xml) const
     }
 }
 
-void SMConditionGroup::readGroupBody(QXmlStreamReader& xml, const char* endElem)
+void SMConditionGroup::readGroupBody(QXmlStreamReader& xml, QLatin1StringView endElem)
 {
     const QXmlStreamAttributes attributes = xml.attributes();
     mCombine = attributes.hasAttribute(XmlSM::xmlSMAttributeCombine)

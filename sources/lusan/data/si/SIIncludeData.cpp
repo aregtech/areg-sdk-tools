@@ -80,7 +80,7 @@ void SIIncludeData::validate(const SIDataTypeData& /*dataTypes*/)
 {
 }
 
-IncludeEntry* SIIncludeData::createInclude(const QString location)
+IncludeEntry* SIIncludeData::createInclude(const QString& location)
 {
     IncludeEntry* result{ nullptr };
     IncludeEntry entry(getNextId(), location, this);

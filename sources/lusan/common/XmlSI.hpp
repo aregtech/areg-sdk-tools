@@ -19,6 +19,8 @@
  *
  ************************************************************************/
 
+#include <QString>
+
 /**
  * \brief   The list of tags and constants used in Service Interface XML file.
  **/
@@ -27,91 +29,91 @@ namespace XmlSI
     /**
      * \brief   Common XML element names of the Service Interface data.
      **/
-    constexpr const char* const xmlSIElementAttribute       { "Attribute" };
-    constexpr const char* const xmlSIElementAttributeList   { "AttributeList" };
-    constexpr const char* const xmlSIElementBaseTypeKey     { "BaseTypeKey" };
-    constexpr const char* const xmlSIElementBaseTypeValue   { "BaseTypeValue" };
-    constexpr const char* const xmlSIElementConstant        { "Constant" };
-    constexpr const char* const xmlSIElementConstantList    { "ConstantList" };
-    constexpr const char* const xmlSIElementContainer       { "Container" };
-    constexpr const char* const xmlSIElementDataType        { "DataType" };
-    constexpr const char* const xmlSIElementDataTypeList    { "DataTypeList" };
-    constexpr const char* const xmlSIElementDeprecateHint   { "DeprecateHint" };
-    constexpr const char* const xmlSIElementDescription     { "Description" };
-    constexpr const char* const xmlSIElementEnumEntry       { "EnumEntry" };
-    constexpr const char* const xmlSIElementField           { "Field" };
-    constexpr const char* const xmlSIElementFieldList       { "FieldList" };
-    constexpr const char* const xmlSIElementImportedObject  { "ImportedObject" };
-    constexpr const char* const xmlSIElementIncludeList     { "IncludeList" };
-    constexpr const char* const xmlSIElementLocation        { "Location" };
-    constexpr const char* const xmlSIElementMethod          { "Method" };
-    constexpr const char* const xmlSIElementMethodList      { "MethodList" };
-    constexpr const char* const xmlSIElementNamespace       { "Namespace" };
-    constexpr const char* const xmlSIElementOverview        { "Overview" };
-    constexpr const char* const xmlSIElementParameter       { "Parameter" };
-    constexpr const char* const xmlSIElementParamList       { "ParamList" };
-    constexpr const char* const xmlSIElementServiceInterface{ "ServiceInterface" };
-    constexpr const char* const xmlSIElementValue           { "Value" };
+    constexpr QLatin1StringView xmlSIElementAttribute       { "Attribute" };
+    constexpr QLatin1StringView xmlSIElementAttributeList   { "AttributeList" };
+    constexpr QLatin1StringView xmlSIElementBaseTypeKey     { "BaseTypeKey" };
+    constexpr QLatin1StringView xmlSIElementBaseTypeValue   { "BaseTypeValue" };
+    constexpr QLatin1StringView xmlSIElementConstant        { "Constant" };
+    constexpr QLatin1StringView xmlSIElementConstantList    { "ConstantList" };
+    constexpr QLatin1StringView xmlSIElementContainer       { "Container" };
+    constexpr QLatin1StringView xmlSIElementDataType        { "DataType" };
+    constexpr QLatin1StringView xmlSIElementDataTypeList    { "DataTypeList" };
+    constexpr QLatin1StringView xmlSIElementDeprecateHint   { "DeprecateHint" };
+    constexpr QLatin1StringView xmlSIElementDescription     { "Description" };
+    constexpr QLatin1StringView xmlSIElementEnumEntry       { "EnumEntry" };
+    constexpr QLatin1StringView xmlSIElementField           { "Field" };
+    constexpr QLatin1StringView xmlSIElementFieldList       { "FieldList" };
+    constexpr QLatin1StringView xmlSIElementImportedObject  { "ImportedObject" };
+    constexpr QLatin1StringView xmlSIElementIncludeList     { "IncludeList" };
+    constexpr QLatin1StringView xmlSIElementLocation        { "Location" };
+    constexpr QLatin1StringView xmlSIElementMethod          { "Method" };
+    constexpr QLatin1StringView xmlSIElementMethodList      { "MethodList" };
+    constexpr QLatin1StringView xmlSIElementNamespace       { "Namespace" };
+    constexpr QLatin1StringView xmlSIElementOverview        { "Overview" };
+    constexpr QLatin1StringView xmlSIElementParameter       { "Parameter" };
+    constexpr QLatin1StringView xmlSIElementParamList       { "ParamList" };
+    constexpr QLatin1StringView xmlSIElementServiceInterface{ "ServiceInterface" };
+    constexpr QLatin1StringView xmlSIElementValue           { "Value" };
 
     /**
      * \brief   Common XML element attributes of the Service Interface data.
      **/
-    constexpr const char* const xmlSIAttributeCategory      { "Category" };
-    constexpr const char* const xmlSIAttributeDataType      { "DataType" };
-    constexpr const char* const xmlSIAttributeHasKey        { "HasKey" };
-    constexpr const char* const xmlSIAttributeHasValue      { "HasValue" };
-    constexpr const char* const xmlSIAttributeID            { "ID" };
-    constexpr const char* const xmlSIAttributeIsDefault     { "IsDefault" };
-    constexpr const char* const xmlSIAttributeIsDeprecated  { "IsDeprecated" };
-    constexpr const char* const xmlSIAttributeFormatVersion { "FormatVersion" };
-    constexpr const char* const xmlSIAttributeMethodType    { "MethodType" };
-    constexpr const char* const xmlSIAttributeName          { "Name" };
-    constexpr const char* const xmlSIAttributeNotify        { "Notify" };
-    constexpr const char* const xmlSIAttributeType          { "Type" };
-    constexpr const char* const xmlSIAttributeResponse      { "Response" };
-    constexpr const char* const xmlSIAttributeValues        { "Values" };
-    constexpr const char* const xmlSIAttributeVersion       { "Version" };
+    constexpr QLatin1StringView xmlSIAttributeCategory      { "Category" };
+    constexpr QLatin1StringView xmlSIAttributeDataType      { "DataType" };
+    constexpr QLatin1StringView xmlSIAttributeHasKey        { "HasKey" };
+    constexpr QLatin1StringView xmlSIAttributeHasValue      { "HasValue" };
+    constexpr QLatin1StringView xmlSIAttributeID            { "ID" };
+    constexpr QLatin1StringView xmlSIAttributeIsDefault     { "IsDefault" };
+    constexpr QLatin1StringView xmlSIAttributeIsDeprecated  { "IsDeprecated" };
+    constexpr QLatin1StringView xmlSIAttributeFormatVersion { "FormatVersion" };
+    constexpr QLatin1StringView xmlSIAttributeMethodType    { "MethodType" };
+    constexpr QLatin1StringView xmlSIAttributeName          { "Name" };
+    constexpr QLatin1StringView xmlSIAttributeNotify        { "Notify" };
+    constexpr QLatin1StringView xmlSIAttributeType          { "Type" };
+    constexpr QLatin1StringView xmlSIAttributeResponse      { "Response" };
+    constexpr QLatin1StringView xmlSIAttributeValues        { "Values" };
+    constexpr QLatin1StringView xmlSIAttributeVersion       { "Version" };
     
-    constexpr const char* const xmlSIValueTrue              { "true" };
-    constexpr const char* const xmlSIValueFalse             { "false" };
+    constexpr QLatin1StringView xmlSIValueTrue              { "true" };
+    constexpr QLatin1StringView xmlSIValueFalse             { "false" };
 
-    constexpr const char* const xmlSIValuePrimitive         { "Primitive" };
-    constexpr const char* const xmlSIValueBool              { "bool" };
-    constexpr const char* const xmlSIValueChar              { "char" };
-    constexpr const char* const xmlSIValueUint8             { "uint8" };
-    constexpr const char* const xmlSIValueInt16             { "int16" };
-    constexpr const char* const xmlSIValueUint16            { "uint16" };
-    constexpr const char* const xmlSIValueInt32             { "int32" };
-    constexpr const char* const xmlSIValueUint32            { "uint32" };
-    constexpr const char* const xmlSIValueInt64             { "int64" };
-    constexpr const char* const xmlSIValueUint64            { "uint64" };
-    constexpr const char* const xmlSIValueFloat             { "float" };
-    constexpr const char* const xmlSIValueDouble            { "double" };
+    constexpr QLatin1StringView xmlSIValuePrimitive         { "Primitive" };
+    constexpr QLatin1StringView xmlSIValueBool              { "bool" };
+    constexpr QLatin1StringView xmlSIValueChar              { "char" };
+    constexpr QLatin1StringView xmlSIValueUint8             { "uint8" };
+    constexpr QLatin1StringView xmlSIValueInt16             { "int16" };
+    constexpr QLatin1StringView xmlSIValueUint16            { "uint16" };
+    constexpr QLatin1StringView xmlSIValueInt32             { "int32" };
+    constexpr QLatin1StringView xmlSIValueUint32            { "uint32" };
+    constexpr QLatin1StringView xmlSIValueInt64             { "int64" };
+    constexpr QLatin1StringView xmlSIValueUint64            { "uint64" };
+    constexpr QLatin1StringView xmlSIValueFloat             { "float" };
+    constexpr QLatin1StringView xmlSIValueDouble            { "double" };
 
-    constexpr const char* const xmlSIValueBasicObject       { "BasicObject" };
-    constexpr const char* const xmlSIValueString            { "String" };
-    constexpr const char* const xmlSIValueBinary            { "BinaryBuffer" };
-    constexpr const char* const xmlSIValueDateTime          { "DateTime" };
+    constexpr QLatin1StringView xmlSIValueBasicObject       { "BasicObject" };
+    constexpr QLatin1StringView xmlSIValueString            { "String" };
+    constexpr QLatin1StringView xmlSIValueBinary            { "BinaryBuffer" };
+    constexpr QLatin1StringView xmlSIValueDateTime          { "DateTime" };
 
-    constexpr const char* const xmlSIValueBasicContainer    { "BasicContainer" };
-    constexpr const char* const xmlSIValueArray             { "Array" };
-    constexpr const char* const xmlSIValueLinkedList        { "LinkedList" };
-    constexpr const char* const xmlSIValueHashMap           { "HashMap" };
-    constexpr const char* const xmlSIValueMap               { "Map" };
-    constexpr const char* const xmlSIValuePair              { "Pair" };
-    constexpr const char* const xmlSIValueNewType           { "NewType" };
+    constexpr QLatin1StringView xmlSIValueBasicContainer    { "BasicContainer" };
+    constexpr QLatin1StringView xmlSIValueArray             { "Array" };
+    constexpr QLatin1StringView xmlSIValueLinkedList        { "LinkedList" };
+    constexpr QLatin1StringView xmlSIValueHashMap           { "HashMap" };
+    constexpr QLatin1StringView xmlSIValueMap               { "Map" };
+    constexpr QLatin1StringView xmlSIValuePair              { "Pair" };
+    constexpr QLatin1StringView xmlSIValueNewType           { "NewType" };
 
-    constexpr const char* const xmlSIValueStructure         { "Structure" };
-    constexpr const char* const xmlSIValueEnumeration       { "Enumeration" };
-    constexpr const char* const xmlSIValueImported          { "Imported" };
-    constexpr const char* const xmlSIValueContainer         { "Container" };
+    constexpr QLatin1StringView xmlSIValueStructure         { "Structure" };
+    constexpr QLatin1StringView xmlSIValueEnumeration       { "Enumeration" };
+    constexpr QLatin1StringView xmlSIValueImported          { "Imported" };
+    constexpr QLatin1StringView xmlSIValueContainer         { "Container" };
 
-    constexpr const char* const xmlSIMethodTypeRequest      { "Request" };
-    constexpr const char* const xmlSIMethodTypeResponse     { "Response" };
-    constexpr const char* const xmlSIMethodTypeBroadcast    { "Broadcast" };
+    constexpr QLatin1StringView xmlSIMethodTypeRequest      { "Request" };
+    constexpr QLatin1StringView xmlSIMethodTypeResponse     { "Response" };
+    constexpr QLatin1StringView xmlSIMethodTypeBroadcast    { "Broadcast" };
 
-    constexpr const char* const xmlSIDefaultType            { xmlSIValueBool };
-    constexpr const char* const xmlSIDefaulValue            { xmlSIValueFalse };
+    constexpr QLatin1StringView xmlSIDefaultType            { xmlSIValueBool };
+    constexpr QLatin1StringView xmlSIDefaulValue            { xmlSIValueFalse };
     constexpr const unsigned int xmlElementId               { 50u };
 }
 

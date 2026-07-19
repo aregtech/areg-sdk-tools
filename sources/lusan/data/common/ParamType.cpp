@@ -42,7 +42,7 @@ namespace
 // TypeFinder class implementation
 //////////////////////////////////////////////////////////////////////////
 
-DataTypeBase* TypeFinder::findObject(const QString name, const QList<DataTypeCustom*>& listTypes) const
+DataTypeBase* TypeFinder::findObject(const QString& name, const QList<DataTypeCustom*>& listTypes) const
 {
     DataTypeBase* dataType{ nullptr };
     

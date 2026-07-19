@@ -220,7 +220,9 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
     if (theme == OptionsManager::eAppTheme::SystemDefault)
     {
         NELusanCommon::setIconsForDarkTheme(false);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         app->styleHints()->setColorScheme(Qt::ColorScheme::Unknown);
+#endif
         QApplication::setStyle(QStyleFactory::create(systemStyle));
         QApplication::setPalette(QApplication::style()->standardPalette());
         app->setStyleSheet(baseStyleSheet());
@@ -229,7 +231,9 @@ void NEAppThemes::applyTheme(OptionsManager::eAppTheme theme)
     {
         const sThemeColors& colors = themeColors(theme);
         NELusanCommon::setIconsForDarkTheme(colors.isDark);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         app->styleHints()->setColorScheme(colors.isDark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light);
+#endif
         QApplication::setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
         QApplication::setPalette(themePalette(colors));
         app->setStyleSheet(themeStyleSheet(colors));

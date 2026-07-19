@@ -40,7 +40,7 @@ public:
     TypeFinder() = default;
     ~TypeFinder() = default;
 public:
-    DataTypeBase* findObject(const QString name, const QList<DataTypeCustom*>& listTypes) const;
+    DataTypeBase* findObject(const QString& name, const QList<DataTypeCustom*>& listTypes) const;
 };
 
 //////////////////////////////////////////////////////////////////////////

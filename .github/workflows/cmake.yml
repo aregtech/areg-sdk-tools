@@ -1,0 +1,155 @@
+# Builds the Lusan application on three targets:
+#   1. Windows  -- MSVC 2022 + Qt 6.8 (aqt)          -> proves the modern Windows/MSVC path
+#   2. Linux    -- Ubuntu + Qt 6.8 (aqt)             -> proves the modern Linux path
+#   3. Linux    -- Ubuntu 24.04 + Qt 6.4.2 (apt)     -> proves the Qt 6.4 support
+#
+# Lusan fetches the Areg SDK and the Qt Advanced Docking System via CMake FetchContent,
+# so every job needs network access and a compiler toolchain; the SDK is compiled once
+# per job. Only Qt6::Widgets and Qt6::LinguistTools are required to configure/link.
+
+name: Build Lusan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    # branches: [ main, "feature/**", "bugfix/**" ]
+    branches: [ main ]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Qt version used by the two "modern Qt" jobs
+  QT_MODERN_VERSION: "6.8.1"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Windows -- MSVC 2022 + Qt 6.8
+  # ---------------------------------------------------------------------------
+  windows-msvc:
+    name: Windows (MSVC 2022, Qt 6.8)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Qt (aqt)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_MODERN_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+
+      - name: Set up MSVC developer shell
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j12
+
+      - name: Upload lusan.exe
+        uses: actions/upload-artifact@v7
+        with:
+          name: lusan-windows-qt68
+          path: |
+            build/**/lusan.exe
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # 2. Linux -- Ubuntu + Qt 6.8 (aqt)
+  # ---------------------------------------------------------------------------
+  linux-qt68:
+    name: Linux (Ubuntu, Qt 6.8)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install build tools and X11/XCB dev libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build git \
+            libgl1-mesa-dev libglu1-mesa-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev \
+            libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
+            libxcb1-dev libxcb-cursor-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev \
+            libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev \
+            libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev \
+            libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev \
+            libfontconfig1-dev libfreetype6-dev
+
+      - name: Install Qt (aqt)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_MODERN_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j12
+
+      - name: Upload lusan binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: lusan-linux-qt68
+          path: |
+            build/**/lusan
+            build/**/lusan.elf
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # 3. Linux -- Ubuntu 24.04 + Qt 6.4.2 (distro apt packages)
+  #    This is the regression guard for the Qt 6.4 support.
+  # ---------------------------------------------------------------------------
+  linux-qt64:
+    name: Linux (Ubuntu 24.04, Qt 6.4 apt)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Qt 6.4 and build tools (apt)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build git \
+            qt6-base-dev qt6-base-private-dev qt6-tools-dev qt6-tools-dev-tools \
+            libqt6svg6-dev libgl1-mesa-dev libglu1-mesa-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev \
+            libx11-dev libx11-xcb-dev libxext-dev libxfixes-dev libxi-dev libxrender-dev \
+            libxcb1-dev libxcb-cursor-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev \
+            libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev \
+            libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev \
+            libxcb-util-dev libxcb-xinerama0-dev libxcb-xkb-dev \
+            libfontconfig1-dev libfreetype6-dev
+          echo "Configured Qt version:"
+          qmake6 --version
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j12
+
+      - name: Upload lusan binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: lusan-linux-qt64
+          path: |
+            build/**/lusan
+            build/**/lusan.elf
+          if-no-files-found: warn
