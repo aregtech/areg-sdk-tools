@@ -10,12 +10,12 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
- *  \file        tests/sm/SMMappingEditorTests.cpp
+ *  \file        tests/sm/SMArgMapTableTests.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       SM-22 parameter-mapping editor: source kinds, compatibility + widening,
  *               resolution order, and undoable byte-exact round-trip -- driven offscreen
- *               through the real SMMappingEditor widget.
+ *               through the real SMArgMapTable widget over an operation argument sink.
  *
  ************************************************************************/
 
@@ -24,11 +24,16 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
-#include "lusan/view/sm/SMMappingEditor.hpp"
+#include "lusan/view/sm/IArgSink.hpp"
+#include "lusan/view/sm/SMArgMapTable.hpp"
+#include "lusan/view/sm/SMArgSinkOperation.hpp"
 
 #include <QApplication>
 #include <QComboBox>
 #include <QDir>
+#include <QFocusEvent>
+#include <QHash>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSet>
@@ -96,16 +101,16 @@ namespace
     }
 
     //!< The declared signature the mapping editor renders (as the operations editor will feed it).
-    QList<SMMappingEditor::Param> signature()
+    QList<SMArgMapTable::Param> signature()
     {
-        QList<SMMappingEditor::Param> params;
-        params.append(SMMappingEditor::Param{ QStringLiteral("waiting"), QStringLiteral("uint32"), QString(),               false });
-        params.append(SMMappingEditor::Param{ QStringLiteral("urgent"),  QStringLiteral("bool"),   QStringLiteral("false"), true  });
-        params.append(SMMappingEditor::Param{ QStringLiteral("note"),    QStringLiteral("String"), QString(),               false });
+        QList<SMArgMapTable::Param> params;
+        params.append(SMArgMapTable::Param{ QStringLiteral("waiting"), QStringLiteral("uint32"), QString(),               false });
+        params.append(SMArgMapTable::Param{ QStringLiteral("urgent"),  QStringLiteral("bool"),   QStringLiteral("false"), true  });
+        params.append(SMArgMapTable::Param{ QStringLiteral("note"),    QStringLiteral("String"), QString(),               false });
         return params;
     }
 
-    void selectSource(SMMappingEditor& ed, int row, eSource kind)
+    void selectSource(SMArgMapTable& ed, int row, eSource kind)
     {
         QComboBox* combo = ed.sourceCombo(row);
         const int index = combo->findData(static_cast<int>(kind));
@@ -115,7 +120,7 @@ namespace
     }
 
     //!< Selects the leading clear item -- unmap the row back to its default.
-    void clearSource(SMMappingEditor& ed, int row)
+    void clearSource(SMArgMapTable& ed, int row)
     {
         QComboBox* combo = ed.sourceCombo(row);
         combo->setCurrentIndex(0);
@@ -123,7 +128,7 @@ namespace
         QCoreApplication::processEvents();
     }
 
-    void setLineText(SMMappingEditor& ed, int row, const QString& text)
+    void setLineText(SMArgMapTable& ed, int row, const QString& text)
     {
         QLineEdit* le = qobject_cast<QLineEdit*>(ed.valueWidget(row));
         le->setText(text);
@@ -131,7 +136,7 @@ namespace
         QCoreApplication::processEvents();
     }
 
-    QSet<int> sourceKinds(SMMappingEditor& ed, int row)
+    QSet<int> sourceKinds(SMArgMapTable& ed, int row)
     {
         QSet<int> kinds;
         QComboBox* combo = ed.sourceCombo(row);
@@ -151,6 +156,56 @@ namespace
         }
         return nullptr;
     }
+
+    /**
+     * \brief   A bare IArgSink that records what the table commits, with no model, no
+     *          commands and no undo stack behind it -- so a check on \ref commits() proves
+     *          the table itself did or did not try to write.
+     **/
+    class StubSink : public IArgSink
+    {
+    public:
+        StubSink(void) : mArgs(), mCommits(0) { }
+
+        virtual void setArg(const QString& paramName, eSource src, const QString& value, const QString& expr) override
+        {
+            SMArgumentEntry entry(0u, paramName, src, value);
+            entry.setExpression(expr);
+            mArgs.insert(paramName, entry);
+            ++mCommits;
+        }
+
+        virtual void clearArg(const QString& paramName) override
+        {
+            mArgs.remove(paramName);
+            ++mCommits;
+        }
+
+        virtual const SMArgumentEntry* argFor(const QString& paramName) const override
+        {
+            const auto it = mArgs.constFind(paramName);
+            return (it != mArgs.constEnd()) ? &it.value() : nullptr;
+        }
+
+        inline int commits(void) const { return mCommits; }
+
+    private:
+        QHash<QString, SMArgumentEntry> mArgs;
+        int                             mCommits;
+    };
+
+    //!< The editable combo of a Compact row.
+    QComboBox* compactCombo(SMArgMapTable& table, int row)
+    {
+        return qobject_cast<QComboBox*>(table.valueWidget(row));
+    }
+
+    //!< Delivers one key press to \p target through the normal filter chain.
+    void sendKey(QWidget* target, int key)
+    {
+        QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier);
+        QApplication::sendEvent(target, &press);
+    }
 }
 
 int main(int argc, char* argv[])
@@ -164,8 +219,11 @@ int main(int argc, char* argv[])
     SMActionCall*     call = nullptr;
     const uint32_t    tid  = buildDoc(model.getData(), call);
 
-    SMMappingEditor ed(model);
-    ed.bind(tid, /*allowParam*/ true, call, &call->getArguments(), signature());
+    SMArgSinkOperation sink(model);
+    sink.bind(call, &call->getArguments());
+
+    SMArgMapTable ed(model);
+    ed.bind(tid, /*allowParam*/ true, &sink, signature());
     ed.resize(780, 240);
 
     check(ed.rowCount() == 3, "one row per declared parameter");
@@ -181,8 +239,8 @@ int main(int argc, char* argv[])
     check(kinds.size() == 6, "exactly the six source kinds are offered where all are legal");
 
     {
-        SMMappingEditor entryScope(model);
-        entryScope.bind(0u, /*allowParam*/ false, call, &call->getArguments(), signature());
+        SMArgMapTable entryScope(model);
+        entryScope.bind(0u, /*allowParam*/ false, &sink, signature());
         check(sourceKinds(entryScope, 0).contains(static_cast<int>(eSource::Param)) == false,
               "Param kind absent outside transition scope (spec 6.8 scope rule)");
     }
@@ -281,12 +339,122 @@ int main(int argc, char* argv[])
               "defaulted-and-unmapped parameter is omitted from the file (resolution via default)");
     }
 
+    // ---------------------------------------------------------------------------------
+    // SM-21-01: the same widget in its Compact (Actions) shape, over a bare stub sink --
+    // it projects rows and commits through IArgSink only, owning no argument state.
+    // ---------------------------------------------------------------------------------
+    StubSink       stub;
+    SMArgMapTable  compact(model);
+    compact.setRowStyle(SMArgMapTable::eRowStyle::Compact);
+    compact.bind(tid, /*allowParam*/ true, &stub, signature());
+    compact.resize(420, 140);
+
+    check(compact.rowCount() == 3, "Compact: one row per formal parameter");
+    check(stub.commits() == 0, "binding is a pure projection -- it commits nothing");
+
+    // Row labels read `name (Type)`.
+    checkEq(compact.nameLabel(0)->text(), QStringLiteral("waiting (uint32)"), "Compact: `name (Type)` label format");
+    checkEq(compact.nameLabel(1)->text(), QStringLiteral("urgent (bool)"),    "Compact: `name (Type)` label on a defaulted parameter");
+    checkEq(compact.nameLabel(2)->text(), QStringLiteral("note (String)"),    "Compact: `name (Type)` label on a String parameter");
+
+    // Unmapped (ghost) rendering: the field is empty and hints what filling it would mean.
+    checkEq(compactCombo(compact, 0)->currentText(), QString(), "Compact: an unmapped slot renders empty");
+    checkEq(compactCombo(compact, 0)->lineEdit()->placeholderText(), QStringLiteral("value, or pick a source"),
+            "Compact: an unmapped required slot hints at its sources");
+    checkEq(compactCombo(compact, 1)->lineEdit()->placeholderText(), QStringLiteral("default: false"),
+            "Compact: an unmapped defaulted slot shows its default as the grey hint");
+
+    // The Actions source set: stimulus parameters + attributes, and no constants.
+    {
+        QStringList offered;
+        QComboBox* combo = compactCombo(compact, 0);
+        for (int i = 0; i < combo->count(); ++i) { offered << combo->itemText(i); }
+        check(offered.contains(QStringLiteral("count")),    "Compact: the stimulus parameter is offered in a transition scope");
+        check(offered.contains(QStringLiteral("Waiting")),  "Compact: attributes are offered");
+        check(offered.contains(QStringLiteral("IsNight")),  "Compact: an attribute is offered whatever its type (no compat filtering)");
+        check(offered.contains(QStringLiteral("MAX_WAIT")) == false, "Compact: constants are NOT offered (Actions parity)");
+    }
+
+    // A picked entry resolves to its source kind; unmatched text stays a free literal.
+    {
+        QComboBox* combo = compactCombo(compact, 0);
+        combo->setEditText(QStringLiteral("Waiting"));
+        emit combo->lineEdit()->editingFinished();
+        const SMArgumentEntry* a = stub.argFor(QStringLiteral("waiting"));
+        check((a != nullptr) && (a->getSource() == eSource::Attribute), "Compact: a picked attribute commits as an Attribute source");
+
+        combo->setEditText(QStringLiteral("count"));
+        emit combo->lineEdit()->editingFinished();
+        a = stub.argFor(QStringLiteral("waiting"));
+        check((a != nullptr) && (a->getSource() == eSource::Param), "Compact: a picked stimulus parameter commits as a Param source");
+
+        combo->setEditText(QStringLiteral("41 + 1"));
+        emit combo->lineEdit()->editingFinished();
+        a = stub.argFor(QStringLiteral("waiting"));
+        check((a != nullptr) && (a->getSource() == eSource::Value) && (a->getValue() == QStringLiteral("41 + 1")),
+              "Compact: unmatched text is kept as a free literal (Value source)");
+
+        combo->setEditText(QString());
+        emit combo->lineEdit()->editingFinished();
+        check(stub.argFor(QStringLiteral("waiting")) == nullptr, "Compact: emptying a field unmaps the slot");
+    }
+
+    // Esc reverts the field to its pre-edit value and commits NOTHING (spec 6, item 13).
+    {
+        QComboBox* combo = compactCombo(compact, 2);
+        combo->setEditText(QStringLiteral("keep me"));
+        emit combo->lineEdit()->editingFinished();
+        const int committed = stub.commits();
+        checkEq(stub.argFor(QStringLiteral("note"))->getValue(), QStringLiteral("keep me"), "Compact: the pre-Esc value is committed normally");
+
+        // Focus marks the revert point, then the edit is abandoned.
+        QFocusEvent focusIn(QEvent::FocusIn);
+        QApplication::sendEvent(combo->lineEdit(), &focusIn);
+        combo->lineEdit()->setText(QStringLiteral("abandoned typing"));
+        sendKey(combo->lineEdit(), Qt::Key_Escape);
+
+        checkEq(combo->lineEdit()->text(), QStringLiteral("keep me"), "Esc reverts the field to the value it held when editing began");
+        check(stub.commits() == committed, "Esc commits nothing -- the sink is never called");
+        checkEq(stub.argFor(QStringLiteral("note"))->getValue(), QStringLiteral("keep me"), "Esc leaves the stored mapping untouched");
+    }
+
+    // Undo granularity through the REAL operation sink: one edit is one step, and a commit
+    // that changes nothing never reaches the stack.
+    {
+        const int before = model.getUndoStack().count();
+        sink.setArg(QStringLiteral("note"), eSource::Value, QStringLiteral("hello"), QString());
+        const int afterFirst = model.getUndoStack().count();
+        sink.setArg(QStringLiteral("note"), eSource::Value, QStringLiteral("hello"), QString());
+        const int afterSecond = model.getUndoStack().count();
+
+        check(afterFirst == (before + 1), "one mapping edit pushes exactly one undo command");
+        check(afterSecond == afterFirst,  "re-committing the value already stored pushes nothing");
+
+        model.getUndoStack().undo();
+        QCoreApplication::processEvents();
+        checkEq(argByName(call->getArguments(), QStringLiteral("note"))->getExpression(), verbatim,
+                "one undo restores the row's previous mapping");
+    }
+
+    // Width (hazard 12.4): no signature length may widen the dock that hosts the table.
+    check(compact.minimumSizeHint().width() == 0, "Compact: minimumSizeHint width is 0");
+    check(ed.minimumSizeHint().width() == 0,      "Detailed: minimumSizeHint width is 0");
+    {
+        QList<SMArgMapTable::Param> wide;
+        wide.append(SMArgMapTable::Param{ QStringLiteral("a_very_long_formal_parameter_name_indeed"), QStringLiteral("uint32"), QString(), false });
+        SMArgMapTable stretched(model);
+        stretched.setRowStyle(SMArgMapTable::eRowStyle::Compact);
+        stretched.bind(tid, true, &stub, wide);
+        check(stretched.minimumSizeHint().width() == 0, "a long signature still cannot widen the dock");
+    }
+
     if (grabDir.isEmpty() == false)
     {
         QDir().mkpath(grabDir);
         ed.grab().save(grabDir + QStringLiteral("/g22-mapping.png"));
+        compact.grab().save(grabDir + QStringLiteral("/g21-01-argmap-compact.png"));
     }
 
-    std::printf("SMMappingEditorTests: %d checks, %d failures\n", gChecks, gFailures);
+    std::printf("SMArgMapTableTests: %d checks, %d failures\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;
 }

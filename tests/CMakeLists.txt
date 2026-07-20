@@ -148,7 +148,7 @@ set_target_properties(lusan_sm_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 
 # ---------------------------------------------------------------------------
-# SM-22: the parameter-mapping editor. Drives the REAL SMMappingEditor widget offscreen
+# SM-22/SM-21-01: the shared argument-mapping table. Drives the REAL SMArgMapTable widget offscreen
 # over an ActionCall's argument list -- source-kind legality, compatibility + widening,
 # resolution order, and the undoable byte-exact round-trip. Reuses the command-tests link
 # set (the full model facade) plus the mapping helpers and the widget under test.
@@ -178,8 +178,9 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
-    ${LUSAN}/view/sm/SMMappingEditor.cpp
-    ${LUSAN_ROOT}/tests/sm/SMMappingEditorTests.cpp
+    ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkOperation.cpp
+    ${LUSAN_ROOT}/tests/sm/SMArgMapTableTests.cpp
     ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_sm_mapping_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
@@ -400,7 +401,8 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
-    ${LUSAN}/view/sm/SMMappingEditor.cpp
+    ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
     ${LUSAN}/view/sm/SMOperationsDialog.cpp
     ${LUSAN_ROOT}/tests/sm/SMCanvasSmokeTests.cpp
@@ -514,7 +516,8 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
-    ${LUSAN}/view/sm/SMMappingEditor.cpp
+    ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardU4Sweep.cpp
     ${LUSAN}/res/lusan.qrc

@@ -1,4 +1,6 @@
 list(APPEND LUSAN_SRC
+    ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMAttribute.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
@@ -13,7 +15,6 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMHoverCard.cpp
     ${LUSAN}/view/sm/SMInlineToken.cpp
     ${LUSAN}/view/sm/SMIslandEditor.cpp
-    ${LUSAN}/view/sm/SMMappingEditor.cpp
     ${LUSAN}/view/sm/SMMappingGrid.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
@@ -52,6 +53,9 @@ list(APPEND LUSAN_SRC
 )
 
 list(APPEND LUSAN_HDR
+    ${LUSAN}/view/sm/IArgSink.hpp
+    ${LUSAN}/view/sm/SMArgMapTable.hpp
+    ${LUSAN}/view/sm/SMArgSinkOperation.hpp
     ${LUSAN}/view/sm/SMAttribute.hpp
     ${LUSAN}/view/sm/SMCodeEditor.hpp
     ${LUSAN}/view/sm/NEGuardStyle.hpp
@@ -66,7 +70,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMHoverCard.hpp
     ${LUSAN}/view/sm/SMInlineToken.hpp
     ${LUSAN}/view/sm/SMIslandEditor.hpp
-    ${LUSAN}/view/sm/SMMappingEditor.hpp
     ${LUSAN}/view/sm/SMMappingGrid.hpp
     ${LUSAN}/view/sm/SMOperandField.hpp
     ${LUSAN}/view/sm/SMSignatureCard.hpp
