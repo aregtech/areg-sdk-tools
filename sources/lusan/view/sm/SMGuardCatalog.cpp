@@ -70,6 +70,23 @@ QString SMGuardSymbol::display() const
     return name + QLatin1Char('(') + paramTypes.join(QStringLiteral(", ")) + QLatin1Char(')');
 }
 
+QString SMGuardSymbol::kindWord() const
+{
+    switch (refkind)
+    {
+    case eRefKind::Param:   return QStringLiteral("param");
+    case eRefKind::Attr:    return QStringLiteral("attr");
+    case eRefKind::Const:   return QStringLiteral("const");
+    case eRefKind::Cond:
+    default:                return QStringLiteral("cond");
+    }
+}
+
+QString SMGuardSymbol::mention() const
+{
+    return QLatin1Char('@') + kindWord() + QLatin1Char(':') + name;
+}
+
 QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_t transitionId)
 {
     QList<SMGuardSymbol> result;
@@ -83,6 +100,7 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
         sym.name        = paramNames.at(i);
         sym.glyph       = QStringLiteral("a");
         sym.owner       = NEGuardStyle::eOwner::Stimulus;
+        sym.refkind     = SMGuardSymbol::eRefKind::Param;
         sym.typeText    = (i < paramTypes.size()) ? paramTypes.at(i) : QString();
         sym.isCall      = false;
         sym.symbolId    = SMGuardSymbols::paramId(data, transitionId, sym.name);
@@ -96,6 +114,7 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
         sym.name        = attr.getName();
         sym.glyph       = QStringLiteral("#");
         sym.owner       = NEGuardStyle::eOwner::Fsm;
+        sym.refkind     = SMGuardSymbol::eRefKind::Attr;
         sym.typeText    = attr.getType();
         sym.isCall      = false;
         sym.symbolId    = attr.getId();
@@ -108,6 +127,7 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
         sym.name        = constant.getName();
         sym.glyph       = QStringLiteral("K");
         sym.owner       = NEGuardStyle::eOwner::Fsm;
+        sym.refkind     = SMGuardSymbol::eRefKind::Const;
         sym.typeText    = constant.getType();
         sym.provenance  = QStringLiteral("= ") + constant.getValue();
         sym.isCall      = false;
@@ -127,6 +147,7 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
         SMGuardSymbol sym;
         sym.name        = method->getName();
         sym.owner       = method->isLambdaCondition() ? NEGuardStyle::eOwner::Fsm : NEGuardStyle::eOwner::Handler;
+        sym.refkind     = SMGuardSymbol::eRefKind::Cond;
         sym.glyph       = method->isLambdaCondition() ? QStringLiteral("{}") : QStringLiteral("h");
         sym.typeText    = method->getReturn();
         sym.provenance  = method->isLambdaCondition() ? QStringLiteral("lambda") : QStringLiteral("handler()");

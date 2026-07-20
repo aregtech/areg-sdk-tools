@@ -36,15 +36,19 @@
 #include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/common/MethodListView.hpp"
 #include "lusan/view/sm/SMOperandField.hpp"
+#include "lusan/view/sm/SMRefCompleter.hpp"
+#include "lusan/view/sm/SMSignatureCard.hpp"
 #include "lusan/view/sm/SMStructureLens.hpp"
 
 #include <QApplication>
 #include <QClipboard>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QGuiApplication>
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMimeData>
+#include <QScreen>
 #include <QTextCursor>
 #include <QTreeWidget>
 #include <cstdio>
@@ -98,6 +102,15 @@ namespace
         {
             QApplication::processEvents(QEventLoop::AllEvents, 20);
         }
+    }
+
+    //!< Sends a synthetic key press+release carrying \p text to \p w (drives the field's keys).
+    void typeChar(QWidget* w, int key, const QString& text)
+    {
+        QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, text);
+        QApplication::sendEvent(w, &press);
+        QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, text);
+        QApplication::sendEvent(w, &release);
     }
 
     void grab(QWidget* widget, const QString& dir, const char* name)
@@ -268,12 +281,14 @@ int main(int argc, char** argv)
         pump(300);
 
         checkEq(guardText(model, transId), QStringLiteral("HasWaiting(MIN_WAITING)"), "grid edit rewrote the tree");
-        checkEq(field->toPlainText(), QStringLiteral("HasWaiting(MIN_WAITING)"), "the field text visibly updated");
+        // SM-21-03: committed references are folded into chip tokens, so the field's plain text
+        // holds replacement chars -- the canonical text is read through committableText().
+        checkEq(field->committableText(), QStringLiteral("HasWaiting(MIN_WAITING)"), "the field text visibly updated");
 
         model.getUndoStack().undo();
         pump(300);
         checkEq(guardText(model, transId), QStringLiteral("HasWaiting(count)"), "ONE undo restored the tree");
-        checkEq(field->toPlainText(), QStringLiteral("HasWaiting(count)"), "and the visible field text");
+        checkEq(field->committableText(), QStringLiteral("HasWaiting(count)"), "and the visible field text");
     }
 
     bar.grid()->hide();
@@ -293,6 +308,121 @@ int main(int argc, char** argv)
           && transition->getGuard().getTree()->equals(*typed.tree)
         , "the stored tree equals the typed-path tree");
     delete typed.tree;
+
+    // ---- SM-21-03: committed references fold into chips; committable/clipboard exact ----
+    std::printf("[ RUN  ] chips\n");
+    setGuard(model, transId, QStringLiteral("WalkRequested && count >= MIN_WAITING"));
+    pump(300);
+    check(field->chipCount() == 3, "three references folded into chips (attr, param, const)");
+    checkEq(field->committableText(), QStringLiteral("WalkRequested && count >= MIN_WAITING")
+          , "committableText expands chips to canonical text (no markers reach the tree, 12.7)");
+    grab(&bar, grabDir, "sm2103-chips.png");
+
+    {
+        ProbeField chipProbe(model);
+        chipProbe.resize(600, 60);
+        chipProbe.show();
+        chipProbe.setTransition(transId);
+        pump(300);
+        check(chipProbe.chipCount() == 3, "the probe folded the same three chips");
+        chipProbe.selectAll();
+        QMimeData* chipCopy = chipProbe.createMimeDataFromSelection();
+        check(chipCopy != nullptr, "copy builds mime data over chips");
+        if (chipCopy != nullptr)
+        {
+            checkEq(chipCopy->text(), QStringLiteral("WalkRequested && count >= MIN_WAITING")
+                  , "chip clipboard round-trips byte-exact");
+            delete chipCopy;
+        }
+        chipProbe.hide();
+    }
+
+    // ---- SM-21-03: the reference completer (D-POPUP): pass-through, D-ESC, filter, clamp ----
+    std::printf("[ RUN  ] completer\n");
+    setGuard(model, transId, QString());
+    pump(200);
+    field->setFocus();
+    SMRefCompleter* comp = field->findChild<SMRefCompleter*>(QStringLiteral("smRefCompleter"));
+    check(comp != nullptr, "the field owns a reference completer");
+    if (comp != nullptr)
+    {
+        typeChar(field, Qt::Key_At, QStringLiteral("@"));
+        pump(120);
+        check(comp->isVisible(), "typing @ opens the completer");
+
+        // 12.6 pass-through: typing narrows the list AND the characters reach the document.
+        typeChar(field, Qt::Key_W, QStringLiteral("W"));
+        typeChar(field, Qt::Key_A, QStringLiteral("a"));
+        pump(120);
+        check(field->committableText().contains(QStringLiteral("@Wa")), "typed characters pass through to the document (no swallow, 12.6)");
+        check(comp->isVisible(), "the completer stays open while typing");
+
+        // D-ESC: Esc closes but keeps the text; it does not reopen for the same token.
+        typeChar(field, Qt::Key_Escape, QString());
+        pump(80);
+        check(comp->isVisible() == false, "Esc closes the completer");
+        check(field->committableText().contains(QStringLiteral("@Wa")), "Esc keeps the typed characters (D-ESC)");
+        typeChar(field, Qt::Key_L, QStringLiteral("l"));
+        pump(80);
+        check(comp->isVisible() == false, "the completer does not reopen for the same token after Esc (D-ESC)");
+    }
+
+    // Widget-level: a `@kind:` filter shows only that kind and inserts the canonical @kind:name;
+    // a caret at the screen corner keeps the popup fully on-screen (12.5).
+    {
+        SMRefCompleter probe;
+        probe.setSymbols(SMGuardCatalog::build(model.getData(), transId));
+        probe.showFor({ SMGuardSymbol::eRefKind::Attr }, QString(), QRect(QPoint(120, 120), QSize(2, 16)));
+        const SMGuardSymbol* cur = probe.currentSymbol();
+        check((cur != nullptr) && (cur->refkind == SMGuardSymbol::eRefKind::Attr), "a @attr: filter shows only attributes");
+        if (cur != nullptr)
+        {
+            check(cur->mention().startsWith(QStringLiteral("@attr:")), "an attribute inserts as @attr:name");
+        }
+
+        const QRect avail = QGuiApplication::primaryScreen()->availableGeometry();
+        probe.showFor({}, QString(), QRect(QPoint(avail.right() - 2, avail.bottom() - 2), QSize(2, 16)));
+        const QRect g = probe.geometry();
+        check((g.left() >= avail.left()) && (g.top() >= avail.top())
+              && (g.right() <= avail.right()) && (g.bottom() <= avail.bottom())
+            , "the completer clamps within the screen at a corner caret (12.5)");
+        probe.hide();
+    }
+
+    setGuard(model, transId, QString());
+    pump(150);
+
+    // ---- SM-21-03: signature help + D-PRECEDENCE (the completer yields, then returns) ----
+    std::printf("[ RUN  ] signatureHelp\n");
+    setGuard(model, transId, QString());
+    pump(150);
+    field->setFocus();
+    SMSignatureCard* sig = field->findChild<SMSignatureCard*>(QStringLiteral("smSignatureCard"));
+    SMRefCompleter* comp2 = field->findChild<SMRefCompleter*>(QStringLiteral("smRefCompleter"));
+    check(sig != nullptr, "the field owns a signature card");
+    if ((sig != nullptr) && (comp2 != nullptr))
+    {
+        for (const QChar c : QStringLiteral("HasWaiting("))
+        {
+            typeChar(field, c.unicode(), QString(c));
+        }
+        pump(150);
+        check(sig->isVisible(), "signature help shows while the caret is inside a call's parentheses");
+
+        // D-PRECEDENCE: typing '@' opens the completer OVER the tooltip and hides it.
+        typeChar(field, Qt::Key_At, QStringLiteral("@"));
+        pump(150);
+        check(comp2->isVisible(), "typing @ inside the call opens the completer");
+        check(sig->isVisible() == false, "D-PRECEDENCE: the completer hides the signature card");
+
+        // Closing the completer restores the signature card.
+        typeChar(field, Qt::Key_Escape, QString());
+        pump(150);
+        check(comp2->isVisible() == false, "Esc closes the completer");
+        check(sig->isVisible(), "closing the completer restores the signature card (D-PRECEDENCE)");
+    }
+    setGuard(model, transId, QString());
+    pump(150);
 
     // ---- S14: the Methods page kind split -------------------------------------
     std::printf("[ RUN  ] methodsPage\n");

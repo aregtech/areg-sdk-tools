@@ -10,17 +10,19 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMSymbolPopup.cpp
+ *  \file        lusan/view/sm/SMRefCompleter.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard completion catalog popup (v7 B4).
+ *  \brief       Lusan application, FSM guard reference completer (SM-21-03, D-POPUP).
  *
  ************************************************************************/
 
-#include "lusan/view/sm/SMSymbolPopup.hpp"
+#include "lusan/view/sm/SMRefCompleter.hpp"
 
+#include <QGuiApplication>
 #include <QListView>
 #include <QPainter>
+#include <QScreen>
 #include <QStandardItem>
 #include <QStandardItemModel>
 #include <QStyledItemDelegate>
@@ -39,19 +41,21 @@ namespace
         , RoleVisIndex                       //!< The mVisible index (entries).
     };
 
-    QString groupLabel(NEGuardStyle::eOwner owner)
+    //!< The group header for a reference kind (the completer groups by kind).
+    QString groupLabel(SMGuardSymbol::eRefKind kind)
     {
-        switch (owner)
+        switch (kind)
         {
-        case NEGuardStyle::eOwner::Stimulus:    return QStringLiteral("STIMULUS");
-        case NEGuardStyle::eOwner::Handler:     return QStringLiteral("HANDLER");
-        case NEGuardStyle::eOwner::Fsm:
-        default:                                return QStringLiteral("FSM");
+        case SMGuardSymbol::eRefKind::Param:    return QStringLiteral("PARAMETERS");
+        case SMGuardSymbol::eRefKind::Attr:     return QStringLiteral("ATTRIBUTES");
+        case SMGuardSymbol::eRefKind::Const:    return QStringLiteral("CONSTANTS");
+        case SMGuardSymbol::eRefKind::Cond:
+        default:                                return QStringLiteral("CONDITIONS");
         }
     }
 
     //!< Paints the three-column catalog row (glyph + name / type / provenance) or a header.
-    class SMSymbolDelegate : public QStyledItemDelegate
+    class SMRefDelegate : public QStyledItemDelegate
     {
     public:
         using QStyledItemDelegate::QStyledItemDelegate;
@@ -95,9 +99,7 @@ namespace
             painter->drawText(glyphRect, Qt::AlignVCenter | Qt::AlignLeft, glyph);
 
             QRect textRect = rect.adjusted(26, 0, 0, 0);
-            const bool enabled = (index.flags() & Qt::ItemIsEnabled);
-            painter->setPen(enabled ? option.palette.color(QPalette::WindowText)
-                                    : option.palette.color(QPalette::Disabled, QPalette::WindowText));
+            painter->setPen(option.palette.color(QPalette::WindowText));
             painter->drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, index.data(RoleName).toString());
 
             // Right side: provenance (italic dim) then type (dim), right-aligned.
@@ -123,12 +125,15 @@ namespace
     };
 }
 
-SMSymbolPopup::SMSymbolPopup(QWidget* parent /*= nullptr*/)
+SMRefCompleter::SMRefCompleter(QWidget* parent /*= nullptr*/)
     : QWidget (parent)
     , mView   (nullptr)
     , mModel  (nullptr)
 {
-    setObjectName(QStringLiteral("smSymbolPopup"));
+    setObjectName(QStringLiteral("smRefCompleter"));
+    // A top-level, frameless, non-activating window: the field keeps focus and forwards keys,
+    // so nothing here can swallow a keystroke (D-BUG / 12.6). Being top-level, its width is
+    // irrelevant to the Properties dock (12.4).
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_ShowWithoutActivating);
 
@@ -137,9 +142,9 @@ SMSymbolPopup::SMSymbolPopup(QWidget* parent /*= nullptr*/)
 
     mModel = new QStandardItemModel(this);
     mView = new QListView(this);
-    mView->setObjectName(QStringLiteral("smSymbolPopupList"));
+    mView->setObjectName(QStringLiteral("smRefCompleterList"));
     mView->setModel(mModel);
-    mView->setItemDelegate(new SMSymbolDelegate(mView));
+    mView->setItemDelegate(new SMRefDelegate(mView));
     mView->setEditTriggers(QAbstractItemView::NoEditTriggers);
     mView->setSelectionMode(QAbstractItemView::SingleSelection);
     mView->setUniformItemSizes(false);
@@ -162,35 +167,39 @@ SMSymbolPopup::SMSymbolPopup(QWidget* parent /*= nullptr*/)
     });
 }
 
-void SMSymbolPopup::setSymbols(const QList<SMGuardSymbol>& symbols)
+void SMRefCompleter::setSymbols(const QList<SMGuardSymbol>& symbols)
 {
     mAll = symbols;
 }
 
-int SMSymbolPopup::rebuild(const QString& prefix)
+int SMRefCompleter::rebuild(const QSet<SMGuardSymbol::eRefKind>& kindFilter, const QString& nameFilter)
 {
     mModel->clear();
     mVisible.clear();
 
-    const QString needle = prefix.trimmed();
+    const QString needle = nameFilter.trimmed();
     bool firstGroup = true;
-    NEGuardStyle::eOwner currentGroup = NEGuardStyle::eOwner::Operator;
+    SMGuardSymbol::eRefKind currentGroup = SMGuardSymbol::eRefKind::Param;
 
     int entries = 0;
     for (const SMGuardSymbol& sym : mAll)
     {
+        if ((kindFilter.isEmpty() == false) && (kindFilter.contains(sym.refkind) == false))
+        {
+            continue;
+        }
         if ((needle.isEmpty() == false) && (sym.name.contains(needle, Qt::CaseInsensitive) == false))
         {
             continue;
         }
 
-        if (firstGroup || (sym.owner != currentGroup))
+        if (firstGroup || (sym.refkind != currentGroup))
         {
-            currentGroup = sym.owner;
+            currentGroup = sym.refkind;
             firstGroup = false;
-            QStandardItem* header = new QStandardItem(groupLabel(sym.owner));
+            QStandardItem* header = new QStandardItem(groupLabel(sym.refkind));
             header->setData(0, RoleKind);
-            header->setData(groupLabel(sym.owner), RoleName);
+            header->setData(groupLabel(sym.refkind), RoleName);
             header->setFlags(Qt::NoItemFlags);
             mModel->appendRow(header);
         }
@@ -211,29 +220,31 @@ int SMSymbolPopup::rebuild(const QString& prefix)
         ++entries;
     }
 
-    // The New-lambda row: inserts an island at the caret (E4) and opens its editor.
-    QStandardItem* sep = new QStandardItem();
-    sep->setData(0, RoleKind);
-    sep->setData(QStringLiteral("--"), RoleName);
-    sep->setFlags(Qt::NoItemFlags);
-    mModel->appendRow(sep);
+    // The New-lambda row (only in the all-kinds view): inserts an island at the caret (E4).
+    if (kindFilter.isEmpty())
+    {
+        QStandardItem* sep = new QStandardItem();
+        sep->setData(0, RoleKind);
+        sep->setData(QStringLiteral("--"), RoleName);
+        sep->setFlags(Qt::NoItemFlags);
+        mModel->appendRow(sep);
 
-    QStandardItem* lambda = new QStandardItem();
-    lambda->setData(2, RoleKind);
-    lambda->setData(QStringLiteral("{}"), RoleGlyph);
-    lambda->setData(NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Fsm), RoleColor);
-    lambda->setData(QStringLiteral("New lambda here..."), RoleName);
-    lambda->setToolTip(QStringLiteral("write a small boolean body inline"));
-    lambda->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
-    mModel->appendRow(lambda);
+        QStandardItem* lambda = new QStandardItem();
+        lambda->setData(2, RoleKind);
+        lambda->setData(QStringLiteral("{}"), RoleGlyph);
+        lambda->setData(NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Fsm), RoleColor);
+        lambda->setData(QStringLiteral("New lambda here..."), RoleName);
+        lambda->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        mModel->appendRow(lambda);
+    }
 
     return entries;
 }
 
-bool SMSymbolPopup::filterAndShow(const QString& prefix, const QPoint& globalTopLeft)
+bool SMRefCompleter::showFor(const QSet<SMGuardSymbol::eRefKind>& kindFilter, const QString& nameFilter, const QRect& caretGlobal)
 {
-    const int entries = rebuild(prefix);
-    if (entries == 0)
+    const int entries = rebuild(kindFilter, nameFilter);
+    if ((entries == 0) && kindFilter.isEmpty() == false)
     {
         hide();
         return false;
@@ -253,8 +264,21 @@ bool SMSymbolPopup::filterAndShow(const QString& prefix, const QPoint& globalTop
     }
     height = qMin(height, 260);
 
-    resize(320, height + 2);
-    move(globalTopLeft);
+    const int width = 320;
+    resize(width, height + 2);
+
+    // Position at the caret, then CLAMP to the screen and FLIP above on vertical overflow (12.5).
+    const QScreen* screen = QGuiApplication::screenAt(caretGlobal.bottomLeft());
+    const QRect avail = (screen != nullptr) ? screen->availableGeometry()
+                                            : QGuiApplication::primaryScreen()->availableGeometry();
+    int x = caretGlobal.left();
+    int y = caretGlobal.bottom() + 2;
+    if ((x + width) > avail.right())        { x = avail.right() - width; }
+    if (x < avail.left())                   { x = avail.left(); }
+    if ((y + height + 2) > avail.bottom())   { y = caretGlobal.top() - (height + 2) - 2; }  // flip above
+    if (y < avail.top())                    { y = avail.top(); }
+    move(x, y);
+
     if (isVisible() == false)
     {
         show();
@@ -263,7 +287,7 @@ bool SMSymbolPopup::filterAndShow(const QString& prefix, const QPoint& globalTop
     return true;
 }
 
-int SMSymbolPopup::currentEntryIndex() const
+int SMRefCompleter::currentEntryIndex() const
 {
     const QModelIndex index = mView->currentIndex();
     if ((index.isValid() == false) || (index.data(RoleKind).toInt() != 1))
@@ -274,7 +298,7 @@ int SMSymbolPopup::currentEntryIndex() const
     return index.data(RoleVisIndex).toInt();
 }
 
-void SMSymbolPopup::moveCurrent(int delta)
+void SMRefCompleter::moveCurrent(int delta)
 {
     const int rows = mModel->rowCount();
     if (rows == 0)
@@ -302,13 +326,13 @@ void SMSymbolPopup::moveCurrent(int delta)
     }
 }
 
-const SMGuardSymbol* SMSymbolPopup::currentSymbol() const
+const SMGuardSymbol* SMRefCompleter::currentSymbol() const
 {
     const int index = currentEntryIndex();
     return ((index >= 0) && (index < mVisible.size())) ? &mVisible.at(index) : nullptr;
 }
 
-void SMSymbolPopup::acceptCurrent()
+void SMRefCompleter::acceptCurrent()
 {
     const QModelIndex index = mView->currentIndex();
     if (index.isValid() && (index.data(RoleKind).toInt() == 2))

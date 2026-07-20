@@ -74,13 +74,32 @@ public:
     };
 
     /**
+     * \struct  Chip
+     * \brief   One committed reference occurrence in the rendered text, addressed by its span
+     *          so the field can fold it into a compact chip (SM-21-03). Chips appear in text
+     *          order, which is pre-order over the reference nodes (the nth chip is the nth
+     *          reference node) -- the same INDEX identity the island tokens use (12.1). The
+     *          view maps \ref role to an owner hue/glyph; \ref kind is the `@kind:` word.
+     **/
+    struct Chip
+    {
+        int     start;      //!< The 0-based start offset of the reference in the rendered text.
+        int     length;     //!< The span length (including any disambiguating `@kind:` prefix).
+        eRole   role;       //!< The owner role (maps to a hue / glyph in the view).
+        QString kind;       //!< The reference kind word: "param" | "attr" | "const" | "cond".
+        QString name;       //!< The bare display name shown inside the chip.
+        bool    reveal;     //!< D-REVEAL: keep the `@kind:` prefix visible (a same-name collision).
+    };
+
+    /**
      * \struct  Rendered
-     * \brief   The rendered text and its span list.
+     * \brief   The rendered text, its span list, and the reference chips it contains.
      **/
     struct Rendered
     {
         QString         text;
         QList<Span>     spans;
+        QList<Chip>     chips;
     };
 
     /**

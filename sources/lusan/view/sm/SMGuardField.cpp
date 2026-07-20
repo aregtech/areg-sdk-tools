@@ -35,8 +35,8 @@
 #include "lusan/view/sm/SMGuardHighlighter.hpp"
 #include "lusan/view/sm/SMHoverCard.hpp"
 #include "lusan/view/sm/SMInlineToken.hpp"
+#include "lusan/view/sm/SMRefCompleter.hpp"
 #include "lusan/view/sm/SMSignatureCard.hpp"
-#include "lusan/view/sm/SMSymbolPopup.hpp"
 
 #include <QAbstractTextDocumentLayout>
 #include <QFontDatabase>
@@ -144,6 +144,18 @@ namespace
         return count;
     }
 
+    //!< The chip owner hue for a render role (SM-21-03 chips reuse the render owner roles).
+    NEGuardStyle::eOwner roleToOwner(SMGuardRender::eRole role)
+    {
+        switch (role)
+        {
+        case SMGuardRender::eRole::Stim:    return NEGuardStyle::eOwner::Stimulus;
+        case SMGuardRender::eRole::Handler: return NEGuardStyle::eOwner::Handler;
+        case SMGuardRender::eRole::Fsm:
+        default:                            return NEGuardStyle::eOwner::Fsm;
+        }
+    }
+
     //!< True when the tree contains at least one Call node.
     bool hasCallNode(const SMGuardNode* node)
     {
@@ -181,7 +193,8 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     , mRebuildPending   (false)
     , mSuppressAnalyze  (false)
     , mHighlighter      (nullptr)
-    , mPopup            (nullptr)
+    , mCompleter        (nullptr)
+    , mCompleterDismissedAt (-1)
     , mSignature        (nullptr)
     , mDebounce         (nullptr)
     , mSlotMode         (false)
@@ -201,7 +214,10 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setTabChangesFocus(true);
-    setPlaceholderText(tr("type a condition -- or press Ctrl+Space to see everything you can use"));
+    // D-PLACEHOLDER: an empty field discovers both the bare-typing and the picker paths. Qt
+    // paints this as placeholder text, so it is never a real character and never reaches
+    // committableText() (12.7).
+    setPlaceholderText(tr("type a condition, or @ to pick a symbol"));
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     setMouseTracking(true);
 
@@ -209,9 +225,11 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     // reason this field derives QTextEdit (QPlainTextDocumentLayout never paints these).
     mTokenHandler = new SMInlineToken(this);
     document()->documentLayout()->registerHandler(SMInlineToken::IslandType, mTokenHandler);
+    // The same handler paints reference chips (SM-21-03); it dispatches on the object type.
+    document()->documentLayout()->registerHandler(SMInlineToken::ChipType, mTokenHandler);
 
     mHighlighter = new SMGuardHighlighter(document());
-    mPopup = new SMSymbolPopup(this);
+    mCompleter = new SMRefCompleter(this);
     mSignature = new SMSignatureCard(this);
 
     mDebounce = new QTimer(this);
@@ -223,8 +241,8 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     mHoverTimer->setInterval(300);
 
     connect(mDebounce, &QTimer::timeout, this, &SMGuardField::onDebounce);
-    connect(mPopup, &SMSymbolPopup::accepted, this, &SMGuardField::onCompletionAccepted);
-    connect(mPopup, &SMSymbolPopup::newLambdaRequested, this, [this]()
+    connect(mCompleter, &SMRefCompleter::accepted, this, &SMGuardField::onCompleterAccepted);
+    connect(mCompleter, &SMRefCompleter::newLambdaRequested, this, [this]()
     {
         const int index = insertIslandAtCaret(QString());
         emit islandEditRequested(index, QString());
@@ -238,7 +256,8 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
 
         updateHeight();
         mDebounce->start();
-        updateCompletion();
+        updateCompleter();
+        updateSignatureHelp();
     });
     connect(this, &QTextEdit::cursorPositionChanged, this, [this]()
     {
@@ -251,6 +270,7 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
         {
             maybeOpenIslandAt(qMin(pos, old));
         }
+        updateSignatureHelp();
     });
     connect(mHoverTimer, &QTimer::timeout, this, [this]()
     {
@@ -309,7 +329,7 @@ void SMGuardField::buildCatalog()
         mOwnerByName.insert(sym.name, static_cast<int>(sym.owner));
     }
 
-    mPopup->setSymbols(mCatalog);
+    mCompleter->setSymbols(mCatalog);
 }
 
 void SMGuardField::commitNow()
@@ -463,9 +483,15 @@ QString SMGuardField::expandedText(QList<int>& docStarts) const
         if (doc.at(i) == QChar::ObjectReplacementCharacter)
         {
             cursor.setPosition(i + 1);
-            if (SMInlineToken::isIsland(cursor.charFormat()))
+            const QTextCharFormat format = cursor.charFormat();
+            if (SMInlineToken::isIsland(format))
             {
-                out += QLatin1Char('{') + SMInlineToken::bodyOf(cursor.charFormat()) + QLatin1Char('}');
+                out += QLatin1Char('{') + SMInlineToken::bodyOf(format) + QLatin1Char('}');
+                continue;
+            }
+            if (SMInlineToken::isChip(format))
+            {
+                out += SMInlineToken::bodyOf(format);   // the canonical @kind:name
                 continue;
             }
         }
@@ -534,6 +560,132 @@ void SMGuardField::foldIslands()
     }
 
     mSuppressAnalyze = false;
+}
+
+void SMGuardField::foldChips(const QList<SMGuardRender::Chip>& chips)
+{
+    if (chips.isEmpty())
+    {
+        return;
+    }
+
+    mSuppressAnalyze = true;
+    // Back-to-front: replacing a later span never invalidates an earlier span's offset.
+    for (int c = static_cast<int>(chips.size()) - 1; c >= 0; --c)
+    {
+        const SMGuardRender::Chip& chip = chips.at(c);
+        const QString prefix = QLatin1Char('@') + chip.kind + QLatin1Char(':');
+
+        QTextCursor cursor(document());
+        cursor.setPosition(chip.start);
+        cursor.setPosition(chip.start + chip.length, QTextCursor::KeepAnchor);
+        // The committable body is EXACTLY the rendered span (bare `name`, or a minimally
+        // `@kind:`-disambiguated form) so committableText and the clipboard stay byte-exact
+        // with the canonical text (12.7). The explicit `@kind:name` edit form for the
+        // double-click de-render is rebuilt from the prefix + name.
+        const QString body = cursor.selectedText();
+        cursor.insertText(QString(QChar::ObjectReplacementCharacter)
+                        , SMInlineToken::makeChipFormat(body, chip.name, roleToOwner(chip.role), prefix, chip.reveal));
+    }
+
+    // Typing after a chip continues in the default format, not the token's.
+    QTextCursor cursor = textCursor();
+    cursor.setCharFormat(QTextCharFormat());
+    mSuppressAnalyze = false;
+}
+
+int SMGuardField::chipCount() const
+{
+    return static_cast<int>(chipPositions().size());
+}
+
+QList<int> SMGuardField::chipPositions() const
+{
+    QList<int> positions;
+    const QString text = toPlainText();
+    QTextCursor cursor(document());
+    for (int i = 0; i < text.length(); ++i)
+    {
+        if (text.at(i) == QChar::ObjectReplacementCharacter)
+        {
+            cursor.setPosition(i + 1);
+            if (SMInlineToken::isChip(cursor.charFormat()))
+            {
+                positions.append(i);
+            }
+        }
+    }
+
+    return positions;
+}
+
+bool SMGuardField::deRenderChipAt(int docPos)
+{
+    if ((docPos < 0) || (document()->characterAt(docPos) != QChar::ObjectReplacementCharacter))
+    {
+        return false;
+    }
+
+    QTextCursor cursor(document());
+    cursor.setPosition(docPos + 1);
+    const QTextCharFormat format = cursor.charFormat();
+    if (SMInlineToken::isChip(format) == false)
+    {
+        return false;
+    }
+
+    // Double-click de-renders the chip to its explicit, editable `@kind:name`; the next commit
+    // re-chips. The explicit form (not the bare body) is shown so the user sees the kind.
+    const QString edit = format.property(SMInlineToken::PropPrefix).toString()
+                       + format.property(SMInlineToken::PropName).toString();
+    cursor.setPosition(docPos);
+    cursor.setPosition(docPos + 1, QTextCursor::KeepAnchor);
+    cursor.insertText(edit, QTextCharFormat());
+    setTextCursor(cursor);
+    return true;
+}
+
+bool SMGuardField::revealChipAt(int docPos, const QPoint& viewportPos)
+{
+    if ((docPos < 0) || (document()->characterAt(docPos) != QChar::ObjectReplacementCharacter))
+    {
+        return false;
+    }
+
+    QTextCursor probe(document());
+    probe.setPosition(docPos + 1);
+    const QTextCharFormat format = probe.charFormat();
+    if (SMInlineToken::isChip(format) == false)
+    {
+        return false;
+    }
+
+    // The reveal gesture is the leading glyph hot-zone only; a click on the name just places
+    // the caret (a double-click there de-renders instead).
+    QTextCursor at(document());
+    at.setPosition(docPos);
+    const QRect leftRect = cursorRect(at);
+    const qreal glyphWidth = SMInlineToken::chipGlyphWidth(format, font());
+    if (viewportPos.x() > (leftRect.left() + glyphWidth))
+    {
+        return false;
+    }
+
+    if (mHover != nullptr)
+    {
+        const QString name = format.property(SMInlineToken::PropName).toString();
+        for (const SMGuardSymbol& sym : mCatalog)
+        {
+            if (sym.name == name)
+            {
+                const QPoint pos = mapToGlobal(QPoint(0, height() + 2));
+                mHover->showSymbol(mModel, mTransitionId, sym, pos);
+                return true;
+            }
+        }
+    }
+
+    return true;
 }
 
 bool SMGuardField::maybeOpenIslandAt(int docPos)
@@ -636,11 +788,23 @@ void SMGuardField::rebuildFromModel()
     SMTransitionEntry* transition = (mTransitionId != 0u) ? mModel.getData().findTransitionById(mTransitionId) : nullptr;
 
     QString text;
+    QList<SMGuardRender::Chip> chips;
     mAllowRaw = false;
     if (transition != nullptr)
     {
         const SMGuard& guard = transition->getGuard();
-        text = SMGuardRender::guardText(mModel.getData(), mTransitionId, guard);
+        if (guard.isOk() && (guard.getTree() != nullptr))
+        {
+            // A committed tree reflows to its canonical text AND its chips (SM-21-03): every
+            // bound reference folds to a compact pill. A draft keeps the user's raw text as-is.
+            const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree());
+            text  = rendered.text;
+            chips = rendered.chips;
+        }
+        else
+        {
+            text = SMGuardRender::guardText(mModel.getData(), mTransitionId, guard);
+        }
         mAllowRaw = (guard.isDraft() && (countRawNodes(guard.getTree()) > 0))
                      || (guard.isOk() && (countRawNodes(guard.getTree()) > 0));
     }
@@ -648,6 +812,9 @@ void SMGuardField::rebuildFromModel()
     mSuppressAnalyze = true;
     setPlainText(text);
     mSuppressAnalyze = false;
+    // Chips fold FIRST (back-to-front, so earlier offsets stay valid); island `{...}` blocks
+    // are then found by a fresh brace scan over the shortened text.
+    foldChips(chips);
     foldIslands();
 
     mSuppressAnalyze = true;
@@ -908,9 +1075,11 @@ void SMGuardField::analyze()
 
 QString SMGuardField::committableText() const
 {
-    // Cleanup runs on the document text (tokens are single characters there), THEN the
-    // tokens expand to `{body}` -- so a multi-line island body survives byte-exact.
-    QStringList bodies;
+    // Cleanup runs on the document text (tokens are single characters there), THEN the tokens
+    // expand -- an island to `{body}`, a chip to its canonical `@kind:name` (12.7: no chip
+    // label or ghost marker ever reaches the stored guard) -- so a multi-line island body and
+    // a folded reference both survive byte-exact.
+    QStringList replacements;   // one per ORC in document order (island or chip)
     QTextCursor cursor(document());
     const QString doc = toPlainText();
     for (int i = 0; i < doc.length(); ++i)
@@ -918,9 +1087,18 @@ QString SMGuardField::committableText() const
         if (doc.at(i) == QChar::ObjectReplacementCharacter)
         {
             cursor.setPosition(i + 1);
-            if (SMInlineToken::isIsland(cursor.charFormat()))
+            const QTextCharFormat format = cursor.charFormat();
+            if (SMInlineToken::isIsland(format))
             {
-                bodies.append(SMInlineToken::bodyOf(cursor.charFormat()));
+                replacements.append(QLatin1Char('{') + SMInlineToken::bodyOf(format) + QLatin1Char('}'));
+            }
+            else if (SMInlineToken::isChip(format))
+            {
+                replacements.append(SMInlineToken::bodyOf(format));
+            }
+            else
+            {
+                replacements.append(QString());     // a stray replacement char -> drop it
             }
         }
     }
@@ -932,7 +1110,7 @@ QString SMGuardField::committableText() const
     text.replace(QRegularExpression(QStringLiteral("\\(\\s*,")), QStringLiteral("("));
     text.replace(QRegularExpression(QStringLiteral(",\\s*,")), QStringLiteral(","));
 
-    for (const QString& body : bodies)
+    for (const QString& replacement : replacements)
     {
         const int at = text.indexOf(QChar::ObjectReplacementCharacter);
         if (at < 0)
@@ -940,7 +1118,7 @@ QString SMGuardField::committableText() const
             break;
         }
 
-        text.replace(at, 1, QLatin1Char('{') + body + QLatin1Char('}'));
+        text.replace(at, 1, replacement);
     }
 
     return text.trimmed();
@@ -973,22 +1151,11 @@ void SMGuardField::commit()
 
 void SMGuardField::revert()
 {
-    clearSlotMode();
-    mSuppressAnalyze = true;
-    setPlainText(mCommittedText);
-    mSuppressAnalyze = false;
-    foldIslands();
-
-    mSuppressAnalyze = true;
-    QTextCursor cursor = textCursor();
-    cursor.movePosition(QTextCursor::End);
-    setTextCursor(cursor);
-    mLastCursorPos = cursor.position();
-    mSuppressAnalyze = false;
-
-    mPopup->hide();
-    updateHeight();
-    analyze();
+    // Esc discards the in-progress edit and restores the committed guard. Reflowing from the
+    // model (rather than the cached text) re-folds the chips too, so the reverted state looks
+    // exactly like a fresh commit.
+    mCompleter->hide();
+    rebuildFromModel();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1072,6 +1239,19 @@ void SMGuardField::applyFix(const QString& id, const QString& payload)
 // Completion
 //////////////////////////////////////////////////////////////////////////
 
+namespace
+{
+    //!< Maps a `@kind` word to its reference kind; false when the word is not a valid kind.
+    bool kindFromWord(const QString& word, SMGuardSymbol::eRefKind& kind)
+    {
+        if (word == QStringLiteral("param")) { kind = SMGuardSymbol::eRefKind::Param; return true; }
+        if (word == QStringLiteral("attr"))  { kind = SMGuardSymbol::eRefKind::Attr;  return true; }
+        if (word == QStringLiteral("const")) { kind = SMGuardSymbol::eRefKind::Const; return true; }
+        if (word == QStringLiteral("cond"))  { kind = SMGuardSymbol::eRefKind::Cond;  return true; }
+        return false;
+    }
+}
+
 void SMGuardField::openCompletion()
 {
     if (mTransitionId == 0u)
@@ -1079,25 +1259,189 @@ void SMGuardField::openCompletion()
         return;
     }
 
+    // Ctrl+Space is a deliberate open: show every kind at the caret and clear any Esc dismissal.
+    mCompleterDismissedAt = -1;
     const QRect rect = cursorRect();
-    const QPoint pos = viewport()->mapToGlobal(QPoint(rect.left(), rect.bottom() + 2));
-    mPopup->filterAndShow(QString(), pos);
+    const QRect caretGlobal(viewport()->mapToGlobal(rect.topLeft()), rect.size());
+    mCompleter->showFor({}, QString(), caretGlobal);
 }
 
-void SMGuardField::updateCompletion()
+bool SMGuardField::mentionUnderCursor(int& atPos, QString& kindWord, QString& namePart, bool& hasColon) const
 {
-    int start = 0;
-    int length = 0;
-    const QString word = wordUnderCursor(start, length);
-    if (word.isEmpty())
+    const QString text = toPlainText();
+    const int caret = textCursor().position();
+    int i = caret;
+    while (i > 0)
     {
-        mPopup->hide();
+        const QChar c = text.at(i - 1);
+        if (c == QLatin1Char('@')) { break; }
+        if (isWordChar(c) || (c == QLatin1Char(':'))) { --i; continue; }
+        return false;   // a non-mention character before any '@' -> not inside a mention
+    }
+
+    if ((i <= 0) || (text.at(i - 1) != QLatin1Char('@')))
+    {
+        return false;
+    }
+
+    atPos = i - 1;
+    const QString body = text.mid(i, caret - i);
+    const int colon = body.indexOf(QLatin1Char(':'));
+    hasColon = (colon >= 0);
+    if (hasColon)
+    {
+        kindWord = body.left(colon);
+        namePart = body.mid(colon + 1);
+        if (namePart.contains(QLatin1Char(':'))) { return false; }  // more than one ':' -> malformed
+    }
+    else
+    {
+        kindWord = QString();
+        namePart = body;
+    }
+
+    return true;
+}
+
+void SMGuardField::updateCompleter()
+{
+    if (mTransitionId == 0u)
+    {
+        mCompleter->hide();
         return;
     }
 
+    int atPos = 0;
+    QString kindWord;
+    QString namePart;
+    bool hasColon = false;
+    if (mentionUnderCursor(atPos, kindWord, namePart, hasColon) == false)
+    {
+        mCompleter->hide();
+        mCompleterDismissedAt = -1;      // left the mention; a future '@' may reopen
+        return;
+    }
+
+    // D-ESC: once dismissed, this exact mention stays closed until a fresh '@' (a new atPos).
+    if (atPos == mCompleterDismissedAt)
+    {
+        mCompleter->hide();
+        return;
+    }
+    mCompleterDismissedAt = -1;
+
+    QSet<SMGuardSymbol::eRefKind> kinds;
+    if (hasColon)
+    {
+        SMGuardSymbol::eRefKind kind;
+        if (kindFromWord(kindWord, kind)) { kinds.insert(kind); }
+    }
+
     const QRect rect = cursorRect();
-    const QPoint pos = viewport()->mapToGlobal(QPoint(rect.left(), rect.bottom() + 2));
-    mPopup->filterAndShow(word, pos);
+    const QRect caretGlobal(viewport()->mapToGlobal(rect.topLeft()), rect.size());
+    mCompleter->showFor(kinds, namePart, caretGlobal);
+
+    // D-PRECEDENCE: the completer opens OVER the signature-help tooltip; the tooltip returns
+    // when the completer closes (see updateSignatureHelp).
+    if (mCompleter->isVisible() && (mSignature != nullptr))
+    {
+        mSignature->hide();
+    }
+}
+
+bool SMGuardField::callContextAtCaret(QString& calleeName, int& argIndex) const
+{
+    // Scan the EXPANDED text (chips -> `@kind:name`, islands -> `{body}`) so the callee is
+    // always plain text; the caret's document position maps to its expanded offset.
+    QList<int> docStarts;
+    const QString exp = expandedText(docStarts);
+    const int caretDoc = textCursor().position();
+    if ((caretDoc < 0) || (caretDoc >= docStarts.size()))
+    {
+        return false;
+    }
+
+    const int caret = docStarts.at(caretDoc);
+    int depth = 0;
+    int commas = 0;
+    int i = caret;
+    while (i > 0)
+    {
+        const QChar c = exp.at(i - 1);
+        if (c == QLatin1Char(')')) { ++depth; }
+        else if (c == QLatin1Char('('))
+        {
+            if (depth == 0) { break; }      // the opening paren of the enclosing call
+            --depth;
+        }
+        else if ((c == QLatin1Char(',')) && (depth == 0)) { ++commas; }
+        --i;
+    }
+
+    if ((i <= 0) || (exp.at(i - 1) != QLatin1Char('(')))
+    {
+        return false;   // the caret is not inside a call's parentheses
+    }
+
+    // The callee is the `@cond:name` / bare identifier immediately before the '('.
+    int nameEnd = i - 1;
+    int nameStart = nameEnd;
+    while ((nameStart > 0)
+        && (isWordChar(exp.at(nameStart - 1)) || (exp.at(nameStart - 1) == QLatin1Char(':')) || (exp.at(nameStart - 1) == QLatin1Char('@'))))
+    {
+        --nameStart;
+    }
+
+    QString callee = exp.mid(nameStart, nameEnd - nameStart);
+    if (callee.startsWith(QLatin1Char('@')))
+    {
+        const int colon = callee.indexOf(QLatin1Char(':'));
+        if (colon >= 0) { callee = callee.mid(colon + 1); }
+    }
+    if (callee.isEmpty())
+    {
+        return false;
+    }
+
+    calleeName = callee;
+    argIndex   = commas;
+    return true;
+}
+
+void SMGuardField::updateSignatureHelp()
+{
+    if (mSignature == nullptr)
+    {
+        return;
+    }
+
+    // D-PRECEDENCE: the completer owns the surface while it is open; the two never overlap.
+    if (mCompleter->isVisible())
+    {
+        mSignature->hide();
+        return;
+    }
+
+    QString callee;
+    int argIndex = 0;
+    if (callContextAtCaret(callee, argIndex) == false)
+    {
+        mSignature->hide();
+        return;
+    }
+
+    for (const SMGuardSymbol& sym : mCatalog)
+    {
+        if (sym.isCall && (sym.name == callee))
+        {
+            const QRect rect = cursorRect();
+            const QPoint pos = viewport()->mapToGlobal(QPoint(rect.left(), rect.bottom() + 4));
+            mSignature->showFor(sym, argIndex, pos);
+            return;
+        }
+    }
+
+    mSignature->hide();
 }
 
 QString SMGuardField::wordUnderCursor(int& start, int& length) const
@@ -1121,56 +1465,42 @@ QString SMGuardField::wordUnderCursor(int& start, int& length) const
     return (length > 0) ? text.mid(left, length) : QString();
 }
 
-void SMGuardField::onCompletionAccepted(const SMGuardSymbol& symbol)
+void SMGuardField::onCompleterAccepted(const SMGuardSymbol& symbol)
 {
-    int start = 0;
-    int length = 0;
-    wordUnderCursor(start, length);
-
-    QTextCursor cursor = textCursor();
-    cursor.setPosition(start);
-    cursor.setPosition(start + length, QTextCursor::KeepAnchor);
-    cursor.removeSelectedText();
-
-    if (symbol.isCall == false)
+    // Replace the `@[kind][:][name]` mention under the caret with the picked symbol's canonical
+    // `@kind:name` (typed == clicked, P3). A call inserts `@cond:name()` with the caret between
+    // the parens; the developer types the arguments inline (signature help arrives in SM-21-03
+    // phase 5), and the Arguments table projects them.
+    int atPos = 0;
+    QString kindWord;
+    QString namePart;
+    bool hasColon = false;
+    if (mentionUnderCursor(atPos, kindWord, namePart, hasColon) == false)
     {
-        cursor.insertText(symbol.name);
-        setTextCursor(cursor);
-        commit();
         return;
     }
 
-    clearSlotMode();
-    cursor.insertText(symbol.name + QLatin1Char('('));
-    mSlots.clear();
-    for (int i = 0; i < symbol.paramNames.size(); ++i)
+    const int caret = textCursor().position();
+    QTextCursor cursor = textCursor();
+    cursor.setPosition(atPos);
+    cursor.setPosition(caret, QTextCursor::KeepAnchor);
+    cursor.removeSelectedText();
+
+    mCompleter->hide();
+    mCompleterDismissedAt = -1;
+
+    if (symbol.isCall)
     {
-        if (i > 0)
-        {
-            cursor.insertText(QStringLiteral(", "));
-        }
-
-        const int slotStart = cursor.position();
-        const QString placeholder = QLatin1Char('<') + symbol.paramNames.at(i) + QLatin1Char('>');
-        cursor.insertText(placeholder);
-
-        QTextCursor slot(document());
-        slot.setPosition(slotStart);
-        slot.setPosition(slotStart + placeholder.length(), QTextCursor::KeepAnchor);
-        mSlots.append(slot);
+        cursor.insertText(symbol.mention() + QStringLiteral("()"));
+        cursor.movePosition(QTextCursor::Left);     // caret between the parens
+        setTextCursor(cursor);
+        updateSignatureHelp();                      // show the parameter info for the first argument
+        return;                                     // the developer fills the arguments, then commits
     }
 
-    cursor.insertText(QStringLiteral(")"));
-
-    mSlotMode = true;
-    mSlotCall = symbol;
-    mCurrentSlot = -1;
-    runAutoMap();
-    if (selectSlot(1) == false)
-    {
-        clearSlotMode();
-        commit();
-    }
+    cursor.insertText(symbol.mention());
+    setTextCursor(cursor);
+    commit();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1303,17 +1633,30 @@ void SMGuardField::updateHeight()
 
 void SMGuardField::keyPressEvent(QKeyEvent* event)
 {
-    if (mPopup->isVisible())
+    if (mCompleter->isVisible())
     {
         switch (event->key())
         {
-        case Qt::Key_Up:        mPopup->moveCurrent(-1);    return;
-        case Qt::Key_Down:      mPopup->moveCurrent(1);     return;
+        case Qt::Key_Up:        mCompleter->moveCurrent(-1);    return;
+        case Qt::Key_Down:      mCompleter->moveCurrent(1);     return;
         case Qt::Key_Return:
         case Qt::Key_Enter:
-        case Qt::Key_Tab:       mPopup->acceptCurrent();    return;
-        case Qt::Key_Escape:    mPopup->hide();             return;
-        default:                                            break;
+        case Qt::Key_Tab:       mCompleter->acceptCurrent();    return;
+        case Qt::Key_Escape:
+            {
+                // D-ESC: close but KEEP the typed characters; do NOT reopen for this same
+                // mention on the next keystroke -- only a fresh '@' (a new position) reopens.
+                int atPos = 0;
+                QString kindWord;
+                QString namePart;
+                bool hasColon = false;
+                mCompleterDismissedAt = mentionUnderCursor(atPos, kindWord, namePart, hasColon) ? atPos : -1;
+                mCompleter->hide();
+                updateSignatureHelp();  // D-PRECEDENCE: the tooltip returns when the completer closes
+            }
+            return;
+        default:
+            break;      // PASS-THROUGH (12.6): the key reaches the document AND re-filters the list
         }
     }
 
@@ -1383,7 +1726,7 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
 
 void SMGuardField::focusOutEvent(QFocusEvent* event)
 {
-    mPopup->hide();
+    mCompleter->hide();
     if (mSignature != nullptr)
     {
         mSignature->hide();
@@ -1397,12 +1740,33 @@ void SMGuardField::mouseReleaseEvent(QMouseEvent* event)
 {
     QTextEdit::mouseReleaseEvent(event);
 
-    // A click on an island token opens its editor (B8).
     const QTextCursor hit = cursorForPosition(event->pos());
+
+    // A click on a chip's leading glyph hot-zone reveals it (D-GESTURE); a click elsewhere on
+    // the chip falls through to normal caret placement (a double-click there de-renders it).
+    if (revealChipAt(hit.position(), event->pos()) || revealChipAt(hit.position() - 1, event->pos()))
+    {
+        return;
+    }
+
+    // A click on an island token opens its editor (B8).
     if (maybeOpenIslandAt(hit.position()) == false)
     {
         maybeOpenIslandAt(hit.position() - 1);
     }
+}
+
+void SMGuardField::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    // Double-click a chip -> de-render to editable `@kind:name` (D-GESTURE): a chip IS one
+    // token, so a double-click that would select a word selects the whole chip instead.
+    const QTextCursor hit = cursorForPosition(event->pos());
+    if (deRenderChipAt(hit.position()) || deRenderChipAt(hit.position() - 1))
+    {
+        return;
+    }
+
+    QTextEdit::mouseDoubleClickEvent(event);
 }
 
 void SMGuardField::mouseMoveEvent(QMouseEvent* event)
@@ -1475,9 +1839,15 @@ QMimeData* SMGuardField::createMimeDataFromSelection() const
         if (doc.at(i) == QChar::ObjectReplacementCharacter)
         {
             probe.setPosition(i + 1);
-            if (SMInlineToken::isIsland(probe.charFormat()))
+            const QTextCharFormat format = probe.charFormat();
+            if (SMInlineToken::isIsland(format))
             {
-                out += QLatin1Char('{') + SMInlineToken::bodyOf(probe.charFormat()) + QLatin1Char('}');
+                out += QLatin1Char('{') + SMInlineToken::bodyOf(format) + QLatin1Char('}');
+                continue;
+            }
+            if (SMInlineToken::isChip(format))
+            {
+                out += SMInlineToken::bodyOf(format);   // the canonical @kind:name / bare name
                 continue;
             }
         }

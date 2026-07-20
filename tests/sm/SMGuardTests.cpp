@@ -189,11 +189,23 @@ static void testParserResolution()
     }
     delete root;
 
-    // Unknown name -> error, not a raw node (D4).
-    SMGuardParser::Result bad = SMGuardParser::parse(data, tid, QStringLiteral("WalkRequsted && count > 2"));
-    check(bad.hasError(), "typo'd attribute is an error");
-    check(bad.resolved() == false, "typo does not resolve");
-    delete bad.tree;
+    // D-RAW (SM-21-03): an unmarked identifier that resolves to no known symbol is raw C++,
+    // kept verbatim with no error -- the guard still resolves (the unknown token is a Raw leaf).
+    // (Supersedes the pre-SM-21-03 rule that an unknown bare name was an error.)
+    SMGuardParser::Result bare = SMGuardParser::parse(data, tid, QStringLiteral("WalkRequsted && count > 2"));
+    check(bare.resolved(), "an unmarked unknown identifier is raw, not an error (D-RAW)");
+    check((bare.tree != nullptr) && (bare.tree->getKind() == eKind::And) && (bare.tree->getCount() == 2), "the guard resolves around the raw leaf");
+    if ((bare.tree != nullptr) && (bare.tree->getKind() == eKind::And) && (bare.tree->getCount() == 2))
+    {
+        check(bare.tree->childAt(0)->getKind() == eKind::Raw, "the unknown identifier is a Raw leaf");
+        checkEq(bare.tree->childAt(0)->getText(), QStringLiteral("WalkRequsted"), "the raw leaf keeps the verbatim text");
+    }
+    delete bare.tree;
+
+    // An EXPLICIT kind that does not resolve IS an error -- the user stated the kind (contrast D-RAW).
+    SMGuardParser::Result explicitBad = SMGuardParser::parse(data, tid, QStringLiteral("@attr:WalkRequsted && count > 2"));
+    check(explicitBad.hasError(), "an explicit @attr:typo is an error (a stated kind must resolve)");
+    delete explicitBad.tree;
 
     // Explicit raw only via the flag (the "Keep as raw C++" quick-fix).
     SMGuardParser::Result rawOff = SMGuardParser::parse(data, tid, QStringLiteral("count $ 3"), false);
@@ -242,6 +254,229 @@ static void testParamVsCall()
     check((s.tree != nullptr) && (s.tree->getKind() == eKind::Param), "shadowed bare name binds the parameter");
     check(warned, "shadowing raises a warning diagnostic");
     delete s.tree;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// SM-21-03: the @kind:name grammar (typed == clicked), D-NOSET, named/mixed args
+//////////////////////////////////////////////////////////////////////////
+
+//!< Parses \p text and returns the resolved tree (caller owns), or nullptr when unresolved.
+static SMGuardNode* parseOk(StateMachineData& data, uint32_t tid, const QString& text)
+{
+    SMGuardParser::Result r = SMGuardParser::parse(data, tid, text);
+    if (r.resolved() == false) { delete r.tree; return nullptr; }
+    return r.tree;
+}
+
+static void testKindGrammar()
+{
+    std::printf("[SM-21-03] @kind:name grammar: typed == clicked, prefixes, D-NOSET\n");
+
+    StateMachineData data;
+    const uint32_t tid = buildDoc(data);
+
+    // Typed (explicit @kind:) and clicked/bare forms resolve to IDENTICAL trees (P3).
+    {
+        SMGuardNode* typed   = parseOk(data, tid, QStringLiteral("@attr:WalkRequested && @cond:HasWaiting(@param:count) && !@attr:IsNightMode"));
+        SMGuardNode* clicked = parseOk(data, tid, QStringLiteral("WalkRequested && HasWaiting(count) && !IsNightMode"));
+        check((typed != nullptr) && (clicked != nullptr) && typed->equals(*clicked), "typed @kind: form == bare/clicked form (identical trees)");
+        delete typed;
+        delete clicked;
+    }
+
+    // Each explicit kind binds the right node kind and id.
+    {
+        SMGuardNode* p = parseOk(data, tid, QStringLiteral("@param:count >= @const:MIN_WAITING"));
+        check((p != nullptr) && (p->getKind() == eKind::Cmp), "@param/@const comparison resolves");
+        if ((p != nullptr) && (p->getKind() == eKind::Cmp))
+        {
+            check(p->childAt(0)->getKind() == eKind::Param, "@param: binds a Param node");
+            check(p->childAt(1)->getKind() == eKind::Const, "@const: binds a Const node");
+        }
+        delete p;
+        SMGuardNode* c = parseOk(data, tid, QStringLiteral("@cond:IsCalmHours(count)"));
+        check((c != nullptr) && (c->getKind() == eKind::Call) && (c->getSymbolId() == data.getMethods().findMethod(QStringLiteral("IsCalmHours"))->getId()), "@cond: binds the method call");
+        delete c;
+    }
+
+    // D-RAW vs explicit-kind error: bare unknown is raw; explicit @param:unknown is an error.
+    {
+        SMGuardParser::Result raw = SMGuardParser::parse(data, tid, QStringLiteral("nonesuch"));
+        check(raw.resolved() && (raw.tree != nullptr) && (raw.tree->getKind() == eKind::Raw), "bare unknown -> Raw leaf (D-RAW)");
+        delete raw.tree;
+        SMGuardParser::Result bad = SMGuardParser::parse(data, tid, QStringLiteral("@param:nonesuch"));
+        check(bad.hasError(), "@param:unknown is an error (explicit kind must resolve)");
+        delete bad.tree;
+        SMGuardParser::Result badArg = SMGuardParser::parse(data, tid, QStringLiteral("@arg:count"));
+        check(badArg.hasError(), "a standalone @arg: is a misuse error");
+        delete badArg.tree;
+    }
+
+    // D-NOSET: '=' in a guard is flagged (warning) and parsed as '==', never a setter.
+    {
+        SMGuardParser::Result eq = SMGuardParser::parse(data, tid, QStringLiteral("@attr:WalkRequested = @const:MIN_WAITING"));
+        bool warned = false;
+        for (const SMGuardParser::Diagnostic& d : eq.diagnostics)
+        {
+            if ((d.severity == SMGuardParser::eSeverity::Warning) && d.message.contains(QStringLiteral("=="))) { warned = true; }
+        }
+        check(warned, "D-NOSET: '=' raises a 'did you mean ==' warning");
+        check((eq.tree != nullptr) && (eq.tree->getKind() == eKind::Cmp) && (eq.tree->getOp() == SMGuardNode::eCmpOp::Eq), "'=' is parsed as an equality comparison, not a setter");
+        delete eq.tree;
+    }
+
+    // Collision (D-REVEAL substrate): a param and an attribute share a name -> render emits the
+    // disambiguating @kind: prefix so the tree round-trips (parse(render(tree)) == tree).
+    {
+        data.getAttributes().createAttribute(QStringLiteral("value"));
+        data.getMethods().findMethod(QStringLiteral("RequestWalk"))->addParam(QStringLiteral("value"))->setType(QStringLiteral("uint16"));
+        SMGuardNode* tree = parseOk(data, tid, QStringLiteral("@param:value > @attr:value"));
+        check(tree != nullptr, "same-name param/attr comparison resolves");
+        if (tree != nullptr)
+        {
+            const QString rendered = SMGuardRender::text(data, tid, *tree);
+            check(rendered.contains(QStringLiteral("@attr:value")), "render emits @attr: to disambiguate the collision");
+            SMGuardNode* again = parseOk(data, tid, rendered);
+            check((again != nullptr) && tree->equals(*again), "collision tree round-trips: parse(render(tree)) == tree");
+            delete again;
+        }
+        delete tree;
+    }
+}
+
+static void testCallArgGrammar()
+{
+    std::printf("[SM-21-03] call args: positional, named (@arg:), Python mixed rule (D-MIXED)\n");
+
+    StateMachineData data;
+    const uint32_t tid = buildDoc(data);
+
+    // A 3-formal condition method for argument mapping.
+    SMMethodEntry* cond = data.getMethods().createMethod(QStringLiteral("check3"), SMMethodEntry::eMethodType::Condition);
+    cond->setImplement(SMMethodEntry::eImplement::Handler);
+    const uint32_t p1 = cond->addParam(QStringLiteral("p1"))->getId();
+    const uint32_t p2 = cond->addParam(QStringLiteral("p2"))->getId();
+    const uint32_t p3 = cond->addParam(QStringLiteral("p3"))->getId();
+    (void)p2;
+
+    // Positional binds each formal by position (keyed on the formal id, not the index).
+    {
+        SMGuardNode* t = parseOk(data, tid, QStringLiteral("check3(count, 5, 9)"));
+        check((t != nullptr) && (t->getKind() == eKind::Call) && (t->getCount() == 3), "3 positional args bind");
+        if ((t != nullptr) && (t->getCount() == 3))
+        {
+            check(t->childAt(0)->getArgFormalId() == p1, "positional arg 0 -> formal p1");
+            check(t->childAt(2)->getArgFormalId() == p3, "positional arg 2 -> formal p3");
+        }
+        delete t;
+    }
+
+    // Mixed: a positional then a named skipping p2 -> a binds p1, c binds p3, p2 unmapped (12.8).
+    {
+        SMGuardNode* t = parseOk(data, tid, QStringLiteral("check3(count, @arg:p3 = 9)"));
+        check((t != nullptr) && (t->getKind() == eKind::Call) && (t->getCount() == 2), "mixed positional+named binds two args");
+        if ((t != nullptr) && (t->getCount() == 2))
+        {
+            check(t->childAt(0)->getArgFormalId() == p1, "positional -> p1");
+            check(t->childAt(1)->getArgFormalId() == p3, "named @arg:p3 -> p3 (p2 left as a ghost)");
+        }
+        delete t;
+    }
+
+    // Named-only, out of order.
+    {
+        SMGuardNode* t = parseOk(data, tid, QStringLiteral("check3(@arg:p3 = 9, @arg:p1 = count)"));
+        check((t != nullptr) && (t->getCount() == 2), "named-only args resolve out of order");
+        if ((t != nullptr) && (t->getCount() == 2))
+        {
+            check(t->childAt(0)->getArgFormalId() == p3, "first named binds p3");
+            check(t->childAt(1)->getArgFormalId() == p1, "second named binds p1");
+        }
+        delete t;
+    }
+
+    // D-MIXED: a positional AFTER a named argument is a syntax error with the exact diagnostic.
+    {
+        SMGuardParser::Result r = SMGuardParser::parse(data, tid, QStringLiteral("check3(@arg:p1 = count, 9)"));
+        check(r.resolved() == false, "positional after named does not resolve");
+        bool fired = false;
+        for (const SMGuardParser::Diagnostic& d : r.diagnostics)
+        {
+            if (d.message == QStringLiteral("positional argument after named argument")) { fired = true; }
+        }
+        check(fired, "the 'positional argument after named argument' diagnostic fires");
+        delete r.tree;
+    }
+
+    // Interior ghost (12.8 / D-GHOST): a value mapped after a hole renders NAMED and the tree
+    // round-trips through the canonical text -- the ghost is display-only, never in the text.
+    {
+        SMGuardNode* t = parseOk(data, tid, QStringLiteral("check3(count, @arg:p3 = 9)"));
+        check(t != nullptr, "interior-ghost call resolves");
+        if (t != nullptr)
+        {
+            const QString canonical = SMGuardRender::text(data, tid, *t);
+            checkEq(canonical, QStringLiteral("check3(count, @arg:p3 = 9)"), "canonical text keeps count positional and p3 named (no empty comma, no ghost)");
+            check(canonical.contains(QStringLiteral("<")) == false, "the canonical text carries no ghost marker");
+            SMGuardNode* again = parseOk(data, tid, canonical);
+            check((again != nullptr) && t->equals(*again), "interior-ghost tree round-trips: parse(text(tree)) == tree");
+            delete again;
+
+            // The field/display render DOES show the labeled ghost for the unmapped p2.
+            const SMGuardRender::Rendered display = SMGuardRender::render(data, tid, *t);
+            check(display.text.contains(QStringLiteral("<p2>")), "the display render shows the <p2> ghost");
+        }
+        delete t;
+    }
+}
+
+static void testRenderChips()
+{
+    std::printf("[SM-21-03] render chips: kinds/names, D-REVEAL collision reveal\n");
+
+    StateMachineData data;
+    const uint32_t tid = buildDoc(data);
+
+    // A plain guard: one chip per reference, none revealed (no name collision).
+    {
+        SMGuardNode* t = parseOk(data, tid, QStringLiteral("WalkRequested && HasWaiting(count)"));
+        check(t != nullptr, "guard resolves");
+        if (t != nullptr)
+        {
+            const SMGuardRender::Rendered r = SMGuardRender::render(data, tid, *t);
+            check(r.chips.size() == 3, "three chips: attr, cond, param");
+            bool anyReveal = false;
+            for (const SMGuardRender::Chip& c : r.chips) { anyReveal = anyReveal || c.reveal; }
+            check(anyReveal == false, "no chip is revealed without a collision");
+            // Each chip's span in the rendered text equals its (bare) name here.
+            for (const SMGuardRender::Chip& c : r.chips)
+            {
+                checkEq(r.text.mid(c.start, c.length), c.name, "a chip span is the bare rendered name");
+            }
+        }
+        delete t;
+    }
+
+    // D-REVEAL: a param and an attribute share the name "value" -> BOTH chips reveal, always.
+    {
+        data.getAttributes().createAttribute(QStringLiteral("value"));
+        data.getMethods().findMethod(QStringLiteral("RequestWalk"))->addParam(QStringLiteral("value"))->setType(QStringLiteral("uint16"));
+        SMGuardNode* t = parseOk(data, tid, QStringLiteral("@param:value > @attr:value"));
+        check(t != nullptr, "collision guard resolves");
+        if (t != nullptr)
+        {
+            const SMGuardRender::Rendered r = SMGuardRender::render(data, tid, *t);
+            check(r.chips.size() == 2, "two chips for the collision");
+            int revealed = 0;
+            for (const SMGuardRender::Chip& c : r.chips)
+            {
+                if (c.reveal) { ++revealed; }
+                checkEq(c.name, QStringLiteral("value"), "both chips display the same name");
+            }
+            check(revealed == 2, "D-REVEAL: every colliding chip is revealed");
+        }
+        delete t;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -413,9 +648,11 @@ static void testXmlRoundTrip()
               && trans->getGuard().getTree()->equals(*rt->getGuard().getTree()), "guard is identical without the <Rendered> cache");
     }
 
-    // Draft losslessness: an unresolved guard saves its raw text and reloads verbatim (D9).
-    SMGuard draft = SMGuardParser::parseToGuard(data, tid, QStringLiteral("WalkRequsted && count > 2"));
-    check(draft.isDraft(), "unresolved text becomes a draft");
+    // Draft losslessness: a STRUCTURALLY unresolved guard saves its raw text and reloads
+    // verbatim (D9). A dangling comparison ('count >' with no right side) is a syntax error,
+    // so it stays a draft even under D-RAW (which only turns unknown identifiers into raw).
+    SMGuard draft = SMGuardParser::parseToGuard(data, tid, QStringLiteral("WalkRequsted && count >"));
+    check(draft.isDraft(), "structurally unresolved text becomes a draft");
     trans->getGuard() = draft;
     const QString outD = tempFile("guard_draft.fsml");
     check(data.writeToFile(outD), "write draft guard");
@@ -425,7 +662,7 @@ static void testXmlRoundTrip()
     SMTransitionEntry* rdt = rd.findTransitionById(tid);
     check((rdt != nullptr) && rdt->getGuard().isDraft(), "reloaded guard is a draft");
     checkEq((rdt != nullptr) ? rdt->getGuard().getDraftText() : QString(),
-            QStringLiteral("WalkRequsted && count > 2"), "draft text is lossless");
+            QStringLiteral("WalkRequsted && count >"), "draft text is lossless");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -506,6 +743,9 @@ int main(int /*argc*/, char** /*argv*/)
 
     testParserResolution();
     testParamVsCall();
+    testKindGrammar();
+    testCallArgGrammar();
+    testRenderChips();
     testRenderRoundTrip();
     testRenameByID();
     testCodegenPreview();

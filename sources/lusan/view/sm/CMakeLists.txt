@@ -19,8 +19,8 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMMappingGrid.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
+    ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/view/sm/SMStructureLens.cpp
-    ${LUSAN}/view/sm/SMSymbolPopup.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
     ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
@@ -75,8 +75,8 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMMappingGrid.hpp
     ${LUSAN}/view/sm/SMOperandField.hpp
     ${LUSAN}/view/sm/SMSignatureCard.hpp
+    ${LUSAN}/view/sm/SMRefCompleter.hpp
     ${LUSAN}/view/sm/SMStructureLens.hpp
-    ${LUSAN}/view/sm/SMSymbolPopup.hpp
     ${LUSAN}/view/sm/SMTryStrip.hpp
     ${LUSAN}/view/sm/SMValidationPanel.hpp
     ${LUSAN}/view/sm/SMConstant.hpp

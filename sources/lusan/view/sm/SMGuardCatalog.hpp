@@ -45,9 +45,24 @@ class StateMachineData;
  **/
 struct SMGuardSymbol
 {
+    /**
+     * \enum    eRefKind
+     * \brief   The reference kind that becomes the `@kind:` word when the completer inserts a
+     *          symbol (SM-21-03). Distinct from \ref owner (a hue) because two kinds (attr and
+     *          const) share the FSM hue yet need different `@kind:` prefixes.
+     **/
+    enum class eRefKind
+    {
+          Param     //!< `@param:` -- a stimulus parameter.
+        , Attr      //!< `@attr:`  -- a machine attribute.
+        , Const     //!< `@const:` -- a declared constant.
+        , Cond      //!< `@cond:`  -- a condition method (handler or lambda).
+    };
+
     QString             name;       //!< The bare declared name inserted into the field.
     QString             glyph;      //!< The ASCII owner/kind glyph (a # K h {}).
     NEGuardStyle::eOwner owner;     //!< The owner hue.
+    eRefKind            refkind;    //!< The `@kind:` reference kind (for canonical insertion).
     QString             typeText;   //!< The type shown in the catalog (return type for calls).
     QString             provenance; //!< The right-column cue (handler() / lambda / = value / empty).
     bool                isCall;     //!< True for a condition method (needs an argument list).
@@ -57,6 +72,12 @@ struct SMGuardSymbol
 
     //!< The catalog display label: `name(type, type)` for a call, else the bare name.
     QString display() const;
+
+    //!< The `@kind:` word for this symbol ("param" | "attr" | "const" | "cond").
+    QString kindWord() const;
+
+    //!< The canonical mention the completer inserts: `@kind:name` (`@cond:name` for a call).
+    QString mention() const;
 };
 
 /**

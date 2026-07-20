@@ -374,7 +374,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
     ${LUSAN}/view/sm/SMStructureLens.cpp
-    ${LUSAN}/view/sm/SMSymbolPopup.cpp
+    ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
     ${LUSAN}/model/sm/SMGuardEval.cpp
@@ -481,7 +481,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
     ${LUSAN}/view/sm/SMStructureLens.cpp
-    ${LUSAN}/view/sm/SMSymbolPopup.cpp
+    ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
 )
 

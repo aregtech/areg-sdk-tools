@@ -30,6 +30,15 @@ namespace
     const QString TOKEN_LABEL { QStringLiteral("{} {...}") };
     constexpr qreal PAD_X { 6.0 };
     constexpr qreal PAD_Y { 2.0 };
+    constexpr qreal GLYPH_GAP { 4.0 };
+
+    //!< The owner glyph + a gap prefixed to a chip's name, e.g. "a " (empty owner -> "").
+    QString chipGlyphText(const QTextFormat& format)
+    {
+        const auto owner = static_cast<NEGuardStyle::eOwner>(format.property(SMInlineToken::PropOwner).toInt());
+        const QString glyph = NEGuardStyle::ownerGlyph(owner);
+        return glyph.isEmpty() ? QString() : (glyph + QLatin1Char(' '));
+    }
 }
 
 SMInlineToken::SMInlineToken(QObject* parent /*= nullptr*/)
@@ -48,14 +57,20 @@ QSizeF SMInlineToken::intrinsicSize(QTextDocument* doc, int /*posInDocument*/, c
     }
 
     const QFontMetricsF metrics(font);
-    return QSizeF(metrics.horizontalAdvance(TOKEN_LABEL) + (2.0 * PAD_X)
+    const QString label = isChip(format) ? chipLabel(format) : TOKEN_LABEL;
+    return QSizeF(metrics.horizontalAdvance(label) + (2.0 * PAD_X)
                  , metrics.height() + (2.0 * PAD_Y));
 }
 
 void SMInlineToken::drawObject(QPainter* painter, const QRectF& rect, QTextDocument* /*doc*/, int /*posInDocument*/, const QTextFormat& format)
 {
-    // The B15 pill contract: 1 px border in the owner hue at 60%, fill at 12%, 4 px radius.
-    QColor hue = NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Fsm);
+    const bool chip = isChip(format);
+    // A chip is painted in its owner hue (glyph is the accessibility channel); an island stays
+    // in the lambda hue. The B15 pill contract: 1 px border at 60%, fill at 12%, 4 px radius.
+    const NEGuardStyle::eOwner owner = chip
+        ? static_cast<NEGuardStyle::eOwner>(format.property(PropOwner).toInt())
+        : NEGuardStyle::eOwner::Fsm;
+    QColor hue = NEGuardStyle::ownerColor(owner);
     QColor border(hue);
     border.setAlphaF(0.6);
     QColor fill(hue);
@@ -69,7 +84,7 @@ void SMInlineToken::drawObject(QPainter* painter, const QRectF& rect, QTextDocum
 
     painter->setPen(hue);
     painter->setFont(format.toCharFormat().font());
-    painter->drawText(rect, Qt::AlignCenter, TOKEN_LABEL);
+    painter->drawText(rect, Qt::AlignCenter, chip ? chipLabel(format) : TOKEN_LABEL);
     painter->restore();
 }
 
@@ -89,4 +104,37 @@ bool SMInlineToken::isIsland(const QTextFormat& format)
 QString SMInlineToken::bodyOf(const QTextFormat& format)
 {
     return format.property(PropBody).toString();
+}
+
+QTextCharFormat SMInlineToken::makeChipFormat(const QString& body, const QString& name
+                                            , NEGuardStyle::eOwner owner, const QString& prefix, bool reveal)
+{
+    QTextCharFormat format;
+    format.setObjectType(ChipType);
+    format.setProperty(PropBody, body);
+    format.setProperty(PropName, name);
+    format.setProperty(PropOwner, static_cast<int>(owner));
+    format.setProperty(PropPrefix, prefix);
+    format.setProperty(PropReveal, reveal);
+    return format;
+}
+
+bool SMInlineToken::isChip(const QTextFormat& format)
+{
+    return (format.objectType() == ChipType);
+}
+
+QString SMInlineToken::chipLabel(const QTextFormat& format)
+{
+    const QString name    = format.property(PropName).toString();
+    const bool    reveal  = format.property(PropReveal).toBool();
+    const QString shown   = reveal ? (format.property(PropPrefix).toString() + name) : name;
+    return chipGlyphText(format) + shown;
+}
+
+qreal SMInlineToken::chipGlyphWidth(const QTextFormat& format, const QFont& font)
+{
+    const QFontMetricsF metrics(font);
+    // The hot-zone spans the leading padding plus the owner glyph and its gap.
+    return PAD_X + metrics.horizontalAdvance(chipGlyphText(format)) + GLYPH_GAP;
 }

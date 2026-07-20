@@ -24,6 +24,7 @@
  ************************************************************************/
 #include <QTextEdit>
 
+#include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/view/sm/SMFixBar.hpp"
 #include "lusan/view/sm/SMGuardCatalog.hpp"
@@ -42,7 +43,7 @@ class StateMachineModel;
 class SMGuardHighlighter;
 class SMHoverCard;
 class SMInlineToken;
-class SMSymbolPopup;
+class SMRefCompleter;
 class SMSignatureCard;
 enum class eDocElementKind;
 
@@ -53,7 +54,7 @@ enum class eDocElementKind;
  *          colors by owner, squiggles unresolved names, and commits the resolved tree on Enter
  *          / focus-out via \ref SMGuardCommands (the D9 commit gate: a resolved tree commits,
  *          an unresolved edit persists as a draft, Esc reverts to the last committed text).
- *          Completion (\ref SMSymbolPopup), the signature card (\ref SMSignatureCard) and
+ *          Completion (\ref SMRefCompleter), the signature card (\ref SMSignatureCard) and
  *          mapping slots ride on top; the container owns the status line and fix bar and wires
  *          them to this field's signals. Rebuild-from-model is deferred (0 ms) so an undo /
  *          redo / rename never rebuilds inside the emitting command.
@@ -116,6 +117,10 @@ public:
     //!< The committable (expanded, slot-stripped) text -- the grid's live-refresh input.
     QString committableText() const;
 
+    // ---- reference chips (SM-21-03) --------------------------------------
+    //!< The number of committed reference chips in the field, in text order.
+    int chipCount() const;
+
     // ---- islands (E4) ----------------------------------------------------
     //!< The number of island tokens in the field, in text order.
     int islandCount() const;
@@ -147,6 +152,7 @@ protected:
     void insertFromMimeData(const QMimeData* source) override;
     QMimeData* createMimeDataFromSelection() const override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void leaveEvent(QEvent* event) override;
 
@@ -159,7 +165,7 @@ private slots:
     void onElementChanged(uint32_t id, eDocElementKind kind);
     void onElementRemoved(uint32_t id, eDocElementKind kind);
     void onDocumentReloaded();
-    void onCompletionAccepted(const SMGuardSymbol& symbol);
+    void onCompleterAccepted(const SMGuardSymbol& symbol);
 
 private:
     void scheduleRebuild();
@@ -195,6 +201,21 @@ private:
     //!< Folds every textual `{...}` block of the document into an island token.
     void foldIslands();
 
+    // ---- reference chips (SM-21-03) --------------------------------------
+    //!< Folds each rendered reference span \p chips into a compact chip token. Called only
+    //!< from a model-driven reflow (a committed tree), back-to-front so offsets stay valid.
+    void foldChips(const QList<SMGuardRender::Chip>& chips);
+
+    //!< The document positions of every chip token, in text order.
+    QList<int> chipPositions() const;
+
+    //!< De-renders the chip at \p docPos back to its editable `@kind:name` text (double-click).
+    bool deRenderChipAt(int docPos);
+
+    //!< Reveals the chip at \p docPos (its `@kind:name` + a symbol popover) when the click at
+    //!< \p viewportPos landed on the chip's leading glyph hot-zone. Returns true when handled.
+    bool revealChipAt(int docPos, const QPoint& viewportPos);
+
     //!< Opens the island editor when the character at \p docPos is an island token.
     bool maybeOpenIslandAt(int docPos);
 
@@ -204,8 +225,29 @@ private:
     //!< The identifier the caret sits on (for typed completion); empty when none.
     QString wordUnderCursor(int& start, int& length) const;
 
-    //!< Shows / filters the completion popup for the caret word.
-    void updateCompletion();
+    // ---- reference completer (SM-21-03) ----------------------------------
+    /**
+     * \brief   Parses the `@[kind][:][name]` mention the caret sits inside. Fills \p atPos
+     *          (the `@`'s document position), \p kindWord (before the colon, empty when none),
+     *          \p namePart (after the colon, or the whole body when there is no colon), and
+     *          \p hasColon. Returns false when the caret is not inside a mention.
+     **/
+    bool mentionUnderCursor(int& atPos, QString& kindWord, QString& namePart, bool& hasColon) const;
+
+    //!< Opens / filters / hides the completer for the caret's mention (the swallow-free path).
+    void updateCompleter();
+
+    // ---- signature help (SM-21-03) ---------------------------------------
+    /**
+     * \brief   Finds the call the caret is inside (its parentheses). Fills \p calleeName (the
+     *          bare method name) and \p argIndex (the 0-based argument the caret is on, counting
+     *          top-level commas). Returns false when the caret is not inside a call's arguments.
+     **/
+    bool callContextAtCaret(QString& calleeName, int& argIndex) const;
+
+    //!< Shows / hides the signature-help tooltip for the caret's call. It yields to the
+    //!< completer while that is open and returns when the completer closes (D-PRECEDENCE).
+    void updateSignatureHelp();
 
     // ---- slots (B5) ----------------------------------------------------
     void enterSlotMode(const SMGuardSymbol& call);
@@ -227,7 +269,8 @@ private:
     bool                    mSuppressAnalyze;//!< True while programmatically setting text.
 
     SMGuardHighlighter*     mHighlighter;   //!< Owner colors + diagnostic underlines.
-    SMSymbolPopup*          mPopup;         //!< The completion catalog.
+    SMRefCompleter*         mCompleter;     //!< The top-level reference completer (D-POPUP).
+    int                     mCompleterDismissedAt;//!< The '@' pos dismissed by Esc, or -1 (D-ESC).
     SMSignatureCard*        mSignature;     //!< The call signature card.
     QTimer*                 mDebounce;      //!< The 150 ms parse debounce.
 
