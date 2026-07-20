@@ -71,8 +71,9 @@ public:
 public:
     /**
      * \brief   Binds the sink to the Call node reached by \p callPath (child indices from the
-     *          guard-tree root) in transition \p transitionId. Passing an empty path or a
-     *          path that is not a Call makes the sink inert.
+     *          guard-tree root) in transition \p transitionId. An EMPTY path is valid -- it
+     *          addresses the guard's root node (a single-call guard). A path that does not
+     *          resolve to a Call makes the sink inert (\ref isBound is false).
      **/
     void bind(uint32_t transitionId, const QList<int>& callPath);
 
@@ -132,6 +133,7 @@ private:
     StateMachineModel&      mModel;
     uint32_t                mTransId;
     QList<int>              mPath;
+    bool                    mBound;     //!< True between bind and clearBinding (an empty path is a valid root call).
     mutable SMArgumentEntry mProjected; //!< Transient storage backing \ref argFor's returned pointer.
 };
 

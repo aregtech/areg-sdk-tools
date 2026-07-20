@@ -25,11 +25,16 @@
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
+#include "lusan/model/sm/SMGuardSymbols.hpp"
 
 #include "lusan/view/sm/SMGuardCatalog.hpp"
+#include "lusan/view/sm/SMGuardCatalogModel.hpp"
 
+#include <QCoreApplication>
+#include <QSortFilterProxyModel>
 #include <QString>
 #include <cstdio>
 
@@ -191,15 +196,115 @@ namespace
         delete a.tree;
         delete b.tree;
     }
+
+    // SM-21-04: the local use-count (bound references by symbol id) equals a manual id-count.
+    void testUseCounts()
+    {
+        std::printf("[use-count] bound references counted by symbol id\n");
+        StateMachineData data;
+        const uint32_t transId = buildDoc(data);
+
+        // count appears twice (a call arg and a comparison operand); the others once each.
+        const QString guard = QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING)");
+        SMGuardParser::Result res = SMGuardParser::parse(data, transId, guard, false);
+        check(res.resolved() && (res.tree != nullptr), "fixture guard resolves");
+
+        const QHash<uint32_t, int> counts = SMGuardCatalog::useCounts(res.tree);
+
+        const uint32_t countId  = SMGuardSymbols::paramId(data, transId, QStringLiteral("count"));
+        const uint32_t walkId   = SMGuardSymbols::attributeId(data, QStringLiteral("WalkRequested"));
+        const uint32_t minId    = SMGuardSymbols::constantId(data, QStringLiteral("MIN_WAITING"));
+        const SMMethodEntry* has = SMGuardSymbols::conditionMethod(data, QStringLiteral("HasWaiting"));
+        const uint32_t nightId  = SMGuardSymbols::attributeId(data, QStringLiteral("IsNightMode"));
+
+        check(counts.value(countId, 0) == 2, "count is used twice");
+        check(counts.value(walkId, 0) == 1, "WalkRequested is used once");
+        check(counts.value(minId, 0) == 1, "MIN_WAITING is used once");
+        check((has != nullptr) && (counts.value(has->getId(), 0) == 1), "HasWaiting is used once");
+        // An unreferenced symbol is absent (a 0 in the used-N column), never counted from raw text.
+        check(counts.value(nightId, 0) == 0, "an unreferenced attribute has no count");
+
+        delete res.tree;
+    }
+
+    // SM-21-04: the catalog model filters by search text and carries every kind.
+    void testCatalogModelFilterAndKinds()
+    {
+        std::printf("[catalog model] search filter + kind coverage\n");
+        StateMachineData data;
+        const uint32_t transId = buildDoc(data);
+        const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(data, transId);
+
+        SMGuardCatalogModel model;
+        model.setSymbols(catalog);
+        check(model.rowCount() == catalog.size(), "the model wraps every catalog symbol");
+        check(model.columnCount() == SMGuardCatalogModel::ColCount, "four columns [hue|name|type|used]");
+
+        QSortFilterProxyModel proxy;
+        proxy.setSourceModel(&model);
+        proxy.setFilterCaseSensitivity(Qt::CaseInsensitive);
+        proxy.setFilterKeyColumn(SMGuardCatalogModel::ColName);
+
+        proxy.setFilterFixedString(QStringLiteral("Walk"));
+        check(proxy.rowCount() == 1, "search 'Walk' narrows to the one matching symbol");
+        if (proxy.rowCount() == 1)
+        {
+            const QString name = proxy.index(0, SMGuardCatalogModel::ColName).data().toString();
+            checkEq(name, QStringLiteral("WalkRequested"), "the surviving row is WalkRequested");
+        }
+
+        proxy.setFilterFixedString(QString());
+        check(proxy.rowCount() == catalog.size(), "clearing the search restores every symbol");
+
+        // Every kind the Data catalog offers is present (Param scope + Attribute + Constant + Cond).
+        int params = 0;
+        int attrs  = 0;
+        int consts = 0;
+        int conds  = 0;
+        for (int row = 0; row < model.rowCount(); ++row)
+        {
+            const SMGuardSymbol* sym = model.symbolAt(row);
+            if (sym == nullptr) { continue; }
+            switch (sym->refkind)
+            {
+            case SMGuardSymbol::eRefKind::Param: ++params; break;
+            case SMGuardSymbol::eRefKind::Attr:  ++attrs;  break;
+            case SMGuardSymbol::eRefKind::Const: ++consts; break;
+            case SMGuardSymbol::eRefKind::Cond:  ++conds;  break;
+            }
+        }
+
+        check(params == 1, "one stimulus parameter in scope");
+        check(attrs  == 2, "two attributes");
+        check(consts == 1, "one constant");
+        check(conds  == 2, "two condition methods (handler + lambda)");
+
+        // The used-N column shows a bound reference count pushed by the host.
+        const uint32_t walkId = SMGuardSymbols::attributeId(data, QStringLiteral("WalkRequested"));
+        QHash<uint32_t, int> counts;
+        counts.insert(walkId, 4);
+        model.setUseCounts(counts);
+        for (int row = 0; row < model.rowCount(); ++row)
+        {
+            const SMGuardSymbol* sym = model.symbolAt(row);
+            if ((sym != nullptr) && (sym->symbolId == walkId))
+            {
+                checkEq(model.index(row, SMGuardCatalogModel::ColUsed).data().toString(), QStringLiteral("4"), "used-N reflects the pushed count");
+            }
+        }
+    }
 }
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
+    QCoreApplication app(argc, argv);
     std::printf("SMGuardCatalog tests (U2)\n");
     testCatalog();
     testNearestName();
     testAutoMapUniqueness();
     testClickTypeParity();
+    testUseCounts();
+    testCatalogModelFilterAndKinds();
 
     std::printf("\n%d checks, %d failures\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

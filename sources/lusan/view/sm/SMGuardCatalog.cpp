@@ -23,6 +23,7 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMConstantData.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
@@ -206,4 +207,34 @@ QString SMGuardCatalog::nearestName(const QStringList& candidates, const QString
     }
 
     return (bestDistance <= limit) ? best : QString();
+}
+
+namespace
+{
+    //!< Accumulates bound-reference counts by symbol id over a guard sub-tree.
+    void accumulateUseCounts(const SMGuardNode* node, QHash<uint32_t, int>& counts)
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        const uint32_t id = node->getSymbolId();
+        if ((id != 0u) && ((node->getKind() == SMGuardNode::eKind::Call) || node->isReference()))
+        {
+            counts[id] += 1;
+        }
+
+        for (const SMGuardNode* child : node->getChildren())
+        {
+            accumulateUseCounts(child, counts);
+        }
+    }
+}
+
+QHash<uint32_t, int> SMGuardCatalog::useCounts(const SMGuardNode* tree)
+{
+    QHash<uint32_t, int> counts;
+    accumulateUseCounts(tree, counts);
+    return counts;
 }

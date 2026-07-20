@@ -59,6 +59,7 @@ SMArgSinkGuard::SMArgSinkGuard(StateMachineModel& model)
     , mModel    (model)
     , mTransId  (0u)
     , mPath     ( )
+    , mBound    (false)
     , mProjected( )
 {
 }
@@ -71,12 +72,14 @@ void SMArgSinkGuard::bind(uint32_t transitionId, const QList<int>& callPath)
 {
     mTransId = transitionId;
     mPath    = callPath;
+    mBound   = true;
 }
 
 void SMArgSinkGuard::clearBinding(void)
 {
     mTransId = 0u;
     mPath.clear();
+    mBound   = false;
 }
 
 bool SMArgSinkGuard::isBound(void) const
@@ -96,7 +99,9 @@ uint32_t SMArgSinkGuard::methodId(void) const
 
 const SMGuardNode* SMArgSinkGuard::callNode(void) const
 {
-    if ((mTransId == 0u) || mPath.isEmpty())
+    // An empty path is a VALID address: the guard's root node is itself the call (a single-call
+    // guard). `mBound` -- not path emptiness -- distinguishes bound from unbound.
+    if ((mTransId == 0u) || (mBound == false))
     {
         return nullptr;
     }

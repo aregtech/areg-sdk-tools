@@ -19,41 +19,60 @@
 
 #include "lusan/view/sm/SMGuardBar.hpp"
 
+#include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 #include "lusan/model/sm/SMGuardCommands.hpp"
 #include "lusan/model/sm/SMGuardLadder.hpp"
+#include "lusan/model/sm/SMGuardSymbols.hpp"
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 
 #include "lusan/view/sm/NEGuardStyle.hpp"
+#include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMFixBar.hpp"
+#include "lusan/view/sm/SMGuardCallsOutline.hpp"
+#include "lusan/view/sm/SMGuardCatalog.hpp"
+#include "lusan/view/sm/SMGuardCatalogView.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMGuardHelpCard.hpp"
 #include "lusan/view/sm/SMGuardStatusLine.hpp"
 #include "lusan/view/sm/SMHoverCard.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
-#include "lusan/view/sm/SMMappingGrid.hpp"
 #include "lusan/view/sm/SMStructureLens.hpp"
 #include "lusan/view/sm/SMTryStrip.hpp"
 
 #include <QApplication>
 #include <QClipboard>
+#include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
+#include <QPair>
+#include <QPlainTextEdit>
+#include <QSet>
 #include <QShortcut>
+#include <QTimer>
+#include <QToolBox>
 #include <QToolButton>
 #include <QVBoxLayout>
 
 namespace
 {
     using eKind = SMGuardNode::eKind;
+
+    // The accordion section indices (QToolBox order).
+    constexpr int SectionCalls = 0;
+    constexpr int SectionArgs  = 1;
+    constexpr int SectionData  = 2;
 
     //!< Pre-order search for the \p target-th Lambda node; returns true when found.
     bool findNthLambda(const SMGuardNode* node, int target, int& counted, QList<int>& path)
@@ -116,6 +135,28 @@ namespace
         return false;
     }
 
+    //!< Pre-order collection of every Call node with its child-index path.
+    void collectCalls(const SMGuardNode* node, const QList<int>& path, QList<QPair<QList<int>, const SMGuardNode*>>& out)
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        if (node->getKind() == eKind::Call)
+        {
+            out.append(qMakePair(path, node));
+        }
+
+        const QList<SMGuardNode*>& kids = node->getChildren();
+        for (int i = 0; i < kids.size(); ++i)
+        {
+            QList<int> childPath = path;
+            childPath.append(i);
+            collectCalls(kids.at(i), childPath, out);
+        }
+    }
+
     //!< The copyable handler stub the user pastes into their handler class.
     QString handlerStub(const StateMachineData& data, uint32_t transitionId, const QString& name, const QString& body)
     {
@@ -141,29 +182,70 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 
 SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
-    : QWidget   (parent)
-    , mModel    (model)
-    , mTransId  (0u)
-    , mField    (nullptr)
-    , mStatus   (nullptr)
-    , mFixBar   (nullptr)
-    , mIsland   (nullptr)
-    , mLens     (nullptr)
-    , mTry      (nullptr)
-    , mGrid     (nullptr)
-    , mHover    (nullptr)
-    , mHelp     (nullptr)
-    , mClear    (nullptr)
-    , mHelpBtn  (nullptr)
+    : QWidget       (parent)
+    , mModel        (model)
+    , mTransId      (0u)
+    , mField        (nullptr)
+    , mStatus       (nullptr)
+    , mFixBar       (nullptr)
+    , mWarnBar      (nullptr)
+    , mIsland       (nullptr)
+    , mLens         (nullptr)
+    , mTry          (nullptr)
+    , mHover        (nullptr)
+    , mHelp         (nullptr)
+    , mClear        (nullptr)
+    , mHelpBtn      (nullptr)
+    , mInsertBtn    (nullptr)
+    , mPreviewBtn   (nullptr)
+    , mDataBtn      (nullptr)
+    , mPopoutBtn    (nullptr)
+    , mAccordion    (nullptr)
+    , mCalls        (nullptr)
+    , mArgs         (nullptr)
+    , mArgSink      (model)
+    , mData         (nullptr)
+    , mLastSection  (0)
+    , mDerivedPending(false)
 {
     QVBoxLayout* outer = new QVBoxLayout(this);
     outer->setContentsMargins(8, 8, 8, 8);
     outer->setSpacing(6);
 
-    // Header row: Guard label + clear + help.
+    // Header row: Guard label + top strip (Insert/Preview/Data>>/Pop-out) + clear + help.
     QHBoxLayout* header = new QHBoxLayout();
     header->addWidget(new QLabel(tr("Guard"), this));
     header->addStretch(1);
+
+    // The top strip: labeled toolbuttons, horizontal (adds function, not height).
+    mInsertBtn = new QToolButton(this);
+    mInsertBtn->setObjectName(QStringLiteral("smGuardInsert"));
+    mInsertBtn->setText(tr("Insert"));
+    mInsertBtn->setAutoRaise(true);
+    mInsertBtn->setToolTip(tr("Insert a symbol reference at the caret"));
+    header->addWidget(mInsertBtn);
+
+    mPreviewBtn = new QToolButton(this);
+    mPreviewBtn->setObjectName(QStringLiteral("smGuardPreview"));
+    mPreviewBtn->setText(tr("Preview"));
+    mPreviewBtn->setAutoRaise(true);
+    mPreviewBtn->setToolTip(tr("Show the generated C++ for this guard"));
+    header->addWidget(mPreviewBtn);
+
+    mDataBtn = new QToolButton(this);
+    mDataBtn->setObjectName(QStringLiteral("smGuardDataToggle"));
+    mDataBtn->setText(tr("Data>>"));
+    mDataBtn->setAutoRaise(true);
+    mDataBtn->setToolTip(tr("Browse and insert symbols"));
+    header->addWidget(mDataBtn);
+
+    mPopoutBtn = new QToolButton(this);
+    mPopoutBtn->setObjectName(QStringLiteral("smGuardPopout"));
+    mPopoutBtn->setText(tr("Pop-out"));
+    mPopoutBtn->setAutoRaise(true);
+    mPopoutBtn->setEnabled(false);      // wired in SM-21-05.
+    mPopoutBtn->setToolTip(tr("Open the guard in a larger editor (coming soon)"));
+    header->addWidget(mPopoutBtn);
 
     mClear = new QToolButton(this);
     mClear->setObjectName(QStringLiteral("smGuardClear"));
@@ -189,6 +271,29 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mFixBar = new SMFixBar(this);
     outer->addWidget(mFixBar);
 
+    // The one advisory warning channel (D-WARN): unmapped-argument entries; click jumps to the
+    // call. Reuses the SMFixBar widget (icon + message + link buttons), driven by the bar (not
+    // the field), so adding a warning rule never adds a widget.
+    mWarnBar = new SMFixBar(this);
+    mWarnBar->setObjectName(QStringLiteral("smGuardWarnBar"));
+    outer->addWidget(mWarnBar);
+
+    // The accordion (spec 10 / design 8.1): Calls (outline) drives the single Arguments table;
+    // Data is the symbol catalog. Exactly one section is expanded at a time (QToolBox).
+    mAccordion = new QToolBox(this);
+    mAccordion->setObjectName(QStringLiteral("smGuardAccordion"));
+
+    mCalls = new SMGuardCallsOutline(mModel, this);
+    mArgs = new SMArgMapTable(mModel, this);
+    mArgs->setObjectName(QStringLiteral("smGuardArgs"));
+    mArgs->setRowStyle(SMArgMapTable::eRowStyle::Detailed);
+    mData = new SMGuardCatalogView(mModel, this);
+
+    mAccordion->addItem(mCalls, tr("Calls"));
+    mAccordion->addItem(mArgs, tr("Arguments"));
+    mAccordion->addItem(mData, tr("Data"));
+    outer->addWidget(mAccordion);
+
     // S4: the island editor sits between the status block and the lens (B0 screen map).
     mIsland = new SMIslandEditor(this);
     mIsland->setVisible(false);
@@ -204,8 +309,8 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
     outer->addStretch(1);
 
-    // Popovers owned by the bar; both live as top-level tool windows.
-    mGrid = new SMMappingGrid(mModel, this);
+    // The hover card is the one remaining top-level popover; the mapping popover (SMMappingGrid)
+    // is retired in favour of the inline accordion Arguments table.
     mHover = new SMHoverCard(this);
     mField->setHoverCard(mHover);
     mLens->setHoverCard(mHover);
@@ -255,9 +360,9 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
     // ---- U3 wiring: lens ----------------------------------------------------
     connect(mLens, &SMStructureLens::caretRequested, mField, &SMGuardField::selectSpan);
-    connect(mLens, &SMStructureLens::gridRequested, this, [this](const QList<int>& callPath, const QPoint& globalPos)
+    connect(mLens, &SMStructureLens::gridRequested, this, [this](const QList<int>& callPath, const QPoint& /*globalPos*/)
     {
-        mGrid->openFor(mTransId, callPath, globalPos);
+        jumpToCall(callPath);       // the mapping popover is retired: drive the inline Arguments table.
     });
     connect(mLens, &SMStructureLens::clauseTextBuilt, mField, &SMGuardField::appendClause);
     connect(mLens, &SMStructureLens::lambdaAppendRequested, mField, &SMGuardField::appendIsland);
@@ -298,17 +403,102 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
     // ---- U4 wiring: Try-it truth tints the lens pills while the strip is open ----
     connect(mTry, &SMTryStrip::truthTintsChanged, mLens, &SMStructureLens::setTruthTints);
+
+    // ---- Top strip ---------------------------------------------------------
+    connect(mInsertBtn, &QToolButton::clicked, this, [this]()
+    {
+        mField->setFocus();
+        mField->openCompletion();                   // the Insert entry point: all kinds at the caret.
+    });
+    connect(mPreviewBtn, &QToolButton::clicked, this, &SMGuardBar::showPreviewDialog);
+    connect(mDataBtn, &QToolButton::clicked, this, &SMGuardBar::toggleDataSection);
+
+    // ---- Accordion: Calls outline drives the single Arguments table --------
+    connect(mCalls, &SMGuardCallsOutline::callSelected, this, &SMGuardBar::onCallSelected);
+    connect(mCalls, &SMGuardCallsOutline::islandActivated, this, [this](int islandIndex)
+    {
+        // Open the island editor for the outline's `raw C++` row (same path as the field).
+        mIsland->openFor(mModel, mTransId, islandIndex, mField->islandBody(islandIndex));
+    });
+    connect(mCalls, &SMGuardCallsOutline::whereUsedRequested, this, [this](uint32_t symbolId)
+    {
+        showWhereUsed(symbolId);
+    });
+    connect(mAccordion, &QToolBox::currentChanged, this, [this](int index)
+    {
+        if (index >= 0)
+        {
+            mLastSection = index;                   // D-ACCORDION remember-last (per tab).
+        }
+    });
+
+    // ---- Data catalog: double-click inserts, right-click asks where-used ----
+    connect(mData, &SMGuardCatalogView::insertRequested, this, [this](const SMGuardSymbol& symbol)
+    {
+        mField->insertReference(symbol);
+    });
+    connect(mData, &SMGuardCatalogView::whereUsedRequested, this, [this](uint32_t symbolId)
+    {
+        showWhereUsed(symbolId);
+    });
+
+    // ---- Warning channel: unmapped-argument jumps to the call; orphan removes the stale binding ----
+    connect(mWarnBar, &SMFixBar::triggered, this, [this](const QString& id, const QString& payload)
+    {
+        // Payload: `p0,p1,...` (jumpGhost) or `p0,p1,...;formalId` (removeOrphan).
+        const QString pathText = payload.section(QLatin1Char(';'), 0, 0);
+        QList<int> path;
+        const QStringList parts = pathText.split(QLatin1Char(','), Qt::SkipEmptyParts);
+        for (const QString& part : parts)
+        {
+            path.append(part.toInt());
+        }
+
+        if (id == QStringLiteral("jumpGhost"))
+        {
+            jumpToCall(path);
+        }
+        else if (id == QStringLiteral("removeOrphan"))
+        {
+            const uint32_t formalId = payload.section(QLatin1Char(';'), 1, 1).toUInt();
+            SMSetGuardCommand* command = SMGuardCommands::clearArgByFormal(mModel.getData(), mModel.getNotifier(), mTransId, path, formalId, tr("Remove orphaned argument"));
+            if (command != nullptr)
+            {
+                mModel.getUndoStack().push(command);
+            }
+        }
+    });
+
+    // A foreign rename / add / remove changes the catalog names and the use counts with NO guard
+    // edit (D-SYNC): re-enumerate the catalog and recompute the derived views off the model pass.
+    DocModelNotifier& notifier = mModel.getNotifier();
+    connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind) { scheduleCatalogRefresh(); });
+    connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind) { scheduleCatalogRefresh(); });
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind) { scheduleCatalogRefresh(); });
 }
 
 void SMGuardBar::setTransition(uint32_t transitionId)
 {
     mTransId = transitionId;
     mIsland->hide();
-    mGrid->hide();
     mHover->hide();
     mField->setTransition(transitionId);
     mLens->setTransition(transitionId);
     mTry->setTransition(transitionId);
+
+    // The accordion + catalog follow the transition; the Arguments table clears until a call
+    // is selected in the outline.
+    mArgs->clearBinding();
+    mArgSink.clearBinding();
+    mCalls->setTransition(transitionId);
+    mData->setTransition(transitionId);
+
+    // D-ACCORDION: re-open the section the user last had open (persisted per tab, not per
+    // transition), clamped to a valid index.
+    const int section = ((mLastSection >= 0) && (mLastSection < mAccordion->count())) ? mLastSection : SectionCalls;
+    mAccordion->setCurrentIndex(section);
+
+    refreshDerived();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -326,11 +516,9 @@ void SMGuardBar::onStatusUpdated(int severity, const QString& verdict, const QSt
         mStatus->setStatus(static_cast<NEGuardStyle::eSeverity>(severity), verdict, preview, chips);
     }
 
-    // The B6 two-way rule: a text edit while the grid is open refreshes the grid.
-    if ((mGrid != nullptr) && mGrid->isVisible())
-    {
-        mGrid->refreshLive(mField->committableText());
-    }
+    // A commit reflows the tree: recompute the catalog use-counts and the warning channel from
+    // the committed guard (cheap; the catalog symbols themselves change only on a model edit).
+    refreshDerived();
 }
 
 void SMGuardBar::onClearClicked()
@@ -508,20 +696,20 @@ void SMGuardBar::runAdoptBody(uint32_t methodId)
 
 void SMGuardBar::openGridForCall(uint32_t methodId)
 {
-    const QList<int> path = firstCallPath(methodId);
-    if (path.isEmpty() && (guardTree() == nullptr))
-    {
-        return;
-    }
-
+    // The mapping popover is retired: `Map arguments...` now drives the inline accordion.
     const SMGuardNode* tree = guardTree();
-    if ((tree == nullptr) || ((path.isEmpty()) && (tree->getKind() != SMGuardNode::eKind::Call)))
+    if (tree == nullptr)
     {
         return;
     }
 
-    const QPoint pos = mField->mapToGlobal(QPoint(0, mField->height() + 2));
-    mGrid->openFor(mTransId, path, pos);
+    const QList<int> path = firstCallPath(methodId);
+    if (path.isEmpty() && (tree->getKind() != SMGuardNode::eKind::Call))
+    {
+        return;
+    }
+
+    jumpToCall(path);
 }
 
 void SMGuardBar::showWhereUsed(uint32_t symbolId)
@@ -545,4 +733,237 @@ void SMGuardBar::showWhereUsed(uint32_t symbolId)
     }
 
     menu.exec(QCursor::pos());
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Accordion + Arguments (SM-21-02 phase 2)
+//////////////////////////////////////////////////////////////////////////
+
+void SMGuardBar::onCallSelected(const QList<int>& callPath, uint32_t methodId, int unmappedCount)
+{
+    const StateMachineData& data = mModel.getData();
+    const SMMethodEntry* method = SMGuardSymbols::method(data, methodId);
+    if (method == nullptr)
+    {
+        // methodId 0 means no call is selected; an empty callPath is still valid (a root call).
+        mArgs->clearBinding();
+        mArgSink.clearBinding();
+        return;
+    }
+
+    QList<SMArgMapTable::Param> params;
+    for (const MethodParameter& formal : method->getElements())
+    {
+        params.append(SMArgMapTable::Param{ formal.getName(), formal.getType(), formal.getValue(), formal.hasDefault() });
+    }
+
+    mArgSink.bind(mTransId, callPath);
+    mArgs->bind(mTransId, true, &mArgSink, params);
+
+    // D-ACCORDION: a call with an unmapped formal auto-opens Arguments on the first ghost slot;
+    // a fully-mapped call leaves the currently-open section as-is.
+    if (unmappedCount > 0)
+    {
+        mAccordion->setCurrentIndex(SectionArgs);
+
+        int firstUnmapped = -1;
+        for (int i = 0; i < params.size(); ++i)
+        {
+            if (mArgSink.argFor(params.at(i).name) == nullptr)
+            {
+                firstUnmapped = i;
+                break;
+            }
+        }
+
+        if ((firstUnmapped >= 0) && (firstUnmapped < mArgs->rowCount()))
+        {
+            QComboBox* combo = mArgs->sourceCombo(firstUnmapped);
+            if (combo != nullptr)
+            {
+                combo->setFocus();
+            }
+        }
+    }
+}
+
+void SMGuardBar::jumpToCall(const QList<int>& callPath)
+{
+    // An empty path is the guard's root call (a single-call guard) -- still a valid selection.
+    mCalls->selectCallPath(callPath);       // emits callSelected -> binds the Arguments table.
+    mAccordion->setCurrentIndex(SectionArgs);
+}
+
+void SMGuardBar::toggleDataSection()
+{
+    if (mAccordion->currentIndex() == SectionData)
+    {
+        mAccordion->setCurrentIndex(SectionCalls);
+    }
+    else
+    {
+        mAccordion->setCurrentIndex(SectionData);
+        mData->focusSearch();
+    }
+}
+
+void SMGuardBar::showPreviewDialog()
+{
+    QString text;
+    const SMTransitionEntry* transition = (mTransId != 0u) ? mModel.getData().findTransitionById(mTransId) : nullptr;
+    if (transition != nullptr)
+    {
+        text = SMGuardCodegenPreview::ifStatement(mModel.getData(), mTransId, transition->getGuard());
+    }
+
+    if (text.isEmpty())
+    {
+        text = tr("// no generated code -- the guard is empty or an unresolved draft");
+    }
+
+    QDialog dialog(this);
+    dialog.setObjectName(QStringLiteral("smGuardPreviewDialog"));
+    dialog.setWindowTitle(tr("Generated guard code"));
+
+    QVBoxLayout* layout = new QVBoxLayout(&dialog);
+    QPlainTextEdit* view = new QPlainTextEdit(&dialog);
+    view->setObjectName(QStringLiteral("smGuardPreviewText"));
+    view->setReadOnly(true);
+    view->setPlainText(text);
+    layout->addWidget(view);
+
+    QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    layout->addWidget(buttons);
+
+    dialog.resize(560, 240);
+    dialog.exec();
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Use-count + warning channel (SM-21-04 phase 4)
+//////////////////////////////////////////////////////////////////////////
+
+void SMGuardBar::refreshDerived()
+{
+    // The `used-N` column: bound references by symbol id over the committed guard (headless walk).
+    mData->setUseCounts(SMGuardCatalog::useCounts(guardTree()));
+    refreshWarnings();
+}
+
+void SMGuardBar::scheduleCatalogRefresh()
+{
+    if (mDerivedPending)
+    {
+        return;
+    }
+
+    mDerivedPending = true;
+    QTimer::singleShot(0, this, [this]()
+    {
+        mDerivedPending = false;
+        mData->refresh();       // re-enumerate the catalog (a foreign rename/add/remove changed names).
+        refreshDerived();       // recompute the use-counts + warnings off the same pass.
+    });
+}
+
+void SMGuardBar::refreshWarnings()
+{
+    const StateMachineData& data = mModel.getData();
+
+    QList<QPair<QList<int>, const SMGuardNode*>> calls;
+    collectCalls(guardTree(), QList<int>(), calls);
+
+    QList<SMFixBar::Fix> fixes;
+    for (const QPair<QList<int>, const SMGuardNode*>& entry : calls)
+    {
+        const SMGuardNode* call = entry.second;
+        const SMMethodEntry* method = SMGuardSymbols::method(data, call->getSymbolId());
+        if (method == nullptr)
+        {
+            continue;
+        }
+
+        // The path packed as a comma-separated payload the warn-bar click unpacks (jumpGhost).
+        QStringList pathParts;
+        for (int index : entry.first)
+        {
+            pathParts.append(QString::number(index));
+        }
+
+        const QString pathPayload = pathParts.join(QLatin1Char(','));
+        const QList<MethodParameter>& formals = method->getElements();
+
+        QSet<uint32_t> formalIds;
+        for (const MethodParameter& formal : formals)
+        {
+            if (formal.getId() != 0u)
+            {
+                formalIds.insert(formal.getId());
+            }
+        }
+
+        // Unmapped formals -> amber "jump to ghost" entries (ghost slot, spec 4.3).
+        for (int i = 0; i < formals.size(); ++i)
+        {
+            const uint32_t formalId = formals.at(i).getId();
+            bool mapped = false;
+            for (int c = 0; c < call->getCount(); ++c)
+            {
+                if ((formalId != 0u) && (call->childAt(c)->getArgFormalId() == formalId))
+                {
+                    mapped = true;
+                    break;
+                }
+            }
+
+            if (mapped == false)
+            {
+                const SMGuardNode* positional = call->childAt(i);
+                if ((positional != nullptr) && (positional->getArgFormalId() == 0u))
+                {
+                    mapped = true;      // legacy positional arg.
+                }
+            }
+
+            if (mapped == false)
+            {
+                SMFixBar::Fix fix;
+                fix.id      = QStringLiteral("jumpGhost");
+                fix.label   = tr("%1: %2 not mapped").arg(method->getName(), formals.at(i).getName());
+                fix.payload = pathPayload;
+                fix.tooltip = tr("Jump to the unmapped argument");
+                fixes.append(fix);
+            }
+        }
+
+        // Orphan args -> a bound formal was removed on the Methods page: never silently drop the
+        // value (12.9); offer a remove quick-fix that keeps the value until the user acts.
+        for (int c = 0; c < call->getCount(); ++c)
+        {
+            const uint32_t argFormal = call->childAt(c)->getArgFormalId();
+            if ((argFormal != 0u) && (formalIds.contains(argFormal) == false))
+            {
+                SMFixBar::Fix fix;
+                fix.id      = QStringLiteral("removeOrphan");
+                fix.label   = tr("%1: remove orphaned argument").arg(method->getName());
+                fix.payload = pathPayload + QLatin1Char(';') + QString::number(argFormal);
+                fix.tooltip = tr("The mapped parameter no longer exists; remove the stale binding");
+                fixes.append(fix);
+            }
+        }
+    }
+
+    // W2 (assignment-in-guard) is delivered by the parser's existing D-NOSET warning on the field
+    // (`=` in a boolean position parses as `==`); it is not re-derived here to avoid any raw-text
+    // scan (W1 raw-collision stays OUT OF SCOPE, D-RAW-UNCHECKED).
+    if (fixes.isEmpty())
+    {
+        mWarnBar->dismiss();
+    }
+    else
+    {
+        mWarnBar->setFixes(tr("unmapped arguments"), fixes);
+    }
 }

@@ -38,10 +38,11 @@
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
+#include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
+#include "lusan/view/sm/SMGuardCallsOutline.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
-#include "lusan/view/sm/SMMappingGrid.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
 #include "lusan/view/sm/SMStructureLens.hpp"
@@ -50,6 +51,7 @@
 
 #include <QApplication>
 #include <QComboBox>
+#include <QToolBox>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -218,12 +220,12 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
         popup->hide();
     }
 
-    // S9: the mapping grid + generated footer.
-    bar.grid()->openFor(transId, { 1, 0 }, bar.mapToGlobal(QPoint(24, 240)));
+    // S9 (retired grid -> inline accordion Arguments): the Calls outline drives the shared table.
+    check(bar.accordion()->objectName() == QStringLiteral("smGuardAccordion"), "S9: smGuardAccordion");
+    check(bar.calls()->callRowCount() >= 1, "S9: the Calls outline lists the call(s)");
+    bar.calls()->selectCallPath({ 1, 0 });
     pump(150);
-    check(bar.grid()->objectName() == QStringLiteral("smMapGrid"), "S9: smMapGrid");
-    check(bar.grid()->findChild<QWidget*>(QStringLiteral("smMapGridGen")) != nullptr, "S9: smMapGridGen");
-    bar.grid()->hide();
+    check(bar.args() != nullptr, "S9: the shared Arguments table exists");
 
     // S6 open: try strip rows.
     bar.tryStrip()->setOpen(true);

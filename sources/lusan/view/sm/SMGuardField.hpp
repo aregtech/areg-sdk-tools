@@ -89,6 +89,15 @@ public:
     //!< Opens the completion catalog at the caret (Ctrl+Space).
     void openCompletion();
 
+    /**
+     * \brief   Inserts \p symbol's canonical reference at the caret (the Data-catalog and
+     *          Insert-button path): `@kind:name` for a value, or `@cond:name()` with the caret
+     *          between the parens and signature help for a call. Identical to accepting the
+     *          symbol in the completer, so a catalog insert and a typed reference commit the
+     *          same tree (P3). A no-op when no transition is bound.
+     **/
+    void insertReference(const SMGuardSymbol& symbol);
+
     //!< Re-opens the fix bar for the caret's diagnostic (Ctrl+.).
     void reopenFixBar();
 

@@ -1266,6 +1266,35 @@ void SMGuardField::openCompletion()
     mCompleter->showFor({}, QString(), caretGlobal);
 }
 
+void SMGuardField::insertReference(const SMGuardSymbol& symbol)
+{
+    if (mTransitionId == 0u)
+    {
+        return;
+    }
+
+    // The Data-catalog / Insert path: insert the canonical reference at the plain caret. This is
+    // the tail of onCompleterAccepted without a mention to remove, so a clicked insert and a
+    // typed reference commit the identical tree (P3).
+    setFocus();
+    mCompleter->hide();
+    mCompleterDismissedAt = -1;
+
+    QTextCursor cursor = textCursor();
+    if (symbol.isCall)
+    {
+        cursor.insertText(symbol.mention() + QStringLiteral("()"));
+        cursor.movePosition(QTextCursor::Left);     // caret between the parens
+        setTextCursor(cursor);
+        updateSignatureHelp();                      // the developer fills the arguments, then commits
+        return;
+    }
+
+    cursor.insertText(symbol.mention());
+    setTextCursor(cursor);
+    commit();
+}
+
 bool SMGuardField::mentionUnderCursor(int& atPos, QString& kindWord, QString& namePart, bool& hasColon) const
 {
     const QString text = toPlainText();

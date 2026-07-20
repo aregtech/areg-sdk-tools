@@ -25,24 +25,31 @@
 #include <QWidget>
 
 #include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/view/sm/SMArgSinkGuard.hpp"
 
+#include <QHash>
 #include <QList>
 #include <cstdint>
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QToolBox;
 class QToolButton;
 class StateMachineModel;
+class SMArgMapTable;
+class SMArgSinkGuard;
+class SMGuardCallsOutline;
+class SMGuardCatalogView;
 class SMGuardField;
 class SMGuardStatusLine;
 class SMFixBar;
 class SMGuardHelpCard;
 class SMHoverCard;
 class SMIslandEditor;
-class SMMappingGrid;
 class SMStructureLens;
 class SMTryStrip;
+class SMGuardNode;
 
 /**
  * \class   SMGuardBar
@@ -77,14 +84,23 @@ public:
     //!< The structure lens (tests).
     inline SMStructureLens* lens() const;
 
-    //!< The mapping grid (tests).
-    inline SMMappingGrid* grid() const;
-
     //!< The island editor (tests).
     inline SMIslandEditor* islandEditor() const;
 
     //!< The Try-it strip (tests).
     inline SMTryStrip* tryStrip() const;
+
+    //!< The accordion (tests).
+    inline QToolBox* accordion() const;
+
+    //!< The Calls outline (tests).
+    inline SMGuardCallsOutline* calls() const;
+
+    //!< The shared Arguments table (tests).
+    inline SMArgMapTable* args() const;
+
+    //!< The Data catalog view (tests).
+    inline SMGuardCatalogView* dataCatalog() const;
 
 signals:
     //!< The Conditions tab badge state changed (draft => `*`, warnings => warn glyph).
@@ -123,6 +139,29 @@ private:
     //!< The `where used` popup: pick a guard, select its transition.
     void showWhereUsed(uint32_t symbolId);
 
+    // ---- accordion + Arguments (SM-21-02 phase 2) -------------------------
+    //!< Binds the shared Arguments table to the selected call and applies D-ACCORDION auto-open.
+    void onCallSelected(const QList<int>& callPath, uint32_t methodId, int unmappedCount);
+
+    //!< Selects \p callPath in the Calls outline and opens the Arguments section on it.
+    void jumpToCall(const QList<int>& callPath);
+
+    //!< Toggles the Data section (Data>> top-strip button).
+    void toggleDataSection();
+
+    //!< The generated-code preview dialog (Preview top-strip button).
+    void showPreviewDialog();
+
+    // ---- use-count + warnings (SM-21-04 phase 4) --------------------------
+    //!< Recomputes the catalog `used-N` counts and the warning channel from the committed guard.
+    void refreshDerived();
+
+    //!< Re-enumerates the Data catalog symbols (a foreign rename/add/remove changed them).
+    void scheduleCatalogRefresh();
+
+    //!< Rebuilds the warning channel (unmapped-argument entries) from the committed guard.
+    void refreshWarnings();
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -131,15 +170,28 @@ private:
     uint32_t            mTransId;   //!< The shown transition (0 = none).
     SMGuardField*       mField;     //!< The editable guard surface.
     SMGuardStatusLine*  mStatus;    //!< The status line + chips.
-    SMFixBar*           mFixBar;    //!< The quick-fix bar.
+    SMFixBar*           mFixBar;    //!< The quick-fix bar (field diagnostics).
+    SMFixBar*           mWarnBar;   //!< The one advisory warning channel (unmapped-argument).
     SMIslandEditor*     mIsland;    //!< The island editor (S4, hidden until an island opens).
     SMStructureLens*    mLens;      //!< The structure lens (S5).
     SMTryStrip*         mTry;       //!< The Try-it strip (S6).
-    SMMappingGrid*      mGrid;      //!< The mapping grid popover (S9).
     SMHoverCard*        mHover;     //!< The shared hover card (S10).
     SMGuardHelpCard*    mHelp;      //!< The help card (lazily shown).
     QToolButton*        mClear;     //!< The clear-guard button.
     QToolButton*        mHelpBtn;   //!< The help button.
+
+    // ---- top strip + accordion (SM-21-02 / SM-21-04) ----------------------
+    QToolButton*        mInsertBtn; //!< Insert: opens the completer at the caret (all kinds).
+    QToolButton*        mPreviewBtn;//!< Preview: opens the generated-code dialog.
+    QToolButton*        mDataBtn;   //!< Data>>: toggles the Data section.
+    QToolButton*        mPopoutBtn; //!< Pop-out: disabled placeholder (wired in SM-21-05).
+    QToolBox*           mAccordion; //!< The Calls / Arguments / Data accordion (one open at a time).
+    SMGuardCallsOutline* mCalls;    //!< The Calls outline (drives the Arguments table).
+    SMArgMapTable*      mArgs;      //!< The single shared Arguments table.
+    SMArgSinkGuard      mArgSink;   //!< The guard-side argument sink behind the table.
+    SMGuardCatalogView* mData;      //!< The Data catalog (model/view).
+    int                 mLastSection;//!< The last-open accordion section (D-ACCORDION, per tab).
+    bool                mDerivedPending;//!< Coalesces the deferred catalog re-enumeration.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -156,11 +208,6 @@ inline SMStructureLens* SMGuardBar::lens() const
     return mLens;
 }
 
-inline SMMappingGrid* SMGuardBar::grid() const
-{
-    return mGrid;
-}
-
 inline SMIslandEditor* SMGuardBar::islandEditor() const
 {
     return mIsland;
@@ -169,6 +216,26 @@ inline SMIslandEditor* SMGuardBar::islandEditor() const
 inline SMTryStrip* SMGuardBar::tryStrip() const
 {
     return mTry;
+}
+
+inline QToolBox* SMGuardBar::accordion() const
+{
+    return mAccordion;
+}
+
+inline SMGuardCallsOutline* SMGuardBar::calls() const
+{
+    return mCalls;
+}
+
+inline SMArgMapTable* SMGuardBar::args() const
+{
+    return mArgs;
+}
+
+inline SMGuardCatalogView* SMGuardBar::dataCatalog() const
+{
+    return mData;
 }
 
 #endif  // LUSAN_VIEW_SM_SMGUARDBAR_HPP

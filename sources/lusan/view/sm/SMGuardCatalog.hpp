@@ -24,6 +24,7 @@
  ************************************************************************/
 #include "lusan/view/sm/NEGuardStyle.hpp"
 
+#include <QHash>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -33,6 +34,7 @@
  * Dependencies
  ************************************************************************/
 class StateMachineData;
+class SMGuardNode;
 
 /**
  * \struct  SMGuardSymbol
@@ -101,6 +103,15 @@ namespace SMGuardCatalog
      *          Model-facing and headless-testable.
      **/
     QString nearestName(const QStringList& candidates, const QString& typed);
+
+    /**
+     * \brief   The LOCAL use-count of every bound symbol in one committed guard \p tree:
+     *          symbol document id -> number of BOUND references (Call / Attr / Const / Param
+     *          nodes). Raw / lambda / literal text is never counted (D-HILITE / A2). Headless
+     *          and testable; the catalog's `used-N` column is exactly this over the current
+     *          transition's guard.
+     **/
+    QHash<uint32_t, int> useCounts(const SMGuardNode* tree);
 }
 
 #endif  // LUSAN_VIEW_SM_SMGUARDCATALOG_HPP

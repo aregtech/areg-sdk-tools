@@ -29,18 +29,19 @@
 #include "lusan/model/sm/SMGuardParser.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
+#include "lusan/view/sm/SMGuardCallsOutline.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
-#include "lusan/view/sm/SMMappingGrid.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/common/MethodListView.hpp"
-#include "lusan/view/sm/SMOperandField.hpp"
 #include "lusan/view/sm/SMRefCompleter.hpp"
 #include "lusan/view/sm/SMSignatureCard.hpp"
 #include "lusan/view/sm/SMStructureLens.hpp"
 
 #include <QApplication>
+#include <QToolBox>
 #include <QClipboard>
 #include <QDir>
 #include <QElapsedTimer>
@@ -261,37 +262,76 @@ int main(int argc, char** argv)
     grab(&bar, grabDir, "u3-island-open.png");
     bar.islandEditor()->hide();
 
-    // ---- 23b: a grid edit changes the visible text; ONE undo restores both ----
-    std::printf("[ RUN  ] gridTwoWay\n");
+    // ---- accordion: selecting a call binds the inline Arguments table (retired grid) ----
+    // The old two-way mapping popover (SMMappingGrid) is replaced by the accordion Arguments
+    // table (SMArgMapTable + SMArgSinkGuard). The inline-mapping parity (a mapping rewrites the
+    // tree, one undo restores both) is covered headless in SMArgMapTableTests; here we assert the
+    // outline lists the call and selecting it binds the shared table.
+    std::printf("[ RUN  ] accordionArguments\n");
     setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
     pump(300);
 
-    bar.grid()->openFor(transId, {}, bar.mapToGlobal(QPoint(20, 200)));
+    bar.accordion()->setCurrentIndex(0);        // the Calls section.
+    pump(50);
+    check(bar.calls()->callRowCount() >= 1, "the Calls outline lists the call");
+    bar.calls()->selectCallPath({});            // the guard's root call (HasWaiting).
     pump(150);
-    check(bar.grid()->isVisible(), "the grid is open for the call");
-    grab(bar.grid(), grabDir, "u3-grid-open.png");
+    check((bar.args() != nullptr) && (bar.args()->rowCount() >= 1), "selecting the call binds the Arguments table");
+    grab(&bar, grabDir, "u3-accordion-arguments.png");
 
-    SMOperandField* operand = bar.grid()->findChild<SMOperandField*>(QStringLiteral("smMapGridField_0"));
-    check(operand != nullptr, "the grid has the first operand field");
-    if (operand != nullptr)
+    // ---- SM-21-04: catalog / Insert produces the same id-bound tree as typing --------
+    std::printf("[ RUN  ] catalogInsert\n");
     {
-        operand->setEditText(QStringLiteral("MIN_WAITING"));
-        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-        QApplication::sendEvent(operand->lineEdit(), &enter);
-        pump(300);
+        const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(model.getData(), transId);
+        const SMGuardSymbol* value = nullptr;
+        const SMGuardSymbol* call  = nullptr;
+        for (const SMGuardSymbol& sym : catalog)
+        {
+            if ((value == nullptr) && (sym.isCall == false)) { value = &sym; }
+            if ((call == nullptr) && sym.isCall)             { call = &sym; }
+        }
 
-        checkEq(guardText(model, transId), QStringLiteral("HasWaiting(MIN_WAITING)"), "grid edit rewrote the tree");
-        // SM-21-03: committed references are folded into chip tokens, so the field's plain text
-        // holds replacement chars -- the canonical text is read through committableText().
-        checkEq(field->committableText(), QStringLiteral("HasWaiting(MIN_WAITING)"), "the field text visibly updated");
+        check(value != nullptr, "the catalog offers a value symbol to insert");
+        if (value != nullptr)
+        {
+            setGuard(model, transId, QString());
+            pump(200);
+            field->setFocus();
+            field->insertReference(*value);         // inserts the canonical reference and commits.
+            pump(300);
+            const QString viaInsert = guardText(model, transId);
 
-        model.getUndoStack().undo();
-        pump(300);
-        checkEq(guardText(model, transId), QStringLiteral("HasWaiting(count)"), "ONE undo restored the tree");
-        checkEq(field->committableText(), QStringLiteral("HasWaiting(count)"), "and the visible field text");
+            setGuard(model, transId, value->mention());     // type the same canonical reference.
+            pump(300);
+            const QString viaType = guardText(model, transId);
+            checkEq(viaInsert, viaType, "inserting a symbol == typing its canonical reference (id-bound)");
+        }
+
+        if (call != nullptr)
+        {
+            setGuard(model, transId, QString());
+            pump(200);
+            field->setFocus();
+            field->insertReference(*call);          // inserts `@cond:name()`, caret in the parens.
+            pump(150);
+            check(field->committableText().contains(call->name + QLatin1Char('(')), "inserting a call inserts name( with the caret in the parens");
+        }
     }
 
-    bar.grid()->hide();
+    // ---- SM-21-04: the one warning channel raises for an unmapped argument -----------
+    std::printf("[ RUN  ] warningChannel\n");
+    {
+        SMFixBar* warn = bar.findChild<SMFixBar*>(QStringLiteral("smGuardWarnBar"));
+        check(warn != nullptr, "the warning channel widget exists");
+
+        setGuard(model, transId, QStringLiteral("HasWaiting()"));    // a call with an unmapped formal.
+        pump(400);
+        check((warn != nullptr) && warn->isVisible(), "an unmapped argument raises the warning channel");
+
+        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));   // now fully mapped.
+        pump(400);
+        check((warn != nullptr) && (warn->isVisible() == false), "mapping the argument clears the warning channel");
+    }
 
     // ---- form-first parity: the clause popover path equals the typed path -----
     std::printf("[ RUN  ] formFirstParity\n");
