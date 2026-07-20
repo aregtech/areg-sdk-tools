@@ -396,6 +396,13 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMSceneManager.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
     ${LUSAN}/view/sm/SMToolIcons.cpp
+    ${LUSAN}/model/sm/SMArgumentCommands.cpp
+    ${LUSAN}/model/sm/SMMappingSources.cpp
+    ${LUSAN}/model/sm/SMOperationCommands.cpp
+    ${LUSAN}/model/sm/SMOperationSummary.cpp
+    ${LUSAN}/view/sm/SMMappingEditor.cpp
+    ${LUSAN}/view/sm/SMOperationsEditor.cpp
+    ${LUSAN}/view/sm/SMOperationsDialog.cpp
     ${LUSAN_ROOT}/tests/sm/SMCanvasSmokeTests.cpp
     ${LUSAN}/res/lusan.qrc
 )
@@ -503,6 +510,12 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/view/sm/SMPropertiesPanel.cpp
     ${LUSAN}/view/sm/SMValidationPanel.cpp
+    ${LUSAN}/model/sm/SMArgumentCommands.cpp
+    ${LUSAN}/model/sm/SMMappingSources.cpp
+    ${LUSAN}/model/sm/SMOperationCommands.cpp
+    ${LUSAN}/model/sm/SMOperationSummary.cpp
+    ${LUSAN}/view/sm/SMMappingEditor.cpp
+    ${LUSAN}/view/sm/SMOperationsEditor.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardU4Sweep.cpp
     ${LUSAN}/res/lusan.qrc
 )

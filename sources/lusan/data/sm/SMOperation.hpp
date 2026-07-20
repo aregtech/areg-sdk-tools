@@ -380,6 +380,35 @@ public:
     SMOperationBase* addOperation(SMOperationBase* operation);
 
     /**
+     * \brief   Inserts an operation at \p index (appended when \p index is out of range),
+     *          taking ownership and re-parenting it. The ID is left untouched -- the caller
+     *          (an undo command) owns ID allocation so history navigation never renumbers.
+     * \return  The same pointer that was passed in.
+     **/
+    SMOperationBase* insertOperation(int index, SMOperationBase* operation);
+
+    /**
+     * \brief   Removes the operation at \p index and returns its ownership to the caller.
+     * \return  The detached operation, or nullptr when \p index is out of range.
+     **/
+    SMOperationBase* takeAt(int index);
+
+    /**
+     * \brief   Swaps the two operations at the given indices (the reorder gesture).
+     **/
+    void swapOperations(int index1, int index2);
+
+    /**
+     * \brief   The index of the operation with the given ID, or -1 when absent.
+     **/
+    int indexOf(uint32_t id) const;
+
+    /**
+     * \brief   The operation with the given ID, or nullptr when absent.
+     **/
+    SMOperationBase* findById(uint32_t id) const;
+
+    /**
      * \brief   Writes this operation list wrapped in \p wrapperName (`EntryList`,
      *          `ExitList` or `OperationList`). Writes nothing when the list is empty.
      **/

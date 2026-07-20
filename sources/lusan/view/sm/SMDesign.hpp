@@ -451,6 +451,17 @@ private:
     void setStimulusOfSelection();
 
     /**
+     * \brief   Opens the operations editor dialog for a state's entry or exit list (the
+     *          context-menu access path; the Properties panel embeds the same editor).
+     **/
+    void openStateOperationsDialog(uint32_t stateId, bool entry);
+
+    /**
+     * \brief   Opens the operations editor dialog for a transition's operation list.
+     **/
+    void openTransitionOperationsDialog(uint32_t transitionId);
+
+    /**
      * \brief   Adds an internal transition (no target; runs its operations without
      *          exit/entry) to the single selected state.
      **/

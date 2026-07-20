@@ -151,6 +151,19 @@ public:
     virtual void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 
     /**
+     * \brief   Paints the edge's labels (stimulus signature, guard, and operation summary) plus
+     *          the note badge, each in its own hue so the three read distinctly. Called by the
+     *          scene's foreground pass so the labels stay above the state boxes and readable.
+     **/
+    void paintLabels(QPainter* painter, const QPalette& palette);
+
+    /**
+     * \brief   The scene-coordinate bounds of everything paintLabels draws (label + action +
+     *          note badge), used by the scene to clip its foreground pass.
+     **/
+    QRectF labelBounds() const;
+
+    /**
      * \brief   Re-reads the transition and its Edge layout: stimulus label, shape, bulge,
      *          waypoints, endpoints, and connected states.
      **/
@@ -202,9 +215,30 @@ private:
     void commitGeometry(const QString& text);
 
     /**
-     * \brief   The label rectangle in item (scene) coordinates.
+     * \brief   The anchor point (item/scene coordinates) the labels hang from: the persisted
+     *          label position when the user placed one, otherwise the polyline midpoint.
+     **/
+    QPointF labelAnchor() const;
+
+    /**
+     * \brief   The stimulus label rectangle in item (scene) coordinates. For a default
+     *          (un-dragged) edge the label sits just above the line so a horizontal edge does
+     *          not strike through the text; once the user drags it, it centers on that point.
      **/
     QRectF labelRect() const;
+
+    /**
+     * \brief   The action-summary rectangle just below the transition line (empty when the
+     *          transition has no operations).
+     **/
+    QRectF actionRect() const;
+
+    /**
+     * \brief   The label text shown for the stimulus + guard: the stimulus signature followed by
+     *          the `[guard]` clause. Empty for a transition from the Start pseudo-state (which
+     *          fires automatically and has no stimulus); a `<stimulus>` hint otherwise when unset.
+     **/
+    QString labelText() const;
 
     /**
      * \brief   The note-badge rectangle (item/scene coordinates), just right of the label;
@@ -251,8 +285,11 @@ private:
     SMLayoutEdge::eShape    mShape;         //!< The edge shape (Line or Arc).
     double                  mBulge;         //!< The arc bulge factor.
     QString                 mColorName;     //!< The persisted edge color (empty = theme).
-    QString                 mStimulusText;  //!< The stimulus label text.
+    QString                 mStimulusText;  //!< The stimulus signature label text (`walk(count)`).
+    QString                 mGuardText;     //!< The `[guard]` clause drawn after the stimulus, or empty.
+    QString                 mActionText;    //!< The operation summary drawn below the line.
     int                     mGuardSeverity; //!< The guard's NEGuardStyle severity for the label tint, or -1 (clean).
+    bool                    mSourceIsStart; //!< The source is the Start pseudo-state (no stimulus placeholder).
     bool                    mHasNote;       //!< A note is bound to this transition (badge shown).
     SMNoteEditor            mNoteEditor;    //!< The open in-place note editor (if any).
     QList<QPointF>          mWaypoints;     //!< The interior waypoints, in order.

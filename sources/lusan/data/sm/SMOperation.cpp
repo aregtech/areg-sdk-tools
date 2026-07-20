@@ -812,6 +812,61 @@ SMOperationBase* SMOperationList::addOperation(SMOperationBase* operation)
     return operation;
 }
 
+SMOperationBase* SMOperationList::insertOperation(int index, SMOperationBase* operation)
+{
+    if (operation != nullptr)
+    {
+        operation->setParent(mParent);
+        if ((index < 0) || (index >= mOperations.size()))
+        {
+            mOperations.append(operation);
+        }
+        else
+        {
+            mOperations.insert(index, operation);
+        }
+    }
+
+    return operation;
+}
+
+SMOperationBase* SMOperationList::takeAt(int index)
+{
+    if ((index < 0) || (index >= mOperations.size()))
+    {
+        return nullptr;
+    }
+
+    return mOperations.takeAt(index);
+}
+
+void SMOperationList::swapOperations(int index1, int index2)
+{
+    if ((index1 >= 0) && (index1 < mOperations.size()) && (index2 >= 0) && (index2 < mOperations.size()) && (index1 != index2))
+    {
+        mOperations.swapItemsAt(index1, index2);
+    }
+}
+
+int SMOperationList::indexOf(uint32_t id) const
+{
+    for (int i = 0; i < mOperations.size(); ++i)
+    {
+        if (mOperations.at(i)->getId() == id)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+SMOperationBase* SMOperationList::findById(uint32_t id) const
+{
+    const int index = indexOf(id);
+    return (index >= 0) ? mOperations.at(index) : nullptr;
+}
+
 void SMOperationList::clear()
 {
     for (SMOperationBase* op : mOperations)

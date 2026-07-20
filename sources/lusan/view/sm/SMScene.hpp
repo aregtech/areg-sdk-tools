@@ -283,6 +283,14 @@ signals:
 //////////////////////////////////////////////////////////////////////////
 protected:
     virtual void drawBackground(QPainter* painter, const QRectF& rect) override;
+
+    /**
+     * \brief   Paints the transition edge labels (stimulus, guard, operation summary) on top of
+     *          every item, so a label that overlaps a state box stays readable regardless of the
+     *          edge's z-order (the line itself still draws under the boxes).
+     **/
+    virtual void drawForeground(QPainter* painter, const QRectF& rect) override;
+
     virtual void mousePressEvent(QGraphicsSceneMouseEvent* event) override;
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent* event) override;
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent* event) override;
@@ -358,6 +366,12 @@ private:
      * \brief   Re-reads every state box body (behaviour rows change when transitions do).
      **/
     void refreshStateBodies();
+
+    /**
+     * \brief   Re-reads every transition edge (a transition's operation summary is drawn on the
+     *          edge, so an operation add/remove/change must refresh the edges, not only the boxes).
+     **/
+    void refreshEdges();
 
     /**
      * \brief   Re-reads every composite state box (the submachine miniature goes stale

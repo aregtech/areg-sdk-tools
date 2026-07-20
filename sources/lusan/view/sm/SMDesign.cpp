@@ -37,6 +37,7 @@
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 #include "lusan/view/sm/SMSceneManager.hpp"
+#include "lusan/view/sm/SMOperationsDialog.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
 #include "lusan/view/sm/SMValidationPanel.hpp"
@@ -1117,6 +1118,10 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActStateColor);
         addNoteMenuEntries(menu, state->getElementId(), true);
         menu.addSeparator();
+        const uint32_t stateId = state->getElementId();
+        connect(menu.addAction(tr("Enter Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, true); });
+        connect(menu.addAction(tr("Exit Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, false); });
+        menu.addSeparator();
         menu.addAction(mActRename);
         menu.addAction(mActDelete);
     }
@@ -1129,6 +1134,8 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         }
 
         menu.addAction(mActSetStimulus);
+        const uint32_t transitionId = edge->getElementId();
+        connect(menu.addAction(tr("Operations...")), &QAction::triggered, this, [this, transitionId]() { openTransitionOperationsDialog(transitionId); });
         menu.addAction(mActRaisePriority);
         menu.addAction(mActLowerPriority);
         menu.addSeparator();
@@ -1242,6 +1249,34 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
     updateNavActions();
 
     menu.exec(mView->viewport()->mapToGlobal(pos));
+}
+
+void SMDesign::openStateOperationsDialog(uint32_t stateId, bool entry)
+{
+    SMStateEntry* state = mModel.getData().findStateById(stateId);
+    if (state == nullptr)
+    {
+        return;
+    }
+
+    SMOperationList& list = entry ? state->getEntryList() : state->getExitList();
+    const QString title = (entry ? tr("On Enter -- %1") : tr("On Exit -- %1")).arg(state->getName());
+    SMOperationsDialog dialog(mModel, title, stateId, eDocElementKind::State, 0u, state, &list, this);
+    dialog.exec();
+}
+
+void SMDesign::openTransitionOperationsDialog(uint32_t transitionId)
+{
+    SMTransitionEntry* transition = mModel.getData().findTransitionById(transitionId);
+    if (transition == nullptr)
+    {
+        return;
+    }
+
+    const QString stim = transition->getStimulus().isEmpty() ? tr("transition") : transition->getStimulus();
+    // The transition is its own Param scope (spec 6.8): a transition operation may map stimulus params.
+    SMOperationsDialog dialog(mModel, tr("Operations -- %1").arg(stim), transitionId, eDocElementKind::Transition, transitionId, transition, &transition->getOperations(), this);
+    dialog.exec();
 }
 
 void SMDesign::deleteSelection()
