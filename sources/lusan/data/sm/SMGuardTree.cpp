@@ -149,20 +149,22 @@ SMGuardNode* SMGuardNode::makeVerbatim(eKind kind, const QString& text)
 //////////////////////////////////////////////////////////////////////////
 
 SMGuardNode::SMGuardNode(eKind kind)
-    : mKind     (kind)
-    , mOp       (eCmpOp::Eq)
-    , mSymbolId (0u)
-    , mText     ( )
-    , mChildren ( )
+    : mKind         (kind)
+    , mOp           (eCmpOp::Eq)
+    , mSymbolId     (0u)
+    , mArgFormalId  (0u)
+    , mText         ( )
+    , mChildren     ( )
 {
 }
 
 SMGuardNode::SMGuardNode(const SMGuardNode& src)
-    : mKind     (src.mKind)
-    , mOp       (src.mOp)
-    , mSymbolId (src.mSymbolId)
-    , mText     (src.mText)
-    , mChildren ( )
+    : mKind         (src.mKind)
+    , mOp           (src.mOp)
+    , mSymbolId     (src.mSymbolId)
+    , mArgFormalId  (src.mArgFormalId)
+    , mText         (src.mText)
+    , mChildren     ( )
 {
     mChildren.reserve(src.mChildren.size());
     for (const SMGuardNode* child : src.mChildren)
@@ -184,10 +186,11 @@ SMGuardNode& SMGuardNode::operator = (const SMGuardNode& other)
         qDeleteAll(mChildren);
         mChildren.clear();
 
-        mKind     = other.mKind;
-        mOp       = other.mOp;
-        mSymbolId = other.mSymbolId;
-        mText     = other.mText;
+        mKind         = other.mKind;
+        mOp           = other.mOp;
+        mSymbolId     = other.mSymbolId;
+        mArgFormalId  = other.mArgFormalId;
+        mText         = other.mText;
         mChildren.reserve(other.mChildren.size());
         for (const SMGuardNode* child : other.mChildren)
         {
@@ -207,6 +210,11 @@ SMGuardNode* SMGuardNode::addChild(SMGuardNode* child)
 bool SMGuardNode::equals(const SMGuardNode& other) const
 {
     if ((mKind != other.mKind) || (mChildren.size() != other.mChildren.size()))
+        return false;
+
+    // The formal binding is part of a node's identity (a Call's arg child; 0 elsewhere),
+    // so a re-bind to a different formal is a real difference the round-trip test sees.
+    if (mArgFormalId != other.mArgFormalId)
         return false;
 
     if ((mKind == eKind::Cmp) && (mOp != other.mOp))
@@ -266,10 +274,17 @@ void SMGuardNode::writeToXml(QXmlStreamWriter& xml) const
     }
     else if (mKind == eKind::Call)
     {
-        // Each argument wraps in <Arg>, in declared-parameter order.
+        // Each argument wraps in <Arg>, in declared-parameter order. The wrapper carries the
+        // bound formal's id (Option A) when known; a legacy arg (0) writes no id and is
+        // matched back to a formal by position on load.
         for (const SMGuardNode* child : mChildren)
         {
             xml.writeStartElement(XmlSM::xmlSMElementGuardArg);
+            if (child->mArgFormalId != 0u)
+            {
+                xml.writeAttribute(XmlSM::xmlSMAttributeGuardRefId, QString::number(child->mArgFormalId));
+            }
+
             child->writeToXml(xml);
             xml.writeEndElement();
         }
@@ -318,11 +333,15 @@ SMGuardNode* SMGuardNode::readFromXml(QXmlStreamReader& xml)
         {
             if (xml.name() == XmlSM::xmlSMElementGuardArg)
             {
+                // Capture the wrapper's formal id BEFORE descending into the operand (the
+                // reader's attributes move with it); a legacy <Arg> has none -> 0.
+                const uint32_t formalId = xml.attributes().value(XmlSM::xmlSMAttributeGuardRefId).toUInt();
                 if (xml.readNextStartElement())
                 {
                     SMGuardNode* arg = readFromXml(xml);
                     if (arg != nullptr)
                     {
+                        arg->mArgFormalId = formalId;
                         node->mChildren.append(arg);
                     }
                     // Consume the rest of the <Arg> element.

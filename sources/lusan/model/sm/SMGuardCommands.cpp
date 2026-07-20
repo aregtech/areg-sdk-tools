@@ -19,11 +19,13 @@
 
 #include "lusan/model/sm/SMGuardCommands.hpp"
 
+#include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
+#include "lusan/model/sm/SMGuardSymbols.hpp"
 
 namespace
 {
@@ -205,6 +207,113 @@ SMSetGuardCommand* SMGuardCommands::replaceArg(StateMachineData& data, DocModelN
         delete newArg;
     }
 
+    return commandFor(data, notifier, transitionId, root, ok, text);
+}
+
+namespace
+{
+    //!< The index of the Call arg child bound to \p formalId, or -1 when none is.
+    int indexOfFormal(const SMGuardNode* call, uint32_t formalId)
+    {
+        for (int i = 0; i < call->getCount(); ++i)
+        {
+            if (call->childAt(i)->getArgFormalId() == formalId)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    //!< The declared position of \p formalId among \p method's formals, or a large value when
+    //!< it is not a formal (a legacy positional arg, id 0, sorts to the end).
+    int declaredPos(const SMMethodEntry* method, uint32_t formalId)
+    {
+        if ((method != nullptr) && (formalId != 0u))
+        {
+            const QList<MethodParameter>& formals = method->getElements();
+            for (int i = 0; i < formals.size(); ++i)
+            {
+                if (formals.at(i).getId() == formalId)
+                {
+                    return i;
+                }
+            }
+        }
+
+        return 1000000;
+    }
+
+    //!< The child index at which a new arg for \p formalId keeps the list in declared order.
+    int insertionIndex(const SMGuardNode* call, const SMMethodEntry* method, uint32_t formalId)
+    {
+        const int pos = declaredPos(method, formalId);
+        int index = 0;
+        for (int i = 0; i < call->getCount(); ++i)
+        {
+            if (declaredPos(method, call->childAt(i)->getArgFormalId()) < pos)
+            {
+                ++index;
+            }
+        }
+
+        return index;
+    }
+}
+
+SMSetGuardCommand* SMGuardCommands::setArgByFormal(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, uint32_t formalId, SMGuardNode* newArg, const QString& text)
+{
+    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    if ((root == nullptr) || (formalId == 0u)) { delete newArg; delete root; return nullptr; }
+
+    SMGuardNode* call = nodeAt(root, callPath);
+    bool ok = false;
+    if ((call != nullptr) && (call->getKind() == eKind::Call) && (newArg != nullptr))
+    {
+        newArg->setArgFormalId(formalId);
+        const int existing = indexOfFormal(call, formalId);
+        if (existing >= 0)
+        {
+            delete call->getChildren().at(existing);
+            call->getChildren()[existing] = newArg;
+        }
+        else
+        {
+            const SMMethodEntry* method = SMGuardSymbols::method(data, call->getSymbolId());
+            call->getChildren().insert(insertionIndex(call, method, formalId), newArg);
+        }
+
+        ok = true;
+    }
+    else
+    {
+        delete newArg;
+    }
+
+    return commandFor(data, notifier, transitionId, root, ok, text);
+}
+
+SMSetGuardCommand* SMGuardCommands::clearArgByFormal(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, uint32_t formalId, const QString& text)
+{
+    SMGuardNode* root = cloneCurrentTree(data, transitionId);
+    if (root == nullptr) { return nullptr; }
+
+    SMGuardNode* call = nodeAt(root, callPath);
+    bool ok = false;
+    if ((call != nullptr) && (call->getKind() == eKind::Call))
+    {
+        const int existing = indexOfFormal(call, formalId);
+        if (existing >= 0)
+        {
+            // A1: removing the last mapped formal keeps the CALL; only the child vanishes.
+            delete call->getChildren().at(existing);
+            call->getChildren().removeAt(existing);
+            ok = true;
+        }
+    }
+
+    // A no-op (nothing was bound) returns nullptr, so a plain focus-out never grows the stack.
     return commandFor(data, notifier, transitionId, root, ok, text);
 }
 

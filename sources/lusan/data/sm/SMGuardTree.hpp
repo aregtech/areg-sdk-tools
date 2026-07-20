@@ -121,6 +121,17 @@ public:
     inline uint32_t getSymbolId() const;
     inline void setSymbolId(uint32_t id);
 
+    /**
+     * \brief   The document id of the FORMAL parameter this node is bound to -- meaningful
+     *          ONLY when the node is a direct argument child of a \ref eKind::Call node
+     *          (SM-21-02, Option A). 0 means "not an argument" or a legacy positional arg
+     *          (no id was stored), which the projection matches back to a formal by position.
+     *          Keying an arg on the formal's id (never its position) is what lets a signature
+     *          insert/rename never re-bind, and what makes ghost and orphan rows representable.
+     **/
+    inline uint32_t getArgFormalId() const;
+    inline void setArgFormalId(uint32_t id);
+
     inline const QString& getText() const;
     inline void setText(const QString& text);
 
@@ -171,6 +182,7 @@ private:
     eKind                   mKind;      //!< The node kind.
     eCmpOp                  mOp;        //!< The comparison operator (Cmp only).
     uint32_t                mSymbolId;  //!< The referenced symbol's document ID (Call/Attr/Const/Param).
+    uint32_t                mArgFormalId;//!< The bound formal parameter's ID (a Call's arg child only; 0 = positional).
     QString                 mText;      //!< The verbatim bytes (Lit/Lambda/Raw).
     QList<SMGuardNode*>     mChildren;  //!< The owned child nodes, in operand order.
 };
@@ -312,6 +324,16 @@ inline uint32_t SMGuardNode::getSymbolId() const
 inline void SMGuardNode::setSymbolId(uint32_t id)
 {
     mSymbolId = id;
+}
+
+inline uint32_t SMGuardNode::getArgFormalId() const
+{
+    return mArgFormalId;
+}
+
+inline void SMGuardNode::setArgFormalId(uint32_t id)
+{
+    mArgFormalId = id;
 }
 
 inline const QString& SMGuardNode::getText() const

@@ -1,5 +1,6 @@
 list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkGuard.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMAttribute.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
@@ -55,6 +56,7 @@ list(APPEND LUSAN_SRC
 list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/IArgSink.hpp
     ${LUSAN}/view/sm/SMArgMapTable.hpp
+    ${LUSAN}/view/sm/SMArgSinkGuard.hpp
     ${LUSAN}/view/sm/SMArgSinkOperation.hpp
     ${LUSAN}/view/sm/SMAttribute.hpp
     ${LUSAN}/view/sm/SMCodeEditor.hpp

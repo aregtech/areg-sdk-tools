@@ -410,6 +410,15 @@ namespace
             const SMMethodEntry* method = SMGuardSymbols::conditionMethod(mData, idTok.text);
             if (method != nullptr)
             {
+                // Option A: a positional arg binds the formal at its position, keyed by the
+                // formal's document id (never its index) so a later signature edit never
+                // re-binds. A bare arg past the declared count keeps id 0 (unbound extra).
+                const QList<MethodParameter>& formals = method->getElements();
+                for (int i = 0; (i < args.size()) && (i < formals.size()); ++i)
+                {
+                    args[i]->setArgFormalId(formals.at(i).getId());
+                }
+
                 return SMGuardNode::makeCall(method->getId(), args);
             }
 
