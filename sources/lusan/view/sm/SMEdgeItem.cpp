@@ -24,6 +24,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
+#include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMGuardValidation.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -108,7 +109,9 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mBulge        (0.0)
     , mColorName    ( )
     , mStimulusText ( )
+    , mGuardText    ( )
     , mGuardSeverity(-1)
+    , mSourceIsStart(false)
     , mHasNote      (false)
     , mWaypoints    ( )
     , mHasAnchors   (false)
@@ -202,6 +205,9 @@ void SMEdgeItem::updateFromModel()
 
     const SMStateEntry* owner = data.findTransitionOwner(getElementId());
     mSourceId    = (owner != nullptr ? owner->getId() : 0);
+    // A transition out of the Start pseudo-state fires automatically: it never carries a stimulus,
+    // so no `<stimulus>` placeholder is shown for it.
+    mSourceIsStart = (owner != nullptr) && (owner->getKind() == SMStateEntry::eStateKind::Start);
     mTargetName  = transition->getTo();
     const SMStateEntry* target = data.findState(mTargetName);
     mTargetId    = (target != nullptr ? target->getId() : 0);
@@ -221,9 +227,13 @@ void SMEdgeItem::updateFromModel()
                                           : NEGuardStyle::eSeverity::Warn);
     }
 
+    // The stimulus reads as a method signature (`walk(count)`); a timer stays bare. The guard
+    // clause is kept separate so paintLabels can tint the stimulus and the condition distinctly.
+    const QString signature = SMOperationSummary::stimulusSignature(data, *transition);
+    mStimulusText = signature;
     if (summary.isEmpty())
     {
-        mStimulusText = transition->getStimulus();
+        mGuardText.clear();
         setToolTip(QString());
     }
     else
@@ -233,8 +243,25 @@ void SMEdgeItem::updateFromModel()
         const QString shortSummary = (summary.length() > MAX_SUMMARY)
                 ? (summary.left(MAX_SUMMARY - 3) + QStringLiteral("..."))
                 : summary;
-        mStimulusText = transition->getStimulus() + QChar('[') + glyph + shortSummary + QChar(']');
-        setToolTip(transition->getStimulus() + QChar('[') + summary + QChar(']'));
+        mGuardText = QChar('[') + glyph + shortSummary + QChar(']');
+        setToolTip(signature + QChar('[') + summary + QChar(']'));
+    }
+
+    // The transition's operations are summarized below the line (the action reads under it).
+    const SMOperationList& ops = transition->getOperations();
+    mActionText.clear();
+    if (ops.getCount() > 0)
+    {
+        constexpr int MAX_ACTION = 40;
+        mActionText = SMOperationSummary::text(data, *ops.at(0));
+        if (ops.getCount() > 1)
+        {
+            mActionText += QStringLiteral(" (+%1)").arg(ops.getCount() - 1);
+        }
+        if (mActionText.length() > MAX_ACTION)
+        {
+            mActionText = mActionText.left(MAX_ACTION - 3) + QStringLiteral("...");
+        }
     }
 
     mHasNote     = (data.getLayout().findNoteByOwner(getElementId()) != nullptr);
@@ -348,58 +375,104 @@ void SMEdgeItem::rebuildPath()
     }
 }
 
+QPointF SMEdgeItem::labelAnchor() const
+{
+    if (mHasLabel)
+    {
+        return mLabelPos;
+    }
+
+    // Halfway along the drawn polyline.
+    double total = 0.0;
+    for (int i = 1; i < mPath.size(); ++i)
+    {
+        total += distance(mPath.at(i - 1), mPath.at(i));
+    }
+
+    double half = total / 2.0;
+    QPointF anchor = mPath.first();
+    for (int i = 1; i < mPath.size(); ++i)
+    {
+        const double seg = distance(mPath.at(i - 1), mPath.at(i));
+        if (seg >= half)
+        {
+            const double t = (seg > 1e-6 ? half / seg : 0.0);
+            anchor = mPath.at(i - 1) + (mPath.at(i) - mPath.at(i - 1)) * t;
+            break;
+        }
+
+        half -= seg;
+    }
+
+    return anchor;
+}
+
+QString SMEdgeItem::labelText() const
+{
+    const QString text = mStimulusText + mGuardText;
+    if (text.isEmpty() == false)
+    {
+        return text;
+    }
+
+    // No stimulus and no guard: a Start-state transition shows nothing (it fires automatically);
+    // any other transition shows a subtle hint that a stimulus can be set.
+    return mSourceIsStart ? QString() : translate("<stimulus>");
+}
+
 QRectF SMEdgeItem::labelRect() const
+{
+    const QString text = labelText();
+    if ((mValid == false) || mPath.isEmpty() || text.isEmpty())
+    {
+        return QRectF();
+    }
+
+    const QPointF anchor = labelAnchor();
+    const QFontMetricsF metrics{ QFont() };
+    const QSizeF size = metrics.size(0, text) + QSizeF(6.0, 2.0);
+
+    // Default edges lift the stimulus above the line so a horizontal edge does not strike
+    // through it; a user-dragged label centers on its point (the user placed it deliberately).
+    constexpr double GAP = 3.0;
+    const double top = mHasLabel ? (anchor.y() - size.height() / 2.0) : (anchor.y() - size.height() - GAP);
+    return QRectF(anchor.x() - size.width() / 2.0, top, size.width(), size.height());
+}
+
+QRectF SMEdgeItem::actionRect() const
+{
+    if ((mValid == false) || mPath.isEmpty() || mActionText.isEmpty())
+    {
+        return QRectF();
+    }
+
+    const QPointF anchor = labelAnchor();
+    const QFontMetricsF metrics{ QFont() };
+    const QSizeF size = metrics.size(0, mActionText) + QSizeF(6.0, 2.0);
+
+    // The action reads below the line; when the user dragged the stimulus label, it tucks
+    // directly beneath that label instead.
+    constexpr double GAP = 3.0;
+    const double top = mHasLabel ? (labelRect().bottom() + 1.0) : (anchor.y() + GAP);
+    return QRectF(anchor.x() - size.width() / 2.0, top, size.width(), size.height());
+}
+
+QRectF SMEdgeItem::noteBadgeRect() const
 {
     if ((mValid == false) || mPath.isEmpty())
     {
         return QRectF();
     }
 
-    QPointF anchor;
-    if (mHasLabel)
-    {
-        anchor = mLabelPos;
-    }
-    else
-    {
-        // Halfway along the drawn polyline.
-        double total = 0.0;
-        for (int i = 1; i < mPath.size(); ++i)
-        {
-            total += distance(mPath.at(i - 1), mPath.at(i));
-        }
-
-        double half = total / 2.0;
-        anchor = mPath.first();
-        for (int i = 1; i < mPath.size(); ++i)
-        {
-            const double seg = distance(mPath.at(i - 1), mPath.at(i));
-            if (seg >= half)
-            {
-                const double t = (seg > 1e-6 ? half / seg : 0.0);
-                anchor = mPath.at(i - 1) + (mPath.at(i) - mPath.at(i - 1)) * t;
-                break;
-            }
-
-            half -= seg;
-        }
-    }
-
-    const QString text = mStimulusText.isEmpty() ? translate("<stimulus>") : mStimulusText;
-    const QFontMetricsF metrics{ QFont() };
-    const QSizeF size = metrics.size(0, text) + QSizeF(6.0, 2.0);
-    return QRectF(anchor - QPointF(size.width() / 2.0, size.height() / 2.0), size);
-}
-
-QRectF SMEdgeItem::noteBadgeRect() const
-{
+    // Sit just right of the label; with no label (a Start transition) hang off the midpoint.
     const QRectF label = labelRect();
-    if (label.isNull())
+    if (label.isNull() == false)
     {
-        return QRectF();
+        return QRectF(label.right() + 3.0, label.center().y() - 7.0, 13.0, 14.0);
     }
 
-    return QRectF(label.right() + 3.0, label.center().y() - 7.0, 13.0, 14.0);
+    const QPointF anchor = labelAnchor();
+    return QRectF(anchor.x() + 4.0, anchor.y() - 7.0, 13.0, 14.0);
 }
 
 QRectF SMEdgeItem::boundingRect() const
@@ -423,6 +496,10 @@ QRectF SMEdgeItem::boundingRect() const
 
     QRectF rect{ QPointF(minX, minY), QPointF(maxX, maxY) };
     rect = rect.united(labelRect());
+    if (actionRect().isNull() == false)
+    {
+        rect = rect.united(actionRect());
+    }
     if (mHasNote)
     {
         rect = rect.united(noteBadgeRect());
@@ -542,37 +619,8 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
 
     paintArrowHead(painter, mPath.at(mPath.size() - 2), mEnd, color);
 
-    // Stimulus label; the guard severity tint overrides the edge color (B13).
-    const QRectF label = labelRect();
-    painter->setPen((mGuardSeverity >= 0)
-                    ? NEGuardStyle::severityColor(static_cast<NEGuardStyle::eSeverity>(mGuardSeverity))
-                    : color);
-    painter->setBrush(Qt::NoBrush);
-    painter->drawText(label, Qt::AlignCenter, mStimulusText.isEmpty() ? translate("<stimulus>") : mStimulusText);
-
-    // Note badge just right of the label: a small folded-page glyph signalling a bound note.
-    if (mHasNote)
-    {
-        const QRectF badge = noteBadgeRect();
-        const double fold = 4.0;
-        QPainterPath page;
-        page.moveTo(badge.left(), badge.top());
-        page.lineTo(badge.right() - fold, badge.top());
-        page.lineTo(badge.right(), badge.top() + fold);
-        page.lineTo(badge.right(), badge.bottom());
-        page.lineTo(badge.left(), badge.bottom());
-        page.closeSubpath();
-
-        QColor fill{ color };
-        fill.setAlphaF(0.16);
-        painter->setBrush(fill);
-        painter->setPen(QPen(color, 1.0));
-        painter->drawPath(page);
-        painter->drawLine(QPointF(badge.right() - fold, badge.top()), QPointF(badge.right() - fold, badge.top() + fold));
-        painter->drawLine(QPointF(badge.right() - fold, badge.top() + fold), QPointF(badge.right(), badge.top() + fold));
-        painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 6.0), QPointF(badge.right() - 2.5, badge.top() + 6.0));
-        painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 9.5), QPointF(badge.right() - 4.5, badge.top() + 9.5));
-    }
+    // The labels (stimulus, guard, action summary) and the note badge are painted by the scene's
+    // foreground pass (paintLabels), so they stay above the state boxes and readable.
 
     if (isSelected())
     {
@@ -600,6 +648,99 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
         painter->setPen(QPen(NESMDesign::selectionColor(palette), 1.4));
         painter->drawEllipse(mBegin, h / 2.0, h / 2.0);
         painter->drawEllipse(mEnd, h / 2.0, h / 2.0);
+    }
+}
+
+QRectF SMEdgeItem::labelBounds() const
+{
+    QRectF rect = labelRect();
+    if (actionRect().isNull() == false)
+    {
+        rect = rect.united(actionRect());
+    }
+
+    if (mHasNote)
+    {
+        rect = rect.united(noteBadgeRect());
+    }
+
+    return rect;
+}
+
+void SMEdgeItem::paintLabels(QPainter* painter, const QPalette& palette)
+{
+    if ((mValid == false) || mPath.isEmpty())
+    {
+        return;
+    }
+
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setBrush(Qt::NoBrush);
+
+    // Stimulus (its own hue) then the guard clause (a distinct condition hue / severity tint),
+    // so the two read apart at a glance (issue: differentiate stimulus vs condition).
+    const QRectF label = labelRect();
+    if (label.isNull() == false)
+    {
+        const QFontMetricsF metrics{ QFont() };
+        if (mStimulusText.isEmpty() && mGuardText.isEmpty())
+        {
+            painter->setPen(palette.color(QPalette::Disabled, QPalette::Text));
+            painter->drawText(label, Qt::AlignCenter, labelText());
+        }
+        else
+        {
+            double x = label.left() + 3.0;
+            if (mStimulusText.isEmpty() == false)
+            {
+                painter->setPen(NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Stimulus));
+                const double advance = metrics.horizontalAdvance(mStimulusText);
+                painter->drawText(QRectF(x, label.top(), advance, label.height()), Qt::AlignVCenter | Qt::AlignLeft, mStimulusText);
+                x += advance;
+            }
+
+            if (mGuardText.isEmpty() == false)
+            {
+                painter->setPen((mGuardSeverity >= 0)
+                                ? NEGuardStyle::severityColor(static_cast<NEGuardStyle::eSeverity>(mGuardSeverity))
+                                : NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Handler));
+                const double advance = metrics.horizontalAdvance(mGuardText);
+                painter->drawText(QRectF(x, label.top(), advance, label.height()), Qt::AlignVCenter | Qt::AlignLeft, mGuardText);
+            }
+        }
+    }
+
+    // Operation summary below the line, in a third hue distinct from stimulus and guard.
+    const QRectF action = actionRect();
+    if (action.isNull() == false)
+    {
+        painter->setPen(NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Fsm));
+        painter->drawText(action, Qt::AlignCenter, mActionText);
+    }
+
+    // Note badge just right of the label: a small folded-page glyph signalling a bound note.
+    if (mHasNote)
+    {
+        const QColor color = strokeColor(palette);
+        const QRectF badge = noteBadgeRect();
+        const double fold = 4.0;
+        QPainterPath page;
+        page.moveTo(badge.left(), badge.top());
+        page.lineTo(badge.right() - fold, badge.top());
+        page.lineTo(badge.right(), badge.top() + fold);
+        page.lineTo(badge.right(), badge.bottom());
+        page.lineTo(badge.left(), badge.bottom());
+        page.closeSubpath();
+
+        QColor fill{ color };
+        fill.setAlphaF(0.16);
+        painter->setBrush(fill);
+        painter->setPen(QPen(color, 1.0));
+        painter->drawPath(page);
+        painter->drawLine(QPointF(badge.right() - fold, badge.top()), QPointF(badge.right() - fold, badge.top() + fold));
+        painter->drawLine(QPointF(badge.right() - fold, badge.top() + fold), QPointF(badge.right(), badge.top() + fold));
+        painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 6.0), QPointF(badge.right() - 2.5, badge.top() + 6.0));
+        painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 9.5), QPointF(badge.right() - 4.5, badge.top() + 9.5));
     }
 }
 

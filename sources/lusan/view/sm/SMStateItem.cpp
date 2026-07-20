@@ -24,6 +24,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
@@ -39,6 +40,7 @@
 #include <QLineEdit>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPolygonF>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QToolTip>
@@ -210,12 +212,27 @@ namespace
             break;
         }
 
-        case SMStateItem::eRowIcon::Timer:
+        case SMStateItem::eRowIcon::TimerStart:
         {
-            // Clock face with one hand.
+            // Clock face with a play triangle (start).
             const QRectF face{ rect.center().x() - 4.5, midY - 4.5, 9.0, 9.0 };
             painter->drawEllipse(face);
-            painter->drawLine(face.center(), face.center() + QPointF(2.5, -2.5));
+            painter->setBrush(color);
+            painter->drawPolygon(QPolygonF({ QPointF(face.center().x() - 1.5, midY - 2.2)
+                                           , QPointF(face.center().x() + 2.5, midY)
+                                           , QPointF(face.center().x() - 1.5, midY + 2.2) }));
+            painter->setBrush(Qt::NoBrush);
+            break;
+        }
+
+        case SMStateItem::eRowIcon::TimerStop:
+        {
+            // Clock face with a stop square.
+            const QRectF face{ rect.center().x() - 4.5, midY - 4.5, 9.0, 9.0 };
+            painter->drawEllipse(face);
+            painter->setBrush(color);
+            painter->drawRect(QRectF(face.center().x() - 1.8, midY - 1.8, 3.6, 3.6));
+            painter->setBrush(Qt::NoBrush);
             break;
         }
 
@@ -875,46 +892,51 @@ void SMStateItem::updateFromModel()
 void SMStateItem::rebuildRows(const SMStateEntry& state)
 {
     mRows.clear();
+
+    const SMScene* canvas = getCanvas();
+    const StateMachineData* data = (canvas != nullptr) ? &canvas->getModel().getData() : nullptr;
+
+    // The icon differentiates the operation kind (start/stop timer, event, generic action);
+    // a generic action keeps the enter/exit direction arrow so the two contexts stay distinct.
+    const auto iconFor = [](const SMOperationBase& op, bool entryList) -> eRowIcon
+    {
+        switch (op.getOperationType())
+        {
+        case SMOperationBase::eOperation::TimerStart:   return eRowIcon::TimerStart;
+        case SMOperationBase::eOperation::TimerStop:    return eRowIcon::TimerStop;
+        case SMOperationBase::eOperation::EventSend:    return eRowIcon::Event;
+        default:                                        return entryList ? eRowIcon::Entry : eRowIcon::Exit;
+        }
+    };
+
+    const auto rowText = [data](const SMOperationBase& op) -> QString
+    {
+        return (data != nullptr) ? SMOperationSummary::text(*data, op) : operationText(op);
+    };
+
     for (const SMOperationBase* op : state.getEntryList().getOperations())
     {
-        mRows.append(BodyRow{ eRowIcon::Entry, operationText(*op) });
+        mRows.append(BodyRow{ iconFor(*op, true), rowText(*op) });
     }
 
-    // Timer and event-send reactions from the state's transitions, then the internal transitions themselves.
-    for (const SMTransitionEntry* transition : state.getTransitions().getElements())
-    {
-        for (const SMOperationBase* op : transition->getOperations().getOperations())
-        {
-            const SMOperationBase::eOperation kind = op->getOperationType();
-            if ((kind == SMOperationBase::eOperation::TimerStart) || (kind == SMOperationBase::eOperation::TimerStop))
-            {
-                mRows.append(BodyRow{ eRowIcon::Timer, operationText(*op) });
-            }
-        }
-    }
-
-    for (const SMTransitionEntry* transition : state.getTransitions().getElements())
-    {
-        for (const SMOperationBase* op : transition->getOperations().getOperations())
-        {
-            if (op->getOperationType() == SMOperationBase::eOperation::EventSend)
-            {
-                mRows.append(BodyRow{ eRowIcon::Event, operationText(*op) });
-            }
-        }
-    }
-
+    // External transitions show their operations on the edge (below the line); internal ones
+    // have no edge, so their operations read here under the "on <stimulus>" row.
     for (const SMTransitionEntry* transition : state.getTransitions().getElements())
     {
         if (transition->isExternal() == false)
         {
-            mRows.append(BodyRow{ eRowIcon::Internal, QStringLiteral("on ") + transition->getStimulus() });
+            const QString stim = (data != nullptr) ? SMOperationSummary::stimulusSignature(*data, *transition) : transition->getStimulus();
+            mRows.append(BodyRow{ eRowIcon::Internal, QStringLiteral("on ") + stim });
+            for (const SMOperationBase* op : transition->getOperations().getOperations())
+            {
+                mRows.append(BodyRow{ iconFor(*op, true), rowText(*op) });
+            }
         }
     }
 
     for (const SMOperationBase* op : state.getExitList().getOperations())
     {
-        mRows.append(BodyRow{ eRowIcon::Exit, operationText(*op) });
+        mRows.append(BodyRow{ iconFor(*op, false), rowText(*op) });
     }
 }
 

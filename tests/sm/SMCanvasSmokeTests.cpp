@@ -1644,18 +1644,21 @@ int main(int argc, char* argv[])
             CHECK(list.getElements().first()->getId() == topId);
         }
 
-        // The stimulus picker is a fixed list of triggers/events/timers (each row carries its
-        // real name at Qt::UserRole+1). Picking a listed entry sets it undoably; a value that is
-        // not on the list is rejected - the panel never creates or renames a registry entry.
+        // The stimulus picker is a read-only, closed list of triggers/events/timers (row 0 is
+        // "(none)"; each row carries its real name at Qt::UserRole+1). Picking a listed entry sets
+        // it undoably; the panel never creates or renames a registry entry, and free text is
+        // impossible (the combo is not editable).
         doc.getSelectionModel().setSelection(QList<uint32_t>{ firstTxId });
         QApplication::processEvents();
         QComboBox* stim = props->stimulusNameCombo();
+        CHECK(stim->isEditable() == false);
 
         const QString curStim = d.findTransitionById(firstTxId)->getStimulus();
         int pickRow = -1;
         for (int i = 0; i < stim->count(); ++i)
         {
-            if (stim->itemData(i, Qt::UserRole + 1).toString() != curStim)
+            const QString name = stim->itemData(i, Qt::UserRole + 1).toString();
+            if ((name.isEmpty() == false) && (name != curStim))
             {
                 pickRow = i;
                 break;
@@ -1666,24 +1669,21 @@ int main(int argc, char* argv[])
         {
             const QString pickName = stim->itemData(pickRow, Qt::UserRole + 1).toString();
             const int indexBeforePick = doc.getUndoStack().index();  // index, not count: prior undo left a redoable
-            stim->setEditText(stim->itemText(pickRow));
-            QMetaObject::invokeMethod(stim->lineEdit(), "editingFinished");
+            stim->setCurrentIndex(pickRow);
+            QMetaObject::invokeMethod(stim, "activated", Q_ARG(int, pickRow));
             CHECK(d.findTransitionById(firstTxId)->getStimulus() == pickName);
             CHECK(doc.getUndoStack().index() == indexBeforePick + 1);
+
+            // Row 0 ("(none)") detaches the stimulus, undoably.
+            const int indexBeforeClear = doc.getUndoStack().index();
+            stim->setCurrentIndex(0);
+            QMetaObject::invokeMethod(stim, "activated", Q_ARG(int, 0));
+            CHECK(d.findTransitionById(firstTxId)->getStimulus().isEmpty());
+            CHECK(doc.getUndoStack().index() == indexBeforeClear + 1);
+            doc.getUndoStack().undo();
             doc.getUndoStack().undo();
             CHECK(d.findTransitionById(firstTxId)->getStimulus() == curStim);
         }
-
-        // A name that is not on the list is rejected: no registry entry created, no change pushed.
-        const QString notListed = QStringLiteral("NotAListedStimulus");
-        CHECK(d.isStimulusName(notListed) == false);
-        const int indexBeforeReject = doc.getUndoStack().index();
-        const QString beforeReject = d.findTransitionById(firstTxId)->getStimulus();
-        stim->setEditText(notListed);
-        QMetaObject::invokeMethod(stim->lineEdit(), "editingFinished");
-        CHECK(d.isStimulusName(notListed) == false);
-        CHECK(d.findTransitionById(firstTxId)->getStimulus() == beforeReject);
-        CHECK(doc.getUndoStack().index() == indexBeforeReject);
 
         // The guard help popup must stay readable whether the Properties panel sits on the left
         // or on the right side of its host window.

@@ -1,0 +1,758 @@
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the Areg Framework.
+ *
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE file included
+ *  with this distribution or contact us at info[at]areg.tech.
+ *
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/sm/SMOperationsEditor.cpp
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, FSM operation-list editor (entry/exit/transition actions).
+ *
+ ************************************************************************/
+
+#include "lusan/view/sm/SMOperationsEditor.hpp"
+
+#include "lusan/data/common/MethodBase.hpp"
+#include "lusan/data/sm/SMAttributeData.hpp"
+#include "lusan/data/sm/SMEventData.hpp"
+#include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMTimerData.hpp"
+#include "lusan/data/sm/SMTransition.hpp"
+#include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/common/DocCommand.hpp"
+#include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/sm/SMArgumentCommands.hpp"
+#include "lusan/model/sm/SMOperationCommands.hpp"
+#include "lusan/model/sm/StateMachineModel.hpp"
+
+#include <QComboBox>
+#include <QCompleter>
+#include <QEvent>
+#include <QFont>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QScrollArea>
+#include <QSignalBlocker>
+#include <QTimer>
+#include <QToolButton>
+#include <QVBoxLayout>
+
+namespace
+{
+    using eOp     = SMOperationBase::eOperation;
+    using eSource = SMArgumentEntry::eValueSource;
+
+    constexpr int RoleTimerOpId { Qt::UserRole + 1 };
+
+    //!< Removes and deletes every widget owned by a layout (used to rebuild the timer rows).
+    void clearLayout(QLayout* layout)
+    {
+        while (QLayoutItem* item = layout->takeAt(0))
+        {
+            if (QWidget* w = item->widget())
+            {
+                w->deleteLater();
+            }
+            delete item;
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Construction
+//////////////////////////////////////////////////////////////////////////
+
+SMOperationsEditor::SMOperationsEditor(StateMachineModel& model, QWidget* parent /*= nullptr*/)
+    : QWidget           (parent)
+    , mModel            (model)
+    , mOwnerId          (0u)
+    , mOwnerKind        (eDocElementKind::State)
+    , mScopeTransition  (0u)
+    , mAllowParam       (false)
+    , mOwner            (nullptr)
+    , mList             (nullptr)
+    , mApplying         (false)
+    , mRebuildQueued    (false)
+    , mActionCombo      (nullptr)
+    , mActionParams     (nullptr)
+    , mEventCombo       (nullptr)
+    , mEventParams      (nullptr)
+    , mTimersList       (nullptr)
+    , mTimersEmpty      (nullptr)
+{
+    buildUi();
+
+    DocModelNotifier& notifier = mModel.getNotifier();
+    const auto onChange = [this](uint32_t id, eDocElementKind kind) { onNotifierChanged(id, kind); };
+    connect(&notifier, &DocModelNotifier::elementAdded, this, onChange);
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, onChange);
+    connect(&notifier, &DocModelNotifier::elementChanged, this, onChange);
+    connect(&notifier, &DocModelNotifier::listReordered, this, onChange);
+    connect(&notifier, &DocModelNotifier::nameChanged, this, [this](uint32_t id, const QString&, const QString&) { onNotifierChanged(id, eDocElementKind::State); });
+}
+
+SMOperationsEditor::~SMOperationsEditor()
+{
+    mModel.getNotifier().disconnect(this);
+}
+
+void SMOperationsEditor::buildUi()
+{
+    QVBoxLayout* outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+
+    // A scroll area keeps the outer size stable when parameter rows appear or disappear.
+    QScrollArea* scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    outer->addWidget(scroll);
+
+    QWidget* content = new QWidget(scroll);
+    QVBoxLayout* box = new QVBoxLayout(content);
+    box->setContentsMargins(6, 6, 6, 6);
+    box->setSpacing(8);
+
+    // Action group.
+    QGroupBox* actionGroup = new QGroupBox(tr("Action"), content);
+    QVBoxLayout* actionBox = new QVBoxLayout(actionGroup);
+    mActionCombo = new QComboBox(actionGroup);
+    connect(mActionCombo, &QComboBox::activated, this, [this](int) { setActionName(mActionCombo->currentText()); });
+    actionBox->addWidget(mActionCombo);
+    QWidget* actionParamsHost = new QWidget(actionGroup);
+    mActionParams = new QFormLayout(actionParamsHost);
+    mActionParams->setContentsMargins(12, 2, 0, 0);
+    actionBox->addWidget(actionParamsHost);
+    box->addWidget(actionGroup);
+
+    // Event group.
+    QGroupBox* eventGroup = new QGroupBox(tr("Event"), content);
+    QVBoxLayout* eventBox = new QVBoxLayout(eventGroup);
+    mEventCombo = new QComboBox(eventGroup);
+    connect(mEventCombo, &QComboBox::activated, this, [this](int) { setEventName(mEventCombo->currentText()); });
+    eventBox->addWidget(mEventCombo);
+    QWidget* eventParamsHost = new QWidget(eventGroup);
+    mEventParams = new QFormLayout(eventParamsHost);
+    mEventParams->setContentsMargins(12, 2, 0, 0);
+    eventBox->addWidget(eventParamsHost);
+    box->addWidget(eventGroup);
+
+    // Timers group.
+    QGroupBox* timerGroup = new QGroupBox(tr("Timers"), content);
+    QVBoxLayout* timerBox = new QVBoxLayout(timerGroup);
+    QHBoxLayout* timerButtons = new QHBoxLayout();
+    QToolButton* addStart = new QToolButton(timerGroup);
+    addStart->setText(tr("+ Start timer"));
+    addStart->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    connect(addStart, &QToolButton::clicked, this, [this]() { addTimer(true); });
+    QToolButton* addStop = new QToolButton(timerGroup);
+    addStop->setText(tr("+ Stop timer"));
+    addStop->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    connect(addStop, &QToolButton::clicked, this, [this]() { addTimer(false); });
+    timerButtons->addWidget(addStart);
+    timerButtons->addWidget(addStop);
+    timerButtons->addStretch(1);
+    timerBox->addLayout(timerButtons);
+    QWidget* timersHost = new QWidget(timerGroup);
+    mTimersList = new QVBoxLayout(timersHost);
+    mTimersList->setContentsMargins(0, 0, 0, 0);
+    timerBox->addWidget(timersHost);
+    mTimersEmpty = new QLabel(tr("No timers."), timerGroup);
+    mTimersEmpty->setEnabled(false);
+    timerBox->addWidget(mTimersEmpty);
+    box->addWidget(timerGroup);
+
+    box->addStretch(1);
+    scroll->setWidget(content);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Binding
+//////////////////////////////////////////////////////////////////////////
+
+void SMOperationsEditor::bind( uint32_t ownerId
+                             , eDocElementKind ownerKind
+                             , uint32_t scopeTransition
+                             , ElementBase* owner
+                             , SMOperationList* list)
+{
+    mOwnerId         = ownerId;
+    mOwnerKind       = ownerKind;
+    mScopeTransition = scopeTransition;
+    mAllowParam      = (scopeTransition != 0u);
+    mOwner           = owner;
+    mList            = list;
+    rebuild();
+}
+
+void SMOperationsEditor::clearBinding()
+{
+    mList = nullptr;
+    mOwner = nullptr;
+    rebuild();
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Rebuild
+//////////////////////////////////////////////////////////////////////////
+
+void SMOperationsEditor::rebuild()
+{
+    mApplying = true;
+    setEnabled(mList != nullptr);
+    rebuildAction();
+    rebuildEvent();
+    rebuildTimers();
+    mApplying = false;
+}
+
+void SMOperationsEditor::rebuildAction()
+{
+    const QSignalBlocker block(mActionCombo);
+    mActionCombo->clear();
+    mActionCombo->addItem(tr("(none)"));
+    mActionCombo->addItems(actionNames());
+
+    SMActionCall* action = findAction();
+    mActionCombo->setCurrentText(action != nullptr ? action->getAction() : tr("(none)"));
+    buildParamRows(mActionParams, action != nullptr ? action->getId() : 0u, false);
+}
+
+void SMOperationsEditor::rebuildEvent()
+{
+    const QSignalBlocker block(mEventCombo);
+    mEventCombo->clear();
+    mEventCombo->addItem(tr("(none)"));
+    mEventCombo->addItems(eventNames());
+
+    SMEventSend* event = findEvent();
+    mEventCombo->setCurrentText(event != nullptr ? event->getEvent() : tr("(none)"));
+    buildParamRows(mEventParams, event != nullptr ? event->getId() : 0u, true);
+}
+
+void SMOperationsEditor::rebuildTimers()
+{
+    clearLayout(mTimersList);
+
+    int count = 0;
+    if (mList != nullptr)
+    {
+        const QStringList timers = timerNames();
+        for (SMOperationBase* op : mList->getOperations())
+        {
+            const bool isStart = (op->getOperationType() == eOp::TimerStart);
+            const bool isStop  = (op->getOperationType() == eOp::TimerStop);
+            if ((isStart == false) && (isStop == false))
+            {
+                continue;
+            }
+
+            ++count;
+            const uint32_t opId = op->getId();
+            const QString current = isStart ? static_cast<SMTimerStart*>(op)->getTimer() : static_cast<SMTimerStop*>(op)->getTimer();
+
+            QWidget* row = new QWidget();
+            QHBoxLayout* rowBox = new QHBoxLayout(row);
+            rowBox->setContentsMargins(0, 0, 0, 0);
+
+            QLabel* kind = new QLabel(isStart ? tr("Start") : tr("Stop"), row);
+            kind->setMinimumWidth(36);
+            QFont f = kind->font();
+            f.setBold(true);
+            kind->setFont(f);
+
+            QComboBox* combo = new QComboBox(row);
+            combo->addItems(timers);
+            combo->setCurrentText(current);
+            combo->setProperty("opId", opId);
+            connect(combo, &QComboBox::activated, this, [this, opId, combo](int) { setTimerName(opId, combo->currentText()); });
+
+            QToolButton* remove = new QToolButton(row);
+            remove->setText(tr("x"));
+            remove->setToolTip(tr("Remove timer"));
+            connect(remove, &QToolButton::clicked, this, [this, opId]() { removeTimer(opId); });
+
+            rowBox->addWidget(kind);
+            rowBox->addWidget(combo, 1);
+            rowBox->addWidget(remove);
+            mTimersList->addWidget(row);
+        }
+    }
+
+    mTimersEmpty->setVisible(count == 0);
+}
+
+void SMOperationsEditor::buildParamRows(QFormLayout* form, uint32_t opId, bool isEvent)
+{
+    while (form->rowCount() > 0)
+    {
+        form->removeRow(0);
+    }
+
+    if ((mList == nullptr) || (opId == 0u))
+    {
+        return;
+    }
+
+    SMOperationBase* op = mList->findById(opId);
+    const MethodBase* callee = calleeFor(op, isEvent);
+    if ((op == nullptr) || (callee == nullptr) || (callee->getElements().isEmpty()))
+    {
+        return;
+    }
+
+    QList<SMArgumentEntry>& args = isEvent ? static_cast<SMEventSend*>(op)->getArguments()
+                                           : static_cast<SMActionCall*>(op)->getArguments();
+
+    const QStringList params = stimulusParamNames();
+    const QStringList attrs  = attributeNames();
+
+    for (const MethodParameter& param : callee->getElements())
+    {
+        const QString paramName = param.getName();
+
+        QComboBox* combo = new QComboBox();
+        combo->setEditable(true);
+        combo->setInsertPolicy(QComboBox::NoInsert);
+        if (mAllowParam)
+        {
+            for (const QString& p : params) { combo->addItem(p); }
+        }
+        for (const QString& a : attrs) { combo->addItem(a); }
+        if (combo->completer() != nullptr)
+        {
+            combo->completer()->setCompletionMode(QCompleter::PopupCompletion);
+            combo->completer()->setCaseSensitivity(Qt::CaseInsensitive);
+        }
+
+        // Current mapping (or a hint about the parameter default when unmapped).
+        QString current;
+        for (const SMArgumentEntry& arg : args)
+        {
+            if (arg.getName() == paramName) { current = arg.getValue(); break; }
+        }
+
+        combo->setEditText(current);
+        combo->lineEdit()->setPlaceholderText(param.hasDefault()
+            ? tr("default: %1").arg(param.getValue())
+            : tr("value, or pick a source"));
+
+        connect(combo, &QComboBox::activated, this, [this, opId, isEvent, paramName, combo](int) { commitParam(opId, isEvent, paramName, combo->currentText()); });
+        connect(combo->lineEdit(), &QLineEdit::editingFinished, this, [this, opId, isEvent, paramName, combo]() { commitParam(opId, isEvent, paramName, combo->currentText()); });
+        // A click in the field opens the value list (mappable stimulus params / attributes).
+        combo->lineEdit()->installEventFilter(this);
+
+        form->addRow(paramName + QStringLiteral(" (") + param.getType() + QLatin1Char(')'), combo);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Finders
+//////////////////////////////////////////////////////////////////////////
+
+SMActionCall* SMOperationsEditor::findAction() const
+{
+    if (mList != nullptr)
+    {
+        for (SMOperationBase* op : mList->getOperations())
+        {
+            if (op->getOperationType() == eOp::ActionCall) { return static_cast<SMActionCall*>(op); }
+        }
+    }
+
+    return nullptr;
+}
+
+SMEventSend* SMOperationsEditor::findEvent() const
+{
+    if (mList != nullptr)
+    {
+        for (SMOperationBase* op : mList->getOperations())
+        {
+            if (op->getOperationType() == eOp::EventSend) { return static_cast<SMEventSend*>(op); }
+        }
+    }
+
+    return nullptr;
+}
+
+const MethodBase* SMOperationsEditor::calleeFor(const SMOperationBase* op, bool isEvent) const
+{
+    if (op == nullptr)
+    {
+        return nullptr;
+    }
+
+    const QString name = isEvent ? static_cast<const SMEventSend*>(op)->getEvent()
+                                 : static_cast<const SMActionCall*>(op)->getAction();
+    if (isEvent)
+    {
+        for (const SMEventEntry* e : mModel.getData().getEvents().getElements())
+        {
+            if ((e != nullptr) && (e->getName() == name)) { return e; }
+        }
+    }
+    else
+    {
+        for (const SMMethodEntry* m : mModel.getData().getMethods().getElements())
+        {
+            if ((m != nullptr) && (m->getName() == name)) { return m; }
+        }
+    }
+
+    return nullptr;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Mutations
+//////////////////////////////////////////////////////////////////////////
+
+void SMOperationsEditor::setActionName(const QString& name)
+{
+    if (mApplying || (mList == nullptr))
+    {
+        return;
+    }
+
+    const QString clean = (name == tr("(none)")) ? QString() : name;
+    SMActionCall* action = findAction();
+    DocModelNotifier& notifier = mModel.getNotifier();
+
+    if (clean.isEmpty())
+    {
+        if (action != nullptr)
+        {
+            mModel.getUndoStack().push(new SMRemoveOperationCommand(notifier, *mList, action->getId(), tr("Remove action")));
+        }
+    }
+    else if (action != nullptr)
+    {
+        if (action->getAction() == clean)
+        {
+            return;
+        }
+
+        // Changing the callee changes the parameter set; drop stale mappings in one undo step.
+        DocCompositeCommand* composite = new DocCompositeCommand(notifier, tr("Set action"));
+        for (const SMArgumentEntry& arg : action->getArguments())
+        {
+            new SMSetArgumentCommand(notifier, *action, action->getArguments(), arg.getName(), false, eSource::Value, QString(), QString(), tr("Clear argument"), composite);
+        }
+        auto getter = [](SMOperationBase& o) -> QString { return static_cast<SMActionCall&>(o).getAction(); };
+        auto setter = [](SMOperationBase& o, const QString& v) { static_cast<SMActionCall&>(o).setAction(v); };
+        new SMSetOperationPropertyCommand<QString>(notifier, *mList, action->getId(), getter, setter, clean, tr("Set action"), composite);
+        mModel.getUndoStack().push(composite);
+    }
+    else
+    {
+        SMActionCall* call = new SMActionCall(nullptr);
+        call->setAction(clean);
+        mModel.getUndoStack().push(new SMAddOperationCommand(notifier, *mList, call, 0, tr("Add action")));
+    }
+
+    // Reflect the change at once: the combo already shows the pick, so refresh only the parameter
+    // rows (a full rebuild would destroy the combo the user just clicked). The canvas edge updates
+    // through the Operation notification the command emitted.
+    SMActionCall* updated = findAction();
+    buildParamRows(mActionParams, updated != nullptr ? updated->getId() : 0u, false);
+}
+
+void SMOperationsEditor::setEventName(const QString& name)
+{
+    if (mApplying || (mList == nullptr))
+    {
+        return;
+    }
+
+    const QString clean = (name == tr("(none)")) ? QString() : name;
+    SMEventSend* event = findEvent();
+    DocModelNotifier& notifier = mModel.getNotifier();
+
+    if (clean.isEmpty())
+    {
+        if (event != nullptr)
+        {
+            mModel.getUndoStack().push(new SMRemoveOperationCommand(notifier, *mList, event->getId(), tr("Remove event")));
+        }
+    }
+    else if (event != nullptr)
+    {
+        if (event->getEvent() == clean)
+        {
+            return;
+        }
+
+        DocCompositeCommand* composite = new DocCompositeCommand(notifier, tr("Set event"));
+        for (const SMArgumentEntry& arg : event->getArguments())
+        {
+            new SMSetArgumentCommand(notifier, *event, event->getArguments(), arg.getName(), false, eSource::Value, QString(), QString(), tr("Clear argument"), composite);
+        }
+        auto getter = [](SMOperationBase& o) -> QString { return static_cast<SMEventSend&>(o).getEvent(); };
+        auto setter = [](SMOperationBase& o, const QString& v) { static_cast<SMEventSend&>(o).setEvent(v); };
+        new SMSetOperationPropertyCommand<QString>(notifier, *mList, event->getId(), getter, setter, clean, tr("Set event"), composite);
+        mModel.getUndoStack().push(composite);
+    }
+    else
+    {
+        // The event runs after the action: insert it right after the action (or first if none).
+        SMActionCall* action = findAction();
+        const int index = (action != nullptr) ? (mList->indexOf(action->getId()) + 1) : 0;
+        SMEventSend* send = new SMEventSend(nullptr);
+        send->setEvent(clean);
+        mModel.getUndoStack().push(new SMAddOperationCommand(notifier, *mList, send, index, tr("Add event")));
+    }
+
+    SMEventSend* updated = findEvent();
+    buildParamRows(mEventParams, updated != nullptr ? updated->getId() : 0u, true);
+}
+
+void SMOperationsEditor::addTimer(bool start)
+{
+    if (mList == nullptr)
+    {
+        return;
+    }
+
+    const QStringList timers = timerNames();
+    const QString name = timers.isEmpty() ? QString() : timers.first();
+    SMOperationBase* op = start ? static_cast<SMOperationBase*>(new SMTimerStart(nullptr)) : static_cast<SMOperationBase*>(new SMTimerStop(nullptr));
+    if (start) { static_cast<SMTimerStart*>(op)->setTimer(name); } else { static_cast<SMTimerStop*>(op)->setTimer(name); }
+
+    mModel.getUndoStack().push(new SMAddOperationCommand(mModel.getNotifier(), *mList, op, mList->getCount(), start ? tr("Add start timer") : tr("Add stop timer")));
+    rebuildTimers();
+}
+
+void SMOperationsEditor::removeTimer(uint32_t opId)
+{
+    if (mList != nullptr)
+    {
+        mModel.getUndoStack().push(new SMRemoveOperationCommand(mModel.getNotifier(), *mList, opId, tr("Remove timer")));
+        rebuildTimers();
+    }
+}
+
+void SMOperationsEditor::setTimerName(uint32_t opId, const QString& name)
+{
+    if (mApplying || (mList == nullptr))
+    {
+        return;
+    }
+
+    SMOperationBase* op = mList->findById(opId);
+    if (op == nullptr)
+    {
+        return;
+    }
+
+    const QString current = (op->getOperationType() == eOp::TimerStart) ? static_cast<SMTimerStart*>(op)->getTimer() : static_cast<SMTimerStop*>(op)->getTimer();
+    if (current == name)
+    {
+        return;
+    }
+
+    auto getter = [](SMOperationBase& o) -> QString { return (o.getOperationType() == eOp::TimerStart) ? static_cast<SMTimerStart&>(o).getTimer() : static_cast<SMTimerStop&>(o).getTimer(); };
+    auto setter = [](SMOperationBase& o, const QString& v) { if (o.getOperationType() == eOp::TimerStart) { static_cast<SMTimerStart&>(o).setTimer(v); } else { static_cast<SMTimerStop&>(o).setTimer(v); } };
+    mModel.getUndoStack().push(new SMSetOperationPropertyCommand<QString>(mModel.getNotifier(), *mList, opId, getter, setter, name, tr("Set timer")));
+}
+
+void SMOperationsEditor::commitParam(uint32_t opId, bool isEvent, const QString& paramName, const QString& text)
+{
+    if (mApplying || (mList == nullptr))
+    {
+        return;
+    }
+
+    SMOperationBase* op = mList->findById(opId);
+    if (op == nullptr)
+    {
+        return;
+    }
+
+    QList<SMArgumentEntry>& args = isEvent ? static_cast<SMEventSend*>(op)->getArguments()
+                                           : static_cast<SMActionCall*>(op)->getArguments();
+
+    const QString trimmed = text.trimmed();
+    const SMArgumentEntry* current = nullptr;
+    for (const SMArgumentEntry& arg : args)
+    {
+        if (arg.getName() == paramName) { current = &arg; break; }
+    }
+
+    bool mapped = (trimmed.isEmpty() == false);
+    eSource source = eSource::Value;
+    QString value;
+    if (mapped)
+    {
+        source = resolveSource(trimmed, value);
+    }
+
+    const bool same = mapped
+        ? ((current != nullptr) && (current->getSource() == source) && (current->getValue() == value))
+        : (current == nullptr);
+    if (same)
+    {
+        return;
+    }
+
+    // The value is already shown in the field and the canvas edge refreshes through the
+    // notification; a rebuild here would only fight the cursor, so none is scheduled.
+    mModel.getUndoStack().push(new SMSetArgumentCommand(mModel.getNotifier(), *op, args, paramName, mapped, source, value, QString(), tr("Map parameter '%1'").arg(paramName)));
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Registry / mapping helpers
+//////////////////////////////////////////////////////////////////////////
+
+QStringList SMOperationsEditor::actionNames() const
+{
+    QStringList names;
+    for (const SMMethodEntry* m : mModel.getData().getMethods().getElements())
+    {
+        if ((m != nullptr) && (m->getMethodType() == SMMethodEntry::eMethodType::Action)) { names.append(m->getName()); }
+    }
+
+    return names;
+}
+
+QStringList SMOperationsEditor::eventNames() const
+{
+    QStringList names;
+    for (const SMEventEntry* e : mModel.getData().getEvents().getElements())
+    {
+        if (e != nullptr) { names.append(e->getName()); }
+    }
+
+    return names;
+}
+
+QStringList SMOperationsEditor::timerNames() const
+{
+    QStringList names;
+    for (const SMTimerEntry& t : mModel.getData().getTimers().getElements())
+    {
+        names.append(t.getName());
+    }
+
+    return names;
+}
+
+QStringList SMOperationsEditor::stimulusParamNames() const
+{
+    QStringList names;
+    if (mScopeTransition == 0u)
+    {
+        return names;
+    }
+
+    const SMTransitionEntry* transition = mModel.getData().findTransitionById(mScopeTransition);
+    if (transition == nullptr)
+    {
+        return names;
+    }
+
+    const StateMachineData::StimulusRef ref = mModel.getData().findStimulus(transition->getStimulus());
+    const MethodBase* callee = nullptr;
+    if ((ref.type == StateMachineData::eStimulusType::Trigger) || (ref.type == StateMachineData::eStimulusType::Event))
+    {
+        callee = static_cast<const MethodBase*>(ref.element);
+    }
+
+    if (callee != nullptr)
+    {
+        for (const MethodParameter& p : callee->getElements()) { names.append(p.getName()); }
+    }
+
+    return names;
+}
+
+QStringList SMOperationsEditor::attributeNames() const
+{
+    QStringList names;
+    for (const SMAttributeEntry& a : mModel.getData().getAttributes().getElements())
+    {
+        names.append(a.getName());
+    }
+
+    return names;
+}
+
+SMArgumentEntry::eValueSource SMOperationsEditor::resolveSource(const QString& name, QString& mappedName) const
+{
+    mappedName = name;
+    if (mAllowParam && stimulusParamNames().contains(name))
+    {
+        return eSource::Param;
+    }
+    if (attributeNames().contains(name))
+    {
+        return eSource::Attribute;
+    }
+
+    return eSource::Value;
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Notifications
+//////////////////////////////////////////////////////////////////////////
+
+void SMOperationsEditor::onNotifierChanged(uint32_t /*id*/, eDocElementKind kind)
+{
+    // Operation edits and any registry change (a renamed action/event/timer/attribute) can shift
+    // what the combos should show; refresh, but never while the user is mid-edit in a field.
+    if ((kind == eDocElementKind::Operation) || (kind == eDocElementKind::Method) || (kind == eDocElementKind::Event)
+        || (kind == eDocElementKind::Timer) || (kind == eDocElementKind::Attribute) || (kind == eDocElementKind::State)
+        || (kind == eDocElementKind::Transition))
+    {
+        scheduleRebuild();
+    }
+}
+
+void SMOperationsEditor::scheduleRebuild()
+{
+    if (mApplying || mRebuildQueued)
+    {
+        return;
+    }
+
+    mRebuildQueued = true;
+    QTimer::singleShot(0, this, [this]()
+    {
+        mRebuildQueued = false;
+        if (isEditing() == false)
+        {
+            rebuild();
+        }
+    });
+}
+
+bool SMOperationsEditor::isEditing() const
+{
+    QWidget* focus = focusWidget();
+    return (focus != nullptr) && isAncestorOf(focus);
+}
+
+bool SMOperationsEditor::eventFilter(QObject* watched, QEvent* event)
+{
+    if (event->type() == QEvent::MouseButtonPress)
+    {
+        QLineEdit* edit = qobject_cast<QLineEdit*>(watched);
+        QComboBox* combo = (edit != nullptr) ? qobject_cast<QComboBox*>(edit->parentWidget()) : nullptr;
+        if ((combo != nullptr) && (combo->count() > 0))
+        {
+            combo->showPopup();
+            return true;
+        }
+    }
+
+    return QWidget::eventFilter(watched, event);
+}

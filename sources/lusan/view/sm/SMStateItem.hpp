@@ -58,11 +58,12 @@ public:
      **/
     enum class eRowIcon
     {
-          Entry     //!< An entry operation (into-the-state arrow).
-        , Timer     //!< A timer start/stop.
-        , Event     //!< An event send.
+          Entry     //!< A generic entry operation (into-the-state arrow).
+        , Exit      //!< A generic exit operation (out-of-the-state arrow).
+        , TimerStart//!< A timer start (clock + play).
+        , TimerStop //!< A timer stop (clock + square).
+        , Event     //!< An event send/trigger.
         , Internal  //!< An internal transition.
-        , Exit      //!< An exit operation (out-of-the-state arrow).
     };
 
 private:

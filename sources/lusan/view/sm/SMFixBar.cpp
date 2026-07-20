@@ -35,9 +35,19 @@ SMFixBar::SMFixBar(QWidget* parent /*= nullptr*/)
 
     mMessage = new QLabel(this);
     mMessage->setObjectName(QStringLiteral("smGuardFixMessage"));
+    // The message wraps and never dictates a width (the Properties dock must not grow to fit it).
+    mMessage->setWordWrap(true);
+    mMessage->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     mLayout->addWidget(mMessage);
 
     hide();
+}
+
+QSize SMFixBar::minimumSizeHint() const
+{
+    // Report no minimum width: the fix row must never force the hosting panel wider than the
+    // width the user gave it via the splitter; excess content clips.
+    return QSize(0, QWidget::minimumSizeHint().height());
 }
 
 void SMFixBar::clearButtons()

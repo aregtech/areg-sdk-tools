@@ -38,6 +38,8 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMMethod.cpp
     ${LUSAN}/view/sm/SMNoteEditor.cpp
     ${LUSAN}/view/sm/SMNoteItem.cpp
+    ${LUSAN}/view/sm/SMOperationsDialog.cpp
+    ${LUSAN}/view/sm/SMOperationsEditor.cpp
     ${LUSAN}/view/sm/SMOutlinePanel.cpp
     ${LUSAN}/view/sm/SMOverview.cpp
     ${LUSAN}/view/sm/SMPropertiesPanel.cpp
@@ -89,6 +91,8 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMMethod.hpp
     ${LUSAN}/view/sm/SMNoteEditor.hpp
     ${LUSAN}/view/sm/SMNoteItem.hpp
+    ${LUSAN}/view/sm/SMOperationsDialog.hpp
+    ${LUSAN}/view/sm/SMOperationsEditor.hpp
     ${LUSAN}/view/sm/SMOutlinePanel.hpp
     ${LUSAN}/view/sm/SMOverview.hpp
     ${LUSAN}/view/sm/SMPropertiesPanel.hpp

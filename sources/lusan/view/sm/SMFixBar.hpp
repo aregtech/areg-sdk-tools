@@ -76,6 +76,13 @@ public:
     //!< Hides the bar (Esc / commit / no diagnostic).
     void dismiss();
 
+    /**
+     * \brief   A zero minimum width so a long fix message or a wide button row can never widen
+     *          the hosting Properties dock (its own width stays under the splitter's control);
+     *          the row clips instead of pushing the panel wider.
+     **/
+    virtual QSize minimumSizeHint() const override;
+
 signals:
     //!< A fix button was pressed.
     void triggered(const QString& id, const QString& payload);

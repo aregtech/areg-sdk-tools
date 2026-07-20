@@ -38,6 +38,7 @@ class QPlainTextEdit;
 class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
+class SMOperationsEditor;
 class StateMachineModel;
 enum class eDocElementKind;
 
@@ -176,20 +177,23 @@ private:
     bool                mUpdating;      //!< Guards field population against commit signals.
 
     // State page.
+    QTabWidget*         mStateTabs;     //!< The General / Actions tab host.
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
     QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line, at the bottom).
-    QLabel*             mStateEntry;    //!< The entry-operation summary (read-only).
-    QLabel*             mStateExit;     //!< The exit-operation summary (read-only).
+    SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
+    SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
     QListWidget*        mTransitions;   //!< The state's transitions, drag-reorderable.
 
     // Transition page.
+    QLabel*             mStimulusSig;   //!< Read-only stimulus signature (`walk(count)`).
     QComboBox*          mStimulusName;  //!< The stimulus picker (fixed list of triggers/events/
                                         //!< timers; editing is search-only, no free rename).
     QComboBox*          mTarget;        //!< The target sibling state (or internal).
     QPlainTextEdit*     mTransDesc;     //!< The transition description (multi-line).
     SMGuardBar*         mConditions;    //!< The Conditions tab guard bar.
-    QTabWidget*         mTransTabs;     //!< The General / Conditions tab host (for the badge).
+    SMOperationsEditor* mTransOps;      //!< The transition operations editor (Actions tab).
+    QTabWidget*         mTransTabs;     //!< The General / Conditions / Actions tab host.
 
     // Registry page.
     QLabel*             mRegistryInfo;  //!< The selected registry entry summary (read-only).

@@ -28,17 +28,20 @@
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMCommand.hpp"
+#include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
+#include "lusan/view/sm/SMOperationsEditor.hpp"
 
 #include <QComboBox>
 #include <QCompleter>
 #include <QDropEvent>
 #include <QEvent>
+#include <QFont>
 #include <QFormLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -150,16 +153,19 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mPage         (PageEmpty)
     , mCurrentId    (0u)
     , mUpdating     (false)
+    , mStateTabs    (nullptr)
     , mStateName    (nullptr)
     , mStateKind    (nullptr)
     , mStateDesc    (nullptr)
-    , mStateEntry   (nullptr)
-    , mStateExit    (nullptr)
+    , mEnterOps     (nullptr)
+    , mExitOps      (nullptr)
     , mTransitions  (nullptr)
+    , mStimulusSig  (nullptr)
     , mStimulusName (nullptr)
     , mTarget       (nullptr)
     , mTransDesc    (nullptr)
     , mConditions   (nullptr)
+    , mTransOps     (nullptr)
     , mTransTabs    (nullptr)
     , mRegistryInfo (nullptr)
 {
@@ -216,8 +222,6 @@ void SMPropertiesPanel::buildStatePage()
     // as the user types, the same rule the canvas in-place editor enforces.
     mStateName->setValidator(new QRegularExpressionValidator(QRegularExpression(StateMachineData::identifierPattern()), mStateName));
     mStateKind = new QLabel(page);
-    mStateEntry = new QLabel(page);
-    mStateExit = new QLabel(page);
     mTransitions = new ReorderList(page);
     mStateDesc = new QPlainTextEdit(page);
 
@@ -228,8 +232,6 @@ void SMPropertiesPanel::buildStatePage()
 
     form->addRow(tr("Name:"), mStateName);
     form->addRow(tr("Kind:"), mStateKind);
-    form->addRow(tr("Entry:"), mStateEntry);
-    form->addRow(tr("Exit:"), mStateExit);
     form->addRow(tr("Transitions:"), mTransitions);
     form->addRow(tr("Description:"), mStateDesc);
 
@@ -250,7 +252,28 @@ void SMPropertiesPanel::buildStatePage()
         QTimer::singleShot(0, this, [this, from, to]() { reorderTransition(from, to); });
     };
 
-    mStack->insertWidget(PageState, page);
+    // The state page is General + Actions; the Actions tab hosts the On-Enter / On-Exit editors.
+    QWidget* actions = new QWidget(this);
+    QVBoxLayout* actionsBox = new QVBoxLayout(actions);
+    actionsBox->setContentsMargins(6, 6, 6, 6);
+    QLabel* enterLabel = new QLabel(tr("On Enter"), actions);
+    QFont headline = enterLabel->font();
+    headline.setBold(true);
+    enterLabel->setFont(headline);
+    mEnterOps = new SMOperationsEditor(mModel, actions);
+    QLabel* exitLabel = new QLabel(tr("On Exit"), actions);
+    exitLabel->setFont(headline);
+    mExitOps = new SMOperationsEditor(mModel, actions);
+    actionsBox->addWidget(enterLabel);
+    actionsBox->addWidget(mEnterOps);
+    actionsBox->addWidget(exitLabel);
+    actionsBox->addWidget(mExitOps);
+
+    mStateTabs = new QTabWidget(this);
+    mStateTabs->addTab(page, tr("General"));
+    mStateTabs->addTab(actions, tr("Actions"));
+
+    mStack->insertWidget(PageState, mStateTabs);
 }
 
 void SMPropertiesPanel::buildTransitionPage()
@@ -262,32 +285,29 @@ void SMPropertiesPanel::buildTransitionPage()
 
     // One picker over the whole stimulus vocabulary (triggers, events, timers). The kind is
     // encoded per row (and by the on_event_/on_timer_ prefix), so a separate "kind" combo is
-    // redundant. Editing is search-only: the row must come from the list, never a free name.
+    // redundant. The picker is read-only (a closed list, like the Actions tab): the user cannot
+    // type a free name; typing a letter jumps to the matching row (Qt's built-in type-ahead).
     mStimulusName = new QComboBox(page);
-    mStimulusName->setEditable(true);
-    mStimulusName->setInsertPolicy(QComboBox::NoInsert);
-    if (mStimulusName->completer() != nullptr)
-    {
-        mStimulusName->completer()->setCompletionMode(QCompleter::PopupCompletion);
-        mStimulusName->completer()->setCaseSensitivity(Qt::CaseInsensitive);
-    }
+    mStimulusName->setEditable(false);
 
     mTarget = new QComboBox(page);
-    mTarget->setEditable(true);
-    mTarget->setInsertPolicy(QComboBox::NoInsert);
+    mTarget->setEditable(false);
+
+    mStimulusSig = new QLabel(page);
+    mStimulusSig->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    mStimulusSig->setEnabled(false);
 
     mTransDesc = new QPlainTextEdit(page);
     mTransDesc->setPlaceholderText(tr("Description"));
     mTransDesc->installEventFilter(this);   // commit on focus-out (no editingFinished signal)
 
     form->addRow(tr("Stimulus:"), mStimulusName);
+    form->addRow(tr("Signature:"), mStimulusSig);
     form->addRow(tr("Target:"), mTarget);
     form->addRow(tr("Description:"), mTransDesc);
 
     connect(mStimulusName, &QComboBox::activated, this, &SMPropertiesPanel::onStimulusCommit);
-    connect(mStimulusName->lineEdit(), &QLineEdit::editingFinished, this, &SMPropertiesPanel::onStimulusCommit);
     connect(mTarget, &QComboBox::activated, this, &SMPropertiesPanel::onTargetCommit);
-    connect(mTarget->lineEdit(), &QLineEdit::editingFinished, this, &SMPropertiesPanel::onTargetCommit);
 
     mTransTabs = new QTabWidget(this);
     mTransTabs->setObjectName(QStringLiteral("smTransTabs"));
@@ -295,6 +315,9 @@ void SMPropertiesPanel::buildTransitionPage()
     mConditions = new SMGuardBar(mModel, this);
     mTransTabs->addTab(mConditions, tr("Conditions"));
     connect(mConditions, &SMGuardBar::badgeChanged, this, &SMPropertiesPanel::onGuardBadgeChanged);
+
+    mTransOps = new SMOperationsEditor(mModel, this);
+    mTransTabs->addTab(mTransOps, tr("Actions"));
 
     mStack->insertWidget(PageTransition, mTransTabs);
 }
@@ -447,8 +470,10 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mStateName->setReadOnly(state->getKind() == SMStateEntry::eStateKind::Start);
     mStateKind->setText(QString::fromLatin1(SMStateEntry::toString(state->getKind())));
     mStateDesc->setPlainText(state->getDescription());
-    mStateEntry->setText(tr("%n operation(s)", nullptr, state->getEntryList().getCount()));
-    mStateExit->setText(tr("%n operation(s)", nullptr, state->getExitList().getCount()));
+    // Entry/exit operations have no transition scope, so the Param source is not offered here.
+    SMStateEntry* mutableState = mModel.getData().findStateById(stateId);
+    mEnterOps->bind(stateId, eDocElementKind::State, 0u, mutableState, &mutableState->getEntryList());
+    mExitOps->bind(stateId, eDocElementKind::State, 0u, mutableState, &mutableState->getExitList());
     populateTransitionList(stateId);
 
     mStack->setCurrentIndex(PageState);
@@ -497,7 +522,9 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
     // Fill the picker with every trigger/event/timer and select the transition's current one by
     // its (kind, name) display label.
     const QString currentLabel = populateStimulusPicker(static_cast<int>(transition->getStimulusKind()), transition->getStimulus());
-    mStimulusName->setEditText(currentLabel);
+    const int stimRow = mStimulusName->findText(currentLabel, Qt::MatchFixedString);
+    mStimulusName->setCurrentIndex(stimRow >= 0 ? stimRow : 0);
+    mStimulusSig->setText(SMOperationSummary::stimulusSignature(data, *transition));
 
     // Populate the target picker from the sibling states of the transition's level.
     mTarget->clear();
@@ -511,10 +538,15 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
         }
     }
 
-    mTarget->setEditText(transition->isExternal() ? transition->getTo() : internalLabel());
+    const QString targetLabel = transition->isExternal() ? transition->getTo() : internalLabel();
+    const int targetRow = mTarget->findText(targetLabel, Qt::MatchFixedString);
+    mTarget->setCurrentIndex(targetRow >= 0 ? targetRow : 0);
     mTransDesc->setPlainText(transition->getDescription());
 
     mConditions->setTransition(transitionId);
+    // A transition operation may map the stimulus parameters, so it is its own Param scope.
+    SMTransitionEntry* mutableTransition = data.findTransitionById(transitionId);
+    mTransOps->bind(transitionId, eDocElementKind::Transition, transitionId, mutableTransition, &mutableTransition->getOperations());
 
     mStack->setCurrentIndex(PageTransition);
     mUpdating = false;
@@ -637,6 +669,11 @@ QString SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString
     StateMachineData& data = mModel.getData();
     mStimulusName->clear();
 
+    // Row 0 detaches the stimulus (an internal/initial transition may have none).
+    mStimulusName->addItem(tr("(none)"));
+    mStimulusName->setItemData(0, static_cast<int>(SMTransitionEntry::eStimulusKind::Trigger), RoleStimulusKind);
+    mStimulusName->setItemData(0, QString(), RoleStimulusName);
+
     const auto addRow = [this](SMTransitionEntry::eStimulusKind kind, const QString& name)
     {
         if (name.isEmpty())
@@ -672,7 +709,9 @@ QString SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString
         addRow(SMTransitionEntry::eStimulusKind::Timer, timer.getName());
     }
 
-    return stimulusDisplayLabel(static_cast<SMTransitionEntry::eStimulusKind>(currentKind), currentName);
+    return currentName.isEmpty()
+            ? tr("(none)")
+            : stimulusDisplayLabel(static_cast<SMTransitionEntry::eStimulusKind>(currentKind), currentName);
 }
 
 void SMPropertiesPanel::applyStimulus()
@@ -684,12 +723,20 @@ void SMPropertiesPanel::applyStimulus()
         return;
     }
 
-    const QString typed = mStimulusName->currentText().trimmed();
-    const QString currentLabel = stimulusDisplayLabel(transition->getStimulusKind(), transition->getStimulus());
+    // The picker is a closed list (row 0 = "(none)"); read the selected row's real kind + name.
+    const int row = mStimulusName->currentIndex();
+    if (row < 0)
+    {
+        return;
+    }
 
-    // A cleared field detaches the stimulus (allowed); anything else must be one of the listed
-    // rows - the picker never renames or creates a registry entry (fixed-list only).
-    if (typed.isEmpty())
+    const SMTransitionEntry::eStimulusKind kind =
+            static_cast<SMTransitionEntry::eStimulusKind>(mStimulusName->itemData(row, RoleStimulusKind).toInt());
+    const QString name = mStimulusName->itemData(row, RoleStimulusName).toString();
+
+    // "(none)" (empty name) detaches the stimulus; the picker never renames or creates a registry
+    // entry.
+    if (name.isEmpty())
     {
         if (transition->getStimulus().isEmpty() == false)
         {
@@ -699,16 +746,6 @@ void SMPropertiesPanel::applyStimulus()
         return;
     }
 
-    const int row = mStimulusName->findText(typed, Qt::MatchFixedString);
-    if (row < 0)
-    {
-        mStimulusName->setEditText(currentLabel);   // reject a value that is not on the list
-        return;
-    }
-
-    const SMTransitionEntry::eStimulusKind kind =
-            static_cast<SMTransitionEntry::eStimulusKind>(mStimulusName->itemData(row, RoleStimulusKind).toInt());
-    const QString name = mStimulusName->itemData(row, RoleStimulusName).toString();
     if ((kind == transition->getStimulusKind()) && (name == transition->getStimulus()))
     {
         return;
@@ -746,7 +783,8 @@ void SMPropertiesPanel::onTargetCommit()
     const bool sibling = (level != nullptr) && (level->findState(text) != nullptr);
     if (sibling == false)
     {
-        mTarget->setEditText(transition->isExternal() ? transition->getTo() : internalLabel());   // reject unknown target
+        // The picker is a closed list, so this is unreachable; re-select the current row defensively.
+        showTransition(mCurrentId);
         return;
     }
 
