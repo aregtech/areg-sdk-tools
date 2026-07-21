@@ -88,6 +88,18 @@ QString SMGuardSymbol::mention() const
     return QLatin1Char('@') + kindWord() + QLatin1Char(':') + name;
 }
 
+QString SMGuardSymbol::kindNoun() const
+{
+    switch (refkind)
+    {
+    case eRefKind::Param:   return QStringLiteral("parameter");
+    case eRefKind::Attr:    return QStringLiteral("attribute");
+    case eRefKind::Const:   return QStringLiteral("constant");
+    case eRefKind::Cond:
+    default:                return QStringLiteral("condition");
+    }
+}
+
 QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_t transitionId)
 {
     QList<SMGuardSymbol> result;
@@ -237,4 +249,103 @@ QHash<uint32_t, int> SMGuardCatalog::useCounts(const SMGuardNode* tree)
     QHash<uint32_t, int> counts;
     accumulateUseCounts(tree, counts);
     return counts;
+}
+
+namespace
+{
+    //!< True when \p text is exactly one bare C++ identifier: [A-Za-z_][A-Za-z0-9_]* and nothing
+    //!< else. This is the ONLY shape W1 flags -- operators, calls, member access, literals, and
+    //!< any span with a space are never bare identifiers, so the raw escape hatch stays unchecked.
+    bool isBareIdentifier(const QString& text)
+    {
+        if (text.isEmpty())
+        {
+            return false;
+        }
+
+        const QChar first = text.at(0);
+        if ((first.isLetter() == false) && (first != QLatin1Char('_')))
+        {
+            return false;
+        }
+
+        for (int i = 1; i < text.size(); ++i)
+        {
+            const QChar c = text.at(i);
+            if ((c.isLetterOrNumber() == false) && (c != QLatin1Char('_')))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    //!< Pre-order walk collecting the bare-identifier Raw nodes and their child-index paths.
+    void collectRawIdentifiers(const SMGuardNode* node, const QList<int>& path, QList<SMGuardRawCollision>& candidates)
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        if (node->getKind() == SMGuardNode::eKind::Raw)
+        {
+            const QString name = node->getText().trimmed();
+            if (isBareIdentifier(name))
+            {
+                SMGuardRawCollision candidate;
+                candidate.path = path;
+                candidate.name = name;
+                candidates.append(candidate);
+            }
+        }
+
+        const QList<SMGuardNode*>& kids = node->getChildren();
+        for (int i = 0; i < kids.size(); ++i)
+        {
+            QList<int> childPath = path;
+            childPath.append(i);
+            collectRawIdentifiers(kids.at(i), childPath, candidates);
+        }
+    }
+}
+
+QList<SMGuardRawCollision> SMGuardCatalog::rawCollisions(const StateMachineData& data, uint32_t transitionId, const SMGuardNode* tree)
+{
+    QList<SMGuardRawCollision> out;
+    if (tree == nullptr)
+    {
+        return out;
+    }
+
+    // Cheap first pass over the tree; the common bound guard has no bare-identifier raw nodes and
+    // never pays for a catalog build (perf: this runs on every projection pass).
+    QList<SMGuardRawCollision> candidates;
+    collectRawIdentifiers(tree, QList<int>(), candidates);
+    if (candidates.isEmpty())
+    {
+        return out;
+    }
+
+    // Match each candidate name against the in-scope symbols (closed world, D1); a name carried by
+    // more than one kind keeps all matches so the caller opens the disambiguation picker.
+    const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(data, transitionId);
+    for (SMGuardRawCollision& candidate : candidates)
+    {
+        for (const SMGuardSymbol& sym : catalog)
+        {
+            if (sym.name == candidate.name)
+            {
+                candidate.matches.append(sym);
+            }
+        }
+
+        if (candidate.matches.isEmpty() == false)
+        {
+            out.append(candidate);
+        }
+    }
+
+    return out;
 }

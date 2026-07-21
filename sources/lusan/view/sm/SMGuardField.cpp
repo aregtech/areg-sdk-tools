@@ -44,6 +44,7 @@
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QRegularExpression>
+#include <QSet>
 #include <QTextDocument>
 #include <QTimer>
 
@@ -202,6 +203,8 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     , mCurrentSlot      (-1)
     , mErrorStart       (-1)
     , mErrorLength      (0)
+    , mRawBindMode      (false)
+    , mRawBindPath      ( )
     , mTokenHandler     (nullptr)
     , mHover            (nullptr)
     , mHoverTimer       (nullptr)
@@ -1304,6 +1307,140 @@ void SMGuardField::applyFix(const QString& id, const QString& payload)
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Raw-collision bind (W1, SM-21-08)
+//////////////////////////////////////////////////////////////////////////
+
+void SMGuardField::applyRawBind(const QList<int>& rawPath, const SMGuardSymbol& symbol)
+{
+    if (mTransitionId == 0u)
+    {
+        return;
+    }
+
+    SMGuardNode* node = nullptr;
+    if (symbol.refkind == SMGuardSymbol::eRefKind::Cond)
+    {
+        // A condition is always a call in the guard grammar (`name()`); any formals fall to
+        // ghosts, exactly as typing `@cond:name()` would.
+        node = SMGuardNode::makeCall(symbol.symbolId, QList<SMGuardNode*>());
+    }
+    else
+    {
+        SMGuardNode::eKind kind = SMGuardNode::eKind::Attr;
+        switch (symbol.refkind)
+        {
+        case SMGuardSymbol::eRefKind::Param: kind = SMGuardNode::eKind::Param; break;
+        case SMGuardSymbol::eRefKind::Const: kind = SMGuardNode::eKind::Const; break;
+        case SMGuardSymbol::eRefKind::Attr:
+        default:                             kind = SMGuardNode::eKind::Attr;  break;
+        }
+
+        node = SMGuardNode::makeRef(kind, symbol.symbolId);
+    }
+
+    // One undo step; the command notifies elementChanged(transitionId) and the field reflows the
+    // committed tree (the raw text becomes a bound chip). Never a text edit -- the exact node at
+    // rawPath is swapped, so a same-name raw fragment elsewhere is untouched.
+    StateMachineData& data = mModel.getData();
+    SMSetGuardCommand* command = SMGuardCommands::replaceSubtree(data, mModel.getNotifier(), mTransitionId, rawPath, node, tr("Bind '%1'").arg(symbol.name));
+    if (command != nullptr)
+    {
+        mModel.getUndoStack().push(command);
+    }
+}
+
+bool SMGuardField::rawNodeSpan(const QList<int>& rawPath, int& start, int& length) const
+{
+    if (mTransitionId == 0u)
+    {
+        return false;
+    }
+
+    const SMTransitionEntry* transition = mModel.getData().findTransitionById(mTransitionId);
+    if ((transition == nullptr) || (transition->getGuard().isOk() == false))
+    {
+        return false;
+    }
+
+    const SMGuardNode* root = transition->getGuard().getTree();
+    if (root == nullptr)
+    {
+        return false;
+    }
+
+    const QList<SMGuardRender::NodeSpan> spans = SMGuardRender::nodeSpans(mModel.getData(), mTransitionId, *root);
+    for (const SMGuardRender::NodeSpan& span : spans)
+    {
+        if (span.path == rawPath)
+        {
+            start = span.start;
+            length = span.length;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SMGuardField::bindRaw(const QList<int>& rawPath, const QString& name)
+{
+    if (mTransitionId == 0u)
+    {
+        return;
+    }
+
+    // Re-resolve against the CURRENT catalog: the collision may already be gone (a rename removed
+    // it), or the name may now match several kinds. Never auto-bind on ambiguity -- defer to the
+    // picker so the developer states the kind.
+    QList<SMGuardSymbol> matches;
+    for (const SMGuardSymbol& sym : mCatalog)
+    {
+        if (sym.name == name)
+        {
+            matches.append(sym);
+        }
+    }
+
+    if (matches.isEmpty())
+    {
+        return;     // the collision vanished before the click resolved -- nothing to bind.
+    }
+
+    if (matches.size() == 1)
+    {
+        applyRawBind(rawPath, matches.first());
+        return;
+    }
+
+    // Multi-kind: open the same reference completer used for bare typing, filtered to this name,
+    // and bind on the pick (onCompleterAccepted routes through mRawBindMode). Selecting the raw
+    // token first shows the developer exactly what will be bound.
+    int spanStart = 0;
+    int spanLength = 0;
+    if (rawNodeSpan(rawPath, spanStart, spanLength))
+    {
+        selectSpan(spanStart, spanLength);
+    }
+    else
+    {
+        setFocus();
+    }
+
+    QSet<SMGuardSymbol::eRefKind> kinds;
+    for (const SMGuardSymbol& sym : matches)
+    {
+        kinds.insert(sym.refkind);
+    }
+
+    mRawBindMode = true;
+    mRawBindPath = rawPath;
+
+    const QRect rect = cursorRect();
+    const QRect caretGlobal(viewport()->mapToGlobal(rect.topLeft()), rect.size());
+    mCompleter->showFor(kinds, name, caretGlobal);
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Completion
 //////////////////////////////////////////////////////////////////////////
 
@@ -1329,6 +1466,7 @@ void SMGuardField::openCompletion()
 
     // Ctrl+Space is a deliberate open: show every kind at the caret and clear any Esc dismissal.
     mCompleterDismissedAt = -1;
+    mRawBindMode = false;       // an explicit completion open is never a W1 raw-bind pick.
     const QRect rect = cursorRect();
     const QRect caretGlobal(viewport()->mapToGlobal(rect.topLeft()), rect.size());
     mCompleter->showFor({}, QString(), caretGlobal);
@@ -1402,6 +1540,11 @@ bool SMGuardField::mentionUnderCursor(int& atPos, QString& kindWord, QString& na
 
 void SMGuardField::updateCompleter()
 {
+    // Any text edit reevaluates the mention-driven completer, so we are no longer in the
+    // standalone W1 pick opened by bindRaw -- clear the one-shot before it could misroute an
+    // ordinary completion into a raw bind.
+    mRawBindMode = false;
+
     if (mTransitionId == 0u)
     {
         mCompleter->hide();
@@ -1564,6 +1707,19 @@ QString SMGuardField::wordUnderCursor(int& start, int& length) const
 
 void SMGuardField::onCompleterAccepted(const SMGuardSymbol& symbol)
 {
+    // W1 multi-kind pick (SM-21-08): the picker was opened standalone by bindRaw (no `@`-mention
+    // in the text), so a pick binds the Raw node at mRawBindPath through the model, not by text
+    // surgery. Consume the one-shot mode first so a later ordinary completion is unaffected.
+    if (mRawBindMode)
+    {
+        mRawBindMode = false;
+        const QList<int> rawPath = mRawBindPath;
+        mRawBindPath.clear();
+        mCompleter->hide();
+        applyRawBind(rawPath, symbol);
+        return;
+    }
+
     // Replace the `@[kind][:][name]` mention under the caret with the picked symbol's canonical
     // `@kind:name` (typed == clicked, P3). A call inserts `@cond:name()` with the caret between
     // the parens; the developer types the arguments inline (signature help arrives in SM-21-03
@@ -1748,11 +1904,13 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
                 QString namePart;
                 bool hasColon = false;
                 mCompleterDismissedAt = mentionUnderCursor(atPos, kindWord, namePart, hasColon) ? atPos : -1;
+                mRawBindMode = false;   // W1: dismissing the picker leaves the raw node untouched.
                 mCompleter->hide();
                 updateSignatureHelp();  // D-PRECEDENCE: the tooltip returns when the completer closes
             }
             return;
         default:
+            mRawBindMode = false;       // W1: typing over the selection exits the multi-kind picker.
             break;      // PASS-THROUGH (12.6): the key reaches the document AND re-filters the list
         }
     }
@@ -1823,6 +1981,7 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
 
 void SMGuardField::focusOutEvent(QFocusEvent* event)
 {
+    mRawBindMode = false;       // W1: a blur abandons the open multi-kind picker.
     mCompleter->hide();
     if (mSignature != nullptr)
     {

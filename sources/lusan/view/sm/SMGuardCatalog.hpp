@@ -80,6 +80,26 @@ struct SMGuardSymbol
 
     //!< The canonical mention the completer inserts: `@kind:name` (`@cond:name` for a call).
     QString mention() const;
+
+    //!< The human noun for this kind ("attribute" | "constant" | "parameter" | "condition"),
+    //!< used by the W1 collision advisory ("there is an attribute named 'x'").
+    QString kindNoun() const;
+};
+
+/**
+ * \struct  SMGuardRawCollision
+ * \brief   One W1 raw-collision hit: a \ref SMGuardNode::eKind::Raw node whose whole text is a
+ *          bare identifier that EXACTLY matches one or more in-scope symbol names (SM-21-08). The
+ *          committed guard kept the name as raw C++ (it resolved to nothing when it was typed),
+ *          but a symbol of that name now exists -- so the editor offers a one-click "bind as
+ *          `@kind:name`" courtesy through the warning channel. Recomputed on every projection
+ *          pass (D-SYNC): a rename that removes the collision drops the hit with no guard edit.
+ **/
+struct SMGuardRawCollision
+{
+    QList<int>              path;       //!< The child-index path to the Raw node (empty = root).
+    QString                 name;       //!< The raw identifier text (a bare identifier).
+    QList<SMGuardSymbol>    matches;    //!< The in-scope symbols of that name (>1 => picker).
 };
 
 /**
@@ -112,6 +132,18 @@ namespace SMGuardCatalog
      *          transition's guard.
      **/
     QHash<uint32_t, int> useCounts(const SMGuardNode* tree);
+
+    /**
+     * \brief   The W1 raw-collision hits over one committed guard \p tree (SM-21-08): every
+     *          \ref SMGuardNode::eKind::Raw node whose WHOLE (trimmed) text is a single bare
+     *          identifier that exactly matches at least one in-scope symbol name for
+     *          \p transitionId. Text that is not a bare identifier -- operators, calls, literals,
+     *          member access, anything with a space or a symbol -- is never a hit (the hazard:
+     *          this is a quiet courtesy, not a linter). Headless and testable; the warning
+     *          channel routes each hit to a "bind as `@kind:name`" quick-fix. Recomputed on the
+     *          projection pass, so a rename that removes the collision drops the hit.
+     **/
+    QList<SMGuardRawCollision> rawCollisions(const StateMachineData& data, uint32_t transitionId, const SMGuardNode* tree);
 }
 
 #endif  // LUSAN_VIEW_SM_SMGUARDCATALOG_HPP

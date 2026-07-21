@@ -30,6 +30,8 @@
 #include <QHash>
 #include <QList>
 #include <QPointer>
+#include <QSet>
+#include <QString>
 #include <cstdint>
 
 /************************************************************************
@@ -202,6 +204,7 @@ private:
     SMGuardCatalogView* mData;      //!< The Data catalog (model/view).
     int                 mLastSection;//!< The last-open accordion section (D-ACCORDION, per tab).
     bool                mDerivedPending;//!< Coalesces the deferred catalog re-enumeration.
+    QSet<QString>       mDismissedRaw;//!< W1 "keep raw" names silenced for the current transition (SM-21-08).
     QPointer<SMGuardPopout> mPopout; //!< The open pop-out editor, or null (SM-21-05).
 };
 

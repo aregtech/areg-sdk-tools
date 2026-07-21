@@ -293,6 +293,91 @@ namespace
             }
         }
     }
+
+    // SM-21-08 (W1): the raw-collision detector over a committed tree. Advisory, exact-match, and
+    // never a linter -- only a whole bare identifier that matches an in-scope symbol name fires.
+    void testRawCollisions()
+    {
+        std::printf("[W1] raw-collision detection (SM-21-08)\n");
+        StateMachineData data;
+        const uint32_t transId = buildDoc(data);
+
+        // A name that is BOTH an attribute and a constant exercises the multi-kind picker route.
+        data.getAttributes().createAttribute(QStringLiteral("Threshold"));
+        ConstantEntry* dup = data.getConstants().createConstant(QStringLiteral("Threshold"));
+        if (dup != nullptr) { dup->setValue(QStringLiteral("7")); }
+
+        using eKind = SMGuardNode::eKind;
+
+        // 1) An exact bare-identifier raw match fires: Raw("IsNightMode") vs the attribute.
+        {
+            SMGuardNode* tree = SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("IsNightMode"));
+            const QList<SMGuardRawCollision> hits = SMGuardCatalog::rawCollisions(data, transId, tree);
+            check(hits.size() == 1, "an exact raw-vs-symbol match fires once");
+            if (hits.size() == 1)
+            {
+                checkEq(hits.first().name, QStringLiteral("IsNightMode"), "the hit names the raw token");
+                check(hits.first().matches.size() == 1, "single-kind match");
+                check((hits.first().matches.size() == 1) && (hits.first().matches.first().refkind == SMGuardSymbol::eRefKind::Attr), "the single match is the attribute");
+                check(hits.first().path.isEmpty(), "the root raw node has an empty path");
+            }
+
+            delete tree;
+        }
+
+        // 2) A condition name typed WITHOUT parens stays raw and still fires (binds as @cond:name()).
+        {
+            SMGuardNode* tree = SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("HasWaiting"));
+            const QList<SMGuardRawCollision> hits = SMGuardCatalog::rawCollisions(data, transId, tree);
+            check((hits.size() == 1) && (hits.first().matches.size() == 1)
+                  && (hits.first().matches.first().refkind == SMGuardSymbol::eRefKind::Cond), "a bare condition name collides with the cond kind");
+            delete tree;
+        }
+
+        // 3) Non-identifier raw is NEVER flagged -- operators, member access, calls, literals, spaces.
+        {
+            const char* noise[] = { "a + b", "obj.count", "count > 3", "MIN_WAITING()", "42", "count + 1" };
+            for (const char* text : noise)
+            {
+                SMGuardNode* tree = SMGuardNode::makeVerbatim(eKind::Raw, QString::fromLatin1(text));
+                const QList<SMGuardRawCollision> hits = SMGuardCatalog::rawCollisions(data, transId, tree);
+                check(hits.isEmpty(), "non-identifier raw is not flagged");
+                delete tree;
+            }
+        }
+
+        // 4) A bare identifier matching nothing stays unchecked (D-RAW-UNCHECKED, no linter).
+        {
+            SMGuardNode* tree = SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("someLocalHelper"));
+            const QList<SMGuardRawCollision> hits = SMGuardCatalog::rawCollisions(data, transId, tree);
+            check(hits.isEmpty(), "an unknown bare identifier is not flagged");
+            delete tree;
+        }
+
+        // 5) A multi-kind name routes to the picker: matches carries more than one kind.
+        {
+            SMGuardNode* tree = SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("Threshold"));
+            const QList<SMGuardRawCollision> hits = SMGuardCatalog::rawCollisions(data, transId, tree);
+            check(hits.size() == 1, "the multi-kind name fires once");
+            check((hits.size() == 1) && (hits.first().matches.size() == 2), "attr+const same name matches two kinds (picker)");
+            delete tree;
+        }
+
+        // 6) A raw child nested in a bound tree is addressed by its child-index path.
+        {
+            QList<SMGuardNode*> kids;
+            kids.append(SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("IsNightMode")));
+            kids.append(SMGuardNode::makeVerbatim(eKind::Lit, QStringLiteral("true")));
+            SMGuardNode* group = SMGuardNode::makeGroup(eKind::And, kids);
+            const QList<SMGuardRawCollision> hits = SMGuardCatalog::rawCollisions(data, transId, group);
+            check(hits.size() == 1, "the nested raw child is found");
+            check((hits.size() == 1) && (hits.first().path.size() == 1) && (hits.first().path.first() == 0), "the path addresses child 0");
+            delete group;
+        }
+
+        // 7) A null tree has no collisions (an empty guard).
+        check(SMGuardCatalog::rawCollisions(data, transId, nullptr).isEmpty(), "a null tree yields no collisions");
+    }
 }
 
 int main(int argc, char** argv)
@@ -305,6 +390,7 @@ int main(int argc, char** argv)
     testClickTypeParity();
     testUseCounts();
     testCatalogModelFilterAndKinds();
+    testRawCollisions();
 
     std::printf("\n%d checks, %d failures\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

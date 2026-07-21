@@ -361,6 +361,96 @@ int main(int argc, char** argv)
         check((warn != nullptr) && (warn->isVisible() == false), "mapping the argument clears the warning channel");
     }
 
+    // ---- SM-21-08 (W1): the raw-collision bind suggestion (advisory, non-nagging) -----
+    std::printf("[ RUN  ] w1RawCollision\n");
+    {
+        SMFixBar* warn = bar.findChild<SMFixBar*>(QStringLiteral("smGuardWarnBar"));
+
+        // A condition name typed WITHOUT parens stays raw (D-RAW) and collides with the cond symbol.
+        setGuard(model, transId, QStringLiteral("HasWaiting"));
+        pump(400);
+        check((warn != nullptr) && warn->isVisible(), "W1: a raw name colliding with a symbol raises the advisory");
+
+        QToolButton* bindBtn = nullptr;
+        QToolButton* keepBtn = nullptr;
+        if (warn != nullptr)
+        {
+            for (QToolButton* button : warn->findChildren<QToolButton*>())
+            {
+                if (button->text().startsWith(QStringLiteral("bind '"))) { bindBtn = button; }
+                else if (button->text().startsWith(QStringLiteral("keep '"))) { keepBtn = button; }
+            }
+        }
+
+        check(bindBtn != nullptr, "W1: the advisory offers a [bind] quick-fix");
+        check(keepBtn != nullptr, "W1: the advisory offers a [keep raw] quick-fix");
+
+        // [bind] a single-kind collision binds the raw token to the symbol (a @cond:name() call).
+        if (bindBtn != nullptr)
+        {
+            bindBtn->click();
+            pump(400);
+            check(guardText(model, transId).contains(QStringLiteral("HasWaiting(")), "W1: [bind] binds the raw name to the condition call");
+        }
+
+        // [keep raw] silences the token for the rest of the guard; retyping it does NOT re-fire.
+        setGuard(model, transId, QStringLiteral("HasWaiting"));      // raw again -> the advisory returns
+        pump(400);
+        keepBtn = nullptr;
+        if (warn != nullptr)
+        {
+            for (QToolButton* button : warn->findChildren<QToolButton*>())
+            {
+                if (button->text().startsWith(QStringLiteral("keep '"))) { keepBtn = button; }
+            }
+        }
+
+        check(keepBtn != nullptr, "W1: the advisory re-appears for a fresh raw collision");
+        if (keepBtn != nullptr)
+        {
+            keepBtn->click();
+            pump(200);
+            check((warn != nullptr) && (warn->isVisible() == false), "W1: [keep raw] dismisses the advisory");
+
+            setGuard(model, transId, QStringLiteral("HasWaiting"));  // retype the SAME token
+            pump(400);
+            check((warn != nullptr) && (warn->isVisible() == false), "W1: [keep raw] stays silent on re-typing the same token");
+        }
+
+        // Multi-kind: a raw name matching several kinds opens the SAME completer picker used for typing.
+        model.getData().getAttributes().createAttribute(QStringLiteral("W1Dup"));
+        model.getData().getConstants().createConstant(QStringLiteral("W1Dup"));
+        bar.setTransition(transId);     // rebuild the in-scope catalog so W1Dup resolves (clears the keep-raw slate)
+
+        // The name now resolves, so it cannot be TYPED raw; install a raw node directly to model the
+        // collision that arises when a symbol is added after the raw text was committed (D-SYNC).
+        SMGuardNode* rawDup = SMGuardNode::makeVerbatim(SMGuardNode::eKind::Raw, QStringLiteral("W1Dup"));
+        model.getUndoStack().push(SMGuardCommands::setTree(model.getData(), model.getNotifier(), transId, rawDup, QStringLiteral("raw dup")));
+        pump(400);
+
+        QToolButton* bindDup = nullptr;
+        if (warn != nullptr)
+        {
+            for (QToolButton* button : warn->findChildren<QToolButton*>())
+            {
+                if (button->text().startsWith(QStringLiteral("bind '"))) { bindDup = button; }
+            }
+        }
+
+        check(bindDup != nullptr, "W1: the multi-kind collision offers a [bind] quick-fix");
+
+        // A multi-kind [bind] opens the SAME completer picker used for bare typing. The warn-bar
+        // button routes straight to field->bindRaw; drive it directly so the synthetic button click
+        // cannot steal the field's keyboard focus. Assert visibility immediately -- this offscreen
+        // harness has no real active window, so a later event pump delivers a spontaneous focus-out
+        // that dismisses the non-activating popup (a harness artifact, not the product behavior).
+        field->setFocus();
+        field->bindRaw(QList<int>(), QStringLiteral("W1Dup"));
+        SMRefCompleter* picker = field->findChild<SMRefCompleter*>(QStringLiteral("smRefCompleter"));
+        check((picker != nullptr) && picker->isVisible(), "W1: a multi-kind [bind] opens the disambiguation picker");
+        if (picker != nullptr) { picker->hide(); }
+    }
+
     // ---- form-first parity: the clause popover path equals the typed path -----
     std::printf("[ RUN  ] formFirstParity\n");
     setGuard(model, transId, QString());

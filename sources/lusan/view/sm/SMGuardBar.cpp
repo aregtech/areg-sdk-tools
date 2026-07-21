@@ -447,7 +447,17 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // ---- Warning channel: unmapped-argument jumps to the call; orphan removes the stale binding ----
     connect(mWarnBar, &SMFixBar::triggered, this, [this](const QString& id, const QString& payload)
     {
-        // Payload: `p0,p1,...` (jumpGhost) or `p0,p1,...;formalId` (removeOrphan).
+        // W1 "keep raw" (SM-21-08): silence this token for the rest of the guard, then rebuild the
+        // channel without it. The dismissal is advisory UI state, never written to the document.
+        if (id == QStringLiteral("keepRaw"))
+        {
+            mDismissedRaw.insert(payload);
+            refreshWarnings();
+            return;
+        }
+
+        // Payload: `p0,p1,...` (jumpGhost) or `p0,p1,...;formalId` (removeOrphan) or
+        // `p0,p1,...;name` (bindRaw). An empty path section is a VALID address (the root node).
         const QString pathText = payload.section(QLatin1Char(';'), 0, 0);
         QList<int> path;
         const QStringList parts = pathText.split(QLatin1Char(','), Qt::SkipEmptyParts);
@@ -456,7 +466,14 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
             path.append(part.toInt());
         }
 
-        if (id == QStringLiteral("jumpGhost"))
+        if (id == QStringLiteral("bindRaw"))
+        {
+            // W1 [bind]: route to the field (single kind binds directly; several kinds open the
+            // same completer picker used for bare typing). Never auto-binds an ambiguous name.
+            const QString name = payload.section(QLatin1Char(';'), 1, 1);
+            mField->bindRaw(path, name);
+        }
+        else if (id == QStringLiteral("jumpGhost"))
         {
             jumpToCall(path);
         }
@@ -489,6 +506,9 @@ void SMGuardBar::setTransition(uint32_t transitionId)
     }
 
     mTransId = transitionId;
+    // W1 "keep raw" dismissals are per guard: a fresh transition starts with a clean advisory
+    // slate (the set is silenced-token state, never persisted to the document).
+    mDismissedRaw.clear();
     mIsland->hide();
     mHover->hide();
     mField->setTransition(transitionId);
@@ -1027,13 +1047,70 @@ void SMGuardBar::refreshWarnings()
 
     // W2 (assignment-in-guard) is delivered by the parser's existing D-NOSET warning on the field
     // (`=` in a boolean position parses as `==`); it is not re-derived here to avoid any raw-text
-    // scan (W1 raw-collision stays OUT OF SCOPE, D-RAW-UNCHECKED).
+    // scan.
+    const bool hasArgFixes = (fixes.isEmpty() == false);
+
+    // W1 (SM-21-08): a raw bare identifier that exactly matches an in-scope symbol name -> a quiet,
+    // dismissible "bind as `@kind:name`" courtesy. Advisory only; never auto-binds; "keep raw"
+    // silences the token for the rest of this guard (mDismissedRaw). Recomputed every pass, so a
+    // rename that removes the collision drops the hint with no guard edit (D-SYNC).
+    int rawHintCount = 0;
+    const QList<SMGuardRawCollision> collisions = SMGuardCatalog::rawCollisions(data, mTransId, guardTree());
+    for (const SMGuardRawCollision& hit : collisions)
+    {
+        if (mDismissedRaw.contains(hit.name))
+        {
+            continue;       // "keep raw" already silenced this token for the current guard.
+        }
+
+        // The path packed as a comma-separated payload (bindRaw unpacks it back to a node path).
+        QStringList pathParts;
+        for (int index : hit.path)
+        {
+            pathParts.append(QString::number(index));
+        }
+
+        const QString bindPayload = pathParts.join(QLatin1Char(',')) + QLatin1Char(';') + hit.name;
+
+        SMFixBar::Fix bind;
+        bind.id      = QStringLiteral("bindRaw");
+        bind.payload = bindPayload;
+        if (hit.matches.size() == 1)
+        {
+            const SMGuardSymbol& only = hit.matches.first();
+            const QString noun = only.kindNoun();
+            const QString article = QStringLiteral("aeiou").contains(noun.at(0)) ? QStringLiteral("an") : QStringLiteral("a");
+            bind.label   = tr("bind '%1' as %2").arg(hit.name, only.mention());
+            bind.tooltip = tr("There is %1 %2 named '%3'; bind the raw reference to it.").arg(article, noun, hit.name);
+        }
+        else
+        {
+            bind.label   = tr("bind '%1'...").arg(hit.name);
+            bind.tooltip = tr("'%1' matches several symbols; pick which one to bind.").arg(hit.name);
+        }
+        fixes.append(bind);
+
+        SMFixBar::Fix keep;
+        keep.id      = QStringLiteral("keepRaw");
+        keep.label   = tr("keep '%1' raw").arg(hit.name);
+        keep.payload = hit.name;
+        keep.tooltip = tr("Leave it as raw C++; do not suggest binding '%1' again.").arg(hit.name);
+        fixes.append(keep);
+
+        ++rawHintCount;
+    }
+
     if (fixes.isEmpty())
     {
         mWarnBar->dismiss();
     }
     else
     {
-        mWarnBar->setFixes(tr("unmapped arguments"), fixes);
+        // One channel, several rules (D-WARN): the message names the dominant rule; each button
+        // carries its own self-describing label + tooltip.
+        const QString message = hasArgFixes ? tr("unmapped arguments")
+                              : (rawHintCount == 1) ? tr("bind suggestion")
+                                                    : tr("bind suggestions");
+        mWarnBar->setFixes(message, fixes);
     }
 }

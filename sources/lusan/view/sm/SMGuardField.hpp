@@ -104,6 +104,16 @@ public:
     //!< Applies a quick-fix chosen in the fix bar.
     void applyFix(const QString& id, const QString& payload);
 
+    /**
+     * \brief   The W1 quick-fix (SM-21-08): binds the raw node at \p rawPath (a bare identifier
+     *          that collides with a symbol \p name) to that symbol. When the name resolves to a
+     *          single kind it binds directly (one undo step through \ref SMGuardCommands); when
+     *          it matches several kinds it opens the same reference completer used for bare
+     *          typing, filtered to that name, and binds on the pick. Advisory and never
+     *          automatic: a no-op when the name no longer matches any in-scope symbol.
+     **/
+    void bindRaw(const QList<int>& rawPath, const QString& name);
+
     //!< The shared hover card (owned by the bar; nullptr disables symbol hovers).
     void setHoverCard(SMHoverCard* card);
 
@@ -260,6 +270,15 @@ private:
     //!< Opens / filters / hides the completer for the caret's mention (the swallow-free path).
     void updateCompleter();
 
+    // ---- raw-collision bind (W1, SM-21-08) -------------------------------
+    //!< Replaces the Raw node at \p rawPath with a resolved reference to \p symbol (one undo
+    //!< step via \ref SMGuardCommands::replaceSubtree); the field reflows from the model.
+    void applyRawBind(const QList<int>& rawPath, const SMGuardSymbol& symbol);
+
+    //!< The canonical-text span of the Raw node at \p rawPath in the committed tree; false when
+    //!< the guard has no tree or the path is not addressable (used to select the token to bind).
+    bool rawNodeSpan(const QList<int>& rawPath, int& start, int& length) const;
+
     // ---- signature help (SM-21-03) ---------------------------------------
     /**
      * \brief   Finds the call the caret is inside (its parentheses). Fills \p calleeName (the
@@ -310,6 +329,9 @@ private:
 
     int                     mErrorStart;    //!< The first error span start (fix target), or -1.
     int                     mErrorLength;   //!< The first error span length.
+
+    bool                    mRawBindMode;   //!< True while the multi-kind W1 picker is open (SM-21-08).
+    QList<int>              mRawBindPath;    //!< The Raw node path the open picker binds on accept.
     QHash<QString, int>     mOwnerByName;   //!< Symbol name -> NEGuardStyle::eOwner (for coloring).
 
     SMInlineToken*          mTokenHandler;  //!< The registered island text-object painter.
