@@ -15,6 +15,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
+    ${LUSAN}/view/sm/SMGuardPopout.cpp
     ${LUSAN}/view/sm/SMGuardStatusLine.cpp
     ${LUSAN}/view/sm/SMHoverCard.cpp
     ${LUSAN}/view/sm/SMInlineToken.cpp
@@ -73,6 +74,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMGuardField.hpp
     ${LUSAN}/view/sm/SMGuardHelpCard.hpp
     ${LUSAN}/view/sm/SMGuardHighlighter.hpp
+    ${LUSAN}/view/sm/SMGuardPopout.hpp
     ${LUSAN}/view/sm/SMGuardStatusLine.hpp
     ${LUSAN}/view/sm/SMHoverCard.hpp
     ${LUSAN}/view/sm/SMInlineToken.hpp

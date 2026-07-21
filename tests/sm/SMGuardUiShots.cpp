@@ -33,6 +33,7 @@
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardCallsOutline.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
+#include "lusan/view/sm/SMGuardPopout.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/common/MethodListView.hpp"
@@ -49,8 +50,10 @@
 #include <QKeyEvent>
 #include <QLineEdit>
 #include <QMimeData>
+#include <QPushButton>
 #include <QScreen>
 #include <QTextCursor>
+#include <QToolButton>
 #include <QTreeWidget>
 #include <cstdio>
 
@@ -461,6 +464,88 @@ int main(int argc, char** argv)
         check(comp2->isVisible() == false, "Esc closes the completer");
         check(sig->isVisible(), "closing the completer restores the signature card (D-PRECEDENCE)");
     }
+    setGuard(model, transId, QString());
+    pump(150);
+
+    // ---- SM-21-05: the pop-out editor (a bigger editor over the same model) ----
+    // Open from the top strip, edit, OK -> the base reflows to the new tree (one undo step);
+    // reopen, edit, Cancel -> the base is unchanged. The base is read-only the whole time a
+    // pop-out owns editing. Shares the model, not the document (each field its own).
+    std::printf("[ RUN  ] popout\n");
+    setGuard(model, transId, QStringLiteral("WalkRequested"));
+    pump(300);
+
+    QToolButton* popoutBtn = bar.findChild<QToolButton*>(QStringLiteral("smGuardPopout"));
+    check(popoutBtn != nullptr, "the Pop-out top-strip button exists");
+    check((popoutBtn != nullptr) && popoutBtn->isEnabled(), "the Pop-out button is enabled (SM-21-05, no longer a placeholder)");
+    if (popoutBtn != nullptr)
+    {
+        popoutBtn->click();
+    }
+    pump(200);
+
+    SMGuardPopout* popout = bar.popout();
+    check(popout != nullptr, "clicking Pop-out opens the pop-out window");
+    check((popout != nullptr) && popout->isVisible(), "the pop-out is visible and non-modal");
+    check(field->isReadOnly(), "the base field is read-only while the pop-out is open");
+    check((popoutBtn != nullptr) && (popoutBtn->isEnabled() == false), "the Pop-out button is disabled while a pop-out is open");
+    if (popout != nullptr)
+    {
+        check(popout->field()->document() != field->document(), "the pop-out has its OWN document (not shared)");
+        checkEq(popout->field()->committableText(), QStringLiteral("WalkRequested"), "the pop-out seeded from the base's committable text");
+        grab(popout, grabDir, "sm2105-popout-open.png");
+
+        // Edit in the pop-out, then OK: the base reflows from the model to the new tree, in ONE undo step.
+        const int beforeOk = model.getUndoStack().index();
+        popout->field()->setPlainText(QStringLiteral("WalkRequested && count >= MIN_WAITING"));
+        pump(250);
+        QPushButton* ok = popout->findChild<QPushButton*>(QStringLiteral("smGuardPopoutOk"));
+        check(ok != nullptr, "the pop-out has an OK button");
+        if (ok != nullptr)
+        {
+            ok->click();
+        }
+        pump(300);
+        checkEq(guardText(model, transId), QStringLiteral("WalkRequested && count >= MIN_WAITING"), "OK reflows the base from the model (new tree)");
+        check(model.getUndoStack().index() == beforeOk + 1, "one OK == one undo step");
+        check(bar.popout() == nullptr, "the pop-out closed after OK");
+        check(field->isReadOnly() == false, "the base field is editable again after OK");
+
+        // Atomicity: one undo restores the whole prior guard.
+        model.getUndoStack().undo();
+        pump(200);
+        checkEq(guardText(model, transId), QStringLiteral("WalkRequested"), "one undo restores the pre-OK guard");
+        model.getUndoStack().redo();
+        pump(200);
+    }
+
+    // Reopen, edit, Cancel: the base guard is untouched and pushes no undo step.
+    if (popoutBtn != nullptr)
+    {
+        popoutBtn->click();
+    }
+    pump(200);
+    SMGuardPopout* popout2 = bar.popout();
+    check(popout2 != nullptr, "the pop-out reopens from the top strip");
+    if (popout2 != nullptr)
+    {
+        const QString baseBefore = guardText(model, transId);
+        const int beforeCancel = model.getUndoStack().index();
+        popout2->field()->setPlainText(QStringLiteral("count >= MIN_WAITING"));
+        pump(250);
+        QPushButton* cancel = popout2->findChild<QPushButton*>(QStringLiteral("smGuardPopoutCancel"));
+        check(cancel != nullptr, "the pop-out has a Cancel button");
+        if (cancel != nullptr)
+        {
+            cancel->click();
+        }
+        pump(300);
+        checkEq(guardText(model, transId), baseBefore, "Cancel leaves the base guard unchanged");
+        check(model.getUndoStack().index() == beforeCancel, "Cancel pushes no undo step");
+        check(bar.popout() == nullptr, "the pop-out closed after Cancel");
+        check(field->isReadOnly() == false, "the base field is editable again after Cancel");
+    }
+
     setGuard(model, transId, QString());
     pump(150);
 

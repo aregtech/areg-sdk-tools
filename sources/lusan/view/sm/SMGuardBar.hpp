@@ -29,6 +29,7 @@
 
 #include <QHash>
 #include <QList>
+#include <QPointer>
 #include <cstdint>
 
 /************************************************************************
@@ -42,6 +43,7 @@ class SMArgSinkGuard;
 class SMGuardCallsOutline;
 class SMGuardCatalogView;
 class SMGuardField;
+class SMGuardPopout;
 class SMGuardStatusLine;
 class SMFixBar;
 class SMGuardHelpCard;
@@ -102,6 +104,10 @@ public:
     //!< The Data catalog view (tests).
     inline SMGuardCatalogView* dataCatalog() const;
 
+    //!< The open pop-out editor, or null (tests). Not inline: QPointer<SMGuardPopout> needs the
+    //!< complete type, and callers of this header only forward-declare it.
+    SMGuardPopout* popout() const;
+
 signals:
     //!< The Conditions tab badge state changed (draft => `*`, warnings => warn glyph).
     void badgeChanged(bool isDraft, bool hasWarnings);
@@ -152,6 +158,10 @@ private:
     //!< The generated-code preview dialog (Preview top-strip button).
     void showPreviewDialog();
 
+    // ---- pop-out editor (SM-21-05) ----------------------------------------
+    //!< Opens the non-modal always-on-top pop-out over the same transition (Pop-out top strip).
+    void openPopout();
+
     // ---- use-count + warnings (SM-21-04 phase 4) --------------------------
     //!< Recomputes the catalog `used-N` counts and the warning channel from the committed guard.
     void refreshDerived();
@@ -192,6 +202,7 @@ private:
     SMGuardCatalogView* mData;      //!< The Data catalog (model/view).
     int                 mLastSection;//!< The last-open accordion section (D-ACCORDION, per tab).
     bool                mDerivedPending;//!< Coalesces the deferred catalog re-enumeration.
+    QPointer<SMGuardPopout> mPopout; //!< The open pop-out editor, or null (SM-21-05).
 };
 
 //////////////////////////////////////////////////////////////////////////

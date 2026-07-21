@@ -123,6 +123,14 @@ public:
     //!< Commits the current text now (the bar's ladder steps need a committed tree).
     void commitNow();
 
+    /**
+     * \brief   Enables / disables the implicit commit on focus-out (default enabled). The pop-out
+     *          editor (SM-21-05) disables it so its Cancel button -- which blurs the field before
+     *          its clicked() slot runs -- cannot silently commit the discarded text; the pop-out
+     *          commits explicitly on OK instead. The base bar leaves it enabled.
+     **/
+    void setAutoCommit(bool enable);
+
     //!< The committable (expanded, slot-stripped) text -- the grid's live-refresh input.
     QString committableText() const;
 
@@ -276,6 +284,7 @@ private:
     bool                    mAllowRaw;      //!< Unresolved fragments become raw nodes (E3).
     bool                    mRebuildPending;//!< Coalesces deferred rebuilds.
     bool                    mSuppressAnalyze;//!< True while programmatically setting text.
+    bool                    mAutoCommit;    //!< Commit on focus-out (false in the pop-out editor).
 
     SMGuardHighlighter*     mHighlighter;   //!< Owner colors + diagnostic underlines.
     SMRefCompleter*         mCompleter;     //!< The top-level reference completer (D-POPUP).

@@ -372,6 +372,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
+    ${LUSAN}/view/sm/SMGuardPopout.cpp
     ${LUSAN}/view/sm/SMGuardStatusLine.cpp
     ${LUSAN}/view/sm/SMHoverCard.cpp
     ${LUSAN}/view/sm/SMInlineToken.cpp
@@ -484,6 +485,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
+    ${LUSAN}/view/sm/SMGuardPopout.cpp
     ${LUSAN}/view/sm/SMGuardStatusLine.cpp
     ${LUSAN}/view/sm/SMHoverCard.cpp
     ${LUSAN}/view/sm/SMInlineToken.cpp

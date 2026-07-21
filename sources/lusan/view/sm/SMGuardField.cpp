@@ -192,6 +192,7 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     , mAllowRaw         (false)
     , mRebuildPending   (false)
     , mSuppressAnalyze  (false)
+    , mAutoCommit       (true)
     , mHighlighter      (nullptr)
     , mCompleter        (nullptr)
     , mCompleterDismissedAt (-1)
@@ -335,6 +336,11 @@ void SMGuardField::buildCatalog()
 void SMGuardField::commitNow()
 {
     commit();
+}
+
+void SMGuardField::setAutoCommit(bool enable)
+{
+    mAutoCommit = enable;
 }
 
 void SMGuardField::selectSpan(int start, int length)
@@ -1761,7 +1767,13 @@ void SMGuardField::focusOutEvent(QFocusEvent* event)
         mSignature->hide();
     }
 
-    commit();
+    // The pop-out editor disables auto-commit so its Cancel button (which blurs the field before
+    // its slot runs) cannot commit the discarded text; it commits explicitly on OK instead.
+    if (mAutoCommit)
+    {
+        commit();
+    }
+
     QTextEdit::focusOutEvent(event);
 }
 

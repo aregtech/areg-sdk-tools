@@ -40,6 +40,7 @@
 #include "lusan/view/sm/SMGuardCatalogView.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMGuardHelpCard.hpp"
+#include "lusan/view/sm/SMGuardPopout.hpp"
 #include "lusan/view/sm/SMGuardStatusLine.hpp"
 #include "lusan/view/sm/SMHoverCard.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
@@ -207,6 +208,7 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mData         (nullptr)
     , mLastSection  (0)
     , mDerivedPending(false)
+    , mPopout       (nullptr)
 {
     QVBoxLayout* outer = new QVBoxLayout(this);
     outer->setContentsMargins(8, 8, 8, 8);
@@ -243,8 +245,7 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mPopoutBtn->setObjectName(QStringLiteral("smGuardPopout"));
     mPopoutBtn->setText(tr("Pop-out"));
     mPopoutBtn->setAutoRaise(true);
-    mPopoutBtn->setEnabled(false);      // wired in SM-21-05.
-    mPopoutBtn->setToolTip(tr("Open the guard in a larger editor (coming soon)"));
+    mPopoutBtn->setToolTip(tr("Open the guard in a larger editor"));
     header->addWidget(mPopoutBtn);
 
     mClear = new QToolButton(this);
@@ -412,6 +413,7 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     });
     connect(mPreviewBtn, &QToolButton::clicked, this, &SMGuardBar::showPreviewDialog);
     connect(mDataBtn, &QToolButton::clicked, this, &SMGuardBar::toggleDataSection);
+    connect(mPopoutBtn, &QToolButton::clicked, this, &SMGuardBar::openPopout);
 
     // ---- Accordion: Calls outline drives the single Arguments table --------
     connect(mCalls, &SMGuardCallsOutline::callSelected, this, &SMGuardBar::onCallSelected);
@@ -479,6 +481,13 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
 void SMGuardBar::setTransition(uint32_t transitionId)
 {
+    // A pop-out is bound to one transition; if the bar retargets, close it (its closed() handler
+    // restores the base field to editable before the rebind below).
+    if (mPopout != nullptr)
+    {
+        mPopout->close();
+    }
+
     mTransId = transitionId;
     mIsland->hide();
     mHover->hide();
@@ -839,6 +848,67 @@ void SMGuardBar::showPreviewDialog()
 
     dialog.resize(560, 240);
     dialog.exec();
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Pop-out editor (SM-21-05)
+//////////////////////////////////////////////////////////////////////////
+
+SMGuardPopout* SMGuardBar::popout() const
+{
+    return mPopout;
+}
+
+void SMGuardBar::openPopout()
+{
+    if (mTransId == 0u)
+    {
+        return;
+    }
+
+    if (mPopout != nullptr)
+    {
+        // Already open: raise and focus it rather than spawning a second window.
+        mPopout->raise();
+        mPopout->activateWindow();
+        return;
+    }
+
+    // Seed the pop-out from the base field's committable text: commit the base first (a no-op when
+    // it is already committed), so the pop-out's field reflows from the model and opens showing
+    // exactly what the base showed. The base field goes read-only while the pop-out owns editing.
+    mField->commitNow();
+    mField->setReadOnly(true);
+    mPopoutBtn->setEnabled(false);
+
+    SMGuardPopout* popout = new SMGuardPopout(mModel, mTransId, this);
+    mPopout = popout;
+
+    // The `Name it...` / `Move to handler...` ladder is bar-owned; run it over the shared model
+    // (the island must be committed first so it exists in the tree the path is resolved against).
+    connect(popout, &SMGuardPopout::nameIslandRequested, this, [this, popout](int islandIndex, const QString& body, bool moveToHandler)
+    {
+        popout->field()->commitNow();
+        const SMMethodEntry::eImplement implement = moveToHandler ? SMMethodEntry::eImplement::Handler
+                                                                  : SMMethodEntry::eImplement::Embedded;
+        runNameIsland(nthIslandPath(islandIndex), body, implement);
+    });
+
+    // On close (OK / Cancel / the window box): the base becomes editable again and regains focus.
+    // An OK commit reflowed the base from the model already (elementChanged); a Cancel left it as-is.
+    connect(popout, &SMGuardPopout::closed, this, [this]()
+    {
+        mField->setReadOnly(false);
+        mPopoutBtn->setEnabled(true);
+        mField->setFocus();
+    });
+
+    // Center the pop-out over the bar so it opens where the developer is looking.
+    popout->move(mapToGlobal(rect().center()) - popout->rect().center());
+    popout->show();
+    popout->raise();
+    popout->activateWindow();
+    popout->field()->setFocus();
 }
 
 //////////////////////////////////////////////////////////////////////////
