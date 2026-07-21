@@ -96,6 +96,7 @@ public:
         QString type;
         QString defaultText;
         bool    hasDefault;
+        bool    orphan;         //!< A stored mapping whose formal was removed (a red orphan row).
     };
 
     /**
@@ -126,6 +127,16 @@ public:
     void setRowStyle(eRowStyle style);
 
     inline eRowStyle rowStyle(void) const;
+
+    /**
+     * \brief   Restricts the Detailed source-kind picker to \p kinds (in the order given), so a
+     *          host can offer a narrower universe than the full six. Passing an empty list
+     *          restores the default (every source kind). A stored argument whose kind is not in
+     *          \p kinds is still shown, so no existing mapping is hidden. Takes effect on the
+     *          next \ref bind, or immediately (deferred) when the table is already bound.
+     *          Ignored by the Compact shape, which always offers its fixed set.
+     **/
+    void setAllowedSources(const QList<SMArgumentEntry::eValueSource>& kinds);
 
     /**
      * \brief   Binds the table to \p sink and shows one row per \p params, in signature
@@ -194,6 +205,7 @@ private:
 
     void buildCompactRow(int index);
     void buildDetailedRow(int index);
+    void buildOrphanRow(int index);
     void refreshRow(int row);
 
     // Detailed interaction.
@@ -239,6 +251,7 @@ private:
     bool                mAllowParam;
     IArgSink*           mSink;
     QList<Param>        mParams;
+    QList<SMArgumentEntry::eValueSource> mAllowedSources;    //!< Detailed source filter; empty = all.
     QWidget*            mHost;          //!< Rebuilt per style; owns the row widgets.
     QGridLayout*        mGrid;          //!< Detailed only -- the row grid inside \ref mHost.
     QList<Row>          mRows;

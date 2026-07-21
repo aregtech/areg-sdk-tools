@@ -324,6 +324,7 @@ private:
     bool                        mComposite;     //!< The state owns painted substates.
     bool                        mImported;      //!< The state hosts an imported submachine.
     bool                        mExpanded;      //!< The body is expanded.
+    int                         mActionSeverity;//!< Entry/exit mapping severity (NEGuardStyle), or -1 (clean).
     QString                     mColorName;     //!< The persisted body color (empty = theme).
     QString                     mHeaderColorName; //!< The persisted header color (empty = derived).
     QList<BodyRow>              mRows;          //!< The behavior rows, in display order.

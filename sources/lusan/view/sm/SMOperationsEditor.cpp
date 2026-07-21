@@ -37,6 +37,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QScrollArea>
+#include <QSet>
 #include <QSignalBlocker>
 #include <QTimer>
 #include <QToolButton>
@@ -48,6 +49,14 @@ namespace
     using eSource = SMArgumentEntry::eValueSource;
 
     constexpr int RoleTimerOpId { Qt::UserRole + 1 };
+
+    //!< The Actions/Events source universe (D-SOURCES): a literal, a stimulus parameter (transition
+    //!< scope only, gated by the table), a machine attribute, or a constant. The condition and
+    //!< verbatim-C++ kinds are Conditions-only and are not offered here.
+    QList<eSource> kActionSources(void)
+    {
+        return { eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant };
+    }
 
     //!< Removes and deletes every widget owned by a layout (used to rebuild the timer rows).
     void clearLayout(QLayout* layout)
@@ -127,7 +136,8 @@ void SMOperationsEditor::buildUi()
     connect(mActionCombo, &QComboBox::activated, this, [this](int) { setActionName(mActionCombo->currentText()); });
     actionBox->addWidget(mActionCombo);
     mActionParams = new SMArgMapTable(mModel, actionGroup);
-    mActionParams->setRowStyle(SMArgMapTable::eRowStyle::Compact);
+    mActionParams->setRowStyle(SMArgMapTable::eRowStyle::Detailed);
+    mActionParams->setAllowedSources(kActionSources());
     actionBox->addWidget(mActionParams);
     box->addWidget(actionGroup);
 
@@ -138,7 +148,8 @@ void SMOperationsEditor::buildUi()
     connect(mEventCombo, &QComboBox::activated, this, [this](int) { setEventName(mEventCombo->currentText()); });
     eventBox->addWidget(mEventCombo);
     mEventParams = new SMArgMapTable(mModel, eventGroup);
-    mEventParams->setRowStyle(SMArgMapTable::eRowStyle::Compact);
+    mEventParams->setRowStyle(SMArgMapTable::eRowStyle::Detailed);
+    mEventParams->setAllowedSources(kActionSources());
     eventBox->addWidget(mEventParams);
     box->addWidget(eventGroup);
 
@@ -291,7 +302,7 @@ void SMOperationsEditor::bindParamRows(SMArgMapTable* table, SMArgSinkOperation&
 {
     SMOperationBase* op = ((mList != nullptr) && (opId != 0u)) ? mList->findById(opId) : nullptr;
     const MethodBase* callee = calleeFor(op, isEvent);
-    if ((op == nullptr) || (callee == nullptr) || (callee->getElements().isEmpty()))
+    if ((op == nullptr) || (callee == nullptr))
     {
         table->clearBinding();
         sink.clearBinding();
@@ -302,9 +313,22 @@ void SMOperationsEditor::bindParamRows(SMArgMapTable* table, SMArgSinkOperation&
                                            : static_cast<SMActionCall*>(op)->getArguments();
 
     QList<SMArgMapTable::Param> params;
+    QSet<QString> formalNames;
     for (const MethodParameter& param : callee->getElements())
     {
-        params.append(SMArgMapTable::Param{ param.getName(), param.getType(), param.getValue(), param.hasDefault() });
+        formalNames.insert(param.getName());
+        params.append(SMArgMapTable::Param{ param.getName(), param.getType(), param.getValue(), param.hasDefault(), false });
+    }
+
+    // D-ORPHAN (case b): a formal removed on the Methods page leaves a stored argument whose name
+    // matches no current parameter. Never drop it silently (hazard 12.9); surface it as a red
+    // orphan row (value kept, remove quick-fix) appended after the live parameters.
+    for (const SMArgumentEntry& arg : args)
+    {
+        if (formalNames.contains(arg.getName()) == false)
+        {
+            params.append(SMArgMapTable::Param{ arg.getName(), QString(), QString(), false, true });
+        }
     }
 
     sink.bind(op, &args);

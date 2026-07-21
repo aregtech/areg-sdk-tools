@@ -23,6 +23,7 @@
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMOperationValidation.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/IArgSink.hpp"
 #include "lusan/view/sm/SMArgMapTable.hpp"
@@ -37,6 +38,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QSet>
+#include <QToolButton>
 #include <QUndoStack>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
@@ -446,6 +448,98 @@ int main(int argc, char* argv[])
         stretched.setRowStyle(SMArgMapTable::eRowStyle::Compact);
         stretched.bind(tid, true, &stub, wide);
         check(stretched.minimumSizeHint().width() == 0, "a long signature still cannot widen the dock");
+    }
+
+    // ---------------------------------------------------------------------------------
+    // SM-23: the Actions rows ARE the shared Detailed widget, restricted to the four
+    // D-SOURCES kinds (literal / param / attribute / constant) -- the condition and the
+    // verbatim-C++ kinds stay Conditions-only, so the two tabs read the same at the row.
+    // ---------------------------------------------------------------------------------
+    {
+        StubSink      s1;
+        SMArgMapTable actions(model);
+        actions.setRowStyle(SMArgMapTable::eRowStyle::Detailed);
+        actions.setAllowedSources({ eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant });
+        actions.bind(tid, /*allowParam*/ true, &s1, signature());
+
+        const QSet<int> ak = sourceKinds(actions, 0);
+        check(ak.contains(static_cast<int>(eSource::Value)),          "Actions: literal offered");
+        check(ak.contains(static_cast<int>(eSource::Param)),          "Actions: Param offered in transition scope");
+        check(ak.contains(static_cast<int>(eSource::Attribute)),      "Actions: Attribute offered");
+        check(ak.contains(static_cast<int>(eSource::Constant)),       "Actions: Constant now offered (SM-23 source parity)");
+        check(ak.contains(static_cast<int>(eSource::Condition))  == false, "Actions: Condition NOT offered (Conditions-only)");
+        check(ak.contains(static_cast<int>(eSource::Expression)) == false, "Actions: verbatim C++ NOT offered (Conditions-only)");
+        check(ak.size() == 4, "Actions: exactly the four D-SOURCES kinds are offered");
+
+        SMArgMapTable entryScope(model);
+        entryScope.setRowStyle(SMArgMapTable::eRowStyle::Detailed);
+        entryScope.setAllowedSources({ eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant });
+        entryScope.bind(0u, /*allowParam*/ false, &s1, signature());
+        check(sourceKinds(entryScope, 0).contains(static_cast<int>(eSource::Param)) == false,
+              "Actions: an entry/exit scope still hides the Param source");
+    }
+
+    // --- SM-23 (D-ORPHAN): a stored mapping whose formal was removed renders as a red orphan
+    //     row that keeps its value until a remove quick-fix clears it. ---
+    {
+        StubSink s2;
+        s2.setArg(QStringLiteral("gone"), eSource::Value, QStringLiteral("5"), QString());
+
+        QList<SMArgMapTable::Param> withOrphan;
+        withOrphan.append(SMArgMapTable::Param{ QStringLiteral("waiting"), QStringLiteral("uint32"), QString(), false, false });
+        withOrphan.append(SMArgMapTable::Param{ QStringLiteral("gone"),    QString(),                QString(), false, true  });
+
+        SMArgMapTable orph(model);
+        orph.setRowStyle(SMArgMapTable::eRowStyle::Detailed);
+        orph.bind(tid, /*allowParam*/ true, &s2, withOrphan);
+
+        check(orph.rowCount() == 2, "orphan row is appended after the live parameters");
+        checkEq(orph.nameLabel(1)->text(),   QStringLiteral("gone"),     "orphan row keeps the removed parameter's name");
+        checkEq(orph.statusLabel(1)->text(), QStringLiteral("orphaned"), "orphan row is flagged orphaned");
+
+        const QList<QToolButton*> buttons = orph.findChildren<QToolButton*>();
+        check(buttons.size() == 1, "the orphan row carries exactly one remove quick-fix");
+        if (buttons.isEmpty() == false)
+        {
+            const int before = s2.commits();
+            buttons.first()->click();
+            QCoreApplication::processEvents();
+            check(s2.argFor(QStringLiteral("gone")) == nullptr, "removing the orphan clears the stale argument (value not silently kept)");
+            check(s2.commits() > before, "the orphan removal commits exactly one clear");
+        }
+    }
+
+    // --- SM-23 (D-ORPHAN-CANVAS): the canvas warning severity follows the mapping -- a required
+    //     argument left unmapped, or an orphan argument, warns; a fully-mapped call is clean. ---
+    {
+        StateMachineData d2;
+        d2.getOverview().setName(QStringLiteral("Warn"));
+        SMMethodEntry* walk = d2.getMethods().createMethod(QStringLiteral("Walk"), SMMethodEntry::eMethodType::Action);
+        walk->addParam(QStringLiteral("waiting"))->setType(QStringLiteral("uint32"));   // required, no default
+
+        SMStateEntry*      root2 = d2.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);
+        SMTransitionEntry* t2    = root2->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("go"), QString());
+        SMActionCall*      c2    = new SMActionCall();
+        c2->setAction(QStringLiteral("Walk"));
+        t2->getOperations().addOperation(c2);
+        const uint32_t tid2 = t2->getId();
+
+        check(SMOperationValidation::transitionSeverity(d2, tid2) == SMOperationValidation::eSeverity::Error,
+              "an unmapped required argument warns on the canvas");
+
+        c2->getArguments().append(SMArgumentEntry(0u, QStringLiteral("waiting"), eSource::Value, QStringLiteral("5")));
+        check(SMOperationValidation::transitionSeverity(d2, tid2) == SMOperationValidation::eSeverity::Ok,
+              "mapping the required argument clears the canvas warning immediately");
+
+        c2->getArguments().append(SMArgumentEntry(0u, QStringLiteral("ghost"), eSource::Value, QStringLiteral("9")));
+        check(SMOperationValidation::transitionSeverity(d2, tid2) == SMOperationValidation::eSeverity::Error,
+              "an orphan argument (no matching formal) warns on the canvas");
+
+        SMActionCall* entryCall = new SMActionCall();
+        entryCall->setAction(QStringLiteral("Walk"));
+        root2->getEntryList().addOperation(entryCall);
+        check(SMOperationValidation::stateSeverity(d2, root2->getId()) == SMOperationValidation::eSeverity::Error,
+              "an unmapped entry action warns on its state box");
     }
 
     if (grabDir.isEmpty() == false)

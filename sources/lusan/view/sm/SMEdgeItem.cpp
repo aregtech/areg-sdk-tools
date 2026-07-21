@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMEdgeItem.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -26,6 +26,7 @@
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/SMOperationSummary.hpp"
 #include "lusan/model/sm/SMGuardValidation.hpp"
+#include "lusan/model/sm/SMOperationValidation.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
@@ -111,6 +112,7 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mStimulusText ( )
     , mGuardText    ( )
     , mGuardSeverity(-1)
+    , mActionSeverity(-1)
     , mSourceIsStart(false)
     , mHasNote      (false)
     , mWaypoints    ( )
@@ -247,6 +249,18 @@ void SMEdgeItem::updateFromModel()
         setToolTip(signature + QChar('[') + summary + QChar(']'));
     }
 
+    // An action/event whose arguments are not fully mapped warns on the canvas, so the developer
+    // sees which transitions a method edit broke without opening each Properties panel; the glyph
+    // clears the instant every argument is mapped.
+    mActionSeverity = -1;
+    const SMOperationValidation::eSeverity opSeverity = SMOperationValidation::transitionSeverity(data, getElementId());
+    if (opSeverity != SMOperationValidation::eSeverity::Ok)
+    {
+        mActionSeverity = static_cast<int>((opSeverity == SMOperationValidation::eSeverity::Error)
+                                           ? NEGuardStyle::eSeverity::Err
+                                           : NEGuardStyle::eSeverity::Warn);
+    }
+
     // The transition's operations are summarized below the line (the action reads under it).
     const SMOperationList& ops = transition->getOperations();
     mActionText.clear();
@@ -261,6 +275,12 @@ void SMEdgeItem::updateFromModel()
         if (mActionText.length() > MAX_ACTION)
         {
             mActionText = mActionText.left(MAX_ACTION - 3) + QStringLiteral("...");
+        }
+
+        // A leading `(!)` marks an incomplete mapping; the tint is applied in paintLabels.
+        if (mActionSeverity >= 0)
+        {
+            mActionText = QStringLiteral("(!) ") + mActionText;
         }
     }
 
@@ -714,7 +734,9 @@ void SMEdgeItem::paintLabels(QPainter* painter, const QPalette& palette)
     const QRectF action = actionRect();
     if (action.isNull() == false)
     {
-        painter->setPen(NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Fsm));
+        painter->setPen((mActionSeverity >= 0)
+                        ? NEGuardStyle::severityColor(static_cast<NEGuardStyle::eSeverity>(mActionSeverity))
+                        : NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Fsm));
         painter->drawText(action, Qt::AlignCenter, mActionText);
     }
 

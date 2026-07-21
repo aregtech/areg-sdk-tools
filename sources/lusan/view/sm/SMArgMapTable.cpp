@@ -41,6 +41,7 @@
 #include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 namespace
@@ -115,6 +116,7 @@ SMArgMapTable::SMArgMapTable(StateMachineModel& model, QWidget* parent /*= nullp
     , mAllowParam       (false)
     , mSink             (nullptr)
     , mParams           ( )
+    , mAllowedSources   ( )
     , mHost             (nullptr)
     , mGrid             (nullptr)
     , mRows             ( )
@@ -140,6 +142,18 @@ void SMArgMapTable::setRowStyle(eRowStyle style)
     {
         mStyle = style;
         rebuild();
+    }
+}
+
+void SMArgMapTable::setAllowedSources(const QList<SMArgumentEntry::eValueSource>& kinds)
+{
+    if (mAllowedSources != kinds)
+    {
+        mAllowedSources = kinds;
+        if (mSink != nullptr)
+        {
+            scheduleRebuild();
+        }
     }
 }
 
@@ -331,6 +345,12 @@ void SMArgMapTable::buildCompactRow(int index)
 
 void SMArgMapTable::buildDetailedRow(int index)
 {
+    if (mParams.at(index).orphan)
+    {
+        buildOrphanRow(index);
+        return;
+    }
+
     const Param& param = mParams.at(index);
     const int gridRow = index + 1;
 
@@ -344,10 +364,21 @@ void SMArgMapTable::buildDetailedRow(int index)
     row.source->setObjectName(QStringLiteral("smArgSource_%1").arg(index));
     makeShrinkable(row.source);
     row.source->addItem(param.hasDefault ? tr("use default (%1)").arg(param.defaultText) : tr("(not mapped)"), -1);
+    // The kind a stored mapping already uses is always offered, so a host source filter can
+    // never hide an existing value (it would otherwise fall back to "(not mapped)").
+    const SMArgumentEntry* curKind = (mSink != nullptr) ? mSink->argFor(param.name) : nullptr;
     const eSource offered[] = { eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant, eSource::Condition, eSource::Expression };
     for (eSource kind : offered)
     {
         if ((kind == eSource::Param) && ((mAllowParam == false) || (SMMappingSources::isKindLegal(mModel.getData(), mTransId, kind) == false)))
+        {
+            continue;
+        }
+
+        // A host may narrow the picker (the Actions tab offers param/attribute/constant/literal
+        // only); an empty filter keeps every kind.
+        if ((mAllowedSources.isEmpty() == false) && (mAllowedSources.contains(kind) == false)
+            && ((curKind == nullptr) || (curKind->getSource() != kind)))
         {
             continue;
         }
@@ -429,6 +460,56 @@ void SMArgMapTable::buildDetailedRow(int index)
     watchEditor(row.expr);
 
     refreshRow(index);
+}
+
+void SMArgMapTable::buildOrphanRow(int index)
+{
+    // D-ORPHAN (case b): the callee still exists but this parameter was removed on the Methods
+    // page, so its stored value can no longer be re-typed as a live formal. The mapping is never
+    // silently discarded (hazard 12.9): the value is shown in a red row that keeps it until the
+    // developer removes it through the quick-fix. The same red row appears in both tabs.
+    const Param& param = mParams.at(index);
+    const int gridRow = index + 1;
+
+    Row row {};
+    row.param = param;
+
+    const QColor err = NEGuardStyle::severityColor(NEGuardStyle::eSeverity::Err);
+    const QString redStyle = QStringLiteral("color: %1;").arg(err.name());
+
+    row.name = new QLabel(param.name, mHost);
+    row.name->setStyleSheet(redStyle);
+
+    row.type = new QLabel(tr("(removed)"), mHost);
+    row.type->setStyleSheet(redStyle);
+
+    const SMArgumentEntry* cur = (mSink != nullptr) ? mSink->argFor(param.name) : nullptr;
+    QLabel* value = new QLabel((cur != nullptr) ? cur->getValue() : QString(), mHost);
+
+    row.status = new QLabel(tr("orphaned"), mHost);
+    row.status->setStyleSheet(redStyle);
+
+    QToolButton* remove = new QToolButton(mHost);
+    remove->setText(tr("x"));
+    remove->setToolTip(tr("The mapped parameter no longer exists; remove the stale binding"));
+
+    mGrid->addWidget(row.name,   gridRow, 0);
+    mGrid->addWidget(row.type,   gridRow, 1);
+    mGrid->addWidget(row.status, gridRow, 2);
+    mGrid->addWidget(value,      gridRow, 3);
+    mGrid->addWidget(remove,     gridRow, 4);
+
+    mRows.append(row);
+
+    // Removing the orphan clears the stale argument (one undo step); the deferred re-projection
+    // then drops this row.
+    connect(remove, &QToolButton::clicked, this, [this, index]()
+    {
+        if (index < mRows.size())
+        {
+            commit(index, false, eSource::Value, QString(), QString());
+        }
+    });
 }
 
 void SMArgMapTable::refreshRow(int row)

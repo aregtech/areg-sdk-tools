@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/view/sm/SMEdgeItem.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -43,7 +43,7 @@ class SMStateEntry;
  *          a polyline (waypoints) or arc to the target state border, an arrowhead, and a
  *          draggable stimulus label. The begin/end anchors are re-derived from the current
  *          state box geometry, so moving a state only moves its anchor; interior waypoints
- *          stay put. Only external (and self) transitions have an edge — internal ones are
+ *          stay put. Only external (and self) transitions have an edge -- internal ones are
  *          shown as a state-body row. The element ID is the item's single model link, and
  *          every edit it produces goes through an undo command.
  **/
@@ -289,6 +289,7 @@ private:
     QString                 mGuardText;     //!< The `[guard]` clause drawn after the stimulus, or empty.
     QString                 mActionText;    //!< The operation summary drawn below the line.
     int                     mGuardSeverity; //!< The guard's NEGuardStyle severity for the label tint, or -1 (clean).
+    int                     mActionSeverity;//!< The operation mapping's NEGuardStyle severity for the action tint, or -1 (clean).
     bool                    mSourceIsStart; //!< The source is the Start pseudo-state (no stimulus placeholder).
     bool                    mHasNote;       //!< A note is bound to this transition (badge shown).
     SMNoteEditor            mNoteEditor;    //!< The open in-place note editor (if any).

@@ -25,8 +25,10 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
 #include "lusan/model/sm/SMOperationSummary.hpp"
+#include "lusan/model/sm/SMOperationValidation.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMScene.hpp"
 
@@ -270,6 +272,7 @@ SMStateItem::SMStateItem(uint32_t stateId, QGraphicsItem* parent /*= nullptr*/)
     , mComposite        (false)
     , mImported         (false)
     , mExpanded         (true)
+    , mActionSeverity   (-1)
     , mColorName        ( )
     , mHeaderColorName  ( )
     , mRows             ( )
@@ -593,6 +596,20 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
         right = badge.left() - 4.0;
     }
 
+    // An incomplete entry/exit action mapping warns with a tinted `(!)` badge, matching the edge
+    // glyph so both canvas surfaces read the same.
+    if (mActionSeverity >= 0)
+    {
+        const QColor warn = NEGuardStyle::severityColor(static_cast<NEGuardStyle::eSeverity>(mActionSeverity));
+        const QRectF badge{ right - 14.0, (headerH - 14.0) / 2.0, 14.0, 14.0 };
+        painter->setPen(QPen(warn, 1.2));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawEllipse(badge);
+        painter->setFont(badgeFont);
+        painter->drawText(badge, Qt::AlignCenter, QStringLiteral("!"));
+        right = badge.left() - 4.0;
+    }
+
     QFont nameFont = painter->font();
     nameFont.setBold(true);
     painter->setFont(nameFont);
@@ -851,6 +868,18 @@ void SMStateItem::updateFromModel()
     mComposite = state->hasNestedStates();
     mImported  = state->isImportedSubmachine();
     mHasNote   = (data.getLayout().findNoteByOwner(getElementId()) != nullptr);
+
+    // An entry/exit action whose arguments are not fully mapped warns in the header, so a method
+    // edit that breaks a mapping is visible on the canvas without opening the Properties panel.
+    mActionSeverity = -1;
+    const SMOperationValidation::eSeverity opSeverity = SMOperationValidation::stateSeverity(data, getElementId());
+    if (opSeverity != SMOperationValidation::eSeverity::Ok)
+    {
+        mActionSeverity = static_cast<int>((opSeverity == SMOperationValidation::eSeverity::Error)
+                                           ? NEGuardStyle::eSeverity::Err
+                                           : NEGuardStyle::eSeverity::Warn);
+    }
+
     rebuildRows(*state);
 
     mMiniature.clear();

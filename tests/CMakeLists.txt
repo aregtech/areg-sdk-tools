@@ -177,6 +177,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
@@ -405,6 +406,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
