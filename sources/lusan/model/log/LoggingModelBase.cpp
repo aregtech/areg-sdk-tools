@@ -586,6 +586,9 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
                           : count;
     mLogs.resize(std::min(count, windowSize));
     mReadThread.start(areg::DO_NOT_WAIT);
+
+    mTotalLogCount = count;
+    qDebug() << "Total logs in DB:" << mTotalLogCount << "| Window size:" << mLogs.size();
 }
 
 // New — add limit and offset params

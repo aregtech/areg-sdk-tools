@@ -74,7 +74,7 @@ void OfflineLogsModel::openDatabase(const QString& filePath, bool readOnly)
     }
 }
 
-uint32_t OfflineLogsModel::setupLogStatement(ITEM_ID instId /*= areg::TARGET_ALL*/)
+uint32_t OfflineLogsModel::setupLogStatement(ITEM_ID instId /*= areg::TARGET_ALL*/, int32_t limit /*= -1*/, uint32_t offset /*= 0u*/)
 {
     return mDatabase.setup_statement_read_filter_logs(mStatement, instId);
 }
