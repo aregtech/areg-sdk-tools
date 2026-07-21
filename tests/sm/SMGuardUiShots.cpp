@@ -22,10 +22,12 @@
  *
  ************************************************************************/
 
+#include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMGuardCommands.hpp"
+#include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
@@ -34,6 +36,7 @@
 #include "lusan/view/sm/SMGuardCallsOutline.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMGuardPopout.hpp"
+#include "lusan/view/sm/SMInlineToken.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/common/MethodListView.hpp"
@@ -44,6 +47,7 @@
 #include <QApplication>
 #include <QToolBox>
 #include <QClipboard>
+#include <QTextDocument>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QGuiApplication>
@@ -155,6 +159,27 @@ namespace
     {
         const SMTransitionEntry* transition = model.getData().findTransitionById(transitionId);
         return (transition != nullptr) ? SMGuardRender::guardText(model.getData(), transitionId, transition->getGuard()) : QString();
+    }
+
+    //!< The DISPLAY name (PropName) of the first folded chip token in the field, or empty.
+    QString firstChipName(SMGuardField* field)
+    {
+        const QString text = field->toPlainText();
+        QTextCursor cursor(field->document());
+        for (int i = 0; i < text.length(); ++i)
+        {
+            if (text.at(i) == QChar::ObjectReplacementCharacter)
+            {
+                cursor.setPosition(i + 1);
+                const QTextCharFormat format = cursor.charFormat();
+                if (SMInlineToken::isChip(format))
+                {
+                    return format.property(SMInlineToken::PropName).toString();
+                }
+            }
+        }
+
+        return QString();
     }
 }
 
@@ -466,6 +491,48 @@ int main(int argc, char** argv)
     }
     setGuard(model, transId, QString());
     pump(150);
+
+    // ---- 12.3: a foreign rename re-projects the chips but keeps a half-typed token ----
+    // Renaming a method on the Methods page while the guard field holds an uncommitted, half-typed
+    // token must UPDATE the folded chips (the method chip respells to the new name) WITHOUT
+    // reflowing the field -- the half-typed text the developer is mid-way through survives, and no
+    // spurious undo step is manufactured (hazard 12.3 / D-SYNC).
+    std::printf("[ RUN  ] foreignRenameKeepsTyping\n");
+    {
+        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+        pump(300);
+        check(field->chipCount() >= 1, "the call folded to a chip");
+        checkEq(firstChipName(field), QStringLiteral("HasWaiting"), "the method chip shows its name before the rename");
+
+        const SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("HasWaiting"));
+        check(hw != nullptr, "the demo document has the HasWaiting condition method");
+        if (hw != nullptr)
+        {
+            const uint32_t methodId = hw->getId();
+
+            // The developer types a half-typed token AFTER the committed call (uncommitted: the
+            // 150 ms debounce has not fired and 'ReadyChk' is an incomplete identifier).
+            field->setFocus();
+            QTextCursor tail = field->textCursor();
+            tail.movePosition(QTextCursor::End);
+            field->setTextCursor(tail);
+            field->insertPlainText(QStringLiteral(" && ReadyChk"));
+
+            const int undoBefore = model.getUndoStack().index();
+
+            // A foreign rename (Methods page): fires elementChanged(methodId != transitionId).
+            model.getMethodModel().renameMethod(methodId, QStringLiteral("StillWaiting"));
+            pump(40);   // reproject is synchronous; stay well under the 150 ms commit debounce.
+
+            checkEq(firstChipName(field), QStringLiteral("StillWaiting"), "the method chip respelled to the new name (12.3 re-projection)");
+            check(field->committableText().contains(QStringLiteral("ReadyChk")), "the half-typed token survived the foreign rename (12.3: no reflow)");
+            check(field->committableText().contains(QStringLiteral("StillWaiting")), "committable text carries the new canonical name, not the stale one");
+            check(model.getUndoStack().index() == undoBefore + 1, "the rename is one undo step; the re-projection adds none");
+        }
+    }
+
+    setGuard(model, transId, QString());
+    pump(200);      // let the pending typing debounce fire (a no-op commit on the now-empty field)
 
     // ---- SM-21-05: the pop-out editor (a bigger editor over the same model) ----
     // Open from the top strip, edit, OK -> the base reflows to the new tree (one undo step);

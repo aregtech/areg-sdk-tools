@@ -223,6 +223,12 @@ private:
     //!< from a model-driven reflow (a committed tree), back-to-front so offsets stay valid.
     void foldChips(const QList<SMGuardRender::Chip>& chips);
 
+    //!< Re-projects every folded chip's DISPLAY name / owner hue / prefix / reveal and its
+    //!< committable body from the committed tree, IN PLACE, without reflowing the field text
+    //!< (hazard 12.3): a foreign rename/retype must update chips while an uncommitted half-typed
+    //!< token is preserved. A no-op when the guard is a draft or a chip was de-rendered mid-edit.
+    void reprojectChips();
+
     //!< The document positions of every chip token, in text order.
     QList<int> chipPositions() const;
 

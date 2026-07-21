@@ -600,6 +600,63 @@ void SMGuardField::foldChips(const QList<SMGuardRender::Chip>& chips)
     mSuppressAnalyze = false;
 }
 
+void SMGuardField::reprojectChips()
+{
+    // A foreign change (a method / attribute / constant / parameter renamed or retyped on another
+    // page) must update what the folded chips SHOW without reflowing the field text -- a reflow
+    // would clobber a half-typed token the user is in the middle of writing (hazard 12.3). The
+    // committed tree is unchanged (references key on ids, P1); only the names it renders through
+    // have moved. So re-render the committed tree and rewrite each folded chip token's format in
+    // place. Text length never changes, so offsets, the caret, and any uncommitted text are all
+    // preserved; only the chips respell.
+    SMTransitionEntry* transition = (mTransitionId != 0u) ? mModel.getData().findTransitionById(mTransitionId) : nullptr;
+    if (transition == nullptr)
+    {
+        return;
+    }
+
+    const SMGuard& guard = transition->getGuard();
+    if ((guard.isOk() == false) || (guard.getTree() == nullptr))
+    {
+        return;     // a draft carries no folded chips.
+    }
+
+    const QList<int> positions = chipPositions();
+    if (positions.isEmpty())
+    {
+        return;
+    }
+
+    const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree());
+    if (rendered.chips.size() != positions.size())
+    {
+        // A de-rendered chip (double-click edit) desyncs the count; leave the respell to the next
+        // reflow rather than risk mapping a chip onto the wrong token.
+        return;
+    }
+
+    mSuppressAnalyze = true;
+    // Back-to-front, matching foldChips: a format-only edit never shifts offsets, but stay
+    // defensive and consistent.
+    for (int c = static_cast<int>(rendered.chips.size()) - 1; c >= 0; --c)
+    {
+        const SMGuardRender::Chip& chip = rendered.chips.at(c);
+        const QString body   = rendered.text.mid(chip.start, chip.length);
+        const QString prefix = QLatin1Char('@') + chip.kind + QLatin1Char(':');
+
+        QTextCursor cursor(document());
+        cursor.setPosition(positions.at(c));
+        cursor.setPosition(positions.at(c) + 1, QTextCursor::KeepAnchor);
+        cursor.setCharFormat(SMInlineToken::makeChipFormat(body, chip.name, roleToOwner(chip.role), prefix, chip.reveal));
+    }
+    mSuppressAnalyze = false;
+
+    // Keep the committed-text snapshot in step (same convention as rebuildFromModel), so a later
+    // focus-out commit still no-ops when the user made no edit of their own -- the foreign rename
+    // must not manufacture a spurious undo step.
+    mCommittedText = rendered.text;
+}
+
 int SMGuardField::chipCount() const
 {
     return static_cast<int>(chipPositions().size());
@@ -730,6 +787,7 @@ void SMGuardField::onElementAdded(uint32_t /*id*/, eDocElementKind /*kind*/)
     buildCatalog();
     if (mSuppressAnalyze == false)
     {
+        reprojectChips();   // a new symbol can introduce a same-name collision -> reveal a prefix
         analyze();
     }
 }
@@ -743,6 +801,9 @@ void SMGuardField::onElementChanged(uint32_t id, eDocElementKind /*kind*/)
     }
     else if (mSuppressAnalyze == false)
     {
+        // A foreign rename/retype: respell the chips in place (12.3) but keep the user's text --
+        // reproject BEFORE analyze so the parse sees the new canonical chip bodies, not stale ones.
+        reprojectChips();
         analyze();  // a registry change may resolve / break a name; keep the user's text
     }
 }
@@ -759,6 +820,7 @@ void SMGuardField::onElementRemoved(uint32_t id, eDocElementKind /*kind*/)
         buildCatalog();
         if (mSuppressAnalyze == false)
         {
+            reprojectChips();
             analyze();
         }
     }

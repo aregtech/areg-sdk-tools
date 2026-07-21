@@ -200,21 +200,15 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     check(bar.findChild<QWidget*>(QStringLiteral("smIslandBody")) != nullptr, "S4: smIslandBody");
     bar.islandEditor()->hide();
 
-    // S7: the completion catalog popup.
+    // S7: the completion catalog popup. The old S7 `smSymbolPopup` was retired in SM-21-03; the
+    // single top-level completer is now `SMRefCompleter` (objectName smRefCompleter, D-POPUP).
     SMGuardField* field = bar.field();
     field->setFocus();
     field->openCompletion();
     pump(100);
     check(QApplication::activeWindow() != nullptr, "a window is active for the popup");
-    QWidget* popup = nullptr;
-    for (QWidget* top : QApplication::topLevelWidgets())
-    {
-        if (top->objectName() == QStringLiteral("smSymbolPopup"))
-        {
-            popup = top;
-        }
-    }
-    check(popup != nullptr, "S7: smSymbolPopup");
+    QWidget* popup = field->findChild<QWidget*>(QStringLiteral("smRefCompleter"));
+    check(popup != nullptr, "S7: smRefCompleter");
     if (popup != nullptr)
     {
         popup->hide();
@@ -251,7 +245,8 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     check(panel.findChild<QWidget*>(QStringLiteral("smValidationList")) != nullptr, "S15: smValidationList");
     panel.hide();
 
-    // S1 tabs: the properties panel hosts [General|Conditions] as smTransTabs.
+    // S1 tabs: the properties panel hosts [General|Conditions|Actions] as smTransTabs (the
+    // Actions tab was added in SM-23; Conditions stays index 1).
     SMPropertiesPanel props(model);
     props.resize(520, 640);
     props.show();
@@ -261,7 +256,7 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     check(tabs != nullptr, "S1: smTransTabs");
     if (tabs != nullptr)
     {
-        check(tabs->count() == 2, "smTransTabs has General + Conditions");
+        check(tabs->count() == 3, "smTransTabs has General + Conditions + Actions");
         props.focusConditions(transId);
         pump(100);
         check(tabs->currentIndex() == 1, "focusConditions lands on the Conditions tab");
@@ -697,21 +692,23 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
         std::snprintf(name, sizeof(name), "u4-%s-e4-island.png", theme.tag);
         grab(&bar, grabDir, name);
 
-        // E5: mapping slots after accepting a call completion.
+        // E5: mapping slots after accepting a call completion. The completer is `@`-mention
+        // driven (SM-21-03): typing `@HasWait` filters to the HasWaiting condition; Enter accepts
+        // the canonical `@cond:HasWaiting()`. A folded chip means the name lives in the committable
+        // text, not the plain text, so assert on committableText().
         setGuard(model, transId, QString());
         pump(300);
         bar.field()->setFocus();
-        bar.field()->setPlainText(QStringLiteral("my_cond"));
-        QTextCursor cursor = bar.field()->textCursor();
-        cursor.movePosition(QTextCursor::End);
-        bar.field()->setTextCursor(cursor);
-        pump(250);
-        bar.field()->openCompletion();
-        pump(150);
+        for (const QChar c : QStringLiteral("@HasWait"))
+        {
+            QKeyEvent key(QEvent::KeyPress, c.unicode(), Qt::NoModifier, QString(c));
+            QApplication::sendEvent(bar.field(), &key);
+        }
+        pump(200);
         QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
         QApplication::sendEvent(bar.field(), &enter);
         pump(250);
-        check(bar.field()->toPlainText().contains(QStringLiteral("my_condition")), "completion accepted the call (E5)");
+        check(bar.field()->committableText().contains(QStringLiteral("HasWaiting")), "completion accepted the call (E5)");
         std::snprintf(name, sizeof(name), "u4-%s-e5-slots.png", theme.tag);
         grab(&bar, grabDir, name);
         QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
