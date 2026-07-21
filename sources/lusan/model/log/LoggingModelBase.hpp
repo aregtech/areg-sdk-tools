@@ -590,14 +590,22 @@ public:
      * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `areg::TARGET_ALL`.
      * \return  Number or log entries to read.
      **/
-    virtual uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL);
+    virtual uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL,int32_t limit = -1,uint32_t offset = 0u);
 
+    /**
+     * \brief   Slides the loaded window to a new position in the dataset.
+     *          Releases the previously loaded rows and loads a new window
+     *          starting at the specified row index.
+     * \param   newStartRow     The index of the first row in the new window.
+     **/
+    void slideWindow(uint32_t newStartRow);
     /**
      * \brief   Applies the filters to the log query.
      * \param   instId  The ID of the instance to apply filters. Applies filters for all instances if `areg::TARGET_ALL`.
      * \param   filter  The list of scope filters to apply.
      * \return  True if filters are applied successfully, false otherwise.
      **/
+
     virtual bool applyFilters(uint32_t instId, const areg::ArrayList<areg::ext::LogSqliteDatabase::ScopeFilter>& filter);
 
     /**
@@ -701,6 +709,8 @@ protected:
     MapScopes               mScopes;        //!< The map of scopes, where key is instance ID and value is the list of scopes.
     int                     mLogChunk;      //!< The position in the log messages list to read from.
     uint32_t                mLogCount;      //!< The position of updated log.
+    uint32_t                mTotalLogCount; //!< NEW: total rows in DB (for scrollbar)
+    uint32_t                mWindowStart;   //!< NEW: first row index of current window
     areg::Thread            mReadThread;    //!< The thread to run the model operations.
     areg::Mutex             mQuitThread;    //!< The event to notify when data is ready.
     ScopeLogViewerFilter*   mScopeFilter;   //<!< The filter for scope logs, can be nullptr.

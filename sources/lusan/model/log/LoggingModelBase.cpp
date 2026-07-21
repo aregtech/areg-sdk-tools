@@ -92,6 +92,8 @@ LoggingModelBase::LoggingModelBase(LoggingModelBase::eLogging logsType, QObject*
     , mScopes       ( )
     , mLogChunk     (-1)
     , mLogCount     (0)
+    , mTotalLogCount(0)
+    , mWindowStart  (0)
     , mReadThread   (static_cast<areg::ThreadConsumer &>(self()), "_LogReadingThread_")
     , mQuitThread   (false)
     , mScopeFilter  (nullptr)
@@ -130,8 +132,7 @@ QVariant LoggingModelBase::headerData(int section, Qt::Orientation orientation, 
 
 int LoggingModelBase::rowCount(const QModelIndex& parent) const
 {
-    Q_UNUSED(parent);
-    return mLogCount;
+    return parent.isValid() ? 0 : static_cast<int>(mTotalLogCount);  // was mLogCount
 }
 
 int LoggingModelBase::columnCount(const QModelIndex& parent) const
@@ -287,6 +288,35 @@ void LoggingModelBase::openDatabase(const QString& dbPath, bool readOnly)
     {
         mDatabase.connect(path, readOnly);
     }
+}
+
+void LoggingModelBase::slideWindow(uint32_t newStartRow)
+{
+    if (newStartRow == mWindowStart)
+        return;
+
+    // Clamp so window doesn't go past end of dataset
+    uint32_t windowSize = static_cast<uint32_t>(mLogs.size());
+    if (newStartRow + windowSize > mTotalLogCount)
+        newStartRow = (mTotalLogCount > windowSize)
+                      ? mTotalLogCount - windowSize
+                      : 0u;
+
+    mWindowStart = newStartRow;
+
+    // Re-prepare the statement with new offset — SQLite jumps directly, no scanning
+    setupLogStatement(areg::TARGET_ALL, mLogChunk, mWindowStart);
+
+    beginResetModel();
+    mLogCount = 0;
+
+    int readCount = areg::ext::LogSqliteDatabase::fill_log_messages(
+                        mLogs, mStatement, 0, mLogChunk);
+
+    if (readCount > 0)
+        mLogCount = static_cast<uint32_t>(readCount);
+
+    endResetModel();
 }
 
 QString LoggingModelBase::getDatabasePath() const
@@ -542,18 +572,29 @@ void LoggingModelBase::readLogsAsynchronous(int maxEntries)
     endResetModel();
     mLogChunk = maxEntries;
     mLogCount = 0u;
+    mWindowStart = 0u;           
     
-    uint32_t count = setupLogStatement(areg::TARGET_ALL);
+    uint32_t count = setupLogStatement(areg::TARGET_ALL, mLogChunk, 0u);
     if (count == 0)
         return;
 
-    mLogs.resize(count);
+    mTotalLogCount = count;
+
+    // If maxEntries <= 0, no windowing limit is applied (e.g. scopes model loads all)
+    uint32_t windowSize = (maxEntries > 0)
+                          ? static_cast<uint32_t>(maxEntries)
+                          : count;
+    mLogs.resize(std::min(count, windowSize));
     mReadThread.start(areg::DO_NOT_WAIT);
+
+    mTotalLogCount = count;
+    qDebug() << "Total logs in DB:" << mTotalLogCount << "| Window size:" << mLogs.size();
 }
 
-uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId /*= areg::TARGET_ALL*/)
+// New — add limit and offset params
+uint32_t LoggingModelBase::setupLogStatement(ITEM_ID instId, int32_t limit, uint32_t offset)
 {
-    return mDatabase.setup_statement_read_logs(mStatement, instId);
+    return mDatabase.setup_statement_read_logs(mStatement, instId, limit, offset);
 }
 
 bool LoggingModelBase::applyFilters(uint32_t instId, const areg::ArrayList<areg::ext::LogSqliteDatabase::ScopeFilter>& filter)
