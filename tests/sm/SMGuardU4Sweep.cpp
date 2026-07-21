@@ -63,6 +63,7 @@
 #include <QTabWidget>
 #include <QTextCursor>
 #include <QToolButton>
+#include <cmath>
 #include <cstdio>
 
 namespace
@@ -89,6 +90,28 @@ namespace
             std::printf("  [FAIL] %s\n         expected: %s\n         actual  : %s\n",
                         what, expected.toStdString().c_str(), actual.toStdString().c_str());
         }
+    }
+
+    // WCAG 2.1 relative-luminance contrast, used by the theme-contrast sweep to prove every dark
+    // guard token clears AA (>= 4.5:1) against the real app dark editor surfaces.
+    double srgbLinear(int channel)
+    {
+        const double v = channel / 255.0;
+        return (v <= 0.03928) ? (v / 12.92) : std::pow((v + 0.055) / 1.055, 2.4);
+    }
+
+    double relativeLuminance(const QColor& c)
+    {
+        return (0.2126 * srgbLinear(c.red())) + (0.7152 * srgbLinear(c.green())) + (0.0722 * srgbLinear(c.blue()));
+    }
+
+    double contrastRatio(const QColor& a, const QColor& b)
+    {
+        const double la = relativeLuminance(a);
+        const double lb = relativeLuminance(b);
+        const double hi = qMax(la, lb);
+        const double lo = qMin(la, lb);
+        return (hi + 0.05) / (lo + 0.05);
     }
 
     void pump(int ms)
@@ -736,6 +759,114 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
 }
 
 // ---------------------------------------------------------------------------
+// Item 24 (SM-21-07): the dark variant is a real second palette (not the light values reused),
+// the surface differs per mode, the owner glyph (shape) channel is theme-independent, and every
+// dark token clears WCAG AA against all three real app dark editor surfaces. All colors come from
+// NEGuardStyle -- this asserts that one place, no rendering needed.
+// ---------------------------------------------------------------------------
+static void sweepThemeContrast()
+{
+    std::printf("[ RUN  ] item24-theme-contrast\n");
+
+    const NEGuardStyle::eOwner owners[] =
+    {
+          NEGuardStyle::eOwner::Stimulus
+        , NEGuardStyle::eOwner::Fsm
+        , NEGuardStyle::eOwner::Handler
+        , NEGuardStyle::eOwner::Literal
+        , NEGuardStyle::eOwner::Raw
+    };
+    const NEGuardStyle::eSeverity sevs[] =
+    {
+          NEGuardStyle::eSeverity::Ok
+        , NEGuardStyle::eSeverity::Warn
+        , NEGuardStyle::eSeverity::Err
+    };
+    const char* ownerName[] = { "Stimulus", "Fsm", "Handler", "Literal", "Raw" };
+    const char* sevName[]   = { "Ok", "Warn", "Err" };
+    char label[128];
+
+    // Capture the light token set from the standard (light) palette.
+    QApplication::setPalette(QApplication::style()->standardPalette());
+    check(NEGuardStyle::isDark() == false, "the standard palette selects the light tokens");
+    const QColor lightSurface = QApplication::palette().color(QPalette::Base);
+    QColor  lightOwner[5];
+    QColor  lightSev[3];
+    QString glyphLight[5];
+    for (int i = 0; i < 5; ++i)
+    {
+        lightOwner[i] = NEGuardStyle::ownerColor(owners[i]);
+        glyphLight[i] = NEGuardStyle::ownerGlyph(owners[i]);
+    }
+    for (int i = 0; i < 3; ++i)
+    {
+        lightSev[i] = NEGuardStyle::severityColor(sevs[i]);
+    }
+
+    // Install a real app dark palette. Nord is the lightest of the three shipped dark themes, so
+    // its base (#3b4252) is the worst case for token-vs-surface contrast.
+    QPalette darkPal;
+    darkPal.setColor(QPalette::Window, QColor(0x2e, 0x34, 0x40));
+    darkPal.setColor(QPalette::WindowText, QColor(0xe5, 0xe9, 0xf0));
+    darkPal.setColor(QPalette::Base, QColor(0x3b, 0x42, 0x52));
+    darkPal.setColor(QPalette::Text, QColor(0xe5, 0xe9, 0xf0));
+    QApplication::setPalette(darkPal);
+    check(NEGuardStyle::isDark(), "the dark palette selects the dark tokens");
+    const QColor darkSurface = QApplication::palette().color(QPalette::Base);
+    QColor darkOwner[5];
+    QColor darkSev[3];
+    for (int i = 0; i < 5; ++i)
+    {
+        darkOwner[i] = NEGuardStyle::ownerColor(owners[i]);
+    }
+    for (int i = 0; i < 3; ++i)
+    {
+        darkSev[i] = NEGuardStyle::severityColor(sevs[i]);
+    }
+
+    // The editor surface differs per mode (a light stab in a dark IDE was the risk this closes).
+    check(lightSurface != darkSurface, "the editor surface differs between light and dark modes");
+
+    // Each token has a distinct light and dark value: the dark variant is a real second palette.
+    for (int i = 0; i < 5; ++i)
+    {
+        std::snprintf(label, sizeof(label), "owner token '%s' has a distinct dark value", ownerName[i]);
+        check(lightOwner[i] != darkOwner[i], label);
+
+        // The glyph (shape) channel is the color-blind / grayscale safety net; it must be stable
+        // and non-empty in BOTH modes so it stays load-bearing when hues collide in grayscale.
+        std::snprintf(label, sizeof(label), "owner glyph '%s' is theme-independent and non-empty", ownerName[i]);
+        check((glyphLight[i] == NEGuardStyle::ownerGlyph(owners[i])) && (glyphLight[i].isEmpty() == false), label);
+    }
+    for (int i = 0; i < 3; ++i)
+    {
+        std::snprintf(label, sizeof(label), "severity token '%s' has a distinct dark value", sevName[i]);
+        check(lightSev[i] != darkSev[i], label);
+    }
+
+    // Every dark token clears WCAG AA (>= 4.5:1) against all three shipped dark surfaces.
+    const QColor darkSurfaces[] = { QColor(0x26, 0x2b, 0x34), QColor(0x14, 0x21, 0x40), QColor(0x3b, 0x42, 0x52) };
+    const char*  surfaceName[]  = { "ModernDark", "MidnightBlue", "Nord" };
+    for (int s = 0; s < 3; ++s)
+    {
+        for (int i = 0; i < 5; ++i)
+        {
+            std::snprintf(label, sizeof(label), "dark owner '%s' clears AA on %s (%.2f)",
+                          ownerName[i], surfaceName[s], contrastRatio(darkOwner[i], darkSurfaces[s]));
+            check(contrastRatio(darkOwner[i], darkSurfaces[s]) >= 4.5, label);
+        }
+        for (int i = 0; i < 3; ++i)
+        {
+            std::snprintf(label, sizeof(label), "dark severity '%s' clears AA on %s (%.2f)",
+                          sevName[i], surfaceName[s], contrastRatio(darkSev[i], darkSurfaces[s]));
+            check(contrastRatio(darkSev[i], darkSurfaces[s]) >= 4.5, label);
+        }
+    }
+
+    QApplication::setPalette(QApplication::style()->standardPalette());
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 int main(int argc, char** argv)
@@ -773,6 +904,7 @@ int main(int argc, char** argv)
     sweepItem21(docPath, tmpDir, grabDir);
     sweepTryIt(docPath, grabDir);
     sweepThemes(docPath, grabDir);
+    sweepThemeContrast();
 
     std::printf("Done: %d checks, %d failure%s\n", gChecks, gFailures, (gFailures == 1) ? "" : "s");
     return (gFailures == 0) ? 0 : 1;
