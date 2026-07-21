@@ -29,7 +29,6 @@
 #include "areg/base/SocketDefs.hpp"
 
 #include <QAbstractItemView>
-#include <QtAssert>
 #include <QAbstractButton>
 #include <QDialog>
 #include <QFileDialog>

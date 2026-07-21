@@ -252,6 +252,7 @@ private:
     double                  mBulge;         //!< The arc bulge factor.
     QString                 mColorName;     //!< The persisted edge color (empty = theme).
     QString                 mStimulusText;  //!< The stimulus label text.
+    int                     mGuardSeverity; //!< The guard's NEGuardStyle severity for the label tint, or -1 (clean).
     bool                    mHasNote;       //!< A note is bound to this transition (badge shown).
     SMNoteEditor            mNoteEditor;    //!< The open in-place note editor (if any).
     QList<QPointF>          mWaypoints;     //!< The interior waypoints, in order.

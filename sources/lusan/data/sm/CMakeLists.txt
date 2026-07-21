@@ -5,6 +5,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/data/sm/SMConstantData.cpp
     ${LUSAN}/data/sm/SMDataTypeData.cpp
     ${LUSAN}/data/sm/SMEventData.cpp
+    ${LUSAN}/data/sm/SMGuardTree.cpp
     ${LUSAN}/data/sm/SMImportData.cpp
     ${LUSAN}/data/sm/SMIncludeData.cpp
     ${LUSAN}/data/sm/SMLayoutData.cpp
@@ -24,6 +25,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/sm/SMConstantData.hpp
     ${LUSAN}/data/sm/SMDataTypeData.hpp
     ${LUSAN}/data/sm/SMEventData.hpp
+    ${LUSAN}/data/sm/SMGuardTree.hpp
     ${LUSAN}/data/sm/SMImportData.hpp
     ${LUSAN}/data/sm/SMIncludeData.hpp
     ${LUSAN}/data/sm/SMLayoutData.hpp

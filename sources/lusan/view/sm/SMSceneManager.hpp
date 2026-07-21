@@ -122,6 +122,12 @@ signals:
      **/
     void signalLevelChanged(uint32_t levelId);
 
+    /**
+     * \brief   Re-emitted from any level's scene: focus a transition's Conditions tab
+     *          field (edge label double-click, B13).
+     **/
+    void signalGuardEditRequested(uint32_t transitionId);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////

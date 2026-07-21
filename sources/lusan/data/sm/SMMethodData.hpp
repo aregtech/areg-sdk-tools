@@ -105,6 +105,16 @@ public:
     inline eImplement getImplement() const;
     inline void setImplement(eImplement implement);
 
+    /**
+     * \brief   The guard-facing kind of a condition method (D8): a `handler` condition is
+     *          declared here and implemented by the user's handler (Implement=Handler); a
+     *          `lambda` condition owns its body here (Implement=Embedded) and is generated
+     *          as a `std::function` member (v7 A.1). This is a naming view over
+     *          \ref eImplement; the guard codegen switches on it.
+     **/
+    inline bool isHandlerCondition() const;
+    inline bool isLambdaCondition() const;
+
     inline const QString& getBody() const;
     inline void setBody(const QString& body);
 
@@ -248,6 +258,16 @@ inline SMMethodEntry::eImplement SMMethodEntry::getImplement() const
 inline void SMMethodEntry::setImplement(SMMethodEntry::eImplement implement)
 {
     mImplement = implement;
+}
+
+inline bool SMMethodEntry::isHandlerCondition() const
+{
+    return (isCondition() && (mImplement == eImplement::Handler));
+}
+
+inline bool SMMethodEntry::isLambdaCondition() const
+{
+    return (isCondition() && (mImplement == eImplement::Embedded));
 }
 
 inline const QString& SMMethodEntry::getBody() const

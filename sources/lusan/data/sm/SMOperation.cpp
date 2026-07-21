@@ -26,7 +26,7 @@
 namespace
 {
     //!< Writes \p text as a CDATA-wrapped child element (byte-exact, never normalized).
-    void writeCDataElem(QXmlStreamWriter& xml, const char* elemName, const QString& text)
+    void writeCDataElem(QXmlStreamWriter& xml, QLatin1StringView elemName, const QString& text)
     {
         xml.writeStartElement(elemName);
         xml.writeCDATA(text);
@@ -69,6 +69,8 @@ SMArgumentEntry::eValueSource SMArgumentEntry::fromSourceString(const QString& s
         return eValueSource::Condition;
     else if (source.compare(STR_SRC_EXPRESSION, Qt::CaseInsensitive) == 0)
         return eValueSource::Expression;
+    else if (source.compare(STR_SRC_LAMBDA, Qt::CaseInsensitive) == 0)
+        return eValueSource::Lambda;
     else
         return eValueSource::Value;
 }
@@ -82,6 +84,7 @@ const char* SMArgumentEntry::toString(SMArgumentEntry::eValueSource source)
     case eValueSource::Constant:    return STR_SRC_CONSTANT;
     case eValueSource::Condition:   return STR_SRC_CONDITION;
     case eValueSource::Expression:  return STR_SRC_EXPRESSION;
+    case eValueSource::Lambda:      return STR_SRC_LAMBDA;
     case eValueSource::Value:
     default:                        return STR_SRC_VALUE;
     }
@@ -819,7 +822,7 @@ void SMOperationList::clear()
     mOperations.clear();
 }
 
-void SMOperationList::writeToXml(QXmlStreamWriter& xml, const char* wrapperName) const
+void SMOperationList::writeToXml(QXmlStreamWriter& xml, QLatin1StringView wrapperName) const
 {
     if (mOperations.isEmpty())
         return;
@@ -833,7 +836,7 @@ void SMOperationList::writeToXml(QXmlStreamWriter& xml, const char* wrapperName)
     xml.writeEndElement();
 }
 
-bool SMOperationList::readFromXml(QXmlStreamReader& xml, const char* wrapperName)
+bool SMOperationList::readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapperName)
 {
     if (xml.name() != QLatin1String(wrapperName))
         return false;

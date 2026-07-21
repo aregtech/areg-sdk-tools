@@ -222,10 +222,24 @@ public:
     void startRenameOfSelection();
 
     /**
+     * \brief   True while a proxy-backed inline editor (state rename / note edit) holds the
+     *          scene focus. The Design page consults this so its single-key tool shortcuts
+     *          (S, F, T, N, Backspace, Delete, ...) never fire while the user types into the
+     *          embedded editor, which would otherwise swallow the keystroke and spawn items.
+     **/
+    bool isInlineEditorActive() const;
+
+    /**
      * \brief   Requests descending into a state's painted submachine (double-click,
      *          Enter, context menu); ignored when the state owns none.
      **/
     void requestEnterSubmachine(uint32_t stateId);
+
+    /**
+     * \brief   Requests the guard editor for a transition (double-click on the edge label,
+     *          B13): the owning page selects it and focuses the Conditions tab field.
+     **/
+    void requestGuardEdit(uint32_t transitionId);
 
 //////////////////////////////////////////////////////////////////////////
 // Internal: item registry (called by SMCanvasItem on scene changes)
@@ -258,6 +272,11 @@ signals:
      * \brief   Emitted to ascend to the parent machine level (Backspace, Alt+double-click).
      **/
     void signalGoToParent();
+
+    /**
+     * \brief   Emitted to focus a transition's Conditions tab field (edge label double-click).
+     **/
+    void signalGuardEditRequested(uint32_t transitionId);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

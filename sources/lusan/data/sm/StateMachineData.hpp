@@ -58,6 +58,8 @@ class StateMachineData  : protected QObject
 // Internal types and constants
 //////////////////////////////////////////////////////////////////////////
 public:
+    static constexpr int MAX_IDENTIFIER_LENGTH { 0xFF };
+
     /**
      * \enum    eStimulusType
      * \brief   The kind of a stimulus found in the shared stimulus name space.
@@ -280,9 +282,16 @@ public:
 
     /**
      * \brief   True if the name is a valid element identifier: a letter or underscore
-     *          followed by letters, digits, or underscores.
+     *          followed by letters, digits, or underscores, with length capped at 0xFF.
      **/
     static bool isValidIdentifier(const QString& name);
+
+    /**
+     * \brief   The regular-expression pattern (anchored) of a valid element identifier.
+     *          Shared with the in-place editors so their input validators reject spaces and
+     *          other non-identifier characters as the user types, matching isValidIdentifier().
+     **/
+    static const QString& identifierPattern();
 
     /**
      * \brief   The total number of states across every machine level.

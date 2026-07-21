@@ -88,7 +88,7 @@ public:
      * \param   location    The file path included in service interface.
      * \return  Returns the created include entry.
      **/
-    IncludeEntry* createInclude(const QString location);
+    IncludeEntry* createInclude(const QString& location);
 
     /**
      * \brief   Inserts new IncludeEntry at the given position in SIIncludeData.

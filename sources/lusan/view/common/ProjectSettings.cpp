@@ -25,7 +25,7 @@
 #include "lusan/view/common/MdiMainWindow.hpp"
 
 #include <QAbstractItemView>
-#include <QtAssert>
+#include <QtGlobal>
 #include <QAbstractButton>
 
 

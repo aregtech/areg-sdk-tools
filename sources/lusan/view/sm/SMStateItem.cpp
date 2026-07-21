@@ -39,6 +39,8 @@
 #include <QLineEdit>
 #include <QPainter>
 #include <QPainterPath>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
 #include <QToolTip>
 
 #include <algorithm>
@@ -68,8 +70,38 @@ namespace
         }
 
     protected:
+        virtual bool event(QEvent* event) override
+        {
+            if (event->type() == QEvent::ShortcutOverride)
+            {
+                const QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+                switch (keyEvent->key())
+                {
+                case Qt::Key_Backspace:
+                case Qt::Key_Delete:
+                case Qt::Key_Left:
+                case Qt::Key_Right:
+                case Qt::Key_Up:
+                case Qt::Key_Down:
+                case Qt::Key_Return:
+                case Qt::Key_Enter:
+                case Qt::Key_Escape:
+                    event->accept();
+                    return true;
+
+                default:
+                    break;
+                }
+            }
+
+            return QLineEdit::event(event);
+        }
+
         virtual void keyPressEvent(QKeyEvent* event) override
         {
+            const Qt::KeyboardModifiers navMods = event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier);
+            const bool plainOrShift = (navMods == Qt::NoModifier) || (navMods == Qt::ShiftModifier);
+
             if (event->key() == Qt::Key_Escape)
             {
                 event->accept();
@@ -78,6 +110,34 @@ namespace
                     mCancel();
                 }
 
+                return;
+            }
+
+            if ((event->key() == Qt::Key_Left) && plainOrShift && hasSelectedText())
+            {
+                home(navMods.testFlag(Qt::ShiftModifier));
+                event->accept();
+                return;
+            }
+
+            if ((event->key() == Qt::Key_Right) && plainOrShift && hasSelectedText())
+            {
+                end(navMods.testFlag(Qt::ShiftModifier));
+                event->accept();
+                return;
+            }
+
+            if (event->key() == Qt::Key_Up)
+            {
+                home(event->modifiers().testFlag(Qt::ShiftModifier));
+                event->accept();
+                return;
+            }
+
+            if (event->key() == Qt::Key_Down)
+            {
+                end(event->modifiers().testFlag(Qt::ShiftModifier));
+                event->accept();
                 return;
             }
 
@@ -1119,10 +1179,25 @@ void SMStateItem::startInlineRename()
         return;
     }
 
-    RenameEdit* edit = new RenameEdit(state->getName());
+    // Seed from the currently displayed name (mName), not state->getName(): the Properties panel
+    // mirrors an in-progress rename onto the canvas via a name preview that is not committed to
+    // the model until its field loses focus, so state->getName() can still hold the old value.
+    RenameEdit* edit = new RenameEdit(mName);
     edit->mValidate  = [this](const QString& name) { return validateName(name); };
-    edit->mCancel    = [this]() { closeRenameEditor(); };
+    edit->mCancel    = [this]()
+    {
+        if (SMScene* canvas = getCanvas())
+        {
+            canvas->getModel().publishStateNamePreview(getElementId(), mName);
+        }
+
+        closeRenameEditor();
+    };
     edit->setFrame(true);
+    edit->setMaxLength(StateMachineData::MAX_IDENTIFIER_LENGTH);
+    // State names must be enum-friendly identifiers: reject spaces and other invalid symbols
+    // as the user types (a leading digit and an empty field remain intermediate, not typed).
+    edit->setValidator(new QRegularExpressionValidator(QRegularExpression(StateMachineData::identifierPattern()), edit));
 
     mRenameProxy = new QGraphicsProxyWidget(this);
     mRenameProxy->setWidget(edit);
@@ -1133,6 +1208,11 @@ void SMStateItem::startInlineRename()
 
     QObject::connect(edit, &QLineEdit::textChanged, edit, [this, edit](const QString& text)
         {
+            if (SMScene* canvas = getCanvas())
+            {
+                canvas->getModel().publishStateNamePreview(getElementId(), text);
+            }
+
             const QString reason = validateName(text.trimmed());
             edit->setStyleSheet(reason.isEmpty() ? QString() : QStringLiteral("QLineEdit { border: 1px solid #D04040; }"));
             edit->setToolTip(reason);
@@ -1148,6 +1228,14 @@ void SMStateItem::startInlineRename()
             const QString name = edit->text().trimmed();
             const bool valid = validateName(name).isEmpty();
             closeRenameEditor();
+            if (valid == false)
+            {
+                if (SMScene* canvas = getCanvas())
+                {
+                    canvas->getModel().publishStateNamePreview(getElementId(), mName);
+                }
+            }
+
             if (valid)
             {
                 commitRename(name);
@@ -1156,6 +1244,15 @@ void SMStateItem::startInlineRename()
 
     edit->selectAll();
     edit->setFocus();
+}
+
+void SMStateItem::setNamePreview(const QString& name)
+{
+    if (mName != name)
+    {
+        mName = name;
+        update();
+    }
 }
 
 void SMStateItem::startNoteEdit()

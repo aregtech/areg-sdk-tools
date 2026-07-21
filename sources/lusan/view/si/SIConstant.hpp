@@ -29,13 +29,14 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class ConstantDetailsView;
 class ConstantEntry;
+class ConstantListView;
 class DataTypesModel;
-class SIConstantDetails;
-class SIConstantList;
 class SIConstantModel;
 class TableCell;
 class QHBoxLayout;
+class QTreeWidgetItem;
 
 //////////////////////////////////////////////////////////////////////////
 // SIConstantWidget class declaration
@@ -142,13 +143,11 @@ protected:
 protected slots:
 
     /**
-     * \brief   Triggered when the current cell is changed.
-     * \param   currentRow      The current row index.
-     * \param   currentColumn   The current column index.
-     * \param   previousRow     The previous row index.
-     * \param   previousColumn  The previous column index.
+     * \brief   Triggered when the current list row (tree item) is changed.
+     * \param   current     The newly selected item, or nullptr.
+     * \param   previous    The previously selected item, or nullptr.
      **/
-    void onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn);
+    void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
 
     /**
      * \brief   Triggered when the add button is clicked.
@@ -295,10 +294,10 @@ private:
 // Hidden members
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIConstantModel&    mModel;     //!< The model of the constant.
-    SIConstantDetails*  mDetails;   //!< The details widget of the constant.
-    SIConstantList*     mList;      //!< The list widget of the constant.
-    SIConstantWidget*   mWidget;    //!< The widget of the constant.
+    SIConstantModel&     mModel;     //!< The model of the constant.
+    ConstantDetailsView* mDetails;   //!< The details widget of the constant.
+    ConstantListView*    mList;      //!< The list widget of the constant.
+    SIConstantWidget*    mWidget;    //!< The widget of the constant.
     DataTypesModel*     mTypeModel; //!< The model of the data types.
     TableCell*          mTableCell; //!< The table cell object.
     uint32_t            mCount;     //!< The counter to generate names.

@@ -53,9 +53,9 @@ DocumentElem& DocumentElem::operator = (DocumentElem&& src) noexcept
     return (*this);
 }
 
-void DocumentElem::writeTextElem(QXmlStreamWriter& xml, const char* elemName, const QString elemValue, bool skipIfEmpty) const
+void DocumentElem::writeTextElem(QXmlStreamWriter& xml, QLatin1StringView elemName, const QString& elemValue, bool skipIfEmpty) const
 {
-    if (elemName == nullptr)
+    if (elemName.isEmpty())
         return;
 
     if (elemValue.isEmpty() == false)

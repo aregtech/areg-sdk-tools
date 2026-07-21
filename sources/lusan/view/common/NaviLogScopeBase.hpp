@@ -75,6 +75,17 @@ public:
     //!< Sets up the controls for the log scopes navigation.
     void setupControls(QTreeView* treeView, QToolButton* prioError, QToolButton* prioWarning, QToolButton* prioInfo, QToolButton* prioDebug, QToolButton* prioScopes);
 
+    /**
+     * \brief   Forces a uniform, compact icon size on every tool button of this view. The
+     *          full-bleed themed toolbar icons (connect / settings / save / find) otherwise
+     *          render taller than the fixed toolbar row and are clipped at the top and bottom
+     *          (the padded priority SVGs stayed within the row, which is why only some icons
+     *          looked cut). 12 logical px is the largest edge that fits the row with margin at
+     *          the tested display scales. Must be called after the UI is set up.
+     * \param   iconExtent  The square icon edge in logical pixels.
+     **/
+    void capToolButtonIconSizes(int iconExtent = 12);
+
 public:
     /**
      * \brief   Enables or disables lot priority tool buttons based on selection index.

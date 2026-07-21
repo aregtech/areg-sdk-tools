@@ -32,12 +32,13 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class AttributeDetailsView;
+class AttributeListView;
 class DataTypesModel;
-class SIAttributeDetails;
-class SIAttributeList;
 class SIAttributeModel;
 class TableCell;
 class QHBoxLayout;
+class QTreeWidgetItem;
 
 //////////////////////////////////////////////////////////////////////////
 // SIAttributeNotifyModel class declaration
@@ -187,13 +188,11 @@ protected:
 protected slots:
     
     /**
-     * \brief   Triggered when the current cell is changed.
-     * \param   currentRow      The current row index.
-     * \param   currentColumn   The current column index.
-     * \param   previousRow     The previous row index.
-     * \param   previousColumn  The previous column index.
+     * \brief   Triggered when the current list row (tree item) is changed.
+     * \param   current     The newly selected item, or nullptr.
+     * \param   previous    The previously selected item, or nullptr.
      **/
-    void onCurCellChanged(int currentRow, int currentColumn, int previousRow, int previousColumn);
+    void onCurCellChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous);
     
     /**
      * \brief   Triggered when the add button is clicked.
@@ -351,8 +350,8 @@ private:
 //////////////////////////////////////////////////////////////////////////
 private:
     SIAttributeModel&       mModel;         //!< The model of the data attribute.
-    SIAttributeDetails*     mDetails;       //!< The details widget of the data attribute.
-    SIAttributeList*        mList;          //!< The list widget of the data attribute.
+    AttributeDetailsView*   mDetails;       //!< The details widget of the data attribute.
+    AttributeListView*      mList;          //!< The list widget of the data attribute.
     SIAttributeWidget*      mWidget;        //!< The widget of the data attribute.
     DataTypesModel*         mTypeModel;     //!< The model of the data types.
     SIAttributeNotifyModel* mNotifyModel;   //!< The model of the notification types.

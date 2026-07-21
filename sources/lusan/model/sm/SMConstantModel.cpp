@@ -72,6 +72,11 @@ DocModelNotifier& SMConstantModel::getNotifier() const
     return mFacade.getNotifier();
 }
 
+StateMachineModel& SMConstantModel::getFacade() const
+{
+    return mFacade;
+}
+
 ConstantEntry* SMConstantModel::createConstant(const QString& name)
 {
     if (findConstant(name) != nullptr)

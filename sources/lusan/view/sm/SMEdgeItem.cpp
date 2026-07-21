@@ -23,6 +23,9 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMLayoutCommands.hpp"
+#include "lusan/model/sm/SMGuardRender.hpp"
+#include "lusan/model/sm/SMGuardValidation.hpp"
+#include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMScene.hpp"
@@ -105,6 +108,7 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mBulge        (0.0)
     , mColorName    ( )
     , mStimulusText ( )
+    , mGuardSeverity(-1)
     , mHasNote      (false)
     , mWaypoints    ( )
     , mHasAnchors   (false)
@@ -202,7 +206,37 @@ void SMEdgeItem::updateFromModel()
     const SMStateEntry* target = data.findState(mTargetName);
     mTargetId    = (target != nullptr ? target->getId() : 0);
     mSelfLoop    = (mTargetId != 0) && (mTargetId == mSourceId);
-    mStimulusText = transition->getStimulus();
+
+    // Show the guard next to the stimulus (`stimulus[summary]`); the full guard is the tooltip.
+    // No guard -> the stimulus alone (no empty brackets). Summary only, never rotated.
+    // B13: the label carries the guard's severity color + glyph when the guard is not ok.
+    const QString summary = SMGuardRender::guardText(data, getElementId(), transition->getGuard()).simplified();
+    mGuardSeverity = -1;
+    SMGuardValidation::eSeverity worst = SMGuardValidation::eSeverity::Info;
+    if (SMGuardValidation::worstSeverity(data, getElementId(), worst)
+        && (worst != SMGuardValidation::eSeverity::Info))
+    {
+        mGuardSeverity = static_cast<int>((worst == SMGuardValidation::eSeverity::Error)
+                                          ? NEGuardStyle::eSeverity::Err
+                                          : NEGuardStyle::eSeverity::Warn);
+    }
+
+    if (summary.isEmpty())
+    {
+        mStimulusText = transition->getStimulus();
+        setToolTip(QString());
+    }
+    else
+    {
+        constexpr int MAX_SUMMARY = 40;
+        const QString glyph = (mGuardSeverity >= 0) ? QStringLiteral("(!) ") : QString();
+        const QString shortSummary = (summary.length() > MAX_SUMMARY)
+                ? (summary.left(MAX_SUMMARY - 3) + QStringLiteral("..."))
+                : summary;
+        mStimulusText = transition->getStimulus() + QChar('[') + glyph + shortSummary + QChar(']');
+        setToolTip(transition->getStimulus() + QChar('[') + summary + QChar(']'));
+    }
+
     mHasNote     = (data.getLayout().findNoteByOwner(getElementId()) != nullptr);
 
     const SMLayoutEdge* edge = data.getLayout().findEdge(getElementId());
@@ -508,9 +542,11 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
 
     paintArrowHead(painter, mPath.at(mPath.size() - 2), mEnd, color);
 
-    // Stimulus label.
+    // Stimulus label; the guard severity tint overrides the edge color (B13).
     const QRectF label = labelRect();
-    painter->setPen(color);
+    painter->setPen((mGuardSeverity >= 0)
+                    ? NEGuardStyle::severityColor(static_cast<NEGuardStyle::eSeverity>(mGuardSeverity))
+                    : color);
     painter->setBrush(Qt::NoBrush);
     painter->drawText(label, Qt::AlignCenter, mStimulusText.isEmpty() ? translate("<stimulus>") : mStimulusText);
 
@@ -941,6 +977,18 @@ void SMEdgeItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
     if (event->button() == Qt::LeftButton)
     {
         const QPointF p = event->pos();
+
+        // Double-click on the label focuses the Conditions tab field (B13).
+        if (labelRect().contains(p))
+        {
+            SMScene* canvas = getCanvas();
+            if (canvas != nullptr)
+            {
+                canvas->requestGuardEdit(getElementId());
+                event->accept();
+                return;
+            }
+        }
 
         // Merge (remove) a waypoint within the small hit threshold; begin/end are never hit.
         for (int i = 0; i < mWaypoints.size(); ++i)

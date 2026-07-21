@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- FSM Condition: a decision diamond (a boolean guard on a transition). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="#e11d48">
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M32 6 L58 32 L32 58 L6 32 Z M32 18 L46 32 L32 46 L18 32 Z"/>
+</svg>

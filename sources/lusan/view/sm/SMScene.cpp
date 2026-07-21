@@ -30,6 +30,7 @@
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QCoreApplication>
+#include <QGraphicsProxyWidget>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QKeyEvent>
@@ -40,6 +41,14 @@
 
 #include <algorithm>
 #include <cmath>
+
+namespace
+{
+    bool hasInlineEditorFocus(const QGraphicsScene& scene)
+    {
+        return (qgraphicsitem_cast<QGraphicsProxyWidget*>(scene.focusItem()) != nullptr);
+    }
+}
 
 SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*= nullptr*/)
     : QGraphicsScene(parent)
@@ -70,6 +79,16 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     connect(&notifier, &DocModelNotifier::listReordered, this, &SMScene::onListReordered);
     connect(&notifier, &DocModelNotifier::nameChanged, this, &SMScene::onNameChanged);
     connect(&notifier, &DocModelNotifier::layoutChanged, this, &SMScene::onLayoutChanged);
+
+    // Live name mirroring: typing in the Properties panel name field paints onto the canvas
+    // box in real time (the reverse of SMStateItem publishing while its inline editor is open).
+    connect(&mModel, &StateMachineModel::signalStateNamePreview, this, [this](uint32_t stateId, const QString& text)
+    {
+        if (SMStateItem* item = stateItem(stateId))
+        {
+            item->setNamePreview(text);
+        }
+    });
 
     populateFromModel();
 }
@@ -369,6 +388,14 @@ void SMScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::keyPressEvent(QKeyEvent* event)
 {
+    if (hasInlineEditorFocus(*this))
+    {
+        // A canvas-owned key must never win while a proxy-backed inline editor is active:
+        // the focused editor (rename/note) owns the entire key stream until it closes.
+        QGraphicsScene::keyPressEvent(event);
+        return;
+    }
+
     if ((mTool != nullptr) && mTool->keyPress(event))
     {
         return;
@@ -738,12 +765,25 @@ void SMScene::startRenameOfSelection()
     }
 }
 
+bool SMScene::isInlineEditorActive() const
+{
+    return hasInlineEditorFocus(*this);
+}
+
 void SMScene::requestEnterSubmachine(uint32_t stateId)
 {
     const SMStateEntry* state = mModel.getData().findStateById(stateId);
     if ((state != nullptr) && state->hasNestedStates())
     {
         emit signalEnterSubmachine(stateId);
+    }
+}
+
+void SMScene::requestGuardEdit(uint32_t transitionId)
+{
+    if ((transitionId != 0u) && (mModel.getData().findTransitionById(transitionId) != nullptr))
+    {
+        emit signalGuardEditRequested(transitionId);
     }
 }
 

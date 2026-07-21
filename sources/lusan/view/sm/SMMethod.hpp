@@ -23,13 +23,15 @@
 #include <cstdint>
 
 #include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/view/common/TableCell.hpp"
 
 class DocumentElem;
+class MethodDetailsView;
+class MethodListView;
+class MethodParamDetailsView;
+class QAbstractItemModel;
 class QEvent;
 class QTreeWidgetItem;
-class SMEventParamDetails;
-class SMMethodDetails;
-class SMMethodList;
 class SMMethodModel;
 
 /**
@@ -44,6 +46,7 @@ class SMMethodModel;
  *          selection by element ID.
  **/
 class SMMethod : public QScrollArea
+               , public IETableHelper
 {
     Q_OBJECT
 
@@ -75,7 +78,16 @@ public:
      * \brief   Returns the list panel (its Add-dropdown actions let a caller start a new
      *          method of a specific kind, e.g. from the Design page's Declare dropdown).
      **/
-    SMMethodList* getList() const;
+    MethodListView* getList() const;
+
+//////////////////////////////////////////////////////////////////////////
+// IETableHelper overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+    //!< Returns the number of columns in the method list tree.
+    int getColumnCount() const override;
+    //!< Returns the display text of the given cell, used to seed the inline editor.
+    QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -115,6 +127,9 @@ private slots:
     //!< Repopulates the type combos on any DataType-kind notifier signal.
     void onDataTypesChanged();
 
+    //!< Triggered when a cell is edited inline in the tree via the TableCell delegate.
+    void onEditorDataChanged(const QModelIndex& index, const QString& newValue);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
@@ -153,6 +168,16 @@ private:
     QTreeWidgetItem* createMethodNode(SMMethodEntry* method) const;
     void setNodeText(QTreeWidgetItem* node, const DocumentElem* elem) const;
 
+    //!< Commits a deferred inline cell edit through the page model's undo commands. Called on the
+    //!< next event-loop turn (see onEditorDataChanged) so the delegate editor tears down first.
+    void commitInlineEdit(int kind, uint32_t methodId, uint32_t paramId, int column, const QString& newValue);
+    //!< True if the given cell may be edited inline (method: name; parameter: name/type/value).
+    bool isCellEditable(const QModelIndex& index) const;
+    //!< The combo model for the given cell (parameter Data Type column), or nullptr for a line editor.
+    QAbstractItemModel* editorModelFor(const QModelIndex& index) const;
+    //!< The keystroke validation for the given cell (Name columns are C++ identifiers).
+    TableCell::eCellValidation validationFor(const QModelIndex& index) const;
+
     eRowKind currentKind() const;
     //!< The method owning the current selection (method or parameter row), or nullptr.
     SMMethodEntry* currentMethod() const;
@@ -162,14 +187,18 @@ private:
     QString genMethodName();
     QString genParamName(const SMMethodEntry* method) const;
 
+    //!< The `used by N guards` popup (S14): pick a guard, select its transition.
+    void showMethodWhereUsed(uint32_t methodId);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     SMMethodModel&          mModel;             //!< Methods page model (undo-command mutators).
-    SMMethodList*           mList;              //!< Left panel: methods/parameters tree + toolbar.
-    SMMethodDetails*        mDetails;           //!< Right panel: selected method form.
-    SMEventParamDetails*    mParamDetails;      //!< Right panel: selected parameter form.
+    MethodListView*         mList;              //!< Left panel: methods/parameters tree + toolbar.
+    MethodDetailsView*      mDetails;           //!< Right panel: selected method form.
+    MethodParamDetailsView* mParamDetails;      //!< Right panel: selected parameter form.
+    TableCell*              mTableCell;         //!< Inline-editing delegate for the list tree.
     uint32_t                mMethodNameCounter; //!< Suffix counter for generated method names.
 };
 

@@ -49,6 +49,7 @@ public:
         , Constant      //!< A declared constant.
         , Condition     //!< A parameterless Condition-method call.
         , Expression    //!< Verbatim C++ (the `Expression` child).
+        , Lambda        //!< Verbatim multi-statement boolean body (condition LHS only; `Body` child).
     };
 
     static constexpr const char* const  STR_SRC_VALUE       { "Value"      };
@@ -57,6 +58,7 @@ public:
     static constexpr const char* const  STR_SRC_CONSTANT    { "Constant"   };
     static constexpr const char* const  STR_SRC_CONDITION   { "Condition"  };
     static constexpr const char* const  STR_SRC_EXPRESSION  { "Expression" };
+    static constexpr const char* const  STR_SRC_LAMBDA      { "Lambda"     };
 
     static SMArgumentEntry::eValueSource fromSourceString(const QString& source);
     static const char* toString(SMArgumentEntry::eValueSource source);
@@ -381,14 +383,14 @@ public:
      * \brief   Writes this operation list wrapped in \p wrapperName (`EntryList`,
      *          `ExitList` or `OperationList`). Writes nothing when the list is empty.
      **/
-    void writeToXml(QXmlStreamWriter& xml, const char* wrapperName) const;
+    void writeToXml(QXmlStreamWriter& xml, QLatin1StringView wrapperName) const;
 
     /**
      * \brief   Reads an operation-list wrapper (`EntryList` / `ExitList` /
      *          `OperationList`); the reader must be positioned on \p wrapperName. Each
      *          child operation element is created by kind and appended in document order.
      **/
-    bool readFromXml(QXmlStreamReader& xml, const char* wrapperName);
+    bool readFromXml(QXmlStreamReader& xml, QLatin1StringView wrapperName);
 
     inline const QList<SMOperationBase*>& getOperations() const;
     inline int getCount() const;

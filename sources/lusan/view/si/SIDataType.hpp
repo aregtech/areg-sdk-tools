@@ -25,6 +25,7 @@
 #include <QScrollArea>
 #include "lusan/data/common/DataTypeBase.hpp"
 #include "lusan/view/common/IEDataTypeConsumer.hpp"
+#include "lusan/view/common/TableCell.hpp"
 
 /************************************************************************
  * Dependencies
@@ -37,15 +38,15 @@ class DataTypeEnum;
 class DataTypeImported;
 class DataTypePrimitive;
 class DataTypeStructure;
+class DataTypeDetailsView;
+class DataTypeFieldDetailsView;
+class DataTypeListView;
 class DataTypesModel;
 class EnumEntry;
 class FieldEntry;
 class SIDataTypeData;
-class SIDataTypeDetails;
-class SIDataTypeList;
-class SIDataTypeFieldDetails;
 class SIDataTypeModel;
-class TableCell;
+class QAbstractItemModel;
 class QTreeWidgetItem;
 class QHBoxLayout;
 
@@ -67,6 +68,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 class SIDataType    : public QScrollArea
                     , public IEDataTypeConsumer
+                    , public IETableHelper
 {
     Q_OBJECT
     
@@ -77,6 +79,22 @@ public:
     explicit SIDataType(SIDataTypeModel & model, QWidget *parent = nullptr);
 
     virtual ~SIDataType();
+
+//////////////////////////////////////////////////////////////////////////
+// IETableHelper overrides
+//////////////////////////////////////////////////////////////////////////
+public:
+
+    /**
+     * \brief   Returns the number of columns in the data type tree.
+     **/
+    int getColumnCount() const override;
+
+    /**
+     * \brief   Returns the current text of the given tree cell (used to seed the inline editor).
+     * \param   cell    The index of the cell being edited.
+     **/
+    QString getCellText(const QModelIndex& cell) const override;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -125,6 +143,13 @@ protected:
      * \param previousColumn The previous column index.
      */
     void onCurCellChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
+
+    /**
+     * \brief   Triggered when a cell is edited inline in the tree via the TableCell delegate.
+     * \param   index       The index of the edited cell.
+     * \param   newValue    The new text committed by the inline editor.
+     **/
+    void onEditorDataChanged(const QModelIndex& index, const QString& newValue);
 
     /**
      * \brief Triggered when the add button is clicked.
@@ -349,6 +374,32 @@ private:
      * \brief Initializes the signals.
      */
     void setupSignals();
+
+    /**
+     * \brief   Applies an inline-edited cell value to the model, the tree node and the details
+     *          panel, honoring the per-category column rules (Name for all; Data Type for
+     *          Enumeration/Imported top nodes and struct fields; Value for struct/enum fields).
+     * \param   item        The edited tree node (top-level data type or a field).
+     * \param   column      The edited column index.
+     * \param   newValue    The new text committed by the inline editor.
+     **/
+    void cellChanged(QTreeWidgetItem* item, int column, const QString& newValue);
+
+    /**
+     * \brief   Returns true if the given tree cell may be edited inline for its row's category.
+     **/
+    bool isCellEditable(const QModelIndex& index) const;
+
+    /**
+     * \brief   Returns the combo-box model to show for the given cell, or nullptr for a plain
+     *          text editor. Only the Data Type column of a structure field uses the type model.
+     **/
+    QAbstractItemModel* editorModelFor(const QModelIndex& index) const;
+
+    /**
+     * \brief   Returns the keystroke validation to apply to the given cell's inline text editor.
+     **/
+    TableCell::eCellValidation validationFor(const QModelIndex& index) const;
 
     /**
      * \brief Blocks the basic signals.
@@ -599,9 +650,9 @@ private:
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    SIDataTypeDetails*      mDetails;   //!< The data type details widget.
-    SIDataTypeList*         mList;      //!< The data type list (tree table) widget.
-    SIDataTypeFieldDetails* mFields;    //!< The data type field details widget.
+    DataTypeDetailsView*    mDetails;   //!< The data type details widget.
+    DataTypeListView*       mList;      //!< The data type list (tree table) widget.
+    DataTypeFieldDetailsView* mFields;  //!< The data type field details widget.
     QWidget*                mRightPanel;//!< Holds mDetails/mFields so the row is exactly 2 equal-width panels.
     SIDataTypeWidget*       mWidget;    //!< The helper widget.
     SIDataTypeModel&        mModel;     //!< The data type main model object.

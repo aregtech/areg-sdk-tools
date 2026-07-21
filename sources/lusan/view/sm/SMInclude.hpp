@@ -20,14 +20,17 @@
  ************************************************************************/
 
 #include <QScrollArea>
+#include "lusan/view/common/TableCell.hpp"
+
 #include <QStringList>
 #include <cstdint>
 
+class IncludeDetailsView;
 class IncludeEntry;
+class IncludeListView;
 class QEvent;
+class QModelIndex;
 class QTreeWidgetItem;
-class SMIncludeDetails;
-class SMIncludeList;
 class SMIncludeModel;
 
 /**
@@ -39,7 +42,8 @@ class SMIncludeModel;
  *          directly and rebuilds the list from the live model on every Include-kind notifier
  *          signal, self-triggered or from undo/redo alike.
  **/
-class SMInclude : public QScrollArea
+class SMInclude : public    QScrollArea
+                , protected IETableHelper
 {
     Q_OBJECT
 
@@ -56,6 +60,17 @@ public:
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
+    /**
+     * \brief   Returns the number of columns in the include list (IETableHelper).
+     **/
+    int getColumnCount() const override;
+
+    /**
+     * \brief   Returns the text of the given list cell (IETableHelper).
+     * \param   cell    The index of the cell.
+     **/
+    QString getCellText(const QModelIndex& cell) const override;
+
 //////////////////////////////////////////////////////////////////////////
 // Slots
 //////////////////////////////////////////////////////////////////////////
@@ -68,6 +83,11 @@ private slots:
     void onMoveDownClicked();
 
     void onLocationCommitted();
+
+    //!< Commits an inline edit of the Location column into the model (undo command); the derived
+    //!< Type/Name columns then refresh from the notifier. Escape is handled by the delegate.
+    void onInlineLocationEdited(const QModelIndex& index, const QString& newValue);
+
     void onBrowseClicked();
     void onDeprecatedToggled(bool checked);
     void onDeprecateHintCommitted();
@@ -103,20 +123,14 @@ private:
 
     static QStringList getSupportedExtensions();
 
-    //!< The include Type derived from a location's file extension: "State Machine" for
-    //!< `.fsml`, "Data Type" for `.dtml`, "Source" for anything else.
-    static QString includeType(const QString& location);
-    //!< The display Name derived from a location: the file name for a source include, the
-    //!< base name (no extension) for a state machine or data type include.
-    static QString includeName(const QString& location);
-
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
     SMIncludeModel&     mModel;
-    SMIncludeList*      mList;
-    SMIncludeDetails*   mDetails;
+    IncludeListView*    mList;
+    IncludeDetailsView* mDetails;
+    TableCell*          mTableCell;     //!< Inline editor delegate for the Location column.
     uint32_t            mNameCounter;
 };
 
