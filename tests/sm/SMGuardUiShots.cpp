@@ -42,7 +42,6 @@
 #include "lusan/view/common/MethodListView.hpp"
 #include "lusan/view/sm/SMRefCompleter.hpp"
 #include "lusan/view/sm/SMSignatureCard.hpp"
-#include "lusan/view/sm/SMStructureLens.hpp"
 
 #include <QApplication>
 #include <QToolBox>
@@ -218,13 +217,11 @@ int main(int argc, char** argv)
     bar.setTransition(transId);
     pump(150);
 
-    // ---- S5: the lens over the running example B ---------------------------
-    std::printf("[ RUN  ] lens\n");
+    // ---- the running example B committed into the guard --------------------
+    std::printf("[ RUN  ] guardExample\n");
     setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
     pump(300);
-    check(bar.lens()->findChild<QWidget*>(QStringLiteral("smLensPill_0")) != nullptr, "lens renders the first clause pill");
-    check(bar.lens()->findChild<QWidget*>(QStringLiteral("smLensJoin_root")) != nullptr, "lens renders the root joiner");
-    grab(&bar, grabDir, "u3-lens-open.png");
+    grab(&bar, grabDir, "u3-guard-open.png");
 
     // ---- 23a: the island token is ONE character to caret/selection/clipboard --
     std::printf("[ RUN  ] islandAtomicity\n");

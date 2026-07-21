@@ -835,10 +835,24 @@ void SMPropertiesPanel::reorderTransition(int from, int to)
     mModel.getUndoStack().push(composite);
 }
 
-void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind /*kind*/)
+void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind kind)
 {
-    if ((id == mCurrentId) && (isEditing() == false))
+    if (isEditing())
     {
+        return;
+    }
+
+    if (id == mCurrentId)
+    {
+        refresh();
+    }
+    else if ((mPage == PageTransition)
+             && ((kind == eDocElementKind::Method) || (kind == eDocElementKind::Event) || (kind == eDocElementKind::Timer)))
+    {
+        // A trigger method changing type (trigger <-> action/condition), or an event/timer edit,
+        // changes the stimulus vocabulary; the changed element's id is never mCurrentId, so rebuild
+        // the transition page (and its picker) here so the Stimulus combo always reflects the
+        // current triggers (live sync, D-SYNC). A rename already routes through onNameChanged.
         refresh();
     }
 }

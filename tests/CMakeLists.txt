@@ -288,7 +288,6 @@ qt_add_executable(lusan_sm_guard_catalog_tests
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
-    ${LUSAN}/view/sm/SMGuardCatalogModel.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardCatalogTests.cpp
 )
 target_include_directories(lusan_sm_guard_catalog_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
@@ -367,8 +366,6 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMGuardBar.cpp
     ${LUSAN}/view/sm/SMGuardCallsOutline.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
-    ${LUSAN}/view/sm/SMGuardCatalogModel.cpp
-    ${LUSAN}/view/sm/SMGuardCatalogView.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
@@ -379,7 +376,6 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMIslandEditor.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
-    ${LUSAN}/view/sm/SMStructureLens.cpp
     ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
@@ -480,8 +476,6 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMGuardBar.cpp
     ${LUSAN}/view/sm/SMGuardCallsOutline.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
-    ${LUSAN}/view/sm/SMGuardCatalogModel.cpp
-    ${LUSAN}/view/sm/SMGuardCatalogView.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
@@ -493,7 +487,6 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMMethod.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
-    ${LUSAN}/view/sm/SMStructureLens.cpp
     ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
 )

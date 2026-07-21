@@ -40,15 +40,16 @@ namespace
     using eKind = SMGuardNode::eKind;
 
     // Item data roles carried by each outline row.
-    constexpr int RoleType    = Qt::UserRole + 1;   //!< 0 call, 1 reference, 2 island, 3 raw.
+    constexpr int RoleType    = Qt::UserRole + 1;   //!< 0 call, 1 reference, 2 island, 3 raw, 4 insert.
     constexpr int RolePath    = Qt::UserRole + 2;   //!< QVariantList of child indices.
     constexpr int RoleSymbol  = Qt::UserRole + 3;   //!< The symbol / method id.
-    constexpr int RoleExtra   = Qt::UserRole + 4;   //!< Island index (islands) / unmapped (calls).
+    constexpr int RoleExtra   = Qt::UserRole + 4;   //!< Island index (islands) / unmapped (calls) / insert index.
 
     constexpr int TypeCall    = 0;
     constexpr int TypeRef     = 1;
     constexpr int TypeIsland  = 2;
     constexpr int TypeRaw     = 3;
+    constexpr int TypeInsert  = 4;  //!< An "available condition method" row (double-click inserts).
 
     //!< Packs a child-index path into a QVariant list.
     QVariant packPath(const QList<int>& path)
@@ -103,8 +104,11 @@ SMGuardCallsOutline::SMGuardCallsOutline(StateMachineModel& model, QWidget* pare
     layout->addWidget(mList);
 
     connect(mList, &QListWidget::itemSelectionChanged, this, &SMGuardCallsOutline::onCurrentRowChanged);
+    // Only itemActivated (a double-click on desktop styles, or Return): it fires ONCE per gesture.
+    // Wiring itemDoubleClicked as well double-fired the handler on one double-click, which inserted
+    // the reference twice and nested it (`@cond:x(@cond:x())`), because the first insert leaves the
+    // caret between the parens where the second insert then lands.
     connect(mList, &QListWidget::itemActivated, this, &SMGuardCallsOutline::onItemActivated);
-    connect(mList, &QListWidget::itemDoubleClicked, this, &SMGuardCallsOutline::onItemActivated);
     connect(mList, &QListWidget::customContextMenuRequested, this, &SMGuardCallsOutline::onContextMenu);
 
     DocModelNotifier& notifier = mModel.getNotifier();
@@ -235,6 +239,7 @@ void SMGuardCallsOutline::rebuild(void)
     const QList<int> keepPath = selectedCallPath();
 
     mList->clear();
+    mInsertable.clear();
 
     const SMGuardNode* tree = guardTree();
     if (tree != nullptr)
@@ -243,15 +248,56 @@ void SMGuardCallsOutline::rebuild(void)
         walk(*tree, QList<int>(), false, islandCounter);
     }
 
+    // The defined condition methods, listed as double-click-to-insert rows below whatever is
+    // already in the guard. This is what makes the section useful when the guard is still empty:
+    // the developer sees their condition methods and picks one instead of recalling its name.
+    appendInsertableConditions();
+
     if (mList->count() == 0)
     {
-        QListWidgetItem* empty = new QListWidgetItem(tr("no calls or references yet"), mList);
+        QListWidgetItem* empty = new QListWidgetItem(tr("no condition methods defined yet"), mList);
         empty->setFlags(Qt::NoItemFlags);
     }
 
     if (keepPath.isEmpty() == false)
     {
         selectCallPath(keepPath);
+    }
+}
+
+void SMGuardCallsOutline::appendInsertableConditions(void)
+{
+    if (mTransId == 0u)
+    {
+        return;
+    }
+
+    const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(mModel.getData(), mTransId);
+    for (const SMGuardSymbol& symbol : catalog)
+    {
+        if (symbol.refkind == SMGuardSymbol::eRefKind::Cond)
+        {
+            mInsertable.append(symbol);
+        }
+    }
+
+    if (mInsertable.isEmpty())
+    {
+        return;
+    }
+
+    // A non-selectable header separates the "in the guard" rows above from the insertable methods.
+    QListWidgetItem* header = new QListWidgetItem(tr("Insert a condition:"), mList);
+    header->setFlags(Qt::NoItemFlags);
+
+    for (int i = 0; i < mInsertable.size(); ++i)
+    {
+        const SMGuardSymbol& symbol = mInsertable.at(i);
+        QListWidgetItem* item = new QListWidgetItem(symbol.display(), mList);
+        item->setData(RoleType, TypeInsert);
+        item->setData(RoleSymbol, symbol.symbolId);
+        item->setData(RoleExtra, i);
+        item->setToolTip(tr("Double-click to insert %1 into the guard").arg(symbol.mention()));
     }
 }
 
@@ -439,9 +485,18 @@ void SMGuardCallsOutline::onItemActivated(QListWidgetItem* item)
         return;
     }
 
-    if (item->data(RoleType).toInt() == TypeIsland)
+    const int type = item->data(RoleType).toInt();
+    if (type == TypeIsland)
     {
         emit islandActivated(item->data(RoleExtra).toInt());
+    }
+    else if (type == TypeInsert)
+    {
+        const int index = item->data(RoleExtra).toInt();
+        if ((index >= 0) && (index < mInsertable.size()))
+        {
+            emit insertRequested(mInsertable.at(index));
+        }
     }
 }
 

@@ -10,8 +10,6 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMGuardBar.cpp
     ${LUSAN}/view/sm/SMGuardCallsOutline.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
-    ${LUSAN}/view/sm/SMGuardCatalogModel.cpp
-    ${LUSAN}/view/sm/SMGuardCatalogView.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
@@ -23,7 +21,6 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
     ${LUSAN}/view/sm/SMRefCompleter.cpp
-    ${LUSAN}/view/sm/SMStructureLens.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
     ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/view/sm/SMConstant.cpp
@@ -69,8 +66,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMGuardBar.hpp
     ${LUSAN}/view/sm/SMGuardCallsOutline.hpp
     ${LUSAN}/view/sm/SMGuardCatalog.hpp
-    ${LUSAN}/view/sm/SMGuardCatalogModel.hpp
-    ${LUSAN}/view/sm/SMGuardCatalogView.hpp
     ${LUSAN}/view/sm/SMGuardField.hpp
     ${LUSAN}/view/sm/SMGuardHelpCard.hpp
     ${LUSAN}/view/sm/SMGuardHighlighter.hpp
@@ -82,7 +77,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMOperandField.hpp
     ${LUSAN}/view/sm/SMSignatureCard.hpp
     ${LUSAN}/view/sm/SMRefCompleter.hpp
-    ${LUSAN}/view/sm/SMStructureLens.hpp
     ${LUSAN}/view/sm/SMTryStrip.hpp
     ${LUSAN}/view/sm/SMValidationPanel.hpp
     ${LUSAN}/view/sm/SMConstant.hpp

@@ -31,10 +31,8 @@
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 
 #include "lusan/view/sm/SMGuardCatalog.hpp"
-#include "lusan/view/sm/SMGuardCatalogModel.hpp"
 
 #include <QCoreApplication>
-#include <QSortFilterProxyModel>
 #include <QString>
 #include <cstdio>
 
@@ -227,73 +225,6 @@ namespace
         delete res.tree;
     }
 
-    // SM-21-04: the catalog model filters by search text and carries every kind.
-    void testCatalogModelFilterAndKinds()
-    {
-        std::printf("[catalog model] search filter + kind coverage\n");
-        StateMachineData data;
-        const uint32_t transId = buildDoc(data);
-        const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(data, transId);
-
-        SMGuardCatalogModel model;
-        model.setSymbols(catalog);
-        check(model.rowCount() == catalog.size(), "the model wraps every catalog symbol");
-        check(model.columnCount() == SMGuardCatalogModel::ColCount, "four columns [hue|name|type|used]");
-
-        QSortFilterProxyModel proxy;
-        proxy.setSourceModel(&model);
-        proxy.setFilterCaseSensitivity(Qt::CaseInsensitive);
-        proxy.setFilterKeyColumn(SMGuardCatalogModel::ColName);
-
-        proxy.setFilterFixedString(QStringLiteral("Walk"));
-        check(proxy.rowCount() == 1, "search 'Walk' narrows to the one matching symbol");
-        if (proxy.rowCount() == 1)
-        {
-            const QString name = proxy.index(0, SMGuardCatalogModel::ColName).data().toString();
-            checkEq(name, QStringLiteral("WalkRequested"), "the surviving row is WalkRequested");
-        }
-
-        proxy.setFilterFixedString(QString());
-        check(proxy.rowCount() == catalog.size(), "clearing the search restores every symbol");
-
-        // Every kind the Data catalog offers is present (Param scope + Attribute + Constant + Cond).
-        int params = 0;
-        int attrs  = 0;
-        int consts = 0;
-        int conds  = 0;
-        for (int row = 0; row < model.rowCount(); ++row)
-        {
-            const SMGuardSymbol* sym = model.symbolAt(row);
-            if (sym == nullptr) { continue; }
-            switch (sym->refkind)
-            {
-            case SMGuardSymbol::eRefKind::Param: ++params; break;
-            case SMGuardSymbol::eRefKind::Attr:  ++attrs;  break;
-            case SMGuardSymbol::eRefKind::Const: ++consts; break;
-            case SMGuardSymbol::eRefKind::Cond:  ++conds;  break;
-            }
-        }
-
-        check(params == 1, "one stimulus parameter in scope");
-        check(attrs  == 2, "two attributes");
-        check(consts == 1, "one constant");
-        check(conds  == 2, "two condition methods (handler + lambda)");
-
-        // The used-N column shows a bound reference count pushed by the host.
-        const uint32_t walkId = SMGuardSymbols::attributeId(data, QStringLiteral("WalkRequested"));
-        QHash<uint32_t, int> counts;
-        counts.insert(walkId, 4);
-        model.setUseCounts(counts);
-        for (int row = 0; row < model.rowCount(); ++row)
-        {
-            const SMGuardSymbol* sym = model.symbolAt(row);
-            if ((sym != nullptr) && (sym->symbolId == walkId))
-            {
-                checkEq(model.index(row, SMGuardCatalogModel::ColUsed).data().toString(), QStringLiteral("4"), "used-N reflects the pushed count");
-            }
-        }
-    }
-
     // SM-21-08 (W1): the raw-collision detector over a committed tree. Advisory, exact-match, and
     // never a linter -- only a whole bare identifier that matches an in-scope symbol name fires.
     void testRawCollisions()
@@ -389,7 +320,6 @@ int main(int argc, char** argv)
     testAutoMapUniqueness();
     testClickTypeParity();
     testUseCounts();
-    testCatalogModelFilterAndKinds();
     testRawCollisions();
 
     std::printf("\n%d checks, %d failures\n", gChecks, gFailures);

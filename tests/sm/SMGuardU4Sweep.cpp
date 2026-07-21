@@ -45,7 +45,6 @@
 #include "lusan/view/sm/SMIslandEditor.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
-#include "lusan/view/sm/SMStructureLens.hpp"
 #include "lusan/view/sm/SMTryStrip.hpp"
 #include "lusan/view/sm/SMValidationPanel.hpp"
 
@@ -210,11 +209,6 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardField")) != nullptr, "S1: smGuardField");
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardStatus")) != nullptr, "S2: smGuardStatus");
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardChips")) != nullptr, "S3: smGuardChips");
-    check(bar.findChild<QWidget*>(QStringLiteral("smGuardLens")) != nullptr, "S5: smGuardLens");
-    check(bar.findChild<QWidget*>(QStringLiteral("smLensAdd")) != nullptr, "S5: smLensAdd");
-    check(bar.findChild<QWidget*>(QStringLiteral("smLensExplain")) != nullptr, "S5/S13: smLensExplain");
-    check(bar.findChild<QWidget*>(QStringLiteral("smLensPill_0")) != nullptr, "S5: smLensPill_<path>");
-    check(bar.findChild<QWidget*>(QStringLiteral("smLensJoin_root")) != nullptr, "S5: smLensJoin_<group>");
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardTry")) != nullptr, "S6: smGuardTry");
 
     // S4: the island editor (open it for a synthetic island).
@@ -584,21 +578,12 @@ static void sweepTryIt(const QString& docPath, const QString& grabDir)
     count->setText(QStringLiteral("3"));
     pump(150);
     check(result->text().contains(QStringLiteral("TRUE")), "true/3 -> the guard is TRUE live");
-
-    // The lens pill tints green while the strip is open.
-    QToolButton* pill = bar.lens()->findChild<QToolButton*>(QStringLiteral("smLensPill_0"));
-    check(pill != nullptr, "the first clause pill exists");
-    const QString okName = NEGuardStyle::severityColor(NEGuardStyle::eSeverity::Ok).name();
-    check((pill != nullptr) && pill->styleSheet().contains(okName), "the TRUE clause pill tints green (B9)");
     grab(&bar, grabDir, "u4-tryit-open.png");
 
-    // Flip WalkRequested -> FALSE; the pill flips red.
+    // Flip WalkRequested -> FALSE; the result flips to FALSE live.
     walk->setCurrentText(QStringLiteral("false"));
     pump(150);
     check(result->text().contains(QStringLiteral("FALSE")), "flipping the attribute updates the result live");
-    const QString errName = NEGuardStyle::severityColor(NEGuardStyle::eSeverity::Err).name();
-    pill = bar.lens()->findChild<QToolButton*>(QStringLiteral("smLensPill_0"));
-    check((pill != nullptr) && pill->styleSheet().contains(errName), "the FALSE clause pill tints red (B9)");
 
     // count=2 + stub false -> the Or clause decides FALSE.
     walk->setCurrentText(QStringLiteral("true"));

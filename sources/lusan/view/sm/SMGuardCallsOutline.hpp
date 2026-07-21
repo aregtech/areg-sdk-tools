@@ -24,6 +24,8 @@
  ************************************************************************/
 #include <QWidget>
 
+#include "lusan/view/sm/SMGuardCatalog.hpp"
+
 #include <QList>
 #include <cstdint>
 
@@ -38,11 +40,14 @@ enum class eDocElementKind;
 
 /**
  * \class   SMGuardCallsOutline
- * \brief   The accordion's Calls section (design 8.1): a path-keyed projection of the
- *          committed guard tree. One row per condition-method call (`name(sig) : ret
- *          [N unmapped]`), per top-level reference (`name -- attribute (read)`), and per
- *          verbatim island / raw fragment (`raw C++`). Selecting a call row emits
- *          \ref callSelected so the host drives the SINGLE Arguments table; double-clicking
+ * \brief   The accordion's Conditions section (design 8.1): a path-keyed projection of the
+ *          committed guard tree PLUS a list of the defined condition methods to insert. One
+ *          row per condition-method call (`name(sig) : ret [N unmapped]`), per top-level
+ *          reference (`name -- attribute (read)`), and per verbatim island / raw fragment
+ *          (`raw C++`) already in the guard; then, under an "Insert a condition:" header, one
+ *          row per defined condition method. Selecting a call row emits \ref callSelected so the
+ *          host drives the SINGLE Arguments table; double-clicking an insert row emits
+ *          \ref insertRequested so the host inserts `@cond:name()` at the caret; double-clicking
  *          an island row emits \ref islandActivated so the host opens the island editor;
  *          right-clicking a reference row emits \ref whereUsedRequested (global where-used).
  *
@@ -91,6 +96,8 @@ public:
 signals:
     //!< A call row was selected: drive the Arguments table for \p callPath of \p methodId.
     void callSelected(const QList<int>& callPath, uint32_t methodId, int unmappedCount);
+    //!< An "available condition" row was activated: insert \p symbol's `@cond:name()` at the caret.
+    void insertRequested(const SMGuardSymbol& symbol);
     //!< An island (verbatim lambda) row was activated: open its editor by \p islandIndex.
     void islandActivated(int islandIndex);
     //!< A reference row's context menu asked for the global where-used of \p symbolId.
@@ -121,6 +128,9 @@ private:
     //!< The count of formals of \p call not mapped by an argument child.
     int unmappedCount(const SMGuardNode& call) const;
 
+    //!< Appends the "insert a condition" rows (every defined condition method) below the tree rows.
+    void appendInsertableConditions(void);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -128,6 +138,7 @@ private:
     StateMachineModel&  mModel;         //!< The document facade.
     uint32_t            mTransId;       //!< The shown transition (0 = none).
     QListWidget*        mList;          //!< The outline rows.
+    QList<SMGuardSymbol> mInsertable;   //!< The defined condition methods (insertable rows).
     bool                mRebuildPending;//!< Coalesces deferred rebuilds.
     bool                mEmitting;      //!< True while emitting a selection (guards re-entry).
 };

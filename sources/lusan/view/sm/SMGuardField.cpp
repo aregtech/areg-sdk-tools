@@ -910,9 +910,22 @@ void SMGuardField::analyze()
     mErrorStart = -1;
     mErrorLength = 0;
 
+    // Applying highlighter formats re-emits QTextEdit::textChanged (Qt fires it for format-only
+    // edits too). The textChanged handler restarts mDebounce, whose timeout runs analyze() again,
+    // which re-applies the formats -- a self-sustaining 150 ms loop that keeps the process off
+    // idle. Shield every decoration write with mSuppressAnalyze (the same guard used around
+    // setPlainText / foldChips / reprojectChips) so our own formatting never re-triggers analyze.
+    auto applyDecorations = [this](const QList<SMGuardHighlighter::OwnerSpan>& owners, const QList<SMGuardHighlighter::DiagSpan>& diags)
+    {
+        const bool prevSuppress = mSuppressAnalyze;
+        mSuppressAnalyze = true;
+        mHighlighter->setDecorations(owners, diags);
+        mSuppressAnalyze = prevSuppress;
+    };
+
     if (mTransitionId == 0u)
     {
-        mHighlighter->setDecorations({}, {});
+        applyDecorations({}, {});
         emit statusUpdated(static_cast<int>(NEGuardStyle::eSeverity::Ok), QString(), QString(), {});
         emit fixesUpdated(QString(), {});
         emit badgeUpdated(false, false);
@@ -1010,7 +1023,7 @@ void SMGuardField::analyze()
         }
     }
 
-    mHighlighter->setDecorations(owners, diags);
+    applyDecorations(owners, diags);
 
     // ---- status + fixes --------------------------------------------------
     if (expText.trimmed().isEmpty())

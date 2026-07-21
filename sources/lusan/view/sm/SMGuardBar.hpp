@@ -43,7 +43,6 @@ class StateMachineModel;
 class SMArgMapTable;
 class SMArgSinkGuard;
 class SMGuardCallsOutline;
-class SMGuardCatalogView;
 class SMGuardField;
 class SMGuardPopout;
 class SMGuardStatusLine;
@@ -51,9 +50,9 @@ class SMFixBar;
 class SMGuardHelpCard;
 class SMHoverCard;
 class SMIslandEditor;
-class SMStructureLens;
 class SMTryStrip;
 class SMGuardNode;
+struct SMGuardSymbol;
 
 /**
  * \class   SMGuardBar
@@ -85,9 +84,6 @@ public:
     //!< The guard field (tests / focus).
     inline SMGuardField* field() const;
 
-    //!< The structure lens (tests).
-    inline SMStructureLens* lens() const;
-
     //!< The island editor (tests).
     inline SMIslandEditor* islandEditor() const;
 
@@ -102,9 +98,6 @@ public:
 
     //!< The shared Arguments table (tests).
     inline SMArgMapTable* args() const;
-
-    //!< The Data catalog view (tests).
-    inline SMGuardCatalogView* dataCatalog() const;
 
     //!< The open pop-out editor, or null (tests). Not inline: QPointer<SMGuardPopout> needs the
     //!< complete type, and callers of this header only forward-declare it.
@@ -154,11 +147,14 @@ private:
     //!< Selects \p callPath in the Calls outline and opens the Arguments section on it.
     void jumpToCall(const QList<int>& callPath);
 
-    //!< Toggles the Data section (Data>> top-strip button).
-    void toggleDataSection();
-
     //!< The generated-code preview dialog (Preview top-strip button).
     void showPreviewDialog();
+
+    //!< Toggles the Try-it what-if strip open/closed (Try-it top-strip button).
+    void toggleTryStrip();
+
+    //!< Inserts a condition method's `@cond:name()` reference at the field caret (Conditions list).
+    void insertCondition(const SMGuardSymbol& symbol);
 
     // ---- pop-out editor (SM-21-05) ----------------------------------------
     //!< Opens the non-modal always-on-top pop-out over the same transition (Pop-out top strip).
@@ -185,7 +181,6 @@ private:
     SMFixBar*           mFixBar;    //!< The quick-fix bar (field diagnostics).
     SMFixBar*           mWarnBar;   //!< The one advisory warning channel (unmapped-argument).
     SMIslandEditor*     mIsland;    //!< The island editor (S4, hidden until an island opens).
-    SMStructureLens*    mLens;      //!< The structure lens (S5).
     SMTryStrip*         mTry;       //!< The Try-it strip (S6).
     SMHoverCard*        mHover;     //!< The shared hover card (S10).
     SMGuardHelpCard*    mHelp;      //!< The help card (lazily shown).
@@ -195,13 +190,12 @@ private:
     // ---- top strip + accordion (SM-21-02 / SM-21-04) ----------------------
     QToolButton*        mInsertBtn; //!< Insert: opens the completer at the caret (all kinds).
     QToolButton*        mPreviewBtn;//!< Preview: opens the generated-code dialog.
-    QToolButton*        mDataBtn;   //!< Data>>: toggles the Data section.
-    QToolButton*        mPopoutBtn; //!< Pop-out: disabled placeholder (wired in SM-21-05).
-    QToolBox*           mAccordion; //!< The Calls / Arguments / Data accordion (one open at a time).
-    SMGuardCallsOutline* mCalls;    //!< The Calls outline (drives the Arguments table).
+    QToolButton*        mTryBtn;    //!< Try-it: toggles the what-if strip open/closed.
+    QToolButton*        mPopoutBtn; //!< Pop-out: opens the bigger editor (SM-21-05).
+    QToolBox*           mAccordion; //!< The Conditions / Arguments accordion (one open at a time).
+    SMGuardCallsOutline* mCalls;    //!< The Conditions outline (list + insert; drives Arguments).
     SMArgMapTable*      mArgs;      //!< The single shared Arguments table.
     SMArgSinkGuard      mArgSink;   //!< The guard-side argument sink behind the table.
-    SMGuardCatalogView* mData;      //!< The Data catalog (model/view).
     int                 mLastSection;//!< The last-open accordion section (D-ACCORDION, per tab).
     bool                mDerivedPending;//!< Coalesces the deferred catalog re-enumeration.
     QSet<QString>       mDismissedRaw;//!< W1 "keep raw" names silenced for the current transition (SM-21-08).
@@ -215,11 +209,6 @@ private:
 inline SMGuardField* SMGuardBar::field() const
 {
     return mField;
-}
-
-inline SMStructureLens* SMGuardBar::lens() const
-{
-    return mLens;
 }
 
 inline SMIslandEditor* SMGuardBar::islandEditor() const
@@ -245,11 +234,6 @@ inline SMGuardCallsOutline* SMGuardBar::calls() const
 inline SMArgMapTable* SMGuardBar::args() const
 {
     return mArgs;
-}
-
-inline SMGuardCatalogView* SMGuardBar::dataCatalog() const
-{
-    return mData;
 }
 
 #endif  // LUSAN_VIEW_SM_SMGUARDBAR_HPP

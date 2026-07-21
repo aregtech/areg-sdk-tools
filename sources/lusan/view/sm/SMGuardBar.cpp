@@ -37,14 +37,12 @@
 #include "lusan/view/sm/SMFixBar.hpp"
 #include "lusan/view/sm/SMGuardCallsOutline.hpp"
 #include "lusan/view/sm/SMGuardCatalog.hpp"
-#include "lusan/view/sm/SMGuardCatalogView.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMGuardHelpCard.hpp"
 #include "lusan/view/sm/SMGuardPopout.hpp"
 #include "lusan/view/sm/SMGuardStatusLine.hpp"
 #include "lusan/view/sm/SMHoverCard.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
-#include "lusan/view/sm/SMStructureLens.hpp"
 #include "lusan/view/sm/SMTryStrip.hpp"
 
 #include <QApplication>
@@ -61,6 +59,7 @@
 #include <QPlainTextEdit>
 #include <QSet>
 #include <QShortcut>
+#include <QStyle>
 #include <QTimer>
 #include <QToolBox>
 #include <QToolButton>
@@ -73,7 +72,6 @@ namespace
     // The accordion section indices (QToolBox order).
     constexpr int SectionCalls = 0;
     constexpr int SectionArgs  = 1;
-    constexpr int SectionData  = 2;
 
     //!< Pre-order search for the \p target-th Lambda node; returns true when found.
     bool findNthLambda(const SMGuardNode* node, int target, int& counted, QList<int>& path)
@@ -191,7 +189,6 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mFixBar       (nullptr)
     , mWarnBar      (nullptr)
     , mIsland       (nullptr)
-    , mLens         (nullptr)
     , mTry          (nullptr)
     , mHover        (nullptr)
     , mHelp         (nullptr)
@@ -199,13 +196,12 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mHelpBtn      (nullptr)
     , mInsertBtn    (nullptr)
     , mPreviewBtn   (nullptr)
-    , mDataBtn      (nullptr)
+    , mTryBtn       (nullptr)
     , mPopoutBtn    (nullptr)
     , mAccordion    (nullptr)
     , mCalls        (nullptr)
     , mArgs         (nullptr)
     , mArgSink      (model)
-    , mData         (nullptr)
     , mLastSection  (0)
     , mDerivedPending(false)
     , mPopout       (nullptr)
@@ -214,50 +210,63 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     outer->setContentsMargins(8, 8, 8, 8);
     outer->setSpacing(6);
 
-    // Header row: Guard label + top strip (Insert/Preview/Data>>/Pop-out) + clear + help.
+    // Header row: Guard label + an icon-only top strip (Insert / Preview / Try-it / Pop-out /
+    // clear / help). Icons instead of text save horizontal room in the narrow Properties dock;
+    // each carries a tooltip so the meaning is one hover away. Icons come from the platform style
+    // (dependency-free and Qt 6.4-safe).
+    QStyle* style = this->style();
+
     QHBoxLayout* header = new QHBoxLayout();
     header->addWidget(new QLabel(tr("Guard"), this));
     header->addStretch(1);
 
-    // The top strip: labeled toolbuttons, horizontal (adds function, not height).
     mInsertBtn = new QToolButton(this);
     mInsertBtn->setObjectName(QStringLiteral("smGuardInsert"));
-    mInsertBtn->setText(tr("Insert"));
+    mInsertBtn->setIcon(style->standardIcon(QStyle::SP_FileDialogContentsView));
+    mInsertBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     mInsertBtn->setAutoRaise(true);
     mInsertBtn->setToolTip(tr("Insert a symbol reference at the caret"));
     header->addWidget(mInsertBtn);
 
     mPreviewBtn = new QToolButton(this);
     mPreviewBtn->setObjectName(QStringLiteral("smGuardPreview"));
-    mPreviewBtn->setText(tr("Preview"));
+    mPreviewBtn->setIcon(style->standardIcon(QStyle::SP_FileDialogInfoView));
+    mPreviewBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     mPreviewBtn->setAutoRaise(true);
     mPreviewBtn->setToolTip(tr("Show the generated C++ for this guard"));
     header->addWidget(mPreviewBtn);
 
-    mDataBtn = new QToolButton(this);
-    mDataBtn->setObjectName(QStringLiteral("smGuardDataToggle"));
-    mDataBtn->setText(tr("Data>>"));
-    mDataBtn->setAutoRaise(true);
-    mDataBtn->setToolTip(tr("Browse and insert symbols"));
-    header->addWidget(mDataBtn);
+    // Try-it moved up here (it is a what-if evaluator, distinct from Pop-out's bigger editor):
+    // this toggles the strip below open/closed.
+    mTryBtn = new QToolButton(this);
+    mTryBtn->setObjectName(QStringLiteral("smGuardTryButton"));
+    mTryBtn->setIcon(style->standardIcon(QStyle::SP_MediaPlay));
+    mTryBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    mTryBtn->setAutoRaise(true);
+    mTryBtn->setCheckable(true);
+    mTryBtn->setToolTip(tr("Try it: evaluate the guard with sample values"));
+    header->addWidget(mTryBtn);
 
     mPopoutBtn = new QToolButton(this);
     mPopoutBtn->setObjectName(QStringLiteral("smGuardPopout"));
-    mPopoutBtn->setText(tr("Pop-out"));
+    mPopoutBtn->setIcon(style->standardIcon(QStyle::SP_TitleBarMaxButton));
+    mPopoutBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     mPopoutBtn->setAutoRaise(true);
     mPopoutBtn->setToolTip(tr("Open the guard in a larger editor"));
     header->addWidget(mPopoutBtn);
 
     mClear = new QToolButton(this);
     mClear->setObjectName(QStringLiteral("smGuardClear"));
-    mClear->setText(QStringLiteral("{x}"));
+    mClear->setIcon(style->standardIcon(QStyle::SP_LineEditClearButton));
+    mClear->setToolButtonStyle(Qt::ToolButtonIconOnly);
     mClear->setAutoRaise(true);
     mClear->setToolTip(tr("Clear the guard (the transition always fires)"));
     header->addWidget(mClear);
 
     mHelpBtn = new QToolButton(this);
     mHelpBtn->setObjectName(QStringLiteral("smGuardHelp"));
-    mHelpBtn->setText(QStringLiteral("(?)"));
+    mHelpBtn->setIcon(style->standardIcon(QStyle::SP_TitleBarContextHelpButton));
+    mHelpBtn->setToolButtonStyle(Qt::ToolButtonIconOnly);
     mHelpBtn->setAutoRaise(true);
     mHelpBtn->setToolTip(tr("What can a guard use?"));
     header->addWidget(mHelpBtn);
@@ -279,8 +288,10 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mWarnBar->setObjectName(QStringLiteral("smGuardWarnBar"));
     outer->addWidget(mWarnBar);
 
-    // The accordion (spec 10 / design 8.1): Calls (outline) drives the single Arguments table;
-    // Data is the symbol catalog. Exactly one section is expanded at a time (QToolBox).
+    // The accordion (design 8.1): the Conditions outline lists the defined condition methods
+    // (double-click inserts one) and the calls already in the guard drive the single Arguments
+    // table. Exactly one section is expanded at a time (QToolBox). Its section headers already
+    // act as flat expand/collapse buttons.
     mAccordion = new QToolBox(this);
     mAccordion->setObjectName(QStringLiteral("smGuardAccordion"));
 
@@ -288,23 +299,17 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mArgs = new SMArgMapTable(mModel, this);
     mArgs->setObjectName(QStringLiteral("smGuardArgs"));
     mArgs->setRowStyle(SMArgMapTable::eRowStyle::Detailed);
-    mData = new SMGuardCatalogView(mModel, this);
 
-    mAccordion->addItem(mCalls, tr("Calls"));
+    mAccordion->addItem(mCalls, tr("Conditions"));
     mAccordion->addItem(mArgs, tr("Arguments"));
-    mAccordion->addItem(mData, tr("Data"));
     outer->addWidget(mAccordion);
 
-    // S4: the island editor sits between the status block and the lens (B0 screen map).
+    // S4: the island editor sits between the status block and the Try-it strip (B0 screen map).
     mIsland = new SMIslandEditor(this);
     mIsland->setVisible(false);
     outer->addWidget(mIsland);
 
-    // S5: the structure lens.
-    mLens = new SMStructureLens(mModel, this);
-    outer->addWidget(mLens);
-
-    // S6: the Try-it strip (collapsed by default).
+    // S6: the Try-it strip (collapsed by default; toggled from the top-strip Try-it button).
     mTry = new SMTryStrip(mModel, this);
     outer->addWidget(mTry);
 
@@ -314,7 +319,6 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // is retired in favour of the inline accordion Arguments table.
     mHover = new SMHoverCard(this);
     mField->setHoverCard(mHover);
-    mLens->setHoverCard(mHover);
 
     // ---- U2 wiring: status / fixes / badge --------------------------------
     connect(mField, &SMGuardField::statusUpdated, this, &SMGuardBar::onStatusUpdated);
@@ -359,35 +363,6 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         runNameIsland(nthIslandPath(islandIndex), body, SMMethodEntry::eImplement::Handler);
     });
 
-    // ---- U3 wiring: lens ----------------------------------------------------
-    connect(mLens, &SMStructureLens::caretRequested, mField, &SMGuardField::selectSpan);
-    connect(mLens, &SMStructureLens::gridRequested, this, [this](const QList<int>& callPath, const QPoint& /*globalPos*/)
-    {
-        jumpToCall(callPath);       // the mapping popover is retired: drive the inline Arguments table.
-    });
-    connect(mLens, &SMStructureLens::clauseTextBuilt, mField, &SMGuardField::appendClause);
-    connect(mLens, &SMStructureLens::lambdaAppendRequested, mField, &SMGuardField::appendIsland);
-    connect(mLens, &SMStructureLens::nameIslandRequested, this, [this](const QList<int>& islandPath, const QString& body)
-    {
-        runNameIsland(islandPath, body, SMMethodEntry::eImplement::Embedded);
-    });
-    connect(mLens, &SMStructureLens::moveToHandlerRequested, this, [this](uint32_t methodId)
-    {
-        runMoveToHandler(methodId);
-    });
-    connect(mLens, &SMStructureLens::adoptBodyRequested, this, [this](uint32_t methodId)
-    {
-        runAdoptBody(methodId);
-    });
-    connect(mLens, &SMStructureLens::inlineBodyRequested, this, [this](const QList<int>& callPath)
-    {
-        QUndoCommand* command = SMGuardLadder::inlineBody(mModel.getData(), mModel.getNotifier(), mTransId, callPath, tr("Inline body"));
-        if (command != nullptr)
-        {
-            mModel.getUndoStack().push(command);
-        }
-    });
-
     // ---- U3 wiring: hover card + fix-bar grid route --------------------------
     connect(mField, &SMGuardField::mapArgumentsRequested, this, [this]()
     {
@@ -402,9 +377,6 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         showWhereUsed(symbolId);
     });
 
-    // ---- U4 wiring: Try-it truth tints the lens pills while the strip is open ----
-    connect(mTry, &SMTryStrip::truthTintsChanged, mLens, &SMStructureLens::setTruthTints);
-
     // ---- Top strip ---------------------------------------------------------
     connect(mInsertBtn, &QToolButton::clicked, this, [this]()
     {
@@ -412,11 +384,12 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         mField->openCompletion();                   // the Insert entry point: all kinds at the caret.
     });
     connect(mPreviewBtn, &QToolButton::clicked, this, &SMGuardBar::showPreviewDialog);
-    connect(mDataBtn, &QToolButton::clicked, this, &SMGuardBar::toggleDataSection);
+    connect(mTryBtn, &QToolButton::clicked, this, &SMGuardBar::toggleTryStrip);
     connect(mPopoutBtn, &QToolButton::clicked, this, &SMGuardBar::openPopout);
 
-    // ---- Accordion: Calls outline drives the single Arguments table --------
+    // ---- Accordion: Conditions outline lists + inserts and drives the Arguments table -------
     connect(mCalls, &SMGuardCallsOutline::callSelected, this, &SMGuardBar::onCallSelected);
+    connect(mCalls, &SMGuardCallsOutline::insertRequested, this, &SMGuardBar::insertCondition);
     connect(mCalls, &SMGuardCallsOutline::islandActivated, this, [this](int islandIndex)
     {
         // Open the island editor for the outline's `raw C++` row (same path as the field).
@@ -432,16 +405,6 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         {
             mLastSection = index;                   // D-ACCORDION remember-last (per tab).
         }
-    });
-
-    // ---- Data catalog: double-click inserts, right-click asks where-used ----
-    connect(mData, &SMGuardCatalogView::insertRequested, this, [this](const SMGuardSymbol& symbol)
-    {
-        mField->insertReference(symbol);
-    });
-    connect(mData, &SMGuardCatalogView::whereUsedRequested, this, [this](uint32_t symbolId)
-    {
-        showWhereUsed(symbolId);
     });
 
     // ---- Warning channel: unmapped-argument jumps to the call; orphan removes the stale binding ----
@@ -512,15 +475,17 @@ void SMGuardBar::setTransition(uint32_t transitionId)
     mIsland->hide();
     mHover->hide();
     mField->setTransition(transitionId);
-    mLens->setTransition(transitionId);
-    mTry->setTransition(transitionId);
+    mTry->setTransition(transitionId);       // collapses the strip; keep the toggle button in sync.
+    if (mTryBtn != nullptr)
+    {
+        mTryBtn->setChecked(mTry->isOpen());
+    }
 
-    // The accordion + catalog follow the transition; the Arguments table clears until a call
-    // is selected in the outline.
+    // The accordion follows the transition; the Arguments table clears until a call is selected
+    // in the outline.
     mArgs->clearBinding();
     mArgSink.clearBinding();
     mCalls->setTransition(transitionId);
-    mData->setTransition(transitionId);
 
     // D-ACCORDION: re-open the section the user last had open (persisted per tab, not per
     // transition), clamped to a valid index.
@@ -823,17 +788,25 @@ void SMGuardBar::jumpToCall(const QList<int>& callPath)
     mAccordion->setCurrentIndex(SectionArgs);
 }
 
-void SMGuardBar::toggleDataSection()
+void SMGuardBar::toggleTryStrip()
 {
-    if (mAccordion->currentIndex() == SectionData)
+    const bool open = (mTry->isOpen() == false);
+    mTry->setOpen(open);
+    mTryBtn->setChecked(open);
+}
+
+void SMGuardBar::insertCondition(const SMGuardSymbol& symbol)
+{
+    // The Conditions outline picked a condition method: insert its `@cond:name()` reference at the
+    // field's caret (or the end / the very begin when the field is empty), through the same path a
+    // typed reference commits (P3). A no-op when no transition is bound.
+    if (mTransId == 0u)
     {
-        mAccordion->setCurrentIndex(SectionCalls);
+        return;
     }
-    else
-    {
-        mAccordion->setCurrentIndex(SectionData);
-        mData->focusSearch();
-    }
+
+    mField->insertReference(symbol);
+    mField->setFocus();
 }
 
 void SMGuardBar::showPreviewDialog()
@@ -937,8 +910,6 @@ void SMGuardBar::openPopout()
 
 void SMGuardBar::refreshDerived()
 {
-    // The `used-N` column: bound references by symbol id over the committed guard (headless walk).
-    mData->setUseCounts(SMGuardCatalog::useCounts(guardTree()));
     refreshWarnings();
 }
 
@@ -953,8 +924,8 @@ void SMGuardBar::scheduleCatalogRefresh()
     QTimer::singleShot(0, this, [this]()
     {
         mDerivedPending = false;
-        mData->refresh();       // re-enumerate the catalog (a foreign rename/add/remove changed names).
-        refreshDerived();       // recompute the use-counts + warnings off the same pass.
+        refreshDerived();       // recompute the warning channel off the model pass (the Conditions
+                                // outline re-enumerates itself on the same notifier signals).
     });
 }
 
