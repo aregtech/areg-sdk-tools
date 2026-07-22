@@ -33,10 +33,15 @@
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/view/sm/SMAccordion.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMOperationsEditor.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
+#include "lusan/view/sm/SMToolIcons.hpp"
 
+#include <QAbstractButton>
 #include <QComboBox>
 #include <QCompleter>
 #include <QDropEvent>
@@ -83,6 +88,27 @@ namespace
     QString internalLabel()
     {
         return QObject::tr("(internal)");
+    }
+
+    //!< A one-line summary of an operation list for a State-Actions section header: the operation
+    //!< one-liners joined, or `not set` when the list is empty.
+    QString operationsSummary(const StateMachineData& data, const SMOperationList& list)
+    {
+        if (list.isEmpty())
+        {
+            return QObject::tr("not set");
+        }
+
+        QStringList parts;
+        for (const SMOperationBase* op : list.getOperations())
+        {
+            if (op != nullptr)
+            {
+                parts.append(SMOperationSummary::text(data, *op));
+            }
+        }
+
+        return parts.join(QStringLiteral(", "));
     }
 
     //!< A drag-reorderable list that never mutates itself: it reports the requested move and
@@ -154,12 +180,15 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mCurrentId    (0u)
     , mUpdating     (false)
     , mStateTabs    (nullptr)
+    , mStateGeneral (nullptr)
+    , mStateActions (nullptr)
     , mStateName    (nullptr)
     , mStateKind    (nullptr)
     , mStateDesc    (nullptr)
     , mEnterOps     (nullptr)
     , mExitOps      (nullptr)
     , mTransitions  (nullptr)
+    , mTransGeneral (nullptr)
     , mStimulusSig  (nullptr)
     , mStimulusName (nullptr)
     , mTarget       (nullptr)
@@ -213,27 +242,38 @@ SMPropertiesPanel::~SMPropertiesPanel()
 
 void SMPropertiesPanel::buildStatePage()
 {
-    QWidget* page = new QWidget(this);
-    QFormLayout* form = new QFormLayout(page);
-
-    mStateName = new QLineEdit(page);
+    mStateName = new QLineEdit(this);
     mStateName->setMaxLength(StateMachineData::MAX_IDENTIFIER_LENGTH);
     // State names must be enum-friendly identifiers: reject spaces and other invalid symbols
     // as the user types, the same rule the canvas in-place editor enforces.
     mStateName->setValidator(new QRegularExpressionValidator(QRegularExpression(StateMachineData::identifierPattern()), mStateName));
-    mStateKind = new QLabel(page);
-    mTransitions = new ReorderList(page);
-    mStateDesc = new QPlainTextEdit(page);
+    mStateKind = new QLabel(this);
+    mTransitions = new ReorderList(this);
+    mStateDesc = new QPlainTextEdit(this);
 
     // The transitions list stays compact; the multi-line description takes the room below it.
     mTransitions->setMaximumHeight(120);
     mStateDesc->setPlaceholderText(tr("Description"));
     mStateDesc->installEventFilter(this);   // commit on focus-out (no editingFinished signal)
 
+    // General tab (R21): the scalar fields and the transitions list are two accordion sections under
+    // the shared chrome, so this tab wears the same header/section/compact language as Conditions.
+    // Compact defaults UNCHECKED here (few sections): the details and the transitions read together.
+    QWidget* details = new QWidget(this);
+    QFormLayout* form = new QFormLayout(details);
+    form->setContentsMargins(6, 6, 6, 6);
     form->addRow(tr("Name:"), mStateName);
     form->addRow(tr("Kind:"), mStateKind);
-    form->addRow(tr("Transitions:"), mTransitions);
     form->addRow(tr("Description:"), mStateDesc);
+
+    mStateGeneral = new SMSectionChrome(this);
+    mStateGeneral->setTitle(tr("State"));
+    mStateGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionDetails), tr("Details"), details
+                             , tr("The state name, kind and description"));
+    mStateGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionList), tr("Transitions"), mTransitions
+                             , tr("The transitions leaving this state"));
+    mStateGeneral->setCompact(false);
+    mStateGeneral->addFooterStretch();
 
     connect(mStateName, &QLineEdit::editingFinished, this, &SMPropertiesPanel::onStateNameCommit);
     // Real-time mirror onto the canvas box while the user types here (no model change yet).
@@ -252,66 +292,83 @@ void SMPropertiesPanel::buildStatePage()
         QTimer::singleShot(0, this, [this, from, to]() { reorderTransition(from, to); });
     };
 
-    // The state page is General + Actions; the Actions tab hosts the On-Enter / On-Exit editors.
-    QWidget* actions = new QWidget(this);
-    QVBoxLayout* actionsBox = new QVBoxLayout(actions);
-    actionsBox->setContentsMargins(6, 6, 6, 6);
-    QLabel* enterLabel = new QLabel(tr("On Enter"), actions);
-    QFont headline = enterLabel->font();
-    headline.setBold(true);
-    enterLabel->setFont(headline);
-    mEnterOps = new SMOperationsEditor(mModel, actions);
-    QLabel* exitLabel = new QLabel(tr("On Exit"), actions);
-    exitLabel->setFont(headline);
-    mExitOps = new SMOperationsEditor(mModel, actions);
-    actionsBox->addWidget(enterLabel);
-    actionsBox->addWidget(mEnterOps);
-    actionsBox->addWidget(exitLabel);
-    actionsBox->addWidget(mExitOps);
+    // Actions tab (R22): a data-driven accordion of operation-list sections. It ships with On Enter /
+    // On Exit; a third `Do` list (R24, step 4) is one enumerator plus one row of this table. Each
+    // header summarizes what is set (`not set` when empty); compact defaults UNCHECKED so the enter
+    // and exit lists stay visible together -- their symmetry is the point. What this shares with the
+    // Conditions tab is ONLY the chrome and the argument table inside each editor -- no guard field,
+    // no chips, no grammar, no Data catalog.
+    mEnterOps = new SMOperationsEditor(mModel, this);
+    mExitOps  = new SMOperationsEditor(mModel, this);
+
+    mStateActions = new SMSectionChrome(this);
+    mStateActions->setTitle(tr("Actions"));
+    const struct { eOpList role; SMToolIcons::eIcon icon; QString title; QString tip; SMOperationsEditor* editor; } table[] =
+    {
+          { eOpList::Entry, SMToolIcons::eIcon::SectionEnter, tr("On Enter"), tr("Actions run when the state is entered"), mEnterOps }
+        , { eOpList::Exit,  SMToolIcons::eIcon::SectionExit,  tr("On Exit"),  tr("Actions run when the state is left"),    mExitOps  }
+    };
+    for (const auto& row : table)
+    {
+        const int section = mStateActions->addSection(SMToolIcons::icon(row.icon), row.title, row.editor, row.tip);
+        mActionSlots.append({ row.role, row.editor, section });
+    }
+    mStateActions->setCompact(false);
+    mStateActions->addFooterStretch();
 
     mStateTabs = new QTabWidget(this);
-    mStateTabs->addTab(page, tr("General"));
-    mStateTabs->addTab(actions, tr("Actions"));
+    mStateTabs->addTab(mStateGeneral, tr("General"));
+    mStateTabs->addTab(mStateActions, tr("Actions"));
 
     mStack->insertWidget(PageState, mStateTabs);
 }
 
 void SMPropertiesPanel::buildTransitionPage()
 {
-    // The stimulus/target/description form becomes the General tab; a Conditions tab hosts the
-    // guard builder. The stimulus/target/list accessors keep pointing at the same widgets.
-    QWidget* page = new QWidget(this);
-    QFormLayout* form = new QFormLayout(page);
+    // The General tab wears the shared chrome (R21): the trigger form and the description are two
+    // accordion sections, so this tab matches Conditions' header/section/compact language. The
+    // stimulus/target accessors keep pointing at the same widgets. Compact defaults UNCHECKED here.
+    QWidget* trigger = new QWidget(this);
+    QFormLayout* form = new QFormLayout(trigger);
+    form->setContentsMargins(6, 6, 6, 6);
 
     // One picker over the whole stimulus vocabulary (triggers, events, timers). The kind is
     // encoded per row (and by the on_event_/on_timer_ prefix), so a separate "kind" combo is
     // redundant. The picker is read-only (a closed list, like the Actions tab): the user cannot
     // type a free name; typing a letter jumps to the matching row (Qt's built-in type-ahead).
-    mStimulusName = new QComboBox(page);
+    mStimulusName = new QComboBox(trigger);
     mStimulusName->setEditable(false);
 
-    mTarget = new QComboBox(page);
+    mTarget = new QComboBox(trigger);
     mTarget->setEditable(false);
 
-    mStimulusSig = new QLabel(page);
+    mStimulusSig = new QLabel(trigger);
     mStimulusSig->setTextInteractionFlags(Qt::TextSelectableByMouse);
     mStimulusSig->setEnabled(false);
 
-    mTransDesc = new QPlainTextEdit(page);
+    mTransDesc = new QPlainTextEdit(this);
     mTransDesc->setPlaceholderText(tr("Description"));
     mTransDesc->installEventFilter(this);   // commit on focus-out (no editingFinished signal)
 
     form->addRow(tr("Stimulus:"), mStimulusName);
     form->addRow(tr("Signature:"), mStimulusSig);
     form->addRow(tr("Target:"), mTarget);
-    form->addRow(tr("Description:"), mTransDesc);
+
+    mTransGeneral = new SMSectionChrome(this);
+    mTransGeneral->setTitle(tr("Transition"));
+    mTransGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionDetails), tr("Trigger"), trigger
+                             , tr("The stimulus, its signature and the target state"));
+    mTransGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionText), tr("Description"), mTransDesc
+                             , tr("A free-text note on this transition"));
+    mTransGeneral->setCompact(false);
+    mTransGeneral->addFooterStretch();
 
     connect(mStimulusName, &QComboBox::activated, this, &SMPropertiesPanel::onStimulusCommit);
     connect(mTarget, &QComboBox::activated, this, &SMPropertiesPanel::onTargetCommit);
 
     mTransTabs = new QTabWidget(this);
     mTransTabs->setObjectName(QStringLiteral("smTransTabs"));
-    mTransTabs->addTab(page, tr("General"));
+    mTransTabs->addTab(mTransGeneral, tr("General"));
     mConditions = new SMGuardBar(mModel, this);
     mTransTabs->addTab(mConditions, tr("Conditions"));
     connect(mConditions, &SMGuardBar::badgeChanged, this, &SMPropertiesPanel::onGuardBadgeChanged);
@@ -470,14 +527,44 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     mStateName->setReadOnly(state->getKind() == SMStateEntry::eStateKind::Start);
     mStateKind->setText(QString::fromLatin1(SMStateEntry::toString(state->getKind())));
     mStateDesc->setPlainText(state->getDescription());
-    // Entry/exit operations have no transition scope, so the Param source is not offered here.
+    // Entry/exit operations have no transition scope, so the Param source is not offered here. The
+    // Actions sections are bound from the slot table, so a `Do` list joins by adding one slot.
     SMStateEntry* mutableState = mModel.getData().findStateById(stateId);
-    mEnterOps->bind(stateId, eDocElementKind::State, 0u, mutableState, &mutableState->getEntryList());
-    mExitOps->bind(stateId, eDocElementKind::State, 0u, mutableState, &mutableState->getExitList());
+    for (const ActionSlot& slot : mActionSlots)
+    {
+        SMOperationList* list = (slot.role == eOpList::Entry) ? &mutableState->getEntryList()
+                                                              : &mutableState->getExitList();
+        slot.editor->bind(stateId, eDocElementKind::State, 0u, mutableState, list);
+    }
+    refreshActionSummaries();
     populateTransitionList(stateId);
 
     mStack->setCurrentIndex(PageState);
     mUpdating = false;
+}
+
+void SMPropertiesPanel::refreshActionSummaries()
+{
+    const SMStateEntry* state = mModel.getData().findStateById(mCurrentId);
+    if ((state == nullptr) || (mStateActions == nullptr))
+    {
+        return;
+    }
+
+    SMAccordion* accordion = mStateActions->accordion();
+    for (const ActionSlot& slot : mActionSlots)
+    {
+        const SMOperationList& list = (slot.role == eOpList::Entry) ? state->getEntryList() : state->getExitList();
+        QAbstractButton* header = accordion->header(slot.section);
+        if (header != nullptr)
+        {
+            // The section title carries its own summary: `On Enter: doWork(), send evGo` or
+            // `On Enter: not set`. The leading word stays so each section is identifiable when
+            // collapsed; the summary answers "what happens around this state?" without a click.
+            const QString title = (slot.role == eOpList::Entry) ? tr("On Enter") : tr("On Exit");
+            header->setText(title + QStringLiteral(": ") + operationsSummary(mModel.getData(), list));
+        }
+    }
 }
 
 void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
@@ -837,6 +924,14 @@ void SMPropertiesPanel::reorderTransition(int from, int to)
 
 void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind kind)
 {
+    // The State-Actions headers summarize the live entry/exit lists; re-label them even mid-edit --
+    // this only re-titles the collapsed headers, it never rebinds the editors, so it cannot clobber
+    // typing. Any operation edit fires elementChanged, and the summary re-reads the state's lists.
+    if (mPage == PageState)
+    {
+        refreshActionSummaries();
+    }
+
     if (isEditing())
     {
         return;

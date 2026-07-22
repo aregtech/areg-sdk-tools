@@ -50,6 +50,7 @@ class SMGuardField;
 class SMGuardPopout;
 class SMGuardStatusLine;
 class SMGuardHelpCard;
+class SMSectionChrome;
 class SMHoverCard;
 class SMIslandEditor;
 class SMTryStrip;
@@ -93,7 +94,7 @@ public:
     inline SMTryStrip* tryStrip() const;
 
     //!< The accordion (tests).
-    inline SMAccordion* accordion() const;
+    SMAccordion* accordion() const;
 
     //!< The Calls outline (tests).
     inline SMGuardCallsOutline* calls() const;
@@ -186,18 +187,13 @@ private:
     // ---- top strip + accordion --------------------------------------------
     QToolButton*        mInsertBtn; //!< Insert: opens the completer at the caret (all kinds).
     QToolButton*        mPopoutBtn; //!< Pop-out: opens the bigger editor.
-    QToolButton*        mCompactBtn;//!< Compact accordion mode (checked = one section open).
-    //!< One jump/press button per accordion section. A LIST, not a C array: the section count has
-    //!< changed twice already, and a fixed size silently overflowed when it grew.
-    QList<QToolButton*> mSectionBtns;
-    SMAccordion*        mAccordion; //!< The Conditions / Arguments / Generated accordion.
+    SMSectionChrome*    mChrome;    //!< The shared chrome: section jump buttons + compact toggle + accordion.
     QPlainTextEdit*     mGenCode;   //!< The generated C++ shown in the `Generated` section (read-only).
     QLabel*             mGenChips;  //!< The `uses handler:` list shown in the `Generated` section.
     SMGuardDataPanel*   mData;      //!< The `Data` section: the browsable symbol catalog.
     SMGuardCallsOutline* mCalls;    //!< The Conditions pickup list (double-click inserts a condition).
     SMArgMapTable*      mArgs;      //!< The single shared Arguments table.
     SMArgSinkGuard      mArgSink;   //!< The guard-side argument sink behind the table.
-    int                 mLastSection;//!< The last-open accordion section (per tab).
     bool                mDerivedPending;//!< Coalesces the deferred Arguments re-projection.
     QList<int>          mBoundCallPath; //!< The call path the Arguments table is currently bound to.
     bool                mBoundCallValid;//!< True when \ref mBoundCallPath addresses a live call.
@@ -221,11 +217,6 @@ inline SMIslandEditor* SMGuardBar::islandEditor() const
 inline SMTryStrip* SMGuardBar::tryStrip() const
 {
     return mTry;
-}
-
-inline SMAccordion* SMGuardBar::accordion() const
-{
-    return mAccordion;
 }
 
 inline SMGuardCallsOutline* SMGuardBar::calls() const

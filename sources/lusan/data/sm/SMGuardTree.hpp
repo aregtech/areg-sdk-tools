@@ -168,6 +168,16 @@ public:
     inline int getIndent() const;
     inline void setIndent(int indent);
 
+    /**
+     * \brief   The advisory display name of the symbol this node references (R19). It exists
+     *          ONLY so a human can read the `.fsml`: it is refreshed from the symbol id on
+     *          every save and is NEVER read back -- resolution is always by \ref getSymbolId.
+     *          Meaningful only on a node that carries a refid (Call / Attr / Const / Param);
+     *          empty otherwise. Not part of \ref equals (it cannot drift into behaviour).
+     **/
+    inline const QString& getCacheName() const;
+    inline void setCacheName(const QString& name);
+
     inline const QString& getText() const;
     inline void setText(const QString& text);
 
@@ -221,6 +231,7 @@ private:
     uint32_t                mArgFormalId;//!< The bound formal parameter's ID (a Call's arg child only; 0 = positional).
     bool                    mBreakBefore;//!< Layout: a user line break precedes this operand (R18).
     int                     mIndent;    //!< Layout: leading spaces on this operand's line (R18).
+    QString                 mCacheName; //!< Advisory display name of the referenced symbol; write-only (R19).
     QString                 mText;      //!< The verbatim bytes (Lit/Lambda/Raw).
     QList<SMGuardNode*>     mChildren;  //!< The owned child nodes, in operand order.
 };
@@ -392,6 +403,16 @@ inline int SMGuardNode::getIndent() const
 inline void SMGuardNode::setIndent(int indent)
 {
     mIndent = indent;
+}
+
+inline const QString& SMGuardNode::getCacheName() const
+{
+    return mCacheName;
+}
+
+inline void SMGuardNode::setCacheName(const QString& name)
+{
+    mCacheName = name;
 }
 
 inline const QString& SMGuardNode::getText() const

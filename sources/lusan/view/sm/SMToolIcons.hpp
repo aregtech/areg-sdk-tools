@@ -91,6 +91,12 @@ namespace SMToolIcons
         , GuardConditions   //!< The `Conditions` accordion header.
         , GuardArguments    //!< The `Arguments` accordion header.
         , GuardData         //!< The `Data` accordion header: the browsable symbol catalog.
+        // The Properties-panel section headers shared by the General and Actions tabs (R21/R22).
+        , SectionDetails    //!< A `Details` / `Trigger` form section (labelled fields).
+        , SectionList       //!< A `Transitions` list section (edge between two states).
+        , SectionText       //!< A `Description` section (paragraph lines).
+        , SectionEnter      //!< An `On Enter` actions section (arrow into a box).
+        , SectionExit       //!< An `On Exit` actions section (arrow out of a box).
     };
 
     /**

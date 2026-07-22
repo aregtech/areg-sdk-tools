@@ -723,6 +723,66 @@ static void testMultiLineLayout()
     delete r2.tree;
 }
 
+static void testAdvisoryName()
+{
+    std::printf("[U1] advisory name (R19): written from the id on save, ignored on load, updates on rename\n");
+
+    StateMachineData data;
+    const uint32_t tid = buildDoc(data);
+
+    SMGuardParser::Result r = SMGuardParser::parse(data, tid, QStringLiteral("WalkRequested && HasWaiting(count)"));
+    check(r.resolved(), "guard resolves");
+
+    SMTransitionEntry* trans = data.findTransitionById(tid);
+    trans->getGuard().setTree(r.tree);
+    SMGuardNode* tree = trans->getGuard().getTree();
+
+    // The root is the And node; child 0 is the attribute reference, child 1 is the call.
+    SMGuardNode* attrNode = tree->childAt(0);
+    SMGuardNode* callNode = tree->childAt(1);
+    check((attrNode != nullptr) && (callNode != nullptr), "the guard shape is attr && call");
+
+    // Before a refresh the advisory name is empty, so nothing extra is written -- a tree whose
+    // names were never resolved stays byte-identical.
+    check((callNode != nullptr) && callNode->getCacheName().isEmpty(), "advisory name is empty before the first refresh");
+
+    // The model refreshes the advisory names from the ids just before every save.
+    SMGuardRender::refreshNames(data, tid, *tree);
+    check((callNode != nullptr) && (callNode->getCacheName() == QStringLiteral("HasWaiting")), "the call node caches its method name");
+    check((attrNode != nullptr) && (attrNode->getCacheName() == QStringLiteral("WalkRequested")), "the attr node caches its attribute name");
+
+    const QString out = tempFile("guard_advisory_name.fsml");
+    check(data.writeToFile(out), "write guard with refreshed advisory names");
+    QByteArray bytes = readBytes(out);
+    check(bytes.contains("name=\"WalkRequested\""), "the advisory name is written for the attribute reference");
+    check(bytes.contains("name=\"HasWaiting\""), "the advisory name is written for the call");
+
+    // The loader NEVER reads name back: the reloaded tree has empty caches, still binds by id, and
+    // is structurally identical (name is not part of equals).
+    StateMachineData reread;
+    check(reread.readFromFile(out), "reread the guard");
+    SMTransitionEntry* rtrans = reread.findTransitionById(tid);
+    check((rtrans != nullptr) && (rtrans->getGuard().getTree() != nullptr), "reloaded guard is ok");
+    if ((rtrans != nullptr) && (rtrans->getGuard().getTree() != nullptr))
+    {
+        check(rtrans->getGuard().getTree()->getCacheName().isEmpty(), "the advisory name is NOT read back (write-only)");
+        check(tree->equals(*rtrans->getGuard().getTree()), "the reloaded tree is structurally identical (name excluded from equals)");
+        checkEq(SMGuardRender::guardText(reread, tid, rtrans->getGuard()),
+                QStringLiteral("WalkRequested && HasWaiting(count)"), "the reloaded guard resolves its names by id");
+    }
+
+    // A rename re-resolves the advisory name on the next refresh -- it can never go stale.
+    for (SMAttributeEntry& a : data.getAttributes().getElements())
+    {
+        if (a.getName() == QStringLiteral("WalkRequested")) { a.setName(QStringLiteral("Crossing")); }
+    }
+    SMGuardRender::refreshNames(data, tid, *tree);
+    check(data.writeToFile(out), "rewrite the guard after a rename");
+    bytes = readBytes(out);
+    check(bytes.contains("name=\"Crossing\""), "the advisory name follows the rename");
+    check(bytes.contains("name=\"WalkRequested\"") == false, "the stale advisory name is gone");
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Undoable commands
 //////////////////////////////////////////////////////////////////////////
@@ -809,6 +869,7 @@ int main(int /*argc*/, char** /*argv*/)
     testCodegenPreview();
     testXmlRoundTrip();
     testMultiLineLayout();
+    testAdvisoryName();
     testCommands();
     testLegacyShim();
 

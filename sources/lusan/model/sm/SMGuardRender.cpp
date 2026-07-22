@@ -532,3 +532,29 @@ QString SMGuardRender::guardText(const StateMachineData& data, uint32_t transiti
 
     return QString();
 }
+
+void SMGuardRender::refreshNames(const StateMachineData& data, uint32_t transitionId, SMGuardNode& node)
+{
+    switch (node.getKind())
+    {
+    case eKind::Attr:   node.setCacheName(SMGuardSymbols::attributeName(data, node.getSymbolId()));         break;
+    case eKind::Const:  node.setCacheName(SMGuardSymbols::constantName(data, node.getSymbolId()));          break;
+    case eKind::Param:  node.setCacheName(SMGuardSymbols::paramName(data, transitionId, node.getSymbolId())); break;
+    case eKind::Call:
+        {
+            const SMMethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
+            node.setCacheName((method != nullptr) ? method->getName() : QString());
+        }
+        break;
+    default:
+        break;
+    }
+
+    for (SMGuardNode* child : node.getChildren())
+    {
+        if (child != nullptr)
+        {
+            refreshNames(data, transitionId, *child);
+        }
+    }
+}

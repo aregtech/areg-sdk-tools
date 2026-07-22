@@ -140,6 +140,15 @@ public:
     static QString guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard, bool layout = false);
 
     /**
+     * \brief   Refreshes the advisory display name (R19) cached on every refid node of the
+     *          sub-tree from its symbol id, using the current declarations. Called just before a
+     *          save so the human-readable `name` written to `.fsml` is never stale -- the name is
+     *          never read back, resolution is always by id. A symbol that no longer resolves
+     *          yields an empty name, and the attribute is then omitted.
+     **/
+    static void refreshNames(const StateMachineData& data, uint32_t transitionId, SMGuardNode& node);
+
+    /**
      * rief   A SHORT, structural summary of \p guard for the FSM canvas label, where the full
      *          expression does not fit and a wall of C++ tells the reader nothing.
      *          Operators and structure are kept; the bulky parts collapse:

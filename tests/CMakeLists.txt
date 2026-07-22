@@ -114,6 +114,7 @@ qt_add_executable(lusan_sm_command_tests
     # StateMachineModel's load path applies the legacy->draft guard shim (SM-21 U4).
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
@@ -159,6 +160,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMCommand.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
@@ -409,6 +411,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMAccordion.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
+    ${LUSAN}/view/sm/SMSectionChrome.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
     ${LUSAN}/view/sm/SMOperationsDialog.cpp
     ${LUSAN_ROOT}/tests/sm/SMCanvasSmokeTests.cpp
@@ -471,6 +474,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMAccordion.cpp
+    ${LUSAN}/view/sm/SMSectionChrome.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkGuard.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp

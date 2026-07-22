@@ -44,6 +44,7 @@
 #include "lusan/view/sm/SMGuardStatusLine.hpp"
 #include "lusan/view/sm/SMHoverCard.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
 #include "lusan/view/sm/SMTryStrip.hpp"
 
@@ -71,13 +72,11 @@ namespace
 {
     using eKind = SMGuardNode::eKind;
 
-    // The accordion section indices (display order). `Generated` comes first, directly under the
-    // editor, so the C++ a guard produces reads next to the guard itself.
-    constexpr int SectionGen   = 0;
+    // The accordion section indices (display order). `Generated` (index 0) comes first, directly
+    // under the editor, so the C++ a guard produces reads next to the guard itself.
     constexpr int SectionCalls = 1;
     constexpr int SectionArgs  = 2;
     constexpr int SectionData  = 3;
-    constexpr int SectionCount = 4;
 
     //!< Pre-order search for the \p target-th Lambda node; returns true when found.
     bool findNthLambda(const SMGuardNode* node, int target, int& counted, QList<int>& path)
@@ -200,75 +199,44 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mHelpBtn      (nullptr)
     , mInsertBtn    (nullptr)
     , mPopoutBtn    (nullptr)
-    , mCompactBtn   (nullptr)
-    , mAccordion    (nullptr)
+    , mChrome       (nullptr)
     , mGenCode      (nullptr)
     , mGenChips     (nullptr)
     , mData         (nullptr)
     , mCalls        (nullptr)
     , mArgs         (nullptr)
     , mArgSink      (model)
-    , mLastSection  (SectionCalls)
     , mDerivedPending(false)
     , mBoundCallValid(false)
     , mPopout       (nullptr)
 {
-    mSectionBtns.assign(SectionCount, nullptr);
 
     QVBoxLayout* outer = new QVBoxLayout(this);
-    outer->setContentsMargins(8, 8, 8, 8);
-    outer->setSpacing(6);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
 
-    // Header row: the `Guard` label, one jump button per accordion section, the compact toggle, then
-    // the icon-only action strip (Insert / Preview / Pop-out / Clear / Help). Every glyph is drawn by
-    // SMToolIcons -- the same thin-stroke vector language as the canvas toolbar -- instead of the
-    // platform's QStyle icons, which read as a foreign icon set inside Lusan.
-    // Icon-only keeps the narrow Properties dock usable; each button carries a tooltip.
-    auto makeTool = [this](const QString& name, SMToolIcons::eIcon glyph, const QString& tip, bool checkable)
+    // The shared section chrome carries the `Guard` title, one jump button per accordion section and
+    // the compact toggle over the accordion; this bar only fills its slots. The icon-only action strip
+    // (Insert / Pop-out / Clear / Help) is guard-specific, so it rides the chrome's trailing header
+    // slot. Every glyph is drawn by SMToolIcons -- the same thin-stroke vector language as the canvas
+    // toolbar -- and icon-only keeps the narrow Properties dock usable; each button carries a tooltip.
+    mChrome = new SMSectionChrome(this);
+    mChrome->setTitle(tr("Guard"));
+
+    auto makeTool = [this](const QString& name, SMToolIcons::eIcon glyph, const QString& tip)
     {
         QToolButton* button = new QToolButton(this);
         button->setObjectName(name);
         button->setIcon(SMToolIcons::icon(glyph));
         button->setToolButtonStyle(Qt::ToolButtonIconOnly);
         button->setAutoRaise(true);
-        button->setCheckable(checkable);
         button->setCursor(Qt::PointingHandCursor);
         button->setToolTip(tip);
         return button;
     };
 
-    QHBoxLayout* header = new QHBoxLayout();
-    header->addWidget(new QLabel(tr("Guard"), this));
-
-    mSectionBtns[SectionGen]   = makeTool(QStringLiteral("smGuardSectionGenerated"), SMToolIcons::eIcon::GuardPreview
-                                         , tr("Show the C++ code this guard produces"), true);
-    mSectionBtns[SectionCalls] = makeTool(QStringLiteral("smGuardSectionConditions"), SMToolIcons::eIcon::GuardConditions
-                                         , tr("Show the condition methods you can insert"), true);
-    mSectionBtns[SectionArgs]  = makeTool(QStringLiteral("smGuardSectionArguments"), SMToolIcons::eIcon::GuardArguments
-                                         , tr("Map the parameters of the called condition"), true);
-    mSectionBtns[SectionData]  = makeTool(QStringLiteral("smGuardSectionData"), SMToolIcons::eIcon::GuardData
-                                         , tr("Browse everything this guard may use, and insert it"), true);
-    for (int i = 0; i < SectionCount; ++i)
-    {
-        header->addWidget(mSectionBtns[i]);
-    }
-
-    mCompactBtn = makeTool(QStringLiteral("smGuardCompact"), SMToolIcons::eIcon::GuardCompact
-                          , tr("Compact: keep only one section open at a time"), true);
-    mCompactBtn->setChecked(true);
-    header->addWidget(mCompactBtn);
-
-    // A rule tells the four section controls apart from the guard actions that follow.
-    QFrame* divider = new QFrame(this);
-    divider->setObjectName(QStringLiteral("smGuardToolSeparator"));
-    divider->setFrameShape(QFrame::VLine);
-    divider->setFrameShadow(QFrame::Sunken);
-    header->addWidget(divider);
-
-    header->addStretch(1);
-
     mInsertBtn  = makeTool(QStringLiteral("smGuardInsert"), SMToolIcons::eIcon::GuardInsert
-                          , tr("Insert a symbol reference at the caret"), false);
+                          , tr("Insert a symbol reference at the caret"));
     // The separate Preview button is GONE: it carried the same icon and
     // did the same job as the `Generated` section button, so one control now serves both, and the
     // dialog it opened is retired in favour of the always-reachable section.
@@ -276,33 +244,31 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // clean, simple guard editor. The what-if evaluator moves to a dedicated FSM "Play" surface
     // (a later task); the widget below is kept constructed-but-hidden so its logic and tests live on.
     mPopoutBtn  = makeTool(QStringLiteral("smGuardPopout"), SMToolIcons::eIcon::GuardPopout
-                          , tr("Open the guard in a larger editor"), false);
+                          , tr("Open the guard in a larger editor"));
     mClear      = makeTool(QStringLiteral("smGuardClear"), SMToolIcons::eIcon::GuardClear
-                          , tr("Clear the guard so the transition always fires"), false);
+                          , tr("Clear the guard so the transition always fires"));
     mHelpBtn    = makeTool(QStringLiteral("smGuardHelp"), SMToolIcons::eIcon::GuardHelp
-                          , tr("What can a guard use?"), false);
-    header->addWidget(mInsertBtn);
-    header->addWidget(mPopoutBtn);
-    header->addWidget(mClear);
-    header->addWidget(mHelpBtn);
-    outer->addLayout(header);
+                          , tr("What can a guard use?"));
+    mChrome->addHeaderWidget(mInsertBtn);
+    mChrome->addHeaderWidget(mPopoutBtn);
+    mChrome->addHeaderWidget(mClear);
+    mChrome->addHeaderWidget(mHelpBtn);
 
     mField = new SMGuardField(mModel, this);
-    outer->addWidget(mField);
+    mChrome->addBodyWidget(mField);
 
     // The error status line stays (it is the one place a genuine unresolved-guard verdict shows).
     // The transient quick-fix bar and the unmapped-argument warning list are REMOVED:
     // the Arguments section already shows which formals are unmapped, and the
     // status line already states any error, so both advisory strips were duplicative clutter.
     mStatus = new SMGuardStatusLine(this);
-    outer->addWidget(mStatus);
+    mChrome->addBodyWidget(mStatus);
 
     // The accordion (design 8.1): the Conditions outline lists the defined condition methods
     // (double-click inserts one), the caret's call drives the single Arguments table, and Generated
     // holds the C++ preview that used to crowd the status line. Compact mode (the default) keeps one
     // section open; unchecking the toolbar toggle lets the developer keep several open.
-    mAccordion = new SMAccordion(this);
-    mAccordion->setObjectName(QStringLiteral("smGuardAccordion"));
+    mChrome->accordion()->setObjectName(QStringLiteral("smGuardAccordion"));
 
     mCalls = new SMGuardCallsOutline(mModel, this);
     mData  = new SMGuardDataPanel(mModel, this);
@@ -340,26 +306,31 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mGenChips->hide();
     genBox->addWidget(mGenChips);
 
-    mAccordion->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardPreview), tr("Generated"), generated);
-    mAccordion->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardConditions), tr("Conditions"), mCalls);
-    mAccordion->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardArguments), tr("Arguments"), mArgs);
-    mAccordion->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardData), tr("Data"), mData);
-    mAccordion->setCurrentIndex(SectionCalls);
-    outer->addWidget(mAccordion);
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardPreview), tr("Generated"), generated
+                       , tr("Show the C++ code this guard produces"));
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardConditions), tr("Conditions"), mCalls
+                       , tr("Show the condition methods you can insert"));
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardArguments), tr("Arguments"), mArgs
+                       , tr("Map the parameters of the called condition"));
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardData), tr("Data"), mData
+                       , tr("Browse everything this guard may use, and insert it"));
+    mChrome->setCompact(true);
+    mChrome->setCurrentSection(SectionCalls);
+    outer->addWidget(mChrome);
 
     // The island editor sits below the accordion.
     mIsland = new SMIslandEditor(this);
     mIsland->setVisible(false);
-    outer->addWidget(mIsland);
+    mChrome->addFooterWidget(mIsland);
 
     // The Try-it what-if strip is kept constructed for its logic/tests, but hidden: it is not part
     // of the clean Conditions tab. isOpen() is toggle-driven, so tests
     // can still open it and reach its child widgets while it stays invisible in the app.
     mTry = new SMTryStrip(mModel, this);
     mTry->hide();
-    outer->addWidget(mTry);
+    mChrome->addFooterWidget(mTry);
 
-    outer->addStretch(1);
+    mChrome->addFooterStretch();
 
     // The hover card is the one remaining top-level popover; the mapping popover (SMMappingGrid)
     // is retired in favour of the inline accordion Arguments table.
@@ -464,45 +435,15 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     {
         showWhereUsed(symbolId);
     });
-    // The toolbar section buttons and the accordion headers are two views of one state: opening a
-    // section presses its button, pressing a button opens the section.
-    connect(mAccordion, &SMAccordion::sectionToggled, this, [this](int index, bool open)
+    // The chrome owns the button<->section sync, the Alt+N jump shortcuts and the compact toggle.
+    // The one guard-specific reaction stays here: opening the Data catalog means "I am looking for
+    // something", so land the focus in its search box.
+    connect(mChrome, &SMSectionChrome::sectionActivated, this, [this](int index, bool open)
     {
-        if ((index >= 0) && (index < SectionCount))
+        if (open && (index == SectionData))
         {
-            mSectionBtns[index]->setChecked(open);
+            mData->focusSearch();
         }
-
-        if (open)
-        {
-            mLastSection = index;                   // Remember-last (per tab).
-            if (index == SectionData)
-            {
-                // Opening the catalog means "I am looking for something": land in the search box.
-                mData->focusSearch();
-            }
-        }
-    });
-    for (int i = 0; i < SectionCount; ++i)
-    {
-        connect(mSectionBtns[i], &QToolButton::clicked, this, [this, i](bool checked)
-        {
-            mAccordion->setSectionOpen(i, checked);
-            mSectionBtns[i]->setChecked(mAccordion->isSectionOpen(i));
-        });
-
-        // Alt+1 .. Alt+N reach the same section as the Nth button. The shortcut just presses that
-        // button, so button, header and shortcut remain one code path. The loop is bounded by
-        // SectionCount (a fixed [3] once segfaulted when the count grew to 4); a new section is
-        // covered automatically. Scoped to the bar and its children so it never leaks app-wide.
-        QShortcut* jump = new QShortcut(QKeySequence(QKeyCombination(Qt::AltModifier, static_cast<Qt::Key>(Qt::Key_1 + i))), this);
-        jump->setContext(Qt::WidgetWithChildrenShortcut);
-        connect(jump, &QShortcut::activated, this, [this, i]() { mSectionBtns[i]->click(); });
-    }
-
-    connect(mCompactBtn, &QToolButton::toggled, this, [this](bool checked)
-    {
-        mAccordion->setCompact(checked);
     });
 
     // The Arguments table follows the call the caret sits in (or the single/first call in the
@@ -544,8 +485,9 @@ void SMGuardBar::setTransition(uint32_t transitionId)
 
     // Re-open the section the user last had open (persisted per tab, not per
     // transition), clamped to a valid index.
-    const int section = ((mLastSection >= 0) && (mLastSection < mAccordion->count())) ? mLastSection : SectionCalls;
-    mAccordion->setCurrentIndex(section);
+    const int last = mChrome->lastSection();
+    const int section = ((last >= 0) && (last < mChrome->accordion()->count())) ? last : SectionCalls;
+    mChrome->setCurrentSection(section);
 
     scheduleCatalogRefresh();       // bind the Arguments table once the field has reflowed the tree.
 }
@@ -780,7 +722,7 @@ void SMGuardBar::openGridForCall(uint32_t methodId)
     if (call != nullptr)
     {
         bindArgumentsTo(path, call->getSymbolId());
-        mAccordion->setCurrentIndex(SectionArgs);
+        mChrome->setCurrentSection(SectionArgs);
     }
 }
 
@@ -959,7 +901,7 @@ void SMGuardBar::insertCondition(const SMGuardSymbol& symbol)
     mField->selectFirstGhost();
 
     // Show the Arguments section so the developer can map the just-inserted call's parameters.
-    mAccordion->setCurrentIndex(SectionArgs);
+    mChrome->setCurrentSection(SectionArgs);
     syncArgumentsToCaret();
 }
 
@@ -970,6 +912,11 @@ void SMGuardBar::insertCondition(const SMGuardSymbol& symbol)
 SMGuardPopout* SMGuardBar::popout() const
 {
     return mPopout;
+}
+
+SMAccordion* SMGuardBar::accordion() const
+{
+    return mChrome->accordion();
 }
 
 void SMGuardBar::openPopout()

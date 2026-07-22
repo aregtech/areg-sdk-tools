@@ -155,6 +155,7 @@ SMGuardNode::SMGuardNode(eKind kind)
     , mArgFormalId  (0u)
     , mBreakBefore  (false)
     , mIndent       (0)
+    , mCacheName    ( )
     , mText         ( )
     , mChildren     ( )
 {
@@ -167,6 +168,7 @@ SMGuardNode::SMGuardNode(const SMGuardNode& src)
     , mArgFormalId  (src.mArgFormalId)
     , mBreakBefore  (src.mBreakBefore)
     , mIndent       (src.mIndent)
+    , mCacheName    (src.mCacheName)
     , mText         (src.mText)
     , mChildren     ( )
 {
@@ -196,6 +198,7 @@ SMGuardNode& SMGuardNode::operator = (const SMGuardNode& other)
         mArgFormalId  = other.mArgFormalId;
         mBreakBefore  = other.mBreakBefore;
         mIndent       = other.mIndent;
+        mCacheName    = other.mCacheName;
         mText         = other.mText;
         mChildren.reserve(other.mChildren.size());
         for (const SMGuardNode* child : other.mChildren)
@@ -268,6 +271,13 @@ void SMGuardNode::writeToXml(QXmlStreamWriter& xml) const
     case eKind::Const:
     case eKind::Param:
         xml.writeAttribute(XmlSM::xmlSMAttributeGuardRefId, QString::number(mSymbolId));
+        // Advisory display name (R19): human-readable only, refreshed from the id before every
+        // save and never read back. Written only when resolved, so a tree whose names were never
+        // refreshed (e.g. a unit-test fixture) stays byte-identical.
+        if (mCacheName.isEmpty() == false)
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeGuardName, mCacheName);
+        }
         break;
 
     default:
@@ -342,6 +352,8 @@ SMGuardNode* SMGuardNode::readFromXml(QXmlStreamReader& xml)
     // tree loads exactly as before.
     node->mBreakBefore = (attributes.value(XmlSM::xmlSMAttributeGuardBreak).toString() == QLatin1StringView("1"));
     node->mIndent      = attributes.value(XmlSM::xmlSMAttributeGuardIndent).toInt();
+    // The advisory `name` (R19) is deliberately NOT read: it is a write-only human aid and the
+    // symbol id is the sole binding. It is refreshed from the id again on the next save.
 
     if (node->isVerbatim())
     {

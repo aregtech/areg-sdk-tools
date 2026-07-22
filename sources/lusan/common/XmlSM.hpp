@@ -156,6 +156,7 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMAttributeGuardOp       { "op" };
     constexpr QLatin1StringView xmlSMAttributeGuardBreak    { "brk" };
     constexpr QLatin1StringView xmlSMAttributeGuardIndent   { "indent" };
+    constexpr QLatin1StringView xmlSMAttributeGuardName     { "name" };
     constexpr QLatin1StringView xmlSMAttributeLhsKind       { "LHSKind" };
     constexpr QLatin1StringView xmlSMAttributeLhs           { "LHS" };
     constexpr QLatin1StringView xmlSMAttributeOperator      { "Operator" };

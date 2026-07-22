@@ -505,6 +505,45 @@ namespace
             p.drawEllipse(QPointF(21.0, 19.0), 5.5, 5.5);
             p.drawLine(QPointF(25.0, 23.0), QPointF(28.0, 26.0));
             break;
+
+        case SMToolIcons::eIcon::SectionDetails:
+            // A labelled form: a short label and a longer field on each of three rows.
+            p.drawLine(QPointF(5.0, 10.0), QPointF(11.0, 10.0));
+            p.drawLine(QPointF(14.0, 10.0), QPointF(27.0, 10.0));
+            p.drawLine(QPointF(5.0, 16.0), QPointF(11.0, 16.0));
+            p.drawLine(QPointF(14.0, 16.0), QPointF(27.0, 16.0));
+            p.drawLine(QPointF(5.0, 22.0), QPointF(11.0, 22.0));
+            p.drawLine(QPointF(14.0, 22.0), QPointF(27.0, 22.0));
+            break;
+
+        case SMToolIcons::eIcon::SectionList:
+            // Two states joined by an arrow: the transitions list.
+            p.drawEllipse(QPointF(8.0, 16.0), 3.5, 3.5);
+            p.drawEllipse(QPointF(24.0, 16.0), 3.5, 3.5);
+            p.drawLine(QPointF(12.0, 16.0), QPointF(19.5, 16.0));
+            arrowHead(p, QPointF(12.0, 16.0), QPointF(21.0, 16.0), 5.0, color);
+            break;
+
+        case SMToolIcons::eIcon::SectionText:
+            // Paragraph lines: a free-text description.
+            p.drawLine(QPointF(5.0, 10.0), QPointF(27.0, 10.0));
+            p.drawLine(QPointF(5.0, 16.0), QPointF(27.0, 16.0));
+            p.drawLine(QPointF(5.0, 22.0), QPointF(19.0, 22.0));
+            break;
+
+        case SMToolIcons::eIcon::SectionEnter:
+            // An arrow entering a box from the left: work done on entry.
+            p.drawRoundedRect(QRectF(15.0, 7.0, 11.0, 18.0), 2.5, 2.5);
+            p.drawLine(QPointF(5.0, 16.0), QPointF(15.0, 16.0));
+            arrowHead(p, QPointF(6.0, 16.0), QPointF(16.0, 16.0), 5.5, color);
+            break;
+
+        case SMToolIcons::eIcon::SectionExit:
+            // An arrow leaving a box to the right: work done on exit.
+            p.drawRoundedRect(QRectF(6.0, 7.0, 11.0, 18.0), 2.5, 2.5);
+            p.drawLine(QPointF(17.0, 16.0), QPointF(27.0, 16.0));
+            arrowHead(p, QPointF(17.0, 16.0), QPointF(28.0, 16.0), 5.5, color);
+            break;
         }
     }
 }

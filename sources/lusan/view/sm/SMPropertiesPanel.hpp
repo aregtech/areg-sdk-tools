@@ -39,6 +39,7 @@ class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
 class SMOperationsEditor;
+class SMSectionChrome;
 class StateMachineModel;
 enum class eDocElementKind;
 
@@ -132,6 +133,9 @@ private:
     void buildTransitionPage();
     void buildRegistryPage();
 
+    //!< Refreshes each State-Actions section header with a summary of its bound list (`not set` when empty).
+    void refreshActionSummaries();
+
     void refresh();
     void showEmpty();
     void showState(uint32_t stateId);
@@ -167,6 +171,34 @@ private:
     bool isEditing() const;
 
 //////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+private:
+    /**
+     * \enum    eOpList
+     * \brief   Which of a state's operation lists a State-Actions section is bound to. `Do` is
+     *          added in step 4 (R24) -- one enumerator plus one build-table row.
+     **/
+    enum class eOpList
+    {
+          Entry     //!< The state's EntryList (`On Enter`).
+        , Exit      //!< The state's ExitList (`On Exit`).
+    };
+
+    /**
+     * \struct  ActionSlot
+     * \brief   One State-Actions accordion section: its operation-list role, its editor and its
+     *          accordion section index. The State-Actions tab is built from a table of these so a
+     *          third `Do` list is a one-line addition (R22).
+     **/
+    struct ActionSlot
+    {
+        eOpList             role;       //!< Which state list this section edits.
+        SMOperationsEditor* editor;     //!< The bound operation-list editor.
+        int                 section;    //!< The accordion section index (for the header summary).
+    };
+
+//////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
@@ -178,14 +210,18 @@ private:
 
     // State page.
     QTabWidget*         mStateTabs;     //!< The General / Actions tab host.
+    SMSectionChrome*    mStateGeneral;  //!< The General tab chrome (Details / Transitions sections).
+    SMSectionChrome*    mStateActions;  //!< The Actions tab chrome (On Enter / On Exit sections).
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
-    QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line, at the bottom).
+    QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
     QListWidget*        mTransitions;   //!< The state's transitions, drag-reorderable.
+    QList<ActionSlot>   mActionSlots;   //!< The State-Actions sections, in display order.
 
     // Transition page.
+    SMSectionChrome*    mTransGeneral;  //!< The General tab chrome (Trigger / Description sections).
     QLabel*             mStimulusSig;   //!< Read-only stimulus signature (`walk(count)`).
     QComboBox*          mStimulusName;  //!< The stimulus picker (fixed list of triggers/events/
                                         //!< timers; editing is search-only, no free rename).

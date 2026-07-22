@@ -49,6 +49,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMPropertiesPanel.cpp
     ${LUSAN}/view/sm/SMScene.cpp
     ${LUSAN}/view/sm/SMSceneManager.cpp
+    ${LUSAN}/view/sm/SMSectionChrome.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
     ${LUSAN}/view/sm/SMTimerDetails.cpp
     ${LUSAN}/view/sm/SMToolIcons.cpp
@@ -107,6 +108,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMPropertiesPanel.hpp
     ${LUSAN}/view/sm/SMScene.hpp
     ${LUSAN}/view/sm/SMSceneManager.hpp
+    ${LUSAN}/view/sm/SMSectionChrome.hpp
     ${LUSAN}/view/sm/SMStateItem.hpp
     ${LUSAN}/view/sm/SMTimerDetails.hpp
     ${LUSAN}/view/sm/SMToolIcons.hpp
