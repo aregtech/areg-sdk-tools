@@ -675,7 +675,7 @@ void SMGuardField::reprojectChips()
         return;
     }
 
-    const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree());
+    const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree(), true);
     if (rendered.chips.size() != positions.size())
     {
         // A de-rendered chip (double-click edit) desyncs the count; leave the respell to the next
@@ -943,13 +943,13 @@ void SMGuardField::rebuildFromModel()
         {
             // A committed tree reflows to its canonical text AND its chips: every
             // bound reference folds to a compact pill. A draft keeps the user's raw text as-is.
-            const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree());
+            const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree(), true);
             text  = rendered.text;
             chips = rendered.chips;
         }
         else
         {
-            text = SMGuardRender::guardText(mModel.getData(), mTransitionId, guard);
+            text = SMGuardRender::guardText(mModel.getData(), mTransitionId, guard, true);
         }
         mAllowRaw = (guard.isDraft() && (countRawNodes(guard.getTree()) > 0))
                      || (guard.isOk() && (countRawNodes(guard.getTree()) > 0));
@@ -1285,7 +1285,9 @@ QString SMGuardField::committableText() const
     }
 
     QString text = doc;
-    text.replace(QLatin1Char('\n'), QLatin1Char(' '));
+    // Line breaks are NOT flattened here (R18): they survive into the parser, which records them
+    // on the operand nodes so the guard reopens across the same lines. Inner spacing and operator
+    // placement stay canonical -- only the breaks and their indent are user-owned.
     text.remove(slotPattern());                                     // never commit slot markers
     text.replace(QRegularExpression(QStringLiteral(",\\s*\\)")), QStringLiteral(")"));
     text.replace(QRegularExpression(QStringLiteral("\\(\\s*,")), QStringLiteral("("));
@@ -1317,7 +1319,7 @@ void SMGuardField::commit()
     SMGuard guard = SMGuardParser::parseToGuard(data, mTransitionId, text, mAllowRaw);
 
     // No change -> no undo step.
-    const QString canonical = SMGuardRender::guardText(data, mTransitionId, guard);
+    const QString canonical = SMGuardRender::guardText(data, mTransitionId, guard, true);
     if (canonical == mCommittedText)
     {
         return;
@@ -1514,7 +1516,7 @@ bool SMGuardField::rawNodeSpan(const QList<int>& rawPath, int& start, int& lengt
         return false;
     }
 
-    const QList<SMGuardRender::NodeSpan> spans = SMGuardRender::nodeSpans(mModel.getData(), mTransitionId, *root);
+    const QList<SMGuardRender::NodeSpan> spans = SMGuardRender::nodeSpans(mModel.getData(), mTransitionId, *root, true);
     for (const SMGuardRender::NodeSpan& span : spans)
     {
         if (span.path == rawPath)

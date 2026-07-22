@@ -75,6 +75,7 @@ namespace
         QList<SMGuardRender::Chip>          mChips;
         QSet<QString>                       mCollisions;    //!< Display names carried by >1 kind.
         bool                                mGhosts { false };//!< Emit `<name>` ghosts (display mode).
+        bool                                mLayout { false };//!< Restore user line breaks + indent (R18).
         QList<SMGuardRender::NodeSpan>*     mNodeSpans { nullptr };
         QList<int>                          mPath;
 
@@ -229,13 +230,46 @@ namespace
             }
         }
 
+        //!< Emits a user line break before an operand (layout mode only): a newline plus the
+        //!< operand's own indent. Returns true when the break was emitted (R18).
+        bool emitBreak(const SMGuardNode& child)
+        {
+            if ((mLayout == false) || (child.isBreakBefore() == false))
+            {
+                return false;
+            }
+
+            append(QLatin1Char('\n') + QString(qMax(0, child.getIndent()), QLatin1Char(' ')));
+            return true;
+        }
+
         void renderGroup(const SMGuardNode& node, const QString& joiner, int childCtx)
         {
+            // The joiner is " && " / " || "; when an operand opens a new line the trailing space
+            // becomes a newline + indent, so the operator stays canonical at the end of the line.
+            const QString opAtLineEnd = QLatin1Char(' ') + joiner.trimmed();
             const QList<SMGuardNode*>& kids = node.getChildren();
             for (int i = 0; i < kids.size(); ++i)
             {
-                if (i > 0) { appendRole(joiner, eRole::Operator); }
-                renderChild(*kids.at(i), i, childCtx);
+                const SMGuardNode& kid = *kids.at(i);
+                if (i > 0)
+                {
+                    if (mLayout && kid.isBreakBefore())
+                    {
+                        appendRole(opAtLineEnd, eRole::Operator);
+                        emitBreak(kid);
+                    }
+                    else
+                    {
+                        appendRole(joiner, eRole::Operator);
+                    }
+                }
+                else
+                {
+                    emitBreak(kid);     // a rare leading break inside a parenthesized group
+                }
+
+                renderChild(kid, i, childCtx);
             }
         }
 
@@ -275,8 +309,14 @@ namespace
             {
                 for (int i = 0; i < args.size(); ++i)
                 {
-                    if (i > 0) { appendRole(QStringLiteral(", "), eRole::Punct); }
-                    renderChild(*args.at(i), i, 1);
+                    const SMGuardNode& arg = *args.at(i);
+                    if (i > 0)
+                    {
+                        // A broken argument keeps the comma at the line end, then wraps.
+                        appendRole((mLayout && arg.isBreakBefore()) ? QStringLiteral(",") : QStringLiteral(", "), eRole::Punct);
+                    }
+                    emitBreak(arg);
+                    renderChild(arg, i, 1);
                 }
                 append(QStringLiteral(")"));
                 return;
@@ -334,13 +374,19 @@ namespace
                     continue;
                 }
 
-                if (first == false) { appendRole(QStringLiteral(", "), eRole::Punct); }
+                const SMGuardNode& value = *args.at(childIndex);
+                if (first == false)
+                {
+                    // A broken argument keeps the comma at the line end, then wraps + indents.
+                    appendRole((mLayout && value.isBreakBefore()) ? QStringLiteral(",") : QStringLiteral(", "), eRole::Punct);
+                }
                 first = false;
+                emitBreak(value);
                 if (holeSeen)
                 {
                     appendRole(NEGuardText::refPrefix(QStringLiteral("arg")) + formals.at(fi).getName() + QStringLiteral(" = "), eRole::Punct);
                 }
-                renderChild(*args.at(childIndex), childIndex, 1);
+                renderChild(value, childIndex, 1);
             }
         }
 
@@ -354,17 +400,19 @@ namespace
 // SMGuardRender
 //////////////////////////////////////////////////////////////////////////
 
-QString SMGuardRender::text(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node)
+QString SMGuardRender::text(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout /*= false*/)
 {
     Builder builder(data, transitionId);
+    builder.mLayout = layout;
     builder.renderRoot(node);
     return builder.mOut;
 }
 
-SMGuardRender::Rendered SMGuardRender::render(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node)
+SMGuardRender::Rendered SMGuardRender::render(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout /*= false*/)
 {
     Builder builder(data, transitionId);
     builder.mGhosts = true;     // the field display shows labeled ghosts for unmapped formals
+    builder.mLayout = layout;
     builder.renderRoot(node);
     Rendered result;
     result.text  = builder.mOut;
@@ -373,10 +421,11 @@ SMGuardRender::Rendered SMGuardRender::render(const StateMachineData& data, uint
     return result;
 }
 
-QList<SMGuardRender::NodeSpan> SMGuardRender::nodeSpans(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node)
+QList<SMGuardRender::NodeSpan> SMGuardRender::nodeSpans(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout /*= false*/)
 {
     QList<NodeSpan> spans;
     Builder builder(data, transitionId);
+    builder.mLayout = layout;
     builder.mNodeSpans = &spans;
     builder.renderRoot(node);
     return spans;
@@ -470,7 +519,7 @@ QString SMGuardRender::canvasSummary(const StateMachineData& data, uint32_t tran
     return QString();
 }
 
-QString SMGuardRender::guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard)
+QString SMGuardRender::guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard, bool layout /*= false*/)
 {
     if (guard.isDraft())
     {
@@ -478,7 +527,7 @@ QString SMGuardRender::guardText(const StateMachineData& data, uint32_t transiti
     }
     if (guard.isOk() && (guard.getTree() != nullptr))
     {
-        return text(data, transitionId, *guard.getTree());
+        return text(data, transitionId, *guard.getTree(), layout);
     }
 
     return QString();

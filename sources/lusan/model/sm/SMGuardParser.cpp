@@ -47,6 +47,8 @@ namespace
         int     len   { 0 };
         QString refKind;            //!< For a Ref token: the `#kind` (param/attr/const/cond/arg), no sigil.
         QString refName;            //!< For a Ref token: the symbol/formal name after the ':'.
+        bool    brk   { false };    //!< A line break precedes this token in the source (R18 layout).
+        int     indent{ 0 };        //!< The leading spaces on the token's line when \ref brk is set.
     };
 
     //!< True for an identifier start character.
@@ -213,6 +215,29 @@ namespace
         out.append({ eTok::End, QString(), n, 0 });
     }
 
+    //!< Marks each token that opens a new source line and records that line's leading indent
+    //!< (R18). The whitespace between two tokens is either all spaces/tabs or a single run
+    //!< containing newlines; the indent is the character count after the LAST newline, so a
+    //!< blank line collapses and the operand keeps only its own line's indent.
+    void annotateLayout(const QString& s, QList<Token>& out)
+    {
+        int prevEnd = 0;
+        for (Token& tk : out)
+        {
+            int lastNewline = -1;
+            for (int i = prevEnd; i < tk.start; ++i)
+            {
+                if (s.at(i) == QLatin1Char('\n')) { lastNewline = i; }
+            }
+            if (lastNewline >= 0)
+            {
+                tk.brk    = true;
+                tk.indent = tk.start - (lastNewline + 1);
+            }
+            prevEnd = tk.start + tk.len;
+        }
+    }
+
     /**
      * \brief   Recursive-descent parser over the token stream, resolving names to symbol
      *          IDs as it goes. Precedence (loosest first): Or, And, comparison, unary Not,
@@ -301,6 +326,17 @@ namespace
             return SMGuardNode::makeVerbatim(eKind::Raw, fragment);
         }
 
+        //!< Carries a break/indent that preceded an operand (captured before it was parsed) onto
+        //!< the resulting node, so the renderer can restore the line the user opened (R18).
+        static void carryLayout(SMGuardNode* node, bool brk, int indent)
+        {
+            if ((node != nullptr) && brk)
+            {
+                node->setBreakBefore(true);
+                node->setIndent(qMax(0, indent));
+            }
+        }
+
         SMGuardNode* parseOr()
         {
             QList<SMGuardNode*> parts;
@@ -308,7 +344,11 @@ namespace
             while (peek().type == eTok::Or)
             {
                 advance();
-                parts.append(parseAnd());
+                const bool brk = peek().brk;
+                const int  ind = peek().indent;
+                SMGuardNode* rhs = parseAnd();
+                carryLayout(rhs, brk, ind);
+                parts.append(rhs);
             }
 
             return (parts.size() == 1) ? parts.first() : SMGuardNode::makeGroup(eKind::Or, parts);
@@ -321,7 +361,11 @@ namespace
             while (peek().type == eTok::And)
             {
                 advance();
-                parts.append(parseCmp());
+                const bool brk = peek().brk;
+                const int  ind = peek().indent;
+                SMGuardNode* rhs = parseCmp();
+                carryLayout(rhs, brk, ind);
+                parts.append(rhs);
             }
 
             return (parts.size() == 1) ? parts.first() : SMGuardNode::makeGroup(eKind::And, parts);
@@ -459,6 +503,10 @@ namespace
             {
                 for (;;)
                 {
+                    // Capture a break BEFORE the entry (a call broken across lines) so it lands on
+                    // the value node once parsed; a named `#arg:` entry keeps it on its value too.
+                    const bool entryBrk = peek().brk;
+                    const int  entryInd = peek().indent;
                     ArgEntry entry;
                     if ((peek().type == eTok::Ref) && (peek().refKind == QStringLiteral("arg")))
                     {
@@ -494,6 +542,7 @@ namespace
                         entry.named = false;
                         entry.value = parseOr();
                     }
+                    carryLayout(entry.value, entryBrk, entryInd);
                     entries.append(entry);
 
                     if (peek().type == eTok::Comma) { advance(); continue; }
@@ -755,6 +804,7 @@ SMGuardParser::Result SMGuardParser::parse(const StateMachineData& data, uint32_
 
     QList<Token> tokens;
     tokenize(text, tokens);
+    annotateLayout(text, tokens);
 
     Parser parser(data, transitionId, text, allowRaw, tokens);
     result.tree = parser.run(result.diagnostics);

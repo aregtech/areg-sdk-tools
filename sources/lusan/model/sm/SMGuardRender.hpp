@@ -120,20 +120,24 @@ public:
 // Operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< The canonical text of a node sub-tree.
-    static QString text(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node);
+    /**
+     * \brief   The canonical text of a node sub-tree. With \p layout set, user line breaks and
+     *          indent are restored (R18); the default single-line form is unchanged, so every
+     *          caller that wants inline text (caches, argument projections) is byte-stable.
+     **/
+    static QString text(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout = false);
 
-    //!< The canonical text plus span list of a node sub-tree.
-    static Rendered render(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node);
+    //!< The canonical text plus span list of a node sub-tree; \p layout restores line breaks (R18).
+    static Rendered render(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout = false);
 
-    //!< The text range of every node of the sub-tree in the canonical rendered text.
-    static QList<NodeSpan> nodeSpans(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node);
+    //!< The text range of every node of the sub-tree; \p layout must match the displayed text (R18).
+    static QList<NodeSpan> nodeSpans(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout = false);
 
     /**
      * \brief   The display text of a whole guard: the rendered tree (ok), the raw draft text
-     *          (draft), or an empty string (empty).
+     *          (draft), or an empty string (empty). \p layout restores multi-line guards (R18).
      **/
-    static QString guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard);
+    static QString guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard, bool layout = false);
 
     /**
      * rief   A SHORT, structural summary of \p guard for the FSM canvas label, where the full

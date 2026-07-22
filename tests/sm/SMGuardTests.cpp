@@ -666,6 +666,64 @@ static void testXmlRoundTrip()
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Multi-line layout (R18): breaks + indent survive render and XML, codegen is unaffected
+//////////////////////////////////////////////////////////////////////////
+
+static void testMultiLineLayout()
+{
+    std::printf("[U1] multi-line guards: breaks/indent round-trip through render + XML; codegen single-line (R18)\n");
+
+    StateMachineData data;
+    const uint32_t tid = buildDoc(data);
+
+    // A guard the user typed across three lines: the operator stays at the line end, the operand
+    // opens the next line with its own indent. This is exactly the canonical layout form.
+    const QString multiline = QStringLiteral("WalkRequested &&\n    HasWaiting(count) &&\n    !IsNightMode");
+
+    SMGuardParser::Result r = SMGuardParser::parse(data, tid, multiline);
+    check(r.resolved(), "multi-line guard resolves");
+
+    // Layout render restores the same three lines; the default (single-line) render flattens them,
+    // so every inline caller (caches, argument projections) stays byte-stable.
+    checkEq(SMGuardRender::text(data, tid, *r.tree, true), multiline, "render(layout) reopens the guard across the same three lines");
+    checkEq(SMGuardRender::text(data, tid, *r.tree, false),
+            QStringLiteral("WalkRequested && HasWaiting(count) && !IsNightMode"), "render(no layout) is the canonical single line");
+
+    // Codegen never reads the layout attributes -> generated C++ is single-line and unchanged.
+    check(SMGuardCodegenPreview::expression(data, tid, *r.tree).contains(QLatin1Char('\n')) == false,
+          "generated C++ carries no line breaks");
+
+    // Structural identity ignores layout: parse(render(tree)) == tree still holds.
+    SMGuardParser::Result r2 = SMGuardParser::parse(data, tid, SMGuardRender::text(data, tid, *r.tree, true));
+    check((r2.tree != nullptr) && r.tree->equals(*r2.tree), "parse(render(tree)) == tree (layout-independent)");
+
+    // XML persistence: the layout attributes are written and read back, so a reload reopens across
+    // the same three lines.
+    SMTransitionEntry* trans = data.findTransitionById(tid);
+    trans->getGuard().setTree(r.tree);
+
+    const QString outML = tempFile("guard_multiline.fsml");
+    check(data.writeToFile(outML), "write multi-line guard");
+
+    const QByteArray bytes = readBytes(outML);
+    check(bytes.contains("brk=\"1\""), "the brk layout attribute is written");
+    check(bytes.contains("indent=\"4\""), "the indent layout attribute is written");
+
+    StateMachineData reread;
+    check(reread.readFromFile(outML), "reread multi-line guard");
+    SMTransitionEntry* rtrans = reread.findTransitionById(tid);
+    check((rtrans != nullptr) && rtrans->getGuard().isOk() && (rtrans->getGuard().getTree() != nullptr), "reloaded guard is ok");
+    if ((rtrans != nullptr) && (rtrans->getGuard().getTree() != nullptr))
+    {
+        checkEq(SMGuardRender::text(reread, tid, *rtrans->getGuard().getTree(), true), multiline,
+                "reloaded guard reopens across the same three lines");
+        check(trans->getGuard().getTree()->equals(*rtrans->getGuard().getTree()), "reloaded tree is structurally identical");
+    }
+
+    delete r2.tree;
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Undoable commands
 //////////////////////////////////////////////////////////////////////////
 
@@ -750,6 +808,7 @@ int main(int /*argc*/, char** /*argv*/)
     testRenameByID();
     testCodegenPreview();
     testXmlRoundTrip();
+    testMultiLineLayout();
     testCommands();
     testLegacyShim();
 

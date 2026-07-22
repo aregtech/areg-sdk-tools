@@ -153,6 +153,8 @@ SMGuardNode::SMGuardNode(eKind kind)
     , mOp           (eCmpOp::Eq)
     , mSymbolId     (0u)
     , mArgFormalId  (0u)
+    , mBreakBefore  (false)
+    , mIndent       (0)
     , mText         ( )
     , mChildren     ( )
 {
@@ -163,6 +165,8 @@ SMGuardNode::SMGuardNode(const SMGuardNode& src)
     , mOp           (src.mOp)
     , mSymbolId     (src.mSymbolId)
     , mArgFormalId  (src.mArgFormalId)
+    , mBreakBefore  (src.mBreakBefore)
+    , mIndent       (src.mIndent)
     , mText         (src.mText)
     , mChildren     ( )
 {
@@ -190,6 +194,8 @@ SMGuardNode& SMGuardNode::operator = (const SMGuardNode& other)
         mOp           = other.mOp;
         mSymbolId     = other.mSymbolId;
         mArgFormalId  = other.mArgFormalId;
+        mBreakBefore  = other.mBreakBefore;
+        mIndent       = other.mIndent;
         mText         = other.mText;
         mChildren.reserve(other.mChildren.size());
         for (const SMGuardNode* child : other.mChildren)
@@ -268,6 +274,17 @@ void SMGuardNode::writeToXml(QXmlStreamWriter& xml) const
         break;
     }
 
+    // User-owned line layout: written only when set, so a single-line guard and an
+    // untouched legacy tree keep their exact bytes. The code generator never reads these.
+    if (mBreakBefore)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeGuardBreak, QStringLiteral("1"));
+    }
+    if (mIndent > 0)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeGuardIndent, QString::number(mIndent));
+    }
+
     if (isVerbatim())
     {
         xml.writeCharacters(mText);
@@ -320,6 +337,11 @@ SMGuardNode* SMGuardNode::readFromXml(QXmlStreamReader& xml)
     {
         node->mSymbolId = attributes.value(XmlSM::xmlSMAttributeGuardRefId).toUInt();
     }
+
+    // Line layout: absent attributes read back as no-break / zero-indent, so a legacy
+    // tree loads exactly as before.
+    node->mBreakBefore = (attributes.value(XmlSM::xmlSMAttributeGuardBreak).toString() == QLatin1StringView("1"));
+    node->mIndent      = attributes.value(XmlSM::xmlSMAttributeGuardIndent).toInt();
 
     if (node->isVerbatim())
     {

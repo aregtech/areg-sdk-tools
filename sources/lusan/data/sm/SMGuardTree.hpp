@@ -154,6 +154,20 @@ public:
     inline uint32_t getArgFormalId() const;
     inline void setArgFormalId(uint32_t id);
 
+    /**
+     * \brief   Layout hint: true when the user placed a line break before this operand. It is
+     *          meaningful only for a node rendered in an operand sequence (a group child or a
+     *          call argument). User-owned surface layout -- the renderer re-applies it and the
+     *          code generator ignores it, so it never changes generated C++. It is NOT
+     *          part of \ref equals (structural identity), which stays layout-independent.
+     **/
+    inline bool isBreakBefore() const;
+    inline void setBreakBefore(bool breakBefore);
+
+    //!< Layout hint: the leading spaces the renderer restores on the line this operand opens (R18).
+    inline int getIndent() const;
+    inline void setIndent(int indent);
+
     inline const QString& getText() const;
     inline void setText(const QString& text);
 
@@ -205,6 +219,8 @@ private:
     eCmpOp                  mOp;        //!< The comparison operator (Cmp only).
     uint32_t                mSymbolId;  //!< The referenced symbol's document ID (Call/Attr/Const/Param).
     uint32_t                mArgFormalId;//!< The bound formal parameter's ID (a Call's arg child only; 0 = positional).
+    bool                    mBreakBefore;//!< Layout: a user line break precedes this operand (R18).
+    int                     mIndent;    //!< Layout: leading spaces on this operand's line (R18).
     QString                 mText;      //!< The verbatim bytes (Lit/Lambda/Raw).
     QList<SMGuardNode*>     mChildren;  //!< The owned child nodes, in operand order.
 };
@@ -356,6 +372,26 @@ inline uint32_t SMGuardNode::getArgFormalId() const
 inline void SMGuardNode::setArgFormalId(uint32_t id)
 {
     mArgFormalId = id;
+}
+
+inline bool SMGuardNode::isBreakBefore() const
+{
+    return mBreakBefore;
+}
+
+inline void SMGuardNode::setBreakBefore(bool breakBefore)
+{
+    mBreakBefore = breakBefore;
+}
+
+inline int SMGuardNode::getIndent() const
+{
+    return mIndent;
+}
+
+inline void SMGuardNode::setIndent(int indent)
+{
+    mIndent = indent;
 }
 
 inline const QString& SMGuardNode::getText() const
