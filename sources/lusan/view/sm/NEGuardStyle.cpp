@@ -68,6 +68,13 @@ QColor NEGuardStyle::autoMapTint()
     return isDark() ? QColor(0x27, 0x3A, 0x52) : QColor(0xDC, 0xE9, 0xF9);
 }
 
+QColor NEGuardStyle::unmappedTint()
+{
+    // A warm amber wash, deliberately distinct from the blue auto-map tint (a slot that IS filled,
+    // just unvisited). Both values sit behind dark text/light text without dropping legibility.
+    return isDark() ? QColor(0x5A, 0x48, 0x1C) : QColor(0xFB, 0xEE, 0xC8);
+}
+
 QString NEGuardStyle::ownerGlyph(eOwner owner)
 {
     switch (owner)

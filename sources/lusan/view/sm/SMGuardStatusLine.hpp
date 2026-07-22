@@ -70,8 +70,20 @@ public:
     //!< Hides the status line (empty guard).
     void clearStatus();
 
+    /**
+     * \brief   Attaches (or clears) a clickable recovery suggestion to the verdict, rendered as a
+     *          trailing `  ->  <label>` hyperlink -- the R20 did-you-mean affordance, with no extra
+     *          height and no strip. An empty \p fixId removes any suggestion. Clicking the link
+     *          emits \ref suggestionActivated so the container can route it to the field's applyFix.
+     **/
+    void setSuggestion(const QString& fixId, const QString& payload, const QString& label);
+
     //!< The exact generated-preview string currently shown (for tests / 23c).
     inline const QString& previewText() const;
+
+signals:
+    //!< The recovery link was clicked; carries the fix id and payload for the field's applyFix.
+    void suggestionActivated(const QString& fixId, const QString& payload);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -94,6 +106,9 @@ private:
     NEGuardStyle::eSeverity mSeverity;  //!< The current severity.
     QString                 mVerdict;   //!< The current verdict phrase.
     QString                 mPreview;   //!< The exact generated preview string.
+    QString                 mSugFixId;  //!< The recovery suggestion's fix id (empty = none).
+    QString                 mSugPayload;//!< The recovery suggestion's payload (the suggested name).
+    QString                 mSugLabel;  //!< The recovery link's visible caption.
 };
 
 //////////////////////////////////////////////////////////////////////////

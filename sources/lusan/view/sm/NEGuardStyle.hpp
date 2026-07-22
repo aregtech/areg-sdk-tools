@@ -73,6 +73,9 @@ namespace NEGuardStyle
     //!< The background tint of a pre-filled, unvisited auto-map slot (guard.automap).
     QColor autoMapTint();
 
+    //!< The background tint of a formal that carries no binding yet (guard.unmapped) -- amber.
+    QColor unmappedTint();
+
     //!< The ASCII glyph for an owner/kind cue used by the catalog, pills and hovers.
     QString ownerGlyph(eOwner owner);
 }

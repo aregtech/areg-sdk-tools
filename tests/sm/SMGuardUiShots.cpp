@@ -43,15 +43,18 @@
 #include "lusan/view/common/MethodListView.hpp"
 #include "lusan/view/sm/SMRefCompleter.hpp"
 #include "lusan/view/sm/SMSignatureCard.hpp"
+#include "lusan/view/sm/NEGuardStyle.hpp"
 
 #include <QApplication>
 #include "lusan/view/sm/SMAccordion.hpp"
 #include <QClipboard>
+#include <QComboBox>
 #include <QTextDocument>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QGuiApplication>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMimeData>
 #include <QPushButton>
@@ -678,6 +681,61 @@ int main(int argc, char** argv)
         check(model.getUndoStack().index() == beforeCancel, "Cancel pushes no undo step");
         check(bar.popout() == nullptr, "the pop-out closed after Cancel");
         check(field->isReadOnly() == false, "the base field is editable again after Cancel");
+    }
+
+    setGuard(model, transId, QString());
+    pump(150);
+
+    // ---- SM-21-10: adding a formal to a referenced condition keeps the existing mapping ----
+    // Critique-05 item 2: adding a parameter to a condition a guard already references was reported
+    // to empty the Arguments table and lose the mapping. Bindings key on the formal's ID (P1), so
+    // the first formal's value must survive the add; the newly declared formal shows up unmapped
+    // and its row is tinted amber. This reproduces that scenario end-to-end through the real table.
+    // IsCalmHours is used here rather than HasWaiting: the foreign-rename scenario above renamed
+    // HasWaiting to StillWaiting and does not restore it, so IsCalmHours is the untouched condition.
+    std::printf("[ RUN  ] addParamKeepsMapping\n");
+    {
+        setGuard(model, transId, QStringLiteral("IsCalmHours(count)"));
+        pump(300);
+        bar.accordion()->setCurrentIndex(2);        // open the Arguments section.
+        pump(150);
+
+        SMArgMapTable* args = bar.args();
+        check(args != nullptr, "the Arguments table is bound to the referenced condition");
+        if (args != nullptr)
+        {
+            check(args->rowCount() == 1, "IsCalmHours starts with a single formal");
+            QComboBox* v0 = qobject_cast<QComboBox*>(args->valueWidget(0));
+            check((v0 != nullptr) && (v0->currentText() == QStringLiteral("count")), "formal 0 is mapped to count");
+
+            SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("IsCalmHours"));
+            check(hw != nullptr, "the demo document has the IsCalmHours condition method");
+            if (hw != nullptr)
+            {
+                // Add a SECOND formal on the Methods side: this fires elementChanged for the method
+                // id (not the transition), so the table re-projects rather than the field reflowing.
+                model.getMethodModel().createParam(hw, QStringLiteral("extra"));
+
+                // The rebuild is deferred via QTimer::singleShot(0, ...); a synchronous assert here
+                // would read the stale one-row projection. Pump the event loop first.
+                pump(400);
+
+                check(args->rowCount() == 2, "the added formal appears as a second row");
+
+                QComboBox* r0 = qobject_cast<QComboBox*>(args->valueWidget(0));
+                check((r0 != nullptr) && (r0->currentText() == QStringLiteral("count"))
+                    , "formal 0 KEEPS its mapping across the parameter add (bind-by-id, P1)");
+
+                QComboBox* r1 = qobject_cast<QComboBox*>(args->valueWidget(1));
+                check((r1 != nullptr) && r1->currentText().isEmpty(), "the newly declared formal is unmapped");
+
+                const QString tint = NEGuardStyle::unmappedTint().name();
+                QLabel* n1 = args->nameLabel(1);
+                check((n1 != nullptr) && n1->styleSheet().contains(tint), "the unmapped formal's row is tinted amber");
+                QLabel* n0 = args->nameLabel(0);
+                check((n0 != nullptr) && (n0->styleSheet().contains(tint) == false), "the mapped formal's row is not tinted");
+            }
+        }
     }
 
     setGuard(model, transId, QString());

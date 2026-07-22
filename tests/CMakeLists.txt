@@ -429,8 +429,8 @@ set_target_properties(lusan_sm_canvas_tests PROPERTIES WIN32_EXECUTABLE OFF)
 # SM-21 (U3): the guard-bar UI verification harness. Drives the REAL SMGuardBar
 # and Methods page widgets programmatically (no input injection), asserts the
 # field invariants (23a/23b, form-first parity) and saves QWidget::grab() shots.
-# Run manually: lusan_sm_guard_ui_shots <doc.fsml> [grab dir] -- not a ctest
-# entry, because it opens visible windows.
+# Registered as the ctest entry sm_guard_ui_shots (offscreen QPA); can also be
+# run manually: lusan_sm_guard_ui_shots <doc.fsml> [grab dir].
 # ---------------------------------------------------------------------------
 set(LUSAN_GUARD_UI_SRC
     ${LUSAN_TEST_SUPPORT_SRC}
@@ -516,8 +516,9 @@ set_target_properties(lusan_sm_guard_ui_shots PROPERTIES WIN32_EXECUTABLE OFF)
 # ---------------------------------------------------------------------------
 # SM-21 (U4): the acceptance sweep harness -- items 16-18/20-22 end-to-end through
 # the real widgets + file + validation path, the Try-it live checks, and the
-# item-24 light/dark theme grabs. Run manually:
-# lusan_sm_guard_u4_sweep <doc.fsml> [grab dir] -- opens visible windows.
+# item-24 light/dark theme grabs. Registered as the ctest entry sm_guard_u4_sweep
+# (offscreen QPA); can also be run manually:
+# lusan_sm_guard_u4_sweep <doc.fsml> [grab dir].
 # ---------------------------------------------------------------------------
 qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN_GUARD_UI_SRC}
@@ -614,3 +615,13 @@ add_test(NAME sm_symbol_tests COMMAND lusan_sm_symbol_tests)
 add_test(NAME sm_command_tests COMMAND lusan_sm_command_tests)
 add_test(NAME sm_mapping_tests COMMAND lusan_sm_mapping_tests)
 add_test(NAME si_command_tests COMMAND lusan_si_command_tests)
+
+# The two standalone guard-editor harnesses run to completion (no app.exec) and
+# return 0 on success, so they are safe ctest entries. Force the offscreen QPA
+# platform so they never need a real display on CI or a headless run.
+add_test(NAME sm_guard_ui_shots COMMAND lusan_sm_guard_ui_shots
+         ${LUSAN_ROOT}/.claude/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-shots)
+add_test(NAME sm_guard_u4_sweep COMMAND lusan_sm_guard_u4_sweep
+         ${LUSAN_ROOT}/.claude/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-sweep)
+set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep PROPERTIES
+                     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

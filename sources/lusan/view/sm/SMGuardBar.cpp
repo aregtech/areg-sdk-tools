@@ -369,6 +369,28 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // ---- Status and badge wiring ------------------------------------------
     connect(mField, &SMGuardField::statusUpdated, this, &SMGuardBar::onStatusUpdated);
     connect(mField, &SMGuardField::badgeUpdated, this, &SMGuardBar::badgeChanged);
+
+    // R20 did-you-mean recovery: the field already builds the fix list but nothing consumed it since
+    // SMFixBar was removed. Surface only the `use <name>?` suggestion as a clickable tail on the
+    // status line (no strip, no added height); clicking routes back through the field's applyFix so
+    // the replacement is exactly one undo step. The full fix set stays available in the context menu.
+    connect(mField, &SMGuardField::fixesUpdated, this, [this](const QString&, const QList<SMFixBar::Fix>& fixes)
+    {
+        for (const SMFixBar::Fix& fix : fixes)
+        {
+            if ((fix.id == QStringLiteral("use")) && fix.enabled)
+            {
+                mStatus->setSuggestion(fix.id, fix.payload, tr("use %1?").arg(fix.payload));
+                return;
+            }
+        }
+
+        mStatus->setSuggestion(QString(), QString(), QString());
+    });
+    connect(mStatus, &SMGuardStatusLine::suggestionActivated, this, [this](const QString& fixId, const QString& payload)
+    {
+        mField->applyFix(fixId, payload);
+    });
     connect(mClear, &QToolButton::clicked, this, &SMGuardBar::onClearClicked);
     connect(mHelpBtn, &QToolButton::clicked, this, &SMGuardBar::onHelpClicked);
 
@@ -468,6 +490,14 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
             mAccordion->setSectionOpen(i, checked);
             mSectionBtns[i]->setChecked(mAccordion->isSectionOpen(i));
         });
+
+        // Alt+1 .. Alt+N reach the same section as the Nth button. The shortcut just presses that
+        // button, so button, header and shortcut remain one code path. The loop is bounded by
+        // SectionCount (a fixed [3] once segfaulted when the count grew to 4); a new section is
+        // covered automatically. Scoped to the bar and its children so it never leaks app-wide.
+        QShortcut* jump = new QShortcut(QKeySequence(QKeyCombination(Qt::AltModifier, static_cast<Qt::Key>(Qt::Key_1 + i))), this);
+        jump->setContext(Qt::WidgetWithChildrenShortcut);
+        connect(jump, &QShortcut::activated, this, [this, i]() { mSectionBtns[i]->click(); });
     }
 
     connect(mCompactBtn, &QToolButton::toggled, this, [this](bool checked)
@@ -872,9 +902,14 @@ void SMGuardBar::syncArgumentsToCaret()
         }
     }
 
-    // Unchanged target: re-project in place (a foreign signature edit) rather than rebuild, so a
-    // plain caret move never flickers the table.
-    if (mBoundCallValid && (targetPath == mBoundCallPath))
+    // Unchanged target: re-project in place (a foreign value edit) rather than rebuild, so a plain
+    // caret move never flickers the table -- but only while the formal COUNT still matches. refresh()
+    // re-projects the formal list captured at bind() time, so adding or removing a parameter on the
+    // referenced method would otherwise keep the stale row set (the added formal never appears). When
+    // the count differs, rebind so the row shape follows the signature.
+    const SMMethodEntry* boundMethod = SMGuardSymbols::method(mModel.getData(), targetMethod);
+    const int formalCount = (boundMethod != nullptr) ? static_cast<int>(boundMethod->getElements().size()) : 0;
+    if (mBoundCallValid && (targetPath == mBoundCallPath) && (mArgs->rowCount() == formalCount))
     {
         mArgs->refresh();
         return;

@@ -356,6 +356,14 @@ void SMArgMapTable::buildCompactRow(int index)
         ? tr("default: %1").arg(param.defaultText)
         : tr("value, or pick a source"));
 
+    // A formal that still has no binding (nor a typed literal, nor a default) gets an amber wash on
+    // its name cell. A parameter freshly added to a referenced condition lands here, so it reads as
+    // "still needs mapping" rather than as a silently blank row the developer might miss.
+    if (row.committed.isEmpty() && (param.hasDefault == false))
+    {
+        row.name->setStyleSheet(QStringLiteral("background-color: %1;").arg(NEGuardStyle::unmappedTint().name()));
+    }
+
     static_cast<QFormLayout*>(mHost->layout())->addRow(row.name, row.compact);
     mRows.append(row);
 

@@ -39,8 +39,11 @@
 #include "lusan/view/sm/SMSignatureCard.hpp"
 
 #include <QAbstractTextDocumentLayout>
+#include <QAction>
+#include <QContextMenuEvent>
 #include <QFontDatabase>
 #include <QKeyEvent>
+#include <QMenu>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QRegularExpression>
@@ -257,6 +260,13 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     // paints this as placeholder text, so it is never a real character and never reaches
     // committableText().
     setPlaceholderText(tr("type a condition, or @ to pick a symbol"));
+    // A condensed gesture legend for the moves that are otherwise discoverable only by accident;
+    // the full version, including the symbol kinds, lives in the (?) help card.
+    setToolTip(tr("#  pick a symbol        #kind:  filter the picker\n"
+                  "Enter  commit     Esc  revert     Shift+Enter  line break\n"
+                  "click a chip icon -- reveal what it really is\n"
+                  "double-click a chip -- edit it as plain text\n"
+                  "Alt+1..4 -- jump to a section"));
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     setMouseTracking(true);
 
@@ -1404,6 +1414,42 @@ void SMGuardField::applyFix(const QString& id, const QString& payload)
         analyze();
         commit();
     }
+}
+
+void SMGuardField::contextMenuEvent(QContextMenuEvent* event)
+{
+    QMenu* menu = createStandardContextMenu();
+
+    // Prepend the current quick-fixes (the same set the removed SMFixBar once presented) so a wrong
+    // or misspelled name keeps a recovery route, at zero space cost (R20). Each runs applyFix, so it
+    // is the same one-undo-step path as the status-line link. Disabled fixes are skipped.
+    if (mLastFixes.isEmpty() == false)
+    {
+        QAction* before = menu->actions().isEmpty() ? nullptr : menu->actions().first();
+        bool added = false;
+        for (const SMFixBar::Fix& fix : mLastFixes)
+        {
+            if (fix.enabled == false)
+            {
+                continue;
+            }
+
+            QAction* action = new QAction(fix.label, menu);
+            const QString fixId = fix.id;
+            const QString payload = fix.payload;
+            connect(action, &QAction::triggered, this, [this, fixId, payload]() { applyFix(fixId, payload); });
+            menu->insertAction(before, action);
+            added = true;
+        }
+
+        if (added)
+        {
+            menu->insertSeparator(before);
+        }
+    }
+
+    menu->exec(event->globalPos());
+    delete menu;
 }
 
 //////////////////////////////////////////////////////////////////////////
