@@ -15,7 +15,7 @@
  *  \file        lusan/model/sm/SMGuardEval.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard what-if evaluator (v7 B9, Try-it strip).
+ *  \brief       Lusan application, FSM guard what-if evaluator (Try-it strip).
  *
  ************************************************************************/
 
@@ -36,7 +36,7 @@ class StateMachineData;
 
 /**
  * \class   SMGuardEval
- * \brief   Evaluates a resolved guard tree against stub values for the Try-it strip (B9).
+ * \brief   Evaluates a resolved guard tree against stub values for the Try-it strip.
  *          References (Param/Attr/Const) read literal values -- supplied by the strip, or
  *          falling back to the declared value of an attribute/constant. Call, Lambda and
  *          Raw nodes NEVER execute in the tool: each is a manual true/false stub site, and

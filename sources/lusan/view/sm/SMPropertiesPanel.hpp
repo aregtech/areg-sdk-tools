@@ -88,7 +88,7 @@ public:
 
     /**
      * \brief   Selects the transition and focuses the Conditions tab's guard field
-     *          (edge-label double-click, B13; validation-entry navigation, S15).
+     *          (edge-label double-click; validation-entry navigation).
      **/
     void focusConditions(uint32_t transitionId);
     inline QLineEdit* stateNameEdit() const;

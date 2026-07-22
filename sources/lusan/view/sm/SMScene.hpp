@@ -236,8 +236,8 @@ public:
     void requestEnterSubmachine(uint32_t stateId);
 
     /**
-     * \brief   Requests the guard editor for a transition (double-click on the edge label,
-     *          B13): the owning page selects it and focuses the Conditions tab field.
+     * \brief   Requests the guard editor for a transition (double-click on the edge
+     *          label): the owning page selects it and focuses the Conditions tab field.
      **/
     void requestGuardEdit(uint32_t transitionId);
 

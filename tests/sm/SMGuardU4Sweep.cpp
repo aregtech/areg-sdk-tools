@@ -50,7 +50,7 @@
 
 #include <QApplication>
 #include <QComboBox>
-#include <QToolBox>
+#include "lusan/view/sm/SMAccordion.hpp"
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -231,10 +231,10 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
         popup->hide();
     }
 
-    // S9 (retired grid -> inline accordion Arguments): the Calls outline drives the shared table.
+    // S9 (retired grid -> inline accordion Arguments): the Conditions pickup list + the caret-driven
+    // shared Arguments table (SM-21 bug-fix, 2026-07-21).
     check(bar.accordion()->objectName() == QStringLiteral("smGuardAccordion"), "S9: smGuardAccordion");
-    check(bar.calls()->callRowCount() >= 1, "S9: the Calls outline lists the call(s)");
-    bar.calls()->selectCallPath({ 1, 0 });
+    check(bar.calls()->insertRowCount() >= 1, "S9: the Conditions pickup list offers condition method(s)");
     pump(150);
     check(bar.args() != nullptr, "S9: the shared Arguments table exists");
 
@@ -454,8 +454,14 @@ static void sweepItem20(const QString& docPath, const QString& tmpDir)
     bar.setTransition(transId);
     bar.tryStrip()->setOpen(true);
     pump(300);
+    // The Try-it strip is no longer SURFACED on the Conditions tab (SM-21, 2026-07-21: the what-if
+    // evaluator moves to a dedicated FSM Play page), so its note cannot be visible here -- but the
+    // refusal logic it carries is still built and still refuses, which is what this item checks.
     QLabel* note = bar.findChild<QLabel*>(QStringLiteral("smTryNote"));
-    check((note != nullptr) && note->isVisible(), "the Try-it strip refuses a draft with a note (20)");
+    check(note != nullptr, "the Try-it strip refuses a draft with a note (20)");
+    check((note != nullptr) && note->text().contains(QStringLiteral("draft"))
+         , "the refusal note names the draft as the reason (20)");
+    check(bar.tryStrip()->isVisible() == false, "the Try-it strip is not surfaced on the Conditions tab (20)");
     check(bar.findChild<QLabel*>(QStringLiteral("smTryResult")) == nullptr, "no result line is shown for a draft (20)");
     bar.hide();
 }
@@ -702,12 +708,12 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
 
         // E5: mapping slots after accepting a call completion. The completer is `@`-mention
         // driven (SM-21-03): typing `@HasWait` filters to the HasWaiting condition; Enter accepts
-        // the canonical `@cond:HasWaiting()`. A folded chip means the name lives in the committable
+        // the canonical `#cond:HasWaiting()`. A folded chip means the name lives in the committable
         // text, not the plain text, so assert on committableText().
         setGuard(model, transId, QString());
         pump(300);
         bar.field()->setFocus();
-        for (const QChar c : QStringLiteral("@HasWait"))
+        for (const QChar c : QStringLiteral("#HasWait"))
         {
             QKeyEvent key(QEvent::KeyPress, c.unicode(), Qt::NoModifier, QString(c));
             QApplication::sendEvent(bar.field(), &key);
@@ -811,6 +817,17 @@ static void sweepThemeContrast()
 
     // The editor surface differs per mode (a light stab in a dark IDE was the risk this closes).
     check(lightSurface != darkSurface, "the editor surface differs between light and dark modes");
+
+    // Critique-04 item 4: the glyph channel only disambiguates if no two glyphs are the SAME. Two
+    // look-alike kind badges would quietly break disambiguation for grayscale / color-blind users.
+    for (int i = 0; i < 5; ++i)
+    {
+        for (int j = i + 1; j < 5; ++j)
+        {
+            std::snprintf(label, sizeof(label), "owner glyphs '%s' and '%s' are distinct", ownerName[i], ownerName[j]);
+            check(glyphLight[i] != glyphLight[j], label);
+        }
+    }
 
     // Each token has a distinct light and dark value: the dark variant is a real second palette.
     for (int i = 0; i < 5; ++i)

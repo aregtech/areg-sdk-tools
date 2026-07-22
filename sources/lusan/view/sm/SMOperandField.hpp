@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMOperandField.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard smart operand field (v7 B6): an editable
+ *  \brief       Lusan application, FSM guard smart operand field: an editable
  *               combo over the symbol catalog, ranked by type fit against a target type.
  *
  ************************************************************************/
@@ -32,7 +32,7 @@
 
 /**
  * \class   SMOperandField
- * \brief   The smart operand field of the mapping grid and clause popover (B5/B6 ranking):
+ * \brief   The smart operand field of the mapping grid and clause popover (ranking):
  *          an editable QComboBox listing the in-scope symbols -- exact-type candidates
  *          first, convertible second with a `(!)` cue, everything else after a literal
  *          hint -- while free text (a literal or any expression) stays allowed. Emits

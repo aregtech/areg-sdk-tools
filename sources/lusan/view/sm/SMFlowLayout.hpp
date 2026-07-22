@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMFlowLayout.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM structure lens flow layout (v7 B7): items wrap
+ *  \brief       Lusan application, FSM structure lens flow layout: items wrap
  *               like text, so clause pills flow across lines.
  *
  ************************************************************************/

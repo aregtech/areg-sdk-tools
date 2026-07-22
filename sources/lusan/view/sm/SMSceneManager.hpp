@@ -124,7 +124,7 @@ signals:
 
     /**
      * \brief   Re-emitted from any level's scene: focus a transition's Conditions tab
-     *          field (edge label double-click, B13).
+     *          field (edge label double-click).
      **/
     void signalGuardEditRequested(uint32_t transitionId);
 

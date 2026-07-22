@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMHoverCard.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard hover cards (v7 B10 / S10): symbol and
+ *  \brief       Lusan application, FSM guard hover cards: symbol and
  *               call-pill hovers with live buttons.
  *
  ************************************************************************/
@@ -41,7 +41,7 @@ class StateMachineModel;
 
 /**
  * \class   SMHoverCard
- * \brief   The hover card (S10): a frameless card shown 300 ms after a symbol or call-pill
+ * \brief   The hover card: a frameless card shown 300 ms after a symbol or call-pill
  *          hover (the delay is the caller's), staying alive while the mouse is over it so
  *          its two buttons (`where used` / `map args`) are really clickable. The symbol
  *          face shows owner, signature, declared-where and the generated form; the call

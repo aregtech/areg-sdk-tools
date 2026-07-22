@@ -34,7 +34,7 @@
  * `elementChanged(transitionId, Transition)` notification. Because a guard is a small value,
  * every edit is a whole-guard swap: the command captures the previous guard on first redo and
  * restores it on undo. The subtree factories compute the new tree from the current one and
- * hand it to \ref SMSetGuardCommand, so U2/U3 get one undo step per gesture with no bespoke
+ * hand it to \ref SMSetGuardCommand, so the editor gets one undo step per gesture with no bespoke
  * inverse to maintain.
  **/
 
@@ -92,7 +92,7 @@ namespace SMGuardCommands
 
     /**
      * \brief   Binds the formal parameter \p formalId of the Call node at \p callPath to
-     *          \p newArg (SM-21-02 Option A). The arg is keyed on the formal's id, never its
+     *          \p newArg. The arg is keyed on the formal's id, never its
      *          position: an existing binding for the formal is replaced in place; a new one
      *          is inserted in declared-parameter order so the child list stays render-ordered.
      *          Takes ownership of \p newArg. Returns nullptr (freeing \p newArg) when the
@@ -102,8 +102,8 @@ namespace SMGuardCommands
 
     /**
      * \brief   Unmaps the formal parameter \p formalId of the Call node at \p callPath -- the
-     *          slot falls back to a ghost (spec 4.3). Removing the last mapped formal keeps the
-     *          CALL (decision A1). Returns nullptr (a no-op, so the undo stack never grows) when
+     *          slot falls back to a ghost. Removing the last mapped formal keeps the
+     *          CALL. Returns nullptr (a no-op, so the undo stack never grows) when
      *          nothing is bound to \p formalId.
      **/
     SMSetGuardCommand* clearArgByFormal(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, uint32_t formalId, const QString& text);

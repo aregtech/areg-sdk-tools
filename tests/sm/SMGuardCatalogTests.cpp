@@ -256,7 +256,7 @@ namespace
             delete tree;
         }
 
-        // 2) A condition name typed WITHOUT parens stays raw and still fires (binds as @cond:name()).
+        // 2) A condition name typed WITHOUT parens stays raw and still fires (binds as #cond:name()).
         {
             SMGuardNode* tree = SMGuardNode::makeVerbatim(eKind::Raw, QStringLiteral("HasWaiting"));
             const QList<SMGuardRawCollision> hits = SMGuardCatalog::rawCollisions(data, transId, tree);

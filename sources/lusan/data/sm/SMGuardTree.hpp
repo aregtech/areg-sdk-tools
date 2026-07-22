@@ -31,9 +31,31 @@ class QXmlStreamReader;
 class QXmlStreamWriter;
 
 /**
+ * \namespace   NEGuardText
+ * \brief       The lexical constants of the guard editing surface. The reference sigil is
+ *              declared here -- the single point of change -- because the parser (grammar),
+ *              the renderer (canonical text) and the field/catalog (insertion, completer)
+ *              must all agree on the very same character.
+ **/
+namespace NEGuardText
+{
+    //!< The character that opens a typed reference mention `#kind:name` in the guard text.
+    constexpr QChar     RefSigil    { QLatin1Char('#') };
+
+    //!< The separator between the kind word and the symbol name in `#kind:name`.
+    constexpr QChar     KindSep     { QLatin1Char(':') };
+
+    //!< Builds the canonical `#kind:` prefix of a reference mention.
+    inline QString refPrefix(const QString& kindWord)
+    {
+        return QString(RefSigil) + kindWord + QString(KindSep);
+    }
+}
+
+/**
  * \class   SMGuardNode
  * \brief   One node of a transition guard's resolved expression tree. The tree is the
- *          deterministic storage of the SM-21 redesign: reference nodes carry a symbol's
+ *          deterministic storage: reference nodes carry a symbol's
  *          document ID (never a name -- names live at declarations), verbatim nodes carry
  *          their bytes. A single tagged class (not a hierarchy) so the XML mapping stays
  *          "element name = node kind" and a walker can switch on the kind. Children are
@@ -58,7 +80,7 @@ public:
         , Param     //!< an in-scope stimulus parameter reference (symbol ID).
         , Lit       //!< a verbatim literal token (number / string / bool / enum member).
         , Lambda    //!< a verbatim anonymous-lambda boolean body.
-        , Raw       //!< a verbatim raw-C++ fragment (the explicit escape hatch, D4).
+, Raw       //!< a verbatim raw-C++ fragment (the explicit escape hatch).
     };
 
     /**
@@ -123,9 +145,9 @@ public:
 
     /**
      * \brief   The document id of the FORMAL parameter this node is bound to -- meaningful
-     *          ONLY when the node is a direct argument child of a \ref eKind::Call node
-     *          (SM-21-02, Option A). 0 means "not an argument" or a legacy positional arg
-     *          (no id was stored), which the projection matches back to a formal by position.
+     *          ONLY when the node is a direct argument child of a \ref eKind::Call node.
+     *          0 means "not an argument" or a legacy positional arg (no id was stored),
+     *          which the projection matches back to a formal by position.
      *          Keying an arg on the formal's id (never its position) is what lets a signature
      *          insert/rename never re-bind, and what makes ghost and orphan rows representable.
      **/

@@ -13,7 +13,7 @@
  *  \file        lusan/model/sm/SMGuardValidation.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard document validation (v7 B12 / S15).
+ *  \brief       Lusan application, FSM guard document validation.
  *
  ************************************************************************/
 
@@ -117,7 +117,7 @@ namespace
             if (name.isEmpty())
             {
                 // Stale after a stimulus change: a same-name-same-type parameter of the
-                // new stimulus is the v6-3.3 auto-re-bind case -- info, not an error.
+                // new stimulus is the auto-re-bind case -- info, not an error.
                 const MethodParameter* stale = findParamAnywhere(data, node.getSymbolId());
                 bool rebindable = false;
                 if (stale != nullptr)
@@ -141,7 +141,7 @@ namespace
             }
             else
             {
-                // D3 shadowing, kept quiet: one warning per shadowed name per guard.
+                // Shadowing, kept quiet: one warning per shadowed name per guard.
                 const bool hidesAttr  = (SMGuardSymbols::attributeId(data, name) != 0u);
                 const bool hidesConst = (SMGuardSymbols::constantId(data, name) != 0u);
                 if ((hidesAttr || hidesConst) && (shadowed.contains(name) == false))
@@ -156,7 +156,7 @@ namespace
         }
 
         case eKind::Raw:
-            // The D4 audit: every verbatim fragment is listed -- never silent.
+            // The audit: every verbatim fragment is listed -- never silent.
             findings.append({ eSeverity::Info, eFinding::RawFragment, transitionId, location
                             , QStringLiteral("raw C++ fragment: %1").arg(elide(node.getText())) });
             break;

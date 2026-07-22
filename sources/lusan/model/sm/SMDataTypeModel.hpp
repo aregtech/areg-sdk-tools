@@ -130,7 +130,7 @@ public:
     //!< Sets the field's type by name — the actual persisted state (`Field DataType="..."`).
     //!< Not by DataTypeBase*: ParamType only resolves a pointer on demand and its setType()
     //!< cannot restore an unresolved original name on undo (see fsm-data-pointer-containers /
-    //!< the SM-07 handoff), so the name string is the only value this command may round-trip.
+    //!< that handoff), so the name string is the only value this command may round-trip.
     void setFieldType(DataTypeStructure* dataType, uint32_t fieldId, const QString& typeName);
     void setFieldValue(DataTypeCustom* dataType, uint32_t fieldId, const QString& value);
     void setFieldDescription(DataTypeCustom* dataType, uint32_t fieldId, const QString& text);

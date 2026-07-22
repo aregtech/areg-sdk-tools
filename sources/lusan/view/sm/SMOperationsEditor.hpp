@@ -54,7 +54,7 @@ class QVBoxLayout;
  *          \ref SMArgSinkOperation, so each parameter is one row with a single editable combo:
  *          pick a stimulus parameter or a machine attribute, or type a free value.
  *          Every edit is one undoable command; the stimulus-parameter source is offered only in
- *          a transition scope (spec 6.8). The same widget is hosted in the Properties panel's
+ *          a transition scope. The same widget is hosted in the Properties panel's
  *          Actions tab and in the context-menu dialog.
  **/
 class SMOperationsEditor : public QWidget

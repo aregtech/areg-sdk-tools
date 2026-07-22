@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMGuardStatusLine.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard status line + provenance chips (v7 B1 5-6).
+ *  \brief       Lusan application, FSM guard status line + provenance chips.
  *
  ************************************************************************/
 
@@ -74,18 +74,12 @@ void SMGuardStatusLine::setStatus(  NEGuardStyle::eSeverity severity
     mVerdict  = verdict;
     mPreview  = generatedPreview;
 
-    if (handlerChips.isEmpty())
-    {
-        mChips->hide();
-    }
-    else
-    {
-        const QColor color = NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Handler);
-        mChips->setText(QStringLiteral("<span style='color:%1;'>uses handler:</span> %2")
-                            .arg(color.name(), handlerChips.join(QStringLiteral(", ")).toHtmlEscaped()));
-        mChips->setToolTip(handlerChips.join(QStringLiteral("\n")));
-        mChips->show();
-    }
+    // The generated preview and the `uses handler:` chips are NO LONGER shown here:
+    // they live in the `Generated` accordion section, which the developer opens only
+    // when interested. The status line keeps exactly one job -- the verdict -- while \ref previewText
+    // still reports the byte-exact generator output for the 23c contract.
+    Q_UNUSED(handlerChips);
+    mChips->hide();
 
     updateLabel();
     show();
@@ -102,22 +96,19 @@ void SMGuardStatusLine::clearStatus()
 
 void SMGuardStatusLine::updateLabel()
 {
+    // `ok` alone when the guard is sound; `err: <what is wrong>` / `warn: <what is risky>` when it
+    // is not -- the severity key carries the state and the message carries the detail, nothing else.
     const QColor sevColor = NEGuardStyle::severityColor(mSeverity);
-    QString html = QStringLiteral("<span style='color:%1; font-weight:bold;'>%2</span>&nbsp;&nbsp;%3")
-                       .arg(sevColor.name(), severityWord(mSeverity), mVerdict.toHtmlEscaped());
-
-    if (mPreview.isEmpty() == false)
+    QString html = QStringLiteral("<span style='color:%1; font-weight:bold;'>%2</span>")
+                       .arg(sevColor.name(), severityWord(mSeverity));
+    if (mSeverity == NEGuardStyle::eSeverity::Ok)
     {
-        const QString prefix = QStringLiteral(" -- generated: ");
-        const int reserved = mStatus->fontMetrics().horizontalAdvance(severityWord(mSeverity) + QStringLiteral("  ") + mVerdict + prefix);
-        const int avail = qMax(60, mStatus->width() - reserved - 8);
-        const QString elided = mStatus->fontMetrics().elidedText(mPreview, Qt::ElideMiddle, avail);
-        html += (prefix + QStringLiteral("<span style='font-family:monospace;'>%1</span>").arg(elided.toHtmlEscaped()));
-        mStatus->setToolTip(mPreview);
+        mStatus->setToolTip(QString());
     }
     else
     {
-        mStatus->setToolTip(QString());
+        html += QStringLiteral(": %1").arg(mVerdict.toHtmlEscaped());
+        mStatus->setToolTip(mVerdict);
     }
 
     mStatus->setText(html);

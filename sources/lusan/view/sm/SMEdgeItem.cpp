@@ -217,7 +217,7 @@ void SMEdgeItem::updateFromModel()
 
     // Show the guard next to the stimulus (`stimulus[summary]`); the full guard is the tooltip.
     // No guard -> the stimulus alone (no empty brackets). Summary only, never rotated.
-    // B13: the label carries the guard's severity color + glyph when the guard is not ok.
+    // The label carries the guard's severity color + glyph when the guard is not ok.
     const QString summary = SMGuardRender::guardText(data, getElementId(), transition->getGuard()).simplified();
     mGuardSeverity = -1;
     SMGuardValidation::eSeverity worst = SMGuardValidation::eSeverity::Info;
@@ -242,9 +242,19 @@ void SMEdgeItem::updateFromModel()
     {
         constexpr int MAX_SUMMARY = 40;
         const QString glyph = (mGuardSeverity >= 0) ? QStringLiteral("(!) ") : QString();
-        const QString shortSummary = (summary.length() > MAX_SUMMARY)
-                ? (summary.left(MAX_SUMMARY - 3) + QStringLiteral("..."))
-                : summary;
+
+        // A short, plain guard reads best in full. A long one, or one carrying an inline C++ block,
+        // is cut down STRUCTURALLY rather than chopped mid-token: the condition names survive and
+        // the bulk collapses. The tooltip always carries the whole text.
+        QString label = summary;
+        if ((summary.length() > MAX_SUMMARY) || summary.contains(QLatin1Char('{')))
+        {
+            label = SMGuardRender::canvasSummary(data, getElementId(), transition->getGuard()).simplified();
+        }
+
+        const QString shortSummary = (label.length() > MAX_SUMMARY)
+                ? (label.left(MAX_SUMMARY - 3) + QStringLiteral("..."))
+                : label;
         mGuardText = QChar('[') + glyph + shortSummary + QChar(']');
         setToolTip(signature + QChar('[') + summary + QChar(']'));
     }
@@ -1141,7 +1151,7 @@ void SMEdgeItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
     {
         const QPointF p = event->pos();
 
-        // Double-click on the label focuses the Conditions tab field (B13).
+        // Double-click on the label focuses the Conditions tab field.
         if (labelRect().contains(p))
         {
             SMScene* canvas = getCanvas();

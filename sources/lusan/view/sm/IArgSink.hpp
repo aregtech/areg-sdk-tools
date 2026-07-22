@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/IArgSink.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM argument-mapping commit target (spec 6).
+ *  \brief       Lusan application, FSM argument-mapping commit target.
  *
  ************************************************************************/
 

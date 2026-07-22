@@ -306,7 +306,7 @@ SMSetGuardCommand* SMGuardCommands::clearArgByFormal(StateMachineData& data, Doc
         const int existing = indexOfFormal(call, formalId);
         if (existing >= 0)
         {
-            // A1: removing the last mapped formal keeps the CALL; only the child vanishes.
+            // Removing the last mapped formal keeps the CALL; only the child vanishes.
             delete call->getChildren().at(existing);
             call->getChildren().removeAt(existing);
             ok = true;

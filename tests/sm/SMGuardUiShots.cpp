@@ -34,6 +34,7 @@
 #include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardCallsOutline.hpp"
+#include "lusan/view/sm/SMGuardDataPanel.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMGuardPopout.hpp"
 #include "lusan/view/sm/SMInlineToken.hpp"
@@ -44,7 +45,7 @@
 #include "lusan/view/sm/SMSignatureCard.hpp"
 
 #include <QApplication>
-#include <QToolBox>
+#include "lusan/view/sm/SMAccordion.hpp"
 #include <QClipboard>
 #include <QTextDocument>
 #include <QDir>
@@ -296,13 +297,91 @@ int main(int argc, char** argv)
     setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
     pump(300);
 
-    bar.accordion()->setCurrentIndex(0);        // the Calls section.
+    // Section order is Generated (0), Conditions (1), Arguments (2) -- Generated sits directly
+    // under the editor since SM-21, 2026-07-22.
+    bar.accordion()->setCurrentIndex(1);        // the Conditions pickup section.
     pump(50);
-    check(bar.calls()->callRowCount() >= 1, "the Calls outline lists the call");
-    bar.calls()->selectCallPath({});            // the guard's root call (HasWaiting).
+    check(bar.accordion()->isSectionOpen(1), "the Conditions section opens from the accordion");
+    check(bar.calls()->insertRowCount() >= 1, "the Conditions pickup list offers the condition method");
     pump(150);
-    check((bar.args() != nullptr) && (bar.args()->rowCount() >= 1), "selecting the call binds the Arguments table");
+    // The Arguments table follows the single call in the guard (caret-driven binding).
+    check((bar.args() != nullptr) && (bar.args()->rowCount() >= 1), "the Arguments table binds to the guard's call");
+    bar.accordion()->setCurrentIndex(2);        // the Arguments section, for the shot.
+    pump(50);
+    check(bar.accordion()->isSectionOpen(2), "opening Arguments closed Conditions (compact mode)");
+    check(bar.accordion()->isSectionOpen(1) == false, "compact mode keeps exactly one section open");
     grab(&bar, grabDir, "u3-accordion-arguments.png");
+
+    // ---- the Data catalog: the whole insertable universe, browsable ------------------
+    // Spec 8 / SM-21-04: the completer answers "what fits here" only after you type `#`. The Data
+    // section answers "what may I even use?" without typing anything -- restored 2026-07-22.
+    std::printf("[ RUN  ] dataCatalog\n");
+    {
+        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+        pump(300);
+        bar.accordion()->setCurrentIndex(3);        // the Data section
+        pump(100);
+
+        SMGuardDataPanel* data = bar.dataPanel();
+        check(data != nullptr, "the bar owns a Data catalog panel");
+        const int all = (data != nullptr) ? data->symbolRowCount() : 0;
+        check(all >= 4, "the catalog lists parameters, attributes, constants and conditions");
+
+        data->setFilter(QStringLiteral("HasWaiting"));
+        pump(50);
+        check(data->symbolRowCount() < all, "the search box narrows the catalog");
+        check(data->symbolRowCount() >= 1, "the searched symbol is still listed");
+
+        data->setFilter(QString());
+        pump(50);
+        check(data->symbolRowCount() == all, "clearing the search restores the whole universe");
+        grab(&bar, grabDir, "sm2104-data-catalog.png");
+    }
+
+    // ---- inserting a condition lands the caret ON its first unmapped formal ----------
+    // A freshly inserted call has every formal unmapped; leaving the caret after the whole call
+    // makes the developer hunt for the first slot (SM-21 bug-fix, 2026-07-22).
+    std::printf("[ RUN  ] firstGhostSelected\n");
+    {
+        setGuard(model, transId, QStringLiteral("HasWaiting()"));
+        pump(300);
+        check(field->selectFirstGhost(), "an unmapped formal is found and selected");
+        checkEq(field->textCursor().selectedText(), QStringLiteral("<count>")
+              , "the selection IS the first unmapped formal's ghost, ready to be typed over");
+
+        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+        pump(300);
+        check(field->selectFirstGhost() == false, "a fully mapped call leaves the caret alone");
+    }
+
+    // ---- canvas label: a long or block-carrying guard collapses STRUCTURALLY ----------
+    // The transition label on the design canvas has room for a few words. A short plain guard is
+    // shown whole; a long one keeps its condition names and drops the bulk; an inline C++ block
+    // says what it IS, not what it contains (SM-21 bug-fix, 2026-07-22).
+    std::printf("[ RUN  ] canvasSummary\n");
+    {
+        const StateMachineData& data = model.getData();
+
+        setGuard(model, transId, QStringLiteral("count > 3"));
+        const SMTransitionEntry* t1 = data.findTransitionById(transId);
+        checkEq(SMGuardRender::canvasSummary(data, transId, t1->getGuard()), QStringLiteral("count > 3")
+              , "a short plain guard summarises to itself");
+
+        setGuard(model, transId, QStringLiteral("HasWaiting(count) && WalkRequested"));
+        const SMTransitionEntry* t2 = data.findTransitionById(transId);
+        checkEq(SMGuardRender::canvasSummary(data, transId, t2->getGuard())
+              , QStringLiteral("HasWaiting(...) && WalkRequested")
+              , "a condition call keeps its name and collapses its arguments");
+
+        setGuard(model, transId, QStringLiteral("{ return count > 3; } && WalkRequested"));
+        const SMTransitionEntry* t3 = data.findTransitionById(transId);
+        checkEq(SMGuardRender::canvasSummary(data, transId, t3->getGuard())
+              , QStringLiteral("this -> bool && WalkRequested")
+              , "an inline block reads as the anonymous lambda it is");
+    }
+
+    setGuard(model, transId, QString());
+    pump(150);
 
     // ---- SM-21-04: catalog / Insert produces the same id-bound tree as typing --------
     std::printf("[ RUN  ] catalogInsert\n");
@@ -337,116 +416,17 @@ int main(int argc, char** argv)
             setGuard(model, transId, QString());
             pump(200);
             field->setFocus();
-            field->insertReference(*call);          // inserts `@cond:name()`, caret in the parens.
+            field->insertReference(*call);          // inserts `#cond:name()`, caret in the parens.
             pump(150);
             check(field->committableText().contains(call->name + QLatin1Char('(')), "inserting a call inserts name( with the caret in the parens");
         }
     }
 
-    // ---- SM-21-04: the one warning channel raises for an unmapped argument -----------
-    std::printf("[ RUN  ] warningChannel\n");
-    {
-        SMFixBar* warn = bar.findChild<SMFixBar*>(QStringLiteral("smGuardWarnBar"));
-        check(warn != nullptr, "the warning channel widget exists");
-
-        setGuard(model, transId, QStringLiteral("HasWaiting()"));    // a call with an unmapped formal.
-        pump(400);
-        check((warn != nullptr) && warn->isVisible(), "an unmapped argument raises the warning channel");
-
-        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));   // now fully mapped.
-        pump(400);
-        check((warn != nullptr) && (warn->isVisible() == false), "mapping the argument clears the warning channel");
-    }
-
-    // ---- SM-21-08 (W1): the raw-collision bind suggestion (advisory, non-nagging) -----
-    std::printf("[ RUN  ] w1RawCollision\n");
-    {
-        SMFixBar* warn = bar.findChild<SMFixBar*>(QStringLiteral("smGuardWarnBar"));
-
-        // A condition name typed WITHOUT parens stays raw (D-RAW) and collides with the cond symbol.
-        setGuard(model, transId, QStringLiteral("HasWaiting"));
-        pump(400);
-        check((warn != nullptr) && warn->isVisible(), "W1: a raw name colliding with a symbol raises the advisory");
-
-        QToolButton* bindBtn = nullptr;
-        QToolButton* keepBtn = nullptr;
-        if (warn != nullptr)
-        {
-            for (QToolButton* button : warn->findChildren<QToolButton*>())
-            {
-                if (button->text().startsWith(QStringLiteral("bind '"))) { bindBtn = button; }
-                else if (button->text().startsWith(QStringLiteral("keep '"))) { keepBtn = button; }
-            }
-        }
-
-        check(bindBtn != nullptr, "W1: the advisory offers a [bind] quick-fix");
-        check(keepBtn != nullptr, "W1: the advisory offers a [keep raw] quick-fix");
-
-        // [bind] a single-kind collision binds the raw token to the symbol (a @cond:name() call).
-        if (bindBtn != nullptr)
-        {
-            bindBtn->click();
-            pump(400);
-            check(guardText(model, transId).contains(QStringLiteral("HasWaiting(")), "W1: [bind] binds the raw name to the condition call");
-        }
-
-        // [keep raw] silences the token for the rest of the guard; retyping it does NOT re-fire.
-        setGuard(model, transId, QStringLiteral("HasWaiting"));      // raw again -> the advisory returns
-        pump(400);
-        keepBtn = nullptr;
-        if (warn != nullptr)
-        {
-            for (QToolButton* button : warn->findChildren<QToolButton*>())
-            {
-                if (button->text().startsWith(QStringLiteral("keep '"))) { keepBtn = button; }
-            }
-        }
-
-        check(keepBtn != nullptr, "W1: the advisory re-appears for a fresh raw collision");
-        if (keepBtn != nullptr)
-        {
-            keepBtn->click();
-            pump(200);
-            check((warn != nullptr) && (warn->isVisible() == false), "W1: [keep raw] dismisses the advisory");
-
-            setGuard(model, transId, QStringLiteral("HasWaiting"));  // retype the SAME token
-            pump(400);
-            check((warn != nullptr) && (warn->isVisible() == false), "W1: [keep raw] stays silent on re-typing the same token");
-        }
-
-        // Multi-kind: a raw name matching several kinds opens the SAME completer picker used for typing.
-        model.getData().getAttributes().createAttribute(QStringLiteral("W1Dup"));
-        model.getData().getConstants().createConstant(QStringLiteral("W1Dup"));
-        bar.setTransition(transId);     // rebuild the in-scope catalog so W1Dup resolves (clears the keep-raw slate)
-
-        // The name now resolves, so it cannot be TYPED raw; install a raw node directly to model the
-        // collision that arises when a symbol is added after the raw text was committed (D-SYNC).
-        SMGuardNode* rawDup = SMGuardNode::makeVerbatim(SMGuardNode::eKind::Raw, QStringLiteral("W1Dup"));
-        model.getUndoStack().push(SMGuardCommands::setTree(model.getData(), model.getNotifier(), transId, rawDup, QStringLiteral("raw dup")));
-        pump(400);
-
-        QToolButton* bindDup = nullptr;
-        if (warn != nullptr)
-        {
-            for (QToolButton* button : warn->findChildren<QToolButton*>())
-            {
-                if (button->text().startsWith(QStringLiteral("bind '"))) { bindDup = button; }
-            }
-        }
-
-        check(bindDup != nullptr, "W1: the multi-kind collision offers a [bind] quick-fix");
-
-        // A multi-kind [bind] opens the SAME completer picker used for bare typing. The warn-bar
-        // button routes straight to field->bindRaw; drive it directly so the synthetic button click
-        // cannot steal the field's keyboard focus. Assert visibility immediately -- this offscreen
-        // harness has no real active window, so a later event pump delivers a spontaneous focus-out
-        // that dismisses the non-activating popup (a harness artifact, not the product behavior).
-        field->setFocus();
-        field->bindRaw(QList<int>(), QStringLiteral("W1Dup"));
-        SMRefCompleter* picker = field->findChild<SMRefCompleter*>(QStringLiteral("smRefCompleter"));
-        check((picker != nullptr) && picker->isVisible(), "W1: a multi-kind [bind] opens the disambiguation picker");
-        if (picker != nullptr) { picker->hide(); }
-    }
+    // The unmapped-argument warning list and the raw-collision quick-fix bar were REMOVED from the
+    // Conditions tab (SM-21 bug-fix, 2026-07-21): the Arguments section already shows which formals
+    // are unmapped and the status line already states any error, so both advisory strips were
+    // duplicative clutter. The multi-kind bindRaw disambiguation picker itself still exists on the
+    // field and is covered by the completer checks above.
 
     // ---- form-first parity: the clause popover path equals the typed path -----
     std::printf("[ RUN  ] formFirstParity\n");
@@ -501,7 +481,7 @@ int main(int argc, char** argv)
     check(comp != nullptr, "the field owns a reference completer");
     if (comp != nullptr)
     {
-        typeChar(field, Qt::Key_At, QStringLiteral("@"));
+        typeChar(field, Qt::Key_NumberSign, QStringLiteral("#"));
         pump(120);
         check(comp->isVisible(), "typing @ opens the completer");
 
@@ -509,14 +489,14 @@ int main(int argc, char** argv)
         typeChar(field, Qt::Key_W, QStringLiteral("W"));
         typeChar(field, Qt::Key_A, QStringLiteral("a"));
         pump(120);
-        check(field->committableText().contains(QStringLiteral("@Wa")), "typed characters pass through to the document (no swallow, 12.6)");
+        check(field->committableText().contains(QStringLiteral("#Wa")), "typed characters pass through to the document (no swallow, 12.6)");
         check(comp->isVisible(), "the completer stays open while typing");
 
         // D-ESC: Esc closes but keeps the text; it does not reopen for the same token.
         typeChar(field, Qt::Key_Escape, QString());
         pump(80);
         check(comp->isVisible() == false, "Esc closes the completer");
-        check(field->committableText().contains(QStringLiteral("@Wa")), "Esc keeps the typed characters (D-ESC)");
+        check(field->committableText().contains(QStringLiteral("#Wa")), "Esc keeps the typed characters (D-ESC)");
         typeChar(field, Qt::Key_L, QStringLiteral("l"));
         pump(80);
         check(comp->isVisible() == false, "the completer does not reopen for the same token after Esc (D-ESC)");
@@ -529,10 +509,10 @@ int main(int argc, char** argv)
         probe.setSymbols(SMGuardCatalog::build(model.getData(), transId));
         probe.showFor({ SMGuardSymbol::eRefKind::Attr }, QString(), QRect(QPoint(120, 120), QSize(2, 16)));
         const SMGuardSymbol* cur = probe.currentSymbol();
-        check((cur != nullptr) && (cur->refkind == SMGuardSymbol::eRefKind::Attr), "a @attr: filter shows only attributes");
+        check((cur != nullptr) && (cur->refkind == SMGuardSymbol::eRefKind::Attr), "a #attr: filter shows only attributes");
         if (cur != nullptr)
         {
-            check(cur->mention().startsWith(QStringLiteral("@attr:")), "an attribute inserts as @attr:name");
+            check(cur->mention().startsWith(QStringLiteral("#attr:")), "an attribute inserts as #attr:name");
         }
 
         const QRect avail = QGuiApplication::primaryScreen()->availableGeometry();
@@ -564,8 +544,8 @@ int main(int argc, char** argv)
         pump(150);
         check(sig->isVisible(), "signature help shows while the caret is inside a call's parentheses");
 
-        // D-PRECEDENCE: typing '@' opens the completer OVER the tooltip and hides it.
-        typeChar(field, Qt::Key_At, QStringLiteral("@"));
+        // D-PRECEDENCE: typing '#' opens the completer OVER the tooltip and hides it.
+        typeChar(field, Qt::Key_NumberSign, QStringLiteral("#"));
         pump(150);
         check(comp2->isVisible(), "typing @ inside the call opens the completer");
         check(sig->isVisible() == false, "D-PRECEDENCE: the completer hides the signature card");

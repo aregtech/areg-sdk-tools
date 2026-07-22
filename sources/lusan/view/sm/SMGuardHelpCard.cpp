@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMGuardHelpCard.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard help card (v7 B11 / S11).
+ *  \brief       Lusan application, FSM guard help card.
  *
  ************************************************************************/
 

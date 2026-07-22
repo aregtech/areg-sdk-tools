@@ -106,7 +106,7 @@ public:
     inline SMConditionList& getConditions();
 
     /**
-     * \brief   The transition's guard (SM-21 redesign): the ID-bound resolved expression
+     * \brief   The transition's guard: the ID-bound resolved expression
      *          tree, a draft, or empty. This is the canonical guard storage; the legacy
      *          `getConditions()` tree is a read-shim only (see SMGuardParser::fromLegacy).
      **/

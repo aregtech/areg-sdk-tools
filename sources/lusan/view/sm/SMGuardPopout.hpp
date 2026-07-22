@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMGuardPopout.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard pop-out: a bigger multiline guard editor (SM-21-05).
+ *  \brief       Lusan application, FSM guard pop-out: a bigger multiline guard editor.
  *
  ************************************************************************/
 
@@ -38,7 +38,7 @@ class SMIslandEditor;
 
 /**
  * \class   SMGuardPopout
- * \brief   The "work in a bigger editor" pop-out (design 7, spec 10): a non-modal,
+ * \brief   The "work in a bigger editor" pop-out (design 7): a non-modal,
  *          always-on-top (`Qt::Tool | Qt::WindowStaysOnTopHint`) window whose body is its OWN
  *          \ref SMGuardField bound to the SAME transition as the base bar. It shares the model,
  *          parser, commands, catalog and style -- but NOT a QTextDocument (each field owns its
@@ -100,7 +100,7 @@ private:
     uint32_t            mTransId;   //!< The edited transition (shared with the base bar).
     SMGuardField*       mField;     //!< The pop-out's own guard surface (its own document).
     SMGuardStatusLine*  mStatus;    //!< The one-line status / generated preview under the field.
-    SMIslandEditor*     mIsland;    //!< The island editor (S4), hidden until an island opens.
+    SMIslandEditor*     mIsland;    //!< The island editor, hidden until an island opens.
 };
 
 //////////////////////////////////////////////////////////////////////////

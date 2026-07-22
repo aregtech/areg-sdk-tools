@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMArgMapTable.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM shared argument-mapping table (spec 6).
+ *  \brief       Lusan application, FSM shared argument-mapping table.
  *
  ************************************************************************/
 
@@ -44,7 +44,7 @@ class QStackedWidget;
 
 /**
  * \class   SMArgMapTable
- * \brief   The ONE argument-mapping widget of spec 6: one row per declared formal parameter
+ * \brief   The ONE argument-mapping widget: one row per declared formal parameter
  *          of a call, shown in signature order. It PROJECTS its rows from whatever an
  *          \ref IArgSink reports and commits every edit back through that sink, so it owns
  *          no argument state and knows nothing about the backing store -- the Actions tab
@@ -52,7 +52,7 @@ class QStackedWidget;
  *          phase) into the guard AST, through the same rows.
  *
  *          Two row shapes are offered, so one widget can serve both hosts while the two
- *          tabs converge (design D-PARITY):
+ *          tabs converge:
  *          - \c Compact  -- one editable combo per parameter: pick a stimulus parameter or
  *            an attribute, or type a free literal. This is the Actions tab's established
  *            shape and is what it renders today.
@@ -66,14 +66,14 @@ class QStackedWidget;
  *          `SMTypeCompat` helpers and colors from `NEGuardStyle`, so this widget carries no
  *          business logic and no literal colors.
  *
- *          Width (hazard 12.4): \ref minimumSizeHint is width 0 and every cell is
+ *          Width: \ref minimumSizeHint is width 0 and every cell is
  *          shrinkable, so however long a signature or a constant name gets, the table can
  *          never widen the dock that hosts it; \c Detailed additionally scrolls
  *          horizontally inside itself. \c Compact deliberately adds no inner scroll area --
  *          its two shrinkable cells have nothing to scroll, and its host already provides
  *          one.
  *
- *          Reentrancy (hazard 12.2): a row edit rewrites the model, which re-projects the
+ *          Reentrancy: a row edit rewrites the model, which re-projects the
  *          table. Every rebuild that a child's own signal could reach is deferred through
  *          \ref scheduleRebuild, so a row is never destroyed while its signal is unwinding.
  **/
@@ -142,7 +142,7 @@ public:
      * \brief   Binds the table to \p sink and shows one row per \p params, in signature
      *          order. \p transitionId is the stimulus scope (0 for an entry/exit operation);
      *          \p allowParam gates the stimulus-parameter source to a transition scope
-     *          (spec 6.8). Passing a null \p sink or an empty \p params clears the table.
+     *          . Passing a null \p sink or an empty \p params clears the table.
      **/
     void bind(uint32_t transitionId, bool allowParam, IArgSink* sink, const QList<Param>& params);
 
@@ -165,12 +165,12 @@ public:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< Width 0, so no signature length can ever widen the hosting dock (hazard 12.4).
+    //!< Width 0, so no signature length can ever widen the hosting dock.
     virtual QSize minimumSizeHint(void) const override;
 
 protected:
     /**
-     * \brief   Gives a value editor the two gestures of spec 6: a click in the field opens
+     * \brief   Gives a value editor the two gestures: a click in the field opens
      *          its source list (rather than only the tiny drop arrow), and Esc reverts the
      *          field to the value it held when editing began WITHOUT committing.
      **/
@@ -196,6 +196,7 @@ private:
         QComboBox*      ref;        //!< Detailed only.
         QLineEdit*      expr;       //!< Detailed only.
         QComboBox*      compact;    //!< Compact only -- the single editable value combo.
+        QString         committed;  //!< Compact only -- the text last pushed to the sink.
         QLabel*         status;     //!< Detailed only.
     };
 
@@ -238,8 +239,16 @@ private:
      **/
     SMArgumentEntry::eValueSource resolveCompactSource(const QString& text) const;
 
-    //!< Defers a rebuild to the next event-loop turn (hazard 12.2); never rebuilds inline.
+    //!< Defers a rebuild to the next event-loop turn; never rebuilds inline.
     void scheduleRebuild(void);
+
+    //!< The Compact combo whose drop-down container is \p container, or nullptr. A popup holds the
+    //!< mouse grab, so clicks meant for its combo arrive at the container and are routed back here.
+    QComboBox* comboOfPopup(QObject* container) const;
+
+    //!< True while any Compact cell has its drop-down open or holds the caret: a re-projection
+    //!< then would delete the widget the developer is using.
+    bool isEditing(void) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

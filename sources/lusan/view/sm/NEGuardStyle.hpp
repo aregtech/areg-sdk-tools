@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/NEGuardStyle.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard editor visual tokens (v7 B15, one place).
+ *  \brief       Lusan application, FSM guard editor visual tokens.
  *
  ************************************************************************/
 
@@ -27,9 +27,9 @@
 
 /**
  * \namespace   NEGuardStyle
- * \brief   The single place the guard editor's B15 visual tokens live: owner colors,
+ * \brief   The single place the guard editor's visual tokens live: owner colors,
  *          severity colors, the auto-map tint, and the ASCII owner glyphs. Everything that
- *          needs a color asks here (never a literal at the call site), so U4's dark-theme
+ *          needs a color asks here (never a literal at the call site), so the dark-theme
  *          pass is a change to this one file. Light and dark values are both defined and
  *          picked by the active palette (the theme sets a dark palette; system default is
  *          judged by window lightness).
@@ -38,7 +38,7 @@ namespace NEGuardStyle
 {
     /**
      * \enum    eOwner
-     * \brief   The owner hue of a rendered span / catalog entry (B15 owner tokens).
+     * \brief   The owner hue of a rendered span / catalog entry (owner tokens).
      **/
     enum class eOwner
     {
@@ -52,7 +52,7 @@ namespace NEGuardStyle
 
     /**
      * \enum    eSeverity
-     * \brief   The status severity (B15 guard.ok / warn / err).
+     * \brief   The status severity (guard.ok / warn / err).
      **/
     enum class eSeverity
     {

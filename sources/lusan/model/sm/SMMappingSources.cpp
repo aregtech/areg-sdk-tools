@@ -74,7 +74,7 @@ QList<SMSourceEntry> SMMappingSources::candidates( const StateMachineData& data
         break;
 
     case SMArgumentEntry::eValueSource::Condition:
-        // A Condition source is a parameterless condition-method call (spec 6.9).
+        // A Condition source is a parameterless condition-method call.
         for (const SMMethodEntry* method : data.getMethods().getElements())
         {
             if ((method != nullptr) && method->isCondition() && method->getElements().isEmpty())

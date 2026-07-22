@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMArgMapTable.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM shared argument-mapping table (spec 6).
+ *  \brief       Lusan application, FSM shared argument-mapping table.
  *
  ************************************************************************/
 
@@ -27,6 +27,7 @@
 #include "lusan/view/sm/IArgSink.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
 
+#include <QAbstractItemView>
 #include <QComboBox>
 #include <QCompleter>
 #include <QEvent>
@@ -36,6 +37,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMouseEvent>
 #include <QPalette>
 #include <QScrollArea>
 #include <QSignalBlocker>
@@ -94,7 +96,7 @@ namespace
 
     /**
      * \brief   Makes \p combo shrinkable, so however long its entries are it can never push
-     *          the hosting dock wider (hazard 12.4). It still expands to fill the space the
+     *          the hosting dock wider. It still expands to fill the space the
      *          layout offers -- only its minimum is pinned low.
      **/
     void makeShrinkable(QComboBox* combo)
@@ -206,7 +208,7 @@ void SMArgMapTable::buildHost(void)
         mGrid->setColumnStretch(3, 1);
 
         // The rich grid cannot shrink past its labels, so it scrolls inside itself rather
-        // than widening the dock (hazard 12.4).
+        // than widening the dock.
         QScrollArea* scroll = new QScrollArea(this);
         scroll->setFrameShape(QFrame::NoFrame);
         scroll->setWidgetResizable(true);
@@ -223,7 +225,7 @@ void SMArgMapTable::clearRows(void)
 
     // The host is only ever torn down from bind() (driven by the host widget, never by one
     // of these rows' own signals) or from the deferred scheduleRebuild -- so no row is
-    // destroyed while its signal is still unwinding (hazard 12.2).
+    // destroyed while its signal is still unwinding.
     QLayoutItem* item = nullptr;
     while ((item = layout()->takeAt(0)) != nullptr)
     {
@@ -300,8 +302,14 @@ void SMArgMapTable::buildCompactRow(int index)
     row.compact->setInsertPolicy(QComboBox::NoInsert);
     makeShrinkable(row.compact);
 
+    // The first entry is ALWAYS empty: picking it is how the developer un-maps a formal without
+    // having to select-all-and-delete the text.
+    row.compact->addItem(QString());
+
     // The offered entries, in resolution order: stimulus parameters first (transition scope
-    // only), then attributes. Anything typed that matches neither stays a free literal.
+    // only), then attributes. Constants are deliberately NOT listed -- the Actions tab has never
+    // offered them in a Compact row and the two tabs must stay in parity (SMArgMapTableTests).
+    // Anything typed that matches neither stays a free literal -- the one "user value".
     const eSource offered[] = { eSource::Param, eSource::Attribute };
     for (eSource kind : offered)
     {
@@ -319,6 +327,13 @@ void SMArgMapTable::buildCompactRow(int index)
         }
     }
 
+    // Watch the drop-down container too: it grabs the mouse while open, so a click aimed back at
+    // the combo (the second half of a double click) is only visible from there.
+    if (row.compact->view() != nullptr)
+    {
+        row.compact->view()->window()->installEventFilter(this);
+    }
+
     if (row.compact->completer() != nullptr)
     {
         row.compact->completer()->setCompletionMode(QCompleter::PopupCompletion);
@@ -328,7 +343,13 @@ void SMArgMapTable::buildCompactRow(int index)
     {
         const QSignalBlocker block(row.compact);
         const SMArgumentEntry* cur = (mSink != nullptr) ? mSink->argFor(param.name) : nullptr;
-        row.compact->setEditText((cur != nullptr) ? cur->getValue() : QString());
+        const QString value = (cur != nullptr) ? cur->getValue() : QString();
+        // Select the mapped entry when it IS one of the offered sources, so re-opening the popup
+        // lands on -- and highlights -- what is currently mapped instead of the first row.
+        const int found = value.isEmpty() ? 0 : row.compact->findText(value);
+        row.compact->setCurrentIndex((found >= 0) ? found : 0);
+        row.compact->setEditText(value);
+        row.committed = value;
     }
 
     row.compact->lineEdit()->setPlaceholderText(param.hasDefault
@@ -338,6 +359,10 @@ void SMArgMapTable::buildCompactRow(int index)
     static_cast<QFormLayout*>(mHost->layout())->addRow(row.name, row.compact);
     mRows.append(row);
 
+    // `activated` is a real user pick. `editingFinished`, however, ALSO fires when the popup takes
+    // focus away from the line edit -- committing there re-projected the table and destroyed the
+    // combo mid-gesture, so the list appeared to open and snap shut and the caret was lost
+    // . onCompactCommitted now ignores a no-op edit.
     connect(row.compact, QOverload<int>::of(&QComboBox::activated), this, [this, index](int) { onCompactCommitted(index); });
     connect(row.compact->lineEdit(), &QLineEdit::editingFinished, this, [this, index]() { onCompactCommitted(index); });
     watchEditor(row.compact->lineEdit());
@@ -464,9 +489,9 @@ void SMArgMapTable::buildDetailedRow(int index)
 
 void SMArgMapTable::buildOrphanRow(int index)
 {
-    // D-ORPHAN (case b): the callee still exists but this parameter was removed on the Methods
+    // Orphan case (b): the callee still exists but this parameter was removed on the Methods
     // page, so its stored value can no longer be re-typed as a live formal. The mapping is never
-    // silently discarded (hazard 12.9): the value is shown in a red row that keeps it until the
+    // silently discarded: the value is shown in a red row that keeps it until the
     // developer removes it through the quick-fix. The same red row appears in both tabs.
     const Param& param = mParams.at(index);
     const int gridRow = index + 1;
@@ -698,6 +723,12 @@ void SMArgMapTable::onCompactCommitted(int row)
     }
 
     const QString text = mRows.at(row).compact->currentText().trimmed();
+    if (text == mRows.at(row).committed)
+    {
+        return;     // nothing changed (a popup open/close, or a focus hop): never re-project
+    }
+
+    mRows[row].committed = text;
     if (text.isEmpty())
     {
         commit(row, false, eSource::Value, QString(), QString());
@@ -778,6 +809,29 @@ void SMArgMapTable::watchEditor(QLineEdit* edit)
 
 bool SMArgMapTable::eventFilter(QObject* watched, QEvent* event)
 {
+    // While a drop-down is up it holds the mouse grab, so the SECOND click of a double click never
+    // reaches the line edit -- it lands on the popup container instead. Catching it here is what
+    // makes the "open, close, select the text" fallback work.
+    if (event->type() == QEvent::MouseButtonPress)
+    {
+        QComboBox* owner = comboOfPopup(watched);
+        if (owner != nullptr)
+        {
+            const QPoint local = owner->mapFromGlobal(static_cast<QMouseEvent*>(event)->globalPosition().toPoint());
+            if (owner->rect().contains(local))
+            {
+                owner->hidePopup();
+                if (owner->lineEdit() != nullptr)
+                {
+                    owner->lineEdit()->setFocus();
+                    owner->lineEdit()->selectAll();
+                }
+
+                return true;
+            }
+        }
+    }
+
     QLineEdit* edit = qobject_cast<QLineEdit*>(watched);
     if (edit != nullptr)
     {
@@ -800,17 +854,30 @@ bool SMArgMapTable::eventFilter(QObject* watched, QEvent* event)
             break;
 
         case QEvent::MouseButtonPress:
+            // NOT swallowed: the press must reach QLineEdit so the
+            // caret lands exactly where the developer clicked. Opening the popup from the press
+            // was also what made the list flash open and shut -- the matching release landed on
+            // the freshly grabbed popup and dismissed it at once.
+            break;
+
+        case QEvent::MouseButtonRelease:
         {
-            // A click in the field opens the value list, rather than leaving it reachable
-            // only through the tiny drop arrow.
+            // A click in the field opens the value list, rather than leaving it reachable only
+            // through the tiny drop arrow. Opening on the RELEASE keeps the list up: by then the
+            // press has already positioned the caret and no stray release remains to dismiss it.
             QComboBox* combo = qobject_cast<QComboBox*>(edit->parentWidget());
-            if ((combo != nullptr) && (combo->count() > 0))
+            if ((combo != nullptr) && (combo->count() > 0) && (combo->view() != nullptr)
+                && (combo->view()->isVisible() == false))
             {
                 combo->showPopup();
-                return true;
             }
             break;
         }
+
+        case QEvent::MouseButtonDblClick:
+            // Double click selects the whole value, ready to be typed over.
+            edit->selectAll();
+            return true;
 
         default:
             break;
@@ -827,7 +894,7 @@ bool SMArgMapTable::eventFilter(QObject* watched, QEvent* event)
 void SMArgMapTable::scheduleRebuild(void)
 {
     // Deferred: rebuilding now would delete the editor widget still emitting the signal this
-    // call runs in (use-after-free on unwind) -- hazard 12.2.
+    // call runs in (use-after-free on unwind)
     if (mRebuildQueued)
     {
         return;
@@ -837,8 +904,53 @@ void SMArgMapTable::scheduleRebuild(void)
     QTimer::singleShot(0, this, [this]()
     {
         mRebuildQueued = false;
+        if (isEditing())
+        {
+            // The developer has a popup open or a caret in a cell: rebuilding would delete the
+            // widget under their hands. The row already shows the live value; re-project when
+            // the edit ends.
+            return;
+        }
+
         rebuild();
     });
+}
+
+QComboBox* SMArgMapTable::comboOfPopup(QObject* container) const
+{
+    for (const Row& row : mRows)
+    {
+        if ((row.compact != nullptr) && (row.compact->view() != nullptr)
+            && (row.compact->view()->window() == container))
+        {
+            return row.compact;
+        }
+    }
+
+    return nullptr;
+}
+
+bool SMArgMapTable::isEditing(void) const
+{
+    for (const Row& row : mRows)
+    {
+        if (row.compact == nullptr)
+        {
+            continue;
+        }
+
+        if ((row.compact->view() != nullptr) && row.compact->view()->isVisible())
+        {
+            return true;        // its drop-down is open
+        }
+
+        if ((row.compact->lineEdit() != nullptr) && row.compact->lineEdit()->hasFocus())
+        {
+            return true;        // the caret is in its editable text
+        }
+    }
+
+    return false;
 }
 
 const SMArgumentEntry* SMArgMapTable::argFor(int row) const

@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMValidationPanel.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM document validation results panel (v7 B12 / S15).
+ *  \brief       Lusan application, FSM document validation results panel.
  *
  ************************************************************************/
 

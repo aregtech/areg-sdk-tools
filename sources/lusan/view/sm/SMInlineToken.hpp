@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMInlineToken.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard folded island token (v7 B2 / E4): the atomic
+ *  \brief       Lusan application, FSM guard folded island token: the atomic
  *               `{...}` pill text object of the guard field.
  *
  ************************************************************************/
@@ -35,15 +35,15 @@
 /**
  * \class   SMInlineToken
  * \brief   The folded text objects of the guard field: one ObjectReplacementCharacter per
- *          folded item, painted as a rounded pill. Two kinds share the exact same machinery
- *          (SM-21-03): an ISLAND (E4) is a `{...}` lambda body in the lambda hue; a CHIP is a
- *          committed `@kind:name` reference painted as owner glyph + colored name (the
- *          `@kind:` prefix hidden unless a same-name/different-kind collision reveals it,
- *          D-REVEAL). Because both are native text objects, the caret, selection, and
+ *          folded item, painted as a rounded pill. Two kinds share the exact same machinery:
+ *          an ISLAND is a `{...}` lambda body in the lambda hue; a CHIP is a
+ *          committed `#kind:name` reference painted as owner glyph + colored name (the
+ *          `#kind:` prefix hidden unless a same-name/different-kind collision reveals it).
+ *          Because both are native text objects, the caret, selection, and
  *          clipboard treat the whole pill as ONE character (acceptance 23a); the committable
  *          text rides in the char format's \ref PropBody property and the tree node stays the
  *          truth after commit. A chip is addressed by its INDEX among chips (nth in text
- *          order = nth reference node in pre-order), never by a cached offset (12.1).
+ *          order = nth reference node in pre-order), never by a cached offset.
  **/
 class SMInlineToken : public QObject, public QTextObjectInterface
 {
@@ -56,15 +56,15 @@ public:
     //!< The registered object type of a reference chip token.
     static constexpr int ChipType   { QTextFormat::UserObject + 2 };
     //!< The char-format property carrying the folded committable body: an island's inner text
-    //!< (no braces) or a chip's canonical `@kind:name`.
+    //!< (no braces) or a chip's canonical `#kind:name`.
     static constexpr int PropBody   { QTextFormat::UserProperty + 1 };
     //!< A chip's display name (the bare symbol name shown in the pill).
     static constexpr int PropName   { QTextFormat::UserProperty + 2 };
     //!< A chip's owner hue as an int (NEGuardStyle::eOwner).
     static constexpr int PropOwner  { QTextFormat::UserProperty + 3 };
-    //!< A chip's `@kind:` prefix (shown only when \ref PropReveal is set; D-REVEAL).
+    //!< A chip's `#kind:` prefix (shown only when \ref PropReveal is set).
     static constexpr int PropPrefix { QTextFormat::UserProperty + 4 };
-    //!< True when the chip must show its `@kind:` prefix permanently (D-REVEAL collision).
+    //!< True when the chip must show its `#kind:` prefix permanently (a same-name collision).
     static constexpr int PropReveal { QTextFormat::UserProperty + 5 };
 
 public:
@@ -82,15 +82,15 @@ public:
     //!< The island body carried by \p format (empty when not an island).
     static QString bodyOf(const QTextFormat& format);
 
-    //!< The char format of a new reference chip: committable \p body (`@kind:name`), display
-    //!< \p name, \p owner hue, `@kind:` \p prefix, and whether that prefix is \p reveal-ed.
+    //!< The char format of a new reference chip: committable \p body (`#kind:name`), display
+    //!< \p name, \p owner hue, `#kind:` \p prefix, and whether that prefix is \p reveal-ed.
     static QTextCharFormat makeChipFormat(const QString& body, const QString& name
                                         , NEGuardStyle::eOwner owner, const QString& prefix, bool reveal);
 
     //!< True when \p format is a reference chip's format.
     static bool isChip(const QTextFormat& format);
 
-    //!< The chip's display label (owner glyph + name, plus the `@kind:` prefix when revealed).
+    //!< The chip's display label (owner glyph + name, plus the `#kind:` prefix when revealed).
     static QString chipLabel(const QTextFormat& format);
 
     //!< The pixel width of the leading glyph hot-zone of a chip (the reveal click target).

@@ -45,7 +45,7 @@ namespace
         QString text;               //!< The verbatim lexeme (Ident/Number/String/Lambda/Ref/Unknown).
         int     start { 0 };
         int     len   { 0 };
-        QString refKind;            //!< For a Ref token: the `@kind` (param/attr/const/cond/arg), no '@'.
+        QString refKind;            //!< For a Ref token: the `#kind` (param/attr/const/cond/arg), no sigil.
         QString refName;            //!< For a Ref token: the symbol/formal name after the ':'.
     };
 
@@ -158,11 +158,11 @@ namespace
                 i = end;
                 continue;
             }
-            if (c == QLatin1Char('@'))
+            if (c == NEGuardText::RefSigil)
             {
-                // A typed reference `@kind:name` (SM-21-03). The whole mention is one Ref
+                // A typed reference `#kind:name`. The whole mention is one Ref
                 // token; the parser resolves `kind`+`name` to a symbol id (or a formal slot
-                // for `@arg:`). A malformed `@` (missing kind/colon/name) yields a Ref token
+                // for `#arg:`). A malformed sigil (missing kind/colon/name) yields a Ref token
                 // with empty parts, which the parser reports.
                 int j = start + 1;
                 const int kindStart = j;
@@ -339,7 +339,7 @@ namespace
             }
             if (peek().type == eTok::Assign)
             {
-                // D-NOSET: a single '=' in a boolean guard is almost always a typo for '=='.
+                // A single '=' in a boolean guard is almost always a typo for '=='.
                 // Flag it (a warning, not a gate) and parse it as an equality comparison --
                 // a guard is read-only, so we never build a setter.
                 const Token assign = peek();
@@ -416,7 +416,7 @@ namespace
         {
             Token idTok = advance();
 
-            // Accept and normalize a typed receiver: handler().X(...) -> X(...) (D6).
+            // Accept and normalize a typed receiver: handler().X(...) -> X(...).
             if ((idTok.text == QStringLiteral("handler"))
                 && (peek().type == eTok::LParen) && (peek(1).type == eTok::RParen)
                 && (peek(2).type == eTok::Dot) && (peek(3).type == eTok::Ident))
@@ -448,7 +448,7 @@ namespace
         };
 
         //!< Parses `( ... )` (peek is at the '('); returns the raw arg entries. \p endOut gets
-        //!< the offset just past the ')'. Enforces the Python mixed rule (D-MIXED): a positional
+        //!< the offset just past the ')'. Enforces the Python mixed rule: a positional
         //!< after a named argument is a syntax error.
         QList<ArgEntry> parseArgList(int& endOut)
         {
@@ -486,7 +486,7 @@ namespace
                     {
                         if (seenNamed)
                         {
-                            // D-MIXED / 12.8: once a named argument appears, a bare positional is
+                            // Once a named argument appears, a bare positional is
                             // ambiguous (which slot?) -- a hard syntax error.
                             mSyntaxError = true;
                             error(peek().start, qMax(1, peek().len), QStringLiteral("positional argument after named argument"));
@@ -509,7 +509,7 @@ namespace
 
         //!< Resolves \p entries to value nodes for a known \p method, keying each on the formal's
         //!< document id (Option A): a positional fills the nth unfilled formal; a named binds its
-        //!< formal by name (12.8). Extra positionals past the declared count keep id 0.
+        //!< formal by name. Extra positionals past the declared count keep id 0.
         QList<SMGuardNode*> bindArgs(const SMMethodEntry* method, QList<ArgEntry>& entries)
         {
             QList<SMGuardNode*> args;
@@ -576,7 +576,7 @@ namespace
                 return SMGuardNode::makeCall(method->getId(), bindArgs(method, entries));
             }
 
-            // A zero-argument call binds an attribute-as-getter (v6 rule 1).
+            // A zero-argument call binds an attribute-as-getter.
             if (entries.isEmpty())
             {
                 const uint32_t attrId = SMGuardSymbols::attributeId(mData, idTok.text);
@@ -609,13 +609,13 @@ namespace
                 return unresolved(refTok.text, refTok.start, span, QStringLiteral("unknown condition '%1'").arg(refTok.refName));
             }
 
-            // A parenless `@cond:name` is a zero-argument boolean call.
+            // A parenless `#cond:name` is a zero-argument boolean call.
             if (method != nullptr) { return SMGuardNode::makeCall(method->getId(), QList<SMGuardNode*>()); }
             return unresolved(refTok.text, refTok.start, refTok.len, QStringLiteral("unknown condition '%1'").arg(refTok.refName));
         }
 
-        //!< A typed reference `@kind:name` (SM-21-03). An explicit kind must resolve within that
-        //!< kind or it is an error -- unlike a bare identifier, which is raw (D-RAW).
+        //!< A typed reference `#kind:name`. An explicit kind must resolve within that
+        //!< kind or it is an error -- unlike a bare identifier, which is raw.
         SMGuardNode* parseRefPrimary()
         {
             const Token refTok = advance();
@@ -679,7 +679,7 @@ namespace
             if (pid != 0u)
             {
                 // A stimulus parameter shadows an FSM attribute/constant of the same name
-                // (parameter wins, v6 rule 2) -- quiet warning with a one-click fix in the UI.
+                // (parameter wins) -- quiet warning with a one-click fix in the UI.
                 if ((aid != 0u) || (cid != 0u))
                 {
                     warn(idTok.start, idTok.len
@@ -690,8 +690,8 @@ namespace
             if (aid != 0u) { return SMGuardNode::makeRef(eKind::Attr, aid); }
             if (cid != 0u) { return SMGuardNode::makeRef(eKind::Const, cid); }
 
-            // D-BARE / D-RAW: an unmarked identifier that resolves to no known symbol is raw C++,
-            // kept verbatim and never validated -- not an error (unlike an explicit `@kind:name`).
+            // An unmarked identifier that resolves to no known symbol is raw C++,
+            // kept verbatim and never validated -- not an error (unlike an explicit `#kind:name`).
             return SMGuardNode::makeVerbatim(eKind::Raw, name);
         }
 
@@ -776,7 +776,7 @@ SMGuard SMGuardParser::parseToGuard(const StateMachineData& data, uint32_t trans
     }
     else
     {
-        // Nothing the user typed is lost: keep the raw text as a draft (D9).
+        // Nothing the user typed is lost: keep the raw text as a draft.
         delete result.tree;
         guard.setDraft(text);
     }

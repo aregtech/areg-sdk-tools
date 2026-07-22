@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMFixBar.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard quick-fix bar (v7 B2).
+ *  \brief       Lusan application, FSM guard quick-fix bar.
  *
  ************************************************************************/
 
@@ -35,10 +35,10 @@ class QLabel;
 
 /**
  * \class   SMFixBar
- * \brief   The transient quick-fix row under the status line (B2): a leading `(!)` message and
+ * \brief   The transient quick-fix row under the status line: a leading `(!)` message and
  *          a set of flat link-buttons the field builds per diagnostic (did-you-mean, declare,
  *          keep-as-raw, shadowing fixes, warning suppression; `Map arguments...` shows disabled
- *          with the Session U3 tooltip). The bar is a dumb presenter: it renders the fix list it
+ *          with the hover tooltip). The bar is a dumb presenter: it renders the fix list it
  *          is given and emits the chosen fix's id + payload; the field owns the resolution.
  *          Esc / the `x` button hides it; the field re-opens it at the caret with Ctrl+.
  **/
@@ -56,7 +56,7 @@ public:
         QString id;                 //!< The stable id the field switches on.
         QString label;              //!< The button caption.
         QString payload;            //!< Fix-specific data (e.g. the suggested name).
-        bool    enabled { true };   //!< False shows the button disabled (e.g. Session U3).
+        bool    enabled { true };   //!< False shows the button disabled.
         QString tooltip;            //!< The button tooltip.
     };
 

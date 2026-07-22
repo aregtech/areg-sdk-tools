@@ -36,12 +36,12 @@ class SMGuard;
  * \class   SMGuardCodegenPreview
  * \brief   Builds the generated-C++ display string of a guard tree -- the status line, the
  *          grid footer and hovers show it, byte-exact with what the external generator must
- *          emit (v7 D5/D7). This is a DISPLAY string only: Lusan emits no C++ files; the
+ *          emit. This is a DISPLAY string only: Lusan emits no C++ files; the
  *          generator is a separate project. This one file is the single place the
- *          receiver/getter/constant spellings live (D5): a handler call is
+ *          receiver/getter/constant spellings live: a handler call is
  *          `handler().Name(args)`, an attribute is `Name()`, a constant is
  *          `<FsmData>::NAME`, a named-lambda call is `m<Name>(args)` (a `std::function`
- *          member, v7 A.1), an anonymous lambda is an IIFE, a raw fragment is verbatim.
+ *          member), an anonymous lambda is an IIFE, a raw fragment is verbatim.
  **/
 class SMGuardCodegenPreview
 {
@@ -50,7 +50,7 @@ public:
     static const char* const FSM_DATA_QUALIFIER;
     //!< The handler accessor of the generated FSM class.
     static const char* const HANDLER_ACCESSOR;
-    //!< The named-lambda `std::function` member prefix (v7 A.1).
+    //!< The named-lambda `std::function` member prefix.
     static const char* const LAMBDA_MEMBER_PREFIX;
 
 //////////////////////////////////////////////////////////////////////////

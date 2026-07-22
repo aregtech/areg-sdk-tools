@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMTryStrip.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard Try-it strip (v7 B9 / S6).
+ *  \brief       Lusan application, FSM guard Try-it strip.
  *
  ************************************************************************/
 
@@ -42,7 +42,7 @@ enum class eDocElementKind;
 
 /**
  * \class   SMTryStrip
- * \brief   The Try-it strip (S6): a collapsible what-if panel under the structure lens.
+ * \brief   The Try-it strip: a collapsible what-if panel under the structure lens.
  *          One value field per stimulus parameter and referenced attribute (literal
  *          validator by declared type; enumerations get a member combo), one stub row per
  *          non-evaluable call/island/raw fragment (they NEVER execute in the tool --

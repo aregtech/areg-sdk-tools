@@ -51,7 +51,7 @@ class StateMachineModel;
  *
  *          A commit whose operand does not resolve to a node (an empty value) unmaps the
  *          slot instead of storing a meaningless node, so an unmapped formal is always a
- *          clean ghost (spec 4.3), and re-committing an unchanged value never grows the
+ *          clean ghost, and re-committing an unchanged value never grows the
  *          undo stack (the underlying command drops a no-op).
  **/
 class SMArgSinkGuard : public IArgSink

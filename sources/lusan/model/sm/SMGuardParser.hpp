@@ -38,10 +38,10 @@ class SMConditionList;
  * \class   SMGuardParser
  * \brief   Parses the guard editing surface (a C++ boolean-expression subset) into the
  *          resolved, ID-bound AST, resolving names against the document's registries scoped
- *          to a transition's stimulus (the Resolution Contract, v6 Section 2.3). Names are
+ *          to a transition's stimulus (the Resolution Contract). Names are
  *          resolved at edit time only; the stored tree references IDs, so codegen never
- *          resolves names (D2). Raw C++ fragments enter the tree ONLY when \p allowRaw is
- *          set (the explicit "Keep as raw C++" quick-fix, D4) -- never silently.
+ *          resolves names. Raw C++ fragments enter the tree ONLY when \p allowRaw is
+ *          set (the explicit "Keep as raw C++" quick-fix) -- never silently.
  **/
 class SMGuardParser
 {
@@ -100,13 +100,13 @@ public:
 
     /**
      * \brief   Parses \p text into a committed guard: `ok(tree)` when fully resolved,
-     *          otherwise `draft(text)` (nothing the user typed is lost, D9). Blank text
+     *          otherwise `draft(text)` (nothing the user typed is lost). Blank text
      *          yields an empty guard.
      **/
     static SMGuard parseToGuard(const StateMachineData& data, uint32_t transitionId, const QString& text, bool allowRaw = false);
 
     /**
-     * \brief   The legacy read-shim (SM-21-02 -> SM-21): renders a legacy condition tree to
+     * \brief   The legacy read-shim: renders a legacy condition tree to
      *          text with the legacy renderer and returns it as a `draft` guard, so a document
      *          that still carries `<ConditionList>` loads without losing anything and is
      *          re-resolved by the user in the editor.

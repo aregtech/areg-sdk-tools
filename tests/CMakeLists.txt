@@ -179,6 +179,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
+    ${LUSAN}/view/sm/SMAccordion.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN_ROOT}/tests/sm/SMArgMapTableTests.cpp
@@ -365,6 +366,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMFlowLayout.cpp
     ${LUSAN}/view/sm/SMGuardBar.cpp
     ${LUSAN}/view/sm/SMGuardCallsOutline.cpp
+    ${LUSAN}/view/sm/SMGuardDataPanel.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
@@ -404,6 +406,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
     ${LUSAN}/model/sm/SMOperationValidation.cpp
+    ${LUSAN}/view/sm/SMAccordion.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
@@ -467,6 +470,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/common/MethodParamDetailsView.cpp
     ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
+    ${LUSAN}/view/sm/SMAccordion.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkGuard.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
@@ -475,6 +479,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMFlowLayout.cpp
     ${LUSAN}/view/sm/SMGuardBar.cpp
     ${LUSAN}/view/sm/SMGuardCallsOutline.cpp
+    ${LUSAN}/view/sm/SMGuardDataPanel.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
@@ -489,6 +494,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMSignatureCard.cpp
     ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
+    ${LUSAN}/view/sm/SMToolIcons.cpp
 )
 
 qt_add_executable(lusan_sm_guard_ui_shots
@@ -522,6 +528,7 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
+    ${LUSAN}/view/sm/SMAccordion.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp

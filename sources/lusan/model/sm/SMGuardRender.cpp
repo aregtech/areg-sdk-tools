@@ -126,7 +126,7 @@ namespace
             mPath.removeLast();
         }
 
-        //!< Computes the D-REVEAL collision set, then renders the whole tree from the root.
+        //!< Computes the same-name collision set, then renders the whole tree from the root.
         void renderRoot(const SMGuardNode& node)
         {
             QHash<QString, QString> seen;
@@ -185,11 +185,11 @@ namespace
             {
             case eKind::Attr:
                 return (SMGuardSymbols::paramId(mData, mTransId, name) != 0u)
-                     ? QStringLiteral("@attr:") : QString();
+                     ? NEGuardText::refPrefix(QStringLiteral("attr")) : QString();
             case eKind::Const:
                 return ((SMGuardSymbols::paramId(mData, mTransId, name) != 0u)
                      || (SMGuardSymbols::attributeId(mData, name) != 0u))
-                     ? QStringLiteral("@const:") : QString();
+                     ? NEGuardText::refPrefix(QStringLiteral("const")) : QString();
             default:
                 return QString();
             }
@@ -287,7 +287,7 @@ namespace
         }
 
         /**
-         * \brief   Renders a call's arguments in SIGNATURE order (D-GHOST / 12.8): each formal's
+         * \brief   Renders a call's arguments in SIGNATURE order: each formal's
          *          bound value in place, an unmapped formal as a labeled ghost `<name>` (only in
          *          the ghost/display mode -- canonical text omits it so it round-trips), and any
          *          value mapped AFTER a hole as the named `@arg:name = value` so its target slot
@@ -338,7 +338,7 @@ namespace
                 first = false;
                 if (holeSeen)
                 {
-                    appendRole(QStringLiteral("@arg:") + formals.at(fi).getName() + QStringLiteral(" = "), eRole::Punct);
+                    appendRole(NEGuardText::refPrefix(QStringLiteral("arg")) + formals.at(fi).getName() + QStringLiteral(" = "), eRole::Punct);
                 }
                 renderChild(*args.at(childIndex), childIndex, 1);
             }
@@ -380,6 +380,94 @@ QList<SMGuardRender::NodeSpan> SMGuardRender::nodeSpans(const StateMachineData& 
     builder.mNodeSpans = &spans;
     builder.renderRoot(node);
     return spans;
+}
+
+namespace
+{
+    //!< The canvas summary of one node (see SMGuardRender::canvasSummary).
+    QString summarize(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node)
+    {
+        using eKind = SMGuardNode::eKind;
+        const QList<SMGuardNode*>& kids = node.getChildren();
+
+        switch (node.getKind())
+        {
+        case eKind::And:
+        case eKind::Or:
+        {
+            const QString joiner = (node.getKind() == eKind::And) ? QStringLiteral(" && ") : QStringLiteral(" || ");
+            QStringList parts;
+            for (const SMGuardNode* kid : kids)
+            {
+                if (kid != nullptr)
+                {
+                    parts.append(summarize(data, transitionId, *kid));
+                }
+            }
+
+            return parts.join(joiner);
+        }
+
+        case eKind::Not:
+            return (node.getCount() == 1)
+                 ? (QStringLiteral("!") + summarize(data, transitionId, *node.childAt(0)))
+                 : QString();
+
+        case eKind::Cmp:
+            return (node.getCount() == 2)
+                 ? (summarize(data, transitionId, *node.childAt(0))
+                    + QLatin1Char(' ') + QString::fromLatin1(cmpText(node.getOp())) + QLatin1Char(' ')
+                    + summarize(data, transitionId, *node.childAt(1)))
+                 : QString();
+
+        case eKind::Call:
+        {
+            const SMMethodEntry* method = SMGuardSymbols::method(data, node.getSymbolId());
+            if (method == nullptr)
+            {
+                return QStringLiteral("?()");
+            }
+
+            // A lambda condition captures its scope (`[this]` / `[&]`), so it is generated and
+            // called WITHOUT arguments -- there is no argument list to collapse.
+            if (method->isLambdaCondition())
+            {
+                return method->getName() + QStringLiteral("()");
+            }
+
+            return method->getName() + (kids.isEmpty() ? QStringLiteral("()") : QStringLiteral("(...)"));
+        }
+
+        case eKind::Attr:   return SMGuardSymbols::attributeName(data, node.getSymbolId());
+        case eKind::Const:  return SMGuardSymbols::constantName(data, node.getSymbolId());
+        case eKind::Param:  return SMGuardSymbols::paramName(data, transitionId, node.getSymbolId());
+        case eKind::Lit:    return node.getText();
+
+        // An inline block is an anonymous `[this]() -> bool { ... }`; its body says nothing at
+        // canvas size, so only what it IS is shown.
+        case eKind::Lambda: return QStringLiteral("this -> bool");
+
+        // Raw C++ is not a lambda and has no signature to show.
+        case eKind::Raw:    return QStringLiteral("{...}");
+
+        default:            return QString();
+        }
+    }
+}
+
+QString SMGuardRender::canvasSummary(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard)
+{
+    if (guard.isDraft())
+    {
+        return guard.getDraftText().simplified();
+    }
+
+    if (guard.isOk() && (guard.getTree() != nullptr))
+    {
+        return summarize(data, transitionId, *guard.getTree()).simplified();
+    }
+
+    return QString();
 }
 
 QString SMGuardRender::guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard)

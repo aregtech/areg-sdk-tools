@@ -16,7 +16,7 @@
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
  *  \brief       Lusan application, FSM guard promotion-ladder composite commands
- *               (island <-> named lambda <-> handler, v7 A.1 + v6 Section 5).
+ *               (island <-> named lambda <-> handler).
  *
  ************************************************************************/
 
@@ -34,7 +34,7 @@
 #include <cstdint>
 
 /**
- * The promotion ladder (v6 Section 5, v7 A.1): each rung is ONE undo step. `Name it...`
+ * The promotion ladder: each rung is ONE undo step. `Name it...`
  * turns an anonymous island into a declared condition method (kind `lambda` by default,
  * `handler` for the direct island-to-handler path) plus a call with the referenced stimulus
  * parameters mapped; `Move to handler...` / `Adopt body...` flip a declared condition's kind

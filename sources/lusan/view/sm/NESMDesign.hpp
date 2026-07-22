@@ -59,7 +59,7 @@ namespace NESMDesign
     /**
      * \brief   The grid rendering styles: full cell lines or dots at the crossings.
      *          An application-level display preference; the document persists only
-     *          the grid size and visibility (spec 7.6).
+     *          the grid size and visibility.
      **/
     enum class eGridStyle
     {

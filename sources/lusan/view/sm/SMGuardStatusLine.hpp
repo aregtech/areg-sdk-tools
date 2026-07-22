@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMGuardStatusLine.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard status line + provenance chips (v7 B1 5-6).
+ *  \brief       Lusan application, FSM guard status line + provenance chips.
  *
  ************************************************************************/
 
@@ -36,7 +36,7 @@ class QLabel;
 
 /**
  * \class   SMGuardStatusLine
- * \brief   The status line under the field (B1 item 5) and the provenance chip row (item 6):
+ * \brief   The status line under the field and the provenance chip row:
  *          a severity word + type verdict + the `generated:` C++ preview (middle-elided, full
  *          text on tooltip), and a `uses handler: X, Y` chip. The generated segment is the
  *          verbatim \ref SMGuardCodegenPreview output the caller passes -- the status line
@@ -60,14 +60,14 @@ public:
     /**
      * \brief   Shows the status: a severity word/icon, a verdict phrase, the (optional)
      *          generated preview, and the handler chips. An empty verdict hides the widget
-     *          (E0 quiet).
+     *          (quiet).
      **/
     void setStatus(  NEGuardStyle::eSeverity severity
                    , const QString& verdict
                    , const QString& generatedPreview
                    , const QStringList& handlerChips);
 
-    //!< Hides the status line (E0 -- empty guard).
+    //!< Hides the status line (empty guard).
     void clearStatus();
 
     //!< The exact generated-preview string currently shown (for tests / 23c).

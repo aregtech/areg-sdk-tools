@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMRefCompleter.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard reference completer (SM-21-03, D-POPUP).
+ *  \brief       Lusan application, FSM guard reference completer.
  *
  ************************************************************************/
 
@@ -37,17 +37,17 @@ class QStandardItemModel;
 
 /**
  * \class   SMRefCompleter
- * \brief   The ONE guard reference completer (D-POPUP), replacing the old SMSymbolPopup and its
- *          keystroke-swallow bug (D-BUG / 12.6). It is a TOP-LEVEL frameless, non-activating
+ * \brief   The ONE guard reference completer, replacing the old SMSymbolPopup and its
+ *          keystroke-swallow bug. It is a TOP-LEVEL frameless, non-activating
  *          window: the field keeps focus and owns every keystroke, so a key that neither
  *          navigates nor commits reaches the document AND re-filters the list -- the completer
  *          filters, it never consumes (the swallow-bug fix). It positions itself at the caret
  *          and CLAMPS to the screen, flipping above the caret when it would overflow below
- *          (12.5); being a top-level window its width never touches the dock (12.4).
+ *          ; being a top-level window its width never touches the dock.
  *
  *          Three entry points (the field decides which): typing `@` (all kinds), typing
- *          `@kind:` (filtered to that kind), and later the Insert button (SM-21-04). Accepting
- *          a symbol emits \ref accepted; the field inserts the canonical `@kind:name`.
+ *          `#kind:` (filtered to that kind), and later the Insert button. Accepting
+ *          a symbol emits \ref accepted; the field inserts the canonical `#kind:name`.
  **/
 class SMRefCompleter : public QWidget
 {
@@ -86,7 +86,7 @@ public:
 signals:
     //!< A real symbol row was accepted; the field inserts its canonical `@kind:name`.
     void accepted(const SMGuardSymbol& symbol);
-    //!< The `New lambda here...` row was accepted: create an island at the caret (E4).
+    //!< The `New lambda here...` row was accepted: create an island at the caret.
     void newLambdaRequested();
 
 //////////////////////////////////////////////////////////////////////////

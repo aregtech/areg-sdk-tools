@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMIslandEditor.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard island editor (v7 B8 / S4): the anonymous
+ *  \brief       Lusan application, FSM guard island editor: the anonymous
  *               lambda body editor shown below the guard field.
  *
  ************************************************************************/
@@ -38,7 +38,7 @@ class StateMachineModel;
 
 /**
  * \class   SMIslandEditor
- * \brief   The island editor (S4): header (`{} lambda -- must return bool`), the in-scope
+ * \brief   The island editor: header (`{} lambda -- must return bool`), the in-scope
  *          line, an \ref SMCodeEditor body with the machine's completion words, shallow
  *          warnings only (brace balance, missing `return` -- never parsed, never blocking,
  *          D4 scope), and the ladder footer (`Name it...` / `Move to handler...` / `Close`).

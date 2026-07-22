@@ -1,5 +1,5 @@
-#ifndef LUSAN_VIEW_SM_SMGUARDCALLSOUTLINE_HPP
-#define LUSAN_VIEW_SM_SMGUARDCALLSOUTLINE_HPP
+#ifndef LUSAN_VIEW_SM_SMGUARDDATAPANEL_HPP
+#define LUSAN_VIEW_SM_SMGUARDDATAPANEL_HPP
 /************************************************************************
  *  This file is part of the Lusan project, an official component of the Areg SDK.
  *  Lusan is a graphical user interface (GUI) tool designed to support the development,
@@ -12,10 +12,10 @@
  *  with this distribution or contact us at info[at]areg.tech.
  *
  *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
- *  \file        lusan/view/sm/SMGuardCallsOutline.hpp
+ *  \file        lusan/view/sm/SMGuardDataPanel.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard Calls outline (accordion section 1).
+ *  \brief       Lusan application, FSM guard Data catalog (accordion section).
  *
  ************************************************************************/
 
@@ -27,11 +27,13 @@
 #include "lusan/view/sm/SMGuardCatalog.hpp"
 
 #include <QList>
+#include <QString>
 #include <cstdint>
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
 class StateMachineModel;
@@ -39,25 +41,26 @@ class SMGuardNode;
 enum class eDocElementKind;
 
 /**
- * \class   SMGuardCallsOutline
- * \brief   The accordion's Conditions section (design 8.1): a path-keyed projection of the
- *          committed guard tree PLUS a list of the defined condition methods to insert. One
- *          row per condition-method call (`name(sig) : ret [N unmapped]`), per top-level
- *          reference (`name -- attribute (read)`), and per verbatim island / raw fragment
- *          (`raw C++`) already in the guard; then, under an "Insert a condition:" header, one
- *          row per defined condition method. Selecting a call row emits \ref callSelected so the
- *          host drives the SINGLE Arguments table; double-clicking an insert row emits
- *          \ref insertRequested so the host inserts `@cond:name()` at the caret; double-clicking
- *          an island row emits \ref islandActivated so the host opens the island editor;
- *          right-clicking a reference row emits \ref whereUsedRequested (global where-used).
+ * \class   SMGuardDataPanel
+ * \brief   The accordion's `Data` section: the WHOLE reference universe a guard may
+ *          use, browsable and insertable -- stimulus parameters (transition scope only),
+ *          attributes, declared constants and condition methods -- grouped by kind, filtered
+ *          by a search box, each row showing its glyph, `type name(...)` and how many times
+ *          the CURRENT guard already references it (`used N`).
  *
- *          The outline is a display-only projection: it addresses every node by its
- *          child-index PATH (nth match in pre-order), never by a cached offset,
- *          and re-projects on every model change. Width-safe: its
- *          \ref minimumSizeHint width is 0 and the list scrolls horizontally inside, so a
- *          long signature can never widen the Properties dock.
+ *          It answers the question the completer cannot: "what can I even write here?" The
+ *          completer is recall-with-a-hint (you must type `#` first); this panel is pure
+ *          recognition, which is why the design keeps both.
+ *
+ *          Double-click inserts the canonical `#kind:name` at the field's caret; right-click
+ *          asks for the global where-used. The panel owns no state: it re-projects from the
+ *          document on every model change, so a rename or a new attribute shows up
+ *          without a manual refresh.
+ *
+ *          Width-safe: \ref minimumSizeHint width is 0 and the list scrolls
+ *          horizontally inside itself, so no long signature can widen the Properties dock.
  **/
-class SMGuardCallsOutline : public QWidget
+class SMGuardDataPanel : public QWidget
 {
     Q_OBJECT
 
@@ -65,20 +68,26 @@ class SMGuardCallsOutline : public QWidget
 // Constructor
 //////////////////////////////////////////////////////////////////////////
 public:
-    explicit SMGuardCallsOutline(StateMachineModel& model, QWidget* parent = nullptr);
+    explicit SMGuardDataPanel(StateMachineModel& model, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< Points the outline at a transition (0 clears it) and rebuilds the pickup list.
+    //!< Points the panel at a transition (0 clears it) and rebuilds the catalog.
     void setTransition(uint32_t transitionId);
 
-    //!< Rebuilds the pickup list of defined condition methods.
+    //!< Re-projects the catalog and the `used N` counts from the document.
     void refresh(void);
 
-    //!< The number of insertable condition-method rows in the pickup list (tests).
-    int insertRowCount(void) const;
+    //!< The number of insertable symbol rows currently shown (excludes group headers; tests).
+    int symbolRowCount(void) const;
+
+    //!< Applies \p text as the search filter (empty shows everything).
+    void setFilter(const QString& text);
+
+    //!< Moves the keyboard focus into the search box (the `Data` toolbutton entry point).
+    void focusSearch(void);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -88,9 +97,10 @@ public:
     virtual QSize minimumSizeHint(void) const override;
 
 signals:
-    //!< An "available condition" row was activated: insert \p symbol's `@cond:name()` at the caret.
+    //!< A symbol row was activated: insert \p symbol's canonical mention at the caret.
     void insertRequested(const SMGuardSymbol& symbol);
-    //!< A pickup row's context menu asked for the global where-used of \p symbolId.
+
+    //!< A row's context menu asked for the global where-used of \p symbolId.
     void whereUsedRequested(uint32_t symbolId);
 
 //////////////////////////////////////////////////////////////////////////
@@ -108,18 +118,19 @@ private:
     void scheduleRebuild(void);
     void rebuild(void);
 
-    //!< Appends one double-click-to-insert row per defined condition method.
-    void appendInsertableConditions(void);
+    //!< How many times the committed guard tree references \p symbolId (bound refs only).
+    int useCount(uint32_t symbolId) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    StateMachineModel&  mModel;         //!< The document facade.
-    uint32_t            mTransId;       //!< The shown transition (0 = none).
-    QListWidget*        mList;          //!< The outline rows.
-    QList<SMGuardSymbol> mInsertable;   //!< The defined condition methods (insertable rows).
-    bool                mRebuildPending;//!< Coalesces deferred rebuilds.
+    StateMachineModel&      mModel;         //!< The document facade.
+    uint32_t                mTransId;       //!< The shown transition (0 = none).
+    QLineEdit*              mSearch;        //!< The filter box.
+    QListWidget*            mList;          //!< The catalog rows.
+    QList<SMGuardSymbol>    mSymbols;       //!< The projected universe, in display order.
+    bool                    mRebuildPending;//!< Coalesces deferred rebuilds.
 };
 
-#endif  // LUSAN_VIEW_SM_SMGUARDCALLSOUTLINE_HPP
+#endif  // LUSAN_VIEW_SM_SMGUARDDATAPANEL_HPP

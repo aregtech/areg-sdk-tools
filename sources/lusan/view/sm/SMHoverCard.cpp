@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMHoverCard.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard hover cards (v7 B10 / S10).
+ *  \brief       Lusan application, FSM guard hover cards.
  *
  ************************************************************************/
 

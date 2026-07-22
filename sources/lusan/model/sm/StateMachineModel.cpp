@@ -31,7 +31,7 @@ namespace
 
     /**
      * \brief   The legacy read-shim (driver decision): a transition still carrying the
-     *          SM-21-02 `<ConditionList>` renders to text and becomes a `<Draft>` guard --
+     *          A legacy `<ConditionList>` renders to text and becomes a `<Draft>` guard --
      *          the user re-resolves it in the editor; nothing is silently dropped.
      **/
     void convertLegacyGuards(SMStateData& level)

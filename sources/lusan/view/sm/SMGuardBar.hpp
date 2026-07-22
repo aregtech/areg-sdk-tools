@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMGuardBar.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard bar: the Conditions tab content (v7 B1 / S1).
+ *  \brief       Lusan application, FSM guard bar: the Conditions tab content.
  *
  ************************************************************************/
 
@@ -37,16 +37,18 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
-class QToolBox;
+class QLabel;
+class QPlainTextEdit;
+class SMAccordion;
 class QToolButton;
 class StateMachineModel;
 class SMArgMapTable;
 class SMArgSinkGuard;
 class SMGuardCallsOutline;
+class SMGuardDataPanel;
 class SMGuardField;
 class SMGuardPopout;
 class SMGuardStatusLine;
-class SMFixBar;
 class SMGuardHelpCard;
 class SMHoverCard;
 class SMIslandEditor;
@@ -56,11 +58,11 @@ struct SMGuardSymbol;
 
 /**
  * \class   SMGuardBar
- * \brief   The Conditions tab content (S1): the header row (`Guard` label, clear `{x}`, help
+ * \brief   The Conditions tab content: the header row (`Guard` label, clear `{x}`, help
  *          `(?)`), the guard field, the status line + chips, the transient fix bar, the
- *          island editor (S4), and the structure lens (S5); the Try-it strip (U4) stays a
- *          collapsed stub. Besides the U2 status/fix/badge wiring, the bar owns the shared
- *          hover card (S10), the mapping grid (S9), and every ladder dialog -- so the lens
+ *          island editor, and the structure lens; the Try-it strip stays a
+ *          collapsed stub. Besides the status/fix/badge wiring, the bar owns the shared
+ *          hover card, the mapping grid, and every ladder dialog -- so the lens
  *          pills, the island editor's footer, the hover card's buttons and the fix bar all
  *          converge on ONE implementation of each flow.
  **/
@@ -91,10 +93,13 @@ public:
     inline SMTryStrip* tryStrip() const;
 
     //!< The accordion (tests).
-    inline QToolBox* accordion() const;
+    inline SMAccordion* accordion() const;
 
     //!< The Calls outline (tests).
     inline SMGuardCallsOutline* calls() const;
+
+    //!< The Data catalog panel (tests).
+    inline SMGuardDataPanel* dataPanel() const;
 
     //!< The shared Arguments table (tests).
     inline SMArgMapTable* args() const;
@@ -140,35 +145,28 @@ private:
     //!< The `where used` popup: pick a guard, select its transition.
     void showWhereUsed(uint32_t symbolId);
 
-    // ---- accordion + Arguments (SM-21-02 phase 2) -------------------------
-    //!< Binds the shared Arguments table to the selected call and applies D-ACCORDION auto-open.
-    void onCallSelected(const QList<int>& callPath, uint32_t methodId, int unmappedCount);
+    // ---- Caret-driven Arguments -------------------------------------------
+    //!< The guard node addressed by \p path (child-index walk), or nullptr when unaddressable.
+    const class SMGuardNode* nodeAtPath(const QList<int>& path) const;
 
-    //!< Selects \p callPath in the Calls outline and opens the Arguments section on it.
-    void jumpToCall(const QList<int>& callPath);
+    //!< Binds the shared Arguments table to the call at \p callPath (method \p methodId).
+    void bindArgumentsTo(const QList<int>& callPath, uint32_t methodId);
 
-    //!< The generated-code preview dialog (Preview top-strip button).
-    void showPreviewDialog();
+    //!< Re-binds the Arguments table to the call the caret sits in, else the single/first call.
+    void syncArgumentsToCaret();
 
-    //!< Toggles the Try-it what-if strip open/closed (Try-it top-strip button).
-    void toggleTryStrip();
-
-    //!< Inserts a condition method's `@cond:name()` reference at the field caret (Conditions list).
+    //!< Inserts a condition method's `#cond:name()` reference, commits, and shows Arguments.
     void insertCondition(const SMGuardSymbol& symbol);
 
-    // ---- pop-out editor (SM-21-05) ----------------------------------------
+    //!< Inserts ANY catalog symbol: a call routes to \ref insertCondition, else a plain reference.
+    void insertSymbol(const SMGuardSymbol& symbol);
+
+    // ---- pop-out editor ---------------------------------------------------
     //!< Opens the non-modal always-on-top pop-out over the same transition (Pop-out top strip).
     void openPopout();
 
-    // ---- use-count + warnings (SM-21-04 phase 4) --------------------------
-    //!< Recomputes the catalog `used-N` counts and the warning channel from the committed guard.
-    void refreshDerived();
-
-    //!< Re-enumerates the Data catalog symbols (a foreign rename/add/remove changed them).
+    //!< Re-projects the Arguments table off a model pass (a foreign rename/add/remove, deferred).
     void scheduleCatalogRefresh();
-
-    //!< Rebuilds the warning channel (unmapped-argument entries) from the committed guard.
-    void refreshWarnings();
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -177,29 +175,33 @@ private:
     StateMachineModel&  mModel;     //!< The document facade.
     uint32_t            mTransId;   //!< The shown transition (0 = none).
     SMGuardField*       mField;     //!< The editable guard surface.
-    SMGuardStatusLine*  mStatus;    //!< The status line + chips.
-    SMFixBar*           mFixBar;    //!< The quick-fix bar (field diagnostics).
-    SMFixBar*           mWarnBar;   //!< The one advisory warning channel (unmapped-argument).
-    SMIslandEditor*     mIsland;    //!< The island editor (S4, hidden until an island opens).
-    SMTryStrip*         mTry;       //!< The Try-it strip (S6).
-    SMHoverCard*        mHover;     //!< The shared hover card (S10).
+    SMGuardStatusLine*  mStatus;    //!< The status line (the one place a guard verdict/error shows).
+    SMIslandEditor*     mIsland;    //!< The island editor (hidden until an island opens).
+    SMTryStrip*         mTry;       //!< The Try-it strip (kept hidden; not on the Conditions tab).
+    SMHoverCard*        mHover;     //!< The shared hover card.
     SMGuardHelpCard*    mHelp;      //!< The help card (lazily shown).
     QToolButton*        mClear;     //!< The clear-guard button.
     QToolButton*        mHelpBtn;   //!< The help button.
 
-    // ---- top strip + accordion (SM-21-02 / SM-21-04) ----------------------
+    // ---- top strip + accordion --------------------------------------------
     QToolButton*        mInsertBtn; //!< Insert: opens the completer at the caret (all kinds).
-    QToolButton*        mPreviewBtn;//!< Preview: opens the generated-code dialog.
-    QToolButton*        mTryBtn;    //!< Try-it: toggles the what-if strip open/closed.
-    QToolButton*        mPopoutBtn; //!< Pop-out: opens the bigger editor (SM-21-05).
-    QToolBox*           mAccordion; //!< The Conditions / Arguments accordion (one open at a time).
-    SMGuardCallsOutline* mCalls;    //!< The Conditions outline (list + insert; drives Arguments).
+    QToolButton*        mPopoutBtn; //!< Pop-out: opens the bigger editor.
+    QToolButton*        mCompactBtn;//!< Compact accordion mode (checked = one section open).
+    //!< One jump/press button per accordion section. A LIST, not a C array: the section count has
+    //!< changed twice already, and a fixed size silently overflowed when it grew.
+    QList<QToolButton*> mSectionBtns;
+    SMAccordion*        mAccordion; //!< The Conditions / Arguments / Generated accordion.
+    QPlainTextEdit*     mGenCode;   //!< The generated C++ shown in the `Generated` section (read-only).
+    QLabel*             mGenChips;  //!< The `uses handler:` list shown in the `Generated` section.
+    SMGuardDataPanel*   mData;      //!< The `Data` section: the browsable symbol catalog.
+    SMGuardCallsOutline* mCalls;    //!< The Conditions pickup list (double-click inserts a condition).
     SMArgMapTable*      mArgs;      //!< The single shared Arguments table.
     SMArgSinkGuard      mArgSink;   //!< The guard-side argument sink behind the table.
-    int                 mLastSection;//!< The last-open accordion section (D-ACCORDION, per tab).
-    bool                mDerivedPending;//!< Coalesces the deferred catalog re-enumeration.
-    QSet<QString>       mDismissedRaw;//!< W1 "keep raw" names silenced for the current transition (SM-21-08).
-    QPointer<SMGuardPopout> mPopout; //!< The open pop-out editor, or null (SM-21-05).
+    int                 mLastSection;//!< The last-open accordion section (per tab).
+    bool                mDerivedPending;//!< Coalesces the deferred Arguments re-projection.
+    QList<int>          mBoundCallPath; //!< The call path the Arguments table is currently bound to.
+    bool                mBoundCallValid;//!< True when \ref mBoundCallPath addresses a live call.
+    QPointer<SMGuardPopout> mPopout; //!< The open pop-out editor, or null.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -221,7 +223,7 @@ inline SMTryStrip* SMGuardBar::tryStrip() const
     return mTry;
 }
 
-inline QToolBox* SMGuardBar::accordion() const
+inline SMAccordion* SMGuardBar::accordion() const
 {
     return mAccordion;
 }
@@ -229,6 +231,11 @@ inline QToolBox* SMGuardBar::accordion() const
 inline SMGuardCallsOutline* SMGuardBar::calls() const
 {
     return mCalls;
+}
+
+inline SMGuardDataPanel* SMGuardBar::dataPanel() const
+{
+    return mData;
 }
 
 inline SMArgMapTable* SMGuardBar::args() const

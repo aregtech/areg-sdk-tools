@@ -50,7 +50,7 @@ namespace
 
     constexpr int RoleTimerOpId { Qt::UserRole + 1 };
 
-    //!< The Actions/Events source universe (D-SOURCES): a literal, a stimulus parameter (transition
+    //!< The Actions/Events source universe: a literal, a stimulus parameter (transition
     //!< scope only, gated by the table), a machine attribute, or a constant. The condition and
     //!< verbatim-C++ kinds are Conditions-only and are not offered here.
     QList<eSource> kActionSources(void)
@@ -320,8 +320,8 @@ void SMOperationsEditor::bindParamRows(SMArgMapTable* table, SMArgSinkOperation&
         params.append(SMArgMapTable::Param{ param.getName(), param.getType(), param.getValue(), param.hasDefault(), false });
     }
 
-    // D-ORPHAN (case b): a formal removed on the Methods page leaves a stored argument whose name
-    // matches no current parameter. Never drop it silently (hazard 12.9); surface it as a red
+    // Orphan case (b): a formal removed on the Methods page leaves a stored argument whose name
+    // matches no current parameter. Never drop it silently; surface it as a red
     // orphan row (value kept, remove quick-fix) appended after the live parameters.
     for (const SMArgumentEntry& arg : args)
     {

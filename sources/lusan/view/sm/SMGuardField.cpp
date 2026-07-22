@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMGuardField.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard field: the editable guard surface (v7 B2, B3).
+ *  \brief       Lusan application, FSM guard field: the editable guard surface.
  *
  ************************************************************************/
 
@@ -59,6 +59,38 @@ namespace
     bool isWordChar(QChar ch)
     {
         return (ch.isLetterOrNumber() || (ch == QLatin1Char('_')));
+    }
+
+    //!< Replaces every display ghost `<name>` with an equal-length identifier of underscores and
+    //!< collects the names. Equal length is the point: the parser's diagnostic offsets keep
+    //!< addressing the very same characters of the document, so the underlines stay correct.
+    QString maskGhosts(const QString& text, QStringList& names)
+    {
+        QString out = text;
+        QRegularExpressionMatchIterator it = slotPattern().globalMatch(text);
+        while (it.hasNext())
+        {
+            const QRegularExpressionMatch match = it.next();
+            const QString whole = match.captured();
+            names.append(whole.mid(1, whole.length() - 2));
+            out.replace(match.capturedStart(), whole.length(), QString(whole.length(), QLatin1Char('_')));
+        }
+
+        return out;
+    }
+
+    //!< The status text for one or more unmapped formals: `unmapped <name> parameter`.
+    QString unmappedMessage(const QStringList& names)
+    {
+        QStringList shown;
+        for (const QString& name : names)
+        {
+            shown.append(QLatin1Char('<') + name + QLatin1Char('>'));
+        }
+
+        return (names.size() == 1)
+               ? QObject::tr("unmapped %1 parameter").arg(shown.first())
+               : QObject::tr("unmapped parameters: %1").arg(shown.join(QStringLiteral(", ")));
     }
 
     //!< The index just past the matching '}' of the '{' at \p i (strings/comments skipped).
@@ -145,7 +177,7 @@ namespace
         return count;
     }
 
-    //!< The chip owner hue for a render role (SM-21-03 chips reuse the render owner roles).
+    //!< The chip owner hue for a render role (chips reuse the render owner roles).
     NEGuardStyle::eOwner roleToOwner(SMGuardRender::eRole role)
     {
         switch (role)
@@ -192,6 +224,9 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     , mTransitionId     (0u)
     , mAllowRaw         (false)
     , mRebuildPending   (false)
+    , mMinLines         (3)
+    , mMaxLines         (12)
+    , mAutoHeight       (true)
     , mSuppressAnalyze  (false)
     , mAutoCommit       (true)
     , mHighlighter      (nullptr)
@@ -218,18 +253,18 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setTabChangesFocus(true);
-    // D-PLACEHOLDER: an empty field discovers both the bare-typing and the picker paths. Qt
+    // An empty field discovers both the bare-typing and the picker paths. Qt
     // paints this as placeholder text, so it is never a real character and never reaches
-    // committableText() (12.7).
+    // committableText().
     setPlaceholderText(tr("type a condition, or @ to pick a symbol"));
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     setMouseTracking(true);
 
-    // The island token painter (E4): registered on the rich-text layout, which is the
+    // The island token painter: registered on the rich-text layout, which is the
     // reason this field derives QTextEdit (QPlainTextDocumentLayout never paints these).
     mTokenHandler = new SMInlineToken(this);
     document()->documentLayout()->registerHandler(SMInlineToken::IslandType, mTokenHandler);
-    // The same handler paints reference chips (SM-21-03); it dispatches on the object type.
+    // The same handler paints reference chips; it dispatches on the object type.
     document()->documentLayout()->registerHandler(SMInlineToken::ChipType, mTokenHandler);
 
     mHighlighter = new SMGuardHighlighter(document());
@@ -265,7 +300,7 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     });
     connect(this, &QTextEdit::cursorPositionChanged, this, [this]()
     {
-        // Caret-entry opens the island editor (B8): crossing exactly one character that
+        // Caret-entry opens the island editor: crossing exactly one character that
         // is a token counts as entering it.
         const int pos = textCursor().position();
         const int old = mLastCursorPos;
@@ -396,7 +431,7 @@ void SMGuardField::appendIsland()
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Islands (E4)
+// Islands
 //////////////////////////////////////////////////////////////////////////
 
 QList<int> SMGuardField::islandPositions() const
@@ -500,7 +535,7 @@ QString SMGuardField::expandedText(QList<int>& docStarts) const
             }
             if (SMInlineToken::isChip(format))
             {
-                out += SMInlineToken::bodyOf(format);   // the canonical @kind:name
+                out += SMInlineToken::bodyOf(format);   // the canonical #kind:name
                 continue;
             }
         }
@@ -583,14 +618,14 @@ void SMGuardField::foldChips(const QList<SMGuardRender::Chip>& chips)
     for (int c = static_cast<int>(chips.size()) - 1; c >= 0; --c)
     {
         const SMGuardRender::Chip& chip = chips.at(c);
-        const QString prefix = QLatin1Char('@') + chip.kind + QLatin1Char(':');
+        const QString prefix = NEGuardText::refPrefix(chip.kind);
 
         QTextCursor cursor(document());
         cursor.setPosition(chip.start);
         cursor.setPosition(chip.start + chip.length, QTextCursor::KeepAnchor);
         // The committable body is EXACTLY the rendered span (bare `name`, or a minimally
-        // `@kind:`-disambiguated form) so committableText and the clipboard stay byte-exact
-        // with the canonical text (12.7). The explicit `@kind:name` edit form for the
+        // `#kind:`-disambiguated form) so committableText and the clipboard stay byte-exact
+        // with the canonical text. The explicit `#kind:name` edit form for the
         // double-click de-render is rebuilt from the prefix + name.
         const QString body = cursor.selectedText();
         cursor.insertText(QString(QChar::ObjectReplacementCharacter)
@@ -607,7 +642,7 @@ void SMGuardField::reprojectChips()
 {
     // A foreign change (a method / attribute / constant / parameter renamed or retyped on another
     // page) must update what the folded chips SHOW without reflowing the field text -- a reflow
-    // would clobber a half-typed token the user is in the middle of writing (hazard 12.3). The
+    // would clobber a half-typed token the user is in the middle of writing. The
     // committed tree is unchanged (references key on ids, P1); only the names it renders through
     // have moved. So re-render the committed tree and rewrite each folded chip token's format in
     // place. Text length never changes, so offsets, the caret, and any uncommitted text are all
@@ -645,7 +680,7 @@ void SMGuardField::reprojectChips()
     {
         const SMGuardRender::Chip& chip = rendered.chips.at(c);
         const QString body   = rendered.text.mid(chip.start, chip.length);
-        const QString prefix = QLatin1Char('@') + chip.kind + QLatin1Char(':');
+        const QString prefix = NEGuardText::refPrefix(chip.kind);
 
         QTextCursor cursor(document());
         cursor.setPosition(positions.at(c));
@@ -700,7 +735,7 @@ bool SMGuardField::deRenderChipAt(int docPos)
         return false;
     }
 
-    // Double-click de-renders the chip to its explicit, editable `@kind:name`; the next commit
+    // Double-click de-renders the chip to its explicit, editable `#kind:name`; the next commit
     // re-chips. The explicit form (not the bare body) is shown so the user sees the kind.
     const QString edit = format.property(SMInlineToken::PropPrefix).toString()
                        + format.property(SMInlineToken::PropName).toString();
@@ -804,7 +839,7 @@ void SMGuardField::onElementChanged(uint32_t id, eDocElementKind /*kind*/)
     }
     else if (mSuppressAnalyze == false)
     {
-        // A foreign rename/retype: respell the chips in place (12.3) but keep the user's text --
+        // A foreign rename/retype: respell the chips in place but keep the user's text
         // reproject BEFORE analyze so the parse sees the new canonical chip bodies, not stale ones.
         reprojectChips();
         analyze();  // a registry change may resolve / break a name; keep the user's text
@@ -847,9 +882,39 @@ void SMGuardField::scheduleRebuild()
     mRebuildPending = true;
     QTimer::singleShot(0, this, [this]()
     {
+        if (mRebuildPending == false)
+        {
+            return;     // a reflowNow() already did this turn's work synchronously
+        }
+
         mRebuildPending = false;
         rebuildFromModel();
     });
+}
+
+void SMGuardField::setAutoHeight(bool autoHeight)
+{
+    mAutoHeight = autoHeight;
+    updateHeight();
+}
+
+void SMGuardField::setHeightLines(int minLines, int maxLines)
+{
+    // The pop-out is a big editor by definition; the docked field stays modest. Both use the same
+    // grow-with-content rule, only the bounds differ.
+    mMinLines = qMax(1, minLines);
+    mMaxLines = qMax(mMinLines, maxLines);
+    updateHeight();
+}
+
+void SMGuardField::reflowNow()
+{
+    // The click-to-insert path must show its chip in the SAME turn as the gesture:
+    // waiting for the deferred rebuild made a double-click feel unresponsive. Safe to
+    // run synchronously here because the caller is a plain widget signal, not a notifier slot.
+    mDebounce->stop();
+    mRebuildPending = false;
+    rebuildFromModel();
 }
 
 void SMGuardField::rebuildFromModel()
@@ -866,7 +931,7 @@ void SMGuardField::rebuildFromModel()
         const SMGuard& guard = transition->getGuard();
         if (guard.isOk() && (guard.getTree() != nullptr))
         {
-            // A committed tree reflows to its canonical text AND its chips (SM-21-03): every
+            // A committed tree reflows to its canonical text AND its chips: every
             // bound reference folds to a compact pill. A draft keeps the user's raw text as-is.
             const SMGuardRender::Rendered rendered = SMGuardRender::render(mModel.getData(), mTransitionId, *guard.getTree());
             text  = rendered.text;
@@ -937,11 +1002,18 @@ void SMGuardField::analyze()
     QList<int> docStarts;
     const QString expText = expandedText(docStarts);
 
-    // The parser sees the expanded text (islands as `{...}`); its diagnostic offsets are
-    // remapped back to document positions for the underlines.
-    SMGuardParser::Result result = SMGuardParser::parse(data, mTransitionId, expText, mAllowRaw);
+    // An unmapped formal renders as a ghost `<name>` -- a DISPLAY marker, never guard syntax. Feeding
+    // it to the parser produced a bogus `unexpected '<'` and demoted a perfectly good guard to a
+    // draft. Neutralize each ghost with an EQUAL-LENGTH filler so every
+    // diagnostic offset still maps back to the document, and report the real problem ourselves.
+    QStringList ghostNames;
+    const QString parseText = maskGhosts(expText, ghostNames);
 
-    // ---- decorations -----------------------------------------------------
+    // The parser sees the masked, expanded text (islands as `{...}`); its diagnostic offsets are
+    // remapped back to document positions for the underlines.
+    SMGuardParser::Result result = SMGuardParser::parse(data, mTransitionId, parseText, mAllowRaw);
+
+    // ---- decorations ------------------------------------------------------
     QList<SMGuardHighlighter::OwnerSpan> owners;
     QList<SMGuardHighlighter::DiagSpan> diags;
 
@@ -1025,7 +1097,7 @@ void SMGuardField::analyze()
 
     applyDecorations(owners, diags);
 
-    // ---- status + fixes --------------------------------------------------
+    // ---- status + fixes ---------------------------------------------------
     if (expText.trimmed().isEmpty())
     {
         delete result.tree;
@@ -1082,6 +1154,17 @@ void SMGuardField::analyze()
             verdict += tr(" (raw code: %1 fragment%2)").arg(raw).arg(raw == 1 ? QString() : QStringLiteral("s"));
         }
 
+        if (ghostNames.isEmpty() == false)
+        {
+            // The guard itself is sound -- what is missing is an argument. Say exactly that, and
+            // name the formal, instead of leaking a parser token the user never typed.
+            emit statusUpdated(static_cast<int>(NEGuardStyle::eSeverity::Err)
+                              , unmappedMessage(ghostNames), preview, chips);
+            emit fixesUpdated(QString(), {});
+            emit badgeUpdated(true, false);
+            return;
+        }
+
         const NEGuardStyle::eSeverity severity = hasWarning ? NEGuardStyle::eSeverity::Warn : NEGuardStyle::eSeverity::Ok;
         emit statusUpdated(static_cast<int>(severity), verdict, preview, chips);
 
@@ -1112,7 +1195,7 @@ void SMGuardField::analyze()
         else
         {
             // Quiet when ok: the bar stays hidden, but Ctrl+. still offers the grid for
-            // guards that call a condition (the B6 fix-bar route).
+            // guards that call a condition (the fix-bar route).
             mLastFixes.clear();
             if (hasCalls)
             {
@@ -1128,9 +1211,13 @@ void SMGuardField::analyze()
     else
     {
         const QString token = (mErrorStart >= 0) ? docText.mid(mErrorStart, mErrorLength) : QString();
-        emit statusUpdated(static_cast<int>(NEGuardStyle::eSeverity::Err)
-                           , firstError.isEmpty() ? tr("unresolved guard") : firstError
-                           , QString(), {});
+        QString message = firstError.isEmpty() ? tr("unresolved guard") : firstError;
+        if (ghostNames.isEmpty() == false)
+        {
+            message = unmappedMessage(ghostNames);
+        }
+
+        emit statusUpdated(static_cast<int>(NEGuardStyle::eSeverity::Err), message, QString(), {});
 
         QList<SMFixBar::Fix> fixes;
         if (token.isEmpty() == false)
@@ -1146,7 +1233,7 @@ void SMGuardField::analyze()
             fixes.append({ QStringLiteral("map"), tr("Map arguments..."), QString(), hasCalls, hasCalls ? QString() : tr("no resolved call in the guard") });
         }
 
-        mLastMessage = tr("(!) %1").arg(firstError.isEmpty() ? tr("unresolved guard") : firstError);
+        mLastMessage = tr("(!) %1").arg(message);
         mLastFixes = fixes;
         emit fixesUpdated(mLastMessage, fixes);
         emit badgeUpdated(true, false);
@@ -1154,13 +1241,13 @@ void SMGuardField::analyze()
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Commit gate (B3)
+// Commit gate
 //////////////////////////////////////////////////////////////////////////
 
 QString SMGuardField::committableText() const
 {
     // Cleanup runs on the document text (tokens are single characters there), THEN the tokens
-    // expand -- an island to `{body}`, a chip to its canonical `@kind:name` (12.7: no chip
+    // expand -- an island to `{body}`, a chip to its canonical `#kind:name` (12.7: no chip
     // label or ghost marker ever reaches the stored guard) -- so a multi-line island body and
     // a folded reference both survive byte-exact.
     QStringList replacements;   // one per ORC in document order (island or chip)
@@ -1298,7 +1385,7 @@ void SMGuardField::applyFix(const QString& id, const QString& payload)
     }
     else if (id == QStringLiteral("shadow-rename"))
     {
-        // Rename lives on the Attributes page; U2 surfaces the fix but defers the dialog.
+        // Rename lives on the Attributes page; the editor surfaces the fix but defers the dialog.
         emit fixesUpdated(QString(), {});
     }
     else if (id == QStringLiteral("suppress"))
@@ -1320,7 +1407,7 @@ void SMGuardField::applyFix(const QString& id, const QString& payload)
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Raw-collision bind (W1, SM-21-08)
+// Raw-collision bind
 //////////////////////////////////////////////////////////////////////////
 
 void SMGuardField::applyRawBind(const QList<int>& rawPath, const SMGuardSymbol& symbol)
@@ -1459,7 +1546,7 @@ void SMGuardField::bindRaw(const QList<int>& rawPath, const QString& name)
 
 namespace
 {
-    //!< Maps a `@kind` word to its reference kind; false when the word is not a valid kind.
+    //!< Maps a `#kind` word to its reference kind; false when the word is not a valid kind.
     bool kindFromWord(const QString& word, SMGuardSymbol::eRefKind& kind)
     {
         if (word == QStringLiteral("param")) { kind = SMGuardSymbol::eRefKind::Param; return true; }
@@ -1479,7 +1566,7 @@ void SMGuardField::openCompletion()
 
     // Ctrl+Space is a deliberate open: show every kind at the caret and clear any Esc dismissal.
     mCompleterDismissedAt = -1;
-    mRawBindMode = false;       // an explicit completion open is never a W1 raw-bind pick.
+    mRawBindMode = false;       // an explicit completion open is never a raw-bind pick.
     const QRect rect = cursorRect();
     const QRect caretGlobal(viewport()->mapToGlobal(rect.topLeft()), rect.size());
     mCompleter->showFor({}, QString(), caretGlobal);
@@ -1514,6 +1601,12 @@ void SMGuardField::insertReference(const SMGuardSymbol& symbol)
     commit();
 }
 
+bool SMGuardField::caretCallee(QString& name) const
+{
+    int argIndex = 0;
+    return callContextAtCaret(name, argIndex);
+}
+
 bool SMGuardField::mentionUnderCursor(int& atPos, QString& kindWord, QString& namePart, bool& hasColon) const
 {
     const QString text = toPlainText();
@@ -1522,12 +1615,12 @@ bool SMGuardField::mentionUnderCursor(int& atPos, QString& kindWord, QString& na
     while (i > 0)
     {
         const QChar c = text.at(i - 1);
-        if (c == QLatin1Char('@')) { break; }
+        if (c == NEGuardText::RefSigil) { break; }
         if (isWordChar(c) || (c == QLatin1Char(':'))) { --i; continue; }
-        return false;   // a non-mention character before any '@' -> not inside a mention
+        return false;   // a non-mention character before any sigil -> not inside a mention
     }
 
-    if ((i <= 0) || (text.at(i - 1) != QLatin1Char('@')))
+    if ((i <= 0) || (text.at(i - 1) != NEGuardText::RefSigil))
     {
         return false;
     }
@@ -1554,7 +1647,7 @@ bool SMGuardField::mentionUnderCursor(int& atPos, QString& kindWord, QString& na
 void SMGuardField::updateCompleter()
 {
     // Any text edit reevaluates the mention-driven completer, so we are no longer in the
-    // standalone W1 pick opened by bindRaw -- clear the one-shot before it could misroute an
+    // standalone pick opened by bindRaw -- clear the one-shot before it could misroute an
     // ordinary completion into a raw bind.
     mRawBindMode = false;
 
@@ -1571,11 +1664,11 @@ void SMGuardField::updateCompleter()
     if (mentionUnderCursor(atPos, kindWord, namePart, hasColon) == false)
     {
         mCompleter->hide();
-        mCompleterDismissedAt = -1;      // left the mention; a future '@' may reopen
+        mCompleterDismissedAt = -1;      // left the mention; a future sigil may reopen
         return;
     }
 
-    // D-ESC: once dismissed, this exact mention stays closed until a fresh '@' (a new atPos).
+    // Once dismissed, this exact mention stays closed until a fresh sigil (a new atPos).
     if (atPos == mCompleterDismissedAt)
     {
         mCompleter->hide();
@@ -1594,7 +1687,7 @@ void SMGuardField::updateCompleter()
     const QRect caretGlobal(viewport()->mapToGlobal(rect.topLeft()), rect.size());
     mCompleter->showFor(kinds, namePart, caretGlobal);
 
-    // D-PRECEDENCE: the completer opens OVER the signature-help tooltip; the tooltip returns
+    // The completer opens OVER the signature-help tooltip; the tooltip returns
     // when the completer closes (see updateSignatureHelp).
     if (mCompleter->isVisible() && (mSignature != nullptr))
     {
@@ -1604,7 +1697,7 @@ void SMGuardField::updateCompleter()
 
 bool SMGuardField::callContextAtCaret(QString& calleeName, int& argIndex) const
 {
-    // Scan the EXPANDED text (chips -> `@kind:name`, islands -> `{body}`) so the callee is
+    // Scan the EXPANDED text (chips -> `#kind:name`, islands -> `{body}`) so the callee is
     // always plain text; the caret's document position maps to its expanded offset.
     QList<int> docStarts;
     const QString exp = expandedText(docStarts);
@@ -1636,17 +1729,17 @@ bool SMGuardField::callContextAtCaret(QString& calleeName, int& argIndex) const
         return false;   // the caret is not inside a call's parentheses
     }
 
-    // The callee is the `@cond:name` / bare identifier immediately before the '('.
+    // The callee is the `#cond:name` / bare identifier immediately before the '('.
     int nameEnd = i - 1;
     int nameStart = nameEnd;
     while ((nameStart > 0)
-        && (isWordChar(exp.at(nameStart - 1)) || (exp.at(nameStart - 1) == QLatin1Char(':')) || (exp.at(nameStart - 1) == QLatin1Char('@'))))
+        && (isWordChar(exp.at(nameStart - 1)) || (exp.at(nameStart - 1) == QLatin1Char(':')) || (exp.at(nameStart - 1) == NEGuardText::RefSigil)))
     {
         --nameStart;
     }
 
     QString callee = exp.mid(nameStart, nameEnd - nameStart);
-    if (callee.startsWith(QLatin1Char('@')))
+    if (callee.startsWith(NEGuardText::RefSigil))
     {
         const int colon = callee.indexOf(QLatin1Char(':'));
         if (colon >= 0) { callee = callee.mid(colon + 1); }
@@ -1668,7 +1761,7 @@ void SMGuardField::updateSignatureHelp()
         return;
     }
 
-    // D-PRECEDENCE: the completer owns the surface while it is open; the two never overlap.
+    // The completer owns the surface while it is open; the two never overlap.
     if (mCompleter->isVisible())
     {
         mSignature->hide();
@@ -1720,7 +1813,7 @@ QString SMGuardField::wordUnderCursor(int& start, int& length) const
 
 void SMGuardField::onCompleterAccepted(const SMGuardSymbol& symbol)
 {
-    // W1 multi-kind pick (SM-21-08): the picker was opened standalone by bindRaw (no `@`-mention
+    // Multi-kind pick: the picker was opened standalone by bindRaw (no `@`-mention
     // in the text), so a pick binds the Raw node at mRawBindPath through the model, not by text
     // surgery. Consume the one-shot mode first so a later ordinary completion is unaffected.
     if (mRawBindMode)
@@ -1734,8 +1827,8 @@ void SMGuardField::onCompleterAccepted(const SMGuardSymbol& symbol)
     }
 
     // Replace the `@[kind][:][name]` mention under the caret with the picked symbol's canonical
-    // `@kind:name` (typed == clicked, P3). A call inserts `@cond:name()` with the caret between
-    // the parens; the developer types the arguments inline (signature help arrives in SM-21-03
+    // `#kind:name` (typed == clicked, P3). A call inserts `#cond:name()` with the caret between
+    // the parens; the developer types the arguments inline (signature help arrives
     // phase 5), and the Arguments table projects them.
     int atPos = 0;
     QString kindWord;
@@ -1770,7 +1863,7 @@ void SMGuardField::onCompleterAccepted(const SMGuardSymbol& symbol)
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Mapping slots (B5)
+// Mapping slots
 //////////////////////////////////////////////////////////////////////////
 
 void SMGuardField::runAutoMap()
@@ -1814,6 +1907,25 @@ void SMGuardField::runAutoMap()
     }
 
     setExtraSelections(tints);
+}
+
+bool SMGuardField::selectFirstGhost()
+{
+    // After a reflow the caret sits at the end of the guard, which is the wrong place to leave the
+    // developer when the condition they just inserted still has unmapped formals: the very next
+    // thing they want to do is fill the first one. The ghost `<name>` is
+    // display-only text, so SELECTING it means the first keystroke replaces it.
+    const QRegularExpressionMatch match = slotPattern().match(toPlainText());
+    if (match.hasMatch() == false)
+    {
+        return false;
+    }
+
+    QTextCursor cursor = textCursor();
+    cursor.setPosition(match.capturedStart());
+    cursor.setPosition(match.capturedEnd(), QTextCursor::KeepAnchor);
+    setTextCursor(cursor);
+    return true;
 }
 
 bool SMGuardField::selectSlot(int direction)
@@ -1888,8 +2000,20 @@ void SMGuardField::updateHeight()
     const int lineHeight = metrics.lineSpacing();
     const qreal docHeight = document()->documentLayout()->documentSize().height();
     const int frame = 2 * static_cast<int>(frameWidth()) + 8;
-    const int minHeight = lineHeight + frame;
-    const int maxHeight = (lineHeight * 4) + frame;
+    // Three lines minimum, up to twelve: the Conditions tab gained room when the advisory strips and
+    // the Try-it evaluator went away, and a guard the developer can break over several lines
+    // (Shift+Enter) needs somewhere to put them.
+    const int minHeight = (lineHeight * mMinLines) + frame;
+    if (mAutoHeight == false)
+    {
+        // The pop-out owns its own geometry: the field fills whatever the dialog gives it instead
+        // of pinning itself to its content.
+        setMinimumHeight(minHeight);
+        setMaximumHeight(QWIDGETSIZE_MAX);
+        return;
+    }
+
+    const int maxHeight = (lineHeight * mMaxLines) + frame;
     setFixedHeight(qBound(minHeight, static_cast<int>(docHeight) + frame, maxHeight));
 }
 
@@ -1910,21 +2034,21 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
         case Qt::Key_Tab:       mCompleter->acceptCurrent();    return;
         case Qt::Key_Escape:
             {
-                // D-ESC: close but KEEP the typed characters; do NOT reopen for this same
-                // mention on the next keystroke -- only a fresh '@' (a new position) reopens.
+                // Close but KEEP the typed characters; do NOT reopen for this same
+                // mention on the next keystroke -- only a fresh sigil (a new position) reopens.
                 int atPos = 0;
                 QString kindWord;
                 QString namePart;
                 bool hasColon = false;
                 mCompleterDismissedAt = mentionUnderCursor(atPos, kindWord, namePart, hasColon) ? atPos : -1;
-                mRawBindMode = false;   // W1: dismissing the picker leaves the raw node untouched.
+                mRawBindMode = false;   // Dismissing the picker leaves the raw node untouched.
                 mCompleter->hide();
-                updateSignatureHelp();  // D-PRECEDENCE: the tooltip returns when the completer closes
+                updateSignatureHelp();  // The tooltip returns when the completer closes
             }
             return;
         default:
-            mRawBindMode = false;       // W1: typing over the selection exits the multi-kind picker.
-            break;      // PASS-THROUGH (12.6): the key reaches the document AND re-filters the list
+            mRawBindMode = false;       // Typing over the selection exits the multi-kind picker.
+            break;      // PASS-THROUGH: the key reaches the document AND re-filters the list
         }
     }
 
@@ -1959,13 +2083,23 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
 
     if ((event->key() == Qt::Key_Return) || (event->key() == Qt::Key_Enter))
     {
+        if (event->modifiers() & Qt::ShiftModifier)
+        {
+            // Shift+Enter breaks a long guard over several lines while it is being written
+            // . The break is an authoring aid only: committableText
+            // folds the lines back into the one-line canonical guard the tree stores.
+            textCursor().insertText(QStringLiteral("\n"));
+            updateHeight();
+            return;
+        }
+
         commit();
         return;
     }
 
     if (event->key() == Qt::Key_Escape)
     {
-        // The Esc chain (B16): an open card/slot session closes first; the next Esc reverts.
+        // The Esc chain: an open card/slot session closes first; the next Esc reverts.
         if (mSlotMode || ((mSignature != nullptr) && mSignature->isVisible()))
         {
             if (mSignature != nullptr)
@@ -1981,7 +2115,7 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    // Typing `{` in an operand position creates an island (E4) and opens its editor.
+    // Typing `{` in an operand position creates an island and opens its editor.
     if (event->text() == QStringLiteral("{"))
     {
         const int index = insertIslandAtCaret(QString());
@@ -1994,7 +2128,7 @@ void SMGuardField::keyPressEvent(QKeyEvent* event)
 
 void SMGuardField::focusOutEvent(QFocusEvent* event)
 {
-    mRawBindMode = false;       // W1: a blur abandons the open multi-kind picker.
+    mRawBindMode = false;       // A blur abandons the open multi-kind picker.
     mCompleter->hide();
     if (mSignature != nullptr)
     {
@@ -2017,14 +2151,14 @@ void SMGuardField::mouseReleaseEvent(QMouseEvent* event)
 
     const QTextCursor hit = cursorForPosition(event->pos());
 
-    // A click on a chip's leading glyph hot-zone reveals it (D-GESTURE); a click elsewhere on
+    // A click on a chip's leading glyph hot-zone reveals it; a click elsewhere on
     // the chip falls through to normal caret placement (a double-click there de-renders it).
     if (revealChipAt(hit.position(), event->pos()) || revealChipAt(hit.position() - 1, event->pos()))
     {
         return;
     }
 
-    // A click on an island token opens its editor (B8).
+    // A click on an island token opens its editor.
     if (maybeOpenIslandAt(hit.position()) == false)
     {
         maybeOpenIslandAt(hit.position() - 1);
@@ -2033,7 +2167,7 @@ void SMGuardField::mouseReleaseEvent(QMouseEvent* event)
 
 void SMGuardField::mouseDoubleClickEvent(QMouseEvent* event)
 {
-    // Double-click a chip -> de-render to editable `@kind:name` (D-GESTURE): a chip IS one
+    // Double-click a chip -> de-render to editable `#kind:name`: a chip IS one
     // token, so a double-click that would select a word selects the whole chip instead.
     const QTextCursor hit = cursorForPosition(event->pos());
     if (deRenderChipAt(hit.position()) || deRenderChipAt(hit.position() - 1))
@@ -2053,7 +2187,7 @@ void SMGuardField::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    // Hover a known symbol word for 300 ms -> the symbol card (S10).
+    // Hover a known symbol word for 300 ms -> the symbol card.
     const QTextCursor hit = cursorForPosition(event->pos());
     const QString text = toPlainText();
     int left = hit.position();
@@ -2122,7 +2256,7 @@ QMimeData* SMGuardField::createMimeDataFromSelection() const
             }
             if (SMInlineToken::isChip(format))
             {
-                out += SMInlineToken::bodyOf(format);   // the canonical @kind:name / bare name
+                out += SMInlineToken::bodyOf(format);   // the canonical #kind:name / bare name
                 continue;
             }
         }

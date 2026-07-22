@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMTryStrip.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard Try-it strip (v7 B9 / S6).
+ *  \brief       Lusan application, FSM guard Try-it strip.
  *
  ************************************************************************/
 
@@ -243,7 +243,7 @@ void SMTryStrip::rebuild()
         mNote->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
         if ((guard != nullptr) && guard->isDraft())
         {
-            // The strip refuses drafts cleanly (D9): nothing to evaluate, no guessing.
+            // The strip refuses drafts cleanly: nothing to evaluate, no guessing.
             mNote->setText(tr("The guard is a draft -- resolve it first; there is nothing to evaluate."));
         }
         else
@@ -531,7 +531,7 @@ void SMTryStrip::recompute()
                                                      : ((result.truth == eTruth::False) ? NEGuardStyle::eSeverity::Err : NEGuardStyle::eSeverity::Warn));
     mResult->setStyleSheet(QStringLiteral("color: %1;").arg(color.name()));
 
-    // Publish the clause truths for the lens tint (B9).
+    // Publish the clause truths for the lens tint.
     QHash<QString, int> tints;
     for (const SMGuardEval::NodeTruth& node : result.nodes)
     {

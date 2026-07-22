@@ -169,7 +169,7 @@ SMGuardNode* SMArgSinkGuard::buildOperand(SMArgumentEntry::eValueSource src, con
     }
 
     // Build the equivalent operand text and parse it exactly as the field would, so a clicked
-    // mapping resolves to the very node typing that text produces (D2 parity). A parameterless
+    // mapping resolves to the very node typing that text produces (parity). A parameterless
     // condition source is spelled `name()` so it parses as a zero-arg Call.
     QString text = value.trimmed();
     if (text.isEmpty())
@@ -182,7 +182,7 @@ SMGuardNode* SMArgSinkGuard::buildOperand(SMArgumentEntry::eValueSource src, con
         text += QStringLiteral("()");
     }
 
-    // Unresolved text is not stored (D4): the slot stays a clean ghost rather than a stray Raw.
+    // Unresolved text is not stored: the slot stays a clean ghost rather than a stray Raw.
     SMGuardParser::Result res = SMGuardParser::parse(mModel.getData(), mTransId, text, false);
     SMGuardNode* node = nullptr;
     if (res.resolved() && (res.tree != nullptr))

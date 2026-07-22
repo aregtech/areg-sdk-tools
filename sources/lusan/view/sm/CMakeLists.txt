@@ -1,4 +1,5 @@
 list(APPEND LUSAN_SRC
+    ${LUSAN}/view/sm/SMAccordion.cpp
     ${LUSAN}/view/sm/SMArgMapTable.cpp
     ${LUSAN}/view/sm/SMArgSinkGuard.cpp
     ${LUSAN}/view/sm/SMArgSinkOperation.cpp
@@ -10,6 +11,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMGuardBar.cpp
     ${LUSAN}/view/sm/SMGuardCallsOutline.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
+    ${LUSAN}/view/sm/SMGuardDataPanel.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
@@ -55,6 +57,7 @@ list(APPEND LUSAN_SRC
 
 list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/IArgSink.hpp
+    ${LUSAN}/view/sm/SMAccordion.hpp
     ${LUSAN}/view/sm/SMArgMapTable.hpp
     ${LUSAN}/view/sm/SMArgSinkGuard.hpp
     ${LUSAN}/view/sm/SMArgSinkOperation.hpp
@@ -66,6 +69,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMGuardBar.hpp
     ${LUSAN}/view/sm/SMGuardCallsOutline.hpp
     ${LUSAN}/view/sm/SMGuardCatalog.hpp
+    ${LUSAN}/view/sm/SMGuardDataPanel.hpp
     ${LUSAN}/view/sm/SMGuardField.hpp
     ${LUSAN}/view/sm/SMGuardHelpCard.hpp
     ${LUSAN}/view/sm/SMGuardHighlighter.hpp

@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMRefCompleter.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard reference completer (SM-21-03, D-POPUP).
+ *  \brief       Lusan application, FSM guard reference completer.
  *
  ************************************************************************/
 
@@ -132,8 +132,8 @@ SMRefCompleter::SMRefCompleter(QWidget* parent /*= nullptr*/)
 {
     setObjectName(QStringLiteral("smRefCompleter"));
     // A top-level, frameless, non-activating window: the field keeps focus and forwards keys,
-    // so nothing here can swallow a keystroke (D-BUG / 12.6). Being top-level, its width is
-    // irrelevant to the Properties dock (12.4).
+    // so nothing here can swallow a keystroke. Being top-level, its width is
+    // irrelevant to the Properties dock.
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_ShowWithoutActivating);
 
@@ -220,7 +220,7 @@ int SMRefCompleter::rebuild(const QSet<SMGuardSymbol::eRefKind>& kindFilter, con
         ++entries;
     }
 
-    // The New-lambda row (only in the all-kinds view): inserts an island at the caret (E4).
+    // The New-lambda row (only in the all-kinds view): inserts an island at the caret.
     if (kindFilter.isEmpty())
     {
         QStandardItem* sep = new QStandardItem();
@@ -267,7 +267,7 @@ bool SMRefCompleter::showFor(const QSet<SMGuardSymbol::eRefKind>& kindFilter, co
     const int width = 320;
     resize(width, height + 2);
 
-    // Position at the caret, then CLAMP to the screen and FLIP above on vertical overflow (12.5).
+    // Position at the caret, then CLAMP to the screen and FLIP above on vertical overflow.
     const QScreen* screen = QGuiApplication::screenAt(caretGlobal.bottomLeft());
     const QRect avail = (screen != nullptr) ? screen->availableGeometry()
                                             : QGuiApplication::primaryScreen()->availableGeometry();

@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMGuardPopout.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard pop-out: a bigger multiline guard editor (SM-21-05).
+ *  \brief       Lusan application, FSM guard pop-out: a bigger multiline guard editor.
  *
  ************************************************************************/
 
@@ -28,8 +28,59 @@
 
 #include <QCloseEvent>
 #include <QDialogButtonBox>
+#include <QGuiApplication>
+#include <QMdiArea>
 #include <QPushButton>
+#include <QScreen>
 #include <QVBoxLayout>
+
+namespace
+{
+    /**
+     * rief   Centers \p window over the MDI area that hosts \p anchor (the document surface the
+     *          user is looking at), falling back to the anchor's own window and then to the primary
+     *          screen. The result is clamped to the available screen area, so the whole dialog --
+     *          including its OK / Cancel row -- is always on screen.
+     **/
+    void centerOnHost(QWidget* window, QWidget* anchor)
+    {
+        QRect host;
+        for (QWidget* walk = anchor; walk != nullptr; walk = walk->parentWidget())
+        {
+            QMdiArea* mdi = qobject_cast<QMdiArea*>(walk);
+            if (mdi != nullptr)
+            {
+                host = QRect(mdi->viewport()->mapToGlobal(QPoint(0, 0)), mdi->viewport()->size());
+                break;
+            }
+        }
+
+        if (host.isEmpty() && (anchor != nullptr) && (anchor->window() != nullptr))
+        {
+            host = anchor->window()->frameGeometry();
+        }
+
+        QScreen* screen = (anchor != nullptr) ? anchor->screen() : QGuiApplication::primaryScreen();
+        const QRect available = (screen != nullptr) ? screen->availableGeometry() : host;
+        if (host.isEmpty())
+        {
+            host = available;
+        }
+
+        QRect target(QPoint(0, 0), window->frameSize().isEmpty() ? window->size() : window->frameSize());
+        target.moveCenter(host.center());
+
+        // Never let an edge fall off the screen; shrink first if the dialog is simply too big.
+        if (target.width() > available.width())     { target.setWidth(available.width()); }
+        if (target.height() > available.height())   { target.setHeight(available.height()); }
+        if (target.right() > available.right())     { target.moveRight(available.right()); }
+        if (target.bottom() > available.bottom())   { target.moveBottom(available.bottom()); }
+        if (target.left() < available.left())       { target.moveLeft(available.left()); }
+        if (target.top() < available.top())         { target.moveTop(available.top()); }
+
+        window->setGeometry(target);
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Construction
@@ -59,17 +110,20 @@ SMGuardPopout::SMGuardPopout(StateMachineModel& model, uint32_t transitionId, QW
     mField = new SMGuardField(mModel, this);
     mField->setObjectName(QStringLiteral("smGuardPopoutField"));
     mField->setAutoCommit(false);
-    outer->addWidget(mField);
+    // The large editor fills the window: a tall, multi-line writing area is the whole point of
+    // popping the guard out.
+    mField->setAutoHeight(false);
+    mField->setHeightLines(8, 8);
+    mField->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    outer->addWidget(mField, 1);
 
     mStatus = new SMGuardStatusLine(this);
     outer->addWidget(mStatus);
 
-    // S4: the island editor, hidden until an island opens (identical to the base bar).
+    // The island editor, hidden until an island opens (identical to the base bar).
     mIsland = new SMIslandEditor(this);
     mIsland->setVisible(false);
     outer->addWidget(mIsland);
-
-    outer->addStretch(1);
 
     QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     buttons->setObjectName(QStringLiteral("smGuardPopoutButtons"));
@@ -129,7 +183,11 @@ SMGuardPopout::SMGuardPopout(StateMachineModel& model, uint32_t transitionId, QW
     // way (identical to a fresh commit render).
     mField->setTransition(mTransId);
 
-    resize(560, 220);
+    // The pop-out IS the large editor: a field tall enough for a multi-line guard, and a window
+    // centered on the design surface rather than dropped at the parent's corner where its right
+    // edge fell off the screen.
+    resize(760, 420);
+    centerOnHost(this, parent);
 }
 
 //////////////////////////////////////////////////////////////////////////

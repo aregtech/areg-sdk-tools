@@ -81,9 +81,6 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMElementCondition       { "Condition" };
     constexpr QLatin1StringView xmlSMElementOperationList   { "OperationList" };
 
-    // Guard (SM-21 redesign): the transition's ID-bound resolved expression tree.
-    // Element name is the AST node kind; the only reference attribute is the lowercase
-    // `id` (a symbol's document ID). See fsml.xsd and the state-machine spec.
     constexpr QLatin1StringView xmlSMElementGuard           { "Guard" };
     constexpr QLatin1StringView xmlSMElementGuardExpr       { "Expr" };
     constexpr QLatin1StringView xmlSMElementGuardDraft      { "Draft" };

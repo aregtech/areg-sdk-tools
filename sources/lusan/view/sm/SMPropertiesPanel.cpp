@@ -852,7 +852,7 @@ void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind kind)
         // A trigger method changing type (trigger <-> action/condition), or an event/timer edit,
         // changes the stimulus vocabulary; the changed element's id is never mCurrentId, so rebuild
         // the transition page (and its picker) here so the Stimulus combo always reflects the
-        // current triggers (live sync, D-SYNC). A rename already routes through onNameChanged.
+        // current triggers (live sync). A rename already routes through onNameChanged.
         refresh();
     }
 }

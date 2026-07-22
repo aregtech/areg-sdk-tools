@@ -54,7 +54,7 @@ public:
 
     /**
      * \brief   Offers the machine's own known identifiers as popup autocomplete while
-     *          typing in the body (SM-21-06). The words are the completion universe --
+     *          typing in the body. The words are the completion universe
      *          attribute getters, constants, method calls, in-scope stimulus params --
      *          produced by the model; the editor never parses the C++ it edits. An empty
      *          list disables completion.

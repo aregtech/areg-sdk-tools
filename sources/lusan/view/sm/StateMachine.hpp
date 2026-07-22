@@ -104,7 +104,7 @@ protected:
 private slots:
     /**
      * \brief   Switches to the page owning the requested declaration kind (building it if
-     *          not built yet) and starts a new entry there (spec 9.2 Declare dropdown).
+     *          not built yet) and starts a new entry there (Declare dropdown).
      **/
     void onDeclareRequested(SMDesign::eDeclareKind kind);
 

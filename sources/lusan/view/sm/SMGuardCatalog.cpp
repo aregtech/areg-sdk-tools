@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMGuardCatalog.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard editable-surface symbol catalog (B4/B5 source).
+ *  \brief       Lusan application, FSM guard editable-surface symbol catalog.
  *
  ************************************************************************/
 
@@ -65,10 +65,13 @@ QString SMGuardSymbol::display() const
 {
     if (isCall == false)
     {
-        return name;
+        return typeText.isEmpty() ? name : (typeText + QLatin1Char(' ') + name);
     }
 
-    return name + QLatin1Char('(') + paramTypes.join(QStringLiteral(", ")) + QLatin1Char(')');
+    // A C++-shaped signature -- `bool IsReady(uint32, String)` -- so the pickup list reads the way
+    // the declaration does: the return type leads, the parameter types sit in the parentheses.
+    const QString signature = name + QLatin1Char('(') + paramTypes.join(QStringLiteral(", ")) + QLatin1Char(')');
+    return typeText.isEmpty() ? signature : (typeText + QLatin1Char(' ') + signature);
 }
 
 QString SMGuardSymbol::kindWord() const
@@ -85,7 +88,7 @@ QString SMGuardSymbol::kindWord() const
 
 QString SMGuardSymbol::mention() const
 {
-    return QLatin1Char('@') + kindWord() + QLatin1Char(':') + name;
+    return NEGuardText::refPrefix(kindWord()) + name;
 }
 
 QString SMGuardSymbol::kindNoun() const
@@ -148,7 +151,7 @@ QList<SMGuardSymbol> SMGuardCatalog::build(const StateMachineData& data, uint32_
         result.append(sym);
     }
 
-    // Condition methods: lambdas stay in the FSM group, handlers in their own (D8).
+    // Condition methods: lambdas stay in the FSM group, handlers in their own.
     QList<SMGuardSymbol> handlers;
     for (const SMMethodEntry* method : data.getMethods().getElements())
     {
@@ -328,7 +331,7 @@ QList<SMGuardRawCollision> SMGuardCatalog::rawCollisions(const StateMachineData&
         return out;
     }
 
-    // Match each candidate name against the in-scope symbols (closed world, D1); a name carried by
+    // Match each candidate name against the in-scope symbols (closed world); a name carried by
     // more than one kind keeps all matches so the caller opens the disambiguation picker.
     const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(data, transitionId);
     for (SMGuardRawCollision& candidate : candidates)
