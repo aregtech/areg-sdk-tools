@@ -122,6 +122,31 @@ public:
     inline SMOperationList& getEntryList();
     inline const SMOperationList& getExitList() const;
     inline SMOperationList& getExitList();
+
+    /**
+     * \brief   The `do/` activity operations, run repeatedly while the state is active
+     *          (started after entry, cancelled on exit). Empty when the state has none.
+     **/
+    inline const SMOperationList& getDoList() const;
+    inline SMOperationList& getDoList();
+
+    /**
+     * \brief   The `do/` repeat interval in milliseconds. 0 means trigger-driven -- the Do
+     *          operations re-run on each trigger handled while the machine stays in the state;
+     *          a positive value means a timer loop firing every that-many milliseconds. The
+     *          runtime semantics are realized by the external code generator, not by Lusan.
+     **/
+    inline uint32_t getDoInterval() const;
+    inline void setDoInterval(uint32_t interval);
+
+    /**
+     * \brief   The optional `do/` stop-condition: a free-text expression evaluated by the
+     *          generator; when it holds the repetition stops without leaving the state. Empty
+     *          means the activity runs until the state is exited. Advisory storage only.
+     **/
+    inline const QString& getDoUntil() const;
+    inline void setDoUntil(const QString& until);
+
     inline const SMTransitionData& getTransitions() const;
     inline SMTransitionData& getTransitions();
 
@@ -177,6 +202,9 @@ private:
     QString             mDescription;   //!< The description text.
     SMOperationList     mEntryList;     //!< Operations executed on entry, in order.
     SMOperationList     mExitList;      //!< Operations executed on exit, in order.
+    SMOperationList     mDoList;        //!< Operations repeated while active (the `do/` activity).
+    uint32_t            mDoInterval;    //!< The `do/` repeat interval in ms (0 = trigger-driven).
+    QString             mDoUntil;       //!< The optional `do/` stop-condition expression (advisory).
     SMTransitionData    mTransitions;   //!< The outgoing transitions (priority order).
     SMStateData*        mNested;        //!< The painted nested StateList (owned) or nullptr.
 };
@@ -344,6 +372,36 @@ inline const SMOperationList& SMStateEntry::getExitList() const
 inline SMOperationList& SMStateEntry::getExitList()
 {
     return mExitList;
+}
+
+inline const SMOperationList& SMStateEntry::getDoList() const
+{
+    return mDoList;
+}
+
+inline SMOperationList& SMStateEntry::getDoList()
+{
+    return mDoList;
+}
+
+inline uint32_t SMStateEntry::getDoInterval() const
+{
+    return mDoInterval;
+}
+
+inline void SMStateEntry::setDoInterval(uint32_t interval)
+{
+    mDoInterval = interval;
+}
+
+inline const QString& SMStateEntry::getDoUntil() const
+{
+    return mDoUntil;
+}
+
+inline void SMStateEntry::setDoUntil(const QString& until)
+{
+    mDoUntil = until;
 }
 
 inline const SMTransitionData& SMStateEntry::getTransitions() const

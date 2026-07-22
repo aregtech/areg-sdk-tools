@@ -544,6 +544,12 @@ namespace
             p.drawLine(QPointF(17.0, 16.0), QPointF(27.0, 16.0));
             arrowHead(p, QPointF(17.0, 16.0), QPointF(28.0, 16.0), 5.5, color);
             break;
+
+        case SMToolIcons::eIcon::SectionDo:
+            // A circular arrow: actions repeated while the state is active.
+            p.drawArc(QRectF(8.0, 8.0, 16.0, 16.0), 300 * 16, 300 * 16);
+            arrowHead(p, QPointF(15.0, 8.5), QPointF(22.0, 10.0), 5.0, color);
+            break;
         }
     }
 }

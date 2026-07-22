@@ -74,6 +74,7 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMElementState           { "State" };
     constexpr QLatin1StringView xmlSMElementEntryList       { "EntryList" };
     constexpr QLatin1StringView xmlSMElementExitList        { "ExitList" };
+    constexpr QLatin1StringView xmlSMElementDoList          { "DoList" };
     constexpr QLatin1StringView xmlSMElementTransitionList  { "TransitionList" };
     constexpr QLatin1StringView xmlSMElementTransition      { "Transition" };
     constexpr QLatin1StringView xmlSMElementConditionList   { "ConditionList" };
@@ -147,6 +148,8 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMAttributeHistory       { "History" };
     constexpr QLatin1StringView xmlSMAttributeSubmachine    { "Submachine" };
     constexpr QLatin1StringView xmlSMAttributeOnFinal       { "OnFinal" };
+    constexpr QLatin1StringView xmlSMAttributeInterval      { "Interval" };
+    constexpr QLatin1StringView xmlSMAttributeUntil         { "Until" };
     constexpr QLatin1StringView xmlSMAttributeStimulusKind  { "StimulusKind" };
     constexpr QLatin1StringView xmlSMAttributeStimulus      { "Stimulus" };
     constexpr QLatin1StringView xmlSMAttributeTo            { "To" };

@@ -33,23 +33,30 @@
  * Dependencies
  ************************************************************************/
 class SMArgMapTable;
+class SMSectionChrome;
 class StateMachineModel;
 class MethodBase;
 class ElementBase;
 enum class eDocElementKind;
 
 class QComboBox;
+class QIcon;
 class QLabel;
 class QVBoxLayout;
 
 /**
  * \class   SMOperationsEditor
- * \brief   The simple, opinionated editor for one operation list -- a state's `EntryList` or
- *          `ExitList`, or a transition's `OperationList`. It presents a fixed three-part form
- *          (all parts optional): one **Action** (a declared action call), one **Event** (an
+ * \brief   The simple, opinionated editor for one operation list -- a state's `EntryList`,
+ *          `DoList` or `ExitList`, or a transition's `OperationList`. It presents a fixed
+ *          three-part form (all parts optional) as a collapsible accordion under a shared
+ *          SMSectionChrome toolbar (one jump button per section + a compact toggle to expand
+ *          or collapse each): one **Action** (a declared action call), one **Event** (an
  *          event send), and any number of **Timers** (start/stop). There is no ordering UI --
- *          the action runs first, the event second, timers after -- so the form has no list or
- *          reorder controls. The action's and the event's argument mapping is rendered by the
+ *          the action runs first, the event second, timers after -- so the form has no list
+ *          or reorder controls. The same toolbar+accordion is shown in every scope this editor
+ *          serves; a host may append its own section via \ref addSection (the state Do tab adds
+ *          a Repeat-policy section that way). The action's and the
+ *          event's argument mapping is rendered by the
  *          shared \ref SMArgMapTable (in its Compact row shape) and committed through an
  *          \ref SMArgSinkOperation, so each parameter is one row with a single editable combo:
  *          pick a stimulus parameter or a machine attribute, or type a free value.
@@ -88,6 +95,14 @@ public:
 
     //!< Clears the binding and empties the editor.
     void clearBinding();
+
+    /**
+     * \brief   Appends a host-owned section to this editor's accordion, after the built-in
+     *          Action/Event/Timers sections, and returns its index. Used by the state `Do` tab to
+     *          give the repeat policy (interval + stop-condition) its own collapsible section under
+     *          the same expand/collapse toolbar. The editor takes ownership of \p content.
+     **/
+    int addSection(const QIcon& icon, const QString& title, QWidget* content);
 
     //!< Test/host accessors.
     inline QComboBox* actionCombo() const;
@@ -149,6 +164,7 @@ private:
     SMArgSinkOperation  mActionSink;    //!< Commits the action's argument mapping.
     SMArgSinkOperation  mEventSink;     //!< Commits the event's argument mapping.
 
+    SMSectionChrome*    mChrome;        //!< The expand/collapse toolbar over the section accordion.
     QComboBox*          mActionCombo;
     SMArgMapTable*      mActionParams;
     QComboBox*          mEventCombo;

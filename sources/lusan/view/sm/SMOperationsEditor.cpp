@@ -30,11 +30,13 @@
 #include "lusan/model/sm/SMOperationCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/SMArgMapTable.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
+#include "lusan/view/sm/SMToolIcons.hpp"
 
 #include <QComboBox>
 #include <QFont>
-#include <QGroupBox>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
 #include <QScrollArea>
 #include <QSet>
@@ -89,6 +91,7 @@ SMOperationsEditor::SMOperationsEditor(StateMachineModel& model, QWidget* parent
     , mRebuildQueued    (false)
     , mActionSink       (model)
     , mEventSink        (model)
+    , mChrome           (nullptr)
     , mActionCombo      (nullptr)
     , mActionParams     (nullptr)
     , mEventCombo       (nullptr)
@@ -129,39 +132,53 @@ void SMOperationsEditor::buildUi()
     box->setContentsMargins(6, 6, 6, 6);
     box->setSpacing(8);
 
-    // Action group.
-    QGroupBox* actionGroup = new QGroupBox(tr("Action"), content);
-    QVBoxLayout* actionBox = new QVBoxLayout(actionGroup);
-    mActionCombo = new QComboBox(actionGroup);
+    // Action / Event / Timers are three collapsible sections under a shared SMSectionChrome, so the
+    // chrome's header carries the very toolbar every other Properties tab has: one icon-only jump
+    // button per section (toggle it open/closed) plus the compact toggle. Compact defaults OFF so the
+    // three stay open together, each collapsible on its own. Because this lives in the shared editor,
+    // every scope it serves -- a transition's Actions tab and a state's Enter/Do/Exit tabs -- gets the
+    // same toolbar+accordion; the gear/pulse/clock glyphs mark Action/Event/Timers respectively. The
+    // state Do tab appends a fourth "Repeat" section through addSection().
+    mChrome = new SMSectionChrome(content);
+
+    // Action section.
+    QWidget* actionBody = new QWidget();
+    QVBoxLayout* actionBox = new QVBoxLayout(actionBody);
+    actionBox->setContentsMargins(6, 6, 6, 6);
+    mActionCombo = new QComboBox(actionBody);
     connect(mActionCombo, &QComboBox::activated, this, [this](int) { setActionName(mActionCombo->currentText()); });
     actionBox->addWidget(mActionCombo);
-    mActionParams = new SMArgMapTable(mModel, actionGroup);
+    mActionParams = new SMArgMapTable(mModel, actionBody);
     mActionParams->setRowStyle(SMArgMapTable::eRowStyle::Detailed);
     mActionParams->setAllowedSources(kActionSources());
     actionBox->addWidget(mActionParams);
-    box->addWidget(actionGroup);
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::NewAction), tr("Action"), actionBody
+                       , tr("The action call this operation runs"));
 
-    // Event group.
-    QGroupBox* eventGroup = new QGroupBox(tr("Event"), content);
-    QVBoxLayout* eventBox = new QVBoxLayout(eventGroup);
-    mEventCombo = new QComboBox(eventGroup);
+    // Event section.
+    QWidget* eventBody = new QWidget();
+    QVBoxLayout* eventBox = new QVBoxLayout(eventBody);
+    eventBox->setContentsMargins(6, 6, 6, 6);
+    mEventCombo = new QComboBox(eventBody);
     connect(mEventCombo, &QComboBox::activated, this, [this](int) { setEventName(mEventCombo->currentText()); });
     eventBox->addWidget(mEventCombo);
-    mEventParams = new SMArgMapTable(mModel, eventGroup);
+    mEventParams = new SMArgMapTable(mModel, eventBody);
     mEventParams->setRowStyle(SMArgMapTable::eRowStyle::Detailed);
     mEventParams->setAllowedSources(kActionSources());
     eventBox->addWidget(mEventParams);
-    box->addWidget(eventGroup);
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::NewEvent), tr("Event"), eventBody
+                       , tr("The event this operation sends"));
 
-    // Timers group.
-    QGroupBox* timerGroup = new QGroupBox(tr("Timers"), content);
-    QVBoxLayout* timerBox = new QVBoxLayout(timerGroup);
+    // Timers section.
+    QWidget* timerBody = new QWidget();
+    QVBoxLayout* timerBox = new QVBoxLayout(timerBody);
+    timerBox->setContentsMargins(6, 6, 6, 6);
     QHBoxLayout* timerButtons = new QHBoxLayout();
-    QToolButton* addStart = new QToolButton(timerGroup);
+    QToolButton* addStart = new QToolButton(timerBody);
     addStart->setText(tr("+ Start timer"));
     addStart->setToolButtonStyle(Qt::ToolButtonTextOnly);
     connect(addStart, &QToolButton::clicked, this, [this]() { addTimer(true); });
-    QToolButton* addStop = new QToolButton(timerGroup);
+    QToolButton* addStop = new QToolButton(timerBody);
     addStop->setText(tr("+ Stop timer"));
     addStop->setToolButtonStyle(Qt::ToolButtonTextOnly);
     connect(addStop, &QToolButton::clicked, this, [this]() { addTimer(false); });
@@ -169,15 +186,19 @@ void SMOperationsEditor::buildUi()
     timerButtons->addWidget(addStop);
     timerButtons->addStretch(1);
     timerBox->addLayout(timerButtons);
-    QWidget* timersHost = new QWidget(timerGroup);
+    QWidget* timersHost = new QWidget(timerBody);
     mTimersList = new QVBoxLayout(timersHost);
     mTimersList->setContentsMargins(0, 0, 0, 0);
     timerBox->addWidget(timersHost);
-    mTimersEmpty = new QLabel(tr("No timers."), timerGroup);
+    mTimersEmpty = new QLabel(tr("No timers."), timerBody);
     mTimersEmpty->setEnabled(false);
     timerBox->addWidget(mTimersEmpty);
-    box->addWidget(timerGroup);
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::NewTimer), tr("Timers"), timerBody
+                       , tr("The timers this operation starts or stops"));
 
+    mChrome->setCompact(false);
+
+    box->addWidget(mChrome);
     box->addStretch(1);
     scroll->setWidget(content);
 }
@@ -206,6 +227,11 @@ void SMOperationsEditor::clearBinding()
     mList = nullptr;
     mOwner = nullptr;
     rebuild();
+}
+
+int SMOperationsEditor::addSection(const QIcon& icon, const QString& title, QWidget* content)
+{
+    return mChrome->addSection(icon, title, content, title);
 }
 
 //////////////////////////////////////////////////////////////////////////

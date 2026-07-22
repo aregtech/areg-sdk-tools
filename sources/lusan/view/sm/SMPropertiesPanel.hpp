@@ -35,6 +35,7 @@ class QLabel;
 class QLineEdit;
 class QListWidget;
 class QPlainTextEdit;
+class QSpinBox;
 class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
@@ -123,6 +124,8 @@ private slots:
 
     void onStateNameCommit();
     void onStateDescriptionCommit();
+    void onDoIntervalCommit();
+    void onDoUntilCommit();
     void onTransitionDescriptionCommit();
     void onStimulusCommit();
     void onTargetCommit();
@@ -133,7 +136,7 @@ private:
     void buildTransitionPage();
     void buildRegistryPage();
 
-    //!< Refreshes each State-Actions section header with a summary of its bound list (`not set` when empty).
+    //!< Refreshes each state-action tab's tooltip with a summary of its bound list (`not set` when empty).
     void refreshActionSummaries();
 
     void refresh();
@@ -176,26 +179,28 @@ private:
 private:
     /**
      * \enum    eOpList
-     * \brief   Which of a state's operation lists a State-Actions section is bound to. `Do` is
-     *          added in step 4 (R24) -- one enumerator plus one build-table row.
+     * \brief   Which of a state's operation lists a state-action tab is bound to. The `Do` list
+     *          (R24) is not parallel to Enter/Exit: its tab also carries a repeat interval and a
+     *          stop-condition above the shared editor, so its page is built by hand.
      **/
     enum class eOpList
     {
-          Entry     //!< The state's EntryList (`On Enter`).
-        , Exit      //!< The state's ExitList (`On Exit`).
+          Entry     //!< The state's EntryList (`Enter` tab).
+        , Do        //!< The state's DoList (`Do` tab -- the repeated activity).
+        , Exit      //!< The state's ExitList (`Exit` tab).
     };
 
     /**
      * \struct  ActionSlot
-     * \brief   One State-Actions accordion section: its operation-list role, its editor and its
-     *          accordion section index. The State-Actions tab is built from a table of these so a
-     *          third `Do` list is a one-line addition (R22).
+     * \brief   One state-action tab: its operation-list role, its editor and its index in the state
+     *          tab widget. showState() binds each editor and refreshActionSummaries() re-tips each
+     *          tab from this table, so a third `Do` list is a one-line addition.
      **/
     struct ActionSlot
     {
-        eOpList             role;       //!< Which state list this section edits.
+        eOpList             role;       //!< Which state list this tab edits.
         SMOperationsEditor* editor;     //!< The bound operation-list editor.
-        int                 section;    //!< The accordion section index (for the header summary).
+        int                 tabIndex;   //!< The tab index in mStateTabs (for the tooltip summary).
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -209,14 +214,16 @@ private:
     bool                mUpdating;      //!< Guards field population against commit signals.
 
     // State page.
-    QTabWidget*         mStateTabs;     //!< The General / Actions tab host.
+    QTabWidget*         mStateTabs;     //!< The General / Enter / Do / Exit tab host.
     SMSectionChrome*    mStateGeneral;  //!< The General tab chrome (Details / Transitions sections).
-    SMSectionChrome*    mStateActions;  //!< The Actions tab chrome (On Enter / On Exit sections).
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
     QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
     SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
     SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
+    SMOperationsEditor* mDoOps;         //!< The Do-activity operations editor (Actions tab).
+    QSpinBox*           mDoInterval;    //!< The Do repeat interval in ms (0 = trigger-driven).
+    QLineEdit*          mDoUntil;       //!< The optional Do stop-condition expression.
     QListWidget*        mTransitions;   //!< The state's transitions, drag-reorderable.
     QList<ActionSlot>   mActionSlots;   //!< The State-Actions sections, in display order.
 

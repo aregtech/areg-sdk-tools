@@ -55,6 +55,7 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 #include <QSignalBlocker>
+#include <QSpinBox>
 #include <QStackedWidget>
 #include <QTabWidget>
 #include <QTimer>
@@ -181,12 +182,14 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mUpdating     (false)
     , mStateTabs    (nullptr)
     , mStateGeneral (nullptr)
-    , mStateActions (nullptr)
     , mStateName    (nullptr)
     , mStateKind    (nullptr)
     , mStateDesc    (nullptr)
     , mEnterOps     (nullptr)
     , mExitOps      (nullptr)
+    , mDoOps        (nullptr)
+    , mDoInterval   (nullptr)
+    , mDoUntil      (nullptr)
     , mTransitions  (nullptr)
     , mTransGeneral (nullptr)
     , mStimulusSig  (nullptr)
@@ -292,33 +295,48 @@ void SMPropertiesPanel::buildStatePage()
         QTimer::singleShot(0, this, [this, from, to]() { reorderTransition(from, to); });
     };
 
-    // Actions tab (R22): a data-driven accordion of operation-list sections. It ships with On Enter /
-    // On Exit; a third `Do` list (R24, step 4) is one enumerator plus one row of this table. Each
-    // header summarizes what is set (`not set` when empty); compact defaults UNCHECKED so the enter
-    // and exit lists stay visible together -- their symmetry is the point. What this shares with the
-    // Conditions tab is ONLY the chrome and the argument table inside each editor -- no guard field,
-    // no chips, no grammar, no Data catalog.
+    // Actions (R22/R24, redesigned): one tab per state activity -- Enter, Do, Exit -- instead of a
+    // single crowded accordion, so the panel stays navigable when every part is open. Each tab hosts
+    // the shared SMOperationsEditor, whose Action/Event/Timer accordion is identical in every scope
+    // (the reuse the redesign asked for). Enter and Exit are symmetric; the Do activity is not --
+    // besides its operation list it carries a repeat interval (0 = trigger-driven, >0 = a timer loop)
+    // and an optional stop-condition, so its tab page is built by hand with those two fields above the
+    // editor. Each tab's tooltip carries the per-list summary the old section headers used to show.
     mEnterOps = new SMOperationsEditor(mModel, this);
+    mDoOps    = new SMOperationsEditor(mModel, this);
     mExitOps  = new SMOperationsEditor(mModel, this);
 
-    mStateActions = new SMSectionChrome(this);
-    mStateActions->setTitle(tr("Actions"));
-    const struct { eOpList role; SMToolIcons::eIcon icon; QString title; QString tip; SMOperationsEditor* editor; } table[] =
-    {
-          { eOpList::Entry, SMToolIcons::eIcon::SectionEnter, tr("On Enter"), tr("Actions run when the state is entered"), mEnterOps }
-        , { eOpList::Exit,  SMToolIcons::eIcon::SectionExit,  tr("On Exit"),  tr("Actions run when the state is left"),    mExitOps  }
-    };
-    for (const auto& row : table)
-    {
-        const int section = mStateActions->addSection(SMToolIcons::icon(row.icon), row.title, row.editor, row.tip);
-        mActionSlots.append({ row.role, row.editor, section });
-    }
-    mStateActions->setCompact(false);
-    mStateActions->addFooterStretch();
+    // The Do repeat policy is its own collapsible `Repeat` section appended to the Do editor's
+    // accordion, under the same expand/collapse toolbar, so the interval and stop-condition sit
+    // beside the Action/Event/Timers sections instead of floating in a form above them. The circular
+    // repeat glyph (SectionDo) marks it.
+    mDoInterval = new QSpinBox(this);
+    mDoInterval->setRange(0, 3600000);
+    mDoInterval->setSingleStep(50);
+    mDoInterval->setSuffix(tr(" ms"));
+    mDoInterval->setToolTip(tr("Repeat interval; 0 runs the Do actions on each trigger while in the state"));
+    mDoUntil = new QLineEdit(this);
+    mDoUntil->setPlaceholderText(tr("Stop condition (optional)"));
+    mDoUntil->setToolTip(tr("When this expression holds the repetition stops without leaving the state"));
+
+    QWidget* repeatBody = new QWidget(this);
+    QFormLayout* repeatForm = new QFormLayout(repeatBody);
+    repeatForm->setContentsMargins(6, 6, 6, 6);
+    repeatForm->addRow(tr("Repeat every:"), mDoInterval);
+    repeatForm->addRow(tr("Until:"), mDoUntil);
+    mDoOps->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionDo), tr("Repeat"), repeatBody);
+
+    connect(mDoInterval, &QSpinBox::editingFinished, this, &SMPropertiesPanel::onDoIntervalCommit);
+    connect(mDoUntil, &QLineEdit::editingFinished, this, &SMPropertiesPanel::onDoUntilCommit);
 
     mStateTabs = new QTabWidget(this);
     mStateTabs->addTab(mStateGeneral, tr("General"));
-    mStateTabs->addTab(mStateActions, tr("Actions"));
+    const int enterTab = mStateTabs->addTab(mEnterOps, tr("Enter"));
+    const int doTab    = mStateTabs->addTab(mDoOps, tr("Do"));
+    const int exitTab  = mStateTabs->addTab(mExitOps, tr("Exit"));
+    mActionSlots.append({ eOpList::Entry, mEnterOps, enterTab });
+    mActionSlots.append({ eOpList::Do,    mDoOps,    doTab });
+    mActionSlots.append({ eOpList::Exit,  mExitOps,  exitTab });
 
     mStack->insertWidget(PageState, mStateTabs);
 }
@@ -532,10 +550,17 @@ void SMPropertiesPanel::showState(uint32_t stateId)
     SMStateEntry* mutableState = mModel.getData().findStateById(stateId);
     for (const ActionSlot& slot : mActionSlots)
     {
-        SMOperationList* list = (slot.role == eOpList::Entry) ? &mutableState->getEntryList()
-                                                              : &mutableState->getExitList();
+        SMOperationList* list = nullptr;
+        switch (slot.role)
+        {
+        case eOpList::Entry:    list = &mutableState->getEntryList();  break;
+        case eOpList::Do:       list = &mutableState->getDoList();     break;
+        case eOpList::Exit:     list = &mutableState->getExitList();   break;
+        }
         slot.editor->bind(stateId, eDocElementKind::State, 0u, mutableState, list);
     }
+    mDoInterval->setValue(static_cast<int>(state->getDoInterval()));
+    mDoUntil->setText(state->getDoUntil());
     refreshActionSummaries();
     populateTransitionList(stateId);
 
@@ -546,24 +571,38 @@ void SMPropertiesPanel::showState(uint32_t stateId)
 void SMPropertiesPanel::refreshActionSummaries()
 {
     const SMStateEntry* state = mModel.getData().findStateById(mCurrentId);
-    if ((state == nullptr) || (mStateActions == nullptr))
+    if ((state == nullptr) || (mStateTabs == nullptr))
     {
         return;
     }
 
-    SMAccordion* accordion = mStateActions->accordion();
     for (const ActionSlot& slot : mActionSlots)
     {
-        const SMOperationList& list = (slot.role == eOpList::Entry) ? state->getEntryList() : state->getExitList();
-        QAbstractButton* header = accordion->header(slot.section);
-        if (header != nullptr)
+        // The tab tooltip carries the summary the old collapsed section headers used to show:
+        // `On Enter: doWork(), send evGo` or `On Enter: not set`, so hovering answers "what happens
+        // around this state?" without switching tabs. The Do tooltip also folds in its repeat policy
+        // -- `Do (every 200 ms)` or `Do (on trigger)`.
+        const SMOperationList* list = nullptr;
+        QString title;
+        switch (slot.role)
         {
-            // The section title carries its own summary: `On Enter: doWork(), send evGo` or
-            // `On Enter: not set`. The leading word stays so each section is identifiable when
-            // collapsed; the summary answers "what happens around this state?" without a click.
-            const QString title = (slot.role == eOpList::Entry) ? tr("On Enter") : tr("On Exit");
-            header->setText(title + QStringLiteral(": ") + operationsSummary(mModel.getData(), list));
+        case eOpList::Entry:
+            list = &state->getEntryList();
+            title = tr("On Enter");
+            break;
+        case eOpList::Do:
+            list = &state->getDoList();
+            title = list->isEmpty() ? tr("Do")
+                  : (state->getDoInterval() > 0u ? tr("Do (every %1 ms)").arg(state->getDoInterval())
+                                                 : tr("Do (on trigger)"));
+            break;
+        case eOpList::Exit:
+            list = &state->getExitList();
+            title = tr("On Exit");
+            break;
         }
+
+        mStateTabs->setTabToolTip(slot.tabIndex, title + QStringLiteral(": ") + operationsSummary(mModel.getData(), *list));
     }
 }
 
@@ -718,6 +757,49 @@ void SMPropertiesPanel::onStateDescriptionCommit()
     auto getter = [doc, id]() -> QString { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDescription() : QString()); };
     auto setter = [doc, id](const QString& value) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDescription(value); };
     mModel.getUndoStack().push(new TDocSetPropertyCommand<QString>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, mStateDesc->toPlainText(), tr("Set description")));
+}
+
+void SMPropertiesPanel::onDoIntervalCommit()
+{
+    if (mUpdating || (mPage != PageState))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(mCurrentId);
+    const uint32_t value = static_cast<uint32_t>(mDoInterval->value());
+    if ((state == nullptr) || (value == state->getDoInterval()))
+    {
+        return;
+    }
+
+    const uint32_t id = mCurrentId;
+    StateMachineData* doc = &data;
+    auto getter = [doc, id]() -> uint32_t { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDoInterval() : 0u); };
+    auto setter = [doc, id](const uint32_t& v) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDoInterval(v); };
+    mModel.getUndoStack().push(new TDocSetPropertyCommand<uint32_t>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, value, tr("Set Do interval")));
+}
+
+void SMPropertiesPanel::onDoUntilCommit()
+{
+    if (mUpdating || (mPage != PageState))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(mCurrentId);
+    if ((state == nullptr) || (mDoUntil->text() == state->getDoUntil()))
+    {
+        return;
+    }
+
+    const uint32_t id = mCurrentId;
+    StateMachineData* doc = &data;
+    auto getter = [doc, id]() -> QString { SMStateEntry* e = doc->findStateById(id); return (e != nullptr ? e->getDoUntil() : QString()); };
+    auto setter = [doc, id](const QString& v) { SMStateEntry* e = doc->findStateById(id); if (e != nullptr) e->setDoUntil(v); };
+    mModel.getUndoStack().push(new TDocSetPropertyCommand<QString>(mModel.getNotifier(), id, eDocElementKind::State, getter, setter, mDoUntil->text(), tr("Set Do stop condition")));
 }
 
 void SMPropertiesPanel::onTransitionDescriptionCommit()
