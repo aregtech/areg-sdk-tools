@@ -105,9 +105,11 @@ private:
      **/
     struct BodyRow
     {
-        eRowIcon    icon;   //!< The glyph kind.
-        QString     text;   //!< The row text.
-        eRowZone    zone;   //!< Where in the box the row is anchored.
+        eRowIcon    icon;           //!< The glyph kind.
+        QString     text;           //!< The row text.
+        eRowZone    zone;           //!< Where in the box the row is anchored.
+        bool        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the zone glyph).
+        bool        continues;      //!< Another row of the same group follows (draws a ` \` cue).
     };
 
 //////////////////////////////////////////////////////////////////////////

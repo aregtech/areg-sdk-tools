@@ -23,6 +23,7 @@
  * Includes
  ************************************************************************/
 #include <QColor>
+#include <QFont>
 #include <QList>
 #include <QPointF>
 #include <QRectF>
@@ -115,8 +116,10 @@ namespace NESMDesign
     constexpr double    StateCornerRadius   { 8.0 };
     //!< The header band height (name and badges).
     constexpr double    StateHeaderHeight   { 24.0 };
-    //!< One behavior row's height in the state body.
-    constexpr double    StateRowHeight      { 16.0 };
+    //!< One behavior row's height in the state body. Kept tight so the action, event and timer rows
+    //!< of one Enter/Do/Exit group read as a single compact cluster (the zone glyph and continuation
+    //!< cue still separate one group from the next); the extra slack falls between the zone bands.
+    constexpr double    StateRowHeight      { 14.0 };
     //!< The horizontal text padding inside the state box.
     constexpr double    StatePadding        { 8.0 };
     //!< The side length of a selection resize handle.
@@ -125,12 +128,13 @@ namespace NESMDesign
     constexpr int       HeaderShadeFactor   { 145 };
 
     //!< The radius of the begin dot drawn on the source state border.
-    constexpr double    EdgeBeginDotRadius  { 3.5 };
+    constexpr double    EdgeBeginDotRadius  { 3.0 };
     //!< The arrowhead length and half-width at the target border.
-    constexpr double    EdgeArrowLength     { 12.0 };
-    constexpr double    EdgeArrowHalfWidth  { 5.0 };
-    //!< The drawn width of an edge line.
-    constexpr double    EdgeLineWidth       { 1.6 };
+    constexpr double    EdgeArrowLength     { 10.0 };
+    constexpr double    EdgeArrowHalfWidth  { 4.0 };
+    //!< The drawn width of an edge line (a little narrower than a full 2px stroke so the
+    //!< transition reads as a fine line, not a rule).
+    constexpr double    EdgeLineWidth       { 1.0 };
     //!< The side length of a waypoint handle drawn on a selected edge.
     constexpr double    WaypointHandleSize  { 7.0 };
     //!< The pick radius for grabbing an endpoint or waypoint with the mouse.
@@ -145,6 +149,15 @@ namespace NESMDesign
     constexpr double    EdgeLabelGap        { 4.0 };
     //!< The band around a state box border from which a transition drag can be started.
     constexpr double    EdgeBorderDragMargin{ 6.0 };
+    //!< The font scale of on-canvas edge labels (trigger signature, guard, operation summary),
+    //!< relative to the application font: a little smaller so the labels stay compact.
+    constexpr double    EdgeLabelFontScale  { 0.85 };
+    //!< The font scale of a state-body behavior row, relative to the application font.
+    constexpr double    StateRowFontScale   { 0.80 };
+    //!< The largest distance an edge's movable label block may sit from the nearest point of the
+    //!< transition line. The label follows mouse or arrow keys but is clamped to this radius so it
+    //!< always reads as belonging to its edge (issue #532 -- movable trigger/operation text).
+    constexpr double    EdgeLabelMaxOffset  { 30.0 };
 
     //!< The largest size of the submachine miniature hint in a composite state's body.
     constexpr double    MiniatureMaxWidth   { 46.0 };
@@ -197,6 +210,15 @@ namespace NESMDesign
      *          user-placed edge endpoint to the state box border.
      **/
     QPointF nearestBorderPoint(const QRectF& rect, double radius, const QPointF& point);
+
+    /**
+     * \brief   Returns a border point that both sticks to the box border AND aligns to the grid:
+     *          the nearest border point, then slid along its edge to the nearest half-grid step so
+     *          it lands exactly on a grid crossing or midway between two crossings (issue #532 --
+     *          the endpoint no longer jitters as the mouse or connected box moves). The tangential
+     *          coordinate is clamped to the straight span so it never rides onto a rounded corner.
+     **/
+    QPointF gridAlignedBorderPoint(const QRectF& rect, double radius, const QPointF& point, int gridSize);
 
     /**
      * \brief   Samples a circular arc through \p begin and \p end with the given signed
@@ -265,6 +287,12 @@ namespace NESMDesign
      * \brief   Returns the selection highlight color of the given palette.
      **/
     QColor selectionColor(const QPalette& palette);
+
+    /**
+     * \brief   Returns \p base scaled by \p scale, preserving whichever of point size or pixel
+     *          size the base font uses (so it works whether the app font is point- or pixel-sized).
+     **/
+    QFont scaledFont(const QFont& base, double scale);
 
     /**
      * \brief   Snaps a single coordinate to the nearest grid line.

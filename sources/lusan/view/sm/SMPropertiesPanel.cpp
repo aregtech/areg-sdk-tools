@@ -1045,11 +1045,17 @@ void SMPropertiesPanel::onElementChanged(uint32_t id, eDocElementKind kind)
     }
 }
 
-void SMPropertiesPanel::onElementRemoved(uint32_t id, eDocElementKind /*kind*/)
+void SMPropertiesPanel::onElementRemoved(uint32_t id, eDocElementKind kind)
 {
     if (id == mCurrentId)
     {
         showEmpty();
+    }
+    else if ((mPage == PageTransition) && (isEditing() == false) && (kind == eDocElementKind::Method))
+    {
+        // Removing a parameter shortens the trigger stimulus signature shown in the General/Trigger
+        // section; the notifier carries the parameter's id (never mCurrentId), so refresh the page.
+        refresh();
     }
 }
 
@@ -1071,6 +1077,12 @@ void SMPropertiesPanel::onListReordered(uint32_t ownerId, eDocElementKind kind)
     if ((mPage == PageState) && (ownerId == mCurrentId) && (kind == eDocElementKind::Transition))
     {
         populateTransitionList(mCurrentId);
+    }
+    else if ((mPage == PageTransition) && (isEditing() == false) && (kind == eDocElementKind::Method))
+    {
+        // Reordering a method's parameters reorders the trigger stimulus signature in the
+        // General/Trigger section; the owner id is the method's, not mCurrentId, so refresh the page.
+        refresh();
     }
 }
 

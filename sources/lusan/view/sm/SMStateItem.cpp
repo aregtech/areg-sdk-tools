@@ -45,11 +45,13 @@
 #include <QPolygonF>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
+#include <QStringList>
 #include <QToolTip>
 
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <utility>
 
 namespace
 {
@@ -190,6 +192,41 @@ namespace
         }
     }
 
+    //!< Drops the leading verb the shared one-line summary prepends for an event or a timer
+    //!< (`send `, `start `, `stop `). On a state body every such row already carries its own kind
+    //!< glyph -- the lightning bolt for an event, the play/stop clock for a timer -- so the word is
+    //!< redundant beside the icon. The edge summary keeps the verbs (it has no per-op icons), so the
+    //!< strip lives here, in the body renderer, not in SMOperationSummary.
+    QString withoutRowVerb(const SMOperationBase& op, QString text)
+    {
+        const char* verb = nullptr;
+        switch (op.getOperationType())
+        {
+        case SMOperationBase::eOperation::EventSend:
+            verb = "send ";
+            break;
+        case SMOperationBase::eOperation::TimerStart:
+            verb = "start ";
+            break;
+        case SMOperationBase::eOperation::TimerStop:
+            verb = "stop ";
+            break;
+        default:
+            break;
+        }
+
+        if (verb != nullptr)
+        {
+            const QString prefix = QString::fromLatin1(verb);
+            if (text.startsWith(prefix))
+            {
+                text = text.mid(prefix.length());
+            }
+        }
+
+        return text;
+    }
+
     //!< Draws one behavior-row glyph centered in the given rectangle.
     void drawRowIcon(QPainter* painter, const QRectF& rect, SMStateItem::eRowIcon icon, const QColor& color)
     {
@@ -269,11 +306,24 @@ namespace
 
         case SMStateItem::eRowIcon::Event:
         {
-            // Send arrow pointing up-right.
-            const QPointF tip{ rect.right() - 1.5, rect.top() + 2.5 };
-            painter->drawLine(QPointF(rect.left() + 1.5, rect.bottom() - 2.5), tip);
-            painter->drawLine(tip, tip + QPointF(-4.5, 0.5));
-            painter->drawLine(tip, tip + QPointF(-0.5, 4.5));
+            // A filled lightning bolt -- the same glyph family as the Events page and the toolbar so
+            // "event" reads the same way on every surface. Normalized coordinates (0..1 in the icon
+            // rect) trace the bolt, then map onto the row-icon rect.
+            const double x = rect.left();
+            const double y = rect.top();
+            const double w = rect.width();
+            const double h = rect.height();
+            QPainterPath bolt;
+            bolt.moveTo(x + 0.62 * w, y + 0.05 * h);
+            bolt.lineTo(x + 0.25 * w, y + 0.55 * h);
+            bolt.lineTo(x + 0.48 * w, y + 0.55 * h);
+            bolt.lineTo(x + 0.40 * w, y + 0.95 * h);
+            bolt.lineTo(x + 0.78 * w, y + 0.42 * h);
+            bolt.lineTo(x + 0.53 * w, y + 0.42 * h);
+            bolt.closeSubpath();
+            painter->setBrush(color);
+            painter->drawPath(bolt);
+            painter->setBrush(Qt::NoBrush);
             break;
         }
 
@@ -691,11 +741,10 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
         shown[0] = std::min(counts[0], rowSlots);
     }
 
-    const auto drawRow = [&](const QString& text, eRowIcon icon, double rowY, bool ellipsis)
+    const auto drawRow = [&](const QString& text, eRowIcon icon, double rowY, bool ellipsis, bool continues)
     {
         painter->setFont(rowFont);
         painter->setPen(color);
-        const QRectF textRect{ padding + 16.0, rowY, box.width() - padding - (padding + 16.0), rowH };
         if (ellipsis)
         {
             painter->drawText(QRectF(padding, rowY, box.width() - 2.0 * padding, rowH)
@@ -703,11 +752,21 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
             return;
         }
 
+        // A ` \` continuation cue at the right edge says "the next row belongs to this same
+        // Enter/Do/Exit group"; reserve its width so it never overlaps the row text.
+        const double cueW = (continues ? (metrics.horizontalAdvance(QStringLiteral("\\")) + 4.0) : 0.0);
+        const QRectF textRect{ padding + 16.0, rowY, box.width() - padding - (padding + 16.0) - cueW, rowH };
+
         drawRowIcon(painter, QRectF(padding, rowY + 2.0, 12.0, rowH - 4.0), icon, color);
         painter->setFont(rowFont);
         painter->setPen(color);
         painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter
                          , metrics.elidedText(text, Qt::ElideRight, static_cast<int>(textRect.width())));
+        if (continues)
+        {
+            painter->drawText(QRectF(box.width() - padding - cueW, rowY, cueW, rowH)
+                             , Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("\\"));
+        }
     };
 
     // Where each band starts: entry at the top, exit against the bottom edge, and the middle band
@@ -732,7 +791,7 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
 
         // The last slot of a truncated band says so, rather than dropping rows silently.
         const bool truncated = ((seen[zone] + 1) == shown[zone]) && (shown[zone] < counts[zone]);
-        drawRow(row.text, row.icon, bandY[zone] + (seen[zone] * rowH), truncated);
+        drawRow(row.text, row.icon, bandY[zone] + (seen[zone] * rowH), truncated, row.continues && (truncated == false));
         ++seen[zone];
     }
 }
@@ -998,64 +1057,106 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
     const SMScene* canvas = getCanvas();
     const StateMachineData* data = (canvas != nullptr) ? &canvas->getModel().getData() : nullptr;
 
-    // The icon differentiates the operation kind (start/stop timer, event, generic action); a
-    // generic action falls back to the glyph of the zone it belongs to, so the three activities
-    // stay distinguishable even when their operations are otherwise alike.
-    const auto iconFor = [](const SMOperationBase& op, eRowZone zone) -> eRowIcon
+    const auto rowText = [data](const SMOperationBase& op) -> QString
     {
-        switch (op.getOperationType())
+        const QString summary = (data != nullptr) ? SMOperationSummary::text(*data, op) : operationText(op);
+        return withoutRowVerb(op, summary);
+    };
+
+    // The zone glyph the FIRST row of an Enter/Do/Exit group carries, so every group opens with the
+    // same mark (`->|` enter, `<-|` exit, a self-loop for Do), and the reader sees at a glance which
+    // activity band a row belongs to.
+    const auto zoneGlyph = [](eRowZone zone) -> eRowIcon
+    {
+        switch (zone)
         {
-        case SMOperationBase::eOperation::TimerStart:   return eRowIcon::TimerStart;
-        case SMOperationBase::eOperation::TimerStop:    return eRowIcon::TimerStop;
-        case SMOperationBase::eOperation::EventSend:    return eRowIcon::Event;
-        default:
-            switch (zone)
-            {
-            case eRowZone::Enter:   return eRowIcon::Entry;
-            case eRowZone::Exit:    return ExitRowIcon;
-            default:                return eRowIcon::Internal;
-            }
+        case eRowZone::Enter:   return eRowIcon::Entry;
+        case eRowZone::Exit:    return ExitRowIcon;
+        default:                return eRowIcon::Internal;
         }
     };
 
-    const auto rowText = [data](const SMOperationBase& op) -> QString
+    // One Enter/Do/Exit group, ordered action -> event -> timer(s): the actions each on a row, the
+    // events each on a row, then ALL timers combined on one row (start and stop together). The first
+    // emitted row carries the zone glyph; every row but the last flags a ` \` continuation cue so the
+    // group reads as one block. An absent kind emits nothing (no empty row, no dangling backslash).
+    const auto appendGroup = [&](const SMOperationList& ops, eRowZone zone)
     {
-        return (data != nullptr) ? SMOperationSummary::text(*data, op) : operationText(op);
+        QList<const SMOperationBase*> actions;
+        QList<const SMOperationBase*> events;
+        QList<const SMOperationBase*> timers;    // start and stop, in list order
+        for (const SMOperationBase* op : ops.getOperations())
+        {
+            switch (op->getOperationType())
+            {
+            case SMOperationBase::eOperation::TimerStart:
+            case SMOperationBase::eOperation::TimerStop:
+                timers.append(op);
+                break;
+            case SMOperationBase::eOperation::EventSend:
+                events.append(op);
+                break;
+            default:
+                actions.append(op);
+                break;
+            }
+        }
+
+        QList<BodyRow> group;
+        for (const SMOperationBase* op : std::as_const(actions))
+        {
+            group.append(BodyRow{ zoneGlyph(zone), rowText(*op), zone, false, false });
+        }
+        for (const SMOperationBase* op : std::as_const(events))
+        {
+            group.append(BodyRow{ eRowIcon::Event, rowText(*op), zone, false, false });
+        }
+        if (timers.isEmpty() == false)
+        {
+            // Every timer of the group on one line (`start A | stop B`); the icon follows the first
+            // timer so a start-only group shows the play clock and a stop-only group the square clock.
+            QStringList parts;
+            for (const SMOperationBase* op : std::as_const(timers))
+            {
+                parts.append(rowText(*op));
+            }
+
+            const eRowIcon tIcon = (timers.first()->getOperationType() == SMOperationBase::eOperation::TimerStop)
+                                    ? eRowIcon::TimerStop : eRowIcon::TimerStart;
+            group.append(BodyRow{ tIcon, parts.join(QStringLiteral(" | ")), zone, false, false });
+        }
+
+        for (int i = 0; i < group.size(); ++i)
+        {
+            if (i == 0)
+            {
+                group[i].icon = zoneGlyph(zone);    // the group opens with `->|` / `<-|` / loop
+                group[i].firstInGroup = true;
+            }
+
+            group[i].continues = (i < (group.size() - 1));
+            mRows.append(group.at(i));
+        }
     };
 
-    // The rows are appended zone by zone -- Enter, then everything that runs while in the state,
-    // then Exit -- and paintBodyRows anchors each zone to the top, middle and bottom of the box.
-    for (const SMOperationBase* op : state.getEntryList().getOperations())
-    {
-        mRows.append(BodyRow{ iconFor(*op, eRowZone::Enter), rowText(*op), eRowZone::Enter });
-    }
+    // Zone by zone -- Enter at the top, everything that runs WHILE in the state in the middle, Exit
+    // anchored to the bottom -- so the box reads in the order the state actually executes.
+    appendGroup(state.getEntryList(), eRowZone::Enter);
+    appendGroup(state.getDoList(), eRowZone::Middle);
 
-    // The Do activity runs repeatedly WHILE the state is active, so it belongs in the middle band
-    // beside the internal transitions rather than at either edge.
-    for (const SMOperationBase* op : state.getDoList().getOperations())
-    {
-        mRows.append(BodyRow{ iconFor(*op, eRowZone::Middle), rowText(*op), eRowZone::Middle });
-    }
-
-    // External transitions show their operations on the edge (below the line); internal ones
-    // have no edge, so their operations read here under the "on <stimulus>" row.
+    // External transitions show their operations on the edge (below the line); internal ones have no
+    // edge, so each reads here as its own group under an "on <stimulus>" header row.
     for (const SMTransitionEntry* transition : state.getTransitions().getElements())
     {
         if (transition->isExternal() == false)
         {
             const QString stim = (data != nullptr) ? SMOperationSummary::stimulusSignature(*data, *transition) : transition->getStimulus();
-            mRows.append(BodyRow{ eRowIcon::Internal, QStringLiteral("on ") + stim, eRowZone::Middle });
-            for (const SMOperationBase* op : transition->getOperations().getOperations())
-            {
-                mRows.append(BodyRow{ iconFor(*op, eRowZone::Middle), rowText(*op), eRowZone::Middle });
-            }
+            mRows.append(BodyRow{ eRowIcon::Internal, QStringLiteral("on ") + stim, eRowZone::Middle, false, false });
+            appendGroup(transition->getOperations(), eRowZone::Middle);
         }
     }
 
-    for (const SMOperationBase* op : state.getExitList().getOperations())
-    {
-        mRows.append(BodyRow{ iconFor(*op, eRowZone::Exit), rowText(*op), eRowZone::Exit });
-    }
+    appendGroup(state.getExitList(), eRowZone::Exit);
 }
 
 void SMStateItem::hoverMoveEvent(QGraphicsSceneHoverEvent* event)

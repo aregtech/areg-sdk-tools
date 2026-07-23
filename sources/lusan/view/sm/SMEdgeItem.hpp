@@ -128,6 +128,33 @@ public:
     inline bool hasSelectedPoint() const;
 
     /**
+     * \brief   True while the label block is in reposition mode: a double-click on the trigger or
+     *          operation text framed it and tethered it to the line, so mouse or arrow keys move it.
+     **/
+    inline bool hasActiveLabel() const;
+
+    /**
+     * \brief   True while a begin/end anchor is the active (keyboard-movable) endpoint.
+     **/
+    inline bool hasActiveEnd() const;
+
+    /**
+     * \brief   Moves the movable label block by one keyboard step, clamped so it stays within
+     *          \ref NESMDesign::EdgeLabelMaxOffset of the line, and commits it as one undo step.
+     *          Steps match \ref nudgeSelectedPoint (5 units, Ctrl = 10, Shift = 1 pixel).
+     * \return  True when the label was active and moved (the event is consumed).
+     **/
+    bool nudgeLabel(int dx, int dy, bool coarse, bool pixelWise);
+
+    /**
+     * \brief   Moves the active begin/end endpoint by one keyboard step along the state border,
+     *          re-sticking it to the nearest grid-aligned border position, and commits one undo
+     *          step. Steps match \ref nudgeSelectedPoint.
+     * \return  True when an endpoint was active and moved (the event is consumed).
+     **/
+    bool nudgeActiveEnd(int dx, int dy, bool coarse, bool pixelWise);
+
+    /**
      * \brief   Moves the active interior waypoint by one keyboard step and commits it as one
      *          undo step. The begin/end anchors stay glued to the state borders and are never
      *          moved this way. Steps snap the moved coordinate to a grid of the step size: a
@@ -268,6 +295,29 @@ private:
     int hitWaypoint(const QPointF& point) const;
 
     /**
+     * \brief   The point on the drawn polyline closest to \p point (the tether target of the
+     *          movable label, and the clamp reference that keeps the label near its line).
+     **/
+    QPointF nearestPathPoint(const QPointF& point) const;
+
+    /**
+     * \brief   Clamps a candidate label anchor so it never sits farther than
+     *          \ref NESMDesign::EdgeLabelMaxOffset from the nearest point of the line.
+     **/
+    QPointF clampLabelPos(const QPointF& candidate) const;
+
+    /**
+     * \brief   Enters (or leaves) label reposition mode: frames the label and tethers it to the
+     *          line so mouse and arrow keys can move it. Seeds a label anchor on first entry.
+     **/
+    void setLabelActive(bool active);
+
+    /**
+     * \brief   Sets the active (keyboard-movable) endpoint: 0 none, 1 begin, 2 end.
+     **/
+    void setActiveEnd(int which);
+
+    /**
      * \brief   Finds the path segment within tolerance of \p point and the projected point
      *          on it; returns the interior insert position, or -1 when none is close.
      **/
@@ -302,9 +352,11 @@ private:
     QList<QPointF>          mPath;          //!< The full drawn polyline (begin, waypoints, end).
     bool                    mHasLabel;      //!< Whether a label position is persisted.
     QPointF                 mLabelPos;      //!< The persisted label anchor.
+    bool                    mLabelActive;   //!< The label block is in reposition mode (framed + tethered).
     eDrag                   mDrag;          //!< The active drag part.
     int                     mDragIndex;     //!< The dragged waypoint index.
     int                     mSelectedPoint; //!< The active interior waypoint for keyboard nudging, or -1.
+    int                     mActiveEnd;     //!< The active endpoint for keyboard nudging: 0 none, 1 begin, 2 end.
     QPointF                 mDragPoint;     //!< The live free position of the dragged endpoint.
     uint32_t                mGesture;       //!< The coalescing gesture ID of the active drag.
 };
@@ -321,6 +373,16 @@ inline bool SMEdgeItem::hasNote() const
 inline bool SMEdgeItem::hasSelectedPoint() const
 {
     return (mSelectedPoint >= 0);
+}
+
+inline bool SMEdgeItem::hasActiveLabel() const
+{
+    return mLabelActive;
+}
+
+inline bool SMEdgeItem::hasActiveEnd() const
+{
+    return (mActiveEnd != 0);
 }
 
 inline uint32_t SMEdgeItem::getSourceId() const

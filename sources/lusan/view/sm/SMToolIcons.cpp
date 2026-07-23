@@ -368,15 +368,38 @@ namespace
 
         case SMToolIcons::eIcon::NewEvent:
         {
-            // A square signal pulse.
-            QPainterPath pulse;
-            pulse.moveTo(5.0, 21.0);
-            pulse.lineTo(11.0, 21.0);
-            pulse.lineTo(11.0, 10.0);
-            pulse.lineTo(20.0, 10.0);
-            pulse.lineTo(20.0, 21.0);
-            pulse.lineTo(27.0, 21.0);
-            p.drawPath(pulse);
+            // The event glyph is a lightning bolt, the same family as the trigger stimulus, shared by
+            // every event surface (the Events page and the state-body event row). The square signal
+            // pulse is kept below behind a compile-time switch so the look can be swapped while
+            // experimenting: flip EVENT_USE_PULSE to true to render the pulse instead of the bolt.
+            constexpr bool EVENT_USE_PULSE = false;
+            if constexpr (EVENT_USE_PULSE)
+            {
+                // A square signal pulse.
+                QPainterPath pulse;
+                pulse.moveTo(5.0, 21.0);
+                pulse.lineTo(11.0, 21.0);
+                pulse.lineTo(11.0, 10.0);
+                pulse.lineTo(20.0, 10.0);
+                pulse.lineTo(20.0, 21.0);
+                pulse.lineTo(27.0, 21.0);
+                p.drawPath(pulse);
+            }
+            else
+            {
+                // A filled lightning bolt.
+                QPainterPath bolt;
+                bolt.moveTo(18.0, 5.0);
+                bolt.lineTo(9.0, 18.0);
+                bolt.lineTo(14.5, 18.0);
+                bolt.lineTo(13.0, 27.0);
+                bolt.lineTo(23.0, 13.5);
+                bolt.lineTo(17.0, 13.5);
+                bolt.closeSubpath();
+                p.setPen(QPen(color, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                p.setBrush(color);
+                p.drawPath(bolt);
+            }
             break;
         }
 
