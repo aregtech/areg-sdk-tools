@@ -35,9 +35,12 @@ class QLabel;
 class QLineEdit;
 class QListWidget;
 class QPlainTextEdit;
+class QSpinBox;
 class QStackedWidget;
 class QTabWidget;
 class SMGuardBar;
+class SMOperationsEditor;
+class SMSectionChrome;
 class StateMachineModel;
 enum class eDocElementKind;
 
@@ -87,7 +90,7 @@ public:
 
     /**
      * \brief   Selects the transition and focuses the Conditions tab's guard field
-     *          (edge-label double-click, B13; validation-entry navigation, S15).
+     *          (edge-label double-click; validation-entry navigation).
      **/
     void focusConditions(uint32_t transitionId);
     inline QLineEdit* stateNameEdit() const;
@@ -121,6 +124,8 @@ private slots:
 
     void onStateNameCommit();
     void onStateDescriptionCommit();
+    void onDoIntervalCommit();
+    void onDoUntilCommit();
     void onTransitionDescriptionCommit();
     void onStimulusCommit();
     void onTargetCommit();
@@ -130,6 +135,9 @@ private:
     void buildStatePage();
     void buildTransitionPage();
     void buildRegistryPage();
+
+    //!< Refreshes each state-action tab's tooltip with a summary of its bound list (`not set` when empty).
+    void refreshActionSummaries();
 
     void refresh();
     void showEmpty();
@@ -166,6 +174,36 @@ private:
     bool isEditing() const;
 
 //////////////////////////////////////////////////////////////////////////
+// Internal types
+//////////////////////////////////////////////////////////////////////////
+private:
+    /**
+     * \enum    eOpList
+     * \brief   Which of a state's operation lists a state-action tab is bound to. The `Do` list
+     *          (R24) is not parallel to Enter/Exit: its tab also carries a repeat interval and a
+     *          stop-condition above the shared editor, so its page is built by hand.
+     **/
+    enum class eOpList
+    {
+          Entry     //!< The state's EntryList (`Enter` tab).
+        , Do        //!< The state's DoList (`Do` tab -- the repeated activity).
+        , Exit      //!< The state's ExitList (`Exit` tab).
+    };
+
+    /**
+     * \struct  ActionSlot
+     * \brief   One state-action tab: its operation-list role, its editor and its index in the state
+     *          tab widget. showState() binds each editor and refreshActionSummaries() re-tips each
+     *          tab from this table, so a third `Do` list is a one-line addition.
+     **/
+    struct ActionSlot
+    {
+        eOpList             role;       //!< Which state list this tab edits.
+        SMOperationsEditor* editor;     //!< The bound operation-list editor.
+        int                 tabIndex;   //!< The tab index in mStateTabs (for the tooltip summary).
+    };
+
+//////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
@@ -176,20 +214,29 @@ private:
     bool                mUpdating;      //!< Guards field population against commit signals.
 
     // State page.
+    QTabWidget*         mStateTabs;     //!< The General / Enter / Do / Exit tab host.
+    SMSectionChrome*    mStateGeneral;  //!< The General tab chrome (Details / Transitions sections).
     QLineEdit*          mStateName;     //!< The state name (atomic rename on commit).
     QLabel*             mStateKind;     //!< The state kind (read-only).
-    QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line, at the bottom).
-    QLabel*             mStateEntry;    //!< The entry-operation summary (read-only).
-    QLabel*             mStateExit;     //!< The exit-operation summary (read-only).
+    QPlainTextEdit*     mStateDesc;     //!< The state description (multi-line).
+    SMOperationsEditor* mEnterOps;      //!< The On-Enter operations editor (Actions tab).
+    SMOperationsEditor* mExitOps;       //!< The On-Exit operations editor (Actions tab).
+    SMOperationsEditor* mDoOps;         //!< The Do-activity operations editor (Actions tab).
+    QSpinBox*           mDoInterval;    //!< The Do repeat interval in ms (0 = trigger-driven).
+    QLineEdit*          mDoUntil;       //!< The optional Do stop-condition expression.
     QListWidget*        mTransitions;   //!< The state's transitions, drag-reorderable.
+    QList<ActionSlot>   mActionSlots;   //!< The State-Actions sections, in display order.
 
     // Transition page.
+    SMSectionChrome*    mTransGeneral;  //!< The General tab chrome (Trigger / Description sections).
+    QLabel*             mStimulusSig;   //!< Read-only stimulus signature (`walk(count)`).
     QComboBox*          mStimulusName;  //!< The stimulus picker (fixed list of triggers/events/
                                         //!< timers; editing is search-only, no free rename).
     QComboBox*          mTarget;        //!< The target sibling state (or internal).
     QPlainTextEdit*     mTransDesc;     //!< The transition description (multi-line).
     SMGuardBar*         mConditions;    //!< The Conditions tab guard bar.
-    QTabWidget*         mTransTabs;     //!< The General / Conditions tab host (for the badge).
+    SMOperationsEditor* mTransOps;      //!< The transition operations editor (Actions tab).
+    QTabWidget*         mTransTabs;     //!< The General / Conditions / Actions tab host.
 
     // Registry page.
     QLabel*             mRegistryInfo;  //!< The selected registry entry summary (read-only).

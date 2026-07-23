@@ -15,7 +15,7 @@
  *  \file        lusan/model/sm/SMGuardValidation.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard document validation (v7 B12 / S15).
+ *  \brief       Lusan application, FSM guard document validation.
  *
  ************************************************************************/
 
@@ -34,13 +34,13 @@ class SMGuardNode;
 
 /**
  * \class   SMGuardValidation
- * \brief   The guard rows of the document validation results (S15) -- the complete
- *          honesty surface of a document's guards (D4/D9): draft guards (ERR, the
+ * \brief   The guard rows of the document validation results -- the complete
+ *          honesty surface of a document's guards: draft guards (ERR, the
  *          generator refuses them), shadowing (WARN), the raw-C++ fragment audit (INFO,
  *          the complete list of verbatim fragments), and broken/stale references (ERR;
  *          a stale stimulus parameter that matches the new stimulus by name and type is
- *          the v6-3.3 re-bind case, reported as INFO). Validation covers `.fsml` content
- *          only -- raw C++ bodies are never parsed (D4). View-free and headless-testable.
+ *          the re-bind case, reported as INFO). Validation covers `.fsml` content
+ *          only -- raw C++ bodies are never parsed. View-free and headless-testable.
  **/
 class SMGuardValidation
 {
@@ -64,9 +64,9 @@ public:
     {
           Draft         //!< The guard is a draft -- generation refuses.
         , Shadowing     //!< A referenced stimulus parameter hides an attribute/constant.
-        , RawFragment   //!< One verbatim raw-C++ fragment (the D4 audit).
+, RawFragment   //!< One verbatim raw-C++ fragment (the audit).
         , BrokenRef     //!< A referenced symbol no longer exists / left the scope.
-        , ParamRebind   //!< A stale parameter matches the new stimulus (v6 3.3, info).
+, ParamRebind   //!< A stale parameter matches the new stimulus (info).
     };
 
     /**

@@ -40,7 +40,7 @@ class SMGuard;
  *          highlighter colors by owner. The tree is the truth: `render(parse(text))` is the
  *          canonical form of \p text, and `parse(render(tree))` reproduces \p tree. Because
  *          names are looked up by ID at render time, a rename re-renders every guard with the
- *          new name and no guard edit (v6 Section 3.3).
+ *          new name and no guard edit.
  **/
 class SMGuardRender
 {
@@ -48,7 +48,7 @@ public:
     /**
      * \enum    eRole
      * \brief   The owner/kind role of a text span, mapped to a visual token by the
-     *          highlighter (B15). Roles, never literal colors.
+     *          highlighter. Roles, never literal colors.
      **/
     enum class eRole
     {
@@ -74,13 +74,32 @@ public:
     };
 
     /**
+     * \struct  Chip
+     * \brief   One committed reference occurrence in the rendered text, addressed by its span
+     *          so the field can fold it into a compact chip. Chips appear in text
+     *          order, which is pre-order over the reference nodes (the nth chip is the nth
+     *          reference node) -- the same INDEX identity the island tokens use. The
+     *          view maps \ref role to an owner hue/glyph; \ref kind is the `#kind:` word.
+     **/
+    struct Chip
+    {
+        int     start;      //!< The 0-based start offset of the reference in the rendered text.
+        int     length;     //!< The span length (including any disambiguating `#kind:` prefix).
+        eRole   role;       //!< The owner role (maps to a hue / glyph in the view).
+        QString kind;       //!< The reference kind word: "param" | "attr" | "const" | "cond".
+        QString name;       //!< The bare display name shown inside the chip.
+        bool    reveal;     //!< Keep the `#kind:` prefix visible (a same-name collision).
+    };
+
+    /**
      * \struct  Rendered
-     * \brief   The rendered text and its span list.
+     * \brief   The rendered text, its span list, and the reference chips it contains.
      **/
     struct Rendered
     {
         QString         text;
         QList<Span>     spans;
+        QList<Chip>     chips;
     };
 
     /**
@@ -101,20 +120,49 @@ public:
 // Operations
 //////////////////////////////////////////////////////////////////////////
 public:
-    //!< The canonical text of a node sub-tree.
-    static QString text(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node);
+    /**
+     * \brief   The canonical text of a node sub-tree. With \p layout set, user line breaks and
+     *          indent are restored (R18); the default single-line form is unchanged, so every
+     *          caller that wants inline text (caches, argument projections) is byte-stable.
+     **/
+    static QString text(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout = false);
 
-    //!< The canonical text plus span list of a node sub-tree.
-    static Rendered render(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node);
+    //!< The canonical text plus span list of a node sub-tree; \p layout restores line breaks (R18).
+    static Rendered render(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout = false);
 
-    //!< The text range of every node of the sub-tree in the canonical rendered text.
-    static QList<NodeSpan> nodeSpans(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node);
+    //!< The text range of every node of the sub-tree; \p layout must match the displayed text (R18).
+    static QList<NodeSpan> nodeSpans(const StateMachineData& data, uint32_t transitionId, const SMGuardNode& node, bool layout = false);
 
     /**
      * \brief   The display text of a whole guard: the rendered tree (ok), the raw draft text
-     *          (draft), or an empty string (empty).
+     *          (draft), or an empty string (empty). \p layout restores multi-line guards (R18).
      **/
-    static QString guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard);
+    static QString guardText(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard, bool layout = false);
+
+    /**
+     * \brief   Refreshes the advisory display name (R19) cached on every refid node of the
+     *          sub-tree from its symbol id, using the current declarations. Called just before a
+     *          save so the human-readable `name` written to `.fsml` is never stale -- the name is
+     *          never read back, resolution is always by id. A symbol that no longer resolves
+     *          yields an empty name, and the attribute is then omitted.
+     **/
+    static void refreshNames(const StateMachineData& data, uint32_t transitionId, SMGuardNode& node);
+
+    /**
+     * rief   A SHORT, structural summary of \p guard for the FSM canvas label, where the full
+     *          expression does not fit and a wall of C++ tells the reader nothing.
+     *          Operators and structure are kept; the bulky parts collapse:
+     *          - a condition call keeps its name, its arguments collapse: `HasWaiting(...)`;
+     *          - a lambda-implemented (Embedded) condition captures its scope, so it takes no
+     *            arguments and reads `name()`;
+     *          - an inline `{ ... }` block is an anonymous `[this]() -> bool` lambda and reads
+     *            `this -> bool`;
+     *          - a raw C++ fragment reads `{...}`.
+     *          References and literals are already short and are kept verbatim, so a plain guard
+     *          such as `count > 3 && ready` summarises to itself.
+     *          An unresolved draft has no tree to walk and returns its raw text unchanged.
+     **/
+    static QString canvasSummary(const StateMachineData& data, uint32_t transitionId, const SMGuard& guard);
 };
 
 #endif  // LUSAN_MODEL_SM_SMGUARDRENDER_HPP

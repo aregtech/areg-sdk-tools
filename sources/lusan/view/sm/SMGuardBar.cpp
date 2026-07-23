@@ -13,47 +13,70 @@
  *  \file        lusan/view/sm/SMGuardBar.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard bar: the Conditions tab content (v7 B1 / S1).
+ *  \brief       Lusan application, FSM guard bar: the Conditions tab content.
  *
  ************************************************************************/
 
 #include "lusan/view/sm/SMGuardBar.hpp"
 
+#include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
 #include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 #include "lusan/model/sm/SMGuardCommands.hpp"
 #include "lusan/model/sm/SMGuardLadder.hpp"
+#include "lusan/model/sm/SMGuardSymbols.hpp"
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 
 #include "lusan/view/sm/NEGuardStyle.hpp"
-#include "lusan/view/sm/SMFixBar.hpp"
+#include "lusan/view/sm/SMAccordion.hpp"
+#include "lusan/view/sm/SMArgMapTable.hpp"
+#include "lusan/view/sm/SMGuardCallsOutline.hpp"
+#include "lusan/view/sm/SMGuardCatalog.hpp"
+#include "lusan/view/sm/SMGuardDataPanel.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMGuardHelpCard.hpp"
+#include "lusan/view/sm/SMGuardPopout.hpp"
 #include "lusan/view/sm/SMGuardStatusLine.hpp"
 #include "lusan/view/sm/SMHoverCard.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
-#include "lusan/view/sm/SMMappingGrid.hpp"
-#include "lusan/view/sm/SMStructureLens.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
+#include "lusan/view/sm/SMToolIcons.hpp"
 #include "lusan/view/sm/SMTryStrip.hpp"
 
 #include <QApplication>
 #include <QClipboard>
+#include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
 #include <QMenu>
 #include <QMessageBox>
+#include <QPair>
+#include <QPlainTextEdit>
+#include <QSet>
 #include <QShortcut>
+#include <QStyle>
+#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
 namespace
 {
     using eKind = SMGuardNode::eKind;
+
+    // The accordion section indices (display order). `Generated` (index 0) comes first, directly
+    // under the editor, so the C++ a guard produces reads next to the guard itself.
+    constexpr int SectionCalls = 1;
+    constexpr int SectionArgs  = 2;
+    constexpr int SectionData  = 3;
 
     //!< Pre-order search for the \p target-th Lambda node; returns true when found.
     bool findNthLambda(const SMGuardNode* node, int target, int& counted, QList<int>& path)
@@ -116,6 +139,28 @@ namespace
         return false;
     }
 
+    //!< Pre-order collection of every Call node with its child-index path.
+    void collectCalls(const SMGuardNode* node, const QList<int>& path, QList<QPair<QList<int>, const SMGuardNode*>>& out)
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        if (node->getKind() == eKind::Call)
+        {
+            out.append(qMakePair(path, node));
+        }
+
+        const QList<SMGuardNode*>& kids = node->getChildren();
+        for (int i = 0; i < kids.size(); ++i)
+        {
+            QList<int> childPath = path;
+            childPath.append(i);
+            collectCalls(kids.at(i), childPath, out);
+        }
+    }
+
     //!< The copyable handler stub the user pastes into their handler class.
     QString handlerStub(const StateMachineData& data, uint32_t transitionId, const QString& name, const QString& body)
     {
@@ -141,89 +186,191 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 
 SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
-    : QWidget   (parent)
-    , mModel    (model)
-    , mTransId  (0u)
-    , mField    (nullptr)
-    , mStatus   (nullptr)
-    , mFixBar   (nullptr)
-    , mIsland   (nullptr)
-    , mLens     (nullptr)
-    , mTry      (nullptr)
-    , mGrid     (nullptr)
-    , mHover    (nullptr)
-    , mHelp     (nullptr)
-    , mClear    (nullptr)
-    , mHelpBtn  (nullptr)
+    : QWidget       (parent)
+    , mModel        (model)
+    , mTransId      (0u)
+    , mField        (nullptr)
+    , mStatus       (nullptr)
+    , mIsland       (nullptr)
+    , mTry          (nullptr)
+    , mHover        (nullptr)
+    , mHelp         (nullptr)
+    , mClear        (nullptr)
+    , mHelpBtn      (nullptr)
+    , mInsertBtn    (nullptr)
+    , mPopoutBtn    (nullptr)
+    , mChrome       (nullptr)
+    , mGenCode      (nullptr)
+    , mGenChips     (nullptr)
+    , mData         (nullptr)
+    , mCalls        (nullptr)
+    , mArgs         (nullptr)
+    , mArgSink      (model)
+    , mDerivedPending(false)
+    , mBoundCallValid(false)
+    , mPopout       (nullptr)
 {
+
     QVBoxLayout* outer = new QVBoxLayout(this);
-    outer->setContentsMargins(8, 8, 8, 8);
-    outer->setSpacing(6);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
 
-    // Header row: Guard label + clear + help.
-    QHBoxLayout* header = new QHBoxLayout();
-    header->addWidget(new QLabel(tr("Guard"), this));
-    header->addStretch(1);
+    // The shared section chrome carries the `Guard` title, one jump button per accordion section and
+    // the compact toggle over the accordion; this bar only fills its slots. The icon-only action strip
+    // (Insert / Pop-out / Clear / Help) is guard-specific, so it rides the chrome's trailing header
+    // slot. Every glyph is drawn by SMToolIcons -- the same thin-stroke vector language as the canvas
+    // toolbar -- and icon-only keeps the narrow Properties dock usable; each button carries a tooltip.
+    mChrome = new SMSectionChrome(this);
+    mChrome->setTitle(tr("Guard"));
 
-    mClear = new QToolButton(this);
-    mClear->setObjectName(QStringLiteral("smGuardClear"));
-    mClear->setText(QStringLiteral("{x}"));
-    mClear->setAutoRaise(true);
-    mClear->setToolTip(tr("Clear the guard (the transition always fires)"));
-    header->addWidget(mClear);
+    auto makeTool = [this](const QString& name, SMToolIcons::eIcon glyph, const QString& tip)
+    {
+        QToolButton* button = new QToolButton(this);
+        button->setObjectName(name);
+        button->setIcon(SMToolIcons::icon(glyph));
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        button->setAutoRaise(true);
+        button->setCursor(Qt::PointingHandCursor);
+        button->setToolTip(tip);
+        return button;
+    };
 
-    mHelpBtn = new QToolButton(this);
-    mHelpBtn->setObjectName(QStringLiteral("smGuardHelp"));
-    mHelpBtn->setText(QStringLiteral("(?)"));
-    mHelpBtn->setAutoRaise(true);
-    mHelpBtn->setToolTip(tr("What can a guard use?"));
-    header->addWidget(mHelpBtn);
-    outer->addLayout(header);
+    mInsertBtn  = makeTool(QStringLiteral("smGuardInsert"), SMToolIcons::eIcon::GuardInsert
+                          , tr("Insert a symbol reference at the caret"));
+    // The separate Preview button is GONE: it carried the same icon and
+    // did the same job as the `Generated` section button, so one control now serves both, and the
+    // dialog it opened is retired in favour of the always-reachable section.
+    // Try-it is NOT surfaced on the Conditions tab: the tab stays a
+    // clean, simple guard editor. The what-if evaluator moves to a dedicated FSM "Play" surface
+    // (a later task); the widget below is kept constructed-but-hidden so its logic and tests live on.
+    mPopoutBtn  = makeTool(QStringLiteral("smGuardPopout"), SMToolIcons::eIcon::GuardPopout
+                          , tr("Open the guard in a larger editor"));
+    mClear      = makeTool(QStringLiteral("smGuardClear"), SMToolIcons::eIcon::GuardClear
+                          , tr("Clear the guard so the transition always fires"));
+    mHelpBtn    = makeTool(QStringLiteral("smGuardHelp"), SMToolIcons::eIcon::GuardHelp
+                          , tr("What can a guard use?"));
+    mChrome->addHeaderWidget(mInsertBtn);
+    mChrome->addHeaderWidget(mPopoutBtn);
+    mChrome->addHeaderWidget(mClear);
+    mChrome->addHeaderWidget(mHelpBtn);
 
     mField = new SMGuardField(mModel, this);
-    outer->addWidget(mField);
+    mChrome->addBodyWidget(mField);
 
+    // The error status line stays (it is the one place a genuine unresolved-guard verdict shows).
+    // The transient quick-fix bar and the unmapped-argument warning list are REMOVED:
+    // the Arguments section already shows which formals are unmapped, and the
+    // status line already states any error, so both advisory strips were duplicative clutter.
     mStatus = new SMGuardStatusLine(this);
-    outer->addWidget(mStatus);
+    mChrome->addBodyWidget(mStatus);
 
-    mFixBar = new SMFixBar(this);
-    outer->addWidget(mFixBar);
+    // The accordion (design 8.1): the Conditions outline lists the defined condition methods
+    // (double-click inserts one), the caret's call drives the single Arguments table, and Generated
+    // holds the C++ preview that used to crowd the status line. Compact mode (the default) keeps one
+    // section open; unchecking the toolbar toggle lets the developer keep several open.
+    mChrome->accordion()->setObjectName(QStringLiteral("smGuardAccordion"));
 
-    // S4: the island editor sits between the status block and the lens (B0 screen map).
+    mCalls = new SMGuardCallsOutline(mModel, this);
+    mData  = new SMGuardDataPanel(mModel, this);
+    mArgs = new SMArgMapTable(mModel, this);
+    mArgs->setObjectName(QStringLiteral("smGuardArgs"));
+    // Compact single-cell rows: one editable combo per formal where the
+    // user either picks a source (parameter / attribute / constant) or types a literal value -- the
+    // Source picker and the Value editor are merged into one cell.
+    mArgs->setRowStyle(SMArgMapTable::eRowStyle::Compact);
+
+    QWidget* generated = new QWidget(this);
+    generated->setObjectName(QStringLiteral("smGuardGenerated"));
+    QVBoxLayout* genBox = new QVBoxLayout(generated);
+    genBox->setContentsMargins(6, 4, 6, 4);
+    genBox->setSpacing(2);
+    // A read-only code view, not a label: the generated `if` can run to
+    // several lines, and a real editor gives selection, wrapping and a scrollbar for free -- which is
+    // exactly what the retired preview dialog offered.
+    mGenCode = new QPlainTextEdit(generated);
+    mGenCode->setObjectName(QStringLiteral("smGuardGeneratedCode"));
+    mGenCode->setReadOnly(true);
+    mGenCode->setFrameShape(QFrame::StyledPanel);
+    mGenCode->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    mGenCode->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    QFont mono = mGenCode->font();
+    mono.setStyleHint(QFont::Monospace);
+    mono.setFamily(QStringLiteral("Consolas"));
+    mGenCode->setFont(mono);
+    // Three lines of code by default; it grows no further, it scrolls.
+    mGenCode->setFixedHeight((QFontMetrics(mono).lineSpacing() * 3) + (mGenCode->frameWidth() * 2) + 8);
+    genBox->addWidget(mGenCode);
+    mGenChips = new QLabel(generated);
+    mGenChips->setObjectName(QStringLiteral("smGuardGeneratedChips"));
+    mGenChips->setWordWrap(true);
+    mGenChips->hide();
+    genBox->addWidget(mGenChips);
+
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardPreview), tr("Generated"), generated
+                       , tr("Show the C++ code this guard produces"));
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardConditions), tr("Conditions"), mCalls
+                       , tr("Show the condition methods you can insert"));
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardArguments), tr("Arguments"), mArgs
+                       , tr("Map the parameters of the called condition"));
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::GuardData), tr("Data"), mData
+                       , tr("Browse everything this guard may use, and insert it"));
+    mChrome->setCompact(true);
+    mChrome->setCurrentSection(SectionCalls);
+    outer->addWidget(mChrome);
+
+    // The island editor sits below the accordion.
     mIsland = new SMIslandEditor(this);
     mIsland->setVisible(false);
-    outer->addWidget(mIsland);
+    mChrome->addFooterWidget(mIsland);
 
-    // S5: the structure lens.
-    mLens = new SMStructureLens(mModel, this);
-    outer->addWidget(mLens);
-
-    // S6: the Try-it strip (collapsed by default).
+    // The Try-it what-if strip is kept constructed for its logic/tests, but hidden: it is not part
+    // of the clean Conditions tab. isOpen() is toggle-driven, so tests
+    // can still open it and reach its child widgets while it stays invisible in the app.
     mTry = new SMTryStrip(mModel, this);
-    outer->addWidget(mTry);
+    mTry->hide();
+    mChrome->addFooterWidget(mTry);
 
-    outer->addStretch(1);
+    mChrome->addFooterStretch();
 
-    // Popovers owned by the bar; both live as top-level tool windows.
-    mGrid = new SMMappingGrid(mModel, this);
+    // The hover card is the one remaining top-level popover; the mapping popover (SMMappingGrid)
+    // is retired in favour of the inline accordion Arguments table.
     mHover = new SMHoverCard(this);
     mField->setHoverCard(mHover);
-    mLens->setHoverCard(mHover);
 
-    // ---- U2 wiring: status / fixes / badge --------------------------------
+    // ---- Status and badge wiring ------------------------------------------
     connect(mField, &SMGuardField::statusUpdated, this, &SMGuardBar::onStatusUpdated);
-    connect(mField, &SMGuardField::fixesUpdated, mFixBar, &SMFixBar::setFixes);
     connect(mField, &SMGuardField::badgeUpdated, this, &SMGuardBar::badgeChanged);
-    connect(mFixBar, &SMFixBar::triggered, mField, &SMGuardField::applyFix);
+
+    // R20 did-you-mean recovery: the field already builds the fix list but nothing consumed it since
+    // SMFixBar was removed. Surface only the `use <name>?` suggestion as a clickable tail on the
+    // status line (no strip, no added height); clicking routes back through the field's applyFix so
+    // the replacement is exactly one undo step. The full fix set stays available in the context menu.
+    connect(mField, &SMGuardField::fixesUpdated, this, [this](const QString&, const QList<SMFixBar::Fix>& fixes)
+    {
+        for (const SMFixBar::Fix& fix : fixes)
+        {
+            if ((fix.id == QStringLiteral("use")) && fix.enabled)
+            {
+                mStatus->setSuggestion(fix.id, fix.payload, tr("use %1?").arg(fix.payload));
+                return;
+            }
+        }
+
+        mStatus->setSuggestion(QString(), QString(), QString());
+    });
+    connect(mStatus, &SMGuardStatusLine::suggestionActivated, this, [this](const QString& fixId, const QString& payload)
+    {
+        mField->applyFix(fixId, payload);
+    });
     connect(mClear, &QToolButton::clicked, this, &SMGuardBar::onClearClicked);
     connect(mHelpBtn, &QToolButton::clicked, this, &SMGuardBar::onHelpClicked);
 
-    // F1 anywhere in the Conditions tab opens the help card (B16).
+    // F1 anywhere in the Conditions tab opens the help card.
     QShortcut* helpKey = new QShortcut(QKeySequence(Qt::Key_F1), this);
     helpKey->setContext(Qt::WidgetWithChildrenShortcut);
     connect(helpKey, &QShortcut::activated, this, &SMGuardBar::onHelpClicked);
 
-    // ---- U3 wiring: islands ------------------------------------------------
+    // ---- Island wiring ----------------------------------------------------
     connect(mField, &SMGuardField::islandEditRequested, this, [this](int islandIndex, const QString& body)
     {
         mIsland->openFor(mModel, mTransId, islandIndex, body);
@@ -253,36 +400,7 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         runNameIsland(nthIslandPath(islandIndex), body, SMMethodEntry::eImplement::Handler);
     });
 
-    // ---- U3 wiring: lens ----------------------------------------------------
-    connect(mLens, &SMStructureLens::caretRequested, mField, &SMGuardField::selectSpan);
-    connect(mLens, &SMStructureLens::gridRequested, this, [this](const QList<int>& callPath, const QPoint& globalPos)
-    {
-        mGrid->openFor(mTransId, callPath, globalPos);
-    });
-    connect(mLens, &SMStructureLens::clauseTextBuilt, mField, &SMGuardField::appendClause);
-    connect(mLens, &SMStructureLens::lambdaAppendRequested, mField, &SMGuardField::appendIsland);
-    connect(mLens, &SMStructureLens::nameIslandRequested, this, [this](const QList<int>& islandPath, const QString& body)
-    {
-        runNameIsland(islandPath, body, SMMethodEntry::eImplement::Embedded);
-    });
-    connect(mLens, &SMStructureLens::moveToHandlerRequested, this, [this](uint32_t methodId)
-    {
-        runMoveToHandler(methodId);
-    });
-    connect(mLens, &SMStructureLens::adoptBodyRequested, this, [this](uint32_t methodId)
-    {
-        runAdoptBody(methodId);
-    });
-    connect(mLens, &SMStructureLens::inlineBodyRequested, this, [this](const QList<int>& callPath)
-    {
-        QUndoCommand* command = SMGuardLadder::inlineBody(mModel.getData(), mModel.getNotifier(), mTransId, callPath, tr("Inline body"));
-        if (command != nullptr)
-        {
-            mModel.getUndoStack().push(command);
-        }
-    });
-
-    // ---- U3 wiring: hover card + fix-bar grid route --------------------------
+    // ---- Hover card and grid route wiring ---------------------------------
     connect(mField, &SMGuardField::mapArgumentsRequested, this, [this]()
     {
         openGridForCall(0u);
@@ -296,23 +414,86 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         showWhereUsed(symbolId);
     });
 
-    // ---- U4 wiring: Try-it truth tints the lens pills while the strip is open ----
-    connect(mTry, &SMTryStrip::truthTintsChanged, mLens, &SMStructureLens::setTruthTints);
+    // ---- Top strip --------------------------------------------------------
+    connect(mInsertBtn, &QToolButton::clicked, this, [this]()
+    {
+        mField->setFocus();
+        mField->openCompletion();                   // the Insert entry point: all kinds at the caret.
+    });
+    connect(mPopoutBtn, &QToolButton::clicked, this, &SMGuardBar::openPopout);
+
+    // ---- Accordion: the Conditions outline is a pickup list; double-click inserts a condition ---
+    connect(mCalls, &SMGuardCallsOutline::insertRequested, this, &SMGuardBar::insertCondition);
+    // The Data catalog inserts ANY symbol kind: a condition goes through the same commit-and-land
+    // path as the pickup list; a parameter / attribute / constant is a plain reference.
+    connect(mData, &SMGuardDataPanel::insertRequested, this, &SMGuardBar::insertSymbol);
+    connect(mData, &SMGuardDataPanel::whereUsedRequested, this, [this](uint32_t symbolId)
+    {
+        showWhereUsed(symbolId);
+    });
+    connect(mCalls, &SMGuardCallsOutline::whereUsedRequested, this, [this](uint32_t symbolId)
+    {
+        showWhereUsed(symbolId);
+    });
+    // The chrome owns the button<->section sync, the Alt+N jump shortcuts and the compact toggle.
+    // The one guard-specific reaction stays here: opening the Data catalog means "I am looking for
+    // something", so land the focus in its search box.
+    connect(mChrome, &SMSectionChrome::sectionActivated, this, [this](int index, bool open)
+    {
+        if (open && (index == SectionData))
+        {
+            mData->focusSearch();
+        }
+    });
+
+    // The Arguments table follows the call the caret sits in (or the single/first call in the
+    // guard): moving the caret in the field re-binds the shared table, replacing the
+    // retired "select a call row" driver.
+    connect(mField, &QTextEdit::cursorPositionChanged, this, [this]() { syncArgumentsToCaret(); });
+
+    // A foreign rename / add / remove changes the method signatures the Arguments rows project, with
+    // NO guard edit: re-project the shared table off the model pass (the Conditions pickup
+    // list re-enumerates itself on the same notifier signals).
+    DocModelNotifier& notifier = mModel.getNotifier();
+    connect(&notifier, &DocModelNotifier::elementAdded, this, [this](uint32_t, eDocElementKind) { scheduleCatalogRefresh(); });
+    connect(&notifier, &DocModelNotifier::elementChanged, this, [this](uint32_t, eDocElementKind) { scheduleCatalogRefresh(); });
+    connect(&notifier, &DocModelNotifier::elementRemoved, this, [this](uint32_t, eDocElementKind) { scheduleCatalogRefresh(); });
 }
 
 void SMGuardBar::setTransition(uint32_t transitionId)
 {
+    // A pop-out is bound to one transition; if the bar retargets, close it (its closed() handler
+    // restores the base field to editable before the rebind below).
+    if (mPopout != nullptr)
+    {
+        mPopout->close();
+    }
+
     mTransId = transitionId;
+    mBoundCallValid = false;
+    mBoundCallPath.clear();
     mIsland->hide();
-    mGrid->hide();
     mHover->hide();
     mField->setTransition(transitionId);
-    mLens->setTransition(transitionId);
-    mTry->setTransition(transitionId);
+    mTry->setTransition(transitionId);       // collapses the hidden strip.
+
+    // The Arguments table clears until the caret sits in a call (or a call exists in the guard).
+    mArgs->clearBinding();
+    mArgSink.clearBinding();
+    mCalls->setTransition(transitionId);
+    mData->setTransition(transitionId);
+
+    // Re-open the section the user last had open (persisted per tab, not per
+    // transition), clamped to a valid index.
+    const int last = mChrome->lastSection();
+    const int section = ((last >= 0) && (last < mChrome->accordion()->count())) ? last : SectionCalls;
+    mChrome->setCurrentSection(section);
+
+    scheduleCatalogRefresh();       // bind the Arguments table once the field has reflowed the tree.
 }
 
 //////////////////////////////////////////////////////////////////////////
-// U2 slots
+// Status slots
 //////////////////////////////////////////////////////////////////////////
 
 void SMGuardBar::onStatusUpdated(int severity, const QString& verdict, const QString& preview, const QStringList& chips)
@@ -326,11 +507,26 @@ void SMGuardBar::onStatusUpdated(int severity, const QString& verdict, const QSt
         mStatus->setStatus(static_cast<NEGuardStyle::eSeverity>(severity), verdict, preview, chips);
     }
 
-    // The B6 two-way rule: a text edit while the grid is open refreshes the grid.
-    if ((mGrid != nullptr) && mGrid->isVisible())
+    // The generated C++ and the handler list now live in their own accordion section, so the status
+    // line can stay a single short verdict.
+    mGenCode->setPlainText(preview.isEmpty()
+                           ? tr("// no generated code: the guard is empty or an unresolved draft")
+                           : preview);
+    if (chips.isEmpty())
     {
-        mGrid->refreshLive(mField->committableText());
+        mGenChips->hide();
     }
+    else
+    {
+        const QColor color = NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Handler);
+        mGenChips->setText(QStringLiteral("<span style='color:%1;'>uses handler:</span> %2")
+                              .arg(color.name(), chips.join(QStringLiteral(", ")).toHtmlEscaped()));
+        mGenChips->show();
+    }
+
+    // A commit reflows the tree: re-bind the Arguments table to the caret's call (deferred so it
+    // never runs inside the field's own signal).
+    scheduleCatalogRefresh();
 }
 
 void SMGuardBar::onClearClicked()
@@ -508,20 +704,26 @@ void SMGuardBar::runAdoptBody(uint32_t methodId)
 
 void SMGuardBar::openGridForCall(uint32_t methodId)
 {
-    const QList<int> path = firstCallPath(methodId);
-    if (path.isEmpty() && (guardTree() == nullptr))
-    {
-        return;
-    }
-
+    // The mapping popover is retired: opening a call's arguments now binds the inline accordion
+    // Arguments table to that call and shows the Arguments section.
     const SMGuardNode* tree = guardTree();
-    if ((tree == nullptr) || ((path.isEmpty()) && (tree->getKind() != SMGuardNode::eKind::Call)))
+    if (tree == nullptr)
     {
         return;
     }
 
-    const QPoint pos = mField->mapToGlobal(QPoint(0, mField->height() + 2));
-    mGrid->openFor(mTransId, path, pos);
+    const QList<int> path = firstCallPath(methodId);
+    if (path.isEmpty() && (tree->getKind() != SMGuardNode::eKind::Call))
+    {
+        return;
+    }
+
+    const SMGuardNode* call = nodeAtPath(path);
+    if (call != nullptr)
+    {
+        bindArgumentsTo(path, call->getSymbolId());
+        mChrome->setCurrentSection(SectionArgs);
+    }
 }
 
 void SMGuardBar::showWhereUsed(uint32_t symbolId)
@@ -545,4 +747,247 @@ void SMGuardBar::showWhereUsed(uint32_t symbolId)
     }
 
     menu.exec(QCursor::pos());
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Accordion + Arguments
+//////////////////////////////////////////////////////////////////////////
+
+const SMGuardNode* SMGuardBar::nodeAtPath(const QList<int>& path) const
+{
+    const SMGuardNode* node = guardTree();
+    for (int index : path)
+    {
+        if ((node == nullptr) || (index < 0) || (index >= node->getCount()))
+        {
+            return nullptr;
+        }
+
+        node = node->childAt(index);
+    }
+
+    return node;
+}
+
+void SMGuardBar::bindArgumentsTo(const QList<int>& callPath, uint32_t methodId)
+{
+    const SMMethodEntry* method = SMGuardSymbols::method(mModel.getData(), methodId);
+    if (method == nullptr)
+    {
+        mArgs->clearBinding();
+        mArgSink.clearBinding();
+        mBoundCallValid = false;
+        mBoundCallPath.clear();
+        return;
+    }
+
+    QList<SMArgMapTable::Param> params;
+    for (const MethodParameter& formal : method->getElements())
+    {
+        params.append(SMArgMapTable::Param{ formal.getName(), formal.getType(), formal.getValue(), formal.hasDefault() });
+    }
+
+    mArgSink.bind(mTransId, callPath);
+    mArgs->bind(mTransId, true, &mArgSink, params);
+    mBoundCallPath  = callPath;
+    mBoundCallValid = true;
+}
+
+void SMGuardBar::syncArgumentsToCaret()
+{
+    if (mTransId == 0u)
+    {
+        return;
+    }
+
+    QList<QPair<QList<int>, const SMGuardNode*>> calls;
+    collectCalls(guardTree(), QList<int>(), calls);
+    if (calls.isEmpty())
+    {
+        mArgs->clearBinding();
+        mArgSink.clearBinding();
+        mBoundCallValid = false;
+        mBoundCallPath.clear();
+        return;
+    }
+
+    // Default target: the single (or first) call in the guard -- the common case is one condition.
+    QList<int>  targetPath   = calls.first().first;
+    uint32_t    targetMethod = calls.first().second->getSymbolId();
+
+    // With more than one call, follow the call the caret sits in (matched by callee name).
+    if (calls.size() > 1)
+    {
+        QString callee;
+        if (mField->caretCallee(callee) && (callee.isEmpty() == false))
+        {
+            for (const QPair<QList<int>, const SMGuardNode*>& entry : calls)
+            {
+                const SMMethodEntry* method = SMGuardSymbols::method(mModel.getData(), entry.second->getSymbolId());
+                if ((method != nullptr) && (method->getName() == callee))
+                {
+                    targetPath   = entry.first;
+                    targetMethod = entry.second->getSymbolId();
+                    break;
+                }
+            }
+        }
+        else if (mBoundCallValid)
+        {
+            // Caret is not inside a call: keep the current binding if it still addresses a call.
+            const SMGuardNode* current = nodeAtPath(mBoundCallPath);
+            if ((current != nullptr) && (current->getKind() == SMGuardNode::eKind::Call))
+            {
+                targetPath   = mBoundCallPath;
+                targetMethod = current->getSymbolId();
+            }
+        }
+    }
+
+    // Unchanged target: re-project in place (a foreign value edit) rather than rebuild, so a plain
+    // caret move never flickers the table -- but only while the formal COUNT still matches. refresh()
+    // re-projects the formal list captured at bind() time, so adding or removing a parameter on the
+    // referenced method would otherwise keep the stale row set (the added formal never appears). When
+    // the count differs, rebind so the row shape follows the signature.
+    const SMMethodEntry* boundMethod = SMGuardSymbols::method(mModel.getData(), targetMethod);
+    const int formalCount = (boundMethod != nullptr) ? static_cast<int>(boundMethod->getElements().size()) : 0;
+    if (mBoundCallValid && (targetPath == mBoundCallPath) && (mArgs->rowCount() == formalCount))
+    {
+        mArgs->refresh();
+        return;
+    }
+
+    bindArgumentsTo(targetPath, targetMethod);
+}
+
+void SMGuardBar::insertSymbol(const SMGuardSymbol& symbol)
+{
+    // The Data catalog offers the whole universe, so it must handle both shapes: a condition is a
+    // call (insert, commit, land on the first unmapped formal), everything else is a plain
+    // reference that simply lands at the caret.
+    if (symbol.isCall)
+    {
+        insertCondition(symbol);
+        return;
+    }
+
+    if (mTransId == 0u)
+    {
+        return;
+    }
+
+    mField->setFocus();
+    mField->insertReference(symbol);
+    mField->commitNow();
+}
+
+void SMGuardBar::insertCondition(const SMGuardSymbol& symbol)
+{
+    // The Conditions pickup list chose a condition method: insert its `#cond:name()` reference at
+    // the field's caret through the same path a typed reference commits (P3), then commit at once so
+    // it renders immediately as a chip on the first double-click.
+    if (mTransId == 0u)
+    {
+        return;
+    }
+
+    mField->setFocus();
+    mField->insertReference(symbol);
+    mField->commitNow();
+    mField->reflowNow();        // the chip appears within the gesture, not a turn later
+
+    // Land on the work: a condition with parameters leaves the caret ON its first unmapped formal
+    // (selected, so typing replaces it) instead of after the whole call.
+    mField->selectFirstGhost();
+
+    // Show the Arguments section so the developer can map the just-inserted call's parameters.
+    mChrome->setCurrentSection(SectionArgs);
+    syncArgumentsToCaret();
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Pop-out editor
+//////////////////////////////////////////////////////////////////////////
+
+SMGuardPopout* SMGuardBar::popout() const
+{
+    return mPopout;
+}
+
+SMAccordion* SMGuardBar::accordion() const
+{
+    return mChrome->accordion();
+}
+
+void SMGuardBar::openPopout()
+{
+    if (mTransId == 0u)
+    {
+        return;
+    }
+
+    if (mPopout != nullptr)
+    {
+        // Already open: raise and focus it rather than spawning a second window.
+        mPopout->raise();
+        mPopout->activateWindow();
+        return;
+    }
+
+    // Seed the pop-out from the base field's committable text: commit the base first (a no-op when
+    // it is already committed), so the pop-out's field reflows from the model and opens showing
+    // exactly what the base showed. The base field goes read-only while the pop-out owns editing.
+    mField->commitNow();
+    mField->setReadOnly(true);
+    mPopoutBtn->setEnabled(false);
+
+    SMGuardPopout* popout = new SMGuardPopout(mModel, mTransId, this);
+    mPopout = popout;
+
+    // The `Name it...` / `Move to handler...` ladder is bar-owned; run it over the shared model
+    // (the island must be committed first so it exists in the tree the path is resolved against).
+    connect(popout, &SMGuardPopout::nameIslandRequested, this, [this, popout](int islandIndex, const QString& body, bool moveToHandler)
+    {
+        popout->field()->commitNow();
+        const SMMethodEntry::eImplement implement = moveToHandler ? SMMethodEntry::eImplement::Handler
+                                                                  : SMMethodEntry::eImplement::Embedded;
+        runNameIsland(nthIslandPath(islandIndex), body, implement);
+    });
+
+    // On close (OK / Cancel / the window box): the base becomes editable again and regains focus.
+    // An OK commit reflowed the base from the model already (elementChanged); a Cancel left it as-is.
+    connect(popout, &SMGuardPopout::closed, this, [this]()
+    {
+        mField->setReadOnly(false);
+        mPopoutBtn->setEnabled(true);
+        mField->setFocus();
+    });
+
+    // Center the pop-out over the bar so it opens where the developer is looking.
+    popout->move(mapToGlobal(rect().center()) - popout->rect().center());
+    popout->show();
+    popout->raise();
+    popout->activateWindow();
+    popout->field()->setFocus();
+}
+
+//////////////////////////////////////////////////////////////////////////
+// Use-count + warning channel
+//////////////////////////////////////////////////////////////////////////
+
+void SMGuardBar::scheduleCatalogRefresh()
+{
+    if (mDerivedPending)
+    {
+        return;
+    }
+
+    mDerivedPending = true;
+    QTimer::singleShot(0, this, [this]()
+    {
+        mDerivedPending = false;
+        // Re-project the Arguments table off the model pass (the Conditions pickup list
+        // re-enumerates itself on the same notifier signals).
+        syncArgumentsToCaret();
+    });
 }

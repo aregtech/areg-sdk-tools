@@ -36,14 +36,14 @@ class SMMethodEntry;
  * \namespace   SMGuardSymbols
  * \brief   The one place the guard tree resolves names to symbol IDs (for the parser) and
  *          symbol IDs back to names (for the renderer and the codegen preview). All lookups
- *          are over the document's own registries -- the closed world (D1). Forward lookups
+ *          are over the document's own registries -- the closed world. Forward lookups
  *          answer "what does this name bind to"; reverse lookups answer "what is this ID's
  *          current name". Because guards store IDs, a rename changes only the declaration and
  *          every reverse lookup returns the new name with no guard edit.
  **/
 namespace SMGuardSymbols
 {
-    // ---- Forward lookups (name -> ID), used by the parser -------------------
+    // ---- Forward lookups (name -> ID), used by the parser -----------------
 
     //!< The attribute ID for \p name, or 0 when no attribute has that name.
     uint32_t attributeId(const StateMachineData& data, const QString& name);
@@ -63,7 +63,7 @@ namespace SMGuardSymbols
     //!< The declared type names of the in-scope stimulus parameters, parallel to paramNames.
     QStringList paramTypes(const StateMachineData& data, uint32_t transitionId);
 
-    // ---- Reverse lookups (ID -> name), used by render / codegen -------------
+    // ---- Reverse lookups (ID -> name), used by render / codegen -----------
 
     //!< The current name of the attribute \p id, or empty when it no longer exists.
     QString attributeName(const StateMachineData& data, uint32_t id);

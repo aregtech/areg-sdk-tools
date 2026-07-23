@@ -33,9 +33,9 @@ class QTextDocument;
 /**
  * \class   SMGuardHighlighter
  * \brief   Paints the guard field's document from a decoration set the field hands it: owner
- *          foreground colors (B2 E1) and diagnostic underlines -- an error squiggle (E2), a
- *          warning underline (E6) and the dotted underline of a raw fragment (E3). The
- *          highlighter owns no analysis; the field computes the spans (from U1 render spans on
+ *          foreground colors and diagnostic underlines -- an error squiggle, a
+ *          warning underline and the dotted underline of a raw fragment. The
+ *          highlighter owns no analysis; the field computes the spans (from render spans on
  *          a resolved tree, or from a live token classification while typing) and calls
  *          \ref setDecorations. One document block: the field forbids newlines.
  **/

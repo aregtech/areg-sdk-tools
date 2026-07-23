@@ -22,30 +22,45 @@
  *
  ************************************************************************/
 
+#include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMGuardCommands.hpp"
+#include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
+#include "lusan/view/sm/SMGuardCallsOutline.hpp"
+#include "lusan/view/sm/SMGuardDataPanel.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
+#include "lusan/view/sm/SMGuardPopout.hpp"
+#include "lusan/view/sm/SMInlineToken.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
-#include "lusan/view/sm/SMMappingGrid.hpp"
 #include "lusan/view/sm/SMMethod.hpp"
 #include "lusan/view/common/MethodListView.hpp"
-#include "lusan/view/sm/SMOperandField.hpp"
-#include "lusan/view/sm/SMStructureLens.hpp"
+#include "lusan/view/sm/SMRefCompleter.hpp"
+#include "lusan/view/sm/SMSignatureCard.hpp"
+#include "lusan/view/sm/NEGuardStyle.hpp"
 
 #include <QApplication>
+#include "lusan/view/sm/SMAccordion.hpp"
 #include <QClipboard>
+#include <QComboBox>
+#include <QTextDocument>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QGuiApplication>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMimeData>
+#include <QPushButton>
+#include <QScreen>
 #include <QTextCursor>
+#include <QToolButton>
 #include <QTreeWidget>
 #include <cstdio>
 
@@ -100,6 +115,15 @@ namespace
         }
     }
 
+    //!< Sends a synthetic key press+release carrying \p text to \p w (drives the field's keys).
+    void typeChar(QWidget* w, int key, const QString& text)
+    {
+        QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, text);
+        QApplication::sendEvent(w, &press);
+        QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, text);
+        QApplication::sendEvent(w, &release);
+    }
+
     void grab(QWidget* widget, const QString& dir, const char* name)
     {
         const QString path = dir + QLatin1Char('/') + QString::fromLatin1(name);
@@ -139,6 +163,27 @@ namespace
         const SMTransitionEntry* transition = model.getData().findTransitionById(transitionId);
         return (transition != nullptr) ? SMGuardRender::guardText(model.getData(), transitionId, transition->getGuard()) : QString();
     }
+
+    //!< The DISPLAY name (PropName) of the first folded chip token in the field, or empty.
+    QString firstChipName(SMGuardField* field)
+    {
+        const QString text = field->toPlainText();
+        QTextCursor cursor(field->document());
+        for (int i = 0; i < text.length(); ++i)
+        {
+            if (text.at(i) == QChar::ObjectReplacementCharacter)
+            {
+                cursor.setPosition(i + 1);
+                const QTextCharFormat format = cursor.charFormat();
+                if (SMInlineToken::isChip(format))
+                {
+                    return format.property(SMInlineToken::PropName).toString();
+                }
+            }
+        }
+
+        return QString();
+    }
 }
 
 int main(int argc, char** argv)
@@ -176,13 +221,11 @@ int main(int argc, char** argv)
     bar.setTransition(transId);
     pump(150);
 
-    // ---- S5: the lens over the running example B ---------------------------
-    std::printf("[ RUN  ] lens\n");
+    // ---- the running example B committed into the guard --------------------
+    std::printf("[ RUN  ] guardExample\n");
     setGuard(model, transId, QStringLiteral("WalkRequested && (HasWaiting(count) || count >= MIN_WAITING) && !IsNightMode"));
     pump(300);
-    check(bar.lens()->findChild<QWidget*>(QStringLiteral("smLensPill_0")) != nullptr, "lens renders the first clause pill");
-    check(bar.lens()->findChild<QWidget*>(QStringLiteral("smLensJoin_root")) != nullptr, "lens renders the root joiner");
-    grab(&bar, grabDir, "u3-lens-open.png");
+    grab(&bar, grabDir, "u3-guard-open.png");
 
     // ---- 23a: the island token is ONE character to caret/selection/clipboard --
     std::printf("[ RUN  ] islandAtomicity\n");
@@ -248,35 +291,145 @@ int main(int argc, char** argv)
     grab(&bar, grabDir, "u3-island-open.png");
     bar.islandEditor()->hide();
 
-    // ---- 23b: a grid edit changes the visible text; ONE undo restores both ----
-    std::printf("[ RUN  ] gridTwoWay\n");
+    // ---- accordion: selecting a call binds the inline Arguments table (retired grid) ----
+    // The old two-way mapping popover (SMMappingGrid) is replaced by the accordion Arguments
+    // table (SMArgMapTable + SMArgSinkGuard). The inline-mapping parity (a mapping rewrites the
+    // tree, one undo restores both) is covered headless in SMArgMapTableTests; here we assert the
+    // outline lists the call and selecting it binds the shared table.
+    std::printf("[ RUN  ] accordionArguments\n");
     setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
     pump(300);
 
-    bar.grid()->openFor(transId, {}, bar.mapToGlobal(QPoint(20, 200)));
+    // Section order is Generated (0), Conditions (1), Arguments (2) -- Generated sits directly
+    // under the editor since SM-21, 2026-07-22.
+    bar.accordion()->setCurrentIndex(1);        // the Conditions pickup section.
+    pump(50);
+    check(bar.accordion()->isSectionOpen(1), "the Conditions section opens from the accordion");
+    check(bar.calls()->insertRowCount() >= 1, "the Conditions pickup list offers the condition method");
     pump(150);
-    check(bar.grid()->isVisible(), "the grid is open for the call");
-    grab(bar.grid(), grabDir, "u3-grid-open.png");
+    // The Arguments table follows the single call in the guard (caret-driven binding).
+    check((bar.args() != nullptr) && (bar.args()->rowCount() >= 1), "the Arguments table binds to the guard's call");
+    bar.accordion()->setCurrentIndex(2);        // the Arguments section, for the shot.
+    pump(50);
+    check(bar.accordion()->isSectionOpen(2), "opening Arguments closed Conditions (compact mode)");
+    check(bar.accordion()->isSectionOpen(1) == false, "compact mode keeps exactly one section open");
+    grab(&bar, grabDir, "u3-accordion-arguments.png");
 
-    SMOperandField* operand = bar.grid()->findChild<SMOperandField*>(QStringLiteral("smMapGridField_0"));
-    check(operand != nullptr, "the grid has the first operand field");
-    if (operand != nullptr)
+    // ---- the Data catalog: the whole insertable universe, browsable ------------------
+    // Spec 8 / SM-21-04: the completer answers "what fits here" only after you type `#`. The Data
+    // section answers "what may I even use?" without typing anything -- restored 2026-07-22.
+    std::printf("[ RUN  ] dataCatalog\n");
     {
-        operand->setEditText(QStringLiteral("MIN_WAITING"));
-        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-        QApplication::sendEvent(operand->lineEdit(), &enter);
+        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
         pump(300);
+        bar.accordion()->setCurrentIndex(3);        // the Data section
+        pump(100);
 
-        checkEq(guardText(model, transId), QStringLiteral("HasWaiting(MIN_WAITING)"), "grid edit rewrote the tree");
-        checkEq(field->toPlainText(), QStringLiteral("HasWaiting(MIN_WAITING)"), "the field text visibly updated");
+        SMGuardDataPanel* data = bar.dataPanel();
+        check(data != nullptr, "the bar owns a Data catalog panel");
+        const int all = (data != nullptr) ? data->symbolRowCount() : 0;
+        check(all >= 4, "the catalog lists parameters, attributes, constants and conditions");
 
-        model.getUndoStack().undo();
-        pump(300);
-        checkEq(guardText(model, transId), QStringLiteral("HasWaiting(count)"), "ONE undo restored the tree");
-        checkEq(field->toPlainText(), QStringLiteral("HasWaiting(count)"), "and the visible field text");
+        data->setFilter(QStringLiteral("HasWaiting"));
+        pump(50);
+        check(data->symbolRowCount() < all, "the search box narrows the catalog");
+        check(data->symbolRowCount() >= 1, "the searched symbol is still listed");
+
+        data->setFilter(QString());
+        pump(50);
+        check(data->symbolRowCount() == all, "clearing the search restores the whole universe");
+        grab(&bar, grabDir, "sm2104-data-catalog.png");
     }
 
-    bar.grid()->hide();
+    // ---- inserting a condition lands the caret ON its first unmapped formal ----------
+    // A freshly inserted call has every formal unmapped; leaving the caret after the whole call
+    // makes the developer hunt for the first slot (SM-21 bug-fix, 2026-07-22).
+    std::printf("[ RUN  ] firstGhostSelected\n");
+    {
+        setGuard(model, transId, QStringLiteral("HasWaiting()"));
+        pump(300);
+        check(field->selectFirstGhost(), "an unmapped formal is found and selected");
+        checkEq(field->textCursor().selectedText(), QStringLiteral("<count>")
+              , "the selection IS the first unmapped formal's ghost, ready to be typed over");
+
+        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+        pump(300);
+        check(field->selectFirstGhost() == false, "a fully mapped call leaves the caret alone");
+    }
+
+    // ---- canvas label: a long or block-carrying guard collapses STRUCTURALLY ----------
+    // The transition label on the design canvas has room for a few words. A short plain guard is
+    // shown whole; a long one keeps its condition names and drops the bulk; an inline C++ block
+    // says what it IS, not what it contains (SM-21 bug-fix, 2026-07-22).
+    std::printf("[ RUN  ] canvasSummary\n");
+    {
+        const StateMachineData& data = model.getData();
+
+        setGuard(model, transId, QStringLiteral("count > 3"));
+        const SMTransitionEntry* t1 = data.findTransitionById(transId);
+        checkEq(SMGuardRender::canvasSummary(data, transId, t1->getGuard()), QStringLiteral("count > 3")
+              , "a short plain guard summarises to itself");
+
+        setGuard(model, transId, QStringLiteral("HasWaiting(count) && WalkRequested"));
+        const SMTransitionEntry* t2 = data.findTransitionById(transId);
+        checkEq(SMGuardRender::canvasSummary(data, transId, t2->getGuard())
+              , QStringLiteral("HasWaiting(...) && WalkRequested")
+              , "a condition call keeps its name and collapses its arguments");
+
+        setGuard(model, transId, QStringLiteral("{ return count > 3; } && WalkRequested"));
+        const SMTransitionEntry* t3 = data.findTransitionById(transId);
+        checkEq(SMGuardRender::canvasSummary(data, transId, t3->getGuard())
+              , QStringLiteral("this -> bool && WalkRequested")
+              , "an inline block reads as the anonymous lambda it is");
+    }
+
+    setGuard(model, transId, QString());
+    pump(150);
+
+    // ---- SM-21-04: catalog / Insert produces the same id-bound tree as typing --------
+    std::printf("[ RUN  ] catalogInsert\n");
+    {
+        const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(model.getData(), transId);
+        const SMGuardSymbol* value = nullptr;
+        const SMGuardSymbol* call  = nullptr;
+        for (const SMGuardSymbol& sym : catalog)
+        {
+            if ((value == nullptr) && (sym.isCall == false)) { value = &sym; }
+            if ((call == nullptr) && sym.isCall)             { call = &sym; }
+        }
+
+        check(value != nullptr, "the catalog offers a value symbol to insert");
+        if (value != nullptr)
+        {
+            setGuard(model, transId, QString());
+            pump(200);
+            field->setFocus();
+            field->insertReference(*value);         // inserts the canonical reference and commits.
+            pump(300);
+            const QString viaInsert = guardText(model, transId);
+
+            setGuard(model, transId, value->mention());     // type the same canonical reference.
+            pump(300);
+            const QString viaType = guardText(model, transId);
+            checkEq(viaInsert, viaType, "inserting a symbol == typing its canonical reference (id-bound)");
+        }
+
+        if (call != nullptr)
+        {
+            setGuard(model, transId, QString());
+            pump(200);
+            field->setFocus();
+            field->insertReference(*call);          // inserts `#cond:name()`, caret in the parens.
+            pump(150);
+            check(field->committableText().contains(call->name + QLatin1Char('(')), "inserting a call inserts name( with the caret in the parens");
+        }
+    }
+
+    // The unmapped-argument warning list and the raw-collision quick-fix bar were REMOVED from the
+    // Conditions tab (SM-21 bug-fix, 2026-07-21): the Arguments section already shows which formals
+    // are unmapped and the status line already states any error, so both advisory strips were
+    // duplicative clutter. The multi-kind bindRaw disambiguation picker itself still exists on the
+    // field and is covered by the completer checks above.
 
     // ---- form-first parity: the clause popover path equals the typed path -----
     std::printf("[ RUN  ] formFirstParity\n");
@@ -293,6 +446,300 @@ int main(int argc, char** argv)
           && transition->getGuard().getTree()->equals(*typed.tree)
         , "the stored tree equals the typed-path tree");
     delete typed.tree;
+
+    // ---- SM-21-03: committed references fold into chips; committable/clipboard exact ----
+    std::printf("[ RUN  ] chips\n");
+    setGuard(model, transId, QStringLiteral("WalkRequested && count >= MIN_WAITING"));
+    pump(300);
+    check(field->chipCount() == 3, "three references folded into chips (attr, param, const)");
+    checkEq(field->committableText(), QStringLiteral("WalkRequested && count >= MIN_WAITING")
+          , "committableText expands chips to canonical text (no markers reach the tree, 12.7)");
+    grab(&bar, grabDir, "sm2103-chips.png");
+
+    {
+        ProbeField chipProbe(model);
+        chipProbe.resize(600, 60);
+        chipProbe.show();
+        chipProbe.setTransition(transId);
+        pump(300);
+        check(chipProbe.chipCount() == 3, "the probe folded the same three chips");
+        chipProbe.selectAll();
+        QMimeData* chipCopy = chipProbe.createMimeDataFromSelection();
+        check(chipCopy != nullptr, "copy builds mime data over chips");
+        if (chipCopy != nullptr)
+        {
+            checkEq(chipCopy->text(), QStringLiteral("WalkRequested && count >= MIN_WAITING")
+                  , "chip clipboard round-trips byte-exact");
+            delete chipCopy;
+        }
+        chipProbe.hide();
+    }
+
+    // ---- SM-21-03: the reference completer (D-POPUP): pass-through, D-ESC, filter, clamp ----
+    std::printf("[ RUN  ] completer\n");
+    setGuard(model, transId, QString());
+    pump(200);
+    field->setFocus();
+    SMRefCompleter* comp = field->findChild<SMRefCompleter*>(QStringLiteral("smRefCompleter"));
+    check(comp != nullptr, "the field owns a reference completer");
+    if (comp != nullptr)
+    {
+        typeChar(field, Qt::Key_NumberSign, QStringLiteral("#"));
+        pump(120);
+        check(comp->isVisible(), "typing @ opens the completer");
+
+        // 12.6 pass-through: typing narrows the list AND the characters reach the document.
+        typeChar(field, Qt::Key_W, QStringLiteral("W"));
+        typeChar(field, Qt::Key_A, QStringLiteral("a"));
+        pump(120);
+        check(field->committableText().contains(QStringLiteral("#Wa")), "typed characters pass through to the document (no swallow, 12.6)");
+        check(comp->isVisible(), "the completer stays open while typing");
+
+        // D-ESC: Esc closes but keeps the text; it does not reopen for the same token.
+        typeChar(field, Qt::Key_Escape, QString());
+        pump(80);
+        check(comp->isVisible() == false, "Esc closes the completer");
+        check(field->committableText().contains(QStringLiteral("#Wa")), "Esc keeps the typed characters (D-ESC)");
+        typeChar(field, Qt::Key_L, QStringLiteral("l"));
+        pump(80);
+        check(comp->isVisible() == false, "the completer does not reopen for the same token after Esc (D-ESC)");
+    }
+
+    // Widget-level: a `@kind:` filter shows only that kind and inserts the canonical @kind:name;
+    // a caret at the screen corner keeps the popup fully on-screen (12.5).
+    {
+        SMRefCompleter probe;
+        probe.setSymbols(SMGuardCatalog::build(model.getData(), transId));
+        probe.showFor({ SMGuardSymbol::eRefKind::Attr }, QString(), QRect(QPoint(120, 120), QSize(2, 16)));
+        const SMGuardSymbol* cur = probe.currentSymbol();
+        check((cur != nullptr) && (cur->refkind == SMGuardSymbol::eRefKind::Attr), "a #attr: filter shows only attributes");
+        if (cur != nullptr)
+        {
+            check(cur->mention().startsWith(QStringLiteral("#attr:")), "an attribute inserts as #attr:name");
+        }
+
+        const QRect avail = QGuiApplication::primaryScreen()->availableGeometry();
+        probe.showFor({}, QString(), QRect(QPoint(avail.right() - 2, avail.bottom() - 2), QSize(2, 16)));
+        const QRect g = probe.geometry();
+        check((g.left() >= avail.left()) && (g.top() >= avail.top())
+              && (g.right() <= avail.right()) && (g.bottom() <= avail.bottom())
+            , "the completer clamps within the screen at a corner caret (12.5)");
+        probe.hide();
+    }
+
+    setGuard(model, transId, QString());
+    pump(150);
+
+    // ---- SM-21-03: signature help + D-PRECEDENCE (the completer yields, then returns) ----
+    std::printf("[ RUN  ] signatureHelp\n");
+    setGuard(model, transId, QString());
+    pump(150);
+    field->setFocus();
+    SMSignatureCard* sig = field->findChild<SMSignatureCard*>(QStringLiteral("smSignatureCard"));
+    SMRefCompleter* comp2 = field->findChild<SMRefCompleter*>(QStringLiteral("smRefCompleter"));
+    check(sig != nullptr, "the field owns a signature card");
+    if ((sig != nullptr) && (comp2 != nullptr))
+    {
+        for (const QChar c : QStringLiteral("HasWaiting("))
+        {
+            typeChar(field, c.unicode(), QString(c));
+        }
+        pump(150);
+        check(sig->isVisible(), "signature help shows while the caret is inside a call's parentheses");
+
+        // D-PRECEDENCE: typing '#' opens the completer OVER the tooltip and hides it.
+        typeChar(field, Qt::Key_NumberSign, QStringLiteral("#"));
+        pump(150);
+        check(comp2->isVisible(), "typing @ inside the call opens the completer");
+        check(sig->isVisible() == false, "D-PRECEDENCE: the completer hides the signature card");
+
+        // Closing the completer restores the signature card.
+        typeChar(field, Qt::Key_Escape, QString());
+        pump(150);
+        check(comp2->isVisible() == false, "Esc closes the completer");
+        check(sig->isVisible(), "closing the completer restores the signature card (D-PRECEDENCE)");
+    }
+    setGuard(model, transId, QString());
+    pump(150);
+
+    // ---- 12.3: a foreign rename re-projects the chips but keeps a half-typed token ----
+    // Renaming a method on the Methods page while the guard field holds an uncommitted, half-typed
+    // token must UPDATE the folded chips (the method chip respells to the new name) WITHOUT
+    // reflowing the field -- the half-typed text the developer is mid-way through survives, and no
+    // spurious undo step is manufactured (hazard 12.3 / D-SYNC).
+    std::printf("[ RUN  ] foreignRenameKeepsTyping\n");
+    {
+        setGuard(model, transId, QStringLiteral("HasWaiting(count)"));
+        pump(300);
+        check(field->chipCount() >= 1, "the call folded to a chip");
+        checkEq(firstChipName(field), QStringLiteral("HasWaiting"), "the method chip shows its name before the rename");
+
+        const SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("HasWaiting"));
+        check(hw != nullptr, "the demo document has the HasWaiting condition method");
+        if (hw != nullptr)
+        {
+            const uint32_t methodId = hw->getId();
+
+            // The developer types a half-typed token AFTER the committed call (uncommitted: the
+            // 150 ms debounce has not fired and 'ReadyChk' is an incomplete identifier).
+            field->setFocus();
+            QTextCursor tail = field->textCursor();
+            tail.movePosition(QTextCursor::End);
+            field->setTextCursor(tail);
+            field->insertPlainText(QStringLiteral(" && ReadyChk"));
+
+            const int undoBefore = model.getUndoStack().index();
+
+            // A foreign rename (Methods page): fires elementChanged(methodId != transitionId).
+            model.getMethodModel().renameMethod(methodId, QStringLiteral("StillWaiting"));
+            pump(40);   // reproject is synchronous; stay well under the 150 ms commit debounce.
+
+            checkEq(firstChipName(field), QStringLiteral("StillWaiting"), "the method chip respelled to the new name (12.3 re-projection)");
+            check(field->committableText().contains(QStringLiteral("ReadyChk")), "the half-typed token survived the foreign rename (12.3: no reflow)");
+            check(field->committableText().contains(QStringLiteral("StillWaiting")), "committable text carries the new canonical name, not the stale one");
+            check(model.getUndoStack().index() == undoBefore + 1, "the rename is one undo step; the re-projection adds none");
+        }
+    }
+
+    setGuard(model, transId, QString());
+    pump(200);      // let the pending typing debounce fire (a no-op commit on the now-empty field)
+
+    // ---- SM-21-05: the pop-out editor (a bigger editor over the same model) ----
+    // Open from the top strip, edit, OK -> the base reflows to the new tree (one undo step);
+    // reopen, edit, Cancel -> the base is unchanged. The base is read-only the whole time a
+    // pop-out owns editing. Shares the model, not the document (each field its own).
+    std::printf("[ RUN  ] popout\n");
+    setGuard(model, transId, QStringLiteral("WalkRequested"));
+    pump(300);
+
+    QToolButton* popoutBtn = bar.findChild<QToolButton*>(QStringLiteral("smGuardPopout"));
+    check(popoutBtn != nullptr, "the Pop-out top-strip button exists");
+    check((popoutBtn != nullptr) && popoutBtn->isEnabled(), "the Pop-out button is enabled (SM-21-05, no longer a placeholder)");
+    if (popoutBtn != nullptr)
+    {
+        popoutBtn->click();
+    }
+    pump(200);
+
+    SMGuardPopout* popout = bar.popout();
+    check(popout != nullptr, "clicking Pop-out opens the pop-out window");
+    check((popout != nullptr) && popout->isVisible(), "the pop-out is visible and non-modal");
+    check(field->isReadOnly(), "the base field is read-only while the pop-out is open");
+    check((popoutBtn != nullptr) && (popoutBtn->isEnabled() == false), "the Pop-out button is disabled while a pop-out is open");
+    if (popout != nullptr)
+    {
+        check(popout->field()->document() != field->document(), "the pop-out has its OWN document (not shared)");
+        checkEq(popout->field()->committableText(), QStringLiteral("WalkRequested"), "the pop-out seeded from the base's committable text");
+        grab(popout, grabDir, "sm2105-popout-open.png");
+
+        // Edit in the pop-out, then OK: the base reflows from the model to the new tree, in ONE undo step.
+        const int beforeOk = model.getUndoStack().index();
+        popout->field()->setPlainText(QStringLiteral("WalkRequested && count >= MIN_WAITING"));
+        pump(250);
+        QPushButton* ok = popout->findChild<QPushButton*>(QStringLiteral("smGuardPopoutOk"));
+        check(ok != nullptr, "the pop-out has an OK button");
+        if (ok != nullptr)
+        {
+            ok->click();
+        }
+        pump(300);
+        checkEq(guardText(model, transId), QStringLiteral("WalkRequested && count >= MIN_WAITING"), "OK reflows the base from the model (new tree)");
+        check(model.getUndoStack().index() == beforeOk + 1, "one OK == one undo step");
+        check(bar.popout() == nullptr, "the pop-out closed after OK");
+        check(field->isReadOnly() == false, "the base field is editable again after OK");
+
+        // Atomicity: one undo restores the whole prior guard.
+        model.getUndoStack().undo();
+        pump(200);
+        checkEq(guardText(model, transId), QStringLiteral("WalkRequested"), "one undo restores the pre-OK guard");
+        model.getUndoStack().redo();
+        pump(200);
+    }
+
+    // Reopen, edit, Cancel: the base guard is untouched and pushes no undo step.
+    if (popoutBtn != nullptr)
+    {
+        popoutBtn->click();
+    }
+    pump(200);
+    SMGuardPopout* popout2 = bar.popout();
+    check(popout2 != nullptr, "the pop-out reopens from the top strip");
+    if (popout2 != nullptr)
+    {
+        const QString baseBefore = guardText(model, transId);
+        const int beforeCancel = model.getUndoStack().index();
+        popout2->field()->setPlainText(QStringLiteral("count >= MIN_WAITING"));
+        pump(250);
+        QPushButton* cancel = popout2->findChild<QPushButton*>(QStringLiteral("smGuardPopoutCancel"));
+        check(cancel != nullptr, "the pop-out has a Cancel button");
+        if (cancel != nullptr)
+        {
+            cancel->click();
+        }
+        pump(300);
+        checkEq(guardText(model, transId), baseBefore, "Cancel leaves the base guard unchanged");
+        check(model.getUndoStack().index() == beforeCancel, "Cancel pushes no undo step");
+        check(bar.popout() == nullptr, "the pop-out closed after Cancel");
+        check(field->isReadOnly() == false, "the base field is editable again after Cancel");
+    }
+
+    setGuard(model, transId, QString());
+    pump(150);
+
+    // ---- SM-21-10: adding a formal to a referenced condition keeps the existing mapping ----
+    // Critique-05 item 2: adding a parameter to a condition a guard already references was reported
+    // to empty the Arguments table and lose the mapping. Bindings key on the formal's ID (P1), so
+    // the first formal's value must survive the add; the newly declared formal shows up unmapped
+    // and its row is tinted amber. This reproduces that scenario end-to-end through the real table.
+    // IsCalmHours is used here rather than HasWaiting: the foreign-rename scenario above renamed
+    // HasWaiting to StillWaiting and does not restore it, so IsCalmHours is the untouched condition.
+    std::printf("[ RUN  ] addParamKeepsMapping\n");
+    {
+        setGuard(model, transId, QStringLiteral("IsCalmHours(count)"));
+        pump(300);
+        bar.accordion()->setCurrentIndex(2);        // open the Arguments section.
+        pump(150);
+
+        SMArgMapTable* args = bar.args();
+        check(args != nullptr, "the Arguments table is bound to the referenced condition");
+        if (args != nullptr)
+        {
+            check(args->rowCount() == 1, "IsCalmHours starts with a single formal");
+            QComboBox* v0 = qobject_cast<QComboBox*>(args->valueWidget(0));
+            check((v0 != nullptr) && (v0->currentText() == QStringLiteral("count")), "formal 0 is mapped to count");
+
+            SMMethodEntry* hw = model.getData().getMethods().findMethod(QStringLiteral("IsCalmHours"));
+            check(hw != nullptr, "the demo document has the IsCalmHours condition method");
+            if (hw != nullptr)
+            {
+                // Add a SECOND formal on the Methods side: this fires elementChanged for the method
+                // id (not the transition), so the table re-projects rather than the field reflowing.
+                model.getMethodModel().createParam(hw, QStringLiteral("extra"));
+
+                // The rebuild is deferred via QTimer::singleShot(0, ...); a synchronous assert here
+                // would read the stale one-row projection. Pump the event loop first.
+                pump(400);
+
+                check(args->rowCount() == 2, "the added formal appears as a second row");
+
+                QComboBox* r0 = qobject_cast<QComboBox*>(args->valueWidget(0));
+                check((r0 != nullptr) && (r0->currentText() == QStringLiteral("count"))
+                    , "formal 0 KEEPS its mapping across the parameter add (bind-by-id, P1)");
+
+                QComboBox* r1 = qobject_cast<QComboBox*>(args->valueWidget(1));
+                check((r1 != nullptr) && r1->currentText().isEmpty(), "the newly declared formal is unmapped");
+
+                const QString tint = NEGuardStyle::unmappedTint().name();
+                QLabel* n1 = args->nameLabel(1);
+                check((n1 != nullptr) && n1->styleSheet().contains(tint), "the unmapped formal's row is tinted amber");
+                QLabel* n0 = args->nameLabel(0);
+                check((n0 != nullptr) && (n0->styleSheet().contains(tint) == false), "the mapped formal's row is not tinted");
+            }
+        }
+    }
+
+    setGuard(model, transId, QString());
+    pump(150);
 
     // ---- S14: the Methods page kind split -------------------------------------
     std::printf("[ RUN  ] methodsPage\n");

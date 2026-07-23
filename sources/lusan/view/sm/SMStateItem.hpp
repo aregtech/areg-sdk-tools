@@ -58,11 +58,27 @@ public:
      **/
     enum class eRowIcon
     {
-          Entry     //!< An entry operation (into-the-state arrow).
-        , Timer     //!< A timer start/stop.
-        , Event     //!< An event send.
-        , Internal  //!< An internal transition.
-        , Exit      //!< An exit operation (out-of-the-state arrow).
+          Entry     //!< A generic entry operation: an arrow running INTO a bar, `->|`.
+        , Exit      //!< A generic exit operation: an arrow running away from a bar, `<-|`.
+        , ExitAlt   //!< The alternative exit glyph, `|<-` -- see \c ExitRowIcon in the .cpp.
+        , TimerStart//!< A timer start (clock + play).
+        , TimerStop //!< A timer stop (clock + square).
+        , Event     //!< An event send/trigger.
+        , Internal  //!< An internal transition, and a generic Do operation (a self-loop).
+    };
+
+    /**
+     * \enum    eRowZone
+     * \brief   Where a behavior row is anchored inside the state box. Enter runs from the top of
+     *          the body down, Exit is anchored to the bottom, and everything that happens WHILE
+     *          in the state (Do operations, internal transitions) sits in the middle -- so the box
+     *          reads in the order the state actually executes.
+     **/
+    enum class eRowZone
+    {
+          Enter
+        , Middle
+        , Exit
     };
 
 private:
@@ -89,8 +105,11 @@ private:
      **/
     struct BodyRow
     {
-        eRowIcon    icon;   //!< The glyph kind.
-        QString     text;   //!< The row text.
+        eRowIcon    icon;           //!< The glyph kind.
+        QString     text;           //!< The row text.
+        eRowZone    zone;           //!< Where in the box the row is anchored.
+        bool        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the zone glyph).
+        bool        continues;      //!< Another row of the same group follows (draws a ` \` cue).
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -323,6 +342,7 @@ private:
     bool                        mComposite;     //!< The state owns painted substates.
     bool                        mImported;      //!< The state hosts an imported submachine.
     bool                        mExpanded;      //!< The body is expanded.
+    int                         mActionSeverity;//!< Entry/exit mapping severity (NEGuardStyle), or -1 (clean).
     QString                     mColorName;     //!< The persisted body color (empty = theme).
     QString                     mHeaderColorName; //!< The persisted header color (empty = derived).
     QList<BodyRow>              mRows;          //!< The behavior rows, in display order.

@@ -270,7 +270,7 @@ private:
 
 /**
  * \class   SMSetGridSizeCommand
- * \brief   Sets the document's grid cell size (`Layout@GridSize`, spec 7.6/9.8).
+ * \brief   Sets the document's grid cell size (`Layout@GridSize`).
  **/
 class SMSetGridSizeCommand : public SMCommand
 {
@@ -287,7 +287,7 @@ private:
 
 /**
  * \class   SMSetGridVisibleCommand
- * \brief   Sets the document's grid visibility (`Layout@GridVisible`, spec 7.6/9.8).
+ * \brief   Sets the document's grid visibility (`Layout@GridVisible`).
  **/
 class SMSetGridVisibleCommand : public SMCommand
 {
@@ -346,7 +346,7 @@ private:
 
 /**
  * \class   SMAddNoteCommand
- * \brief   Creates a diagram note (spec 7.6): allocates its document-unique ID on first
+ * \brief   Creates a diagram note: allocates its document-unique ID on first
  *          redo and re-inserts it under that exact ID on later redo (history navigation
  *          never allocates new IDs).
  **/

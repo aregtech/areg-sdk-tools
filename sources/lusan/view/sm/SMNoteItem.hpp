@@ -37,7 +37,7 @@ class SMScene;
  * \class   SMNoteItem
  * \brief   A diagram-only text annotation on the design canvas: a colored rounded box with
  *          wrapped text, movable and resizable via a single corner handle, with inline text
- *          editing. Notes reference no model element and are semantically inert (spec 7.6);
+ *          editing. Notes reference no model element and are semantically inert;
  *          the element ID is the item's single link to its `Note` layout entry, and every
  *          edit it produces goes through an undo command.
  **/

@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMIslandEditor.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard island editor (v7 B8 / S4).
+ *  \brief       Lusan application, FSM guard island editor.
  *
  ************************************************************************/
 
@@ -195,7 +195,7 @@ bool SMIslandEditor::eventFilter(QObject* watched, QEvent* event)
         if (((key->key() == Qt::Key_Return) || (key->key() == Qt::Key_Enter))
             && (key->modifiers() & Qt::ControlModifier))
         {
-            // Ctrl+Enter: commit the body, keep the island open (B16).
+            // Ctrl+Enter: commit the body, keep the island open.
             emit bodyCommitted(mIsland, body());
             return true;
         }

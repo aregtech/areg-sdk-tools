@@ -15,7 +15,7 @@
  *  \file        lusan/model/sm/SMSymbolIndex.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM verbatim-code symbol assistance (SM-21-06).
+ *  \brief       Lusan application, FSM verbatim-code symbol assistance.
  *
  ************************************************************************/
 
@@ -39,8 +39,8 @@ class StateMachineData;
  *          blocks, embedded condition bodies, inline code). It never parses C++: it only
  *          (1) offers the machine's own in-scope identifiers as a completion list, and
  *          (2) scans a verbatim block for the known identifiers it references, so
- *          validation (SM-24/25) can flag a reference to a deleted element and rename
- *          (SM-26) can find-and-replace into verbatim text. The token surface stays
+ *          validation can flag a reference to a deleted element and rename
+ *          can find-and-replace into verbatim text. The token surface stays
  *          opaque -- only whole-word identifier tokens that match a declared element name
  *          are recognized; keywords, unknown tokens, literals, and member accesses are
  *          ignored.
@@ -143,7 +143,7 @@ namespace SMSymbolIndex
 
     /**
      * \brief   Every verbatim block that references the identifier \p name. The answer
-     *          rename (SM-26) and validation (SM-24/25) consume so a deleted or renamed
+     *          rename and validation consume so a deleted or renamed
      *          element can be resolved to the blocks that still mention it.
      **/
     QList<VerbatimRef> findReferences(const StateMachineData& data, const QString& name);

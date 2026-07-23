@@ -26,7 +26,7 @@
 
 #include <QStringList>
 
-// The single place the runtime-contract spellings live (D5): a rename of the accessor or the
+// The single place the runtime-contract spellings live: a rename of the accessor or the
 // data class touches only these constants, and stored guards (IDs) outlive the change.
 const char* const SMGuardCodegenPreview::FSM_DATA_QUALIFIER  { "<FsmData>" };
 const char* const SMGuardCodegenPreview::HANDLER_ACCESSOR    { "handler()" };
@@ -132,7 +132,7 @@ namespace
 
             if ((method != nullptr) && method->isLambdaCondition())
             {
-                // A named lambda is generated as a std::function member m<Name> (v7 A.1).
+                // A named lambda is generated as a std::function member m<Name>.
                 return QString::fromLatin1(SMGuardCodegenPreview::LAMBDA_MEMBER_PREFIX) + name
                      + QStringLiteral("(") + argList + QStringLiteral(")");
             }

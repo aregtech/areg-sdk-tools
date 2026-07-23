@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMGuardCatalog.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard editable-surface symbol catalog (B4/B5 source).
+ *  \brief       Lusan application, FSM guard editable-surface symbol catalog.
  *
  ************************************************************************/
 
@@ -24,6 +24,7 @@
  ************************************************************************/
 #include "lusan/view/sm/NEGuardStyle.hpp"
 
+#include <QHash>
 #include <QList>
 #include <QString>
 #include <QStringList>
@@ -33,21 +34,37 @@
  * Dependencies
  ************************************************************************/
 class StateMachineData;
+class SMGuardNode;
 
 /**
  * \struct  SMGuardSymbol
- * \brief   One entry of the guard editing surface's symbol universe (D6 bare names): a
+ * \brief   One entry of the guard editing surface's symbol universe (bare names): a
  *          stimulus parameter, an attribute, a constant, a handler condition, or a named
- *          lambda -- everything the completion catalog (B4) offers and the signature card
- *          (B5) needs to place slots. Names, not IDs: the surface is textual, so completion
+ *          lambda -- everything the completion catalog offers and the signature card
+ *          needs to place slots. Names, not IDs: the surface is textual, so completion
  *          inserts a bare name and the parser re-resolves it to an ID at commit (this is what
  *          keeps click-and-type paths identical).
  **/
 struct SMGuardSymbol
 {
+    /**
+     * \enum    eRefKind
+     * \brief   The reference kind that becomes the `#kind:` word when the completer inserts a
+     *          symbol. Distinct from \ref owner (a hue) because two kinds (attr and
+     *          const) share the FSM hue yet need different `#kind:` prefixes.
+     **/
+    enum class eRefKind
+    {
+          Param     //!< `#param:` -- a stimulus parameter.
+        , Attr      //!< `#attr:`  -- a machine attribute.
+        , Const     //!< `#const:` -- a declared constant.
+        , Cond      //!< `#cond:`  -- a condition method (handler or lambda).
+    };
+
     QString             name;       //!< The bare declared name inserted into the field.
-    QString             glyph;      //!< The ASCII owner/kind glyph (a # K h {}).
+    QString             glyph;      //!< The ASCII owner/kind glyph (a f h r =).
     NEGuardStyle::eOwner owner;     //!< The owner hue.
+    eRefKind            refkind;    //!< The `#kind:` reference kind (for canonical insertion).
     QString             typeText;   //!< The type shown in the catalog (return type for calls).
     QString             provenance; //!< The right-column cue (handler() / lambda / = value / empty).
     bool                isCall;     //!< True for a condition method (needs an argument list).
@@ -55,8 +72,34 @@ struct SMGuardSymbol
     QStringList         paramTypes; //!< The declared parameter types, parallel to paramNames.
     uint32_t            symbolId;   //!< The document ID of the declaration (for hovers / where-used).
 
-    //!< The catalog display label: `name(type, type)` for a call, else the bare name.
+    //!< The catalog display label: `type name(type, type)` for a call, else `type name`.
     QString display() const;
+
+    //!< The `#kind:` word for this symbol ("param" | "attr" | "const" | "cond").
+    QString kindWord() const;
+
+    //!< The canonical mention the completer inserts: `#kind:name` (`#cond:name` for a call).
+    QString mention() const;
+
+    //!< The human noun for this kind ("attribute" | "constant" | "parameter" | "condition"),
+    //!< used by the W1 collision advisory ("there is an attribute named 'x'").
+    QString kindNoun() const;
+};
+
+/**
+ * \struct  SMGuardRawCollision
+ * \brief   One W1 raw-collision hit: a \ref SMGuardNode::eKind::Raw node whose whole text is a
+ *          bare identifier that EXACTLY matches one or more in-scope symbol names. The
+ *          committed guard kept the name as raw C++ (it resolved to nothing when it was typed),
+ *          but a symbol of that name now exists -- so the editor offers a one-click "bind as
+ *          `#kind:name`" courtesy through the warning channel. Recomputed on every projection
+ *          pass: a rename that removes the collision drops the hit with no guard edit.
+ **/
+struct SMGuardRawCollision
+{
+    QList<int>              path;       //!< The child-index path to the Raw node (empty = root).
+    QString                 name;       //!< The raw identifier text (a bare identifier).
+    QList<SMGuardSymbol>    matches;    //!< The in-scope symbols of that name (>1 => picker).
 };
 
 /**
@@ -80,6 +123,27 @@ namespace SMGuardCatalog
      *          Model-facing and headless-testable.
      **/
     QString nearestName(const QStringList& candidates, const QString& typed);
+
+    /**
+     * \brief   The LOCAL use-count of every bound symbol in one committed guard \p tree:
+     *          symbol document id -> number of BOUND references (Call / Attr / Const / Param
+     *          nodes). Raw / lambda / literal text is never counted. Headless
+     *          and testable; the catalog's `used-N` column is exactly this over the current
+     *          transition's guard.
+     **/
+    QHash<uint32_t, int> useCounts(const SMGuardNode* tree);
+
+    /**
+     * \brief   The W1 raw-collision hits over one committed guard \p tree: every
+     *          \ref SMGuardNode::eKind::Raw node whose WHOLE (trimmed) text is a single bare
+     *          identifier that exactly matches at least one in-scope symbol name for
+     *          \p transitionId. Text that is not a bare identifier -- operators, calls, literals,
+     *          member access, anything with a space or a symbol -- is never a hit (the hazard:
+     *          this is a quiet courtesy, not a linter). Headless and testable; the warning
+     *          channel routes each hit to a "bind as `#kind:name`" quick-fix. Recomputed on the
+     *          projection pass, so a rename that removes the collision drops the hit.
+     **/
+    QList<SMGuardRawCollision> rawCollisions(const StateMachineData& data, uint32_t transitionId, const SMGuardNode* tree);
 }
 
 #endif  // LUSAN_VIEW_SM_SMGUARDCATALOG_HPP

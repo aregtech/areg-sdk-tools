@@ -31,9 +31,31 @@ class QXmlStreamReader;
 class QXmlStreamWriter;
 
 /**
+ * \namespace   NEGuardText
+ * \brief       The lexical constants of the guard editing surface. The reference sigil is
+ *              declared here -- the single point of change -- because the parser (grammar),
+ *              the renderer (canonical text) and the field/catalog (insertion, completer)
+ *              must all agree on the very same character.
+ **/
+namespace NEGuardText
+{
+    //!< The character that opens a typed reference mention `#kind:name` in the guard text.
+    constexpr QChar     RefSigil    { QLatin1Char('#') };
+
+    //!< The separator between the kind word and the symbol name in `#kind:name`.
+    constexpr QChar     KindSep     { QLatin1Char(':') };
+
+    //!< Builds the canonical `#kind:` prefix of a reference mention.
+    inline QString refPrefix(const QString& kindWord)
+    {
+        return QString(RefSigil) + kindWord + QString(KindSep);
+    }
+}
+
+/**
  * \class   SMGuardNode
  * \brief   One node of a transition guard's resolved expression tree. The tree is the
- *          deterministic storage of the SM-21 redesign: reference nodes carry a symbol's
+ *          deterministic storage: reference nodes carry a symbol's
  *          document ID (never a name -- names live at declarations), verbatim nodes carry
  *          their bytes. A single tagged class (not a hierarchy) so the XML mapping stays
  *          "element name = node kind" and a walker can switch on the kind. Children are
@@ -58,7 +80,7 @@ public:
         , Param     //!< an in-scope stimulus parameter reference (symbol ID).
         , Lit       //!< a verbatim literal token (number / string / bool / enum member).
         , Lambda    //!< a verbatim anonymous-lambda boolean body.
-        , Raw       //!< a verbatim raw-C++ fragment (the explicit escape hatch, D4).
+, Raw       //!< a verbatim raw-C++ fragment (the explicit escape hatch).
     };
 
     /**
@@ -121,6 +143,41 @@ public:
     inline uint32_t getSymbolId() const;
     inline void setSymbolId(uint32_t id);
 
+    /**
+     * \brief   The document id of the FORMAL parameter this node is bound to -- meaningful
+     *          ONLY when the node is a direct argument child of a \ref eKind::Call node.
+     *          0 means "not an argument" or a legacy positional arg (no id was stored),
+     *          which the projection matches back to a formal by position.
+     *          Keying an arg on the formal's id (never its position) is what lets a signature
+     *          insert/rename never re-bind, and what makes ghost and orphan rows representable.
+     **/
+    inline uint32_t getArgFormalId() const;
+    inline void setArgFormalId(uint32_t id);
+
+    /**
+     * \brief   Layout hint: true when the user placed a line break before this operand. It is
+     *          meaningful only for a node rendered in an operand sequence (a group child or a
+     *          call argument). User-owned surface layout -- the renderer re-applies it and the
+     *          code generator ignores it, so it never changes generated C++. It is NOT
+     *          part of \ref equals (structural identity), which stays layout-independent.
+     **/
+    inline bool isBreakBefore() const;
+    inline void setBreakBefore(bool breakBefore);
+
+    //!< Layout hint: the leading spaces the renderer restores on the line this operand opens (R18).
+    inline int getIndent() const;
+    inline void setIndent(int indent);
+
+    /**
+     * \brief   The advisory display name of the symbol this node references (R19). It exists
+     *          ONLY so a human can read the `.fsml`: it is refreshed from the symbol id on
+     *          every save and is NEVER read back -- resolution is always by \ref getSymbolId.
+     *          Meaningful only on a node that carries a refid (Call / Attr / Const / Param);
+     *          empty otherwise. Not part of \ref equals (it cannot drift into behaviour).
+     **/
+    inline const QString& getCacheName() const;
+    inline void setCacheName(const QString& name);
+
     inline const QString& getText() const;
     inline void setText(const QString& text);
 
@@ -171,6 +228,10 @@ private:
     eKind                   mKind;      //!< The node kind.
     eCmpOp                  mOp;        //!< The comparison operator (Cmp only).
     uint32_t                mSymbolId;  //!< The referenced symbol's document ID (Call/Attr/Const/Param).
+    uint32_t                mArgFormalId;//!< The bound formal parameter's ID (a Call's arg child only; 0 = positional).
+    bool                    mBreakBefore;//!< Layout: a user line break precedes this operand (R18).
+    int                     mIndent;    //!< Layout: leading spaces on this operand's line (R18).
+    QString                 mCacheName; //!< Advisory display name of the referenced symbol; write-only (R19).
     QString                 mText;      //!< The verbatim bytes (Lit/Lambda/Raw).
     QList<SMGuardNode*>     mChildren;  //!< The owned child nodes, in operand order.
 };
@@ -312,6 +373,46 @@ inline uint32_t SMGuardNode::getSymbolId() const
 inline void SMGuardNode::setSymbolId(uint32_t id)
 {
     mSymbolId = id;
+}
+
+inline uint32_t SMGuardNode::getArgFormalId() const
+{
+    return mArgFormalId;
+}
+
+inline void SMGuardNode::setArgFormalId(uint32_t id)
+{
+    mArgFormalId = id;
+}
+
+inline bool SMGuardNode::isBreakBefore() const
+{
+    return mBreakBefore;
+}
+
+inline void SMGuardNode::setBreakBefore(bool breakBefore)
+{
+    mBreakBefore = breakBefore;
+}
+
+inline int SMGuardNode::getIndent() const
+{
+    return mIndent;
+}
+
+inline void SMGuardNode::setIndent(int indent)
+{
+    mIndent = indent;
+}
+
+inline const QString& SMGuardNode::getCacheName() const
+{
+    return mCacheName;
+}
+
+inline void SMGuardNode::setCacheName(const QString& name)
+{
+    mCacheName = name;
 }
 
 inline const QString& SMGuardNode::getText() const

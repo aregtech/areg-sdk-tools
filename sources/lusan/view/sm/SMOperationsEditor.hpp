@@ -1,0 +1,190 @@
+#ifndef LUSAN_VIEW_SM_SMOPERATIONSEDITOR_HPP
+#define LUSAN_VIEW_SM_SMOPERATIONSEDITOR_HPP
+/************************************************************************
+ *  This file is part of the Lusan project, an official component of the Areg SDK.
+ *  Lusan is a graphical user interface (GUI) tool designed to support the development,
+ *  debugging, and testing of applications built with the Areg Framework.
+ *
+ *  Lusan is available as free and open-source software under the Apache version 2.0 License,
+ *  providing essential features for developers.
+ *
+ *  For detailed licensing terms, please refer to the LICENSE file included
+ *  with this distribution or contact us at info[at]areg.tech.
+ *
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
+ *  \file        lusan/view/sm/SMOperationsEditor.hpp
+ *  \ingroup     Lusan - GUI Tool for Areg SDK
+ *  \author      Artak Avetyan
+ *  \brief       Lusan application, FSM operation-list editor (entry/exit/transition actions).
+ *
+ ************************************************************************/
+
+/************************************************************************
+ * Includes
+ ************************************************************************/
+#include <QWidget>
+
+#include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/view/sm/SMArgSinkOperation.hpp"
+
+#include <cstdint>
+
+/************************************************************************
+ * Dependencies
+ ************************************************************************/
+class SMArgMapTable;
+class SMSectionChrome;
+class StateMachineModel;
+class MethodBase;
+class ElementBase;
+enum class eDocElementKind;
+
+class QComboBox;
+class QIcon;
+class QLabel;
+class QVBoxLayout;
+
+/**
+ * \class   SMOperationsEditor
+ * \brief   The simple, opinionated editor for one operation list -- a state's `EntryList`,
+ *          `DoList` or `ExitList`, or a transition's `OperationList`. It presents a fixed
+ *          three-part form (all parts optional) as a collapsible accordion under a shared
+ *          SMSectionChrome toolbar (one jump button per section + a compact toggle to expand
+ *          or collapse each): one **Action** (a declared action call), one **Event** (an
+ *          event send), and any number of **Timers** (start/stop). There is no ordering UI --
+ *          the action runs first, the event second, timers after -- so the form has no list
+ *          or reorder controls. The same toolbar+accordion is shown in every scope this editor
+ *          serves; a host may append its own section via \ref addSection (the state Do tab adds
+ *          a Repeat-policy section that way). The action's and the
+ *          event's argument mapping is rendered by the
+ *          shared \ref SMArgMapTable (in its Compact row shape) and committed through an
+ *          \ref SMArgSinkOperation, so each parameter is one row with a single editable combo:
+ *          pick a stimulus parameter or a machine attribute, or type a free value.
+ *          Every edit is one undoable command; the stimulus-parameter source is offered only in
+ *          a transition scope. The same widget is hosted in the Properties panel's
+ *          Actions tab and in the context-menu dialog.
+ **/
+class SMOperationsEditor : public QWidget
+{
+    Q_OBJECT
+
+//////////////////////////////////////////////////////////////////////////
+// Constructor / Destructor
+//////////////////////////////////////////////////////////////////////////
+public:
+    explicit SMOperationsEditor(StateMachineModel& model, QWidget* parent = nullptr);
+    virtual ~SMOperationsEditor();
+
+//////////////////////////////////////////////////////////////////////////
+// Operations
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   Binds the editor to an operation list.
+     * \param   ownerId         The owning state or transition ID.
+     * \param   ownerKind       eDocElementKind::State or ::Transition.
+     * \param   scopeTransition The transition ID for the stimulus-parameter scope, or 0.
+     * \param   owner           The owning element (list parent), for ID delegation.
+     * \param   list            The live operation list, or nullptr to clear.
+     **/
+    void bind( uint32_t ownerId
+             , eDocElementKind ownerKind
+             , uint32_t scopeTransition
+             , ElementBase* owner
+             , SMOperationList* list);
+
+    //!< Clears the binding and empties the editor.
+    void clearBinding();
+
+    /**
+     * \brief   Appends a host-owned section to this editor's accordion, after the built-in
+     *          Action/Event/Timers sections, and returns its index. Used by the state `Do` tab to
+     *          give the repeat policy (interval + stop-condition) its own collapsible section under
+     *          the same expand/collapse toolbar. The editor takes ownership of \p content.
+     **/
+    int addSection(const QIcon& icon, const QString& title, QWidget* content);
+
+    //!< Test/host accessors.
+    inline QComboBox* actionCombo() const;
+    inline QComboBox* eventCombo() const;
+
+//////////////////////////////////////////////////////////////////////////
+// Hidden members
+//////////////////////////////////////////////////////////////////////////
+private slots:
+    void onNotifierChanged(uint32_t id, eDocElementKind kind);
+
+private:
+    void buildUi();
+    void rebuild();
+    void rebuildAction();
+    void rebuildEvent();
+    void rebuildTimers();
+
+    /**
+     * \brief   Points \p table (through \p sink) at the argument list of operation \p opId and
+     *          at the callee's declared signature, or clears both when there is nothing to map.
+     **/
+    void bindParamRows(SMArgMapTable* table, SMArgSinkOperation& sink, uint32_t opId, bool isEvent);
+
+    // Finders.
+    SMActionCall* findAction() const;
+    SMEventSend* findEvent() const;
+    const MethodBase* calleeFor(const SMOperationBase* op, bool isEvent) const;
+
+    // Mutations.
+    void setActionName(const QString& name);
+    void setEventName(const QString& name);
+    void addTimer(bool start);
+    void removeTimer(uint32_t opId);
+    void setTimerName(uint32_t opId, const QString& name);
+
+    // Registry helpers.
+    QStringList actionNames() const;
+    QStringList eventNames() const;
+    QStringList timerNames() const;
+
+    bool isEditing() const;
+    void scheduleRebuild();
+
+//////////////////////////////////////////////////////////////////////////
+// Member variables
+//////////////////////////////////////////////////////////////////////////
+private:
+    StateMachineModel&  mModel;
+    uint32_t            mOwnerId;
+    eDocElementKind     mOwnerKind;
+    uint32_t            mScopeTransition;
+    bool                mAllowParam;
+    ElementBase*        mOwner;
+    SMOperationList*    mList;
+    bool                mApplying;
+    bool                mRebuildQueued;
+
+    SMArgSinkOperation  mActionSink;    //!< Commits the action's argument mapping.
+    SMArgSinkOperation  mEventSink;     //!< Commits the event's argument mapping.
+
+    SMSectionChrome*    mChrome;        //!< The expand/collapse toolbar over the section accordion.
+    QComboBox*          mActionCombo;
+    SMArgMapTable*      mActionParams;
+    QComboBox*          mEventCombo;
+    SMArgMapTable*      mEventParams;
+    QVBoxLayout*        mTimersList;
+    QLabel*             mTimersEmpty;
+};
+
+//////////////////////////////////////////////////////////////////////////
+// Inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline QComboBox* SMOperationsEditor::actionCombo() const
+{
+    return mActionCombo;
+}
+
+inline QComboBox* SMOperationsEditor::eventCombo() const
+{
+    return mEventCombo;
+}
+
+#endif  // LUSAN_VIEW_SM_SMOPERATIONSEDITOR_HPP

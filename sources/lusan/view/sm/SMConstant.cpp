@@ -409,8 +409,8 @@ void SMConstant::onRemoveClicked()
     if (id == 0)
         return;
 
-    // Deleting a constant still referenced by guards is refused with the where-used list
-    // (v6 3.3); `Delete anyway` breaks the references VISIBLY (validation reports ERR).
+    // Deleting a constant still referenced by guards is refused with the where-used list;
+    // `Delete anyway` breaks the references VISIBLY (validation reports ERR).
     const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getFacade().getData(), id);
     if (uses.isEmpty() == false)
     {

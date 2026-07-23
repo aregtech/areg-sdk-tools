@@ -34,7 +34,7 @@
  * `elementChanged(transitionId, Transition)` notification. Because a guard is a small value,
  * every edit is a whole-guard swap: the command captures the previous guard on first redo and
  * restores it on undo. The subtree factories compute the new tree from the current one and
- * hand it to \ref SMSetGuardCommand, so U2/U3 get one undo step per gesture with no bespoke
+ * hand it to \ref SMSetGuardCommand, so the editor gets one undo step per gesture with no bespoke
  * inverse to maintain.
  **/
 
@@ -89,6 +89,24 @@ namespace SMGuardCommands
 
     //!< Replaces argument \p argIndex of the Call node at \p callPath (takes ownership of \p newArg).
     SMSetGuardCommand* replaceArg(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, int argIndex, SMGuardNode* newArg, const QString& text);
+
+    /**
+     * \brief   Binds the formal parameter \p formalId of the Call node at \p callPath to
+     *          \p newArg. The arg is keyed on the formal's id, never its
+     *          position: an existing binding for the formal is replaced in place; a new one
+     *          is inserted in declared-parameter order so the child list stays render-ordered.
+     *          Takes ownership of \p newArg. Returns nullptr (freeing \p newArg) when the
+     *          guard has no tree, the path is not a Call, or \p formalId is 0.
+     **/
+    SMSetGuardCommand* setArgByFormal(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, uint32_t formalId, SMGuardNode* newArg, const QString& text);
+
+    /**
+     * \brief   Unmaps the formal parameter \p formalId of the Call node at \p callPath -- the
+     *          slot falls back to a ghost. Removing the last mapped formal keeps the
+     *          CALL. Returns nullptr (a no-op, so the undo stack never grows) when
+     *          nothing is bound to \p formalId.
+     **/
+    SMSetGuardCommand* clearArgByFormal(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& callPath, uint32_t formalId, const QString& text);
 
     //!< Flips the And/Or combinator of the group node at \p path.
     SMSetGuardCommand* flipCombinator(StateMachineData& data, DocModelNotifier& notifier, uint32_t transitionId, const QList<int>& path, const QString& text);

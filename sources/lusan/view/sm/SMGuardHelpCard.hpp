@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMGuardHelpCard.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard help card (v7 B11 / S11).
+ *  \brief       Lusan application, FSM guard help card.
  *
  ************************************************************************/
 
@@ -26,7 +26,7 @@
 
 /**
  * \class   SMGuardHelpCard
- * \brief   The one-screen static help card (S11), opened by the `(?)` button or F1: what a
+ * \brief   The one-screen static help card, opened by the `(?)` button or F1: what a
  *          guard can use (the five owner glyphs) and the `you write -> it runs` mapping table,
  *          including the D7 `IsCalmHours(x) -> mIsCalmHours(x)` row (named lambdas generate as
  *          a `std::function` member). No pages, no wizard. Shown as a frameless popover.

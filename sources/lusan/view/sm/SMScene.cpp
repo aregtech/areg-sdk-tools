@@ -529,6 +529,23 @@ void SMScene::onElementAdded(uint32_t id, eDocElementKind kind)
         refreshNoteBadges();
     }
 
+    if (kind == eDocElementKind::Operation)
+    {
+        // An operation is summarized in its owner state box (entry/exit) or on its transition
+        // edge (transition operations) -- refresh both, the notifier does not say which owner.
+        refreshStateBodies();
+        refreshEdges();
+    }
+
+    if (kind == eDocElementKind::Method)
+    {
+        // A method's signature is rendered as a trigger stimulus on transition edges and, via the
+        // operations that call it, summarized in state bodies. A parameter add emits the parameter's
+        // id (not the method's) under the Method kind, so re-read both surfaces unconditionally.
+        refreshEdges();
+        refreshStateBodies();
+    }
+
     if ((kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
     {
         updateConnHighlights();
@@ -561,6 +578,18 @@ void SMScene::onElementRemoved(uint32_t id, eDocElementKind kind)
             refreshNoteBadges();    // an owned note left its state/transition
         }
     }
+    else if (kind == eDocElementKind::Operation)
+    {
+        refreshStateBodies();       // an operation left its owner state box
+        refreshEdges();             // or its transition edge summary
+    }
+    else if (kind == eDocElementKind::Method)
+    {
+        // A removed parameter shortens the trigger stimulus signature on edges and the called-method
+        // summaries in state bodies; the notifier carries the parameter's id, so refresh both.
+        refreshEdges();
+        refreshStateBodies();
+    }
 }
 
 void SMScene::onElementChanged(uint32_t id, eDocElementKind kind)
@@ -587,6 +616,25 @@ void SMScene::onElementChanged(uint32_t id, eDocElementKind kind)
 
         refreshStateBodies();
         updateConnHighlights();
+        return;
+    }
+
+    if (kind == eDocElementKind::Operation)
+    {
+        // An operation has no item of its own: its owner state box shows its summary (entry/exit),
+        // and a transition's operations read on its edge -- refresh both.
+        refreshStateBodies();
+        refreshEdges();
+        return;
+    }
+
+    if (kind == eDocElementKind::Method)
+    {
+        // A method rename, or a parameter rename/retype/default change, alters the trigger stimulus
+        // signature shown on edges and the called-method summaries in state bodies. The changed id is
+        // the method's (never a canvas item's), so re-read both surfaces rather than a single item.
+        refreshEdges();
+        refreshStateBodies();
         return;
     }
 
@@ -619,6 +667,18 @@ void SMScene::onListReordered(uint32_t /*ownerId*/, eDocElementKind kind)
 
         refreshStateBodies();
         updateConnHighlights();
+    }
+    else if (kind == eDocElementKind::Operation)
+    {
+        refreshStateBodies();       // execution order changed; refresh the summarized rows
+        refreshEdges();             // and the transition edge summary
+    }
+    else if (kind == eDocElementKind::Method)
+    {
+        // Reordering a method's parameters reorders the trigger stimulus signature on edges and the
+        // called-method summaries in state bodies; refresh both.
+        refreshEdges();
+        refreshStateBodies();
     }
 }
 
@@ -934,6 +994,35 @@ void SMScene::refreshStateBodies()
     }
 }
 
+void SMScene::refreshEdges()
+{
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item);
+        if (edge != nullptr)
+        {
+            edge->updateFromModel();
+        }
+    }
+}
+
+void SMScene::drawForeground(QPainter* painter, const QRectF& rect)
+{
+    // Edge lines paint under the state boxes (z = -1) so borders stay clean, but their labels
+    // must stay readable even where they overlap a box; paint them here, above every item.
+    const QPalette palette{ (views().isEmpty() == false) ? views().first()->palette() : QPalette() };
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(item);
+        if ((edge != nullptr) && rect.intersects(edge->labelBounds()))
+        {
+            edge->paintLabels(painter, palette);
+        }
+    }
+
+    QGraphicsScene::drawForeground(painter, rect);
+}
+
 void SMScene::refreshCompositeBoxes()
 {
     for (SMCanvasItem* item : std::as_const(mItems))
@@ -1018,12 +1107,28 @@ void SMScene::updateConnHighlights()
 bool SMScene::nudgeSelectedEdgePoint(int dx, int dy, bool coarse, bool pixel)
 {
     const QList<SMEdgeItem*> edges{ selectedEdgeItems() };
-    if ((edges.size() != 1) || (edges.first()->hasSelectedPoint() == false))
+    if (edges.size() != 1)
     {
         return false;
     }
 
-    return edges.first()->nudgeSelectedPoint(dx, dy, coarse, pixel);
+    // The arrow keys move whichever of the selected edge's parts is active: an interior waypoint,
+    // the repositioned label block, or a grabbed begin/end endpoint (issue #532).
+    SMEdgeItem* edge = edges.first();
+    if (edge->hasSelectedPoint())
+    {
+        return edge->nudgeSelectedPoint(dx, dy, coarse, pixel);
+    }
+    else if (edge->hasActiveLabel())
+    {
+        return edge->nudgeLabel(dx, dy, coarse, pixel);
+    }
+    else if (edge->hasActiveEnd())
+    {
+        return edge->nudgeActiveEnd(dx, dy, coarse, pixel);
+    }
+
+    return false;
 }
 
 bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)

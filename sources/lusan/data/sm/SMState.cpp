@@ -83,6 +83,9 @@ SMStateEntry::SMStateEntry(ElementBase* parent /*= nullptr*/)
     , mDescription  ( )
     , mEntryList    (this)
     , mExitList     (this)
+    , mDoList       (this)
+    , mDoInterval   (0u)
+    , mDoUntil      ( )
     , mTransitions  (this)
     , mNested       (nullptr)
 {
@@ -98,6 +101,9 @@ SMStateEntry::SMStateEntry(uint32_t id, const QString& name, eStateKind kind, El
     , mDescription  ( )
     , mEntryList    (this)
     , mExitList     (this)
+    , mDoList       (this)
+    , mDoInterval   (0u)
+    , mDoUntil      ( )
     , mTransitions  (this)
     , mNested       (nullptr)
 {
@@ -113,11 +119,15 @@ SMStateEntry::SMStateEntry(const SMStateEntry& src)
     , mDescription  (src.mDescription)
     , mEntryList    (src.mEntryList)
     , mExitList     (src.mExitList)
+    , mDoList       (src.mDoList)
+    , mDoInterval   (src.mDoInterval)
+    , mDoUntil      (src.mDoUntil)
     , mTransitions  (src.mTransitions)
     , mNested       (src.mNested != nullptr ? new SMStateData(*src.mNested) : nullptr)
 {
     mEntryList.setParent(this);
     mExitList.setParent(this);
+    mDoList.setParent(this);
     mTransitions.setParent(this);
     if (mNested != nullptr)
     {
@@ -135,12 +145,16 @@ SMStateEntry::SMStateEntry(SMStateEntry&& src) noexcept
     , mDescription  (std::move(src.mDescription))
     , mEntryList    (std::move(src.mEntryList))
     , mExitList     (std::move(src.mExitList))
+    , mDoList       (std::move(src.mDoList))
+    , mDoInterval   (src.mDoInterval)
+    , mDoUntil      (std::move(src.mDoUntil))
     , mTransitions  (std::move(src.mTransitions))
     , mNested       (src.mNested)
 {
     src.mNested = nullptr;
     mEntryList.setParent(this);
     mExitList.setParent(this);
+    mDoList.setParent(this);
     mTransitions.setParent(this);
     if (mNested != nullptr)
     {
@@ -167,6 +181,9 @@ SMStateEntry& SMStateEntry::operator = (const SMStateEntry& other)
         mDescription = other.mDescription;
         mEntryList   = other.mEntryList;
         mExitList    = other.mExitList;
+        mDoList      = other.mDoList;
+        mDoInterval  = other.mDoInterval;
+        mDoUntil     = other.mDoUntil;
         mTransitions = other.mTransitions;
 
         delete mNested;
@@ -174,6 +191,7 @@ SMStateEntry& SMStateEntry::operator = (const SMStateEntry& other)
 
         mEntryList.setParent(this);
         mExitList.setParent(this);
+        mDoList.setParent(this);
         mTransitions.setParent(this);
         if (mNested != nullptr)
         {
@@ -197,6 +215,9 @@ SMStateEntry& SMStateEntry::operator = (SMStateEntry&& other) noexcept
         mDescription = std::move(other.mDescription);
         mEntryList   = std::move(other.mEntryList);
         mExitList    = std::move(other.mExitList);
+        mDoList      = std::move(other.mDoList);
+        mDoInterval  = other.mDoInterval;
+        mDoUntil     = std::move(other.mDoUntil);
         mTransitions = std::move(other.mTransitions);
 
         delete mNested;
@@ -205,6 +226,7 @@ SMStateEntry& SMStateEntry::operator = (SMStateEntry&& other) noexcept
 
         mEntryList.setParent(this);
         mExitList.setParent(this);
+        mDoList.setParent(this);
         mTransitions.setParent(this);
         if (mNested != nullptr)
         {
@@ -284,6 +306,8 @@ bool SMStateEntry::readFromXml(QXmlStreamReader& xml)
         setOnFinal(attributes.value(XmlSM::xmlSMAttributeOnFinal).toString());
     }
     mDescription.clear();
+    mDoInterval = 0u;
+    mDoUntil.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementState))
     {
@@ -300,6 +324,15 @@ bool SMStateEntry::readFromXml(QXmlStreamReader& xml)
             else if (xml.name() == XmlSM::xmlSMElementExitList)
             {
                 mExitList.readFromXml(xml, XmlSM::xmlSMElementExitList);
+            }
+            else if (xml.name() == XmlSM::xmlSMElementDoList)
+            {
+                // The Do repeat policy rides on the wrapper element as attributes; capture them
+                // before delegating the child operations (the list reader ignores attributes).
+                const QXmlStreamAttributes doAttributes = xml.attributes();
+                mDoInterval = doAttributes.value(XmlSM::xmlSMAttributeInterval).toUInt();
+                mDoUntil = doAttributes.value(XmlSM::xmlSMAttributeUntil).toString();
+                mDoList.readFromXml(xml, XmlSM::xmlSMElementDoList);
             }
             else if (xml.name() == XmlSM::xmlSMElementTransitionList)
             {
@@ -339,6 +372,26 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
     writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
     mEntryList.writeToXml(xml, XmlSM::xmlSMElementEntryList);
     mExitList.writeToXml(xml, XmlSM::xmlSMElementExitList);
+    // The Do list carries a repeat policy, so it is written by hand: the interval and stop-condition
+    // ride on the wrapper element (omitted at their defaults), then the operations as usual. Nothing
+    // is written when there are no Do operations, exactly like an empty entry/exit list.
+    if (mDoList.isEmpty() == false)
+    {
+        xml.writeStartElement(XmlSM::xmlSMElementDoList);
+        if (mDoInterval != 0u)
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeInterval, QString::number(mDoInterval));
+        }
+        if (mDoUntil.isEmpty() == false)
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeUntil, mDoUntil);
+        }
+        for (const SMOperationBase* op : mDoList.getOperations())
+        {
+            op->writeToXml(xml);
+        }
+        xml.writeEndElement();
+    }
     mTransitions.writeToXml(xml);
     if (mNested != nullptr)
     {
