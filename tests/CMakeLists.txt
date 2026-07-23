@@ -94,6 +94,27 @@ target_link_libraries(lusan_sm_serialization_tests PRIVATE
 )
 set_target_properties(lusan_sm_serialization_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
+# ---------------------------------------------------------------------------
+# Structural and reference validation engine. The engine is headless, so it reuses
+# the same data-layer support sources plus SMValidator.cpp; the QObject scheduler
+# (SMValidationController) is exercised by the app, not this headless driver.
+# ---------------------------------------------------------------------------
+qt_add_executable(lusan_sm_validation_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN_ROOT}/tests/sm/SMValidationTests.cpp
+)
+target_include_directories(lusan_sm_validation_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_validation_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_validation_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_validation_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
 
 # ---------------------------------------------------------------------------
 # SM-04: undo/redo command framework (FSM) + the same shared framework applied to
@@ -129,6 +150,8 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
+    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
     # Container tests need the real basic-container catalog (Array/HashMap/Map/...): it is
     # loaded from the "Predefined Types" resource at runtime (DataTypeFactory::_initPredefined),
@@ -175,6 +198,8 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMIncludeModel.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
+    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
@@ -356,6 +381,8 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
+    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/sm/NESMDesign.cpp
     ${LUSAN}/view/sm/SMAutoPlacer.cpp
@@ -457,6 +484,8 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
     ${LUSAN}/model/sm/StateMachineModel.cpp
+    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/sm/SMValidator.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
     ${LUSAN}/model/sm/SMGuardEval.cpp
