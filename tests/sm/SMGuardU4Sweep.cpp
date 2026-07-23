@@ -24,9 +24,12 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMOperationCommands.hpp"
+#include "lusan/view/sm/SMOperationsEditor.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 #include "lusan/model/sm/SMGuardCommands.hpp"
@@ -51,6 +54,7 @@
 #include <QApplication>
 #include <QComboBox>
 #include "lusan/view/sm/SMAccordion.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -62,6 +66,7 @@
 #include <QTabWidget>
 #include <QTextCursor>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <cmath>
 #include <cstdio>
 
@@ -179,6 +184,18 @@ namespace
         return file.open(QIODevice::WriteOnly) && (file.write(bytes) == bytes.size());
     }
 
+    //!< The item texts of a combo, in order (used to assert what a merged value cell offers).
+    QStringList comboItems(const QComboBox* combo)
+    {
+        QStringList out;
+        for (int i = 0; i < combo->count(); ++i)
+        {
+            out.append(combo->itemText(i));
+        }
+
+        return out;
+    }
+
     //!< The <Expr>...</Expr> block of the saved document (the ID-bound tree).
     QString exprBlock(const QByteArray& bytes)
     {
@@ -278,6 +295,50 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
         pump(100);
         check(tabs->currentIndex() == 1, "focusConditions lands on the Conditions tab");
         grab(&props, grabDir, "u4-properties-conditions.png");
+    }
+
+    // The state page: [General|Enter|Do|Exit], with the General tab OPEN on arrival and stable in
+    // width however its sections are toggled (the two Properties-panel bugs of 2026-07-22).
+    uint32_t stateId = 0u;
+    for (const SMStateEntry* state : model.getData().getStates().getElements())
+    {
+        if ((state != nullptr) && (state->getTransitions().getElementCount() > 0))
+        {
+            stateId = state->getId();
+            break;
+        }
+    }
+
+    if (stateId != 0u)
+    {
+        model.getSelectionModel().setSelection({ stateId });
+        pump(200);
+
+        QTabWidget* stateTabs = props.findChild<QTabWidget*>(QStringLiteral("smStateTabs"));
+        check(stateTabs != nullptr, "S1: smStateTabs");
+
+        SMSectionChrome* general = props.findChild<SMSectionChrome*>(QStringLiteral("smStateGeneral"));
+        check(general != nullptr, "S1: smStateGeneral chrome");
+        if (general != nullptr)
+        {
+            // Bug 2: the General tab arrives expanded, so the name and the description are editable
+            // without a click.
+            check(general->isCompact() == false, "state General is not compact (several sections open together)");
+            check(general->accordion()->isSectionOpen(0), "state General opens with `Details` expanded");
+            check(general->accordion()->isSectionOpen(1), "state General opens with `Transitions` expanded");
+
+            // Bug 1: toggling a section changes the HEIGHT the panel wants, never the WIDTH -- the
+            // dock used to widen on expand and snap back on collapse.
+            const int openWidth = general->minimumSizeHint().width();
+            general->accordion()->setSectionOpen(0, false);
+            pump(50);
+            const int closedWidth = general->minimumSizeHint().width();
+            general->accordion()->setSectionOpen(0, true);
+            pump(50);
+            checkEq(QString::number(closedWidth), QString::number(openWidth)
+                   , "collapsing a section does not change the panel's minimum width");
+            check(general->accordion()->isSectionOpen(0), "the section re-opens");
+        }
     }
 
     props.hide();
@@ -869,6 +930,96 @@ static void sweepThemeContrast()
 }
 
 // ---------------------------------------------------------------------------
+// SM-23 Actions live refresh (2026-07-23 bug): the merged value cell must pick up a newly created
+// attribute (or a set stimulus / new constant) WITHOUT a tab switch, even after the user has
+// clicked into a value cell and then moved focus away. The regression was that isEditing() read
+// QWidget::focusWidget() -- the last-focused DESCENDANT, which stays non-null forever once a cell
+// was clicked -- so every notification-driven rebuild was silently skipped.
+// ---------------------------------------------------------------------------
+static void sweepActionsLiveRefresh(const QString& docPath)
+{
+    std::printf("[ RUN  ] actions-live-refresh\n");
+
+    StateMachineModel model;
+    check(model.loadFromFile(docPath), "document loads");
+    StateMachineData& data = model.getData();
+    const uint32_t transId = firstTransition(data);
+    SMTransitionEntry* trans = data.findTransitionById(transId);
+    check(trans != nullptr, "the demo has a transition to host the action");
+    if (trans == nullptr)
+    {
+        return;
+    }
+
+    // An action method with two parameters, so the transition's Actions editor shows two mappable
+    // rows (each a merged value combo).
+    SMMethodEntry* act = data.getMethods().findMethod(QStringLiteral("liveDoWork"));
+    if (act == nullptr)
+    {
+        act = data.getMethods().createMethod(QStringLiteral("liveDoWork"), SMMethodEntry::eMethodType::Action);
+        act->addParam(QStringLiteral("a"))->setType(QStringLiteral("bool"));
+        act->addParam(QStringLiteral("b"))->setType(QStringLiteral("bool"));
+        model.getNotifier().notifyElementAdded(act->getId(), eDocElementKind::Method);
+    }
+
+    // The action call the transition runs (added straight to its operation list).
+    SMActionCall* call = new SMActionCall(nullptr);
+    call->setAction(QStringLiteral("liveDoWork"));
+    model.getUndoStack().push(new SMAddOperationCommand(model.getNotifier(), trans->getOperations(), call, 0, QStringLiteral("add action")));
+
+    // The editor plus an OUTSIDE field under one shared window: focus can then leave the editor for a
+    // sibling, which is exactly what leaves the editor's stale focus_child pointing at the clicked
+    // cell -- the condition that used to freeze the refresh.
+    QWidget host;
+    QVBoxLayout* lay = new QVBoxLayout(&host);
+    SMOperationsEditor* editor = new SMOperationsEditor(model);
+    QLineEdit* outside = new QLineEdit();
+    lay->addWidget(editor);
+    lay->addWidget(outside);
+    host.resize(420, 620);
+    host.show();
+    pump(100);
+
+    editor->bind(transId, eDocElementKind::Transition, transId, trans, &trans->getOperations());
+    pump(150);
+
+    QComboBox* combo = editor->findChild<QComboBox*>(QStringLiteral("smArgValue_0"));
+    check(combo != nullptr, "the first parameter has a merged value combo");
+    if (combo == nullptr)
+    {
+        host.hide();
+        return;
+    }
+
+    const QString newAttr = QStringLiteral("LiveEnabled");
+    check(comboItems(combo).contains(newAttr) == false, "the new attribute is not offered before it exists");
+
+    // Reproduce the gesture: click into the value cell, then move focus to another field (as
+    // switching to the General tab / another page does).
+    combo->lineEdit()->setFocus();
+    pump(20);
+    outside->setFocus();
+    pump(20);
+
+    // Create the attribute on the shared model, as the Attributes page would.
+    SMAttributeEntry* attr = data.getAttributes().createAttribute(newAttr);
+    check(attr != nullptr, "the attribute is created");
+    if (attr != nullptr)
+    {
+        attr->setType(QStringLiteral("bool"));
+        model.getNotifier().notifyElementAdded(attr->getId(), eDocElementKind::Attribute);
+    }
+    pump(200);      // let the deferred rebuild run
+
+    QComboBox* refreshed = editor->findChild<QComboBox*>(QStringLiteral("smArgValue_0"));
+    check(refreshed != nullptr, "the value combo still exists after the refresh");
+    check((refreshed != nullptr) && comboItems(refreshed).contains(newAttr)
+         , "creating an attribute live-updates the Actions value cell with no tab switch (2026-07-23)");
+
+    host.hide();
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 int main(int argc, char** argv)
@@ -905,6 +1056,7 @@ int main(int argc, char** argv)
     sweepItem20(docPath, tmpDir);
     sweepItem21(docPath, tmpDir, grabDir);
     sweepTryIt(docPath, grabDir);
+    sweepActionsLiveRefresh(docPath);
     sweepThemes(docPath, grabDir);
     sweepThemeContrast();
 

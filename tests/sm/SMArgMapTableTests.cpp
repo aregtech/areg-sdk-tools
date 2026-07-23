@@ -438,6 +438,107 @@ int main(int argc, char* argv[])
                 "one undo restores the row's previous mapping");
     }
 
+    // ---------------------------------------------------------------------------------
+    // The MERGED cell (2026-07-22): the Actions rows are Compact again -- one editable combo
+    // per formal, because a parameter is bound to a source OR to a typed value, never both.
+    // It lists only what exists, in one fixed order, and carries at most ONE custom value.
+    // ---------------------------------------------------------------------------------
+    {
+        StubSink      s0;
+        SMArgMapTable merged(model);
+        merged.setRowStyle(SMArgMapTable::eRowStyle::Compact);
+        merged.setAllowedSources({ eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant });
+        merged.bind(tid, /*allowParam*/ true, &s0, signature());
+
+        QComboBox* cell = compactCombo(merged, 0);
+        check(cell != nullptr, "merged: the row is one editable combo");
+        check(cell->isEditable(), "merged: the cell is editable -- a fixed value can always be typed");
+
+        QStringList entries;
+        for (int i = 0; i < cell->count(); ++i) { entries << cell->itemText(i); }
+        checkEq(entries.value(0), QString(), "merged: the first entry is empty (it un-maps the formal)");
+        check(entries.contains(QStringLiteral("count")),    "merged: the stimulus parameter is listed");
+        check(entries.contains(QStringLiteral("Waiting")),  "merged: attributes are listed");
+        check(entries.contains(QStringLiteral("MAX_WAIT")), "merged: constants are listed under the Actions filter");
+        check(entries.contains(QStringLiteral("...")) == false, "merged: no placeholder entries -- only what exists");
+
+        // Order: parameters, then attributes, then constants. Each entry carries its kind marker.
+        check(entries.indexOf(QStringLiteral("count")) < entries.indexOf(QStringLiteral("Waiting")),
+              "merged: parameters are listed ahead of attributes");
+        check(entries.indexOf(QStringLiteral("Waiting")) < entries.indexOf(QStringLiteral("MAX_WAIT")),
+              "merged: attributes are listed ahead of constants");
+        check(cell->itemIcon(entries.indexOf(QStringLiteral("count"))).isNull() == false,
+              "merged: an entry carries a kind marker");
+
+        // An entry/exit scope offers no stimulus parameter, and lists nothing in its place.
+        {
+            StubSink      s1;
+            SMArgMapTable entryScope(model);
+            entryScope.setRowStyle(SMArgMapTable::eRowStyle::Compact);
+            entryScope.setAllowedSources({ eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant });
+            entryScope.bind(0u, /*allowParam*/ false, &s1, signature());
+
+            QComboBox* c = compactCombo(entryScope, 0);
+            QStringList list;
+            for (int i = 0; i < c->count(); ++i) { list << c->itemText(i); }
+            check(list.contains(QStringLiteral("count")) == false, "merged: no stimulus parameter outside a transition");
+            check(list.contains(QStringLiteral("Waiting")),        "merged: attributes are still listed there");
+        }
+
+        // The one custom value: typing a literal lists it (second, right after the empty entry) and
+        // typing another REPLACES it rather than piling a second literal onto the list.
+        const int listed = cell->count();
+        cell->setEditText(QStringLiteral("true"));
+        emit cell->lineEdit()->editingFinished();
+        checkEq(cell->itemText(1), QStringLiteral("true"), "merged: a typed value is listed straight after the empty entry");
+        check(cell->count() == (listed + 1), "merged: typing a value adds exactly one entry");
+        checkEq(cell->currentText(), QStringLiteral("true"), "merged: the typed value stays selected");
+
+        cell->setEditText(QStringLiteral("false"));
+        emit cell->lineEdit()->editingFinished();
+        checkEq(cell->itemText(1), QStringLiteral("false"), "merged: a new typed value replaces the previous one");
+        check(cell->count() == (listed + 1), "merged: there is never more than one custom value");
+        check(cell->findText(QStringLiteral("true")) < 0, "merged: the replaced value is gone from the list");
+
+        // Picking a source drops the custom entry -- a formal holds one binding, not two.
+        cell->setEditText(QStringLiteral("Waiting"));
+        emit cell->lineEdit()->editingFinished();
+        check(cell->count() == listed, "merged: picking a source drops the custom entry");
+        check(cell->currentIndex() == cell->findText(QStringLiteral("Waiting")),
+              "merged: the mapped entry is the current one, so the popup opens on it");
+
+        // Emptying the cell un-maps the formal and leaves the list as it was found.
+        cell->setEditText(QString());
+        emit cell->lineEdit()->editingFinished();
+        check(s0.argFor(QStringLiteral("waiting")) == nullptr, "merged: emptying the cell un-maps the formal");
+        check(cell->currentIndex() == 0, "merged: an unmapped cell rests on the empty entry");
+
+        // An orphan (its formal was removed on the Methods page) keeps its value in a red row with
+        // a remove quick-fix, exactly as the Detailed grid does -- it is never silently dropped.
+        {
+            StubSink s2;
+            s2.setArg(QStringLiteral("gone"), eSource::Value, QStringLiteral("5"), QString());
+
+            QList<SMArgMapTable::Param> withOrphan;
+            withOrphan.append(SMArgMapTable::Param{ QStringLiteral("waiting"), QStringLiteral("uint32"), QString(), false, false });
+            withOrphan.append(SMArgMapTable::Param{ QStringLiteral("gone"),    QString(),                QString(), false, true  });
+
+            SMArgMapTable orphan(model);
+            orphan.setRowStyle(SMArgMapTable::eRowStyle::Compact);
+            orphan.bind(tid, true, &s2, withOrphan);
+            check(orphan.rowCount() == 2, "merged: the orphan row is appended after the live parameters");
+
+            const QList<QToolButton*> fix = orphan.findChildren<QToolButton*>();
+            check(fix.size() == 1, "merged: the orphan row carries one remove quick-fix");
+            if (fix.isEmpty() == false)
+            {
+                fix.first()->click();
+                QCoreApplication::processEvents();
+                check(s2.argFor(QStringLiteral("gone")) == nullptr, "merged: the quick-fix clears the stale argument");
+            }
+        }
+    }
+
     // Width (hazard 12.4): no signature length may widen the dock that hosts the table.
     check(compact.minimumSizeHint().width() == 0, "Compact: minimumSizeHint width is 0");
     check(ed.minimumSizeHint().width() == 0,      "Detailed: minimumSizeHint width is 0");

@@ -160,6 +160,15 @@ namespace
         }
     };
 
+    /**
+     * \brief   Which of the two exit glyphs a generic exit operation draws. Both are implemented
+     *          (\c Exit is `<-|`, \c ExitAlt is `|<-`) so the pair can be compared on a real
+     *          diagram; change this one line to adopt the other. `<-|` is the current choice: it
+     *          mirrors the entry glyph `->|` exactly -- the same bar, the arrow reversed -- so the
+     *          two read as a pair rather than as two unrelated marks.
+     **/
+    constexpr SMStateItem::eRowIcon ExitRowIcon { SMStateItem::eRowIcon::Exit };
+
     //!< The text of one behavior row for an operation.
     QString operationText(const SMOperationBase& op)
     {
@@ -194,23 +203,43 @@ namespace
         {
         case SMStateItem::eRowIcon::Entry:
         {
-            // Arrow into a bar: -->|
-            const double barX = rect.right() - 1.5;
-            painter->drawLine(QPointF(rect.left(), midY), QPointF(barX - 2.0, midY));
-            painter->drawLine(QPointF(barX - 5.5, midY - 3.0), QPointF(barX - 2.0, midY));
-            painter->drawLine(QPointF(barX - 5.5, midY + 3.0), QPointF(barX - 2.0, midY));
-            painter->drawLine(QPointF(barX, midY - 4.0), QPointF(barX, midY + 4.0));
+            // `->|` -- an arrow running rightwards INTO the bar that stands for the state: control
+            // arrives here. The bar sits on the right so the arrow reads left-to-right, the same
+            // direction the eye travels along the row text beside it.
+            const double barX = rect.right() - 1.0;
+            const double tipX = barX - 2.0;
+            painter->drawLine(QPointF(rect.left() + 1.0, midY), QPointF(tipX, midY));
+            painter->drawLine(QPointF(tipX - 3.5, midY - 3.0), QPointF(tipX, midY));
+            painter->drawLine(QPointF(tipX - 3.5, midY + 3.0), QPointF(tipX, midY));
+            painter->drawLine(QPointF(barX, midY - 4.5), QPointF(barX, midY + 4.5));
             break;
         }
 
         case SMStateItem::eRowIcon::Exit:
         {
-            // Arrow out of a bar: |-->
-            const double barX = rect.left() + 1.5;
-            painter->drawLine(QPointF(barX, midY - 4.0), QPointF(barX, midY + 4.0));
-            painter->drawLine(QPointF(barX + 2.0, midY), QPointF(rect.right(), midY));
-            painter->drawLine(QPointF(rect.right() - 3.5, midY - 3.0), QPointF(rect.right(), midY));
-            painter->drawLine(QPointF(rect.right() - 3.5, midY + 3.0), QPointF(rect.right(), midY));
+            // `<-|` -- the mirror of the entry glyph: the same bar on the right, but the arrow runs
+            // AWAY from it, leftwards. Entry and exit therefore differ only in arrow direction,
+            // which is what makes the pair readable at a glance in a small box.
+            const double barX = rect.right() - 1.0;
+            const double tipX = rect.left() + 1.0;
+            painter->drawLine(QPointF(barX - 2.0, midY), QPointF(tipX, midY));
+            painter->drawLine(QPointF(tipX + 3.5, midY - 3.0), QPointF(tipX, midY));
+            painter->drawLine(QPointF(tipX + 3.5, midY + 3.0), QPointF(tipX, midY));
+            painter->drawLine(QPointF(barX, midY - 4.5), QPointF(barX, midY + 4.5));
+            break;
+        }
+
+        case SMStateItem::eRowIcon::ExitAlt:
+        {
+            // `|<-` -- the alternative exit glyph: the bar on the LEFT with the arrow pointing back
+            // into it. Offered beside `<-|` so the two can be compared on a real diagram; flip
+            // ExitRowIcon (below) to adopt it.
+            const double barX = rect.left() + 1.0;
+            const double tipX = barX + 2.0;
+            painter->drawLine(QPointF(barX, midY - 4.5), QPointF(barX, midY + 4.5));
+            painter->drawLine(QPointF(tipX, midY), QPointF(rect.right() - 1.0, midY));
+            painter->drawLine(QPointF(tipX + 3.5, midY - 3.0), QPointF(tipX, midY));
+            painter->drawLine(QPointF(tipX + 3.5, midY + 3.0), QPointF(tipX, midY));
             break;
         }
 
@@ -634,33 +663,77 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
     rowFont.setPointSizeF(rowFont.pointSizeF() * 0.85);
     const QFontMetrics metrics{ rowFont };
 
-    double y = NESMDesign::StateHeaderHeight + 2.0;
-    for (int i = 0; i < mRows.size(); ++i)
+    // The body is read as three bands, in execution order: what runs on the way IN sits at the top,
+    // what runs while in the state sits in the middle, and what runs on the way OUT is anchored to
+    // the bottom edge. Stacking all three from the top (as this did) put the exit actions directly
+    // under the entry ones, which reads as one undifferentiated list.
+    const double top    = NESMDesign::StateHeaderHeight + 2.0;
+    const double bottom = box.height() - 2.0;
+    const int    rowSlots = static_cast<int>((bottom - top) / rowH);
+    if (rowSlots <= 0)
     {
-        const bool lastVisible = (y + 2.0 * rowH > box.height() - 2.0) && (i < mRows.size() - 1);
-        if (lastVisible)
-        {
-            painter->setFont(rowFont);
-            painter->setPen(color);
-            painter->drawText(QRectF(padding, y, box.width() - 2.0 * padding, rowH), Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("..."));
-            break;
-        }
+        return;
+    }
 
-        const BodyRow& row = mRows[i];
-        const QRectF iconRect{ padding, y + 2.0, 12.0, rowH - 4.0 };
-        drawRowIcon(painter, iconRect, row.icon, color);
+    int counts[3] { 0, 0, 0 };
+    for (const BodyRow& row : mRows)
+    {
+        ++counts[static_cast<int>(row.zone)];
+    }
 
+    // When the box is too short for every row, the middle band gives way first, then the exit band,
+    // and the entry band last: the two edges are the rows the zoning exists to keep apart.
+    int shown[3] { counts[0], counts[1], counts[2] };
+    if ((counts[0] + counts[1] + counts[2]) > rowSlots)
+    {
+        shown[1] = std::max(0, rowSlots - counts[0] - counts[2]);
+        shown[2] = std::min(counts[2], std::max(0, rowSlots - counts[0]));
+        shown[0] = std::min(counts[0], rowSlots);
+    }
+
+    const auto drawRow = [&](const QString& text, eRowIcon icon, double rowY, bool ellipsis)
+    {
         painter->setFont(rowFont);
         painter->setPen(color);
-        const QRectF textRect{ padding + 16.0, y, box.width() - padding - (padding + 16.0), rowH };
-        const QString elided = metrics.elidedText(row.text, Qt::ElideRight, static_cast<int>(textRect.width()));
-        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
-
-        y += rowH;
-        if (y + rowH > box.height() - 2.0)
+        const QRectF textRect{ padding + 16.0, rowY, box.width() - padding - (padding + 16.0), rowH };
+        if (ellipsis)
         {
-            break;
+            painter->drawText(QRectF(padding, rowY, box.width() - 2.0 * padding, rowH)
+                             , Qt::AlignLeft | Qt::AlignVCenter, QStringLiteral("..."));
+            return;
         }
+
+        drawRowIcon(painter, QRectF(padding, rowY + 2.0, 12.0, rowH - 4.0), icon, color);
+        painter->setFont(rowFont);
+        painter->setPen(color);
+        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter
+                         , metrics.elidedText(text, Qt::ElideRight, static_cast<int>(textRect.width())));
+    };
+
+    // Where each band starts: entry at the top, exit against the bottom edge, and the middle band
+    // centered in whatever room is left between the two.
+    const double midTop    = top + (shown[0] * rowH);
+    const double midBottom = bottom - (shown[2] * rowH);
+    const double bandY[3]
+    {
+          top
+        , midTop + std::max(0.0, ((midBottom - midTop) - (shown[1] * rowH)) / 2.0)
+        , midBottom
+    };
+
+    int seen[3] { 0, 0, 0 };
+    for (const BodyRow& row : mRows)
+    {
+        const int zone = static_cast<int>(row.zone);
+        if (seen[zone] >= shown[zone])
+        {
+            continue;       // this band is full; its remaining rows are covered by the `...` below
+        }
+
+        // The last slot of a truncated band says so, rather than dropping rows silently.
+        const bool truncated = ((seen[zone] + 1) == shown[zone]) && (shown[zone] < counts[zone]);
+        drawRow(row.text, row.icon, bandY[zone] + (seen[zone] * rowH), truncated);
+        ++seen[zone];
     }
 }
 
@@ -925,16 +998,23 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
     const SMScene* canvas = getCanvas();
     const StateMachineData* data = (canvas != nullptr) ? &canvas->getModel().getData() : nullptr;
 
-    // The icon differentiates the operation kind (start/stop timer, event, generic action);
-    // a generic action keeps the enter/exit direction arrow so the two contexts stay distinct.
-    const auto iconFor = [](const SMOperationBase& op, bool entryList) -> eRowIcon
+    // The icon differentiates the operation kind (start/stop timer, event, generic action); a
+    // generic action falls back to the glyph of the zone it belongs to, so the three activities
+    // stay distinguishable even when their operations are otherwise alike.
+    const auto iconFor = [](const SMOperationBase& op, eRowZone zone) -> eRowIcon
     {
         switch (op.getOperationType())
         {
         case SMOperationBase::eOperation::TimerStart:   return eRowIcon::TimerStart;
         case SMOperationBase::eOperation::TimerStop:    return eRowIcon::TimerStop;
         case SMOperationBase::eOperation::EventSend:    return eRowIcon::Event;
-        default:                                        return entryList ? eRowIcon::Entry : eRowIcon::Exit;
+        default:
+            switch (zone)
+            {
+            case eRowZone::Enter:   return eRowIcon::Entry;
+            case eRowZone::Exit:    return ExitRowIcon;
+            default:                return eRowIcon::Internal;
+            }
         }
     };
 
@@ -943,9 +1023,18 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         return (data != nullptr) ? SMOperationSummary::text(*data, op) : operationText(op);
     };
 
+    // The rows are appended zone by zone -- Enter, then everything that runs while in the state,
+    // then Exit -- and paintBodyRows anchors each zone to the top, middle and bottom of the box.
     for (const SMOperationBase* op : state.getEntryList().getOperations())
     {
-        mRows.append(BodyRow{ iconFor(*op, true), rowText(*op) });
+        mRows.append(BodyRow{ iconFor(*op, eRowZone::Enter), rowText(*op), eRowZone::Enter });
+    }
+
+    // The Do activity runs repeatedly WHILE the state is active, so it belongs in the middle band
+    // beside the internal transitions rather than at either edge.
+    for (const SMOperationBase* op : state.getDoList().getOperations())
+    {
+        mRows.append(BodyRow{ iconFor(*op, eRowZone::Middle), rowText(*op), eRowZone::Middle });
     }
 
     // External transitions show their operations on the edge (below the line); internal ones
@@ -955,17 +1044,17 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         if (transition->isExternal() == false)
         {
             const QString stim = (data != nullptr) ? SMOperationSummary::stimulusSignature(*data, *transition) : transition->getStimulus();
-            mRows.append(BodyRow{ eRowIcon::Internal, QStringLiteral("on ") + stim });
+            mRows.append(BodyRow{ eRowIcon::Internal, QStringLiteral("on ") + stim, eRowZone::Middle });
             for (const SMOperationBase* op : transition->getOperations().getOperations())
             {
-                mRows.append(BodyRow{ iconFor(*op, true), rowText(*op) });
+                mRows.append(BodyRow{ iconFor(*op, eRowZone::Middle), rowText(*op), eRowZone::Middle });
             }
         }
     }
 
     for (const SMOperationBase* op : state.getExitList().getOperations())
     {
-        mRows.append(BodyRow{ iconFor(*op, false), rowText(*op) });
+        mRows.append(BodyRow{ iconFor(*op, eRowZone::Exit), rowText(*op), eRowZone::Exit });
     }
 }
 

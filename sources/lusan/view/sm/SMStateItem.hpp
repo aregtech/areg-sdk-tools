@@ -58,12 +58,27 @@ public:
      **/
     enum class eRowIcon
     {
-          Entry     //!< A generic entry operation (into-the-state arrow).
-        , Exit      //!< A generic exit operation (out-of-the-state arrow).
+          Entry     //!< A generic entry operation: an arrow running INTO a bar, `->|`.
+        , Exit      //!< A generic exit operation: an arrow running away from a bar, `<-|`.
+        , ExitAlt   //!< The alternative exit glyph, `|<-` -- see \c ExitRowIcon in the .cpp.
         , TimerStart//!< A timer start (clock + play).
         , TimerStop //!< A timer stop (clock + square).
         , Event     //!< An event send/trigger.
-        , Internal  //!< An internal transition.
+        , Internal  //!< An internal transition, and a generic Do operation (a self-loop).
+    };
+
+    /**
+     * \enum    eRowZone
+     * \brief   Where a behavior row is anchored inside the state box. Enter runs from the top of
+     *          the body down, Exit is anchored to the bottom, and everything that happens WHILE
+     *          in the state (Do operations, internal transitions) sits in the middle -- so the box
+     *          reads in the order the state actually executes.
+     **/
+    enum class eRowZone
+    {
+          Enter
+        , Middle
+        , Exit
     };
 
 private:
@@ -92,6 +107,7 @@ private:
     {
         eRowIcon    icon;   //!< The glyph kind.
         QString     text;   //!< The row text.
+        eRowZone    zone;   //!< Where in the box the row is anchored.
     };
 
 //////////////////////////////////////////////////////////////////////////

@@ -124,6 +124,15 @@ int SMAccordion::addSection(const QIcon& icon, const QString& title, QWidget* co
     header->setIcon(icon);
 
     content->setParent(this);
+
+    // A section's content must never drive the accordion's WIDTH: an Ignored horizontal policy
+    // pins its minimum width to 0, so opening or closing a section changes the height only. Without
+    // this the hosting dock grew when a section expanded (its form's minimum width became visible)
+    // and shrank back when it collapsed, so every toggle resized the whole Properties panel.
+    QSizePolicy policy = content->sizePolicy();
+    policy.setHorizontalPolicy(QSizePolicy::Ignored);
+    content->setSizePolicy(policy);
+
     mLayout->addWidget(header);
     mLayout->addWidget(content);
 

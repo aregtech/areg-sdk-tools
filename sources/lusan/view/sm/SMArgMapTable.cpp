@@ -28,17 +28,22 @@
 #include "lusan/view/sm/NEGuardStyle.hpp"
 
 #include <QAbstractItemView>
+#include <QApplication>
 #include <QComboBox>
 #include <QCompleter>
 #include <QEvent>
 #include <QFontDatabase>
 #include <QFormLayout>
 #include <QGridLayout>
+#include <QHBoxLayout>
+#include <QIcon>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QPalette>
+#include <QPixmap>
 #include <QScrollArea>
 #include <QSignalBlocker>
 #include <QStackedWidget>
@@ -74,6 +79,61 @@ namespace
     QString labelFor(eSource source)
     {
         return QString::fromLatin1(SMArgumentEntry::toString(source));
+    }
+
+    //!< The owner hue of a source kind, so a marker is tinted like the same symbol everywhere else.
+    NEGuardStyle::eOwner ownerFor(eSource source)
+    {
+        switch (source)
+        {
+        case eSource::Param:        return NEGuardStyle::eOwner::Stimulus;
+        case eSource::Attribute:    return NEGuardStyle::eOwner::Fsm;
+        case eSource::Constant:     return NEGuardStyle::eOwner::Fsm;
+        case eSource::Condition:    return NEGuardStyle::eOwner::Handler;
+        default:                    return NEGuardStyle::eOwner::Literal;
+        }
+    }
+
+    /**
+     * \brief   The per-entry marker of a merged value cell: the kind's owner glyph, drawn in the
+     *          kind's owner hue. It tells a stimulus parameter from an attribute, a constant or a
+     *          typed value at a glance, WITHOUT touching the item's text -- the text is the bare
+     *          name, because it is also what the editable field commits.
+     **/
+    QIcon markerIcon(eSource source)
+    {
+        const qreal ratio = qApp->devicePixelRatio();
+        const int   side  = 14;
+
+        QPixmap pix(qRound(side * ratio), qRound(side * ratio));
+        pix.setDevicePixelRatio(ratio);
+        pix.fill(Qt::transparent);
+
+        QPainter painter(&pix);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setRenderHint(QPainter::TextAntialiasing, true);
+
+        QFont font = QApplication::font();
+        font.setPointSizeF(font.pointSizeF() * 0.85);
+        font.setBold(true);
+        painter.setFont(font);
+        painter.setPen(NEGuardStyle::ownerColor(ownerFor(source)));
+        painter.drawText(QRectF(0.0, 0.0, side, side), Qt::AlignCenter, glyphFor(source));
+
+        return QIcon(pix);
+    }
+
+    //!< The human name of a source kind, shown as an entry's tooltip in a merged value cell.
+    QString kindTip(eSource source)
+    {
+        switch (source)
+        {
+        case eSource::Param:        return SMArgMapTable::tr("A parameter of the stimulus that fires this transition");
+        case eSource::Attribute:    return SMArgMapTable::tr("A state-machine attribute");
+        case eSource::Constant:     return SMArgMapTable::tr("A state-machine constant");
+        case eSource::Condition:    return SMArgMapTable::tr("A declared condition");
+        default:                    return SMArgMapTable::tr("A fixed value typed here");
+        }
     }
 
     //!< A short literal-form hint used as the typed-literal placeholder.
@@ -194,9 +254,12 @@ void SMArgMapTable::buildHost(void)
     if (mStyle == eRowStyle::Compact)
     {
         // The Actions shape: a plain form host, indented under its group's picker. No inner
-        // scroll area -- both cells shrink, and the operations editor already scrolls.
+        // scroll area -- both cells shrink, and the operations editor already scrolls. The form
+        // gives every row one shared field column, so the merged cells all line up at one width
+        // however long or short the parameter names beside them are.
         QFormLayout* form = new QFormLayout(mHost);
         form->setContentsMargins(12, 2, 0, 0);
+        form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
         outer->addWidget(mHost);
     }
     else
@@ -289,10 +352,17 @@ void SMArgMapTable::rebuild(void)
 
 void SMArgMapTable::buildCompactRow(int index)
 {
+    if (mParams.at(index).orphan)
+    {
+        buildCompactOrphanRow(index);
+        return;
+    }
+
     const Param& param = mParams.at(index);
 
     Row row {};
     row.param = param;
+    row.customIndex = -1;
 
     row.name = new QLabel(param.name + QStringLiteral(" (") + param.type + QLatin1Char(')'), mHost);
 
@@ -301,29 +371,35 @@ void SMArgMapTable::buildCompactRow(int index)
     row.compact->setEditable(true);
     row.compact->setInsertPolicy(QComboBox::NoInsert);
     makeShrinkable(row.compact);
+    // The merged cell is the widest thing on the row and every row shares one form column, so all
+    // cells line up at the same width whatever their parameter names are.
+    row.compact->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    // The first entry is ALWAYS empty: picking it is how the developer un-maps a formal without
-    // having to select-all-and-delete the text.
+    // The list is built in a fixed reading order and NOTHING is listed that does not exist -- a
+    // kind with no members contributes no rows at all rather than a placeholder:
+    //   [0]      the empty entry (always) -- picking it un-maps the formal
+    //   [1]      the one custom value, when this formal currently holds a typed literal
+    //   then     stimulus parameters, then attributes, then constants -- each entry marked with
+    //            its kind's glyph, so what a name refers to is readable without opening anything.
     row.compact->addItem(QString());
 
-    // The offered entries, in resolution order: stimulus parameters first (transition scope
-    // only), then attributes. Constants are deliberately NOT listed -- the Actions tab has never
-    // offered them in a Compact row and the two tabs must stay in parity (SMArgMapTableTests).
-    // Anything typed that matches neither stays a free literal -- the one "user value".
-    const eSource offered[] = { eSource::Param, eSource::Attribute };
-    for (eSource kind : offered)
+    const SMArgumentEntry* cur = (mSink != nullptr) ? mSink->argFor(param.name) : nullptr;
+    const QString value = (cur != nullptr) ? cur->getValue() : QString();
+    if ((cur != nullptr) && (cur->getSource() == eSource::Value) && (value.isEmpty() == false))
     {
-        if ((kind == eSource::Param)
-            && ((mAllowParam == false) || (SMMappingSources::isKindLegal(mModel.getData(), mTransId, kind) == false)))
-        {
-            continue;
-        }
+        row.customIndex = row.compact->count();
+        row.compact->addItem(markerIcon(eSource::Value), value);
+        row.compact->setItemData(row.customIndex, kindTip(eSource::Value), Qt::ToolTipRole);
+    }
 
-        // An empty target type ranks every entry Unknown rather than Mismatch, so the list
-        // stays unfiltered -- a Compact row offers every source, as the Actions tab always has.
+    // An empty target type ranks every entry Unknown rather than Mismatch, so the list stays
+    // unfiltered -- an entry is offered whatever its type, and the row's status says how it fits.
+    for (eSource kind : compactKinds())
+    {
         for (const SMSourceEntry& entry : SMMappingSources::candidates(mModel.getData(), mTransId, kind, QString()))
         {
-            row.compact->addItem(entry.name);
+            row.compact->addItem(markerIcon(kind), entry.name);
+            row.compact->setItemData(row.compact->count() - 1, kindTip(kind), Qt::ToolTipRole);
         }
     }
 
@@ -342,10 +418,8 @@ void SMArgMapTable::buildCompactRow(int index)
 
     {
         const QSignalBlocker block(row.compact);
-        const SMArgumentEntry* cur = (mSink != nullptr) ? mSink->argFor(param.name) : nullptr;
-        const QString value = (cur != nullptr) ? cur->getValue() : QString();
-        // Select the mapped entry when it IS one of the offered sources, so re-opening the popup
-        // lands on -- and highlights -- what is currently mapped instead of the first row.
+        // Select the mapped entry -- the custom value or an offered source -- so opening the popup
+        // lands on, highlights and scrolls to what is currently mapped instead of the first row.
         const int found = value.isEmpty() ? 0 : row.compact->findText(value);
         row.compact->setCurrentIndex((found >= 0) ? found : 0);
         row.compact->setEditText(value);
@@ -355,6 +429,10 @@ void SMArgMapTable::buildCompactRow(int index)
     row.compact->lineEdit()->setPlaceholderText(param.hasDefault
         ? tr("default: %1").arg(param.defaultText)
         : tr("value, or pick a source"));
+
+    // How the current mapping fits, on the cell itself: a Compact row has no status column, so the
+    // verdict (required / converts / narrows / mismatch) rides the tooltip and the name tint.
+    row.compact->setToolTip(compactStatus(param, cur));
 
     // A formal that still has no binding (nor a typed literal, nor a default) gets an amber wash on
     // its name cell. A parameter freshly added to a referenced condition lands here, so it reads as
@@ -374,6 +452,161 @@ void SMArgMapTable::buildCompactRow(int index)
     connect(row.compact, QOverload<int>::of(&QComboBox::activated), this, [this, index](int) { onCompactCommitted(index); });
     connect(row.compact->lineEdit(), &QLineEdit::editingFinished, this, [this, index]() { onCompactCommitted(index); });
     watchEditor(row.compact->lineEdit());
+}
+
+void SMArgMapTable::buildCompactOrphanRow(int index)
+{
+    // The same orphan case the Detailed grid renders, in one form row: the formal behind this stored
+    // mapping was removed on the Methods page, so the value can no longer be re-typed as a live
+    // argument. It is never silently discarded -- it stays in a red row until the developer clears
+    // it through the quick-fix beside it.
+    const Param& param = mParams.at(index);
+
+    Row row {};
+    row.param = param;
+    row.customIndex = -1;
+
+    const QString redStyle = QStringLiteral("color: %1;")
+                             .arg(NEGuardStyle::severityColor(NEGuardStyle::eSeverity::Err).name());
+
+    row.name = new QLabel(param.name + tr(" (removed)"), mHost);
+    row.name->setStyleSheet(redStyle);
+
+    const SMArgumentEntry* cur = (mSink != nullptr) ? mSink->argFor(param.name) : nullptr;
+
+    QWidget* cell = new QWidget(mHost);
+    QHBoxLayout* cellBox = new QHBoxLayout(cell);
+    cellBox->setContentsMargins(0, 0, 0, 0);
+
+    QLabel* value = new QLabel((cur != nullptr) ? cur->getValue() : QString(), cell);
+    value->setStyleSheet(redStyle);
+    cellBox->addWidget(value, 1);
+
+    QToolButton* remove = new QToolButton(cell);
+    remove->setText(tr("x"));
+    remove->setToolTip(tr("The mapped parameter no longer exists; remove the stale binding"));
+    cellBox->addWidget(remove);
+
+    static_cast<QFormLayout*>(mHost->layout())->addRow(row.name, cell);
+    mRows.append(row);
+
+    connect(remove, &QToolButton::clicked, this, [this, index]()
+    {
+        if (index < mRows.size())
+        {
+            commit(index, false, eSource::Value, QString(), QString());
+        }
+    });
+}
+
+QList<SMArgumentEntry::eValueSource> SMArgMapTable::compactKinds(void) const
+{
+    // The reference kinds a merged cell offers, in list order. A host that declared a source filter
+    // gets exactly its reference kinds (the Actions tab: parameters, attributes, constants); a host
+    // that declared none keeps the historical pair. A kind that is illegal in this scope -- a
+    // stimulus parameter outside a transition -- is dropped, and a kind with no members contributes
+    // nothing, so the list never carries an entry that cannot be picked.
+    const eSource ordered[] = { eSource::Param, eSource::Attribute, eSource::Constant };
+
+    QList<eSource> kinds;
+    for (eSource kind : ordered)
+    {
+        if (mAllowedSources.isEmpty())
+        {
+            if (kind == eSource::Constant)
+            {
+                continue;
+            }
+        }
+        else if (mAllowedSources.contains(kind) == false)
+        {
+            continue;
+        }
+
+        if ((kind == eSource::Param)
+            && ((mAllowParam == false) || (SMMappingSources::isKindLegal(mModel.getData(), mTransId, kind) == false)))
+        {
+            continue;
+        }
+
+        kinds.append(kind);
+    }
+
+    return kinds;
+}
+
+QString SMArgMapTable::compactStatus(const Param& param, const SMArgumentEntry* cur) const
+{
+    if (cur == nullptr)
+    {
+        return param.hasDefault
+               ? tr("Not mapped: the declared default (%1) is used").arg(param.defaultText)
+               : tr("Required: pick a source or type a value");
+    }
+
+    if (cur->getSource() == eSource::Value)
+    {
+        const QString err = SMLiteralValidator::validate(param.type, cur->getValue());
+        return err.isEmpty() ? tr("A fixed value of type %1").arg(param.type) : err;
+    }
+
+    const QString kind = labelFor(cur->getSource());
+    const QString srcType = SMMappingSources::referencedType(mModel.getData(), mTransId, cur->getSource(), cur->getValue());
+    switch (SMTypeCompat::rank(srcType, param.type))
+    {
+    case SMTypeCompat::eRank::Converts:
+        return tr("%1 %2 (%3) converts to %4").arg(kind, cur->getValue(), srcType, param.type);
+
+    case SMTypeCompat::eRank::Narrows:
+        return tr("(!) %1 %2 (%3) narrows to %4").arg(kind, cur->getValue(), srcType, param.type);
+
+    case SMTypeCompat::eRank::Mismatch:
+        return tr("%1 %2 (%3) does not fit %4").arg(kind, cur->getValue(), srcType, param.type);
+
+    default:
+        return tr("%1 %2").arg(kind, cur->getValue());
+    }
+}
+
+void SMArgMapTable::updateCompactCustom(int row)
+{
+    // The one custom value: a merged cell lists at most a single typed literal, so a newly typed
+    // value REPLACES the one listed before it rather than piling up. Done in place -- a Compact
+    // commit deliberately does not re-project (it would fight the caret), so without this the list
+    // would still be offering the value the developer just typed over.
+    Row& r = mRows[row];
+    if (r.compact == nullptr)
+    {
+        return;
+    }
+
+    const QSignalBlocker block(r.compact);
+    const QString text = r.committed;
+    const bool isCustom = (text.isEmpty() == false) && (resolveCompactSource(text) == eSource::Value);
+
+    if (isCustom == false)
+    {
+        if (r.customIndex >= 0)
+        {
+            r.compact->removeItem(r.customIndex);
+            r.customIndex = -1;
+        }
+    }
+    else if (r.customIndex >= 0)
+    {
+        r.compact->setItemText(r.customIndex, text);
+    }
+    else
+    {
+        r.customIndex = 1;      // straight after the empty entry, ahead of every reference kind
+        r.compact->insertItem(r.customIndex, markerIcon(eSource::Value), text);
+        r.compact->setItemData(r.customIndex, kindTip(eSource::Value), Qt::ToolTipRole);
+    }
+
+    const int found = text.isEmpty() ? 0 : r.compact->findText(text);
+    r.compact->setCurrentIndex((found >= 0) ? found : 0);
+    r.compact->setEditText(text);
+    r.compact->setToolTip(compactStatus(r.param, argFor(row)));
 }
 
 void SMArgMapTable::buildDetailedRow(int index)
@@ -745,18 +978,14 @@ void SMArgMapTable::onCompactCommitted(int row)
     {
         commit(row, true, resolveCompactSource(text), text, QString());
     }
+
+    updateCompactCustom(row);
 }
 
 SMArgumentEntry::eValueSource SMArgMapTable::resolveCompactSource(const QString& text) const
 {
-    const eSource offered[] = { eSource::Param, eSource::Attribute };
-    for (eSource kind : offered)
+    for (eSource kind : compactKinds())
     {
-        if ((kind == eSource::Param) && (mAllowParam == false))
-        {
-            continue;
-        }
-
         for (const SMSourceEntry& entry : SMMappingSources::candidates(mModel.getData(), mTransId, kind, QString()))
         {
             if (entry.name == text)

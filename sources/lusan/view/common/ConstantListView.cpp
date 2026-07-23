@@ -86,6 +86,15 @@ void ConstantListView::buildUi()
     mTable->header()->setMinimumSectionSize(50);
     mTable->setHeaderLabels(QStringList{ tr("Name:"), tr("Data Type:"), tr("Value:") });
 
+    // One column policy shared by every list page (Data Types, Attributes, Events, Methods,
+    // Constants): the Name column takes all the horizontal slack (Stretch) so names stay readable,
+    // and every other column fits its content (ResizeToContents). Kept identical to the Methods
+    // table so the Name / Type / Value columns look and behave the same across all pages.
+    QHeaderView* header = mTable->header();
+    header->setSectionResizeMode(0, QHeaderView::Stretch);
+    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+
     groupLayout->addWidget(toolbar);
     groupLayout->addWidget(mTable);
     root->addWidget(group);

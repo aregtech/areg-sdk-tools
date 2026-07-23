@@ -42,6 +42,7 @@
 #include "lusan/view/sm/SMToolIcons.hpp"
 
 #include <QAbstractButton>
+#include <QApplication>
 #include <QComboBox>
 #include <QCompleter>
 #include <QDropEvent>
@@ -276,6 +277,10 @@ void SMPropertiesPanel::buildStatePage()
     mStateGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionList), tr("Transitions"), mTransitions
                              , tr("The transitions leaving this state"));
     mStateGeneral->setCompact(false);
+    // Both sections start OPEN: selecting a state must land on an editable name, a readable kind and
+    // the description without a click, which is what a General tab is for. Sections are still
+    // collapsible by hand -- only the initial state changed.
+    mStateGeneral->openAllSections();
     mStateGeneral->addFooterStretch();
 
     connect(mStateName, &QLineEdit::editingFinished, this, &SMPropertiesPanel::onStateNameCommit);
@@ -330,6 +335,8 @@ void SMPropertiesPanel::buildStatePage()
     connect(mDoUntil, &QLineEdit::editingFinished, this, &SMPropertiesPanel::onDoUntilCommit);
 
     mStateTabs = new QTabWidget(this);
+    mStateTabs->setObjectName(QStringLiteral("smStateTabs"));
+    mStateGeneral->setObjectName(QStringLiteral("smStateGeneral"));
     mStateTabs->addTab(mStateGeneral, tr("General"));
     const int enterTab = mStateTabs->addTab(mEnterOps, tr("Enter"));
     const int doTab    = mStateTabs->addTab(mDoOps, tr("Do"));
@@ -379,6 +386,7 @@ void SMPropertiesPanel::buildTransitionPage()
     mTransGeneral->addSection(SMToolIcons::icon(SMToolIcons::eIcon::SectionText), tr("Description"), mTransDesc
                              , tr("A free-text note on this transition"));
     mTransGeneral->setCompact(false);
+    mTransGeneral->openAllSections();   // same as the state General tab: open and editable at once
     mTransGeneral->addFooterStretch();
 
     connect(mStimulusName, &QComboBox::activated, this, &SMPropertiesPanel::onStimulusCommit);
@@ -444,7 +452,10 @@ void SMPropertiesPanel::buildRegistryPage()
 
 bool SMPropertiesPanel::isEditing() const
 {
-    QWidget* focus = focusWidget();
+    // Use the application's ACTIVE focus, not QWidget::focusWidget(): the latter returns the
+    // last-focused DESCENDANT and stays non-null once any field here was clicked, so it reported
+    // "editing" permanently and blocked the live stimulus-picker refresh after the first click.
+    QWidget* focus = QApplication::focusWidget();
     return (focus != nullptr) && isAncestorOf(focus);
 }
 

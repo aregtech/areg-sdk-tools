@@ -33,6 +33,7 @@
 #include "lusan/view/sm/SMSectionChrome.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
 
+#include <QApplication>
 #include <QComboBox>
 #include <QFont>
 #include <QHBoxLayout>
@@ -149,7 +150,11 @@ void SMOperationsEditor::buildUi()
     connect(mActionCombo, &QComboBox::activated, this, [this](int) { setActionName(mActionCombo->currentText()); });
     actionBox->addWidget(mActionCombo);
     mActionParams = new SMArgMapTable(mModel, actionBody);
-    mActionParams->setRowStyle(SMArgMapTable::eRowStyle::Detailed);
+    // One MERGED cell per parameter, not a source picker beside a value editor: a parameter is
+    // bound to a source or to a typed value, never to both, so two controls only asked the same
+    // question twice and cost the narrow dock a column. The cell lists exactly what exists --
+    // typed value, stimulus parameters, attributes, constants -- each marked with its kind.
+    mActionParams->setRowStyle(SMArgMapTable::eRowStyle::Compact);
     mActionParams->setAllowedSources(kActionSources());
     actionBox->addWidget(mActionParams);
     mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::NewAction), tr("Action"), actionBody
@@ -163,7 +168,7 @@ void SMOperationsEditor::buildUi()
     connect(mEventCombo, &QComboBox::activated, this, [this](int) { setEventName(mEventCombo->currentText()); });
     eventBox->addWidget(mEventCombo);
     mEventParams = new SMArgMapTable(mModel, eventBody);
-    mEventParams->setRowStyle(SMArgMapTable::eRowStyle::Detailed);
+    mEventParams->setRowStyle(SMArgMapTable::eRowStyle::Compact);    // the same merged cell
     mEventParams->setAllowedSources(kActionSources());
     eventBox->addWidget(mEventParams);
     mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::NewEvent), tr("Event"), eventBody
@@ -197,6 +202,10 @@ void SMOperationsEditor::buildUi()
                        , tr("The timers this operation starts or stops"));
 
     mChrome->setCompact(false);
+    // Every section starts open, so the tab reads as one short form instead of a stack of closed
+    // bars the developer has to click through. A host section appended later (the Do tab's Repeat)
+    // opens itself the same way.
+    mChrome->openAllSections();
 
     box->addWidget(mChrome);
     box->addStretch(1);
@@ -231,7 +240,9 @@ void SMOperationsEditor::clearBinding()
 
 int SMOperationsEditor::addSection(const QIcon& icon, const QString& title, QWidget* content)
 {
-    return mChrome->addSection(icon, title, content, title);
+    const int index = mChrome->addSection(icon, title, content, title);
+    mChrome->setCurrentSection(index);      // open like the built-in sections
+    return index;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -613,11 +624,13 @@ QStringList SMOperationsEditor::timerNames() const
 
 void SMOperationsEditor::onNotifierChanged(uint32_t /*id*/, eDocElementKind kind)
 {
-    // Operation edits and any registry change (a renamed action/event/timer/attribute) can shift
-    // what the combos should show; refresh, but never while the user is mid-edit in a field.
+    // Operation edits and any registry change that can shift what the combos or the arg cells should
+    // show: an action/event/timer name (the pickers), or a stimulus parameter, attribute, constant or
+    // data type (the merged value cell's source list and its type-fit status). Refresh, but never
+    // while the user is mid-edit in a field.
     if ((kind == eDocElementKind::Operation) || (kind == eDocElementKind::Method) || (kind == eDocElementKind::Event)
-        || (kind == eDocElementKind::Timer) || (kind == eDocElementKind::Attribute) || (kind == eDocElementKind::State)
-        || (kind == eDocElementKind::Transition))
+        || (kind == eDocElementKind::Timer) || (kind == eDocElementKind::Attribute) || (kind == eDocElementKind::Constant)
+        || (kind == eDocElementKind::DataType) || (kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
     {
         scheduleRebuild();
     }
@@ -643,6 +656,12 @@ void SMOperationsEditor::scheduleRebuild()
 
 bool SMOperationsEditor::isEditing() const
 {
-    QWidget* focus = focusWidget();
+    // Use the application's ACTIVE focus, not QWidget::focusWidget(): the latter returns the
+    // last-focused DESCENDANT and stays non-null forever once the user has clicked a field here,
+    // so it reported "editing" permanently and every later notification-driven rebuild was
+    // silently skipped -- the arg combos never picked up a newly set stimulus or a freshly created
+    // attribute/event/constant until the whole editor was rebound. Skip a rebuild only while the
+    // caret is really inside this editor.
+    QWidget* focus = QApplication::focusWidget();
     return (focus != nullptr) && isAncestorOf(focus);
 }

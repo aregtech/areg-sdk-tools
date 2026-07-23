@@ -113,6 +113,13 @@ public:
     //!< Expands \p index.
     void setCurrentSection(int index);
 
+    /**
+     * \brief   Expands every section at once, so a tab opens ready to read and edit rather than as
+     *          a column of closed bars. Only meaningful outside compact mode (which structurally
+     *          keeps one section open); a compact chrome is left alone.
+     **/
+    void openAllSections();
+
     //!< The first expanded section, or -1.
     int currentSection() const;
 

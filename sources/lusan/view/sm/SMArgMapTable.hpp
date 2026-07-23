@@ -105,7 +105,7 @@ public:
      **/
     enum class eRowStyle
     {
-          Compact   //!< One editable combo: pick a source entry or type a literal.
+          Compact   //!< One editable combo (the merged cell): pick a source entry or type a value.
         , Detailed  //!< Source-kind combo, a value editor that follows it, and a status cell.
     };
 
@@ -134,7 +134,8 @@ public:
      *          restores the default (every source kind). A stored argument whose kind is not in
      *          \p kinds is still shown, so no existing mapping is hidden. Takes effect on the
      *          next \ref bind, or immediately (deferred) when the table is already bound.
-     *          Ignored by the Compact shape, which always offers its fixed set.
+     *          The Compact shape honours the filter too -- its merged cell lists the reference
+     *          kinds among \p kinds; with no filter it keeps the parameter/attribute pair.
      **/
     void setAllowedSources(const QList<SMArgumentEntry::eValueSource>& kinds);
 
@@ -197,6 +198,7 @@ private:
         QLineEdit*      expr;       //!< Detailed only.
         QComboBox*      compact;    //!< Compact only -- the single editable value combo.
         QString         committed;  //!< Compact only -- the text last pushed to the sink.
+        int             customIndex;//!< Compact only -- the one custom-value item, or -1.
         QLabel*         status;     //!< Detailed only.
     };
 
@@ -205,9 +207,27 @@ private:
     void buildHost(void);
 
     void buildCompactRow(int index);
+    void buildCompactOrphanRow(int index);
     void buildDetailedRow(int index);
     void buildOrphanRow(int index);
     void refreshRow(int row);
+
+    /**
+     * \brief   The reference kinds a Compact (merged) cell lists, in list order: the host's source
+     *          filter narrowed to the reference kinds and to what is legal in this scope. A host
+     *          that declared no filter keeps the historical parameter/attribute pair.
+     **/
+    QList<SMArgumentEntry::eValueSource> compactKinds(void) const;
+
+    //!< How the mapping of \p cur fits \p param, in one sentence -- a Compact cell's tooltip.
+    QString compactStatus(const Param& param, const SMArgumentEntry* cur) const;
+
+    /**
+     * \brief   Re-points row \p row's single custom-value item at the text just committed, adding
+     *          or dropping that item as needed. A merged cell lists at most ONE typed literal, so a
+     *          new one replaces the previous rather than accumulating.
+     **/
+    void updateCompactCustom(int row);
 
     // Detailed interaction.
     void onSourceChanged(int row);

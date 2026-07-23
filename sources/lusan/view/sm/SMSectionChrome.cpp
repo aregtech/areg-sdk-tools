@@ -214,6 +214,19 @@ void SMSectionChrome::setCurrentSection(int index)
     mAccordion->setCurrentIndex(index);
 }
 
+void SMSectionChrome::openAllSections()
+{
+    if (mAccordion->isCompact())
+    {
+        return;     // compact mode allows exactly one open section; opening all would fight it
+    }
+
+    for (int i = 0; i < mAccordion->count(); ++i)
+    {
+        mAccordion->setSectionOpen(i, true);
+    }
+}
+
 int SMSectionChrome::currentSection() const
 {
     return mAccordion->currentIndex();
