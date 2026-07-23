@@ -309,6 +309,14 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     });
 
     connect(mSceneManager, &SMSceneManager::signalLevelChanged, this, &SMDesign::onLevelChanged);
+    connect(mSceneManager, &SMSceneManager::signalRequestSubstate, this, [this](uint32_t stateId)
+    {
+        // Body double-click on a state: descend into its submachine, creating one on the fly for a
+        // plain normal state (the same create-or-enter path as the Enter Submachine action). Make
+        // the double-clicked state the selection so the shared logic acts on it.
+        mModel.getSelectionModel().setSelection(QList<uint32_t>{ stateId });
+        enterSelectedSubmachine();
+    });
     connect(mSceneManager, &SMSceneManager::signalGuardEditRequested, this, [this](uint32_t transitionId)
     {
         // Edge-label double-click: surface the Properties panel and focus the guard field.

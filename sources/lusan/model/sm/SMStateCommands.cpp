@@ -24,6 +24,7 @@
 
 #include <QSet>
 #include <memory>
+#include <utility>
 
 namespace
 {
@@ -56,6 +57,34 @@ namespace
         SMTransitionData*   list;   //!< The owning state's transition list.
         uint32_t            id;     //!< The transition's element ID.
     };
+
+    //!< Collects, document-wide, the IDs of every external transition whose target is `targetName`.
+    //!< State names are unique, so this is exactly the set of transitions connected to that state --
+    //!< used by a rename to rebind them (transitions reference their target by name, not by ID), so
+    //!< the connection survives the rename instead of dangling on the old name.
+    void collectIncomingTransitions(SMStateData& level, const QString& targetName, QList<uint32_t>& out)
+    {
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+            {
+                continue;
+            }
+
+            for (SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                if ((transition != nullptr) && transition->isExternal() && (transition->getTo() == targetName))
+                {
+                    out.append(transition->getId());
+                }
+            }
+
+            if (state->hasNestedStates())
+            {
+                collectIncomingTransitions(*state->getNestedStates(), targetName, out);
+            }
+        }
+    }
 
     //!< Walks every state outside the deleted subtree and collects the transitions whose
     //!< target name belongs to the subtree.
@@ -124,6 +153,20 @@ void SMRenameStateCommand::apply(const QString& name, const QString& previous)
     if (state != nullptr)
     {
         state->setName(name);
+
+        // Rebind the incoming transitions captured on first redo. Transitions reference their
+        // target by name, so a rename that only changed the state name left them pointing at the
+        // old (now non-existent) name -- the connection appeared broken. The state itself is never
+        // deleted here; only its name and the names its transitions target are updated.
+        for (uint32_t transitionId : std::as_const(mRetargeted))
+        {
+            SMTransitionEntry* transition = data().findTransitionById(transitionId);
+            if (transition != nullptr)
+            {
+                transition->setTo(name);
+            }
+        }
+
         notifier().notifyNameChanged(mId, previous, name);
     }
 }
@@ -134,6 +177,10 @@ void SMRenameStateCommand::redo()
     {
         const SMStateEntry* state = data().findStateById(mId);
         mOld = (state != nullptr ? state->getName() : QString());
+        // Capture the transitions targeting this state while they still name the old value, so
+        // undo/redo rebind exactly them (and nothing that later happens to reuse a name).
+        mRetargeted.clear();
+        collectIncomingTransitions(data().getStates(), mOld, mRetargeted);
         mCaptured = true;
     }
 

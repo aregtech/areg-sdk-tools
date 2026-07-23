@@ -839,6 +839,16 @@ void SMScene::requestEnterSubmachine(uint32_t stateId)
     }
 }
 
+void SMScene::requestSubstate(uint32_t stateId)
+{
+    // Not gated on hasNestedStates: a plain normal state gets a submachine created on the fly by
+    // the Design page. Only guard that the state still exists.
+    if (mModel.getData().findStateById(stateId) != nullptr)
+    {
+        emit signalRequestSubstate(stateId);
+    }
+}
+
 void SMScene::requestGuardEdit(uint32_t transitionId)
 {
     if ((transitionId != 0u) && (mModel.getData().findTransitionById(transitionId) != nullptr))

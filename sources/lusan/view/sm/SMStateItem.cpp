@@ -45,6 +45,7 @@
 #include <QPolygonF>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
+#include <QSignalBlocker>
 #include <QStringList>
 #include <QToolTip>
 
@@ -997,7 +998,10 @@ void SMStateItem::updateFromModel()
     mName      = state->getName();
     mKind      = state->getKind();
     mHistory   = state->getHistory();
-    mComposite = state->hasNestedStates();
+    // A submachine counts as composite only when it is "real" -- it owns at least one Normal state.
+    // A just-entered-then-left submachine that still holds only its Start marker is not real (it is
+    // never persisted), so the box must not advertise a substate it does not really have.
+    mComposite = state->hasNestedStates() && state->getNestedStates()->hasRealState();
     mImported  = state->isImportedSubmachine();
     mHasNote   = (data.getLayout().findNoteByOwner(getElementId()) != nullptr);
 
@@ -1270,18 +1274,22 @@ void SMStateItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton)
     {
-        // A painted composite opens its submachine; plain states open the rename editor.
-        if (mComposite)
+        // Start / Final markers have no title/body split and no submachine: double-click always
+        // edits the name. A normal state splits on the header band: the title (header) opens the
+        // in-place rename; the body descends into the state's submachine, which the owning page
+        // creates on the fly for a plain normal state (the same path as the Enter Submachine
+        // action). This is why a double-click on the body must NOT fall back to rename.
+        const bool onTitle = isMarker() || (event->pos().y() <= NESMDesign::StateHeaderHeight);
+        if (onTitle)
         {
-            SMScene* canvas = getCanvas();
-            if (canvas != nullptr)
+            if (isRenameActive() == false)
             {
-                canvas->requestEnterSubmachine(getElementId());
+                startInlineRename();
             }
         }
-        else if (isRenameActive() == false)
+        else if (SMScene* canvas = getCanvas())
         {
-            startInlineRename();
+            canvas->requestSubstate(getElementId());
         }
 
         event->accept();
@@ -1427,9 +1435,13 @@ void SMStateItem::startInlineRename()
     edit->mValidate  = [this](const QString& name) { return validateName(name); };
     edit->mCancel    = [this]()
     {
+        // Esc discards the in-progress name and restores the committed one everywhere (canvas box
+        // and the Properties panel field) -- restore from the model, not mName, which holds the
+        // abandoned typing preview (Bug 3, Esc case).
         if (SMScene* canvas = getCanvas())
         {
-            canvas->getModel().publishStateNamePreview(getElementId(), mName);
+            const SMStateEntry* state = getState();
+            canvas->getModel().publishStateNamePreview(getElementId(), state != nullptr ? state->getName() : mName);
         }
 
         closeRenameEditor();
@@ -1471,9 +1483,12 @@ void SMStateItem::startInlineRename()
             closeRenameEditor();
             if (valid == false)
             {
+                // Reject: restore the committed name (from the model, not mName which holds the
+                // rejected typing preview) on both the canvas box and the Properties panel.
                 if (SMScene* canvas = getCanvas())
                 {
-                    canvas->getModel().publishStateNamePreview(getElementId(), mName);
+                    const SMStateEntry* state = getState();
+                    canvas->getModel().publishStateNamePreview(getElementId(), state != nullptr ? state->getName() : mName);
                 }
             }
 
@@ -1493,6 +1508,21 @@ void SMStateItem::setNamePreview(const QString& name)
     {
         mName = name;
         update();
+    }
+
+    // When the state is in edit mode, the in-place editor widget covers the painted header, so
+    // updating mName alone is invisible: the on-canvas title is whatever the RenameEdit shows.
+    // Mirror the preview into the editor too, so typing the name in the Properties panel updates
+    // the on-canvas editor in real time (Bug 1). Skip when the editor is the source of the change
+    // (it has focus) to avoid clobbering the caret and to break the preview feedback loop.
+    if (mRenameProxy != nullptr)
+    {
+        QLineEdit* edit = qobject_cast<QLineEdit*>(mRenameProxy->widget());
+        if ((edit != nullptr) && (edit->hasFocus() == false) && (edit->text() != name))
+        {
+            const QSignalBlocker block(edit);
+            edit->setText(name);
+        }
     }
 }
 
@@ -1536,7 +1566,18 @@ void SMStateItem::startNoteEdit()
 void SMStateItem::commitRename(const QString& name)
 {
     SMScene* canvas = getCanvas();
-    if ((canvas == nullptr) || (name == mName))
+    if (canvas == nullptr)
+    {
+        return;
+    }
+
+    // Compare against the model's committed name, NOT mName: mName tracks the live typing preview
+    // (see setNamePreview), so it already equals the typed text by commit time. Guarding on mName
+    // made every rename a no-op, so the new name was never written and later reappeared as the old
+    // one (Bug 3). getState() is the single source of truth for what is actually stored.
+    const SMStateEntry* state = getState();
+    const QString committed = (state != nullptr ? state->getName() : QString());
+    if (name == committed)
     {
         return;
     }

@@ -152,6 +152,7 @@ SMScene* SMSceneManager::sceneForLevel(uint32_t levelId)
         connect(scene, &SMScene::signalEnterSubmachine, this, &SMSceneManager::enterSubmachine);
         connect(scene, &SMScene::signalGoToParent, this, &SMSceneManager::goToParent);
         connect(scene, &SMScene::signalGuardEditRequested, this, &SMSceneManager::signalGuardEditRequested);
+        connect(scene, &SMScene::signalRequestSubstate, this, &SMSceneManager::signalRequestSubstate);
     }
 
     return scene;

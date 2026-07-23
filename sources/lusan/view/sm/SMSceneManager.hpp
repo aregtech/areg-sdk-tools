@@ -128,6 +128,13 @@ signals:
      **/
     void signalGuardEditRequested(uint32_t transitionId);
 
+    /**
+     * \brief   Re-emitted from any level's scene: descend into a state's submachine, creating
+     *          one on the fly when the state has none (body double-click). The Design page owns
+     *          the create-or-enter decision.
+     **/
+    void signalRequestSubstate(uint32_t stateId);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////

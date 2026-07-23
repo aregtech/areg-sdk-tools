@@ -236,6 +236,14 @@ public:
     void requestEnterSubmachine(uint32_t stateId);
 
     /**
+     * \brief   Requests descending into a state's submachine, creating one on the fly when the
+     *          state is a plain normal state with none (body double-click). Unlike
+     *          requestEnterSubmachine, this is not gated on hasNestedStates: the owning Design
+     *          page decides whether to create-and-enter or just enter.
+     **/
+    void requestSubstate(uint32_t stateId);
+
+    /**
      * \brief   Requests the guard editor for a transition (double-click on the edge
      *          label): the owning page selects it and focuses the Conditions tab field.
      **/
@@ -267,6 +275,13 @@ signals:
      * \param   stateId The composite state's element ID.
      **/
     void signalEnterSubmachine(uint32_t stateId);
+
+    /**
+     * \brief   Emitted to descend into a state's submachine, creating one on the fly when the
+     *          state has none (body double-click). The Design page handles the create-or-enter.
+     * \param   stateId The state's element ID.
+     **/
+    void signalRequestSubstate(uint32_t stateId);
 
     /**
      * \brief   Emitted to ascend to the parent machine level (Backspace, Alt+double-click).

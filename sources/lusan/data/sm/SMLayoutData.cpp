@@ -212,6 +212,11 @@ bool SMLayoutData::readFromXml(QXmlStreamReader& xml)
 
 void SMLayoutData::writeToXml(QXmlStreamWriter& xml) const
 {
+    writeToXml(xml, QSet<uint32_t>(), QSet<uint32_t>());
+}
+
+void SMLayoutData::writeToXml(QXmlStreamWriter& xml, const QSet<uint32_t>& dropOwners, const QSet<uint32_t>& dropLevels) const
+{
     // The Layout section is editor state only; omit it when there is nothing to persist.
     if (mViews.isEmpty() && mNodes.isEmpty() && mEdges.isEmpty() && mNotes.isEmpty())
         return;
@@ -226,6 +231,10 @@ void SMLayoutData::writeToXml(QXmlStreamWriter& xml) const
         for (const SMLayoutView* entry : sortedByKey(mViews, [](const SMLayoutView& v) { return v.owner; }))
         {
             const SMLayoutView& view{ *entry };
+            if (dropLevels.contains(view.owner))
+            {
+                continue;   // the sublevel of a dropped submachine: no View is persisted for it
+            }
             xml.writeStartElement(XmlSM::xmlSMElementView);
             xml.writeAttribute(XmlSM::xmlSMAttributeOwner, QString::number(view.owner));
             xml.writeAttribute(XmlSM::xmlSMAttributeZoom, QString::number(view.zoom));
@@ -242,6 +251,10 @@ void SMLayoutData::writeToXml(QXmlStreamWriter& xml) const
         for (const SMLayoutNode* entry : sortedByKey(mNodes, [](const SMLayoutNode& n) { return n.owner; }))
         {
             const SMLayoutNode& node{ *entry };
+            if (dropOwners.contains(node.owner))
+            {
+                continue;   // a nested state of a dropped submachine
+            }
             xml.writeStartElement(XmlSM::xmlSMElementNode);
             xml.writeAttribute(XmlSM::xmlSMAttributeOwner, QString::number(node.owner));
             xml.writeAttribute(XmlSM::xmlSMAttributeX, QString::number(node.x));
@@ -271,6 +284,10 @@ void SMLayoutData::writeToXml(QXmlStreamWriter& xml) const
         for (const SMLayoutEdge* entry : sortedByKey(mEdges, [](const SMLayoutEdge& e) { return e.owner; }))
         {
             const SMLayoutEdge& edge{ *entry };
+            if (dropOwners.contains(edge.owner))
+            {
+                continue;   // a transition inside a dropped submachine
+            }
             xml.writeStartElement(XmlSM::xmlSMElementEdge);
             xml.writeAttribute(XmlSM::xmlSMAttributeOwner, QString::number(edge.owner));
             if (edge.shape == SMLayoutEdge::eShape::Arc)
@@ -307,6 +324,10 @@ void SMLayoutData::writeToXml(QXmlStreamWriter& xml) const
         for (const SMLayoutNote* entry : sortedByKey(mNotes, [](const SMLayoutNote& n) { return n.id; }))
         {
             const SMLayoutNote& note{ *entry };
+            if (dropLevels.contains(note.level) || ((note.owner != 0) && dropOwners.contains(note.owner)))
+            {
+                continue;   // a note placed at, or bound inside, a dropped submachine
+            }
             xml.writeStartElement(XmlSM::xmlSMElementNote);
             xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(note.id));
             xml.writeAttribute(XmlSM::xmlSMAttributeLevel, QString::number(note.level));

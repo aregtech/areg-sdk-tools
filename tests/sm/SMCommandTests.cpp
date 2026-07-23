@@ -252,6 +252,44 @@ namespace
         stack.redo();
         CHECK(doc.getStates().findState("Parent") == nullptr);
     }
+
+    //!< Renaming a state must keep every transition connected to it: transitions reference their
+    //!< target by name, so the rename has to rebind them, not leave them dangling on the old name.
+    void testRenameKeepsTransitions()
+    {
+        StateMachineData    doc;
+        DocModelNotifier    notifier;
+        QUndoStack          stack;
+
+        SMStateEntry* start  = doc.getStates().createState("Start", SMStateEntry::eStateKind::Start);
+        SMStateEntry* worker = doc.getStates().createState("Worker", SMStateEntry::eStateKind::Normal);
+        SMStateEntry* other  = doc.getStates().createState("Other", SMStateEntry::eStateKind::Normal);
+        CHECK((start != nullptr) && (worker != nullptr) && (other != nullptr));
+
+        // Start -> Worker, and a self-referencing loop Worker -> Worker; Other -> itself stays put.
+        SMTransitionEntry* toWorker = start->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", "Worker");
+        SMTransitionEntry* loop     = worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "L", "Worker");
+        SMTransitionEntry* toOther  = other->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "O", "Other");
+        CHECK((toWorker != nullptr) && (loop != nullptr) && (toOther != nullptr));
+
+        stack.push(new SMRenameStateCommand(doc, notifier, worker->getId(), "Machine", "Rename"));
+
+        // Every transition that targeted "Worker" now targets "Machine"; unrelated ones are untouched.
+        CHECK(worker->getName() == QStringLiteral("Machine"));
+        CHECK(toWorker->getTo() == QStringLiteral("Machine"));
+        CHECK(loop->getTo()     == QStringLiteral("Machine"));
+        CHECK(toOther->getTo()  == QStringLiteral("Other"));
+
+        stack.undo();
+        CHECK(worker->getName() == QStringLiteral("Worker"));
+        CHECK(toWorker->getTo() == QStringLiteral("Worker"));   // connection restored on undo
+        CHECK(loop->getTo()     == QStringLiteral("Worker"));
+        CHECK(toOther->getTo()  == QStringLiteral("Other"));
+
+        stack.redo();
+        CHECK(toWorker->getTo() == QStringLiteral("Machine"));  // and reapplied on redo
+        CHECK(loop->getTo()     == QStringLiteral("Machine"));
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -866,6 +904,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testScriptedSequence();
     testCoalescedLayoutDrag();
     testCompositeDelete();
+    testRenameKeepsTransitions();
     testDeepHistory();
     testDataTypeLifecycle();
     testContainerLifecycle();
