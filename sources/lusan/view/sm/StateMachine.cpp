@@ -288,6 +288,26 @@ void StateMachine::onDeclareRequested(SMDesign::eDeclareKind kind)
     }
 }
 
+void StateMachine::onNavigateToPage(eDocElementKind kind)
+{
+    int pageIndex = static_cast<int>(PageDesign);
+    switch (kind)
+    {
+    case eDocElementKind::DataType:     pageIndex = static_cast<int>(PageDataTypes);    break;
+    case eDocElementKind::Attribute:    pageIndex = static_cast<int>(PageAttributes);   break;
+    case eDocElementKind::Event:
+    case eDocElementKind::Timer:        pageIndex = static_cast<int>(PageEvents);        break;
+    case eDocElementKind::Method:       pageIndex = static_cast<int>(PageMethods);       break;
+    case eDocElementKind::Constant:     pageIndex = static_cast<int>(PageConstants);     break;
+    case eDocElementKind::Import:
+    case eDocElementKind::Include:      pageIndex = static_cast<int>(PageIncludes);      break;
+    default:                            return;     // canvas-owned kinds are handled by the Design page.
+    }
+
+    ensureTabInitialized(pageIndex);
+    mTabWidget.setCurrentIndex(pageIndex);
+}
+
 QString StateMachine::newDocumentName()
 {
     static uint32_t _seqNr{ 0 };
@@ -449,6 +469,7 @@ void StateMachine::ensureTabInitialized(int index)
         SMDesign* design = new SMDesign(mModel, &mTabWidget);
         design->setToolbarVisible(mToolbarVisible);
         connect(design, &SMDesign::signalDeclareRequested, this, &StateMachine::onDeclareRequested);
+        connect(design, &SMDesign::signalNavigateToPage, this, &StateMachine::onNavigateToPage);
         // The canvas View submenu moves the toolbar / Properties / Outline between the Design
         // page and the Navigation Window; the main window owns that global placement (issue #516).
         connect(design, &SMDesign::signalPlaceDesignWidget, this, [this](int widget, int place) {

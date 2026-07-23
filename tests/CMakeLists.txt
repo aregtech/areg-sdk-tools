@@ -102,7 +102,11 @@ set_target_properties(lusan_sm_serialization_tests PROPERTIES WIN32_EXECUTABLE O
 qt_add_executable(lusan_sm_validation_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/sm/SMLiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMValidationTests.cpp
+    # Enumeration literal checks (rule 15) load the basic-container/predefined type catalog.
+    ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_sm_validation_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
 target_compile_definitions(lusan_sm_validation_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
@@ -152,6 +156,8 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN}/model/sm/SMValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/sm/SMLiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
     # Container tests need the real basic-container catalog (Array/HashMap/Map/...): it is
     # loaded from the "Predefined Types" resource at runtime (DataTypeFactory::_initPredefined),

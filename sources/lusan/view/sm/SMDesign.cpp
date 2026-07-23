@@ -946,27 +946,22 @@ void SMDesign::buildDesignPanels()
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
 
-    // Validation results: a bottom dock, hidden until the user opens it; every guard
-    // entry navigates to its transition's Conditions tab.
+    // Validation results: a bottom dock, hidden until the user opens it; a finding navigates
+    // to the offending element (canvas selection, or a page switch for a registry entry).
     mValidation = new SMValidationPanel(mModel);
     mValidationDock = new QDockWidget(tr("Validation"), this);
     mValidationDock->setObjectName(QStringLiteral("SMValidationDock"));
     mValidationDock->setWidget(mValidation);
     addDockWidget(Qt::BottomDockWidgetArea, mValidationDock);
     mValidationDock->hide();
-    connect(mValidation, &SMValidationPanel::navigateRequested, this, [this](uint32_t transitionId)
-    {
-        if (mProperties != nullptr)
-        {
-            if ((mPropertiesDock != nullptr) && (mPropertiesDock->widget() == mProperties) && (mPropertiesDock->isVisible() == false))
-            {
-                mPropertiesDock->show();
-                mPropertiesDock->raise();
-            }
+    connect(mValidation, &SMValidationPanel::navigateRequested, this, &SMDesign::navigateToIssue);
 
-            mProperties->focusConditions(transitionId);
-        }
-    });
+    // F8 / Shift+F8 step through the findings (spec 9.1); they are window shortcuts so they
+    // work whether or not the validation dock currently holds keyboard focus.
+    QShortcut* nextIssue = new QShortcut(QKeySequence(Qt::Key_F8), this);
+    QShortcut* prevIssue = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
+    connect(nextIssue, &QShortcut::activated, this, [this]() { mValidation->focusNextIssue(); });
+    connect(prevIssue, &QShortcut::activated, this, [this]() { mValidation->focusPreviousIssue(); });
 }
 
 QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
@@ -2275,6 +2270,155 @@ void SMDesign::focusSearchHit(int index)
     if (SMCanvasItem* item = getScene().findCanvasItem(hit.elementId))
     {
         mView->centerOn(item);
+    }
+}
+
+namespace
+{
+    //!< The owner id of the level that directly contains \p stateId, or 0 if none does.
+    uint32_t levelOfState(const SMStateData& level, uint32_t levelId, uint32_t stateId)
+    {
+        for (const SMStateEntry* st : level.getElements())
+        {
+            if (st == nullptr)
+                continue;
+            if (st->getId() == stateId)
+                return levelId;
+            if (st->hasNestedStates())
+            {
+                const uint32_t found = levelOfState(*st->getNestedStates(), st->getId(), stateId);
+                if (found != 0)
+                    return found;
+            }
+        }
+        return 0;
+    }
+
+    //!< If \p elementId is a transition, or a condition row / operation owned by one, returns
+    //!< that transition's id and sets \p levelOut to the level drawing its source state; else 0.
+    uint32_t transitionForElement(const SMStateData& level, uint32_t levelId, uint32_t elementId, uint32_t& levelOut)
+    {
+        for (const SMStateEntry* st : level.getElements())
+        {
+            if (st == nullptr)
+                continue;
+            for (const SMTransitionEntry* tr : st->getTransitions().getElements())
+            {
+                if (tr == nullptr)
+                    continue;
+                bool match = (tr->getId() == elementId);
+                if (match == false)
+                    for (const SMConditionEntry* leaf : tr->getConditions().collectLeaves())
+                        if ((leaf != nullptr) && (leaf->getId() == elementId)) { match = true; break; }
+                if (match == false)
+                    for (const SMOperationBase* op : tr->getOperations().getOperations())
+                        if ((op != nullptr) && (op->getId() == elementId)) { match = true; break; }
+                if (match)
+                {
+                    levelOut = levelId;
+                    return tr->getId();
+                }
+            }
+            if (st->hasNestedStates())
+            {
+                const uint32_t owner = transitionForElement(*st->getNestedStates(), st->getId(), elementId, levelOut);
+                if (owner != 0)
+                    return owner;
+            }
+        }
+        return 0;
+    }
+
+    //!< The state whose entry/exit/do list owns operation \p opId (and its level), or 0.
+    uint32_t stateForOperation(const SMStateData& level, uint32_t levelId, uint32_t opId, uint32_t& levelOut)
+    {
+        auto owns = [opId](const SMOperationList& ops) -> bool
+        {
+            for (const SMOperationBase* op : ops.getOperations())
+                if ((op != nullptr) && (op->getId() == opId)) return true;
+            return false;
+        };
+        for (const SMStateEntry* st : level.getElements())
+        {
+            if (st == nullptr)
+                continue;
+            if (owns(st->getEntryList()) || owns(st->getExitList()) || owns(st->getDoList()))
+            {
+                levelOut = levelId;
+                return st->getId();
+            }
+            if (st->hasNestedStates())
+            {
+                const uint32_t owner = stateForOperation(*st->getNestedStates(), st->getId(), opId, levelOut);
+                if (owner != 0)
+                    return owner;
+            }
+        }
+        return 0;
+    }
+}
+
+void SMDesign::revealOnCanvas(uint32_t levelId, uint32_t canvasElementId)
+{
+    // The same reveal path the canvas search uses: navigate the level, select through the
+    // shared selection model, and center the viewport on the resulting item.
+    mSceneManager->navigateTo(levelId);
+    mModel.getSelectionModel().setSelection(QList<uint32_t>{ canvasElementId });
+    if (SMCanvasItem* item = getScene().findCanvasItem(canvasElementId))
+    {
+        mView->centerOn(item);
+    }
+}
+
+void SMDesign::navigateToIssue(uint32_t elementId, eDocElementKind kind)
+{
+    const SMStateData& root = mModel.getData().getStates();
+    const uint32_t rootLevel = mSceneManager->getRootLevel();
+
+    switch (kind)
+    {
+    case eDocElementKind::State:
+    {
+        const uint32_t levelId = levelOfState(root, rootLevel, elementId);
+        if (levelId != 0)
+            revealOnCanvas(levelId, elementId);
+        break;
+    }
+
+    case eDocElementKind::Transition:
+    case eDocElementKind::Condition:
+    case eDocElementKind::Operation:
+    {
+        uint32_t levelId = 0;
+        const uint32_t transitionId = transitionForElement(root, rootLevel, elementId, levelId);
+        if (transitionId != 0)
+        {
+            revealOnCanvas(levelId, transitionId);
+            if (mProperties != nullptr)
+            {
+                if ((mPropertiesDock != nullptr) && (mPropertiesDock->widget() == mProperties) && (mPropertiesDock->isVisible() == false))
+                {
+                    mPropertiesDock->show();
+                    mPropertiesDock->raise();
+                }
+                mProperties->focusConditions(transitionId);
+            }
+        }
+        else if (kind == eDocElementKind::Operation)
+        {
+            // A state entry/exit/do operation belongs to a state, not a transition.
+            uint32_t stateLevel = 0;
+            const uint32_t stateId = stateForOperation(root, rootLevel, elementId, stateLevel);
+            if (stateId != 0)
+                revealOnCanvas(stateLevel, stateId);
+        }
+        break;
+    }
+
+    default:
+        // A registry entry: its editor is another page, owned by the window.
+        emit signalNavigateToPage(kind);
+        break;
     }
 }
 

@@ -108,6 +108,13 @@ private slots:
      **/
     void onDeclareRequested(SMDesign::eDeclareKind kind);
 
+    /**
+     * \brief   Switches to the editor page that owns the given element kind, so a validation
+     *          finding on a registry entry brings its page forward (the canvas handles state
+     *          and transition findings itself).
+     **/
+    void onNavigateToPage(eDocElementKind kind);
+
 private:
     bool loadDocument(const QString& documentPath, const QString& sourcePath = QString());
 
