@@ -19,6 +19,8 @@
 
 #include "lusan/view/sm/StateMachine.hpp"
 
+#include "lusan/app/LusanApplication.hpp"
+#include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NavigationDock.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
@@ -36,6 +38,7 @@
 #include "lusan/view/sm/SMOverview.hpp"
 
 #include <QAction>
+#include <QDir>
 #include <QLabel>
 #include <QMessageBox>
 #include <QTimer>
@@ -337,6 +340,42 @@ const QString& StateMachine::fileFilter() const
 {
     static const QString _filterFSM{ "State Machine document (*.fsml)\nAll Files (*.*)" };
     return _filterFSM;
+}
+
+QString StateMachine::suggestedSaveName() const
+{
+    // A titled document already lives on disk -- keep its path as the default.
+    if ((mIsUntitled == false) && (mCurFile.isEmpty() == false))
+    {
+        return mCurFile;
+    }
+
+    // On the first save of an untitled FSM, offer "<MachineName>.fsml" derived from
+    // the Overview -> Details -> Name field instead of the auto-generated placeholder.
+    const QString baseName{ mModel.getData().getOverview().getName().trimmed() };
+    if (baseName.isEmpty())
+    {
+        // No name entered yet -- fall back to the auto-generated NewStateMachineN.fsml.
+        return mCurFile;
+    }
+
+    QString dirPath{ LusanApplication::getWorkspaceSources() };
+    if (dirPath.isEmpty())
+    {
+        dirPath = LusanApplication::getWorkspaceRoot();
+    }
+
+    // If the target directory already holds a FSM with this name, append a sequence
+    // number: "TrafficLight.fsml" -> "TrafficLight1.fsml" -> "TrafficLight2.fsml" ...
+    const QDir dir{ dirPath };
+    const QString suffix{ fileSuffix() };
+    QString fileName{ baseName + "." + suffix };
+    for (uint32_t seq = 1; (dirPath.isEmpty() == false) && dir.exists(fileName); ++ seq)
+    {
+        fileName = baseName + QString::number(seq) + "." + suffix;
+    }
+
+    return dirPath.isEmpty() ? fileName : dir.filePath(fileName);
 }
 
 bool StateMachine::writeToFile(const QString& filePath)

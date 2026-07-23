@@ -97,6 +97,7 @@ protected:
     const QString& newDocumentExt() const override;
     const QString& fileSuffix() const override;
     const QString& fileFilter() const override;
+    QString suggestedSaveName() const override;
     bool writeToFile(const QString& filePath) override;
     bool maybeSave() override;
     void onWindowClosing(bool isActive) override;
