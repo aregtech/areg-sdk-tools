@@ -30,6 +30,7 @@
 #include "lusan/model/sm/SMConstantModel.hpp"
 #include "lusan/model/sm/SMIncludeModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
+#include "lusan/model/sm/SMValidationController.hpp"
 
 #include <QObject>
 #include <QTimer>
@@ -76,6 +77,7 @@ public:
     inline SMConstantModel& getConstantModel();
     inline SMIncludeModel& getIncludeModel();
     inline SMSelectionModel& getSelectionModel();
+    inline SMValidationController& getValidationController();
 
 signals:
     void signalDirtyChanged(bool dirty);
@@ -104,6 +106,7 @@ private:
     SMIncludeModel  mIncludeModel;
     SMSelectionModel mSelectionModel;
     bool            mOpenSuccess;
+    SMValidationController mValidationController; //!< Background structural/reference validation.
 };
 
 inline bool StateMachineModel::openSucceeded() const
@@ -190,6 +193,11 @@ inline SMIncludeModel& StateMachineModel::getIncludeModel()
 inline SMSelectionModel& StateMachineModel::getSelectionModel()
 {
     return mSelectionModel;
+}
+
+inline SMValidationController& StateMachineModel::getValidationController()
+{
+    return mValidationController;
 }
 
 #endif  // LUSAN_MODEL_SM_STATEMACHINEMODEL_HPP

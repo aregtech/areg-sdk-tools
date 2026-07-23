@@ -32,6 +32,8 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMTimerModel.cpp
     ${LUSAN}/model/sm/SMTransitionCommands.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
+    ${LUSAN}/model/sm/SMValidationController.cpp
+    ${LUSAN}/model/sm/SMValidator.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -68,4 +70,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMTimerModel.hpp
     ${LUSAN}/model/sm/SMTransitionCommands.hpp
     ${LUSAN}/model/sm/SMTypeCompat.hpp
+    ${LUSAN}/model/sm/SMValidationController.hpp
+    ${LUSAN}/model/sm/SMValidator.hpp
 )

@@ -108,6 +108,7 @@ StateMachineModel::StateMachineModel(QObject* parent /*= nullptr*/)
     , mIncludeModel  (*this)
     , mSelectionModel(this)
     , mOpenSuccess   (false)
+    , mValidationController(*mData, mNotifier, this)
 {
     mUndoStack.setUndoLimit(100);
     mAutosaveTimer.setSingleShot(false);
@@ -126,6 +127,7 @@ bool StateMachineModel::createNewDocument(const QString& machineName)
         return false;
     }
 
+    mValidationController.setDocument(*mData);
     mUndoStack.clear();
     mUndoStack.setClean();
     mSelectionModel.reset();
@@ -155,6 +157,7 @@ bool StateMachineModel::loadFromFile(const QString& documentPath, const QString&
     mData = std::move(loaded);
     mOpenSuccess = true;
 
+    mValidationController.setDocument(*mData);
     mUndoStack.clear();
     mUndoStack.setClean();
     mSelectionModel.reset();
