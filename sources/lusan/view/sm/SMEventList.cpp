@@ -72,11 +72,13 @@ void SMEventList::buildUi()
     QMenu* addMenu = new QMenu(mButtonAdd);
     addMenu->addAction(mActNewEvent);
     addMenu->addAction(mActNewTimer);
+    // Same split-button decoration as the Data Types and Methods pages (MenuButtonPopup, the "+ v"
+    // look) so the Add button is visually identical across every list page. The main area does a
+    // context-sensitive add (SMEvent::onAddClicked adds an event or a timer by the current row, and
+    // falls back to opening this menu when nothing is selected); the drop-down zone always opens the
+    // New Event / New Timer menu. Do NOT switch this to InstantPopup -- that drew the native
+    // menu-indicator triangle instead of the shared chevron and made this button the odd one out.
     NELusanCommon::decorateToolButton(mButtonAdd, addMenu);
-    // There is no default kind here (an event and a timer are unrelated stimuli), so any click
-    // must present the choice: InstantPopup opens the menu for the whole button, not just the
-    // narrow drop-down zone of a split button.
-    mButtonAdd->setPopupMode(QToolButton::InstantPopup);
 
     QFrame* sepParam = new QFrame(toolbar);
     sepParam->setFrameShape(QFrame::VLine);
@@ -113,6 +115,15 @@ void SMEventList::buildUi()
     mTable->header()->setCascadingSectionResizes(false);
     mTable->header()->setMinimumSectionSize(50);
     mTable->setHeaderLabels(QStringList{ tr("Name:"), tr("Type:"), tr("Value:") });
+
+    // One column policy shared by every list page (Data Types, Attributes, Events, Methods,
+    // Constants): the Name column takes all the horizontal slack (Stretch) so names stay readable,
+    // and every other column fits its content (ResizeToContents). Kept identical to the Methods
+    // table so the Name / Type / Value columns look and behave the same across all pages.
+    QHeaderView* header = mTable->header();
+    header->setSectionResizeMode(0, QHeaderView::Stretch);
+    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(2, QHeaderView::ResizeToContents);
 
     mGroupEvents = new QTreeWidgetItem(mTable);
     mGroupEvents->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);

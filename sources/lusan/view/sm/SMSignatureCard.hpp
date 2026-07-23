@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMSignatureCard.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard call signature card (v7 B5).
+ *  \brief       Lusan application, FSM guard call signature card.
  *
  ************************************************************************/
 
@@ -34,7 +34,7 @@ class QLabel;
 /**
  * \class   SMSignatureCard
  * \brief   The frameless signature card shown under the caret while mapping a call's arguments
- *          (B5): the full declared signature with the active parameter underlined, and a second
+ *          : the full declared signature with the active parameter underlined, and a second
  *          line restating that parameter. It follows the caret and never takes focus.
  **/
 class SMSignatureCard : public QFrame

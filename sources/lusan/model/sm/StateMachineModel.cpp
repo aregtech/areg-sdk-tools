@@ -22,6 +22,7 @@
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/model/sm/SMGuardParser.hpp"
+#include "lusan/model/sm/SMGuardRender.hpp"
 
 #include <QUndoCommand>
 
@@ -31,7 +32,7 @@ namespace
 
     /**
      * \brief   The legacy read-shim (driver decision): a transition still carrying the
-     *          SM-21-02 `<ConditionList>` renders to text and becomes a `<Draft>` guard --
+     *          A legacy `<ConditionList>` renders to text and becomes a `<Draft>` guard --
      *          the user re-resolves it in the editor; nothing is silently dropped.
      **/
     void convertLegacyGuards(SMStateData& level)
@@ -56,6 +57,36 @@ namespace
             if (state->hasNestedStates())
             {
                 convertLegacyGuards(*state->getNestedStates());
+            }
+        }
+    }
+
+    /**
+     * \brief   Refreshes the advisory `name` (R19) on every guard tree in the document just
+     *          before a save, so the human-readable names written to `.fsml` reflect the current
+     *          declarations even after a rename. The name is never read back -- the id binds.
+     **/
+    void refreshGuardNames(const StateMachineData& data, SMStateData& level)
+    {
+        for (SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+            {
+                continue;
+            }
+
+            for (SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                SMGuardNode* tree = (transition != nullptr) ? transition->getGuard().getTree() : nullptr;
+                if (tree != nullptr)
+                {
+                    SMGuardRender::refreshNames(data, transition->getId(), *tree);
+                }
+            }
+
+            if (state->hasNestedStates())
+            {
+                refreshGuardNames(data, *state->getNestedStates());
             }
         }
     }
@@ -144,6 +175,8 @@ bool StateMachineModel::saveToFile(const QString& filePath /*= QString()*/)
         return false;
     }
 
+    refreshGuardNames(*mData, mData->getStates());
+
     const QString previousPath = mData->getFilePath();
     if (mData->writeToFile(filePath) == false)
     {
@@ -170,6 +203,7 @@ bool StateMachineModel::writeAutosave()
         return true;
     }
 
+    refreshGuardNames(*mData, mData->getStates());
     return mData->writeToAutosaveFile(StateMachineData::autosavePathForDocument(documentPath));
 }
 

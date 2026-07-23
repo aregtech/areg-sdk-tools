@@ -267,7 +267,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mBreadcrumbLayout->setSpacing(4);
 
     // The top bar carries the breadcrumb (left, cleared/rebuilt on level change) and the
-    // canvas search box (right, persistent) so navigating large machines stays cheap (SM-21-08).
+    // canvas search box (right, persistent) so navigating large machines stays cheap.
     QWidget* topBar = new QWidget(this);
     QHBoxLayout* topLayout = new QHBoxLayout(topBar);
     topLayout->setContentsMargins(0, 0, 8, 0);
@@ -311,7 +311,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     connect(mSceneManager, &SMSceneManager::signalLevelChanged, this, &SMDesign::onLevelChanged);
     connect(mSceneManager, &SMSceneManager::signalGuardEditRequested, this, [this](uint32_t transitionId)
     {
-        // Edge-label double-click (B13): surface the Properties panel and focus the guard field.
+        // Edge-label double-click: surface the Properties panel and focus the guard field.
         if (mProperties == nullptr)
         {
             return;
@@ -335,7 +335,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     buildDesignPanels();
     mView->installEventFilter(this);
 
-    // Context-sensitive canvas/state/transition/note menus (spec 9.3 rule 2), built on
+    // Context-sensitive canvas/state/transition/note menus, built on
     // demand from the same action set the toolbar and Design menu reuse. A QGraphicsView
     // routes context-menu events through contextMenuEvent(), so a Qt::CustomContextMenu
     // policy never fires customContextMenuRequested; the view's own signal (emitted from its
@@ -396,7 +396,7 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == mSearchEdit)
     {
-        // Esc abandons the search and hands focus back to the canvas (SM-21-08).
+        // Esc abandons the search and hands focus back to the canvas.
         if ((event->type() == QEvent::KeyPress) && (static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape))
         {
             mSearchEdit->clear();   // clears the match cache and status via textChanged
@@ -541,7 +541,7 @@ void SMDesign::setupActions()
     });
 
     // The grid style is an application-level display preference (the document persists
-    // only the grid size and visibility, spec 7.6).
+    // only the grid size and visibility).
     mActGridDots = new QAction(tr("Dotted Grid"), this);
     mActGridDots->setCheckable(true);
     {
@@ -559,7 +559,7 @@ void SMDesign::setupActions()
     // the very first paint (issue #514).
     getScene().setGridStyle(mActGridDots->isChecked() ? NESMDesign::eGridStyle::Dots : NESMDesign::eGridStyle::Lines);
 
-    // The dot diameter is likewise an application-level display preference (spec 7.6 keeps
+    // The dot diameter is likewise an application-level display preference (keeps
     // only grid size/visibility in the document). Seed the scene from the stored value.
     {
         QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
@@ -946,7 +946,7 @@ void SMDesign::buildDesignPanels()
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
 
-    // Validation results (S15): a bottom dock, hidden until the user opens it; every guard
+    // Validation results: a bottom dock, hidden until the user opens it; every guard
     // entry navigates to its transition's Conditions tab.
     mValidation = new SMValidationPanel(mModel);
     mValidationDock = new QDockWidget(tr("Validation"), this);
@@ -1195,7 +1195,7 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
 
     if ((state != nullptr) || (edge != nullptr) || (note != nullptr))
     {
-        // The shared command group (spec 9.3): present in every element context so the four
+        // The shared command group: present in every element context so the four
         // core actions stay reachable (the canvas menu above already leads with them).
         menu.addSeparator();
         menu.addAction(mActAddState);
@@ -1274,7 +1274,7 @@ void SMDesign::openTransitionOperationsDialog(uint32_t transitionId)
     }
 
     const QString stim = transition->getStimulus().isEmpty() ? tr("transition") : transition->getStimulus();
-    // The transition is its own Param scope (spec 6.8): a transition operation may map stimulus params.
+    // The transition is its own Param scope: a transition operation may map stimulus params.
     SMOperationsDialog dialog(mModel, tr("Operations -- %1").arg(stim), transitionId, eDocElementKind::Transition, transitionId, transition, &transition->getOperations(), this);
     dialog.exec();
 }
@@ -2209,7 +2209,7 @@ void SMDesign::rebuildBreadcrumb()
 }
 
 //////////////////////////////////////////////////////////////////////////
-// Canvas search / go-to (SM-21-08)
+// Canvas search / go-to
 //////////////////////////////////////////////////////////////////////////
 
 void SMDesign::onSearchTextChanged()

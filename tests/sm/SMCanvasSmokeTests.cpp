@@ -1564,11 +1564,8 @@ int main(int argc, char* argv[])
         CHECK(props->currentPage() == SMPropertiesPanel::PageTransition);
         CHECK(props->currentElementId() == firstTxId);
 
-        QToolButton* structureToggle = props->findChild<QToolButton*>(QStringLiteral("smGuardLensToggle"));
         QToolButton* tryToggle = props->findChild<QToolButton*>(QStringLiteral("smGuardTryToggle"));
-        CHECK((structureToggle != nullptr) && (structureToggle->icon().isNull() == false));
         CHECK((tryToggle != nullptr) && (tryToggle->icon().isNull() == false));
-        CHECK((structureToggle != nullptr) && (structureToggle->text() == QStringLiteral("Structure")));
         CHECK((tryToggle != nullptr) && (tryToggle->text() == QStringLiteral("Try it")));
 
         QTextEdit* guardField = props->findChild<QTextEdit*>(QStringLiteral("smGuardField"));
@@ -1595,21 +1592,6 @@ int main(int argc, char* argv[])
             QApplication::processEvents();
         }
 
-        QLabel* lensEmpty = nullptr;
-        for (QLabel* label : props->findChildren<QLabel*>())
-        {
-            if (label->text() == QStringLiteral("empty guard -- the transition always fires"))
-            {
-                lensEmpty = label;
-                break;
-            }
-        }
-        CHECK(lensEmpty != nullptr);
-        if (lensEmpty != nullptr)
-        {
-            CHECK(lensEmpty->wordWrap());
-            CHECK(lensEmpty->sizePolicy().horizontalPolicy() == QSizePolicy::Ignored);
-        }
         CHECK(tryToggle != nullptr);
         if (tryToggle != nullptr)
         {

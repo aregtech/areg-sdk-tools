@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMGuardStatusLine.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard status line + provenance chips (v7 B1 5-6).
+ *  \brief       Lusan application, FSM guard status line + provenance chips.
  *
  ************************************************************************/
 
@@ -51,7 +51,22 @@ SMGuardStatusLine::SMGuardStatusLine(QWidget* parent /*= nullptr*/)
     mStatus = new QLabel(this);
     mStatus->setObjectName(QStringLiteral("smGuardStatus"));
     mStatus->setTextFormat(Qt::RichText);
-    mStatus->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    // LinksAccessibleByMouse is required in addition to the selectable flag: without it the
+    // recovery hyperlink renders but never fires linkActivated (R20).
+    mStatus->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::LinksAccessibleByMouse);
+    connect(mStatus, &QLabel::linkActivated, this, [this](const QString& href)
+    {
+        // The href encodes the fix as `fix:<id>:<payload>` (payload may be empty); split on the
+        // first ':' after the scheme so a payload that itself contains ':' stays intact.
+        if (href.startsWith(QStringLiteral("fix:")))
+        {
+            const QString rest = href.mid(4);
+            const int sep = rest.indexOf(QLatin1Char(':'));
+            const QString fixId   = (sep >= 0) ? rest.left(sep) : rest;
+            const QString payload = (sep >= 0) ? rest.mid(sep + 1) : QString();
+            emit suggestionActivated(fixId, payload);
+        }
+    });
     box->addWidget(mStatus);
 
     mChips = new QLabel(this);
@@ -74,27 +89,42 @@ void SMGuardStatusLine::setStatus(  NEGuardStyle::eSeverity severity
     mVerdict  = verdict;
     mPreview  = generatedPreview;
 
-    if (handlerChips.isEmpty())
-    {
-        mChips->hide();
-    }
-    else
-    {
-        const QColor color = NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Handler);
-        mChips->setText(QStringLiteral("<span style='color:%1;'>uses handler:</span> %2")
-                            .arg(color.name(), handlerChips.join(QStringLiteral(", ")).toHtmlEscaped()));
-        mChips->setToolTip(handlerChips.join(QStringLiteral("\n")));
-        mChips->show();
-    }
+    // The generated preview and the `uses handler:` chips are NO LONGER shown here:
+    // they live in the `Generated` accordion section, which the developer opens only
+    // when interested. The status line keeps exactly one job -- the verdict -- while \ref previewText
+    // still reports the byte-exact generator output for the 23c contract.
+    Q_UNUSED(handlerChips);
+    mChips->hide();
 
     updateLabel();
     show();
+}
+
+void SMGuardStatusLine::setSuggestion(const QString& fixId, const QString& payload, const QString& label)
+{
+    if ((fixId == mSugFixId) && (payload == mSugPayload) && (label == mSugLabel))
+    {
+        return;
+    }
+
+    mSugFixId   = fixId;
+    mSugPayload = payload;
+    mSugLabel   = label;
+
+    // Only re-render while a verdict is shown; an empty guard keeps the line hidden.
+    if (mVerdict.isEmpty() == false)
+    {
+        updateLabel();
+    }
 }
 
 void SMGuardStatusLine::clearStatus()
 {
     mVerdict.clear();
     mPreview.clear();
+    mSugFixId.clear();
+    mSugPayload.clear();
+    mSugLabel.clear();
     mStatus->clear();
     mChips->hide();
     hide();
@@ -102,22 +132,28 @@ void SMGuardStatusLine::clearStatus()
 
 void SMGuardStatusLine::updateLabel()
 {
+    // `ok` alone when the guard is sound; `err: <what is wrong>` / `warn: <what is risky>` when it
+    // is not -- the severity key carries the state and the message carries the detail, nothing else.
     const QColor sevColor = NEGuardStyle::severityColor(mSeverity);
-    QString html = QStringLiteral("<span style='color:%1; font-weight:bold;'>%2</span>&nbsp;&nbsp;%3")
-                       .arg(sevColor.name(), severityWord(mSeverity), mVerdict.toHtmlEscaped());
-
-    if (mPreview.isEmpty() == false)
+    QString html = QStringLiteral("<span style='color:%1; font-weight:bold;'>%2</span>")
+                       .arg(sevColor.name(), severityWord(mSeverity));
+    if (mSeverity == NEGuardStyle::eSeverity::Ok)
     {
-        const QString prefix = QStringLiteral(" -- generated: ");
-        const int reserved = mStatus->fontMetrics().horizontalAdvance(severityWord(mSeverity) + QStringLiteral("  ") + mVerdict + prefix);
-        const int avail = qMax(60, mStatus->width() - reserved - 8);
-        const QString elided = mStatus->fontMetrics().elidedText(mPreview, Qt::ElideMiddle, avail);
-        html += (prefix + QStringLiteral("<span style='font-family:monospace;'>%1</span>").arg(elided.toHtmlEscaped()));
-        mStatus->setToolTip(mPreview);
+        mStatus->setToolTip(QString());
     }
     else
     {
-        mStatus->setToolTip(QString());
+        html += QStringLiteral(": %1").arg(mVerdict.toHtmlEscaped());
+        mStatus->setToolTip(mVerdict);
+    }
+
+    // The R20 recovery affordance: a trailing `  ->  <label>` hyperlink when a suggestion exists.
+    // No inline color -- the anchor uses the palette's Link role, so it stays theme-correct and
+    // carries no literal color. The href encodes the fix id + payload for the linkActivated route.
+    if (mSugFixId.isEmpty() == false)
+    {
+        html += QStringLiteral("  -&gt;  <a href=\"fix:%1:%2\">%3</a>")
+                    .arg(mSugFixId, mSugPayload.toHtmlEscaped(), mSugLabel.toHtmlEscaped());
     }
 
     mStatus->setText(html);

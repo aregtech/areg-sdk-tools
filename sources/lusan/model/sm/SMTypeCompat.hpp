@@ -25,11 +25,11 @@
 
 /**
  * \brief   Minimal type-compatibility check for a condition comparison row, implementing
- *          the primitive rules of spec 6.9: the numeric widening ladders
+ *          the primitive rules: the numeric widening ladders
  *          (`uint8..uint64`, `int8..int64`, `float -> double`, integer of at most 32 bits
  *          `-> double`), and the `bool`/`String`/enumeration `Equal`/`NotEqual`-only rule.
  *          This is a seed helper: it judges the `.siml` primitive vocabulary directly and
- *          treats any other (declared) type by exact-name equality only. SM-25 extends it
+ *          treats any other (declared) type by exact-name equality only. a later pass extends it
  *          with the document's type registry (enum vs structure vs container distinction,
  *          "no compare" for structure/container, enum literal resolution).
  **/
@@ -39,7 +39,7 @@ public:
     /**
      * \enum    eRank
      * \brief   How well a source expression type fits a declared target type. The
-     *          argument-mapping grid (v7 B6) shows one status per row from this rank.
+     *          argument-mapping grid shows one status per row from this rank.
      **/
     enum class eRank
     {

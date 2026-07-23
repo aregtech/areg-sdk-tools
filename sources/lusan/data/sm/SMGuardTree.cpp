@@ -149,20 +149,28 @@ SMGuardNode* SMGuardNode::makeVerbatim(eKind kind, const QString& text)
 //////////////////////////////////////////////////////////////////////////
 
 SMGuardNode::SMGuardNode(eKind kind)
-    : mKind     (kind)
-    , mOp       (eCmpOp::Eq)
-    , mSymbolId (0u)
-    , mText     ( )
-    , mChildren ( )
+    : mKind         (kind)
+    , mOp           (eCmpOp::Eq)
+    , mSymbolId     (0u)
+    , mArgFormalId  (0u)
+    , mBreakBefore  (false)
+    , mIndent       (0)
+    , mCacheName    ( )
+    , mText         ( )
+    , mChildren     ( )
 {
 }
 
 SMGuardNode::SMGuardNode(const SMGuardNode& src)
-    : mKind     (src.mKind)
-    , mOp       (src.mOp)
-    , mSymbolId (src.mSymbolId)
-    , mText     (src.mText)
-    , mChildren ( )
+    : mKind         (src.mKind)
+    , mOp           (src.mOp)
+    , mSymbolId     (src.mSymbolId)
+    , mArgFormalId  (src.mArgFormalId)
+    , mBreakBefore  (src.mBreakBefore)
+    , mIndent       (src.mIndent)
+    , mCacheName    (src.mCacheName)
+    , mText         (src.mText)
+    , mChildren     ( )
 {
     mChildren.reserve(src.mChildren.size());
     for (const SMGuardNode* child : src.mChildren)
@@ -184,10 +192,14 @@ SMGuardNode& SMGuardNode::operator = (const SMGuardNode& other)
         qDeleteAll(mChildren);
         mChildren.clear();
 
-        mKind     = other.mKind;
-        mOp       = other.mOp;
-        mSymbolId = other.mSymbolId;
-        mText     = other.mText;
+        mKind         = other.mKind;
+        mOp           = other.mOp;
+        mSymbolId     = other.mSymbolId;
+        mArgFormalId  = other.mArgFormalId;
+        mBreakBefore  = other.mBreakBefore;
+        mIndent       = other.mIndent;
+        mCacheName    = other.mCacheName;
+        mText         = other.mText;
         mChildren.reserve(other.mChildren.size());
         for (const SMGuardNode* child : other.mChildren)
         {
@@ -207,6 +219,11 @@ SMGuardNode* SMGuardNode::addChild(SMGuardNode* child)
 bool SMGuardNode::equals(const SMGuardNode& other) const
 {
     if ((mKind != other.mKind) || (mChildren.size() != other.mChildren.size()))
+        return false;
+
+    // The formal binding is part of a node's identity (a Call's arg child; 0 elsewhere),
+    // so a re-bind to a different formal is a real difference the round-trip test sees.
+    if (mArgFormalId != other.mArgFormalId)
         return false;
 
     if ((mKind == eKind::Cmp) && (mOp != other.mOp))
@@ -254,10 +271,28 @@ void SMGuardNode::writeToXml(QXmlStreamWriter& xml) const
     case eKind::Const:
     case eKind::Param:
         xml.writeAttribute(XmlSM::xmlSMAttributeGuardRefId, QString::number(mSymbolId));
+        // Advisory display name (R19): human-readable only, refreshed from the id before every
+        // save and never read back. Written only when resolved, so a tree whose names were never
+        // refreshed (e.g. a unit-test fixture) stays byte-identical.
+        if (mCacheName.isEmpty() == false)
+        {
+            xml.writeAttribute(XmlSM::xmlSMAttributeGuardName, mCacheName);
+        }
         break;
 
     default:
         break;
+    }
+
+    // User-owned line layout: written only when set, so a single-line guard and an
+    // untouched legacy tree keep their exact bytes. The code generator never reads these.
+    if (mBreakBefore)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeGuardBreak, QStringLiteral("1"));
+    }
+    if (mIndent > 0)
+    {
+        xml.writeAttribute(XmlSM::xmlSMAttributeGuardIndent, QString::number(mIndent));
     }
 
     if (isVerbatim())
@@ -266,10 +301,17 @@ void SMGuardNode::writeToXml(QXmlStreamWriter& xml) const
     }
     else if (mKind == eKind::Call)
     {
-        // Each argument wraps in <Arg>, in declared-parameter order.
+        // Each argument wraps in <Arg>, in declared-parameter order. The wrapper carries the
+        // bound formal's id (Option A) when known; a legacy arg (0) writes no id and is
+        // matched back to a formal by position on load.
         for (const SMGuardNode* child : mChildren)
         {
             xml.writeStartElement(XmlSM::xmlSMElementGuardArg);
+            if (child->mArgFormalId != 0u)
+            {
+                xml.writeAttribute(XmlSM::xmlSMAttributeGuardRefId, QString::number(child->mArgFormalId));
+            }
+
             child->writeToXml(xml);
             xml.writeEndElement();
         }
@@ -306,6 +348,13 @@ SMGuardNode* SMGuardNode::readFromXml(QXmlStreamReader& xml)
         node->mSymbolId = attributes.value(XmlSM::xmlSMAttributeGuardRefId).toUInt();
     }
 
+    // Line layout: absent attributes read back as no-break / zero-indent, so a legacy
+    // tree loads exactly as before.
+    node->mBreakBefore = (attributes.value(XmlSM::xmlSMAttributeGuardBreak).toString() == QLatin1StringView("1"));
+    node->mIndent      = attributes.value(XmlSM::xmlSMAttributeGuardIndent).toInt();
+    // The advisory `name` (R19) is deliberately NOT read: it is a write-only human aid and the
+    // symbol id is the sole binding. It is refreshed from the id again on the next save.
+
     if (node->isVerbatim())
     {
         node->mText = xml.readElementText(QXmlStreamReader::IncludeChildElements);
@@ -318,11 +367,15 @@ SMGuardNode* SMGuardNode::readFromXml(QXmlStreamReader& xml)
         {
             if (xml.name() == XmlSM::xmlSMElementGuardArg)
             {
+                // Capture the wrapper's formal id BEFORE descending into the operand (the
+                // reader's attributes move with it); a legacy <Arg> has none -> 0.
+                const uint32_t formalId = xml.attributes().value(XmlSM::xmlSMAttributeGuardRefId).toUInt();
                 if (xml.readNextStartElement())
                 {
                     SMGuardNode* arg = readFromXml(xml);
                     if (arg != nullptr)
                     {
+                        arg->mArgFormalId = formalId;
                         node->mChildren.append(arg);
                     }
                     // Consume the rest of the <Arg> element.

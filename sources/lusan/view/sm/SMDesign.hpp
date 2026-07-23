@@ -74,8 +74,8 @@ public:
     /**
      * \enum    eDeclareKind
      * \brief   The registry entry kind of one "Add Declaration" dropdown entry
-     *          (spec 9.2). Submachine imports are not listed - no page exists yet for
-     *          them (SM-29).
+     *          . Submachine imports are not listed - no page exists yet for
+     *          them.
      **/
     enum class eDeclareKind
     {
@@ -112,7 +112,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \brief   Shows or hides the in-page drawing toolbar (spec 9.2/9.3: hideable via the
+     * \brief   Shows or hides the in-page drawing toolbar (: hideable via the
      *          application View menu; every toolbar command remains reachable via the
      *          Design menu, context menus, and shortcuts).
      **/
@@ -190,7 +190,7 @@ public:
     /**
      * \brief   The undo/redo actions (no shortcut of their own - Ctrl+Z/Ctrl+Y are the
      *          global Edit-menu shortcut; these exist so the canvas toolbar/Design menu
-     *          carry the "General" group's Undo/Redo per spec 9.2).
+     *          carry the "General" group's Undo/Redo).
      **/
     inline QAction* actionUndo() const;
     inline QAction* actionRedo() const;
@@ -306,7 +306,7 @@ public:
     /**
      * \brief   True when \p action activates a placement tool (Add State/Final/Transition/
      *          Note); on true, \p toolOut receives the tool so the toolbar can arm it sticky
-     *          on a double-click (spec 9.2 rule 1).
+     *          on a double-click.
      **/
     bool placementToolFor(QAction* action, NESMDesign::eCanvasTool& toolOut) const;
 
@@ -321,7 +321,7 @@ public:
 signals:
     /**
      * \brief   Emitted by a Declare-dropdown entry; StateMachine switches to the owning
-     *          page and starts a new entry of the requested kind (spec 9.2).
+     *          page and starts a new entry of the requested kind.
      **/
     void signalDeclareRequested(SMDesign::eDeclareKind kind);
 
@@ -351,7 +351,7 @@ private slots:
 
     /**
      * \brief   Builds and shows the context-sensitive right-click menu (canvas / state /
-     *          transition / note, spec 9.3 rule 2) at the given viewport position.
+     *          transition / note) at the given viewport position.
      **/
     void onViewContextMenuRequested(const QPoint& pos);
 
@@ -499,7 +499,7 @@ private:
 
     /**
      * \brief   Opens a color picker and applies the chosen color to every selected item of
-     *          the given kind, as one undo step (spec 9.2 "State Color"/"analogous" edge
+     *          the given kind, as one undo step ("State Color"/"analogous" edge
      *          color); no-op when the selection has none of that kind.
      **/
     void applyColorToSelection(eColorTarget target);
@@ -577,7 +577,7 @@ private:
 
     /**
      * \brief   Recomputes the canvas-search matches for the current query and jumps to the
-     *          first (SM-21-08). Empty query clears the affordance; no match leaves the
+     *          first. Empty query clears the affordance; no match leaves the
      *          canvas unchanged with a "No match" note.
      **/
     void onSearchTextChanged();
@@ -600,7 +600,7 @@ private:
     /**
      * \brief   Collects the matches of \p query over state names, transition stimuli, and
      *          transition targets, recursing into painted submachines. A local name scan
-     *          until SM-26's shared search index lands (one index, two surfaces).
+     *          until a shared search index lands (one index, two surfaces).
      **/
     void collectSearchHits(const QString& query, const SMStateData& level, uint32_t levelId, QList<SearchHit>& out) const;
 
@@ -621,7 +621,7 @@ private:
     QToolBar*           mToolBar;       //!< The in-page drawing toolbar (movable to the page edges).
     QDockWidget*        mPropertiesDock;//!< The Properties dock (right, top) inside the Design page.
     QDockWidget*        mOutlineDock;   //!< The Outline dock (right, below Properties) inside the Design page.
-    QDockWidget*        mValidationDock;//!< The Validation results dock (bottom, S15) inside the Design page.
+    QDockWidget*        mValidationDock;//!< The Validation results dock (bottom) inside the Design page.
     SMPropertiesPanel*  mProperties;    //!< The Properties editor hosted in mPropertiesDock.
     SMOutlinePanel*     mOutline;       //!< The Outline tree hosted in mOutlineDock.
     SMValidationPanel*  mValidation;    //!< The validation results list hosted in mValidationDock.

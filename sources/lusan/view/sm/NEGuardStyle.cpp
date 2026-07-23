@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/NEGuardStyle.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard editor visual tokens (v7 B15, one place).
+ *  \brief       Lusan application, FSM guard editor visual tokens.
  *
  ************************************************************************/
 
@@ -30,14 +30,18 @@ bool NEGuardStyle::isDark()
 
 QColor NEGuardStyle::ownerColor(eOwner owner)
 {
+    // Dark hues are tuned to clear WCAG AA (>= 4.5:1) against the LIGHTEST dark editor surface
+    // (Nord base #3b4252); they then exceed AA on the darker dark surfaces (ModernDark, Midnight).
+    // The owner glyph (ownerGlyph) is the load-bearing color-blind/grayscale channel in both modes.
+    // Light hues are unchanged (any AA gaps there are a separate task).
     const bool dark = isDark();
     switch (owner)
     {
-    case eOwner::Stimulus:  return dark ? QColor(0x6F, 0xA8, 0xF5) : QColor(0x2F, 0x6F, 0xD0);
-    case eOwner::Fsm:       return dark ? QColor(0x4F, 0xC0, 0x9E) : QColor(0x1F, 0x8A, 0x70);
-    case eOwner::Handler:   return dark ? QColor(0xE0, 0x8A, 0x50) : QColor(0xC0, 0x5A, 0x1F);
-    case eOwner::Literal:   return dark ? QColor(0x9A, 0x9A, 0x9A) : QColor(0x6A, 0x6A, 0x6A);
-    case eOwner::Raw:       return dark ? QColor(0x9A, 0x9A, 0x9A) : QColor(0x6A, 0x6A, 0x6A);
+    case eOwner::Stimulus:  return dark ? QColor(0x80, 0xB2, 0xF6) : QColor(0x2F, 0x6F, 0xD0);
+    case eOwner::Fsm:       return dark ? QColor(0x53, 0xC1, 0xA0) : QColor(0x1F, 0x8A, 0x70);
+    case eOwner::Handler:   return dark ? QColor(0xE6, 0xA0, 0x70) : QColor(0xC0, 0x5A, 0x1F);
+    case eOwner::Literal:   return dark ? QColor(0xB0, 0xB0, 0xB0) : QColor(0x6A, 0x6A, 0x6A);
+    case eOwner::Raw:       return dark ? QColor(0xB0, 0xB0, 0xB0) : QColor(0x6A, 0x6A, 0x6A);
     case eOwner::Operator:
     default:                return QApplication::palette().color(QPalette::WindowText);
     }
@@ -45,13 +49,17 @@ QColor NEGuardStyle::ownerColor(eOwner owner)
 
 QColor NEGuardStyle::severityColor(eSeverity severity)
 {
+    // Dark severity hues clear WCAG AA (>= 4.5:1) against the lightest dark surface (Nord #3b4252).
+    // Severity has no glyph channel in the field underline, so the status-line icon + text carry the
+    // Ok/Warn/Err distinction where two hues land at a similar grayscale luminance (Err is a light
+    // coral: a strict-AA red on a mid-dark surface cannot stay fully saturated -- sRGB luminance).
     const bool dark = isDark();
     switch (severity)
     {
-    case eSeverity::Ok:     return dark ? QColor(0x5F, 0xB8, 0x63) : QColor(0x2E, 0x7D, 0x32);
+    case eSeverity::Ok:     return dark ? QColor(0x72, 0xC1, 0x76) : QColor(0x2E, 0x7D, 0x32);
     case eSeverity::Warn:   return dark ? QColor(0xD8, 0xB0, 0x40) : QColor(0xB8, 0x86, 0x0B);
     case eSeverity::Err:
-    default:                return dark ? QColor(0xE0, 0x6A, 0x5C) : QColor(0xC0, 0x39, 0x2B);
+    default:                return dark ? QColor(0xEA, 0x9B, 0x92) : QColor(0xC0, 0x39, 0x2B);
     }
 }
 
@@ -60,14 +68,21 @@ QColor NEGuardStyle::autoMapTint()
     return isDark() ? QColor(0x27, 0x3A, 0x52) : QColor(0xDC, 0xE9, 0xF9);
 }
 
+QColor NEGuardStyle::unmappedTint()
+{
+    // A warm amber wash, deliberately distinct from the blue auto-map tint (a slot that IS filled,
+    // just unvisited). Both values sit behind dark text/light text without dropping legibility.
+    return isDark() ? QColor(0x5A, 0x48, 0x1C) : QColor(0xFB, 0xEE, 0xC8);
+}
+
 QString NEGuardStyle::ownerGlyph(eOwner owner)
 {
     switch (owner)
     {
     case eOwner::Stimulus:  return QStringLiteral("a");
-    case eOwner::Fsm:       return QStringLiteral("#");
+    case eOwner::Fsm:       return QStringLiteral("f");
     case eOwner::Handler:   return QStringLiteral("h");
-    case eOwner::Raw:       return QStringLiteral("<>");
+    case eOwner::Raw:       return QStringLiteral("r");
     case eOwner::Literal:   return QStringLiteral("=");
     case eOwner::Operator:
     default:                return QString();

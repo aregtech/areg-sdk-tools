@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMFixBar.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard quick-fix bar (v7 B2).
+ *  \brief       Lusan application, FSM guard quick-fix bar.
  *
  ************************************************************************/
 

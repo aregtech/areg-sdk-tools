@@ -24,9 +24,12 @@
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMOperationCommands.hpp"
+#include "lusan/view/sm/SMOperationsEditor.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 #include "lusan/model/sm/SMGuardCommands.hpp"
@@ -38,18 +41,20 @@
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
+#include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
+#include "lusan/view/sm/SMGuardCallsOutline.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
-#include "lusan/view/sm/SMMappingGrid.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
-#include "lusan/view/sm/SMStructureLens.hpp"
 #include "lusan/view/sm/SMTryStrip.hpp"
 #include "lusan/view/sm/SMValidationPanel.hpp"
 
 #include <QApplication>
 #include <QComboBox>
+#include "lusan/view/sm/SMAccordion.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -61,6 +66,8 @@
 #include <QTabWidget>
 #include <QTextCursor>
 #include <QToolButton>
+#include <QVBoxLayout>
+#include <cmath>
 #include <cstdio>
 
 namespace
@@ -87,6 +94,28 @@ namespace
             std::printf("  [FAIL] %s\n         expected: %s\n         actual  : %s\n",
                         what, expected.toStdString().c_str(), actual.toStdString().c_str());
         }
+    }
+
+    // WCAG 2.1 relative-luminance contrast, used by the theme-contrast sweep to prove every dark
+    // guard token clears AA (>= 4.5:1) against the real app dark editor surfaces.
+    double srgbLinear(int channel)
+    {
+        const double v = channel / 255.0;
+        return (v <= 0.03928) ? (v / 12.92) : std::pow((v + 0.055) / 1.055, 2.4);
+    }
+
+    double relativeLuminance(const QColor& c)
+    {
+        return (0.2126 * srgbLinear(c.red())) + (0.7152 * srgbLinear(c.green())) + (0.0722 * srgbLinear(c.blue()));
+    }
+
+    double contrastRatio(const QColor& a, const QColor& b)
+    {
+        const double la = relativeLuminance(a);
+        const double lb = relativeLuminance(b);
+        const double hi = qMax(la, lb);
+        const double lo = qMin(la, lb);
+        return (hi + 0.05) / (lo + 0.05);
     }
 
     void pump(int ms)
@@ -155,6 +184,18 @@ namespace
         return file.open(QIODevice::WriteOnly) && (file.write(bytes) == bytes.size());
     }
 
+    //!< The item texts of a combo, in order (used to assert what a merged value cell offers).
+    QStringList comboItems(const QComboBox* combo)
+    {
+        QStringList out;
+        for (int i = 0; i < combo->count(); ++i)
+        {
+            out.append(combo->itemText(i));
+        }
+
+        return out;
+    }
+
     //!< The <Expr>...</Expr> block of the saved document (the ID-bound tree).
     QString exprBlock(const QByteArray& bytes)
     {
@@ -185,11 +226,6 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardField")) != nullptr, "S1: smGuardField");
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardStatus")) != nullptr, "S2: smGuardStatus");
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardChips")) != nullptr, "S3: smGuardChips");
-    check(bar.findChild<QWidget*>(QStringLiteral("smGuardLens")) != nullptr, "S5: smGuardLens");
-    check(bar.findChild<QWidget*>(QStringLiteral("smLensAdd")) != nullptr, "S5: smLensAdd");
-    check(bar.findChild<QWidget*>(QStringLiteral("smLensExplain")) != nullptr, "S5/S13: smLensExplain");
-    check(bar.findChild<QWidget*>(QStringLiteral("smLensPill_0")) != nullptr, "S5: smLensPill_<path>");
-    check(bar.findChild<QWidget*>(QStringLiteral("smLensJoin_root")) != nullptr, "S5: smLensJoin_<group>");
     check(bar.findChild<QWidget*>(QStringLiteral("smGuardTry")) != nullptr, "S6: smGuardTry");
 
     // S4: the island editor (open it for a synthetic island).
@@ -198,32 +234,26 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     check(bar.findChild<QWidget*>(QStringLiteral("smIslandBody")) != nullptr, "S4: smIslandBody");
     bar.islandEditor()->hide();
 
-    // S7: the completion catalog popup.
+    // S7: the completion catalog popup. The old S7 `smSymbolPopup` was retired in SM-21-03; the
+    // single top-level completer is now `SMRefCompleter` (objectName smRefCompleter, D-POPUP).
     SMGuardField* field = bar.field();
     field->setFocus();
     field->openCompletion();
     pump(100);
     check(QApplication::activeWindow() != nullptr, "a window is active for the popup");
-    QWidget* popup = nullptr;
-    for (QWidget* top : QApplication::topLevelWidgets())
-    {
-        if (top->objectName() == QStringLiteral("smSymbolPopup"))
-        {
-            popup = top;
-        }
-    }
-    check(popup != nullptr, "S7: smSymbolPopup");
+    QWidget* popup = field->findChild<QWidget*>(QStringLiteral("smRefCompleter"));
+    check(popup != nullptr, "S7: smRefCompleter");
     if (popup != nullptr)
     {
         popup->hide();
     }
 
-    // S9: the mapping grid + generated footer.
-    bar.grid()->openFor(transId, { 1, 0 }, bar.mapToGlobal(QPoint(24, 240)));
+    // S9 (retired grid -> inline accordion Arguments): the Conditions pickup list + the caret-driven
+    // shared Arguments table (SM-21 bug-fix, 2026-07-21).
+    check(bar.accordion()->objectName() == QStringLiteral("smGuardAccordion"), "S9: smGuardAccordion");
+    check(bar.calls()->insertRowCount() >= 1, "S9: the Conditions pickup list offers condition method(s)");
     pump(150);
-    check(bar.grid()->objectName() == QStringLiteral("smMapGrid"), "S9: smMapGrid");
-    check(bar.grid()->findChild<QWidget*>(QStringLiteral("smMapGridGen")) != nullptr, "S9: smMapGridGen");
-    bar.grid()->hide();
+    check(bar.args() != nullptr, "S9: the shared Arguments table exists");
 
     // S6 open: try strip rows.
     bar.tryStrip()->setOpen(true);
@@ -249,7 +279,8 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     check(panel.findChild<QWidget*>(QStringLiteral("smValidationList")) != nullptr, "S15: smValidationList");
     panel.hide();
 
-    // S1 tabs: the properties panel hosts [General|Conditions] as smTransTabs.
+    // S1 tabs: the properties panel hosts [General|Conditions|Actions] as smTransTabs (the
+    // Actions tab was added in SM-23; Conditions stays index 1).
     SMPropertiesPanel props(model);
     props.resize(520, 640);
     props.show();
@@ -259,11 +290,55 @@ static void sweepObjectNames(StateMachineModel& model, uint32_t transId, const Q
     check(tabs != nullptr, "S1: smTransTabs");
     if (tabs != nullptr)
     {
-        check(tabs->count() == 2, "smTransTabs has General + Conditions");
+        check(tabs->count() == 3, "smTransTabs has General + Conditions + Actions");
         props.focusConditions(transId);
         pump(100);
         check(tabs->currentIndex() == 1, "focusConditions lands on the Conditions tab");
         grab(&props, grabDir, "u4-properties-conditions.png");
+    }
+
+    // The state page: [General|Enter|Do|Exit], with the General tab OPEN on arrival and stable in
+    // width however its sections are toggled (the two Properties-panel bugs of 2026-07-22).
+    uint32_t stateId = 0u;
+    for (const SMStateEntry* state : model.getData().getStates().getElements())
+    {
+        if ((state != nullptr) && (state->getTransitions().getElementCount() > 0))
+        {
+            stateId = state->getId();
+            break;
+        }
+    }
+
+    if (stateId != 0u)
+    {
+        model.getSelectionModel().setSelection({ stateId });
+        pump(200);
+
+        QTabWidget* stateTabs = props.findChild<QTabWidget*>(QStringLiteral("smStateTabs"));
+        check(stateTabs != nullptr, "S1: smStateTabs");
+
+        SMSectionChrome* general = props.findChild<SMSectionChrome*>(QStringLiteral("smStateGeneral"));
+        check(general != nullptr, "S1: smStateGeneral chrome");
+        if (general != nullptr)
+        {
+            // Bug 2: the General tab arrives expanded, so the name and the description are editable
+            // without a click.
+            check(general->isCompact() == false, "state General is not compact (several sections open together)");
+            check(general->accordion()->isSectionOpen(0), "state General opens with `Details` expanded");
+            check(general->accordion()->isSectionOpen(1), "state General opens with `Transitions` expanded");
+
+            // Bug 1: toggling a section changes the HEIGHT the panel wants, never the WIDTH -- the
+            // dock used to widen on expand and snap back on collapse.
+            const int openWidth = general->minimumSizeHint().width();
+            general->accordion()->setSectionOpen(0, false);
+            pump(50);
+            const int closedWidth = general->minimumSizeHint().width();
+            general->accordion()->setSectionOpen(0, true);
+            pump(50);
+            checkEq(QString::number(closedWidth), QString::number(openWidth)
+                   , "collapsing a section does not change the panel's minimum width");
+            check(general->accordion()->isSectionOpen(0), "the section re-opens");
+        }
     }
 
     props.hide();
@@ -440,8 +515,14 @@ static void sweepItem20(const QString& docPath, const QString& tmpDir)
     bar.setTransition(transId);
     bar.tryStrip()->setOpen(true);
     pump(300);
+    // The Try-it strip is no longer SURFACED on the Conditions tab (SM-21, 2026-07-21: the what-if
+    // evaluator moves to a dedicated FSM Play page), so its note cannot be visible here -- but the
+    // refusal logic it carries is still built and still refuses, which is what this item checks.
     QLabel* note = bar.findChild<QLabel*>(QStringLiteral("smTryNote"));
-    check((note != nullptr) && note->isVisible(), "the Try-it strip refuses a draft with a note (20)");
+    check(note != nullptr, "the Try-it strip refuses a draft with a note (20)");
+    check((note != nullptr) && note->text().contains(QStringLiteral("draft"))
+         , "the refusal note names the draft as the reason (20)");
+    check(bar.tryStrip()->isVisible() == false, "the Try-it strip is not surfaced on the Conditions tab (20)");
     check(bar.findChild<QLabel*>(QStringLiteral("smTryResult")) == nullptr, "no result line is shown for a draft (20)");
     bar.hide();
 }
@@ -564,21 +645,12 @@ static void sweepTryIt(const QString& docPath, const QString& grabDir)
     count->setText(QStringLiteral("3"));
     pump(150);
     check(result->text().contains(QStringLiteral("TRUE")), "true/3 -> the guard is TRUE live");
-
-    // The lens pill tints green while the strip is open.
-    QToolButton* pill = bar.lens()->findChild<QToolButton*>(QStringLiteral("smLensPill_0"));
-    check(pill != nullptr, "the first clause pill exists");
-    const QString okName = NEGuardStyle::severityColor(NEGuardStyle::eSeverity::Ok).name();
-    check((pill != nullptr) && pill->styleSheet().contains(okName), "the TRUE clause pill tints green (B9)");
     grab(&bar, grabDir, "u4-tryit-open.png");
 
-    // Flip WalkRequested -> FALSE; the pill flips red.
+    // Flip WalkRequested -> FALSE; the result flips to FALSE live.
     walk->setCurrentText(QStringLiteral("false"));
     pump(150);
     check(result->text().contains(QStringLiteral("FALSE")), "flipping the attribute updates the result live");
-    const QString errName = NEGuardStyle::severityColor(NEGuardStyle::eSeverity::Err).name();
-    pill = bar.lens()->findChild<QToolButton*>(QStringLiteral("smLensPill_0"));
-    check((pill != nullptr) && pill->styleSheet().contains(errName), "the FALSE clause pill tints red (B9)");
 
     // count=2 + stub false -> the Or clause decides FALSE.
     walk->setCurrentText(QStringLiteral("true"));
@@ -695,21 +767,23 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
         std::snprintf(name, sizeof(name), "u4-%s-e4-island.png", theme.tag);
         grab(&bar, grabDir, name);
 
-        // E5: mapping slots after accepting a call completion.
+        // E5: mapping slots after accepting a call completion. The completer is `@`-mention
+        // driven (SM-21-03): typing `@HasWait` filters to the HasWaiting condition; Enter accepts
+        // the canonical `#cond:HasWaiting()`. A folded chip means the name lives in the committable
+        // text, not the plain text, so assert on committableText().
         setGuard(model, transId, QString());
         pump(300);
         bar.field()->setFocus();
-        bar.field()->setPlainText(QStringLiteral("my_cond"));
-        QTextCursor cursor = bar.field()->textCursor();
-        cursor.movePosition(QTextCursor::End);
-        bar.field()->setTextCursor(cursor);
-        pump(250);
-        bar.field()->openCompletion();
-        pump(150);
+        for (const QChar c : QStringLiteral("#HasWait"))
+        {
+            QKeyEvent key(QEvent::KeyPress, c.unicode(), Qt::NoModifier, QString(c));
+            QApplication::sendEvent(bar.field(), &key);
+        }
+        pump(200);
         QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
         QApplication::sendEvent(bar.field(), &enter);
         pump(250);
-        check(bar.field()->toPlainText().contains(QStringLiteral("my_condition")), "completion accepted the call (E5)");
+        check(bar.field()->committableText().contains(QStringLiteral("HasWaiting")), "completion accepted the call (E5)");
         std::snprintf(name, sizeof(name), "u4-%s-e5-slots.png", theme.tag);
         grab(&bar, grabDir, name);
         QKeyEvent esc(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
@@ -734,6 +808,215 @@ static void sweepThemes(const QString& docPath, const QString& grabDir)
     }
 
     QApplication::setPalette(QApplication::style()->standardPalette());
+}
+
+// ---------------------------------------------------------------------------
+// Item 24 (SM-21-07): the dark variant is a real second palette (not the light values reused),
+// the surface differs per mode, the owner glyph (shape) channel is theme-independent, and every
+// dark token clears WCAG AA against all three real app dark editor surfaces. All colors come from
+// NEGuardStyle -- this asserts that one place, no rendering needed.
+// ---------------------------------------------------------------------------
+static void sweepThemeContrast()
+{
+    std::printf("[ RUN  ] item24-theme-contrast\n");
+
+    const NEGuardStyle::eOwner owners[] =
+    {
+          NEGuardStyle::eOwner::Stimulus
+        , NEGuardStyle::eOwner::Fsm
+        , NEGuardStyle::eOwner::Handler
+        , NEGuardStyle::eOwner::Literal
+        , NEGuardStyle::eOwner::Raw
+    };
+    const NEGuardStyle::eSeverity sevs[] =
+    {
+          NEGuardStyle::eSeverity::Ok
+        , NEGuardStyle::eSeverity::Warn
+        , NEGuardStyle::eSeverity::Err
+    };
+    const char* ownerName[] = { "Stimulus", "Fsm", "Handler", "Literal", "Raw" };
+    const char* sevName[]   = { "Ok", "Warn", "Err" };
+    char label[128];
+
+    // Capture the light token set from the standard (light) palette.
+    QApplication::setPalette(QApplication::style()->standardPalette());
+    check(NEGuardStyle::isDark() == false, "the standard palette selects the light tokens");
+    const QColor lightSurface = QApplication::palette().color(QPalette::Base);
+    QColor  lightOwner[5];
+    QColor  lightSev[3];
+    QString glyphLight[5];
+    for (int i = 0; i < 5; ++i)
+    {
+        lightOwner[i] = NEGuardStyle::ownerColor(owners[i]);
+        glyphLight[i] = NEGuardStyle::ownerGlyph(owners[i]);
+    }
+    for (int i = 0; i < 3; ++i)
+    {
+        lightSev[i] = NEGuardStyle::severityColor(sevs[i]);
+    }
+
+    // Install a real app dark palette. Nord is the lightest of the three shipped dark themes, so
+    // its base (#3b4252) is the worst case for token-vs-surface contrast.
+    QPalette darkPal;
+    darkPal.setColor(QPalette::Window, QColor(0x2e, 0x34, 0x40));
+    darkPal.setColor(QPalette::WindowText, QColor(0xe5, 0xe9, 0xf0));
+    darkPal.setColor(QPalette::Base, QColor(0x3b, 0x42, 0x52));
+    darkPal.setColor(QPalette::Text, QColor(0xe5, 0xe9, 0xf0));
+    QApplication::setPalette(darkPal);
+    check(NEGuardStyle::isDark(), "the dark palette selects the dark tokens");
+    const QColor darkSurface = QApplication::palette().color(QPalette::Base);
+    QColor darkOwner[5];
+    QColor darkSev[3];
+    for (int i = 0; i < 5; ++i)
+    {
+        darkOwner[i] = NEGuardStyle::ownerColor(owners[i]);
+    }
+    for (int i = 0; i < 3; ++i)
+    {
+        darkSev[i] = NEGuardStyle::severityColor(sevs[i]);
+    }
+
+    // The editor surface differs per mode (a light stab in a dark IDE was the risk this closes).
+    check(lightSurface != darkSurface, "the editor surface differs between light and dark modes");
+
+    // Critique-04 item 4: the glyph channel only disambiguates if no two glyphs are the SAME. Two
+    // look-alike kind badges would quietly break disambiguation for grayscale / color-blind users.
+    for (int i = 0; i < 5; ++i)
+    {
+        for (int j = i + 1; j < 5; ++j)
+        {
+            std::snprintf(label, sizeof(label), "owner glyphs '%s' and '%s' are distinct", ownerName[i], ownerName[j]);
+            check(glyphLight[i] != glyphLight[j], label);
+        }
+    }
+
+    // Each token has a distinct light and dark value: the dark variant is a real second palette.
+    for (int i = 0; i < 5; ++i)
+    {
+        std::snprintf(label, sizeof(label), "owner token '%s' has a distinct dark value", ownerName[i]);
+        check(lightOwner[i] != darkOwner[i], label);
+
+        // The glyph (shape) channel is the color-blind / grayscale safety net; it must be stable
+        // and non-empty in BOTH modes so it stays load-bearing when hues collide in grayscale.
+        std::snprintf(label, sizeof(label), "owner glyph '%s' is theme-independent and non-empty", ownerName[i]);
+        check((glyphLight[i] == NEGuardStyle::ownerGlyph(owners[i])) && (glyphLight[i].isEmpty() == false), label);
+    }
+    for (int i = 0; i < 3; ++i)
+    {
+        std::snprintf(label, sizeof(label), "severity token '%s' has a distinct dark value", sevName[i]);
+        check(lightSev[i] != darkSev[i], label);
+    }
+
+    // Every dark token clears WCAG AA (>= 4.5:1) against all three shipped dark surfaces.
+    const QColor darkSurfaces[] = { QColor(0x26, 0x2b, 0x34), QColor(0x14, 0x21, 0x40), QColor(0x3b, 0x42, 0x52) };
+    const char*  surfaceName[]  = { "ModernDark", "MidnightBlue", "Nord" };
+    for (int s = 0; s < 3; ++s)
+    {
+        for (int i = 0; i < 5; ++i)
+        {
+            std::snprintf(label, sizeof(label), "dark owner '%s' clears AA on %s (%.2f)",
+                          ownerName[i], surfaceName[s], contrastRatio(darkOwner[i], darkSurfaces[s]));
+            check(contrastRatio(darkOwner[i], darkSurfaces[s]) >= 4.5, label);
+        }
+        for (int i = 0; i < 3; ++i)
+        {
+            std::snprintf(label, sizeof(label), "dark severity '%s' clears AA on %s (%.2f)",
+                          sevName[i], surfaceName[s], contrastRatio(darkSev[i], darkSurfaces[s]));
+            check(contrastRatio(darkSev[i], darkSurfaces[s]) >= 4.5, label);
+        }
+    }
+
+    QApplication::setPalette(QApplication::style()->standardPalette());
+}
+
+// ---------------------------------------------------------------------------
+// SM-23 Actions live refresh (2026-07-23 bug): the merged value cell must pick up a newly created
+// attribute (or a set stimulus / new constant) WITHOUT a tab switch, even after the user has
+// clicked into a value cell and then moved focus away. The regression was that isEditing() read
+// QWidget::focusWidget() -- the last-focused DESCENDANT, which stays non-null forever once a cell
+// was clicked -- so every notification-driven rebuild was silently skipped.
+// ---------------------------------------------------------------------------
+static void sweepActionsLiveRefresh(const QString& docPath)
+{
+    std::printf("[ RUN  ] actions-live-refresh\n");
+
+    StateMachineModel model;
+    check(model.loadFromFile(docPath), "document loads");
+    StateMachineData& data = model.getData();
+    const uint32_t transId = firstTransition(data);
+    SMTransitionEntry* trans = data.findTransitionById(transId);
+    check(trans != nullptr, "the demo has a transition to host the action");
+    if (trans == nullptr)
+    {
+        return;
+    }
+
+    // An action method with two parameters, so the transition's Actions editor shows two mappable
+    // rows (each a merged value combo).
+    SMMethodEntry* act = data.getMethods().findMethod(QStringLiteral("liveDoWork"));
+    if (act == nullptr)
+    {
+        act = data.getMethods().createMethod(QStringLiteral("liveDoWork"), SMMethodEntry::eMethodType::Action);
+        act->addParam(QStringLiteral("a"))->setType(QStringLiteral("bool"));
+        act->addParam(QStringLiteral("b"))->setType(QStringLiteral("bool"));
+        model.getNotifier().notifyElementAdded(act->getId(), eDocElementKind::Method);
+    }
+
+    // The action call the transition runs (added straight to its operation list).
+    SMActionCall* call = new SMActionCall(nullptr);
+    call->setAction(QStringLiteral("liveDoWork"));
+    model.getUndoStack().push(new SMAddOperationCommand(model.getNotifier(), trans->getOperations(), call, 0, QStringLiteral("add action")));
+
+    // The editor plus an OUTSIDE field under one shared window: focus can then leave the editor for a
+    // sibling, which is exactly what leaves the editor's stale focus_child pointing at the clicked
+    // cell -- the condition that used to freeze the refresh.
+    QWidget host;
+    QVBoxLayout* lay = new QVBoxLayout(&host);
+    SMOperationsEditor* editor = new SMOperationsEditor(model);
+    QLineEdit* outside = new QLineEdit();
+    lay->addWidget(editor);
+    lay->addWidget(outside);
+    host.resize(420, 620);
+    host.show();
+    pump(100);
+
+    editor->bind(transId, eDocElementKind::Transition, transId, trans, &trans->getOperations());
+    pump(150);
+
+    QComboBox* combo = editor->findChild<QComboBox*>(QStringLiteral("smArgValue_0"));
+    check(combo != nullptr, "the first parameter has a merged value combo");
+    if (combo == nullptr)
+    {
+        host.hide();
+        return;
+    }
+
+    const QString newAttr = QStringLiteral("LiveEnabled");
+    check(comboItems(combo).contains(newAttr) == false, "the new attribute is not offered before it exists");
+
+    // Reproduce the gesture: click into the value cell, then move focus to another field (as
+    // switching to the General tab / another page does).
+    combo->lineEdit()->setFocus();
+    pump(20);
+    outside->setFocus();
+    pump(20);
+
+    // Create the attribute on the shared model, as the Attributes page would.
+    SMAttributeEntry* attr = data.getAttributes().createAttribute(newAttr);
+    check(attr != nullptr, "the attribute is created");
+    if (attr != nullptr)
+    {
+        attr->setType(QStringLiteral("bool"));
+        model.getNotifier().notifyElementAdded(attr->getId(), eDocElementKind::Attribute);
+    }
+    pump(200);      // let the deferred rebuild run
+
+    QComboBox* refreshed = editor->findChild<QComboBox*>(QStringLiteral("smArgValue_0"));
+    check(refreshed != nullptr, "the value combo still exists after the refresh");
+    check((refreshed != nullptr) && comboItems(refreshed).contains(newAttr)
+         , "creating an attribute live-updates the Actions value cell with no tab switch (2026-07-23)");
+
+    host.hide();
 }
 
 // ---------------------------------------------------------------------------
@@ -773,7 +1056,9 @@ int main(int argc, char** argv)
     sweepItem20(docPath, tmpDir);
     sweepItem21(docPath, tmpDir, grabDir);
     sweepTryIt(docPath, grabDir);
+    sweepActionsLiveRefresh(docPath);
     sweepThemes(docPath, grabDir);
+    sweepThemeContrast();
 
     std::printf("Done: %d checks, %d failure%s\n", gChecks, gFailures, (gFailures == 1) ? "" : "s");
     return (gFailures == 0) ? 0 : 1;

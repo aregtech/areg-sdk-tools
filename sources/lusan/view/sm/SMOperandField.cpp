@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMOperandField.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard smart operand field (v7 B6).
+ *  \brief       Lusan application, FSM guard smart operand field.
  *
  ************************************************************************/
 
@@ -56,7 +56,7 @@ void SMOperandField::setSymbols(const QList<SMGuardSymbol>& symbols, const QStri
     clear();
 
     // Exact-type candidates first, convertible with a `(!)` cue second, the rest after a
-    // literal hint -- the same ranking the B5 slot popup uses.
+    // literal hint -- the same ranking the slot popup uses.
     QList<const SMGuardSymbol*> exact;
     QList<const SMGuardSymbol*> convertible;
     QList<const SMGuardSymbol*> others;

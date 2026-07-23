@@ -20,28 +20,27 @@
 #include "lusan/view/sm/SMOperationsEditor.hpp"
 
 #include "lusan/data/common/MethodBase.hpp"
-#include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMTimerData.hpp"
-#include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/common/DocCommand.hpp"
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMArgumentCommands.hpp"
 #include "lusan/model/sm/SMOperationCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
+#include "lusan/view/sm/SMArgMapTable.hpp"
+#include "lusan/view/sm/SMSectionChrome.hpp"
+#include "lusan/view/sm/SMToolIcons.hpp"
 
+#include <QApplication>
 #include <QComboBox>
-#include <QCompleter>
-#include <QEvent>
 #include <QFont>
-#include <QFormLayout>
-#include <QGroupBox>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
-#include <QLineEdit>
 #include <QScrollArea>
+#include <QSet>
 #include <QSignalBlocker>
 #include <QTimer>
 #include <QToolButton>
@@ -53,6 +52,14 @@ namespace
     using eSource = SMArgumentEntry::eValueSource;
 
     constexpr int RoleTimerOpId { Qt::UserRole + 1 };
+
+    //!< The Actions/Events source universe: a literal, a stimulus parameter (transition
+    //!< scope only, gated by the table), a machine attribute, or a constant. The condition and
+    //!< verbatim-C++ kinds are Conditions-only and are not offered here.
+    QList<eSource> kActionSources(void)
+    {
+        return { eSource::Value, eSource::Param, eSource::Attribute, eSource::Constant };
+    }
 
     //!< Removes and deletes every widget owned by a layout (used to rebuild the timer rows).
     void clearLayout(QLayout* layout)
@@ -83,6 +90,9 @@ SMOperationsEditor::SMOperationsEditor(StateMachineModel& model, QWidget* parent
     , mList             (nullptr)
     , mApplying         (false)
     , mRebuildQueued    (false)
+    , mActionSink       (model)
+    , mEventSink        (model)
+    , mChrome           (nullptr)
     , mActionCombo      (nullptr)
     , mActionParams     (nullptr)
     , mEventCombo       (nullptr)
@@ -123,39 +133,57 @@ void SMOperationsEditor::buildUi()
     box->setContentsMargins(6, 6, 6, 6);
     box->setSpacing(8);
 
-    // Action group.
-    QGroupBox* actionGroup = new QGroupBox(tr("Action"), content);
-    QVBoxLayout* actionBox = new QVBoxLayout(actionGroup);
-    mActionCombo = new QComboBox(actionGroup);
+    // Action / Event / Timers are three collapsible sections under a shared SMSectionChrome, so the
+    // chrome's header carries the very toolbar every other Properties tab has: one icon-only jump
+    // button per section (toggle it open/closed) plus the compact toggle. Compact defaults OFF so the
+    // three stay open together, each collapsible on its own. Because this lives in the shared editor,
+    // every scope it serves -- a transition's Actions tab and a state's Enter/Do/Exit tabs -- gets the
+    // same toolbar+accordion; the gear/pulse/clock glyphs mark Action/Event/Timers respectively. The
+    // state Do tab appends a fourth "Repeat" section through addSection().
+    mChrome = new SMSectionChrome(content);
+
+    // Action section.
+    QWidget* actionBody = new QWidget();
+    QVBoxLayout* actionBox = new QVBoxLayout(actionBody);
+    actionBox->setContentsMargins(6, 6, 6, 6);
+    mActionCombo = new QComboBox(actionBody);
     connect(mActionCombo, &QComboBox::activated, this, [this](int) { setActionName(mActionCombo->currentText()); });
     actionBox->addWidget(mActionCombo);
-    QWidget* actionParamsHost = new QWidget(actionGroup);
-    mActionParams = new QFormLayout(actionParamsHost);
-    mActionParams->setContentsMargins(12, 2, 0, 0);
-    actionBox->addWidget(actionParamsHost);
-    box->addWidget(actionGroup);
+    mActionParams = new SMArgMapTable(mModel, actionBody);
+    // One MERGED cell per parameter, not a source picker beside a value editor: a parameter is
+    // bound to a source or to a typed value, never to both, so two controls only asked the same
+    // question twice and cost the narrow dock a column. The cell lists exactly what exists --
+    // typed value, stimulus parameters, attributes, constants -- each marked with its kind.
+    mActionParams->setRowStyle(SMArgMapTable::eRowStyle::Compact);
+    mActionParams->setAllowedSources(kActionSources());
+    actionBox->addWidget(mActionParams);
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::NewAction), tr("Action"), actionBody
+                       , tr("The action call this operation runs"));
 
-    // Event group.
-    QGroupBox* eventGroup = new QGroupBox(tr("Event"), content);
-    QVBoxLayout* eventBox = new QVBoxLayout(eventGroup);
-    mEventCombo = new QComboBox(eventGroup);
+    // Event section.
+    QWidget* eventBody = new QWidget();
+    QVBoxLayout* eventBox = new QVBoxLayout(eventBody);
+    eventBox->setContentsMargins(6, 6, 6, 6);
+    mEventCombo = new QComboBox(eventBody);
     connect(mEventCombo, &QComboBox::activated, this, [this](int) { setEventName(mEventCombo->currentText()); });
     eventBox->addWidget(mEventCombo);
-    QWidget* eventParamsHost = new QWidget(eventGroup);
-    mEventParams = new QFormLayout(eventParamsHost);
-    mEventParams->setContentsMargins(12, 2, 0, 0);
-    eventBox->addWidget(eventParamsHost);
-    box->addWidget(eventGroup);
+    mEventParams = new SMArgMapTable(mModel, eventBody);
+    mEventParams->setRowStyle(SMArgMapTable::eRowStyle::Compact);    // the same merged cell
+    mEventParams->setAllowedSources(kActionSources());
+    eventBox->addWidget(mEventParams);
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::NewEvent), tr("Event"), eventBody
+                       , tr("The event this operation sends"));
 
-    // Timers group.
-    QGroupBox* timerGroup = new QGroupBox(tr("Timers"), content);
-    QVBoxLayout* timerBox = new QVBoxLayout(timerGroup);
+    // Timers section.
+    QWidget* timerBody = new QWidget();
+    QVBoxLayout* timerBox = new QVBoxLayout(timerBody);
+    timerBox->setContentsMargins(6, 6, 6, 6);
     QHBoxLayout* timerButtons = new QHBoxLayout();
-    QToolButton* addStart = new QToolButton(timerGroup);
+    QToolButton* addStart = new QToolButton(timerBody);
     addStart->setText(tr("+ Start timer"));
     addStart->setToolButtonStyle(Qt::ToolButtonTextOnly);
     connect(addStart, &QToolButton::clicked, this, [this]() { addTimer(true); });
-    QToolButton* addStop = new QToolButton(timerGroup);
+    QToolButton* addStop = new QToolButton(timerBody);
     addStop->setText(tr("+ Stop timer"));
     addStop->setToolButtonStyle(Qt::ToolButtonTextOnly);
     connect(addStop, &QToolButton::clicked, this, [this]() { addTimer(false); });
@@ -163,15 +191,23 @@ void SMOperationsEditor::buildUi()
     timerButtons->addWidget(addStop);
     timerButtons->addStretch(1);
     timerBox->addLayout(timerButtons);
-    QWidget* timersHost = new QWidget(timerGroup);
+    QWidget* timersHost = new QWidget(timerBody);
     mTimersList = new QVBoxLayout(timersHost);
     mTimersList->setContentsMargins(0, 0, 0, 0);
     timerBox->addWidget(timersHost);
-    mTimersEmpty = new QLabel(tr("No timers."), timerGroup);
+    mTimersEmpty = new QLabel(tr("No timers."), timerBody);
     mTimersEmpty->setEnabled(false);
     timerBox->addWidget(mTimersEmpty);
-    box->addWidget(timerGroup);
+    mChrome->addSection(SMToolIcons::icon(SMToolIcons::eIcon::NewTimer), tr("Timers"), timerBody
+                       , tr("The timers this operation starts or stops"));
 
+    mChrome->setCompact(false);
+    // Every section starts open, so the tab reads as one short form instead of a stack of closed
+    // bars the developer has to click through. A host section appended later (the Do tab's Repeat)
+    // opens itself the same way.
+    mChrome->openAllSections();
+
+    box->addWidget(mChrome);
     box->addStretch(1);
     scroll->setWidget(content);
 }
@@ -202,6 +238,13 @@ void SMOperationsEditor::clearBinding()
     rebuild();
 }
 
+int SMOperationsEditor::addSection(const QIcon& icon, const QString& title, QWidget* content)
+{
+    const int index = mChrome->addSection(icon, title, content, title);
+    mChrome->setCurrentSection(index);      // open like the built-in sections
+    return index;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Rebuild
 //////////////////////////////////////////////////////////////////////////
@@ -225,7 +268,7 @@ void SMOperationsEditor::rebuildAction()
 
     SMActionCall* action = findAction();
     mActionCombo->setCurrentText(action != nullptr ? action->getAction() : tr("(none)"));
-    buildParamRows(mActionParams, action != nullptr ? action->getId() : 0u, false);
+    bindParamRows(mActionParams, mActionSink, action != nullptr ? action->getId() : 0u, false);
 }
 
 void SMOperationsEditor::rebuildEvent()
@@ -237,7 +280,7 @@ void SMOperationsEditor::rebuildEvent()
 
     SMEventSend* event = findEvent();
     mEventCombo->setCurrentText(event != nullptr ? event->getEvent() : tr("(none)"));
-    buildParamRows(mEventParams, event != nullptr ? event->getId() : 0u, true);
+    bindParamRows(mEventParams, mEventSink, event != nullptr ? event->getId() : 0u, true);
 }
 
 void SMOperationsEditor::rebuildTimers()
@@ -292,68 +335,41 @@ void SMOperationsEditor::rebuildTimers()
     mTimersEmpty->setVisible(count == 0);
 }
 
-void SMOperationsEditor::buildParamRows(QFormLayout* form, uint32_t opId, bool isEvent)
+void SMOperationsEditor::bindParamRows(SMArgMapTable* table, SMArgSinkOperation& sink, uint32_t opId, bool isEvent)
 {
-    while (form->rowCount() > 0)
-    {
-        form->removeRow(0);
-    }
-
-    if ((mList == nullptr) || (opId == 0u))
-    {
-        return;
-    }
-
-    SMOperationBase* op = mList->findById(opId);
+    SMOperationBase* op = ((mList != nullptr) && (opId != 0u)) ? mList->findById(opId) : nullptr;
     const MethodBase* callee = calleeFor(op, isEvent);
-    if ((op == nullptr) || (callee == nullptr) || (callee->getElements().isEmpty()))
+    if ((op == nullptr) || (callee == nullptr))
     {
+        table->clearBinding();
+        sink.clearBinding();
         return;
     }
 
     QList<SMArgumentEntry>& args = isEvent ? static_cast<SMEventSend*>(op)->getArguments()
                                            : static_cast<SMActionCall*>(op)->getArguments();
 
-    const QStringList params = stimulusParamNames();
-    const QStringList attrs  = attributeNames();
-
+    QList<SMArgMapTable::Param> params;
+    QSet<QString> formalNames;
     for (const MethodParameter& param : callee->getElements())
     {
-        const QString paramName = param.getName();
-
-        QComboBox* combo = new QComboBox();
-        combo->setEditable(true);
-        combo->setInsertPolicy(QComboBox::NoInsert);
-        if (mAllowParam)
-        {
-            for (const QString& p : params) { combo->addItem(p); }
-        }
-        for (const QString& a : attrs) { combo->addItem(a); }
-        if (combo->completer() != nullptr)
-        {
-            combo->completer()->setCompletionMode(QCompleter::PopupCompletion);
-            combo->completer()->setCaseSensitivity(Qt::CaseInsensitive);
-        }
-
-        // Current mapping (or a hint about the parameter default when unmapped).
-        QString current;
-        for (const SMArgumentEntry& arg : args)
-        {
-            if (arg.getName() == paramName) { current = arg.getValue(); break; }
-        }
-
-        combo->setEditText(current);
-        combo->lineEdit()->setPlaceholderText(param.hasDefault()
-            ? tr("default: %1").arg(param.getValue())
-            : tr("value, or pick a source"));
-
-        connect(combo, &QComboBox::activated, this, [this, opId, isEvent, paramName, combo](int) { commitParam(opId, isEvent, paramName, combo->currentText()); });
-        connect(combo->lineEdit(), &QLineEdit::editingFinished, this, [this, opId, isEvent, paramName, combo]() { commitParam(opId, isEvent, paramName, combo->currentText()); });
-        // A click in the field opens the value list (mappable stimulus params / attributes).
-        combo->lineEdit()->installEventFilter(this);
-
-        form->addRow(paramName + QStringLiteral(" (") + param.getType() + QLatin1Char(')'), combo);
+        formalNames.insert(param.getName());
+        params.append(SMArgMapTable::Param{ param.getName(), param.getType(), param.getValue(), param.hasDefault(), false });
     }
+
+    // Orphan case (b): a formal removed on the Methods page leaves a stored argument whose name
+    // matches no current parameter. Never drop it silently; surface it as a red
+    // orphan row (value kept, remove quick-fix) appended after the live parameters.
+    for (const SMArgumentEntry& arg : args)
+    {
+        if (formalNames.contains(arg.getName()) == false)
+        {
+            params.append(SMArgMapTable::Param{ arg.getName(), QString(), QString(), false, true });
+        }
+    }
+
+    sink.bind(op, &args);
+    table->bind(mScopeTransition, mAllowParam, &sink, params);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -464,7 +480,7 @@ void SMOperationsEditor::setActionName(const QString& name)
     // rows (a full rebuild would destroy the combo the user just clicked). The canvas edge updates
     // through the Operation notification the command emitted.
     SMActionCall* updated = findAction();
-    buildParamRows(mActionParams, updated != nullptr ? updated->getId() : 0u, false);
+    bindParamRows(mActionParams, mActionSink, updated != nullptr ? updated->getId() : 0u, false);
 }
 
 void SMOperationsEditor::setEventName(const QString& name)
@@ -513,7 +529,7 @@ void SMOperationsEditor::setEventName(const QString& name)
     }
 
     SMEventSend* updated = findEvent();
-    buildParamRows(mEventParams, updated != nullptr ? updated->getId() : 0u, true);
+    bindParamRows(mEventParams, mEventSink, updated != nullptr ? updated->getId() : 0u, true);
 }
 
 void SMOperationsEditor::addTimer(bool start)
@@ -565,52 +581,8 @@ void SMOperationsEditor::setTimerName(uint32_t opId, const QString& name)
     mModel.getUndoStack().push(new SMSetOperationPropertyCommand<QString>(mModel.getNotifier(), *mList, opId, getter, setter, name, tr("Set timer")));
 }
 
-void SMOperationsEditor::commitParam(uint32_t opId, bool isEvent, const QString& paramName, const QString& text)
-{
-    if (mApplying || (mList == nullptr))
-    {
-        return;
-    }
-
-    SMOperationBase* op = mList->findById(opId);
-    if (op == nullptr)
-    {
-        return;
-    }
-
-    QList<SMArgumentEntry>& args = isEvent ? static_cast<SMEventSend*>(op)->getArguments()
-                                           : static_cast<SMActionCall*>(op)->getArguments();
-
-    const QString trimmed = text.trimmed();
-    const SMArgumentEntry* current = nullptr;
-    for (const SMArgumentEntry& arg : args)
-    {
-        if (arg.getName() == paramName) { current = &arg; break; }
-    }
-
-    bool mapped = (trimmed.isEmpty() == false);
-    eSource source = eSource::Value;
-    QString value;
-    if (mapped)
-    {
-        source = resolveSource(trimmed, value);
-    }
-
-    const bool same = mapped
-        ? ((current != nullptr) && (current->getSource() == source) && (current->getValue() == value))
-        : (current == nullptr);
-    if (same)
-    {
-        return;
-    }
-
-    // The value is already shown in the field and the canvas edge refreshes through the
-    // notification; a rebuild here would only fight the cursor, so none is scheduled.
-    mModel.getUndoStack().push(new SMSetArgumentCommand(mModel.getNotifier(), *op, args, paramName, mapped, source, value, QString(), tr("Map parameter '%1'").arg(paramName)));
-}
-
 //////////////////////////////////////////////////////////////////////////
-// Registry / mapping helpers
+// Registry helpers
 //////////////////////////////////////////////////////////////////////////
 
 QStringList SMOperationsEditor::actionNames() const
@@ -646,72 +618,19 @@ QStringList SMOperationsEditor::timerNames() const
     return names;
 }
 
-QStringList SMOperationsEditor::stimulusParamNames() const
-{
-    QStringList names;
-    if (mScopeTransition == 0u)
-    {
-        return names;
-    }
-
-    const SMTransitionEntry* transition = mModel.getData().findTransitionById(mScopeTransition);
-    if (transition == nullptr)
-    {
-        return names;
-    }
-
-    const StateMachineData::StimulusRef ref = mModel.getData().findStimulus(transition->getStimulus());
-    const MethodBase* callee = nullptr;
-    if ((ref.type == StateMachineData::eStimulusType::Trigger) || (ref.type == StateMachineData::eStimulusType::Event))
-    {
-        callee = static_cast<const MethodBase*>(ref.element);
-    }
-
-    if (callee != nullptr)
-    {
-        for (const MethodParameter& p : callee->getElements()) { names.append(p.getName()); }
-    }
-
-    return names;
-}
-
-QStringList SMOperationsEditor::attributeNames() const
-{
-    QStringList names;
-    for (const SMAttributeEntry& a : mModel.getData().getAttributes().getElements())
-    {
-        names.append(a.getName());
-    }
-
-    return names;
-}
-
-SMArgumentEntry::eValueSource SMOperationsEditor::resolveSource(const QString& name, QString& mappedName) const
-{
-    mappedName = name;
-    if (mAllowParam && stimulusParamNames().contains(name))
-    {
-        return eSource::Param;
-    }
-    if (attributeNames().contains(name))
-    {
-        return eSource::Attribute;
-    }
-
-    return eSource::Value;
-}
-
 //////////////////////////////////////////////////////////////////////////
 // Notifications
 //////////////////////////////////////////////////////////////////////////
 
 void SMOperationsEditor::onNotifierChanged(uint32_t /*id*/, eDocElementKind kind)
 {
-    // Operation edits and any registry change (a renamed action/event/timer/attribute) can shift
-    // what the combos should show; refresh, but never while the user is mid-edit in a field.
+    // Operation edits and any registry change that can shift what the combos or the arg cells should
+    // show: an action/event/timer name (the pickers), or a stimulus parameter, attribute, constant or
+    // data type (the merged value cell's source list and its type-fit status). Refresh, but never
+    // while the user is mid-edit in a field.
     if ((kind == eDocElementKind::Operation) || (kind == eDocElementKind::Method) || (kind == eDocElementKind::Event)
-        || (kind == eDocElementKind::Timer) || (kind == eDocElementKind::Attribute) || (kind == eDocElementKind::State)
-        || (kind == eDocElementKind::Transition))
+        || (kind == eDocElementKind::Timer) || (kind == eDocElementKind::Attribute) || (kind == eDocElementKind::Constant)
+        || (kind == eDocElementKind::DataType) || (kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
     {
         scheduleRebuild();
     }
@@ -737,22 +656,12 @@ void SMOperationsEditor::scheduleRebuild()
 
 bool SMOperationsEditor::isEditing() const
 {
-    QWidget* focus = focusWidget();
+    // Use the application's ACTIVE focus, not QWidget::focusWidget(): the latter returns the
+    // last-focused DESCENDANT and stays non-null forever once the user has clicked a field here,
+    // so it reported "editing" permanently and every later notification-driven rebuild was
+    // silently skipped -- the arg combos never picked up a newly set stimulus or a freshly created
+    // attribute/event/constant until the whole editor was rebound. Skip a rebuild only while the
+    // caret is really inside this editor.
+    QWidget* focus = QApplication::focusWidget();
     return (focus != nullptr) && isAncestorOf(focus);
-}
-
-bool SMOperationsEditor::eventFilter(QObject* watched, QEvent* event)
-{
-    if (event->type() == QEvent::MouseButtonPress)
-    {
-        QLineEdit* edit = qobject_cast<QLineEdit*>(watched);
-        QComboBox* combo = (edit != nullptr) ? qobject_cast<QComboBox*>(edit->parentWidget()) : nullptr;
-        if ((combo != nullptr) && (combo->count() > 0))
-        {
-            combo->showPopup();
-            return true;
-        }
-    }
-
-    return QWidget::eventFilter(watched, event);
 }

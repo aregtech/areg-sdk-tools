@@ -47,7 +47,7 @@ namespace
         return 0;
     }
 
-    // An integer of at most 32 bits (signed or unsigned), per spec 6.9 rule 4.
+    // An integer of at most 32 bits (signed or unsigned).
     bool isIntUpTo32(const QString& t)
     {
         return (t == "int8")  || (t == "int16")  || (t == "int32")
@@ -134,7 +134,7 @@ QString SMTypeCompat::areComparable(const QString& lhsType, SMConditionEntry::eO
     if (op == SMConditionEntry::eOperator::None)
         return QString();
 
-    // An operand whose type is not resolved yet cannot be judged (SM-25 resolves refs).
+    // An operand whose type is not resolved yet cannot be judged.
     if (lhsType.isEmpty() || rhsType.isEmpty())
         return QString();
 
@@ -173,7 +173,7 @@ QString SMTypeCompat::areComparable(const QString& lhsType, SMConditionEntry::eO
         return QString();
 
     // Remaining: char-vs-other, or a declared (non-primitive) type. In the seed these
-    // support Equal / NotEqual only, and only by exact-name match (SM-25 refines).
+    // support Equal / NotEqual only, and only by exact-name match.
     if (ordering)
     {
         const QString& reported = (isPrimitive(lhsType) == false) ? lhsType

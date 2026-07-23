@@ -13,7 +13,7 @@
  *  \file        lusan/model/sm/SMSymbolIndex.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM verbatim-code symbol assistance (SM-21-06).
+ *  \brief       Lusan application, FSM verbatim-code symbol assistance.
  *
  ************************************************************************/
 

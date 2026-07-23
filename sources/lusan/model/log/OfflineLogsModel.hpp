@@ -68,7 +68,7 @@ public:
      * \param   instId  The ID of the instance to read logs. Reads logs of all instances it `areg::TARGET_ALL`.
      * \return  Number or log entries to read.
      **/
-    uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL) override;
+    uint32_t setupLogStatement(ITEM_ID instId = areg::TARGET_ALL, int32_t limit = -1, uint32_t offset = 0u) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Signals

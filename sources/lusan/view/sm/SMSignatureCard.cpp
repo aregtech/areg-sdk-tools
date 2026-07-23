@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMSignatureCard.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard call signature card (v7 B5).
+ *  \brief       Lusan application, FSM guard call signature card.
  *
  ************************************************************************/
 

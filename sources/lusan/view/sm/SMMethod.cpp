@@ -171,7 +171,7 @@ void SMMethod::setupSignals()
     mDetails->ctrlBody()->ctrlBody()->installEventFilter(this);
     mDetails->ctrlDescription()->installEventFilter(this);
 
-    // S14: the `used by N guards` navigation and the per-kind row actions.
+    // The `used by N guards` navigation and the per-kind row actions.
     connect(mDetails->ctrlGuardInfo(), &QLabel::linkActivated, this, [this](const QString& link)
     {
         const QString prefix = QStringLiteral("uses:");
@@ -403,7 +403,7 @@ QTreeWidgetItem* SMMethod::createMethodNode(SMMethodEntry* method) const
     setNodeText(item, method);
     if (method->isCondition())
     {
-        // The D8 kind split (S14): the type column shows the kind as glyph + word.
+        // The D8 kind split: the type column shows the kind as glyph + word.
         const bool isLambda = method->isLambdaCondition();
         item->setText(1, isLambda ? tr("{} lambda") : tr("h handler"));
         item->setToolTip(1, isLambda
@@ -567,7 +567,7 @@ void SMMethod::showMethodForm(SMMethodEntry* method)
     mDetails->setBodyVisible(isCondition && isEmbedded);
     if (isCondition)
     {
-        // S14: the kind, the generated call form, and the where-used navigation.
+        // The kind, the generated call form, and the where-used navigation.
         const int uses = SMGuardWhereUsed::useCount(mModel.getData(), method->getId());
         const QString call = isEmbedded
                              ? QString::fromLatin1(SMGuardCodegenPreview::LAMBDA_MEMBER_PREFIX) + method->getName() + QStringLiteral("(...)")
@@ -788,7 +788,7 @@ void SMMethod::onRemoveClicked()
             break;
 
         // Deleting a condition still referenced by guards is refused with the where-used
-        // list (S14/S15): the ID-bound trees would dangle otherwise.
+        // list: the ID-bound trees would dangle otherwise.
         if (method->isCondition())
         {
             const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getData(), method->getId());

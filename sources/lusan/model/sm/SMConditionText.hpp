@@ -24,8 +24,8 @@
 #include <QString>
 
 /**
- * \brief   LEGACY-LOAD-ONLY (SM-21 U4 retirement). The sole remaining consumer is
- *          \ref SMGuardParser::fromLegacy, which renders a loaded SM-21-02
+ * \brief   LEGACY-LOAD-ONLY. The sole remaining consumer is
+ *          \ref SMGuardParser::fromLegacy, which renders a loaded legacy
  *          `<ConditionList>` tree to text so it can be kept as a `<Draft>` guard.
  *          Do not add new callers; the guard classes (SMGuardRender /
  *          SMGuardCodegenPreview) own every live rendering path.

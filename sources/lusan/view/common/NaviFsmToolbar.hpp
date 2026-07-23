@@ -101,7 +101,7 @@ public:
 //////////////////////////////////////////////////////////////////////////
 protected:
     /**
-     * \brief   Arms a placement tool sticky when its button is double-clicked (spec 9.2 rule 1).
+     * \brief   Arms a placement tool sticky when its button is double-clicked.
      **/
     virtual bool eventFilter(QObject* watched, QEvent* event) override;
 

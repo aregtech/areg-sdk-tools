@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMFlowLayout.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM structure lens flow layout (v7 B7).
+ *  \brief       Lusan application, FSM structure lens flow layout.
  *
  ************************************************************************/
 

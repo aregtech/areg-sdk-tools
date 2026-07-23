@@ -49,7 +49,7 @@ struct SMSourceEntry
 /**
  * \namespace   SMMappingSources
  * \brief   Headless enumeration of the value sources a parameter-mapping cell may offer,
- *          filtered to type-compatible entries per the widening table (spec 6.9). Shared by
+ *          filtered to type-compatible entries per the widening table. Shared by
  *          the mapping editor and reusable by the operations editors; no widget dependency.
  **/
 namespace SMMappingSources
@@ -68,7 +68,7 @@ namespace SMMappingSources
     /**
      * \brief   True when \p kind is a legal source in this scope. Only Param is scope-limited:
      *          it requires a transition scope (\p transitionId != 0) whose stimulus declares
-     *          parameters (spec 6.8 scope rule); every other kind is always legal.
+     *          parameters (scope rule); every other kind is always legal.
      **/
     bool isKindLegal(const StateMachineData& data, uint32_t transitionId, SMArgumentEntry::eValueSource kind);
 

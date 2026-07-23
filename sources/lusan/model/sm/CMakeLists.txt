@@ -23,6 +23,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMMethodModel.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
@@ -58,6 +59,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMMethodModel.hpp
     ${LUSAN}/model/sm/SMOperationCommands.hpp
     ${LUSAN}/model/sm/SMOperationSummary.hpp
+    ${LUSAN}/model/sm/SMOperationValidation.hpp
     ${LUSAN}/model/sm/SMOverviewModel.hpp
     ${LUSAN}/model/sm/SMPasteCommand.hpp
     ${LUSAN}/model/sm/SMSelectionModel.hpp

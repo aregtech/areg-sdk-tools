@@ -38,7 +38,7 @@ class ElementBase;
 /**
  * \class   SMSetArgumentCommand
  * \brief   Maps or unmaps one declared parameter in an operation's argument list, keyed by
- *          parameter name (arguments bind by name -- spec 6.9). One command shape covers the
+ *          parameter name (arguments bind by name). One command shape covers the
  *          three edits the mapping grid produces: set an existing mapping, add an explicit
  *          mapping to a previously-unmapped parameter, and clear a mapping back to its default
  *          (the argument is omitted). The name key makes the edit index-independent, so a

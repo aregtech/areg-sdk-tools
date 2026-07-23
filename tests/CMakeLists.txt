@@ -114,6 +114,7 @@ qt_add_executable(lusan_sm_command_tests
     # StateMachineModel's load path applies the legacy->draft guard shim (SM-21 U4).
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
@@ -148,7 +149,7 @@ set_target_properties(lusan_sm_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 
 # ---------------------------------------------------------------------------
-# SM-22: the parameter-mapping editor. Drives the REAL SMMappingEditor widget offscreen
+# SM-22/SM-21-01: the shared argument-mapping table. Drives the REAL SMArgMapTable widget offscreen
 # over an ActionCall's argument list -- source-kind legality, compatibility + widening,
 # resolution order, and the undoable byte-exact round-trip. Reuses the command-tests link
 # set (the full model facade) plus the mapping helpers and the widget under test.
@@ -159,6 +160,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMCommand.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMGuardParser.cpp
+    ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
@@ -177,9 +179,12 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
-    ${LUSAN}/view/sm/SMMappingEditor.cpp
-    ${LUSAN_ROOT}/tests/sm/SMMappingEditorTests.cpp
+    ${LUSAN}/view/sm/SMAccordion.cpp
+    ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkOperation.cpp
+    ${LUSAN_ROOT}/tests/sm/SMArgMapTableTests.cpp
     ${LUSAN}/res/lusan.qrc
 )
 target_include_directories(lusan_sm_mapping_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
@@ -358,22 +363,24 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMCanvasTool.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
+    ${LUSAN}/view/sm/SMArgSinkGuard.cpp
     ${LUSAN}/view/sm/SMFixBar.cpp
     ${LUSAN}/view/sm/SMFlowLayout.cpp
     ${LUSAN}/view/sm/SMGuardBar.cpp
+    ${LUSAN}/view/sm/SMGuardCallsOutline.cpp
+    ${LUSAN}/view/sm/SMGuardDataPanel.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
+    ${LUSAN}/view/sm/SMGuardPopout.cpp
     ${LUSAN}/view/sm/SMGuardStatusLine.cpp
     ${LUSAN}/view/sm/SMHoverCard.cpp
     ${LUSAN}/view/sm/SMInlineToken.cpp
     ${LUSAN}/view/sm/SMIslandEditor.cpp
-    ${LUSAN}/view/sm/SMMappingGrid.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
-    ${LUSAN}/view/sm/SMStructureLens.cpp
-    ${LUSAN}/view/sm/SMSymbolPopup.cpp
+    ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
     ${LUSAN}/model/sm/SMGuardEval.cpp
@@ -400,7 +407,11 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
-    ${LUSAN}/view/sm/SMMappingEditor.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
+    ${LUSAN}/view/sm/SMAccordion.cpp
+    ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkOperation.cpp
+    ${LUSAN}/view/sm/SMSectionChrome.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
     ${LUSAN}/view/sm/SMOperationsDialog.cpp
     ${LUSAN_ROOT}/tests/sm/SMCanvasSmokeTests.cpp
@@ -421,8 +432,8 @@ set_target_properties(lusan_sm_canvas_tests PROPERTIES WIN32_EXECUTABLE OFF)
 # SM-21 (U3): the guard-bar UI verification harness. Drives the REAL SMGuardBar
 # and Methods page widgets programmatically (no input injection), asserts the
 # field invariants (23a/23b, form-first parity) and saves QWidget::grab() shots.
-# Run manually: lusan_sm_guard_ui_shots <doc.fsml> [grab dir] -- not a ctest
-# entry, because it opens visible windows.
+# Registered as the ctest entry sm_guard_ui_shots (offscreen QPA); can also be
+# run manually: lusan_sm_guard_ui_shots <doc.fsml> [grab dir].
 # ---------------------------------------------------------------------------
 set(LUSAN_GUARD_UI_SRC
     ${LUSAN_TEST_SUPPORT_SRC}
@@ -454,6 +465,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
+    ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/common/EditCancelFilter.cpp
     ${LUSAN}/view/common/MethodDetailsView.cpp
@@ -461,26 +473,32 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/common/MethodParamDetailsView.cpp
     ${LUSAN}/view/common/TableCell.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
+    ${LUSAN}/view/sm/SMAccordion.cpp
+    ${LUSAN}/view/sm/SMSectionChrome.cpp
+    ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkGuard.cpp
     ${LUSAN}/view/sm/SMCodeEditor.cpp
     ${LUSAN}/view/sm/SMEventParamDetails.cpp
     ${LUSAN}/view/sm/SMFixBar.cpp
     ${LUSAN}/view/sm/SMFlowLayout.cpp
     ${LUSAN}/view/sm/SMGuardBar.cpp
+    ${LUSAN}/view/sm/SMGuardCallsOutline.cpp
+    ${LUSAN}/view/sm/SMGuardDataPanel.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
     ${LUSAN}/view/sm/SMGuardField.cpp
     ${LUSAN}/view/sm/SMGuardHelpCard.cpp
     ${LUSAN}/view/sm/SMGuardHighlighter.cpp
+    ${LUSAN}/view/sm/SMGuardPopout.cpp
     ${LUSAN}/view/sm/SMGuardStatusLine.cpp
     ${LUSAN}/view/sm/SMHoverCard.cpp
     ${LUSAN}/view/sm/SMInlineToken.cpp
     ${LUSAN}/view/sm/SMIslandEditor.cpp
-    ${LUSAN}/view/sm/SMMappingGrid.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
     ${LUSAN}/view/sm/SMOperandField.cpp
     ${LUSAN}/view/sm/SMSignatureCard.cpp
-    ${LUSAN}/view/sm/SMStructureLens.cpp
-    ${LUSAN}/view/sm/SMSymbolPopup.cpp
+    ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
+    ${LUSAN}/view/sm/SMToolIcons.cpp
 )
 
 qt_add_executable(lusan_sm_guard_ui_shots
@@ -502,8 +520,9 @@ set_target_properties(lusan_sm_guard_ui_shots PROPERTIES WIN32_EXECUTABLE OFF)
 # ---------------------------------------------------------------------------
 # SM-21 (U4): the acceptance sweep harness -- items 16-18/20-22 end-to-end through
 # the real widgets + file + validation path, the Try-it live checks, and the
-# item-24 light/dark theme grabs. Run manually:
-# lusan_sm_guard_u4_sweep <doc.fsml> [grab dir] -- opens visible windows.
+# item-24 light/dark theme grabs. Registered as the ctest entry sm_guard_u4_sweep
+# (offscreen QPA); can also be run manually:
+# lusan_sm_guard_u4_sweep <doc.fsml> [grab dir].
 # ---------------------------------------------------------------------------
 qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN_GUARD_UI_SRC}
@@ -514,7 +533,9 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMOperationCommands.cpp
     ${LUSAN}/model/sm/SMOperationSummary.cpp
-    ${LUSAN}/view/sm/SMMappingEditor.cpp
+    ${LUSAN}/view/sm/SMAccordion.cpp
+    ${LUSAN}/view/sm/SMArgMapTable.cpp
+    ${LUSAN}/view/sm/SMArgSinkOperation.cpp
     ${LUSAN}/view/sm/SMOperationsEditor.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardU4Sweep.cpp
     ${LUSAN}/res/lusan.qrc
@@ -598,3 +619,13 @@ add_test(NAME sm_symbol_tests COMMAND lusan_sm_symbol_tests)
 add_test(NAME sm_command_tests COMMAND lusan_sm_command_tests)
 add_test(NAME sm_mapping_tests COMMAND lusan_sm_mapping_tests)
 add_test(NAME si_command_tests COMMAND lusan_si_command_tests)
+
+# The two standalone guard-editor harnesses run to completion (no app.exec) and
+# return 0 on success, so they are safe ctest entries. Force the offscreen QPA
+# platform so they never need a real display on CI or a headless run.
+add_test(NAME sm_guard_ui_shots COMMAND lusan_sm_guard_ui_shots
+         ${LUSAN_ROOT}/.claude/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-shots)
+add_test(NAME sm_guard_u4_sweep COMMAND lusan_sm_guard_u4_sweep
+         ${LUSAN_ROOT}/.claude/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-sweep)
+set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep PROPERTIES
+                     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

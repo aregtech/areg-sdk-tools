@@ -13,7 +13,7 @@
  *  \file        lusan/model/sm/SMGuardEval.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard what-if evaluator (v7 B9, Try-it strip).
+ *  \brief       Lusan application, FSM guard what-if evaluator (Try-it strip).
  *
  ************************************************************************/
 

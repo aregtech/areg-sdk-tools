@@ -25,6 +25,7 @@
 #include <QPalette>
 #include <QPen>
 #include <QPixmap>
+#include <QPolygonF>
 
 #include <cmath>
 
@@ -367,15 +368,38 @@ namespace
 
         case SMToolIcons::eIcon::NewEvent:
         {
-            // A square signal pulse.
-            QPainterPath pulse;
-            pulse.moveTo(5.0, 21.0);
-            pulse.lineTo(11.0, 21.0);
-            pulse.lineTo(11.0, 10.0);
-            pulse.lineTo(20.0, 10.0);
-            pulse.lineTo(20.0, 21.0);
-            pulse.lineTo(27.0, 21.0);
-            p.drawPath(pulse);
+            // The event glyph is a lightning bolt, the same family as the trigger stimulus, shared by
+            // every event surface (the Events page and the state-body event row). The square signal
+            // pulse is kept below behind a compile-time switch so the look can be swapped while
+            // experimenting: flip EVENT_USE_PULSE to true to render the pulse instead of the bolt.
+            constexpr bool EVENT_USE_PULSE = false;
+            if constexpr (EVENT_USE_PULSE)
+            {
+                // A square signal pulse.
+                QPainterPath pulse;
+                pulse.moveTo(5.0, 21.0);
+                pulse.lineTo(11.0, 21.0);
+                pulse.lineTo(11.0, 10.0);
+                pulse.lineTo(20.0, 10.0);
+                pulse.lineTo(20.0, 21.0);
+                pulse.lineTo(27.0, 21.0);
+                p.drawPath(pulse);
+            }
+            else
+            {
+                // A filled lightning bolt.
+                QPainterPath bolt;
+                bolt.moveTo(18.0, 5.0);
+                bolt.lineTo(9.0, 18.0);
+                bolt.lineTo(14.5, 18.0);
+                bolt.lineTo(13.0, 27.0);
+                bolt.lineTo(23.0, 13.5);
+                bolt.lineTo(17.0, 13.5);
+                bolt.closeSubpath();
+                p.setPen(QPen(color, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                p.setBrush(color);
+                p.drawPath(bolt);
+            }
             break;
         }
 
@@ -430,6 +454,125 @@ namespace
             p.drawLine(QPointF(16.0, 15.0), QPointF(16.0, 26.0));
             break;
         }
+
+        case SMToolIcons::eIcon::GuardInsert:
+            // A caret bar with a plus: drop a reference where the cursor is.
+            p.drawLine(QPointF(11.0, 7.0), QPointF(11.0, 25.0));
+            p.drawLine(QPointF(7.0, 7.0), QPointF(15.0, 7.0));
+            p.drawLine(QPointF(7.0, 25.0), QPointF(15.0, 25.0));
+            p.drawLine(QPointF(23.0, 11.0), QPointF(23.0, 21.0));
+            p.drawLine(QPointF(18.0, 16.0), QPointF(28.0, 16.0));
+            break;
+
+        case SMToolIcons::eIcon::GuardPreview:
+            // Angle brackets: generated source.
+            p.drawPolyline(QPolygonF({ QPointF(12.0, 9.0), QPointF(5.0, 16.0), QPointF(12.0, 23.0) }));
+            p.drawPolyline(QPolygonF({ QPointF(20.0, 9.0), QPointF(27.0, 16.0), QPointF(20.0, 23.0) }));
+            break;
+
+        case SMToolIcons::eIcon::GuardPopout:
+            // A frame with an out-pointing arrow: the same guard, more room.
+            p.drawRoundedRect(QRectF(5.0, 8.0, 15.0, 16.0), 3.0, 3.0);
+            p.drawLine(QPointF(17.0, 15.0), QPointF(27.0, 5.0));
+            arrowHead(p, QPointF(17.0, 15.0), QPointF(28.0, 4.0), 6.0, color);
+            break;
+
+        case SMToolIcons::eIcon::GuardClear:
+            // A circled cross: back to "always fires".
+            p.drawEllipse(QPointF(16.0, 16.0), 10.0, 10.0);
+            p.drawLine(QPointF(12.0, 12.0), QPointF(20.0, 20.0));
+            p.drawLine(QPointF(20.0, 12.0), QPointF(12.0, 20.0));
+            break;
+
+        case SMToolIcons::eIcon::GuardHelp:
+        {
+            p.drawEllipse(QPointF(16.0, 16.0), 10.0, 10.0);
+            QPainterPath hook;
+            hook.moveTo(12.5, 13.0);
+            hook.cubicTo(12.5, 8.5, 20.0, 9.0, 19.0, 13.5);
+            hook.cubicTo(18.3, 16.5, 16.0, 16.5, 16.0, 19.0);
+            p.drawPath(hook);
+            p.setBrush(color);
+            p.drawEllipse(QPointF(16.0, 22.5), 1.4, 1.4);
+            p.setBrush(Qt::NoBrush);
+            break;
+        }
+
+        case SMToolIcons::eIcon::GuardCompact:
+            // Two arrows folding towards one line: keep a single section open.
+            p.drawLine(QPointF(6.0, 16.0), QPointF(26.0, 16.0));
+            p.drawPolyline(QPolygonF({ QPointF(11.0, 7.0), QPointF(16.0, 12.0), QPointF(21.0, 7.0) }));
+            p.drawPolyline(QPolygonF({ QPointF(11.0, 25.0), QPointF(16.0, 20.0), QPointF(21.0, 25.0) }));
+            break;
+
+        case SMToolIcons::eIcon::GuardConditions:
+            // A checklist: the palette of defined condition methods.
+            p.drawPolyline(QPolygonF({ QPointF(5.0, 10.0), QPointF(7.5, 12.5), QPointF(12.0, 8.0) }));
+            p.drawPolyline(QPolygonF({ QPointF(5.0, 22.0), QPointF(7.5, 24.5), QPointF(12.0, 20.0) }));
+            p.drawLine(QPointF(16.0, 11.0), QPointF(27.0, 11.0));
+            p.drawLine(QPointF(16.0, 23.0), QPointF(27.0, 23.0));
+            break;
+
+        case SMToolIcons::eIcon::GuardArguments:
+            // A two-column table: formal -> source.
+            p.drawRoundedRect(QRectF(5.0, 8.0, 22.0, 16.0), 2.5, 2.5);
+            p.drawLine(QPointF(15.0, 8.0), QPointF(15.0, 24.0));
+            p.drawLine(QPointF(5.0, 16.0), QPointF(27.0, 16.0));
+            break;
+
+        case SMToolIcons::eIcon::GuardData:
+            // A stack of browsable entries with a lens over it: the symbol catalog.
+            p.drawLine(QPointF(5.0, 9.0), QPointF(21.0, 9.0));
+            p.drawLine(QPointF(5.0, 15.0), QPointF(17.0, 15.0));
+            p.drawLine(QPointF(5.0, 21.0), QPointF(21.0, 21.0));
+            p.drawEllipse(QPointF(21.0, 19.0), 5.5, 5.5);
+            p.drawLine(QPointF(25.0, 23.0), QPointF(28.0, 26.0));
+            break;
+
+        case SMToolIcons::eIcon::SectionDetails:
+            // A labelled form: a short label and a longer field on each of three rows.
+            p.drawLine(QPointF(5.0, 10.0), QPointF(11.0, 10.0));
+            p.drawLine(QPointF(14.0, 10.0), QPointF(27.0, 10.0));
+            p.drawLine(QPointF(5.0, 16.0), QPointF(11.0, 16.0));
+            p.drawLine(QPointF(14.0, 16.0), QPointF(27.0, 16.0));
+            p.drawLine(QPointF(5.0, 22.0), QPointF(11.0, 22.0));
+            p.drawLine(QPointF(14.0, 22.0), QPointF(27.0, 22.0));
+            break;
+
+        case SMToolIcons::eIcon::SectionList:
+            // Two states joined by an arrow: the transitions list.
+            p.drawEllipse(QPointF(8.0, 16.0), 3.5, 3.5);
+            p.drawEllipse(QPointF(24.0, 16.0), 3.5, 3.5);
+            p.drawLine(QPointF(12.0, 16.0), QPointF(19.5, 16.0));
+            arrowHead(p, QPointF(12.0, 16.0), QPointF(21.0, 16.0), 5.0, color);
+            break;
+
+        case SMToolIcons::eIcon::SectionText:
+            // Paragraph lines: a free-text description.
+            p.drawLine(QPointF(5.0, 10.0), QPointF(27.0, 10.0));
+            p.drawLine(QPointF(5.0, 16.0), QPointF(27.0, 16.0));
+            p.drawLine(QPointF(5.0, 22.0), QPointF(19.0, 22.0));
+            break;
+
+        case SMToolIcons::eIcon::SectionEnter:
+            // An arrow entering a box from the left: work done on entry.
+            p.drawRoundedRect(QRectF(15.0, 7.0, 11.0, 18.0), 2.5, 2.5);
+            p.drawLine(QPointF(5.0, 16.0), QPointF(15.0, 16.0));
+            arrowHead(p, QPointF(6.0, 16.0), QPointF(16.0, 16.0), 5.5, color);
+            break;
+
+        case SMToolIcons::eIcon::SectionExit:
+            // An arrow leaving a box to the right: work done on exit.
+            p.drawRoundedRect(QRectF(6.0, 7.0, 11.0, 18.0), 2.5, 2.5);
+            p.drawLine(QPointF(17.0, 16.0), QPointF(27.0, 16.0));
+            arrowHead(p, QPointF(17.0, 16.0), QPointF(28.0, 16.0), 5.5, color);
+            break;
+
+        case SMToolIcons::eIcon::SectionDo:
+            // A circular arrow: actions repeated while the state is active.
+            p.drawArc(QRectF(8.0, 8.0, 16.0, 16.0), 300 * 16, 300 * 16);
+            arrowHead(p, QPointF(15.0, 8.5), QPointF(22.0, 10.0), 5.0, color);
+            break;
         }
     }
 }

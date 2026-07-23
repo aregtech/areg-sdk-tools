@@ -245,6 +245,43 @@ QPointF NESMDesign::nearestBorderPoint(const QRectF& rect, double radius, const 
     return QPointF(kx, ky) + out * (rad / len);
 }
 
+QPointF NESMDesign::gridAlignedBorderPoint(const QRectF& rect, double radius, const QPointF& point, int gridSize)
+{
+    const QPointF onBorder = nearestBorderPoint(rect, radius, point);
+    if ((rect.width() <= 0.0) || (rect.height() <= 0.0))
+    {
+        return onBorder;
+    }
+
+    // Half the grid so the snap lands on either a crossing (a whole cell) or the midpoint between
+    // two crossings (a half cell), whichever is closer.
+    const double half = std::max(static_cast<double>(gridSize) / 2.0, 1.0);
+    const double rad  = std::clamp(radius, 0.0, std::min(rect.width(), rect.height()) / 2.0);
+
+    // Slide along whichever edge the point sits on: on a top/bottom edge the x coordinate runs
+    // along it, on a left/right edge the y coordinate. The other coordinate stays pinned to the
+    // border. Clamp the sliding coordinate to the straight span so it never climbs a rounded corner.
+    const double dl = std::abs(onBorder.x() - rect.left());
+    const double dr = std::abs(onBorder.x() - rect.right());
+    const double dt = std::abs(onBorder.y() - rect.top());
+    const double db = std::abs(onBorder.y() - rect.bottom());
+    const double dm = std::min({ dl, dr, dt, db });
+
+    QPointF result = onBorder;
+    if ((dm == dt) || (dm == db))
+    {
+        const double x = std::clamp(std::round(onBorder.x() / half) * half, rect.left() + rad, rect.right() - rad);
+        result.setX(x);
+    }
+    else
+    {
+        const double y = std::clamp(std::round(onBorder.y() / half) * half, rect.top() + rad, rect.bottom() - rad);
+        result.setY(y);
+    }
+
+    return result;
+}
+
 QList<QPointF> NESMDesign::arcPolyline(const QPointF& begin, const QPointF& end, double bulge, int samples)
 {
     constexpr double Pi = 3.14159265358979323846;
@@ -292,6 +329,21 @@ QList<QPointF> NESMDesign::arcPolyline(const QPointF& begin, const QPointF& end,
     }
 
     return points;
+}
+
+QFont NESMDesign::scaledFont(const QFont& base, double scale)
+{
+    QFont font{ base };
+    if (base.pointSizeF() > 0.0)
+    {
+        font.setPointSizeF(base.pointSizeF() * scale);
+    }
+    else if (base.pixelSize() > 0)
+    {
+        font.setPixelSize(std::max(1, static_cast<int>(std::round(base.pixelSize() * scale))));
+    }
+
+    return font;
 }
 
 qreal NESMDesign::snapValue(qreal value, int gridSize)

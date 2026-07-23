@@ -25,33 +25,43 @@
 #include <QWidget>
 
 #include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/view/sm/SMArgSinkOperation.hpp"
 
 #include <cstdint>
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class SMArgMapTable;
+class SMSectionChrome;
 class StateMachineModel;
 class MethodBase;
 class ElementBase;
 enum class eDocElementKind;
 
 class QComboBox;
-class QFormLayout;
+class QIcon;
 class QLabel;
 class QVBoxLayout;
 
 /**
  * \class   SMOperationsEditor
- * \brief   The simple, opinionated editor for one operation list -- a state's `EntryList` or
- *          `ExitList`, or a transition's `OperationList`. It presents a fixed three-part form
- *          (all parts optional): one **Action** (a declared action call), one **Event** (an
+ * \brief   The simple, opinionated editor for one operation list -- a state's `EntryList`,
+ *          `DoList` or `ExitList`, or a transition's `OperationList`. It presents a fixed
+ *          three-part form (all parts optional) as a collapsible accordion under a shared
+ *          SMSectionChrome toolbar (one jump button per section + a compact toggle to expand
+ *          or collapse each): one **Action** (a declared action call), one **Event** (an
  *          event send), and any number of **Timers** (start/stop). There is no ordering UI --
- *          the action runs first, the event second, timers after -- so the form has no list or
- *          reorder controls. Each action/event parameter is one row with a single editable
- *          combo: pick a stimulus parameter or a machine attribute, or type a free value.
+ *          the action runs first, the event second, timers after -- so the form has no list
+ *          or reorder controls. The same toolbar+accordion is shown in every scope this editor
+ *          serves; a host may append its own section via \ref addSection (the state Do tab adds
+ *          a Repeat-policy section that way). The action's and the
+ *          event's argument mapping is rendered by the
+ *          shared \ref SMArgMapTable (in its Compact row shape) and committed through an
+ *          \ref SMArgSinkOperation, so each parameter is one row with a single editable combo:
+ *          pick a stimulus parameter or a machine attribute, or type a free value.
  *          Every edit is one undoable command; the stimulus-parameter source is offered only in
- *          a transition scope (spec 6.8). The same widget is hosted in the Properties panel's
+ *          a transition scope. The same widget is hosted in the Properties panel's
  *          Actions tab and in the context-menu dialog.
  **/
 class SMOperationsEditor : public QWidget
@@ -86,20 +96,17 @@ public:
     //!< Clears the binding and empties the editor.
     void clearBinding();
 
+    /**
+     * \brief   Appends a host-owned section to this editor's accordion, after the built-in
+     *          Action/Event/Timers sections, and returns its index. Used by the state `Do` tab to
+     *          give the repeat policy (interval + stop-condition) its own collapsible section under
+     *          the same expand/collapse toolbar. The editor takes ownership of \p content.
+     **/
+    int addSection(const QIcon& icon, const QString& title, QWidget* content);
+
     //!< Test/host accessors.
     inline QComboBox* actionCombo() const;
     inline QComboBox* eventCombo() const;
-
-//////////////////////////////////////////////////////////////////////////
-// Overrides
-//////////////////////////////////////////////////////////////////////////
-protected:
-    /**
-     * \brief   Opens a parameter mapping combo's dropdown on a click in its edit field, so the
-     *          allowed values (stimulus parameters / attributes) are one click away rather than
-     *          only reachable through the tiny drop arrow.
-     **/
-    virtual bool eventFilter(QObject* watched, QEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden members
@@ -113,7 +120,12 @@ private:
     void rebuildAction();
     void rebuildEvent();
     void rebuildTimers();
-    void buildParamRows(QFormLayout* form, uint32_t opId, bool isEvent);
+
+    /**
+     * \brief   Points \p table (through \p sink) at the argument list of operation \p opId and
+     *          at the callee's declared signature, or clears both when there is nothing to map.
+     **/
+    void bindParamRows(SMArgMapTable* table, SMArgSinkOperation& sink, uint32_t opId, bool isEvent);
 
     // Finders.
     SMActionCall* findAction() const;
@@ -126,15 +138,11 @@ private:
     void addTimer(bool start);
     void removeTimer(uint32_t opId);
     void setTimerName(uint32_t opId, const QString& name);
-    void commitParam(uint32_t opId, bool isEvent, const QString& paramName, const QString& text);
 
-    // Registry / mapping helpers.
+    // Registry helpers.
     QStringList actionNames() const;
     QStringList eventNames() const;
     QStringList timerNames() const;
-    QStringList stimulusParamNames() const;
-    QStringList attributeNames() const;
-    SMArgumentEntry::eValueSource resolveSource(const QString& name, QString& mappedName) const;
 
     bool isEditing() const;
     void scheduleRebuild();
@@ -153,10 +161,14 @@ private:
     bool                mApplying;
     bool                mRebuildQueued;
 
+    SMArgSinkOperation  mActionSink;    //!< Commits the action's argument mapping.
+    SMArgSinkOperation  mEventSink;     //!< Commits the event's argument mapping.
+
+    SMSectionChrome*    mChrome;        //!< The expand/collapse toolbar over the section accordion.
     QComboBox*          mActionCombo;
-    QFormLayout*        mActionParams;
+    SMArgMapTable*      mActionParams;
     QComboBox*          mEventCombo;
-    QFormLayout*        mEventParams;
+    SMArgMapTable*      mEventParams;
     QVBoxLayout*        mTimersList;
     QLabel*             mTimersEmpty;
 };

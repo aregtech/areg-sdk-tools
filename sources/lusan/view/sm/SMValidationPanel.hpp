@@ -15,7 +15,7 @@
  *  \file        lusan/view/sm/SMValidationPanel.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM document validation results panel (v7 B12 / S15).
+ *  \brief       Lusan application, FSM document validation results panel.
  *
  ************************************************************************/
 
@@ -37,7 +37,7 @@ enum class eDocElementKind;
 
 /**
  * \class   SMValidationPanel
- * \brief   The document validation results (S15), hosted as a dockable panel of the Design
+ * \brief   The document validation results, hosted as a dockable panel of the Design
  *          page. Shows the guard entries of \ref SMGuardValidation -- drafts (ERR),
  *          shadowing (WARN), the raw-fragment audit (INFO), broken/stale references --
  *          each row colored by severity and navigating to its transition's Conditions tab

@@ -74,6 +74,7 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMElementState           { "State" };
     constexpr QLatin1StringView xmlSMElementEntryList       { "EntryList" };
     constexpr QLatin1StringView xmlSMElementExitList        { "ExitList" };
+    constexpr QLatin1StringView xmlSMElementDoList          { "DoList" };
     constexpr QLatin1StringView xmlSMElementTransitionList  { "TransitionList" };
     constexpr QLatin1StringView xmlSMElementTransition      { "Transition" };
     constexpr QLatin1StringView xmlSMElementConditionList   { "ConditionList" };
@@ -81,9 +82,6 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMElementCondition       { "Condition" };
     constexpr QLatin1StringView xmlSMElementOperationList   { "OperationList" };
 
-    // Guard (SM-21 redesign): the transition's ID-bound resolved expression tree.
-    // Element name is the AST node kind; the only reference attribute is the lowercase
-    // `id` (a symbol's document ID). See fsml.xsd and the state-machine spec.
     constexpr QLatin1StringView xmlSMElementGuard           { "Guard" };
     constexpr QLatin1StringView xmlSMElementGuardExpr       { "Expr" };
     constexpr QLatin1StringView xmlSMElementGuardDraft      { "Draft" };
@@ -150,6 +148,8 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMAttributeHistory       { "History" };
     constexpr QLatin1StringView xmlSMAttributeSubmachine    { "Submachine" };
     constexpr QLatin1StringView xmlSMAttributeOnFinal       { "OnFinal" };
+    constexpr QLatin1StringView xmlSMAttributeInterval      { "Interval" };
+    constexpr QLatin1StringView xmlSMAttributeUntil         { "Until" };
     constexpr QLatin1StringView xmlSMAttributeStimulusKind  { "StimulusKind" };
     constexpr QLatin1StringView xmlSMAttributeStimulus      { "Stimulus" };
     constexpr QLatin1StringView xmlSMAttributeTo            { "To" };
@@ -157,6 +157,9 @@ namespace XmlSM
     constexpr QLatin1StringView xmlSMAttributeGuardState    { "state" };
     constexpr QLatin1StringView xmlSMAttributeGuardRefId    { "id" };
     constexpr QLatin1StringView xmlSMAttributeGuardOp       { "op" };
+    constexpr QLatin1StringView xmlSMAttributeGuardBreak    { "brk" };
+    constexpr QLatin1StringView xmlSMAttributeGuardIndent   { "indent" };
+    constexpr QLatin1StringView xmlSMAttributeGuardName     { "name" };
     constexpr QLatin1StringView xmlSMAttributeLhsKind       { "LHSKind" };
     constexpr QLatin1StringView xmlSMAttributeLhs           { "LHS" };
     constexpr QLatin1StringView xmlSMAttributeOperator      { "Operator" };

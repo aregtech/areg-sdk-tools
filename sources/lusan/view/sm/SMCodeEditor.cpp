@@ -107,7 +107,7 @@ void SMCodeEditor::setCompletions(const QStringList& words)
     if (mCompleter == nullptr)
     {
         // Known-identifier completion only: the words are the machine's own names, never a
-        // parse of the edited text (SM-21-06 / invariant: verbatim stays opaque).
+        // parse of the edited text (verbatim stays opaque).
         mWordModel = new QStringListModel(words, this);
         mCompleter = new QCompleter(mWordModel, this);
         mCompleter->setWidget(mBody);

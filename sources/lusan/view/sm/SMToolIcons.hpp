@@ -80,6 +80,24 @@ namespace SMToolIcons
         , NewAttribute
         , NewConstant
         , NewDataType
+        // The Conditions/Actions guard editor strip and its accordion headers. Same thin-stroke
+        // language as the canvas glyphs, so the Properties panel matches the drawing toolbar.
+        , GuardInsert       //!< Insert a symbol reference at the caret.
+        , GuardPreview      //!< The generated C++ (also the `Generated` accordion header).
+        , GuardPopout       //!< Open the guard in a larger editor.
+        , GuardClear        //!< Clear the guard.
+        , GuardHelp         //!< What can a guard use?
+        , GuardCompact      //!< Accordion compact mode (one section open at a time).
+        , GuardConditions   //!< The `Conditions` accordion header.
+        , GuardArguments    //!< The `Arguments` accordion header.
+        , GuardData         //!< The `Data` accordion header: the browsable symbol catalog.
+        // The Properties-panel section headers shared by the General and Actions tabs (R21/R22).
+        , SectionDetails    //!< A `Details` / `Trigger` form section (labelled fields).
+        , SectionList       //!< A `Transitions` list section (edge between two states).
+        , SectionText       //!< A `Description` section (paragraph lines).
+        , SectionEnter      //!< An `On Enter` actions section (arrow into a box).
+        , SectionExit       //!< An `On Exit` actions section (arrow out of a box).
+        , SectionDo         //!< A `Do` actions section (a circular repeat arrow).
     };
 
     /**

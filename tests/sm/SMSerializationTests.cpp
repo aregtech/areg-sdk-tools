@@ -747,6 +747,74 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// SM-21-R24: state `Do` activity (interval + stop condition)
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testDoActivity()
+    {
+        std::printf("[SM-21-R24] state Do activity: interval + stop-condition round-trip\n");
+
+        StateMachineData doc;
+        doc.getOverview().setName("DoActivity");
+        doc.getMethods().createMethod("Go", SMMethodEntry::eMethodType::Trigger);
+
+        // Root: a timer-loop Do activity -- interval and stop-condition both set.
+        SMStateEntry* root = doc.getStates().createState("Root", SMStateEntry::eStateKind::Start);
+        CHECK(root != nullptr);
+        SMInlineCode* work = new SMInlineCode();
+        work->setBody("tick();");
+        root->getDoList().addOperation(work);
+        root->setDoInterval(200u);
+        root->setDoUntil("isDone");
+
+        // Loop: the trigger-driven variant -- a Do list with interval 0 and no stop-condition must
+        // omit both attributes on the wrapper.
+        SMStateEntry* loop = doc.getStates().createState("Loop", SMStateEntry::eStateKind::Normal);
+        CHECK(loop != nullptr);
+        SMInlineCode* pump = new SMInlineCode();
+        pump->setBody("pump();");
+        loop->getDoList().addOperation(pump);
+
+        const QString outPath = outFile("sm21_do.fsml");
+        CHECK(doc.writeToFile(outPath));
+
+        const QByteArray written = readAllBytes(outPath);
+        CHECK(written.contains("<DoList"));
+        CHECK(written.contains("Interval=\"200\""));
+        CHECK(written.contains("Until=\"isDone\""));
+
+        StateMachineData reread;
+        CHECK(reread.readFromFile(outPath));
+        CHECK(reread.openSucceeded());
+
+        SMStateEntry* rroot = reread.getStates().findState("Root");
+        CHECK(rroot != nullptr);
+        if (rroot != nullptr)
+        {
+            CHECK(rroot->getDoList().getCount() == 1);
+            CHECK(rroot->getDoInterval() == 200u);
+            CHECK(rroot->getDoUntil() == QString("isDone"));
+        }
+
+        SMStateEntry* rloop = reread.getStates().findState("Loop");
+        CHECK(rloop != nullptr);
+        if (rloop != nullptr)
+        {
+            CHECK(rloop->getDoList().getCount() == 1);
+            CHECK(rloop->getDoInterval() == 0u);
+            CHECK(rloop->getDoUntil().isEmpty());
+        }
+
+        // A second resave of the reloaded model must be byte-identical (determinism / idempotence).
+        const QString outPath2 = outFile("sm21_do_2.fsml");
+        CHECK(reread.writeToFile(outPath2));
+        CHECK(readAllBytes(outPath) == readAllBytes(outPath2));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Entry point
 //////////////////////////////////////////////////////////////////////////
 
@@ -766,6 +834,7 @@ int main(int /*argc*/, char** /*argv*/)
     testRejectNewerMajor();
     testNewDocumentSkeleton();
     testAutosaveHelpers();
+    testDoActivity();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

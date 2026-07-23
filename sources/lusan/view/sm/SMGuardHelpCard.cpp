@@ -13,7 +13,7 @@
  *  \file        lusan/view/sm/SMGuardHelpCard.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
- *  \brief       Lusan application, FSM guard help card (v7 B11 / S11).
+ *  \brief       Lusan application, FSM guard help card.
  *
  ************************************************************************/
 
@@ -45,6 +45,15 @@ namespace
         grid->addWidget(glyphLabel, row, 0);
         grid->addWidget(new QLabel(what), row, 1);
         grid->addWidget(new QLabel(example), row, 2);
+    }
+
+    //!< A `gesture -- what it does` legend row (the gesture shown monospace).
+    void addGestureRow(QGridLayout* grid, int row, const QString& gesture, const QString& what)
+    {
+        QLabel* key = new QLabel(gesture);
+        key->setStyleSheet(QStringLiteral("font-family: monospace;"));
+        grid->addWidget(key, row, 0);
+        grid->addWidget(new QLabel(what), row, 1);
     }
 
     //!< A `you write -> it runs` mapping row (monospace).
@@ -127,6 +136,26 @@ void SMGuardHelpCard::buildUi()
     addMapRow(maps, 2, QStringLiteral("{ return ...; }"), QStringLiteral("inline lambda"));
     addMapRow(maps, 3, QStringLiteral("IsCalmHours(x)"),  QStringLiteral("mIsCalmHours(x)"));
     outer->addLayout(maps);
+
+    // The gesture legend: keys and mouse moves that are real features but were discoverable only by
+    // accident (Shift+Enter, the chip icon hot-zone, double-click-to-edit, the Alt section jumps).
+    QLabel* gestureTitle = new QLabel(tr("Gestures"), this);
+    QFont gestureFont = gestureTitle->font();
+    gestureFont.setBold(true);
+    gestureTitle->setFont(gestureFont);
+    outer->addWidget(gestureTitle);
+
+    QGridLayout* gestures = new QGridLayout();
+    gestures->setHorizontalSpacing(16);
+    addGestureRow(gestures, 0, QStringLiteral("#"),           tr("pick a symbol (parameter, attribute, constant, condition)"));
+    addGestureRow(gestures, 1, QStringLiteral("#kind:"),      tr("filter the picker to one kind"));
+    addGestureRow(gestures, 2, QStringLiteral("Enter"),       tr("commit the guard"));
+    addGestureRow(gestures, 3, QStringLiteral("Esc"),         tr("revert to the committed guard"));
+    addGestureRow(gestures, 4, QStringLiteral("Shift+Enter"), tr("insert a line break while writing"));
+    addGestureRow(gestures, 5, tr("click a chip icon"),      tr("reveal what the chip really is"));
+    addGestureRow(gestures, 6, tr("double-click a chip"),    tr("edit it as plain text"));
+    addGestureRow(gestures, 7, QStringLiteral("Alt+1..4"),    tr("jump to a section"));
+    outer->addLayout(gestures);
 }
 
 void SMGuardHelpCard::popupAt(const QWidget& anchor)

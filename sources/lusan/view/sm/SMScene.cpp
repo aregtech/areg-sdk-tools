@@ -537,6 +537,15 @@ void SMScene::onElementAdded(uint32_t id, eDocElementKind kind)
         refreshEdges();
     }
 
+    if (kind == eDocElementKind::Method)
+    {
+        // A method's signature is rendered as a trigger stimulus on transition edges and, via the
+        // operations that call it, summarized in state bodies. A parameter add emits the parameter's
+        // id (not the method's) under the Method kind, so re-read both surfaces unconditionally.
+        refreshEdges();
+        refreshStateBodies();
+    }
+
     if ((kind == eDocElementKind::State) || (kind == eDocElementKind::Transition))
     {
         updateConnHighlights();
@@ -573,6 +582,13 @@ void SMScene::onElementRemoved(uint32_t id, eDocElementKind kind)
     {
         refreshStateBodies();       // an operation left its owner state box
         refreshEdges();             // or its transition edge summary
+    }
+    else if (kind == eDocElementKind::Method)
+    {
+        // A removed parameter shortens the trigger stimulus signature on edges and the called-method
+        // summaries in state bodies; the notifier carries the parameter's id, so refresh both.
+        refreshEdges();
+        refreshStateBodies();
     }
 }
 
@@ -612,6 +628,16 @@ void SMScene::onElementChanged(uint32_t id, eDocElementKind kind)
         return;
     }
 
+    if (kind == eDocElementKind::Method)
+    {
+        // A method rename, or a parameter rename/retype/default change, alters the trigger stimulus
+        // signature shown on edges and the called-method summaries in state bodies. The changed id is
+        // the method's (never a canvas item's), so re-read both surfaces rather than a single item.
+        refreshEdges();
+        refreshStateBodies();
+        return;
+    }
+
     SMCanvasItem* item = findCanvasItem(id);
     if (item != nullptr)
     {
@@ -646,6 +672,13 @@ void SMScene::onListReordered(uint32_t /*ownerId*/, eDocElementKind kind)
     {
         refreshStateBodies();       // execution order changed; refresh the summarized rows
         refreshEdges();             // and the transition edge summary
+    }
+    else if (kind == eDocElementKind::Method)
+    {
+        // Reordering a method's parameters reorders the trigger stimulus signature on edges and the
+        // called-method summaries in state bodies; refresh both.
+        refreshEdges();
+        refreshStateBodies();
     }
 }
 
@@ -1074,12 +1107,28 @@ void SMScene::updateConnHighlights()
 bool SMScene::nudgeSelectedEdgePoint(int dx, int dy, bool coarse, bool pixel)
 {
     const QList<SMEdgeItem*> edges{ selectedEdgeItems() };
-    if ((edges.size() != 1) || (edges.first()->hasSelectedPoint() == false))
+    if (edges.size() != 1)
     {
         return false;
     }
 
-    return edges.first()->nudgeSelectedPoint(dx, dy, coarse, pixel);
+    // The arrow keys move whichever of the selected edge's parts is active: an interior waypoint,
+    // the repositioned label block, or a grabbed begin/end endpoint (issue #532).
+    SMEdgeItem* edge = edges.first();
+    if (edge->hasSelectedPoint())
+    {
+        return edge->nudgeSelectedPoint(dx, dy, coarse, pixel);
+    }
+    else if (edge->hasActiveLabel())
+    {
+        return edge->nudgeLabel(dx, dy, coarse, pixel);
+    }
+    else if (edge->hasActiveEnd())
+    {
+        return edge->nudgeActiveEnd(dx, dy, coarse, pixel);
+    }
+
+    return false;
 }
 
 bool SMScene::nudgeSelection(int dx, int dy, bool pixelWise)
