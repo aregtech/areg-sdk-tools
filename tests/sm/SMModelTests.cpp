@@ -228,10 +228,10 @@ namespace
         SMActionCall* offAction = new SMActionCall();
         offAction->setAction("AllLightsOff");
         lightOff->getEntryList().addOperation(offAction);
-        lightOff->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "PowerOn", "LightOn");
+        lightOff->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "PowerOn", lightOn->getId());
 
         // LightOn: external transition to LightOff (fires from any nested substate).
-        lightOn->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "PowerOff", "LightOff");
+        lightOn->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "PowerOff", lightOff->getId());
 
         // LightOn nested level: Start + a Normal state carrying operations and transitions.
         SMStateData* nested = lightOn->getOrCreateNestedStates();
@@ -242,7 +242,7 @@ namespace
         SMEventSend* send = new SMEventSend();
         send->setEvent("StartTrafficLight");
         init->getEntryList().addOperation(send);
-        SMTransitionEntry* toFunc = init->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "PowerOn", "Function");
+        SMTransitionEntry* toFunc = init->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "PowerOn", func->getId());
         SMTimerStart* tstart = new SMTimerStart();
         tstart->setTimer("YellowGreen");
         toFunc->getOperations().addOperation(tstart);
@@ -253,7 +253,7 @@ namespace
         tstop->setTimer("Red");
         func->getExitList().addOperation(tstop);
 
-        SMTransitionEntry* toInit = func->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "PowerOff", "Initialize");
+        SMTransitionEntry* toInit = func->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "PowerOff", init->getId());
         SMConditionEntry* row = toInit->getConditions().addCondition();
         row->setLhsKind(SMConditionEntry::eOperandKind::Condition);
         row->setLhs("IsReady");

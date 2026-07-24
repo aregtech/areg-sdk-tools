@@ -196,6 +196,7 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
     , mStimulusSig  (nullptr)
     , mStimulusName (nullptr)
     , mTarget       (nullptr)
+    , mSource       (nullptr)
     , mTransDesc    (nullptr)
     , mConditions   (nullptr)
     , mTransOps     (nullptr)
@@ -367,6 +368,9 @@ void SMPropertiesPanel::buildTransitionPage()
     mTarget = new QComboBox(trigger);
     mTarget->setEditable(false);
 
+    mSource = new QComboBox(trigger);
+    mSource->setEditable(false);
+
     mStimulusSig = new QLabel(trigger);
     mStimulusSig->setTextInteractionFlags(Qt::TextSelectableByMouse);
     mStimulusSig->setEnabled(false);
@@ -377,6 +381,7 @@ void SMPropertiesPanel::buildTransitionPage()
 
     form->addRow(tr("Stimulus:"), mStimulusName);
     form->addRow(tr("Signature:"), mStimulusSig);
+    form->addRow(tr("Source:"), mSource);
     form->addRow(tr("Target:"), mTarget);
 
     mTransGeneral = new SMSectionChrome(this);
@@ -391,6 +396,7 @@ void SMPropertiesPanel::buildTransitionPage()
 
     connect(mStimulusName, &QComboBox::activated, this, &SMPropertiesPanel::onStimulusCommit);
     connect(mTarget, &QComboBox::activated, this, &SMPropertiesPanel::onTargetCommit);
+    connect(mSource, &QComboBox::activated, this, &SMPropertiesPanel::onSourceCommit);
 
     mTransTabs = new QTabWidget(this);
     mTransTabs->setObjectName(QStringLiteral("smTransTabs"));
@@ -635,7 +641,7 @@ void SMPropertiesPanel::populateTransitionList(uint32_t stateId)
 
         const QString stimulus = transition->getStimulus().isEmpty() ? tr("<stimulus>") : transition->getStimulus();
         const QString label = transition->isExternal()
-                ? (stimulus + QStringLiteral(" -> ") + transition->getTo())
+                ? (stimulus + QStringLiteral(" -> ") + transition->getTargetName())
                 : (stimulus + QStringLiteral(" ") + internalLabel());
         QListWidgetItem* item = new QListWidgetItem(label, mTransitions);
         item->setData(RoleTransitionId, transition->getId());
@@ -663,21 +669,45 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
     mStimulusName->setCurrentIndex(stimRow >= 0 ? stimRow : 0);
     mStimulusSig->setText(SMOperationSummary::stimulusSignature(data, *transition));
 
-    // Populate the target picker from the sibling states of the transition's level.
+    // Populate the target and source pickers from the sibling states of the transition's level.
+    // Each item carries the sibling's element ID as its data, so the endpoint is committed by ID --
+    // robust even when several states share a display name (Start/Final).
+    //
+    // Spec rule (mirrors the canvas endpoint-drag guard): a Start state has no incoming transition,
+    // so it is never offered as a Target; a Final state has no outgoing transition, so it is never
+    // offered as a Source. Omitting them from the lists is the primary enforcement; the commit slots
+    // add a backstop in case a stale selection slips through.
     mTarget->clear();
-    mTarget->addItem(internalLabel());
+    mTarget->addItem(internalLabel(), 0u);
+    mSource->clear();
+    const SMStateEntry* owner = data.findTransitionOwner(transitionId);
+    const uint32_t sourceId = (owner != nullptr ? owner->getId() : 0u);
     const SMStateData* level = data.findLevel(mModel.getSelectionModel().getActiveLevel());
     if (level != nullptr)
     {
         for (SMStateEntry* sibling : level->getElements())
         {
-            if (sibling != nullptr) mTarget->addItem(sibling->getName());
+            if (sibling == nullptr)
+            {
+                continue;
+            }
+
+            if (sibling->getKind() != SMStateEntry::eStateKind::Start)
+            {
+                mTarget->addItem(sibling->getName(), sibling->getId());
+            }
+
+            if (sibling->getKind() != SMStateEntry::eStateKind::Final)
+            {
+                mSource->addItem(sibling->getName(), sibling->getId());
+            }
         }
     }
 
-    const QString targetLabel = transition->isExternal() ? transition->getTo() : internalLabel();
-    const int targetRow = mTarget->findText(targetLabel, Qt::MatchFixedString);
+    const int targetRow = mTarget->findData(transition->getToId());
     mTarget->setCurrentIndex(targetRow >= 0 ? targetRow : 0);
+    const int sourceRow = mSource->findData(sourceId);
+    mSource->setCurrentIndex(sourceRow >= 0 ? sourceRow : -1);
     mTransDesc->setPlainText(transition->getDescription());
 
     mConditions->setTransition(transitionId);
@@ -948,30 +978,64 @@ void SMPropertiesPanel::onTargetCommit()
         return;
     }
 
-    const QString text = mTarget->currentText().trimmed();
-    if ((text.isEmpty()) || (text == internalLabel()))
+    // The picker is a closed list; each row carries its state's element ID (0 = internal).
+    const uint32_t targetId = mTarget->currentData().toUInt();
+    if (targetId == 0)
     {
         if (transition->isExternal())
         {
-            mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, QString(), tr("Make internal")));
+            mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, 0u, tr("Make internal")));
         }
 
         return;
     }
 
-    const SMStateData* level = data.findLevel(mModel.getSelectionModel().getActiveLevel());
-    const bool sibling = (level != nullptr) && (level->findState(text) != nullptr);
-    if (sibling == false)
+    // Backstop for the spec rule: a Start state has no incoming transition. The picker already omits
+    // Start rows, so this only fires if a stale/programmatic selection slips through.
+    const SMStateEntry* targetState = data.findStateById(targetId);
+    if ((targetState != nullptr) && (targetState->getKind() == SMStateEntry::eStateKind::Start))
     {
-        // The picker is a closed list, so this is unreachable; re-select the current row defensively.
-        showTransition(mCurrentId);
         return;
     }
 
-    if (text != transition->getTo())
+    if (targetId != transition->getToId())
     {
-        mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, text, tr("Set target")));
+        mModel.getUndoStack().push(new SMSetTransitionTargetCommand(data, mModel.getNotifier(), mCurrentId, targetId, tr("Set target")));
     }
+}
+
+void SMPropertiesPanel::onSourceCommit()
+{
+    if (mUpdating || (mPage != PageTransition))
+    {
+        return;
+    }
+
+    StateMachineData& data = mModel.getData();
+    const SMTransitionEntry* transition = data.findTransitionById(mCurrentId);
+    if (transition == nullptr)
+    {
+        return;
+    }
+
+    // The picker is a closed list; each row carries its state's element ID. Reparenting the
+    // transition to a new owner state changes its begin endpoint (source).
+    const uint32_t newSourceId = mSource->currentData().toUInt();
+    SMStateEntry* newSource = data.findStateById(newSourceId);
+    SMStateEntry* oldSource = data.findTransitionOwner(mCurrentId);
+    if ((newSource == nullptr) || (oldSource == nullptr) || (newSource == oldSource))
+    {
+        return;
+    }
+
+    // Backstop for the spec rule: a Final state has no outgoing transition. The picker already omits
+    // Final rows, so this only fires if a stale/programmatic selection slips through.
+    if (newSource->getKind() == SMStateEntry::eStateKind::Final)
+    {
+        return;
+    }
+
+    mModel.getUndoStack().push(new SMReparentTransitionCommand(data, mModel.getNotifier(), *oldSource, *newSource, mCurrentId, tr("Set source")));
 }
 
 void SMPropertiesPanel::onTransitionActivated()

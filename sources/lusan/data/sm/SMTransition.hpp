@@ -88,14 +88,24 @@ public:
     inline void setStimulus(const QString& stimulus);
 
     /**
-     * \brief   The target sibling state name; empty when this is an internal transition.
+     * \brief   The target sibling state's element ID; 0 when this is an internal transition.
+     *          The target is referenced by ID (not by name), so renaming the target state
+     *          never breaks the connection.
      **/
-    inline const QString& getTo() const;
-    inline void setTo(const QString& target);
+    inline uint32_t getToId() const;
+    inline void setToId(uint32_t targetId);
     inline void clearTo();
 
     /**
-     * \brief   True for an external transition (a `To` target is present).
+     * \brief   Resolves and returns the current name of the target state, or an empty string
+     *          when the transition is internal or its target no longer exists. Walks the
+     *          document (via the element parent chain) to look the target up by ID, so the
+     *          returned name always reflects the target state's current name.
+     **/
+    QString getTargetName() const;
+
+    /**
+     * \brief   True for an external transition (a target state is present).
      **/
     inline bool isExternal() const;
 
@@ -135,8 +145,7 @@ public:
 private:
     eStimulusKind   mStimulusKind;  //!< The stimulus kind.
     QString         mStimulus;      //!< The stimulus name.
-    QString         mTo;            //!< The target sibling state (empty = internal).
-    bool            mHasTo;         //!< Whether a target is present.
+    uint32_t        mToId;          //!< The target sibling state's ID (0 = internal).
     QString         mDescription;   //!< The description text.
     SMConditionList mConditions;    //!< Legacy condition tree (read-shim only; not written when a guard exists).
     SMGuard         mGuard;         //!< The canonical guard (ID-bound tree / draft / empty).
@@ -168,10 +177,10 @@ public:
      * \brief   Creates a new transition appended at the end (lowest priority).
      * \param   kind        The stimulus kind.
      * \param   stimulus    The stimulus name.
-     * \param   target      The target sibling state, or empty for an internal transition.
+     * \param   targetId    The target sibling state's ID, or 0 for an internal transition.
      * \return  Pointer to the created transition.
      **/
-    SMTransitionEntry* createTransition(SMTransitionEntry::eStimulusKind kind, const QString& stimulus, const QString& target = QString());
+    SMTransitionEntry* createTransition(SMTransitionEntry::eStimulusKind kind, const QString& stimulus, uint32_t targetId = 0);
 
     /**
      * \brief   Deletes and removes all transitions.
@@ -211,26 +220,24 @@ inline void SMTransitionEntry::setStimulus(const QString& stimulus)
     mStimulus = stimulus;
 }
 
-inline const QString& SMTransitionEntry::getTo() const
+inline uint32_t SMTransitionEntry::getToId() const
 {
-    return mTo;
+    return mToId;
 }
 
-inline void SMTransitionEntry::setTo(const QString& target)
+inline void SMTransitionEntry::setToId(uint32_t targetId)
 {
-    mTo = target;
-    mHasTo = true;
+    mToId = targetId;
 }
 
 inline void SMTransitionEntry::clearTo()
 {
-    mTo.clear();
-    mHasTo = false;
+    mToId = 0;
 }
 
 inline bool SMTransitionEntry::isExternal() const
 {
-    return mHasTo;
+    return (mToId != 0);
 }
 
 inline const QString& SMTransitionEntry::getDescription() const

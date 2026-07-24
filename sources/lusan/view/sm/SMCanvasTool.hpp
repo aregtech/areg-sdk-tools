@@ -203,8 +203,12 @@ private:
 
     /**
      * \brief   Completes the gesture as an external/self transition to the target state.
+     * \param   targetId    The target state's element ID.
+     * \param   dropPos     The scene position where the pointer completed the gesture on
+     *                      the target (release or click). Used to place the target endpoint
+     *                      near the drop for a Select-tool border drag.
      **/
-    void completeExternal(uint32_t targetId);
+    void completeExternal(uint32_t targetId, const QPointF& dropPos);
 
     /**
      * \brief   Completes the gesture as an internal transition on the source state.
@@ -223,6 +227,7 @@ private:
     bool                mFromBorder;    //!< The gesture was started from a state border (Select tool).
     uint32_t            mSourceId;      //!< The picked source state ID.
     QPointF             mPressPos;      //!< The position of the most recent press.
+    QPointF             mSourcePress;   //!< Where the source was armed (kept across a later target press).
     QList<QPointF>      mWaypoints;     //!< The dropped intermediate waypoints.
     QGraphicsPathItem*  mPreview;       //!< The live edge preview, or nullptr.
 };

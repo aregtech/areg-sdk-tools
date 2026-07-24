@@ -291,6 +291,7 @@ SMTransitionTool::SMTransitionTool(SMScene& scene)
     , mFromBorder   (false)
     , mSourceId     (0)
     , mPressPos     ( )
+    , mSourcePress  ( )
     , mWaypoints    ( )
     , mPreview      (nullptr)
 {
@@ -384,8 +385,21 @@ void SMTransitionTool::updatePreview(const QPointF& cursor)
     SMStateItem* sourceItem = getScene().stateItem(mSourceId);
     const double srcRadius = (sourceItem != nullptr ? sourceItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
     const QPointF ref = (mWaypoints.isEmpty() ? cursor : mWaypoints.first());
+
+    // The live preview's start anchor must track where the source was pressed, the same way the
+    // committed edge does in completeExternal(): the facing side is chosen center-to-center, then
+    // for a straight (no-waypoint) drag the anchor slides along that side to the grid-aligned press
+    // position. Without this the dashed line starts mid-border while dragging and only jumps to the
+    // pressed row when the solid edge is committed.
+    const int     grid      = getScene().getGridSize();
+    const bool    snap      = getScene().isSnapToGrid();
+    const QPointF beginFace = NESMDesign::borderPoint(src, srcRadius, ref);
+    const QPointF begin     = mWaypoints.isEmpty()
+                            ? NESMDesign::slideBorderPoint(src, srcRadius, beginFace, mSourcePress, grid, snap)
+                            : beginFace;
+
     QPainterPath path;
-    path.moveTo(NESMDesign::borderPoint(src, srcRadius, ref));
+    path.moveTo(begin);
     for (const QPointF& wp : mWaypoints)
     {
         path.lineTo(wp);
@@ -413,9 +427,10 @@ bool SMTransitionTool::mousePress(QGraphicsSceneMouseEvent* event)
             return false;
         }
 
-        mArmed    = true;
-        mDragging = false;
-        mSourceId = state->getElementId();
+        mArmed       = true;
+        mDragging    = false;
+        mSourceId    = state->getElementId();
+        mSourcePress = event->scenePos();
         mWaypoints.clear();
         createPreview();
         updatePreview(event->scenePos());
@@ -428,7 +443,7 @@ bool SMTransitionTool::mousePress(QGraphicsSceneMouseEvent* event)
     mFromBorder = false;
     if (state != nullptr)
     {
-        completeExternal(state->getElementId());
+        completeExternal(state->getElementId(), event->scenePos());
     }
     else
     {
@@ -476,7 +491,7 @@ bool SMTransitionTool::mouseRelease(QGraphicsSceneMouseEvent* event)
         SMStateItem* state = getScene().stateAt(event->scenePos());
         if (state != nullptr)
         {
-            completeExternal(state->getElementId());
+            completeExternal(state->getElementId(), event->scenePos());
         }
         else
         {
@@ -550,18 +565,19 @@ bool SMTransitionTool::keyPress(QKeyEvent* event)
 
 void SMTransitionTool::beginDragFrom(uint32_t sourceId, const QPointF& scenePos)
 {
-    mArmed      = true;
-    mButtonDown = true;
-    mDragging   = false;
-    mFromBorder = true;
-    mSourceId   = sourceId;
-    mPressPos   = scenePos;
+    mArmed       = true;
+    mButtonDown  = true;
+    mDragging    = false;
+    mFromBorder  = true;
+    mSourceId    = sourceId;
+    mPressPos    = scenePos;
+    mSourcePress = scenePos;
     mWaypoints.clear();
     createPreview();
     updatePreview(scenePos);
 }
 
-void SMTransitionTool::completeExternal(uint32_t targetId)
+void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPos)
 {
     SMScene& canvas = getScene();
     StateMachineModel& model = canvas.getModel();
@@ -616,15 +632,31 @@ void SMTransitionTool::completeExternal(uint32_t targetId)
         const double tgtRadius = (targetItem != nullptr ? targetItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
         const QPointF beginRef = waypoints.isEmpty() ? tgtRect.center() : waypoints.first();
         const QPointF endRef   = waypoints.isEmpty() ? srcRect.center() : waypoints.last();
-        points.append(NESMDesign::borderPoint(srcRect, srcRadius, beginRef));
+
+        // For a straight (no-waypoint) external transition, the endpoints follow where the user
+        // actually pressed on the source and released on the target: the facing side is still
+        // chosen center-to-center (so the edge leaves/enters the correct side), but each endpoint
+        // is then slid along that side to the grid-aligned pointer coordinate. This makes a
+        // straight drag connect press-point to release-point instead of snapping mid-border to
+        // mid-border; a center press/release reproduces the old mid-border result exactly.
+        const int  grid     = canvas.getGridSize();
+        const bool snap     = canvas.isSnapToGrid();
+        const bool straight = (selfLoop == false) && waypoints.isEmpty();
+        const QPointF beginFace = NESMDesign::borderPoint(srcRect, srcRadius, beginRef);
+        const QPointF endFace   = NESMDesign::borderPoint(tgtRect, tgtRadius, endRef);
+        const QPointF begin = straight ? NESMDesign::slideBorderPoint(srcRect, srcRadius, beginFace, mSourcePress, grid, snap)
+                                       : beginFace;
+        const QPointF end   = straight ? NESMDesign::slideBorderPoint(tgtRect, tgtRadius, endFace, dropPos, grid, snap)
+                                       : endFace;
+        points.append(begin);
         points.append(waypoints);
-        points.append(NESMDesign::borderPoint(tgtRect, tgtRadius, endRef));
+        points.append(end);
     }
 
     const QString text = QCoreApplication::translate("SMTransitionTool", "Add transition");
     SMCreateTransitionCommand* command = new SMCreateTransitionCommand(  data, model.getNotifier(), *source
                                                                        , SMTransitionEntry::eStimulusKind::Trigger, QString()
-                                                                       , target->getName(), points, text);
+                                                                       , target->getId(), points, text);
     model.getUndoStack().push(command);
     const uint32_t transitionId = command->getTransitionId();
 
@@ -646,7 +678,7 @@ void SMTransitionTool::completeInternal()
         const QString text = QCoreApplication::translate("SMTransitionTool", "Add internal transition");
         model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *source
                                                                 , SMTransitionEntry::eStimulusKind::Trigger, QString()
-                                                                , QString(), QList<QPointF>(), text));
+                                                                , 0u, QList<QPointF>(), text));
     }
 
     clearPreview();

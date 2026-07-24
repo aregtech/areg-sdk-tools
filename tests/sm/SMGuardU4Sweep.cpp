@@ -586,7 +586,7 @@ static void sweepItem21(const QString& docPath, const QString& tmpDir, const QSt
     // The validation panel shows a draft ERR and the raw INFO audit side by side: keep the
     // raw guard on the first transition, give a second transition a draft.
     SMStateEntry* idle = model.getData().findState(QStringLiteral("Idle"));
-    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), QStringLiteral("Walking"));
+    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), idle->getId());
     second->getGuard().setDraft(QStringLiteral("WalkRequsted &&"));
     model.getNotifier().notifyElementAdded(second->getId(), eDocElementKind::Transition);
 
@@ -664,7 +664,7 @@ static void sweepTryIt(const QString& docPath, const QString& grabDir)
 
     // Sibling winner: a second transition on the same stimulus, lower priority, empty guard.
     SMStateEntry* idle = data.findState(QStringLiteral("Idle"));
-    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), QStringLiteral("Idle"));
+    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), idle->getId());
     model.getNotifier().notifyElementAdded(second->getId(), eDocElementKind::Transition);
     pump(300);
 

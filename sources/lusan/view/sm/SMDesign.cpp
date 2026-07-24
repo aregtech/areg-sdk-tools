@@ -1713,7 +1713,7 @@ void SMDesign::addInternalToSelection()
     // No target and no edge geometry: internal transitions render as a state-body row.
     mModel.getUndoStack().push(new SMCreateTransitionCommand(  data, mModel.getNotifier(), *state
                                                              , SMTransitionEntry::eStimulusKind::Trigger, QString()
-                                                             , QString(), QList<QPointF>()
+                                                             , 0u, QList<QPointF>()
                                                              , tr("Add internal transition to %1").arg(state->getName())));
 }
 
@@ -2457,7 +2457,7 @@ void SMDesign::collectSearchHits(const QString& query, const SMStateData& level,
             }
 
             if (transition->getStimulus().contains(query, Qt::CaseInsensitive)
-                || transition->getTo().contains(query, Qt::CaseInsensitive))
+                || transition->getTargetName().contains(query, Qt::CaseInsensitive))
             {
                 out.append({ levelId, transition->getId(), false });
             }

@@ -88,7 +88,6 @@ private:
     uint32_t        mId;                //!< The renamed state's ID.
     QString         mNew;               //!< The new name.
     QString         mOld;               //!< The previous name, captured on first redo.
-    QList<uint32_t> mRetargeted;        //!< Incoming transitions (targets by name) rebound with the rename.
     bool            mCaptured { false };
 };
 

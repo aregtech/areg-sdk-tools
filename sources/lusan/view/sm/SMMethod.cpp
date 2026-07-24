@@ -297,9 +297,33 @@ QString SMMethod::nameCollisionReason(const SMMethodEntry* method, const QString
     if (name.isEmpty())
         return QString();
 
-    SMMethodEntry* other = mModel.findMethod(name);
-    if ((other != nullptr) && (other->getId() != selfId))
-        return tr("'%1' is already used by another method").arg(name);
+    // Method names collide only WITHIN the same kind. Each kind generates a distinct symbol in a
+    // distinct scope: a trigger becomes a member of the FSM class; an action becomes the pure-virtual
+    // `action_<name>()` on the handler class; a condition becomes `<name>()` on that same handler class
+    // (a virtual method, or a std::function member when it is a lambda). So `on` may legitimately exist
+    // once as a trigger, once as an action and once as a condition. Only two methods of the SAME kind
+    // (two triggers, two actions, or two conditions) named alike map to one symbol and truly collide.
+    // findMethod() is name-only and returns the first match regardless of kind, so it cannot answer this
+    // -- scan the list for a same-kind, same-name sibling instead. When no method is bound the kind is
+    // unknown, so the cross-method check is skipped (the live name hint fires only for a selected method).
+    if (method != nullptr)
+    {
+        for (const SMMethodEntry* other : mModel.getMethods())
+        {
+            if ((other == nullptr) || (other->getId() == selfId)
+                || (other->getMethodType() != method->getMethodType())
+                || (other->getName() != name))
+            {
+                continue;
+            }
+
+            if (method->isTrigger())
+                return tr("'%1' is already used by another trigger method").arg(name);
+            if (method->isAction())
+                return tr("'%1' is already used by another action method").arg(name);
+            return tr("'%1' is already used by another condition method").arg(name);
+        }
+    }
 
     // Only trigger methods participate in the shared stimulus name space
     if ((method != nullptr) && method->isTrigger())

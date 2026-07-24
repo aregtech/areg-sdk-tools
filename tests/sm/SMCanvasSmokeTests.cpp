@@ -60,6 +60,7 @@
 #include <QFile>
 #include <QFocusEvent>
 #include <QHBoxLayout>
+#include <QGraphicsPathItem>
 #include <QGraphicsProxyWidget>
 #include <QKeyEvent>
 #include <QLabel>
@@ -286,6 +287,70 @@ int main(int argc, char* argv[])
     QApplication::processEvents();
     grab(design, "g1-rendered");
 
+    std::printf("sect: z-order + Start/Final endpoint rules\n");
+    // Isolated in its own model/design so undo-stack accounting never perturbs the sections below.
+    {
+        StateMachineModel zmodel;
+        CHECK(zmodel.loadFromFile(QString::fromLocal8Bit(argv[1])));
+        SMDesign zdesign(zmodel);
+        zdesign.resize(1000, 700);
+        zdesign.show();
+        QApplication::processEvents();
+
+        SMScene&          zscene = zdesign.getScene();
+        StateMachineData& zdata  = zmodel.getData();
+
+        // --- Issue 1: an inactive transition line paints ABOVE an inactive state box ---
+        SMStateEntry* zoff = zdata.findState("LightOff");
+        CHECK(zoff != nullptr);
+        SMStateItem* zoffItem = zscene.stateItem(zoff->getId());
+        SMEdgeItem*  zedge     = dynamic_cast<SMEdgeItem*>(zscene.findCanvasItem(27));
+        CHECK((zoffItem != nullptr) && (zedge != nullptr));
+        if ((zoffItem != nullptr) && (zedge != nullptr))
+        {
+            CHECK(zoffItem->zValue() == 0.0);       // inactive box: bottom band
+            CHECK(zedge->zValue() == 1.0);          // inactive edge: above the boxes
+            // A selected (active) box raises to cover the inactive edges...
+            zscene.clearSelection();
+            zoffItem->setSelected(true);
+            QApplication::processEvents();
+            CHECK(zoffItem->zValue() == 2.0);
+            // ...and a selected edge tops everything so its handles stay grabbable.
+            zscene.clearSelection();
+            zedge->setSelected(true);
+            QApplication::processEvents();
+            CHECK(zedge->zValue() == 3.0);
+            zscene.clearSelection();
+            QApplication::processEvents();
+            CHECK(zoffItem->zValue() == 0.0);       // back to the inactive bands
+            CHECK(zedge->zValue() == 1.0);
+        }
+
+        // --- Issue 2: a Start state is a source only; a Final state is a target only ---
+        const SMLayoutEdge geom = *zdata.getLayout().findEdge(27);
+
+        // Retargeting a transition onto the Start state is rejected (no incoming into Start).
+        const uint32_t to27Before = zdata.findTransitionById(27)->getToId();
+        const int      undoA = zmodel.getUndoStack().count();
+        zscene.reconnectTransitionTarget(27, zoff->getId(), geom);
+        CHECK(zdata.findTransitionById(27)->getToId() == to27Before);    // unchanged
+        CHECK(zmodel.getUndoStack().count() == undoA);                   // nothing pushed
+
+        // Reparenting a transition onto a Final state is rejected (no outgoing from Final).
+        SMStateData& zroot = *zdata.findLevel(zscene.getLevelId());
+        SMCreateStateCommand* mkFinal = new SMCreateStateCommand(  zdata, zmodel.getNotifier(), zroot
+                                                                 , QStringLiteral("Final"), SMStateEntry::eStateKind::Final
+                                                                 , QRectF(600.0, 40.0, 96.0, 48.0), QStringLiteral("final"));
+        zmodel.getUndoStack().push(mkFinal);
+        SMStateEntry* zfinal = zdata.findStateById(mkFinal->getStateId());
+        CHECK((zfinal != nullptr) && (zfinal->getKind() == SMStateEntry::eStateKind::Final));
+        const SMStateEntry* ownerBefore = zdata.findTransitionOwner(27);
+        const int           undoB = zmodel.getUndoStack().count();
+        zscene.reparentTransition(27, zfinal->getId(), geom);
+        CHECK(zdata.findTransitionOwner(27) == ownerBefore);            // unchanged
+        CHECK(zmodel.getUndoStack().count() == undoB);                  // nothing pushed
+    }
+
     std::printf("sect: placement\n");
     // --- Placement tool ---
     const int undoBase = model.getUndoStack().count();
@@ -462,7 +527,7 @@ int main(int argc, char* argv[])
     CHECK(standby != nullptr);
     model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *standby
                                                             , SMTransitionEntry::eStimulusKind::Trigger, QString()
-                                                            , QString(), QList<QPointF>(), QStringLiteral("internal row")));
+                                                            , 0u, QList<QPointF>(), QStringLiteral("internal row")));
     QApplication::processEvents();
     placedItem = dynamic_cast<SMStateItem*>(scene.findCanvasItem(standby->getId()));
     CHECK(placedItem != nullptr);
@@ -556,18 +621,159 @@ int main(int argc, char* argv[])
     CHECK(onState->getTransitions().getElementCount() == selfBefore + 1);
     const uint32_t selfTx = onState->getTransitions().getElements().last()->getId();
     const SMTransitionEntry* self = data.findTransitionById(selfTx);
-    CHECK((self != nullptr) && self->isExternal() && (self->getTo() == onState->getName()));
+    CHECK((self != nullptr) && self->isExternal() && (self->getToId() == onState->getId()));
     CHECK(dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(selfTx)) != nullptr);
     model.getUndoStack().undo();
 
     // Internal transition (no target): the path the tool takes on Enter / empty drop.
     model.getUndoStack().push(new SMCreateTransitionCommand(  data, model.getNotifier(), *onState
-                                                           , SMTransitionEntry::eStimulusKind::Trigger, QString(), QString()
+                                                           , SMTransitionEntry::eStimulusKind::Trigger, QString(), 0u
                                                            , QList<QPointF>(), QStringLiteral("internal")));
     const uint32_t internalTx = onState->getTransitions().getElements().last()->getId();
     CHECK(data.findTransitionById(internalTx)->isExternal() == false);
     CHECK(scene.findCanvasItem(internalTx) == nullptr);                      // no edge for an internal
     model.getUndoStack().undo();
+
+    std::printf("sect: straight transition follows the pressed/released row\n");
+    // --- A straight (no-waypoint) transition drawn by press-drag-release starts where the
+    // user pressed on the source and ends where the pointer is released on the target: the
+    // endpoint sticks to the facing side but slides along it to the grid-snapped pointer row,
+    // rather than snapping to the middle of the vertical borders regardless of the pressed row. ---
+    {
+        SMStateData* rootLevel = data.findLevel(scene.getLevelId());
+        CHECK(rootLevel != nullptr);
+
+        // Grid 10 so the along-edge snap step is 5 (half a cell): the pressed row rounds to a
+        // value clearly distinct from the box center row.
+        model.getUndoStack().push(new SMSetGridSizeCommand(data, model.getNotifier(), 10, QStringLiteral("grid 10")));
+        QApplication::processEvents();
+        CHECK(scene.getGridSize() == 10);
+        CHECK(scene.isSnapToGrid());
+
+        const QRectF srcBox(2000.0, 2000.0, 160.0, 80.0);   // right = 2160, center y = 2040
+        const QRectF tgtBox(2400.0, 2000.0, 160.0, 80.0);   // left  = 2400, center y = 2040
+        SMCreateStateCommand* mkSrc = new SMCreateStateCommand(  data, model.getNotifier(), *rootLevel
+                                                              , QStringLiteral("PWR_OFF"), SMStateEntry::eStateKind::Normal
+                                                              , srcBox, QStringLiteral("src"));
+        model.getUndoStack().push(mkSrc);
+        SMCreateStateCommand* mkTgt = new SMCreateStateCommand(  data, model.getNotifier(), *rootLevel
+                                                              , QStringLiteral("PWR_ON"), SMStateEntry::eStateKind::Normal
+                                                              , tgtBox, QStringLiteral("tgt"));
+        model.getUndoStack().push(mkTgt);
+        const uint32_t srcId = mkSrc->getStateId();
+        const uint32_t tgtId = mkTgt->getStateId();
+        QApplication::processEvents();
+
+        SMStateItem* srcItem = scene.stateItem(srcId);
+        SMStateItem* tgtItem = scene.stateItem(tgtId);
+        CHECK((srcItem != nullptr) && (tgtItem != nullptr));
+
+        // Draw at 1:1 with both boxes centered so synthetic scene->viewport->scene mapping is exact.
+        view.resetTransform();
+        view.centerOn((srcBox.center() + tgtBox.center()) / 2.0);
+        QApplication::processEvents();
+
+        const QRectF sbox = srcItem->getBoxGeometry();
+        const QRectF tbox = tgtItem->getBoxGeometry();
+        const double pressRow = sbox.top() + 22.0;      // 2022 -> snaps to 2020 (not the center 2040)
+        const double snapRow  = 2020.0;
+        const QPointF from(sbox.right() - 3.0, pressRow);   // inside the source, near its right border
+        const QPointF to  (tbox.left()  + 3.0, pressRow);   // inside the target, near its left border
+
+        scene.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+
+        // Drive the gesture by hand (press, moves, release) so the LIVE dashed preview can be
+        // inspected mid-drag: the preview's start anchor must already sit at the pressed row, not
+        // jump to the border middle while moving and only correct itself once the solid edge is
+        // committed on release. This is the bug reported for the transition-in-progress painting.
+        const auto previewPath = [&scene]() -> QList<QPointF>
+        {
+            for (QGraphicsItem* it : scene.items())
+            {
+                QGraphicsPathItem* p = dynamic_cast<QGraphicsPathItem*>(it);
+                if ((p != nullptr) && (p->pen().style() == Qt::DashLine))
+                {
+                    QList<QPointF> pts;
+                    const QPainterPath path = p->path();
+                    for (int i = 0; i < path.elementCount(); ++i)
+                    {
+                        const QPainterPath::Element e = path.elementAt(i);
+                        pts.append(QPointF(e.x, e.y));
+                    }
+
+                    return pts;
+                }
+            }
+
+            return QList<QPointF>();
+        };
+
+        const QPoint vpFrom = view.mapFromScene(from);
+        QMouseEvent pvPress(QEvent::MouseButtonPress, QPointF(vpFrom), view.viewport()->mapToGlobal(vpFrom)
+                          , Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(view.viewport(), &pvPress);
+        QApplication::processEvents();
+
+        constexpr int pvSteps{ 8 };
+        for (int i = 1; i <= pvSteps; ++i)
+        {
+            const QPointF sp = from + (to - from) * (static_cast<double>(i) / pvSteps);
+            const QPoint  vp = view.mapFromScene(sp);
+            QMouseEvent move(QEvent::MouseMove, QPointF(vp), view.viewport()->mapToGlobal(vp)
+                             , Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(view.viewport(), &move);
+        }
+
+        QApplication::processEvents();
+
+        // Mid-drag: the dashed preview starts on the source's right border at the snapped pressed
+        // row, NOT at the box-center row - this is the regression the fix targets.
+        grab(design, "g8c-straight-preview-midway");
+        const QList<QPointF> livePts = previewPath();
+        CHECK(livePts.size() >= 2);
+        if (livePts.size() >= 2)
+        {
+            CHECK(std::abs(livePts.first().x() - sbox.right()) < 1.0);
+            CHECK(std::abs(livePts.first().y() - snapRow) < 1.0);
+            CHECK(std::abs(livePts.first().y() - sbox.center().y()) > 3.0);   // NOT the mid-border row
+        }
+
+        const QPoint vpTo = view.mapFromScene(to);
+        QMouseEvent pvRelease(QEvent::MouseButtonRelease, QPointF(vpTo), view.viewport()->mapToGlobal(vpTo)
+                            , Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(view.viewport(), &pvRelease);
+        QApplication::processEvents();
+
+        SMStateEntry* srcState = data.findStateById(srcId);
+        CHECK((srcState != nullptr) && (srcState->getTransitions().getElementCount() == 1));
+        const uint32_t txId = srcState->getTransitions().getElements().last()->getId();
+        const SMLayoutEdge* edge = data.getLayout().findEdge(txId);
+        CHECK((edge != nullptr) && (edge->points.size() == 2));
+        const QPointF begin = edge->points.first();
+        const QPointF end   = edge->points.last();
+
+        // Begin clings to the source's right border (facing the target) at the snapped pressed row.
+        CHECK(std::abs(begin.x() - sbox.right()) < 1.0);
+        CHECK(std::abs(begin.y() - snapRow) < 1.0);
+        CHECK(std::abs(begin.y() - sbox.center().y()) > 3.0);   // regression guard: NOT the mid-border row
+        // End clings to the target's left border at the same snapped row -> a straight horizontal edge.
+        CHECK(std::abs(end.x() - tbox.left()) < 1.0);
+        CHECK(std::abs(end.y() - snapRow) < 1.0);
+        CHECK(std::abs(begin.y() - end.y()) < 1.0);
+
+        // The drawn polyline reflects the stored anchors (endpoints projected onto the live border).
+        SMEdgeItem* edgeItem = dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(txId));
+        CHECK((edgeItem != nullptr) && (edgeItem->getPath().size() == 2));
+        CHECK(std::abs(edgeItem->getPath().first().y() - snapRow) < 1.0);
+        CHECK(std::abs(edgeItem->getPath().last().y()  - snapRow) < 1.0);
+        grab(design, "g8b-straight-follows-row");
+
+        model.getUndoStack().undo();    // remove transition
+        model.getUndoStack().undo();    // remove target state
+        model.getUndoStack().undo();    // remove source state
+        model.getUndoStack().undo();    // restore grid size
+        QApplication::processEvents();
+    }
 
     std::printf("sect: fix-514 waypoint clicks while creating\n");
     // --- Add Transition: each click on empty canvas drops a polyline waypoint; the
@@ -645,27 +851,28 @@ int main(int argc, char* argv[])
     // --- Priority reorder changes document order and survives save/load ---
     SMStateEntry* yellow = data.findState("Yellow");
     CHECK((yellow != nullptr) && (yellow->getTransitions().getElementCount() >= 2));
-    const QString firstToBefore = yellow->getTransitions().getElements().at(0)->getTo();
+    const uint32_t firstToBefore = yellow->getTransitions().getElements().at(0)->getToId();
     model.getUndoStack().push(new TDocReorderCommand<SMTransitionEntry*, DocumentElem>(  model.getNotifier(), yellow->getTransitions()
                                                                                        , 0, 1, yellow->getId(), eDocElementKind::Transition
                                                                                        , QStringLiteral("reorder")));
-    const QString firstToAfter = yellow->getTransitions().getElements().at(0)->getTo();
+    const uint32_t firstToAfter = yellow->getTransitions().getElements().at(0)->getToId();
     CHECK(firstToAfter != firstToBefore);
     const QString roundtripPath = QDir::tempPath() + QStringLiteral("/sm14_roundtrip.fsml");
     CHECK(model.saveToFile(roundtripPath));
     StateMachineModel reloaded;
     CHECK(reloaded.loadFromFile(roundtripPath));
     SMStateEntry* yellowReloaded = reloaded.getData().findState("Yellow");
-    CHECK((yellowReloaded != nullptr) && (yellowReloaded->getTransitions().getElements().at(0)->getTo() == firstToAfter));
+    CHECK((yellowReloaded != nullptr) && (yellowReloaded->getTransitions().getElements().at(0)->getToId() == firstToAfter));
 
     std::printf("sect: SM-14 reconnect (target + source)\n");
     // --- Target-endpoint reconnection retargets `To`, undoable ---
-    const QString to27Before = data.findTransitionById(27)->getTo();
+    const uint32_t lightOffId  = data.findState("LightOff")->getId();
+    const uint32_t to27Before  = data.findTransitionById(27)->getToId();
     model.getUndoStack().push(new SMSetTransitionTargetCommand(  data, model.getNotifier(), 27
-                                                              , QStringLiteral("LightOff"), QStringLiteral("retarget")));
-    CHECK(data.findTransitionById(27)->getTo() == QStringLiteral("LightOff"));
+                                                              , lightOffId, QStringLiteral("retarget")));
+    CHECK(data.findTransitionById(27)->getToId() == lightOffId);
     model.getUndoStack().undo();
-    CHECK(data.findTransitionById(27)->getTo() == to27Before);
+    CHECK(data.findTransitionById(27)->getToId() == to27Before);
     model.getUndoStack().redo();
     model.getUndoStack().undo();     // leave 27 as it was
 
@@ -1570,20 +1777,27 @@ int main(int argc, char* argv[])
 
         QTextEdit* guardField = props->findChild<QTextEdit*>(QStringLiteral("smGuardField"));
         QLabel* guardStatus = props->findChild<QLabel*>(QStringLiteral("smGuardStatus"));
-        CHECK((guardField != nullptr) && (guardStatus != nullptr));
+        QPlainTextEdit* guardGenCode = props->findChild<QPlainTextEdit*>(QStringLiteral("smGuardGeneratedCode"));
+        CHECK((guardField != nullptr) && (guardStatus != nullptr) && (guardGenCode != nullptr));
         const QString immediateAttr = QStringLiteral("ImmediateAttrSmoke");
         CHECK(doc.getAttributeModel().findAttribute(immediateAttr) == nullptr);
-        if ((guardField != nullptr) && (guardStatus != nullptr))
+        if ((guardField != nullptr) && (guardStatus != nullptr) && (guardGenCode != nullptr))
         {
+            // An undefined name is NOT silent raw C++: attributes/parameters/constants are typed data
+            // objects that must be declared, so a bare name resolving to none of them is an error.
             guardField->setPlainText(immediateAttr);
             QMetaObject::invokeMethod(guardField, "onDebounce");
             QApplication::processEvents();
             CHECK(guardStatus->text().contains(QStringLiteral("err")));
 
+            // Once the attribute exists the guard resolves: no error, the generated code shows the
+            // attribute call, and the status tooltip stays empty for a valid guard (the generated C++
+            // lives in the Generated-code section, not the status tooltip).
             doc.getAttributeModel().createAttribute(immediateAttr);
             QApplication::processEvents();
             CHECK(guardStatus->text().contains(QStringLiteral("err")) == false);
-            CHECK(guardStatus->toolTip().contains(immediateAttr + QStringLiteral("()")));
+            CHECK(guardGenCode->toPlainText().contains(immediateAttr + QStringLiteral("()")));
+            CHECK(guardStatus->toolTip().isEmpty());
         }
 
         if (SMSetGuardCommand* clearGuard = SMGuardCommands::clearGuard(doc.getData(), doc.getNotifier(), firstTxId, QStringLiteral("Clear guard")))

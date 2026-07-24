@@ -34,14 +34,17 @@
 #include "lusan/view/sm/SMStateItem.hpp"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QFont>
 #include <QFontMetricsF>
 #include <QGraphicsSceneMouseEvent>
+#include <QGraphicsView>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPainterPathStroker>
 #include <QPalette>
 #include <QTimer>
+#include <QToolTip>
 #include <QWidget>
 
 #include <algorithm>
@@ -140,8 +143,10 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
 {
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setAcceptedMouseButtons(Qt::LeftButton);
-    // Edges paint under the state boxes so borders and badges stay readable.
-    setZValue(-1.0);
+    // A transition line always paints ABOVE the inactive state boxes so a box never hides it
+    // (z = 1 vs a box's z = 0). A selected box raises to z = 2 to cover the inactive edges, and a
+    // selected edge raises to z = 3 so it -- and its grab handles -- stay on top of everything.
+    setZValue(1.0);
 }
 
 SMEdgeItem::~SMEdgeItem()
@@ -218,9 +223,9 @@ void SMEdgeItem::updateFromModel()
     // A transition out of the Start pseudo-state fires automatically: it never carries a stimulus,
     // so no `<stimulus>` placeholder is shown for it.
     mSourceIsStart = (owner != nullptr) && (owner->getKind() == SMStateEntry::eStateKind::Start);
-    mTargetName  = transition->getTo();
-    const SMStateEntry* target = data.findState(mTargetName);
-    mTargetId    = (target != nullptr ? target->getId() : 0);
+    mTargetId    = transition->getToId();
+    const SMStateEntry* target = data.findStateById(mTargetId);
+    mTargetName  = (target != nullptr ? target->getName() : QString());
     mSelfLoop    = (mTargetId != 0) && (mTargetId == mSourceId);
 
     // Show the guard next to the stimulus (`stimulus[summary]`); the full guard is the tooltip.
@@ -1169,9 +1174,10 @@ QVariant SMEdgeItem::itemChange(GraphicsItemChange change, const QVariant& value
 {
     if (change == QGraphicsItem::ItemSelectedHasChanged)
     {
-        // A selected edge raises above the state boxes so its endpoint and waypoint
-        // handles stay grabbable where they overlap a box.
-        setZValue(value.toBool() ? 1.0 : -1.0);
+        // A selected edge raises to the top (above even a selected state box, z = 2) so its
+        // endpoint and waypoint handles stay grabbable where they overlap a box; an unselected
+        // edge falls back to z = 1, still above the inactive boxes (see the constructor).
+        setZValue(value.toBool() ? 3.0 : 1.0);
         if (value.toBool() == false)
         {
             setSelectedPoint(-1);   // a deselected edge has no active point to nudge
@@ -1340,17 +1346,66 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
             const QRectF   ownBox = stateRect(ownId);
             if ((overId != 0) && (overId != ownId))
             {
-                // Dropped on another state: reconnect. Revert the drag feedback first;
-                // the scene applies the reconnection deferred so this item can be
-                // safely deleted/recreated by the resulting command.
-                updateFromModel();
+                // Spec rule (mirrors the new-transition tool's guard): a Start state is a source
+                // only -- no transition may END on it -- and a Final state is a target only -- no
+                // transition may BEGIN on it. Reject such a drop: restore the edge to its stored
+                // geometry (undo the drag feedback) and warn briefly at the cursor.
+                const SMStateEntry* overState = canvas->getModel().getData().findStateById(overId);
+                const SMStateEntry::eStateKind overKind =
+                        (overState != nullptr ? overState->getKind() : SMStateEntry::eStateKind::Normal);
+                const bool rejectEnd   = (drag == eDrag::End)   && (overKind == SMStateEntry::eStateKind::Start);
+                const bool rejectBegin = (drag == eDrag::Begin) && (overKind == SMStateEntry::eStateKind::Final);
+                if (rejectEnd || rejectBegin)
+                {
+                    updateFromModel();      // snap the endpoint back to the unchanged connection
+                    const QList<QGraphicsView*> viewList = canvas->views();
+                    QToolTip::showText(QCursor::pos()
+                                     , rejectEnd ? translate("A transition cannot enter a Start state.")
+                                                 : translate("A transition cannot leave a Final state.")
+                                     , (viewList.isEmpty() ? nullptr : viewList.first()));
+                    break;
+                }
+
+                // Dropped on another state: reconnect. Pin the dragged endpoint to the border of
+                // the drop state at the release position, reset the label so it re-centres on the
+                // new line, and hand the finished geometry to the deferred reconnection. The drag
+                // feedback is NOT reverted here: keeping the dropped path drawn until the command
+                // redraws the identical geometry removes the one-frame flash back to the old anchor.
+                const QRectF  overBox = over->getBoxGeometry();
+                const double  overRad = over->boxCornerRadius();
+                const int     grid    = canvas->getGridSize();
+                const QPointF glued   = canvas->isSnapToGrid()
+                        ? NESMDesign::gridAlignedBorderPoint(overBox, overRad, event->scenePos(), grid)
+                        : NESMDesign::nearestBorderPoint(overBox, overRad, canvas->snappedPosition(event->scenePos()));
+
+                if (mHasAnchors == false)
+                {
+                    // Seed both anchors from the drawn path so the non-dragged endpoint survives.
+                    mAnchorBegin = mBegin;
+                    mAnchorEnd   = mEnd;
+                    mHasAnchors  = true;
+                }
+
+                mHasLabel = false;      // re-derive the label at the new line's midpoint
                 if (drag == eDrag::End)
                 {
-                    QTimer::singleShot(0, canvas, [canvas, tid, overId]() { canvas->reconnectTransitionTarget(tid, overId); });
+                    mEnd       = glued;
+                    mAnchorEnd = glued;
                 }
                 else
                 {
-                    QTimer::singleShot(0, canvas, [canvas, tid, overId]() { canvas->reparentTransition(tid, overId); });
+                    mBegin       = glued;
+                    mAnchorBegin = glued;
+                }
+
+                const SMLayoutEdge geometry = buildGeometry();
+                if (drag == eDrag::End)
+                {
+                    QTimer::singleShot(0, canvas, [canvas, tid, overId, geometry]() { canvas->reconnectTransitionTarget(tid, overId, geometry); });
+                }
+                else
+                {
+                    QTimer::singleShot(0, canvas, [canvas, tid, overId, geometry]() { canvas->reparentTransition(tid, overId, geometry); });
                 }
             }
             else if ((ownBox.width() > 0.0) && (ownBox.height() > 0.0))

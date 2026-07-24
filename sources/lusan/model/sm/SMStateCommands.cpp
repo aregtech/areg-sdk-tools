@@ -28,12 +28,12 @@
 
 namespace
 {
-    //!< Collects the layout owner IDs and the state names of a state subtree: the state,
+    //!< Collects the layout owner IDs and the state IDs of a state subtree: the state,
     //!< its transitions, and recursively its painted substates and their transitions.
-    void collectSubtree(const SMStateEntry& state, QList<uint32_t>& owners, QSet<QString>& names)
+    void collectSubtree(const SMStateEntry& state, QList<uint32_t>& owners, QSet<uint32_t>& stateIds)
     {
         owners.append(state.getId());
-        names.insert(state.getName());
+        stateIds.insert(state.getId());
         for (const SMTransitionEntry* transition : state.getTransitions().getElements())
         {
             owners.append(transition->getId());
@@ -44,7 +44,7 @@ namespace
         {
             for (const SMStateEntry* child : nested->getElements())
             {
-                collectSubtree(*child, owners, names);
+                collectSubtree(*child, owners, stateIds);
             }
         }
     }
@@ -58,37 +58,9 @@ namespace
         uint32_t            id;     //!< The transition's element ID.
     };
 
-    //!< Collects, document-wide, the IDs of every external transition whose target is `targetName`.
-    //!< State names are unique, so this is exactly the set of transitions connected to that state --
-    //!< used by a rename to rebind them (transitions reference their target by name, not by ID), so
-    //!< the connection survives the rename instead of dangling on the old name.
-    void collectIncomingTransitions(SMStateData& level, const QString& targetName, QList<uint32_t>& out)
-    {
-        for (SMStateEntry* state : level.getElements())
-        {
-            if (state == nullptr)
-            {
-                continue;
-            }
-
-            for (SMTransitionEntry* transition : state->getTransitions().getElements())
-            {
-                if ((transition != nullptr) && transition->isExternal() && (transition->getTo() == targetName))
-                {
-                    out.append(transition->getId());
-                }
-            }
-
-            if (state->hasNestedStates())
-            {
-                collectIncomingTransitions(*state->getNestedStates(), targetName, out);
-            }
-        }
-    }
-
     //!< Walks every state outside the deleted subtree and collects the transitions whose
-    //!< target name belongs to the subtree.
-    void collectIncoming(SMStateData& level, uint32_t skipStateId, const QSet<QString>& names, QList<IncomingRef>& incoming)
+    //!< target ID belongs to the subtree (transitions reference their target by ID).
+    void collectIncoming(SMStateData& level, uint32_t skipStateId, const QSet<uint32_t>& stateIds, QList<IncomingRef>& incoming)
     {
         for (SMStateEntry* state : level.getElements())
         {
@@ -99,7 +71,7 @@ namespace
 
             for (SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                if (transition->isExternal() && names.contains(transition->getTo()))
+                if (transition->isExternal() && stateIds.contains(transition->getToId()))
                 {
                     incoming.append(IncomingRef{ &state->getTransitions(), transition->getId() });
                 }
@@ -107,7 +79,7 @@ namespace
 
             if (state->hasNestedStates())
             {
-                collectIncoming(*state->getNestedStates(), skipStateId, names, incoming);
+                collectIncoming(*state->getNestedStates(), skipStateId, stateIds, incoming);
             }
         }
     }
@@ -152,21 +124,10 @@ void SMRenameStateCommand::apply(const QString& name, const QString& previous)
     SMStateEntry* state = data().findStateById(mId);
     if (state != nullptr)
     {
+        // Transitions reference their target by ID, so a rename touches only the state's name --
+        // every connection to it survives untouched. The canvas repaints affected edge labels
+        // (which resolve the target name live) in response to notifyNameChanged.
         state->setName(name);
-
-        // Rebind the incoming transitions captured on first redo. Transitions reference their
-        // target by name, so a rename that only changed the state name left them pointing at the
-        // old (now non-existent) name -- the connection appeared broken. The state itself is never
-        // deleted here; only its name and the names its transitions target are updated.
-        for (uint32_t transitionId : std::as_const(mRetargeted))
-        {
-            SMTransitionEntry* transition = data().findTransitionById(transitionId);
-            if (transition != nullptr)
-            {
-                transition->setTo(name);
-            }
-        }
-
         notifier().notifyNameChanged(mId, previous, name);
     }
 }
@@ -177,10 +138,6 @@ void SMRenameStateCommand::redo()
     {
         const SMStateEntry* state = data().findStateById(mId);
         mOld = (state != nullptr ? state->getName() : QString());
-        // Capture the transitions targeting this state while they still name the old value, so
-        // undo/redo rebind exactly them (and nothing that later happens to reuse a name).
-        mRetargeted.clear();
-        collectIncomingTransitions(data().getStates(), mOld, mRetargeted);
         mCaptured = true;
     }
 
@@ -289,15 +246,15 @@ SMRemoveStateCommand::SMRemoveStateCommand(StateMachineData& data, DocModelNotif
     : SMCompositeCommand(data, notifier, text, parent)
 {
     QList<uint32_t> owners;
-    QSet<QString>   names;
+    QSet<uint32_t>  stateIds;
     SMStateEntry** slot = level.findElement(stateId);
     if ((slot != nullptr) && (*slot != nullptr))
     {
-        collectSubtree(**slot, owners, names);
+        collectSubtree(**slot, owners, stateIds);
     }
 
     QList<IncomingRef> incoming;
-    collectIncoming(data.getStates(), stateId, names, incoming);
+    collectIncoming(data.getStates(), stateId, stateIds, incoming);
     for (const IncomingRef& ref : incoming)
     {
         owners.append(ref.id);

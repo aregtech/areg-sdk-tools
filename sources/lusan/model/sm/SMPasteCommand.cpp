@@ -465,6 +465,13 @@ void SMPasteCommand::allocateContent(SMStateData& level)
         }
     }
 
+    // Transition targets reference states by ID: re-point them to the pasted copies' new IDs.
+    // A target outside the pasted set is not in the map and becomes internal.
+    for (PastedState& pasted : mStates)
+    {
+        SMClipboard::remapTransitionTargets(*pasted.state, mOldToNew);
+    }
+
     // State names are document-unique: a collision renames the copy with its fresh ID
     // as suffix; references to a renamed copied state remap inside the pasted set only.
     QSet<QString> usedNames;

@@ -25,6 +25,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QScreen>
+#include <QScrollArea>
 #include <QVBoxLayout>
 
 namespace
@@ -42,8 +43,10 @@ namespace
         palette.setColor(QPalette::WindowText, NEGuardStyle::ownerColor(owner));
         glyphLabel->setPalette(palette);
 
+        QLabel* whatLabel = new QLabel(what);
+        whatLabel->setWordWrap(true);           // long descriptions wrap instead of forcing the card wide
         grid->addWidget(glyphLabel, row, 0);
-        grid->addWidget(new QLabel(what), row, 1);
+        grid->addWidget(whatLabel, row, 1);
         grid->addWidget(new QLabel(example), row, 2);
     }
 
@@ -52,8 +55,10 @@ namespace
     {
         QLabel* key = new QLabel(gesture);
         key->setStyleSheet(QStringLiteral("font-family: monospace;"));
+        QLabel* whatLabel = new QLabel(what);
+        whatLabel->setWordWrap(true);           // long descriptions wrap instead of forcing the card wide
         grid->addWidget(key, row, 0);
-        grid->addWidget(new QLabel(what), row, 1);
+        grid->addWidget(whatLabel, row, 1);
     }
 
     //!< A `you write -> it runs` mapping row (monospace).
@@ -106,11 +111,29 @@ SMGuardHelpCard::SMGuardHelpCard(QWidget* parent /*= nullptr*/)
 
 void SMGuardHelpCard::buildUi()
 {
-    QVBoxLayout* outer = new QVBoxLayout(this);
+    // The content lives inside a scroll area so the card stays fully readable even when the screen is
+    // smaller than the card's natural size: popupAt() caps the card to the screen, and anything that
+    // no longer fits becomes scrollable rather than clipped or pushed off-screen.
+    QScrollArea* scroll = new QScrollArea(this);
+    scroll->setObjectName(QStringLiteral("smGuardHelpScroll"));
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+    QVBoxLayout* frameLayout = new QVBoxLayout(this);
+    frameLayout->setContentsMargins(0, 0, 0, 0);
+    frameLayout->setSpacing(0);
+    frameLayout->addWidget(scroll);
+
+    QWidget* content = new QWidget(scroll);
+    scroll->setWidget(content);
+
+    QVBoxLayout* outer = new QVBoxLayout(content);
     outer->setContentsMargins(12, 12, 12, 12);
     outer->setSpacing(8);
 
-    QLabel* title = new QLabel(tr("What can a guard use?"), this);
+    QLabel* title = new QLabel(tr("What can a guard use?"), content);
     QFont titleFont = title->font();
     titleFont.setBold(true);
     title->setFont(titleFont);
@@ -125,7 +148,7 @@ void SMGuardHelpCard::buildUi()
     addUseRow(uses, 4, NEGuardStyle::eOwner::Fsm,      QStringLiteral("{}"), tr("lambda"),            QStringLiteral("{ ... }"));
     outer->addLayout(uses);
 
-    QLabel* mapTitle = new QLabel(tr("you write        ->  it runs"), this);
+    QLabel* mapTitle = new QLabel(tr("you write        ->  it runs"), content);
     mapTitle->setStyleSheet(QStringLiteral("font-family: monospace; font-weight: bold;"));
     outer->addWidget(mapTitle);
 
@@ -139,7 +162,7 @@ void SMGuardHelpCard::buildUi()
 
     // The gesture legend: keys and mouse moves that are real features but were discoverable only by
     // accident (Shift+Enter, the chip icon hot-zone, double-click-to-edit, the Alt section jumps).
-    QLabel* gestureTitle = new QLabel(tr("Gestures"), this);
+    QLabel* gestureTitle = new QLabel(tr("Gestures"), content);
     QFont gestureFont = gestureTitle->font();
     gestureFont.setBold(true);
     gestureTitle->setFont(gestureFont);
@@ -161,10 +184,24 @@ void SMGuardHelpCard::buildUi()
 void SMGuardHelpCard::popupAt(const QWidget& anchor)
 {
     adjustSize();
-    const QSize cardSize = size();
     const QRect anchorRect(anchor.mapToGlobal(QPoint(0, 0)), anchor.size());
     const QRect hostRect = (anchor.window() != nullptr) ? anchor.window()->frameGeometry() : QRect();
     const QRect screenBounds = screenBoundsFor(anchor);
+
+    // Never let the card exceed the visible screen: a card larger than the screen cannot be brought
+    // fully on-screen by repositioning alone, so cap it (the scroll area keeps the content reachable).
+    // This guarantees the clamped position below leaves the whole popup inside screenBounds.
+    if (screenBounds.isValid())
+    {
+        const int maxW = qMax(0, screenBounds.width() - 2 * PopupGap);
+        const int maxH = qMax(0, screenBounds.height() - 2 * PopupGap);
+        if ((width() > maxW) || (height() > maxH))
+        {
+            resize(qMin(width(), maxW), qMin(height(), maxH));
+        }
+    }
+
+    const QSize cardSize = size();
 
     const int openRightX = anchorRect.left();
     const int openLeftX  = anchorRect.right() - cardSize.width() + 1;

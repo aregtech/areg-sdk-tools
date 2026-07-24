@@ -103,7 +103,7 @@ namespace
         lambda->setBody(QStringLiteral("return count < MIN_WAITING;"));
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Root"), SMStateEntry::eStateKind::Start);
-        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), QString());
+        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u);
         return trans->getId();
     }
 
@@ -189,18 +189,19 @@ static void testParserResolution()
     }
     delete root;
 
-    // D-RAW (SM-21-03): an unmarked identifier that resolves to no known symbol is raw C++,
-    // kept verbatim with no error -- the guard still resolves (the unknown token is a Raw leaf).
-    // (Supersedes the pre-SM-21-03 rule that an unknown bare name was an error.)
+    // SM-536: a bare name that resolves to no defined parameter/attribute/constant is UNDEFINED --
+    // an error, not silent raw C++. Attributes/parameters/constants are typed data objects that must
+    // be declared; only the explicit "raw code" mode (allowRaw) accepts unvalidated C++. (This
+    // supersedes the earlier D-RAW rule that a bare unknown name was raw by default.)
     SMGuardParser::Result bare = SMGuardParser::parse(data, tid, QStringLiteral("WalkRequsted && count > 2"));
-    check(bare.resolved(), "an unmarked unknown identifier is raw, not an error (D-RAW)");
-    check((bare.tree != nullptr) && (bare.tree->getKind() == eKind::And) && (bare.tree->getCount() == 2), "the guard resolves around the raw leaf");
-    if ((bare.tree != nullptr) && (bare.tree->getKind() == eKind::And) && (bare.tree->getCount() == 2))
-    {
-        check(bare.tree->childAt(0)->getKind() == eKind::Raw, "the unknown identifier is a Raw leaf");
-        checkEq(bare.tree->childAt(0)->getText(), QStringLiteral("WalkRequsted"), "the raw leaf keeps the verbatim text");
-    }
+    check(bare.hasError(), "an unmarked unknown identifier is an error, not raw (SM-536)");
     delete bare.tree;
+
+    // The same text under the explicit "raw code" opt-in (allowRaw) is accepted without error: the
+    // user has taken responsibility for correctness.
+    SMGuardParser::Result bareRaw = SMGuardParser::parse(data, tid, QStringLiteral("WalkRequsted && count > 2"), true);
+    check(bareRaw.hasError() == false, "the same bare name under explicit raw mode carries no error");
+    delete bareRaw.tree;
 
     // An EXPLICIT kind that does not resolve IS an error -- the user stated the kind (contrast D-RAW).
     SMGuardParser::Result explicitBad = SMGuardParser::parse(data, tid, QStringLiteral("#attr:WalkRequsted && count > 2"));
@@ -299,10 +300,11 @@ static void testKindGrammar()
         delete c;
     }
 
-    // D-RAW vs explicit-kind error: bare unknown is raw; explicit #param:unknown is an error.
+    // SM-536: a bare unknown name is an error (not silent raw); an explicit #param:unknown is also
+    // an error. Both must resolve to a defined symbol -- only explicit "raw code" mode opts out.
     {
         SMGuardParser::Result raw = SMGuardParser::parse(data, tid, QStringLiteral("nonesuch"));
-        check(raw.resolved() && (raw.tree != nullptr) && (raw.tree->getKind() == eKind::Raw), "bare unknown -> Raw leaf (D-RAW)");
+        check(raw.hasError(), "bare unknown is an error, not raw (SM-536)");
         delete raw.tree;
         SMGuardParser::Result bad = SMGuardParser::parse(data, tid, QStringLiteral("#param:nonesuch"));
         check(bad.hasError(), "#param:unknown is an error (explicit kind must resolve)");

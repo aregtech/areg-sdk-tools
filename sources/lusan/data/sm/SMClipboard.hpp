@@ -215,6 +215,17 @@ public:
     static void remapReferences(SMStateEntry& state, const RenameMaps& renames);
 
     /**
+     * \brief   Remaps the transition targets inside the state subtree by the old-ID -> new-ID
+     *          map produced when the pasted subtree's IDs are re-allocated. A target that
+     *          names a state inside the pasted set is re-pointed to that state's new ID; a
+     *          target outside the pasted set (not in the map) is cleared to internal, since
+     *          its original state does not belong to the paste.
+     * \param   state       The subtree root whose transitions are remapped.
+     * \param   oldToNew    The old element ID -> new element ID map of the pasted set.
+     **/
+    static void remapTransitionTargets(SMStateEntry& state, const QHash<uint32_t, uint32_t>& oldToNew);
+
+    /**
      * \brief   True when two registry entries are structurally identical: their
      *          serialized XML matches with the element IDs ignored. Used by the
      *          cross-document merge to decide reuse versus ID-suffixed copy.

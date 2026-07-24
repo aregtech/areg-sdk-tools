@@ -221,6 +221,25 @@ namespace NESMDesign
     QPointF gridAlignedBorderPoint(const QRectF& rect, double radius, const QPointF& point, int gridSize);
 
     /**
+     * \brief   Keeps \p border on the side it already sits on, but slides it along that side to
+     *          follow \p pointer. Only the coordinate that runs along the chosen edge moves (x on a
+     *          top/bottom edge, y on a left/right edge); the pinned coordinate stays on the border.
+     *          The side is taken from \p border (typically a center-facing borderPoint()), so a
+     *          transition endpoint follows where the user pressed/released along the facing side
+     *          instead of hopping to whichever side is merely nearest the pointer. With \p snap the
+     *          sliding coordinate rounds to the nearest half-grid step; the span is clamped so the
+     *          endpoint never rides onto a rounded corner.
+     * \param   rect        The state box geometry in scene coordinates.
+     * \param   radius      The box corner radius.
+     * \param   border      A point already on the box border; its edge selects the slide axis.
+     * \param   pointer     The pointer position whose along-edge coordinate the result follows.
+     * \param   gridSize    The grid cell size; the slide snaps to half of it.
+     * \param   snap        When false the sliding coordinate follows the pointer exactly (no grid).
+     **/
+    QPointF slideBorderPoint(const QRectF& rect, double radius, const QPointF& border
+                           , const QPointF& pointer, int gridSize, bool snap);
+
+    /**
      * \brief   Samples a circular arc through \p begin and \p end with the given signed
      *          bulge (arc height over half chord; sign picks the bowing side, 1 = semicircle)
      *          into a polyline. Returns the plain chord when the bulge is ~0 or degenerate.

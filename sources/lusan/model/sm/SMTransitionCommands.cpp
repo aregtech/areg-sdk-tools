@@ -30,20 +30,20 @@
 
 SMCreateTransitionCommand::SMCreateTransitionCommand(  StateMachineData& data, DocModelNotifier& notifier
                                                      , SMStateEntry& source, SMTransitionEntry::eStimulusKind kind
-                                                     , const QString& stimulus, const QString& target
+                                                     , const QString& stimulus, uint32_t targetId
                                                      , const QList<QPointF>& edgePoints
                                                      , const QString& text, QUndoCommand* parent /*= nullptr*/)
     : SMCompositeCommand(data, notifier, text, parent)
     , mTransition       (new SMTransitionEntry(0, kind, stimulus, &source.getTransitions()))
 {
-    if (target.isEmpty() == false)
+    if (targetId != 0)
     {
-        mTransition->setTo(target);
+        mTransition->setToId(targetId);
     }
 
     // The add runs first on redo and allocates the ID the edge child reads.
     new TDocAddCommand<SMTransitionEntry*, DocumentElem>(notifier, source.getTransitions(), mTransition, eDocElementKind::Transition, text, this);
-    if ((target.isEmpty() == false) && (edgePoints.isEmpty() == false))
+    if ((targetId != 0) && (edgePoints.isEmpty() == false))
     {
         SMLayoutEdge geometry;
         geometry.shape  = SMLayoutEdge::eShape::Line;
@@ -75,23 +75,22 @@ SMRemoveTransitionCommand::SMRemoveTransitionCommand(  StateMachineData& data, D
 //////////////////////////////////////////////////////////////////////////
 
 SMSetTransitionTargetCommand::SMSetTransitionTargetCommand(  StateMachineData& data, DocModelNotifier& notifier
-                                                           , uint32_t transitionId, const QString& target
+                                                           , uint32_t transitionId, uint32_t targetId
                                                            , const QString& text, QUndoCommand* parent /*= nullptr*/)
     : SMCommand     (data, notifier, text, parent)
     , mId           (transitionId)
-    , mNew          (target)
-    , mNewExternal  (target.isEmpty() == false)
+    , mNewTarget    (targetId)
 {
 }
 
-void SMSetTransitionTargetCommand::apply(const QString& target, bool external)
+void SMSetTransitionTargetCommand::apply(uint32_t targetId)
 {
     SMTransitionEntry* transition = data().findTransitionById(mId);
     if (transition != nullptr)
     {
-        if (external)
+        if (targetId != 0)
         {
-            transition->setTo(target);
+            transition->setToId(targetId);
         }
         else
         {
@@ -107,17 +106,16 @@ void SMSetTransitionTargetCommand::redo()
     if (mCaptured == false)
     {
         const SMTransitionEntry* transition = data().findTransitionById(mId);
-        mOldExternal = (transition != nullptr) && transition->isExternal();
-        mOld         = (transition != nullptr ? transition->getTo() : QString());
-        mCaptured    = true;
+        mOldTarget = (transition != nullptr ? transition->getToId() : 0);
+        mCaptured  = true;
     }
 
-    apply(mNew, mNewExternal);
+    apply(mNewTarget);
 }
 
 void SMSetTransitionTargetCommand::undo()
 {
-    apply(mOld, mOldExternal);
+    apply(mOldTarget);
 }
 
 //////////////////////////////////////////////////////////////////////////

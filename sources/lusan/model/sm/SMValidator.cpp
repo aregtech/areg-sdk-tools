@@ -475,16 +475,17 @@ namespace
     {
         const uint32_t id = tr.getId();
 
-        // An external target must name a state, and that state must be a sibling of the owner.
+        // An external target must resolve to a state, and that state must be a sibling of the owner.
         if (tr.isExternal())
         {
-            const QString& target = tr.getTo();
-            if (level.findState(target) == nullptr)
+            const uint32_t targetId = tr.getToId();
+            if (level.findStateById(targetId) == nullptr)
             {
-                if (mData.findState(target) == nullptr)
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Transition target '%1' does not resolve").arg(target));
+                const SMStateEntry* target = mData.findStateById(targetId);
+                if (target == nullptr)
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Transition target does not resolve"));
                 else
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 7, vtr("Transition target '%1' is not a sibling state").arg(target));
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 7, vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
             }
         }
 
@@ -1055,22 +1056,22 @@ namespace
         };
 
         // Incoming (sibling) transition targets per level -- reachability and history re-entry.
-        QHash<const SMStateData*, QSet<QString>> incoming;
+        QHash<const SMStateData*, QSet<uint32_t>> incoming;
         for (const LevelInfo& info : levels)
         {
-            QSet<QString>& targets = incoming[info.level];
+            QSet<uint32_t>& targets = incoming[info.level];
             for (SMStateEntry* st : info.level->getElements())
             {
                 if (st == nullptr)
                     continue;
                 for (SMTransitionEntry* tr : st->getTransitions().getElements())
-                    if ((tr != nullptr) && tr->isExternal()) targets.insert(tr->getTo());
+                    if ((tr != nullptr) && tr->isExternal()) targets.insert(tr->getToId());
             }
         }
 
         for (const LevelInfo& info : levels)
         {
-            const QSet<QString>& targets = incoming[info.level];
+            const QSet<uint32_t>& targets = incoming[info.level];
             for (SMStateEntry* st : info.level->getElements())
             {
                 if (st == nullptr)
@@ -1090,13 +1091,13 @@ namespace
                 noteOps(st->getExitList());
                 noteOps(st->getDoList());
 
-                if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(st->getName()) == false))
+                if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(sid) == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, 1, vtr("State '%1' is unreachable (no incoming transition)").arg(st->getName()));
 
                 if ((st->getKind() == SMStateEntry::eStateKind::Normal) && (composite == false) && (st->getTransitions().hasElements() == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, 2, vtr("State '%1' is a dead end (no outgoing transition)").arg(st->getName()));
 
-                if (composite && (st->getHistory() != SMStateEntry::eHistory::None) && (targets.contains(st->getName()) == false))
+                if (composite && (st->getHistory() != SMStateEntry::eHistory::None) && (targets.contains(sid) == false))
                     add(sid, eDocElementKind::State, eSeverity::Warning, 10, vtr("History on '%1' is never re-entered").arg(st->getName()));
 
                 QSet<QString> unconditionalStimuli;

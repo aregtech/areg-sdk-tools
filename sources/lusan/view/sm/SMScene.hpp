@@ -39,6 +39,7 @@ class SMEdgeItem;
 class SMNoteItem;
 class SMStateItem;
 class StateMachineModel;
+struct SMLayoutEdge;
 enum class eDocElementKind;
 
 /**
@@ -206,15 +207,25 @@ public:
     /**
      * \brief   Applies a target-endpoint reconnection: retargets the transition to the state
      *          under the drop (empty drop offers making it internal). Deferred by the edge
-     *          item so the resulting command may recreate the edge safely.
+     *          item so the resulting command may recreate the edge safely. The finished drop
+     *          geometry is persisted in the same undo step so the endpoint lands where the mouse
+     *          was released and the edge never flashes back to its old anchor first.
+     * \param   transitionId    The reconnected transition's element ID.
+     * \param   targetStateId   The new target state's element ID.
+     * \param   geometry        The finished edge geometry from the drop (dragged endpoint pinned
+     *                          to the drop border position, label reset to re-centre on the line).
      **/
-    void reconnectTransitionTarget(uint32_t transitionId, uint32_t targetStateId);
+    void reconnectTransitionTarget(uint32_t transitionId, uint32_t targetStateId, const SMLayoutEdge& geometry);
 
     /**
      * \brief   Applies a begin-endpoint reconnection: moves the transition to a new source
-     *          state. A zero or unchanged source is ignored.
+     *          state. A zero or unchanged source is ignored. The finished drop geometry is
+     *          persisted in the same undo step (see \ref reconnectTransitionTarget).
+     * \param   transitionId        The reconnected transition's element ID.
+     * \param   newSourceStateId    The new source state's element ID.
+     * \param   geometry            The finished edge geometry from the drop.
      **/
-    void reparentTransition(uint32_t transitionId, uint32_t newSourceStateId);
+    void reparentTransition(uint32_t transitionId, uint32_t newSourceStateId, const SMLayoutEdge& geometry);
 
     /**
      * \brief   Opens the in-place name editor when exactly one state is selected (F2).

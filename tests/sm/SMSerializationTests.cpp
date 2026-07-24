@@ -628,8 +628,10 @@ namespace
         CHECK(start != nullptr);
         CHECK((start != nullptr) && (start->getKind() == SMStateEntry::eStateKind::Start));
 
-        const SMLayoutView* rootView = (doc != nullptr) ? doc->getLayout().findView(doc->getOverview().getId()) : nullptr;
-        CHECK(rootView != nullptr);
+        // A fresh document deliberately persists NO overview View entry (see
+        // StateMachineData::createNewDocument): the Design page anchors the first view to the
+        // top-left content, since a stored center of 0;0 would push the lone Start state into the
+        // middle of the viewport. The default layout is just the Start node.
         const SMLayoutNode* startNode = (doc != nullptr && start != nullptr) ? doc->getLayout().findNode(start->getId()) : nullptr;
         CHECK(startNode != nullptr);
     }

@@ -83,7 +83,7 @@ namespace
                     QString location = state->getName() + QStringLiteral(" : ") + transition->getStimulus();
                     if (transition->isExternal())
                     {
-                        location += QStringLiteral(" -> ") + transition->getTo();
+                        location += QStringLiteral(" -> ") + transition->getTargetName();
                     }
 
                     out.append({ transition->getId(), location });

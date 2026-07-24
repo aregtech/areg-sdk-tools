@@ -89,7 +89,7 @@ namespace
         handler->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Idle"), SMStateEntry::eStateKind::Start);
-        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), QStringLiteral("Walking"));
+        SMTransitionEntry* trans = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), root->getId());
         return trans->getId();
     }
 
@@ -289,10 +289,10 @@ static void testGuardTruthAndSiblings()
 
     // A second transition on the same stimulus, later in document order (lower priority).
     SMStateEntry* idle = data.findState(QStringLiteral("Idle"));
-    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), QStringLiteral("Sleeping"));
+    SMTransitionEntry* second = idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), idle->getId());
     // And one on a different stimulus that must NOT count as a sibling.
     data.getMethods().createMethod(QStringLiteral("RequestRest"), SMMethodEntry::eMethodType::Trigger);
-    idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestRest"), QString());
+    idle->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestRest"), 0u);
 
     const QList<uint32_t> siblings = SMGuardEval::siblingTransitions(data, tid);
     check(siblings.size() == 2, "two transitions share the stimulus");

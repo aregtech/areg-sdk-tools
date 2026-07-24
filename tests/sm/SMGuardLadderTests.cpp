@@ -98,8 +98,8 @@ namespace
         handler->addParam(QStringLiteral("count"))->setType(QStringLiteral("uint16"));
 
         SMStateEntry* root = data.getStates().createState(QStringLiteral("Idle"), SMStateEntry::eStateKind::Start);
-        trans1 = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), QString())->getId();
-        trans2 = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), QString())->getId();
+        trans1 = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u)->getId();
+        trans2 = root->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, QStringLiteral("RequestWalk"), 0u)->getId();
     }
 
     //!< Parses \p text and installs it as \p transitionId's guard through the command path.

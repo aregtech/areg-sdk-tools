@@ -47,7 +47,7 @@ class SMCreateTransitionCommand : public SMCompositeCommand
 public:
     SMCreateTransitionCommand(  StateMachineData& data, DocModelNotifier& notifier
                               , SMStateEntry& source, SMTransitionEntry::eStimulusKind kind
-                              , const QString& stimulus, const QString& target
+                              , const QString& stimulus, uint32_t targetId
                               , const QList<QPointF>& edgePoints
                               , const QString& text, QUndoCommand* parent = nullptr);
 
@@ -75,28 +75,26 @@ public:
 
 /**
  * \class   SMSetTransitionTargetCommand
- * \brief   Sets or clears a transition's target state (`To`). An empty target makes the
- *          transition internal; a non-empty one makes it external (target reconnection).
+ * \brief   Sets or clears a transition's target state (`To`). A target ID of 0 makes the
+ *          transition internal; a non-zero one makes it external (target reconnection).
  **/
 class SMSetTransitionTargetCommand : public SMCommand
 {
 public:
     SMSetTransitionTargetCommand(  StateMachineData& data, DocModelNotifier& notifier
-                                 , uint32_t transitionId, const QString& target
+                                 , uint32_t transitionId, uint32_t targetId
                                  , const QString& text, QUndoCommand* parent = nullptr);
 
     void redo() override;
     void undo() override;
 
 private:
-    void apply(const QString& target, bool external);
+    void apply(uint32_t targetId);
 
 private:
     uint32_t    mId;                    //!< The transition's ID.
-    QString     mNew;                   //!< The new target (empty = internal).
-    bool        mNewExternal;           //!< Whether the new state is external.
-    QString     mOld;                   //!< The previous target, captured on first redo.
-    bool        mOldExternal { false };
+    uint32_t    mNewTarget;             //!< The new target state ID (0 = internal).
+    uint32_t    mOldTarget { 0 };       //!< The previous target state ID, captured on first redo.
     bool        mCaptured { false };
 };
 

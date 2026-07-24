@@ -103,6 +103,14 @@ namespace
     {
         return doc.getStates().createState(name, eKind::Start);
     }
+
+    //!< The document-wide ID of a state by name, for use as a transition target. An absent name
+    //!< yields a deliberately-dangling ID so "unresolved target" cases still exercise rules 6/7.
+    uint32_t stateId(const StateMachineData& doc, const QString& name)
+    {
+        const SMStateEntry* s = doc.findState(name);
+        return (s != nullptr ? s->getId() : 0xFFFFFF00u);
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -252,14 +260,14 @@ namespace
         {   // Positive: an unresolved trigger stimulus.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
-            s->getTransitions().createTransition(eStim::Trigger, "ghost", "Idle");
+            s->getTransitions().createTransition(eStim::Trigger, "ghost", stateId(doc, "Idle"));
             CHECK(hasRule(SMValidator::validate(doc), 6));
         }
         {   // Positive: an unresolved transition target.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            s->getTransitions().createTransition(eStim::Trigger, "go", "Nowhere");
+            s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Nowhere"));
             CHECK(hasRule(SMValidator::validate(doc), 6));
         }
         {   // Positive: a target that exists but is not a sibling (it is nested).
@@ -268,7 +276,7 @@ namespace
             doc.getMethods().createMethod("go", eMethod::Trigger);
             SMStateEntry* comp = doc.getStates().createState("Comp", eKind::Normal);
             comp->getOrCreateNestedStates()->createState("Inner", eKind::Start);
-            start->getTransitions().createTransition(eStim::Trigger, "go", "Inner");
+            start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Inner"));
             CHECK(hasRule(SMValidator::validate(doc), 7));
         }
         {   // Positive: an operation action that does not resolve.
@@ -282,7 +290,7 @@ namespace
             SMStateEntry* start = addStart(doc);
             doc.getStates().createState("Work", eKind::Normal);
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            start->getTransitions().createTransition(eStim::Trigger, "go", "Work");
+            start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Work"));
             const QList<SMIssue> issues = SMValidator::validate(doc);
             CHECK(countRule(issues, 6) == 0);
             CHECK(countRule(issues, 7) == 0);
@@ -304,7 +312,7 @@ namespace
             addStart(doc);
             SMStateEntry* fin = doc.getStates().createState("Done", eKind::Final);
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            fin->getTransitions().createTransition(eStim::Trigger, "go", "Idle");
+            fin->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             CHECK(hasRule(SMValidator::validate(doc), 8));
         }
         {   // Positive: a Start state that owns substates.
@@ -822,7 +830,7 @@ namespace
         SMStateEntry* st = doc.getStates().createState(name, eKind::Normal);
         if (doc.getMethods().findMethod(trigger) == nullptr)
             doc.getMethods().createMethod(trigger, eMethod::Trigger);
-        start->getTransitions().createTransition(eStim::Trigger, trigger, name);
+        start->getTransitions().createTransition(eStim::Trigger, trigger, stateId(doc, name));
         return st;
     }
 
@@ -837,7 +845,7 @@ namespace
             CHECK(hasWarn(SMValidator::validate(doc), 1));
 
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            s->getTransitions().createTransition(eStim::Trigger, "go", "Lost");
+            s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Lost"));
             CHECK(countWarn(SMValidator::validate(doc), 1) == 0);
         }
         {   // W2: a reachable Normal state with no outgoing transition; negative once it has one.
@@ -847,25 +855,25 @@ namespace
             CHECK(hasWarn(SMValidator::validate(doc), 2));
 
             doc.getMethods().createMethod("back", eMethod::Trigger);
-            work->getTransitions().createTransition(eStim::Trigger, "back", "Idle");
+            work->getTransitions().createTransition(eStim::Trigger, "back", stateId(doc, "Idle"));
             CHECK(countWarn(SMValidator::validate(doc), 2) == 0);
         }
         {   // W3: a transition shadowed by an earlier unconditional one on the same stimulus.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            s->getTransitions().createTransition(eStim::Trigger, "go", "Idle");
-            s->getTransitions().createTransition(eStim::Trigger, "go", "Idle");
+            s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
+            s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             CHECK(hasWarn(SMValidator::validate(doc), 3));
         }
         {   // Negative W3: the first transition carries a condition, so it does not shadow.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            SMTransitionEntry* first = s->getTransitions().createTransition(eStim::Trigger, "go", "Idle");
+            SMTransitionEntry* first = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             SMConditionEntry* row = first->getConditions().addCondition();
             row->setLhsKind(eSource::Expression); row->setExpression("count > 0");
-            s->getTransitions().createTransition(eStim::Trigger, "go", "Idle");
+            s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             CHECK(countWarn(SMValidator::validate(doc), 3) == 0);
         }
         {   // W4: a declared constant that is never referenced.
@@ -956,7 +964,7 @@ namespace
             CHECK(hasWarn(SMValidator::validate(doc), 10));
 
             doc.getMethods().createMethod("go", eMethod::Trigger);
-            start->getTransitions().createTransition(eStim::Trigger, "go", "Comp");
+            start->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Comp"));
             CHECK(countWarn(SMValidator::validate(doc), 10) == 0);
         }
         {   // W11: an empty inline-code block; negative once it has content.

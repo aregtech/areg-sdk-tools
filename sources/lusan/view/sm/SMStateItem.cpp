@@ -1304,6 +1304,10 @@ QVariant SMStateItem::itemChange(GraphicsItemChange change, const QVariant& valu
     if (change == QGraphicsItem::ItemSelectedHasChanged)
     {
         prepareGeometryChange();
+        // A selected (active) box raises above the inactive transition lines (z = 1) so it can
+        // cover them, while an inactive box stays at z = 0, below every edge; a selected edge
+        // still wins at z = 3 so its handles stay grabbable (see SMEdgeItem).
+        setZValue(value.toBool() ? 2.0 : 0.0);
         if ((value.toBool() == false) && isRenameActive())
         {
             closeRenameEditor();

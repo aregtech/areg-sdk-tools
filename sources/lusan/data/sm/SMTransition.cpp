@@ -18,6 +18,7 @@
  ************************************************************************/
 
 #include "lusan/data/sm/SMTransition.hpp"
+#include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/common/XmlSM.hpp"
 
 #include <QXmlStreamReader>
@@ -56,8 +57,7 @@ SMTransitionEntry::SMTransitionEntry(ElementBase* parent /*= nullptr*/)
     : DocumentElem  (parent)
     , mStimulusKind (eStimulusKind::Trigger)
     , mStimulus     ( )
-    , mTo           ( )
-    , mHasTo        (false)
+    , mToId         (0)
     , mDescription  ( )
     , mConditions   (this)
     , mGuard        ( )
@@ -72,8 +72,7 @@ SMTransitionEntry::SMTransitionEntry(  uint32_t id
     : DocumentElem  (id, parent)
     , mStimulusKind (kind)
     , mStimulus     (stimulus)
-    , mTo           ( )
-    , mHasTo        (false)
+    , mToId         (0)
     , mDescription  ( )
     , mConditions   (this)
     , mGuard        ( )
@@ -85,8 +84,7 @@ SMTransitionEntry::SMTransitionEntry(const SMTransitionEntry& src)
     : DocumentElem  (src)
     , mStimulusKind (src.mStimulusKind)
     , mStimulus     (src.mStimulus)
-    , mTo           (src.mTo)
-    , mHasTo        (src.mHasTo)
+    , mToId         (src.mToId)
     , mDescription  (src.mDescription)
     , mConditions   (src.mConditions)
     , mGuard        (src.mGuard)
@@ -100,8 +98,7 @@ SMTransitionEntry::SMTransitionEntry(SMTransitionEntry&& src) noexcept
     : DocumentElem  (std::move(src))
     , mStimulusKind (src.mStimulusKind)
     , mStimulus     (std::move(src.mStimulus))
-    , mTo           (std::move(src.mTo))
-    , mHasTo        (src.mHasTo)
+    , mToId         (src.mToId)
     , mDescription  (std::move(src.mDescription))
     , mConditions   (std::move(src.mConditions))
     , mGuard        (std::move(src.mGuard))
@@ -118,8 +115,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (const SMTransitionEntry& other
         DocumentElem::operator = (other);
         mStimulusKind = other.mStimulusKind;
         mStimulus     = other.mStimulus;
-        mTo           = other.mTo;
-        mHasTo        = other.mHasTo;
+        mToId         = other.mToId;
         mDescription  = other.mDescription;
         mConditions   = other.mConditions;
         mGuard        = other.mGuard;
@@ -138,8 +134,7 @@ SMTransitionEntry& SMTransitionEntry::operator = (SMTransitionEntry&& other) noe
         DocumentElem::operator = (std::move(other));
         mStimulusKind = other.mStimulusKind;
         mStimulus     = std::move(other.mStimulus);
-        mTo           = std::move(other.mTo);
-        mHasTo        = other.mHasTo;
+        mToId         = other.mToId;
         mDescription  = std::move(other.mDescription);
         mConditions   = std::move(other.mConditions);
         mGuard        = std::move(other.mGuard);
@@ -149,6 +144,23 @@ SMTransitionEntry& SMTransitionEntry::operator = (SMTransitionEntry&& other) noe
     }
 
     return *this;
+}
+
+QString SMTransitionEntry::getTargetName() const
+{
+    if (mToId == 0)
+        return QString();
+
+    // Walk the element parent chain to the document root, then resolve the target by ID.
+    const ElementBase* root = this;
+    while (root->getParent() != nullptr)
+    {
+        root = root->getParent();
+    }
+
+    const StateMachineData* doc = dynamic_cast<const StateMachineData*>(root);
+    const SMStateEntry* target = (doc != nullptr ? doc->findStateById(mToId) : nullptr);
+    return (target != nullptr ? target->getName() : QString());
 }
 
 bool SMTransitionEntry::isValid() const
@@ -165,14 +177,7 @@ bool SMTransitionEntry::readFromXml(QXmlStreamReader& xml)
     setId(attributes.value(XmlSM::xmlSMAttributeID).toUInt());
     mStimulusKind = fromKindString(attributes.value(XmlSM::xmlSMAttributeStimulusKind).toString());
     mStimulus     = attributes.value(XmlSM::xmlSMAttributeStimulus).toString();
-    if (attributes.hasAttribute(XmlSM::xmlSMAttributeTo))
-    {
-        setTo(attributes.value(XmlSM::xmlSMAttributeTo).toString());
-    }
-    else
-    {
-        clearTo();
-    }
+    mToId = attributes.value(XmlSM::xmlSMAttributeTo).toUInt();
     mDescription.clear();
 
     while (!xml.atEnd() && !(xml.tokenType() == QXmlStreamReader::EndElement && xml.name() == XmlSM::xmlSMElementTransition))
@@ -209,9 +214,9 @@ void SMTransitionEntry::writeToXml(QXmlStreamWriter& xml) const
     xml.writeAttribute(XmlSM::xmlSMAttributeID, QString::number(getId()));
     xml.writeAttribute(XmlSM::xmlSMAttributeStimulusKind, SMTransitionEntry::toString(mStimulusKind));
     xml.writeAttribute(XmlSM::xmlSMAttributeStimulus, mStimulus);
-    if (mHasTo)
+    if (mToId != 0)
     {
-        xml.writeAttribute(XmlSM::xmlSMAttributeTo, mTo);
+        xml.writeAttribute(XmlSM::xmlSMAttributeTo, QString::number(mToId));
     }
 
     writeTextElem(xml, XmlSM::xmlSMElementDescription, mDescription, true);
@@ -288,12 +293,12 @@ void SMTransitionData::cloneFrom(const SMTransitionData& src)
     }
 }
 
-SMTransitionEntry* SMTransitionData::createTransition(SMTransitionEntry::eStimulusKind kind, const QString& stimulus, const QString& target /*= QString()*/)
+SMTransitionEntry* SMTransitionData::createTransition(SMTransitionEntry::eStimulusKind kind, const QString& stimulus, uint32_t targetId /*= 0*/)
 {
     SMTransitionEntry* entry = new SMTransitionEntry(getNextId(), kind, stimulus, this);
-    if (target.isEmpty() == false)
+    if (targetId != 0)
     {
-        entry->setTo(target);
+        entry->setToId(targetId);
     }
 
     addElement(entry, false);
