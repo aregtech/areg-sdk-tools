@@ -17,6 +17,13 @@ on:
     # branches: [ main ]
   workflow_dispatch:
 
+# Least-privilege GITHUB_TOKEN: every job only checks out the repo and uploads build
+# artifacts (artifact upload uses ACTIONS_RUNTIME_TOKEN, not GITHUB_TOKEN), so read-only
+# access to repository contents is all that is required. Applied at the workflow root, it
+# covers all jobs that do not define their own permissions block.
+permissions:
+  contents: read
+
 # Cancel superseded runs on the same ref to save CI minutes.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

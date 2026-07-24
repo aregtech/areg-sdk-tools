@@ -207,9 +207,10 @@ MdiMainWindow::MdiMainWindow()
 const QString& MdiMainWindow::fileFilters() const
 {
     static const QString _filter {
-        "Service Interface Document (*.siml)\n"
-        "State Machine Document (*.fsml)\n"
-        "Log Database Files (*.sqlog)\n"
+        "Areg SDK Files (*.siml *.fsml *.sqlog)\n"
+        "Service Interface Files (*.siml)\n"
+        "State Machine Files (*.fsml)\n"
+        "Log Files (*.sqlog)\n"
         "All Files (*.*)"
     };
     

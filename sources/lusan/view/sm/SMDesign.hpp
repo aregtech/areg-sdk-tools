@@ -52,6 +52,7 @@ class SMScene;
 class SMSceneManager;
 class SMStateData;
 class StateMachineModel;
+enum class eDocElementKind;
 
 /**
  * \class   SMDesign
@@ -333,6 +334,13 @@ signals:
      **/
     void signalPlaceDesignWidget(int widget, int place);
 
+    /**
+     * \brief   Emitted when a validation finding on a registry entry is activated; the owning
+     *          window switches to that entry's editor page (states/transitions are handled on
+     *          the canvas, so those never reach this signal).
+     **/
+    void signalNavigateToPage(eDocElementKind kind);
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
@@ -593,6 +601,16 @@ private:
      *          path), and centers the viewport on it.
      **/
     void focusSearchHit(int index);
+
+    /**
+     * \brief   Reveals a validation finding: a registry entry switches the editor page; a
+     *          state, transition, condition or operation navigates the canvas to its level,
+     *          selects it, and (for transition-owned findings) focuses the Conditions tab.
+     **/
+    void navigateToIssue(uint32_t elementId, eDocElementKind kind);
+
+    //!< Navigates the canvas to the given level and selects/centers the canvas element.
+    void revealOnCanvas(uint32_t levelId, uint32_t canvasElementId);
 
     //!< Updates the "current / total" match counter next to the search box.
     void updateSearchStatus();

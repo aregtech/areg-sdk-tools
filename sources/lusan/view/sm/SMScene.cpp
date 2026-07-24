@@ -776,7 +776,7 @@ QList<SMNoteItem*> SMScene::selectedNoteItems() const
     return result;
 }
 
-void SMScene::reconnectTransitionTarget(uint32_t transitionId, uint32_t targetStateId)
+void SMScene::reconnectTransitionTarget(uint32_t transitionId, uint32_t targetStateId, const SMLayoutEdge& geometry)
 {
     StateMachineData& data = mModel.getData();
     const SMTransitionEntry* transition = data.findTransitionById(transitionId);
@@ -786,17 +786,29 @@ void SMScene::reconnectTransitionTarget(uint32_t transitionId, uint32_t targetSt
     }
 
     const SMStateEntry* target = (targetStateId != 0 ? data.findStateById(targetStateId) : nullptr);
-    if ((target == nullptr) || (target->getName() == transition->getTo()))
+    if ((target == nullptr) || (target->getId() == transition->getToId()))
     {
         return;
     }
 
-    mModel.getUndoStack().push(new SMSetTransitionTargetCommand(  data, mModel.getNotifier()
-                                                               , transitionId, target->getName()
-                                                               , QCoreApplication::translate("SMScene", "Reconnect transition")));
+    // A Start state is a source only (no incoming): never retarget a transition onto it. The edge
+    // item already vetoes this drop with a hint; this is the backstop for any other caller.
+    if (target->getKind() == SMStateEntry::eStateKind::Start)
+    {
+        return;
+    }
+
+    // One undo step: persist the drop geometry (the end anchor at the release position, the label
+    // reset) and retarget the transition. Geometry first, so the retarget's edge refresh reads the
+    // final anchor and there is no flash back to the old endpoint.
+    const QString text = QCoreApplication::translate("SMScene", "Reconnect transition");
+    SMCompositeCommand* command = new SMCompositeCommand(data, mModel.getNotifier(), text);
+    new SMSetEdgeGeometryCommand(data, mModel.getNotifier(), transitionId, SMMoveNodeCommand::takeNextGesture(), geometry, text, command);
+    new SMSetTransitionTargetCommand(data, mModel.getNotifier(), transitionId, target->getId(), text, command);
+    mModel.getUndoStack().push(command);
 }
 
-void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateId)
+void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateId, const SMLayoutEdge& geometry)
 {
     if (newSourceStateId == 0)
     {
@@ -811,9 +823,22 @@ void SMScene::reparentTransition(uint32_t transitionId, uint32_t newSourceStateI
         return;
     }
 
-    mModel.getUndoStack().push(new SMReparentTransitionCommand(  data, mModel.getNotifier()
-                                                              , *oldSource, *newSource, transitionId
-                                                              , QCoreApplication::translate("SMScene", "Reconnect transition source")));
+    // A Final state is a target only (no outgoing): never reparent a transition onto it. The edge
+    // item already vetoes this drop with a hint; this is the backstop for any other caller.
+    if (newSource->getKind() == SMStateEntry::eStateKind::Final)
+    {
+        return;
+    }
+
+    // One undo step: persist the drop geometry under the current (old) id first, then reparent --
+    // the reparent captures that edge and re-keys it to the new source, so the begin anchor lands
+    // at the release position, the label re-centres, and the edge never flashes back to its old
+    // source before the command redraws it.
+    const QString text = QCoreApplication::translate("SMScene", "Reconnect transition source");
+    SMCompositeCommand* command = new SMCompositeCommand(data, mModel.getNotifier(), text);
+    new SMSetEdgeGeometryCommand(data, mModel.getNotifier(), transitionId, SMMoveNodeCommand::takeNextGesture(), geometry, text, command);
+    new SMReparentTransitionCommand(data, mModel.getNotifier(), *oldSource, *newSource, transitionId, text, command);
+    mModel.getUndoStack().push(command);
 }
 
 void SMScene::startRenameOfSelection()
@@ -836,6 +861,16 @@ void SMScene::requestEnterSubmachine(uint32_t stateId)
     if ((state != nullptr) && state->hasNestedStates())
     {
         emit signalEnterSubmachine(stateId);
+    }
+}
+
+void SMScene::requestSubstate(uint32_t stateId)
+{
+    // Not gated on hasNestedStates: a plain normal state gets a submachine created on the fly by
+    // the Design page. Only guard that the state still exists.
+    if (mModel.getData().findStateById(stateId) != nullptr)
+    {
+        emit signalRequestSubstate(stateId);
     }
 }
 
@@ -1049,8 +1084,8 @@ bool SMScene::isOnThisLevel(uint32_t stateId) const
 
 void SMScene::updateConnHighlights()
 {
-    // Selected states: their names key the incoming side, their transitions the outgoing.
-    QSet<QString>  selectedNames;
+    // Selected states: their IDs key the incoming side, their transitions the outgoing.
+    QSet<uint32_t> selectedIds;
     QSet<uint32_t> outgoing;
     for (QGraphicsItem* item : selectedItems())
     {
@@ -1066,7 +1101,7 @@ void SMScene::updateConnHighlights()
             continue;
         }
 
-        selectedNames.insert(state->getName());
+        selectedIds.insert(state->getId());
         for (const SMTransitionEntry* transition : state->getTransitions().getElements())
         {
             if (transition->isExternal())
@@ -1078,13 +1113,13 @@ void SMScene::updateConnHighlights()
 
     QSet<uint32_t> incoming;
     const SMStateData* level = mModel.getData().findLevel(mLevelId);
-    if ((level != nullptr) && (selectedNames.isEmpty() == false))
+    if ((level != nullptr) && (selectedIds.isEmpty() == false))
     {
         for (const SMStateEntry* state : level->getElements())
         {
             for (const SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                if (transition->isExternal() && selectedNames.contains(transition->getTo()))
+                if (transition->isExternal() && selectedIds.contains(transition->getToId()))
                 {
                     incoming.insert(transition->getId());
                 }

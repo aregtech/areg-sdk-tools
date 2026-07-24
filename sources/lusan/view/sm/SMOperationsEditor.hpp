@@ -114,6 +114,10 @@ public:
 private slots:
     void onNotifierChanged(uint32_t id, eDocElementKind kind);
 
+    //!< Drops the binding when the bound owner (transition/state) is deleted, so a queued deferred
+    //!< rebuild never dereferences the freed operation list (use-after-free). See the .cpp for detail.
+    void onElementRemoved(uint32_t id, eDocElementKind kind);
+
 private:
     void buildUi();
     void rebuild();

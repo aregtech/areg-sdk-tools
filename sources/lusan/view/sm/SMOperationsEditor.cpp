@@ -105,7 +105,8 @@ SMOperationsEditor::SMOperationsEditor(StateMachineModel& model, QWidget* parent
     DocModelNotifier& notifier = mModel.getNotifier();
     const auto onChange = [this](uint32_t id, eDocElementKind kind) { onNotifierChanged(id, kind); };
     connect(&notifier, &DocModelNotifier::elementAdded, this, onChange);
-    connect(&notifier, &DocModelNotifier::elementRemoved, this, onChange);
+    connect(&notifier, &DocModelNotifier::elementRemoved, this
+          , [this](uint32_t id, eDocElementKind kind) { onElementRemoved(id, kind); });
     connect(&notifier, &DocModelNotifier::elementChanged, this, onChange);
     connect(&notifier, &DocModelNotifier::listReordered, this, onChange);
     connect(&notifier, &DocModelNotifier::nameChanged, this, [this](uint32_t id, const QString&, const QString&) { onNotifierChanged(id, eDocElementKind::State); });
@@ -621,6 +622,24 @@ QStringList SMOperationsEditor::timerNames() const
 //////////////////////////////////////////////////////////////////////////
 // Notifications
 //////////////////////////////////////////////////////////////////////////
+
+void SMOperationsEditor::onElementRemoved(uint32_t id, eDocElementKind kind)
+{
+    // The bound owner (a transition, or a state for its Enter/Do/Exit list) was deleted -- e.g. an
+    // undo of "Add transition". mOwner/mList point straight into that now-freed element, so a still-
+    // queued deferred rebuild (scheduleRebuild) would iterate the freed operation list: a use-after-
+    // free that crashes on the poisoned pointer. Drop the binding immediately; a null mList makes
+    // rebuild() a no-op, and the panel re-binds on the next selection. Guard by (id, kind) so an
+    // unrelated removal still refreshes the pickers through the normal path.
+    if ((id == mOwnerId) && (kind == mOwnerKind))
+    {
+        clearBinding();
+    }
+    else
+    {
+        onNotifierChanged(id, kind);
+    }
+}
 
 void SMOperationsEditor::onNotifierChanged(uint32_t /*id*/, eDocElementKind kind)
 {

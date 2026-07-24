@@ -24,15 +24,16 @@
 
 #include <QSet>
 #include <memory>
+#include <utility>
 
 namespace
 {
-    //!< Collects the layout owner IDs and the state names of a state subtree: the state,
+    //!< Collects the layout owner IDs and the state IDs of a state subtree: the state,
     //!< its transitions, and recursively its painted substates and their transitions.
-    void collectSubtree(const SMStateEntry& state, QList<uint32_t>& owners, QSet<QString>& names)
+    void collectSubtree(const SMStateEntry& state, QList<uint32_t>& owners, QSet<uint32_t>& stateIds)
     {
         owners.append(state.getId());
-        names.insert(state.getName());
+        stateIds.insert(state.getId());
         for (const SMTransitionEntry* transition : state.getTransitions().getElements())
         {
             owners.append(transition->getId());
@@ -43,7 +44,7 @@ namespace
         {
             for (const SMStateEntry* child : nested->getElements())
             {
-                collectSubtree(*child, owners, names);
+                collectSubtree(*child, owners, stateIds);
             }
         }
     }
@@ -58,8 +59,8 @@ namespace
     };
 
     //!< Walks every state outside the deleted subtree and collects the transitions whose
-    //!< target name belongs to the subtree.
-    void collectIncoming(SMStateData& level, uint32_t skipStateId, const QSet<QString>& names, QList<IncomingRef>& incoming)
+    //!< target ID belongs to the subtree (transitions reference their target by ID).
+    void collectIncoming(SMStateData& level, uint32_t skipStateId, const QSet<uint32_t>& stateIds, QList<IncomingRef>& incoming)
     {
         for (SMStateEntry* state : level.getElements())
         {
@@ -70,7 +71,7 @@ namespace
 
             for (SMTransitionEntry* transition : state->getTransitions().getElements())
             {
-                if (transition->isExternal() && names.contains(transition->getTo()))
+                if (transition->isExternal() && stateIds.contains(transition->getToId()))
                 {
                     incoming.append(IncomingRef{ &state->getTransitions(), transition->getId() });
                 }
@@ -78,7 +79,7 @@ namespace
 
             if (state->hasNestedStates())
             {
-                collectIncoming(*state->getNestedStates(), skipStateId, names, incoming);
+                collectIncoming(*state->getNestedStates(), skipStateId, stateIds, incoming);
             }
         }
     }
@@ -123,6 +124,9 @@ void SMRenameStateCommand::apply(const QString& name, const QString& previous)
     SMStateEntry* state = data().findStateById(mId);
     if (state != nullptr)
     {
+        // Transitions reference their target by ID, so a rename touches only the state's name --
+        // every connection to it survives untouched. The canvas repaints affected edge labels
+        // (which resolve the target name live) in response to notifyNameChanged.
         state->setName(name);
         notifier().notifyNameChanged(mId, previous, name);
     }
@@ -242,15 +246,15 @@ SMRemoveStateCommand::SMRemoveStateCommand(StateMachineData& data, DocModelNotif
     : SMCompositeCommand(data, notifier, text, parent)
 {
     QList<uint32_t> owners;
-    QSet<QString>   names;
+    QSet<uint32_t>  stateIds;
     SMStateEntry** slot = level.findElement(stateId);
     if ((slot != nullptr) && (*slot != nullptr))
     {
-        collectSubtree(**slot, owners, names);
+        collectSubtree(**slot, owners, stateIds);
     }
 
     QList<IncomingRef> incoming;
-    collectIncoming(data.getStates(), stateId, names, incoming);
+    collectIncoming(data.getStates(), stateId, stateIds, incoming);
     for (const IncomingRef& ref : incoming)
     {
         owners.append(ref.id);

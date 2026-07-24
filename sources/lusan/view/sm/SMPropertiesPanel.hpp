@@ -97,6 +97,7 @@ public:
     inline QListWidget* transitionList() const;
     inline QComboBox* stimulusNameCombo() const;
     inline QComboBox* targetCombo() const;
+    inline QComboBox* sourceCombo() const;
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -129,6 +130,7 @@ private slots:
     void onTransitionDescriptionCommit();
     void onStimulusCommit();
     void onTargetCommit();
+    void onSourceCommit();
     void onTransitionActivated();
 
 private:
@@ -232,7 +234,10 @@ private:
     QLabel*             mStimulusSig;   //!< Read-only stimulus signature (`walk(count)`).
     QComboBox*          mStimulusName;  //!< The stimulus picker (fixed list of triggers/events/
                                         //!< timers; editing is search-only, no free rename).
-    QComboBox*          mTarget;        //!< The target sibling state (or internal).
+    QComboBox*          mTarget;        //!< The target sibling state (or internal). Start states
+                                        //!< are omitted: a Start has no incoming transition.
+    QComboBox*          mSource;        //!< The source sibling state (the transition's owner). Final
+                                        //!< states are omitted: a Final has no outgoing transition.
     QPlainTextEdit*     mTransDesc;     //!< The transition description (multi-line).
     SMGuardBar*         mConditions;    //!< The Conditions tab guard bar.
     SMOperationsEditor* mTransOps;      //!< The transition operations editor (Actions tab).
@@ -274,6 +279,11 @@ inline QComboBox* SMPropertiesPanel::stimulusNameCombo() const
 inline QComboBox* SMPropertiesPanel::targetCombo() const
 {
     return mTarget;
+}
+
+inline QComboBox* SMPropertiesPanel::sourceCombo() const
+{
+    return mSource;
 }
 
 #endif  // LUSAN_VIEW_SM_SMPROPERTIESPANEL_HPP

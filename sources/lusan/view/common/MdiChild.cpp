@@ -130,8 +130,13 @@ bool MdiChild::save()
 
 bool MdiChild::saveAs()
 {
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), mCurFile, fileFilter());
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save As"), suggestedSaveName(), fileFilter());
     return (fileName.isEmpty() ? false : saveFile(fileName));
+}
+
+QString MdiChild::suggestedSaveName() const
+{
+    return mCurFile;
 }
 
 bool MdiChild::saveFile(const QString& fileName)

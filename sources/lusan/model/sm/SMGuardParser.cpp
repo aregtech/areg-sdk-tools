@@ -739,9 +739,15 @@ namespace
             if (aid != 0u) { return SMGuardNode::makeRef(eKind::Attr, aid); }
             if (cid != 0u) { return SMGuardNode::makeRef(eKind::Const, cid); }
 
-            // An unmarked identifier that resolves to no known symbol is raw C++,
-            // kept verbatim and never validated -- not an error (unlike an explicit `#kind:name`).
-            return SMGuardNode::makeVerbatim(eKind::Raw, name);
+            // Every bare name in a guard must resolve to a DEFINED, typed symbol: a stimulus
+            // parameter, an FSM attribute, or an FSM constant (all data objects that must be
+            // declared). A name that resolves to none of these is undefined -- an error, NOT silent
+            // "raw C++". The one exception is the explicit "raw code" mode (allowRaw): there the user
+            // deliberately opted out of validation and owns correctness, so unresolved() keeps the
+            // text verbatim without error. A named condition method is a call (`name(...)`) resolved
+            // elsewhere; an inline lambda is an island (`{...}`); literals are handled before here.
+            return unresolved(name, idTok.start, idTok.len
+                            , QStringLiteral("unknown symbol '%1' -- not a defined parameter, attribute, or constant").arg(name));
         }
 
         static bool cmpOp(eTok t, eCmpOp& op)

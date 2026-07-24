@@ -735,10 +735,8 @@ void SMClipboard::remapReferences(SMStateEntry& state, const RenameMaps& renames
             _remapName(*stimulusMap, transition->getStimulus(), [transition](const QString& name) { transition->setStimulus(name); });
         }
 
-        if (transition->isExternal())
-        {
-            _remapName(renames.states, transition->getTo(), [transition](const QString& name) { transition->setTo(name); });
-        }
+        // Transition targets reference states by ID, not by name; they are remapped by
+        // remapTransitionTargets() using the paste's old-ID -> new-ID map, not here.
 
         for (SMConditionEntry* condition : transition->getConditions().collectLeaves())
         {
@@ -766,6 +764,26 @@ void SMClipboard::remapReferences(SMStateEntry& state, const RenameMaps& renames
         for (SMStateEntry* nested : state.getNestedStates()->getElements())
         {
             remapReferences(*nested, renames);
+        }
+    }
+}
+
+void SMClipboard::remapTransitionTargets(SMStateEntry& state, const QHash<uint32_t, uint32_t>& oldToNew)
+{
+    for (SMTransitionEntry* transition : state.getTransitions().getElements())
+    {
+        if (transition->isExternal())
+        {
+            const uint32_t newTarget = oldToNew.value(transition->getToId(), 0);
+            transition->setToId(newTarget);     // 0 when the target lies outside the pasted set -> internal
+        }
+    }
+
+    if (state.hasNestedStates())
+    {
+        for (SMStateEntry* nested : state.getNestedStates()->getElements())
+        {
+            remapTransitionTargets(*nested, oldToNew);
         }
     }
 }

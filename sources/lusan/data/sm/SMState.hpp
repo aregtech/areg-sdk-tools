@@ -277,6 +277,14 @@ public:
     int countStatesRecursive() const;
 
     /**
+     * \brief   True when this level owns at least one Normal state (a composite counts, being
+     *          Normal-kind). A level with only Start/Final markers, or an empty one, is not a
+     *          "real" submachine: it exists only in RAM while being built and is never persisted
+     *          -- writeToXml omits it and its layout, so it is discarded on save/reload.
+     **/
+    bool hasRealState() const;
+
+    /**
      * \brief   Deletes and removes all states of this level (recursively via ownership).
      **/
     void removeAll();

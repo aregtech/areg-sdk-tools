@@ -393,7 +393,12 @@ void SMStateEntry::writeToXml(QXmlStreamWriter& xml) const
         xml.writeEndElement();
     }
     mTransitions.writeToXml(xml);
-    if (mNested != nullptr)
+    // A painted submachine is persisted only when it is "real" -- it owns at least one Normal
+    // state. A submachine left with only Start/Final markers (or empty) was created in RAM while
+    // the user was building it but is not a real state, so it is dropped on save: the state
+    // serializes as a plain leaf. StateMachineData::writeToXml drops the matching layout too, so
+    // no orphan Node/View lingers to collide with a future ID.
+    if ((mNested != nullptr) && mNested->hasRealState())
     {
         mNested->writeToXml(xml);
     }
@@ -574,6 +579,19 @@ int SMStateData::countStatesRecursive() const
     }
 
     return count;
+}
+
+bool SMStateData::hasRealState() const
+{
+    for (const SMStateEntry* state : getElements())
+    {
+        if ((state != nullptr) && (state->getKind() == SMStateEntry::eStateKind::Normal))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void SMStateData::removeAll()

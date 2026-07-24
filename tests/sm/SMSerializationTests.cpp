@@ -628,8 +628,10 @@ namespace
         CHECK(start != nullptr);
         CHECK((start != nullptr) && (start->getKind() == SMStateEntry::eStateKind::Start));
 
-        const SMLayoutView* rootView = (doc != nullptr) ? doc->getLayout().findView(doc->getOverview().getId()) : nullptr;
-        CHECK(rootView != nullptr);
+        // A fresh document deliberately persists NO overview View entry (see
+        // StateMachineData::createNewDocument): the Design page anchors the first view to the
+        // top-left content, since a stored center of 0;0 would push the lone Start state into the
+        // middle of the viewport. The default layout is just the Start node.
         const SMLayoutNode* startNode = (doc != nullptr && start != nullptr) ? doc->getLayout().findNode(start->getId()) : nullptr;
         CHECK(startNode != nullptr);
     }
@@ -815,6 +817,67 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Ephemeral submachine: a not-real submachine (only Start/Final, or empty) is
+// created in RAM while the user builds it but is never persisted (issue #514 follow-up).
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testEphemeralSubmachine()
+    {
+        std::printf("[SM-514] a submachine with no Normal state is not saved (and neither is its layout)\n");
+
+        StateMachineData doc;
+        doc.getOverview().setName("Ephemeral");
+
+        SMStateEntry* start  = doc.getStates().createState("Root", SMStateEntry::eStateKind::Start);
+        SMStateEntry* worker = doc.getStates().createState("Worker", SMStateEntry::eStateKind::Normal);
+        CHECK((start != nullptr) && (worker != nullptr));
+        doc.getLayout().addNode(worker->getId()).x = 100.0;         // Worker's own box: must be kept
+
+        // Give Worker a submachine that holds only a Start marker -- not a real state.
+        SMStateData* nested = worker->getOrCreateNestedStates();
+        SMStateEntry* subStart = nested->createState("SubStart", SMStateEntry::eStateKind::Start);
+        CHECK(subStart != nullptr);
+        const uint32_t subStartId = subStart->getId();
+        doc.getLayout().addNode(subStartId).x = 200.0;              // nested Node: must be dropped
+        doc.getLayout().addView(worker->getId()).zoom = 150;        // Worker's sublevel View: must be dropped
+
+        const QString outPath = outFile("sm514_empty.fsml");
+        CHECK(doc.writeToFile(outPath));
+        const QByteArray written = readAllBytes(outPath);
+
+        // The nested Start is omitted from the StateList, and its layout Node is omitted too.
+        CHECK(written.contains("SubStart") == false);
+        CHECK(written.contains(QString("Owner=\"%1\"").arg(subStartId).toLatin1()) == false);
+        CHECK(written.contains("Worker"));                          // the composite reverts to a plain state
+
+        StateMachineData reread;
+        CHECK(reread.readFromFile(outPath));
+        CHECK(reread.openSucceeded());
+        SMStateEntry* rworker = reread.getStates().findState("Worker");
+        CHECK((rworker != nullptr) && (rworker->hasNestedStates() == false));
+        CHECK(reread.getStates().findStateRecursive("SubStart") == nullptr);
+        CHECK(reread.getLayout().findNode(worker->getId()) != nullptr);   // Worker's own box survived
+
+        // Adding a Normal state makes the submachine real: now it IS persisted.
+        SMStateData* nested2 = worker->getOrCreateNestedStates();
+        SMStateEntry* inner = nested2->createState("Inner", SMStateEntry::eStateKind::Normal);
+        CHECK(inner != nullptr);
+        const QString outPath2 = outFile("sm514_real.fsml");
+        CHECK(doc.writeToFile(outPath2));
+        const QByteArray written2 = readAllBytes(outPath2);
+        CHECK(written2.contains("Inner"));
+        CHECK(written2.contains("SubStart"));                       // the whole real submachine persists
+
+        StateMachineData reread2;
+        CHECK(reread2.readFromFile(outPath2));
+        SMStateEntry* rworker2 = reread2.getStates().findState("Worker");
+        CHECK((rworker2 != nullptr) && rworker2->hasNestedStates());
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Entry point
 //////////////////////////////////////////////////////////////////////////
 
@@ -835,6 +898,7 @@ int main(int /*argc*/, char** /*argv*/)
     testNewDocumentSkeleton();
     testAutosaveHelpers();
     testDoActivity();
+    testEphemeralSubmachine();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

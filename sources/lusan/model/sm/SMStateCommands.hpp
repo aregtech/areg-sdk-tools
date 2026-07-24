@@ -26,6 +26,7 @@
 #include "lusan/model/common/DocElementCommands.hpp"
 #include "lusan/data/sm/SMState.hpp"
 
+#include <QList>
 #include <QRectF>
 
 /**
@@ -84,10 +85,10 @@ private:
     void apply(const QString& name, const QString& previous);
 
 private:
-    uint32_t    mId;                    //!< The renamed state's ID.
-    QString     mNew;                   //!< The new name.
-    QString     mOld;                   //!< The previous name, captured on first redo.
-    bool        mCaptured { false };
+    uint32_t        mId;                //!< The renamed state's ID.
+    QString         mNew;               //!< The new name.
+    QString         mOld;               //!< The previous name, captured on first redo.
+    bool            mCaptured { false };
 };
 
 /**

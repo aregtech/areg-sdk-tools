@@ -97,6 +97,7 @@ protected:
     const QString& newDocumentExt() const override;
     const QString& fileSuffix() const override;
     const QString& fileFilter() const override;
+    QString suggestedSaveName() const override;
     bool writeToFile(const QString& filePath) override;
     bool maybeSave() override;
     void onWindowClosing(bool isActive) override;
@@ -107,6 +108,13 @@ private slots:
      *          not built yet) and starts a new entry there (Declare dropdown).
      **/
     void onDeclareRequested(SMDesign::eDeclareKind kind);
+
+    /**
+     * \brief   Switches to the editor page that owns the given element kind, so a validation
+     *          finding on a registry entry brings its page forward (the canvas handles state
+     *          and transition findings itself).
+     **/
+    void onNavigateToPage(eDocElementKind kind);
 
 private:
     bool loadDocument(const QString& documentPath, const QString& sourcePath = QString());

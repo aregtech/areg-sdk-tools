@@ -282,6 +282,40 @@ QPointF NESMDesign::gridAlignedBorderPoint(const QRectF& rect, double radius, co
     return result;
 }
 
+QPointF NESMDesign::slideBorderPoint(const QRectF& rect, double radius, const QPointF& border
+                                   , const QPointF& pointer, int gridSize, bool snap)
+{
+    if ((rect.width() <= 0.0) || (rect.height() <= 0.0))
+    {
+        return border;
+    }
+
+    const double rad  = std::clamp(radius, 0.0, std::min(rect.width(), rect.height()) / 2.0);
+    const double half = std::max(static_cast<double>(gridSize) / 2.0, 1.0);
+    const auto   slide = [snap, half](double v) -> double { return snap ? std::round(v / half) * half : v; };
+
+    // Which of the four edges does `border` sit on? Slide along that edge only.
+    const double dl = std::abs(border.x() - rect.left());
+    const double dr = std::abs(border.x() - rect.right());
+    const double dt = std::abs(border.y() - rect.top());
+    const double db = std::abs(border.y() - rect.bottom());
+    const double dm = std::min({ dl, dr, dt, db });
+
+    QPointF result = border;
+    if ((dm == dt) || (dm == db))
+    {
+        // Top/bottom edge: the x coordinate runs along it.
+        result.setX(std::clamp(slide(pointer.x()), rect.left() + rad, rect.right() - rad));
+    }
+    else
+    {
+        // Left/right edge: the y coordinate runs along it.
+        result.setY(std::clamp(slide(pointer.y()), rect.top() + rad, rect.bottom() - rad));
+    }
+
+    return result;
+}
+
 QList<QPointF> NESMDesign::arcPolyline(const QPointF& begin, const QPointF& end, double bulge, int samples)
 {
     constexpr double Pi = 3.14159265358979323846;

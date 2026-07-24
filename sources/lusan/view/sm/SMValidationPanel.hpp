@@ -24,6 +24,9 @@
  ************************************************************************/
 #include <QWidget>
 
+#include "lusan/model/sm/SMValidator.hpp"
+
+#include <QList>
 #include <cstdint>
 
 /************************************************************************
@@ -33,15 +36,17 @@ class QLabel;
 class QListWidget;
 class QListWidgetItem;
 class StateMachineModel;
-enum class eDocElementKind;
 
 /**
  * \class   SMValidationPanel
- * \brief   The document validation results, hosted as a dockable panel of the Design
- *          page. Shows the guard entries of \ref SMGuardValidation -- drafts (ERR),
- *          shadowing (WARN), the raw-fragment audit (INFO), broken/stale references --
- *          each row colored by severity and navigating to its transition's Conditions tab
- *          on activation. Rebuilds (deferred, coalesced) on any document change.
+ * \brief   The document validation results, hosted as a dockable panel of the Design page
+ *          (bottom, tabbed with the output window). It renders the headless engine's findings
+ *          (\ref SMValidator, via the facade's controller) together with the guard-specific
+ *          entries of \ref SMGuardValidation, one live list ordered worst-severity first. Each
+ *          row shows a severity icon and a severity word alongside the message (severity is
+ *          never conveyed by color alone) and, on activation, asks the Design page to select
+ *          the offending element -- switching page or level as needed. F8 / Shift+F8 step
+ *          through the findings. The list rebuilds, deferred and coalesced, on every change.
  **/
 class SMValidationPanel : public QWidget
 {
@@ -60,25 +65,31 @@ public:
     //!< Rebuilds the list now (tests; the panel otherwise coalesces on model changes).
     void refreshNow();
 
+    //!< Selects and activates the next finding (F8), wrapping at the end. No-op when empty.
+    void focusNextIssue();
+
+    //!< Selects and activates the previous finding (Shift+F8), wrapping at the start.
+    void focusPreviousIssue();
+
     //!< The findings list widget (tests).
     inline QListWidget* list() const;
 
 signals:
-    //!< A finding row was activated: navigate to the transition's Conditions tab.
-    void navigateRequested(uint32_t transitionId);
+    //!< A finding row was activated: navigate to the offending element on the owning page.
+    void navigateRequested(uint32_t elementId, eDocElementKind kind);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private slots:
-    void onElementChanged(uint32_t id, eDocElementKind kind);
-    void onElementRemoved(uint32_t id, eDocElementKind kind);
-    void onDocumentReloaded();
+    void onModelChanged();
+    void onEngineIssues(const QList<SMIssue>& issues);
     void onItemActivated(QListWidgetItem* item);
 
 private:
     void scheduleRebuild();
     void rebuild();
+    void step(int delta);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
@@ -87,6 +98,7 @@ private:
     StateMachineModel&  mModel;         //!< The document facade.
     QListWidget*        mList;          //!< The findings list.
     QLabel*             mSummary;       //!< The one-line count summary (`2 errors, 1 warning`).
+    QList<SMIssue>      mEngineIssues;  //!< The latest structural/reference/type findings.
     bool                mRebuildPending;//!< Coalesces deferred rebuilds.
 };
 

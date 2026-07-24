@@ -54,7 +54,7 @@ namespace
         const QString stimulus = transition.getStimulus().isEmpty()
                 ? QObject::tr("<stimulus>") : transition.getStimulus();
         return transition.isExternal()
-                ? (stimulus + QStringLiteral(" -> ") + transition.getTo())
+                ? (stimulus + QStringLiteral(" -> ") + transition.getTargetName())
                 : (stimulus + QObject::tr(" (internal)"));
     }
 }

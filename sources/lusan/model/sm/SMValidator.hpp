@@ -77,6 +77,18 @@ struct SMIssue
 class SMValidator
 {
 //////////////////////////////////////////////////////////////////////////
+// Constants
+//////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   A 10.2 warning `n` is reported with the rule id (`WARNING_RULE_BASE + n`); the
+     *          error rule ids stay the plain 10.1 numbers. The two numbering spaces share the
+     *          single `SMIssue::rule` field, so the warning offset keeps them from colliding
+     *          (warning 2 and error 2 are distinguishable by id, not only by severity).
+     **/
+    static constexpr int WARNING_RULE_BASE { 100 };
+
+//////////////////////////////////////////////////////////////////////////
 // Operations
 //////////////////////////////////////////////////////////////////////////
 public:

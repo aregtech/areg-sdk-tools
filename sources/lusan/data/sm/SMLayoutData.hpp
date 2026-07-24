@@ -26,6 +26,7 @@
 
 #include <QList>
 #include <QPointF>
+#include <QSet>
 #include <QString>
 
 /**
@@ -121,6 +122,17 @@ public:
     bool isValid() const override;
     bool readFromXml(QXmlStreamReader& xml) override;
     void writeToXml(QXmlStreamWriter& xml) const override;
+
+    /**
+     * \brief   Writes the Layout section while omitting the layout of dropped elements: any
+     *          Node/Edge (and owned Note) whose owner is in \p dropOwners, and any View (and
+     *          level Note) whose level is in \p dropLevels. Used when a not-real submachine is
+     *          not persisted, so its nested states' geometry never survives as an orphan that a
+     *          later element could inherit by ID reuse.
+     * \param   dropOwners  Element IDs (states, transitions) whose Node/Edge/owned-Note is omitted.
+     * \param   dropLevels  Level owner IDs whose View and level-scoped Notes are omitted.
+     **/
+    void writeToXml(QXmlStreamWriter& xml, const QSet<uint32_t>& dropOwners, const QSet<uint32_t>& dropLevels) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations

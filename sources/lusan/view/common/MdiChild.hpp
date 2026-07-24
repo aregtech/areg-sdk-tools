@@ -261,6 +261,15 @@ protected:
     virtual const QString& fileFilter() const;
 
     /**
+     * \brief   Returns the file name (or full path) to offer the user in the
+     *          "Save As" dialog. The base implementation returns the current file
+     *          name (the auto-generated `NewDocumentN.ext` for untitled documents).
+     *          Derived classes may override this to suggest a name derived from the
+     *          document content (for example, the state machine name).
+     **/
+    virtual QString suggestedSaveName() const;
+
+    /**
      * \brief   Reads the document from the file.
      * \param   filePath    The path of the file to read.
      * \return  True if the document was successfully read, false otherwise.

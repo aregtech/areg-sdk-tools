@@ -25,6 +25,7 @@
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSet>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
@@ -34,6 +35,60 @@ namespace
     {
         static const VersionNumber kCurrent(StateMachineData::XML_FORMAT_DEFAULT);
         return kCurrent;
+    }
+
+    //!< Collects every layout owner ID (each state and its transitions) in a submachine subtree.
+    void collectSubtreeOwners(const SMStateData& level, QSet<uint32_t>& owners)
+    {
+        for (const SMStateEntry* state : level.getElements())
+        {
+            if (state == nullptr)
+            {
+                continue;
+            }
+
+            owners.insert(state->getId());
+            for (const SMTransitionEntry* transition : state->getTransitions().getElements())
+            {
+                if (transition != nullptr)
+                {
+                    owners.insert(transition->getId());
+                }
+            }
+
+            if (state->hasNestedStates())
+            {
+                collectSubtreeOwners(*state->getNestedStates(), owners);
+            }
+        }
+    }
+
+    //!< Walks the state tree and records the layout a not-real submachine drops from the saved
+    //!< file: the composite's own sublevel ID (dropLevels -- its View and level-scoped notes) and
+    //!< every nested owner (dropOwners -- the nested states' Nodes, their transitions' Edges, and
+    //!< owned notes). A real submachine is kept but still recursed into, so a deeper empty one is
+    //!< found. This keeps SMStateEntry::writeToXml (which omits the empty <StateList>) and the
+    //!< Layout section consistent, so no orphan geometry survives to be reused by a future ID.
+    void collectDroppedLayout(const SMStateData& level, QSet<uint32_t>& dropOwners, QSet<uint32_t>& dropLevels)
+    {
+        for (const SMStateEntry* state : level.getElements())
+        {
+            if ((state == nullptr) || (state->hasNestedStates() == false))
+            {
+                continue;
+            }
+
+            const SMStateData* nested = state->getNestedStates();
+            if (nested->hasRealState())
+            {
+                collectDroppedLayout(*nested, dropOwners, dropLevels);
+            }
+            else
+            {
+                dropLevels.insert(state->getId());
+                collectSubtreeOwners(*nested, dropOwners);
+            }
+        }
     }
 
     int getSectionIndex(const QStringView& name)
@@ -519,7 +574,13 @@ void StateMachineData::writeToXml(QXmlStreamWriter& xml) const
     writeUnknownBucket(9);
     mStates.writeToXml(xml);
     writeUnknownBucket(10);
-    mLayout.writeToXml(xml);
+    // A not-real submachine (only Start/Final, or empty) is omitted from the StateList above, so
+    // its layout must be omitted too -- otherwise an orphan Node/View would linger and a future
+    // element could inherit it by ID reuse (the ID counter is derived from the max saved ID).
+    QSet<uint32_t> dropOwners;
+    QSet<uint32_t> dropLevels;
+    collectDroppedLayout(mStates, dropOwners, dropLevels);
+    mLayout.writeToXml(xml, dropOwners, dropLevels);
     writeUnknownBucket(11);
 
     xml.writeEndElement();

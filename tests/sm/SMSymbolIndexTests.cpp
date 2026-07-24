@@ -77,10 +77,10 @@ namespace
 
             data.getMethods().createMethod("DoWork", SMMethodEntry::eMethodType::Action);
 
-            data.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
+            SMStateEntry* idle = data.getStates().createState("Idle", SMStateEntry::eStateKind::Start);
             SMStateEntry* run = data.getStates().createState("Run", SMStateEntry::eStateKind::Normal);
 
-            SMTransitionEntry* tr = run->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go", "Idle");
+            SMTransitionEntry* tr = run->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Trigger, "Go", idle->getId());
             transitionId = tr->getId();
 
             // A verbatim expression row referencing known symbols, plus member access, a string

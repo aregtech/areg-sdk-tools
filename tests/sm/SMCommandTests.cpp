@@ -232,7 +232,7 @@ namespace
         SMStateEntry* parent = doc.getStates().createState("Parent", SMStateEntry::eStateKind::Normal);
         SMStateData*  nested = parent->getOrCreateNestedStates();
         nested->createState("Child", SMStateEntry::eStateKind::Start);
-        parent->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", QString());
+        parent->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", 0u);
         const uint32_t parentId = parent->getId();
         doc.getLayout().addNode(parentId).x = 3.0;
 
@@ -251,6 +251,51 @@ namespace
 
         stack.redo();
         CHECK(doc.getStates().findState("Parent") == nullptr);
+    }
+
+    //!< Renaming a state must keep every transition connected to it. Transitions reference their
+    //!< target by ID, so the connection is intrinsically rename-proof: the target ID never changes,
+    //!< and getTargetName() resolves the target's current name live (reflecting the rename).
+    void testRenameKeepsTransitions()
+    {
+        StateMachineData    doc;
+        DocModelNotifier    notifier;
+        QUndoStack          stack;
+
+        SMStateEntry* start  = doc.getStates().createState("Start", SMStateEntry::eStateKind::Start);
+        SMStateEntry* worker = doc.getStates().createState("Worker", SMStateEntry::eStateKind::Normal);
+        SMStateEntry* other  = doc.getStates().createState("Other", SMStateEntry::eStateKind::Normal);
+        CHECK((start != nullptr) && (worker != nullptr) && (other != nullptr));
+
+        // Start -> Worker, and a self-referencing loop Worker -> Worker; Other -> itself stays put.
+        SMTransitionEntry* toWorker = start->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "T", worker->getId());
+        SMTransitionEntry* loop     = worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "L", worker->getId());
+        SMTransitionEntry* toOther  = other->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "O", other->getId());
+        CHECK((toWorker != nullptr) && (loop != nullptr) && (toOther != nullptr));
+
+        // The target IDs before the rename; they must be unchanged by it.
+        const uint32_t workerId = worker->getId();
+        const uint32_t otherId  = other->getId();
+
+        stack.push(new SMRenameStateCommand(doc, notifier, worker->getId(), "Machine", "Rename"));
+
+        // Renaming Worker to Machine leaves every target ID intact; the resolved names follow the rename.
+        CHECK(worker->getName() == QStringLiteral("Machine"));
+        CHECK((toWorker->getToId() == workerId) && (loop->getToId() == workerId) && (toOther->getToId() == otherId));
+        CHECK(toWorker->getTargetName() == QStringLiteral("Machine"));
+        CHECK(loop->getTargetName()     == QStringLiteral("Machine"));
+        CHECK(toOther->getTargetName()  == QStringLiteral("Other"));
+
+        stack.undo();
+        CHECK(worker->getName() == QStringLiteral("Worker"));
+        CHECK((toWorker->getToId() == workerId) && (loop->getToId() == workerId)); // connection intact through undo
+        CHECK(toWorker->getTargetName() == QStringLiteral("Worker"));
+        CHECK(loop->getTargetName()     == QStringLiteral("Worker"));
+        CHECK(toOther->getTargetName()  == QStringLiteral("Other"));
+
+        stack.redo();
+        CHECK(toWorker->getTargetName() == QStringLiteral("Machine"));  // and reapplied on redo
+        CHECK(loop->getTargetName()     == QStringLiteral("Machine"));
     }
 }
 
@@ -560,33 +605,36 @@ namespace
         CHECK(ev.getParamCount(started) == 1);
         snap();
 
-        SMTimerEntry* t1 = tm.createTimer("T1");
-        CHECK(t1 != nullptr);
+        // Timers are stored BY VALUE in a QList, and a reorder keeps IDs in list order (swapElements
+        // swaps the two entries' data and their IDs, so index N always holds the Nth id). So a held
+        // SMTimerEntry* dangles after any append/insert reallocates the buffer, and a captured id does
+        // not follow a logical timer across a swap. The only stable handle to a logical timer is its
+        // NAME: re-fetch by name at each use and read its current id right before passing it in.
+        CHECK(tm.createTimer("T1") != nullptr);
         snap();
-        tm.setTimeout(t1->getId(), 500u);
+        tm.setTimeout(tm.findTimer("T1")->getId(), 500u);
         snap();
-        tm.setRepeat(t1->getId(), 3u);
+        tm.setRepeat(tm.findTimer("T1")->getId(), 3u);
         snap();
 
-        SMTimerEntry* t2 = tm.createTimer("T2");
-        CHECK(t2 != nullptr);
+        CHECK(tm.createTimer("T2") != nullptr);
         snap();
         // The Continuous checkbox writes Repeat=0 (spec 6.10); 0xFFFFFFFF is also continuous.
-        tm.setRepeat(t2->getId(), 0u);
-        CHECK(tm.findTimer(t2->getId())->isContinuous());
+        tm.setRepeat(tm.findTimer("T2")->getId(), 0u);
+        CHECK(tm.findTimer("T2")->isContinuous());
         snap();
-        tm.setDescription(t2->getId(), "Heartbeat");
-        snap();
-
-        tm.swapTimers(t1->getId(), t2->getId());
-        CHECK(tm.findIndex(t2->getId()) == 0);
+        tm.setDescription(tm.findTimer("T2")->getId(), "Heartbeat");
         snap();
 
-        SMTimerEntry* t0 = tm.insertTimer(0, "T0");
-        CHECK((t0 != nullptr) && (tm.findIndex(t0->getId()) == 0));
+        tm.swapTimers(tm.findTimer("T1")->getId(), tm.findTimer("T2")->getId());
+        CHECK(tm.findIndex(tm.findTimer("T2")->getId()) == 0);   // T2 reordered to the front
         snap();
 
-        tm.deleteTimer(t1->getId());
+        CHECK(tm.insertTimer(0, "T0") != nullptr);
+        CHECK(tm.findIndex(tm.findTimer("T0")->getId()) == 0);
+        snap();
+
+        tm.deleteTimer(tm.findTimer("T1")->getId());
         CHECK(tm.findTimer("T1") == nullptr);
         snap();
 
@@ -667,8 +715,8 @@ namespace
 
         // Delete: a transition of a surviving state targeting the deleted one goes with it.
         SMStateEntry* run = doc.getStates().createState("Run", SMStateEntry::eStateKind::Normal);
-        run->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evStop", "Ready");
-        run->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evLoop", "Run");
+        run->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evStop", idleId); // targets the (renamed) deleted state
+        run->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evLoop", run->getId());
         const QString beforeDelete = serialize(doc);
 
         stack.push(new SMRemoveStateCommand(doc, notifier, doc.getStates(), idleId, "Delete Ready"));
@@ -703,14 +751,14 @@ namespace
         SMStateData& root = doc.getStates();
         root.createState("Start", SMStateEntry::eStateKind::Start);
         SMStateEntry* worker = root.createState("Worker", SMStateEntry::eStateKind::Normal);
-        root.createState("Idle", SMStateEntry::eStateKind::Normal);
+        SMStateEntry* idle   = root.createState("Idle", SMStateEntry::eStateKind::Normal);
 
         SMStateData* nested = worker->getOrCreateNestedStates();
         SMStateEntry* wstart = nested->createState("WStart", SMStateEntry::eStateKind::Start);
-        nested->createState("Inner", SMStateEntry::eStateKind::Normal);
+        SMStateEntry* inner  = nested->createState("Inner", SMStateEntry::eStateKind::Normal);
 
-        worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evGo", "Idle");
-        wstart->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "tmPoll", "Inner");
+        worker->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Event, "evGo", idle->getId());
+        wstart->getTransitions().createTransition(SMTransitionEntry::eStimulusKind::Timer, "tmPoll", inner->getId());
         worker->getEntryList().addOperation(new SMActionCall(0u, "doWork"));
         worker->getEntryList().addOperation(new SMEventSend(0u, "evGo"));
         worker->getExitList().addOperation(new SMTimerStart(0u, "tmPoll"));
@@ -766,15 +814,15 @@ namespace
         // Fresh, non-overlapping IDs across the whole subtree.
         CHECK(ownedIdSet(*worker).intersects(ownedIdSet(*copy)) == false);
 
-        // The internal transition follows its renamed copied sibling; references leaving
-        // the copied set (target Idle, stimulus evGo) are kept.
+        // A target inside the copied set is remapped to the copy's new ID; a target leaving the
+        // copied set (Idle) is dropped to internal, while the stimulus (evGo) is kept.
         SMStateEntry* wstartCopy = copy->getNestedStates()->getStartState();
         CHECK((wstartCopy != nullptr) && (wstartCopy->getName() != QStringLiteral("WStart")));
         SMStateEntry* innerCopy = copy->getNestedStates()->getElements().last();
         CHECK(innerCopy->getName() != QStringLiteral("Inner"));
-        CHECK(wstartCopy->getTransitions().getElements().first()->getTo() == innerCopy->getName());
+        CHECK(wstartCopy->getTransitions().getElements().first()->getToId() == innerCopy->getId());
         SMTransitionEntry* outTx = copy->getTransitions().getElements().first();
-        CHECK(outTx->getTo() == QStringLiteral("Idle"));
+        CHECK(outTx->isExternal() == false);        // target Idle lay outside the pasted set
         CHECK(outTx->getStimulus() == QStringLiteral("evGo"));
 
         // Registries merged in place: nothing duplicated within the same document.
@@ -866,6 +914,7 @@ int main(int /*argc*/, char* /*argv*/[])
     testScriptedSequence();
     testCoalescedLayoutDrag();
     testCompositeDelete();
+    testRenameKeepsTransitions();
     testDeepHistory();
     testDataTypeLifecycle();
     testContainerLifecycle();

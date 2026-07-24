@@ -34,8 +34,13 @@
 
 #include "lusan/data/common/ConstantEntry.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
+#include "lusan/data/common/ParamBase.hpp"
 #include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/DataTypeEnum.hpp"
 #include "lusan/data/common/DataTypeFactory.hpp"
+
+#include "lusan/model/sm/SMTypeCompat.hpp"
+#include "lusan/model/sm/SMLiteralValidator.hpp"
 
 #include <QCoreApplication>
 #include <QHash>
@@ -45,6 +50,22 @@ namespace
 {
     using eSeverity = SMIssue::eSeverity;
     using eValueSource = SMArgumentEntry::eValueSource;
+
+    /**
+     * \brief   The broad type family of an operand or mapping target, used to pick the right
+     *          literal, comparison and assignment rules without re-inspecting the type name.
+     **/
+    enum class eTypeCat
+    {
+          Unknown       //!< Empty, unresolved, or an opaque/imported type: not judged.
+        , Bool
+        , Char
+        , StringT
+        , Numeric       //!< Any integer or floating-point primitive.
+        , Enum
+        , Structure
+        , Container
+    };
 
     //!< Translatable finding text.
     QString vtr(const char* text)
@@ -108,6 +129,17 @@ namespace
 
         bool hasParam(const MethodBase* owner, const QString& name) const;
 
+        // Type / literal rules (10.1 rules 13-17).
+        const DataTypeCustom* customType(const QString& typeName) const;
+        eTypeCat categorize(const QString& typeName) const;
+        QString operandType(eValueSource kind, const QString& ref, const Scope& scope) const;
+        void checkLiteral(uint32_t id, eDocElementKind kind, const QString& targetType, const QString& literal, int rule);
+        void checkAssignment(uint32_t id, eDocElementKind kind, eValueSource src, const QString& ref, const QString& targetType, const Scope& scope, int mismatchRule);
+        void checkComparisonTypes(const SMConditionEntry& leaf, const Scope& scope);
+
+        // Warning rules (10.2 rules 1-11).
+        void checkWarnings(const QList<LevelInfo>& levels);
+
     private:
         const StateMachineData& mData;
         QList<SMIssue>          mIssues;
@@ -119,7 +151,9 @@ namespace
         issue.elementId = id;
         issue.kind      = kind;
         issue.severity  = sev;
-        issue.rule      = rule;
+        // Callers pass the plain spec number for both classes; a 10.2 warning is offset here so
+        // its id never collides with the like-numbered 10.1 error in the shared `rule` field.
+        issue.rule      = (sev == eSeverity::Warning) ? (SMValidator::WARNING_RULE_BASE + rule) : rule;
         issue.message   = message;
         mIssues.append(issue);
     }
@@ -441,16 +475,17 @@ namespace
     {
         const uint32_t id = tr.getId();
 
-        // An external target must name a state, and that state must be a sibling of the owner.
+        // An external target must resolve to a state, and that state must be a sibling of the owner.
         if (tr.isExternal())
         {
-            const QString& target = tr.getTo();
-            if (level.findState(target) == nullptr)
+            const uint32_t targetId = tr.getToId();
+            if (level.findStateById(targetId) == nullptr)
             {
-                if (mData.findState(target) == nullptr)
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Transition target '%1' does not resolve").arg(target));
+                const SMStateEntry* target = mData.findStateById(targetId);
+                if (target == nullptr)
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Transition target does not resolve"));
                 else
-                    add(id, eDocElementKind::Transition, eSeverity::Error, 7, vtr("Transition target '%1' is not a sibling state").arg(target));
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 7, vtr("Transition target '%1' is not a sibling state").arg(target->getName()));
             }
         }
 
@@ -510,9 +545,14 @@ namespace
             case SMOperationBase::eOperation::AttributeSet:
             {
                 SMAttributeSet* set = static_cast<SMAttributeSet*>(op);
-                if (mData.getAttributes().findElement(set->getAttribute()) == nullptr)
+                const SMAttributeEntry* attr = mData.getAttributes().findElement(set->getAttribute());
+                if (attr == nullptr)
                     add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Attribute '%1' is not declared").arg(set->getAttribute()));
                 validateValueSource(id, eDocElementKind::Operation, set->getSource(), set->getValue(), set->getExpression(), scope, true);
+
+                // The assigned value must fit the attribute's declared type (rule 17 / literal rule 15).
+                if (attr != nullptr)
+                    checkAssignment(id, eDocElementKind::Operation, set->getSource(), set->getValue(), attr->getType(), scope, 17);
                 break;
             }
             case SMOperationBase::eOperation::TimerStart:
@@ -546,6 +586,7 @@ namespace
 
     void Ctx::validateArguments(uint32_t ownerId, eDocElementKind kind, const MethodBase* target, const QList<SMArgumentEntry>& args, const Scope& scope)
     {
+        QHash<QString, QString> paramTypes;
         if (target != nullptr)
         {
             // Every argument must name a declared parameter, and every parameter without a
@@ -555,7 +596,10 @@ namespace
                 mapped.insert(arg.getName());
             QSet<QString> declared;
             for (const MethodParameter& p : target->getElements())
+            {
                 declared.insert(p.getName());
+                paramTypes.insert(p.getName(), p.getType());
+            }
 
             for (const SMArgumentEntry& arg : args)
             {
@@ -570,7 +614,14 @@ namespace
         }
 
         for (const SMArgumentEntry& arg : args)
+        {
             validateValueSource(ownerId, kind, arg.getSource(), arg.getValue(), arg.getExpression(), scope, true);
+
+            // The mapped value must fit the declared parameter type (rule 13 / literal rule 15).
+            auto it = paramTypes.constFind(arg.getName());
+            if (it != paramTypes.constEnd())
+                checkAssignment(ownerId, kind, arg.getSource(), arg.getValue(), it.value(), scope, 13);
+        }
     }
 
     void Ctx::validateValueSource(uint32_t ownerId, eDocElementKind kind, eValueSource source, const QString& ref, const QString& expr, const Scope& scope, bool valuePosition)
@@ -666,6 +717,8 @@ namespace
 
             if (leaf->hasOperator())
                 validateOperand(id, leaf->getRhsKind(), leaf->getRhs(), scope, true);
+
+            checkComparisonTypes(*leaf, scope);
         }
     }
 
@@ -698,6 +751,182 @@ namespace
             break;
         }
         }
+    }
+
+    const DataTypeCustom* Ctx::customType(const QString& typeName) const
+    {
+        return mData.getDataTypes().findCustomDataType(typeName);
+    }
+
+    eTypeCat Ctx::categorize(const QString& typeName) const
+    {
+        if (typeName.isEmpty())
+            return eTypeCat::Unknown;
+        if (typeName == "bool")     return eTypeCat::Bool;
+        if (typeName == "char")     return eTypeCat::Char;
+        if (typeName == "String")   return eTypeCat::StringT;
+        if (SMTypeCompat::isPrimitive(typeName))
+            return eTypeCat::Numeric;   // every remaining primitive is an integer or float.
+
+        const DataTypeCustom* custom = customType(typeName);
+        if (custom == nullptr)
+            return eTypeCat::Unknown;   // an unresolved name is rule 6's concern, not a type rule.
+        if (custom->isEnumeration())    return eTypeCat::Enum;
+        if (custom->isStructure())      return eTypeCat::Structure;
+        if (custom->isContainer())      return eTypeCat::Container;
+        return eTypeCat::Unknown;       // imported / opaque: the user owns its correctness.
+    }
+
+    QString Ctx::operandType(eValueSource kind, const QString& ref, const Scope& scope) const
+    {
+        // The declared type of a non-literal source; a literal or verbatim operand has no
+        // type of its own (it is judged against the position it fills).
+        switch (kind)
+        {
+        case eValueSource::Param:
+            if (scope.stimParams != nullptr)
+            {
+                for (const MethodParameter& p : scope.stimParams->getElements())
+                {
+                    if (p.getName() == ref)
+                        return p.getType();
+                }
+            }
+            return QString();
+        case eValueSource::Attribute:
+        {
+            const SMAttributeEntry* a = mData.getAttributes().findElement(ref);
+            return (a != nullptr) ? a->getType() : QString();
+        }
+        case eValueSource::Constant:
+        {
+            const ConstantEntry* c = mData.getConstants().findElement(ref);
+            return (c != nullptr) ? c->getType() : QString();
+        }
+        case eValueSource::Condition:
+        {
+            SMMethodEntry* m = mData.getMethods().findMethod(ref);
+            return ((m != nullptr) && m->isCondition()) ? m->getReturn() : QString();
+        }
+        default:
+            return QString();
+        }
+    }
+
+    void Ctx::checkLiteral(uint32_t id, eDocElementKind kind, const QString& targetType, const QString& literal, int rule)
+    {
+        // An absent literal is never a syntax error (a default may fill it).
+        if (literal.isEmpty())
+            return;
+
+        switch (categorize(targetType))
+        {
+        case eTypeCat::Unknown:
+            return;
+        case eTypeCat::Structure:
+        case eTypeCat::Container:
+            add(id, kind, eSeverity::Error, rule, vtr("Type '%1' has no literal form").arg(targetType));
+            return;
+        case eTypeCat::Enum:
+        {
+            const DataTypeEnum* e = dynamic_cast<const DataTypeEnum*>(customType(targetType));
+            if ((e != nullptr) && (e->hasElement(literal) == false))
+                add(id, kind, eSeverity::Error, rule, vtr("'%1' is not an enumerator of '%2'").arg(literal, targetType));
+            return;
+        }
+        default:
+        {
+            const QString reason = SMLiteralValidator::validate(targetType, literal);
+            if (reason.isEmpty() == false)
+                add(id, kind, eSeverity::Error, rule, vtr("Invalid %1 literal '%2': %3").arg(targetType, literal, reason));
+            return;
+        }
+        }
+    }
+
+    void Ctx::checkAssignment(uint32_t id, eDocElementKind kind, eValueSource src, const QString& ref, const QString& targetType, const Scope& scope, int mismatchRule)
+    {
+        if (targetType.isEmpty())
+            return;                                     // no declared target: nothing to judge against.
+
+        if (src == eValueSource::Value)
+        {
+            checkLiteral(id, kind, targetType, ref, 15);
+            return;
+        }
+        if ((src == eValueSource::Expression) || (src == eValueSource::Lambda))
+            return;                                     // verbatim: the user owns type correctness.
+
+        const QString sourceType = operandType(src, ref, scope);
+        if (sourceType.isEmpty())
+            return;                                     // unresolved source is rule 6's concern.
+
+        const SMTypeCompat::eRank rank = SMTypeCompat::rank(sourceType, targetType);
+        if ((rank == SMTypeCompat::eRank::Mismatch) || (rank == SMTypeCompat::eRank::Narrows))
+            add(id, kind, eSeverity::Error, mismatchRule, vtr("Type '%1' is not compatible with '%2'").arg(sourceType, targetType));
+    }
+
+    void Ctx::checkComparisonTypes(const SMConditionEntry& leaf, const Scope& scope)
+    {
+        const uint32_t id = leaf.getId();
+        const QString lhsType = operandType(leaf.getLhsKind(), leaf.getLhs(), scope);
+
+        // A boolean-test row (no operator): the single operand must be bool (rule 16).
+        if (leaf.hasOperator() == false)
+        {
+            if (leaf.getLhsKind() == eValueSource::Value)
+            {
+                if ((leaf.getLhs().isEmpty() == false) && (SMLiteralValidator::validate("bool", leaf.getLhs()).isEmpty() == false))
+                    add(id, eDocElementKind::Condition, eSeverity::Error, 16, vtr("A boolean-test operand must be a bool value"));
+            }
+            else
+            {
+                const eTypeCat cat = categorize(lhsType);
+                if ((cat != eTypeCat::Unknown) && (cat != eTypeCat::Bool))
+                    add(id, eDocElementKind::Condition, eSeverity::Error, 16, vtr("A boolean-test operand must be bool, not '%1'").arg(lhsType));
+            }
+            return;
+        }
+
+        const QString rhsType = operandType(leaf.getRhsKind(), leaf.getRhs(), scope);
+        const SMConditionEntry::eOperator op = leaf.getOperator();
+        const bool ordering = (op != SMConditionEntry::eOperator::Equal) && (op != SMConditionEntry::eOperator::NotEqual);
+        const eTypeCat lc = categorize(lhsType);
+        const eTypeCat rc = categorize(rhsType);
+
+        // Rule 14: no structure/container operand, and no ordering on bool/String/enumeration.
+        bool flagged14 = false;
+        if ((lc == eTypeCat::Structure) || (lc == eTypeCat::Container) || (rc == eTypeCat::Structure) || (rc == eTypeCat::Container))
+        {
+            add(id, eDocElementKind::Condition, eSeverity::Error, 14, vtr("A structure or container cannot be compared in a condition"));
+            flagged14 = true;
+        }
+        else if (ordering && ((lc == eTypeCat::Bool) || (lc == eTypeCat::StringT) || (lc == eTypeCat::Enum)
+                           || (rc == eTypeCat::Bool) || (rc == eTypeCat::StringT) || (rc == eTypeCat::Enum)))
+        {
+            add(id, eDocElementKind::Condition, eSeverity::Error, 14, vtr("An ordering operator is not allowed on bool, String or enumeration operands"));
+            flagged14 = true;
+        }
+
+        // Rule 15: a literal operand must parse against the other operand's declared type.
+        if ((leaf.getLhsKind() == eValueSource::Value) && (rhsType.isEmpty() == false))
+            checkLiteral(id, eDocElementKind::Condition, rhsType, leaf.getLhs(), 15);
+        if ((leaf.getRhsKind() == eValueSource::Value) && (lhsType.isEmpty() == false))
+            checkLiteral(id, eDocElementKind::Condition, lhsType, leaf.getRhs(), 15);
+
+        // Rule 13: both operand types known and no implicit widening path between them.
+        if ((flagged14 == false) && (lhsType.isEmpty() == false) && (rhsType.isEmpty() == false))
+        {
+            const QString reason = SMTypeCompat::areComparable(lhsType, op, rhsType);
+            if (reason.isEmpty() == false)
+                add(id, eDocElementKind::Condition, eSeverity::Error, 13, vtr("Type mismatch: %1").arg(reason));
+        }
+
+        // Warning 9: a comparison of two design-time constants (literals or Constant sources).
+        const bool lConst = (leaf.getLhsKind() == eValueSource::Value) || (leaf.getLhsKind() == eValueSource::Constant);
+        const bool rConst = (leaf.getRhsKind() == eValueSource::Value) || (leaf.getRhsKind() == eValueSource::Constant);
+        if (lConst && rConst)
+            add(id, eDocElementKind::Condition, eSeverity::Warning, 9, vtr("Both operands are constant at design time"));
     }
 
     QList<SMIssue> Ctx::run()
@@ -750,7 +979,254 @@ namespace
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
             if (d != nullptr) checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName());
 
+        checkWarnings(levels);
+
         return mIssues;
+    }
+
+    void Ctx::checkWarnings(const QList<LevelInfo>& levels)
+    {
+        using eOp = SMOperationBase::eOperation;
+
+        // Usage sets, filled by one document-wide walk; W4/W5/W6/W8 are decided against them.
+        QSet<QString> triggersUsed, eventsReacted, eventsSent, timersReacted, timersStarted, timersStopped;
+        QSet<QString> actionsUsed, conditionsUsed, attrsRead, attrsWritten, constsUsed, importsUsed, typesUsed;
+
+        // The elements whose send/react status is resolved after the sets are complete.
+        struct Use { uint32_t id; eDocElementKind kind; QString name; };
+        QList<Use> reactedEvents, sentEvents, reactedTimers, startedTimers;
+
+        auto noteType = [&typesUsed](const QString& t) { if (t.isEmpty() == false) typesUsed.insert(t); };
+        auto noteSource = [&](eValueSource src, const QString& ref)
+        {
+            switch (src)
+            {
+            case eValueSource::Attribute:  attrsRead.insert(ref);      break;
+            case eValueSource::Constant:   constsUsed.insert(ref);     break;
+            case eValueSource::Condition:  conditionsUsed.insert(ref); break;
+            default: break;
+            }
+        };
+        auto noteOps = [&](const SMOperationList& ops)
+        {
+            for (SMOperationBase* op : ops.getOperations())
+            {
+                if (op == nullptr)
+                    continue;
+                switch (op->getOperationType())
+                {
+                case eOp::ActionCall:
+                {
+                    SMActionCall* a = static_cast<SMActionCall*>(op);
+                    actionsUsed.insert(a->getAction());
+                    for (const SMArgumentEntry& arg : a->getArguments()) noteSource(arg.getSource(), arg.getValue());
+                    break;
+                }
+                case eOp::AttributeSet:
+                {
+                    SMAttributeSet* s = static_cast<SMAttributeSet*>(op);
+                    attrsWritten.insert(s->getAttribute());
+                    noteSource(s->getSource(), s->getValue());
+                    break;
+                }
+                case eOp::TimerStart:
+                {
+                    SMTimerStart* t = static_cast<SMTimerStart*>(op);
+                    timersStarted.insert(t->getTimer());
+                    startedTimers.append({ op->getId(), eDocElementKind::Operation, t->getTimer() });
+                    break;
+                }
+                case eOp::TimerStop:
+                    timersStopped.insert(static_cast<SMTimerStop*>(op)->getTimer());
+                    break;
+                case eOp::EventSend:
+                {
+                    SMEventSend* e = static_cast<SMEventSend*>(op);
+                    eventsSent.insert(e->getEvent());
+                    sentEvents.append({ op->getId(), eDocElementKind::Operation, e->getEvent() });
+                    for (const SMArgumentEntry& arg : e->getArguments()) noteSource(arg.getSource(), arg.getValue());
+                    break;
+                }
+                case eOp::InlineCode:
+                    if (static_cast<SMInlineCode*>(op)->getBody().trimmed().isEmpty())
+                        add(op->getId(), eDocElementKind::Operation, eSeverity::Warning, 11, vtr("Inline code block is empty"));
+                    break;
+                }
+            }
+        };
+
+        // Incoming (sibling) transition targets per level -- reachability and history re-entry.
+        QHash<const SMStateData*, QSet<uint32_t>> incoming;
+        for (const LevelInfo& info : levels)
+        {
+            QSet<uint32_t>& targets = incoming[info.level];
+            for (SMStateEntry* st : info.level->getElements())
+            {
+                if (st == nullptr)
+                    continue;
+                for (SMTransitionEntry* tr : st->getTransitions().getElements())
+                    if ((tr != nullptr) && tr->isExternal()) targets.insert(tr->getToId());
+            }
+        }
+
+        for (const LevelInfo& info : levels)
+        {
+            const QSet<uint32_t>& targets = incoming[info.level];
+            for (SMStateEntry* st : info.level->getElements())
+            {
+                if (st == nullptr)
+                    continue;
+                const uint32_t sid = st->getId();
+                const bool composite = st->hasNestedStates() || st->isImportedSubmachine();
+
+                if (st->getOnFinal().isEmpty() == false)
+                {
+                    eventsSent.insert(st->getOnFinal());            // OnFinal counts as sending its event.
+                    sentEvents.append({ sid, eDocElementKind::State, st->getOnFinal() });
+                }
+                if (st->isImportedSubmachine())
+                    importsUsed.insert(st->getSubmachine());
+
+                noteOps(st->getEntryList());
+                noteOps(st->getExitList());
+                noteOps(st->getDoList());
+
+                if ((st->getKind() != SMStateEntry::eStateKind::Start) && (targets.contains(sid) == false))
+                    add(sid, eDocElementKind::State, eSeverity::Warning, 1, vtr("State '%1' is unreachable (no incoming transition)").arg(st->getName()));
+
+                if ((st->getKind() == SMStateEntry::eStateKind::Normal) && (composite == false) && (st->getTransitions().hasElements() == false))
+                    add(sid, eDocElementKind::State, eSeverity::Warning, 2, vtr("State '%1' is a dead end (no outgoing transition)").arg(st->getName()));
+
+                if (composite && (st->getHistory() != SMStateEntry::eHistory::None) && (targets.contains(sid) == false))
+                    add(sid, eDocElementKind::State, eSeverity::Warning, 10, vtr("History on '%1' is never re-entered").arg(st->getName()));
+
+                QSet<QString> unconditionalStimuli;
+                for (SMTransitionEntry* tr : st->getTransitions().getElements())
+                {
+                    if (tr == nullptr)
+                        continue;
+                    const uint32_t tid = tr->getId();
+                    const QString& stim = tr->getStimulus();
+                    switch (tr->getStimulusKind())
+                    {
+                    case SMTransitionEntry::eStimulusKind::Trigger:
+                        triggersUsed.insert(stim);
+                        break;
+                    case SMTransitionEntry::eStimulusKind::Event:
+                        eventsReacted.insert(stim);
+                        reactedEvents.append({ tid, eDocElementKind::Transition, stim });
+                        break;
+                    case SMTransitionEntry::eStimulusKind::Timer:
+                        timersReacted.insert(stim);
+                        reactedTimers.append({ tid, eDocElementKind::Transition, stim });
+                        break;
+                    }
+
+                    for (SMConditionEntry* leaf : tr->getConditions().collectLeaves())
+                    {
+                        if (leaf == nullptr)
+                            continue;
+                        noteSource(leaf->getLhsKind(), leaf->getLhs());
+                        if (leaf->hasOperator()) noteSource(leaf->getRhsKind(), leaf->getRhs());
+                        for (const SMArgumentEntry& arg : leaf->getArguments()) noteSource(arg.getSource(), arg.getValue());
+                    }
+                    noteOps(tr->getOperations());
+
+                    // Condition-free means neither a legacy condition row nor a canonical guard.
+                    const bool unconditional = tr->getConditions().collectLeaves().isEmpty() && (tr->getGuard().hasContent() == false);
+
+                    if ((tr->isExternal() == false) && tr->getOperations().isEmpty() && unconditional)
+                        add(tid, eDocElementKind::Transition, eSeverity::Warning, 7, vtr("Internal transition on '%1' has no operations or conditions").arg(stim));
+
+                    const QString key = QString::number(static_cast<int>(tr->getStimulusKind())) + QLatin1Char(':') + stim;
+                    if (unconditionalStimuli.contains(key))
+                        add(tid, eDocElementKind::Transition, eSeverity::Warning, 3, vtr("Transition on '%1' is shadowed by an earlier unconditional transition").arg(stim));
+                    if (unconditional)
+                        unconditionalStimuli.insert(key);
+                }
+            }
+        }
+
+        // Declared types referenced by declarations count as used (nested field/element type
+        // references are not followed -- an approximation that only relaxes W4).
+        for (SMMethodEntry* m : mData.getMethods().getElements())
+        {
+            if (m == nullptr)
+                continue;
+            if (m->isCondition()) noteType(m->getReturn());
+            for (const MethodParameter& p : m->getElements()) noteType(p.getType());
+        }
+        for (SMEventEntry* e : mData.getEvents().getElements())
+            if (e != nullptr) for (const MethodParameter& p : e->getElements()) noteType(p.getType());
+        for (const SMAttributeEntry& a : mData.getAttributes().getElements()) noteType(a.getType());
+        for (const ConstantEntry& c : mData.getConstants().getElements()) noteType(c.getType());
+
+        // Warning 4 (and, for attributes, warning 8): declared but unused registry entries.
+        for (SMMethodEntry* m : mData.getMethods().getElements())
+        {
+            if (m == nullptr)
+                continue;
+            bool used = false;
+            if (m->isAction())          used = actionsUsed.contains(m->getName());
+            else if (m->isCondition())  used = conditionsUsed.contains(m->getName());
+            else if (m->isTrigger())    used = triggersUsed.contains(m->getName());
+            if (used == false)
+                add(m->getId(), eDocElementKind::Method, eSeverity::Warning, 4, vtr("Method '%1' is never referenced").arg(m->getName()));
+        }
+        for (SMEventEntry* e : mData.getEvents().getElements())
+        {
+            if (e == nullptr)
+                continue;
+            if ((eventsSent.contains(e->getName()) == false) && (eventsReacted.contains(e->getName()) == false))
+                add(e->getId(), eDocElementKind::Event, eSeverity::Warning, 4, vtr("Event '%1' is never referenced").arg(e->getName()));
+        }
+        for (const SMTimerEntry& t : mData.getTimers().getElements())
+        {
+            if ((timersStarted.contains(t.getName()) == false) && (timersStopped.contains(t.getName()) == false) && (timersReacted.contains(t.getName()) == false))
+                add(t.getId(), eDocElementKind::Timer, eSeverity::Warning, 4, vtr("Timer '%1' is never referenced").arg(t.getName()));
+        }
+        for (const SMAttributeEntry& a : mData.getAttributes().getElements())
+        {
+            const bool read = attrsRead.contains(a.getName());
+            const bool written = attrsWritten.contains(a.getName());
+            if ((read == false) && (written == false))
+                add(a.getId(), eDocElementKind::Attribute, eSeverity::Warning, 4, vtr("Attribute '%1' is never referenced").arg(a.getName()));
+            else if (written && (read == false))
+                add(a.getId(), eDocElementKind::Attribute, eSeverity::Warning, 8, vtr("Attribute '%1' is written but never read").arg(a.getName()));
+            else if (read && (written == false))
+                add(a.getId(), eDocElementKind::Attribute, eSeverity::Warning, 8, vtr("Attribute '%1' is read but never written").arg(a.getName()));
+        }
+        for (const ConstantEntry& c : mData.getConstants().getElements())
+        {
+            if (constsUsed.contains(c.getName()) == false)
+                add(c.getId(), eDocElementKind::Constant, eSeverity::Warning, 4, vtr("Constant '%1' is never referenced").arg(c.getName()));
+        }
+        for (const SMImportEntry& i : mData.getImports().getElements())
+        {
+            if (importsUsed.contains(i.getName()) == false)
+                add(i.getId(), eDocElementKind::Import, eSeverity::Warning, 4, vtr("Import '%1' is never referenced").arg(i.getName()));
+        }
+        for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
+        {
+            if ((d != nullptr) && (typesUsed.contains(d->getName()) == false))
+                add(d->getId(), eDocElementKind::DataType, eSeverity::Warning, 4, vtr("Data type '%1' is never referenced").arg(d->getName()));
+        }
+
+        // Warning 5: an event reacted to but never sent, or sent but never reacted to.
+        for (const Use& u : reactedEvents)
+            if (eventsSent.contains(u.name) == false)
+                add(u.id, u.kind, eSeverity::Warning, 5, vtr("Event '%1' is reacted to but never sent").arg(u.name));
+        for (const Use& u : sentEvents)
+            if (eventsReacted.contains(u.name) == false)
+                add(u.id, u.kind, eSeverity::Warning, 5, vtr("Event '%1' is sent but no transition reacts to it").arg(u.name));
+
+        // Warning 6: a timer reacted to but never started, or started but never reacted to.
+        for (const Use& u : reactedTimers)
+            if (timersStarted.contains(u.name) == false)
+                add(u.id, u.kind, eSeverity::Warning, 6, vtr("Timer '%1' is reacted to but never started").arg(u.name));
+        for (const Use& u : startedTimers)
+            if (timersReacted.contains(u.name) == false)
+                add(u.id, u.kind, eSeverity::Warning, 6, vtr("Timer '%1' is started but no transition reacts to it").arg(u.name));
     }
 
 } // namespace
