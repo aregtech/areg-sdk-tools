@@ -105,9 +105,9 @@ NESMDesign::eCanvasTool SMSelectTool::getKind() const
     return NESMDesign::eCanvasTool::Select;
 }
 
-SMPlaceStateTool::SMPlaceStateTool(SMScene& scene, bool finalState)
+SMPlaceStateTool::SMPlaceStateTool(SMScene& scene, NESMDesign::eCanvasTool kind)
     : SMCanvasTool  (scene)
-    , mFinal        (finalState)
+    , mKind         (kind)
     , mPressed      (false)
     , mDragging     (false)
     , mPressPos     ( )
@@ -122,7 +122,12 @@ SMPlaceStateTool::~SMPlaceStateTool()
 
 NESMDesign::eCanvasTool SMPlaceStateTool::getKind() const
 {
-    return (mFinal ? NESMDesign::eCanvasTool::AddFinalState : NESMDesign::eCanvasTool::AddState);
+    return mKind;
+}
+
+bool SMPlaceStateTool::isMarkerKind() const
+{
+    return (mKind != NESMDesign::eCanvasTool::AddState);
 }
 
 void SMPlaceStateTool::cancelGesture()
@@ -223,8 +228,8 @@ bool SMPlaceStateTool::mouseRelease(QGraphicsSceneMouseEvent* event)
     else
     {
         // A plain click: a default-sized box centered on the click position.
-        const QSizeF size = mFinal ? QSizeF(NESMDesign::MarkerStateWidth, NESMDesign::MarkerStateHeight)
-                                   : QSizeF(NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight);
+        const QSizeF size = isMarkerKind() ? QSizeF(NESMDesign::MarkerStateWidth, NESMDesign::MarkerStateHeight)
+                                          : QSizeF(NESMDesign::StateDefaultWidth, NESMDesign::StateDefaultHeight);
         const QPointF topLeft = getScene().snappedPosition(cursor - QPointF(size.width() / 2.0, size.height() / 2.0));
         placeState(QRectF(topLeft, size));
     }
@@ -251,16 +256,34 @@ void SMPlaceStateTool::placeState(const QRectF& box)
         return;
     }
 
-    // Final states read as terminals, so they are named plainly "Final" (then Final2,
-    // Final3, ...), not "NewFinalN" (issue #514).
-    const QString base = (mFinal ? QStringLiteral("Final") : QStringLiteral("NewState"));
+    SMStateEntry::eStateKind kind = SMStateEntry::eStateKind::Normal;
+    if (mKind == NESMDesign::eCanvasTool::AddStartState)
+    {
+        // A level has exactly one entry point. The action is disabled while a Start state
+        // exists, but a sticky tool outlives the click that placed one, so re-check here.
+        if (level->getStartState() != nullptr)
+        {
+            return;
+        }
+
+        kind = SMStateEntry::eStateKind::Start;
+    }
+    else if (mKind == NESMDesign::eCanvasTool::AddFinalState)
+    {
+        kind = SMStateEntry::eStateKind::Final;
+    }
+
+    // Markers read as terminals / entry points, so they are named plainly "Start" and
+    // "Final" (then Final2, Final3, ...), not "NewFinalN" (issue #514).
+    const QString base = (kind == SMStateEntry::eStateKind::Start  ? QStringLiteral("Start")
+                        : kind == SMStateEntry::eStateKind::Final  ? QStringLiteral("Final")
+                                                                   : QStringLiteral("NewState"));
     QString name{ base };
     for (int i = 2; data.findState(name) != nullptr; ++i)
     {
         name = base + QString::number(i);
     }
 
-    const SMStateEntry::eStateKind kind = (mFinal ? SMStateEntry::eStateKind::Final : SMStateEntry::eStateKind::Normal);
     SMCreateStateCommand* command = new SMCreateStateCommand(  data, model.getNotifier(), *level, name, kind
                                                              , box
                                                              , QCoreApplication::translate("SMCanvasTool", "Add state %1").arg(name));
@@ -328,6 +351,29 @@ void SMTransitionTool::resetGesture()
     mWaypoints.clear();
 }
 
+void SMTransitionTool::appendWaypoint(const QPointF& scenePos)
+{
+    QPointF point = getScene().snappedPosition(scenePos);
+    if (mWaypoints.isEmpty() == false)
+    {
+        // A corner dropped within half a cell of the previous one was meant to be square with it;
+        // beyond that the user is drawing at an angle on purpose. The first corner needs no help:
+        // the border anchor lines up with it instead.
+        const QPointF prev = mWaypoints.last();
+        const double  tol  = std::max(getScene().getGridSize() / 2.0, 1.0);
+        if (std::abs(point.x() - prev.x()) <= tol)
+        {
+            point.setX(prev.x());
+        }
+        else if (std::abs(point.y() - prev.y()) <= tol)
+        {
+            point.setY(prev.y());
+        }
+    }
+
+    mWaypoints.append(point);
+}
+
 void SMTransitionTool::createPreview()
 {
     if (mPreview == nullptr)
@@ -391,12 +437,12 @@ void SMTransitionTool::updatePreview(const QPointF& cursor)
     // for a straight (no-waypoint) drag the anchor slides along that side to the grid-aligned press
     // position. Without this the dashed line starts mid-border while dragging and only jumps to the
     // pressed row when the solid edge is committed.
-    const int     grid      = getScene().getGridSize();
-    const bool    snap      = getScene().isSnapToGrid();
-    const QPointF beginFace = NESMDesign::borderPoint(src, srcRadius, ref);
-    const QPointF begin     = mWaypoints.isEmpty()
-                            ? NESMDesign::slideBorderPoint(src, srcRadius, beginFace, mSourcePress, grid, snap)
-                            : beginFace;
+    const int     grid  = getScene().getGridSize();
+    const bool    snap  = getScene().isSnapToGrid();
+    const QPointF begin = mWaypoints.isEmpty()
+                        ? NESMDesign::slideBorderPoint(src, srcRadius, NESMDesign::borderPoint(src, srcRadius, ref)
+                                                     , mSourcePress, grid, snap)
+                        : NESMDesign::polylineBorderPoint(src, srcRadius, mWaypoints.first());
 
     QPainterPath path;
     path.moveTo(begin);
@@ -448,7 +494,7 @@ bool SMTransitionTool::mousePress(QGraphicsSceneMouseEvent* event)
     else
     {
         // A click on empty canvas drops a polyline waypoint; the gesture continues.
-        mWaypoints.append(getScene().snappedPosition(event->scenePos()));
+        appendWaypoint(event->scenePos());
         updatePreview(event->scenePos());
     }
 
@@ -498,7 +544,7 @@ bool SMTransitionTool::mouseRelease(QGraphicsSceneMouseEvent* event)
             // Released on empty canvas: drop a waypoint there and continue the gesture
             // click by click until a state is picked (Enter = internal, Esc cancels).
             mFromBorder = false;
-            mWaypoints.append(getScene().snappedPosition(event->scenePos()));
+            appendWaypoint(event->scenePos());
             updatePreview(event->scenePos());
         }
 
@@ -630,24 +676,31 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         SMStateItem* targetItem = canvas.stateItem(targetId);
         const double srcRadius = (sourceItem != nullptr ? sourceItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
         const double tgtRadius = (targetItem != nullptr ? targetItem->boxCornerRadius() : NESMDesign::StateCornerRadius);
-        const QPointF beginRef = waypoints.isEmpty() ? tgtRect.center() : waypoints.first();
-        const QPointF endRef   = waypoints.isEmpty() ? srcRect.center() : waypoints.last();
-
         // For a straight (no-waypoint) external transition, the endpoints follow where the user
         // actually pressed on the source and released on the target: the facing side is still
         // chosen center-to-center (so the edge leaves/enters the correct side), but each endpoint
         // is then slid along that side to the grid-aligned pointer coordinate. This makes a
         // straight drag connect press-point to release-point instead of snapping mid-border to
         // mid-border; a center press/release reproduces the old mid-border result exactly.
-        const int  grid     = canvas.getGridSize();
-        const bool snap     = canvas.isSnapToGrid();
-        const bool straight = (selfLoop == false) && waypoints.isEmpty();
-        const QPointF beginFace = NESMDesign::borderPoint(srcRect, srcRadius, beginRef);
-        const QPointF endFace   = NESMDesign::borderPoint(tgtRect, tgtRadius, endRef);
-        const QPointF begin = straight ? NESMDesign::slideBorderPoint(srcRect, srcRadius, beginFace, mSourcePress, grid, snap)
-                                       : beginFace;
-        const QPointF end   = straight ? NESMDesign::slideBorderPoint(tgtRect, tgtRadius, endFace, dropPos, grid, snap)
-                                       : endFace;
+        // With waypoints the endpoints line up with the adjacent corner instead, so the first and
+        // last legs stay square to the border.
+        QPointF begin;
+        QPointF end;
+        if (waypoints.isEmpty())
+        {
+            const int  grid = canvas.getGridSize();
+            const bool snap = canvas.isSnapToGrid();
+            const QPointF beginFace = NESMDesign::borderPoint(srcRect, srcRadius, tgtRect.center());
+            const QPointF endFace   = NESMDesign::borderPoint(tgtRect, tgtRadius, srcRect.center());
+            begin = NESMDesign::slideBorderPoint(srcRect, srcRadius, beginFace, mSourcePress, grid, snap);
+            end   = NESMDesign::slideBorderPoint(tgtRect, tgtRadius, endFace, dropPos, grid, snap);
+        }
+        else
+        {
+            begin = NESMDesign::polylineBorderPoint(srcRect, srcRadius, waypoints.first());
+            end   = NESMDesign::polylineBorderPoint(tgtRect, tgtRadius, waypoints.last());
+        }
+
         points.append(begin);
         points.append(waypoints);
         points.append(end);
@@ -770,9 +823,9 @@ std::unique_ptr<SMCanvasTool> createCanvasTool(NESMDesign::eCanvasTool tool, SMS
     case NESMDesign::eCanvasTool::Select:
         return std::make_unique<SMSelectTool>(scene);
     case NESMDesign::eCanvasTool::AddState:
-        return std::make_unique<SMPlaceStateTool>(scene, false);
+    case NESMDesign::eCanvasTool::AddStartState:
     case NESMDesign::eCanvasTool::AddFinalState:
-        return std::make_unique<SMPlaceStateTool>(scene, true);
+        return std::make_unique<SMPlaceStateTool>(scene, tool);
     case NESMDesign::eCanvasTool::AddTransition:
         return std::make_unique<SMTransitionTool>(scene);
     case NESMDesign::eCanvasTool::AddNote:

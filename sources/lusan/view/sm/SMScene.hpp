@@ -138,13 +138,19 @@ public:
     void setActiveTool(NESMDesign::eCanvasTool tool, bool sticky = false);
 
     /**
+     * \brief   Returns true while the active tool is armed sticky (double-clicked button).
+     **/
+    inline bool isToolSticky() const;
+
+    /**
      * \brief   Cancels the in-progress gesture and returns to the Select tool (Esc).
      **/
     void cancelActiveGesture();
 
     /**
      * \brief   Called by the active tool when its gesture completed; single-shot
-     *          tools revert to Select.
+     *          tools revert to Select. Holding Ctrl through the gesture repeats the
+     *          tool once more (issue #541) without arming it sticky.
      **/
     void finishToolGesture();
 
@@ -475,6 +481,9 @@ private:
                                                     //!< next switch: a tool may retire itself from
                                                     //!< inside its own event handler.
     bool                            mToolSticky;    //!< Keep the tool after a finished gesture.
+    Qt::KeyboardModifiers           mToolModifiers; //!< Modifiers of the last mouse event, read by
+                                                    //!< finishToolGesture(): a tool completes from
+                                                    //!< inside its own handler and has no event there.
     int                             mGridSize;      //!< The grid cell size in scene units.
     bool                            mGridVisible;   //!< The grid visibility.
     NESMDesign::eGridStyle          mGridStyle;     //!< The grid rendering style (lines or dots).
@@ -531,6 +540,11 @@ inline bool SMScene::isInteractiveSnap() const
 inline NESMDesign::eCanvasTool SMScene::getActiveTool() const
 {
     return (mTool != nullptr ? mTool->getKind() : NESMDesign::eCanvasTool::Select);
+}
+
+inline bool SMScene::isToolSticky() const
+{
+    return mToolSticky;
 }
 
 inline SMCanvasItem* SMScene::findCanvasItem(uint32_t elementId) const

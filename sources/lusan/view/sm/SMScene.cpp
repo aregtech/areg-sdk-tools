@@ -57,6 +57,7 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     , mItems        ( )
     , mTool         (createCanvasTool(NESMDesign::eCanvasTool::Select, *this))
     , mToolSticky   (false)
+    , mToolModifiers(Qt::NoModifier)
     , mGridSize     (NESMDesign::GridSizeDefault)
     , mGridVisible  (true)
     , mGridStyle    (NESMDesign::eGridStyle::Lines)
@@ -206,7 +207,10 @@ void SMScene::cancelActiveGesture()
 
 void SMScene::finishToolGesture()
 {
-    if ((mToolSticky == false) && (getActiveTool() != NESMDesign::eCanvasTool::Select))
+    // Ctrl held through the gesture repeats the tool: the arming stays for the next gesture
+    // only, so the first plain click ends the run and drops back to Select (issue #541).
+    const bool repeat = mToolSticky || mToolModifiers.testFlag(Qt::ControlModifier);
+    if ((repeat == false) && (getActiveTool() != NESMDesign::eCanvasTool::Select))
     {
         setActiveTool(NESMDesign::eCanvasTool::Select);
     }
@@ -309,6 +313,7 @@ void SMScene::drawBackground(QPainter* painter, const QRectF& rect)
 
 void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
+    mToolModifiers = event->modifiers();
     if (event->button() == Qt::LeftButton)
     {
         mMouseDrag = true;
@@ -351,6 +356,7 @@ void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 {
+    mToolModifiers = event->modifiers();
     if ((mTool == nullptr) || (mTool->mouseMove(event) == false))
     {
         QGraphicsScene::mouseMoveEvent(event);
@@ -359,6 +365,7 @@ void SMScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 {
+    mToolModifiers = event->modifiers();
     const bool handled = (mTool != nullptr) && mTool->mouseRelease(event);
     if (handled == false)
     {
@@ -373,6 +380,7 @@ void SMScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
 {
+    mToolModifiers = event->modifiers();
     if (event->modifiers().testFlag(Qt::AltModifier))
     {
         emit signalGoToParent();

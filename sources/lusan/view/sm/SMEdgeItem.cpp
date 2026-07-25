@@ -439,13 +439,19 @@ void SMEdgeItem::rebuildPath()
     }
     else
     {
-        const QPointF beginRef = mWaypoints.isEmpty() ? tc : mWaypoints.first();
-        const QPointF endRef   = mWaypoints.isEmpty() ? sc : mWaypoints.last();
+        // Without waypoints the endpoint faces the other box; with them it lines up with the
+        // adjacent corner, so the first and last legs leave the border square instead of fanning
+        // back toward the box center.
+        const bool    poly     = (mWaypoints.isEmpty() == false);
+        const QPointF beginRef = poly ? mWaypoints.first() : tc;
+        const QPointF endRef   = poly ? mWaypoints.last()  : sc;
         mBegin = (mDrag == eDrag::Begin) ? mDragPoint
                : mHasAnchors ? NESMDesign::nearestBorderPoint(src, srcRad, mAnchorBegin)
+               : poly        ? NESMDesign::polylineBorderPoint(src, srcRad, beginRef)
                              : defaultBorder(src, srcRad, beginRef);
         mEnd   = (mDrag == eDrag::End)   ? mDragPoint
                : mHasAnchors ? NESMDesign::nearestBorderPoint(tgt, tgtRad, mAnchorEnd)
+               : poly        ? NESMDesign::polylineBorderPoint(tgt, tgtRad, endRef)
                              : defaultBorder(tgt, tgtRad, endRef);
 
         mPath.append(mBegin);

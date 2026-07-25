@@ -839,42 +839,8 @@ void MdiMainWindow::onShowMenuDesign()
         return;
     }
 
-    mDesignMenu->addAction(design->actionAddState());
-    mDesignMenu->addAction(design->actionAddFinalState());
-    mDesignMenu->addAction(design->actionAddTransition());
-    mDesignMenu->addAction(design->actionAddNote());
-    mDesignMenu->addSeparator();
-    mDesignMenu->addAction(design->actionStateColor());
-    mDesignMenu->addAction(design->actionEdgeColor());
-    mDesignMenu->addAction(design->actionNoteColor());
-    mDesignMenu->addSeparator();
-    mDesignMenu->addAction(design->actionAlignLeft());
-    mDesignMenu->addAction(design->actionAlignRight());
-    mDesignMenu->addAction(design->actionAlignTop());
-    mDesignMenu->addAction(design->actionAlignBottom());
-    mDesignMenu->addAction(design->actionDistributeHorizontal());
-    mDesignMenu->addAction(design->actionDistributeVertical());
-    mDesignMenu->addSeparator();
-    mDesignMenu->addAction(design->actionToggleGrid());
-    mDesignMenu->addAction(design->actionGridDots());
-    mDesignMenu->addAction(design->actionToggleSnap());
-    mDesignMenu->addAction(design->actionGridSize());
-    mDesignMenu->addSeparator();
-    QMenu* declareMenu = mDesignMenu->addMenu(tr("Add &Declaration"));
-    declareMenu->addActions(design->declareActions());
-    mDesignMenu->addSeparator();
-    mDesignMenu->addAction(design->actionAddSubstate());
-    mDesignMenu->addAction(design->actionEnterSubmachine());
-    mDesignMenu->addAction(design->actionGoToParent());
-    mDesignMenu->addSeparator();
-    mDesignMenu->addAction(design->actionZoomIn());
-    mDesignMenu->addAction(design->actionZoomOut());
-    mDesignMenu->addAction(design->actionZoomReset());
-    mDesignMenu->addAction(design->actionZoomFit());
-    mDesignMenu->addSeparator();
-    mDesignMenu->addAction(design->actionSelectAll());
-    mDesignMenu->addAction(design->actionRename());
-    mDesignMenu->addAction(design->actionDelete());
+    // The page owns the menu order so it cannot drift from the drawing toolbar.
+    design->populateDesignMenu(*mDesignMenu);
 }
 
 void MdiMainWindow::onToolsOptions()

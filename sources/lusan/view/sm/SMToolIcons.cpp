@@ -75,6 +75,20 @@ namespace
             p.drawLine(QPointF(20.0, 11.0), QPointF(28.0, 11.0));
             break;
 
+        case SMToolIcons::eIcon::AddStartState:
+        {
+            // Same pill outline as the Final glyph, filled with the play triangle the
+            // canvas draws inside a Start marker.
+            p.drawEllipse(QPointF(16.0, 16.0), 9.0, 9.0);
+            QPainterPath play;
+            play.moveTo(13.0, 11.0);
+            play.lineTo(21.5, 16.0);
+            play.lineTo(13.0, 21.0);
+            play.closeSubpath();
+            p.fillPath(play, color);
+            break;
+        }
+
         case SMToolIcons::eIcon::AddFinalState:
             p.drawEllipse(QPointF(16.0, 16.0), 9.0, 9.0);
             p.setBrush(color);

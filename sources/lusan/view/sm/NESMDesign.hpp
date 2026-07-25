@@ -50,6 +50,7 @@ namespace NESMDesign
     {
           Select        //!< Default pointer: select, multi-select, move.
         , AddState      //!< Place a normal state.
+        , AddStartState //!< Place the level's start state.
         , AddFinalState //!< Place a final state.
         , AddTransition //!< Draw a transition between states.
         , Waypoint      //!< Insert / remove edge waypoints.
@@ -94,6 +95,14 @@ namespace NESMDesign
     constexpr double    GridHidePixels  { 4.0 };
     //!< The grid reaches full opacity when one cell is at least this large on screen.
     constexpr double    GridFullPixels  { 12.0 };
+
+    //!< The full span of the crosshair cursor shown while a placement tool is armed, in
+    //!< device-independent pixels. Kept odd so the hot spot lands on a single center pixel.
+    //!< The system Qt::CrossCursor is about twice this and reads as heavy on a dense canvas;
+    //!< a value of 0 or less falls back to it.
+    constexpr int       ToolCursorSize      { 15 };
+    //!< The stroke width of the crosshair, in device-independent pixels.
+    constexpr int       ToolCursorWidth     { 1 };
 
     //!< The fixed canvas working area of one machine level.
     constexpr double    SceneExtent     { 10000.0 };
@@ -238,6 +247,20 @@ namespace NESMDesign
      **/
     QPointF slideBorderPoint(const QRectF& rect, double radius, const QPointF& border
                            , const QPointF& pointer, int gridSize, bool snap);
+
+    /**
+     * \brief   Returns the endpoint anchor of a polyline edge whose adjacent corner is \p neighbour:
+     *          the facing side is chosen center-to-neighbour, then the anchor slides along that side
+     *          until it lines up with the neighbour itself. The segment between the box and its first
+     *          (or last) waypoint therefore leaves the border at a right angle, instead of fanning
+     *          back toward the box center and turning a hand-drawn rectangle into a trapezoid.
+     *          No grid rounding: the waypoint is already snapped when snap-to-grid is on, and
+     *          re-rounding here would break the very alignment the anchor is following.
+     * \param   rect        The state box geometry in scene coordinates.
+     * \param   radius      The box corner radius.
+     * \param   neighbour   The waypoint next to this endpoint.
+     **/
+    QPointF polylineBorderPoint(const QRectF& rect, double radius, const QPointF& neighbour);
 
     /**
      * \brief   Samples a circular arc through \p begin and \p end with the given signed

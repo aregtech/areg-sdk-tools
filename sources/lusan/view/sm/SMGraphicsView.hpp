@@ -24,6 +24,9 @@
  ************************************************************************/
 #include <QGraphicsView>
 
+#include "lusan/view/sm/NESMDesign.hpp"
+
+#include <QCursor>
 #include <QPoint>
 
 /**
@@ -70,6 +73,14 @@ public:
      **/
     void zoomToFit();
 
+    /**
+     * \brief   Reflects the armed canvas tool in the cursor: a crosshair while a placement
+     *          tool waits for a click, the default arrow under the Select tool (issue #541).
+     *          The state is remembered so a middle-button pan restores it instead of
+     *          dropping back to the arrow.
+     **/
+    void setToolCursor(NESMDesign::eCanvasTool tool);
+
 //////////////////////////////////////////////////////////////////////////
 // Signals
 //////////////////////////////////////////////////////////////////////////
@@ -101,12 +112,22 @@ protected:
     virtual void contextMenuEvent(QContextMenuEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
+// Hidden methods
+//////////////////////////////////////////////////////////////////////////
+private:
+    /**
+     * \brief   Puts the remembered tool cursor on the view.
+     **/
+    void applyToolCursor();
+
+//////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    int     mZoom;      //!< The zoom in percent.
-    bool    mPanning;   //!< A middle-button pan is in progress.
-    QPoint  mPanStart;  //!< The last pan position in viewport coordinates.
+    int             mZoom;          //!< The zoom in percent.
+    bool            mPanning;       //!< A middle-button pan is in progress.
+    QPoint          mPanStart;      //!< The last pan position in viewport coordinates.
+    bool            mToolArmed;     //!< A placement tool is armed; remembered to survive a pan.
 };
 
 //////////////////////////////////////////////////////////////////////////

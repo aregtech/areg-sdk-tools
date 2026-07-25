@@ -77,9 +77,12 @@ QToolButton:hover
     border-color: ${border};
 }
 
+/* A checked tool button is a mode that stays on (the armed canvas tool, a grid toggle), so it
+   needs more than a background tint to read at icon-only sizes: an accent border marks it. */
 QToolButton:pressed, QToolButton:checked
 {
     background: ${pressed};
+    border-color: ${accent};
 }
 
 /* Split buttons (MenuButtonPopup): keep the drop-down zone on the same background as the

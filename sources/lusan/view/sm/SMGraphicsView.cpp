@@ -23,17 +23,65 @@
 
 #include <QContextMenuEvent>
 #include <QMouseEvent>
+#include <QPainter>
+#include <QPen>
+#include <QPixmap>
 #include <QScrollBar>
 #include <QWheelEvent>
 
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+    /**
+     * \brief   Draws the crosshair shown while a placement tool is armed. It is drawn rather
+     *          than taken from Qt::CrossCursor because the system shape has a fixed size,
+     *          roughly twice as wide, which reads as heavy over a dense canvas; drawing it
+     *          makes the size the tunable NESMDesign::ToolCursorSize. The dark cross sits on
+     *          a light halo, so it stays visible on both a light and a dark canvas.
+     * \param   ratio   The device pixel ratio of the screen showing the cursor.
+     **/
+    QCursor makeToolCursor(qreal ratio)
+    {
+        if (NESMDesign::ToolCursorSize <= 0)
+        {
+            return QCursor(Qt::CrossCursor);
+        }
+
+        // An odd span puts the hot spot on a single center pixel, so the click lands exactly
+        // where the arms meet instead of half a pixel off.
+        const int span  = std::max(3, NESMDesign::ToolCursorSize | 1);
+        const int width = std::max(1, NESMDesign::ToolCursorWidth);
+        QPixmap pixmap(QSize(span, span) * ratio);
+        pixmap.setDevicePixelRatio(ratio);
+        pixmap.fill(Qt::transparent);
+
+        // Half-pixel offset: a pen centered on a pixel boundary would smear over two rows.
+        const qreal mid = (span / 2) + 0.5;
+        QPainter painter(&pixmap);
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        for (int pass = 0; pass < 2; ++pass)
+        {
+            const bool halo = (pass == 0);
+            painter.setPen(QPen(halo ? QColor(255, 255, 255, 190) : QColor(16, 16, 16)
+                                , halo ? (width + 2) : width));
+            painter.drawLine(QPointF(0.0, mid), QPointF(span, mid));
+            painter.drawLine(QPointF(mid, 0.0), QPointF(mid, span));
+        }
+
+        painter.end();
+
+        return QCursor(pixmap, span / 2, span / 2);
+    }
+}
+
 SMGraphicsView::SMGraphicsView(QWidget* parent /*= nullptr*/)
     : QGraphicsView(parent)
-    , mZoom     (NESMDesign::ZoomDefault)
-    , mPanning  (false)
-    , mPanStart ( )
+    , mZoom         (NESMDesign::ZoomDefault)
+    , mPanning      (false)
+    , mPanStart     ( )
+    , mToolArmed    (false)
 {
     setRenderHint(QPainter::Antialiasing, true);
     setRenderHint(QPainter::TextAntialiasing, true);
@@ -122,6 +170,31 @@ void SMGraphicsView::wheelEvent(QWheelEvent* event)
     QGraphicsView::wheelEvent(event);
 }
 
+void SMGraphicsView::setToolCursor(NESMDesign::eCanvasTool tool)
+{
+    // Every tool except the pointer waits for a click at a precise spot, so they all get the
+    // crosshair; the shape alone tells the user a tool is armed, the toolbar says which one.
+    mToolArmed = (tool != NESMDesign::eCanvasTool::Select);
+    if (mPanning == false)
+    {
+        applyToolCursor();
+    }
+}
+
+void SMGraphicsView::applyToolCursor()
+{
+    // Unset rather than set the arrow: an item's hover cursor (resize handles, links) is
+    // applied to the viewport and must still win once the pointer tool is back.
+    if (mToolArmed)
+    {
+        setCursor(makeToolCursor(devicePixelRatioF()));
+    }
+    else
+    {
+        unsetCursor();
+    }
+}
+
 void SMGraphicsView::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::MiddleButton)
@@ -156,7 +229,7 @@ void SMGraphicsView::mouseReleaseEvent(QMouseEvent* event)
     if (mPanning && (event->button() == Qt::MiddleButton))
     {
         mPanning = false;
-        unsetCursor();
+        applyToolCursor();
         event->accept();
         return;
     }

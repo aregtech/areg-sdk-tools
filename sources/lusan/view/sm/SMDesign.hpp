@@ -242,6 +242,7 @@ public:
      * \brief   The state editing actions: placement tools, delete, and rename.
      **/
     inline QAction* actionAddState() const;
+    inline QAction* actionAddStartState() const;
     inline QAction* actionAddFinalState() const;
     inline QAction* actionAddTransition() const;
     inline QAction* actionAddNote() const;
@@ -347,6 +348,15 @@ public:
     static QList<ToolGroup> placeholderToolGroups(QObject& owner);
 
     /**
+     * \brief   Fills \p menu with the page's commands in menu order. The page owns this list
+     *          so the main window's Design menu cannot drift away from the drawing toolbar:
+     *          every toolGroups() command reachable nowhere else must appear here (spec 9.3 --
+     *          hiding the toolbar loses nothing). Undo/Redo/Cut/Copy/Paste stay with the Edit
+     *          menu, and "Set Color..." is presented as its three explicit variants.
+     **/
+    void populateDesignMenu(QMenu& menu);
+
+    /**
      * \brief   True when \p action activates a placement tool (Add State/Final/Transition/
      *          Note); on true, \p toolOut receives the tool so the toolbar can arm it sticky
      *          on a double-click.
@@ -417,6 +427,13 @@ private slots:
      *          settings, restores the level's viewport, and refreshes the breadcrumb.
      **/
     void onLevelChanged(uint32_t levelId);
+
+    /**
+     * \brief   Mirrors the armed canvas tool on its action (checked) and on the canvas
+     *          cursor, so the user sees which tool is active no matter which surface armed
+     *          it -- toolbar, Design menu, context menu, or shortcut (issue #541).
+     **/
+    void onToolChanged(NESMDesign::eCanvasTool tool);
 
     /**
      * \brief   Persists the displayed level's zoom/scroll into its View layout entry
@@ -753,6 +770,7 @@ private:
     QAction*            mActUndo;       //!< Undo (no shortcut; the Edit menu owns Ctrl+Z).
     QAction*            mActRedo;       //!< Redo (no shortcut; the Edit menu owns Ctrl+Y).
     QAction*            mActAddState;   //!< Activate the Add State tool.
+    QAction*            mActAddStart;   //!< Activate the Add Start State tool (only while the level has none).
     QAction*            mActAddFinal;   //!< Activate the Add Final State tool.
     QAction*            mActAddTransition; //!< Activate the Add Transition tool.
     QAction*            mActAddNote;    //!< Activate the Add Note tool.
@@ -890,6 +908,11 @@ inline QAction* SMDesign::actionRedo() const
 inline QAction* SMDesign::actionAddState() const
 {
     return mActAddState;
+}
+
+inline QAction* SMDesign::actionAddStartState() const
+{
+    return mActAddStart;
 }
 
 inline QAction* SMDesign::actionAddFinalState() const

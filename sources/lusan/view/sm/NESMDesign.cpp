@@ -316,6 +316,12 @@ QPointF NESMDesign::slideBorderPoint(const QRectF& rect, double radius, const QP
     return result;
 }
 
+QPointF NESMDesign::polylineBorderPoint(const QRectF& rect, double radius, const QPointF& neighbour)
+{
+    const QPointF face = borderPoint(rect, radius, neighbour);
+    return slideBorderPoint(rect, radius, face, neighbour, 0, false);
+}
+
 QList<QPointF> NESMDesign::arcPolyline(const QPointF& begin, const QPointF& end, double bulge, int samples)
 {
     constexpr double Pi = 3.14159265358979323846;
