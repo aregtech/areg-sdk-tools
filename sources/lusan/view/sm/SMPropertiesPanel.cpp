@@ -404,6 +404,7 @@ void SMPropertiesPanel::buildTransitionPage()
     mConditions = new SMGuardBar(mModel, this);
     mTransTabs->addTab(mConditions, tr("Conditions"));
     connect(mConditions, &SMGuardBar::badgeChanged, this, &SMPropertiesPanel::onGuardBadgeChanged);
+    connect(mConditions, &SMGuardBar::signalNavigateToDefinition, this, &SMPropertiesPanel::signalNavigateToDefinition);
 
     mTransOps = new SMOperationsEditor(mModel, this);
     mTransTabs->addTab(mTransOps, tr("Actions"));

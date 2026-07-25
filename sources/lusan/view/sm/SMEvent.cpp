@@ -32,10 +32,12 @@
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMEventModel.hpp"
 #include "lusan/model/sm/SMTimerModel.hpp"
+#include "lusan/model/sm/SMWhereUsed.hpp"
 #include "lusan/view/sm/SMEventDetails.hpp"
 #include "lusan/view/sm/SMEventList.hpp"
 #include "lusan/view/sm/SMEventParamDetails.hpp"
 #include "lusan/view/sm/SMTimerDetails.hpp"
+#include "lusan/view/sm/SMWhereUsedMenu.hpp"
 
 #include <QAction>
 #include <QCheckBox>
@@ -45,8 +47,10 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QShortcut>
+#include <QStringList>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QToolButton>
@@ -65,6 +69,30 @@ namespace
         checkBox->setChecked(deprecated);
         hintEdit->setEnabled(deprecated);
         hintEdit->setText(deprecated ? hint : QString());
+    }
+
+    //!< Confirms deleting a referenced entry, listing every place it is used (spec 9.4).
+    //!< Returns true to proceed; on confirm the references become validation errors.
+    bool confirmReferencedDelete(QWidget* parent, const StateMachineData& data, SMReferences::eTarget target
+                                 , const QString& name, uint32_t id, const QString& kindLabel)
+    {
+        const QList<SMReferences::Use> uses = SMWhereUsed::collect(data, target, name, id);
+        if (uses.isEmpty())
+            return true;
+
+        QStringList places;
+        for (const SMReferences::Use& use : uses)
+            places.append(QStringLiteral("  - ") + use.location);
+
+        const QMessageBox::StandardButton choice = QMessageBox::warning(parent
+            , QObject::tr("%1 is referenced").arg(kindLabel)
+            , QObject::tr("This %1 is used in %2 place%3:\n%4\n\nDelete anyway? The references break and are listed by validation.")
+              .arg(kindLabel.toLower())
+              .arg(uses.size())
+              .arg((uses.size() == 1) ? QString() : QStringLiteral("s"))
+              .arg(places.join(QLatin1Char('\n')))
+            , QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        return (choice == QMessageBox::Yes);
     }
 }
 
@@ -768,6 +796,90 @@ void SMEvent::onInsertClicked()
     }
 }
 
+void SMEvent::whereUsedForCurrent()
+{
+    switch (currentKind())
+    {
+    case eRowKind::Event:
+    {
+        SMEventEntry* event = currentEvent();
+        if (event != nullptr)
+        {
+            const QList<SMReferences::Use> uses = SMWhereUsed::collect(mEventModel.getData(), SMReferences::eTarget::Event, event->getName(), event->getId());
+            SMWhereUsedMenu::present(this, uses, mEventModel.getSelectionModel(), event->getName());
+            return;
+        }
+        break;
+    }
+    case eRowKind::Timer:
+    {
+        const uint32_t id = currentTimerId();
+        if (id != 0)
+        {
+            const SMTimerEntry* timer = mTimerModel.getData().getTimers().findElement(id);
+            const QString name = (timer != nullptr) ? timer->getName() : QString();
+            const QList<SMReferences::Use> uses = SMWhereUsed::collect(mTimerModel.getData(), SMReferences::eTarget::Timer, name, id);
+            SMWhereUsedMenu::present(this, uses, mEventModel.getSelectionModel(), name);
+            return;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    QMessageBox::information(this, tr("Where used"), tr("Select an event or timer first."));
+}
+
+bool SMEvent::currentReference(SMReferences::eTarget& target, uint32_t& id, QString& name) const
+{
+    switch (currentKind())
+    {
+    case eRowKind::Event:
+    {
+        SMEventEntry* event = currentEvent();
+        if (event != nullptr)
+        {
+            target = SMReferences::eTarget::Event;
+            id   = event->getId();
+            name = event->getName();
+            return true;
+        }
+        break;
+    }
+    case eRowKind::Timer:
+    {
+        const uint32_t timerId = currentTimerId();
+        if (timerId != 0)
+        {
+            const SMTimerEntry* timer = mTimerModel.getData().getTimers().findElement(timerId);
+            if (timer != nullptr)
+            {
+                target = SMReferences::eTarget::Timer;
+                id   = timerId;
+                name = timer->getName();
+                return true;
+            }
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return false;
+}
+
+void SMEvent::revealEvent(uint32_t id)
+{
+    selectEvent(id);
+}
+
+void SMEvent::revealTimer(uint32_t id)
+{
+    selectTimer(id);
+}
+
 void SMEvent::onRemoveClicked()
 {
     switch (currentKind())
@@ -776,6 +888,9 @@ void SMEvent::onRemoveClicked()
     {
         SMEventEntry* event = currentEvent();
         if (event == nullptr)
+            break;
+
+        if (confirmReferencedDelete(this, mEventModel.getData(), SMReferences::eTarget::Event, event->getName(), event->getId(), tr("Event")) == false)
             break;
 
         const QList<SMEventEntry*>& list = mEventModel.getEvents();
@@ -818,6 +933,11 @@ void SMEvent::onRemoveClicked()
     {
         const uint32_t id = currentTimerId();
         if (id == 0)
+            break;
+
+        const SMTimerEntry* timer = mTimerModel.getData().getTimers().findElement(id);
+        const QString timerName = (timer != nullptr) ? timer->getName() : QString();
+        if (confirmReferencedDelete(this, mTimerModel.getData(), SMReferences::eTarget::Timer, timerName, id, tr("Timer")) == false)
             break;
 
         const QList<SMTimerEntry>& list = mTimerModel.getTimers();

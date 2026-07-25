@@ -385,6 +385,13 @@ private slots:
     void onEditRedo();
 
     /**
+     * \brief   Slot forwarding Find (Ctrl+F) and where-used (Shift+F12) to the active MDI child.
+     **/
+    void onEditFind();
+    void onEditWhereUsed();
+    void onEditGotoDef();
+
+    /**
      * \brief   Refreshes the check marks of the View menu's Navigation and Design submenus
      *          from the live dock / tab visibility and the current widget placement.
      **/
@@ -686,6 +693,9 @@ private:
     QAction         mActEditPaste;
     QAction         mActEditUndo;   //!< Undo, forwarded to the active child (inert for SI/log windows).
     QAction         mActEditRedo;   //!< Redo, forwarded to the active child (inert for SI/log windows).
+    QAction         mActEditFind;   //!< Find (Ctrl+F), forwarded to the active child (inert for SI/log windows).
+    QAction         mActEditWhereUsed;  //!< Find usages / where-used (Shift+F12), forwarded to the active child.
+    QAction         mActEditGotoDef;    //!< Go to Declaration (F12), forwarded to the active child.
 
     //!< Actions for View sub-menus.
     QAction         mActViewNavigator;

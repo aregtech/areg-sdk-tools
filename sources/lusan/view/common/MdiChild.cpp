@@ -27,11 +27,14 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QKeySequence>
 #include <QMdiSubWindow>
 #include <QMessageBox>
 #include <QSaveFile>
 #include <QScrollBar>
+#include <QShortcut>
 #include <QTabBar>
+#include <QTabWidget>
 #include <QTextDocument>
 
 MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWidget* parent /*= nullptr*/)
@@ -48,6 +51,17 @@ MdiChild::MdiChild(MdiChild::eMdiWindow windowType, MdiMainWindow* wndMain, QWid
     setAttribute(Qt::WA_DeleteOnClose, true);
     Q_ASSERT(wndMain != nullptr);
     emit wndMain->signalMdiWindowCreated(this);
+
+    // Ctrl+PageDown / Ctrl+PageUp cycle the document's own pages (Ctrl+Tab / Ctrl+Shift+Tab
+    // stay reserved for switching MDI windows). The children scope keeps them local to the
+    // active document, and switchToAdjacentPage() is inert for children without page tabs.
+    QShortcut* nextPage = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_PageDown), this);
+    nextPage->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(nextPage, &QShortcut::activated, this, [this]() { switchToAdjacentPage(1); });
+
+    QShortcut* prevPage = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_PageUp), this);
+    prevPage->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(prevPage, &QShortcut::activated, this, [this]() { switchToAdjacentPage(-1); });
 }
 
 MdiChild::~MdiChild()
@@ -57,6 +71,38 @@ MdiChild::~MdiChild()
 bool MdiChild::openSucceeded() const
 {
     return false;
+}
+
+QTabWidget* MdiChild::pageTabWidget()
+{
+    return nullptr;
+}
+
+void MdiChild::switchToAdjacentPage(int delta)
+{
+    QTabWidget* tabs = pageTabWidget();
+    if (tabs == nullptr)
+    {
+        return;
+    }
+
+    const int count = tabs->count();
+    if (count <= 1)
+    {
+        return;
+    }
+
+    int index = tabs->currentIndex() + delta;
+    if (index < 0)
+    {
+        index = count - 1;
+    }
+    else if (index >= count)
+    {
+        index = 0;
+    }
+
+    tabs->setCurrentIndex(index);
 }
 
 QString MdiChild::newDocumentName()
@@ -296,6 +342,21 @@ void MdiChild::redo()
 {
     // Implement redo functionality
     // document()->redo();
+}
+
+void MdiChild::find()
+{
+    // No search facility on the base document; overridden by StateMachine.
+}
+
+void MdiChild::findUsages()
+{
+    // No where-used facility on the base document; overridden by StateMachine.
+}
+
+void MdiChild::gotoDefinition()
+{
+    // No go-to-declaration facility on the base document; overridden by StateMachine.
 }
 
 bool MdiChild::canUndo() const

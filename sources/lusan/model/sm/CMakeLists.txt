@@ -26,6 +26,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/model/sm/SMOverviewModel.cpp
     ${LUSAN}/model/sm/SMPasteCommand.cpp
+    ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMSelectionModel.cpp
     ${LUSAN}/model/sm/SMStateCommands.cpp
     ${LUSAN}/model/sm/SMSymbolIndex.cpp
@@ -34,6 +35,8 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN}/model/sm/SMGoToDef.cpp
+    ${LUSAN}/model/sm/SMWhereUsed.cpp
 )
 
 list(APPEND LUSAN_HDR
@@ -64,6 +67,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMOperationValidation.hpp
     ${LUSAN}/model/sm/SMOverviewModel.hpp
     ${LUSAN}/model/sm/SMPasteCommand.hpp
+    ${LUSAN}/model/sm/SMRenameCommands.hpp
     ${LUSAN}/model/sm/SMSelectionModel.hpp
     ${LUSAN}/model/sm/SMStateCommands.hpp
     ${LUSAN}/model/sm/SMSymbolIndex.hpp
@@ -72,4 +76,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/model/sm/SMTypeCompat.hpp
     ${LUSAN}/model/sm/SMValidationController.hpp
     ${LUSAN}/model/sm/SMValidator.hpp
+    ${LUSAN}/model/sm/SMGoToDef.hpp
+    ${LUSAN}/model/sm/SMWhereUsed.hpp
 )

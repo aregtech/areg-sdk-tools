@@ -24,6 +24,8 @@
  ************************************************************************/
 #include <QObject>
 
+#include "lusan/data/sm/SMReferences.hpp"
+
 #include <QHash>
 #include <QList>
 #include <QString>
@@ -127,6 +129,18 @@ signals:
      *          field (edge label double-click).
      **/
     void signalGuardEditRequested(uint32_t transitionId);
+
+    /**
+     * \brief   Re-emitted from any level's scene: go-to-declaration for a canvas element (a
+     *          Ctrl+Shift link was clicked); the Design page resolves the scoped part and navigates.
+     **/
+    void signalGotoDefinitionRequested(uint32_t elementId, bool isState, int scope);
+
+    /**
+     * \brief   Re-emitted from any level's scene: go-to-declaration for an explicit reference set
+     *          (a Ctrl+Shift link on one state-body operation row); the Design page navigates.
+     **/
+    void signalGotoRefsRequested(const QList<SMReferences::Ref>& refs);
 
     /**
      * \brief   Re-emitted from any level's scene: descend into a state's submachine, creating

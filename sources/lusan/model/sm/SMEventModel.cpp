@@ -21,6 +21,7 @@
 
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
+#include "lusan/model/sm/SMRenameCommands.hpp"
 
 namespace
 {
@@ -83,6 +84,16 @@ SMDataTypeModel& SMEventModel::getDataTypeModel() const
 DocModelNotifier& SMEventModel::getNotifier() const
 {
     return mFacade.getNotifier();
+}
+
+const StateMachineData& SMEventModel::getData() const
+{
+    return mFacade.getData();
+}
+
+SMSelectionModel& SMEventModel::getSelectionModel() const
+{
+    return mFacade.getSelectionModel();
 }
 
 StateMachineData::StimulusRef SMEventModel::findStimulus(const QString& name) const
@@ -157,10 +168,15 @@ void SMEventModel::renameEvent(uint32_t id, const QString& newName)
     if ((entry == nullptr) || (newName == entry->getName()))
         return;
 
+    const QString oldName{ entry->getName() };
     StateMachineModel* facade = &mFacade;
     auto getter = [facade, id]() -> QString { SMEventEntry* e = facade->getData().getEvents().findEvent(id); return (e != nullptr ? e->getName() : QString()); };
     auto setter = [facade, id](const QString& value) { SMEventEntry* e = facade->getData().getEvents().findEvent(id); if (e != nullptr) e->setName(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Event, getter, setter, newName, QObject::tr("Rename event")));
+
+    SMCompositeCommand* composite = new SMCompositeCommand(mFacade.getData(), getNotifier(), QObject::tr("Rename event"));
+    new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Event, getter, setter, newName, QObject::tr("Rename event"), composite);
+    new SMRewriteReferencesCommand(mFacade.getData(), getNotifier(), SMReferences::eTarget::Event, id, oldName, newName, QObject::tr("Rename event"), composite);
+    mFacade.getUndoStack().push(composite);
 }
 
 void SMEventModel::setDescription(uint32_t id, const QString& text)

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Lusan
+GenericName=Areg SDK GUI Tool
+Comment=Design, debug and test Areg SDK service interfaces and state machines
+Exec=lusan %f
+Icon=lusan
+Terminal=false
+Categories=Development;IDE;
+StartupNotify=true

@@ -31,6 +31,7 @@
 #include "lusan/model/sm/SMDataTypeModel.hpp"
 #include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 #include "lusan/model/sm/SMGuardWhereUsed.hpp"
+#include "lusan/model/sm/SMWhereUsed.hpp"
 #include "lusan/model/sm/SMMethodModel.hpp"
 #include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/model/sm/SMSymbolIndex.hpp"
@@ -778,23 +779,63 @@ void SMMethod::onInsertClicked()
     }
 }
 
+void SMMethod::whereUsedForCurrent()
+{
+    SMMethodEntry* method = currentMethod();
+    if (method == nullptr)
+    {
+        QMessageBox::information(this, tr("Where used"), tr("Select a method first."));
+        return;
+    }
+
+    showMethodWhereUsed(method->getId());
+}
+
+bool SMMethod::currentReference(SMReferences::eTarget& target, uint32_t& id, QString& name) const
+{
+    SMMethodEntry* method = currentMethod();
+    if (method == nullptr)
+        return false;
+
+    target = method->isTrigger() ? SMReferences::eTarget::Trigger
+           : method->isAction()  ? SMReferences::eTarget::Action
+                                  : SMReferences::eTarget::Condition;
+    id   = method->getId();
+    name = method->getName();
+    return true;
+}
+
+void SMMethod::revealElement(uint32_t id)
+{
+    selectMethod(id);
+}
+
 void SMMethod::showMethodWhereUsed(uint32_t methodId)
 {
-    const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getData(), methodId);
+    SMMethodEntry* method = mModel.getData().getMethods().findMethod(methodId);
+    if (method == nullptr)
+        return;
+
+    // Every reference kind of the method: transition stimuli / action calls / condition
+    // mappings from the shared walker, plus the ID-bound guard uses of a condition.
+    const SMReferences::eTarget target = method->isTrigger() ? SMReferences::eTarget::Trigger
+                                       : method->isAction()  ? SMReferences::eTarget::Action
+                                                             : SMReferences::eTarget::Condition;
+    const QList<SMReferences::Use> uses = SMWhereUsed::collect(mModel.getData(), target, method->getName(), methodId);
     if (uses.isEmpty())
     {
-        QMessageBox::information(this, tr("Where used"), tr("No guard references this condition."));
+        QMessageBox::information(this, tr("Where used"), tr("'%1' is not referenced anywhere.").arg(method->getName()));
         return;
     }
 
     QMenu menu(this);
-    for (const SMGuardWhereUsed::Use& use : uses)
+    for (const SMReferences::Use& use : uses)
     {
         QAction* action = menu.addAction(use.location);
-        const uint32_t transitionId = use.transitionId;
-        connect(action, &QAction::triggered, this, [this, transitionId]()
+        const uint32_t navId = use.navId;
+        connect(action, &QAction::triggered, this, [this, navId]()
         {
-            mModel.getSelectionModel().setSelection({ transitionId });
+            mModel.getSelectionModel().setSelection({ navId });
         });
     }
 
@@ -832,6 +873,32 @@ void SMMethod::onRemoveClicked()
                                       .arg(places.join(QLatin1Char('\n'))));
                 break;
             }
+        }
+
+        // A referenced entry's deletion is confirmed, showing where it is used; on confirm
+        // the entry is removed and its former references become unresolved-reference
+        // validation errors -- nothing else is deleted silently (spec 9.4). A guard-bound
+        // condition is refused above instead, since ID-bound trees cannot dangle by name.
+        const SMReferences::eTarget target = method->isTrigger() ? SMReferences::eTarget::Trigger
+                                           : method->isAction()  ? SMReferences::eTarget::Action
+                                                                 : SMReferences::eTarget::Condition;
+        const QList<SMReferences::Use> refs = SMWhereUsed::collect(mModel.getData(), target, method->getName(), method->getId());
+        if (refs.isEmpty() == false)
+        {
+            QStringList places;
+            for (const SMReferences::Use& use : refs)
+                places.append(QStringLiteral("  - ") + use.location);
+
+            const QMessageBox::StandardButton answer = QMessageBox::question(this
+                , tr("Delete '%1'?").arg(method->getName())
+                , tr("'%1' is used in %2 place%3:\n%4\n\nDelete it anyway? The references become unresolved-reference errors.")
+                  .arg(method->getName())
+                  .arg(refs.size())
+                  .arg((refs.size() == 1) ? QString() : QStringLiteral("s"))
+                  .arg(places.join(QLatin1Char('\n')))
+                , QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (answer != QMessageBox::Yes)
+                break;
         }
 
         const QList<SMMethodEntry*>& list = mModel.getMethods();

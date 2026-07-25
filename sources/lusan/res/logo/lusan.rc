@@ -1,0 +1,4 @@
+// Windows application icon resource for the Lusan executable.
+// The lowest-numbered ICON resource is the icon Explorer / the taskbar show for the .exe.
+// Regenerate lusan.ico with res/logo/make-icons.py after editing lusan.svg.
+1 ICON "lusan.ico"

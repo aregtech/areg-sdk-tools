@@ -882,6 +882,25 @@ void SMScene::requestGuardEdit(uint32_t transitionId)
     }
 }
 
+void SMScene::requestGotoDefinition(uint32_t elementId, bool isState, int scope)
+{
+    const bool exists = isState
+                      ? (mModel.getData().findStateById(elementId) != nullptr)
+                      : (mModel.getData().findTransitionById(elementId) != nullptr);
+    if ((elementId != 0u) && exists)
+    {
+        emit signalGotoDefinitionRequested(elementId, isState, scope);
+    }
+}
+
+void SMScene::requestGotoRefs(const QList<SMReferences::Ref>& refs)
+{
+    if (refs.isEmpty() == false)
+    {
+        emit signalGotoRefsRequested(refs);
+    }
+}
+
 void SMScene::populateFromModel()
 {
     const SMStateData* level = mModel.getData().findLevel(mLevelId);

@@ -25,6 +25,7 @@
 #include <QWidget>
 
 #include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/view/sm/SMArgSinkGuard.hpp"
 
 #include <QHash>
@@ -112,6 +113,9 @@ public:
 signals:
     //!< The Conditions tab badge state changed (draft => `*`, warnings => warn glyph).
     void badgeChanged(bool isDraft, bool hasWarnings);
+    //!< A Ctrl+Shift click on a referenced symbol in the guard field asks the host to open that
+    //!< declaration's page. Relayed up from the field to the Properties panel and on to the design.
+    void signalNavigateToDefinition(SMReferences::eTarget kind, uint32_t declId);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

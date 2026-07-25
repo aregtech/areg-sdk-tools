@@ -29,11 +29,12 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMConstantModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
-#include "lusan/model/sm/SMGuardWhereUsed.hpp"
+#include "lusan/model/sm/SMWhereUsed.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/common/ConstantDetailsView.hpp"
 #include "lusan/view/common/ConstantListView.hpp"
+#include "lusan/view/sm/SMWhereUsedMenu.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -359,6 +360,43 @@ void SMConstant::updateMoveButtons(int row, int rowCount)
     mList->ctrlButtonMoveDown()->setEnabled(row < (rowCount - 1));
 }
 
+void SMConstant::whereUsedForCurrent()
+{
+    const uint32_t id = currentConstantId();
+    if (id == 0)
+    {
+        QMessageBox::information(this, tr("Where used"), tr("Select a constant first."));
+        return;
+    }
+
+    StateMachineData& data = mModel.getFacade().getData();
+    const ConstantEntry* constant = data.getConstants().findElement(id);
+    const QString name = (constant != nullptr) ? constant->getName() : QString();
+    const QList<SMReferences::Use> uses = SMWhereUsed::collect(data, SMReferences::eTarget::Constant, name, id);
+    SMWhereUsedMenu::present(this, uses, mModel.getFacade().getSelectionModel(), name);
+}
+
+bool SMConstant::currentReference(SMReferences::eTarget& target, uint32_t& id, QString& name) const
+{
+    const uint32_t current = currentConstantId();
+    if (current == 0)
+        return false;
+
+    const ConstantEntry* constant = mModel.getFacade().getData().getConstants().findElement(current);
+    if (constant == nullptr)
+        return false;
+
+    target = SMReferences::eTarget::Constant;
+    id   = current;
+    name = constant->getName();
+    return true;
+}
+
+void SMConstant::revealElement(uint32_t id)
+{
+    selectConstant(id);
+}
+
 uint32_t SMConstant::currentConstantId() const
 {
     QTreeWidgetItem* item = mList->ctrlTableList()->currentItem();
@@ -409,19 +447,23 @@ void SMConstant::onRemoveClicked()
     if (id == 0)
         return;
 
-    // Deleting a constant still referenced by guards is refused with the where-used list;
-    // `Delete anyway` breaks the references VISIBLY (validation reports ERR).
-    const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getFacade().getData(), id);
+    // Deleting a referenced constant shows every place it is used (name-based mappings plus
+    // ID-bound guards); `Delete anyway` breaks the references VISIBLY -- each becomes an
+    // unresolved-reference validation error (spec 9.4).
+    StateMachineData& data = mModel.getFacade().getData();
+    const ConstantEntry* constant = data.getConstants().findElement(id);
+    const QString name = (constant != nullptr) ? constant->getName() : QString();
+    const QList<SMReferences::Use> uses = SMWhereUsed::collect(data, SMReferences::eTarget::Constant, name, id);
     if (uses.isEmpty() == false)
     {
         QStringList places;
-        for (const SMGuardWhereUsed::Use& use : uses)
+        for (const SMReferences::Use& use : uses)
         {
             places.append(QStringLiteral("  - ") + use.location);
         }
 
-        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Constant is used by guards")
-                            , tr("This constant is used by %1 guard%2:\n%3\n\nDelete anyway? The affected guards break and are listed by validation.")
+        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Constant is referenced")
+                            , tr("This constant is used in %1 place%2:\n%3\n\nDelete anyway? The references break and are listed by validation.")
                               .arg(uses.size())
                               .arg((uses.size() == 1) ? QString() : QStringLiteral("s"))
                               .arg(places.join(QLatin1Char('\n')))

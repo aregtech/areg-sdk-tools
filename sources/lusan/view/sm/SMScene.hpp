@@ -27,6 +27,8 @@
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMCanvasTool.hpp"
 
+#include "lusan/data/sm/SMReferences.hpp"
+
 #include <QHash>
 #include <QList>
 #include <memory>
@@ -260,6 +262,39 @@ public:
      **/
     void requestGuardEdit(uint32_t transitionId);
 
+    /**
+     * \enum    eGotoScope
+     * \brief   Which referenced declarations a go-to-declaration request targets. A Ctrl+Shift
+     *          click on an edge label scopes to the part clicked; the whole-element triggers
+     *          (F12, context menu) use \c GotoAll.
+     **/
+    enum eGotoScope
+    {
+          GotoAll = 0   //!< Every declaration the element references (whole-element trigger).
+        , GotoStimulus  //!< Only the transition's stimulus (the trigger / event / timer that fires it).
+        , GotoAction    //!< Only the transition's operations (action calls, sent events, started/stopped timers).
+    };
+
+    /**
+     * \brief   Requests go-to-declaration for a canvas element (a Ctrl+Shift link click, or the
+     *          whole-element F12 / context-menu trigger): the owning page resolves the registry
+     *          declarations the element references and navigates (directly when there is one,
+     *          picker when many).
+     * \param   elementId   The state or transition the user acted on.
+     * \param   isState     True when \p elementId is a state, false for a transition.
+     * \param   scope       Which part of the element to resolve (see \ref eGotoScope). Carried as
+     *                      int so it forwards cleanly through the scene-manager passthrough signal.
+     **/
+    void requestGotoDefinition(uint32_t elementId, bool isState, int scope = GotoAll);
+
+    /**
+     * \brief   Requests go-to-declaration for an explicit set of references (a Ctrl+Shift click on
+     *          one state-body operation row): the owning page resolves them to declarations and
+     *          navigates (directly when there is one, picker when several). No-op for an empty set.
+     * \param   refs    The references the clicked row makes (kind + name).
+     **/
+    void requestGotoRefs(const QList<SMReferences::Ref>& refs);
+
 //////////////////////////////////////////////////////////////////////////
 // Internal: item registry (called by SMCanvasItem on scene changes)
 //////////////////////////////////////////////////////////////////////////
@@ -303,6 +338,18 @@ signals:
      * \brief   Emitted to focus a transition's Conditions tab field (edge label double-click).
      **/
     void signalGuardEditRequested(uint32_t transitionId);
+
+    /**
+     * \brief   Emitted when a Ctrl+Shift link on a canvas element is clicked; the owning page
+     *          navigates to the declaration(s) the scoped part references.
+     **/
+    void signalGotoDefinitionRequested(uint32_t elementId, bool isState, int scope);
+
+    /**
+     * \brief   Emitted when a Ctrl+Shift link on a single state-body operation row is clicked; the
+     *          owning page resolves the row's references and navigates.
+     **/
+    void signalGotoRefsRequested(const QList<SMReferences::Ref>& refs);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
 #include <QScrollArea>
@@ -62,6 +63,24 @@ public:
      *          e.g. from the Design page's Declare dropdown).
      **/
     AttributeListView* getList() const;
+
+    /**
+     * \brief   Shows the where-used popup for the currently selected attribute (Find Usages /
+     *          Shift+F12). Shows an information box if no attribute is selected.
+     **/
+    void whereUsedForCurrent();
+
+    /**
+     * \brief   Fills the search seed (kind/id/name) for the currently selected attribute.
+     *          False when no attribute is selected.
+     **/
+    bool currentReference(SMReferences::eTarget& target, uint32_t& id, QString& name) const;
+
+    /**
+     * \brief   Selects and reveals the attribute with the given document ID (go-to-declaration
+     *          target from the canvas). Does nothing if no attribute has that ID.
+     **/
+    void revealElement(uint32_t id);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

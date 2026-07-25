@@ -73,6 +73,12 @@ public:
     SMDataTypeModel& getDataTypeModel() const;
     DocModelNotifier& getNotifier() const;
 
+    //!< The document root, for cross-registry queries (e.g. where-used on delete).
+    const StateMachineData& getData() const;
+
+    //!< The document-wide selection model, so where-used navigation can select a referencer.
+    class SMSelectionModel& getSelectionModel() const;
+
     //!< Resolves a name in the document-wide stimulus name space so the page
     //!< can flag a collision as the user types, without waiting for commit.
     StateMachineData::StimulusRef findStimulus(const QString& name) const;

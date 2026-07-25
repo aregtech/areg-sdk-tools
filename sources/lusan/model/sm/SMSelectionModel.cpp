@@ -100,3 +100,8 @@ void SMSelectionModel::reset()
         emit signalActiveLevelChanged(mActiveLevel);
     }
 }
+
+void SMSelectionModel::requestReveal(uint32_t elementId, bool isState)
+{
+    emit signalRevealRequested(elementId, isState);
+}

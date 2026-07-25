@@ -340,6 +340,7 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // ---- Status and badge wiring ------------------------------------------
     connect(mField, &SMGuardField::statusUpdated, this, &SMGuardBar::onStatusUpdated);
     connect(mField, &SMGuardField::badgeUpdated, this, &SMGuardBar::badgeChanged);
+    connect(mField, &SMGuardField::signalNavigateToDefinition, this, &SMGuardBar::signalNavigateToDefinition);
 
     // R20 did-you-mean recovery: the field already builds the fix list but nothing consumed it since
     // SMFixBar was removed. Surface only the `use <name>?` suggestion as a clickable tail on the

@@ -57,6 +57,15 @@
         <file alias="sm method condition">icons/sm-method-condition.svg</file>
         <file alias="view-fsm-design">icons/view-fsm-design.svg</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file alias="app-logo-16.png">logo/app-logo-16.png</file>
+        <file alias="app-logo-24.png">logo/app-logo-24.png</file>
+        <file alias="app-logo-32.png">logo/app-logo-32.png</file>
+        <file alias="app-logo-48.png">logo/app-logo-48.png</file>
+        <file alias="app-logo-64.png">logo/app-logo-64.png</file>
+        <file alias="app-logo-128.png">logo/app-logo-128.png</file>
+        <file alias="app-logo-256.png">logo/app-logo-256.png</file>
+    </qresource>
     <qresource prefix="/data">
         <file alias="Predefined Types">datatype.xml</file>
     </qresource>

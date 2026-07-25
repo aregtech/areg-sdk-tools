@@ -361,6 +361,7 @@ SMStateItem::SMStateItem(uint32_t stateId, QGraphicsItem* parent /*= nullptr*/)
     , mResizeStart      ( )
     , mRenameProxy      (nullptr)
     , mClosingRename    (false)
+    , mHoverRow         (-1)
 {
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setFlag(QGraphicsItem::ItemIsMovable, true);
@@ -699,31 +700,26 @@ void SMStateItem::paintHeaderContent(QPainter* painter, const QRectF& box, const
     painter->drawText(nameRect, Qt::AlignVCenter | Qt::AlignLeft, elided);
 }
 
-void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QColor& bodyColor)
+QList<SMStateItem::RowSlot> SMStateItem::bodyRowLayout() const
 {
-    if (hasBodyContent() == false)
+    QList<RowSlot> layout;      // note: 'slots' is a Qt keyword macro, so this must not be named that.
+    if ((mExpanded == false) || (hasBodyContent() == false))
     {
-        return;
+        return layout;
     }
-
-    const double rowH    = NESMDesign::StateRowHeight;
-    const double padding = NESMDesign::StatePadding;
-    const QColor color   = NESMDesign::contrastTextColor(bodyColor);
-
-    QFont rowFont = painter->font();
-    rowFont.setPointSizeF(rowFont.pointSizeF() * 0.85);
-    const QFontMetrics metrics{ rowFont };
 
     // The body is read as three bands, in execution order: what runs on the way IN sits at the top,
     // what runs while in the state sits in the middle, and what runs on the way OUT is anchored to
-    // the bottom edge. Stacking all three from the top (as this did) put the exit actions directly
-    // under the entry ones, which reads as one undifferentiated list.
+    // the bottom edge. This packing is the single source of the row geometry; paintBodyRows draws it
+    // and bodyRowAt hit-tests it, so the drawn rows and the clickable links can never drift apart.
+    const QRectF box{ 0.0, 0.0, mSize.width(), visibleHeight() };
+    const double rowH   = NESMDesign::StateRowHeight;
     const double top    = NESMDesign::StateHeaderHeight + 2.0;
     const double bottom = box.height() - 2.0;
     const int    rowSlots = static_cast<int>((bottom - top) / rowH);
     if (rowSlots <= 0)
     {
-        return;
+        return layout;
     }
 
     int counts[3] { 0, 0, 0 };
@@ -742,7 +738,72 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
         shown[0] = std::min(counts[0], rowSlots);
     }
 
-    const auto drawRow = [&](const QString& text, eRowIcon icon, double rowY, bool ellipsis, bool continues)
+    // Where each band starts: entry at the top, exit against the bottom edge, and the middle band
+    // centered in whatever room is left between the two.
+    const double midTop    = top + (shown[0] * rowH);
+    const double midBottom = bottom - (shown[2] * rowH);
+    const double bandY[3]
+    {
+          top
+        , midTop + std::max(0.0, ((midBottom - midTop) - (shown[1] * rowH)) / 2.0)
+        , midBottom
+    };
+
+    int seen[3] { 0, 0, 0 };
+    for (int i = 0; i < mRows.size(); ++i)
+    {
+        const int zone = static_cast<int>(mRows.at(i).zone);
+        if (seen[zone] >= shown[zone])
+        {
+            continue;       // this band is full; its remaining rows are covered by the `...` marker
+        }
+
+        // The last slot of a truncated band says so, rather than dropping rows silently.
+        const bool truncated = ((seen[zone] + 1) == shown[zone]) && (shown[zone] < counts[zone]);
+        layout.append(RowSlot{ i, bandY[zone] + (seen[zone] * rowH), truncated });
+        ++seen[zone];
+    }
+
+    return layout;
+}
+
+int SMStateItem::bodyRowAt(const QPointF& pos) const
+{
+    const double rowH = NESMDesign::StateRowHeight;
+    for (const RowSlot& slot : bodyRowLayout())
+    {
+        if (slot.truncated)
+        {
+            continue;       // the "..." overflow marker is not a link.
+        }
+
+        const QRectF rowRect{ 0.0, slot.y, mSize.width(), rowH };
+        if (rowRect.contains(pos))
+        {
+            return (mRows.at(slot.index).refs.isEmpty() == false) ? slot.index : -1;
+        }
+    }
+
+    return -1;
+}
+
+void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QColor& bodyColor)
+{
+    const QList<RowSlot> layout = bodyRowLayout();
+    if (layout.isEmpty())
+    {
+        return;
+    }
+
+    const double rowH    = NESMDesign::StateRowHeight;
+    const double padding = NESMDesign::StatePadding;
+    const QColor color   = NESMDesign::contrastTextColor(bodyColor);
+
+    QFont rowFont = painter->font();
+    rowFont.setPointSizeF(rowFont.pointSizeF() * 0.85);
+    const QFontMetrics metrics{ rowFont };
+
+    const auto drawRow = [&](const BodyRow& row, double rowY, bool ellipsis, bool continues, bool linked)
     {
         painter->setFont(rowFont);
         painter->setPen(color);
@@ -758,42 +819,31 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
         const double cueW = (continues ? (metrics.horizontalAdvance(QStringLiteral("\\")) + 4.0) : 0.0);
         const QRectF textRect{ padding + 16.0, rowY, box.width() - padding - (padding + 16.0) - cueW, rowH };
 
-        drawRowIcon(painter, QRectF(padding, rowY + 2.0, 12.0, rowH - 4.0), icon, color);
+        drawRowIcon(painter, QRectF(padding, rowY + 2.0, 12.0, rowH - 4.0), row.icon, color);
         painter->setFont(rowFont);
         painter->setPen(color);
-        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter
-                         , metrics.elidedText(text, Qt::ElideRight, static_cast<int>(textRect.width())));
+        const QString elided = metrics.elidedText(row.text, Qt::ElideRight, static_cast<int>(textRect.width()));
+        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
         if (continues)
         {
             painter->drawText(QRectF(box.width() - padding - cueW, rowY, cueW, rowH)
                              , Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("\\"));
         }
-    };
 
-    // Where each band starts: entry at the top, exit against the bottom edge, and the middle band
-    // centered in whatever room is left between the two.
-    const double midTop    = top + (shown[0] * rowH);
-    const double midBottom = bottom - (shown[2] * rowH);
-    const double bandY[3]
-    {
-          top
-        , midTop + std::max(0.0, ((midBottom - midTop) - (shown[1] * rowH)) / 2.0)
-        , midBottom
-    };
-
-    int seen[3] { 0, 0, 0 };
-    for (const BodyRow& row : mRows)
-    {
-        const int zone = static_cast<int>(row.zone);
-        if (seen[zone] >= shown[zone])
+        // Ctrl+Shift link feedback: underline the hovered row's text so the user sees the link.
+        if (linked)
         {
-            continue;       // this band is full; its remaining rows are covered by the `...` below
+            const double textW   = std::min(static_cast<double>(metrics.horizontalAdvance(elided)), textRect.width());
+            const double baseline = rowY + (rowH / 2.0) + ((metrics.ascent() - metrics.descent()) / 2.0) + 1.0;
+            painter->drawLine(QPointF(textRect.left(), baseline), QPointF(textRect.left() + textW, baseline));
         }
+    };
 
-        // The last slot of a truncated band says so, rather than dropping rows silently.
-        const bool truncated = ((seen[zone] + 1) == shown[zone]) && (shown[zone] < counts[zone]);
-        drawRow(row.text, row.icon, bandY[zone] + (seen[zone] * rowH), truncated, row.continues && (truncated == false));
-        ++seen[zone];
+    for (const RowSlot& slot : layout)
+    {
+        const BodyRow& row = mRows.at(slot.index);
+        const bool linked = (slot.truncated == false) && (slot.index == mHoverRow) && (row.refs.isEmpty() == false);
+        drawRow(row, slot.y, slot.truncated, row.continues && (slot.truncated == false), linked);
     }
 }
 
@@ -1109,25 +1159,30 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         QList<BodyRow> group;
         for (const SMOperationBase* op : std::as_const(actions))
         {
-            group.append(BodyRow{ zoneGlyph(zone), rowText(*op), zone, false, false });
+            group.append(BodyRow{ zoneGlyph(zone), rowText(*op), zone, false, false, SMReferences::operationRefs(*op) });
         }
         for (const SMOperationBase* op : std::as_const(events))
         {
-            group.append(BodyRow{ eRowIcon::Event, rowText(*op), zone, false, false });
+            group.append(BodyRow{ eRowIcon::Event, rowText(*op), zone, false, false, SMReferences::operationRefs(*op) });
         }
         if (timers.isEmpty() == false)
         {
             // Every timer of the group on one line (`start A | stop B`); the icon follows the first
             // timer so a start-only group shows the play clock and a stop-only group the square clock.
             QStringList parts;
+            QList<SMReferences::Ref> timerRefs;    // the row links to every timer it names.
             for (const SMOperationBase* op : std::as_const(timers))
             {
                 parts.append(rowText(*op));
+                for (const SMReferences::Ref& ref : SMReferences::operationRefs(*op))
+                {
+                    timerRefs.append(ref);
+                }
             }
 
             const eRowIcon tIcon = (timers.first()->getOperationType() == SMOperationBase::eOperation::TimerStop)
                                     ? eRowIcon::TimerStop : eRowIcon::TimerStart;
-            group.append(BodyRow{ tIcon, parts.join(QStringLiteral(" | ")), zone, false, false });
+            group.append(BodyRow{ tIcon, parts.join(QStringLiteral(" | ")), zone, false, false, timerRefs });
         }
 
         for (int i = 0; i < group.size(); ++i)
@@ -1155,7 +1210,24 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
         if (transition->isExternal() == false)
         {
             const QString stim = (data != nullptr) ? SMOperationSummary::stimulusSignature(*data, *transition) : transition->getStimulus();
-            mRows.append(BodyRow{ eRowIcon::Internal, QStringLiteral("on ") + stim, eRowZone::Middle, false, false });
+
+            // The header row links to the stimulus declaration (trigger / event / timer that fires
+            // the internal transition); its operations become their own navigable rows below.
+            SMReferences::eTarget stimKind = SMReferences::eTarget::Trigger;
+            switch (transition->getStimulusKind())
+            {
+            case SMTransitionEntry::eStimulusKind::Trigger: stimKind = SMReferences::eTarget::Trigger; break;
+            case SMTransitionEntry::eStimulusKind::Event:   stimKind = SMReferences::eTarget::Event;   break;
+            case SMTransitionEntry::eStimulusKind::Timer:   stimKind = SMReferences::eTarget::Timer;   break;
+            }
+
+            QList<SMReferences::Ref> stimRef;
+            if (transition->getStimulus().isEmpty() == false)
+            {
+                stimRef.append({ stimKind, transition->getStimulus() });
+            }
+
+            mRows.append(BodyRow{ eRowIcon::Internal, QStringLiteral("on ") + stim, eRowZone::Middle, false, false, stimRef });
             appendGroup(transition->getOperations(), eRowZone::Middle);
         }
     }
@@ -1165,6 +1237,24 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
 
 void SMStateItem::hoverMoveEvent(QGraphicsSceneHoverEvent* event)
 {
+    // Ctrl+Shift held turns each referenced body row into a link: underline the row under the
+    // pointer and switch to a link cursor, ahead of the normal resize-handle cursors.
+    const Qt::KeyboardModifiers mods = event->modifiers();
+    const bool linkMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::ShiftModifier);
+    const int linkRow = linkMode ? bodyRowAt(event->pos()) : -1;
+    if (linkRow != mHoverRow)
+    {
+        mHoverRow = linkRow;
+        update();
+    }
+
+    if (linkRow >= 0)
+    {
+        setCursor(Qt::PointingHandCursor);
+        SMCanvasItem::hoverMoveEvent(event);
+        return;
+    }
+
     switch (hitHandle(event->pos()))
     {
     case eHandle::TopLeft:
@@ -1198,12 +1288,37 @@ void SMStateItem::hoverMoveEvent(QGraphicsSceneHoverEvent* event)
 
 void SMStateItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
 {
+    if (mHoverRow != -1)
+    {
+        mHoverRow = -1;
+        update();
+    }
+
     unsetCursor();
     SMCanvasItem::hoverLeaveEvent(event);
 }
 
 void SMStateItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
+    // Ctrl+Shift + primary click on a referenced body row is a link: navigate to what the row's
+    // operation references. Plain clicks are untouched, so selecting and moving the box still work.
+    const Qt::KeyboardModifiers mods = event->modifiers();
+    const bool linkMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::ShiftModifier);
+    if ((event->button() == Qt::LeftButton) && linkMode)
+    {
+        const int linkRow = bodyRowAt(event->pos());
+        if (linkRow >= 0)
+        {
+            if (SMScene* canvas = getCanvas())
+            {
+                canvas->requestGotoRefs(mRows.at(linkRow).refs);
+            }
+
+            event->accept();
+            return;
+        }
+    }
+
     if (event->button() == Qt::LeftButton)
     {
         if (mHasNote && noteBadgeRect().contains(event->pos()))
