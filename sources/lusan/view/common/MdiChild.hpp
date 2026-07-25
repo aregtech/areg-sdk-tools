@@ -23,6 +23,7 @@
 
 class MdiMainWindow;
 class QMdiSubWindow;
+class QTabWidget;
 
 /**
  * \brief   The MdiChild class represents a child window in the MDI interface.
@@ -147,6 +148,22 @@ public:
 
     virtual void undo();
     virtual void redo();
+
+    /**
+     * \brief   Document-wide search (Ctrl+F) and where-used (Shift+F12), forwarded from the
+     *          main window's Edit menu to the active child. The empty defaults keep documents
+     *          without a search/reference facility (SI, log viewers) inert; StateMachine
+     *          routes them to the currently selected inner page.
+     **/
+    virtual void find();
+    virtual void findUsages();
+
+    /**
+     * \brief   Go to Declaration (F12), forwarded from the main window's Edit menu to the active
+     *          child. The empty default keeps documents without a reference facility inert;
+     *          StateMachine routes it from a selected canvas element to its declaration page.
+     **/
+    virtual void gotoDefinition();
 
     /**
      * \brief   Whether the document's undo/redo history currently has a step to apply.
@@ -306,7 +323,21 @@ protected:
      * \return  True if the user chose to save or discard changes, false if the user canceled.
      **/
     virtual bool maybeSave();
-    
+
+    /**
+     * \brief   Returns the tab widget hosting this document's pages, or nullptr when the document
+     *          has no page tabs. Backs the shared Ctrl+PageDown / Ctrl+PageUp page cycling
+     *          installed in the constructor; only the paged editors (Service Interface, State
+     *          Machine) override it -- log viewers keep the nullptr default and stay inert.
+     **/
+    virtual QTabWidget* pageTabWidget();
+
+    /**
+     * \brief   Switches to the page \p delta steps from the current one, wrapping around the ends.
+     *          A no-op when the document has no page tabs or has only a single page.
+     **/
+    void switchToAdjacentPage(int delta);
+
 protected:
     /**
      * \brief   Strips the path from the file name.

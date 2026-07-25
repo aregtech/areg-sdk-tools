@@ -19,6 +19,7 @@
 
 #include "lusan/view/sm/SMDesign.hpp"
 
+#include "lusan/common/NELusanCommon.hpp"
 #include "lusan/data/sm/SMClipboard.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -28,6 +29,8 @@
 #include "lusan/model/sm/SMPasteCommand.hpp"
 #include "lusan/model/sm/SMStateCommands.hpp"
 #include "lusan/model/sm/SMTransitionCommands.hpp"
+#include "lusan/model/sm/SMGoToDef.hpp"
+#include "lusan/model/sm/SMWhereUsed.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMAutoPlacer.hpp"
@@ -43,13 +46,16 @@
 #include "lusan/view/sm/SMValidationPanel.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
+#include "lusan/view/sm/SMWhereUsedMenu.hpp"
 
 #include <QAction>
 #include <QClipboard>
 #include <QColorDialog>
+#include <QCursor>
 #include <QGuiApplication>
 #include <QDockWidget>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
@@ -60,6 +66,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPair>
+#include <QRegularExpression>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
@@ -254,6 +261,9 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mPlaceToolbar (1)     // eDesignPlace::InDesign
     , mPlaceProperties(1)   // eDesignPlace::InDesign
     , mPlaceOutline (1)     // eDesignPlace::InDesign
+    , mSeedActive   (false)
+    , mSeedTarget   (SMReferences::eTarget::State)
+    , mSeedId       (0u)
     , mShownLevel   (0u)
     , mViewGesture  (0u)
     , mRestoringView(false)
@@ -282,6 +292,23 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     mSearchEdit->installEventFilter(this);
     topLayout->addWidget(mSearchEdit);
 
+    // Search option toggles (match case, whole word, regular expression). Re-running the
+    // search on toggle keeps the result live as the user tunes the query.
+    auto makeSearchOption = [this, topBar, topLayout](const QIcon& icon, const QString& tip) -> QToolButton*
+    {
+        QToolButton* button = new QToolButton(topBar);
+        button->setIcon(icon);
+        button->setToolTip(tip);
+        button->setCheckable(true);
+        button->setAutoRaise(true);
+        connect(button, &QToolButton::toggled, this, [this](bool) { onSearchTextChanged(); });
+        topLayout->addWidget(button);
+        return button;
+    };
+    mSearchCase  = makeSearchOption(NELusanCommon::iconSearchMatchCase(), tr("Match case"));
+    mSearchWord  = makeSearchOption(NELusanCommon::iconSearchMatchWord(), tr("Match whole word"));
+    mSearchRegex = makeSearchOption(NELusanCommon::iconSearchWildCard(), tr("Regular expression"));
+
     mSearchStatus = new QLabel(topBar);
     mSearchStatus->setObjectName(QStringLiteral("smCanvasSearchStatus"));
     mSearchStatus->setMinimumWidth(72);
@@ -301,12 +328,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
     connect(mSearchEdit, &QLineEdit::textChanged, this, &SMDesign::onSearchTextChanged);
     connect(mSearchEdit, &QLineEdit::returnPressed, this, &SMDesign::advanceSearch);
-    QShortcut* findShortcut = new QShortcut(QKeySequence::Find, this);
-    findShortcut->setContext(Qt::WidgetWithChildrenShortcut);
-    connect(findShortcut, &QShortcut::activated, this, [this]() {
-        mSearchEdit->setFocus();
-        mSearchEdit->selectAll();
-    });
+    // No local Ctrl+F shortcut here: the main window's Edit > Find owns Ctrl+F and calls
+    // beginSearch(), so the two never collide into an ambiguous-shortcut no-op (issue #538).
 
     connect(mSceneManager, &SMSceneManager::signalLevelChanged, this, &SMDesign::onLevelChanged);
     connect(mSceneManager, &SMSceneManager::signalRequestSubstate, this, [this](uint32_t stateId)
@@ -332,6 +355,17 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         }
 
         mProperties->focusConditions(transitionId);
+    });
+    connect(mSceneManager, &SMSceneManager::signalGotoDefinitionRequested, this, [this](uint32_t elementId, bool isState, int scope)
+    {
+        // Ctrl+Shift link on a state/transition: go to the declaration(s) the clicked part
+        // references. The picker (when several) opens at the pointer, right where the user clicked.
+        gotoDefinitionFor(elementId, isState, QCursor::pos(), scope);
+    });
+    connect(mSceneManager, &SMSceneManager::signalGotoRefsRequested, this, [this](const QList<SMReferences::Ref>& refs)
+    {
+        // Ctrl+Shift link on one state-body operation row: navigate to what that row references.
+        gotoDefinitionForRefs(refs, QCursor::pos());
     });
     connect(mView->horizontalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
     connect(mView->verticalScrollBar(), &QScrollBar::valueChanged, this, &SMDesign::onViewportChanged);
@@ -934,6 +968,9 @@ void SMDesign::buildDesignPanels()
     // Properties on the right, top; Outline on the right, below it. Both bound to this page's
     // model/scene manager (issue #516) and dockable to any of the page's four edges.
     mProperties = new SMPropertiesPanel(mModel);
+    // A Ctrl+Shift click on a referenced symbol in the Conditions guard field navigates to its
+    // declaration page, the same channel the canvas links use (StateMachine switches pages).
+    connect(mProperties, &SMPropertiesPanel::signalNavigateToDefinition, this, &SMDesign::signalNavigateToDefinition);
     mPropertiesDock = new QDockWidget(tr("Properties"), this);
     mPropertiesDock->setObjectName(QStringLiteral("SMPropertiesDock"));
     mPropertiesDock->setWidget(mProperties);
@@ -1124,6 +1161,7 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         const uint32_t stateId = state->getElementId();
         connect(menu.addAction(tr("Enter Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, true); });
         connect(menu.addAction(tr("Exit Actions...")), &QAction::triggered, this, [this, stateId]() { openStateOperationsDialog(stateId, false); });
+        addGotoDeclarationMenu(menu, state->getElementId(), true);
         menu.addSeparator();
         menu.addAction(mActRename);
         menu.addAction(mActDelete);
@@ -1144,6 +1182,7 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addSeparator();
         menu.addAction(mActEdgeColor);
         addNoteMenuEntries(menu, edge->getElementId(), false);
+        addGotoDeclarationMenu(menu, edge->getElementId(), false);
         menu.addSeparator();
         menu.addAction(mActDelete);
     }
@@ -2215,6 +2254,193 @@ void SMDesign::rebuildBreadcrumb()
 // Canvas search / go-to
 //////////////////////////////////////////////////////////////////////////
 
+void SMDesign::beginSearch()
+{
+    // Plain Find keeps whatever free-text query the box already had; drop any entry seed so
+    // the next edit scans by name/ID again.
+    mSeedActive = false;
+    mSearchEdit->setFocus();
+    mSearchEdit->selectAll();
+}
+
+void SMDesign::beginSearch(const QString& text, SMReferences::eTarget target, uint32_t id)
+{
+    mSeedActive = true;
+    mSeedTarget = target;
+    mSeedId     = id;
+    mSeedName   = text;
+
+    // Setting the text drives onSearchTextChanged, which lists the seeded entry's usages while
+    // the seed is active; if the text is unchanged, no signal fires, so recompute directly.
+    if (mSearchEdit->text() == text)
+        onSearchTextChanged();
+    else
+        mSearchEdit->setText(text);
+
+    mSearchEdit->setFocus();
+    mSearchEdit->selectAll();
+}
+
+void SMDesign::revealReference(uint32_t elementId, bool isState)
+{
+    navigateToIssue(elementId, isState ? eDocElementKind::State : eDocElementKind::Transition);
+}
+
+void SMDesign::whereUsedForSelection()
+{
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    if (selection.size() != 1)
+    {
+        QMessageBox::information(this, tr("Where used"), tr("Select a single state to list where it is used."));
+        return;
+    }
+
+    SMStateEntry* state = mModel.getData().findStateById(selection.first());
+    if (state == nullptr)
+    {
+        // A transition or note is selected: where-used lists references to a named target, so
+        // it applies to states (and to the registry entries on the other pages), not edges.
+        QMessageBox::information(this, tr("Where used"), tr("Where used applies to a state or a registry entry."));
+        return;
+    }
+
+    const QList<SMReferences::Use> uses = SMWhereUsed::collect(mModel.getData(), SMReferences::eTarget::State, state->getName(), state->getId());
+    SMWhereUsedMenu::present(this, uses, mModel.getSelectionModel(), state->getName());
+}
+
+void SMDesign::gotoDefinitionForSelection()
+{
+    const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+    if (selection.size() != 1)
+    {
+        QMessageBox::information(this, tr("Go to Declaration"),
+            tr("Select a single state or transition to go to the declarations it uses."));
+        return;
+    }
+
+    const uint32_t id = selection.first();
+    const bool isState = (mModel.getData().findStateById(id) != nullptr);
+    if ((isState == false) && (mModel.getData().findTransitionById(id) == nullptr))
+    {
+        // A note (or nothing navigable) is selected: go-to-declaration applies to states and
+        // transitions, whose stimulus / operations / guards reference registry declarations.
+        QMessageBox::information(this, tr("Go to Declaration"),
+            tr("Select a state or transition to go to the declarations it uses."));
+        return;
+    }
+
+    // The picker (for several targets) opens at the pointer, matching where the user is looking.
+    gotoDefinitionFor(id, isState, QCursor::pos());
+}
+
+void SMDesign::gotoDefinitionFor(uint32_t elementId, bool isState, const QPoint& globalPos, int scope)
+{
+    // A Ctrl+Shift click on the stimulus part of an edge label: the stimulus is a single
+    // declaration (the trigger / event / timer that fires the transition), so jump straight to it.
+    if (scope == SMScene::GotoStimulus)
+    {
+        const SMGoToDef::Target stim = SMGoToDef::stimulusOf(mModel.getData(), elementId);
+        if (stim.declId == 0u)
+        {
+            QMessageBox::information(this, tr("Go to Declaration"),
+                tr("This transition's stimulus does not reference a declaration."));
+            return;
+        }
+
+        emit signalNavigateToDefinition(stim.kind, stim.declId);
+        return;
+    }
+
+    QList<SMGoToDef::Target> targets = SMGoToDef::collect(mModel.getData(), elementId, isState);
+
+    // A Ctrl+Shift click on the action part: keep only the operations (action calls, sent events,
+    // started/stopped timers), never the stimulus (which can share an event/timer with an
+    // operation) and never the guard symbols (those are reached through the guard editor).
+    if (scope == SMScene::GotoAction)
+    {
+        const SMGoToDef::Target stim = SMGoToDef::stimulusOf(mModel.getData(), elementId);
+        QList<SMGoToDef::Target> operations;
+        for (const SMGoToDef::Target& target : targets)
+        {
+            const bool isOperation = (target.kind == SMReferences::eTarget::Action)
+                                  || (target.kind == SMReferences::eTarget::Event)
+                                  || (target.kind == SMReferences::eTarget::Timer);
+            const bool isStimulus = (target.kind == stim.kind) && (target.declId == stim.declId);
+            if (isOperation && (isStimulus == false))
+            {
+                operations.append(target);
+            }
+        }
+
+        targets = operations;
+    }
+
+    navigateTargets(targets, globalPos);
+}
+
+void SMDesign::gotoDefinitionForRefs(const QList<SMReferences::Ref>& refs, const QPoint& globalPos)
+{
+    navigateTargets(SMGoToDef::resolveRefs(mModel.getData(), refs), globalPos);
+}
+
+void SMDesign::navigateTargets(const QList<SMGoToDef::Target>& targets, const QPoint& globalPos)
+{
+    if (targets.isEmpty())
+    {
+        QMessageBox::information(this, tr("Go to Declaration"),
+            tr("This element does not reference any declaration."));
+        return;
+    }
+
+    if (targets.size() == 1)
+    {
+        // Exactly one referenced declaration: no guessing is needed, jump straight to it.
+        emit signalNavigateToDefinition(targets.first().kind, targets.first().declId);
+        return;
+    }
+
+    // Several referenced declarations: the user picks, so the app never guesses which to open.
+    QMenu menu(this);
+    for (const SMGoToDef::Target& target : targets)
+    {
+        QAction* action = menu.addAction(tr("%1  (%2)").arg(target.name, SMGoToDef::kindWord(target.kind)));
+        const SMReferences::eTarget kind = target.kind;
+        const uint32_t declId = target.declId;
+        connect(action, &QAction::triggered, this, [this, kind, declId]() { emit signalNavigateToDefinition(kind, declId); });
+    }
+    menu.exec(globalPos);
+}
+
+void SMDesign::addGotoDeclarationMenu(QMenu& menu, uint32_t elementId, bool isState)
+{
+    const QList<SMGoToDef::Target> targets = SMGoToDef::collect(mModel.getData(), elementId, isState);
+    if (targets.isEmpty())
+        return;
+
+    menu.addSeparator();
+    if (targets.size() == 1)
+    {
+        // One target: a direct, self-describing item ("Go to Declaration: onTimer (timer)").
+        const SMGoToDef::Target target = targets.first();
+        QAction* action = menu.addAction(tr("Go to Declaration: %1  (%2)").arg(target.name, SMGoToDef::kindWord(target.kind)));
+        const SMReferences::eTarget kind = target.kind;
+        const uint32_t declId = target.declId;
+        connect(action, &QAction::triggered, this, [this, kind, declId]() { emit signalNavigateToDefinition(kind, declId); });
+    }
+    else
+    {
+        // Several targets: the submenu itself is the picker, one entry per referenced declaration.
+        QMenu* submenu = menu.addMenu(tr("Go to Declaration"));
+        for (const SMGoToDef::Target& target : targets)
+        {
+            QAction* action = submenu->addAction(tr("%1  (%2)").arg(target.name, SMGoToDef::kindWord(target.kind)));
+            const SMReferences::eTarget kind = target.kind;
+            const uint32_t declId = target.declId;
+            connect(action, &QAction::triggered, this, [this, kind, declId]() { emit signalNavigateToDefinition(kind, declId); });
+        }
+    }
+}
+
 void SMDesign::onSearchTextChanged()
 {
     const QString query = mSearchEdit->text().trimmed();
@@ -2223,11 +2449,30 @@ void SMDesign::onSearchTextChanged()
 
     if (query.isEmpty())
     {
+        mSeedActive = false;
         mSearchStatus->clear();
         return;
     }
 
-    collectSearchHits(query, mModel.getData().getStates(), mSceneManager->getRootLevel(), mSearchHits);
+    if (mSeedActive && (query == mSeedName))
+    {
+        // Seeded from a selected entry: list exactly its usage sites, keyed by id and kind, so a
+        // same-named entry of another kind is ignored (issue #538). Options do not apply here -
+        // the query is the entry's own name, not a free-text pattern.
+        const QList<SMReferences::Use> uses = SMWhereUsed::collect(mModel.getData(), mSeedTarget, mSeedName, mSeedId);
+        for (const SMReferences::Use& use : uses)
+        {
+            const uint32_t level = levelOfElement(use.navId, use.isState);
+            if (level != 0)
+                mSearchHits.append({ level, use.navId, use.isState });
+        }
+    }
+    else
+    {
+        // Any edit away from the seed name reverts to the free-text name/ID scan.
+        mSeedActive = false;
+        collectSearchHits(query, mModel.getData().getStates(), mSceneManager->getRootLevel(), mSearchHits);
+    }
 
     if (mSearchHits.isEmpty())
     {
@@ -2437,6 +2682,11 @@ void SMDesign::updateSearchStatus()
 
 void SMDesign::collectSearchHits(const QString& query, const SMStateData& level, uint32_t levelId, QList<SearchHit>& out) const
 {
+    // A purely numeric query additionally matches an element by its exact ID (spec 11:
+    // find by name or ID); a name substring match still applies to the same digits.
+    bool numeric = false;
+    const uint32_t queryId = query.toUInt(&numeric);
+
     for (const SMStateEntry* state : level.getElements())
     {
         if (state == nullptr)
@@ -2444,7 +2694,8 @@ void SMDesign::collectSearchHits(const QString& query, const SMStateData& level,
             continue;
         }
 
-        if (state->getName().contains(query, Qt::CaseInsensitive))
+        if (matchText(state->getName(), query)
+            || (numeric && (state->getId() == queryId)))
         {
             out.append({ levelId, state->getId(), true });
         }
@@ -2456,8 +2707,9 @@ void SMDesign::collectSearchHits(const QString& query, const SMStateData& level,
                 continue;
             }
 
-            if (transition->getStimulus().contains(query, Qt::CaseInsensitive)
-                || transition->getTargetName().contains(query, Qt::CaseInsensitive))
+            if (matchText(transition->getStimulus(), query)
+                || matchText(transition->getTargetName(), query)
+                || (numeric && (transition->getId() == queryId)))
             {
                 out.append({ levelId, transition->getId(), false });
             }
@@ -2468,6 +2720,44 @@ void SMDesign::collectSearchHits(const QString& query, const SMStateData& level,
             collectSearchHits(query, *state->getNestedStates(), state->getId(), out);
         }
     }
+}
+
+bool SMDesign::matchText(const QString& hay, const QString& needle) const
+{
+    if (needle.isEmpty())
+        return false;
+
+    const Qt::CaseSensitivity cs = mSearchCase->isChecked() ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    QRegularExpression::PatternOptions opt = QRegularExpression::NoPatternOption;
+    if (cs == Qt::CaseInsensitive)
+        opt |= QRegularExpression::CaseInsensitiveOption;
+
+    if (mSearchRegex->isChecked())
+    {
+        const QRegularExpression re(needle, opt);
+        return re.isValid() && re.match(hay).hasMatch();
+    }
+
+    if (mSearchWord->isChecked())
+    {
+        // \b...\b so the needle matches only as a whole word, not as a substring.
+        const QRegularExpression re(QStringLiteral("\\b") + QRegularExpression::escape(needle) + QStringLiteral("\\b"), opt);
+        return re.match(hay).hasMatch();
+    }
+
+    return hay.contains(needle, cs);
+}
+
+uint32_t SMDesign::levelOfElement(uint32_t id, bool isState) const
+{
+    const SMStateData& root = mModel.getData().getStates();
+    const uint32_t rootLevel = mSceneManager->getRootLevel();
+    if (isState)
+        return levelOfState(root, rootLevel, id);
+
+    uint32_t level = 0;
+    transitionForElement(root, rootLevel, id, level);
+    return level;
 }
 
 void SMDesign::updateNavActions()

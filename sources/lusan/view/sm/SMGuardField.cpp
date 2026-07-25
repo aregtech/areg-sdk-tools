@@ -826,6 +826,81 @@ bool SMGuardField::maybeOpenIslandAt(int docPos)
     return false;
 }
 
+bool SMGuardField::linkSymbolAt(const QPoint& viewportPos, SMReferences::eTarget& kind, uint32_t& declId) const
+{
+    const QTextCursor hit = cursorForPosition(viewportPos);
+
+    // A committed reference renders as a chip token that carries its symbol name; a still-typed
+    // reference is a plain identifier word. Try the chip first (both sides of the caret, since the
+    // token occupies one object-replacement character), then fall back to the word under the pointer.
+    QString name;
+    for (int delta = 0; (delta >= -1) && name.isEmpty(); --delta)
+    {
+        const int pos = hit.position() + delta;
+        if (pos < 0)
+        {
+            continue;
+        }
+
+        QTextCursor probe(document());
+        probe.setPosition(pos + 1);
+        const QTextCharFormat format = probe.charFormat();
+        if (SMInlineToken::isChip(format))
+        {
+            name = format.property(SMInlineToken::PropName).toString();
+        }
+    }
+
+    if (name.isEmpty())
+    {
+        const QString text = toPlainText();
+        int left = hit.position();
+        while ((left > 0) && (left <= text.length()) && isWordChar(text.at(left - 1)))
+        {
+            --left;
+        }
+
+        int right = hit.position();
+        while ((right < text.length()) && isWordChar(text.at(right)))
+        {
+            ++right;
+        }
+
+        name = (right > left) ? text.mid(left, right - left) : QString();
+    }
+
+    if (name.isEmpty())
+    {
+        return false;
+    }
+
+    for (const SMGuardSymbol& sym : mCatalog)
+    {
+        if (sym.name != name)
+        {
+            continue;
+        }
+
+        switch (sym.refkind)
+        {
+        case SMGuardSymbol::eRefKind::Attr:  kind = SMReferences::eTarget::Attribute; break;
+        case SMGuardSymbol::eRefKind::Const: kind = SMReferences::eTarget::Constant;  break;
+        case SMGuardSymbol::eRefKind::Cond:  kind = SMReferences::eTarget::Condition; break;
+        default:                             return false;   // a stimulus parameter has no registry page.
+        }
+
+        if (sym.symbolId == 0u)
+        {
+            return false;   // an unresolved name has nowhere to navigate.
+        }
+
+        declId = sym.symbolId;
+        return true;
+    }
+
+    return false;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Notifications
 //////////////////////////////////////////////////////////////////////////
@@ -2193,6 +2268,28 @@ void SMGuardField::focusOutEvent(QFocusEvent* event)
     QTextEdit::focusOutEvent(event);
 }
 
+void SMGuardField::mousePressEvent(QMouseEvent* event)
+{
+    // Ctrl+Shift + primary click on a referenced symbol is a link: jump to its declaration page.
+    // Consumed before the base handler so it never moves the caret or starts a selection; plain
+    // clicks fall through untouched.
+    const Qt::KeyboardModifiers mods = event->modifiers();
+    const bool linkMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::ShiftModifier);
+    if ((event->button() == Qt::LeftButton) && linkMode)
+    {
+        SMReferences::eTarget kind = SMReferences::eTarget::Attribute;
+        uint32_t declId = 0u;
+        if (linkSymbolAt(event->pos(), kind, declId))
+        {
+            emit signalNavigateToDefinition(kind, declId);
+            event->accept();
+            return;
+        }
+    }
+
+    QTextEdit::mousePressEvent(event);
+}
+
 void SMGuardField::mouseReleaseEvent(QMouseEvent* event)
 {
     QTextEdit::mouseReleaseEvent(event);
@@ -2229,6 +2326,18 @@ void SMGuardField::mouseDoubleClickEvent(QMouseEvent* event)
 void SMGuardField::mouseMoveEvent(QMouseEvent* event)
 {
     QTextEdit::mouseMoveEvent(event);
+
+    // Ctrl+Shift held turns a referenced symbol into a link: a link cursor over one, the text
+    // cursor otherwise. This overrides the hover-card path while the modifiers are down.
+    const Qt::KeyboardModifiers mods = event->modifiers();
+    if (mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::ShiftModifier))
+    {
+        SMReferences::eTarget kind = SMReferences::eTarget::Attribute;
+        uint32_t declId = 0u;
+        const bool overLink = linkSymbolAt(event->pos(), kind, declId);
+        viewport()->setCursor(overLink ? Qt::PointingHandCursor : Qt::IBeamCursor);
+        return;
+    }
 
     if (mHover == nullptr)
     {
@@ -2270,6 +2379,7 @@ void SMGuardField::mouseMoveEvent(QMouseEvent* event)
 
 void SMGuardField::leaveEvent(QEvent* event)
 {
+    viewport()->setCursor(Qt::IBeamCursor);     // drop any link cursor left by a Ctrl+Shift hover.
     mHoverTimer->stop();
     mHoverWord.clear();
     if (mHover != nullptr)

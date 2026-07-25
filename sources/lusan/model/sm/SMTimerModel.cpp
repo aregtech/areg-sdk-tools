@@ -21,6 +21,7 @@
 
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
+#include "lusan/model/sm/SMRenameCommands.hpp"
 
 namespace
 {
@@ -65,6 +66,11 @@ int SMTimerModel::findIndex(uint32_t id) const
 DocModelNotifier& SMTimerModel::getNotifier() const
 {
     return mFacade.getNotifier();
+}
+
+const StateMachineData& SMTimerModel::getData() const
+{
+    return mFacade.getData();
 }
 
 StateMachineData::StimulusRef SMTimerModel::findStimulus(const QString& name) const
@@ -113,10 +119,15 @@ void SMTimerModel::renameTimer(uint32_t id, const QString& newName)
     if ((entry == nullptr) || (newName == entry->getName()))
         return;
 
+    const QString oldName{ entry->getName() };
     StateMachineModel* facade = &mFacade;
     auto getter = [facade, id]() -> QString { SMTimerEntry* e = facade->getData().getTimers().findElement(id); return (e != nullptr ? e->getName() : QString()); };
     auto setter = [facade, id](const QString& value) { SMTimerEntry* e = facade->getData().getTimers().findElement(id); if (e != nullptr) e->setName(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Timer, getter, setter, newName, QObject::tr("Rename timer")));
+
+    SMCompositeCommand* composite = new SMCompositeCommand(mFacade.getData(), getNotifier(), QObject::tr("Rename timer"));
+    new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Timer, getter, setter, newName, QObject::tr("Rename timer"), composite);
+    new SMRewriteReferencesCommand(mFacade.getData(), getNotifier(), SMReferences::eTarget::Timer, id, oldName, newName, QObject::tr("Rename timer"), composite);
+    mFacade.getUndoStack().push(composite);
 }
 
 void SMTimerModel::setTimeout(uint32_t id, uint32_t timeout)

@@ -19,6 +19,7 @@
  *
  ************************************************************************/
 
+#include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/common/MdiChild.hpp"
 #include "lusan/view/sm/SMDesign.hpp"
@@ -75,6 +76,22 @@ public:
     void cut() override;
     void copy() override;
     void paste() override;
+
+    /**
+     * \brief   Find (Ctrl+F) and where-used (Shift+F12), forwarded from the main window's
+     *          Edit menu. Find reveals the Design page's search field; where-used pops the
+     *          references of the currently selected entry on whichever page is in front.
+     **/
+    void find() override;
+    void findUsages() override;
+
+    /**
+     * \brief   Go to Declaration (F12): from a state or transition selected on the Design page,
+     *          navigate to the registry declaration one of its references points at (the Design
+     *          page resolves the targets and offers a picker when there is more than one).
+     **/
+    void gotoDefinition() override;
+
     void setToolbarVisible(bool visible) override;
     bool isToolbarVisible() const override;
 
@@ -102,6 +119,11 @@ protected:
     bool maybeSave() override;
     void onWindowClosing(bool isActive) override;
 
+    /**
+     * \brief   Returns the page tab host, enabling the shared Ctrl+PageDown / Ctrl+PageUp cycling.
+     **/
+    QTabWidget* pageTabWidget() override;
+
 private slots:
     /**
      * \brief   Switches to the page owning the requested declaration kind (building it if
@@ -118,6 +140,20 @@ private slots:
 
 private:
     bool loadDocument(const QString& documentPath, const QString& sourcePath = QString());
+
+    /**
+     * \brief   Resolves the entry selected on the current page into a search seed (its kind,
+     *          id, and name), so Ctrl+F searches that specific entry's usages. False when the
+     *          page has no selected referenceable entry.
+     **/
+    bool currentSearchSeed(SMReferences::eTarget& target, uint32_t& id, QString& name);
+
+    /**
+     * \brief   Switches to the registry page that declares the given element kind and selects the
+     *          declaration by ID (the go-to-declaration landing step). Wired to the Design page's
+     *          signalNavigateToDefinition; state targets are revealed on the canvas, not here.
+     **/
+    void navigateToDefinition(SMReferences::eTarget kind, uint32_t declId);
 
     //!< Number of editor pages.
     static constexpr int pageCount() { return static_cast<int>(PageDesign) + 1; }

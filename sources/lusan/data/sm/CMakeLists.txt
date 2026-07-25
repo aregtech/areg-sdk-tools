@@ -12,6 +12,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/data/sm/SMMethodData.cpp
     ${LUSAN}/data/sm/SMOperation.cpp
     ${LUSAN}/data/sm/SMOverviewData.cpp
+    ${LUSAN}/data/sm/SMReferences.cpp
     ${LUSAN}/data/sm/SMState.cpp
     ${LUSAN}/data/sm/SMTimerData.cpp
     ${LUSAN}/data/sm/SMTransition.cpp
@@ -32,6 +33,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/data/sm/SMMethodData.hpp
     ${LUSAN}/data/sm/SMOperation.hpp
     ${LUSAN}/data/sm/SMOverviewData.hpp
+    ${LUSAN}/data/sm/SMReferences.hpp
     ${LUSAN}/data/sm/SMState.hpp
     ${LUSAN}/data/sm/SMTimerData.hpp
     ${LUSAN}/data/sm/SMTransition.hpp

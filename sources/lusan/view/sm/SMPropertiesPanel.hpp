@@ -24,6 +24,8 @@
  ************************************************************************/
 #include <QWidget>
 
+#include "lusan/data/sm/SMReferences.hpp"
+
 #include <cstdint>
 
 /************************************************************************
@@ -98,6 +100,11 @@ public:
     inline QComboBox* stimulusNameCombo() const;
     inline QComboBox* targetCombo() const;
     inline QComboBox* sourceCombo() const;
+
+signals:
+    //!< A Ctrl+Shift click on a referenced symbol in the Conditions guard field asks the host to
+    //!< open that declaration's registry page. Relayed up to the design, which switches pages.
+    void signalNavigateToDefinition(SMReferences::eTarget kind, uint32_t declId);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides

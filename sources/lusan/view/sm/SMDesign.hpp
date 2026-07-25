@@ -24,6 +24,8 @@
  ************************************************************************/
 #include <QMainWindow>
 
+#include "lusan/data/sm/SMReferences.hpp"
+#include "lusan/model/sm/SMGoToDef.hpp"
 #include "lusan/view/sm/NESMDesign.hpp"
 
 #include <QHash>
@@ -41,6 +43,7 @@ class QHBoxLayout;
 class QKeyEvent;
 class QLabel;
 class QLineEdit;
+class QMenu;
 class QToolBar;
 class QToolButton;
 class SMClipboardContent;
@@ -146,6 +149,45 @@ public:
      *          Mode submenu; the chosen style is persisted and seeded on the next page's toolbar.
      **/
     void setToolbarStyle(Qt::ToolButtonStyle style);
+
+    /**
+     * \brief   Reveals and focuses the canvas search field (the Find command). The
+     *          main window's Edit > Find routes here so a single Ctrl+F owner drives
+     *          the search, avoiding an ambiguous shortcut with the window action.
+     **/
+    void beginSearch();
+
+    /**
+     * \brief   Seeds the search from a selected registry entry (or state): fills the box with
+     *          \p text and lists exactly that entry's usage sites, identified by \p target +
+     *          \p id, so a same-named entry of another kind is ignored. Editing the text
+     *          reverts to the free-text name/ID scan.
+     **/
+    void beginSearch(const QString& text, SMReferences::eTarget target, uint32_t id);
+
+    /**
+     * \brief   Navigates the canvas to the referencing state (\p isState) or transition and
+     *          selects it. Drives where-used popup navigation from any page (the window brings
+     *          the Design page forward first).
+     **/
+    void revealReference(uint32_t elementId, bool isState);
+
+    /**
+     * \brief   Shows the where-used popup for the single selected state (Find Usages /
+     *          Shift+F12 on the Design page). Shows an information box when the selection is
+     *          not exactly one state.
+     **/
+    void whereUsedForSelection();
+
+    /**
+     * \brief   Go to Declaration (F12) for the single selected canvas element: resolves the
+     *          registry declarations the selected state or transition references and, if there
+     *          is more than one, offers a picker; a single target navigates directly. Shows an
+     *          information box when nothing referenceable is selected. Navigation itself is
+     *          emitted via signalNavigateToDefinition so the owning window switches pages.
+     **/
+    void gotoDefinitionForSelection();
+
     /**
      * \brief   Returns the scene of the displayed machine level.
      **/
@@ -340,6 +382,13 @@ signals:
      *          the canvas, so those never reach this signal).
      **/
     void signalNavigateToPage(eDocElementKind kind);
+
+    /**
+     * \brief   Emitted by Go to Declaration (F12 or the canvas context menu) to navigate from a
+     *          canvas use to its declaration; the owning window switches to the declaration's
+     *          page and selects the row. States are revealed on the canvas, not through this.
+     **/
+    void signalNavigateToDefinition(SMReferences::eTarget kind, uint32_t declId);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -622,6 +671,47 @@ private:
      **/
     void collectSearchHits(const QString& query, const SMStateData& level, uint32_t levelId, QList<SearchHit>& out) const;
 
+    /**
+     * \brief   True if \p needle matches within \p hay under the active search options
+     *          (match case, whole word, regular expression). An invalid regex matches nothing.
+     **/
+    bool matchText(const QString& hay, const QString& needle) const;
+
+    //!< The owner id of the level that draws the state / transition \p id, or 0 if not found.
+    uint32_t levelOfElement(uint32_t id, bool isState) const;
+
+    /**
+     * \brief   Resolves the declarations the canvas element \p elementId (\p isState selects a
+     *          state vs a transition) references and drives go-to-declaration: none shows an
+     *          information box, one navigates directly, several open a picker at \p globalPos.
+     * \param   scope   Which part of the element to resolve (SMScene::eGotoScope, as int): the
+     *                  whole element (GotoAll -- F12 / context menu), only the stimulus, or only
+     *                  the operations. Ctrl+Shift links on an edge label pass a scoped value.
+     **/
+    void gotoDefinitionFor(uint32_t elementId, bool isState, const QPoint& globalPos, int scope = 0);
+
+    /**
+     * \brief   Drives go-to-declaration for an explicit reference set (a Ctrl+Shift click on one
+     *          state-body operation row): resolves \p refs to declarations and navigates -- none
+     *          shows an information box, one navigates directly, several open a picker at \p globalPos.
+     **/
+    void gotoDefinitionForRefs(const QList<SMReferences::Ref>& refs, const QPoint& globalPos);
+
+    /**
+     * \brief   Shared tail of the go-to-declaration paths: with the resolved \p targets, shows an
+     *          information box when empty, navigates directly when there is one, or opens a picker
+     *          at \p globalPos when there are several (so the app never guesses which to open).
+     **/
+    void navigateTargets(const QList<SMGoToDef::Target>& targets, const QPoint& globalPos);
+
+    /**
+     * \brief   Appends a "Go to Declaration" entry to a canvas context \p menu for the element
+     *          \p elementId (\p isState selects a state vs a transition): a single referenced
+     *          declaration becomes a direct item, several become a submenu. Adds nothing when the
+     *          element references no declaration.
+     **/
+    void addGotoDeclarationMenu(QMenu& menu, uint32_t elementId, bool isState);
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -633,9 +723,16 @@ private:
     QWidget*            mBreadcrumb;    //!< The level-path bar above the viewport.
     QHBoxLayout*        mBreadcrumbLayout; //!< The breadcrumb content layout.
     QLineEdit*          mSearchEdit;    //!< The canvas search box (find state / transition).
+    QToolButton*        mSearchCase;    //!< Match-case option toggle.
+    QToolButton*        mSearchWord;    //!< Match-whole-word option toggle.
+    QToolButton*        mSearchRegex;   //!< Regular-expression option toggle.
     QLabel*             mSearchStatus;  //!< The "current / total" match counter (or "No match").
     QList<SearchHit>    mSearchHits;    //!< The current query's matches, in document order.
     int                 mSearchIndex;   //!< The focused match index, or -1.
+    bool                mSeedActive;    //!< True while the box holds an entry-seeded query (usage list).
+    SMReferences::eTarget mSeedTarget;  //!< The seeded entry's kind (valid when mSeedActive).
+    uint32_t            mSeedId;        //!< The seeded entry's id (valid when mSeedActive).
+    QString             mSeedName;      //!< The seeded entry's name; editing away from it drops the seed.
     QToolBar*           mToolBar;       //!< The in-page drawing toolbar (movable to the page edges).
     QDockWidget*        mPropertiesDock;//!< The Properties dock (right, top) inside the Design page.
     QDockWidget*        mOutlineDock;   //!< The Outline dock (right, below Properties) inside the Design page.

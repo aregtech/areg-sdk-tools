@@ -21,6 +21,7 @@
 
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
+#include "lusan/model/sm/SMRenameCommands.hpp"
 
 namespace
 {
@@ -167,10 +168,21 @@ void SMMethodModel::renameMethod(uint32_t id, const QString& newName)
     if ((entry == nullptr) || (newName == entry->getName()))
         return;
 
+    const QString oldName{ entry->getName() };
+    const SMReferences::eTarget target = entry->isTrigger() ? SMReferences::eTarget::Trigger
+                                       : entry->isAction()  ? SMReferences::eTarget::Action
+                                                            : SMReferences::eTarget::Condition;
+
     StateMachineModel* facade = &mFacade;
     auto getter = [facade, id]() -> QString { SMMethodEntry* m = facade->getData().getMethods().findMethod(id); return (m != nullptr ? m->getName() : QString()); };
     auto setter = [facade, id](const QString& value) { SMMethodEntry* m = facade->getData().getMethods().findMethod(id); if (m != nullptr) m->setName(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Method, getter, setter, newName, QObject::tr("Rename method")));
+
+    // Rename + reference rewrite as one undo step: name-based references (stimulus/action)
+    // flip with the entry; guard trees bind by ID and re-render the new name themselves.
+    SMCompositeCommand* composite = new SMCompositeCommand(mFacade.getData(), getNotifier(), QObject::tr("Rename method"));
+    new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Method, getter, setter, newName, QObject::tr("Rename method"), composite);
+    new SMRewriteReferencesCommand(mFacade.getData(), getNotifier(), target, id, oldName, newName, QObject::tr("Rename method"), composite);
+    mFacade.getUndoStack().push(composite);
 }
 
 void SMMethodModel::setMethodType(uint32_t id, SMMethodEntry::eMethodType type)

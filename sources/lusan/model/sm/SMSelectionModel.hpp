@@ -106,6 +106,15 @@ public:
      **/
     void reset();
 
+    /**
+     * \brief   Requests the canvas to reveal (navigate to + select) a referencing element.
+     *          The window brings the Design page forward and the canvas reveals it. Used by
+     *          the where-used popup so navigation works from any page, not only the canvas.
+     * \param   elementId   The state or transition to reveal.
+     * \param   isState     True when \a elementId is a state, false for a transition.
+     **/
+    void requestReveal(uint32_t elementId, bool isState);
+
 //////////////////////////////////////////////////////////////////////////
 // Signals
 //////////////////////////////////////////////////////////////////////////
@@ -121,6 +130,13 @@ signals:
      * \param   levelId     The new level owner ID.
      **/
     void signalActiveLevelChanged(uint32_t levelId);
+
+    /**
+     * \brief   Emitted by requestReveal() to ask the window+canvas to reveal an element.
+     * \param   elementId   The state or transition to reveal.
+     * \param   isState     True when \a elementId is a state, false for a transition.
+     **/
+    void signalRevealRequested(uint32_t elementId, bool isState);
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables

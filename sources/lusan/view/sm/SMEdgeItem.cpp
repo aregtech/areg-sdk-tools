@@ -37,6 +37,7 @@
 #include <QCursor>
 #include <QFont>
 #include <QFontMetricsF>
+#include <QGraphicsSceneHoverEvent>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsView>
 #include <QPainter>
@@ -140,9 +141,11 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mActiveEnd    (0)
     , mDragPoint    ( )
     , mGesture      (0)
+    , mHoverLink    (LinkNone)
 {
     setFlag(QGraphicsItem::ItemIsSelectable, true);
     setAcceptedMouseButtons(Qt::LeftButton);
+    setAcceptHoverEvents(true);     // drives the Ctrl+Shift label links (go-to-declaration).
     // A transition line always paints ABOVE the inactive state boxes so a box never hides it
     // (z = 1 vs a box's z = 0). A selected box raises to z = 2 to cover the inactive edges, and a
     // selected edge raises to z = 3 so it -- and its grab handles -- stay on top of everything.
@@ -551,6 +554,73 @@ QRectF SMEdgeItem::noteBadgeRect() const
     return QRectF(anchor.x() + 4.0, anchor.y() - 7.0, 13.0, 14.0);
 }
 
+QRectF SMEdgeItem::stimulusLinkRect() const
+{
+    if (mStimulusText.isEmpty())
+    {
+        return QRectF();
+    }
+
+    const QRectF label = labelRect();
+    if (label.isNull())
+    {
+        return QRectF();
+    }
+
+    // Mirror paintLabels: the stimulus is drawn at label.left() + 2, its own advance wide.
+    const QFontMetricsF metrics{ labelFont() };
+    const double advance = metrics.horizontalAdvance(mStimulusText);
+    return QRectF(label.left() + 2.0, label.top(), advance, label.height());
+}
+
+QRectF SMEdgeItem::guardLinkRect() const
+{
+    if (mGuardText.isEmpty())
+    {
+        return QRectF();
+    }
+
+    const QRectF label = labelRect();
+    if (label.isNull())
+    {
+        return QRectF();
+    }
+
+    // The guard clause is drawn just right of the stimulus (or at the label start when there is none).
+    const QFontMetricsF metrics{ labelFont() };
+    double x = label.left() + 2.0;
+    if (mStimulusText.isEmpty() == false)
+    {
+        x += metrics.horizontalAdvance(mStimulusText);
+    }
+
+    const double advance = metrics.horizontalAdvance(mGuardText);
+    return QRectF(x, label.top(), advance, label.height());
+}
+
+SMEdgeItem::eLink SMEdgeItem::linkRegionAt(const QPointF& pos) const
+{
+    const QRectF stimulus = stimulusLinkRect();
+    if ((stimulus.isNull() == false) && stimulus.contains(pos))
+    {
+        return LinkStimulus;
+    }
+
+    const QRectF guard = guardLinkRect();
+    if ((guard.isNull() == false) && guard.contains(pos))
+    {
+        return LinkGuard;
+    }
+
+    const QRectF action = actionRect();
+    if ((action.isNull() == false) && action.contains(pos))
+    {
+        return LinkAction;
+    }
+
+    return LinkNone;
+}
+
 QRectF SMEdgeItem::boundingRect() const
 {
     if (mPath.isEmpty())
@@ -858,6 +928,66 @@ void SMEdgeItem::paintLabels(QPainter* painter, const QPalette& palette)
         painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 6.0), QPointF(badge.right() - 2.5, badge.top() + 6.0));
         painter->drawLine(QPointF(badge.left() + 2.5, badge.top() + 9.5), QPointF(badge.right() - 4.5, badge.top() + 9.5));
     }
+
+    // Ctrl+Shift link feedback: underline the label part under the pointer so the user sees exactly
+    // what a click opens (the stimulus, the guard editor, or the operations), matching the editor's
+    // go-to-definition affordance. Drawn last so the rule sits above the text.
+    if (mHoverLink != LinkNone)
+    {
+        QRectF region;
+        switch (mHoverLink)
+        {
+        case LinkStimulus:  region = stimulusLinkRect(); break;
+        case LinkGuard:     region = guardLinkRect();    break;
+        case LinkAction:    region = actionRect();       break;
+        default:            break;
+        }
+
+        if (region.isNull() == false)
+        {
+            painter->setBrush(Qt::NoBrush);
+            painter->setPen(QPen(NESMDesign::selectionColor(palette), 1.0));
+            const double y = region.bottom() - 1.0;
+            painter->drawLine(QPointF(region.left(), y), QPointF(region.right(), y));
+        }
+    }
+}
+
+void SMEdgeItem::hoverMoveEvent(QGraphicsSceneHoverEvent* event)
+{
+    // Ctrl+Shift held turns the referenced label parts into links: underline the part under the
+    // pointer and switch to a link cursor. Without both modifiers the label behaves normally.
+    const Qt::KeyboardModifiers mods = event->modifiers();
+    const bool linkMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::ShiftModifier);
+    const eLink region = linkMode ? linkRegionAt(event->pos()) : LinkNone;
+    if (region != mHoverLink)
+    {
+        mHoverLink = region;
+        if (region == LinkNone)
+        {
+            unsetCursor();
+        }
+        else
+        {
+            setCursor(Qt::PointingHandCursor);
+        }
+
+        update();
+    }
+
+    SMCanvasItem::hoverMoveEvent(event);
+}
+
+void SMEdgeItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
+{
+    if (mHoverLink != LinkNone)
+    {
+        mHoverLink = LinkNone;
+        unsetCursor();
+        update();
+    }
+
+    SMCanvasItem::hoverLeaveEvent(event);
 }
 
 void SMEdgeItem::setSelectedPoint(int index)
@@ -1191,6 +1321,37 @@ QVariant SMEdgeItem::itemChange(GraphicsItemChange change, const QVariant& value
 
 void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
+    // Ctrl+Shift + primary click on a referenced label part is a link: the stimulus and the
+    // operations jump to their declarations; the guard opens the transition's guard editor. Plain
+    // clicks are untouched, so clicking a label to select or drag the transition still works.
+    const Qt::KeyboardModifiers mods = event->modifiers();
+    const bool linkMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::ShiftModifier);
+    if ((event->button() == Qt::LeftButton) && linkMode)
+    {
+        const eLink region = linkRegionAt(event->pos());
+        if (region != LinkNone)
+        {
+            if (SMScene* canvas = getCanvas())
+            {
+                if (region == LinkStimulus)
+                {
+                    canvas->requestGotoDefinition(getElementId(), false, SMScene::GotoStimulus);
+                }
+                else if (region == LinkGuard)
+                {
+                    canvas->requestGuardEdit(getElementId());
+                }
+                else
+                {
+                    canvas->requestGotoDefinition(getElementId(), false, SMScene::GotoAction);
+                }
+            }
+
+            event->accept();
+            return;
+        }
+    }
+
     if ((event->button() == Qt::LeftButton) && mHasNote && noteBadgeRect().contains(event->pos()))
     {
         startNoteEdit();

@@ -24,6 +24,7 @@
  ************************************************************************/
 #include <QTextEdit>
 
+#include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/view/sm/NEGuardStyle.hpp"
 #include "lusan/view/sm/SMFixBar.hpp"
@@ -198,6 +199,9 @@ signals:
     void islandEditRequested(int islandIndex, const QString& body);
     //!< The `Map arguments...` quick-fix: the bar opens the grid for the first call.
     void mapArgumentsRequested();
+    //!< A Ctrl+Shift click on a referenced symbol (attribute / constant / condition) asks the host
+    //!< to open that declaration's registry page. Relayed up through the Conditions tab to the design.
+    void signalNavigateToDefinition(SMReferences::eTarget kind, uint32_t declId);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -207,6 +211,7 @@ protected:
     void focusOutEvent(QFocusEvent* event) override;
     void insertFromMimeData(const QMimeData* source) override;
     QMimeData* createMimeDataFromSelection() const override;
+    void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
@@ -281,6 +286,18 @@ private:
 
     //!< Opens the island editor when the character at \p docPos is an island token.
     bool maybeOpenIslandAt(int docPos);
+
+    /**
+     * \brief   The navigable declaration referenced under a viewport point, for the Ctrl+Shift link.
+     *          Resolves a committed reference chip (by its token name) or a plain identifier word to
+     *          the catalog symbol under the pointer, then to a registry kind + document ID. Stimulus
+     *          parameters and unknown / unresolved names are not navigable.
+     * \param   viewportPos The pointer position in viewport coordinates.
+     * \param   kind        [out] The referenced declaration's kind (attribute / constant / condition).
+     * \param   declId      [out] The referenced declaration's document ID.
+     * \return  True when a navigable symbol lies under the point.
+     **/
+    bool linkSymbolAt(const QPoint& viewportPos, SMReferences::eTarget& kind, uint32_t& declId) const;
 
     //!< Caps the widget height to at most four visual lines.
     void updateHeight();

@@ -21,6 +21,7 @@
 
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/model/common/DocElementCommands.hpp"
+#include "lusan/model/sm/SMRenameCommands.hpp"
 
 namespace
 {
@@ -122,10 +123,15 @@ void SMAttributeModel::renameAttribute(uint32_t id, const QString& newName)
     if ((entry == nullptr) || (newName == entry->getName()))
         return;
 
+    const QString oldName{ entry->getName() };
     StateMachineModel* facade = &mFacade;
     auto getter = [facade, id]() -> QString { SMAttributeEntry* e = facade->getData().getAttributes().findElement(id); return (e != nullptr ? e->getName() : QString()); };
     auto setter = [facade, id](const QString& value) { SMAttributeEntry* e = facade->getData().getAttributes().findElement(id); if (e != nullptr) e->setName(value); };
-    mFacade.getUndoStack().push(new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Attribute, getter, setter, newName, QObject::tr("Rename attribute")));
+
+    SMCompositeCommand* composite = new SMCompositeCommand(mFacade.getData(), getNotifier(), QObject::tr("Rename attribute"));
+    new TDocSetPropertyCommand<QString>(getNotifier(), id, eDocElementKind::Attribute, getter, setter, newName, QObject::tr("Rename attribute"), composite);
+    new SMRewriteReferencesCommand(mFacade.getData(), getNotifier(), SMReferences::eTarget::Attribute, id, oldName, newName, QObject::tr("Rename attribute"), composite);
+    mFacade.getUndoStack().push(composite);
 }
 
 void SMAttributeModel::setType(uint32_t id, const QString& typeName)

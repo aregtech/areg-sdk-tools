@@ -23,6 +23,7 @@
 #include <cstdint>
 
 #include "lusan/data/sm/SMMethodData.hpp"
+#include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/view/common/TableCell.hpp"
 
 class DocumentElem;
@@ -79,6 +80,24 @@ public:
      *          method of a specific kind, e.g. from the Design page's Declare dropdown).
      **/
     MethodListView* getList() const;
+
+    /**
+     * \brief   Shows the where-used popup for the currently selected method (Find Usages /
+     *          Shift+F12). Does nothing beyond an information box if no method is selected.
+     **/
+    void whereUsedForCurrent();
+
+    /**
+     * \brief   Fills the search seed (kind/id/name) for the currently selected method, so
+     *          Ctrl+F searches that method's usages. False when no method is selected.
+     **/
+    bool currentReference(SMReferences::eTarget& target, uint32_t& id, QString& name) const;
+
+    /**
+     * \brief   Selects and reveals the method with the given document ID (go-to-declaration
+     *          target from the canvas). Does nothing if no method has that ID.
+     **/
+    void revealElement(uint32_t id);
 
 //////////////////////////////////////////////////////////////////////////
 // IETableHelper overrides

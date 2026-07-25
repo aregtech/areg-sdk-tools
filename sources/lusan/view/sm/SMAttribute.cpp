@@ -29,11 +29,12 @@
 #include "lusan/model/common/DocModelNotifier.hpp"
 #include "lusan/model/sm/SMAttributeModel.hpp"
 #include "lusan/model/sm/SMDataTypeModel.hpp"
-#include "lusan/model/sm/SMGuardWhereUsed.hpp"
+#include "lusan/model/sm/SMWhereUsed.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/view/common/AttributeDetailsView.hpp"
 #include "lusan/view/common/AttributeListView.hpp"
+#include "lusan/view/sm/SMWhereUsedMenu.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -431,6 +432,43 @@ uint32_t SMAttribute::currentAttributeId() const
     return (item != nullptr ? item->data(0, Qt::ItemDataRole::UserRole).toUInt() : 0u);
 }
 
+void SMAttribute::whereUsedForCurrent()
+{
+    const uint32_t id = currentAttributeId();
+    if (id == 0)
+    {
+        QMessageBox::information(this, tr("Where used"), tr("Select an attribute first."));
+        return;
+    }
+
+    StateMachineData& data = mModel.getFacade().getData();
+    const SMAttributeEntry* attr = data.getAttributes().findElement(id);
+    const QString name = (attr != nullptr) ? attr->getName() : QString();
+    const QList<SMReferences::Use> uses = SMWhereUsed::collect(data, SMReferences::eTarget::Attribute, name, id);
+    SMWhereUsedMenu::present(this, uses, mModel.getFacade().getSelectionModel(), name);
+}
+
+bool SMAttribute::currentReference(SMReferences::eTarget& target, uint32_t& id, QString& name) const
+{
+    const uint32_t current = currentAttributeId();
+    if (current == 0)
+        return false;
+
+    const SMAttributeEntry* attr = mModel.getFacade().getData().getAttributes().findElement(current);
+    if (attr == nullptr)
+        return false;
+
+    target = SMReferences::eTarget::Attribute;
+    id   = current;
+    name = attr->getName();
+    return true;
+}
+
+void SMAttribute::revealElement(uint32_t id)
+{
+    selectAttribute(id);
+}
+
 QString SMAttribute::genName()
 {
     static const QString _defName("NewAttribute");
@@ -475,19 +513,23 @@ void SMAttribute::onRemoveClicked()
     if (id == 0)
         return;
 
-    // Deleting an attribute still referenced by guards is refused with the where-used list;
-    // `Delete anyway` breaks the references VISIBLY (validation reports ERR).
-    const QList<SMGuardWhereUsed::Use> uses = SMGuardWhereUsed::symbolUses(mModel.getFacade().getData(), id);
+    // Deleting a referenced attribute shows every place it is used (name-based operations
+    // and mappings plus ID-bound guards); `Delete anyway` breaks the references VISIBLY --
+    // each becomes an unresolved-reference validation error (spec 9.4).
+    StateMachineData& data = mModel.getFacade().getData();
+    const SMAttributeEntry* attr = data.getAttributes().findElement(id);
+    const QString name = (attr != nullptr) ? attr->getName() : QString();
+    const QList<SMReferences::Use> uses = SMWhereUsed::collect(data, SMReferences::eTarget::Attribute, name, id);
     if (uses.isEmpty() == false)
     {
         QStringList places;
-        for (const SMGuardWhereUsed::Use& use : uses)
+        for (const SMReferences::Use& use : uses)
         {
             places.append(QStringLiteral("  - ") + use.location);
         }
 
-        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Attribute is used by guards")
-                            , tr("This attribute is used by %1 guard%2:\n%3\n\nDelete anyway? The affected guards break and are listed by validation.")
+        const QMessageBox::StandardButton choice = QMessageBox::warning(this, tr("Attribute is referenced")
+                            , tr("This attribute is used in %1 place%2:\n%3\n\nDelete anyway? The references break and are listed by validation.")
                               .arg(uses.size())
                               .arg((uses.size() == 1) ? QString() : QStringLiteral("s"))
                               .arg(places.join(QLatin1Char('\n')))

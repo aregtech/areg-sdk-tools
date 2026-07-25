@@ -25,6 +25,7 @@
 #include "lusan/view/sm/SMCanvasItem.hpp"
 
 #include "lusan/data/sm/SMState.hpp"
+#include "lusan/data/sm/SMReferences.hpp"
 #include "lusan/view/sm/SMNoteEditor.hpp"
 
 #include <QColor>
@@ -105,11 +106,25 @@ private:
      **/
     struct BodyRow
     {
-        eRowIcon    icon;           //!< The glyph kind.
-        QString     text;           //!< The row text.
-        eRowZone    zone;           //!< Where in the box the row is anchored.
-        bool        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the zone glyph).
-        bool        continues;      //!< Another row of the same group follows (draws a ` \` cue).
+        eRowIcon                    icon;           //!< The glyph kind.
+        QString                     text;           //!< The row text.
+        eRowZone                    zone;           //!< Where in the box the row is anchored.
+        bool                        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the zone glyph).
+        bool                        continues;      //!< Another row of the same group follows (draws a ` \` cue).
+        QList<SMReferences::Ref>    refs;           //!< Declarations this row references (empty = not a navigable link).
+    };
+
+    /**
+     * \struct  RowSlot
+     * \brief   One drawn body row after band packing: its index into \ref mRows, its top Y in item
+     *          coordinates, and whether it is the truncation ("...") slot. The single source of the
+     *          body layout, shared by painting and Ctrl+Shift link hit-testing so they never drift.
+     **/
+    struct RowSlot
+    {
+        int     index;      //!< The row's index into mRows.
+        double  y;          //!< The row's top Y in item coordinates.
+        bool    truncated;  //!< True when this slot draws the "..." overflow marker (not a link).
     };
 
 //////////////////////////////////////////////////////////////////////////
@@ -224,6 +239,21 @@ private:
      * \brief   Rebuilds the cached behavior rows from the state element.
      **/
     void rebuildRows(const SMStateEntry& state);
+
+    /**
+     * \brief   The drawn body rows after band packing (entry at top, exit at bottom, middle
+     *          centered, overflow truncated), each with its item-coordinate top Y. The shared
+     *          layout backing both paintBodyRows and Ctrl+Shift link hit-testing. Empty when the
+     *          box is collapsed, a marker, or has no body content.
+     **/
+    QList<RowSlot> bodyRowLayout() const;
+
+    /**
+     * \brief   The index (into mRows) of the navigable body row under an item-coordinate point, or
+     *          -1 when the point is over no row, over the truncation slot, or over a row that
+     *          references nothing. Used to underline and to route the Ctrl+Shift link click.
+     **/
+    int bodyRowAt(const QPointF& pos) const;
 
     /**
      * \brief   Paints the header: markers, name, badges, and the collapse chevron.
@@ -352,6 +382,7 @@ private:
     QRectF                      mResizeStart;   //!< The box scene geometry at resize start.
     QGraphicsProxyWidget*       mRenameProxy;   //!< The open in-place name editor, or nullptr.
     bool                        mClosingRename; //!< Guards re-entrant editor teardown.
+    int                         mHoverRow;      //!< Body row underlined as a link under Ctrl+Shift hover, or -1.
     SMNoteEditor                mNoteEditor;    //!< The open in-place note editor (if any).
 };
 

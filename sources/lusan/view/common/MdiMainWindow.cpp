@@ -163,6 +163,9 @@ MdiMainWindow::MdiMainWindow()
     , mActEditPaste (this)
     , mActEditUndo  (this)
     , mActEditRedo  (this)
+    , mActEditFind  (this)
+    , mActEditWhereUsed(this)
+    , mActEditGotoDef(this)
     , mActViewNavigator(this)
     , mActViewWokspace(this)
     , mActViewLogs  (this)
@@ -539,6 +542,33 @@ void MdiMainWindow::onEditRedo()
     if (active != nullptr)
     {
         active->redo();
+    }
+}
+
+void MdiMainWindow::onEditFind()
+{
+    MdiChild* active = activeMdiChild();
+    if (active != nullptr)
+    {
+        active->find();
+    }
+}
+
+void MdiMainWindow::onEditWhereUsed()
+{
+    MdiChild* active = activeMdiChild();
+    if (active != nullptr)
+    {
+        active->findUsages();
+    }
+}
+
+void MdiMainWindow::onEditGotoDef()
+{
+    MdiChild* active = activeMdiChild();
+    if (active != nullptr)
+    {
+        active->gotoDefinition();
     }
 }
 
@@ -969,9 +999,14 @@ void MdiMainWindow::onSubWindowActivated(QMdiSubWindow* mdiSubWindow)
 {
     MdiChild * mdiActive = mdiSubWindow != nullptr ? qobject_cast<MdiChild *>(mdiSubWindow->widget()) : nullptr;
     bool hasMdiChild = (mdiActive != nullptr);
+    // Find and where-used are FSM-only; the base MdiChild has no search/reference facility.
+    const bool isStateMachine = (qobject_cast<StateMachine*>(mdiActive) != nullptr);
     mActFileSave.setEnabled(hasMdiChild);
     mActFileSaveAs.setEnabled(hasMdiChild);
     mActEditPaste.setEnabled(hasMdiChild);
+    mActEditFind.setEnabled(isStateMachine);
+    mActEditWhereUsed.setEnabled(isStateMachine);
+    mActEditGotoDef.setEnabled(isStateMachine);
     mActFileClose.setEnabled(hasMdiChild);
     mActFileCloseAll.setEnabled(hasMdiChild);
     mActWindowsTile.setEnabled(hasMdiChild);
@@ -1195,7 +1230,7 @@ void MdiMainWindow::_createActions()
     connect(&mActFileNewFSM, &QAction::triggered, this, &MdiMainWindow::onFileNewFSM);
 
     initAction(mActFileNewLog, NELusanCommon::iconNewLiveLogs(NELusanCommon::SizeBig), tr("New &Live Logs"));
-    mActFileNewLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_L));
+    mActFileNewLog.setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_L));
     mActFileNewLog.setStatusTip(tr("Create a new live logs"));
     connect(&mActFileNewLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviLiveLogs); signalNewLiveLog();});
     
@@ -1205,7 +1240,8 @@ void MdiMainWindow::_createActions()
     connect(&mActFileOpen, &QAction::triggered, this, &MdiMainWindow::onFileOpen);
     
     initAction(mActFileOfflineLog, NELusanCommon::iconNewOfflineLogs(NELusanCommon::SizeBig), tr("Open O&ffline Logs"));
-    mActFileOfflineLog.setShortcut(QKeyCombination(Qt::Modifier::CTRL, Qt::Key::Key_F));
+    // Ctrl+F is reserved for Edit > Find (document search); offline logs move to Ctrl+Shift+O.
+    mActFileOfflineLog.setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
     mActFileOfflineLog.setStatusTip(tr("Open offline logs"));
     connect(&mActFileOfflineLog, &QAction::triggered, this, [this]() {mNaviDock.showTab(NavigationDock::NaviOfflineLogs); signalOpenOfflineLog();});
     
@@ -1259,6 +1295,24 @@ void MdiMainWindow::_createActions()
     mActEditRedo.setStatusTip(tr("Redo the last undone edit"));
     mActEditRedo.setEnabled(false);
     connect(&mActEditRedo, &QAction::triggered, this, &MdiMainWindow::onEditRedo);
+
+    initAction(mActEditFind, NELusanCommon::iconSearch(NELusanCommon::SizeBig), tr("&Find..."));
+    mActEditFind.setShortcut(QKeySequence::Find);
+    mActEditFind.setStatusTip(tr("Find a state, transition, or registry entry by name or ID"));
+    mActEditFind.setEnabled(false);
+    connect(&mActEditFind, &QAction::triggered, this, &MdiMainWindow::onEditFind);
+
+    initAction(mActEditWhereUsed, NELusanCommon::iconSearch(NELusanCommon::SizeBig), tr("Find &Usages"));
+    mActEditWhereUsed.setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F12));
+    mActEditWhereUsed.setStatusTip(tr("List everywhere the selected entry is referenced"));
+    mActEditWhereUsed.setEnabled(false);
+    connect(&mActEditWhereUsed, &QAction::triggered, this, &MdiMainWindow::onEditWhereUsed);
+
+    initAction(mActEditGotoDef, NELusanCommon::iconGotoDefinition(NELusanCommon::SizeBig), tr("Go to &Declaration"));
+    mActEditGotoDef.setShortcut(QKeySequence(Qt::Key_F12));
+    mActEditGotoDef.setStatusTip(tr("Go to the declaration referenced by the selected state or transition"));
+    mActEditGotoDef.setEnabled(false);
+    connect(&mActEditGotoDef, &QAction::triggered, this, &MdiMainWindow::onEditGotoDef);
 
     initAction(mActViewNavigator, NELusanCommon::iconViewNavigationWindow(NELusanCommon::SizeBig), tr("&Navigation Window"));
     mActViewNavigator.setStatusTip(tr("View Navigation Window"));
@@ -1352,6 +1406,10 @@ void MdiMainWindow::_createMenus()
     mEditMenu->addAction(&mActEditCut);
     mEditMenu->addAction(&mActEditCopy);
     mEditMenu->addAction(&mActEditPaste);
+    mEditMenu->addSeparator();
+    mEditMenu->addAction(&mActEditFind);
+    mEditMenu->addAction(&mActEditWhereUsed);
+    mEditMenu->addAction(&mActEditGotoDef);
 
     mViewMenu = menuBar()->addMenu(tr("&View"));
 

@@ -170,6 +170,11 @@ protected:
      **/
     bool writeToFile(const QString& filePath) override;
 
+    /**
+     * \brief   Returns the page tab host, enabling the shared Ctrl+PageDown / Ctrl+PageUp cycling.
+     **/
+    QTabWidget* pageTabWidget() override;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden member variables
 //////////////////////////////////////////////////////////////////////////

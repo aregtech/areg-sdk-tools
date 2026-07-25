@@ -21,6 +21,7 @@
 
 #include "lusan/app/LusanApplication.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/model/sm/SMSelectionModel.hpp"
 #include "lusan/view/common/MdiMainWindow.hpp"
 #include "lusan/view/common/NavigationDock.hpp"
 #include "lusan/view/sm/SMAttribute.hpp"
@@ -111,6 +112,18 @@ StateMachine::StateMachine(MdiMainWindow* wndMain, const QString& filePath /*= Q
     connect(&mModel, &StateMachineModel::signalDirtyChanged, this, &MdiChild::setModified);
     connect(&mModel.getUndoStack(), &QUndoStack::canUndoChanged, this, &MdiChild::signalCanUndoChanged);
     connect(&mModel.getUndoStack(), &QUndoStack::canRedoChanged, this, &MdiChild::signalCanRedoChanged);
+
+    // Where-used navigation (from any registry page) reveals the referencing element: bring the
+    // Design page forward and let the canvas navigate to and select it.
+    connect(&mModel.getSelectionModel(), &SMSelectionModel::signalRevealRequested, this, [this](uint32_t elementId, bool isState) {
+        ensureTabInitialized(static_cast<int>(PageDesign));
+        if (SMDesign* design = designPageIfBuilt())
+        {
+            mTabWidget.setCurrentIndex(static_cast<int>(PageDesign));
+            design->revealReference(elementId, isState);
+        }
+    });
+
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
@@ -126,6 +139,11 @@ void StateMachine::newFile()
 bool StateMachine::openSucceeded() const
 {
     return mModel.openSucceeded();
+}
+
+QTabWidget* StateMachine::pageTabWidget()
+{
+    return &mTabWidget;
 }
 
 void StateMachine::undo()
@@ -172,6 +190,151 @@ void StateMachine::paste()
     if ((design != nullptr) && isDesignPageCurrent())
     {
         design->pasteClipboard();
+    }
+}
+
+void StateMachine::find()
+{
+    // Resolve the seed from the page that is in front BEFORE switching tabs: a selected registry
+    // entry (or state) makes Ctrl+F search that specific entry's usages by id+kind, so a
+    // same-named entry of another kind is ignored (issue #538). No selection -> plain Find.
+    SMReferences::eTarget target = SMReferences::eTarget::State;
+    uint32_t id = 0;
+    QString name;
+    const bool seeded = currentSearchSeed(target, id, name);
+
+    ensureTabInitialized(static_cast<int>(PageDesign));
+    SMDesign* design = designPageIfBuilt();
+    if (design == nullptr)
+        return;
+
+    if (isDesignPageCurrent() == false)
+    {
+        mTabWidget.setCurrentIndex(static_cast<int>(PageDesign));
+    }
+
+    if (seeded)
+        design->beginSearch(name, target, id);
+    else
+        design->beginSearch();
+}
+
+bool StateMachine::currentSearchSeed(SMReferences::eTarget& target, uint32_t& id, QString& name)
+{
+    const int index = mTabWidget.currentIndex();
+    if (isTabInitialized(index) == false)
+        return false;
+
+    QWidget* page = mPages.at(index);
+    switch (index)
+    {
+    case PageAttributes:
+        return static_cast<SMAttribute*>(page)->currentReference(target, id, name);
+    case PageEvents:
+        return static_cast<SMEvent*>(page)->currentReference(target, id, name);
+    case PageMethods:
+        return static_cast<SMMethod*>(page)->currentReference(target, id, name);
+    case PageConstants:
+        return static_cast<SMConstant*>(page)->currentReference(target, id, name);
+    case PageDesign:
+    {
+        const QList<uint32_t>& selection = mModel.getSelectionModel().getSelection();
+        if (selection.size() != 1)
+            return false;
+
+        SMStateEntry* state = mModel.getData().findStateById(selection.first());
+        if (state == nullptr)
+            return false;
+
+        target = SMReferences::eTarget::State;
+        id   = state->getId();
+        name = state->getName();
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+void StateMachine::findUsages()
+{
+    const int index = mTabWidget.currentIndex();
+    if (isTabInitialized(index) == false)
+        return;
+
+    QWidget* page = mPages.at(index);
+    switch (index)
+    {
+    case PageAttributes:
+        static_cast<SMAttribute*>(page)->whereUsedForCurrent();
+        break;
+    case PageEvents:
+        static_cast<SMEvent*>(page)->whereUsedForCurrent();
+        break;
+    case PageMethods:
+        static_cast<SMMethod*>(page)->whereUsedForCurrent();
+        break;
+    case PageConstants:
+        static_cast<SMConstant*>(page)->whereUsedForCurrent();
+        break;
+    case PageDesign:
+        static_cast<SMDesign*>(page)->whereUsedForSelection();
+        break;
+    default:
+        // Overview, Data Types, Includes have no referenceable registry entry of their own.
+        break;
+    }
+}
+
+void StateMachine::gotoDefinition()
+{
+    // Go to Declaration navigates from a canvas use (state/transition) to the registry page that
+    // declares it, so it is meaningful only while the Design page is in front. On any other page
+    // the user is already looking at a declaration list.
+    ensureTabInitialized(static_cast<int>(PageDesign));
+    SMDesign* design = designPageIfBuilt();
+    if (design == nullptr)
+        return;
+
+    if (isDesignPageCurrent() == false)
+    {
+        QMessageBox::information(this, tr("Go to Declaration"),
+            tr("Go to Declaration works on a state or transition selected in the Design view."));
+        return;
+    }
+
+    design->gotoDefinitionForSelection();
+}
+
+void StateMachine::navigateToDefinition(SMReferences::eTarget kind, uint32_t declId)
+{
+    int pageIndex = static_cast<int>(PageOverview);
+    switch (kind)
+    {
+    case SMReferences::eTarget::Trigger:
+    case SMReferences::eTarget::Action:
+    case SMReferences::eTarget::Condition:  pageIndex = static_cast<int>(PageMethods);      break;
+    case SMReferences::eTarget::Event:
+    case SMReferences::eTarget::Timer:      pageIndex = static_cast<int>(PageEvents);        break;
+    case SMReferences::eTarget::Attribute:  pageIndex = static_cast<int>(PageAttributes);    break;
+    case SMReferences::eTarget::Constant:   pageIndex = static_cast<int>(PageConstants);     break;
+    case SMReferences::eTarget::State:      return;     // states are revealed on the canvas, not here.
+    }
+
+    ensureTabInitialized(pageIndex);
+    mTabWidget.setCurrentIndex(pageIndex);
+
+    QWidget* page = mPages.at(pageIndex);
+    switch (kind)
+    {
+    case SMReferences::eTarget::Trigger:
+    case SMReferences::eTarget::Action:
+    case SMReferences::eTarget::Condition:  static_cast<SMMethod*>(page)->revealElement(declId);     break;
+    case SMReferences::eTarget::Event:      static_cast<SMEvent*>(page)->revealEvent(declId);        break;
+    case SMReferences::eTarget::Timer:      static_cast<SMEvent*>(page)->revealTimer(declId);        break;
+    case SMReferences::eTarget::Attribute:  static_cast<SMAttribute*>(page)->revealElement(declId);  break;
+    case SMReferences::eTarget::Constant:   static_cast<SMConstant*>(page)->revealElement(declId);   break;
+    default:                                                                                         break;
     }
 }
 
@@ -509,6 +672,7 @@ void StateMachine::ensureTabInitialized(int index)
         design->setToolbarVisible(mToolbarVisible);
         connect(design, &SMDesign::signalDeclareRequested, this, &StateMachine::onDeclareRequested);
         connect(design, &SMDesign::signalNavigateToPage, this, &StateMachine::onNavigateToPage);
+        connect(design, &SMDesign::signalNavigateToDefinition, this, &StateMachine::navigateToDefinition);
         // The canvas View submenu moves the toolbar / Properties / Outline between the Design
         // page and the Navigation Window; the main window owns that global placement (issue #516).
         connect(design, &SMDesign::signalPlaceDesignWidget, this, [this](int widget, int place) {

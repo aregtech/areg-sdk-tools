@@ -66,6 +66,20 @@ private:
         , Label     //!< The stimulus label.
     };
 
+    /**
+     * \enum    eLink
+     * \brief   The navigable part of an edge label under a Ctrl+Shift link interaction. Each part
+     *          maps to a distinct jump: the stimulus and the operations go to their registry
+     *          declarations; the guard opens the transition's guard editor.
+     **/
+    enum eLink
+    {
+          LinkNone = 0  //!< Not over any navigable label part.
+        , LinkStimulus  //!< The stimulus signature -- jumps to its trigger / event / timer declaration.
+        , LinkGuard     //!< The `[guard]` clause -- opens the guard (Conditions) editor for the transition.
+        , LinkAction    //!< The operation summary -- jumps to its action / event / timer declarations.
+    };
+
 //////////////////////////////////////////////////////////////////////////
 // Constructor / Destructor
 //////////////////////////////////////////////////////////////////////////
@@ -202,6 +216,8 @@ protected:
     virtual void mouseReleaseEvent(QGraphicsSceneMouseEvent* event) override;
     virtual void mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event) override;
     virtual QVariant itemChange(GraphicsItemChange change, const QVariant& value) override;
+    virtual void hoverMoveEvent(QGraphicsSceneHoverEvent* event) override;
+    virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -272,6 +288,25 @@ private:
      *          valid only when the transition has a bound note.
      **/
     QRectF noteBadgeRect() const;
+
+    /**
+     * \brief   The item-coordinate rectangle of the stimulus signature within the label, or an
+     *          empty rect when the transition has no stimulus text. Matches the geometry paintLabels
+     *          uses, so the Ctrl+Shift link underline and hit-test align with the drawn text.
+     **/
+    QRectF stimulusLinkRect() const;
+
+    /**
+     * \brief   The item-coordinate rectangle of the `[guard]` clause within the label, or an empty
+     *          rect when the transition has no guard. Sits just right of the stimulus rectangle.
+     **/
+    QRectF guardLinkRect() const;
+
+    /**
+     * \brief   The navigable label part under an item-coordinate point (stimulus, guard, or action),
+     *          or LinkNone. Used both to underline on hover and to route the Ctrl+Shift click.
+     **/
+    eLink linkRegionAt(const QPointF& pos) const;
 
     /**
      * \brief   Paints the arrowhead pointing from \p from to \p tip.
@@ -359,6 +394,7 @@ private:
     int                     mActiveEnd;     //!< The active endpoint for keyboard nudging: 0 none, 1 begin, 2 end.
     QPointF                 mDragPoint;     //!< The live free position of the dragged endpoint.
     uint32_t                mGesture;       //!< The coalescing gesture ID of the active drag.
+    eLink                   mHoverLink;     //!< The label part underlined as a link under Ctrl+Shift hover, or LinkNone.
 };
 
 //////////////////////////////////////////////////////////////////////////

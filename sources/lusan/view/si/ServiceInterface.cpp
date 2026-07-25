@@ -115,6 +115,11 @@ bool ServiceInterface::openSucceeded() const
     return mModel.openSucceeded();
 }
 
+QTabWidget* ServiceInterface::pageTabWidget()
+{
+    return &mTabWidget;
+}
+
 QString ServiceInterface::newDocumentName()
 {
     static uint32_t _seqNr{0};

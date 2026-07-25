@@ -53,6 +53,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMStateItem.cpp
     ${LUSAN}/view/sm/SMTimerDetails.cpp
     ${LUSAN}/view/sm/SMToolIcons.cpp
+    ${LUSAN}/view/sm/SMWhereUsedMenu.cpp
     ${LUSAN}/view/sm/StateMachine.cpp
 )
 
@@ -112,5 +113,6 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMStateItem.hpp
     ${LUSAN}/view/sm/SMTimerDetails.hpp
     ${LUSAN}/view/sm/SMToolIcons.hpp
+    ${LUSAN}/view/sm/SMWhereUsedMenu.hpp
     ${LUSAN}/view/sm/StateMachine.hpp
 )

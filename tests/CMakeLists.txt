@@ -48,10 +48,13 @@ set(LUSAN_TEST_SUPPORT_SRC
     ${LUSAN}/data/sm/SMMethodData.cpp
     ${LUSAN}/data/sm/SMOperation.cpp
     ${LUSAN}/data/sm/SMOverviewData.cpp
+    ${LUSAN}/data/sm/SMReferences.cpp
     ${LUSAN}/data/sm/SMState.cpp
     ${LUSAN}/data/sm/SMTimerData.cpp
     ${LUSAN}/data/sm/SMTransition.cpp
     ${LUSAN}/data/sm/StateMachineData.cpp
+    # model/sm (headless reference glue)
+    ${LUSAN}/model/sm/SMGoToDef.cpp
 )
 
 qt_add_executable(lusan_sm_tests
@@ -71,6 +74,23 @@ target_link_libraries(lusan_sm_tests PRIVATE
 
 # A console test, not a windowed app - keep stdout for the harness.
 set_target_properties(lusan_sm_tests PROPERTIES WIN32_EXECUTABLE OFF)
+
+# SM-26: the reference walker (where-used completeness + rename reference-rewrite
+# round-trip). Headless: the data layer only, exercising every reference kind.
+qt_add_executable(lusan_sm_reference_tests
+    ${LUSAN_TEST_SUPPORT_SRC}
+    ${LUSAN_ROOT}/tests/sm/SMReferenceTests.cpp
+)
+target_include_directories(lusan_sm_reference_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
+target_compile_definitions(lusan_sm_reference_tests PRIVATE ${COMMON_COMPILE_DEF} IMP_LOGGER_DLL)
+target_link_libraries(lusan_sm_reference_tests PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+    areg::areg
+    areg::aregextend
+    areg::areglogger
+    aregsqlite3
+)
+set_target_properties(lusan_sm_reference_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 # SM-02: deterministic XML round-trip + parse robustness. Reuses the same headless
 # support sources; the reference documents live next to the spec in .claude/.
@@ -136,6 +156,7 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMRenameCommands.cpp
     # StateMachineModel's load path applies the legacy->draft guard shim (SM-21 U4).
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMGuardParser.cpp
@@ -187,6 +208,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
@@ -238,6 +260,7 @@ qt_add_executable(lusan_sm_guard_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
@@ -266,6 +289,7 @@ qt_add_executable(lusan_sm_guard_ladder_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
@@ -369,6 +393,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
@@ -425,6 +450,10 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
     ${LUSAN}/view/sm/SMValidationPanel.cpp
+    ${LUSAN}/data/sm/SMReferences.cpp
+    ${LUSAN}/model/sm/SMGoToDef.cpp
+    ${LUSAN}/model/sm/SMWhereUsed.cpp
+    ${LUSAN}/view/sm/SMWhereUsedMenu.cpp
     ${LUSAN}/view/sm/SMDesign.cpp
     ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
@@ -472,6 +501,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN_CMD_COMMON_SRC}
     ${LUSAN}/model/sm/SMCommand.cpp
+    ${LUSAN}/model/sm/SMRenameCommands.cpp
     ${LUSAN}/model/sm/SMConditionText.cpp
     ${LUSAN}/model/sm/SMLayoutCommands.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
@@ -500,6 +530,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMGuardWhereUsed.cpp
+    ${LUSAN}/model/sm/SMWhereUsed.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/view/common/CppSyntaxHighlighter.cpp
     ${LUSAN}/view/common/EditCancelFilter.cpp
@@ -534,6 +565,7 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/view/sm/SMRefCompleter.cpp
     ${LUSAN}/view/sm/SMTryStrip.cpp
     ${LUSAN}/view/sm/SMToolIcons.cpp
+    ${LUSAN}/view/sm/SMWhereUsedMenu.cpp
 )
 
 qt_add_executable(lusan_sm_guard_ui_shots
@@ -645,6 +677,7 @@ set_target_properties(lusan_si_command_tests PROPERTIES WIN32_EXECUTABLE OFF)
 
 enable_testing()
 add_test(NAME sm_model_tests COMMAND lusan_sm_tests)
+add_test(NAME sm_reference_tests COMMAND lusan_sm_reference_tests)
 add_test(NAME sm_serialization_tests COMMAND lusan_sm_serialization_tests)
 add_test(NAME sm_guard_tests COMMAND lusan_sm_guard_tests)
 add_test(NAME sm_guard_catalog_tests COMMAND lusan_sm_guard_catalog_tests)

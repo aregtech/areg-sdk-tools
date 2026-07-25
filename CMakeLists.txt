@@ -42,7 +42,23 @@ include_directories(${LUSAN_BASE})
 include_directories(${LUSAN_THIRDPARTY})
 include("${LUSAN_BASE}/CMakeLists.txt")
 
+# Per-platform application icon source: an .rc embedding the .ico on Windows, and the .icns
+# bundled into Resources on macOS. Linux uses the runtime QIcon plus an installed .desktop
+# entry and hicolor icons (see the install rules below). All are baked from res/logo/lusan.svg
+# by res/logo/make-icons.py.
+set(LUSAN_APP_ICON)
+if (WIN32)
+    enable_language(RC)
+    set(LUSAN_APP_ICON "${LUSAN_BASE}/lusan/res/logo/lusan.rc")
+elseif (APPLE)
+    set(LUSAN_APP_ICON "${LUSAN_BASE}/lusan/res/logo/lusan.icns")
+    set_source_files_properties("${LUSAN_APP_ICON}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+endif()
+
 list(APPEND PROJECT_SOURCES "${LUSAN_TRANS}" "${LUSAN_RES}" "${LUSAN_UI}" "${LUSAN_HDR}" "${LUSAN_SRC}")
+if (LUSAN_APP_ICON)
+    list(APPEND PROJECT_SOURCES "${LUSAN_APP_ICON}")
+endif()
 
 qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${LUSAN_TRANS})
 qt_add_executable(${APP_NAME} MANUAL_FINALIZATION ${PROJECT_SOURCES})
@@ -65,6 +81,7 @@ set_target_properties(${APP_NAME} PROPERTIES
     ${BUNDLE_ID_OPTION}
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    MACOSX_BUNDLE_ICON_FILE lusan.icns
     MACOSX_BUNDLE TRUE
     WIN32_EXECUTABLE TRUE
 )
@@ -102,6 +119,19 @@ endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(${APP_NAME})
+endif()
+
+# Linux desktop integration: install the launcher entry and hicolor icons so the app icon
+# shows up in the application menu (the running window's icon comes from QIcon at runtime).
+if (UNIX AND NOT APPLE)
+    include(GNUInstallDirs)
+    install(TARGETS ${APP_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan-256.png"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps" RENAME lusan.png)
+    install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan.svg"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps" RENAME lusan.svg)
+    install(FILES "${LUSAN_BASE}/lusan/res/logo/lusan.desktop"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 endif()
 
 # Opt-in unit tests (additive; the default application build is unaffected).

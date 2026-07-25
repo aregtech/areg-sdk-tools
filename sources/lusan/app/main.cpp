@@ -24,6 +24,8 @@
 #include <QTranslator>
 #include <QCommonStyle>
 #include <QStyleFactory>
+#include <QIcon>
+#include <QSize>
 
 namespace
 {
@@ -38,6 +40,17 @@ int main(int argc, char *argv[])
     LusanApplication::setOrganizationName(_organization);
     LusanApplication::setApplicationName(_application);
     LusanApplication::setApplicationVersion(_version);
+
+    // Application / window icon (taskbar, title bar, macOS dock, Linux WM). The multi-size
+    // PNG set is baked from res/logo/lusan.svg by res/logo/make-icons.py; the Windows .exe
+    // and macOS .app bundle icons are wired separately in the top-level CMakeLists.txt.
+    QIcon appIcon;
+    for (int iconSize : { 16, 24, 32, 48, 64, 128, 256 })
+    {
+        appIcon.addFile(QString(":/icons/app-logo-%1.png").arg(iconSize), QSize(iconSize, iconSize));
+    }
+    LusanApplication::setWindowIcon(appIcon);
+
     areg::Application::set_working_directory(nullptr);
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();

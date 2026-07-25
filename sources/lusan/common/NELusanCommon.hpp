@@ -601,6 +601,9 @@ namespace NELusanCommon
     //<! Loads search by wild card button icon and sets the specified size
     inline QIcon iconSearchWildCard(const QSize & size = QSize{ 32, 32 });
 
+    //!< Loads the go-to-declaration (jump) icon and sets the specified size
+    inline QIcon iconGotoDefinition(const QSize & size = QSize{ 32, 32 });
+
     //<! Loads go up icon and sets the specified size
     inline QIcon iconGoUp(const QSize & size = QSize{ 32, 32 });
 
@@ -764,6 +767,14 @@ inline QIcon NELusanCommon::iconSearchMatchWord(const QSize & size)
 inline QIcon NELusanCommon::iconSearchWildCard(const QSize & size)
 {
     return loadIcon(":/icons/search-wild-card", size);
+}
+
+inline QIcon NELusanCommon::iconGotoDefinition(const QSize & size)
+{
+    // "go-jump" is the freedesktop standard name; Qt's ThemeIcon enum has no GoJump member.
+    QIcon icon{ QIcon::fromTheme(QStringLiteral("go-jump")) };
+    icon.actualSize(size, QIcon::Mode::Normal, QIcon::State::On);
+    return icon;
 }
 
 inline QIcon NELusanCommon::iconGoUp(const QSize & size)
