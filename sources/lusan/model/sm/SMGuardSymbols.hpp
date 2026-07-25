@@ -43,7 +43,32 @@ class SMMethodEntry;
  **/
 namespace SMGuardSymbols
 {
+    /**
+     * \enum    eScoped
+     * \brief   The outcome of resolving a scope-qualified operand `Type::Member` against the
+     *          document's data type registry.
+     **/
+    enum class eScoped
+    {
+          NoType    //!< The head name is not a declared data type: the operand is undefined.
+        , NoMember  //!< The head is a declared enumeration/structure that has no such member.
+        , Opaque    //!< The head is an imported type: what follows belongs to the foreign header.
+        , Ok        //!< The member is declared by the type.
+    };
+
     // ---- Forward lookups (name -> ID), used by the parser -----------------
+
+    /**
+     * \brief   Resolves a scope-qualified operand -- `Numbers::Zero` -- against the data type
+     *          registry: an enumeration checks its enumerators, a structure its fields, and an
+     *          imported type accepts anything (only the imported name itself is ours to know).
+     * \param   parts       The `::`-separated segments, head first; at least two.
+     * \param   typeNameOut Receives the head type's name when it is declared (the operand's type).
+     **/
+    eScoped scopedValue(const StateMachineData& data, const QStringList& parts, QString& typeNameOut);
+
+    //!< The declared member names (enumerators / fields) of \p typeName, empty for any other type.
+    QStringList scopedMembers(const StateMachineData& data, const QString& typeName);
 
     //!< The attribute ID for \p name, or 0 when no attribute has that name.
     uint32_t attributeId(const StateMachineData& data, const QString& name);
@@ -73,6 +98,17 @@ namespace SMGuardSymbols
 
     //!< The current name of the stimulus parameter \p id in \p transitionId, or empty.
     QString paramName(const StateMachineData& data, uint32_t transitionId, uint32_t id);
+
+    // ---- Declared operand types (ID -> type name), used by the type check --
+
+    //!< The declared type of the attribute \p id, or empty when it no longer exists.
+    QString attributeType(const StateMachineData& data, uint32_t id);
+
+    //!< The declared type of the constant \p id, or empty when it no longer exists.
+    QString constantType(const StateMachineData& data, uint32_t id);
+
+    //!< The declared type of the stimulus parameter \p id in \p transitionId, or empty.
+    QString paramType(const StateMachineData& data, uint32_t transitionId, uint32_t id);
 
     //!< The condition method with the document ID \p id, or nullptr.
     const SMMethodEntry* method(const StateMachineData& data, uint32_t id);

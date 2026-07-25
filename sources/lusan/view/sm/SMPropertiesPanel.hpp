@@ -109,6 +109,14 @@ signals:
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////
+public:
+    /**
+     * \brief   The panel's own, fixed minimum width (\ref NESMDesign::PanelMinWidth), independent
+     *          of what the current selection puts on screen -- the hosting dock reads this to
+     *          decide how narrow the user may drag it.
+     **/
+    virtual QSize minimumSizeHint() const override;
+
 protected:
     /**
      * \brief   Commits a multi-line description editor (state / transition) when it loses
@@ -164,12 +172,14 @@ private:
     void applyStimulus();
 
     /**
-     * \brief   Fills the stimulus picker with every trigger (by name), event ("on_event_<name>"),
-     *          and timer ("on_timer_<name>"), each row carrying its kind and real name so the
-     *          same name across an event and a timer stays unambiguous. Returns the display label
-     *          for the given (kind, name) so the current transition's stimulus can be shown.
+     * \brief   Fills the stimulus picker with every trigger, event and timer under its DECLARED
+     *          name, marked by kind (a call, a lightning bolt, a clock) rather than by a
+     *          synthesized handler name -- how a handler is spelled is the code generator's
+     *          choice, not the editor's. Each row carries its kind and name as data, so the same
+     *          name in two registries stays unambiguous.
+     * \return  The row to select for the given (kind, name), 0 ("(none)") when there is none.
      **/
-    QString populateStimulusPicker(int currentKind, const QString& currentName);
+    int populateStimulusPicker(int currentKind, const QString& currentName);
 
     /**
      * \brief   Reorders the current state's transition at \p from to \p to as one undo step

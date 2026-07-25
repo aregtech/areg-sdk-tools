@@ -256,28 +256,16 @@ void SMPlaceStateTool::placeState(const QRectF& box)
         return;
     }
 
-    SMStateEntry::eStateKind kind = SMStateEntry::eStateKind::Normal;
-    if (mKind == NESMDesign::eCanvasTool::AddStartState)
-    {
-        // A level has exactly one entry point. The action is disabled while a Start state
-        // exists, but a sticky tool outlives the click that placed one, so re-check here.
-        if (level->getStartState() != nullptr)
-        {
-            return;
-        }
+    // A level's Start state comes with the level and cannot be removed, so it is never placed
+    // by hand: this tool makes a Normal or a Final state only.
+    const SMStateEntry::eStateKind kind = (mKind == NESMDesign::eCanvasTool::AddFinalState)
+                                            ? SMStateEntry::eStateKind::Final
+                                            : SMStateEntry::eStateKind::Normal;
 
-        kind = SMStateEntry::eStateKind::Start;
-    }
-    else if (mKind == NESMDesign::eCanvasTool::AddFinalState)
-    {
-        kind = SMStateEntry::eStateKind::Final;
-    }
-
-    // Markers read as terminals / entry points, so they are named plainly "Start" and
-    // "Final" (then Final2, Final3, ...), not "NewFinalN" (issue #514).
-    const QString base = (kind == SMStateEntry::eStateKind::Start  ? QStringLiteral("Start")
-                        : kind == SMStateEntry::eStateKind::Final  ? QStringLiteral("Final")
-                                                                   : QStringLiteral("NewState"));
+    // A Final marker reads as a terminal, so it is named plainly "Final" (then Final2,
+    // Final3, ...), not "NewFinalN" (issue #514).
+    const QString base = (kind == SMStateEntry::eStateKind::Final) ? QStringLiteral("Final")
+                                                                  : QStringLiteral("NewState");
     QString name{ base };
     for (int i = 2; data.findState(name) != nullptr; ++i)
     {
@@ -823,7 +811,6 @@ std::unique_ptr<SMCanvasTool> createCanvasTool(NESMDesign::eCanvasTool tool, SMS
     case NESMDesign::eCanvasTool::Select:
         return std::make_unique<SMSelectTool>(scene);
     case NESMDesign::eCanvasTool::AddState:
-    case NESMDesign::eCanvasTool::AddStartState:
     case NESMDesign::eCanvasTool::AddFinalState:
         return std::make_unique<SMPlaceStateTool>(scene, tool);
     case NESMDesign::eCanvasTool::AddTransition:

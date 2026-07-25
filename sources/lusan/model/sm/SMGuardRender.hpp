@@ -149,7 +149,7 @@ public:
     static void refreshNames(const StateMachineData& data, uint32_t transitionId, SMGuardNode& node);
 
     /**
-     * rief   A SHORT, structural summary of \p guard for the FSM canvas label, where the full
+     * \brief   A SHORT, structural summary of \p guard for the FSM canvas label, where the full
      *          expression does not fit and a wall of C++ tells the reader nothing.
      *          Operators and structure are kept; the bulky parts collapse:
      *          - a condition call keeps its name, its arguments collapse: `HasWaiting(...)`;

@@ -50,7 +50,6 @@ namespace NESMDesign
     {
           Select        //!< Default pointer: select, multi-select, move.
         , AddState      //!< Place a normal state.
-        , AddStartState //!< Place the level's start state.
         , AddFinalState //!< Place a final state.
         , AddTransition //!< Draw a transition between states.
         , Waypoint      //!< Insert / remove edge waypoints.
@@ -96,13 +95,35 @@ namespace NESMDesign
     //!< The grid reaches full opacity when one cell is at least this large on screen.
     constexpr double    GridFullPixels  { 12.0 };
 
-    //!< The full span of the crosshair cursor shown while a placement tool is armed, in
+    /**
+     * \brief   True for the tools that AIM: the ones that drop a brand-new element exactly where
+     *          the user clicks, and therefore swap the pointer for a crosshair. Every other mode
+     *          keeps the ordinary pointer, because it acts on what is already on the canvas
+     *          (Select, Waypoint, ColorApply) or, like AddNote, is placed loosely enough that a
+     *          crosshair only makes the canvas feel stuck in a mode (issue #543).
+     *
+     *          This is the whole list -- edit it to change which tools aim.
+     **/
+    constexpr bool toolAims(eCanvasTool tool)
+    {
+        return (tool == eCanvasTool::AddState)
+            || (tool == eCanvasTool::AddFinalState)
+            || (tool == eCanvasTool::AddTransition);
+    }
+
+    //!< The full span of the crosshair cursor shown while an aiming tool is armed, in
     //!< device-independent pixels. Kept odd so the hot spot lands on a single center pixel.
     //!< The system Qt::CrossCursor is about twice this and reads as heavy on a dense canvas;
     //!< a value of 0 or less falls back to it.
     constexpr int       ToolCursorSize      { 15 };
     //!< The stroke width of the crosshair, in device-independent pixels.
     constexpr int       ToolCursorWidth     { 1 };
+
+    //!< The narrowest the Design page's Properties panel ever asks to be, in device-independent
+    //!< pixels. It is a CEILING on the panel's minimum width, not a starting size: nothing the
+    //!< panel shows may widen it, so the dock separator keeps its full travel and the width stays
+    //!< the user's to set. Raise it if the panel's controls become unusable when squeezed.
+    constexpr int       PanelMinWidth   { 180 };
 
     //!< The fixed canvas working area of one machine level.
     constexpr double    SceneExtent     { 10000.0 };

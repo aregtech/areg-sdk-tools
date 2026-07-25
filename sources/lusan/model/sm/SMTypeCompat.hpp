@@ -69,6 +69,14 @@ public:
     static QString areComparable(const QString& lhsType, SMConditionEntry::eOperator op, const QString& rhsType);
 
     /**
+     * \brief   The same judgement stated without the legacy condition-row operator, for the guard
+     *          expression parser: \p ordering is true for `<`, `<=`, `>`, `>=` and false for
+     *          `==` / `!=`. Both overloads share one rule set, so a comparison never reads as
+     *          valid on one surface and invalid on the other.
+     **/
+    static QString areComparable(const QString& lhsType, bool ordering, const QString& rhsType);
+
+    /**
      * \brief   True if \p typeName is one of the `.siml` primitive type names.
      **/
     static bool isPrimitive(const QString& typeName);

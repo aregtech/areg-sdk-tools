@@ -267,6 +267,7 @@ qt_add_executable(lusan_sm_guard_tests
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardTests.cpp
 )
 target_include_directories(lusan_sm_guard_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
@@ -344,6 +345,7 @@ qt_add_executable(lusan_sm_guard_catalog_tests
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardCatalogTests.cpp
@@ -370,6 +372,7 @@ qt_add_executable(lusan_sm_guard_eval_tests
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardEvalTests.cpp
 )
@@ -457,6 +460,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMDesign.cpp
     ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
+    ${LUSAN}/view/sm/SMKindGlyph.cpp
     ${LUSAN}/view/sm/SMNoteEditor.cpp
     ${LUSAN}/view/sm/SMNoteItem.cpp
     ${LUSAN}/view/sm/SMOutlinePanel.cpp
@@ -595,6 +599,7 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN_GUARD_UI_SRC}
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/view/sm/SMPropertiesPanel.cpp
+    ${LUSAN}/view/sm/SMKindGlyph.cpp
     ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp

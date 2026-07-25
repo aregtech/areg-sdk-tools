@@ -134,12 +134,16 @@ QString SMTypeCompat::areComparable(const QString& lhsType, SMConditionEntry::eO
     if (op == SMConditionEntry::eOperator::None)
         return QString();
 
+    return areComparable(lhsType
+                       , (op != SMConditionEntry::eOperator::Equal) && (op != SMConditionEntry::eOperator::NotEqual)
+                       , rhsType);
+}
+
+QString SMTypeCompat::areComparable(const QString& lhsType, bool ordering, const QString& rhsType)
+{
     // An operand whose type is not resolved yet cannot be judged.
     if (lhsType.isEmpty() || rhsType.isEmpty())
         return QString();
-
-    const bool ordering = (op != SMConditionEntry::eOperator::Equal)
-                       && (op != SMConditionEntry::eOperator::NotEqual);
 
     // bool / String: Equal / NotEqual only, and only against the same type.
     if (isBoolOrString(lhsType) || isBoolOrString(rhsType))

@@ -51,6 +51,10 @@ SMGuardStatusLine::SMGuardStatusLine(QWidget* parent /*= nullptr*/)
     mStatus = new QLabel(this);
     mStatus->setObjectName(QStringLiteral("smGuardStatus"));
     mStatus->setTextFormat(Qt::RichText);
+    // A verdict is a sentence, and a sentence is wider than a docked panel. An Ignored horizontal
+    // policy makes the label ask for NO width at all, so a diagnostic can never widen the panel the
+    // user sized -- the text elides to the width it is given and the tooltip keeps it whole.
+    mStatus->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
     // LinksAccessibleByMouse is required in addition to the selectable flag: without it the
     // recovery hyperlink renders but never fires linkActivated (R20).
     mStatus->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::LinksAccessibleByMouse);
@@ -125,6 +129,7 @@ void SMGuardStatusLine::clearStatus()
     mSugFixId.clear();
     mSugPayload.clear();
     mSugLabel.clear();
+    mHtml.clear();
     mStatus->clear();
     mChips->hide();
     hide();
@@ -134,16 +139,17 @@ void SMGuardStatusLine::updateLabel()
 {
     // `ok` alone when the guard is sound; `err: <what is wrong>` / `warn: <what is risky>` when it
     // is not -- the severity key carries the state and the message carries the detail, nothing else.
+    const QString word = severityWord(mSeverity);
     const QColor sevColor = NEGuardStyle::severityColor(mSeverity);
     QString html = QStringLiteral("<span style='color:%1; font-weight:bold;'>%2</span>")
-                       .arg(sevColor.name(), severityWord(mSeverity));
+                       .arg(sevColor.name(), word);
     if (mSeverity == NEGuardStyle::eSeverity::Ok)
     {
         mStatus->setToolTip(QString());
     }
     else
     {
-        html += QStringLiteral(": %1").arg(mVerdict.toHtmlEscaped());
+        html += QStringLiteral(": %1").arg(elidedVerdict(word).toHtmlEscaped());
         mStatus->setToolTip(mVerdict);
     }
 
@@ -156,7 +162,37 @@ void SMGuardStatusLine::updateLabel()
                     .arg(mSugFixId, mSugPayload.toHtmlEscaped(), mSugLabel.toHtmlEscaped());
     }
 
-    mStatus->setText(html);
+    // Only when it actually changed: setting the same text still asks the layout to run, and this
+    // is called FROM a resize -- re-entering the layout from inside it is what made the panel
+    // judder while the user dragged its edge.
+    if (html != mHtml)
+    {
+        mHtml = html;
+        mStatus->setText(html);
+    }
+}
+
+QString SMGuardStatusLine::elidedVerdict(const QString& severityWord) const
+{
+    // The verdict is cut to the room the label was GIVEN, never the other way round. Room the
+    // severity key and the recovery link already claim is taken off the budget first.
+    const int room = mStatus->contentsRect().width();
+    if (room <= 0)
+    {
+        return mVerdict;    // not laid out yet; the resize that follows re-elides
+    }
+
+    const QFontMetrics metrics(mStatus->font());
+    int budget = room - metrics.horizontalAdvance(severityWord + QStringLiteral(": "));
+    if (mSugFixId.isEmpty() == false)
+    {
+        budget -= metrics.horizontalAdvance(QStringLiteral("  ->  ") + mSugLabel);
+    }
+
+    // Below a few characters an elided verdict says nothing at all; keep a readable stub and let
+    // the label clip it -- the widget still asks for no width, so the panel is unaffected either way.
+    constexpr int MIN_BUDGET = 40;
+    return metrics.elidedText(mVerdict, Qt::ElideRight, qMax(MIN_BUDGET, budget));
 }
 
 void SMGuardStatusLine::resizeEvent(QResizeEvent* event)

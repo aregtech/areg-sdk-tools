@@ -222,7 +222,6 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActUndo      (nullptr)
     , mActRedo      (nullptr)
     , mActAddState  (nullptr)
-    , mActAddStart  (nullptr)
     , mActAddFinal  (nullptr)
     , mActAddTransition(nullptr)
     , mActAddNote   (nullptr)
@@ -665,11 +664,6 @@ void SMDesign::setupActions()
 
     mActAddState = placementAction(tr("Add State"), QKeySequence(Qt::Key_S), NESMDesign::eCanvasTool::AddState);
 
-    // A level carries a single entry point, so this one is normally disabled; it exists for
-    // the level that lost its Start state (deleted, or never present in an imported file).
-    mActAddStart = placementAction(tr("Add Start State"), QKeySequence(Qt::SHIFT | Qt::Key_S)
-                                   , NESMDesign::eCanvasTool::AddStartState);
-
     mActAddFinal = placementAction(tr("Add Final State"), QKeySequence(Qt::Key_F)
                                    , NESMDesign::eCanvasTool::AddFinalState);
 
@@ -799,7 +793,6 @@ void SMDesign::setupActions()
     // icons also show in the Design menu and context menus alongside the labels.
     using SMToolIcons::eIcon;
     mActAddState->setIcon(SMToolIcons::icon(eIcon::AddState));
-    mActAddStart->setIcon(SMToolIcons::icon(eIcon::AddStartState));
     mActAddFinal->setIcon(SMToolIcons::icon(eIcon::AddFinalState));
     mActAddTransition->setIcon(SMToolIcons::icon(eIcon::AddTransition));
     mActAddNote->setIcon(SMToolIcons::icon(eIcon::AddNote));
@@ -844,7 +837,7 @@ void SMDesign::setupActions()
     const QList<QAction*> actions{ mActZoomIn, mActZoomOut, mActZoomReset, mActZoomFit
                                  , mActToggleGrid, mActGridDots, mActGridDotSize, mActToggleSnap, mActGridSize, mActSelectAll
                                  , mActUndo, mActRedo
-                                 , mActAddState, mActAddStart, mActAddFinal, mActAddTransition, mActAddNote, mActAddInternal
+                                 , mActAddState, mActAddFinal, mActAddTransition, mActAddNote, mActAddInternal
                                  , mActDelete, mActRename, mActDuplicate
                                  , mActStateColor, mActEdgeColor, mActNoteColor, mActSetColor
                                  , mActAlignLeft, mActAlignRight, mActAlignTop, mActAlignBottom
@@ -1036,7 +1029,7 @@ QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
     // the declarations right after them, then alignment, level navigation, color, grid,
     // edit, and zoom. The Design group order matches the canvas context menu.
     QList<ToolGroup> groups;
-    groups.append(ToolGroup{ tr("Design"),    { mActAddState, mActAddTransition, mActAddNote, mActAddStart, mActAddFinal } });
+    groups.append(ToolGroup{ tr("Design"),    { mActAddState, mActAddTransition, mActAddNote, mActAddFinal } });
     groups.append(ToolGroup{ tr("Declare"),   declareActions() });
     groups.append(ToolGroup{ tr("Alignment"), { mActAlignLeft, mActAlignRight, mActAlignTop, mActAlignBottom
                                                , mActDistributeH, mActDistributeV } });
@@ -1067,7 +1060,6 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
     groups.append(ToolGroup{ tr("Design"),    { make(eIcon::AddState, tr("Add State"))
                                               , make(eIcon::AddTransition, tr("Add Transition"))
                                               , make(eIcon::AddNote, tr("Add Note"))
-                                              , make(eIcon::AddStartState, tr("Add Start State"))
                                               , make(eIcon::AddFinalState, tr("Add Final State")) } });
     groups.append(ToolGroup{ tr("Declare"),   { make(eIcon::NewTrigger, tr("New Trigger"))
                                               , make(eIcon::NewAction, tr("New Action"))
@@ -1108,7 +1100,6 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
 void SMDesign::populateDesignMenu(QMenu& menu)
 {
     menu.addAction(mActAddState);
-    menu.addAction(mActAddStart);
     menu.addAction(mActAddFinal);
     menu.addAction(mActAddTransition);
     menu.addAction(mActAddNote);
@@ -1151,7 +1142,6 @@ void SMDesign::populateDesignMenu(QMenu& menu)
 bool SMDesign::placementToolFor(QAction* action, NESMDesign::eCanvasTool& toolOut) const
 {
     if (action == mActAddState)           { toolOut = NESMDesign::eCanvasTool::AddState;      return true; }
-    if (action == mActAddStart)           { toolOut = NESMDesign::eCanvasTool::AddStartState; return true; }
     if (action == mActAddFinal)           { toolOut = NESMDesign::eCanvasTool::AddFinalState; return true; }
     if (action == mActAddTransition)      { toolOut = NESMDesign::eCanvasTool::AddTransition; return true; }
     if (action == mActAddNote)            { toolOut = NESMDesign::eCanvasTool::AddNote;       return true; }
@@ -1266,7 +1256,6 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActAddState);
         menu.addAction(mActAddTransition);
         menu.addAction(mActAddNote);
-        menu.addAction(mActAddStart);
         menu.addAction(mActAddFinal);
         menu.addSeparator();
         menu.addAction(mActPaste);
@@ -2167,7 +2156,6 @@ void SMDesign::onToolChanged(NESMDesign::eCanvasTool tool)
     };
 
     sync(mActAddState     , NESMDesign::eCanvasTool::AddState);
-    sync(mActAddStart     , NESMDesign::eCanvasTool::AddStartState);
     sync(mActAddFinal     , NESMDesign::eCanvasTool::AddFinalState);
     sync(mActAddTransition, NESMDesign::eCanvasTool::AddTransition);
     sync(mActAddNote      , NESMDesign::eCanvasTool::AddNote);
@@ -2891,21 +2879,6 @@ void SMDesign::updateNavActions()
     if (mActAddTransition != nullptr)
     {
         mActAddTransition->setEnabled(hasTargetState);
-    }
-
-    // A machine or submachine has exactly one entry point, so the tool is offered only while
-    // the current level has no Start state -- that is, after the user deleted it, or on a
-    // level that never had one (issue #540).
-    if (mActAddStart != nullptr)
-    {
-        mActAddStart->setEnabled((level != nullptr) && (level->getStartState() == nullptr));
-
-        // Ctrl-repeat keeps the tool armed past the placement that just consumed the level's
-        // only entry point; disarm it so a checked button never outlives its enabled action.
-        if ((mActAddStart->isEnabled() == false) && (getScene().getActiveTool() == NESMDesign::eCanvasTool::AddStartState))
-        {
-            getScene().setActiveTool(NESMDesign::eCanvasTool::Select);
-        }
     }
 
     // The transition actions apply to a single selected edge; priority moves need a

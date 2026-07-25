@@ -26,6 +26,7 @@
 
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMReferences.hpp"
+#include "lusan/view/sm/SMKindGlyph.hpp"
 #include "lusan/view/sm/SMNoteEditor.hpp"
 
 #include <QColor>
@@ -54,21 +55,6 @@ class SMStateItem : public SMCanvasItem
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \enum    eRowIcon
-     * \brief   The glyph kind of one behavior row in the state body.
-     **/
-    enum class eRowIcon
-    {
-          Entry     //!< A generic entry operation: an arrow running INTO a bar, `->|`.
-        , Exit      //!< A generic exit operation: an arrow running away from a bar, `<-|`.
-        , ExitAlt   //!< The alternative exit glyph, `|<-` -- see \c ExitRowIcon in the .cpp.
-        , TimerStart//!< A timer start (clock + play).
-        , TimerStop //!< A timer stop (clock + square).
-        , Event     //!< An event send/trigger.
-        , Internal  //!< An internal transition, and a generic Do operation (a self-loop).
-    };
-
-    /**
      * \enum    eRowZone
      * \brief   Where a behavior row is anchored inside the state box. Enter runs from the top of
      *          the body down, Exit is anchored to the bottom, and everything that happens WHILE
@@ -80,6 +66,20 @@ public:
           Enter
         , Middle
         , Exit
+    };
+
+    /**
+     * \struct  BodyRow
+     * \brief   One behavior row of the state body.
+     **/
+    struct BodyRow
+    {
+        SMKindGlyph::eGlyph         icon;           //!< The row's mark: its band, or its own kind.
+        QString                     text;           //!< The row text.
+        eRowZone                    zone;           //!< Where in the box the row is anchored.
+        bool                        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the band mark).
+        bool                        continues;      //!< Another row of the same group follows (draws a ` \` cue).
+        QList<SMReferences::Ref>    refs;           //!< Declarations this row references (empty = not a navigable link).
     };
 
 private:
@@ -98,20 +98,6 @@ private:
         , Bottom
         , BottomLeft
         , Left
-    };
-
-    /**
-     * \struct  BodyRow
-     * \brief   One behavior row of the state body.
-     **/
-    struct BodyRow
-    {
-        eRowIcon                    icon;           //!< The glyph kind.
-        QString                     text;           //!< The row text.
-        eRowZone                    zone;           //!< Where in the box the row is anchored.
-        bool                        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the zone glyph).
-        bool                        continues;      //!< Another row of the same group follows (draws a ` \` cue).
-        QList<SMReferences::Ref>    refs;           //!< Declarations this row references (empty = not a navigable link).
     };
 
     /**
@@ -143,6 +129,10 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    //!< The behavior rows of the body, in display order, exactly as painted. Read-only: the
+    //!< canvas tests assert the rows the user reads, not the pixels they are drawn as.
+    inline const QList<BodyRow>& getBodyRows() const;
+
     /**
      * \brief   Opens the in-place name editor over the header. Commit pushes an undoable
      *          rename; invalid or duplicate names are rejected inline; Esc cancels.
@@ -408,6 +398,11 @@ inline bool SMStateItem::hasBodyContent() const
 inline bool SMStateItem::isMarker() const
 {
     return (mKind != SMStateEntry::eStateKind::Normal);
+}
+
+inline const QList<SMStateItem::BodyRow>& SMStateItem::getBodyRows() const
+{
+    return mRows;
 }
 
 #endif  // LUSAN_VIEW_SM_SMSTATEITEM_HPP

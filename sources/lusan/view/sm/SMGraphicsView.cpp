@@ -172,9 +172,9 @@ void SMGraphicsView::wheelEvent(QWheelEvent* event)
 
 void SMGraphicsView::setToolCursor(NESMDesign::eCanvasTool tool)
 {
-    // Every tool except the pointer waits for a click at a precise spot, so they all get the
-    // crosshair; the shape alone tells the user a tool is armed, the toolbar says which one.
-    mToolArmed = (tool != NESMDesign::eCanvasTool::Select);
+    // Only the tools that drop a new element at the clicked spot need to aim; see
+    // NESMDesign::toolAims for the list and the reasoning.
+    mToolArmed = NESMDesign::toolAims(tool);
     if (mPanning == false)
     {
         applyToolCursor();
@@ -183,16 +183,21 @@ void SMGraphicsView::setToolCursor(NESMDesign::eCanvasTool tool)
 
 void SMGraphicsView::applyToolCursor()
 {
-    // Unset rather than set the arrow: an item's hover cursor (resize handles, links) is
-    // applied to the viewport and must still win once the pointer tool is back.
+    // Set on the VIEW, not the viewport: an item's hover cursor (resize handles, links) is applied
+    // to the viewport and must still win over the tool shape.
     if (mToolArmed)
     {
         setCursor(makeToolCursor(devicePixelRatioF()));
+        return;
     }
-    else
-    {
-        unsetCursor();
-    }
+
+    // Disarming has to clear the viewport as well. The first time an item under the pointer sets a
+    // hover cursor, QGraphicsView remembers the viewport's cursor -- which, while a tool is armed,
+    // resolves to the inherited crosshair -- and writes that remembered copy back explicitly when
+    // the hover ends. That copy outlives the tool: unsetting the view alone left the crosshair on
+    // the canvas for good, which is what made the pointer feel permanently lost (issue #543).
+    viewport()->unsetCursor();
+    unsetCursor();
 }
 
 void SMGraphicsView::mousePressEvent(QMouseEvent* event)

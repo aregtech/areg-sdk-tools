@@ -121,8 +121,8 @@ public:
  *          positions (a minimum size is enforced so the resize handles stay usable). Either
  *          way the placement is one undo step and opens the in-place name editor. The
  *          scene's single-shot/sticky policy decides whether the tool stays active
- *          afterwards. A level holds at most one Start state, so the Start variant refuses
- *          to place a second one.
+ *          afterwards. A level's Start state is never placed by hand: it is created with the
+ *          level and cannot be deleted, so there is no Start placement mode.
  **/
 class SMPlaceStateTool : public SMCanvasTool
 {
@@ -130,7 +130,7 @@ public:
     /**
      * \brief   Creates the placement tool.
      * \param   scene   The scene the tool operates on.
-     * \param   kind    The placement mode: AddState, AddStartState, or AddFinalState.
+     * \param   kind    The placement mode: AddState or AddFinalState.
      **/
     SMPlaceStateTool(SMScene& scene, NESMDesign::eCanvasTool kind);
     virtual ~SMPlaceStateTool();

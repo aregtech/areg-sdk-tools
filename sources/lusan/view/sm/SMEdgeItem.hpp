@@ -25,6 +25,7 @@
 #include "lusan/view/sm/SMCanvasItem.hpp"
 
 #include "lusan/data/sm/SMLayoutData.hpp"
+#include "lusan/view/sm/SMKindGlyph.hpp"
 #include "lusan/view/sm/SMNoteEditor.hpp"
 
 #include <QList>
@@ -135,6 +136,16 @@ public:
      * \brief   True when a note is bound to this transition (a note badge is shown).
      **/
     inline bool hasNote() const;
+
+    /**
+     * \brief   The stimulus half of the edge label as drawn, and the kind mark drawn in front
+     *          of it. Read-only: the canvas tests assert what the user actually reads.
+     **/
+    inline const QString& getStimulusText() const;
+    inline SMKindGlyph::eGlyph getStimulusGlyph() const;
+
+    //!< The operation summary drawn below the line, or empty when the transition runs none.
+    inline const QString& getActionText() const;
 
     /**
      * \brief   True when one interior waypoint is the active (keyboard-movable) point.
@@ -370,7 +381,8 @@ private:
     SMLayoutEdge::eShape    mShape;         //!< The edge shape (Line or Arc).
     double                  mBulge;         //!< The arc bulge factor.
     QString                 mColorName;     //!< The persisted edge color (empty = theme).
-    QString                 mStimulusText;  //!< The stimulus signature label text (`walk(count)`).
+    QString                 mStimulusText;  //!< The stimulus label text (`walk(count)`, `NewEvent`).
+    SMKindGlyph::eGlyph     mStimulusGlyph; //!< The mark drawn in front of it: bolt, clock, or call.
     QString                 mGuardText;     //!< The `[guard]` clause drawn after the stimulus, or empty.
     QString                 mActionText;    //!< The operation summary drawn below the line.
     int                     mGuardSeverity; //!< The guard's NEGuardStyle severity for the label tint, or -1 (clean).
@@ -400,6 +412,21 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // SMEdgeItem inline methods
 //////////////////////////////////////////////////////////////////////////
+
+inline const QString& SMEdgeItem::getStimulusText() const
+{
+    return mStimulusText;
+}
+
+inline SMKindGlyph::eGlyph SMEdgeItem::getStimulusGlyph() const
+{
+    return mStimulusGlyph;
+}
+
+inline const QString& SMEdgeItem::getActionText() const
+{
+    return mActionText;
+}
 
 inline bool SMEdgeItem::hasNote() const
 {

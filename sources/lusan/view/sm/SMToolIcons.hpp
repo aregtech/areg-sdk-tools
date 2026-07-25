@@ -40,7 +40,6 @@ namespace SMToolIcons
     enum class eIcon
     {
           AddState
-        , AddStartState
         , AddFinalState
         , AddTransition
         , AddNote

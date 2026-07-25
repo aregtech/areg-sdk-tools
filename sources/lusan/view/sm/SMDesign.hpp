@@ -242,7 +242,6 @@ public:
      * \brief   The state editing actions: placement tools, delete, and rename.
      **/
     inline QAction* actionAddState() const;
-    inline QAction* actionAddStartState() const;
     inline QAction* actionAddFinalState() const;
     inline QAction* actionAddTransition() const;
     inline QAction* actionAddNote() const;
@@ -770,7 +769,6 @@ private:
     QAction*            mActUndo;       //!< Undo (no shortcut; the Edit menu owns Ctrl+Z).
     QAction*            mActRedo;       //!< Redo (no shortcut; the Edit menu owns Ctrl+Y).
     QAction*            mActAddState;   //!< Activate the Add State tool.
-    QAction*            mActAddStart;   //!< Activate the Add Start State tool (only while the level has none).
     QAction*            mActAddFinal;   //!< Activate the Add Final State tool.
     QAction*            mActAddTransition; //!< Activate the Add Transition tool.
     QAction*            mActAddNote;    //!< Activate the Add Note tool.
@@ -908,11 +906,6 @@ inline QAction* SMDesign::actionRedo() const
 inline QAction* SMDesign::actionAddState() const
 {
     return mActAddState;
-}
-
-inline QAction* SMDesign::actionAddStartState() const
-{
-    return mActAddStart;
 }
 
 inline QAction* SMDesign::actionAddFinalState() const

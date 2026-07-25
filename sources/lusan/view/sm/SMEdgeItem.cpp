@@ -64,6 +64,13 @@ namespace
         return NESMDesign::scaledFont(QFont(), NESMDesign::EdgeLabelFontScale);
     }
 
+    //!< The room the stimulus kind mark reserves in front of the label text, mark plus its gap.
+    //!< Zero when nothing is drawn, so the label geometry collapses to plain text by itself.
+    inline double markWidth(SMKindGlyph::eGlyph glyph)
+    {
+        return SMKindGlyph::isDrawn(glyph) ? (SMKindGlyph::GlyphSize + 2.0) : 0.0;
+    }
+
     //!< The straight-line distance between two points.
     inline double distance(const QPointF& a, const QPointF& b)
     {
@@ -120,6 +127,7 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mBulge        (0.0)
     , mColorName    ( )
     , mStimulusText ( )
+    , mStimulusGlyph(SMKindGlyph::eGlyph::None)
     , mGuardText    ( )
     , mGuardSeverity(-1)
     , mActionSeverity(-1)
@@ -236,19 +244,41 @@ void SMEdgeItem::updateFromModel()
     // The label carries the guard's severity color + glyph when the guard is not ok.
     const QString summary = SMGuardRender::guardText(data, getElementId(), transition->getGuard()).simplified();
     mGuardSeverity = -1;
+    QString guardIssue;
+    const QList<SMGuardValidation::Finding> findings = SMGuardValidation::validateTransition(data, getElementId());
     SMGuardValidation::eSeverity worst = SMGuardValidation::eSeverity::Info;
-    if (SMGuardValidation::worstSeverity(data, getElementId(), worst)
-        && (worst != SMGuardValidation::eSeverity::Info))
+    for (const SMGuardValidation::Finding& finding : findings)
+    {
+        if (static_cast<int>(finding.severity) > static_cast<int>(worst))
+        {
+            worst = finding.severity;
+        }
+    }
+
+    if ((findings.isEmpty() == false) && (worst != SMGuardValidation::eSeverity::Info))
     {
         mGuardSeverity = static_cast<int>((worst == SMGuardValidation::eSeverity::Error)
                                           ? NEGuardStyle::eSeverity::Err
                                           : NEGuardStyle::eSeverity::Warn);
+        // The canvas says WHAT is wrong, not merely that something is: the same sentence the
+        // Conditions status line shows, so the two surfaces never seem to disagree.
+        for (const SMGuardValidation::Finding& finding : findings)
+        {
+            if (finding.severity == worst)
+            {
+                guardIssue = finding.message;
+                break;
+            }
+        }
     }
 
-    // The stimulus reads as a method signature (`walk(count)`); a timer stays bare. The guard
-    // clause is kept separate so paintLabels can tint the stimulus and the condition distinctly.
+    // Only a trigger reads as a method signature (`walk(count)`); an event and a timer are named
+    // bare and say WHAT they are through a mark drawn in front of the text -- a lightning bolt or a
+    // clock -- rather than through empty brackets or a generated `on_event_` prefix (issue #543).
+    // The guard clause is kept separate so paintLabels can tint stimulus and condition distinctly.
     const QString signature = SMOperationSummary::stimulusSignature(data, *transition);
-    mStimulusText = signature;
+    mStimulusText  = SMKindGlyph::prefix(SMKindGlyph::stimulusGlyph(*transition)) + signature;
+    mStimulusGlyph = SMKindGlyph::stimulusGlyph(*transition);
     if (summary.isEmpty())
     {
         mGuardText.clear();
@@ -257,7 +287,18 @@ void SMEdgeItem::updateFromModel()
     else
     {
         constexpr int MAX_SUMMARY = 40;
-        const QString glyph = (mGuardSeverity >= 0) ? QStringLiteral("(!) ") : QString();
+        // One glyph per severity: an error and a warning must not look alike on the canvas while
+        // the status line calls them by different names. The glyph is the grayscale/color-blind
+        // channel -- the severity color alone would carry the whole distinction.
+        QString glyph;
+        if (mGuardSeverity == static_cast<int>(NEGuardStyle::eSeverity::Err))
+        {
+            glyph = QStringLiteral("(x) ");
+        }
+        else if (mGuardSeverity >= 0)
+        {
+            glyph = QStringLiteral("(!) ");
+        }
 
         // A short, plain guard reads best in full. A long one, or one carrying an inline C++ block,
         // is cut down STRUCTURALLY rather than chopped mid-token: the condition names survive and
@@ -272,7 +313,18 @@ void SMEdgeItem::updateFromModel()
                 ? (label.left(MAX_SUMMARY - 3) + QStringLiteral("..."))
                 : label;
         mGuardText = QChar('[') + glyph + shortSummary + QChar(']');
-        setToolTip(signature + QChar('[') + summary + QChar(']'));
+        // A tooltip cannot carry a drawn mark, so it spells the kind out instead.
+        const QString kindWord = SMKindGlyph::word(mStimulusGlyph);
+        QString tip = (kindWord.isEmpty() ? QString() : (kindWord + QChar(' ')))
+                    + signature + QChar('[') + summary + QChar(']');
+        if (guardIssue.isEmpty() == false)
+        {
+            tip += QChar('\n')
+                 + translate((mGuardSeverity == static_cast<int>(NEGuardStyle::eSeverity::Err))
+                             ? "err: %1" : "warn: %1").arg(guardIssue);
+        }
+
+        setToolTip(tip);
     }
 
     // An action/event whose arguments are not fully mapped warns on the canvas, so the developer
@@ -515,7 +567,7 @@ QRectF SMEdgeItem::labelRect() const
 
     const QPointF anchor = labelAnchor();
     const QFontMetricsF metrics{ labelFont() };
-    const QSizeF size = metrics.size(0, text) + QSizeF(4.0, 1.0);
+    const QSizeF size = metrics.size(0, text) + QSizeF(4.0 + markWidth(mStimulusGlyph), 1.0);
 
     // Default edges lift the stimulus above the line so a horizontal edge does not strike
     // through it; a user-dragged label centers on its point (the user placed it deliberately).
@@ -573,9 +625,10 @@ QRectF SMEdgeItem::stimulusLinkRect() const
         return QRectF();
     }
 
-    // Mirror paintLabels: the stimulus is drawn at label.left() + 2, its own advance wide.
+    // Mirror paintLabels: the stimulus is drawn at label.left() + 2, its mark and text wide. The
+    // mark is part of the link -- it names the same declaration the text does.
     const QFontMetricsF metrics{ labelFont() };
-    const double advance = metrics.horizontalAdvance(mStimulusText);
+    const double advance = markWidth(mStimulusGlyph) + metrics.horizontalAdvance(mStimulusText);
     return QRectF(label.left() + 2.0, label.top(), advance, label.height());
 }
 
@@ -597,7 +650,7 @@ QRectF SMEdgeItem::guardLinkRect() const
     double x = label.left() + 2.0;
     if (mStimulusText.isEmpty() == false)
     {
-        x += metrics.horizontalAdvance(mStimulusText);
+        x += markWidth(mStimulusGlyph) + metrics.horizontalAdvance(mStimulusText);
     }
 
     const double advance = metrics.horizontalAdvance(mGuardText);
@@ -883,7 +936,18 @@ void SMEdgeItem::paintLabels(QPainter* painter, const QPalette& palette)
             double x = label.left() + 2.0;
             if (mStimulusText.isEmpty() == false)
             {
-                painter->setPen(NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Stimulus));
+                const QColor stimColor = NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Stimulus);
+                const double mark = markWidth(mStimulusGlyph);
+                if (mark > 0.0)
+                {
+                    // The mark takes the stimulus hue too, so mark and name read as one token.
+                    SMKindGlyph::paint(*painter, QRectF(x, label.top() + 1.0
+                                                      , SMKindGlyph::GlyphSize, label.height() - 2.0)
+                                      , mStimulusGlyph, stimColor);
+                    x += mark;
+                }
+
+                painter->setPen(stimColor);
                 const double advance = metrics.horizontalAdvance(mStimulusText);
                 painter->drawText(QRectF(x, label.top(), advance, label.height()), Qt::AlignVCenter | Qt::AlignLeft, mStimulusText);
                 x += advance;

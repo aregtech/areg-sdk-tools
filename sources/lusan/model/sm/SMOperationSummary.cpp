@@ -20,7 +20,6 @@
 #include "lusan/model/sm/SMOperationSummary.hpp"
 
 #include "lusan/data/common/MethodBase.hpp"
-#include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -102,20 +101,6 @@ namespace
         return nullptr;
     }
 
-    //!< The event with the given name, or nullptr.
-    const MethodBase* findEvent(const StateMachineData& data, const QString& name)
-    {
-        for (const SMEventEntry* event : data.getEvents().getElements())
-        {
-            if ((event != nullptr) && (event->getName() == name))
-            {
-                return event;
-            }
-        }
-
-        return nullptr;
-    }
-
     //!< The first non-empty, trimmed line of an inline body, elided for the row.
     QString firstLine(const QString& body)
     {
@@ -141,22 +126,16 @@ QString SMOperationSummary::stimulusSignature(const StateMachineData& data, cons
         return name;
     }
 
-    // A timer expiry carries no parameters; a trigger or event reads as a method signature.
-    if (transition.getStimulusKind() == SMTransitionEntry::eStimulusKind::Timer)
+    // Only a trigger is a declared method, so only a trigger reads as a signature. A timer expiry
+    // has no parameters at all, and an event is a signal rather than a call -- writing `evGo()`
+    // invented a method the model does not have.
+    if (transition.getStimulusKind() != SMTransitionEntry::eStimulusKind::Trigger)
     {
         return name;
     }
 
-    const MethodBase* callee = (transition.getStimulusKind() == SMTransitionEntry::eStimulusKind::Event)
-        ? findEvent(data, name)
-        : findAction(data, name);
-    if (callee == nullptr)
-    {
-        // Trigger methods live in the same registry; try there before giving up.
-        callee = findAction(data, name);
-    }
-
     QStringList parts;
+    const MethodBase* callee = findAction(data, name);
     if (callee != nullptr)
     {
         for (const MethodParameter& param : callee->getElements())
@@ -180,8 +159,11 @@ QString SMOperationSummary::text(const StateMachineData& data, const SMOperation
 
     case SMOperationBase::eOperation::EventSend:
     {
-        const SMEventSend& send = static_cast<const SMEventSend&>(op);
-        return QStringLiteral("send ") + callSignature(send.getEvent(), findEvent(data, send.getEvent()), send.getArguments());
+        // An event is signalled, not called: no parentheses, and the payload is not spelled here.
+        // The verb survives only because the surfaces that use this text (the edge action line,
+        // the Properties summaries) carry no kind mark of their own; the state box strips it and
+        // draws the lightning bolt instead.
+        return QStringLiteral("send ") + static_cast<const SMEventSend&>(op).getEvent();
     }
 
     case SMOperationBase::eOperation::AttributeSet:
