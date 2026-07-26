@@ -25,6 +25,7 @@
 #include "lusan/view/sm/SMCanvasItem.hpp"
 
 #include "lusan/data/sm/SMLayoutData.hpp"
+#include "lusan/view/sm/SMKindGlyph.hpp"
 #include "lusan/view/sm/SMNoteEditor.hpp"
 
 #include <QList>
@@ -64,6 +65,7 @@ private:
         , End       //!< The end anchor (target-endpoint reconnection).
         , Waypoint  //!< An interior waypoint.
         , Label     //!< The stimulus label.
+        , Bulge     //!< The apex handle of an arc (curvature).
     };
 
     /**
@@ -137,6 +139,16 @@ public:
     inline bool hasNote() const;
 
     /**
+     * \brief   The stimulus half of the edge label as drawn, and the kind mark drawn in front
+     *          of it. Read-only: the canvas tests assert what the user actually reads.
+     **/
+    inline const QString& getStimulusText() const;
+    inline SMKindGlyph::eGlyph getStimulusGlyph() const;
+
+    //!< The operation summary drawn below the line, or empty when the transition runs none.
+    inline const QString& getActionText() const;
+
+    /**
      * \brief   True when one interior waypoint is the active (keyboard-movable) point.
      **/
     inline bool hasSelectedPoint() const;
@@ -182,6 +194,23 @@ public:
      * \return  True when an active waypoint was moved (the event is consumed).
      **/
     bool nudgeSelectedPoint(int dx, int dy, bool coarse, bool pixelWise);
+
+    /**
+     * \brief   The drawn shape of the edge: a straight/polyline run or a curve.
+     **/
+    inline SMLayoutEdge::eShape getShape() const;
+
+    /**
+     * \brief   Switches the edge between a polyline and an arc and commits it as one undo step.
+     *          Every transition can take either shape, a self-loop included: its two anchors sit
+     *          on the same box but are still distinct points, so a chord and a bulge describe the
+     *          loop just as they describe a transition running between two boxes.
+     *          Curving drops the interior waypoints -- an arc is its two endpoints and a bulge,
+     *          the mirror of the downgrade a new waypoint performs on an arc. Straightening a
+     *          self-loop gives it back the two corners that make it a rectangle, because a
+     *          two-point run between anchors on the same box would draw nothing.
+     **/
+    void setShape(SMLayoutEdge::eShape shape);
 
 //////////////////////////////////////////////////////////////////////////
 // Overrides
@@ -330,6 +359,51 @@ private:
     int hitWaypoint(const QPointF& point) const;
 
     /**
+     * \brief   The apex of the drawn arc -- the grab handle that sets the curvature. Null
+     *          (and meaningless) unless the edge is an arc.
+     **/
+    QPointF arcApex() const;
+
+    /**
+     * \brief   The bulge that would put the arc's apex under \p point, clamped to the limit of
+     *          this edge (\ref NESMDesign::EdgeArcSelfBulgeMax for a self-loop, which has to
+     *          double back over its short chord to read as a loop at all, otherwise
+     *          \ref NESMDesign::EdgeArcBulgeMax).
+     **/
+    double bulgeFor(const QPointF& point) const;
+
+    /**
+     * \brief   The two border points of a default self-loop: symmetric about the box center on its
+     *          top border. A self-loop has no other box to aim at, so there is no facing side to
+     *          derive them from -- this is the fallback when the edge carries no anchors of its own.
+     * \param   box     The source (and target) state box in scene coordinates.
+     * \param   begin   [out] The point the loop leaves from.
+     * \param   end     [out] The point the loop re-enters at.
+     **/
+    void selfLoopEnds(const QRectF& box, QPointF& begin, QPointF& end) const;
+
+    /**
+     * \brief   Pins the current drawn endpoints as this self-loop's anchors, so curving it keeps
+     *          where the loop already left and re-entered its box. Falls back to \ref selfLoopEnds
+     *          when the two coincide, because a curve needs two distinct points.
+     **/
+    void adoptSelfLoopEnds();
+
+    /**
+     * \brief   The bulge that stands an arc self-loop \ref NESMDesign::EdgeSelfLoopStandoff off its
+     *          border, signed so the loop bows AWAY from the box, and clamped to
+     *          \ref NESMDesign::EdgeArcSelfBulgeMax.
+     **/
+    double selfLoopBulge() const;
+
+    /**
+     * \brief   The two waypoints that turn a self-loop into a rectangle: one standing
+     *          \ref NESMDesign::EdgeSelfLoopStandoff off each anchor, straight out from the border
+     *          that anchor sits on. Empty when the box geometry is not known yet.
+     **/
+    QList<QPointF> selfLoopCorners() const;
+
+    /**
      * \brief   The point on the drawn polyline closest to \p point (the tether target of the
      *          movable label, and the clamp reference that keeps the label near its line).
      **/
@@ -370,7 +444,8 @@ private:
     SMLayoutEdge::eShape    mShape;         //!< The edge shape (Line or Arc).
     double                  mBulge;         //!< The arc bulge factor.
     QString                 mColorName;     //!< The persisted edge color (empty = theme).
-    QString                 mStimulusText;  //!< The stimulus signature label text (`walk(count)`).
+    QString                 mStimulusText;  //!< The stimulus label text (`walk(count)`, `NewEvent`).
+    SMKindGlyph::eGlyph     mStimulusGlyph; //!< The mark drawn in front of it: bolt, clock, or call.
     QString                 mGuardText;     //!< The `[guard]` clause drawn after the stimulus, or empty.
     QString                 mActionText;    //!< The operation summary drawn below the line.
     int                     mGuardSeverity; //!< The guard's NEGuardStyle severity for the label tint, or -1 (clean).
@@ -401,6 +476,21 @@ private:
 // SMEdgeItem inline methods
 //////////////////////////////////////////////////////////////////////////
 
+inline const QString& SMEdgeItem::getStimulusText() const
+{
+    return mStimulusText;
+}
+
+inline SMKindGlyph::eGlyph SMEdgeItem::getStimulusGlyph() const
+{
+    return mStimulusGlyph;
+}
+
+inline const QString& SMEdgeItem::getActionText() const
+{
+    return mActionText;
+}
+
 inline bool SMEdgeItem::hasNote() const
 {
     return mHasNote;
@@ -419,6 +509,11 @@ inline bool SMEdgeItem::hasActiveLabel() const
 inline bool SMEdgeItem::hasActiveEnd() const
 {
     return (mActiveEnd != 0);
+}
+
+inline SMLayoutEdge::eShape SMEdgeItem::getShape() const
+{
+    return mShape;
 }
 
 inline uint32_t SMEdgeItem::getSourceId() const

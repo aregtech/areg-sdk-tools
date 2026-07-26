@@ -22,11 +22,15 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/model/common/DocIssue.hpp"
+
 #include <cstdint>
 
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class MethodBase;
+class SMArgumentEntry;
 class StateMachineData;
 class SMOperationList;
 
@@ -49,31 +53,45 @@ class SMOperationValidation
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \enum    eSeverity
-     * \brief   The worst mapping state of an operation list, ordered for worst-of comparisons.
+     * \brief   The mapping findings of one operation list, each with the message that says
+     *          which formal is unmapped or which stored argument is orphaned. This is the
+     *          SINGLE implementation of the argument-mapping check: the document-wide run
+     *          (\ref SMValidator) and the canvas per-element queries below both call it, so
+     *          a glyph on an edge and a row in the results list can never disagree.
+     *          A callee that does not resolve is skipped -- that is a reference fault, which
+     *          the reference rules report, not a mapping fault.
+     * \param   ownerId     The element the findings navigate to.
+     * \param   kind        The owning element's kind (page routing).
+     * \param   location    The owner in the document's own words, for the results list.
      **/
-    enum class eSeverity
-    {
-          Ok        //!< Every action/event argument is mapped (or defaulted).
-        , Warn      //!< Reserved for softer findings (kept for ordering).
-        , Error     //!< A required argument is unmapped, or a stored argument is orphaned.
-    };
+    static QList<DocIssue> listIssues( const StateMachineData& data
+                                     , const SMOperationList& list
+                                     , uint32_t ownerId
+                                     , eDocElementKind kind
+                                     , const QString& location);
 
-//////////////////////////////////////////////////////////////////////////
-// Operations
-//////////////////////////////////////////////////////////////////////////
-public:
     /**
-     * \brief   The worst mapping severity across every `ActionCall` / `EventSend` in \p list.
-     *          A callee that does not resolve is skipped (it is not a mapping fault).
+     * \brief   The mapping findings of one argument list against one callee's formals: an
+     *          argument naming no formal (an orphan), and a formal without a default that no
+     *          argument binds. This is the smallest shared unit -- an operation's call and a
+     *          guard's parameterized condition call are both checked by it, so "is this call
+     *          mapped" has exactly one answer in the code base.
      **/
-    static eSeverity listSeverity(const StateMachineData& data, const SMOperationList& list);
+    static QList<DocIssue> argumentIssues( const MethodBase& callee
+                                         , const QList<SMArgumentEntry>& args
+                                         , uint32_t ownerId
+                                         , eDocElementKind kind
+                                         , const QString& location);
 
-    //!< The worst mapping severity of a transition's operation list (0 -> Ok when not found).
-    static eSeverity transitionSeverity(const StateMachineData& data, uint32_t transitionId);
+    /**
+     * \brief   The worst mapping severity of a transition's operation list. False when the
+     *          mapping is clean, matching \ref SMGuardValidation::worstSeverity so the canvas
+     *          asks both checkers the same way.
+     **/
+    static bool worstForTransition(const StateMachineData& data, uint32_t transitionId, DocIssue::eSeverity& worst);
 
-    //!< The worst mapping severity of a state's entry AND exit lists (0 -> Ok when not found).
-    static eSeverity stateSeverity(const StateMachineData& data, uint32_t stateId);
+    //!< The worst mapping severity of a state's entry, do AND exit lists.
+    static bool worstForState(const StateMachineData& data, uint32_t stateId, DocIssue::eSeverity& worst);
 };
 
 #endif  // LUSAN_MODEL_SM_SMOPERATIONVALIDATION_HPP

@@ -39,6 +39,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMDesign.cpp
     ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
+    ${LUSAN}/view/sm/SMKindGlyph.cpp
     ${LUSAN}/view/sm/SMMethod.cpp
     ${LUSAN}/view/sm/SMNoteEditor.cpp
     ${LUSAN}/view/sm/SMNoteItem.cpp
@@ -51,6 +52,7 @@ list(APPEND LUSAN_SRC
     ${LUSAN}/view/sm/SMSceneManager.cpp
     ${LUSAN}/view/sm/SMSectionChrome.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
+    ${LUSAN}/view/sm/SMSubmachinePeek.cpp
     ${LUSAN}/view/sm/SMTimerDetails.cpp
     ${LUSAN}/view/sm/SMToolIcons.cpp
     ${LUSAN}/view/sm/SMWhereUsedMenu.cpp
@@ -99,6 +101,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMDesign.hpp
     ${LUSAN}/view/sm/SMEdgeItem.hpp
     ${LUSAN}/view/sm/SMGraphicsView.hpp
+    ${LUSAN}/view/sm/SMKindGlyph.hpp
     ${LUSAN}/view/sm/SMMethod.hpp
     ${LUSAN}/view/sm/SMNoteEditor.hpp
     ${LUSAN}/view/sm/SMNoteItem.hpp
@@ -111,6 +114,7 @@ list(APPEND LUSAN_HDR
     ${LUSAN}/view/sm/SMSceneManager.hpp
     ${LUSAN}/view/sm/SMSectionChrome.hpp
     ${LUSAN}/view/sm/SMStateItem.hpp
+    ${LUSAN}/view/sm/SMSubmachinePeek.hpp
     ${LUSAN}/view/sm/SMTimerDetails.hpp
     ${LUSAN}/view/sm/SMToolIcons.hpp
     ${LUSAN}/view/sm/SMWhereUsedMenu.hpp

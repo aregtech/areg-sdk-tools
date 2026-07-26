@@ -42,6 +42,7 @@
 #include <QAction>
 #include <QContextMenuEvent>
 #include <QFontDatabase>
+#include <QHelpEvent>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMimeData>
@@ -50,6 +51,7 @@
 #include <QSet>
 #include <QTextDocument>
 #include <QTimer>
+#include <QToolTip>
 
 namespace
 {
@@ -245,8 +247,7 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     , mRawBindPath      ( )
     , mTokenHandler     (nullptr)
     , mHover            (nullptr)
-    , mHoverTimer       (nullptr)
-    , mHoverWord        ( )
+    , mHintsEnabled     (true)
     , mLastCursorPos    (0)
 {
     setObjectName(QStringLiteral("smGuardField"));
@@ -259,14 +260,7 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     // An empty field discovers both the bare-typing and the picker paths. Qt
     // paints this as placeholder text, so it is never a real character and never reaches
     // committableText().
-    setPlaceholderText(tr("type a condition, or @ to pick a symbol"));
-    // A condensed gesture legend for the moves that are otherwise discoverable only by accident;
-    // the full version, including the symbol kinds, lives in the (?) help card.
-    setToolTip(tr("#  pick a symbol        #kind:  filter the picker\n"
-                  "Enter  commit     Esc  revert     Shift+Enter  line break\n"
-                  "click a chip icon -- reveal what it really is\n"
-                  "double-click a chip -- edit it as plain text\n"
-                  "Alt+1..4 -- jump to a section"));
+    setPlaceholderText(tr("type a condition, or %1 to pick a symbol").arg(NEGuardText::RefSigil));
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     setMouseTracking(true);
 
@@ -284,10 +278,6 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
     mDebounce = new QTimer(this);
     mDebounce->setSingleShot(true);
     mDebounce->setInterval(150);
-
-    mHoverTimer = new QTimer(this);
-    mHoverTimer->setSingleShot(true);
-    mHoverTimer->setInterval(300);
 
     connect(mDebounce, &QTimer::timeout, this, &SMGuardField::onDebounce);
     connect(mCompleter, &SMRefCompleter::accepted, this, &SMGuardField::onCompleterAccepted);
@@ -321,24 +311,6 @@ SMGuardField::SMGuardField(StateMachineModel& model, QWidget* parent /*= nullptr
         }
         updateSignatureHelp();
     });
-    connect(mHoverTimer, &QTimer::timeout, this, [this]()
-    {
-        if ((mHover == nullptr) || mHoverWord.isEmpty())
-        {
-            return;
-        }
-
-        for (const SMGuardSymbol& sym : mCatalog)
-        {
-            if (sym.name == mHoverWord)
-            {
-                const QPoint pos = mapToGlobal(QPoint(0, height() + 2));
-                mHover->showSymbol(mModel, mTransitionId, sym, pos);
-                break;
-            }
-        }
-    });
-
     DocModelNotifier& notifier = mModel.getNotifier();
     connect(&notifier, &DocModelNotifier::elementAdded, this, &SMGuardField::onElementAdded);
     connect(&notifier, &DocModelNotifier::elementChanged, this, &SMGuardField::onElementChanged);
@@ -367,6 +339,43 @@ void SMGuardField::setTransition(uint32_t transitionId)
 void SMGuardField::setHoverCard(SMHoverCard* card)
 {
     mHover = card;
+}
+
+void SMGuardField::setHintsEnabled(bool enable)
+{
+    if (mHintsEnabled == enable)
+    {
+        return;
+    }
+
+    mHintsEnabled = enable;
+    if (mHintsEnabled == false)
+    {
+        // Whatever is already on screen belongs to the state the user just switched off.
+        QToolTip::hideText();
+    }
+}
+
+QString SMGuardField::symbolTipAt(const QPoint& viewportPos) const
+{
+    // A folded chip is ONE object character, so a scan over the plain text cannot see through it:
+    // symbolNameAt reads the chip token itself, which is what makes pointing ANYWHERE on
+    // `[f]#Power` -- badge or name -- ask what the element is.
+    const QString name = symbolNameAt(viewportPos);
+    if (name.isEmpty() || (mOwnerByName.contains(name) == false))
+    {
+        return QString();
+    }
+
+    for (const SMGuardSymbol& sym : mCatalog)
+    {
+        if (sym.name == name)
+        {
+            return SMHoverCard::symbolTip(mModel, mTransitionId, sym);
+        }
+    }
+
+    return QString();
 }
 
 void SMGuardField::buildCatalog()
@@ -826,15 +835,14 @@ bool SMGuardField::maybeOpenIslandAt(int docPos)
     return false;
 }
 
-bool SMGuardField::linkSymbolAt(const QPoint& viewportPos, SMReferences::eTarget& kind, uint32_t& declId) const
+QString SMGuardField::symbolNameAt(const QPoint& viewportPos) const
 {
     const QTextCursor hit = cursorForPosition(viewportPos);
 
     // A committed reference renders as a chip token that carries its symbol name; a still-typed
     // reference is a plain identifier word. Try the chip first (both sides of the caret, since the
     // token occupies one object-replacement character), then fall back to the word under the pointer.
-    QString name;
-    for (int delta = 0; (delta >= -1) && name.isEmpty(); --delta)
+    for (int delta = 0; delta >= -1; --delta)
     {
         const int pos = hit.position() + delta;
         if (pos < 0)
@@ -847,28 +855,29 @@ bool SMGuardField::linkSymbolAt(const QPoint& viewportPos, SMReferences::eTarget
         const QTextCharFormat format = probe.charFormat();
         if (SMInlineToken::isChip(format))
         {
-            name = format.property(SMInlineToken::PropName).toString();
+            return format.property(SMInlineToken::PropName).toString();
         }
     }
 
-    if (name.isEmpty())
+    const QString text = toPlainText();
+    int left = hit.position();
+    while ((left > 0) && (left <= text.length()) && isWordChar(text.at(left - 1)))
     {
-        const QString text = toPlainText();
-        int left = hit.position();
-        while ((left > 0) && (left <= text.length()) && isWordChar(text.at(left - 1)))
-        {
-            --left;
-        }
-
-        int right = hit.position();
-        while ((right < text.length()) && isWordChar(text.at(right)))
-        {
-            ++right;
-        }
-
-        name = (right > left) ? text.mid(left, right - left) : QString();
+        --left;
     }
 
+    int right = hit.position();
+    while ((right < text.length()) && isWordChar(text.at(right)))
+    {
+        ++right;
+    }
+
+    return (right > left) ? text.mid(left, right - left) : QString();
+}
+
+bool SMGuardField::linkSymbolAt(const QPoint& viewportPos, SMReferences::eTarget& kind, uint32_t& declId) const
+{
+    const QString name = symbolNameAt(viewportPos);
     if (name.isEmpty())
     {
         return false;
@@ -2323,6 +2332,37 @@ void SMGuardField::mouseDoubleClickEvent(QMouseEvent* event)
     QTextEdit::mouseDoubleClickEvent(event);
 }
 
+bool SMGuardField::event(QEvent* event)
+{
+    if (event->type() == QEvent::ToolTip)
+    {
+        // The editor answers exactly one question on hover: what is the element under the pointer.
+        // Anywhere else it stays silent, because a tooltip that explains the editor itself fires
+        // wherever the pointer happens to rest and competes with the answer the user asked for;
+        // that explanation belongs behind the (?) button, where it is requested deliberately.
+        // The help event arrives in THIS widget's coordinates after propagating up from the
+        // viewport, so the hit test goes back through global coordinates rather than assuming the
+        // frame width.
+        QHelpEvent* help = static_cast<QHelpEvent*>(event);
+        const QString tip = mHintsEnabled ? symbolTipAt(viewport()->mapFromGlobal(help->globalPos())) : QString();
+        if (tip.isEmpty())
+        {
+            // Accepted, not ignored: an ignored help event keeps travelling up the parent chain,
+            // and a container tooltip would then answer in the editor's place.
+            QToolTip::hideText();
+            help->accept();
+        }
+        else
+        {
+            QToolTip::showText(help->globalPos(), tip, this);
+        }
+
+        return true;
+    }
+
+    return QTextEdit::event(event);
+}
+
 void SMGuardField::mouseMoveEvent(QMouseEvent* event)
 {
     QTextEdit::mouseMoveEvent(event);
@@ -2339,49 +2379,13 @@ void SMGuardField::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    if (mHover == nullptr)
-    {
-        return;
-    }
-
-    // Hover a known symbol word for 300 ms -> the symbol card.
-    const QTextCursor hit = cursorForPosition(event->pos());
-    const QString text = toPlainText();
-    int left = hit.position();
-    while ((left > 0) && (left <= text.length()) && isWordChar(text.at(left - 1)))
-    {
-        --left;
-    }
-
-    int right = hit.position();
-    while ((right < text.length()) && isWordChar(text.at(right)))
-    {
-        ++right;
-    }
-
-    const QString word = (right > left) ? text.mid(left, right - left) : QString();
-    if (word == mHoverWord)
-    {
-        return;
-    }
-
-    mHoverWord = word;
-    mHoverTimer->stop();
-    if ((word.isEmpty() == false) && mOwnerByName.contains(word))
-    {
-        mHoverTimer->start();
-    }
-    else
-    {
-        mHover->scheduleHide();
-    }
+    // Hovering is answered by the tooltip in event(), on Qt's own timing. The card stays for the
+    // badge click, which is the gesture that needs its buttons.
 }
 
 void SMGuardField::leaveEvent(QEvent* event)
 {
     viewport()->setCursor(Qt::IBeamCursor);     // drop any link cursor left by a Ctrl+Shift hover.
-    mHoverTimer->stop();
-    mHoverWord.clear();
     if (mHover != nullptr)
     {
         mHover->scheduleHide();

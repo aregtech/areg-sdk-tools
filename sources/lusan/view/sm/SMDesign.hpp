@@ -47,10 +47,10 @@ class QMenu;
 class QToolBar;
 class QToolButton;
 class SMClipboardContent;
+class SMEdgeItem;
 class SMGraphicsView;
 class SMOutlinePanel;
 class SMPropertiesPanel;
-class SMValidationPanel;
 class SMScene;
 class SMSceneManager;
 class SMStateData;
@@ -132,6 +132,14 @@ public:
     bool isPropertiesVisible() const;
     void setOutlineVisible(bool visible);
     bool isOutlineVisible() const;
+
+    /**
+     * \brief   Reveals a validation finding: a registry entry switches the editor page; a
+     *          state, transition, condition or operation navigates the canvas to its level,
+     *          selects it, and (for transition-owned findings) focuses the Conditions tab.
+     *          Called by the output window's Validation tab, which owns the findings list.
+     **/
+    void navigateToIssue(uint32_t elementId, eDocElementKind kind);
 
     /**
      * \brief   Records where each of the three design widgets (toolbar, Properties, Outline)
@@ -347,6 +355,15 @@ public:
     static QList<ToolGroup> placeholderToolGroups(QObject& owner);
 
     /**
+     * \brief   Fills \p menu with the page's commands in menu order. The page owns this list
+     *          so the main window's Design menu cannot drift away from the drawing toolbar:
+     *          every toolGroups() command reachable nowhere else must appear here (spec 9.3 --
+     *          hiding the toolbar loses nothing). Undo/Redo/Cut/Copy/Paste stay with the Edit
+     *          menu, and "Set Color..." is presented as its three explicit variants.
+     **/
+    void populateDesignMenu(QMenu& menu);
+
+    /**
      * \brief   True when \p action activates a placement tool (Add State/Final/Transition/
      *          Note); on true, \p toolOut receives the tool so the toolbar can arm it sticky
      *          on a double-click.
@@ -377,6 +394,13 @@ signals:
     void signalPlaceDesignWidget(int widget, int place);
 
     /**
+     * \brief   Asks the owning window to bring the output window's Validation tab forward.
+     *          \p step is 0 to only show it, +1 for the next finding (F8), -1 for the previous
+     *          (Shift+F8). The findings list is global to the window, so the page can only ask.
+     **/
+    void signalShowValidation(int step);
+
+    /**
      * \brief   Emitted when a validation finding on a registry entry is activated; the owning
      *          window switches to that entry's editor page (states/transitions are handled on
      *          the canvas, so those never reach this signal).
@@ -400,11 +424,24 @@ protected:
      **/
     virtual bool eventFilter(QObject* watched, QEvent* event) override;
 
+public:
+    /**
+     * \brief   Suppresses the stock dock/toolbar right-click list. Hiding a design widget
+     *          through it would bypass the placement the main window persists, so the panel
+     *          would reappear on the next activation. The View menus own these commands.
+     **/
+    virtual QMenu* createPopupMenu(void) override;
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private slots:
     void onDocumentReloaded();
+
+    /**
+     * \brief   Switches the transition the shape action was aimed at between polyline and arc.
+     **/
+    void onToggleEdgeShape();
 
     /**
      * \brief   Builds and shows the context-sensitive right-click menu (canvas / state /
@@ -417,6 +454,13 @@ private slots:
      *          settings, restores the level's viewport, and refreshes the breadcrumb.
      **/
     void onLevelChanged(uint32_t levelId);
+
+    /**
+     * \brief   Mirrors the armed canvas tool on its action (checked) and on the canvas
+     *          cursor, so the user sees which tool is active no matter which surface armed
+     *          it -- toolbar, Design menu, context menu, or shortcut (issue #541).
+     **/
+    void onToolChanged(NESMDesign::eCanvasTool tool);
 
     /**
      * \brief   Persists the displayed level's zoom/scroll into its View layout entry
@@ -531,6 +575,23 @@ private:
      * \param   ownerId The state or transition element ID.
      * \param   isState True for a state owner, false for a transition owner.
      **/
+    /**
+     * \brief   Adds the polyline/arc toggle to a transition's context menu.
+     **/
+    void addEdgeShapeMenu(QMenu& menu, SMEdgeItem& edge);
+
+    /**
+     * \brief   Retargets the one shape-toggle action at \p edge (nullptr = the current selection)
+     *          and relabels it for what it would do next. Returns the action, ready to be added.
+     **/
+    QAction* shapeToggleAction(SMEdgeItem* edge);
+
+    /**
+     * \brief   The single selected transition's item, or nullptr when the selection is not
+     *          exactly one transition.
+     **/
+    SMEdgeItem* selectedEdge() const;
+
     void addNoteMenuEntries(QMenu& menu, uint32_t ownerId, bool isState);
 
     /**
@@ -651,13 +712,6 @@ private:
      **/
     void focusSearchHit(int index);
 
-    /**
-     * \brief   Reveals a validation finding: a registry entry switches the editor page; a
-     *          state, transition, condition or operation navigates the canvas to its level,
-     *          selects it, and (for transition-owned findings) focuses the Conditions tab.
-     **/
-    void navigateToIssue(uint32_t elementId, eDocElementKind kind);
-
     //!< Navigates the canvas to the given level and selects/centers the canvas element.
     void revealOnCanvas(uint32_t levelId, uint32_t canvasElementId);
 
@@ -736,10 +790,8 @@ private:
     QToolBar*           mToolBar;       //!< The in-page drawing toolbar (movable to the page edges).
     QDockWidget*        mPropertiesDock;//!< The Properties dock (right, top) inside the Design page.
     QDockWidget*        mOutlineDock;   //!< The Outline dock (right, below Properties) inside the Design page.
-    QDockWidget*        mValidationDock;//!< The Validation results dock (bottom) inside the Design page.
     SMPropertiesPanel*  mProperties;    //!< The Properties editor hosted in mPropertiesDock.
     SMOutlinePanel*     mOutline;       //!< The Outline tree hosted in mOutlineDock.
-    SMValidationPanel*  mValidation;    //!< The validation results list hosted in mValidationDock.
     QAction*            mActZoomIn;     //!< Zoom one step in.
     QAction*            mActZoomOut;    //!< Zoom one step out.
     QAction*            mActZoomReset;  //!< Zoom to 100%.
@@ -764,6 +816,7 @@ private:
     QAction*            mActDuplicate;  //!< Duplicate the selection in place.
     QAction*            mActStateColor; //!< Apply a picked color to the selected states.
     QAction*            mActEdgeColor;  //!< Apply a picked color to the selected transitions.
+    QAction*            mActEdgeShape;  //!< Toggle the selected transition between polyline and arc.
     QAction*            mActNoteColor;  //!< Apply a picked color to the selected notes.
     QAction*            mActSetColor;   //!< Toolbar: apply a picked color to the whole selection.
     QAction*            mActAlignLeft;  //!< Align selected boxes to the leftmost edge.

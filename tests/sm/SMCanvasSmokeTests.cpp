@@ -66,12 +66,18 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMenu>
+#include <QSet>
 #include <QTreeWidget>
 #include <QMimeData>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
 #include <QScreen>
 #include <QSettings>
+#include <QDockWidget>
+#include <QShortcut>
+#include <QToolBar>
+#include <QStackedWidget>
 #include <QTabWidget>
 #include <QTextEdit>
 #include <QToolButton>
@@ -106,13 +112,14 @@ namespace
     }
 
     //!< Posts a full mouse press/release pair to the view's viewport at a scene position.
-    void clickScene(SMGraphicsView& view, const QPointF& scenePos, Qt::MouseButton button = Qt::LeftButton)
+    void clickScene(  SMGraphicsView& view, const QPointF& scenePos, Qt::MouseButton button = Qt::LeftButton
+                    , Qt::KeyboardModifiers modifiers = Qt::NoModifier)
     {
         const QPoint vp = view.mapFromScene(scenePos);
         const QPointF global = view.viewport()->mapToGlobal(vp);
-        QMouseEvent press(QEvent::MouseButtonPress, QPointF(vp), global, button, button, Qt::NoModifier);
+        QMouseEvent press(QEvent::MouseButtonPress, QPointF(vp), global, button, button, modifiers);
         QApplication::sendEvent(view.viewport(), &press);
-        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(vp), global, button, Qt::NoButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(vp), global, button, Qt::NoButton, modifiers);
         QApplication::sendEvent(view.viewport(), &release);
         QApplication::processEvents();
     }
@@ -790,6 +797,94 @@ int main(int argc, char* argv[])
     CHECK((polyEdge != nullptr) && (polyEdge->points.size() == 4));          // begin + 2 waypoints + end
     model.getUndoStack().undo();
     CHECK(lightOff->getTransitions().getElementCount() == wpTxBefore);
+
+    std::printf("sect: rectangular self-loop keeps its right angles\n");
+    // --- A self-transition drawn as a rectangle out of one side (press the box, out, along, back
+    // into the same box) must come back with horizontal and vertical legs: each anchor lines up
+    // with its adjacent corner instead of aiming at the box center, which used to bend the first
+    // and last legs and turn the rectangle into a trapezoid. Snap-to-grid is off so the hand
+    // drift in the corner clicks is not rounded away before the alignment rules see it. ---
+    {
+        const bool snapBefore = scene.isSnapToGrid();
+        scene.setSnapToGrid(false);
+
+        // Both anchors must stay on the straight part of the right side: a border point cannot
+        // slide onto a rounded corner, and a clamped anchor would bend the leg it belongs to.
+        const QRectF box  = onItem->getBoxGeometry();
+        const double rad  = onItem->boxCornerRadius();
+        const double outY = box.top() + rad + 8.0;
+        const double back = box.bottom() - rad - 8.0;
+
+        // Turn the corners clear of every box, or a corner click would land on a state and end
+        // the gesture there instead of dropping a waypoint.
+        double corner = box.right() + 120.0;
+        for (const SMStateEntry* sibling : level->getElements())
+        {
+            SMStateItem* item = scene.stateItem(sibling->getId());
+            if (item != nullptr)
+            {
+                corner = std::max(corner, item->getBoxGeometry().right() + 120.0);
+            }
+        }
+
+        const QPointF w1(corner, outY + 3.0);                       // out, drifting down a little
+        const QPointF w2(corner - 3.0, back - 2.0);                 // along, drifting left a little
+        const QPointF press(box.right() - rad - 4.0, outY);         // act 1, inside the right side
+        const QPointF close(box.right() - rad - 4.0, back);         // act 8, back onto the same box
+        CHECK(scene.stateAt(w1) == nullptr);                        // the corners must be on empty canvas
+        CHECK(scene.stateAt(w2) == nullptr);
+        CHECK(scene.stateAt(press) == onItem);
+        CHECK(scene.stateAt(close) == onItem);
+
+        const auto same = [](double a, double b) -> bool { return std::abs(a - b) < 0.5; };
+        const int loopBefore = onState->getTransitions().getElementCount();
+        scene.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+        clickScene(view, press);
+        clickScene(view, w1);
+        clickScene(view, w2);
+        clickScene(view, close);
+
+        CHECK(onState->getTransitions().getElementCount() == loopBefore + 1);
+        const uint32_t loopTx = onState->getTransitions().getElements().last()->getId();
+        const SMTransitionEntry* loop = data.findTransitionById(loopTx);
+        CHECK((loop != nullptr) && (loop->getToId() == onState->getId()));       // it is a self-loop
+        const SMLayoutEdge* loopEdge = data.getLayout().findEdge(loopTx);
+        CHECK((loopEdge != nullptr) && (loopEdge->points.size() == 4));
+        if ((loopEdge != nullptr) && (loopEdge->points.size() == 4))
+        {
+            const QPointF p0 = loopEdge->points.at(0);
+            const QPointF p1 = loopEdge->points.at(1);
+            const QPointF p2 = loopEdge->points.at(2);
+            const QPointF p3 = loopEdge->points.at(3);
+            CHECK(same(p0.x(), box.right()));                       // both anchors on the pressed side
+            CHECK(same(p3.x(), box.right()));
+            CHECK(same(p0.y(), p1.y()));                            // the leg out is horizontal
+            CHECK(same(p1.x(), p2.x()));                            // the leg along is vertical
+            CHECK(same(p2.y(), p3.y()));                            // the leg back is horizontal
+            CHECK(same(p0.y(), outY + 3.0));                        // each anchor followed its corner
+            CHECK(same(p3.y(), back - 2.0));
+            CHECK(std::abs(p0.y() - p3.y()) > 1.0);                 // neither slid to the box center
+        }
+
+        SMEdgeItem* loopItem = dynamic_cast<SMEdgeItem*>(scene.findCanvasItem(loopTx));
+        CHECK(loopItem != nullptr);
+        if (loopItem != nullptr)
+        {
+            // What is drawn matches what is stored: the renderer applies the same anchor rule.
+            const QList<QPointF>& drawn = loopItem->getPath();
+            CHECK(drawn.size() == 4);
+            if (drawn.size() == 4)
+            {
+                CHECK(same(drawn.first().y(), drawn.at(1).y()));
+                CHECK(same(drawn.at(2).y(), drawn.last().y()));
+            }
+        }
+
+        model.getUndoStack().undo();
+        CHECK(onState->getTransitions().getElementCount() == loopBefore);
+        scene.setSnapToGrid(snapBefore);
+        QApplication::processEvents();
+    }
 
     std::printf("sect: fix-514 draw state by drag\n");
     // --- Add State: press-drag-release draws the box between press and release ---
@@ -1497,6 +1592,42 @@ int main(int argc, char* argv[])
         page.setToolbarVisible(true);
         CHECK(page.isToolbarVisible());
 
+        // Toolbar-free operation (spec 9.3): every toolbar command must also be in the Design
+        // menu. Undo/Redo/Cut/Copy/Paste/Select All belong to the Edit menu, and the toolbar's
+        // selection-aware "Set Color..." is presented there as its three explicit variants.
+        {
+            QMenu designMenu;
+            page.populateDesignMenu(designMenu);
+            QSet<QAction*> inMenu;
+            for (QAction* action : designMenu.actions())
+            {
+                if (action->menu() != nullptr)
+                {
+                    for (QAction* sub : action->menu()->actions())
+                        inMenu.insert(sub);
+                }
+                else
+                {
+                    inMenu.insert(action);
+                }
+            }
+
+            for (const SMDesign::ToolGroup& group : page.toolGroups())
+            {
+                if (group.title == SMDesign::tr("Edit"))
+                    continue;
+
+                for (QAction* action : group.actions)
+                {
+                    if (action == page.actionSetColor())
+                        continue;
+                    if (inMenu.contains(action) == false)
+                        std::printf("  design menu misses '%s'\n", action->text().toUtf8().constData());
+                    CHECK(inMenu.contains(action));
+                }
+            }
+        }
+
         // Shortcuts S/F/T/N activate the placement tools while the canvas has focus.
         SMGraphicsView& pageView = page.getView();
         pageView.setFocus();
@@ -1537,8 +1668,9 @@ int main(int argc, char* argv[])
         page.show();
         QApplication::processEvents();
 
-        // Toolbar groups: Design first (state -> transition -> note -> final, the same
-        // order as the canvas context menu), Declare second with icons on every entry.
+        // Toolbar groups: Design first (state -> transition -> note -> final, the same order
+        // as the canvas context menu), Declare second with icons on every entry. There is no
+        // Add Start State button: every level is born with its Start and cannot lose it.
         const QList<SMDesign::ToolGroup> groups = page.toolGroups();
         CHECK(groups.size() == 8);
         CHECK(groups.at(0).title == QStringLiteral("Design"));
@@ -1620,6 +1752,151 @@ int main(int argc, char* argv[])
         CHECK(found.intersects(pageScene.contentBounds()));
     }
 
+    std::printf("sect: issue #541 the armed tool is visible, and Ctrl repeats it\n");
+    // --- Picking a drawing tool must be visible wherever it was picked from: the placement
+    // actions are checkable and the toolbar, the Design menu and the context menu share the
+    // very same action objects, so one checked flag lights all three. The canvas cursor
+    // doubles the hint. Ctrl held through the gesture keeps the tool armed for one more. ---
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        SMScene& pageScene = page.getScene();
+        SMGraphicsView& pageView = page.getView();
+
+        const QList<QAction*> placement{ page.actionAddState(), page.actionAddFinalState()
+                                       , page.actionAddTransition(), page.actionAddNote() };
+        for (QAction* action : placement)
+        {
+            CHECK(action->isCheckable());
+            CHECK(action->isChecked() == false);        // nothing armed on a fresh page
+        }
+
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::Select);
+        CHECK(pageView.cursor().shape() == Qt::ArrowCursor);
+
+        const auto cancelRename = [&pageScene]()
+        {
+            for (QGraphicsItem* item : pageScene.items())
+            {
+                QGraphicsProxyWidget* proxy = qgraphicsitem_cast<QGraphicsProxyWidget*>(item);
+                QLineEdit* editor = (proxy != nullptr ? qobject_cast<QLineEdit*>(proxy->widget()) : nullptr);
+                if (editor != nullptr)
+                {
+                    keyClick(editor, Qt::Key_Escape);
+                    break;
+                }
+            }
+        };
+
+        // Only the armed tool's action is checked; the others must clear even though the
+        // user never touched them.
+        const auto checkedOnly = [&placement](const QAction* armed) -> bool
+        {
+            for (const QAction* action : placement)
+            {
+                if (action->isChecked() != (action == armed))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        };
+
+        // Armed from the Design menu, which hands out this page's own action objects: the
+        // toolbar button of the same action shows the arming without a second code path.
+        QMenu designMenu;
+        page.populateDesignMenu(designMenu);
+        CHECK(designMenu.actions().contains(page.actionAddState()));
+        page.actionAddState()->trigger();
+        QApplication::processEvents();
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::AddState);
+        CHECK(checkedOnly(page.actionAddState()));
+
+        // The crosshair is drawn, not the fixed system Qt::CrossCursor, so its span follows
+        // the NESMDesign::ToolCursorSize constant (odd, to keep a center pixel).
+        CHECK(pageView.cursor().shape() == Qt::BitmapCursor);
+        CHECK(static_cast<int>(pageView.cursor().pixmap().deviceIndependentSize().width())
+              == (NESMDesign::ToolCursorSize | 1));
+
+        // The arms actually got painted: an empty pixmap would still have the right size and
+        // would leave the canvas with an invisible cursor.
+        const QImage cursorImage = pageView.cursor().pixmap().toImage();
+        CHECK(cursorImage.pixelColor(cursorImage.width() / 2, cursorImage.height() / 2).alpha() > 0);
+        CHECK(cursorImage.pixelColor(0, 0).alpha() == 0);    // corners stay transparent
+
+        // Switching tools moves the check rather than adding one.
+        page.actionAddNote()->trigger();
+        QApplication::processEvents();
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::AddNote);
+        CHECK(checkedOnly(page.actionAddNote()));
+
+        // Triggering the armed action again unchecks it and disarms: the checked button is a
+        // real toggle, not a one-way indicator.
+        page.actionAddNote()->trigger();
+        QApplication::processEvents();
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::Select);
+        CHECK(checkedOnly(nullptr));
+        CHECK(pageView.cursor().shape() == Qt::ArrowCursor);
+
+        // A finished placement disarms, the way the issue asks: click Add State, draw one
+        // state, and the button is no longer highlighted.
+        const int before = d.getStates().getElementCount();
+        page.actionAddState()->trigger();
+        clickScene(pageView, QPointF(560.0, 660.0));
+        cancelRename();
+        CHECK(d.getStates().getElementCount() == (before + 1));
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::Select);
+        CHECK(checkedOnly(nullptr));
+        CHECK(pageView.cursor().shape() == Qt::ArrowCursor);
+
+        // Ctrl held through the click repeats: the tool stays armed (and visibly checked)
+        // for the next placement without going back to the toolbar.
+        page.actionAddState()->trigger();
+        clickScene(pageView, QPointF(760.0, 660.0), Qt::LeftButton, Qt::ControlModifier);
+        cancelRename();
+        CHECK(d.getStates().getElementCount() == (before + 2));
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::AddState);
+        CHECK(checkedOnly(page.actionAddState()));
+        CHECK(pageScene.isToolSticky() == false);   // armed for the next gesture, not pinned
+
+        clickScene(pageView, QPointF(960.0, 660.0), Qt::LeftButton, Qt::ControlModifier);
+        cancelRename();
+        CHECK(d.getStates().getElementCount() == (before + 3));
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::AddState);
+
+        // The first click without Ctrl ends the run.
+        clickScene(pageView, QPointF(1160.0, 660.0));
+        cancelRename();
+        CHECK(d.getStates().getElementCount() == (before + 4));
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::Select);
+        CHECK(checkedOnly(nullptr));
+
+        // A double-clicked toolbar button pins the tool (issue #516); the check must survive
+        // the finished gesture that Ctrl-repeat would only have survived once.
+        page.armStickyTool(NESMDesign::eCanvasTool::AddState);
+        QApplication::processEvents();
+        CHECK(pageScene.isToolSticky());
+        CHECK(checkedOnly(page.actionAddState()));
+        clickScene(pageView, QPointF(560.0, 860.0));
+        cancelRename();
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::AddState);
+        CHECK(checkedOnly(page.actionAddState()));
+
+        // Esc is the way out of a pinned tool, and it clears the check as well.
+        keyClickScene(pageScene, Qt::Key_Escape);
+        QApplication::processEvents();
+        CHECK(pageScene.getActiveTool() == NESMDesign::eCanvasTool::Select);
+        CHECK(checkedOnly(nullptr));
+        CHECK(pageView.cursor().shape() == Qt::ArrowCursor);
+    }
+
     std::printf("sect: SM-19 grid dots startup sync\n");
     {
         // The stored dotted-grid preference must reach the scene at page construction, so
@@ -1667,6 +1944,18 @@ int main(int argc, char* argv[])
         // what MdiMainWindow::updateDesignPanels() constructs per active Design page.
         SMOutlinePanel outlinePanel(doc, page.getSceneManager());
         SMPropertiesPanel propsPanel(doc);
+
+        // issue #542: how narrow the user may drag the right dock column is the WORST minimum in
+        // it, so both docks are held to the panel contract -- otherwise one of them silently
+        // becomes the floor for the other and the separator stops moving.
+        QDockWidget* propsDock = page.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        QDockWidget* outlineDock = page.findChild<QDockWidget*>(QStringLiteral("SMOutlineDock"));
+        CHECK((propsDock != nullptr) && (outlineDock != nullptr));
+        if ((propsDock != nullptr) && (outlineDock != nullptr))
+        {
+            CHECK(propsDock->minimumSizeHint().width() <= NESMDesign::PanelMinWidth);
+            CHECK(outlineDock->minimumSizeHint().width() <= NESMDesign::PanelMinWidth);
+        }
         outlinePanel.resize(320, 600);
         outlinePanel.show();
         propsPanel.resize(320, 600);
@@ -2333,6 +2622,814 @@ int main(int argc, char* argv[])
             QApplication::sendEvent(box, &escPress);
             QApplication::processEvents();
             CHECK(box->text().isEmpty());
+        }
+    }
+
+    std::printf("sect: SM-26 canvas search options (case / word / regex / exact id)\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        QLineEdit* box       = page.findChild<QLineEdit*>(QStringLiteral("smCanvasSearch"));
+        QLabel* status       = page.findChild<QLabel*>(QStringLiteral("smCanvasSearchStatus"));
+        QToolButton* opCase  = page.findChild<QToolButton*>(QStringLiteral("smCanvasSearchCase"));
+        QToolButton* opWord  = page.findChild<QToolButton*>(QStringLiteral("smCanvasSearchWord"));
+        QToolButton* opRegex = page.findChild<QToolButton*>(QStringLiteral("smCanvasSearchRegex"));
+        SMStateEntry* off = d.findState("LightOff");
+        CHECK((box != nullptr) && (status != nullptr));
+        CHECK((opCase != nullptr) && (opWord != nullptr) && (opRegex != nullptr));
+        CHECK(off != nullptr);
+
+        if ((box != nullptr) && (status != nullptr) && (off != nullptr)
+            && (opCase != nullptr) && (opWord != nullptr) && (opRegex != nullptr))
+        {
+            // A no-match query deliberately leaves the selection where it was, so the verdict --
+            // not the selection -- is what says whether the query matched.
+            const QString noMatch = QStringLiteral("No match");
+            const auto hit = [&doc, off](void) -> bool
+            {
+                return doc.getSelectionModel().getSelection().contains(off->getId());
+            };
+
+            // A purely numeric query matches the element carrying exactly that id (spec 11).
+            box->setText(QString::number(off->getId()));
+            QApplication::processEvents();
+            CHECK(status->text() != noMatch);
+            CHECK(hit());
+
+            // Match case off (default) accepts any casing; on, it does not.
+            box->setText(QStringLiteral("lightoff"));
+            QApplication::processEvents();
+            CHECK(hit());
+            opCase->setChecked(true);
+            QApplication::processEvents();
+            CHECK(status->text() == noMatch);
+            opCase->setChecked(false);
+            QApplication::processEvents();
+            CHECK(status->text() != noMatch);
+
+            // Whole word makes a substring of a longer name stop matching.
+            box->setText(QStringLiteral("Light"));
+            QApplication::processEvents();
+            CHECK(status->text() != noMatch);
+            opWord->setChecked(true);
+            QApplication::processEvents();
+            CHECK(status->text() == noMatch);
+            opWord->setChecked(false);
+
+            // Regular expression mode interprets the query as a pattern.
+            box->setText(QStringLiteral("^Light.*ff$"));
+            QApplication::processEvents();
+            CHECK(status->text() == noMatch);    // literal substring: no such name
+            opRegex->setChecked(true);
+            QApplication::processEvents();
+            CHECK(status->text() != noMatch);
+            CHECK(hit());
+            opRegex->setChecked(false);
+        }
+    }
+
+    std::printf("sect: issue #542 editing a condition never resizes the Properties panel\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+
+        // The panel lives in a dock whose width the user owns. A QMainWindow can never make a dock
+        // narrower than the hosted widget's minimum, so ANY growth of that minimum while typing
+        // silently drags the dock wider -- which is exactly what the user sees. The minimum is
+        // therefore the contract, and it is asserted against the panel's whole working life.
+        SMPropertiesPanel props(doc);
+        props.resize(280, 700);
+        props.show();
+        QApplication::processEvents();
+
+        const int emptyMin = props.minimumSizeHint().width();
+        CHECK(emptyMin <= NESMDesign::PanelMinWidth);
+
+        StateMachineData& d = doc.getData();
+        uint32_t txId = 0;
+        for (const SMStateEntry* s : d.getStates().getElements())
+        {
+            if ((txId == 0) && (s->getTransitions().getElementCount() >= 1))
+            {
+                txId = s->getTransitions().getElements().first()->getId();
+            }
+        }
+        CHECK(txId != 0);
+
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ txId });
+        QApplication::processEvents();
+        CHECK(props.currentPage() == SMPropertiesPanel::PageTransition);
+        CHECK(props.minimumSizeHint().width() <= NESMDesign::PanelMinWidth);
+
+        // The Conditions tab must be the CURRENT one: the status line is only laid out while its
+        // tab is shown, and a hidden widget asks a box layout for nothing. The bug lives on the
+        // visible path.
+        QTabWidget* transTabs = props.findChild<QTabWidget*>(QStringLiteral("smTransTabs"));
+        CHECK(transTabs != nullptr);
+        if (transTabs != nullptr)
+        {
+            for (int i = 0; i < transTabs->count(); ++i)
+            {
+                if (transTabs->tabText(i).contains(QStringLiteral("Condition")))
+                {
+                    transTabs->setCurrentIndex(i);
+                }
+            }
+        }
+
+        QApplication::processEvents();
+        const int armedMin = props.minimumSizeHint().width();
+        CHECK(armedMin <= NESMDesign::PanelMinWidth);
+
+        QTextEdit* guardField = props.findChild<QTextEdit*>(QStringLiteral("smGuardField"));
+        QLabel* guardStatus = props.findChild<QLabel*>(QStringLiteral("smGuardStatus"));
+        CHECK((guardField != nullptr) && (guardStatus != nullptr));
+        if ((guardField != nullptr) && (guardStatus != nullptr))
+        {
+            // The verdict of a long, unresolved guard is the widest text the panel ever shows.
+            guardField->setPlainText(QStringLiteral("ThisNameIsDeliberatelyVeryLongAndUndeclaredSoTheVerdictRunsWide == 1"));
+            QMetaObject::invokeMethod(guardField, "onDebounce");
+            QApplication::processEvents();
+            CHECK(guardStatus->text().contains(QStringLiteral("err")));
+            CHECK(guardStatus->isVisible());
+
+            // The heart of the issue: the verdict appeared, and the panel asks for exactly what it
+            // asked for before. Nothing the user types moves the edge the user placed.
+            CHECK(props.minimumSizeHint().width() == armedMin);
+
+            // ... because it is the tooltip, not the panel, that carries the full sentence.
+            CHECK(guardStatus->toolTip().contains(QStringLiteral("ThisNameIsDeliberatelyVeryLong")));
+
+            // A narrow panel stays narrow: the label elides into the room it is given.
+            props.resize(200, 700);
+            QApplication::processEvents();
+            CHECK(props.minimumSizeHint().width() <= NESMDesign::PanelMinWidth);
+            CHECK(guardStatus->text().contains(QChar(0x2026)));      // the elision mark
+            CHECK(guardStatus->text().length() < guardStatus->toolTip().length());
+
+            // Clearing the guard is just as quiet.
+            guardField->setPlainText(QString());
+            QMetaObject::invokeMethod(guardField, "onDebounce");
+            QApplication::processEvents();
+            CHECK(props.minimumSizeHint().width() <= NESMDesign::PanelMinWidth);
+        }
+    }
+
+    std::printf("sect: issue #543 kind marks -- an event is not a method, a band mark keeps its row\n");
+    // --- The three surfaces that name a stimulus or an operation (state box, edge label,
+    // Properties picker) must agree on ONE vocabulary: a declared method wears parentheses, an
+    // event and a timer wear a mark, and nothing wears a name Lusan synthesized. ---
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        StateMachineData& d = doc.getData();
+        CHECK(d.getEvents().createEvent(QStringLiteral("NewEvent")) != nullptr);
+        CHECK(d.getTimers().createTimer(QStringLiteral("NewTimer")) != nullptr);
+
+        SMStateEntry* host = nullptr;
+        for (SMStateEntry* s : d.getStates().getElements())
+        {
+            if ((host == nullptr) && (s->getKind() == SMStateEntry::eStateKind::Normal))
+            {
+                host = s;
+            }
+        }
+
+        CHECK(host != nullptr);
+        if (host != nullptr)
+        {
+            // A clean slate: an Enter list holding ONLY an event, and an Exit list holding only a
+            // timer -- the exact shape that used to lose its band mark to the kind mark.
+            const auto clear = [](SMOperationList& list)
+            {
+                while (list.getCount() > 0)
+                {
+                    delete list.takeAt(0);
+                }
+            };
+
+            clear(host->getEntryList());
+            clear(host->getDoList());
+            clear(host->getExitList());
+            host->getEntryList().addOperation(new SMEventSend(0, QStringLiteral("NewEvent")));
+            host->getExitList().addOperation(new SMTimerStart(0, QStringLiteral("NewTimer")));
+
+            SMStateItem* box = dynamic_cast<SMStateItem*>(page.getScene().findCanvasItem(host->getId()));
+            CHECK(box != nullptr);
+            if (box != nullptr)
+            {
+                box->updateFromModel();
+                const QList<SMStateItem::BodyRow> rows = box->getBodyRows();
+                CHECK(rows.size() == 4);
+                if (rows.size() == 4)
+                {
+                    // Row 1 is the action row even with no action: it holds the `->|` band mark and
+                    // says `...`, so row 2 is free to carry the lightning bolt.
+                    CHECK(rows.at(0).icon == SMKindGlyph::eGlyph::Entry);
+                    CHECK(rows.at(0).text == QStringLiteral("..."));
+                    CHECK(rows.at(0).continues);                  // the group reads as one block
+                    CHECK(rows.at(1).icon == SMKindGlyph::eGlyph::Event);
+                    CHECK(rows.at(1).text == QStringLiteral("NewEvent"));    // no brackets, no verb
+
+                    CHECK(rows.at(2).icon == SMKindGlyph::exitGlyph());
+                    CHECK(rows.at(2).text == QStringLiteral("..."));
+                    CHECK(rows.at(3).icon == SMKindGlyph::eGlyph::TimerStart);
+                    CHECK(rows.at(3).text == QStringLiteral("NewTimer"));
+                }
+
+                // With a real action the placeholder is gone: the band mark rides the action row,
+                // and the event keeps its own row and its own mark.
+                host->getEntryList().insertOperation(0, new SMActionCall(0, QStringLiteral("doWork")));
+                box->updateFromModel();
+                const QList<SMStateItem::BodyRow> withAction = box->getBodyRows();
+                CHECK(withAction.size() == 4);
+                if (withAction.size() == 4)
+                {
+                    CHECK(withAction.at(0).icon == SMKindGlyph::eGlyph::Entry);
+                    CHECK(withAction.at(0).text.startsWith(QStringLiteral("doWork(")));   // a method DOES call
+                    CHECK(withAction.at(1).icon == SMKindGlyph::eGlyph::Event);
+                    CHECK(withAction.at(1).text == QStringLiteral("NewEvent"));
+                }
+            }
+        }
+
+        // The edge label: the stimulus name is bare and the kind is a mark, for every kind.
+        SMTransitionEntry* tx = nullptr;
+        for (SMStateEntry* s : d.getStates().getElements())
+        {
+            for (SMTransitionEntry* t : s->getTransitions().getElements())
+            {
+                if ((tx == nullptr) && t->isExternal())
+                {
+                    tx = t;
+                }
+            }
+        }
+
+        CHECK(tx != nullptr);
+        SMEdgeItem* edge = (tx != nullptr)
+                            ? dynamic_cast<SMEdgeItem*>(page.getScene().findCanvasItem(tx->getId())) : nullptr;
+        CHECK(edge != nullptr);
+        if ((tx != nullptr) && (edge != nullptr))
+        {
+            tx->setStimulusKind(SMTransitionEntry::eStimulusKind::Event);
+            tx->setStimulus(QStringLiteral("NewEvent"));
+            edge->updateFromModel();
+            CHECK(edge->getStimulusText() == QStringLiteral("NewEvent"));
+            CHECK(edge->getStimulusText().contains(QLatin1Char('(')) == false);
+            CHECK(edge->getStimulusGlyph() == SMKindGlyph::eGlyph::Event);
+
+            tx->setStimulusKind(SMTransitionEntry::eStimulusKind::Timer);
+            tx->setStimulus(QStringLiteral("NewTimer"));
+            edge->updateFromModel();
+            CHECK(edge->getStimulusText() == QStringLiteral("NewTimer"));
+            CHECK(edge->getStimulusGlyph() == SMKindGlyph::eGlyph::TimerStart);
+
+            // A trigger is a declared method, so it alone keeps the signature.
+            QString triggerName;
+            for (const SMMethodEntry* m : d.getMethods().getElements())
+            {
+                if (triggerName.isEmpty() && (m != nullptr)
+                    && (m->getMethodType() == SMMethodEntry::eMethodType::Trigger))
+                {
+                    triggerName = m->getName();
+                }
+            }
+
+            if (triggerName.isEmpty() == false)
+            {
+                tx->setStimulusKind(SMTransitionEntry::eStimulusKind::Trigger);
+                tx->setStimulus(triggerName);
+                edge->updateFromModel();
+                CHECK(edge->getStimulusText().startsWith(triggerName + QLatin1Char('(')));
+                CHECK(edge->getStimulusGlyph() == SMKindGlyph::eGlyph::Trigger);
+            }
+
+            // The Properties picker offers DECLARED names, never a synthesized handler name, and
+            // the row is found by its (kind, name) data rather than by that text.
+            tx->setStimulusKind(SMTransitionEntry::eStimulusKind::Event);
+            tx->setStimulus(QStringLiteral("NewEvent"));
+
+            SMPropertiesPanel props(doc);
+            props.resize(320, 700);
+            props.show();
+            doc.getSelectionModel().setSelection(QList<uint32_t>{ tx->getId() });
+            QApplication::processEvents();
+            CHECK(props.currentPage() == SMPropertiesPanel::PageTransition);
+
+            QComboBox* picker = props.stimulusNameCombo();
+            CHECK(picker != nullptr);
+            if (picker != nullptr)
+            {
+                bool synthesized = false;
+                int eventRow = -1;
+                int timerRow = -1;
+                for (int row = 1; row < picker->count(); ++row)
+                {
+                    synthesized = synthesized
+                               || picker->itemText(row).startsWith(QStringLiteral("on_event_"))
+                               || picker->itemText(row).startsWith(QStringLiteral("on_timer_"));
+                    if (picker->itemText(row) == QStringLiteral("NewEvent"))
+                    {
+                        eventRow = row;
+                    }
+                    else if (picker->itemText(row) == QStringLiteral("NewTimer"))
+                    {
+                        timerRow = row;
+                    }
+                }
+
+                CHECK(synthesized == false);
+                CHECK(eventRow > 0);
+                CHECK(timerRow > 0);
+
+                // Each row carries its own mark, so an event and a timer of the same name would
+                // still be told apart on sight.
+                CHECK((eventRow < 0) || (picker->itemIcon(eventRow).isNull() == false));
+                CHECK((timerRow < 0) || (picker->itemIcon(timerRow).isNull() == false));
+
+                // The transition's own stimulus is the selected row -- matched by data, which is
+                // what the dropped prefixes used to do by text.
+                CHECK(picker->currentIndex() == eventRow);
+                CHECK(picker->currentText() == QStringLiteral("NewEvent"));
+            }
+        }
+
+        // The pointer belongs to the user: only a tool that drops a NEW element where the click
+        // lands takes the crosshair, and disarming gives the pointer back for good.
+        CHECK(NESMDesign::toolAims(NESMDesign::eCanvasTool::AddState));
+        CHECK(NESMDesign::toolAims(NESMDesign::eCanvasTool::AddFinalState));
+        CHECK(NESMDesign::toolAims(NESMDesign::eCanvasTool::AddTransition));
+        CHECK(NESMDesign::toolAims(NESMDesign::eCanvasTool::Select) == false);
+        CHECK(NESMDesign::toolAims(NESMDesign::eCanvasTool::AddNote) == false);
+        CHECK(NESMDesign::toolAims(NESMDesign::eCanvasTool::Waypoint) == false);
+        CHECK(NESMDesign::toolAims(NESMDesign::eCanvasTool::ColorApply) == false);
+
+        SMGraphicsView& toolView = page.getView();
+        page.actionAddNote()->trigger();
+        QApplication::processEvents();
+        CHECK(page.getScene().getActiveTool() == NESMDesign::eCanvasTool::AddNote);
+        CHECK(toolView.cursor().shape() == Qt::ArrowCursor);        // a note does not aim
+
+        page.actionAddState()->trigger();
+        QApplication::processEvents();
+        CHECK(toolView.cursor().shape() == Qt::BitmapCursor);
+
+        // The heart of the cursor bug: an item's hover cursor makes QGraphicsView remember the
+        // viewport's cursor -- the crosshair -- and write it back when the hover ends. Disarming
+        // must clear that copy, or the crosshair outlives the tool.
+        toolView.viewport()->setCursor(toolView.cursor());
+        page.actionAddState()->trigger();                           // toggles the tool back off
+        QApplication::processEvents();
+        CHECK(page.getScene().getActiveTool() == NESMDesign::eCanvasTool::Select);
+        CHECK(toolView.cursor().shape() == Qt::ArrowCursor);
+        CHECK(toolView.viewport()->cursor().shape() == Qt::ArrowCursor);
+    }
+
+    std::printf("sect: issue #546 design panel placement survives a close\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        QDockWidget* propsDock = page.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        QDockWidget* outlineDock = page.findChild<QDockWidget*>(QStringLiteral("SMOutlineDock"));
+        CHECK((propsDock != nullptr) && (outlineDock != nullptr));
+
+        // Left or right only: a panel dropped on the top edge squashed the canvas and had no
+        // usable height of its own.
+        const Qt::DockWidgetAreas sides = Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea;
+        CHECK((propsDock != nullptr) && (propsDock->allowedAreas() == sides));
+        CHECK((outlineDock != nullptr) && (outlineDock->allowedAreas() == sides));
+
+        // The toolbar keeps all four edges.
+        QToolBar* bar = page.findChild<QToolBar*>(QStringLiteral("SMDesignToolBar"));
+        CHECK((bar != nullptr) && (bar->allowedAreas() == Qt::AllToolBarAreas));
+
+        // The dock's own close button must announce the placement change; the main window
+        // persists it and stops re-showing the panel on the next activation.
+        int closedWidget = -1;
+        int closedPlace = -1;
+        QObject::connect(&page, &SMDesign::signalPlaceDesignWidget, [&closedWidget, &closedPlace](int w, int p) {
+            closedWidget = w;
+            closedPlace = p;
+        });
+
+        if (outlineDock != nullptr)
+        {
+            outlineDock->close();
+            QApplication::processEvents();
+        }
+
+        CHECK(closedWidget == 2);       // eDesignWidget::Outline
+        CHECK(closedPlace == 0);        // eDesignPlace::Hidden
+
+        closedWidget = -1;
+        closedPlace = -1;
+        if (propsDock != nullptr)
+        {
+            propsDock->close();
+            QApplication::processEvents();
+        }
+
+        CHECK(closedWidget == 1);       // eDesignWidget::Properties
+        CHECK(closedPlace == 0);
+
+        // The stock dock/toolbar right-click list would hide a widget behind the coordinator's
+        // back, so the page refuses to build one.
+        CHECK(page.createPopupMenu() == nullptr);
+    }
+
+    std::printf("sect: SM-26 verify -- the Validation dock has a way back, and the no-document menu matches\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        // Findings live in the output window's Validation tab, not in a page dock. The page
+        // owns no validation widget at all; F8 / Shift+F8 and the canvas View entry can only
+        // ask the window for it, which is what keeps one findings list for the whole app.
+        CHECK(page.findChild<QDockWidget*>(QStringLiteral("SMValidationDock")) == nullptr);
+        CHECK(page.findChild<QWidget*>(QStringLiteral("smValidation")) == nullptr);
+
+        bool hasNextIssue = false;
+        bool hasPrevIssue = false;
+        for (QShortcut* shortcut : page.findChildren<QShortcut*>())
+        {
+            hasNextIssue = hasNextIssue || (shortcut->key() == QKeySequence(Qt::Key_F8));
+            hasPrevIssue = hasPrevIssue || (shortcut->key() == QKeySequence(Qt::SHIFT | Qt::Key_F8));
+        }
+
+        CHECK(hasNextIssue);
+        CHECK(hasPrevIssue);
+
+        // The Design menu built with no document open is a hand-written copy of toolGroups().
+        // Drift there is invisible in the running app (the two are never on screen together),
+        // so compare titles and labels position by position.
+        const QList<SMDesign::ToolGroup> live = page.toolGroups();
+        const QList<SMDesign::ToolGroup> standIn = SMDesign::placeholderToolGroups(page);
+        CHECK(live.size() == standIn.size());
+        for (int i = 0; (i < live.size()) && (i < standIn.size()); ++i)
+        {
+            if (live.at(i).title != standIn.at(i).title)
+                std::printf("  group %d: '%s' vs '%s'\n", i, live.at(i).title.toUtf8().constData()
+                                                           , standIn.at(i).title.toUtf8().constData());
+            CHECK(live.at(i).title == standIn.at(i).title);
+            CHECK(live.at(i).actions.size() == standIn.at(i).actions.size());
+            for (int j = 0; (j < live.at(i).actions.size()) && (j < standIn.at(i).actions.size()); ++j)
+            {
+                const QString liveText = live.at(i).actions.at(j)->text();
+                const QString standInText = standIn.at(i).actions.at(j)->text();
+                if (liveText != standInText)
+                    std::printf("  %s[%d]: '%s' vs '%s'\n", live.at(i).title.toUtf8().constData(), j
+                                                          , liveText.toUtf8().constData(), standInText.toUtf8().constData());
+                CHECK(liveText == standInText);
+            }
+        }
+
+        // Ctrl+F belongs to the window's Edit > Find. A second, page-local shortcut would make
+        // both ambiguous and neither would fire.
+        for (QShortcut* shortcut : page.findChildren<QShortcut*>())
+        {
+            CHECK(shortcut->key() != QKeySequence(QKeySequence::Find));
+        }
+    }
+
+    std::printf("sect: issue 8 arming a tool ends an open in-place edit\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& canvas = page.getScene();
+        SMStateEntry* off = doc.getData().findState("LightOff");
+        CHECK(off != nullptr);
+        SMStateItem* item = (off != nullptr) ? dynamic_cast<SMStateItem*>(canvas.findCanvasItem(off->getId())) : nullptr;
+        CHECK(item != nullptr);
+
+        if (item != nullptr)
+        {
+            item->startInlineRename();
+            QApplication::processEvents();
+            CHECK(item->isRenameActive());
+
+            // Arming a placement tool is a mode switch: the editor ends here. Left open, its proxy
+            // widget's cursor is restored onto the viewport when the pointer leaves it and masks
+            // the tool's crosshair -- the pointer-instead-of-cross report.
+            canvas.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+            QApplication::processEvents();
+            CHECK(item->isRenameActive() == false);
+            CHECK(canvas.isInlineEditorActive() == false);
+
+            // The name is committed, not discarded: a mode switch must not lose typed work.
+            CHECK(off->getName() == QStringLiteral("LightOff"));
+        }
+    }
+
+    std::printf("sect: issue 9 a transition can be curved, and the arc is a shape of the edge\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& canvas = page.getScene();
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(canvas.findCanvasItem(27));
+        CHECK(edge != nullptr);
+
+        if (edge != nullptr)
+        {
+            // Curving is reachable at all: before this the format carried Arc, the renderer drew
+            // it, and nothing in the editor could ever set it.
+            edge->setShape(SMLayoutEdge::eShape::Arc);
+            CHECK(edge->getShape() == SMLayoutEdge::eShape::Arc);
+            edge->setSelected(true);
+            QApplication::processEvents();
+            grab(page, "g-arc-curved");
+
+            const SMLayoutEdge* stored = doc.getData().getLayout().findEdge(27);
+            CHECK(stored != nullptr);
+            CHECK((stored != nullptr) && (stored->shape == SMLayoutEdge::eShape::Arc));
+            // A zero bulge would still draw a straight line, so curving seeds a visible one.
+            CHECK((stored != nullptr) && (std::abs(stored->bulge) > 1e-6));
+            // An arc is its two endpoints plus a bulge.
+            CHECK((stored != nullptr) && (stored->points.size() == 2));
+
+            // One undo step, and it restores the polyline.
+            doc.getUndoStack().undo();
+            QApplication::processEvents();
+            const SMLayoutEdge* undone = doc.getData().getLayout().findEdge(27);
+            CHECK((undone != nullptr) && (undone->shape == SMLayoutEdge::eShape::Line));
+
+            doc.getUndoStack().redo();
+            QApplication::processEvents();
+
+            // Straightening clears the curvature rather than leaving a bulge on a Line edge.
+            edge->setShape(SMLayoutEdge::eShape::Line);
+            const SMLayoutEdge* flat = doc.getData().getLayout().findEdge(27);
+            CHECK((flat != nullptr) && (flat->shape == SMLayoutEdge::eShape::Line));
+            CHECK((flat != nullptr) && (std::abs(flat->bulge) < 1e-6));
+        }
+
+        // A self-loop curves too: its two anchors sit on the same box but are still distinct
+        // points, so a chord and a bulge describe the loop exactly as they describe any other
+        // transition. Refusing it was the bug.
+        StateMachineData& d = doc.getData();
+        SMStateEntry* on = d.findState("LightOn");
+        SMGraphicsView* view = page.findChild<SMGraphicsView*>();
+        SMStateItem* onItem = (on != nullptr) ? canvas.stateItem(on->getId()) : nullptr;
+        CHECK((on != nullptr) && (view != nullptr) && (onItem != nullptr));
+        if ((on != nullptr) && (view != nullptr) && (onItem != nullptr))
+        {
+            // Drawn out of the right side, so the loop has two DISTINCT anchors to preserve: the
+            // two-click default puts both at the same border point, which is a separate case below.
+            const QRectF box  = onItem->getBoxGeometry();
+            const double rad  = onItem->boxCornerRadius();
+            const double outY = box.top() + rad + 8.0;
+            const double back = box.bottom() - rad - 8.0;
+            const SMStateData* level = d.findLevel(canvas.getLevelId());
+            double corner = box.right() + 120.0;
+            if (level != nullptr)
+            {
+                for (const SMStateEntry* sibling : level->getElements())
+                {
+                    SMStateItem* item = canvas.stateItem(sibling->getId());
+                    if (item != nullptr)
+                    {
+                        corner = std::max(corner, item->getBoxGeometry().right() + 120.0);
+                    }
+                }
+            }
+
+            canvas.setSnapToGrid(false);
+            canvas.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+            clickScene(*view, QPointF(box.right() - rad - 4.0, outY));   // press inside the right side
+            clickScene(*view, QPointF(corner, outY));                    // out
+            clickScene(*view, QPointF(corner, back));                    // along
+            clickScene(*view, QPointF(box.right() - rad - 4.0, back));   // back onto the same box
+            QApplication::processEvents();
+
+            const uint32_t selfTx = on->getTransitions().getElements().last()->getId();
+            SMEdgeItem* loop = dynamic_cast<SMEdgeItem*>(canvas.findCanvasItem(selfTx));
+            CHECK(loop != nullptr);
+            if (loop != nullptr)
+            {
+                const QPointF from = loop->getPath().first();
+                const QPointF to   = loop->getPath().last();
+                CHECK(std::hypot(from.x() - to.x(), from.y() - to.y()) > 1.0);   // two anchors, not one
+
+                loop->setShape(SMLayoutEdge::eShape::Arc);
+                CHECK(loop->getShape() == SMLayoutEdge::eShape::Arc);
+                loop->setSelected(true);
+                view->centerOn(box.center() + QPointF(NESMDesign::EdgeSelfLoopStandoff, 0.0));
+                QApplication::processEvents();
+                grab(page, "g-arc-self-loop");
+
+                const SMLayoutEdge* curved = d.getLayout().findEdge(selfTx);
+                CHECK((curved != nullptr) && (curved->shape == SMLayoutEdge::eShape::Arc));
+                // An arc is its two endpoints plus a bulge -- the loop's corners are gone, and the
+                // self-loop default must not seed them back in behind the shape's back.
+                CHECK((curved != nullptr) && (curved->points.size() == 2));
+                CHECK((curved != nullptr) && (std::abs(curved->bulge) > 1e-6));
+                // Where the loop left and re-entered the box is kept, not re-derived.
+                CHECK((curved != nullptr) && (std::hypot(curved->points.first().x() - from.x()
+                                                       , curved->points.first().y() - from.y()) < 0.5));
+                CHECK((curved != nullptr) && (std::hypot(curved->points.last().x() - to.x()
+                                                       , curved->points.last().y() - to.y()) < 0.5));
+
+                // The curve bows AWAY from its own state: no drawn point falls inside the box, so
+                // the loop never reads as a line crossing the state it belongs to.
+                const QList<QPointF> drawn = loop->getPath();
+                CHECK(drawn.size() > 2);
+                bool   outside   = true;
+                double apexStand = 0.0;
+                for (const QPointF& p : drawn)
+                {
+                    outside   = outside && (box.adjusted(0.5, 0.5, -0.5, -0.5).contains(p) == false);
+                    apexStand = std::max(apexStand, p.x() - box.right());
+                }
+
+                CHECK(outside);
+                // It stands off the border about as far as the polyline loop's corners did, so
+                // switching the shape does not resize the loop.
+                CHECK(apexStand > (NESMDesign::EdgeSelfLoopStandoff / 2.0));
+
+                // Back to a polyline: a two-point run between anchors on the same box would draw
+                // nothing, so straightening restores the rectangle -- begin, two corners, end.
+                loop->setShape(SMLayoutEdge::eShape::Line);
+                CHECK(loop->getShape() == SMLayoutEdge::eShape::Line);
+                const SMLayoutEdge* flat = d.getLayout().findEdge(selfTx);
+                CHECK((flat != nullptr) && (flat->points.size() == 4));
+                CHECK((flat != nullptr) && (std::abs(flat->bulge) < 1e-6));
+                CHECK(loop->getPath().size() == 4);
+                if ((flat != nullptr) && (flat->points.size() == 4))
+                {
+                    // Each corner stands straight out from the anchor it belongs to: the legs that
+                    // leave and re-enter the box are square, which is what makes it a rectangle.
+                    CHECK(std::abs(flat->points.at(1).y() - flat->points.first().y()) < 0.5);
+                    CHECK(std::abs(flat->points.at(2).y() - flat->points.last().y()) < 0.5);
+                    CHECK(std::abs((flat->points.at(1).x() - box.right()) - NESMDesign::EdgeSelfLoopStandoff) < 0.5);
+                    CHECK(std::abs((flat->points.at(2).x() - box.right()) - NESMDesign::EdgeSelfLoopStandoff) < 0.5);
+                }
+            }
+
+            // The two-click default loop puts both anchors on the same border point. A chord of
+            // zero length is not a curve, so curving it falls back to a symmetric pair -- it must
+            // still come out drawable rather than collapsing to nothing.
+            canvas.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+            clickScene(*view, box.center());
+            clickScene(*view, box.center());
+            QApplication::processEvents();
+            SMEdgeItem* plain = dynamic_cast<SMEdgeItem*>(
+                        canvas.findCanvasItem(on->getTransitions().getElements().last()->getId()));
+            CHECK(plain != nullptr);
+            if (plain != nullptr)
+            {
+                plain->setShape(SMLayoutEdge::eShape::Arc);
+                CHECK(plain->getShape() == SMLayoutEdge::eShape::Arc);
+                const QPointF a = plain->getPath().first();
+                const QPointF b = plain->getPath().last();
+                CHECK(std::hypot(a.x() - b.x(), a.y() - b.y()) > 1.0);
+                CHECK(plain->getPath().size() > 2);      // a real curve, not a collapsed chord
+            }
+        }
+    }
+
+    std::printf("sect: issue 9-1 a deliberate angle keeps its anchor, a near-straight leg is squared\n");
+    {
+        // The box the leg leaves: left 100, top 100, right 260, bottom 164.
+        const QRectF box(100.0, 100.0, 160.0, 64.0);
+        const QPointF press(150.0, 100.0);          // where the user pressed on the top border
+
+        CHECK(NESMDesign::isNearAxis(QPointF(4.0, -200.0)));         // ~1 deg off vertical
+        CHECK(NESMDesign::isNearAxis(QPointF(-200.0, 6.0)));         // ~2 deg off horizontal
+        CHECK(NESMDesign::isNearAxis(QPointF(250.0, -200.0)) == false);  // ~39 deg: deliberate
+
+        // Almost straight up: tidied to exactly straight, so the anchor takes the waypoint's column.
+        const QPointF nearAxis(154.0, -100.0);
+        const QPointF squared = NESMDesign::polylineAnchorPoint(box, 0.0, press, nearAxis, 16, false);
+        CHECK(std::abs(squared.x() - nearAxis.x()) < 0.5);
+
+        // A deliberate diagonal keeps the pressed anchor -- it must NOT jump onto the waypoint's
+        // column, which is what made an angled transition snap straight (issue 9-1).
+        const QPointF diagonal(400.0, -100.0);
+        const QPointF kept = NESMDesign::polylineAnchorPoint(box, 0.0, press, diagonal, 16, false);
+        CHECK(std::abs(kept.x() - press.x()) < 0.5);
+        CHECK(std::abs(kept.x() - diagonal.x()) > 1.0);
+    }
+
+    std::printf("sect: issue 9-1 a press just outside a state still starts a transition\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& canvas = page.getScene();
+        SMStateEntry* off = doc.getData().findState("LightOff");
+        SMStateItem* item = (off != nullptr) ? canvas.stateItem(off->getId()) : nullptr;
+        CHECK((off != nullptr) && (item != nullptr));
+
+        if ((off != nullptr) && (item != nullptr))
+        {
+            const QRectF box = item->getBoxGeometry();
+            // Two units outside the left border: aiming at the exact border is not reasonable.
+            const QPointF outside(box.left() - 2.0, box.center().y());
+            CHECK(canvas.stateAt(outside) == nullptr);                                  // strictly outside
+            CHECK(canvas.stateNear(outside, NESMDesign::StatePickMargin) == item);       // still picks it
+
+            // Far away stays nothing, so the margin does not swallow the empty canvas.
+            CHECK(canvas.stateNear(QPointF(box.left() - 400.0, box.center().y())
+                                  , NESMDesign::StatePickMargin) == nullptr);
+        }
+    }
+
+    std::printf("sect: issue 9-2 one flat entry states the shape it would switch to\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& canvas = page.getScene();
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(canvas.findCanvasItem(27));
+        CHECK(edge != nullptr);
+
+        // The Design menu carries it too, so it is reachable without right-clicking the edge.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
+        QApplication::processEvents();
+        QMenu designMenu;
+        page.populateDesignMenu(designMenu);
+        QAction* shapeEntry = nullptr;
+        for (QAction* action : designMenu.actions())
+        {
+            if (action->text() == QStringLiteral("Make Arc"))
+            {
+                shapeEntry = action;
+            }
+        }
+
+        CHECK(shapeEntry != nullptr);
+        CHECK((shapeEntry != nullptr) && shapeEntry->isEnabled());   // exactly one transition selected
+
+        if ((shapeEntry != nullptr) && (edge != nullptr))
+        {
+            // Triggering it curves the edge, and the entry then offers the way back.
+            shapeEntry->trigger();
+            QApplication::processEvents();
+            CHECK(edge->getShape() == SMLayoutEdge::eShape::Arc);
+
+            QMenu again;
+            page.populateDesignMenu(again);
+            bool offersPolyline = false;
+            for (QAction* action : again.actions())
+            {
+                if (action->text() == QStringLiteral("Make Polyline"))
+                {
+                    offersPolyline = true;
+                }
+            }
+
+            CHECK(offersPolyline);
+        }
+
+        // Nothing selected: the entry is present but dead, never a silent no-op on a guess.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{});
+        QApplication::processEvents();
+        QMenu empty;
+        page.populateDesignMenu(empty);
+        for (QAction* action : empty.actions())
+        {
+            if ((action->text() == QStringLiteral("Make Arc")) || (action->text() == QStringLiteral("Make Polyline")))
+            {
+                CHECK(action->isEnabled() == false);
+            }
         }
     }
 

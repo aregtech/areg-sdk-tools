@@ -34,9 +34,11 @@
 #include "lusan/model/sm/SMTransitionCommands.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
+#include "lusan/view/sm/NESMDesign.hpp"
 #include "lusan/view/sm/SMAccordion.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
+#include "lusan/view/sm/SMKindGlyph.hpp"
 #include "lusan/view/sm/SMOperationsEditor.hpp"
 #include "lusan/view/sm/SMSectionChrome.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
@@ -74,16 +76,25 @@ namespace
     //!< The real registry name carried by each stimulus-picker row (the label may be prefixed).
     constexpr int RoleStimulusName { Qt::UserRole + 1 };
 
-    //!< The display label for a stimulus: triggers show their method name (unambiguous), events
-    //!< and timers are prefixed so the same name across the two registries stays distinct.
-    QString stimulusDisplayLabel(SMTransitionEntry::eStimulusKind kind, const QString& name)
+    //!< The mark of a stimulus kind, shown on its picker row and beside the chosen stimulus.
+    SMKindGlyph::eGlyph stimulusGlyph(SMTransitionEntry::eStimulusKind kind)
     {
         switch (kind)
         {
-        case SMTransitionEntry::eStimulusKind::Event: return QStringLiteral("on_event_") + name;
-        case SMTransitionEntry::eStimulusKind::Timer: return QStringLiteral("on_timer_") + name;
-        default:                                      return name;
+        case SMTransitionEntry::eStimulusKind::Event: return SMKindGlyph::eGlyph::Event;
+        case SMTransitionEntry::eStimulusKind::Timer: return SMKindGlyph::eGlyph::TimerStart;
+        default:                                      return SMKindGlyph::eGlyph::Trigger;
         }
+    }
+
+    //!< The display label for a stimulus: the REGISTRY name, exactly as declared. What kind it is
+    //!< comes from the row's mark, never from a synthesized handler name -- `on_event_<name>` and
+    //!< `on_timer_<name>` invented a method signature that is the code generator's to choose, not
+    //!< Lusan's, and it did not match what the transition then showed on the canvas (issue #543).
+    //!< A row is therefore identified by its (kind, name) data, not by its text.
+    QString stimulusDisplayLabel(SMTransitionEntry::eStimulusKind kind, const QString& name)
+    {
+        return SMKindGlyph::prefix(stimulusGlyph(kind)) + name;
     }
 
     //!< The label shown for a transition with no target (an internal transition).
@@ -205,6 +216,9 @@ SMPropertiesPanel::SMPropertiesPanel(StateMachineModel& model, QWidget* parent /
 {
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
+    // The panel states its own minimum (minimumSizeHint below); the layout must not overwrite it
+    // with the sum of everything the pages contain, or the dock is back to being content-driven.
+    layout->setSizeConstraint(QLayout::SetNoConstraint);
     layout->addWidget(mStack);
 
     QLabel* empty = new QLabel(tr("No selection"), this);
@@ -243,6 +257,18 @@ SMPropertiesPanel::~SMPropertiesPanel()
 {
     mModel.getNotifier().disconnect(this);
     mModel.getSelectionModel().disconnect(this);
+}
+
+QSize SMPropertiesPanel::minimumSizeHint() const
+{
+    // The width of this panel belongs to the user, not to what happens to be selected. A dock can
+    // never be dragged narrower than the widget it hosts asks for, so the panel promises the dock
+    // a fixed, small minimum (NESMDesign::PanelMinWidth) instead of the sum of its pages: the
+    // separator then keeps its full travel, and no selection, tab or diagnostic can move the edge.
+    // Squeezed below what a row genuinely needs, the row is clipped on the right -- the user's own
+    // drag, undone by dragging back -- which is the lesser evil next to a panel that resizes itself.
+    const QSize base = QWidget::minimumSizeHint();
+    return QSize(qMin(base.width(), NESMDesign::PanelMinWidth), base.height());
 }
 
 void SMPropertiesPanel::buildStatePage()
@@ -665,10 +691,14 @@ void SMPropertiesPanel::showTransition(uint32_t transitionId)
 
     // Fill the picker with every trigger/event/timer and select the transition's current one by
     // its (kind, name) display label.
-    const QString currentLabel = populateStimulusPicker(static_cast<int>(transition->getStimulusKind()), transition->getStimulus());
-    const int stimRow = mStimulusName->findText(currentLabel, Qt::MatchFixedString);
-    mStimulusName->setCurrentIndex(stimRow >= 0 ? stimRow : 0);
-    mStimulusSig->setText(SMOperationSummary::stimulusSignature(data, *transition));
+    mStimulusName->setCurrentIndex(populateStimulusPicker(static_cast<int>(transition->getStimulusKind())
+                                                         , transition->getStimulus()));
+
+    // The read-only signature spells the kind out (`event NewEvent`): a QLabel carries no mark, and
+    // this line is the one place that has room for the word.
+    const QString signature = SMOperationSummary::stimulusSignature(data, *transition);
+    const QString kindWord  = signature.isEmpty() ? QString() : SMKindGlyph::word(stimulusGlyph(transition->getStimulusKind()));
+    mStimulusSig->setText(kindWord.isEmpty() ? signature : (kindWord + QLatin1Char(' ') + signature));
 
     // Populate the target and source pickers from the sibling states of the transition's level.
     // Each item carries the sibling's element ID as its data, so the endpoint is committed by ID --
@@ -875,7 +905,7 @@ void SMPropertiesPanel::onStimulusCommit()
     applyStimulus();
 }
 
-QString SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString& currentName)
+int SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString& currentName)
 {
     StateMachineData& data = mModel.getData();
     mStimulusName->clear();
@@ -893,9 +923,13 @@ QString SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString
         }
 
         const int row = mStimulusName->count();
-        mStimulusName->addItem(stimulusDisplayLabel(kind, name));
+        mStimulusName->addItem(SMKindGlyph::icon(stimulusGlyph(kind), mStimulusName->palette().color(QPalette::Text))
+                              , stimulusDisplayLabel(kind, name));
         mStimulusName->setItemData(row, static_cast<int>(kind), RoleStimulusKind);
         mStimulusName->setItemData(row, name, RoleStimulusName);
+        // The kind is a mark, not a word, so the tooltip is what a screen reader and a hovering
+        // user get: `event NewEvent`.
+        mStimulusName->setItemData(row, SMKindGlyph::word(stimulusGlyph(kind)) + QLatin1Char(' ') + name, Qt::ToolTipRole);
     };
 
     // Triggers are the FSM's methods of trigger type (checked against the Methods page).
@@ -920,9 +954,23 @@ QString SMPropertiesPanel::populateStimulusPicker(int currentKind, const QString
         addRow(SMTransitionEntry::eStimulusKind::Timer, timer.getName());
     }
 
-    return currentName.isEmpty()
-            ? tr("(none)")
-            : stimulusDisplayLabel(static_cast<SMTransitionEntry::eStimulusKind>(currentKind), currentName);
+    if (currentName.isEmpty())
+    {
+        return 0;   // row 0 is "(none)"
+    }
+
+    // By DATA, never by text: two registries may legally hold the same name until validation
+    // objects, and the rows no longer carry a kind prefix to tell them apart.
+    for (int row = 1; row < mStimulusName->count(); ++row)
+    {
+        if ((mStimulusName->itemData(row, RoleStimulusKind).toInt() == currentKind)
+            && (mStimulusName->itemData(row, RoleStimulusName).toString() == currentName))
+        {
+            return row;
+        }
+    }
+
+    return 0;
 }
 
 void SMPropertiesPanel::applyStimulus()

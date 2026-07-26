@@ -40,6 +40,7 @@ class SMCanvasItem;
 class SMEdgeItem;
 class SMNoteItem;
 class SMStateItem;
+class SMSubmachinePeek;
 class StateMachineModel;
 struct SMLayoutEdge;
 enum class eDocElementKind;
@@ -138,13 +139,19 @@ public:
     void setActiveTool(NESMDesign::eCanvasTool tool, bool sticky = false);
 
     /**
+     * \brief   Returns true while the active tool is armed sticky (double-clicked button).
+     **/
+    inline bool isToolSticky() const;
+
+    /**
      * \brief   Cancels the in-progress gesture and returns to the Select tool (Esc).
      **/
     void cancelActiveGesture();
 
     /**
      * \brief   Called by the active tool when its gesture completed; single-shot
-     *          tools revert to Select.
+     *          tools revert to Select. Holding Ctrl through the gesture repeats the
+     *          tool once more (issue #541) without arming it sticky.
      **/
     void finishToolGesture();
 
@@ -202,6 +209,14 @@ public:
     SMStateItem* stateAt(const QPointF& scenePos) const;
 
     /**
+     * \brief   Returns the state box at a scene position or, failing that, the nearest one whose
+     *          border lies within \p margin. Aiming at the exact border of a box is not a
+     *          reasonable thing to ask of a pointing device, so a press that lands just outside
+     *          one still starts (or finishes) a transition on it.
+     **/
+    SMStateItem* stateNear(const QPointF& scenePos, double margin) const;
+
+    /**
      * \brief   Re-anchors every edge connected to a state after its box moved or resized.
      **/
     void updateEdgesForState(uint32_t stateId);
@@ -241,6 +256,11 @@ public:
      *          embedded editor, which would otherwise swallow the keystroke and spawn items.
      **/
     bool isInlineEditorActive() const;
+
+    /**
+     * \brief   Ends every open in-place editor, committing each as a focus-out would.
+     **/
+    void closeInlineEditors();
 
     /**
      * \brief   Requests descending into a state's painted submachine (double-click,
@@ -294,6 +314,19 @@ public:
      * \param   refs    The references the clicked row makes (kind + name).
      **/
     void requestGotoRefs(const QList<SMReferences::Ref>& refs);
+
+    /**
+     * \brief   Shows the submachine quick view over the composite state \p stateId (the Ctrl+Alt
+     *          hover on its corner hint). The scene builds it, not the item: reading the nested
+     *          level is a model read, and a canvas item holds no model data. Nothing is shown for
+     *          a state without a real submachine.
+     * \param   stateId     The composite state whose level is previewed.
+     * \param   globalPos   The pointer position, in screen coordinates.
+     **/
+    void showSubmachinePeek(uint32_t stateId, const QPoint& globalPos);
+
+    //!< Hides the submachine quick view; harmless when none is open.
+    void hideSubmachinePeek();
 
 //////////////////////////////////////////////////////////////////////////
 // Internal: item registry (called by SMCanvasItem on scene changes)
@@ -475,6 +508,9 @@ private:
                                                     //!< next switch: a tool may retire itself from
                                                     //!< inside its own event handler.
     bool                            mToolSticky;    //!< Keep the tool after a finished gesture.
+    Qt::KeyboardModifiers           mToolModifiers; //!< Modifiers of the last mouse event, read by
+                                                    //!< finishToolGesture(): a tool completes from
+                                                    //!< inside its own handler and has no event there.
     int                             mGridSize;      //!< The grid cell size in scene units.
     bool                            mGridVisible;   //!< The grid visibility.
     NESMDesign::eGridStyle          mGridStyle;     //!< The grid rendering style (lines or dots).
@@ -482,6 +518,7 @@ private:
     bool                            mSnapToGrid;    //!< Snap interactive moves to the grid.
     bool                            mMouseDrag;     //!< A mouse drag is in progress.
     bool                            mSyncSelection; //!< Guards the two-way selection sync.
+    SMSubmachinePeek*               mPeek;          //!< The submachine quick view, built on first use.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -531,6 +568,11 @@ inline bool SMScene::isInteractiveSnap() const
 inline NESMDesign::eCanvasTool SMScene::getActiveTool() const
 {
     return (mTool != nullptr ? mTool->getKind() : NESMDesign::eCanvasTool::Select);
+}
+
+inline bool SMScene::isToolSticky() const
+{
+    return mToolSticky;
 }
 
 inline SMCanvasItem* SMScene::findCanvasItem(uint32_t elementId) const

@@ -26,6 +26,7 @@
 
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMReferences.hpp"
+#include "lusan/view/sm/SMKindGlyph.hpp"
 #include "lusan/view/sm/SMNoteEditor.hpp"
 
 #include <QColor>
@@ -54,21 +55,6 @@ class SMStateItem : public SMCanvasItem
 //////////////////////////////////////////////////////////////////////////
 public:
     /**
-     * \enum    eRowIcon
-     * \brief   The glyph kind of one behavior row in the state body.
-     **/
-    enum class eRowIcon
-    {
-          Entry     //!< A generic entry operation: an arrow running INTO a bar, `->|`.
-        , Exit      //!< A generic exit operation: an arrow running away from a bar, `<-|`.
-        , ExitAlt   //!< The alternative exit glyph, `|<-` -- see \c ExitRowIcon in the .cpp.
-        , TimerStart//!< A timer start (clock + play).
-        , TimerStop //!< A timer stop (clock + square).
-        , Event     //!< An event send/trigger.
-        , Internal  //!< An internal transition, and a generic Do operation (a self-loop).
-    };
-
-    /**
      * \enum    eRowZone
      * \brief   Where a behavior row is anchored inside the state box. Enter runs from the top of
      *          the body down, Exit is anchored to the bottom, and everything that happens WHILE
@@ -80,6 +66,20 @@ public:
           Enter
         , Middle
         , Exit
+    };
+
+    /**
+     * \struct  BodyRow
+     * \brief   One behavior row of the state body.
+     **/
+    struct BodyRow
+    {
+        SMKindGlyph::eGlyph         icon;           //!< The row's mark: its band, or its own kind.
+        QString                     text;           //!< The row text.
+        eRowZone                    zone;           //!< Where in the box the row is anchored.
+        bool                        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the band mark).
+        bool                        continues;      //!< Another row of the same group follows (draws a ` \` cue).
+        QList<SMReferences::Ref>    refs;           //!< Declarations this row references (empty = not a navigable link).
     };
 
 private:
@@ -98,20 +98,6 @@ private:
         , Bottom
         , BottomLeft
         , Left
-    };
-
-    /**
-     * \struct  BodyRow
-     * \brief   One behavior row of the state body.
-     **/
-    struct BodyRow
-    {
-        eRowIcon                    icon;           //!< The glyph kind.
-        QString                     text;           //!< The row text.
-        eRowZone                    zone;           //!< Where in the box the row is anchored.
-        bool                        firstInGroup;   //!< First row of its Enter/Do/Exit group (carries the zone glyph).
-        bool                        continues;      //!< Another row of the same group follows (draws a ` \` cue).
-        QList<SMReferences::Ref>    refs;           //!< Declarations this row references (empty = not a navigable link).
     };
 
     /**
@@ -143,6 +129,10 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    //!< The behavior rows of the body, in display order, exactly as painted. Read-only: the
+    //!< canvas tests assert the rows the user reads, not the pixels they are drawn as.
+    inline const QList<BodyRow>& getBodyRows() const;
+
     /**
      * \brief   Opens the in-place name editor over the header. Commit pushes an undoable
      *          rename; invalid or duplicate names are rejected inline; Esc cancels.
@@ -207,6 +197,11 @@ public:
      **/
     virtual void updateFromModel() override;
 
+    /**
+     * \brief   Ends the rename and the bound-note editor, whichever is open.
+     **/
+    virtual void finishInlineEdit() override;
+
 protected:
     virtual void hoverMoveEvent(QGraphicsSceneHoverEvent* event) override;
     virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) override;
@@ -266,8 +261,16 @@ private:
     void paintBodyRows(QPainter* painter, const QRectF& box, const QColor& bodyColor);
 
     /**
-     * \brief   Paints the submachine miniature hint of a composite state into the
-     *          bottom-right body corner: the nested level's node boxes, scaled to fit.
+     * \brief   The bottom-right body corner the submachine hint occupies, in item coordinates, and
+     *          the hot zone of the Ctrl+Alt quick view. Null when nothing is drawn there: the state
+     *          has no real submachine, is collapsed, or is too short to give the corner away.
+     **/
+    QRectF miniatureRect() const;
+
+    /**
+     * \brief   Paints the submachine hint of a composite state into the bottom-right body corner:
+     *          a FIXED symbol (a Start marker and two states), not the substates themselves --
+     *          see the note in the definition.
      **/
     void paintMiniature(QPainter* painter, const QRectF& box, const QColor& bodyColor);
 
@@ -347,9 +350,19 @@ private:
     void commitRename(const QString& name);
 
     /**
-     * \brief   Closes and destroys the in-place name editor.
+     * \brief   Ends an open rename: commits a valid name, restores the committed one otherwise.
+     *          QLineEdit withholds `editingFinished` on focus-out while its validator rejects
+     *          the text, so the editor cannot rely on that signal alone to end an edit.
      **/
-    void closeRenameEditor();
+    void finishRename(bool immediate = false);
+
+    /**
+     * \brief   Closes and destroys the in-place name editor.
+     * \param   immediate   Destroys the proxy now instead of deferring it. The deferred path is
+     *                      required when closing from inside the editor's own signal, but a
+     *                      proxy still alive after a tool armed keeps its cursor on the viewport.
+     **/
+    void closeRenameEditor(bool immediate = false);
 
     /**
      * \brief   Toggles the body collapse through an undo command.
@@ -376,7 +389,6 @@ private:
     QString                     mColorName;     //!< The persisted body color (empty = theme).
     QString                     mHeaderColorName; //!< The persisted header color (empty = derived).
     QList<BodyRow>              mRows;          //!< The behavior rows, in display order.
-    QList<QRectF>               mMiniature;     //!< The nested level's node boxes (scene units).
     bool                        mHasNote;       //!< A note is bound to this state (badge shown).
     eHandle                     mResizeHandle;  //!< The handle grabbed by the resize drag.
     QRectF                      mResizeStart;   //!< The box scene geometry at resize start.
@@ -408,6 +420,11 @@ inline bool SMStateItem::hasBodyContent() const
 inline bool SMStateItem::isMarker() const
 {
     return (mKind != SMStateEntry::eStateKind::Normal);
+}
+
+inline const QList<SMStateItem::BodyRow>& SMStateItem::getBodyRows() const
+{
+    return mRows;
 }
 
 #endif  // LUSAN_VIEW_SM_SMSTATEITEM_HPP

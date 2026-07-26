@@ -225,7 +225,9 @@ int SMRefCompleter::rebuild(const QSet<SMGuardSymbol::eRefKind>& kindFilter, con
     {
         QStandardItem* sep = new QStandardItem();
         sep->setData(0, RoleKind);
-        sep->setData(QStringLiteral("--"), RoleName);
+        // A blank header row, not a drawn `--`: the group-header path paints RoleName verbatim, so
+        // the dash was reaching the screen as if it were a label.
+        sep->setData(QString(), RoleName);
         sep->setFlags(Qt::NoItemFlags);
         mModel->appendRow(sep);
 

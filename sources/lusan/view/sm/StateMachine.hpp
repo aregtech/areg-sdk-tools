@@ -155,6 +155,22 @@ private:
      **/
     void navigateToDefinition(SMReferences::eTarget kind, uint32_t declId);
 
+public slots:
+    /**
+     * \brief   Reveals a validation finding of this document. Called from the output window's
+     *          Validation tab, which hosts the findings for whichever document is active, so
+     *          the Design page is built on demand here rather than assumed.
+     **/
+    void navigateToIssue(uint32_t elementId, eDocElementKind kind);
+
+public:
+    /**
+     * \brief   The document facade. The output window's Validation tab binds to it directly,
+     *          since findings exist whether or not the expensive Design page has been built.
+     **/
+    inline StateMachineModel& getModel();
+
+
     //!< Number of editor pages.
     static constexpr int pageCount() { return static_cast<int>(PageDesign) + 1; }
     //!< True if the index is a valid page index.
@@ -179,5 +195,14 @@ private:
     bool                mToolbarVisible;    //!< The Design page toolbar's requested visibility;
                                             //!< applied immediately if built, or on its construction.
 };
+
+//////////////////////////////////////////////////////////////////////////
+// StateMachine class inline methods
+//////////////////////////////////////////////////////////////////////////
+
+inline StateMachineModel& StateMachine::getModel()
+{
+    return mModel;
+}
 
 #endif  // LUSAN_VIEW_SM_STATEMACHINE_HPP

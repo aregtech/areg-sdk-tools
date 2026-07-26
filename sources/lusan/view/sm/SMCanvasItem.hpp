@@ -81,6 +81,14 @@ public:
      **/
     virtual void updateFromModel();
 
+    /**
+     * \brief   Ends any in-place editor the item is hosting, committing it exactly as a
+     *          focus-out would. Called when the canvas switches to another tool: arming a
+     *          placement tool is a mode switch, and an editor left open behind it keeps its
+     *          proxy widget's cursor, which masks the tool's crosshair.
+     **/
+    virtual void finishInlineEdit();
+
 //////////////////////////////////////////////////////////////////////////
 // Overrides
 //////////////////////////////////////////////////////////////////////////

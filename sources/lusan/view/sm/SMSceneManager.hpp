@@ -25,6 +25,7 @@
 #include <QObject>
 
 #include "lusan/data/sm/SMReferences.hpp"
+#include "lusan/view/sm/NESMDesign.hpp"
 
 #include <QHash>
 #include <QList>
@@ -148,6 +149,13 @@ signals:
      *          the create-or-enter decision.
      **/
     void signalRequestSubstate(uint32_t stateId);
+
+    /**
+     * \brief   Re-emitted from any level's scene: the active canvas tool changed. The Design
+     *          page mirrors it on the tool actions (checked state) and on the canvas cursor,
+     *          so the armed tool is visible however it was picked (issue #541).
+     **/
+    void signalToolChanged(NESMDesign::eCanvasTool tool);
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods

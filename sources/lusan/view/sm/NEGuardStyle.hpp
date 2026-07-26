@@ -78,6 +78,15 @@ namespace NEGuardStyle
 
     //!< The ASCII glyph for an owner/kind cue used by the catalog, pills and hovers.
     QString ownerGlyph(eOwner owner);
+
+    /**
+     * \brief   What the owner badge STANDS FOR, in one phrase -- the legend behind the `a f h r`
+     *          letters a user meets on a chip and on a Try-it stub row. The letter is the
+     *          color-blind channel, not an explanation: on its own it tells a user who has not read
+     *          the help card nothing at all. Every surface that shows a badge explains it from
+     *          here, so the wording cannot drift between them.
+     **/
+    QString ownerMeaning(eOwner owner);
 }
 
 #endif  // LUSAN_VIEW_SM_NEGUARDSTYLE_HPP

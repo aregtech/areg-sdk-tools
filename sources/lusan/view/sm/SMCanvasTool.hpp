@@ -115,22 +115,24 @@ public:
 
 /**
  * \class   SMPlaceStateTool
- * \brief   The Add State / Add Final State tool: a click places a default-sized state of
- *          the tool's kind at the (snapped) click position; press-drag-release draws the
- *          state's rectangle between the press and release positions (a minimum size is
- *          enforced so the resize handles stay usable). Either way the placement is one
- *          undo step and opens the in-place name editor. The scene's single-shot/sticky
- *          policy decides whether the tool stays active afterwards.
+ * \brief   The Add State / Add Start State / Add Final State tool: a click places a
+ *          default-sized state of the tool's kind at the (snapped) click position;
+ *          press-drag-release draws the state's rectangle between the press and release
+ *          positions (a minimum size is enforced so the resize handles stay usable). Either
+ *          way the placement is one undo step and opens the in-place name editor. The
+ *          scene's single-shot/sticky policy decides whether the tool stays active
+ *          afterwards. A level's Start state is never placed by hand: it is created with the
+ *          level and cannot be deleted, so there is no Start placement mode.
  **/
 class SMPlaceStateTool : public SMCanvasTool
 {
 public:
     /**
      * \brief   Creates the placement tool.
-     * \param   scene       The scene the tool operates on.
-     * \param   finalState  True places Final states, false places Normal states.
+     * \param   scene   The scene the tool operates on.
+     * \param   kind    The placement mode: AddState or AddFinalState.
      **/
-    SMPlaceStateTool(SMScene& scene, bool finalState);
+    SMPlaceStateTool(SMScene& scene, NESMDesign::eCanvasTool kind);
     virtual ~SMPlaceStateTool();
 
     virtual NESMDesign::eCanvasTool getKind() const override;
@@ -155,11 +157,18 @@ private:
     void clearPreview();
 
 private:
-    const bool          mFinal;     //!< True to place Final states.
-    bool                mPressed;   //!< The left button is down.
-    bool                mDragging;  //!< The press has grown into a draw-the-box drag.
-    QPointF             mPressPos;  //!< The press position in scene coordinates.
-    QGraphicsRectItem*  mPreview;   //!< The live box preview while drawing, or nullptr.
+    /**
+     * \brief   True when the placed state is a compact marker pill (Start or Final)
+     *          rather than a full-size box.
+     **/
+    bool isMarkerKind() const;
+
+private:
+    const NESMDesign::eCanvasTool   mKind;      //!< The kind of state this tool places.
+    bool                            mPressed;   //!< The left button is down.
+    bool                            mDragging;  //!< The press has grown into a draw-the-box drag.
+    QPointF                         mPressPos;  //!< The press position in scene coordinates.
+    QGraphicsRectItem*              mPreview;   //!< The live box preview while drawing, or nullptr.
 };
 
 /**
@@ -200,6 +209,13 @@ private:
     void clearPreview();
     void updatePreview(const QPointF& cursor);
     void resetGesture();
+
+    /**
+     * \brief   Drops a polyline corner at \p scenePos, grid-snapped and -- when it lands close
+     *          enough to the previous corner's row or column -- pulled into exact alignment with
+     *          it, so a hand-drawn rectangular route keeps its right angles.
+     **/
+    void appendWaypoint(const QPointF& scenePos);
 
     /**
      * \brief   Completes the gesture as an external/self transition to the target state.

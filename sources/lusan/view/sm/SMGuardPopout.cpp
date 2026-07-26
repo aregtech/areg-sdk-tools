@@ -37,7 +37,7 @@
 namespace
 {
     /**
-     * rief   Centers \p window over the MDI area that hosts \p anchor (the document surface the
+     * \brief   Centers \p window over the MDI area that hosts \p anchor (the document surface the
      *          user is looking at), falling back to the anchor's own window and then to the primary
      *          screen. The result is clamped to the available screen area, so the whole dialog --
      *          including its OK / Cancel row -- is always on screen.

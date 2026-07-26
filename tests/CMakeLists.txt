@@ -122,6 +122,9 @@ set_target_properties(lusan_sm_serialization_tests PROPERTIES WIN32_EXECUTABLE O
 qt_add_executable(lusan_sm_validation_tests
     ${LUSAN_TEST_SUPPORT_SRC}
     ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN}/model/sm/SMGuardValidation.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
+    ${LUSAN}/model/sm/SMGuardSymbols.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMValidationTests.cpp
@@ -177,6 +180,8 @@ qt_add_executable(lusan_sm_command_tests
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN}/model/sm/SMValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN}/model/sm/SMGuardValidation.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMLiteralValidator.cpp
     ${LUSAN_ROOT}/tests/sm/SMCommandTests.cpp
@@ -228,6 +233,7 @@ qt_add_executable(lusan_sm_mapping_tests
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN}/model/sm/SMValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
     ${LUSAN}/model/sm/SMTypeCompat.cpp
@@ -267,6 +273,7 @@ qt_add_executable(lusan_sm_guard_tests
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardTests.cpp
 )
 target_include_directories(lusan_sm_guard_tests PRIVATE ${LUSAN_BASE} ${LUSAN_THIRDPARTY})
@@ -344,6 +351,7 @@ qt_add_executable(lusan_sm_guard_catalog_tests
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/view/sm/NEGuardStyle.cpp
     ${LUSAN}/view/sm/SMGuardCatalog.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardCatalogTests.cpp
@@ -370,6 +378,7 @@ qt_add_executable(lusan_sm_guard_eval_tests
     ${LUSAN}/model/sm/SMGuardParser.cpp
     ${LUSAN}/model/sm/SMGuardRender.cpp
     ${LUSAN}/model/sm/SMGuardSymbols.cpp
+    ${LUSAN}/model/sm/SMTypeCompat.cpp
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN_ROOT}/tests/sm/SMGuardEvalTests.cpp
 )
@@ -457,6 +466,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMDesign.cpp
     ${LUSAN}/view/sm/SMEdgeItem.cpp
     ${LUSAN}/view/sm/SMGraphicsView.cpp
+    ${LUSAN}/view/sm/SMKindGlyph.cpp
     ${LUSAN}/view/sm/SMNoteEditor.cpp
     ${LUSAN}/view/sm/SMNoteItem.cpp
     ${LUSAN}/view/sm/SMOutlinePanel.cpp
@@ -464,6 +474,7 @@ qt_add_executable(lusan_sm_canvas_tests
     ${LUSAN}/view/sm/SMScene.cpp
     ${LUSAN}/view/sm/SMSceneManager.cpp
     ${LUSAN}/view/sm/SMStateItem.cpp
+    ${LUSAN}/view/sm/SMSubmachinePeek.cpp
     ${LUSAN}/view/sm/SMToolIcons.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
@@ -522,6 +533,8 @@ set(LUSAN_GUARD_UI_SRC
     ${LUSAN}/model/sm/StateMachineModel.cpp
     ${LUSAN}/model/sm/SMValidationController.cpp
     ${LUSAN}/model/sm/SMValidator.cpp
+    ${LUSAN}/model/sm/SMGuardValidation.cpp
+    ${LUSAN}/model/sm/SMOperationValidation.cpp
     ${LUSAN}/model/sm/SMGuardCodegenPreview.cpp
     ${LUSAN}/model/sm/SMGuardCommands.cpp
     ${LUSAN}/model/sm/SMGuardEval.cpp
@@ -595,6 +608,7 @@ qt_add_executable(lusan_sm_guard_u4_sweep
     ${LUSAN_GUARD_UI_SRC}
     ${LUSAN}/model/sm/SMGuardValidation.cpp
     ${LUSAN}/view/sm/SMPropertiesPanel.cpp
+    ${LUSAN}/view/sm/SMKindGlyph.cpp
     ${LUSAN}/view/sm/SMValidationPanel.cpp
     ${LUSAN}/model/sm/SMArgumentCommands.cpp
     ${LUSAN}/model/sm/SMMappingSources.cpp
@@ -686,6 +700,7 @@ add_test(NAME sm_guard_eval_tests COMMAND lusan_sm_guard_eval_tests)
 add_test(NAME sm_symbol_tests COMMAND lusan_sm_symbol_tests)
 add_test(NAME sm_command_tests COMMAND lusan_sm_command_tests)
 add_test(NAME sm_mapping_tests COMMAND lusan_sm_mapping_tests)
+add_test(NAME sm_validation_tests COMMAND lusan_sm_validation_tests)
 add_test(NAME si_command_tests COMMAND lusan_si_command_tests)
 
 # The two standalone guard-editor harnesses run to completion (no app.exec) and
@@ -695,5 +710,12 @@ add_test(NAME sm_guard_ui_shots COMMAND lusan_sm_guard_ui_shots
          ${LUSAN_ROOT}/.claude/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-shots)
 add_test(NAME sm_guard_u4_sweep COMMAND lusan_sm_guard_u4_sweep
          ${LUSAN_ROOT}/.claude/GuardDemo.fsml ${CMAKE_CURRENT_BINARY_DIR}/guard-sweep)
-set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep PROPERTIES
+
+# The canvas harness is the widest regression guard in the tree (toolbar/menu parity,
+# panel placement, tools, search, kind marks). It has to be in the gate, or the features
+# it protects regress unnoticed.
+add_test(NAME sm_canvas_tests COMMAND lusan_sm_canvas_tests
+         ${LUSAN_ROOT}/.claude/TrafficLight.fsml ${CMAKE_CURRENT_BINARY_DIR}/canvas-shots)
+
+set_tests_properties(sm_guard_ui_shots sm_guard_u4_sweep sm_canvas_tests PROPERTIES
                      ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

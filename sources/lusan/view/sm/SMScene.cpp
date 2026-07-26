@@ -28,6 +28,10 @@
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
+#include "lusan/view/sm/SMSubmachinePeek.hpp"
+
+#include "lusan/data/sm/SMLayoutData.hpp"
+#include "lusan/data/sm/SMState.hpp"
 
 #include <QCoreApplication>
 #include <QGraphicsProxyWidget>
@@ -57,6 +61,7 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     , mItems        ( )
     , mTool         (createCanvasTool(NESMDesign::eCanvasTool::Select, *this))
     , mToolSticky   (false)
+    , mToolModifiers(Qt::NoModifier)
     , mGridSize     (NESMDesign::GridSizeDefault)
     , mGridVisible  (true)
     , mGridStyle    (NESMDesign::eGridStyle::Lines)
@@ -64,6 +69,7 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     , mSnapToGrid   (true)
     , mMouseDrag    (false)
     , mSyncSelection(false)
+    , mPeek         (nullptr)
 {
     const double half{ NESMDesign::SceneExtent / 2.0 };
     setSceneRect(-half, -half, NESMDesign::SceneExtent, NESMDesign::SceneExtent);
@@ -185,6 +191,13 @@ void SMScene::setActiveTool(NESMDesign::eCanvasTool tool, bool sticky /*= false*
         mTool->cancelGesture();
     }
 
+    // Arming a tool is a mode switch, so an open in-place editor ends here -- before the tool
+    // change is announced. An editor left open owns a proxy widget whose cursor QGraphicsView
+    // remembers and restores onto the viewport when the pointer leaves it; that restored copy
+    // is captured from before the tool armed, so it masks the crosshair the tool then sets.
+    // Ending the editors first puts that restore ahead of applyToolCursor() (issue 8).
+    closeInlineEditors();
+
     // A tool may switch tools from inside its own event handler; keep the replaced
     // object alive until the next switch so its call frame stays valid.
     mRetiredTool = std::move(mTool);
@@ -206,7 +219,10 @@ void SMScene::cancelActiveGesture()
 
 void SMScene::finishToolGesture()
 {
-    if ((mToolSticky == false) && (getActiveTool() != NESMDesign::eCanvasTool::Select))
+    // Ctrl held through the gesture repeats the tool: the arming stays for the next gesture
+    // only, so the first plain click ends the run and drops back to Select (issue #541).
+    const bool repeat = mToolSticky || mToolModifiers.testFlag(Qt::ControlModifier);
+    if ((repeat == false) && (getActiveTool() != NESMDesign::eCanvasTool::Select))
     {
         setActiveTool(NESMDesign::eCanvasTool::Select);
     }
@@ -309,6 +325,7 @@ void SMScene::drawBackground(QPainter* painter, const QRectF& rect)
 
 void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
+    mToolModifiers = event->modifiers();
     if (event->button() == Qt::LeftButton)
     {
         mMouseDrag = true;
@@ -351,6 +368,7 @@ void SMScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 {
+    mToolModifiers = event->modifiers();
     if ((mTool == nullptr) || (mTool->mouseMove(event) == false))
     {
         QGraphicsScene::mouseMoveEvent(event);
@@ -359,6 +377,7 @@ void SMScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 {
+    mToolModifiers = event->modifiers();
     const bool handled = (mTool != nullptr) && mTool->mouseRelease(event);
     if (handled == false)
     {
@@ -373,6 +392,7 @@ void SMScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
 void SMScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
 {
+    mToolModifiers = event->modifiers();
     if (event->modifiers().testFlag(Qt::AltModifier))
     {
         emit signalGoToParent();
@@ -855,6 +875,19 @@ bool SMScene::isInlineEditorActive() const
     return hasInlineEditorFocus(*this);
 }
 
+void SMScene::closeInlineEditors()
+{
+    // Copied: an item may commit through an undo command, which can rebuild the item map.
+    const QList<SMCanvasItem*> items = mItems.values();
+    for (SMCanvasItem* item : items)
+    {
+        if (item != nullptr)
+        {
+            item->finishInlineEdit();
+        }
+    }
+}
+
 void SMScene::requestEnterSubmachine(uint32_t stateId)
 {
     const SMStateEntry* state = mModel.getData().findStateById(stateId);
@@ -898,6 +931,57 @@ void SMScene::requestGotoRefs(const QList<SMReferences::Ref>& refs)
     if (refs.isEmpty() == false)
     {
         emit signalGotoRefsRequested(refs);
+    }
+}
+
+void SMScene::showSubmachinePeek(uint32_t stateId, const QPoint& globalPos)
+{
+    const StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(stateId);
+    if ((state == nullptr) || (state->hasNestedStates() == false))
+    {
+        hideSubmachinePeek();
+        return;
+    }
+
+    const QList<SMStateEntry*>& children = state->getNestedStates()->getElements();
+    QList<SMSubmachinePeek::Shape> shapes;
+    for (const SMStateEntry* child : children)
+    {
+        if (shapes.size() >= SMSubmachinePeek::MaxShapes)
+        {
+            break;      // a fixed-size view costs a fixed amount to build, too
+        }
+
+        const SMLayoutNode* node = (child != nullptr) ? data.getLayout().findNode(child->getId()) : nullptr;
+        if (node != nullptr)
+        {
+            shapes.append({ QRectF(node->x, node->y, node->width, node->height), child->getKind() });
+        }
+    }
+
+    if (shapes.isEmpty())
+    {
+        hideSubmachinePeek();   // a level whose nodes have no layout yet has no silhouette to show
+        return;
+    }
+
+    if (mPeek == nullptr)
+    {
+        // Parented to the view, not to the scene: the popup is a widget, and it must die with the
+        // window rather than outlive the level it belongs to.
+        const QList<QGraphicsView*> canvasViews = views();
+        mPeek = new SMSubmachinePeek(canvasViews.isEmpty() ? nullptr : canvasViews.first());
+    }
+
+    mPeek->showFor(state->getName(), shapes, static_cast<int>(children.size()), globalPos);
+}
+
+void SMScene::hideSubmachinePeek()
+{
+    if (mPeek != nullptr)
+    {
+        mPeek->hide();
     }
 }
 
@@ -1022,6 +1106,39 @@ SMStateItem* SMScene::stateAt(const QPointF& scenePos) const
     }
 
     return nullptr;
+}
+
+SMStateItem* SMScene::stateNear(const QPointF& scenePos, double margin) const
+{
+    if (SMStateItem* exact = stateAt(scenePos))
+    {
+        return exact;
+    }
+
+    // Just outside a border still counts. Nearest box wins, so overlapping margins are not a
+    // coin toss; a box that contains the point outright already returned above.
+    SMStateItem* best = nullptr;
+    double bestDistance = margin;
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        SMStateItem* state = dynamic_cast<SMStateItem*>(item);
+        if (state == nullptr)
+        {
+            continue;
+        }
+
+        const QRectF box = state->getBoxGeometry();
+        const double dx = std::max({ box.left() - scenePos.x(), 0.0, scenePos.x() - box.right() });
+        const double dy = std::max({ box.top() - scenePos.y(), 0.0, scenePos.y() - box.bottom() });
+        const double distance = std::hypot(dx, dy);
+        if (distance <= bestDistance)
+        {
+            bestDistance = distance;
+            best = state;
+        }
+    }
+
+    return best;
 }
 
 void SMScene::updateEdgesForState(uint32_t stateId)

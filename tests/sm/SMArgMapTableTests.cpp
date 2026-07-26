@@ -210,6 +210,29 @@ namespace
     }
 }
 
+namespace
+{
+    // The canvas idiom: "is anything wrong, and how bad" -- the same shape the guard checker
+    // uses, so an edge and a state box ask both checkers the same way.
+    DocIssue::eSeverity canvasWorst(const StateMachineData& data, uint32_t transitionId)
+    {
+        DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+        return SMOperationValidation::worstForTransition(data, transitionId, worst) ? worst : DocIssue::eSeverity::Info;
+    }
+
+    bool canvasClean(const StateMachineData& data, uint32_t transitionId)
+    {
+        DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+        return (SMOperationValidation::worstForTransition(data, transitionId, worst) == false);
+    }
+
+    DocIssue::eSeverity canvasStateWorst(const StateMachineData& data, uint32_t stateId)
+    {
+        DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+        return SMOperationValidation::worstForState(data, stateId, worst) ? worst : DocIssue::eSeverity::Info;
+    }
+}
+
 int main(int argc, char* argv[])
 {
     qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("offscreen"));
@@ -625,21 +648,21 @@ int main(int argc, char* argv[])
         t2->getOperations().addOperation(c2);
         const uint32_t tid2 = t2->getId();
 
-        check(SMOperationValidation::transitionSeverity(d2, tid2) == SMOperationValidation::eSeverity::Error,
+        check(canvasWorst(d2, tid2) == DocIssue::eSeverity::Error,
               "an unmapped required argument warns on the canvas");
 
         c2->getArguments().append(SMArgumentEntry(0u, QStringLiteral("waiting"), eSource::Value, QStringLiteral("5")));
-        check(SMOperationValidation::transitionSeverity(d2, tid2) == SMOperationValidation::eSeverity::Ok,
+        check(canvasClean(d2, tid2),
               "mapping the required argument clears the canvas warning immediately");
 
         c2->getArguments().append(SMArgumentEntry(0u, QStringLiteral("ghost"), eSource::Value, QStringLiteral("9")));
-        check(SMOperationValidation::transitionSeverity(d2, tid2) == SMOperationValidation::eSeverity::Error,
+        check(canvasWorst(d2, tid2) == DocIssue::eSeverity::Error,
               "an orphan argument (no matching formal) warns on the canvas");
 
         SMActionCall* entryCall = new SMActionCall();
         entryCall->setAction(QStringLiteral("Walk"));
         root2->getEntryList().addOperation(entryCall);
-        check(SMOperationValidation::stateSeverity(d2, root2->getId()) == SMOperationValidation::eSeverity::Error,
+        check(canvasStateWorst(d2, root2->getId()) == DocIssue::eSeverity::Error,
               "an unmapped entry action warns on its state box");
     }
 

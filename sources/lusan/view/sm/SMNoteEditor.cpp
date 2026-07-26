@@ -19,6 +19,7 @@
 
 #include "lusan/view/sm/SMNoteEditor.hpp"
 
+#include <QCoreApplication>
 #include <QGraphicsItem>
 #include <QGraphicsProxyWidget>
 #include <QKeyEvent>
@@ -110,6 +111,18 @@ void SMNoteEditor::open(QGraphicsItem* host, const QRectF& rect, const QString& 
 
     edit->selectAll();
     edit->setFocus();
+}
+
+void SMNoteEditor::commit()
+{
+    // NoteTextEdit commits in focusOutEvent; go through it so there is one commit path. The commit
+    // closes the editor deferred, so flush it here: a proxy that outlives an arming tool keeps its
+    // I-beam on the viewport and masks the tool cursor.
+    if ((mProxy != nullptr) && (mProxy->widget() != nullptr))
+    {
+        mProxy->widget()->clearFocus();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
 }
 
 void SMNoteEditor::close()

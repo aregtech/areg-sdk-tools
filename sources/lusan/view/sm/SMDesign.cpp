@@ -43,7 +43,6 @@
 #include "lusan/view/sm/SMOperationsDialog.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
-#include "lusan/view/sm/SMValidationPanel.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
 #include "lusan/view/sm/SMWhereUsedMenu.hpp"
@@ -205,10 +204,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mToolBar      (nullptr)
     , mPropertiesDock(nullptr)
     , mOutlineDock  (nullptr)
-    , mValidationDock(nullptr)
     , mProperties   (nullptr)
     , mOutline      (nullptr)
-    , mValidation   (nullptr)
     , mActZoomIn    (nullptr)
     , mActZoomOut   (nullptr)
     , mActZoomReset (nullptr)
@@ -233,6 +230,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActDuplicate (nullptr)
     , mActStateColor(nullptr)
     , mActEdgeColor (nullptr)
+    , mActEdgeShape (nullptr)
     , mActNoteColor (nullptr)
     , mActSetColor  (nullptr)
     , mActAlignLeft (nullptr)
@@ -294,9 +292,10 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
 
     // Search option toggles (match case, whole word, regular expression). Re-running the
     // search on toggle keeps the result live as the user tunes the query.
-    auto makeSearchOption = [this, topBar, topLayout](const QIcon& icon, const QString& tip) -> QToolButton*
+    auto makeSearchOption = [this, topBar, topLayout](const QIcon& icon, const QString& tip, const QString& name) -> QToolButton*
     {
         QToolButton* button = new QToolButton(topBar);
+        button->setObjectName(name);
         button->setIcon(icon);
         button->setToolTip(tip);
         button->setCheckable(true);
@@ -305,9 +304,9 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
         topLayout->addWidget(button);
         return button;
     };
-    mSearchCase  = makeSearchOption(NELusanCommon::iconSearchMatchCase(), tr("Match case"));
-    mSearchWord  = makeSearchOption(NELusanCommon::iconSearchMatchWord(), tr("Match whole word"));
-    mSearchRegex = makeSearchOption(NELusanCommon::iconSearchWildCard(), tr("Regular expression"));
+    mSearchCase  = makeSearchOption(NELusanCommon::iconSearchMatchCase(), tr("Match case"), QStringLiteral("smCanvasSearchCase"));
+    mSearchWord  = makeSearchOption(NELusanCommon::iconSearchMatchWord(), tr("Match whole word"), QStringLiteral("smCanvasSearchWord"));
+    mSearchRegex = makeSearchOption(NELusanCommon::iconSearchWildCard(), tr("Regular expression"), QStringLiteral("smCanvasSearchRegex"));
 
     mSearchStatus = new QLabel(topBar);
     mSearchStatus->setObjectName(QStringLiteral("smCanvasSearchStatus"));
@@ -332,6 +331,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // beginSearch(), so the two never collide into an ambiguous-shortcut no-op (issue #538).
 
     connect(mSceneManager, &SMSceneManager::signalLevelChanged, this, &SMDesign::onLevelChanged);
+    connect(mSceneManager, &SMSceneManager::signalToolChanged, this, &SMDesign::onToolChanged);
     connect(mSceneManager, &SMSceneManager::signalRequestSubstate, this, [this](uint32_t stateId)
     {
         // Body double-click on a state: descend into its submachine, creating one on the fly for a
@@ -436,6 +436,15 @@ SMDesign::~SMDesign()
 
 bool SMDesign::eventFilter(QObject* watched, QEvent* event)
 {
+    if ((event->type() == QEvent::Close) && ((watched == mPropertiesDock) || (watched == mOutlineDock)))
+    {
+        // The dock's own close button hides the widget but knows nothing about the placement the
+        // main window persists and re-applies on every activation -- without this the panel came
+        // back on the next repaint. Route the close through the same channel as the View menus.
+        const int widget = (watched == mPropertiesDock) ? 1 : 2;
+        emit signalPlaceDesignWidget(widget, 0);
+    }
+
     if (watched == mSearchEdit)
     {
         // Esc abandons the search and hands focus back to the canvas.
@@ -498,6 +507,11 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
     }
 
     return QMainWindow::eventFilter(watched, event);
+}
+
+QMenu* SMDesign::createPopupMenu(void)
+{
+    return nullptr;
 }
 
 QAction* SMDesign::matchAction(const QKeyEvent& event) const
@@ -644,35 +658,39 @@ void SMDesign::setupActions()
     mActRedo = new QAction(tr("Redo"), this);
     connect(mActRedo, &QAction::triggered, this, [this]() { mModel.getUndoStack().redo(); });
 
-    mActAddState = new QAction(tr("Add State"), this);
-    mActAddState->setShortcut(QKeySequence(Qt::Key_S));
-    connect(mActAddState, &QAction::triggered, this, [this]() {
-        getScene().setActiveTool(NESMDesign::eCanvasTool::AddState);
-    });
+    // The placement actions are checkable: the checked one is the armed tool, which is what
+    // makes the picked tool visible on the toolbar, in the Design menu, and in the context
+    // menu at once (they all share these action objects, issue #541). Unchecking disarms.
+    // onToolChanged() is the only place that writes the checked state back.
+    auto placementAction = [this](const QString& text, const QKeySequence& shortcut, NESMDesign::eCanvasTool tool) -> QAction*
+    {
+        QAction* action = new QAction(text, this);
+        action->setShortcut(shortcut);
+        action->setCheckable(true);
+        connect(action, &QAction::triggered, this, [this, tool](bool checked) {
+            getScene().setActiveTool(checked ? tool : NESMDesign::eCanvasTool::Select);
+        });
 
-    mActAddFinal = new QAction(tr("Add Final State"), this);
-    mActAddFinal->setShortcut(QKeySequence(Qt::Key_F));
-    connect(mActAddFinal, &QAction::triggered, this, [this]() {
-        getScene().setActiveTool(NESMDesign::eCanvasTool::AddFinalState);
-    });
+        return action;
+    };
 
-    mActAddTransition = new QAction(tr("Add Transition"), this);
-    mActAddTransition->setShortcut(QKeySequence(Qt::Key_T));
-    connect(mActAddTransition, &QAction::triggered, this, [this]() {
-        getScene().setActiveTool(NESMDesign::eCanvasTool::AddTransition);
-    });
+    mActAddState = placementAction(tr("Add State"), QKeySequence(Qt::Key_S), NESMDesign::eCanvasTool::AddState);
 
-    mActAddNote = new QAction(tr("Add Note"), this);
-    mActAddNote->setShortcut(QKeySequence(Qt::Key_N));
-    connect(mActAddNote, &QAction::triggered, this, [this]() {
-        getScene().setActiveTool(NESMDesign::eCanvasTool::AddNote);
-    });
+    mActAddFinal = placementAction(tr("Add Final State"), QKeySequence(Qt::Key_F)
+                                   , NESMDesign::eCanvasTool::AddFinalState);
+
+    mActAddTransition = placementAction(tr("Add Transition"), QKeySequence(Qt::Key_T)
+                                        , NESMDesign::eCanvasTool::AddTransition);
+
+    mActAddNote = placementAction(tr("Add Note"), QKeySequence(Qt::Key_N), NESMDesign::eCanvasTool::AddNote);
 
     mActStateColor = new QAction(tr("State Color..."), this);
     connect(mActStateColor, &QAction::triggered, this, [this]() { applyColorToSelection(eColorTarget::State); });
 
     mActEdgeColor = new QAction(tr("Transition Color..."), this);
     connect(mActEdgeColor, &QAction::triggered, this, [this]() { applyColorToSelection(eColorTarget::Edge); });
+    mActEdgeShape = new QAction(tr("Make Arc"), this);
+    connect(mActEdgeShape, &QAction::triggered, this, &SMDesign::onToggleEdgeShape);
 
     mActNoteColor = new QAction(tr("Note Color..."), this);
     connect(mActNoteColor, &QAction::triggered, this, [this]() { applyColorToSelection(eColorTarget::Note); });
@@ -974,6 +992,10 @@ void SMDesign::buildDesignPanels()
     mPropertiesDock = new QDockWidget(tr("Properties"), this);
     mPropertiesDock->setObjectName(QStringLiteral("SMPropertiesDock"));
     mPropertiesDock->setWidget(mProperties);
+    // Left or right only: both panels are tall lists of fields, and a top/bottom strip of the
+    // canvas cannot hold one at a usable height.
+    mPropertiesDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    mPropertiesDock->installEventFilter(this);
     addDockWidget(Qt::RightDockWidgetArea, mPropertiesDock);
 
     mOutline = new SMOutlinePanel(mModel, *mSceneManager);
@@ -987,26 +1009,19 @@ void SMDesign::buildDesignPanels()
     mOutlineDock = new QDockWidget(tr("Outline"), this);
     mOutlineDock->setObjectName(QStringLiteral("SMOutlineDock"));
     mOutlineDock->setWidget(mOutline);
+    mOutlineDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    mOutlineDock->installEventFilter(this);
     addDockWidget(Qt::RightDockWidgetArea, mOutlineDock);
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
 
-    // Validation results: a bottom dock, hidden until the user opens it; a finding navigates
-    // to the offending element (canvas selection, or a page switch for a registry entry).
-    mValidation = new SMValidationPanel(mModel);
-    mValidationDock = new QDockWidget(tr("Validation"), this);
-    mValidationDock->setObjectName(QStringLiteral("SMValidationDock"));
-    mValidationDock->setWidget(mValidation);
-    addDockWidget(Qt::BottomDockWidgetArea, mValidationDock);
-    mValidationDock->hide();
-    connect(mValidation, &SMValidationPanel::navigateRequested, this, &SMDesign::navigateToIssue);
-
-    // F8 / Shift+F8 step through the findings (spec 9.1); they are window shortcuts so they
-    // work whether or not the validation dock currently holds keyboard focus.
+    // F8 / Shift+F8 step through the findings (spec 9.1). The findings themselves live in the
+    // output window's Validation tab, so the page asks for it and the window brings it forward
+    // -- otherwise the canvas jumps to a finding with nothing on screen saying why.
     QShortcut* nextIssue = new QShortcut(QKeySequence(Qt::Key_F8), this);
     QShortcut* prevIssue = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
-    connect(nextIssue, &QShortcut::activated, this, [this]() { mValidation->focusNextIssue(); });
-    connect(prevIssue, &QShortcut::activated, this, [this]() { mValidation->focusPreviousIssue(); });
+    connect(nextIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(1); });
+    connect(prevIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(-1); });
 }
 
 QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
@@ -1091,6 +1106,50 @@ QList<SMDesign::ToolGroup> SMDesign::placeholderToolGroups(QObject& owner)
                                               , make(eIcon::ZoomReset, tr("Zoom 100%"))
                                               , make(eIcon::ZoomFit, tr("Zoom to Fit")) } });
     return groups;
+}
+
+void SMDesign::populateDesignMenu(QMenu& menu)
+{
+    menu.addAction(mActAddState);
+    menu.addAction(mActAddFinal);
+    menu.addAction(mActAddTransition);
+    menu.addAction(mActAddNote);
+    menu.addSeparator();
+    menu.addAction(mActStateColor);
+    menu.addAction(mActEdgeColor);
+    menu.addAction(mActNoteColor);
+    // Reachable without right-clicking the transition; disabled unless exactly one is selected.
+    menu.addAction(shapeToggleAction(selectedEdge()));
+    menu.addSeparator();
+    menu.addAction(mActAlignLeft);
+    menu.addAction(mActAlignRight);
+    menu.addAction(mActAlignTop);
+    menu.addAction(mActAlignBottom);
+    menu.addAction(mActDistributeH);
+    menu.addAction(mActDistributeV);
+    menu.addSeparator();
+    menu.addAction(mActToggleGrid);
+    menu.addAction(mActGridDots);
+    menu.addAction(mActGridDotSize);
+    menu.addAction(mActToggleSnap);
+    menu.addAction(mActGridSize);
+    menu.addSeparator();
+    QMenu* declareMenu = menu.addMenu(tr("Add &Declaration"));
+    declareMenu->addActions(declareActions());
+    menu.addSeparator();
+    menu.addAction(mActAddSubstate);
+    menu.addAction(mActEnterSubmachine);
+    menu.addAction(mActGoToParent);
+    menu.addAction(mActCenterMachine);
+    menu.addSeparator();
+    menu.addAction(mActZoomIn);
+    menu.addAction(mActZoomOut);
+    menu.addAction(mActZoomReset);
+    menu.addAction(mActZoomFit);
+    menu.addSeparator();
+    menu.addAction(mActSelectAll);
+    menu.addAction(mActRename);
+    menu.addAction(mActDelete);
 }
 
 bool SMDesign::placementToolFor(QAction* action, NESMDesign::eCanvasTool& toolOut) const
@@ -1180,6 +1239,7 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActRaisePriority);
         menu.addAction(mActLowerPriority);
         menu.addSeparator();
+        addEdgeShapeMenu(menu, *edge);
         menu.addAction(mActEdgeColor);
         addNoteMenuEntries(menu, edge->getElementId(), false);
         addGotoDeclarationMenu(menu, edge->getElementId(), false);
@@ -1252,15 +1312,17 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
 
     const auto addPair = [this, viewMenu](const QString& designText, const QString& naviText, int widget, int place)
     {
+        // Unchecking the current home hides the widget, matching the View menu; without it the
+        // context menu could only move a widget between its two homes, never put it away.
         QAction* inDesign = viewMenu->addAction(designText);
         inDesign->setCheckable(true);
         inDesign->setChecked(place == 1);
-        connect(inDesign, &QAction::triggered, this, [this, widget]() { emit signalPlaceDesignWidget(widget, 1); });
+        connect(inDesign, &QAction::triggered, this, [this, widget](bool on) { emit signalPlaceDesignWidget(widget, on ? 1 : 0); });
 
         QAction* inNavi = viewMenu->addAction(naviText);
         inNavi->setCheckable(true);
         inNavi->setChecked(place == 2);
-        connect(inNavi, &QAction::triggered, this, [this, widget]() { emit signalPlaceDesignWidget(widget, 2); });
+        connect(inNavi, &QAction::triggered, this, [this, widget](bool on) { emit signalPlaceDesignWidget(widget, on ? 2 : 0); });
     };
 
     addPair(tr("Show Toolbar in Design"), tr("Show Toolbar in Navigation"), 0, mPlaceToolbar);
@@ -1269,21 +1331,9 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
     viewMenu->addSeparator();
     addPair(tr("Show Outline in Design"), tr("Show Outline in Navigation"), 2, mPlaceOutline);
 
-    if (mValidationDock != nullptr)
-    {
-        viewMenu->addSeparator();
-        QAction* showValidation = viewMenu->addAction(tr("Show Validation Results"));
-        showValidation->setCheckable(true);
-        showValidation->setChecked(mValidationDock->isVisible());
-        connect(showValidation, &QAction::triggered, this, [this](bool checked)
-        {
-            mValidationDock->setVisible(checked);
-            if (checked && (mValidation != nullptr))
-            {
-                mValidation->refreshNow();
-            }
-        });
-    }
+    viewMenu->addSeparator();
+    connect(viewMenu->addAction(tr("Show Validation Results")), &QAction::triggered
+          , this, [this]() { emit signalShowValidation(0); });
 
     // Refresh the shared actions' enabled state against the (possibly just changed) selection
     // and current level so entries like Add Transition / Add Internal Transition open correctly
@@ -1302,7 +1352,7 @@ void SMDesign::openStateOperationsDialog(uint32_t stateId, bool entry)
     }
 
     SMOperationList& list = entry ? state->getEntryList() : state->getExitList();
-    const QString title = (entry ? tr("On Enter -- %1") : tr("On Exit -- %1")).arg(state->getName());
+    const QString title = (entry ? tr("On Enter: %1") : tr("On Exit: %1")).arg(state->getName());
     SMOperationsDialog dialog(mModel, title, stateId, eDocElementKind::State, 0u, state, &list, this);
     dialog.exec();
 }
@@ -1317,7 +1367,7 @@ void SMDesign::openTransitionOperationsDialog(uint32_t transitionId)
 
     const QString stim = transition->getStimulus().isEmpty() ? tr("transition") : transition->getStimulus();
     // The transition is its own Param scope: a transition operation may map stimulus params.
-    SMOperationsDialog dialog(mModel, tr("Operations -- %1").arg(stim), transitionId, eDocElementKind::Transition, transitionId, transition, &transition->getOperations(), this);
+    SMOperationsDialog dialog(mModel, tr("Operations: %1").arg(stim), transitionId, eDocElementKind::Transition, transitionId, transition, &transition->getOperations(), this);
     dialog.exec();
 }
 
@@ -1756,6 +1806,50 @@ void SMDesign::addInternalToSelection()
                                                              , tr("Add internal transition to %1").arg(state->getName())));
 }
 
+void SMDesign::addEdgeShapeMenu(QMenu& menu, SMEdgeItem& edge)
+{
+    // ONE flat entry that names what it will do, not a submenu of shapes to compare: the shape a
+    // transition already has is visible on the canvas, so the only thing worth saying is the other
+    // one. A nested "Shape >" was shipped first and went unfound.
+    menu.addAction(shapeToggleAction(&edge));
+}
+
+QAction* SMDesign::shapeToggleAction(SMEdgeItem* edge)
+{
+    const bool isArc = (edge != nullptr) && (edge->getShape() == SMLayoutEdge::eShape::Arc);
+    mActEdgeShape->setText(isArc ? tr("Make Polyline") : tr("Make Arc"));
+    // Every transition can take either shape, a self-loop included: the only thing that disables
+    // the entry is having no single transition to apply it to.
+    mActEdgeShape->setEnabled(edge != nullptr);
+    mActEdgeShape->setData(edge != nullptr ? edge->getElementId() : 0u);
+    return mActEdgeShape;
+}
+
+SMEdgeItem* SMDesign::selectedEdge() const
+{
+    const QList<uint32_t> selection = mModel.getSelectionModel().getSelection();
+    if (selection.size() != 1)
+    {
+        return nullptr;     // "the shape of which one?" has no answer for a multi-selection
+    }
+
+    return dynamic_cast<SMEdgeItem*>(getScene().findCanvasItem(selection.first()));
+}
+
+void SMDesign::onToggleEdgeShape()
+{
+    // Re-resolve from the id the menu was built with: the action outlives the press, and a
+    // rebuild between the two would leave a dangling item pointer.
+    const uint32_t edgeId = mActEdgeShape->data().toUInt();
+    SMEdgeItem* edge = (edgeId != 0u) ? dynamic_cast<SMEdgeItem*>(getScene().findCanvasItem(edgeId)) : selectedEdge();
+    if (edge != nullptr)
+    {
+        edge->setShape(edge->getShape() == SMLayoutEdge::eShape::Arc
+                        ? SMLayoutEdge::eShape::Line
+                        : SMLayoutEdge::eShape::Arc);
+    }
+}
+
 void SMDesign::addNoteMenuEntries(QMenu& menu, uint32_t ownerId, bool isState)
 {
     const bool hasNote = (mModel.getData().getLayout().findNoteByOwner(ownerId) != nullptr);
@@ -2093,6 +2187,31 @@ void SMDesign::onLevelChanged(uint32_t levelId)
     mViewGesture = SMMoveNodeCommand::takeNextGesture();
     rebuildBreadcrumb();
     updateNavActions();
+
+    // A scene keeps its own tool, and a freshly created one starts on Select; re-sync so the
+    // checked action and the cursor describe the level that is now shown.
+    onToolChanged(mScene->getActiveTool());
+}
+
+void SMDesign::onToolChanged(NESMDesign::eCanvasTool tool)
+{
+    const auto sync = [tool](QAction* action, NESMDesign::eCanvasTool owned)
+    {
+        if (action != nullptr)
+        {
+            action->setChecked(tool == owned);
+        }
+    };
+
+    sync(mActAddState     , NESMDesign::eCanvasTool::AddState);
+    sync(mActAddFinal     , NESMDesign::eCanvasTool::AddFinalState);
+    sync(mActAddTransition, NESMDesign::eCanvasTool::AddTransition);
+    sync(mActAddNote      , NESMDesign::eCanvasTool::AddNote);
+
+    if (mView != nullptr)
+    {
+        mView->setToolCursor(tool);
+    }
 }
 
 void SMDesign::restoreViewport(uint32_t levelId, bool applyDefault)

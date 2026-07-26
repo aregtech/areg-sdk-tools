@@ -20,6 +20,9 @@
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 
 #include "lusan/data/common/ConstantEntry.hpp"
+#include "lusan/data/common/DataTypeCustom.hpp"
+#include "lusan/data/common/DataTypeEnum.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMConstantData.hpp"
@@ -54,6 +57,95 @@ namespace
 
         return nullptr;
     }
+
+    //!< The declared parameter with the id \p id in the transition's stimulus payload, or nullptr.
+    const MethodParameter* payloadParam(const StateMachineData& data, uint32_t transitionId, uint32_t id)
+    {
+        const MethodBase* payload = stimulusPayload(data, transitionId);
+        if (payload != nullptr)
+        {
+            for (const MethodParameter& param : payload->getElements())
+            {
+                if (param.getId() == id)
+                {
+                    return &param;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+}
+
+SMGuardSymbols::eScoped SMGuardSymbols::scopedValue(const StateMachineData& data, const QStringList& parts, QString& typeNameOut)
+{
+    typeNameOut.clear();
+    if (parts.size() < 2)
+    {
+        return eScoped::NoType;
+    }
+
+    const DataTypeCustom* type = data.getDataTypes().findCustomDataType(parts.first());
+    if (type == nullptr)
+    {
+        return eScoped::NoType;
+    }
+
+    typeNameOut = type->getName();
+    if (type->isImported())
+    {
+        // An imported type is a name borrowed from a foreign header: the document declares that the
+        // name exists and nothing else, so judging what hangs off it would be inventing knowledge.
+        return eScoped::Opaque;
+    }
+
+    // Only one level is ours to check: `Enum::value` and `Struct::field`. A deeper chain reaches
+    // into a member's own type, which the registry does not model.
+    if (parts.size() > 2)
+    {
+        return eScoped::NoMember;
+    }
+
+    if (type->isEnumeration())
+    {
+        const DataTypeEnum* enumType = static_cast<const DataTypeEnum*>(type);
+        return enumType->hasElement(parts.at(1)) ? eScoped::Ok : eScoped::NoMember;
+    }
+
+    if (type->isStructure())
+    {
+        const DataTypeStructure* structType = static_cast<const DataTypeStructure*>(type);
+        return structType->hasElement(parts.at(1)) ? eScoped::Ok : eScoped::NoMember;
+    }
+
+    return eScoped::NoMember;
+}
+
+QStringList SMGuardSymbols::scopedMembers(const StateMachineData& data, const QString& typeName)
+{
+    QStringList members;
+    const DataTypeCustom* type = data.getDataTypes().findCustomDataType(typeName);
+    if (type == nullptr)
+    {
+        return members;
+    }
+
+    if (type->isEnumeration())
+    {
+        for (const EnumEntry& entry : static_cast<const DataTypeEnum*>(type)->getElements())
+        {
+            members.append(entry.getName());
+        }
+    }
+    else if (type->isStructure())
+    {
+        for (const FieldEntry& field : static_cast<const DataTypeStructure*>(type)->getElements())
+        {
+            members.append(field.getName());
+        }
+    }
+
+    return members;
 }
 
 uint32_t SMGuardSymbols::attributeId(const StateMachineData& data, const QString& name)
@@ -176,6 +268,38 @@ QString SMGuardSymbols::paramName(const StateMachineData& data, uint32_t transit
     }
 
     return QString();
+}
+
+QString SMGuardSymbols::attributeType(const StateMachineData& data, uint32_t id)
+{
+    for (const SMAttributeEntry& attr : data.getAttributes().getElements())
+    {
+        if (attr.getId() == id)
+        {
+            return attr.getType();
+        }
+    }
+
+    return QString();
+}
+
+QString SMGuardSymbols::constantType(const StateMachineData& data, uint32_t id)
+{
+    for (const ConstantEntry& constant : data.getConstants().getElements())
+    {
+        if (constant.getId() == id)
+        {
+            return constant.getType();
+        }
+    }
+
+    return QString();
+}
+
+QString SMGuardSymbols::paramType(const StateMachineData& data, uint32_t transitionId, uint32_t id)
+{
+    const MethodParameter* param = payloadParam(data, transitionId, id);
+    return (param != nullptr) ? param->getType() : QString();
 }
 
 const SMMethodEntry* SMGuardSymbols::method(const StateMachineData& data, uint32_t id)

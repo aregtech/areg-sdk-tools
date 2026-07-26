@@ -244,11 +244,11 @@ void SMTryStrip::rebuild()
         if ((guard != nullptr) && guard->isDraft())
         {
             // The strip refuses drafts cleanly: nothing to evaluate, no guessing.
-            mNote->setText(tr("The guard is a draft -- resolve it first; there is nothing to evaluate."));
+            mNote->setText(tr("The guard is still a draft. Resolve it first; there is nothing to evaluate yet."));
         }
         else
         {
-            mNote->setText(tr("No guard -- the transition always fires."));
+            mNote->setText(tr("No guard, so the transition always fires."));
         }
 
         layout->addWidget(mNote);
@@ -398,6 +398,9 @@ void SMTryStrip::addStubRow(QVBoxLayout* into, const SMGuardEval::StubSite& site
 
     QLabel* glyph = new QLabel(NEGuardStyle::ownerGlyph(owner), row);
     glyph->setStyleSheet(QStringLiteral("color: %1; font-weight: bold;").arg(NEGuardStyle::ownerColor(owner).name()));
+    // `r` is the one badge that appears here and nowhere else, so this is the only place a user can
+    // find out what it means. A single letter is a cue for someone who already knows.
+    glyph->setToolTip(QStringLiteral("%1 : %2").arg(NEGuardStyle::ownerGlyph(owner), NEGuardStyle::ownerMeaning(owner)));
     layout->addWidget(glyph);
 
     // The rendered call with the mapped values substituted (recomputed on value edits).
@@ -519,7 +522,7 @@ void SMTryStrip::recompute()
         break;
     case eTruth::Unknown:
     default:
-        text = tr("result: guard is UNKNOWN -- set the stub values");
+        text = tr("result: guard is UNKNOWN until you set the stub values");
         break;
     }
 

@@ -24,12 +24,17 @@
  ************************************************************************/
 #include <QFrame>
 
+class QScrollArea;
+
 /**
  * \class   SMGuardHelpCard
- * \brief   The one-screen static help card, opened by the `(?)` button or F1: what a
- *          guard can use (the five owner glyphs) and the `you write -> it runs` mapping table,
- *          including the D7 `IsCalmHours(x) -> mIsCalmHours(x)` row (named lambdas generate as
- *          a `std::function` member). No pages, no wizard. Shown as a frameless popover.
+ * \brief   The one-screen static help card, opened by the `(?)` button or F1: what a condition
+ *          decides, what a guard can use (the owner glyphs), the `you write -> it runs` mapping
+ *          table including the D7 `IsCalmHours(x) -> mIsCalmHours(x)` row (named lambdas generate
+ *          as a `std::function` member), the gestures and the operators. Since pointing at the
+ *          editor explains only the symbol under the pointer, this card is where the editor
+ *          itself is explained, so it has to be complete. No pages, no wizard. Shown as a
+ *          frameless popover.
  **/
 class SMGuardHelpCard : public QFrame
 {
@@ -41,8 +46,14 @@ public:
     //!< Shows the card below \p anchor, opening toward the usable side and clamping to screen.
     void popupAt(const QWidget& anchor);
 
+    //!< The size that shows the whole card, which is NOT what the scroll area would ask for.
+    QSize sizeHint() const override;
+
 private:
     void buildUi();
+
+    QScrollArea*    mScroll;    //!< Keeps the card reachable when the screen is smaller than it.
+    QWidget*        mContent;   //!< The scrolled content, whose hint is the card's real size.
 };
 
 #endif  // LUSAN_VIEW_SM_SMGUARDHELPCARD_HPP

@@ -97,6 +97,13 @@ protected:
 private:
     void updateLabel();
 
+    /**
+     * \brief   The verdict cut to the width the label currently HAS (the full sentence stays in
+     *          the tooltip), so a long diagnostic never asks the hosting panel to grow.
+     * \param   severityWord    The `err` / `warn` key already claiming room on the same line.
+     **/
+    QString elidedVerdict(const QString& severityWord) const;
+
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
@@ -109,6 +116,7 @@ private:
     QString                 mSugFixId;  //!< The recovery suggestion's fix id (empty = none).
     QString                 mSugPayload;//!< The recovery suggestion's payload (the suggested name).
     QString                 mSugLabel;  //!< The recovery link's visible caption.
+    QString                 mHtml;      //!< The last rendered markup; re-set only when it changes.
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -115,7 +115,7 @@ SMIslandEditor::SMIslandEditor(QWidget* parent /*= nullptr*/)
     mBody = new SMCodeEditor(this);
     mBody->setObjectName(QStringLiteral("smIslandBody"));
     mBody->setSignature(QString());
-    mBody->setNote(tr("shallow checks only -- the body is stored verbatim and compiles in your project"));
+    mBody->setNote(tr("shallow checks only; the body is stored verbatim and compiles in your project"));
     outer->addWidget(mBody);
 
     mWarn = new QLabel(this);
@@ -217,7 +217,7 @@ void SMIslandEditor::updateWarnings()
 
     if (text.contains(QStringLiteral("return")) == false)
     {
-        warnings.append(tr("no 'return' -- a lambda must return bool"));
+        warnings.append(tr("no 'return': a lambda must return bool"));
     }
 
     mWarn->setText(warnings.isEmpty() ? QString() : QStringLiteral("(!) ") + warnings.join(QStringLiteral("; ")));

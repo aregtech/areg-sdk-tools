@@ -22,7 +22,7 @@
 /************************************************************************
  * Includes
  ************************************************************************/
-#include "lusan/model/common/DocModelNotifier.hpp"
+#include "lusan/model/common/DocIssue.hpp"
 
 #include <QList>
 #include <QString>
@@ -34,31 +34,11 @@
 class StateMachineData;
 
 /**
- * \struct  SMIssue
- * \brief   One validation finding: the offending element (the navigation target), its
- *          severity, an identifier for the check it failed, and a human-readable message.
- *          The `kind` routes a results panel to the owning page; a zero `elementId` marks
- *          a document- or level-wide finding with no single owning element.
+ * \brief   An FSM finding is a document finding -- there is one finding type for every
+ *          document kind (\ref DocIssue). The name is kept because it reads better at the
+ *          FSM call sites and because the rule ids below are FSM rule ids.
  **/
-struct SMIssue
-{
-    /**
-     * \enum    eSeverity
-     * \brief   Finding severity, ordered so a worst-of comparison is a simple `max`.
-     **/
-    enum class eSeverity
-    {
-          Info      //!< Advisory.
-        , Warning   //!< Should fix.
-        , Error     //!< Must fix; blocks code generation.
-    };
-
-    uint32_t        elementId { 0 };                        //!< The offending element (navigation target).
-    eDocElementKind kind      { eDocElementKind::State };   //!< The element kind (page routing).
-    eSeverity       severity  { eSeverity::Error };         //!< The severity.
-    int             rule      { 0 };                        //!< The identifier of the failed check.
-    QString         message;                                //!< The finding text.
-};
+using SMIssue = DocIssue;
 
 /**
  * \class   SMValidator
@@ -87,6 +67,20 @@ public:
      *          (warning 2 and error 2 are distinguishable by id, not only by severity).
      **/
     static constexpr int WARNING_RULE_BASE { 100 };
+
+    /**
+     * \brief   The 10.1 rule that argument-to-parameter mapping faults are reported under.
+     *          Named because the check lives in \ref SMOperationValidation (one implementation,
+     *          called both document-wide and per canvas element) and must file its findings
+     *          under the same rule the rest of the engine uses.
+     **/
+    static constexpr int RULE_ARGUMENT_MAPPING { 10 };
+
+    /**
+     * \brief   The rule guard findings are filed under. The guard checker owns the grammar and
+     *          the symbol binding, but its findings are collected into the one document run.
+     **/
+    static constexpr int RULE_GUARD { 25 };
 
 //////////////////////////////////////////////////////////////////////////
 // Operations

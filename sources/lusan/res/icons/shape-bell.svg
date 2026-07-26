@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Shape library: a bell (dome, base bar, clapper, top knob).
+     Candidate glyph for a signal that fires. Reads as an alarm, so it competes with the timer. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"
+     fill="none" stroke="#7c3aed" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="32" cy="14" r="3.2" fill="#7c3aed"/>
+  <path d="M17 44 C17 25 22 18 32 18 C42 18 47 25 47 44"/>
+  <path d="M13 44 L51 44"/>
+  <path d="M26.8 45 C26.8 51.2 37.2 51.2 37.2 45"/>
+</svg>

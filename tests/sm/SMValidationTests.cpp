@@ -22,11 +22,13 @@
 
 #include "lusan/model/sm/SMValidator.hpp"
 #include "lusan/model/sm/SMTypeCompat.hpp"
+#include "lusan/model/sm/SMOperationValidation.hpp"
 
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
@@ -96,6 +98,17 @@ namespace
     bool hasWarn(const QList<SMIssue>& issues, int warnNumber)
     {
         return countWarn(issues, warnNumber) > 0;
+    }
+
+    //!< True when EVERY finding of 10.2 rule \p warnNumber carries \p severity (vacuously true when
+    //!< the rule produced none). Rule 4 is advisory for data and a warning for behaviour, so the
+    //!< severity is part of the contract and not only the rule number.
+    bool warnSeverityIs(const QList<SMIssue>& issues, int warnNumber, SMIssue::eSeverity severity)
+    {
+        for (const SMIssue& i : issues)
+            if ((i.rule == (SMValidator::WARNING_RULE_BASE + warnNumber)) && (i.severity != severity))
+                return false;
+        return true;
     }
 
     //!< A minimal single-level machine with one Start state, valid on its own.
@@ -876,11 +889,57 @@ namespace
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             CHECK(countWarn(SMValidator::validate(doc), 3) == 0);
         }
-        {   // W4: a declared constant that is never referenced.
+        {   // W4: a declared constant that is never referenced. Data that nothing reads yet is
+            // legitimate at any point in a design, so it is reported as information, never a warning.
             StateMachineData doc;
             addStart(doc);
             doc.getConstants().createConstant("Unused")->setType("int32");
             CHECK(hasWarn(SMValidator::validate(doc), 4));
+            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Info));
+        }
+        {   // W4 severity, the other half: an unused ACTION is behaviour wired to nothing, and stays
+            // a warning. One rule number, two severities, decided by the kind of the declaration.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("orphan", eMethod::Action);
+            CHECK(hasWarn(SMValidator::validate(doc), 4));
+            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Warning));
+        }
+        {   // Negative W4, the guard path: a canonical guard binds by symbol ID, not by name, so a
+            // usage scan that only walked the legacy condition rows called this attribute unused.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            SMAttributeEntry* power = doc.getAttributes().createAttribute("Power");
+            power->setType("int32");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
+            tr->getGuard().setTree(SMGuardNode::makeCmp(SMGuardNode::eCmpOp::Ne
+                                                       , SMGuardNode::makeRef(SMGuardNode::eKind::Attr, power->getId())
+                                                       , SMGuardNode::makeVerbatim(SMGuardNode::eKind::Lit, "0")));
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
+        }
+        {   // Same for a constant and for a condition method called by the guard.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            ConstantEntry* limit = doc.getConstants().createConstant("Limit");
+            limit->setType("int32");
+            SMMethodEntry* cond = doc.getMethods().createMethod("isReady", eMethod::Condition);
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
+            tr->getGuard().setTree(SMGuardNode::makeCmp(SMGuardNode::eCmpOp::Lt
+                                                       , SMGuardNode::makeCall(cond->getId(), QList<SMGuardNode*>())
+                                                       , SMGuardNode::makeRef(SMGuardNode::eKind::Const, limit->getId())));
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
+        }
+        {   // A scope-qualified guard literal names its enumeration as plainly as a declaration does,
+            // so the type it names is not "never referenced" either.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getDataTypes().addEnum("PowerState");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
+            tr->getGuard().setTree(SMGuardNode::makeVerbatim(SMGuardNode::eKind::Lit, "PowerState::On"));
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
         }
         {   // Negative W4: the constant is referenced by an AttributeSet.
             StateMachineData doc;
@@ -923,22 +982,32 @@ namespace
             tr->getOperations().addOperation(new SMActionCall(0, "act"));
             CHECK(countWarn(SMValidator::validate(doc), 7) == 0);
         }
-        {   // W8: an attribute written but never read; negative once it is also read.
+        {   // Direction is not a finding: an attribute the design only writes, and one it only
+            // reads, are both fully referenced. The writing side of a read-only attribute lives in
+            // the hand-written service code, which the document cannot see.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("w")->setType("int32");
             SMAttributeSet* set = new SMAttributeSet(0, "w");
             s->getEntryList().addOperation(set);
             set->setSource(eSource::Value); set->setValue("1");
-            CHECK(hasWarn(SMValidator::validate(doc), 8));
+            CHECK(countWarn(SMValidator::validate(doc), 8) == 0);
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
 
+            doc.getAttributes().createAttribute("r")->setType("int32");
             doc.getMethods().createMethod("go", eMethod::Trigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
             SMConditionEntry* row = tr->getConditions().addCondition();
-            row->setLhsKind(eSource::Attribute); row->setLhs("w");
+            row->setLhsKind(eSource::Attribute); row->setLhs("r");
             row->setOperator(eOp::Greater);
             row->setRhsKind(eSource::Value); row->setRhs("0");
             CHECK(countWarn(SMValidator::validate(doc), 8) == 0);
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
+
+            // Only a declaration nothing touches at all is still reported, and only as information.
+            doc.getAttributes().createAttribute("idle")->setType("int32");
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 1);
+            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Info));
         }
         {   // W9: a comparison of two design-time constants; negative once one side is live.
             StateMachineData doc;
@@ -1000,6 +1069,139 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Pseudo-state and per-kind name space (reported 2026-07-26)
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testPseudoStateAndKindNamespace()
+    {
+        std::printf("- Start pseudo-state and the per-kind method name space\n");
+
+        {   // Negative: Start is a pseudo-state -- its outgoing transition is the initial one,
+            // taken on entering the level, so it needs no stimulus at all.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            doc.getStates().createState("Work", eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Work"));
+            CHECK(hasRule(SMValidator::validate(doc), 6) == false);
+        }
+        {   // Positive: an ordinary state still has to name a declared stimulus.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, "begin", work->getId());
+            doc.getMethods().createMethod("begin", eMethod::Trigger);
+            work->getTransitions().createTransition(eStim::Trigger, "ghost", stateId(doc, "Idle"));
+            CHECK(hasRule(SMValidator::validate(doc), 6));
+        }
+
+        {   // Negative: a trigger, an action and a condition may all be called `on`. They become
+            // members of different generated classes, so the names can never collide -- and each
+            // must resolve to ITS OWN kind, not to whichever entry happens to be stored first.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Trigger) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Action) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Condition) != nullptr);
+
+            start->getTransitions().createTransition(eStim::Trigger, "on", work->getId());
+            work->getEntryList().addOperation(new SMActionCall(0, "on"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(hasRule(issues, 6) == false);     // neither the trigger nor the action is "undeclared"
+            CHECK(hasRule(issues, 4) == false);     // and three kinds sharing one name is not a duplicate
+        }
+        {   // Positive: two entries of the SAME kind are still a duplicate.
+            StateMachineData doc;
+            addStart(doc);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Action) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Action) == nullptr);
+
+            // The creator refuses the second one, so build the collision the way a hand-edited
+            // document would carry it.
+            SMMethodEntry* clone = new SMMethodEntry(doc.getNextId(), "on", eMethod::Action, &doc.getMethods());
+            doc.getMethods().addElement(clone, false);
+            CHECK(hasRule(SMValidator::validate(doc), 4));
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// One engine: the canvas query and the document run are the same check
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testUnifiedEngine()
+    {
+        std::printf("- one engine: canvas query and document run agree\n");
+
+        StateMachineData doc;
+        SMStateEntry* start = addStart(doc);
+        SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
+        SMMethodEntry* act = doc.getMethods().createMethod("Walk", eMethod::Action);
+        CHECK(act != nullptr);
+        MethodParameter required(act);
+        required.setName("waiting");
+        required.setType("uint32");
+        act->addElement(std::move(required), true);
+
+        SMActionCall* call = new SMActionCall(0, "Walk");
+        work->getEntryList().addOperation(call);
+        const uint32_t stateId = work->getId();
+        start->getTransitions().createTransition(eStim::Trigger, QString(), stateId);
+
+        // The document run reports the unmapped formal WITH a message -- before unification the
+        // canvas knew about this fault and the results list could not say what it was.
+        {
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            int mappingFindings = 0;
+            for (const SMIssue& issue : issues)
+            {
+                if (issue.rule == SMValidator::RULE_ARGUMENT_MAPPING)
+                {
+                    ++mappingFindings;
+                    CHECK(issue.message.contains("waiting"));
+                    CHECK(issue.detail.isEmpty() == false);
+                }
+            }
+
+            CHECK(mappingFindings == 1);
+        }
+
+        // The canvas asks the SAME check, scoped to one element, and must agree with it.
+        {
+            DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+            CHECK(SMOperationValidation::worstForState(doc, stateId, worst));
+            CHECK(worst == DocIssue::eSeverity::Error);
+        }
+
+        // Mapping the formal clears both at once.
+        call->getArguments().append(SMArgumentEntry(0u, "waiting", eSource::Value, "5"));
+        {
+            DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+            CHECK(SMOperationValidation::worstForState(doc, stateId, worst) == false);
+            CHECK(countRule(SMValidator::validate(doc), SMValidator::RULE_ARGUMENT_MAPPING) == 0);
+        }
+
+        // An orphan argument is a mapping fault on both paths too.
+        call->getArguments().append(SMArgumentEntry(0u, "ghost", eSource::Value, "9"));
+        {
+            DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+            CHECK(SMOperationValidation::worstForState(doc, stateId, worst));
+            CHECK(countRule(SMValidator::validate(doc), SMValidator::RULE_ARGUMENT_MAPPING) == 1);
+        }
+
+        // Every finding of the one run speaks the one severity ladder, ordered so that a
+        // worst-of is a max -- the property the canvas and the results list both rely on.
+        CHECK(worstOf(DocIssue::eSeverity::Info, DocIssue::eSeverity::Error) == DocIssue::eSeverity::Error);
+        CHECK(worstOf(DocIssue::eSeverity::Warning, DocIssue::eSeverity::Info) == DocIssue::eSeverity::Warning);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -1024,6 +1226,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testTypeRules();
     testWarnings();
     testErrorsDoNotBlock();
+    testPseudoStateAndKindNamespace();
+    testUnifiedEngine();
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

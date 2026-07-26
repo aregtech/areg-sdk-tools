@@ -64,6 +64,13 @@ namespace
         return NESMDesign::scaledFont(QFont(), NESMDesign::EdgeLabelFontScale);
     }
 
+    //!< The room the stimulus kind mark reserves in front of the label text, mark plus its gap.
+    //!< Zero when nothing is drawn, so the label geometry collapses to plain text by itself.
+    inline double markWidth(SMKindGlyph::eGlyph glyph)
+    {
+        return SMKindGlyph::isDrawn(glyph) ? (SMKindGlyph::GlyphSize + 2.0) : 0.0;
+    }
+
     //!< The straight-line distance between two points.
     inline double distance(const QPointF& a, const QPointF& b)
     {
@@ -120,6 +127,7 @@ SMEdgeItem::SMEdgeItem(uint32_t transitionId, QGraphicsItem* parent /*= nullptr*
     , mBulge        (0.0)
     , mColorName    ( )
     , mStimulusText ( )
+    , mStimulusGlyph(SMKindGlyph::eGlyph::None)
     , mGuardText    ( )
     , mGuardSeverity(-1)
     , mActionSeverity(-1)
@@ -236,19 +244,41 @@ void SMEdgeItem::updateFromModel()
     // The label carries the guard's severity color + glyph when the guard is not ok.
     const QString summary = SMGuardRender::guardText(data, getElementId(), transition->getGuard()).simplified();
     mGuardSeverity = -1;
+    QString guardIssue;
+    const QList<SMGuardValidation::Finding> findings = SMGuardValidation::validateTransition(data, getElementId());
     SMGuardValidation::eSeverity worst = SMGuardValidation::eSeverity::Info;
-    if (SMGuardValidation::worstSeverity(data, getElementId(), worst)
-        && (worst != SMGuardValidation::eSeverity::Info))
+    for (const SMGuardValidation::Finding& finding : findings)
+    {
+        if (static_cast<int>(finding.severity) > static_cast<int>(worst))
+        {
+            worst = finding.severity;
+        }
+    }
+
+    if ((findings.isEmpty() == false) && (worst != SMGuardValidation::eSeverity::Info))
     {
         mGuardSeverity = static_cast<int>((worst == SMGuardValidation::eSeverity::Error)
                                           ? NEGuardStyle::eSeverity::Err
                                           : NEGuardStyle::eSeverity::Warn);
+        // The canvas says WHAT is wrong, not merely that something is: the same sentence the
+        // Conditions status line shows, so the two surfaces never seem to disagree.
+        for (const SMGuardValidation::Finding& finding : findings)
+        {
+            if (finding.severity == worst)
+            {
+                guardIssue = finding.message;
+                break;
+            }
+        }
     }
 
-    // The stimulus reads as a method signature (`walk(count)`); a timer stays bare. The guard
-    // clause is kept separate so paintLabels can tint the stimulus and the condition distinctly.
+    // Only a trigger reads as a method signature (`walk(count)`); an event and a timer are named
+    // bare and say WHAT they are through a mark drawn in front of the text -- a lightning bolt or a
+    // clock -- rather than through empty brackets or a generated `on_event_` prefix (issue #543).
+    // The guard clause is kept separate so paintLabels can tint stimulus and condition distinctly.
     const QString signature = SMOperationSummary::stimulusSignature(data, *transition);
-    mStimulusText = signature;
+    mStimulusText  = SMKindGlyph::prefix(SMKindGlyph::stimulusGlyph(*transition)) + signature;
+    mStimulusGlyph = SMKindGlyph::stimulusGlyph(*transition);
     if (summary.isEmpty())
     {
         mGuardText.clear();
@@ -257,7 +287,18 @@ void SMEdgeItem::updateFromModel()
     else
     {
         constexpr int MAX_SUMMARY = 40;
-        const QString glyph = (mGuardSeverity >= 0) ? QStringLiteral("(!) ") : QString();
+        // One glyph per severity: an error and a warning must not look alike on the canvas while
+        // the status line calls them by different names. The glyph is the grayscale/color-blind
+        // channel -- the severity color alone would carry the whole distinction.
+        QString glyph;
+        if (mGuardSeverity == static_cast<int>(NEGuardStyle::eSeverity::Err))
+        {
+            glyph = QStringLiteral("(x) ");
+        }
+        else if (mGuardSeverity >= 0)
+        {
+            glyph = QStringLiteral("(!) ");
+        }
 
         // A short, plain guard reads best in full. A long one, or one carrying an inline C++ block,
         // is cut down STRUCTURALLY rather than chopped mid-token: the condition names survive and
@@ -272,17 +313,28 @@ void SMEdgeItem::updateFromModel()
                 ? (label.left(MAX_SUMMARY - 3) + QStringLiteral("..."))
                 : label;
         mGuardText = QChar('[') + glyph + shortSummary + QChar(']');
-        setToolTip(signature + QChar('[') + summary + QChar(']'));
+        // A tooltip cannot carry a drawn mark, so it spells the kind out instead.
+        const QString kindWord = SMKindGlyph::word(mStimulusGlyph);
+        QString tip = (kindWord.isEmpty() ? QString() : (kindWord + QChar(' ')))
+                    + signature + QChar('[') + summary + QChar(']');
+        if (guardIssue.isEmpty() == false)
+        {
+            tip += QChar('\n')
+                 + translate((mGuardSeverity == static_cast<int>(NEGuardStyle::eSeverity::Err))
+                             ? "err: %1" : "warn: %1").arg(guardIssue);
+        }
+
+        setToolTip(tip);
     }
 
     // An action/event whose arguments are not fully mapped warns on the canvas, so the developer
     // sees which transitions a method edit broke without opening each Properties panel; the glyph
     // clears the instant every argument is mapped.
     mActionSeverity = -1;
-    const SMOperationValidation::eSeverity opSeverity = SMOperationValidation::transitionSeverity(data, getElementId());
-    if (opSeverity != SMOperationValidation::eSeverity::Ok)
+    DocIssue::eSeverity opSeverity = DocIssue::eSeverity::Info;
+    if (SMOperationValidation::worstForTransition(data, getElementId(), opSeverity))
     {
-        mActionSeverity = static_cast<int>((opSeverity == SMOperationValidation::eSeverity::Error)
+        mActionSeverity = static_cast<int>((opSeverity == DocIssue::eSeverity::Error)
                                            ? NEGuardStyle::eSeverity::Err
                                            : NEGuardStyle::eSeverity::Warn);
     }
@@ -404,12 +456,14 @@ void SMEdgeItem::rebuildPath()
 
     const QPointF tc = tgt.center();
 
-    // A self-loop with no stored waypoints gets a default loop above the box.
-    if (mSelfLoop && mWaypoints.isEmpty())
+    // A self-loop with no stored waypoints gets a default loop above the box. An ARC self-loop gets
+    // none: its two border anchors and the bulge already describe the whole loop, and a seeded
+    // waypoint here would be written straight back into the layout as if the user had placed it.
+    if (mSelfLoop && mWaypoints.isEmpty() && (mShape != SMLayoutEdge::eShape::Arc))
     {
-        const double off = 44.0;
-        mWaypoints.append(QPointF(src.center().x() - 22.0, src.top() - off));
-        mWaypoints.append(QPointF(src.center().x() + 22.0, src.top() - off));
+        const double off = NESMDesign::EdgeSelfLoopStandoff;
+        mWaypoints.append(QPointF(src.center().x() - NESMDesign::EdgeSelfLoopHalfSpan, src.top() - off));
+        mWaypoints.append(QPointF(src.center().x() + NESMDesign::EdgeSelfLoopHalfSpan, src.top() - off));
     }
 
     const double srcRad = stateRadius(mSourceId, src);
@@ -427,25 +481,42 @@ void SMEdgeItem::rebuildPath()
         return snap ? NESMDesign::gridAlignedBorderPoint(rect, rad, bp, grid) : bp;
     };
 
-    if ((mShape == SMLayoutEdge::eShape::Arc) && (mSelfLoop == false))
+    if (mShape == SMLayoutEdge::eShape::Arc)
     {
+        // A self-loop faces no other box, so center-to-center gives no direction at all: without
+        // anchors of its own it falls back to the symmetric default pair on its top border.
+        QPointF loopBegin;
+        QPointF loopEnd;
+        if (mSelfLoop && (mHasAnchors == false))
+        {
+            selfLoopEnds(src, loopBegin, loopEnd);
+        }
+
         mBegin = (mDrag == eDrag::Begin) ? mDragPoint
                : mHasAnchors ? NESMDesign::nearestBorderPoint(src, srcRad, mAnchorBegin)
+               : mSelfLoop   ? loopBegin
                              : defaultBorder(src, srcRad, tc);
         mEnd   = (mDrag == eDrag::End)   ? mDragPoint
                : mHasAnchors ? NESMDesign::nearestBorderPoint(tgt, tgtRad, mAnchorEnd)
+               : mSelfLoop   ? loopEnd
                              : defaultBorder(tgt, tgtRad, sc);
         mPath  = NESMDesign::arcPolyline(mBegin, mEnd, mBulge, NESMDesign::EdgeArcSamples);
     }
     else
     {
-        const QPointF beginRef = mWaypoints.isEmpty() ? tc : mWaypoints.first();
-        const QPointF endRef   = mWaypoints.isEmpty() ? sc : mWaypoints.last();
+        // Without waypoints the endpoint faces the other box; with them it lines up with the
+        // adjacent corner, so the first and last legs leave the border square instead of fanning
+        // back toward the box center.
+        const bool    poly     = (mWaypoints.isEmpty() == false);
+        const QPointF beginRef = poly ? mWaypoints.first() : tc;
+        const QPointF endRef   = poly ? mWaypoints.last()  : sc;
         mBegin = (mDrag == eDrag::Begin) ? mDragPoint
                : mHasAnchors ? NESMDesign::nearestBorderPoint(src, srcRad, mAnchorBegin)
+               : poly        ? NESMDesign::polylineBorderPoint(src, srcRad, beginRef)
                              : defaultBorder(src, srcRad, beginRef);
         mEnd   = (mDrag == eDrag::End)   ? mDragPoint
                : mHasAnchors ? NESMDesign::nearestBorderPoint(tgt, tgtRad, mAnchorEnd)
+               : poly        ? NESMDesign::polylineBorderPoint(tgt, tgtRad, endRef)
                              : defaultBorder(tgt, tgtRad, endRef);
 
         mPath.append(mBegin);
@@ -509,7 +580,7 @@ QRectF SMEdgeItem::labelRect() const
 
     const QPointF anchor = labelAnchor();
     const QFontMetricsF metrics{ labelFont() };
-    const QSizeF size = metrics.size(0, text) + QSizeF(4.0, 1.0);
+    const QSizeF size = metrics.size(0, text) + QSizeF(4.0 + markWidth(mStimulusGlyph), 1.0);
 
     // Default edges lift the stimulus above the line so a horizontal edge does not strike
     // through it; a user-dragged label centers on its point (the user placed it deliberately).
@@ -567,9 +638,10 @@ QRectF SMEdgeItem::stimulusLinkRect() const
         return QRectF();
     }
 
-    // Mirror paintLabels: the stimulus is drawn at label.left() + 2, its own advance wide.
+    // Mirror paintLabels: the stimulus is drawn at label.left() + 2, its mark and text wide. The
+    // mark is part of the link -- it names the same declaration the text does.
     const QFontMetricsF metrics{ labelFont() };
-    const double advance = metrics.horizontalAdvance(mStimulusText);
+    const double advance = markWidth(mStimulusGlyph) + metrics.horizontalAdvance(mStimulusText);
     return QRectF(label.left() + 2.0, label.top(), advance, label.height());
 }
 
@@ -591,7 +663,7 @@ QRectF SMEdgeItem::guardLinkRect() const
     double x = label.left() + 2.0;
     if (mStimulusText.isEmpty() == false)
     {
-        x += metrics.horizontalAdvance(mStimulusText);
+        x += markWidth(mStimulusGlyph) + metrics.horizontalAdvance(mStimulusText);
     }
 
     const double advance = metrics.horizontalAdvance(mGuardText);
@@ -680,6 +752,11 @@ QPainterPath SMEdgeItem::shape() const
     for (const QPointF& wp : mWaypoints)
     {
         result.addEllipse(wp, NESMDesign::EndpointPickRadius, NESMDesign::EndpointPickRadius);
+    }
+
+    if (mShape == SMLayoutEdge::eShape::Arc)
+    {
+        result.addEllipse(arcApex(), NESMDesign::EndpointPickRadius, NESMDesign::EndpointPickRadius);
     }
 
     return result;
@@ -792,6 +869,19 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
             }
         }
 
+        if (mShape == SMLayoutEdge::eShape::Arc)
+        {
+            // The curvature handle: a diamond at the apex, so it never reads as one more waypoint
+            // (squares) or an endpoint (circles) -- dragging it bends the arc, it does not move a point.
+            const QPointF apex = arcApex();
+            const double  d    = h / 2.0 + 1.0;
+            const QPointF diamond[4] = { QPointF(apex.x(), apex.y() - d), QPointF(apex.x() + d, apex.y())
+                                       , QPointF(apex.x(), apex.y() + d), QPointF(apex.x() - d, apex.y()) };
+            painter->setPen(QPen(NESMDesign::selectionColor(palette), 1.4));
+            painter->setBrush(palette.color(QPalette::Base));
+            painter->drawPolygon(diamond, 4);
+        }
+
         painter->setBrush(palette.color(QPalette::Base));
         painter->setPen(QPen(NESMDesign::selectionColor(palette), 1.4));
         // The active (keyboard-movable) endpoint gets a slightly larger ring so the user sees which
@@ -877,7 +967,18 @@ void SMEdgeItem::paintLabels(QPainter* painter, const QPalette& palette)
             double x = label.left() + 2.0;
             if (mStimulusText.isEmpty() == false)
             {
-                painter->setPen(NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Stimulus));
+                const QColor stimColor = NEGuardStyle::ownerColor(NEGuardStyle::eOwner::Stimulus);
+                const double mark = markWidth(mStimulusGlyph);
+                if (mark > 0.0)
+                {
+                    // The mark takes the stimulus hue too, so mark and name read as one token.
+                    SMKindGlyph::paint(*painter, QRectF(x, label.top() + 1.0
+                                                      , SMKindGlyph::GlyphSize, label.height() - 2.0)
+                                      , mStimulusGlyph, stimColor);
+                    x += mark;
+                }
+
+                painter->setPen(stimColor);
                 const double advance = metrics.horizontalAdvance(mStimulusText);
                 painter->drawText(QRectF(x, label.top(), advance, label.height()), Qt::AlignVCenter | Qt::AlignLeft, mStimulusText);
                 x += advance;
@@ -1034,6 +1135,142 @@ int SMEdgeItem::hitSegment(const QPointF& point, QPointF& projected) const
     }
 
     return best;
+}
+
+QPointF SMEdgeItem::arcApex() const
+{
+    // Must agree with NESMDesign::arcPolyline, which places the apex the same way.
+    const QPointF chord = mEnd - mBegin;
+    const double  c     = std::hypot(chord.x(), chord.y());
+    if (c < 1e-6)
+    {
+        return mBegin;
+    }
+
+    const QPointF normal{ -chord.y() / c, chord.x() / c };
+    return ((mBegin + mEnd) / 2.0) + normal * (mBulge * c / 2.0);
+}
+
+double SMEdgeItem::bulgeFor(const QPointF& point) const
+{
+    const QPointF chord = mEnd - mBegin;
+    const double  c     = std::hypot(chord.x(), chord.y());
+    if (c < 1e-6)
+    {
+        return 0.0;
+    }
+
+    // The bulge is the signed sagitta as a fraction of half the chord, so the apex tracks the
+    // pointer's distance from the chord and its side decides which way the arc bends.
+    const QPointF normal{ -chord.y() / c, chord.x() / c };
+    const QPointF fromMid = point - ((mBegin + mEnd) / 2.0);
+    const double  sagitta = (fromMid.x() * normal.x()) + (fromMid.y() * normal.y());
+    const double  limit   = (mSelfLoop ? NESMDesign::EdgeArcSelfBulgeMax : NESMDesign::EdgeArcBulgeMax);
+    return std::clamp(2.0 * sagitta / c, -limit, limit);
+}
+
+void SMEdgeItem::selfLoopEnds(const QRectF& box, QPointF& begin, QPointF& end) const
+{
+    begin = QPointF(box.center().x() - NESMDesign::EdgeSelfLoopHalfSpan, box.top());
+    end   = QPointF(box.center().x() + NESMDesign::EdgeSelfLoopHalfSpan, box.top());
+}
+
+void SMEdgeItem::adoptSelfLoopEnds()
+{
+    const QRectF box = stateRect(mSourceId);
+    if ((box.width() <= 0.0) || (box.height() <= 0.0))
+    {
+        return;
+    }
+
+    if (distance(mBegin, mEnd) < 1e-3)
+    {
+        selfLoopEnds(box, mBegin, mEnd);    // a chord of zero length is not a curve
+    }
+
+    // Pin them: without anchors the arc branch would re-derive the endpoints and lose the side of
+    // the box the user had the loop leaving from.
+    mAnchorBegin = mBegin;
+    mAnchorEnd   = mEnd;
+    mHasAnchors  = true;
+}
+
+double SMEdgeItem::selfLoopBulge() const
+{
+    const QRectF  box   = stateRect(mSourceId);
+    const QPointF chord = mEnd - mBegin;
+    const double  c     = std::hypot(chord.x(), chord.y());
+    if ((c < 1e-6) || (box.width() <= 0.0) || (box.height() <= 0.0))
+    {
+        return NESMDesign::EdgeArcBulgeDefault;
+    }
+
+    // Stand the apex the same distance off the border as the polyline loop's corners, so switching
+    // a loop between the two shapes keeps it the same size, and bow it AWAY from the box: a loop
+    // curving back through its own state reads as a line crossing it, not as a transition.
+    const QPointF normal { -chord.y() / c, chord.x() / c };
+    const QPointF outward = ((mBegin + mEnd) / 2.0) - box.center();
+    const double  side    = (((normal.x() * outward.x()) + (normal.y() * outward.y())) < 0.0) ? -1.0 : 1.0;
+    return side * std::min(2.0 * NESMDesign::EdgeSelfLoopStandoff / c, NESMDesign::EdgeArcSelfBulgeMax);
+}
+
+QList<QPointF> SMEdgeItem::selfLoopCorners() const
+{
+    QList<QPointF> corners;
+    const QRectF box = stateRect(mSourceId);
+    if ((box.width() <= 0.0) || (box.height() <= 0.0))
+    {
+        return corners;
+    }
+
+    corners.append(mBegin + (NESMDesign::borderOutwardNormal(box, mBegin) * NESMDesign::EdgeSelfLoopStandoff));
+    corners.append(mEnd   + (NESMDesign::borderOutwardNormal(box, mEnd)   * NESMDesign::EdgeSelfLoopStandoff));
+    return corners;
+}
+
+void SMEdgeItem::setShape(SMLayoutEdge::eShape shape)
+{
+    const bool arc = (shape == SMLayoutEdge::eShape::Arc);
+    if (mShape == shape)
+    {
+        return;
+    }
+
+    prepareGeometryChange();
+    mShape = shape;
+    if (arc)
+    {
+        // An arc is its two endpoints plus a bulge; the corners of a polyline describe nothing
+        // on a curve. This mirrors the Arc -> Line downgrade that adding a waypoint performs.
+        mWaypoints.clear();
+        setSelectedPoint(-1);
+        if (mSelfLoop)
+        {
+            adoptSelfLoopEnds();
+        }
+
+        if (std::abs(mBulge) < 1e-6)
+        {
+            // A zero bulge would still draw straight.
+            mBulge = (mSelfLoop ? selfLoopBulge() : NESMDesign::EdgeArcBulgeDefault);
+        }
+    }
+    else
+    {
+        mBulge = 0.0;
+        if (mSelfLoop && mWaypoints.isEmpty())
+        {
+            // Both anchors of a self-loop sit on the same box, so a two-point run between them has
+            // nothing to draw. Straightening gives it the rectangle the arc stood in: one corner
+            // off each anchor, at the standoff the default loop uses.
+            mWaypoints = selfLoopCorners();
+        }
+    }
+
+    rebuildPath();
+    mGesture = SMMoveNodeCommand::takeNextGesture();
+    commitGeometry(arc ? translate("Curve transition") : translate("Straighten transition"));
+    update();
 }
 
 SMLayoutEdge SMEdgeItem::buildGeometry() const
@@ -1386,6 +1623,17 @@ void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
             return;
         }
 
+        if ((mShape == SMLayoutEdge::eShape::Arc) && (distance(p, arcApex()) <= NESMDesign::EndpointPickRadius))
+        {
+            mDrag = eDrag::Bulge;
+            setSelectedPoint(-1);
+            setLabelActive(false);
+            setActiveEnd(0);
+            mGesture = SMMoveNodeCommand::takeNextGesture();
+            event->accept();
+            return;
+        }
+
         const int wp = hitWaypoint(p);
         if (wp >= 0)
         {
@@ -1434,6 +1682,13 @@ void SMEdgeItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
     {
     case eDrag::Waypoint:
         mWaypoints[mDragIndex] = snapped;
+        rebuildPath();
+        break;
+
+    case eDrag::Bulge:
+        // Curvature follows the pointer freely: snapping the apex to the grid would quantise the
+        // curve into visible steps, and the arc is judged by eye, not by coordinate.
+        mBulge = bulgeFor(event->scenePos());
         rebuildPath();
         break;
 
@@ -1490,6 +1745,10 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
     {
     case eDrag::Waypoint:
         commitGeometry(translate("Move waypoint"));
+        break;
+
+    case eDrag::Bulge:
+        commitGeometry(translate("Curve transition"));
         break;
 
     case eDrag::Label:

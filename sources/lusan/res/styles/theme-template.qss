@@ -77,9 +77,12 @@ QToolButton:hover
     border-color: ${border};
 }
 
+/* A checked tool button is a mode that stays on (the armed canvas tool, a grid toggle), so it
+   needs more than a background tint to read at icon-only sizes: an accent border marks it. */
 QToolButton:pressed, QToolButton:checked
 {
     background: ${pressed};
+    border-color: ${accent};
 }
 
 /* Split buttons (MenuButtonPopup): keep the drop-down zone on the same background as the
@@ -426,4 +429,49 @@ QPushButton#smLinkMethods:hover, QPushButton#smLinkConstants:hover, QPushButton#
 QPushButton#smLinkDesign:hover
 {
     color: ${accentHover};
+}
+
+/* ---- Dock drop guides ---- */
+
+/*
+ * The docking library ships no rule for the drop-guide icons, so they fall back to a
+ * palette default where the arrow and the icon body are both QPalette::Base -- the arrow
+ * is painted in its own background colour and the guides read as blank plates. Naming the
+ * five colours here is the documented way to override them. Overlay and Shadow are given
+ * opaque values on purpose: the library re-applies its own alpha to any opaque value.
+ */
+ads--CDockOverlayCross
+{
+    qproperty-iconColors: "Frame=${accent} Background=${base} Overlay=${accent} Arrow=${accent} Shadow=${border}";
+}
+
+/* ---- Dock splitter handles ---- */
+
+/*
+ * The grab area between a dock and the editor is invisible with the stock style, so the
+ * only way to find it is to sweep the mouse until the cursor changes. A line down the
+ * middle of the handle marks it, and it lights up on hover, the way a resize affordance
+ * has to. The handle is deliberately wider than the line it draws: 6px is comfortable to
+ * hit, while the 1px line keeps the seam visually thin.
+ */
+ads--CDockSplitter::handle
+{
+    background: ${panel};
+}
+
+ads--CDockSplitter::handle:horizontal
+{
+    width: 6px;
+    border-left: 1px solid ${border};
+}
+
+ads--CDockSplitter::handle:vertical
+{
+    height: 6px;
+    border-top: 1px solid ${border};
+}
+
+ads--CDockSplitter::handle:hover
+{
+    background: ${accent};
 }

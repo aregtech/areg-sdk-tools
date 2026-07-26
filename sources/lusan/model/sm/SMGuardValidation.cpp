@@ -28,6 +28,8 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 
+#include <QObject>
+
 namespace
 {
     using eKind     = SMGuardNode::eKind;
@@ -88,7 +90,8 @@ namespace
             if (SMGuardSymbols::attributeName(data, node.getSymbolId()).isEmpty())
             {
                 findings.append({ eSeverity::Error, eFinding::BrokenRef, transitionId, location
-                                , QStringLiteral("guard references a deleted attribute (id %1)").arg(node.getSymbolId()) });
+                                , QStringLiteral("guard references a deleted attribute (id %1)").arg(node.getSymbolId())
+                                , node.getSymbolId() });
             }
             break;
 
@@ -96,7 +99,8 @@ namespace
             if (SMGuardSymbols::constantName(data, node.getSymbolId()).isEmpty())
             {
                 findings.append({ eSeverity::Error, eFinding::BrokenRef, transitionId, location
-                                , QStringLiteral("guard references a deleted constant (id %1)").arg(node.getSymbolId()) });
+                                , QStringLiteral("guard references a deleted constant (id %1)").arg(node.getSymbolId())
+                                , node.getSymbolId() });
             }
             break;
 
@@ -106,7 +110,8 @@ namespace
             if ((method == nullptr) || (method->isCondition() == false))
             {
                 findings.append({ eSeverity::Error, eFinding::BrokenRef, transitionId, location
-                                , QStringLiteral("guard calls a deleted condition method (id %1)").arg(node.getSymbolId()) });
+                                , QStringLiteral("guard calls a deleted condition method (id %1)").arg(node.getSymbolId())
+                                , node.getSymbolId() });
             }
             break;
         }
@@ -131,12 +136,14 @@ namespace
                 if (rebindable)
                 {
                     findings.append({ eSeverity::Info, eFinding::ParamRebind, transitionId, location
-                                    , QStringLiteral("parameter '%1' re-binds to the new stimulus by name and type -- re-commit the guard").arg(stale->getName()) });
+                                    , QStringLiteral("parameter '%1' re-binds to the new stimulus by name and type, so commit the guard again").arg(stale->getName())
+                                    , node.getSymbolId() });
                 }
                 else
                 {
                     findings.append({ eSeverity::Error, eFinding::BrokenRef, transitionId, location
-                                    , QStringLiteral("guard references a parameter the stimulus no longer has (id %1)").arg(node.getSymbolId()) });
+                                    , QStringLiteral("guard references a parameter the stimulus no longer has (id %1)").arg(node.getSymbolId())
+                                    , node.getSymbolId() });
                 }
             }
             else
@@ -149,7 +156,8 @@ namespace
                     shadowed.append(name);
                     findings.append({ eSeverity::Warning, eFinding::Shadowing, transitionId, location
                                     , QStringLiteral("'%1' is the stimulus parameter and hides %2 '%1'")
-                                          .arg(name, hidesAttr ? QStringLiteral("attribute") : QStringLiteral("constant")) });
+                                          .arg(name, hidesAttr ? QStringLiteral("attribute") : QStringLiteral("constant"))
+                                    , node.getSymbolId() });
                 }
             }
             break;
@@ -158,7 +166,8 @@ namespace
         case eKind::Raw:
             // The audit: every verbatim fragment is listed -- never silent.
             findings.append({ eSeverity::Info, eFinding::RawFragment, transitionId, location
-                            , QStringLiteral("raw C++ fragment: %1").arg(elide(node.getText())) });
+                            , QStringLiteral("raw C++ fragment: %1").arg(elide(node.getText()))
+                            , 0u });   // raw text names no declaration -- there is nothing to key on
             break;
 
         default:
@@ -189,7 +198,8 @@ namespace
         if (guard.isDraft())
         {
             findings.append({ eSeverity::Error, eFinding::Draft, transition.getId(), location
-                            , QStringLiteral("guard is a draft: %1 -- generation refuses").arg(elide(guard.getDraftText())) });
+                            , QStringLiteral("guard is still a draft: %1. Code generation refuses it").arg(elide(guard.getDraftText()))
+                            , 0u });   // a draft is the whole guard, not one element of it
             return;
         }
 
@@ -230,6 +240,25 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 // SMGuardValidation
 //////////////////////////////////////////////////////////////////////////
+
+QString SMGuardValidation::describe(SMGuardValidation::eKind kind)
+{
+    switch (kind)
+    {
+    case eKind::Draft:
+        return QObject::tr("The guard text was never committed, so there is no parsed condition to generate. Commit it or clear it.");
+    case eKind::Shadowing:
+        return QObject::tr("A stimulus parameter has the same name as an attribute or constant, and hides it inside this guard. Rename one of them to say which is meant.");
+    case eKind::RawFragment:
+        return QObject::tr("A verbatim C++ fragment is emitted as written and is never parsed or checked. Listed so every unchecked fragment in the document is accounted for.");
+    case eKind::BrokenRef:
+        return QObject::tr("The guard references a declaration that no longer exists or has left its scope. Re-bind the reference or remove it.");
+    case eKind::ParamRebind:
+        return QObject::tr("The stimulus changed, but a parameter of the same name and type exists on the new one, so the reference can be re-bound as it stands.");
+    default:
+        return QString();
+    }
+}
 
 QList<SMGuardValidation::Finding> SMGuardValidation::validate(const StateMachineData& data)
 {

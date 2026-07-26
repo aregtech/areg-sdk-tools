@@ -20,6 +20,8 @@
  ************************************************************************/
 
 #include "lusan/data/common/ConstantEntry.hpp"
+#include "lusan/data/common/DataTypeEnum.hpp"
+#include "lusan/data/common/DataTypeStructure.hpp"
 #include "lusan/data/common/MethodParameter.hpp"
 #include "lusan/data/sm/SMAttributeData.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
@@ -828,6 +830,120 @@ static void testCommands()
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Data types in a guard (issue #542)
+//////////////////////////////////////////////////////////////////////////
+
+static void testScopedValues()
+{
+    std::printf("[U1] scope-qualified operands: enum values, structure fields, imported types\n");
+
+    StateMachineData data;
+    const uint32_t tid = buildDoc(data);
+
+    DataTypeEnum* numbers = static_cast<DataTypeEnum*>(data.getDataTypes().addEnum(QStringLiteral("Numbers")));
+    numbers->addField(QStringLiteral("Zero"));
+    numbers->addField(QStringLiteral("One"));
+    numbers->addField(QStringLiteral("Two"));
+
+    DataTypeEnum* colors = static_cast<DataTypeEnum*>(data.getDataTypes().addEnum(QStringLiteral("Colors")));
+    colors->addField(QStringLiteral("Red"));
+
+    DataTypeStructure* point = static_cast<DataTypeStructure*>(data.getDataTypes().addStructure(QStringLiteral("Point")));
+    point->addField(QStringLiteral("x"));
+
+    data.getDataTypes().addImported(QStringLiteral("NEService"));
+
+    SMAttributeEntry* number = data.getAttributes().createAttribute(QStringLiteral("number"));
+    number->setType(QStringLiteral("Numbers"));
+
+    // The reported case: an attribute compared with a value of its own enumeration.
+    SMGuardParser::Result ok = SMGuardParser::parse(data, tid, QStringLiteral("#number == Numbers::Zero"));
+    check(ok.resolved(), "'#number == Numbers::Zero' resolves");
+    check((ok.tree != nullptr) && (ok.tree->getKind() == eKind::Cmp), "the scoped comparison is a Cmp node");
+    if ((ok.tree != nullptr) && (ok.tree->getCount() == 2))
+    {
+        check(ok.tree->childAt(0)->getKind() == eKind::Attr, "'#number' without a kind binds the attribute");
+        check(ok.tree->childAt(1)->getKind() == eKind::Lit, "the enum value is stored as a literal");
+        checkEq(ok.tree->childAt(1)->getText(), QStringLiteral("Numbers::Zero"), "the literal keeps the qualified text");
+    }
+    delete ok.tree;
+
+    // Order and sigil are both free: the validator resolves whichever side is a document symbol.
+    SMGuardParser::Result flipped = SMGuardParser::parse(data, tid, QStringLiteral("Numbers::Zero == number"));
+    check(flipped.resolved(), "the reversed, sigil-less form resolves the same way");
+    delete flipped.tree;
+
+    // Whitespace around the scope operator is C++-legal and must not change the stored value.
+    SMGuardParser::Result spaced = SMGuardParser::parse(data, tid, QStringLiteral("number == Numbers :: One"));
+    check(spaced.resolved(), "spaces around '::' resolve");
+    if ((spaced.tree != nullptr) && (spaced.tree->getCount() == 2))
+    {
+        checkEq(spaced.tree->childAt(1)->getText(), QStringLiteral("Numbers::One"), "the stored literal is canonical");
+    }
+    delete spaced.tree;
+
+    // An undeclared enumerator is an error, and the message names what the type does declare.
+    SMGuardParser::Result badMember = SMGuardParser::parse(data, tid, QStringLiteral("number == Numbers::Three"));
+    check(badMember.hasError(), "an undeclared enumerator is an error");
+    check((badMember.diagnostics.isEmpty() == false)
+          && badMember.diagnostics.first().message.contains(QStringLiteral("Zero")), "the message lists the declared values");
+    delete badMember.tree;
+
+    // An undeclared type is an error too -- it is not silently kept as raw C++.
+    SMGuardParser::Result badType = SMGuardParser::parse(data, tid, QStringLiteral("number == Digits::Zero"));
+    check(badType.hasError(), "an unknown type is an error");
+    delete badType.tree;
+
+    // A structure field resolves the same way as an enumerator.
+    SMGuardParser::Result field = SMGuardParser::parse(data, tid, QStringLiteral("count == Point::x"));
+    check(field.resolved(), "a declared structure field resolves");
+    delete field.tree;
+
+    // An imported type is opaque past its own name: the tail belongs to the foreign header, and
+    // because the value's real type lives there too, the comparison is left unjudged.
+    SMGuardParser::Result imported = SMGuardParser::parse(data, tid, QStringLiteral("number == NEService::eResult::Ok"));
+    check(imported.resolved(), "an imported type accepts any tail");
+    check(imported.diagnostics.isEmpty(), "an imported value is never second-guessed");
+    delete imported.tree;
+
+    // Two different enumerations cannot meet -- a WARNING, so the guard still commits.
+    SMGuardParser::Result crossed = SMGuardParser::parse(data, tid, QStringLiteral("number == Colors::Red"));
+    check(crossed.hasError() == false, "a type mismatch does not block the guard");
+    check(crossed.resolved(), "a type mismatch still produces a resolved tree");
+    check(crossed.diagnostics.isEmpty() == false, "a type mismatch is reported");
+    if (crossed.diagnostics.isEmpty() == false)
+    {
+        check(crossed.diagnostics.first().severity == SMGuardParser::eSeverity::Warning, "the mismatch is a warning");
+        check(crossed.diagnostics.first().message.contains(QStringLiteral("Colors")), "the message names both types");
+    }
+    delete crossed.tree;
+
+    // An enumeration has no order, so an ordering test on one is worth saying out loud.
+    SMGuardParser::Result ordered = SMGuardParser::parse(data, tid, QStringLiteral("number < Numbers::One"));
+    check(ordered.hasError() == false, "an ordering test on an enumeration still commits");
+    check(ordered.diagnostics.isEmpty() == false, "an ordering test on an enumeration warns");
+    delete ordered.tree;
+
+    // A number literal carries no type of its own: it must never provoke a false alarm.
+    SMGuardParser::Result numeric = SMGuardParser::parse(data, tid, QStringLiteral("count >= 3"));
+    check(numeric.resolved() && numeric.diagnostics.isEmpty(), "a bare number is compared without complaint");
+    delete numeric.tree;
+
+    // The kind-less sigil resolves like a bare name; a stated kind still has to resolve.
+    SMGuardParser::Result kindless = SMGuardParser::parse(data, tid, QStringLiteral("#count >= 3"));
+    check(kindless.resolved(), "'#count' resolves to the stimulus parameter");
+    if (kindless.tree != nullptr)
+    {
+        check(kindless.tree->childAt(0)->getKind() == eKind::Param, "the kind-less mention binds the parameter");
+    }
+    delete kindless.tree;
+
+    SMGuardParser::Result unknownBare = SMGuardParser::parse(data, tid, QStringLiteral("#nosuch"));
+    check(unknownBare.hasError(), "a kind-less mention of an unknown name is still an error");
+    delete unknownBare.tree;
+}
+
+//////////////////////////////////////////////////////////////////////////
 // Legacy read-shim
 //////////////////////////////////////////////////////////////////////////
 
@@ -873,6 +989,7 @@ int main(int /*argc*/, char** /*argv*/)
     testMultiLineLayout();
     testAdvisoryName();
     testCommands();
+    testScopedValues();
     testLegacyShim();
 
     std::printf("---- %d checks, %d failure(s) ----\n", gChecks, gFailures);

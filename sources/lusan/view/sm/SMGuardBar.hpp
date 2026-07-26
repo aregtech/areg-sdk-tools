@@ -38,6 +38,7 @@
 /************************************************************************
  * Dependencies
  ************************************************************************/
+class QCheckBox;
 class QLabel;
 class QPlainTextEdit;
 class SMAccordion;
@@ -187,6 +188,7 @@ private:
     SMGuardHelpCard*    mHelp;      //!< The help card (lazily shown).
     QToolButton*        mClear;     //!< The clear-guard button.
     QToolButton*        mHelpBtn;   //!< The help button.
+    QCheckBox*          mHintBox;   //!< `Hints`: shows or silences the field's explanatory popups.
 
     // ---- top strip + accordion --------------------------------------------
     QToolButton*        mInsertBtn; //!< Insert: opens the completer at the caret (all kinds).

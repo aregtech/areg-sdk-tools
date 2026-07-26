@@ -37,15 +37,17 @@ class QLabel;
 class QPushButton;
 class QTimer;
 class QVBoxLayout;
+class StateMachineData;
 class StateMachineModel;
 
 /**
  * \class   SMHoverCard
- * \brief   The hover card: a frameless card shown 300 ms after a symbol or call-pill
- *          hover (the delay is the caller's), staying alive while the mouse is over it so
- *          its two buttons (`where used` / `map args`) are really clickable. The symbol
- *          face shows owner, signature, declared-where and the generated form; the call
- *          face shows the read-only mapping rows plus the generated line.
+ * \brief   A frameless card opened by a click on a chip's badge or a call pill, staying alive
+ *          while the mouse is over it so its two buttons (`where used` / `map args`) are really
+ *          clickable. The symbol face shows owner, signature, declared-where and the generated
+ *          form; the call face shows the read-only mapping rows plus the generated line. Merely
+ *          POINTING at a symbol is answered by a tooltip instead, rendered from \ref symbolTip so
+ *          the two surfaces cannot describe the same element differently.
  **/
 class SMHoverCard : public QFrame
 {
@@ -61,6 +63,16 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   The same explanation the symbol face shows, as tooltip rich text: owner badge,
+     *          signature, where it is declared, the generated call, and any finding this element
+     *          is guilty of. The card and the field's tooltip must never disagree about an
+     *          element, so both are rendered from here; the card adds only the two buttons, which
+     *          is the one thing a tooltip cannot carry.
+     * \return  The rich text, or an empty string when there is nothing to say.
+     **/
+    static QString symbolTip(StateMachineModel& model, uint32_t transitionId, const SMGuardSymbol& symbol);
+
     //!< Shows the symbol face for \p symbol at \p globalPos.
     void showSymbol(StateMachineModel& model, uint32_t transitionId, const SMGuardSymbol& symbol, const QPoint& globalPos);
 
@@ -95,6 +107,17 @@ private:
 
     //!< Adds one content label; \p monospace selects the code font.
     QLabel* addLine(const QString& text, bool monospace = false);
+
+    //!< Adds the leading `<badge>  --  <noun>` line, in the owner hue.
+    QLabel* addBadgeLine(NEGuardStyle::eOwner owner, const QString& noun);
+
+    /**
+     * \brief   Adds one line per guard finding that is about THIS declaration in THIS transition's
+     *          guard, colored by severity. Nothing is added for a sound element -- silence is the
+     *          "no complaints" state, and a green "ok" line on every hover would train the eye to
+     *          skip the line that matters.
+     **/
+    void addValidationLines(const StateMachineData& data, uint32_t transitionId, uint32_t symbolId);
 
     void placeAt(const QPoint& globalPos);
 

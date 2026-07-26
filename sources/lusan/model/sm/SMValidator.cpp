@@ -19,7 +19,11 @@
 
 #include "lusan/model/sm/SMValidator.hpp"
 
+#include "lusan/model/sm/SMGuardValidation.hpp"
+#include "lusan/model/sm/SMOperationValidation.hpp"
+
 #include "lusan/data/sm/StateMachineData.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
@@ -40,6 +44,7 @@
 #include "lusan/data/common/DataTypeFactory.hpp"
 
 #include "lusan/model/sm/SMTypeCompat.hpp"
+#include "lusan/model/sm/SMGuardSymbols.hpp"
 #include "lusan/model/sm/SMLiteralValidator.hpp"
 
 #include <QCoreApplication>
@@ -85,6 +90,69 @@ namespace
         SMTransitionEntry::eStimulusKind    stimKind     { SMTransitionEntry::eStimulusKind::Timer };
         const MethodBase*                   stimParams   { nullptr };                           //!< The stimulus parameter owner (null for timer/entry/exit).
     };
+
+    /**
+     * \struct  GuardUses
+     * \brief   The declarations a transition guard references, by name.
+     **/
+    struct GuardUses
+    {
+        QSet<QString> attributes;
+        QSet<QString> constants;
+        QSet<QString> conditions;
+        QSet<QString> types;
+    };
+
+    /**
+     * \brief   Collects, from a committed guard tree, every declaration the guard references.
+     *
+     *          A guard is the SECOND place a declaration is used from, and the only one that
+     *          binds by document ID rather than by name, so the usage sets (which are keyed by
+     *          name) can only be filled through the reverse lookups. Without this walk an
+     *          attribute used solely by a guard was reported as never referenced.
+     **/
+    void collectGuardUses(const StateMachineData& data, const SMGuardNode* node, GuardUses& out)
+    {
+        if (node == nullptr)
+            return;
+
+        switch (node->getKind())
+        {
+        case SMGuardNode::eKind::Attr:
+        {
+            const QString name = SMGuardSymbols::attributeName(data, node->getSymbolId());
+            if (name.isEmpty() == false) out.attributes.insert(name);
+            break;
+        }
+        case SMGuardNode::eKind::Const:
+        {
+            const QString name = SMGuardSymbols::constantName(data, node->getSymbolId());
+            if (name.isEmpty() == false) out.constants.insert(name);
+            break;
+        }
+        case SMGuardNode::eKind::Call:
+        {
+            const SMMethodEntry* method = SMGuardSymbols::method(data, node->getSymbolId());
+            if (method != nullptr) out.conditions.insert(method->getName());
+            break;
+        }
+        case SMGuardNode::eKind::Lit:
+        {
+            // `PowerState::On` names its enumeration as plainly as a declaration does, and for a
+            // type used nowhere else the guard literal is the only thing keeping it alive.
+            const int sep = static_cast<int>(node->getText().indexOf(QStringLiteral("::")));
+            if (sep > 0) out.types.insert(node->getText().left(sep));
+            break;
+        }
+        default:
+            break;
+        }
+
+        for (const SMGuardNode* child : node->getChildren())
+        {
+            collectGuardUses(data, child, out);
+        }
+    }
 
     /**
      * \class   Ctx
@@ -139,6 +207,7 @@ namespace
 
         // Warning rules (10.2 rules 1-11).
         void checkWarnings(const QList<LevelInfo>& levels);
+        void checkGuards();
 
     private:
         const StateMachineData& mData;
@@ -151,9 +220,11 @@ namespace
         issue.elementId = id;
         issue.kind      = kind;
         issue.severity  = sev;
-        // Callers pass the plain spec number for both classes; a 10.2 warning is offset here so
+        // Callers pass the plain spec number for both classes; a 10.2 advisory is offset here so
         // its id never collides with the like-numbered 10.1 error in the shared `rule` field.
-        issue.rule      = (sev == eSeverity::Warning) ? (SMValidator::WARNING_RULE_BASE + rule) : rule;
+        // Info belongs to the same 10.2 space as Warning: a rule that is advisory for one element
+        // kind and a warning for another (rule 4) keeps one number and must keep one offset.
+        issue.rule      = (sev != eSeverity::Error) ? (SMValidator::WARNING_RULE_BASE + rule) : rule;
         issue.message   = message;
         mIssues.append(issue);
     }
@@ -318,9 +389,20 @@ namespace
             }
         };
 
+        // Methods are unique per KIND, not per name: a trigger, an action and a condition may
+        // all be called `on` -- each becomes a member of a different generated class, so they
+        // can never collide. Two triggers named `on` is the error. Qualifying the name with
+        // its kind expresses exactly that.
         QStringList mNames; QList<uint32_t> mIds;
         for (SMMethodEntry* m : mData.getMethods().getElements())
-            if (m != nullptr) { mNames << m->getName(); mIds << m->getId(); }
+        {
+            if (m != nullptr)
+            {
+                mNames << (QString::fromLatin1(SMMethodEntry::toString(m->getMethodType())) + QLatin1Char(' ') + m->getName());
+                mIds << m->getId();
+            }
+        }
+
         dupWithin(mNames, mIds, eDocElementKind::Method);
 
         QStringList eNames; QList<uint32_t> eIds;
@@ -495,28 +577,36 @@ namespace
         scope.inTransition = true;
         scope.stimKind = tr.getStimulusKind();
         const QString& stim = tr.getStimulus();
-        switch (tr.getStimulusKind())
+
+        // Start is a pseudo-state: its outgoing transition is the initial one, taken as the
+        // machine enters the level, so it needs no stimulus to trigger it. An empty stimulus
+        // there is the normal case, not a missing declaration.
+        const bool initialTransition = (owner.getKind() == SMStateEntry::eStateKind::Start) && stim.isEmpty();
+        if (initialTransition == false)
         {
-        case SMTransitionEntry::eStimulusKind::Trigger:
-        {
-            SMMethodEntry* m = mData.getMethods().findTrigger(stim);
-            if (m == nullptr)
-                add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Trigger '%1' is not declared").arg(stim));
-            scope.stimParams = m;
-            break;
-        }
-        case SMTransitionEntry::eStimulusKind::Event:
-        {
-            SMEventEntry* e = mData.getEvents().findEvent(stim);
-            if (e == nullptr)
-                add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Event '%1' is not declared").arg(stim));
-            scope.stimParams = e;
-            break;
-        }
-        case SMTransitionEntry::eStimulusKind::Timer:
-            if (mData.getTimers().findElement(stim) == nullptr)
-                add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Timer '%1' is not declared").arg(stim));
-            break;
+            switch (tr.getStimulusKind())
+            {
+            case SMTransitionEntry::eStimulusKind::Trigger:
+            {
+                SMMethodEntry* m = mData.getMethods().findTrigger(stim);
+                if (m == nullptr)
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Trigger '%1' is not declared").arg(stim));
+                scope.stimParams = m;
+                break;
+            }
+            case SMTransitionEntry::eStimulusKind::Event:
+            {
+                SMEventEntry* e = mData.getEvents().findEvent(stim);
+                if (e == nullptr)
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Event '%1' is not declared").arg(stim));
+                scope.stimParams = e;
+                break;
+            }
+            case SMTransitionEntry::eStimulusKind::Timer:
+                if (mData.getTimers().findElement(stim) == nullptr)
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Timer '%1' is not declared").arg(stim));
+                break;
+            }
         }
 
         validateOperations(tr.getOperations(), scope);
@@ -536,10 +626,10 @@ namespace
             case SMOperationBase::eOperation::ActionCall:
             {
                 SMActionCall* call = static_cast<SMActionCall*>(op);
-                SMMethodEntry* action = mData.getMethods().findMethod(call->getAction());
-                if ((action == nullptr) || (action->isAction() == false))
+                SMMethodEntry* action = mData.getMethods().findAction(call->getAction());
+                if (action == nullptr)
                     add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Action '%1' is not declared").arg(call->getAction()));
-                validateArguments(id, eDocElementKind::Operation, (action != nullptr && action->isAction()) ? action : nullptr, call->getArguments(), scope);
+                validateArguments(id, eDocElementKind::Operation, action, call->getArguments(), scope);
                 break;
             }
             case SMOperationBase::eOperation::AttributeSet:
@@ -589,28 +679,15 @@ namespace
         QHash<QString, QString> paramTypes;
         if (target != nullptr)
         {
-            // Every argument must name a declared parameter, and every parameter without a
-            // default must be mapped.
-            QSet<QString> mapped;
-            for (const SMArgumentEntry& arg : args)
-                mapped.insert(arg.getName());
-            QSet<QString> declared;
             for (const MethodParameter& p : target->getElements())
             {
-                declared.insert(p.getName());
                 paramTypes.insert(p.getName(), p.getType());
             }
 
-            for (const SMArgumentEntry& arg : args)
-            {
-                if (declared.contains(arg.getName()) == false)
-                    add(ownerId, kind, eSeverity::Error, 10, vtr("Argument '%1' is not a declared parameter").arg(arg.getName()));
-            }
-            for (const MethodParameter& p : target->getElements())
-            {
-                if ((mapped.contains(p.getName()) == false) && (target->hasDefaultValue(p.getName()) == false))
-                    add(ownerId, kind, eSeverity::Error, 10, vtr("Required parameter '%1' is not mapped").arg(p.getName()));
-            }
+            // Orphan arguments and unmapped required formals are checked in exactly one place,
+            // which the canvas also calls per element -- so an edge glyph and a results row are
+            // always the same verdict.
+            mIssues += SMOperationValidation::argumentIssues(*target, args, ownerId, kind, QString());
         }
 
         for (const SMArgumentEntry& arg : args)
@@ -643,8 +720,8 @@ namespace
             break;
         case eValueSource::Condition:
         {
-            SMMethodEntry* c = mData.getMethods().findMethod(ref);
-            if ((c == nullptr) || (c->isCondition() == false))
+            SMMethodEntry* c = mData.getMethods().findCondition(ref);
+            if (c == nullptr)
                 add(ownerId, kind, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
             else if (valuePosition && c->hasElements())
                 add(ownerId, kind, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
@@ -710,8 +787,8 @@ namespace
             validateOperand(id, leaf->getLhsKind(), leaf->getLhs(), scope, false);
             if (leaf->getLhsKind() == eValueSource::Condition)
             {
-                SMMethodEntry* c = mData.getMethods().findMethod(leaf->getLhs());
-                if ((c != nullptr) && c->isCondition() && c->hasElements())
+                SMMethodEntry* c = mData.getMethods().findCondition(leaf->getLhs());
+                if ((c != nullptr) && c->hasElements())
                     validateArguments(id, eDocElementKind::Condition, c, leaf->getArguments(), scope);
             }
 
@@ -743,8 +820,8 @@ namespace
             break;
         case eValueSource::Condition:
         {
-            SMMethodEntry* c = mData.getMethods().findMethod(ref);
-            if ((c == nullptr) || (c->isCondition() == false))
+            SMMethodEntry* c = mData.getMethods().findCondition(ref);
+            if (c == nullptr)
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
             else if (isRhs && c->hasElements())
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
@@ -805,8 +882,8 @@ namespace
         }
         case eValueSource::Condition:
         {
-            SMMethodEntry* m = mData.getMethods().findMethod(ref);
-            return ((m != nullptr) && m->isCondition()) ? m->getReturn() : QString();
+            SMMethodEntry* m = mData.getMethods().findCondition(ref);
+            return (m != nullptr) ? m->getReturn() : QString();
         }
         default:
             return QString();
@@ -980,15 +1057,35 @@ namespace
             if (d != nullptr) checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName());
 
         checkWarnings(levels);
+        checkGuards();
 
         return mIssues;
+    }
+
+    void Ctx::checkGuards()
+    {
+        // The guard checker owns the grammar, the symbol binding and the raw-fragment audit, so
+        // it stays the place those rules live -- but its findings are the document's findings and
+        // are collected here, not merged by whatever happens to be displaying them.
+        for (const SMGuardValidation::Finding& finding : SMGuardValidation::validate(mData))
+        {
+            SMIssue issue;
+            issue.elementId = finding.transitionId;
+            issue.kind      = eDocElementKind::Transition;
+            issue.severity  = finding.severity;
+            issue.rule      = SMValidator::RULE_GUARD;
+            issue.message   = finding.message;
+            issue.location  = finding.location;
+            issue.detail    = SMGuardValidation::describe(finding.kind);
+            mIssues.append(issue);
+        }
     }
 
     void Ctx::checkWarnings(const QList<LevelInfo>& levels)
     {
         using eOp = SMOperationBase::eOperation;
 
-        // Usage sets, filled by one document-wide walk; W4/W5/W6/W8 are decided against them.
+        // Usage sets, filled by one document-wide walk; W4/W5/W6 are decided against them.
         QSet<QString> triggersUsed, eventsReacted, eventsSent, timersReacted, timersStarted, timersStopped;
         QSet<QString> actionsUsed, conditionsUsed, attrsRead, attrsWritten, constsUsed, importsUsed, typesUsed;
 
@@ -1132,6 +1229,17 @@ namespace
                     }
                     noteOps(tr->getOperations());
 
+                    // The canonical guard counts as a use exactly as a legacy condition row does.
+                    // A draft's last-good tree is walked too: the names in it are still what the
+                    // document refers to, and reporting them unused while the user is mid-edit
+                    // would make the list flicker on every keystroke.
+                    GuardUses guard;
+                    collectGuardUses(mData, tr->getGuard().getTree(), guard);
+                    attrsRead      += guard.attributes;
+                    constsUsed     += guard.constants;
+                    conditionsUsed += guard.conditions;
+                    typesUsed      += guard.types;
+
                     // Condition-free means neither a legacy condition row nor a canonical guard.
                     const bool unconditional = tr->getConditions().collectLeaves().isEmpty() && (tr->getGuard().hasContent() == false);
 
@@ -1161,7 +1269,13 @@ namespace
         for (const SMAttributeEntry& a : mData.getAttributes().getElements()) noteType(a.getType());
         for (const ConstantEntry& c : mData.getConstants().getElements()) noteType(c.getType());
 
-        // Warning 4 (and, for attributes, warning 8): declared but unused registry entries.
+        // Rule 4: declared but unused registry entries.
+        //
+        // Severity is decided per element kind, not per rule. An unused method, event, timer, data
+        // type or import is behaviour or a contract that was written and then wired to nothing, and
+        // that is worth a warning. An unused attribute or constant is just data the machine does not
+        // happen to read yet: legitimate at any point in a design, so it is reported as information
+        // and never as a warning.
         for (SMMethodEntry* m : mData.getMethods().getElements())
         {
             if (m == nullptr)
@@ -1187,24 +1301,26 @@ namespace
         }
         for (const SMAttributeEntry& a : mData.getAttributes().getElements())
         {
-            const bool read = attrsRead.contains(a.getName());
-            const bool written = attrsWritten.contains(a.getName());
-            if ((read == false) && (written == false))
-                add(a.getId(), eDocElementKind::Attribute, eSeverity::Warning, 4, vtr("Attribute '%1' is never referenced").arg(a.getName()));
-            else if (written && (read == false))
-                add(a.getId(), eDocElementKind::Attribute, eSeverity::Warning, 8, vtr("Attribute '%1' is written but never read").arg(a.getName()));
-            else if (read && (written == false))
-                add(a.getId(), eDocElementKind::Attribute, eSeverity::Warning, 8, vtr("Attribute '%1' is read but never written").arg(a.getName()));
+            // Direction is deliberately not judged. An FSM design reads its attributes; the writing
+            // side normally lives in the hand-written service code the generator never sees, so a
+            // read-only or write-only attribute here is the normal case and not a finding. Any
+            // reference at all, whatever its kind, settles the question.
+            if ((attrsRead.contains(a.getName()) == false) && (attrsWritten.contains(a.getName()) == false))
+                add(a.getId(), eDocElementKind::Attribute, eSeverity::Info, 4, vtr("Attribute '%1' is never referenced").arg(a.getName()));
         }
         for (const ConstantEntry& c : mData.getConstants().getElements())
         {
             if (constsUsed.contains(c.getName()) == false)
-                add(c.getId(), eDocElementKind::Constant, eSeverity::Warning, 4, vtr("Constant '%1' is never referenced").arg(c.getName()));
+                add(c.getId(), eDocElementKind::Constant, eSeverity::Info, 4, vtr("Constant '%1' is never referenced").arg(c.getName()));
         }
         for (const SMImportEntry& i : mData.getImports().getElements())
         {
+            // An import is always another `.fsml` machine brought in to serve as a submachine, so
+            // one that no state adopts was imported for a purpose that never happened. That is the
+            // one import case worth a warning; C++ includes live in their own registry and carry
+            // no such expectation.
             if (importsUsed.contains(i.getName()) == false)
-                add(i.getId(), eDocElementKind::Import, eSeverity::Warning, 4, vtr("Import '%1' is never referenced").arg(i.getName()));
+                add(i.getId(), eDocElementKind::Import, eSeverity::Warning, 4, vtr("Import '%1' is never used as a submachine").arg(i.getName()));
         }
         for (DataTypeCustom* d : mData.getDataTypes().getCustomDataTypes())
         {

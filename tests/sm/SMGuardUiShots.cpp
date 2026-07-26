@@ -34,8 +34,11 @@
 #include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardCallsOutline.hpp"
+#include "lusan/view/sm/SMGuardCatalog.hpp"
+#include "lusan/view/sm/SMHoverCard.hpp"
 #include "lusan/view/sm/SMGuardDataPanel.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
+#include "lusan/view/sm/SMGuardHelpCard.hpp"
 #include "lusan/view/sm/SMGuardPopout.hpp"
 #include "lusan/view/sm/SMInlineToken.hpp"
 #include "lusan/view/sm/SMIslandEditor.hpp"
@@ -55,10 +58,13 @@
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLayout>
 #include <QLineEdit>
 #include <QMimeData>
 #include <QPushButton>
 #include <QScreen>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QTextCursor>
 #include <QToolButton>
 #include <QTreeWidget>
@@ -473,6 +479,95 @@ int main(int argc, char** argv)
             delete chipCopy;
         }
         chipProbe.hide();
+    }
+
+    // ---- the hover explanation: ONE surface, rendered as tooltip rich text ----
+    // The arbitration itself (tooltip over a chip, silence everywhere else) is a hover and cannot be
+    // driven offscreen; what IS testable here is that every symbol the editor can hold produces a
+    // real explanation, since an empty tip is what the field reads as "say nothing".
+    std::printf("[ RUN  ] symbolTip\n");
+    {
+        const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(model.getData(), transId);
+        check(catalog.isEmpty() == false, "the example document offers symbols to explain");
+        bool everyTipSpeaks = true;
+        bool everyTipNamesIt = true;
+        bool everyTipShowsGenerated = true;
+        for (const SMGuardSymbol& sym : catalog)
+        {
+            const QString tip = SMHoverCard::symbolTip(model, transId, sym);
+            if (tip.isEmpty())                               { everyTipSpeaks = false; }
+            if (tip.contains(sym.name.toHtmlEscaped()) == false) { everyTipNamesIt = false; }
+            if (tip.contains(QStringLiteral("called as")) == false) { everyTipShowsGenerated = false; }
+        }
+
+        check(everyTipSpeaks, "every catalog symbol has something to say on hover");
+        check(everyTipNamesIt, "every tip names the symbol it explains");
+        check(everyTipShowsGenerated, "every tip shows the generated form");
+    }
+
+    // ---- the (?) card on a screen too small for it: nothing is lost, it scrolls ----
+    // The card opens at its natural size and is capped to the screen, so on a laptop the cap is what
+    // the user meets. What has to hold there is that the content becomes SCROLLABLE rather than
+    // clipped: a word-wrapped label happily shrinks to one line and draws the rest outside itself,
+    // which looks identical to a short card and loses the last sections in silence.
+    std::printf("[ RUN  ] helpCardScroll\n");
+    {
+        SMGuardHelpCard help;
+        QScrollArea* scroll = help.findChild<QScrollArea*>(QStringLiteral("smGuardHelpScroll"));
+        check(scroll != nullptr, "the help card holds its content in a scroll area");
+        if (scroll != nullptr)
+        {
+            const QSize natural = help.sizeHint();
+            help.resize(natural);
+            help.show();
+            pump(150);
+
+            QScrollBar* vbar = scroll->verticalScrollBar();
+            const int fullHeight = scroll->widget()->height();
+            check(fullHeight > 0, "the card has content to show");
+            check(vbar->maximum() == 0, "at its natural size the card needs no scrolling");
+
+            // A quarter of the card's own height stands in for a screen it does not fit on.
+            help.resize(natural.width(), qMax(120, natural.height() / 4));
+            pump(150);
+
+            check(vbar->maximum() > 0, "a card taller than its window can be scrolled");
+            check(vbar->maximum() + scroll->viewport()->height() >= scroll->widget()->height()
+                , "scrolling reaches the bottom of the content");
+            check(scroll->widget()->height() >= fullHeight
+                , "the squeezed content keeps its full height instead of compressing its text");
+
+            vbar->setValue(vbar->maximum());
+            pump(100);
+            const QWidget* last = scroll->widget()->layout()->itemAt(scroll->widget()->layout()->count() - 1)->widget();
+            check(last != nullptr, "the card ends with a widget");
+            if (last != nullptr)
+            {
+                // Scrolling moves the content widget itself, so its own y is the offset: the last
+                // section sits at last->y() inside a widget parked at a negative y.
+                const int lastBottom = scroll->widget()->y() + last->y() + last->height();
+                check(lastBottom <= scroll->viewport()->height()
+                    , "scrolled to the end, the last section is inside the viewport");
+            }
+
+            // Opened for real, the card is a popup, and a popup delivers keys to its own focus
+            // widget or to nothing at all. A small screen is often a laptop with no wheel worth
+            // the name, so PageDown and the arrows have to work.
+            help.hide();
+            help.popupAt(bar);
+            pump(150);
+            check(help.focusWidget() == scroll, "the opened card puts focus where the keys can scroll");
+            help.resize(help.width(), qMax(120, natural.height() / 4));
+            pump(150);
+
+            const int before = vbar->value();
+            typeChar(scroll, Qt::Key_PageDown, QString());
+            pump(100);
+            check(vbar->maximum() > 0, "the squeezed popup still has content below the fold");
+            check(vbar->value() > before, "PageDown scrolls the card");
+
+            help.hide();
+        }
     }
 
     // ---- SM-21-03: the reference completer (D-POPUP): pass-through, D-ESC, filter, clamp ----

@@ -88,6 +88,11 @@ public:
      **/
     virtual void updateFromModel() override;
 
+    /**
+     * \brief   Ends an open note edit, committing the typed text.
+     **/
+    virtual void finishInlineEdit() override;
+
 protected:
     virtual void hoverMoveEvent(QGraphicsSceneHoverEvent* event) override;
     virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) override;

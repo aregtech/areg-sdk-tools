@@ -20,6 +20,7 @@
 #include "lusan/model/sm/SMOperationValidation.hpp"
 
 #include "lusan/data/common/MethodBase.hpp"
+#include "lusan/model/sm/SMValidator.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
@@ -27,6 +28,7 @@
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/StateMachineData.hpp"
 
+#include <QObject>
 #include <QSet>
 #include <QString>
 
@@ -43,13 +45,8 @@ namespace
         {
             SMActionCall* call = static_cast<SMActionCall*>(op);
             args = &call->getArguments();
-            for (const SMMethodEntry* m : data.getMethods().getElements())
-            {
-                if ((m != nullptr) && (m->getName() == call->getAction()))
-                {
-                    return m;
-                }
-            }
+            // By kind: a trigger sharing the action's name is a different declaration.
+            return data.getMethods().findAction(call->getAction());
         }
         else if (op->getOperationType() == eOp::EventSend)
         {
@@ -68,12 +65,75 @@ namespace
     }
 }
 
-SMOperationValidation::eSeverity SMOperationValidation::listSeverity(const StateMachineData& data, const SMOperationList& list)
-{
-    // Only Ok and Error are produced today; the Warn tier is reserved. Error is terminal, so once
-    // a fault is found the scan need not rank -- it can only stay Error.
-    eSeverity worst = eSeverity::Ok;
 
+QList<DocIssue> SMOperationValidation::argumentIssues( const MethodBase& callee
+                                                    , const QList<SMArgumentEntry>& args
+                                                    , uint32_t ownerId
+                                                    , eDocElementKind kind
+                                                    , const QString& location)
+{
+    QList<DocIssue> issues;
+    const auto add = [&issues, ownerId, kind, &location](const QString& message, const QString& detail)
+    {
+        DocIssue issue;
+        issue.elementId = ownerId;
+        issue.kind      = kind;
+        issue.severity  = DocIssue::eSeverity::Error;
+        issue.rule      = SMValidator::RULE_ARGUMENT_MAPPING;
+        issue.message   = message;
+        issue.location  = location;
+        issue.detail    = detail;
+        issues.append(issue);
+    };
+
+    QSet<QString> formalNames;
+    for (const MethodParameter& formal : callee.getElements())
+    {
+        formalNames.insert(formal.getName());
+
+        // A required formal (no default) that no argument binds is an incomplete mapping.
+        if (formal.hasDefault())
+        {
+            continue;
+        }
+
+        bool mapped = false;
+        for (const SMArgumentEntry& arg : args)
+        {
+            if (arg.getName() == formal.getName())
+            {
+                mapped = true;
+                break;
+            }
+        }
+
+        if (mapped == false)
+        {
+            add( QObject::tr("Required parameter '%1' of '%2' is not mapped").arg(formal.getName(), callee.getName())
+               , QObject::tr("The parameter has no default, so the call cannot be generated until a value is bound to it."));
+        }
+    }
+
+    // A stored argument for a formal that no longer exists is an orphan (value kept, red row).
+    for (const SMArgumentEntry& arg : args)
+    {
+        if (formalNames.contains(arg.getName()) == false)
+        {
+            add( QObject::tr("Argument '%1' is not a parameter of '%2'").arg(arg.getName(), callee.getName())
+               , QObject::tr("The parameter was renamed or removed on its declaration page. The bound value is kept so it can be re-bound; remove the row to discard it."));
+        }
+    }
+
+    return issues;
+}
+
+QList<DocIssue> SMOperationValidation::listIssues( const StateMachineData& data
+                                                 , const SMOperationList& list
+                                                 , uint32_t ownerId
+                                                 , eDocElementKind kind
+                                                 , const QString& location)
+{
+    QList<DocIssue> issues;
     for (SMOperationBase* op : list.getOperations())
     {
         const QList<SMArgumentEntry>* args = nullptr;
@@ -83,59 +143,48 @@ SMOperationValidation::eSeverity SMOperationValidation::listSeverity(const State
             continue;   // unresolved callee (the picker shows it blank): not a mapping fault here.
         }
 
-        QSet<QString> formalNames;
-        for (const MethodParameter& formal : callee->getElements())
-        {
-            formalNames.insert(formal.getName());
-
-            // A required formal (no default) with no stored argument is an incomplete mapping.
-            if (formal.hasDefault() == false)
-            {
-                bool mapped = false;
-                for (const SMArgumentEntry& arg : *args)
-                {
-                    if (arg.getName() == formal.getName())
-                    {
-                        mapped = true;
-                        break;
-                    }
-                }
-
-                if (mapped == false)
-                {
-                    worst = eSeverity::Error;
-                }
-            }
-        }
-
-        // A stored argument for a formal that no longer exists is an orphan (value kept, red row).
-        for (const SMArgumentEntry& arg : *args)
-        {
-            if (formalNames.contains(arg.getName()) == false)
-            {
-                worst = eSeverity::Error;
-            }
-        }
+        issues += argumentIssues(*callee, *args, ownerId, kind, location);
     }
 
-    return worst;
+    return issues;
 }
 
-SMOperationValidation::eSeverity SMOperationValidation::transitionSeverity(const StateMachineData& data, uint32_t transitionId)
+bool SMOperationValidation::worstForTransition(const StateMachineData& data, uint32_t transitionId, DocIssue::eSeverity& worst)
 {
     const SMTransitionEntry* transition = data.findTransitionById(transitionId);
-    return (transition != nullptr) ? listSeverity(data, transition->getOperations()) : eSeverity::Ok;
+    if (transition == nullptr)
+    {
+        return false;
+    }
+
+    // Scoped to one transition on purpose: the canvas asks per item while it repaints, so this
+    // must stay proportional to that transition, never to the document.
+    const QList<DocIssue> issues = listIssues(data, transition->getOperations(), transitionId, eDocElementKind::Transition, QString());
+    if (issues.isEmpty())
+    {
+        return false;
+    }
+
+    worst = worstOf(issues, DocIssue::eSeverity::Info);
+    return true;
 }
 
-SMOperationValidation::eSeverity SMOperationValidation::stateSeverity(const StateMachineData& data, uint32_t stateId)
+bool SMOperationValidation::worstForState(const StateMachineData& data, uint32_t stateId, DocIssue::eSeverity& worst)
 {
     const SMStateEntry* state = data.findStateById(stateId);
     if (state == nullptr)
     {
-        return eSeverity::Ok;
+        return false;
     }
 
-    const eSeverity entry = listSeverity(data, state->getEntryList());
-    const eSeverity exit  = listSeverity(data, state->getExitList());
-    return (static_cast<int>(entry) >= static_cast<int>(exit)) ? entry : exit;
+    QList<DocIssue> issues = listIssues(data, state->getEntryList(), stateId, eDocElementKind::State, QString());
+    issues += listIssues(data, state->getDoList(), stateId, eDocElementKind::State, QString());
+    issues += listIssues(data, state->getExitList(), stateId, eDocElementKind::State, QString());
+    if (issues.isEmpty())
+    {
+        return false;
+    }
+
+    worst = worstOf(issues, DocIssue::eSeverity::Info);
+    return true;
 }

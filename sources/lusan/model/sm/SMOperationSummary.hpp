@@ -33,11 +33,17 @@ class SMTransitionEntry;
 
 /**
  * \namespace   SMOperationSummary
- * \brief   Renders an operation as a compact, call-style one-liner for the operations list
- *          and the state-box body: `doWork(count, 5)`, `start blink (2000 ms, x3)`,
- *          `power = On`, `send evGo(x)`, `{ inline }`. Mapped arguments are inlined in the
- *          callee's parameter order; an unmapped parameter shows its default or its name.
+ * \brief   Renders an operation as a compact one-liner for the operations list and the state-box
+ *          body: `doWork(count, 5)`, `start blink (2000 ms, x3)`, `power = On`, `send evGo`,
+ *          `{ inline }`. Mapped arguments are inlined in the callee's parameter order; an
+ *          unmapped parameter shows its default or its name.
  *          Headless (no widget/model dependency): shared by the editor and the canvas.
+ *
+ *          **Only a method wears parentheses.** An action call and a trigger are declared
+ *          methods, so they read as calls. An event is a signal and a timer is a resource:
+ *          neither is invoked, so neither takes `(...)` -- empty brackets on `evGo()` claimed a
+ *          call that does not exist (issue #543). Their payload is not spelled inline; the
+ *          Properties panel and the guard completer are where a payload is inspected.
  **/
 namespace SMOperationSummary
 {
@@ -48,10 +54,10 @@ namespace SMOperationSummary
     QString text(const StateMachineData& data, const SMOperationBase& op);
 
     /**
-     * \brief   The transition stimulus rendered as a method-like signature: `walk(count)` for a
-     *          trigger or event (its declared parameters), and the bare name for a timer (no
-     *          parameters). Used on the edge label, the state-box internal rows, and the
-     *          transition properties.
+     * \brief   The transition stimulus rendered for a label: `walk(count)` for a trigger (a
+     *          declared method, so its parameters read as a signature), and the bare registry
+     *          name for an event or a timer. Used on the edge label, the state-box internal
+     *          rows, and the transition properties.
      **/
     QString stimulusSignature(const StateMachineData& data, const SMTransitionEntry& transition);
 }

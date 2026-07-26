@@ -24,6 +24,7 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMConditionText.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
+#include "lusan/model/sm/SMTypeCompat.hpp"
 
 namespace
 {
@@ -35,9 +36,16 @@ namespace
           Ident, Number, String, Lambda, Ref
         , And, Or, Not
         , Eq, Ne, Lt, Le, Gt, Ge, Assign
-        , LParen, RParen, Comma, Dot, Minus
+        , LParen, RParen, Comma, Dot, Minus, Scope
         , Unknown, End
     };
+
+    //!< The reference sigil as text, so a diagnostic always quotes the character the surface
+    //!< actually uses (NEGuardText::RefSigil is the single point of change).
+    QString sigil()
+    {
+        return QString(NEGuardText::RefSigil);
+    }
 
     struct Token
     {
@@ -194,7 +202,8 @@ namespace
             auto two = [&](eTok t) { out.append({ t, s.mid(start, 2), start, 2 }); i += 2; };
             auto one = [&](eTok t) { out.append({ t, s.mid(start, 1), start, 1 }); i += 1; };
 
-            if      ((c == '&') && (c2 == '&')) { two(eTok::And); }
+            if      ((c == ':') && (c2 == ':')) { two(eTok::Scope); }
+            else if ((c == '&') && (c2 == '&')) { two(eTok::And); }
             else if ((c == '|') && (c2 == '|')) { two(eTok::Or);  }
             else if ((c == '=') && (c2 == '=')) { two(eTok::Eq);  }
             else if ((c == '!') && (c2 == '=')) { two(eTok::Ne);  }
@@ -304,6 +313,13 @@ namespace
             return tk;
         }
 
+        //!< The source offset just past the last consumed token (the end of what was parsed).
+        int consumedEnd() const
+        {
+            const int idx = qBound(0, mPos - 1, static_cast<int>(mTokens.size()) - 1);
+            return mTokens.at(idx).start + mTokens.at(idx).len;
+        }
+
         void error(int start, int len, const QString& message)
         {
             mDiags.append({ SMGuardParser::eSeverity::Error, start, len, message });
@@ -373,12 +389,14 @@ namespace
 
         SMGuardNode* parseCmp()
         {
+            const int start = peek().start;
             SMGuardNode* lhs = parseUnary();
             eCmpOp op;
             if (cmpOp(peek().type, op))
             {
                 advance();
                 SMGuardNode* rhs = parseUnary();
+                checkOperandTypes(lhs, op, rhs, start, consumedEnd() - start);
                 return SMGuardNode::makeCmp(op, lhs, rhs);
             }
             if (peek().type == eTok::Assign)
@@ -469,12 +487,154 @@ namespace
                 idTok = advance();                  // the real symbol name
             }
 
+            if (peek().type == eTok::Scope)
+            {
+                return parseScopedPrimary(idTok);
+            }
+
             if (peek().type == eTok::LParen)
             {
                 return parseIdentCall(idTok);
             }
 
             return resolveBare(idTok);
+        }
+
+        /**
+         * \brief   A scope-qualified operand -- `Numbers::Zero`. The head names a data type of
+         *          this machine and the tail names one of its members, so the whole mention is a
+         *          literal OF that type: the type check below can then judge what it is compared
+         *          with, and the generator emits the text unchanged. An imported type is opaque
+         *          past its own name (only the import is declared here), so its tail is accepted
+         *          as written.
+         **/
+        SMGuardNode* parseScopedPrimary(const Token& idTok)
+        {
+            QStringList parts{ idTok.text };
+            while (peek().type == eTok::Scope)
+            {
+                advance();
+                if (peek().type != eTok::Ident)
+                {
+                    break;      // a dangling `::` -- reported below as a missing member
+                }
+
+                parts.append(advance().text);
+            }
+
+            const int span = qMax(idTok.len, consumedEnd() - idTok.start);
+            const QString text = parts.join(QStringLiteral("::"));
+            if (parts.size() < 2)
+            {
+                mSyntaxError = true;
+                error(idTok.start, span, QStringLiteral("expected a name after '%1::'").arg(idTok.text));
+                return SMGuardNode::makeVerbatim(eKind::Raw, text);
+            }
+
+            QString typeName;
+            switch (SMGuardSymbols::scopedValue(mData, parts, typeName))
+            {
+            case SMGuardSymbols::eScoped::Ok:
+            case SMGuardSymbols::eScoped::Opaque:
+                return SMGuardNode::makeVerbatim(eKind::Lit, text);
+
+            case SMGuardSymbols::eScoped::NoMember:
+                return unresolved(text, idTok.start, span, memberMessage(typeName, parts));
+
+            default:
+                return unresolved(text, idTok.start, span
+                                , QStringLiteral("unknown type '%1': this machine declares no such data type").arg(parts.first()));
+            }
+        }
+
+        //!< Names what the type does declare, so the fix is in the message and not one panel away.
+        QString memberMessage(const QString& typeName, const QStringList& parts) const
+        {
+            const QString member  = parts.mid(1).join(QStringLiteral("::"));
+            QString message = QStringLiteral("'%1' is not a value of '%2'").arg(member, typeName);
+
+            constexpr int MAX_LISTED = 5;
+            QStringList members = SMGuardSymbols::scopedMembers(mData, typeName);
+            if (members.isEmpty() == false)
+            {
+                const bool more = (members.size() > MAX_LISTED);
+                members = members.mid(0, MAX_LISTED);
+                if (more) { members.append(QStringLiteral("...")); }
+                message += QStringLiteral(". Expected one of: %1").arg(members.join(QStringLiteral(", ")));
+            }
+
+            return message;
+        }
+
+        /**
+         * \brief   The declared type of an operand, or empty when it cannot be judged: a call, a
+         *          raw fragment, an island -- and a bare number, which compares with every numeric
+         *          type and would only produce false alarms if it were given one.
+         **/
+        QString typeOf(const SMGuardNode* node) const
+        {
+            if (node == nullptr)
+            {
+                return QString();
+            }
+
+            switch (node->getKind())
+            {
+            case eKind::Attr:   return SMGuardSymbols::attributeType(mData, node->getSymbolId());
+            case eKind::Const:  return SMGuardSymbols::constantType(mData, node->getSymbolId());
+            case eKind::Param:  return SMGuardSymbols::paramType(mData, mTransId, node->getSymbolId());
+            case eKind::Lit:    return literalType(node->getText());
+            default:            return QString();
+            }
+        }
+
+        //!< The type a literal token carries: `bool`, `String`, the type of a scoped value, or
+        //!< nothing at all for a number.
+        QString literalType(const QString& text) const
+        {
+            if ((text == QStringLiteral("true")) || (text == QStringLiteral("false")))
+            {
+                return QStringLiteral("bool");
+            }
+            if (text.startsWith(QLatin1Char('"')))
+            {
+                return QStringLiteral("String");
+            }
+            if (text.contains(QStringLiteral("::")))
+            {
+                QString typeName;
+                // Only a value this document declares carries a type we may judge. An imported
+                // type is opaque: `NEService::eResult::Ok` is a value of the FOREIGN type its
+                // header names, not of the import, so claiming a type here would invent one.
+                return (SMGuardSymbols::scopedValue(mData, text.split(QStringLiteral("::")), typeName)
+                        == SMGuardSymbols::eScoped::Ok)
+                     ? typeName : QString();
+            }
+
+            return QString();
+        }
+
+        /**
+         * \brief   Reports a comparison whose two operands cannot meet -- an attribute of one
+         *          enumeration against a value of another, or an ordering test on a type that has
+         *          no order. A WARNING, never an error: both types have to be known for the check
+         *          to run at all, and a guard the user believes in must still be committable.
+         **/
+        void checkOperandTypes(const SMGuardNode* lhs, eCmpOp op, const SMGuardNode* rhs, int start, int len)
+        {
+            const QString lhsType = typeOf(lhs);
+            const QString rhsType = typeOf(rhs);
+            if (lhsType.isEmpty() || rhsType.isEmpty())
+            {
+                return;
+            }
+
+            const bool ordering = (op != eCmpOp::Eq) && (op != eCmpOp::Ne);
+            const QString reason = SMTypeCompat::areComparable(lhsType, ordering, rhsType);
+            if (reason.isEmpty() == false)
+            {
+                warn(start, qMax(1, len), reason);
+            }
         }
 
         /**
@@ -518,14 +678,15 @@ namespace
                         if (argTok.refName.isEmpty())
                         {
                             mSyntaxError = true;
-                            error(argTok.start, qMax(1, argTok.len), QStringLiteral("expected a formal name after '@arg:'"));
+                            error(argTok.start, qMax(1, argTok.len)
+                                , QStringLiteral("expected a formal name after '%1arg:'").arg(sigil()));
                         }
                         if (peek().type == eTok::Assign) { advance(); }
                         else
                         {
                             mSyntaxError = true;
                             error(peek().start, qMax(1, peek().len)
-                                , QStringLiteral("expected '=' after '@arg:%1'").arg(argTok.refName));
+                                , QStringLiteral("expected '=' after '%1arg:%2'").arg(sigil(), argTok.refName));
                         }
                         entry.value = parseOr();
                         seenNamed   = true;
@@ -671,6 +832,23 @@ namespace
             const QString& kind = refTok.refKind;
             const QString& name = refTok.refName;
 
+            if (refTok.text.contains(NEGuardText::KindSep) == false)
+            {
+                // `#count` -- the sigil marks a document symbol without stating which kind it is.
+                // Resolve it exactly as the bare name resolves (parameter, then attribute, then
+                // constant): the shorthand a user naturally types means what it looks like, and
+                // stating the kind stays the way to disambiguate.
+                if (kind.isEmpty())
+                {
+                    mSyntaxError = true;
+                    error(refTok.start, qMax(1, refTok.len), QStringLiteral("expected a name after '%1'").arg(sigil()));
+                    return SMGuardNode::makeVerbatim(eKind::Raw, refTok.text);
+                }
+
+                Token bare = refTok;
+                bare.text = kind;   // the span stays the whole mention, so a diagnostic underlines it
+                return resolveBare(bare);
+            }
             if (kind == QStringLiteral("cond"))
             {
                 return parseCondCall(refTok);
@@ -678,7 +856,8 @@ namespace
             if (name.isEmpty())
             {
                 mSyntaxError = true;
-                error(refTok.start, qMax(1, refTok.len), QStringLiteral("expected a name after '@%1:'").arg(kind));
+                error(refTok.start, qMax(1, refTok.len)
+                    , QStringLiteral("expected a name after '%1%2%3'").arg(sigil(), kind, QString(NEGuardText::KindSep)));
                 return SMGuardNode::makeVerbatim(eKind::Raw, refTok.text);
             }
             if (kind == QStringLiteral("param"))
@@ -704,12 +883,13 @@ namespace
                 // `@arg:` names a callee's formal slot; it is only meaningful as the LHS of a
                 // named call argument (handled inside parseArgList). Standalone, it is a misuse.
                 mSyntaxError = true;
-                error(refTok.start, qMax(1, refTok.len), QStringLiteral("'@arg:' is valid only inside a condition call's arguments"));
+                error(refTok.start, qMax(1, refTok.len)
+                    , QStringLiteral("'%1arg:' is valid only inside a condition call's arguments").arg(sigil()));
                 return SMGuardNode::makeVerbatim(eKind::Raw, refTok.text);
             }
 
             mSyntaxError = true;
-            error(refTok.start, qMax(1, refTok.len), QStringLiteral("unknown reference kind '@%1'").arg(kind));
+            error(refTok.start, qMax(1, refTok.len), QStringLiteral("unknown reference kind '%1%2'").arg(sigil(), kind));
             return SMGuardNode::makeVerbatim(eKind::Raw, refTok.text);
         }
 
@@ -747,7 +927,7 @@ namespace
             // text verbatim without error. A named condition method is a call (`name(...)`) resolved
             // elsewhere; an inline lambda is an island (`{...}`); literals are handled before here.
             return unresolved(name, idTok.start, idTok.len
-                            , QStringLiteral("unknown symbol '%1' -- not a defined parameter, attribute, or constant").arg(name));
+                            , QStringLiteral("unknown symbol '%1': it is not a defined parameter, attribute, or constant").arg(name));
         }
 
         static bool cmpOp(eTok t, eCmpOp& op)

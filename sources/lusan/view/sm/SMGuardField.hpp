@@ -118,6 +118,17 @@ public:
     //!< The shared hover card (owned by the bar; nullptr disables symbol hovers).
     void setHoverCard(SMHoverCard* card);
 
+    /**
+     * \brief   Turns the symbol tooltip on or off (the default is on). Off leaves the status line
+     *          as the only feedback, which is what a developer who already knows the syntax wants
+     *          -- the tooltip is for learning it, and it gets in the way once it is learned. The
+     *          host owns the checkbox and the persisted preference. The (?) card is never
+     *          affected: it is asked for, not offered.
+     **/
+    void setHintsEnabled(bool enable);
+
+    inline bool hintsEnabled() const;
+
     //!< Selects the span [start, start+length) of the CANONICAL text (lens pill click).
     void selectSpan(int start, int length);
 
@@ -207,6 +218,14 @@ signals:
 // Overrides
 //////////////////////////////////////////////////////////////////////////
 protected:
+    /**
+     * \brief   Arbitrates the tooltip. Qt would show the widget-wide legend wherever the pointer
+     *          rests, including on a chip the symbol card is already explaining, so the two popups
+     *          overlapped. Here exactly one of them answers per position, and neither answers while
+     *          hints are off.
+     **/
+    bool event(QEvent* event) override;
+
     void keyPressEvent(QKeyEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
     void insertFromMimeData(const QMimeData* source) override;
@@ -286,6 +305,19 @@ private:
 
     //!< Opens the island editor when the character at \p docPos is an island token.
     bool maybeOpenIslandAt(int docPos);
+
+    /**
+     * \brief   The symbol name under a viewport point: the name a folded reference chip carries, or
+     *          the plain identifier word. THE one resolver for "what is the pointer on", so the
+     *          hover card and the Ctrl+Shift link can never disagree about the same pixel. A chip
+     *          occupies a single object-replacement character, so both sides of the hit position are
+     *          probed before falling back to the word scan. Empty when the pointer is on neither.
+     **/
+    QString symbolNameAt(const QPoint& viewportPos) const;
+
+    //!< The tooltip rich text explaining the symbol under a viewport point, or empty when the
+    //!< pointer is not on one, which is also the signal to show nothing at all.
+    QString symbolTipAt(const QPoint& viewportPos) const;
 
     /**
      * \brief   The navigable declaration referenced under a viewport point, for the Ctrl+Shift link.
@@ -385,9 +417,8 @@ private:
     QHash<QString, int>     mOwnerByName;   //!< Symbol name -> NEGuardStyle::eOwner (for coloring).
 
     SMInlineToken*          mTokenHandler;  //!< The registered island text-object painter.
-    SMHoverCard*            mHover;         //!< The shared hover card (not owned; may be nullptr).
-    QTimer*                 mHoverTimer;    //!< The 300 ms symbol-hover delay.
-    QString                 mHoverWord;     //!< The word under the pending hover.
+    SMHoverCard*            mHover;         //!< The badge-click card (not owned; may be nullptr).
+    bool                    mHintsEnabled;  //!< False silences the symbol tooltip.
     int                     mLastCursorPos; //!< The previous caret position (island caret-entry).
 };
 
@@ -398,6 +429,11 @@ private:
 inline uint32_t SMGuardField::transitionId() const
 {
     return mTransitionId;
+}
+
+inline bool SMGuardField::hintsEnabled() const
+{
+    return mHintsEnabled;
 }
 
 #endif  // LUSAN_VIEW_SM_SMGUARDFIELD_HPP

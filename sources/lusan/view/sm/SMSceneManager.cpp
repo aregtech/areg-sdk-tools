@@ -155,6 +155,7 @@ SMScene* SMSceneManager::sceneForLevel(uint32_t levelId)
         connect(scene, &SMScene::signalGotoDefinitionRequested, this, &SMSceneManager::signalGotoDefinitionRequested);
         connect(scene, &SMScene::signalGotoRefsRequested, this, &SMSceneManager::signalGotoRefsRequested);
         connect(scene, &SMScene::signalRequestSubstate, this, &SMSceneManager::signalRequestSubstate);
+        connect(scene, &SMScene::signalToolChanged, this, &SMSceneManager::signalToolChanged);
     }
 
     return scene;
