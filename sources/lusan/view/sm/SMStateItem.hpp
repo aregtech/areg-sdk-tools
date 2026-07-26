@@ -197,6 +197,11 @@ public:
      **/
     virtual void updateFromModel() override;
 
+    /**
+     * \brief   Ends the rename and the bound-note editor, whichever is open.
+     **/
+    virtual void finishInlineEdit() override;
+
 protected:
     virtual void hoverMoveEvent(QGraphicsSceneHoverEvent* event) override;
     virtual void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) override;
@@ -337,9 +342,19 @@ private:
     void commitRename(const QString& name);
 
     /**
-     * \brief   Closes and destroys the in-place name editor.
+     * \brief   Ends an open rename: commits a valid name, restores the committed one otherwise.
+     *          QLineEdit withholds `editingFinished` on focus-out while its validator rejects
+     *          the text, so the editor cannot rely on that signal alone to end an edit.
      **/
-    void closeRenameEditor();
+    void finishRename(bool immediate = false);
+
+    /**
+     * \brief   Closes and destroys the in-place name editor.
+     * \param   immediate   Destroys the proxy now instead of deferring it. The deferred path is
+     *                      required when closing from inside the editor's own signal, but a
+     *                      proxy still alive after a tool armed keeps its cursor on the viewport.
+     **/
+    void closeRenameEditor(bool immediate = false);
 
     /**
      * \brief   Toggles the body collapse through an undo command.

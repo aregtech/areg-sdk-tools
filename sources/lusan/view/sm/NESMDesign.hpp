@@ -175,6 +175,29 @@ namespace NESMDesign
     constexpr double    SegmentPickTolerance{ 6.0 };
     //!< The number of straight sections an arc edge is sampled into for drawing and hit test.
     constexpr int       EdgeArcSamples      { 28 };
+    //!< The bulge a transition takes when it is first curved: enough to read as a curve at a
+    //!< glance, shallow enough not to collide with what the straight line already cleared.
+    constexpr double    EdgeArcBulgeDefault { 0.35 };
+    //!< The bulge limit in either direction. Past a half-circle (1.0) the arc doubles back on
+    //!< its own chord and its endpoints stop describing where the transition runs.
+    constexpr double    EdgeArcBulgeMax     { 1.0 };
+    //!< The bulge limit of a SELF-loop. Both of its anchors sit on the same box, only a short
+    //!< chord apart, so a loop that reads at all must double back over that chord -- the very
+    //!< thing \ref EdgeArcBulgeMax rules out for a transition running between two boxes.
+    constexpr double    EdgeArcSelfBulgeMax { 3.0 };
+    //!< How far a self-loop stands off the border of its own box: the depth of the default
+    //!< polyline loop's corners, and the apex height an arc self-loop is seeded with, so
+    //!< switching a loop between the two shapes keeps it the same size.
+    constexpr double    EdgeSelfLoopStandoff{ 44.0 };
+    //!< Half the span between the two anchors of a default self-loop on its box border.
+    constexpr double    EdgeSelfLoopHalfSpan{ 22.0 };
+    //!< How far off horizontal/vertical a transition's first or last leg may sit and still be
+    //!< read as "meant to be straight", and squared to the border. Beyond it the angle is the
+    //!< user's and the anchor stays where they put it.
+    constexpr double    EdgeSquareToleranceDeg { 8.0 };
+    //!< How far outside a state box a press still counts as landing on it when starting or
+    //!< finishing a transition. Aiming at a 1px border is not a reasonable thing to ask.
+    constexpr double    StatePickMargin     { 3.0 };
     //!< The gap kept between the label and the edge line.
     constexpr double    EdgeLabelGap        { 4.0 };
     //!< The band around a state box border from which a transition drag can be started.
@@ -270,11 +293,25 @@ namespace NESMDesign
                            , const QPointF& pointer, int gridSize, bool snap);
 
     /**
-     * \brief   Returns the endpoint anchor of a polyline edge whose adjacent corner is \p neighbour:
-     *          the facing side is chosen center-to-neighbour, then the anchor slides along that side
-     *          until it lines up with the neighbour itself. The segment between the box and its first
-     *          (or last) waypoint therefore leaves the border at a right angle, instead of fanning
-     *          back toward the box center and turning a hand-drawn rectangle into a trapezoid.
+     * \brief   Returns the outward unit normal of the box side \p border sits on (the side it is
+     *          nearest to). Used to push a self-loop's corner straight away from the box, so the
+     *          loop stands off whichever border its anchors ended up on.
+     **/
+    QPointF borderOutwardNormal(const QRectF& rect, const QPointF& border);
+
+    /**
+     * \brief   True when \p direction lies within \ref EdgeSquareToleranceDeg of horizontal or
+     *          vertical -- i.e. the user was drawing a straight leg and missed by a hair.
+     **/
+    bool isNearAxis(const QPointF& direction);
+
+    /**
+     * \brief   Returns the endpoint anchor of a polyline edge whose adjacent corner is \p neighbour,
+     *          for an edge that has no anchor of its own to honour (a reloaded or auto-placed one).
+     *          The facing side is chosen center-to-neighbour; the anchor then slides along that side
+     *          to line up with the neighbour ONLY when that leg is already within
+     *          \ref EdgeSquareToleranceDeg of an axis, so a near-straight leg is tidied to exactly
+     *          straight while a deliberate diagonal is left alone.
      *          No grid rounding: the waypoint is already snapped when snap-to-grid is on, and
      *          re-rounding here would break the very alignment the anchor is following.
      * \param   rect        The state box geometry in scene coordinates.
@@ -282,6 +319,21 @@ namespace NESMDesign
      * \param   neighbour   The waypoint next to this endpoint.
      **/
     QPointF polylineBorderPoint(const QRectF& rect, double radius, const QPointF& neighbour);
+
+    /**
+     * \brief   Returns the endpoint anchor of a polyline leg the user just drew. The anchor keeps
+     *          the border position they pressed on (\p chosen) and is squared to \p neighbour only
+     *          when the resulting leg is within \ref EdgeSquareToleranceDeg of an axis. This is what
+     *          keeps a deliberately angled first leg from snapping to the waypoint's row or column.
+     * \param   rect        The state box geometry in scene coordinates.
+     * \param   radius      The box corner radius.
+     * \param   chosen      Where the user pressed / released, in scene coordinates.
+     * \param   neighbour   The waypoint next to this endpoint.
+     * \param   gridSize    The grid step used when \p snap is set.
+     * \param   snap        Whether snap-to-grid is on.
+     **/
+    QPointF polylineAnchorPoint(  const QRectF& rect, double radius, const QPointF& chosen
+                                , const QPointF& neighbour, int gridSize, bool snap);
 
     /**
      * \brief   Samples a circular arc through \p begin and \p end with the given signed

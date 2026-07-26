@@ -47,6 +47,7 @@ class QMenu;
 class QToolBar;
 class QToolButton;
 class SMClipboardContent;
+class SMEdgeItem;
 class SMGraphicsView;
 class SMOutlinePanel;
 class SMPropertiesPanel;
@@ -438,6 +439,11 @@ private slots:
     void onDocumentReloaded();
 
     /**
+     * \brief   Switches the transition the shape action was aimed at between polyline and arc.
+     **/
+    void onToggleEdgeShape();
+
+    /**
      * \brief   Builds and shows the context-sensitive right-click menu (canvas / state /
      *          transition / note) at the given viewport position.
      **/
@@ -569,6 +575,23 @@ private:
      * \param   ownerId The state or transition element ID.
      * \param   isState True for a state owner, false for a transition owner.
      **/
+    /**
+     * \brief   Adds the polyline/arc toggle to a transition's context menu.
+     **/
+    void addEdgeShapeMenu(QMenu& menu, SMEdgeItem& edge);
+
+    /**
+     * \brief   Retargets the one shape-toggle action at \p edge (nullptr = the current selection)
+     *          and relabels it for what it would do next. Returns the action, ready to be added.
+     **/
+    QAction* shapeToggleAction(SMEdgeItem* edge);
+
+    /**
+     * \brief   The single selected transition's item, or nullptr when the selection is not
+     *          exactly one transition.
+     **/
+    SMEdgeItem* selectedEdge() const;
+
     void addNoteMenuEntries(QMenu& menu, uint32_t ownerId, bool isState);
 
     /**
@@ -793,6 +816,7 @@ private:
     QAction*            mActDuplicate;  //!< Duplicate the selection in place.
     QAction*            mActStateColor; //!< Apply a picked color to the selected states.
     QAction*            mActEdgeColor;  //!< Apply a picked color to the selected transitions.
+    QAction*            mActEdgeShape;  //!< Toggle the selected transition between polyline and arc.
     QAction*            mActNoteColor;  //!< Apply a picked color to the selected notes.
     QAction*            mActSetColor;   //!< Toolbar: apply a picked color to the whole selection.
     QAction*            mActAlignLeft;  //!< Align selected boxes to the leftmost edge.

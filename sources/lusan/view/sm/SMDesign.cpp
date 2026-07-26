@@ -230,6 +230,7 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mActDuplicate (nullptr)
     , mActStateColor(nullptr)
     , mActEdgeColor (nullptr)
+    , mActEdgeShape (nullptr)
     , mActNoteColor (nullptr)
     , mActSetColor  (nullptr)
     , mActAlignLeft (nullptr)
@@ -688,6 +689,8 @@ void SMDesign::setupActions()
 
     mActEdgeColor = new QAction(tr("Transition Color..."), this);
     connect(mActEdgeColor, &QAction::triggered, this, [this]() { applyColorToSelection(eColorTarget::Edge); });
+    mActEdgeShape = new QAction(tr("Make Arc"), this);
+    connect(mActEdgeShape, &QAction::triggered, this, &SMDesign::onToggleEdgeShape);
 
     mActNoteColor = new QAction(tr("Note Color..."), this);
     connect(mActNoteColor, &QAction::triggered, this, [this]() { applyColorToSelection(eColorTarget::Note); });
@@ -1115,6 +1118,8 @@ void SMDesign::populateDesignMenu(QMenu& menu)
     menu.addAction(mActStateColor);
     menu.addAction(mActEdgeColor);
     menu.addAction(mActNoteColor);
+    // Reachable without right-clicking the transition; disabled unless exactly one is selected.
+    menu.addAction(shapeToggleAction(selectedEdge()));
     menu.addSeparator();
     menu.addAction(mActAlignLeft);
     menu.addAction(mActAlignRight);
@@ -1234,6 +1239,7 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
         menu.addAction(mActRaisePriority);
         menu.addAction(mActLowerPriority);
         menu.addSeparator();
+        addEdgeShapeMenu(menu, *edge);
         menu.addAction(mActEdgeColor);
         addNoteMenuEntries(menu, edge->getElementId(), false);
         addGotoDeclarationMenu(menu, edge->getElementId(), false);
@@ -1798,6 +1804,50 @@ void SMDesign::addInternalToSelection()
                                                              , SMTransitionEntry::eStimulusKind::Trigger, QString()
                                                              , 0u, QList<QPointF>()
                                                              , tr("Add internal transition to %1").arg(state->getName())));
+}
+
+void SMDesign::addEdgeShapeMenu(QMenu& menu, SMEdgeItem& edge)
+{
+    // ONE flat entry that names what it will do, not a submenu of shapes to compare: the shape a
+    // transition already has is visible on the canvas, so the only thing worth saying is the other
+    // one. A nested "Shape >" was shipped first and went unfound.
+    menu.addAction(shapeToggleAction(&edge));
+}
+
+QAction* SMDesign::shapeToggleAction(SMEdgeItem* edge)
+{
+    const bool isArc = (edge != nullptr) && (edge->getShape() == SMLayoutEdge::eShape::Arc);
+    mActEdgeShape->setText(isArc ? tr("Make Polyline") : tr("Make Arc"));
+    // Every transition can take either shape, a self-loop included: the only thing that disables
+    // the entry is having no single transition to apply it to.
+    mActEdgeShape->setEnabled(edge != nullptr);
+    mActEdgeShape->setData(edge != nullptr ? edge->getElementId() : 0u);
+    return mActEdgeShape;
+}
+
+SMEdgeItem* SMDesign::selectedEdge() const
+{
+    const QList<uint32_t> selection = mModel.getSelectionModel().getSelection();
+    if (selection.size() != 1)
+    {
+        return nullptr;     // "the shape of which one?" has no answer for a multi-selection
+    }
+
+    return dynamic_cast<SMEdgeItem*>(getScene().findCanvasItem(selection.first()));
+}
+
+void SMDesign::onToggleEdgeShape()
+{
+    // Re-resolve from the id the menu was built with: the action outlives the press, and a
+    // rebuild between the two would leave a dangling item pointer.
+    const uint32_t edgeId = mActEdgeShape->data().toUInt();
+    SMEdgeItem* edge = (edgeId != 0u) ? dynamic_cast<SMEdgeItem*>(getScene().findCanvasItem(edgeId)) : selectedEdge();
+    if (edge != nullptr)
+    {
+        edge->setShape(edge->getShape() == SMLayoutEdge::eShape::Arc
+                        ? SMLayoutEdge::eShape::Line
+                        : SMLayoutEdge::eShape::Arc);
+    }
 }
 
 void SMDesign::addNoteMenuEntries(QMenu& menu, uint32_t ownerId, bool isState)

@@ -430,7 +430,7 @@ void SMTransitionTool::updatePreview(const QPointF& cursor)
     const QPointF begin = mWaypoints.isEmpty()
                         ? NESMDesign::slideBorderPoint(src, srcRadius, NESMDesign::borderPoint(src, srcRadius, ref)
                                                      , mSourcePress, grid, snap)
-                        : NESMDesign::polylineBorderPoint(src, srcRadius, mWaypoints.first());
+                        : NESMDesign::polylineAnchorPoint(src, srcRadius, mSourcePress, mWaypoints.first(), grid, snap);
 
     QPainterPath path;
     path.moveTo(begin);
@@ -450,7 +450,7 @@ bool SMTransitionTool::mousePress(QGraphicsSceneMouseEvent* event)
         return false;
     }
 
-    SMStateItem* state = getScene().stateAt(event->scenePos());
+    SMStateItem* state = getScene().stateNear(event->scenePos(), NESMDesign::StatePickMargin);
     mButtonDown = true;
     mPressPos   = event->scenePos();
     if (mArmed == false)
@@ -522,7 +522,7 @@ bool SMTransitionTool::mouseRelease(QGraphicsSceneMouseEvent* event)
 
     if (dragged)
     {
-        SMStateItem* state = getScene().stateAt(event->scenePos());
+        SMStateItem* state = getScene().stateNear(event->scenePos(), NESMDesign::StatePickMargin);
         if (state != nullptr)
         {
             completeExternal(state->getElementId(), event->scenePos());
@@ -652,9 +652,9 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
     QList<QPointF> waypoints = mWaypoints;
     if (selfLoop && waypoints.isEmpty())
     {
-        const double off = 44.0;
-        waypoints.append(QPointF(srcRect.center().x() - 22.0, srcRect.top() - off));
-        waypoints.append(QPointF(srcRect.center().x() + 22.0, srcRect.top() - off));
+        const double off = NESMDesign::EdgeSelfLoopStandoff;
+        waypoints.append(QPointF(srcRect.center().x() - NESMDesign::EdgeSelfLoopHalfSpan, srcRect.top() - off));
+        waypoints.append(QPointF(srcRect.center().x() + NESMDesign::EdgeSelfLoopHalfSpan, srcRect.top() - off));
     }
 
     QList<QPointF> points;
@@ -670,14 +670,15 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         // is then slid along that side to the grid-aligned pointer coordinate. This makes a
         // straight drag connect press-point to release-point instead of snapping mid-border to
         // mid-border; a center press/release reproduces the old mid-border result exactly.
-        // With waypoints the endpoints line up with the adjacent corner instead, so the first and
-        // last legs stay square to the border.
+        // With waypoints the endpoints keep the pressed/released position too, and are squared to
+        // the adjacent corner only when that leg is already near an axis -- a deliberate diagonal
+        // first leg must not be dragged onto the waypoint's row or column.
+        const int  grid = canvas.getGridSize();
+        const bool snap = canvas.isSnapToGrid();
         QPointF begin;
         QPointF end;
         if (waypoints.isEmpty())
         {
-            const int  grid = canvas.getGridSize();
-            const bool snap = canvas.isSnapToGrid();
             const QPointF beginFace = NESMDesign::borderPoint(srcRect, srcRadius, tgtRect.center());
             const QPointF endFace   = NESMDesign::borderPoint(tgtRect, tgtRadius, srcRect.center());
             begin = NESMDesign::slideBorderPoint(srcRect, srcRadius, beginFace, mSourcePress, grid, snap);
@@ -685,8 +686,8 @@ void SMTransitionTool::completeExternal(uint32_t targetId, const QPointF& dropPo
         }
         else
         {
-            begin = NESMDesign::polylineBorderPoint(srcRect, srcRadius, waypoints.first());
-            end   = NESMDesign::polylineBorderPoint(tgtRect, tgtRadius, waypoints.last());
+            begin = NESMDesign::polylineAnchorPoint(srcRect, srcRadius, mSourcePress, waypoints.first(), grid, snap);
+            end   = NESMDesign::polylineAnchorPoint(tgtRect, tgtRadius, dropPos, waypoints.last(), grid, snap);
         }
 
         points.append(begin);

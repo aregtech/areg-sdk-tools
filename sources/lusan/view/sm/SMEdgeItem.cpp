@@ -456,12 +456,14 @@ void SMEdgeItem::rebuildPath()
 
     const QPointF tc = tgt.center();
 
-    // A self-loop with no stored waypoints gets a default loop above the box.
-    if (mSelfLoop && mWaypoints.isEmpty())
+    // A self-loop with no stored waypoints gets a default loop above the box. An ARC self-loop gets
+    // none: its two border anchors and the bulge already describe the whole loop, and a seeded
+    // waypoint here would be written straight back into the layout as if the user had placed it.
+    if (mSelfLoop && mWaypoints.isEmpty() && (mShape != SMLayoutEdge::eShape::Arc))
     {
-        const double off = 44.0;
-        mWaypoints.append(QPointF(src.center().x() - 22.0, src.top() - off));
-        mWaypoints.append(QPointF(src.center().x() + 22.0, src.top() - off));
+        const double off = NESMDesign::EdgeSelfLoopStandoff;
+        mWaypoints.append(QPointF(src.center().x() - NESMDesign::EdgeSelfLoopHalfSpan, src.top() - off));
+        mWaypoints.append(QPointF(src.center().x() + NESMDesign::EdgeSelfLoopHalfSpan, src.top() - off));
     }
 
     const double srcRad = stateRadius(mSourceId, src);
@@ -479,13 +481,24 @@ void SMEdgeItem::rebuildPath()
         return snap ? NESMDesign::gridAlignedBorderPoint(rect, rad, bp, grid) : bp;
     };
 
-    if ((mShape == SMLayoutEdge::eShape::Arc) && (mSelfLoop == false))
+    if (mShape == SMLayoutEdge::eShape::Arc)
     {
+        // A self-loop faces no other box, so center-to-center gives no direction at all: without
+        // anchors of its own it falls back to the symmetric default pair on its top border.
+        QPointF loopBegin;
+        QPointF loopEnd;
+        if (mSelfLoop && (mHasAnchors == false))
+        {
+            selfLoopEnds(src, loopBegin, loopEnd);
+        }
+
         mBegin = (mDrag == eDrag::Begin) ? mDragPoint
                : mHasAnchors ? NESMDesign::nearestBorderPoint(src, srcRad, mAnchorBegin)
+               : mSelfLoop   ? loopBegin
                              : defaultBorder(src, srcRad, tc);
         mEnd   = (mDrag == eDrag::End)   ? mDragPoint
                : mHasAnchors ? NESMDesign::nearestBorderPoint(tgt, tgtRad, mAnchorEnd)
+               : mSelfLoop   ? loopEnd
                              : defaultBorder(tgt, tgtRad, sc);
         mPath  = NESMDesign::arcPolyline(mBegin, mEnd, mBulge, NESMDesign::EdgeArcSamples);
     }
@@ -741,6 +754,11 @@ QPainterPath SMEdgeItem::shape() const
         result.addEllipse(wp, NESMDesign::EndpointPickRadius, NESMDesign::EndpointPickRadius);
     }
 
+    if (mShape == SMLayoutEdge::eShape::Arc)
+    {
+        result.addEllipse(arcApex(), NESMDesign::EndpointPickRadius, NESMDesign::EndpointPickRadius);
+    }
+
     return result;
 }
 
@@ -849,6 +867,19 @@ void SMEdgeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*opti
                 painter->setBrush(NESMDesign::selectionColor(palette));
                 painter->drawRect(QRectF(wp.x() - h / 2.0, wp.y() - h / 2.0, h, h));
             }
+        }
+
+        if (mShape == SMLayoutEdge::eShape::Arc)
+        {
+            // The curvature handle: a diamond at the apex, so it never reads as one more waypoint
+            // (squares) or an endpoint (circles) -- dragging it bends the arc, it does not move a point.
+            const QPointF apex = arcApex();
+            const double  d    = h / 2.0 + 1.0;
+            const QPointF diamond[4] = { QPointF(apex.x(), apex.y() - d), QPointF(apex.x() + d, apex.y())
+                                       , QPointF(apex.x(), apex.y() + d), QPointF(apex.x() - d, apex.y()) };
+            painter->setPen(QPen(NESMDesign::selectionColor(palette), 1.4));
+            painter->setBrush(palette.color(QPalette::Base));
+            painter->drawPolygon(diamond, 4);
         }
 
         painter->setBrush(palette.color(QPalette::Base));
@@ -1104,6 +1135,142 @@ int SMEdgeItem::hitSegment(const QPointF& point, QPointF& projected) const
     }
 
     return best;
+}
+
+QPointF SMEdgeItem::arcApex() const
+{
+    // Must agree with NESMDesign::arcPolyline, which places the apex the same way.
+    const QPointF chord = mEnd - mBegin;
+    const double  c     = std::hypot(chord.x(), chord.y());
+    if (c < 1e-6)
+    {
+        return mBegin;
+    }
+
+    const QPointF normal{ -chord.y() / c, chord.x() / c };
+    return ((mBegin + mEnd) / 2.0) + normal * (mBulge * c / 2.0);
+}
+
+double SMEdgeItem::bulgeFor(const QPointF& point) const
+{
+    const QPointF chord = mEnd - mBegin;
+    const double  c     = std::hypot(chord.x(), chord.y());
+    if (c < 1e-6)
+    {
+        return 0.0;
+    }
+
+    // The bulge is the signed sagitta as a fraction of half the chord, so the apex tracks the
+    // pointer's distance from the chord and its side decides which way the arc bends.
+    const QPointF normal{ -chord.y() / c, chord.x() / c };
+    const QPointF fromMid = point - ((mBegin + mEnd) / 2.0);
+    const double  sagitta = (fromMid.x() * normal.x()) + (fromMid.y() * normal.y());
+    const double  limit   = (mSelfLoop ? NESMDesign::EdgeArcSelfBulgeMax : NESMDesign::EdgeArcBulgeMax);
+    return std::clamp(2.0 * sagitta / c, -limit, limit);
+}
+
+void SMEdgeItem::selfLoopEnds(const QRectF& box, QPointF& begin, QPointF& end) const
+{
+    begin = QPointF(box.center().x() - NESMDesign::EdgeSelfLoopHalfSpan, box.top());
+    end   = QPointF(box.center().x() + NESMDesign::EdgeSelfLoopHalfSpan, box.top());
+}
+
+void SMEdgeItem::adoptSelfLoopEnds()
+{
+    const QRectF box = stateRect(mSourceId);
+    if ((box.width() <= 0.0) || (box.height() <= 0.0))
+    {
+        return;
+    }
+
+    if (distance(mBegin, mEnd) < 1e-3)
+    {
+        selfLoopEnds(box, mBegin, mEnd);    // a chord of zero length is not a curve
+    }
+
+    // Pin them: without anchors the arc branch would re-derive the endpoints and lose the side of
+    // the box the user had the loop leaving from.
+    mAnchorBegin = mBegin;
+    mAnchorEnd   = mEnd;
+    mHasAnchors  = true;
+}
+
+double SMEdgeItem::selfLoopBulge() const
+{
+    const QRectF  box   = stateRect(mSourceId);
+    const QPointF chord = mEnd - mBegin;
+    const double  c     = std::hypot(chord.x(), chord.y());
+    if ((c < 1e-6) || (box.width() <= 0.0) || (box.height() <= 0.0))
+    {
+        return NESMDesign::EdgeArcBulgeDefault;
+    }
+
+    // Stand the apex the same distance off the border as the polyline loop's corners, so switching
+    // a loop between the two shapes keeps it the same size, and bow it AWAY from the box: a loop
+    // curving back through its own state reads as a line crossing it, not as a transition.
+    const QPointF normal { -chord.y() / c, chord.x() / c };
+    const QPointF outward = ((mBegin + mEnd) / 2.0) - box.center();
+    const double  side    = (((normal.x() * outward.x()) + (normal.y() * outward.y())) < 0.0) ? -1.0 : 1.0;
+    return side * std::min(2.0 * NESMDesign::EdgeSelfLoopStandoff / c, NESMDesign::EdgeArcSelfBulgeMax);
+}
+
+QList<QPointF> SMEdgeItem::selfLoopCorners() const
+{
+    QList<QPointF> corners;
+    const QRectF box = stateRect(mSourceId);
+    if ((box.width() <= 0.0) || (box.height() <= 0.0))
+    {
+        return corners;
+    }
+
+    corners.append(mBegin + (NESMDesign::borderOutwardNormal(box, mBegin) * NESMDesign::EdgeSelfLoopStandoff));
+    corners.append(mEnd   + (NESMDesign::borderOutwardNormal(box, mEnd)   * NESMDesign::EdgeSelfLoopStandoff));
+    return corners;
+}
+
+void SMEdgeItem::setShape(SMLayoutEdge::eShape shape)
+{
+    const bool arc = (shape == SMLayoutEdge::eShape::Arc);
+    if (mShape == shape)
+    {
+        return;
+    }
+
+    prepareGeometryChange();
+    mShape = shape;
+    if (arc)
+    {
+        // An arc is its two endpoints plus a bulge; the corners of a polyline describe nothing
+        // on a curve. This mirrors the Arc -> Line downgrade that adding a waypoint performs.
+        mWaypoints.clear();
+        setSelectedPoint(-1);
+        if (mSelfLoop)
+        {
+            adoptSelfLoopEnds();
+        }
+
+        if (std::abs(mBulge) < 1e-6)
+        {
+            // A zero bulge would still draw straight.
+            mBulge = (mSelfLoop ? selfLoopBulge() : NESMDesign::EdgeArcBulgeDefault);
+        }
+    }
+    else
+    {
+        mBulge = 0.0;
+        if (mSelfLoop && mWaypoints.isEmpty())
+        {
+            // Both anchors of a self-loop sit on the same box, so a two-point run between them has
+            // nothing to draw. Straightening gives it the rectangle the arc stood in: one corner
+            // off each anchor, at the standoff the default loop uses.
+            mWaypoints = selfLoopCorners();
+        }
+    }
+
+    rebuildPath();
+    mGesture = SMMoveNodeCommand::takeNextGesture();
+    commitGeometry(arc ? translate("Curve transition") : translate("Straighten transition"));
+    update();
 }
 
 SMLayoutEdge SMEdgeItem::buildGeometry() const
@@ -1456,6 +1623,17 @@ void SMEdgeItem::mousePressEvent(QGraphicsSceneMouseEvent* event)
             return;
         }
 
+        if ((mShape == SMLayoutEdge::eShape::Arc) && (distance(p, arcApex()) <= NESMDesign::EndpointPickRadius))
+        {
+            mDrag = eDrag::Bulge;
+            setSelectedPoint(-1);
+            setLabelActive(false);
+            setActiveEnd(0);
+            mGesture = SMMoveNodeCommand::takeNextGesture();
+            event->accept();
+            return;
+        }
+
         const int wp = hitWaypoint(p);
         if (wp >= 0)
         {
@@ -1504,6 +1682,13 @@ void SMEdgeItem::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
     {
     case eDrag::Waypoint:
         mWaypoints[mDragIndex] = snapped;
+        rebuildPath();
+        break;
+
+    case eDrag::Bulge:
+        // Curvature follows the pointer freely: snapping the apex to the grid would quantise the
+        // curve into visible steps, and the arc is judged by eye, not by coordinate.
+        mBulge = bulgeFor(event->scenePos());
         rebuildPath();
         break;
 
@@ -1560,6 +1745,10 @@ void SMEdgeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
     {
     case eDrag::Waypoint:
         commitGeometry(translate("Move waypoint"));
+        break;
+
+    case eDrag::Bulge:
+        commitGeometry(translate("Curve transition"));
         break;
 
     case eDrag::Label:

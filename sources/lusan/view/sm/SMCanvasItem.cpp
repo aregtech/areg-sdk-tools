@@ -42,6 +42,10 @@ void SMCanvasItem::updateFromModel()
 {
 }
 
+void SMCanvasItem::finishInlineEdit()
+{
+}
+
 SMCanvasItem::~SMCanvasItem()
 {
     SMScene* canvas = qobject_cast<SMScene*>(scene());

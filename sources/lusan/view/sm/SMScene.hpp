@@ -208,6 +208,14 @@ public:
     SMStateItem* stateAt(const QPointF& scenePos) const;
 
     /**
+     * \brief   Returns the state box at a scene position or, failing that, the nearest one whose
+     *          border lies within \p margin. Aiming at the exact border of a box is not a
+     *          reasonable thing to ask of a pointing device, so a press that lands just outside
+     *          one still starts (or finishes) a transition on it.
+     **/
+    SMStateItem* stateNear(const QPointF& scenePos, double margin) const;
+
+    /**
      * \brief   Re-anchors every edge connected to a state after its box moved or resized.
      **/
     void updateEdgesForState(uint32_t stateId);
@@ -247,6 +255,11 @@ public:
      *          embedded editor, which would otherwise swallow the keystroke and spawn items.
      **/
     bool isInlineEditorActive() const;
+
+    /**
+     * \brief   Ends every open in-place editor, committing each as a focus-out would.
+     **/
+    void closeInlineEditors();
 
     /**
      * \brief   Requests descending into a state's painted submachine (double-click,

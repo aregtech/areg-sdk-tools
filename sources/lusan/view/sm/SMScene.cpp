@@ -186,6 +186,13 @@ void SMScene::setActiveTool(NESMDesign::eCanvasTool tool, bool sticky /*= false*
         mTool->cancelGesture();
     }
 
+    // Arming a tool is a mode switch, so an open in-place editor ends here -- before the tool
+    // change is announced. An editor left open owns a proxy widget whose cursor QGraphicsView
+    // remembers and restores onto the viewport when the pointer leaves it; that restored copy
+    // is captured from before the tool armed, so it masks the crosshair the tool then sets.
+    // Ending the editors first puts that restore ahead of applyToolCursor() (issue 8).
+    closeInlineEditors();
+
     // A tool may switch tools from inside its own event handler; keep the replaced
     // object alive until the next switch so its call frame stays valid.
     mRetiredTool = std::move(mTool);
@@ -863,6 +870,19 @@ bool SMScene::isInlineEditorActive() const
     return hasInlineEditorFocus(*this);
 }
 
+void SMScene::closeInlineEditors()
+{
+    // Copied: an item may commit through an undo command, which can rebuild the item map.
+    const QList<SMCanvasItem*> items = mItems.values();
+    for (SMCanvasItem* item : items)
+    {
+        if (item != nullptr)
+        {
+            item->finishInlineEdit();
+        }
+    }
+}
+
 void SMScene::requestEnterSubmachine(uint32_t stateId)
 {
     const SMStateEntry* state = mModel.getData().findStateById(stateId);
@@ -1030,6 +1050,39 @@ SMStateItem* SMScene::stateAt(const QPointF& scenePos) const
     }
 
     return nullptr;
+}
+
+SMStateItem* SMScene::stateNear(const QPointF& scenePos, double margin) const
+{
+    if (SMStateItem* exact = stateAt(scenePos))
+    {
+        return exact;
+    }
+
+    // Just outside a border still counts. Nearest box wins, so overlapping margins are not a
+    // coin toss; a box that contains the point outright already returned above.
+    SMStateItem* best = nullptr;
+    double bestDistance = margin;
+    for (SMCanvasItem* item : std::as_const(mItems))
+    {
+        SMStateItem* state = dynamic_cast<SMStateItem*>(item);
+        if (state == nullptr)
+        {
+            continue;
+        }
+
+        const QRectF box = state->getBoxGeometry();
+        const double dx = std::max({ box.left() - scenePos.x(), 0.0, scenePos.x() - box.right() });
+        const double dy = std::max({ box.top() - scenePos.y(), 0.0, scenePos.y() - box.bottom() });
+        const double distance = std::hypot(dx, dy);
+        if (distance <= bestDistance)
+        {
+            bestDistance = distance;
+            best = state;
+        }
+    }
+
+    return best;
 }
 
 void SMScene::updateEdgesForState(uint32_t stateId)

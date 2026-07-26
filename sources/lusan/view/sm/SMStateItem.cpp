@@ -1486,32 +1486,7 @@ void SMStateItem::startInlineRename()
             edit->setToolTip(reason);
         });
 
-    QObject::connect(edit, &QLineEdit::editingFinished, edit, [this, edit]()
-        {
-            if (mRenameProxy == nullptr)
-            {
-                return;
-            }
-
-            const QString name = edit->text().trimmed();
-            const bool valid = validateName(name).isEmpty();
-            closeRenameEditor();
-            if (valid == false)
-            {
-                // Reject: restore the committed name (from the model, not mName which holds the
-                // rejected typing preview) on both the canvas box and the Properties panel.
-                if (SMScene* canvas = getCanvas())
-                {
-                    const SMStateEntry* state = getState();
-                    canvas->getModel().publishStateNamePreview(getElementId(), state != nullptr ? state->getName() : mName);
-                }
-            }
-
-            if (valid)
-            {
-                commitRename(name);
-            }
-        });
+    QObject::connect(edit, &QLineEdit::editingFinished, edit, [this]() { finishRename(); });
 
     edit->selectAll();
     edit->setFocus();
@@ -1603,7 +1578,43 @@ void SMStateItem::commitRename(const QString& name)
                                                        , translate("Rename state")));
 }
 
-void SMStateItem::closeRenameEditor()
+void SMStateItem::finishRename(bool immediate /*= false*/)
+{
+    if (mRenameProxy == nullptr)
+    {
+        return;
+    }
+
+    const QLineEdit* edit = qobject_cast<const QLineEdit*>(mRenameProxy->widget());
+    const QString name = (edit != nullptr ? edit->text().trimmed() : QString());
+    const bool valid = (edit != nullptr) && validateName(name).isEmpty();
+    closeRenameEditor(immediate);
+    if (valid)
+    {
+        commitRename(name);
+    }
+    else
+    {
+        // Reject: restore the committed name (from the model, not mName which holds the
+        // rejected typing preview) on both the canvas box and the Properties panel.
+        if (SMScene* canvas = getCanvas())
+        {
+            const SMStateEntry* state = getState();
+            canvas->getModel().publishStateNamePreview(getElementId(), state != nullptr ? state->getName() : mName);
+        }
+    }
+}
+
+void SMStateItem::finishInlineEdit()
+{
+    // Destroy the proxies now rather than deferring them: this path runs from a tool switch, never
+    // from an editor's own signal, and a proxy that outlives the switch keeps its I-beam on the
+    // viewport past the point the tool sets its cursor.
+    finishRename(true);
+    mNoteEditor.commit();
+}
+
+void SMStateItem::closeRenameEditor(bool immediate /*= false*/)
 {
     if ((mRenameProxy == nullptr) || mClosingRename)
     {
@@ -1613,7 +1624,15 @@ void SMStateItem::closeRenameEditor()
     mClosingRename = true;
     QGraphicsProxyWidget* proxy = mRenameProxy;
     mRenameProxy = nullptr;
-    proxy->deleteLater();
+    if (immediate)
+    {
+        delete proxy;
+    }
+    else
+    {
+        proxy->deleteLater();
+    }
+
     mClosingRename = false;
     setFocus();
 }

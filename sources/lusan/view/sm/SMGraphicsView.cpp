@@ -22,6 +22,7 @@
 #include "lusan/view/sm/NESMDesign.hpp"
 
 #include <QContextMenuEvent>
+#include <QGraphicsItem>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPen>
@@ -183,11 +184,16 @@ void SMGraphicsView::setToolCursor(NESMDesign::eCanvasTool tool)
 
 void SMGraphicsView::applyToolCursor()
 {
-    // Set on the VIEW, not the viewport: an item's hover cursor (resize handles, links) is applied
-    // to the viewport and must still win over the tool shape.
     if (mToolArmed)
     {
-        setCursor(makeToolCursor(devicePixelRatioF()));
+        // The viewport takes it too, not only the view. A cursor the scene has written onto the
+        // viewport -- an inline editor's I-beam, or the plain arrow the scene restores when that
+        // editor dies -- sits in front of the view's cursor and would mask the tool shape for good.
+        // A later hover cursor still wins: the scene sets those on the viewport as well, and the
+        // copy it remembers to restore afterwards is now the tool shape rather than an arrow.
+        const QCursor tool = makeToolCursor(devicePixelRatioF());
+        setCursor(tool);
+        viewport()->setCursor(tool);
         return;
     }
 
@@ -227,6 +233,21 @@ void SMGraphicsView::mouseMoveEvent(QMouseEvent* event)
     }
 
     QGraphicsView::mouseMoveEvent(event);
+
+    // Last word on the tool shape. An inline editor closed in the same breath as the arming dies
+    // deferred, and the scene writes its remembered cursor onto the viewport whenever that happens
+    // -- after applyToolCursor() has already run. Rather than depend on that ordering, re-assert
+    // here: the pointer has to move before the user can aim anyway. An item that carries its own
+    // cursor keeps it, so resize handles and links are untouched.
+    if (mToolArmed && (mPanning == false))
+    {
+        const QGraphicsItem* under = itemAt(event->pos());
+        if (((under == nullptr) || (under->hasCursor() == false))
+            && (viewport()->cursor().shape() != Qt::BitmapCursor))
+        {
+            applyToolCursor();
+        }
+    }
 }
 
 void SMGraphicsView::mouseReleaseEvent(QMouseEvent* event)

@@ -3112,6 +3112,327 @@ int main(int argc, char* argv[])
         }
     }
 
+    std::printf("sect: issue 8 arming a tool ends an open in-place edit\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& canvas = page.getScene();
+        SMStateEntry* off = doc.getData().findState("LightOff");
+        CHECK(off != nullptr);
+        SMStateItem* item = (off != nullptr) ? dynamic_cast<SMStateItem*>(canvas.findCanvasItem(off->getId())) : nullptr;
+        CHECK(item != nullptr);
+
+        if (item != nullptr)
+        {
+            item->startInlineRename();
+            QApplication::processEvents();
+            CHECK(item->isRenameActive());
+
+            // Arming a placement tool is a mode switch: the editor ends here. Left open, its proxy
+            // widget's cursor is restored onto the viewport when the pointer leaves it and masks
+            // the tool's crosshair -- the pointer-instead-of-cross report.
+            canvas.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+            QApplication::processEvents();
+            CHECK(item->isRenameActive() == false);
+            CHECK(canvas.isInlineEditorActive() == false);
+
+            // The name is committed, not discarded: a mode switch must not lose typed work.
+            CHECK(off->getName() == QStringLiteral("LightOff"));
+        }
+    }
+
+    std::printf("sect: issue 9 a transition can be curved, and the arc is a shape of the edge\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& canvas = page.getScene();
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(canvas.findCanvasItem(27));
+        CHECK(edge != nullptr);
+
+        if (edge != nullptr)
+        {
+            // Curving is reachable at all: before this the format carried Arc, the renderer drew
+            // it, and nothing in the editor could ever set it.
+            edge->setShape(SMLayoutEdge::eShape::Arc);
+            CHECK(edge->getShape() == SMLayoutEdge::eShape::Arc);
+            edge->setSelected(true);
+            QApplication::processEvents();
+            grab(page, "g-arc-curved");
+
+            const SMLayoutEdge* stored = doc.getData().getLayout().findEdge(27);
+            CHECK(stored != nullptr);
+            CHECK((stored != nullptr) && (stored->shape == SMLayoutEdge::eShape::Arc));
+            // A zero bulge would still draw a straight line, so curving seeds a visible one.
+            CHECK((stored != nullptr) && (std::abs(stored->bulge) > 1e-6));
+            // An arc is its two endpoints plus a bulge.
+            CHECK((stored != nullptr) && (stored->points.size() == 2));
+
+            // One undo step, and it restores the polyline.
+            doc.getUndoStack().undo();
+            QApplication::processEvents();
+            const SMLayoutEdge* undone = doc.getData().getLayout().findEdge(27);
+            CHECK((undone != nullptr) && (undone->shape == SMLayoutEdge::eShape::Line));
+
+            doc.getUndoStack().redo();
+            QApplication::processEvents();
+
+            // Straightening clears the curvature rather than leaving a bulge on a Line edge.
+            edge->setShape(SMLayoutEdge::eShape::Line);
+            const SMLayoutEdge* flat = doc.getData().getLayout().findEdge(27);
+            CHECK((flat != nullptr) && (flat->shape == SMLayoutEdge::eShape::Line));
+            CHECK((flat != nullptr) && (std::abs(flat->bulge) < 1e-6));
+        }
+
+        // A self-loop curves too: its two anchors sit on the same box but are still distinct
+        // points, so a chord and a bulge describe the loop exactly as they describe any other
+        // transition. Refusing it was the bug.
+        StateMachineData& d = doc.getData();
+        SMStateEntry* on = d.findState("LightOn");
+        SMGraphicsView* view = page.findChild<SMGraphicsView*>();
+        SMStateItem* onItem = (on != nullptr) ? canvas.stateItem(on->getId()) : nullptr;
+        CHECK((on != nullptr) && (view != nullptr) && (onItem != nullptr));
+        if ((on != nullptr) && (view != nullptr) && (onItem != nullptr))
+        {
+            // Drawn out of the right side, so the loop has two DISTINCT anchors to preserve: the
+            // two-click default puts both at the same border point, which is a separate case below.
+            const QRectF box  = onItem->getBoxGeometry();
+            const double rad  = onItem->boxCornerRadius();
+            const double outY = box.top() + rad + 8.0;
+            const double back = box.bottom() - rad - 8.0;
+            const SMStateData* level = d.findLevel(canvas.getLevelId());
+            double corner = box.right() + 120.0;
+            if (level != nullptr)
+            {
+                for (const SMStateEntry* sibling : level->getElements())
+                {
+                    SMStateItem* item = canvas.stateItem(sibling->getId());
+                    if (item != nullptr)
+                    {
+                        corner = std::max(corner, item->getBoxGeometry().right() + 120.0);
+                    }
+                }
+            }
+
+            canvas.setSnapToGrid(false);
+            canvas.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+            clickScene(*view, QPointF(box.right() - rad - 4.0, outY));   // press inside the right side
+            clickScene(*view, QPointF(corner, outY));                    // out
+            clickScene(*view, QPointF(corner, back));                    // along
+            clickScene(*view, QPointF(box.right() - rad - 4.0, back));   // back onto the same box
+            QApplication::processEvents();
+
+            const uint32_t selfTx = on->getTransitions().getElements().last()->getId();
+            SMEdgeItem* loop = dynamic_cast<SMEdgeItem*>(canvas.findCanvasItem(selfTx));
+            CHECK(loop != nullptr);
+            if (loop != nullptr)
+            {
+                const QPointF from = loop->getPath().first();
+                const QPointF to   = loop->getPath().last();
+                CHECK(std::hypot(from.x() - to.x(), from.y() - to.y()) > 1.0);   // two anchors, not one
+
+                loop->setShape(SMLayoutEdge::eShape::Arc);
+                CHECK(loop->getShape() == SMLayoutEdge::eShape::Arc);
+                loop->setSelected(true);
+                view->centerOn(box.center() + QPointF(NESMDesign::EdgeSelfLoopStandoff, 0.0));
+                QApplication::processEvents();
+                grab(page, "g-arc-self-loop");
+
+                const SMLayoutEdge* curved = d.getLayout().findEdge(selfTx);
+                CHECK((curved != nullptr) && (curved->shape == SMLayoutEdge::eShape::Arc));
+                // An arc is its two endpoints plus a bulge -- the loop's corners are gone, and the
+                // self-loop default must not seed them back in behind the shape's back.
+                CHECK((curved != nullptr) && (curved->points.size() == 2));
+                CHECK((curved != nullptr) && (std::abs(curved->bulge) > 1e-6));
+                // Where the loop left and re-entered the box is kept, not re-derived.
+                CHECK((curved != nullptr) && (std::hypot(curved->points.first().x() - from.x()
+                                                       , curved->points.first().y() - from.y()) < 0.5));
+                CHECK((curved != nullptr) && (std::hypot(curved->points.last().x() - to.x()
+                                                       , curved->points.last().y() - to.y()) < 0.5));
+
+                // The curve bows AWAY from its own state: no drawn point falls inside the box, so
+                // the loop never reads as a line crossing the state it belongs to.
+                const QList<QPointF> drawn = loop->getPath();
+                CHECK(drawn.size() > 2);
+                bool   outside   = true;
+                double apexStand = 0.0;
+                for (const QPointF& p : drawn)
+                {
+                    outside   = outside && (box.adjusted(0.5, 0.5, -0.5, -0.5).contains(p) == false);
+                    apexStand = std::max(apexStand, p.x() - box.right());
+                }
+
+                CHECK(outside);
+                // It stands off the border about as far as the polyline loop's corners did, so
+                // switching the shape does not resize the loop.
+                CHECK(apexStand > (NESMDesign::EdgeSelfLoopStandoff / 2.0));
+
+                // Back to a polyline: a two-point run between anchors on the same box would draw
+                // nothing, so straightening restores the rectangle -- begin, two corners, end.
+                loop->setShape(SMLayoutEdge::eShape::Line);
+                CHECK(loop->getShape() == SMLayoutEdge::eShape::Line);
+                const SMLayoutEdge* flat = d.getLayout().findEdge(selfTx);
+                CHECK((flat != nullptr) && (flat->points.size() == 4));
+                CHECK((flat != nullptr) && (std::abs(flat->bulge) < 1e-6));
+                CHECK(loop->getPath().size() == 4);
+                if ((flat != nullptr) && (flat->points.size() == 4))
+                {
+                    // Each corner stands straight out from the anchor it belongs to: the legs that
+                    // leave and re-enter the box are square, which is what makes it a rectangle.
+                    CHECK(std::abs(flat->points.at(1).y() - flat->points.first().y()) < 0.5);
+                    CHECK(std::abs(flat->points.at(2).y() - flat->points.last().y()) < 0.5);
+                    CHECK(std::abs((flat->points.at(1).x() - box.right()) - NESMDesign::EdgeSelfLoopStandoff) < 0.5);
+                    CHECK(std::abs((flat->points.at(2).x() - box.right()) - NESMDesign::EdgeSelfLoopStandoff) < 0.5);
+                }
+            }
+
+            // The two-click default loop puts both anchors on the same border point. A chord of
+            // zero length is not a curve, so curving it falls back to a symmetric pair -- it must
+            // still come out drawable rather than collapsing to nothing.
+            canvas.setActiveTool(NESMDesign::eCanvasTool::AddTransition);
+            clickScene(*view, box.center());
+            clickScene(*view, box.center());
+            QApplication::processEvents();
+            SMEdgeItem* plain = dynamic_cast<SMEdgeItem*>(
+                        canvas.findCanvasItem(on->getTransitions().getElements().last()->getId()));
+            CHECK(plain != nullptr);
+            if (plain != nullptr)
+            {
+                plain->setShape(SMLayoutEdge::eShape::Arc);
+                CHECK(plain->getShape() == SMLayoutEdge::eShape::Arc);
+                const QPointF a = plain->getPath().first();
+                const QPointF b = plain->getPath().last();
+                CHECK(std::hypot(a.x() - b.x(), a.y() - b.y()) > 1.0);
+                CHECK(plain->getPath().size() > 2);      // a real curve, not a collapsed chord
+            }
+        }
+    }
+
+    std::printf("sect: issue 9-1 a deliberate angle keeps its anchor, a near-straight leg is squared\n");
+    {
+        // The box the leg leaves: left 100, top 100, right 260, bottom 164.
+        const QRectF box(100.0, 100.0, 160.0, 64.0);
+        const QPointF press(150.0, 100.0);          // where the user pressed on the top border
+
+        CHECK(NESMDesign::isNearAxis(QPointF(4.0, -200.0)));         // ~1 deg off vertical
+        CHECK(NESMDesign::isNearAxis(QPointF(-200.0, 6.0)));         // ~2 deg off horizontal
+        CHECK(NESMDesign::isNearAxis(QPointF(250.0, -200.0)) == false);  // ~39 deg: deliberate
+
+        // Almost straight up: tidied to exactly straight, so the anchor takes the waypoint's column.
+        const QPointF nearAxis(154.0, -100.0);
+        const QPointF squared = NESMDesign::polylineAnchorPoint(box, 0.0, press, nearAxis, 16, false);
+        CHECK(std::abs(squared.x() - nearAxis.x()) < 0.5);
+
+        // A deliberate diagonal keeps the pressed anchor -- it must NOT jump onto the waypoint's
+        // column, which is what made an angled transition snap straight (issue 9-1).
+        const QPointF diagonal(400.0, -100.0);
+        const QPointF kept = NESMDesign::polylineAnchorPoint(box, 0.0, press, diagonal, 16, false);
+        CHECK(std::abs(kept.x() - press.x()) < 0.5);
+        CHECK(std::abs(kept.x() - diagonal.x()) > 1.0);
+    }
+
+    std::printf("sect: issue 9-1 a press just outside a state still starts a transition\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& canvas = page.getScene();
+        SMStateEntry* off = doc.getData().findState("LightOff");
+        SMStateItem* item = (off != nullptr) ? canvas.stateItem(off->getId()) : nullptr;
+        CHECK((off != nullptr) && (item != nullptr));
+
+        if ((off != nullptr) && (item != nullptr))
+        {
+            const QRectF box = item->getBoxGeometry();
+            // Two units outside the left border: aiming at the exact border is not reasonable.
+            const QPointF outside(box.left() - 2.0, box.center().y());
+            CHECK(canvas.stateAt(outside) == nullptr);                                  // strictly outside
+            CHECK(canvas.stateNear(outside, NESMDesign::StatePickMargin) == item);       // still picks it
+
+            // Far away stays nothing, so the margin does not swallow the empty canvas.
+            CHECK(canvas.stateNear(QPointF(box.left() - 400.0, box.center().y())
+                                  , NESMDesign::StatePickMargin) == nullptr);
+        }
+    }
+
+    std::printf("sect: issue 9-2 one flat entry states the shape it would switch to\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        SMScene& canvas = page.getScene();
+        SMEdgeItem* edge = dynamic_cast<SMEdgeItem*>(canvas.findCanvasItem(27));
+        CHECK(edge != nullptr);
+
+        // The Design menu carries it too, so it is reachable without right-clicking the edge.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{ 27u });
+        QApplication::processEvents();
+        QMenu designMenu;
+        page.populateDesignMenu(designMenu);
+        QAction* shapeEntry = nullptr;
+        for (QAction* action : designMenu.actions())
+        {
+            if (action->text() == QStringLiteral("Make Arc"))
+            {
+                shapeEntry = action;
+            }
+        }
+
+        CHECK(shapeEntry != nullptr);
+        CHECK((shapeEntry != nullptr) && shapeEntry->isEnabled());   // exactly one transition selected
+
+        if ((shapeEntry != nullptr) && (edge != nullptr))
+        {
+            // Triggering it curves the edge, and the entry then offers the way back.
+            shapeEntry->trigger();
+            QApplication::processEvents();
+            CHECK(edge->getShape() == SMLayoutEdge::eShape::Arc);
+
+            QMenu again;
+            page.populateDesignMenu(again);
+            bool offersPolyline = false;
+            for (QAction* action : again.actions())
+            {
+                if (action->text() == QStringLiteral("Make Polyline"))
+                {
+                    offersPolyline = true;
+                }
+            }
+
+            CHECK(offersPolyline);
+        }
+
+        // Nothing selected: the entry is present but dead, never a silent no-op on a guess.
+        doc.getSelectionModel().setSelection(QList<uint32_t>{});
+        QApplication::processEvents();
+        QMenu empty;
+        page.populateDesignMenu(empty);
+        for (QAction* action : empty.actions())
+        {
+            if ((action->text() == QStringLiteral("Make Arc")) || (action->text() == QStringLiteral("Make Polyline")))
+            {
+                CHECK(action->isEnabled() == false);
+            }
+        }
+    }
+
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);
     return (gFailures == 0 ? 0 : 1);
 }

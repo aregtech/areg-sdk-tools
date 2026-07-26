@@ -316,10 +316,58 @@ QPointF NESMDesign::slideBorderPoint(const QRectF& rect, double radius, const QP
     return result;
 }
 
+QPointF NESMDesign::borderOutwardNormal(const QRectF& rect, const QPointF& border)
+{
+    // The side a border point belongs to is the one it is nearest to; an exact corner is arbitrary
+    // either way, so the first match wins rather than adding a diagonal nobody asked for.
+    const double left   = std::abs(border.x() - rect.left());
+    const double right  = std::abs(border.x() - rect.right());
+    const double top    = std::abs(border.y() - rect.top());
+    const double bottom = std::abs(border.y() - rect.bottom());
+    const double least  = std::min(std::min(left, right), std::min(top, bottom));
+    if (least == top)
+    {
+        return QPointF(0.0, -1.0);
+    }
+    else if (least == bottom)
+    {
+        return QPointF(0.0, 1.0);
+    }
+    else if (least == left)
+    {
+        return QPointF(-1.0, 0.0);
+    }
+
+    return QPointF(1.0, 0.0);
+}
+
+bool NESMDesign::isNearAxis(const QPointF& direction)
+{
+    const double dx = std::abs(direction.x());
+    const double dy = std::abs(direction.y());
+    if ((dx < 1e-6) && (dy < 1e-6))
+    {
+        return true;    // no direction at all: nothing to preserve, tidy it
+    }
+
+    // Angle off the dominant axis, so the test is symmetric for horizontal and vertical legs.
+    constexpr double Pi = 3.14159265358979323846;
+    const double offAxis = std::atan2(std::min(dx, dy), std::max(dx, dy));
+    return (offAxis <= (EdgeSquareToleranceDeg * Pi / 180.0));
+}
+
 QPointF NESMDesign::polylineBorderPoint(const QRectF& rect, double radius, const QPointF& neighbour)
 {
     const QPointF face = borderPoint(rect, radius, neighbour);
-    return slideBorderPoint(rect, radius, face, neighbour, 0, false);
+    return isNearAxis(neighbour - face) ? slideBorderPoint(rect, radius, face, neighbour, 0, false) : face;
+}
+
+QPointF NESMDesign::polylineAnchorPoint(  const QRectF& rect, double radius, const QPointF& chosen
+                                        , const QPointF& neighbour, int gridSize, bool snap)
+{
+    const QPointF face = borderPoint(rect, radius, neighbour);
+    const QPointF kept = slideBorderPoint(rect, radius, face, chosen, gridSize, snap);
+    return isNearAxis(neighbour - kept) ? slideBorderPoint(rect, radius, face, neighbour, 0, false) : kept;
 }
 
 QList<QPointF> NESMDesign::arcPolyline(const QPointF& begin, const QPointF& end, double bulge, int samples)
