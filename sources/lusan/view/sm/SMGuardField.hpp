@@ -119,11 +119,11 @@ public:
     void setHoverCard(SMHoverCard* card);
 
     /**
-     * \brief   Turns every explanatory popup of the field on or off (the default is on): the
-     *          gesture legend over the empty surface AND the symbol card over a chip. Off leaves
-     *          the status line as the only feedback, which is what a developer who already knows
-     *          the syntax wants -- the popups are for learning it, and they get in the way once
-     *          it is learned. The host owns the checkbox and the persisted preference.
+     * \brief   Turns the symbol tooltip on or off (the default is on). Off leaves the status line
+     *          as the only feedback, which is what a developer who already knows the syntax wants
+     *          -- the tooltip is for learning it, and it gets in the way once it is learned. The
+     *          host owns the checkbox and the persisted preference. The (?) card is never
+     *          affected: it is asked for, not offered.
      **/
     void setHintsEnabled(bool enable);
 
@@ -315,9 +315,9 @@ private:
      **/
     QString symbolNameAt(const QPoint& viewportPos) const;
 
-    //!< True when \ref symbolNameAt lands on a symbol the catalog knows, i.e. when the symbol card
-    //!< is the surface that answers for this point and the gesture legend must stay away.
-    bool isSymbolAt(const QPoint& viewportPos) const;
+    //!< The tooltip rich text explaining the symbol under a viewport point, or empty when the
+    //!< pointer is not on one, which is also the signal to show nothing at all.
+    QString symbolTipAt(const QPoint& viewportPos) const;
 
     /**
      * \brief   The navigable declaration referenced under a viewport point, for the Ctrl+Shift link.
@@ -417,11 +417,8 @@ private:
     QHash<QString, int>     mOwnerByName;   //!< Symbol name -> NEGuardStyle::eOwner (for coloring).
 
     SMInlineToken*          mTokenHandler;  //!< The registered island text-object painter.
-    SMHoverCard*            mHover;         //!< The shared hover card (not owned; may be nullptr).
-    QTimer*                 mHoverTimer;    //!< The 300 ms symbol-hover delay.
-    QString                 mHoverWord;     //!< The word under the pending hover.
-    QString                 mHelpTip;       //!< The gesture legend, shown by \ref event, not by Qt.
-    bool                    mHintsEnabled;  //!< False silences both the legend and the symbol card.
+    SMHoverCard*            mHover;         //!< The badge-click card (not owned; may be nullptr).
+    bool                    mHintsEnabled;  //!< False silences the symbol tooltip.
     int                     mLastCursorPos; //!< The previous caret position (island caret-entry).
 };
 

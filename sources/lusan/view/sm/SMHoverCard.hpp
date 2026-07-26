@@ -42,11 +42,12 @@ class StateMachineModel;
 
 /**
  * \class   SMHoverCard
- * \brief   The hover card: a frameless card shown 300 ms after a symbol or call-pill
- *          hover (the delay is the caller's), staying alive while the mouse is over it so
- *          its two buttons (`where used` / `map args`) are really clickable. The symbol
- *          face shows owner, signature, declared-where and the generated form; the call
- *          face shows the read-only mapping rows plus the generated line.
+ * \brief   A frameless card opened by a click on a chip's badge or a call pill, staying alive
+ *          while the mouse is over it so its two buttons (`where used` / `map args`) are really
+ *          clickable. The symbol face shows owner, signature, declared-where and the generated
+ *          form; the call face shows the read-only mapping rows plus the generated line. Merely
+ *          POINTING at a symbol is answered by a tooltip instead, rendered from \ref symbolTip so
+ *          the two surfaces cannot describe the same element differently.
  **/
 class SMHoverCard : public QFrame
 {
@@ -62,6 +63,16 @@ public:
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   The same explanation the symbol face shows, as tooltip rich text: owner badge,
+     *          signature, where it is declared, the generated call, and any finding this element
+     *          is guilty of. The card and the field's tooltip must never disagree about an
+     *          element, so both are rendered from here; the card adds only the two buttons, which
+     *          is the one thing a tooltip cannot carry.
+     * \return  The rich text, or an empty string when there is nothing to say.
+     **/
+    static QString symbolTip(StateMachineModel& model, uint32_t transitionId, const SMGuardSymbol& symbol);
+
     //!< Shows the symbol face for \p symbol at \p globalPos.
     void showSymbol(StateMachineModel& model, uint32_t transitionId, const SMGuardSymbol& symbol, const QPoint& globalPos);
 

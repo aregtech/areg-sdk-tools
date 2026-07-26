@@ -1085,7 +1085,7 @@ namespace
     {
         using eOp = SMOperationBase::eOperation;
 
-        // Usage sets, filled by one document-wide walk; W4/W5/W6/W8 are decided against them.
+        // Usage sets, filled by one document-wide walk; W4/W5/W6 are decided against them.
         QSet<QString> triggersUsed, eventsReacted, eventsSent, timersReacted, timersStarted, timersStopped;
         QSet<QString> actionsUsed, conditionsUsed, attrsRead, attrsWritten, constsUsed, importsUsed, typesUsed;
 
@@ -1269,7 +1269,7 @@ namespace
         for (const SMAttributeEntry& a : mData.getAttributes().getElements()) noteType(a.getType());
         for (const ConstantEntry& c : mData.getConstants().getElements()) noteType(c.getType());
 
-        // Rule 4 (and, for attributes, rule 8): declared but unused registry entries.
+        // Rule 4: declared but unused registry entries.
         //
         // Severity is decided per element kind, not per rule. An unused method, event, timer, data
         // type or import is behaviour or a contract that was written and then wired to nothing, and
@@ -1301,14 +1301,12 @@ namespace
         }
         for (const SMAttributeEntry& a : mData.getAttributes().getElements())
         {
-            const bool read = attrsRead.contains(a.getName());
-            const bool written = attrsWritten.contains(a.getName());
-            if ((read == false) && (written == false))
+            // Direction is deliberately not judged. An FSM design reads its attributes; the writing
+            // side normally lives in the hand-written service code the generator never sees, so a
+            // read-only or write-only attribute here is the normal case and not a finding. Any
+            // reference at all, whatever its kind, settles the question.
+            if ((attrsRead.contains(a.getName()) == false) && (attrsWritten.contains(a.getName()) == false))
                 add(a.getId(), eDocElementKind::Attribute, eSeverity::Info, 4, vtr("Attribute '%1' is never referenced").arg(a.getName()));
-            else if (written && (read == false))
-                add(a.getId(), eDocElementKind::Attribute, eSeverity::Info, 8, vtr("Attribute '%1' is written but never read").arg(a.getName()));
-            else if (read && (written == false))
-                add(a.getId(), eDocElementKind::Attribute, eSeverity::Info, 8, vtr("Attribute '%1' is read but never written").arg(a.getName()));
         }
         for (const ConstantEntry& c : mData.getConstants().getElements())
         {

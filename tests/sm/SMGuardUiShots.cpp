@@ -34,6 +34,8 @@
 #include "lusan/view/sm/SMArgMapTable.hpp"
 #include "lusan/view/sm/SMGuardBar.hpp"
 #include "lusan/view/sm/SMGuardCallsOutline.hpp"
+#include "lusan/view/sm/SMGuardCatalog.hpp"
+#include "lusan/view/sm/SMHoverCard.hpp"
 #include "lusan/view/sm/SMGuardDataPanel.hpp"
 #include "lusan/view/sm/SMGuardField.hpp"
 #include "lusan/view/sm/SMGuardPopout.hpp"
@@ -473,6 +475,30 @@ int main(int argc, char** argv)
             delete chipCopy;
         }
         chipProbe.hide();
+    }
+
+    // ---- the hover explanation: ONE surface, rendered as tooltip rich text ----
+    // The arbitration itself (tooltip over a chip, silence everywhere else) is a hover and cannot be
+    // driven offscreen; what IS testable here is that every symbol the editor can hold produces a
+    // real explanation, since an empty tip is what the field reads as "say nothing".
+    std::printf("[ RUN  ] symbolTip\n");
+    {
+        const QList<SMGuardSymbol> catalog = SMGuardCatalog::build(model.getData(), transId);
+        check(catalog.isEmpty() == false, "the example document offers symbols to explain");
+        bool everyTipSpeaks = true;
+        bool everyTipNamesIt = true;
+        bool everyTipShowsGenerated = true;
+        for (const SMGuardSymbol& sym : catalog)
+        {
+            const QString tip = SMHoverCard::symbolTip(model, transId, sym);
+            if (tip.isEmpty())                               { everyTipSpeaks = false; }
+            if (tip.contains(sym.name.toHtmlEscaped()) == false) { everyTipNamesIt = false; }
+            if (tip.contains(QStringLiteral("called as")) == false) { everyTipShowsGenerated = false; }
+        }
+
+        check(everyTipSpeaks, "every catalog symbol has something to say on hover");
+        check(everyTipNamesIt, "every tip names the symbol it explains");
+        check(everyTipShowsGenerated, "every tip shows the generated form");
     }
 
     // ---- SM-21-03: the reference completer (D-POPUP): pass-through, D-ESC, filter, clamp ----

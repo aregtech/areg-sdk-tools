@@ -101,7 +101,6 @@ namespace
             case 5:  return QObject::tr("Only one half of the event is here. An event needs something that sends it and a transition that reacts to it.");
             case 6:  return QObject::tr("Only one half of the timer is here. A timer needs something that starts it and a transition that reacts to it.");
             case 7:  return QObject::tr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
-            case 8:  return QObject::tr("The attribute is used in one direction only. Check whether the missing read or write was forgotten.");
             case 10: return QObject::tr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
             case 11: return QObject::tr("The inline code block generates nothing. Write the code, or remove the block.");
             default: return QObject::tr("Advisory only. The document still generates.");

@@ -982,22 +982,32 @@ namespace
             tr->getOperations().addOperation(new SMActionCall(0, "act"));
             CHECK(countWarn(SMValidator::validate(doc), 7) == 0);
         }
-        {   // W8: an attribute written but never read; negative once it is also read.
+        {   // Direction is not a finding: an attribute the design only writes, and one it only
+            // reads, are both fully referenced. The writing side of a read-only attribute lives in
+            // the hand-written service code, which the document cannot see.
             StateMachineData doc;
             SMStateEntry* s = addStart(doc);
             doc.getAttributes().createAttribute("w")->setType("int32");
             SMAttributeSet* set = new SMAttributeSet(0, "w");
             s->getEntryList().addOperation(set);
             set->setSource(eSource::Value); set->setValue("1");
-            CHECK(hasWarn(SMValidator::validate(doc), 8));
+            CHECK(countWarn(SMValidator::validate(doc), 8) == 0);
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
 
+            doc.getAttributes().createAttribute("r")->setType("int32");
             doc.getMethods().createMethod("go", eMethod::Trigger);
             SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go");
             SMConditionEntry* row = tr->getConditions().addCondition();
-            row->setLhsKind(eSource::Attribute); row->setLhs("w");
+            row->setLhsKind(eSource::Attribute); row->setLhs("r");
             row->setOperator(eOp::Greater);
             row->setRhsKind(eSource::Value); row->setRhs("0");
             CHECK(countWarn(SMValidator::validate(doc), 8) == 0);
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
+
+            // Only a declaration nothing touches at all is still reported, and only as information.
+            doc.getAttributes().createAttribute("idle")->setType("int32");
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 1);
+            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Info));
         }
         {   // W9: a comparison of two design-time constants; negative once one side is live.
             StateMachineData doc;

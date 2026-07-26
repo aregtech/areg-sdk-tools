@@ -273,7 +273,7 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // checkbox must survive that.
     mHintBox = new QCheckBox(tr("Hints"), this);
     mHintBox->setObjectName(QStringLiteral("smGuardHints"));
-    mHintBox->setToolTip(tr("Explain the editor and its symbols while the pointer rests on them"));
+    mHintBox->setToolTip(tr("Explain a symbol while the pointer rests on it. The (?) button explains the editor itself."));
     QSettings hintSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     mHintBox->setChecked(hintSettings.value(QStringLiteral("sm/guardHints"), true).toBool());
     mField->setHintsEnabled(mHintBox->isChecked());
