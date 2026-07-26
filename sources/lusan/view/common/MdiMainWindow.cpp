@@ -56,7 +56,10 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStatusBar>
+#include <QSplitter>
 #include <QTimer>
+
+#include <algorithm>
 #include <QToolBar>
 #include <QPushButton>
 
@@ -181,6 +184,7 @@ MdiMainWindow::MdiMainWindow()
     , mActDsgToolbar(nullptr)
     , mActDsgProperties(nullptr)
     , mActDsgOutline(nullptr)
+    , mActDsgValidation(nullptr)
     , mActWindowsTile(this)
     , mActWindowsCascade(this)
     , mActWindowsNext(this)
@@ -666,6 +670,12 @@ void MdiMainWindow::loadDesignPlacements()
     updatePlacementActions();
 }
 
+SMDesign* MdiMainWindow::activeDesignPage() const
+{
+    StateMachine* stateMachine = qobject_cast<StateMachine*>(const_cast<MdiMainWindow*>(this)->activeMdiChild());
+    return (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
+}
+
 void MdiMainWindow::updatePlacementActions()
 {
     const auto set = [](QAction* act, bool checked) {
@@ -682,6 +692,109 @@ void MdiMainWindow::updatePlacementActions()
     set(mActNavProperties, mPlaceProperties == eDesignPlace::InNavigation);
     set(mActDsgOutline,    mPlaceOutline    == eDesignPlace::InDesign);
     set(mActNavOutline,    mPlaceOutline    == eDesignPlace::InNavigation);
+
+    // The findings belong to one document, so the entry is dead without an active one.
+    if (mActDsgValidation != nullptr)
+    {
+        mActDsgValidation->setEnabled(qobject_cast<StateMachine*>(activeMdiChild()) != nullptr);
+    }
+}
+
+void MdiMainWindow::showValidationOutput(int step)
+{
+    showDock(mOutputDockWidget);
+    mOutputDock.showValidation(step);
+}
+
+void MdiMainWindow::watchDockFloating(ads::CDockWidget* dock)
+{
+    if (dock == nullptr)
+    {
+        return;
+    }
+
+    connect(dock, &ads::CDockWidget::topLevelChanged, this, [this, dock](bool floating) {
+        if (floating)
+        {
+            mFloatingSizes.insert(dock, dock->size());
+            return;
+        }
+
+        // ADS finishes the drop after this signal, so the splitter it lands in does not exist
+        // yet; the geometry is only ours to correct once that layout pass is done. Painting
+        // is held off until then, or the dock is seen at its floating size for a frame and
+        // the correction reads as a jump.
+        const QSize floatingSize = mFloatingSizes.value(dock, dock->size());
+        QWidget* container = dock->dockContainer();
+        if (container != nullptr)
+        {
+            container->setUpdatesEnabled(false);
+        }
+
+        QTimer::singleShot(0, this, [this, dock, floatingSize, container]() {
+            restoreDockedSize(dock, floatingSize);
+            if (container != nullptr)
+            {
+                container->setUpdatesEnabled(true);
+                container->update();
+            }
+        });
+    });
+}
+
+void MdiMainWindow::restoreDockedSize(ads::CDockWidget* dock, const QSize& floatingSize)
+{
+    ads::CDockAreaWidget* area = (dock != nullptr) ? dock->dockAreaWidget() : nullptr;
+    QSplitter* splitter = (area != nullptr) ? qobject_cast<QSplitter*>(area->parentWidget()) : nullptr;
+    if ((splitter == nullptr) || (dock->isFloating()))
+    {
+        return;
+    }
+
+    const int index = splitter->indexOf(area);
+    QList<int> sizes = splitter->sizes();
+    if ((index < 0) || (sizes.size() < 2))
+    {
+        return;     // nothing to share the space with
+    }
+
+    // A vertical splitter stacks its children top to bottom, so a dock in it is docked
+    // horizontally (top/bottom) and it is the height that must be clamped.
+    const bool horizontalDock = (splitter->orientation() == Qt::Vertical);
+    const int standard = horizontalDock
+                            ? static_cast<int>(NELusanCommon::MIN_OUTPUT_HEIGHT * 3)
+                            : static_cast<int>(NELusanCommon::MIN_NAVI_WIDTH);
+    const int actual = horizontalDock ? floatingSize.height() : floatingSize.width();
+
+    int total = 0;
+    for (int size : sizes)
+    {
+        total += size;
+    }
+
+    const int wanted = std::min(std::max(actual, 1), standard);
+    const int rest = total - wanted;
+    if ((rest <= 0) || (wanted >= total))
+    {
+        return;     // the dock is the only thing in this splitter
+    }
+
+    // The cross axis takes everything: only the docking axis is clamped, and the space the
+    // dock gives up goes back to its siblings in the proportion they already had.
+    const int othersTotal = total - sizes.at(index);
+    for (int i = 0; i < sizes.size(); ++i)
+    {
+        if (i == index)
+        {
+            sizes[i] = wanted;
+        }
+        else
+        {
+            sizes[i] = (othersTotal > 0) ? ((sizes.at(i) * rest) / othersTotal) : (rest / (sizes.size() - 1));
+        }
+    }
+
+    mDockManager->setSplitterSizes(area, sizes);
 }
 
 void MdiMainWindow::syncDesignWidgets()
@@ -694,6 +807,20 @@ void MdiMainWindow::syncDesignWidgets()
     StateMachine* stateMachine = qobject_cast<StateMachine*>(activeMdiChild());
     SMDesign* design = (stateMachine != nullptr) ? stateMachine->designPageIfBuilt() : nullptr;
     const bool designCurrent = (stateMachine != nullptr) && (design != nullptr) && stateMachine->isDesignPageCurrent();
+
+    // The output window's Validation tab lists EVERY open State Machine, one tree root each, so
+    // the count on the tab is a workspace total and a finding always names its document.
+    QList<StateMachine*> stateMachines;
+    for (QMdiSubWindow* sub : mMdiArea.subWindowList())
+    {
+        StateMachine* doc = (sub != nullptr) ? qobject_cast<StateMachine*>(sub->widget()) : nullptr;
+        if (doc != nullptr)
+        {
+            stateMachines.append(doc);
+        }
+    }
+
+    mOutputDock.setDocuments(stateMachines);
 
     // Let the active Design page's context menu render the correct check marks.
     if (design != nullptr)
@@ -1456,6 +1583,12 @@ void MdiMainWindow::_createMenus()
         setDesignWidgetPlacement(eDesignWidget::Outline, on ? eDesignPlace::InDesign : eDesignPlace::Hidden);
     });
 
+    // Validation findings are a tab of the output window, not a design widget: this entry
+    // brings that tab forward rather than toggling a panel of its own.
+    mViewDesignMenu->addSeparator();
+    mActDsgValidation = mViewDesignMenu->addAction(tr("&Validation Results"));
+    connect(mActDsgValidation, &QAction::triggered, this, [this]() { showValidationOutput(0); });
+
     mViewMenu->addSeparator();
     mViewMenu->addAction(&mActViewOutput);
     mViewMenu->addSeparator();
@@ -1565,7 +1698,13 @@ void MdiMainWindow::_createDockWindows()
     mOutputDockWidget = new ads::CDockWidget(tr("Output"), mDockManager);
     mOutputDockWidget->setObjectName(QStringLiteral("OutputDock"));
     mOutputDockWidget->setWidget(&mOutputDock, ads::CDockWidget::ForceNoScrollArea);
+    mOutputDockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContentMinimumSize);
     mDockManager->addDockWidget(ads::BottomDockWidgetArea, mOutputDockWidget);
+
+    // A dock dragged out and back keeps its floating size, which is far bigger than the strip
+    // it came from; both docks are clamped back to a usable extent on re-docking.
+    watchDockFloating(mNaviDockWidget);
+    watchDockFloating(mOutputDockWidget);
 
     // The editor area starts empty: only Navigation (left) and Output (bottom) surround it. The
     // State Machine drawing toolbar and the Properties/Outline panels are NOT global docks; each

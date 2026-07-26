@@ -26,7 +26,9 @@
 
 #include <QApplication>
 #include <QLabel>
-#include <QListWidget>
+#include <QFontMetrics>
+#include <QHeaderView>
+#include <QTreeWidget>
 #include <QStyle>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -38,29 +40,15 @@ namespace
     //!< The item roles carrying a finding's navigation target (element ID + kind).
     constexpr int RoleElementId{ Qt::UserRole + 1 };
     constexpr int RoleKind     { Qt::UserRole + 2 };
+    constexpr int RoleOwner    { Qt::UserRole + 3 };
 
-    //!< A single severity ladder both engines map onto, ordered worst first for sorting.
-    enum class eSev { Error = 0, Warning = 1, Info = 2 };
+    //!< Table columns: what it is, where it is, what is wrong, and why that is wrong.
+    constexpr int ColumnSeverity{ 0 };
+    constexpr int ColumnWhere   { 1 };
+    constexpr int ColumnMessage { 2 };
+    constexpr int ColumnDetail  { 3 };
 
-    eSev fromEngine(SMIssue::eSeverity severity)
-    {
-        switch (severity)
-        {
-        case SMIssue::eSeverity::Error:     return eSev::Error;
-        case SMIssue::eSeverity::Warning:   return eSev::Warning;
-        default:                            return eSev::Info;
-        }
-    }
-
-    eSev fromGuard(SMGuardValidation::eSeverity severity)
-    {
-        switch (severity)
-        {
-        case SMGuardValidation::eSeverity::Error:   return eSev::Error;
-        case SMGuardValidation::eSeverity::Warning: return eSev::Warning;
-        default:                                    return eSev::Info;
-        }
-    }
+    using eSev = DocIssue::eSeverity;
 
     QString severityWord(eSev severity)
     {
@@ -85,10 +73,65 @@ namespace
     struct Row
     {
         eSev            severity;
-        QString         text;
+        QString         where;      //!< Which element the finding blames.
+        QString         text;       //!< The finding itself.
+        QString         detail;     //!< Why it is a finding, and what resolves it.
         uint32_t        elementId;
         eDocElementKind kind;
     };
+
+    /**
+     * The message names the symbol; this names the RULE, so a row explains itself without a
+     * trip to the spec. Keyed by SMIssue::rule -- 10.1 error numbers plain, 10.2 warnings
+     * offset by SMValidator::WARNING_RULE_BASE.
+     **/
+    QString ruleDetail(int rule, SMIssue::eSeverity severity)
+    {
+        if (rule > SMValidator::WARNING_RULE_BASE)
+        {
+            switch (rule - SMValidator::WARNING_RULE_BASE)
+            {
+            case 1:  return QObject::tr("Nothing in the machine reacts to this declaration. Either use it or remove it.");
+            case 2:  return QObject::tr("The state cannot be reached by any transition, so its behaviour never runs.");
+            case 3:  return QObject::tr("The state has no way out: once entered, the machine stays there.");
+            default: return QObject::tr("Advisory only -- the document still generates.");
+            }
+        }
+
+        switch (rule)
+        {
+        case 1:  return QObject::tr("Every machine level needs exactly one Start state; it marks where execution begins.");
+        case 2:  return QObject::tr("A level may declare only one Start state, otherwise the entry point is ambiguous.");
+        case 3:  return QObject::tr("A Final state is terminal and cannot have outgoing transitions.");
+        case 4:  return QObject::tr("Two entries of the SAME kind share this name. Names are unique per kind -- a trigger, an action and a condition may all be called the same, but two triggers may not.");
+        case 5:  return QObject::tr("Identifiers must be usable in generated code: a letter or underscore first, then letters, digits or underscores.");
+        case 6:  return QObject::tr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind -- an action and a trigger of the same name are different declarations.");
+        case 7:  return QObject::tr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
+        case 8:  return QObject::tr("Every element ID must be unique in the document; a repeat breaks layout and reference tracking.");
+        case 9:  return QObject::tr("Start and Final are pseudo-states: they mark entry and termination and cannot own substates or a submachine.");
+        case 10: return QObject::tr("The argument does not match the parameter it is bound to.");
+        case 11: return QObject::tr("The call passes a different number of arguments than the declaration takes.");
+        case 12: return QObject::tr("A Param reference resolves against the stimulus of its own transition; this stimulus declares no such parameter.");
+        case 13: return QObject::tr("The literal cannot be read as a value of the target type.");
+        case 14: return QObject::tr("The two operands have no common type, so the comparison has no defined result.");
+        case 16: return QObject::tr("The declared type is not in the data-type registry.");
+        case 18: return QObject::tr("A submachine belongs on a composite state; Start and Final cannot carry one.");
+        case 20: return QObject::tr("The condition row is incomplete: an operator needs both operands.");
+        case 21: return QObject::tr("A condition that takes parameters may appear as the LEFT operand only -- the right side must be a plain value.");
+        case 23: return QObject::tr("The value source and the target disagree; pick a source of a compatible kind.");
+        case 24: return QObject::tr("The element refers to itself, directly or through a cycle.");
+        default: return (severity == SMIssue::eSeverity::Error)
+                            ? QObject::tr("The document will not generate until this is resolved.")
+                            : QString();
+        }
+    }
+
+    /**
+     * Names the element a finding blames, so the row says WHERE before it says what. A state
+     * or transition is resolved to its own name; a registry entry keeps its kind label,
+     * because the message already quotes the name that failed to resolve.
+     **/
+    QString whereLabel(const StateMachineData& data, uint32_t elementId, eDocElementKind kind, const QString& fallback);
 
     //!< A short, human-readable label for the owning page of an engine finding.
     QString kindLabel(eDocElementKind kind)
@@ -109,19 +152,59 @@ namespace
         default:                          return QObject::tr("Machine");
         }
     }
+
+    QString whereLabel(const StateMachineData& data, uint32_t elementId, eDocElementKind kind, const QString& fallback)
+    {
+        if (fallback.isEmpty() == false)
+        {
+            return fallback;    // the guard engine already knows its own location string
+        }
+
+        if (elementId != 0)
+        {
+            if (const SMStateEntry* state = data.findStateById(elementId))
+            {
+                return QObject::tr("State '%1'").arg(state->getName());
+            }
+
+            if (const SMTransitionEntry* tr = data.findTransitionById(elementId))
+            {
+                // A transition has no name of its own: it is identified by what it reacts to
+                // and where it leads, which is how it is labelled on the canvas.
+                const SMStateEntry* target = data.findStateById(tr->getToId());
+                const QString stimulus = tr->getStimulus().isEmpty() ? QObject::tr("(initial)") : tr->getStimulus();
+                return (target != nullptr)
+                        ? QObject::tr("Transition %1 -> %2").arg(stimulus, target->getName())
+                        : QObject::tr("Transition %1").arg(stimulus);
+            }
+        }
+
+        return kindLabel(kind);
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Construction
 //////////////////////////////////////////////////////////////////////////
 
-SMValidationPanel::SMValidationPanel(StateMachineModel& model, QWidget* parent /*= nullptr*/)
+SMValidationPanel::SMValidationPanel(QWidget* parent /*= nullptr*/)
     : QWidget           (parent)
-    , mModel            (model)
     , mList             (nullptr)
     , mSummary          (nullptr)
-    , mEngineIssues     ( )
+    , mSources          ( )
     , mRebuildPending   (false)
+    , mPending          (0)
+{
+    buildUi();
+}
+
+SMValidationPanel::SMValidationPanel(StateMachineModel& model, QWidget* parent /*= nullptr*/)
+    : SMValidationPanel (parent)
+{
+    addDocument(model, QString());
+}
+
+void SMValidationPanel::buildUi()
 {
     setObjectName(QStringLiteral("smValidation"));
 
@@ -133,27 +216,121 @@ SMValidationPanel::SMValidationPanel(StateMachineModel& model, QWidget* parent /
     mSummary->setObjectName(QStringLiteral("smValidationSummary"));
     outer->addWidget(mSummary);
 
-    mList = new QListWidget(this);
+    mList = new QTreeWidget(this);
     mList->setObjectName(QStringLiteral("smValidationList"));
     mList->setAlternatingRowColors(true);
+    mList->setRootIsDecorated(false);
+    mList->setUniformRowHeights(true);
+    mList->setAllColumnsShowFocus(true);
+    mList->setColumnCount(4);
+    mList->setHeaderLabels({ tr("Severity"), tr("Element"), tr("Problem"), tr("Details") });
+
+    // A build-style diagnostic list is scanned, not read: one point smaller than the UI font
+    // and a tight row height fit noticeably more findings in the same output strip.
+    QFont listFont = mList->font();
+    listFont.setPointSizeF(std::max(listFont.pointSizeF() - 1.0, 7.0));
+    mList->setFont(listFont);
+    const int rowHeight = QFontMetrics(listFont).height() + 2;
+    mList->setIconSize(QSize(rowHeight - 4, rowHeight - 4));
+    mList->setStyleSheet(QStringLiteral("QTreeView::item { padding: 0px; margin: 0px; }"));
+    if (mList->header() != nullptr)
+    {
+        mList->header()->setFont(listFont);
+        mList->header()->setStretchLastSection(true);
+        mList->header()->setSectionResizeMode(ColumnSeverity, QHeaderView::ResizeToContents);
+        mList->header()->setSectionResizeMode(ColumnWhere, QHeaderView::Interactive);
+        mList->header()->setSectionResizeMode(ColumnMessage, QHeaderView::Interactive);
+    }
+
     outer->addWidget(mList);
 
-    connect(mList, &QListWidget::itemActivated, this, &SMValidationPanel::onItemActivated);
-    connect(mList, &QListWidget::itemDoubleClicked, this, &SMValidationPanel::onItemActivated);
+    connect(mList, &QTreeWidget::itemActivated, this, &SMValidationPanel::onItemActivated);
+    connect(mList, &QTreeWidget::itemDoubleClicked, this, &SMValidationPanel::onItemActivated);
 
-    // The engine runs in the facade's controller; the panel is a consumer of its findings, and
-    // rebuilds on both engine updates and guard-affecting model changes.
-    SMValidationController& controller = mModel.getValidationController();
-    connect(&controller, &SMValidationController::validationUpdated, this, &SMValidationPanel::onEngineIssues);
+    // A tree of documents: the roots carry the document names, so only the leaves indent.
+    mList->setRootIsDecorated(true);
+}
 
-    DocModelNotifier& notifier = mModel.getNotifier();
-    connect(&notifier, &DocModelNotifier::elementChanged, this, &SMValidationPanel::onModelChanged);
-    connect(&notifier, &DocModelNotifier::elementRemoved, this, &SMValidationPanel::onModelChanged);
-    connect(&notifier, &DocModelNotifier::documentReloaded, this, &SMValidationPanel::onModelChanged);
+int SMValidationPanel::indexOf(const StateMachineModel* model) const
+{
+    for (int i = 0; i < mSources.size(); ++i)
+    {
+        if (mSources.at(i).model == model)
+        {
+            return i;
+        }
+    }
 
-    controller.validateNow();       // seed mEngineIssues (and schedule the first rebuild).
-    mEngineIssues = controller.issues();
+    return -1;
+}
+
+void SMValidationPanel::addDocument(StateMachineModel& model, const QString& name, QObject* owner /*= nullptr*/)
+{
+    const int existing = indexOf(&model);
+    if (existing >= 0)
+    {
+        mSources[existing].name  = name;
+        mSources[existing].owner = owner;
+        scheduleRebuild();
+        return;
+    }
+
+    Source source;
+    source.model = &model;
+    source.owner = owner;
+    source.name  = name;
+
+    // Each document drives its own root: its controller publishes findings, and guard-affecting
+    // edits schedule a rebuild. The connections are kept so the root can be dropped cleanly.
+    SMValidationController& controller = model.getValidationController();
+    source.bindings.append(connect(&controller, &SMValidationController::validationUpdated, this
+                                  , [this, &model](const QList<SMIssue>& issues)
+    {
+        const int index = indexOf(&model);
+        if (index >= 0)
+        {
+            mSources[index].issues = issues;
+            scheduleRebuild();
+        }
+    }));
+
+    DocModelNotifier& notifier = model.getNotifier();
+    const auto onChanged = [this]() { scheduleRebuild(); };
+    source.bindings.append(connect(&notifier, &DocModelNotifier::elementChanged, this, onChanged));
+    source.bindings.append(connect(&notifier, &DocModelNotifier::elementRemoved, this, onChanged));
+    source.bindings.append(connect(&notifier, &DocModelNotifier::documentReloaded, this, onChanged));
+
+    controller.validateNow();
+    source.issues = controller.issues();
+    mSources.append(source);
     rebuild();
+}
+
+void SMValidationPanel::removeDocument(StateMachineModel& model)
+{
+    const int index = indexOf(&model);
+    if (index < 0)
+    {
+        return;
+    }
+
+    for (const QMetaObject::Connection& binding : mSources.at(index).bindings)
+    {
+        disconnect(binding);
+    }
+
+    mSources.removeAt(index);
+    rebuild();
+}
+
+int SMValidationPanel::documentCount() const
+{
+    return static_cast<int>(mSources.size());
+}
+
+int SMValidationPanel::pendingCount() const
+{
+    return mPending;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -162,7 +339,11 @@ SMValidationPanel::SMValidationPanel(StateMachineModel& model, QWidget* parent /
 
 void SMValidationPanel::refreshNow()
 {
-    mEngineIssues = mModel.getValidationController().issues();
+    for (Source& source : mSources)
+    {
+        source.issues = source.model->getValidationController().issues();
+    }
+
     rebuild();
 }
 
@@ -178,44 +359,55 @@ void SMValidationPanel::focusPreviousIssue()
 
 void SMValidationPanel::step(int delta)
 {
-    const int count = mList->count();
+    // F8 steps findings, not document roots, so it walks the leaves across every document in
+    // tree order -- a root is a heading and can never be a destination.
+    QList<QTreeWidgetItem*> leaves;
+    for (int i = 0; i < mList->topLevelItemCount(); ++i)
+    {
+        QTreeWidgetItem* top = mList->topLevelItem(i);
+        if (top->childCount() == 0)
+        {
+            leaves.append(top);     // flattened single-document tree
+            continue;
+        }
+
+        for (int j = 0; j < top->childCount(); ++j)
+        {
+            leaves.append(top->child(j));
+        }
+    }
+
+    const int count = static_cast<int>(leaves.size());
     if (count == 0)
     {
         return;
     }
 
-    const int current = mList->currentRow();
+    const int current = static_cast<int>(leaves.indexOf(mList->currentItem()));
     const int next = (current < 0)
                         ? (delta > 0 ? 0 : count - 1)
                         : (((current + delta) % count) + count) % count;
-    mList->setCurrentRow(next);
-    onItemActivated(mList->item(next));
+    mList->setCurrentItem(leaves.at(next));
+    onItemActivated(leaves.at(next), ColumnSeverity);
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Update slots
 //////////////////////////////////////////////////////////////////////////
 
-void SMValidationPanel::onEngineIssues(const QList<SMIssue>& issues)
+void SMValidationPanel::onItemActivated(QTreeWidgetItem* item, int /*column*/)
 {
-    mEngineIssues = issues;
-    scheduleRebuild();
-}
-
-void SMValidationPanel::onModelChanged()
-{
-    scheduleRebuild();
-}
-
-void SMValidationPanel::onItemActivated(QListWidgetItem* item)
-{
-    if (item == nullptr)
+    // A document root carries no element; expanding it is the only sensible response.
+    if ((item == nullptr) || (item->parent() == nullptr))
     {
         return;
     }
 
-    const uint32_t elementId = item->data(RoleElementId).toUInt();
-    const eDocElementKind kind = static_cast<eDocElementKind>(item->data(RoleKind).toInt());
+    const uint32_t elementId = item->data(ColumnSeverity, RoleElementId).toUInt();
+    const eDocElementKind kind = static_cast<eDocElementKind>(item->data(ColumnSeverity, RoleKind).toInt());
+    QObject* owner = item->data(ColumnSeverity, RoleOwner).value<QObject*>();
+
+    emit navigateRequestedIn(owner, elementId, kind);
     emit navigateRequested(elementId, kind);
 }
 
@@ -241,59 +433,102 @@ void SMValidationPanel::scheduleRebuild()
 
 void SMValidationPanel::rebuild()
 {
-    QList<Row> rows;
-
-    for (const SMIssue& issue : mEngineIssues)
-    {
-        Row row;
-        row.severity  = fromEngine(issue.severity);
-        row.text      = QStringLiteral("%1: %2").arg(kindLabel(issue.kind), issue.message);
-        row.elementId = issue.elementId;
-        row.kind      = issue.kind;
-        rows.append(row);
-    }
-
-    for (const SMGuardValidation::Finding& finding : SMGuardValidation::validate(mModel.getData()))
-    {
-        Row row;
-        row.severity  = fromGuard(finding.severity);
-        row.text      = QStringLiteral("%1: %2").arg(finding.location, finding.message);
-        row.elementId = finding.transitionId;
-        row.kind      = eDocElementKind::Transition;
-        rows.append(row);
-    }
-
-    // Worst first; equal severities keep their discovery order (document order for the engine).
-    std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b)
-    {
-        return static_cast<int>(a.severity) < static_cast<int>(b.severity);
-    });
-
     mList->clear();
+
     int errors = 0, warnings = 0, infos = 0;
-    for (const Row& row : rows)
+    const bool single = (mSources.size() == 1);
+
+    for (const Source& source : mSources)
     {
-        switch (row.severity)
+        // One list from one engine. The guard and mapping checks are part of that run now, so
+        // this view no longer knows which checker produced a row, or what a rule number means.
+        const StateMachineData& data = source.model->getData();
+        QList<Row> rows;
+        for (const SMIssue& issue : source.issues)
         {
-        case eSev::Error:   ++errors;   break;
-        case eSev::Warning: ++warnings; break;
-        default:            ++infos;    break;
+            Row row;
+            row.severity  = issue.severity;
+            row.where     = whereLabel(data, issue.elementId, issue.kind, issue.location);
+            row.text      = issue.message;
+            row.detail    = issue.detail.isEmpty() ? ruleDetail(issue.rule, issue.severity) : issue.detail;
+            row.elementId = issue.elementId;
+            row.kind      = issue.kind;
+            rows.append(row);
         }
 
-        QListWidgetItem* item = new QListWidgetItem(severityIcon(row.severity),
-                                                    QStringLiteral("%1  %2").arg(severityWord(row.severity), row.text));
-        item->setData(RoleElementId, row.elementId);
-        item->setData(RoleKind, static_cast<int>(row.kind));
-        item->setToolTip(row.text);
-        mList->addItem(item);
+        // Worst first within a document; equal severities keep their discovery order (document
+        // order for the engine). The shared ladder ranks Error highest so a worst-of is a max,
+        // hence the descending compare.
+        std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b)
+        {
+            return static_cast<int>(a.severity) > static_cast<int>(b.severity);
+        });
+
+        int docErrors = 0, docWarnings = 0;
+        for (const Row& row : rows)
+        {
+            switch (row.severity)
+            {
+            case eSev::Error:   ++docErrors;   break;
+            case eSev::Warning: ++docWarnings; break;
+            default:            ++infos;       break;
+            }
+        }
+
+        errors   += docErrors;
+        warnings += docWarnings;
+
+        // With one document open the root would be a lone parent over every row, so the tree is
+        // flattened to the rows themselves; the moment a second document appears, roots name them.
+        QTreeWidgetItem* root = nullptr;
+        if (single == false)
+        {
+            root = new QTreeWidgetItem(mList);
+            const QString name = source.name.isEmpty() ? tr("Untitled") : source.name;
+            const int pending = docErrors + docWarnings;
+            root->setFirstColumnSpanned(true);
+            root->setText(ColumnSeverity, (pending > 0) ? tr("%1 (%2)").arg(name).arg(pending) : name);
+            root->setExpanded(true);
+        }
+
+        for (const Row& row : rows)
+        {
+            QTreeWidgetItem* item = (root != nullptr) ? new QTreeWidgetItem(root) : new QTreeWidgetItem(mList);
+            item->setIcon(ColumnSeverity, severityIcon(row.severity));
+            item->setText(ColumnSeverity, severityWord(row.severity));
+            item->setText(ColumnWhere, row.where);
+            item->setText(ColumnMessage, row.text);
+            item->setText(ColumnDetail, row.detail);
+            item->setData(ColumnSeverity, RoleElementId, row.elementId);
+            item->setData(ColumnSeverity, RoleKind, static_cast<int>(row.kind));
+            item->setData(ColumnSeverity, RoleOwner, QVariant::fromValue(source.owner));
+
+            // The columns elide; the tooltip carries the finding whole, wherever the pointer is.
+            const QString whole = QStringLiteral("%1  %2\n%3").arg(row.where, row.text, row.detail);
+            for (int column = ColumnSeverity; column <= ColumnDetail; ++column)
+            {
+                item->setToolTip(column, whole);
+            }
+        }
     }
 
-    if (rows.isEmpty())
+    mList->resizeColumnToContents(ColumnWhere);
+    mList->resizeColumnToContents(ColumnMessage);
+
+    if ((errors + warnings + infos) == 0)
     {
         mSummary->setText(tr("No issues."));
     }
     else
     {
         mSummary->setText(tr("%1 error(s), %2 warning(s), %3 info").arg(errors).arg(warnings).arg(infos));
+    }
+
+    // Advisory notes are excluded on purpose: the tab badge must mean "something is wrong".
+    const int pending = errors + warnings;
+    if (pending != mPending)
+    {
+        mPending = pending;
+        emit pendingCountChanged(mPending);
     }
 }

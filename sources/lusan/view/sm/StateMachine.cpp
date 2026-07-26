@@ -338,6 +338,19 @@ void StateMachine::navigateToDefinition(SMReferences::eTarget kind, uint32_t dec
     }
 }
 
+void StateMachine::navigateToIssue(uint32_t elementId, eDocElementKind kind)
+{
+    const int pageIndex = static_cast<int>(PageDesign);
+    ensureTabInitialized(pageIndex);
+    mTabWidget.setCurrentIndex(pageIndex);
+
+    SMDesign* design = designPageIfBuilt();
+    if (design != nullptr)
+    {
+        design->navigateToIssue(elementId, kind);
+    }
+}
+
 void StateMachine::setToolbarVisible(bool visible)
 {
     mToolbarVisible = visible;
@@ -680,6 +693,13 @@ void StateMachine::ensureTabInitialized(int index)
             {
                 mMainWindow->setDesignWidgetPlacement(static_cast<MdiMainWindow::eDesignWidget>(widget)
                                                     , static_cast<MdiMainWindow::eDesignPlace>(place));
+            }
+        });
+        // The findings list is a tab of the shared output window, so the page can only ask for it.
+        connect(design, &SMDesign::signalShowValidation, this, [this](int step) {
+            if (mMainWindow != nullptr)
+            {
+                mMainWindow->showValidationOutput(step);
             }
         });
         page = design;

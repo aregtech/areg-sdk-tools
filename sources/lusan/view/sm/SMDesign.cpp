@@ -43,7 +43,6 @@
 #include "lusan/view/sm/SMOperationsDialog.hpp"
 #include "lusan/view/sm/SMOutlinePanel.hpp"
 #include "lusan/view/sm/SMPropertiesPanel.hpp"
-#include "lusan/view/sm/SMValidationPanel.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
 #include "lusan/view/sm/SMToolIcons.hpp"
 #include "lusan/view/sm/SMWhereUsedMenu.hpp"
@@ -205,10 +204,8 @@ SMDesign::SMDesign(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mToolBar      (nullptr)
     , mPropertiesDock(nullptr)
     , mOutlineDock  (nullptr)
-    , mValidationDock(nullptr)
     , mProperties   (nullptr)
     , mOutline      (nullptr)
-    , mValidation   (nullptr)
     , mActZoomIn    (nullptr)
     , mActZoomOut   (nullptr)
     , mActZoomReset (nullptr)
@@ -438,6 +435,15 @@ SMDesign::~SMDesign()
 
 bool SMDesign::eventFilter(QObject* watched, QEvent* event)
 {
+    if ((event->type() == QEvent::Close) && ((watched == mPropertiesDock) || (watched == mOutlineDock)))
+    {
+        // The dock's own close button hides the widget but knows nothing about the placement the
+        // main window persists and re-applies on every activation -- without this the panel came
+        // back on the next repaint. Route the close through the same channel as the View menus.
+        const int widget = (watched == mPropertiesDock) ? 1 : 2;
+        emit signalPlaceDesignWidget(widget, 0);
+    }
+
     if (watched == mSearchEdit)
     {
         // Esc abandons the search and hands focus back to the canvas.
@@ -500,6 +506,11 @@ bool SMDesign::eventFilter(QObject* watched, QEvent* event)
     }
 
     return QMainWindow::eventFilter(watched, event);
+}
+
+QMenu* SMDesign::createPopupMenu(void)
+{
+    return nullptr;
 }
 
 QAction* SMDesign::matchAction(const QKeyEvent& event) const
@@ -978,6 +989,10 @@ void SMDesign::buildDesignPanels()
     mPropertiesDock = new QDockWidget(tr("Properties"), this);
     mPropertiesDock->setObjectName(QStringLiteral("SMPropertiesDock"));
     mPropertiesDock->setWidget(mProperties);
+    // Left or right only: both panels are tall lists of fields, and a top/bottom strip of the
+    // canvas cannot hold one at a usable height.
+    mPropertiesDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    mPropertiesDock->installEventFilter(this);
     addDockWidget(Qt::RightDockWidgetArea, mPropertiesDock);
 
     mOutline = new SMOutlinePanel(mModel, *mSceneManager);
@@ -991,26 +1006,19 @@ void SMDesign::buildDesignPanels()
     mOutlineDock = new QDockWidget(tr("Outline"), this);
     mOutlineDock->setObjectName(QStringLiteral("SMOutlineDock"));
     mOutlineDock->setWidget(mOutline);
+    mOutlineDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    mOutlineDock->installEventFilter(this);
     addDockWidget(Qt::RightDockWidgetArea, mOutlineDock);
 
     splitDockWidget(mPropertiesDock, mOutlineDock, Qt::Vertical);
 
-    // Validation results: a bottom dock, hidden until the user opens it; a finding navigates
-    // to the offending element (canvas selection, or a page switch for a registry entry).
-    mValidation = new SMValidationPanel(mModel);
-    mValidationDock = new QDockWidget(tr("Validation"), this);
-    mValidationDock->setObjectName(QStringLiteral("SMValidationDock"));
-    mValidationDock->setWidget(mValidation);
-    addDockWidget(Qt::BottomDockWidgetArea, mValidationDock);
-    mValidationDock->hide();
-    connect(mValidation, &SMValidationPanel::navigateRequested, this, &SMDesign::navigateToIssue);
-
-    // F8 / Shift+F8 step through the findings (spec 9.1); they are window shortcuts so they
-    // work whether or not the validation dock currently holds keyboard focus.
+    // F8 / Shift+F8 step through the findings (spec 9.1). The findings themselves live in the
+    // output window's Validation tab, so the page asks for it and the window brings it forward
+    // -- otherwise the canvas jumps to a finding with nothing on screen saying why.
     QShortcut* nextIssue = new QShortcut(QKeySequence(Qt::Key_F8), this);
     QShortcut* prevIssue = new QShortcut(QKeySequence(Qt::SHIFT | Qt::Key_F8), this);
-    connect(nextIssue, &QShortcut::activated, this, [this]() { mValidation->focusNextIssue(); });
-    connect(prevIssue, &QShortcut::activated, this, [this]() { mValidation->focusPreviousIssue(); });
+    connect(nextIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(1); });
+    connect(prevIssue, &QShortcut::activated, this, [this]() { emit signalShowValidation(-1); });
 }
 
 QList<SMDesign::ToolGroup> SMDesign::toolGroups() const
@@ -1298,15 +1306,17 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
 
     const auto addPair = [this, viewMenu](const QString& designText, const QString& naviText, int widget, int place)
     {
+        // Unchecking the current home hides the widget, matching the View menu; without it the
+        // context menu could only move a widget between its two homes, never put it away.
         QAction* inDesign = viewMenu->addAction(designText);
         inDesign->setCheckable(true);
         inDesign->setChecked(place == 1);
-        connect(inDesign, &QAction::triggered, this, [this, widget]() { emit signalPlaceDesignWidget(widget, 1); });
+        connect(inDesign, &QAction::triggered, this, [this, widget](bool on) { emit signalPlaceDesignWidget(widget, on ? 1 : 0); });
 
         QAction* inNavi = viewMenu->addAction(naviText);
         inNavi->setCheckable(true);
         inNavi->setChecked(place == 2);
-        connect(inNavi, &QAction::triggered, this, [this, widget]() { emit signalPlaceDesignWidget(widget, 2); });
+        connect(inNavi, &QAction::triggered, this, [this, widget](bool on) { emit signalPlaceDesignWidget(widget, on ? 2 : 0); });
     };
 
     addPair(tr("Show Toolbar in Design"), tr("Show Toolbar in Navigation"), 0, mPlaceToolbar);
@@ -1315,21 +1325,9 @@ void SMDesign::onViewContextMenuRequested(const QPoint& pos)
     viewMenu->addSeparator();
     addPair(tr("Show Outline in Design"), tr("Show Outline in Navigation"), 2, mPlaceOutline);
 
-    if (mValidationDock != nullptr)
-    {
-        viewMenu->addSeparator();
-        QAction* showValidation = viewMenu->addAction(tr("Show Validation Results"));
-        showValidation->setCheckable(true);
-        showValidation->setChecked(mValidationDock->isVisible());
-        connect(showValidation, &QAction::triggered, this, [this](bool checked)
-        {
-            mValidationDock->setVisible(checked);
-            if (checked && (mValidation != nullptr))
-            {
-                mValidation->refreshNow();
-            }
-        });
-    }
+    viewMenu->addSeparator();
+    connect(viewMenu->addAction(tr("Show Validation Results")), &QAction::triggered
+          , this, [this]() { emit signalShowValidation(0); });
 
     // Refresh the shared actions' enabled state against the (possibly just changed) selection
     // and current level so entries like Add Transition / Add Internal Transition open correctly

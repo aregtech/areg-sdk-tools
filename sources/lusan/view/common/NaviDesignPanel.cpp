@@ -36,6 +36,7 @@ NaviDesignPanel::NaviDesignPanel(NaviDesignPanel::eKind kind, MdiMainWindow* wnd
     , mLayout   (nullptr)
     , mContent  (nullptr)
     , mBound    ( )
+    , mEmpty    (true)
 {
     mLayout = new QVBoxLayout(this);
     mLayout->setContentsMargins(0, 0, 0, 0);
@@ -47,7 +48,11 @@ NaviDesignPanel::NaviDesignPanel(NaviDesignPanel::eKind kind, MdiMainWindow* wnd
 
 void NaviDesignPanel::bindDesign(SMDesign* design)
 {
-    if ((design == mBound.data()) && (mContent != nullptr))
+    // mBound is a guarded pointer: it reads nullptr once the page is gone, so "same page" alone
+    // would keep a panel that is still bound to the destroyed page's model. The empty flag is
+    // what tells an unbound host from one that merely lost its page.
+    const bool unchanged = (design != nullptr) ? ((design == mBound.data()) && (mEmpty == false)) : mEmpty;
+    if (unchanged && (mContent != nullptr))
     {
         // Already reflecting this Design page (or the same empty state); the hosted panel
         // tracks selection/model changes on its own, so there is nothing to rebuild.
@@ -64,6 +69,7 @@ void NaviDesignPanel::bindDesign(SMDesign* design)
         return;
     }
 
+    mEmpty = false;
     if (mKind == NaviDesignPanel::eKind::Properties)
     {
         mContent = new SMPropertiesPanel(design->getModel(), this);
@@ -90,6 +96,7 @@ void NaviDesignPanel::bindDesign(SMDesign* design)
 
 void NaviDesignPanel::showPlaceholder()
 {
+    mEmpty = true;
     QLabel* placeholder = new QLabel(tr("Open a State Machine Design page to use this panel."), this);
     placeholder->setAlignment(Qt::AlignCenter);
     placeholder->setWordWrap(true);

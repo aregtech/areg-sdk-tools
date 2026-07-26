@@ -941,10 +941,10 @@ void SMStateItem::updateFromModel()
     // An entry/exit action whose arguments are not fully mapped warns in the header, so a method
     // edit that breaks a mapping is visible on the canvas without opening the Properties panel.
     mActionSeverity = -1;
-    const SMOperationValidation::eSeverity opSeverity = SMOperationValidation::stateSeverity(data, getElementId());
-    if (opSeverity != SMOperationValidation::eSeverity::Ok)
+    DocIssue::eSeverity opSeverity = DocIssue::eSeverity::Info;
+    if (SMOperationValidation::worstForState(data, getElementId(), opSeverity))
     {
-        mActionSeverity = static_cast<int>((opSeverity == SMOperationValidation::eSeverity::Error)
+        mActionSeverity = static_cast<int>((opSeverity == DocIssue::eSeverity::Error)
                                            ? NEGuardStyle::eSeverity::Err
                                            : NEGuardStyle::eSeverity::Warn);
     }

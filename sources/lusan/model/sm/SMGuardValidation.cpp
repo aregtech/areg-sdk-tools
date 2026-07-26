@@ -28,6 +28,8 @@
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
 
+#include <QObject>
+
 namespace
 {
     using eKind     = SMGuardNode::eKind;
@@ -230,6 +232,25 @@ namespace
 //////////////////////////////////////////////////////////////////////////
 // SMGuardValidation
 //////////////////////////////////////////////////////////////////////////
+
+QString SMGuardValidation::describe(SMGuardValidation::eKind kind)
+{
+    switch (kind)
+    {
+    case eKind::Draft:
+        return QObject::tr("The guard text was never committed, so there is no parsed condition to generate. Commit it or clear it.");
+    case eKind::Shadowing:
+        return QObject::tr("A stimulus parameter has the same name as an attribute or constant, and hides it inside this guard. Rename one of them to say which is meant.");
+    case eKind::RawFragment:
+        return QObject::tr("A verbatim C++ fragment is emitted as written and is never parsed or checked. Listed so every unchecked fragment in the document is accounted for.");
+    case eKind::BrokenRef:
+        return QObject::tr("The guard references a declaration that no longer exists or has left its scope. Re-bind the reference or remove it.");
+    case eKind::ParamRebind:
+        return QObject::tr("The stimulus changed, but a parameter of the same name and type exists on the new one, so the reference can be re-bound as it stands.");
+    default:
+        return QString();
+    }
+}
 
 QList<SMGuardValidation::Finding> SMGuardValidation::validate(const StateMachineData& data)
 {

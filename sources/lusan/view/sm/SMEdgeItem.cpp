@@ -331,10 +331,10 @@ void SMEdgeItem::updateFromModel()
     // sees which transitions a method edit broke without opening each Properties panel; the glyph
     // clears the instant every argument is mapped.
     mActionSeverity = -1;
-    const SMOperationValidation::eSeverity opSeverity = SMOperationValidation::transitionSeverity(data, getElementId());
-    if (opSeverity != SMOperationValidation::eSeverity::Ok)
+    DocIssue::eSeverity opSeverity = DocIssue::eSeverity::Info;
+    if (SMOperationValidation::worstForTransition(data, getElementId(), opSeverity))
     {
-        mActionSeverity = static_cast<int>((opSeverity == SMOperationValidation::eSeverity::Error)
+        mActionSeverity = static_cast<int>((opSeverity == DocIssue::eSeverity::Error)
                                            ? NEGuardStyle::eSeverity::Err
                                            : NEGuardStyle::eSeverity::Warn);
     }

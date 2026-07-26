@@ -33,20 +33,25 @@
  * Dependencies
  ************************************************************************/
 class QLabel;
-class QListWidget;
-class QListWidgetItem;
+class QTreeWidget;
+class QTreeWidgetItem;
 class StateMachineModel;
+
+#include <QMetaObject>
 
 /**
  * \class   SMValidationPanel
- * \brief   The document validation results, hosted as a dockable panel of the Design page
- *          (bottom, tabbed with the output window). It renders the headless engine's findings
- *          (\ref SMValidator, via the facade's controller) together with the guard-specific
- *          entries of \ref SMGuardValidation, one live list ordered worst-severity first. Each
- *          row shows a severity icon and a severity word alongside the message (severity is
- *          never conveyed by color alone) and, on activation, asks the Design page to select
- *          the offending element -- switching page or level as needed. F8 / Shift+F8 step
- *          through the findings. The list rebuilds, deferred and coalesced, on every change.
+ * \brief   The validation results of every open document, in the output window's Validation
+ *          tab: one tree root per document, its findings beneath it, so a message always says
+ *          which document it belongs to. Rows come from the one document engine
+ *          (\ref SMValidator, via each document's controller) already carrying severity,
+ *          location and the explanation -- this view sorts and shows them, and knows nothing
+ *          about which check produced a row.
+ *
+ *          Each row shows a severity icon and a severity word beside the message (severity is
+ *          never conveyed by colour alone) and, on activation, asks its own document to reveal
+ *          the offending element. F8 / Shift+F8 step through the findings across all documents.
+ *          The tree rebuilds, deferred and coalesced, on every change.
  **/
 class SMValidationPanel : public QWidget
 {
@@ -56,12 +61,36 @@ class SMValidationPanel : public QWidget
 // Constructor
 //////////////////////////////////////////////////////////////////////////
 public:
+    explicit SMValidationPanel(QWidget* parent = nullptr);
+
+    //!< Convenience for a single-document host (tests): constructs and adds \p model.
     explicit SMValidationPanel(StateMachineModel& model, QWidget* parent = nullptr);
 
 //////////////////////////////////////////////////////////////////////////
 // Attributes and operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    /**
+     * \brief   Shows \p model's findings under a root labelled \p name, and keeps them live.
+     *          Re-adding a model already shown only refreshes its label.
+     * \param   owner   Emitted back with a navigation request so the host can reveal the
+     *                  element in the right document; may be nullptr in a single-document host.
+     **/
+    void addDocument(StateMachineModel& model, const QString& name, QObject* owner = nullptr);
+
+    //!< Drops a document's root and stops tracking it.
+    void removeDocument(StateMachineModel& model);
+
+    //!< The documents currently shown, in tree order.
+    int documentCount() const;
+
+    /**
+     * \brief   How many findings deserve the user's attention right now: errors and warnings
+     *          across every shown document. Advisory notes are excluded on purpose -- the tab
+     *          badge must mean "something is wrong", not "something was said".
+     **/
+    int pendingCount() const;
+
     //!< Rebuilds the list now (tests; the panel otherwise coalesces on model changes).
     void refreshNow();
 
@@ -71,42 +100,64 @@ public:
     //!< Selects and activates the previous finding (Shift+F8), wrapping at the start.
     void focusPreviousIssue();
 
-    //!< The findings list widget (tests).
-    inline QListWidget* list() const;
+    //!< The findings table widget (tests).
+    inline QTreeWidget* list() const;
 
 signals:
     //!< A finding row was activated: navigate to the offending element on the owning page.
     void navigateRequested(uint32_t elementId, eDocElementKind kind);
 
+    /**
+     * \brief   As \ref navigateRequested, naming the document that owns the finding (the
+     *          `owner` passed to \ref addDocument), so a multi-document host reveals it in the
+     *          right window.
+     **/
+    void navigateRequestedIn(QObject* owner, uint32_t elementId, eDocElementKind kind);
+
+    //!< Emitted whenever \ref pendingCount changes, so a tab can show `Validation (5)`.
+    void pendingCountChanged(int count);
+
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
 //////////////////////////////////////////////////////////////////////////
 private slots:
-    void onModelChanged();
-    void onEngineIssues(const QList<SMIssue>& issues);
-    void onItemActivated(QListWidgetItem* item);
+    void onItemActivated(QTreeWidgetItem* item, int column);
 
 private:
+    void buildUi();
     void scheduleRebuild();
     void rebuild();
     void step(int delta);
+
+    //!< One shown document: its facade, display name, live findings, and signal bindings.
+    struct Source
+    {
+        StateMachineModel*  model;
+        QObject*            owner;
+        QString             name;
+        QList<SMIssue>      issues;
+        QList<QMetaObject::Connection> bindings;
+    };
+
+    //!< The index of \p model in mSources, or -1.
+    int indexOf(const StateMachineModel* model) const;
 
 //////////////////////////////////////////////////////////////////////////
 // Member variables
 //////////////////////////////////////////////////////////////////////////
 private:
-    StateMachineModel&  mModel;         //!< The document facade.
-    QListWidget*        mList;          //!< The findings list.
+    QTreeWidget*        mList;          //!< The findings tree (one root per document).
     QLabel*             mSummary;       //!< The one-line count summary (`2 errors, 1 warning`).
-    QList<SMIssue>      mEngineIssues;  //!< The latest structural/reference/type findings.
+    QList<Source>       mSources;       //!< The shown documents, in tree order.
     bool                mRebuildPending;//!< Coalesces deferred rebuilds.
+    int                 mPending;       //!< Last published error+warning count.
 };
 
 //////////////////////////////////////////////////////////////////////////
 // Inline methods
 //////////////////////////////////////////////////////////////////////////
 
-inline QListWidget* SMValidationPanel::list() const
+inline QTreeWidget* SMValidationPanel::list() const
 {
     return mList;
 }

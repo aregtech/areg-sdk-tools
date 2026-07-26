@@ -22,6 +22,8 @@
 /************************************************************************
  * Includes
  ************************************************************************/
+#include "lusan/model/common/DocIssue.hpp"
+
 #include <QList>
 #include <QString>
 #include <cstdint>
@@ -46,15 +48,12 @@ class SMGuardValidation
 {
 public:
     /**
-     * \enum    eSeverity
-     * \brief   The severity of one finding, ordered for worst-of comparisons.
+     * \brief   Guard findings are document findings: one severity ladder for every checker
+     *          (\ref DocIssue), so nothing has to translate between vocabularies.
+     *          Info = the raw-fragment audit / the re-bind notice; Warning = shadowing;
+     *          Error = drafts and broken references.
      **/
-    enum class eSeverity
-    {
-          Info      //!< The raw-fragment audit / the re-bind notice.
-        , Warning   //!< Shadowing.
-        , Error     //!< Drafts and broken references.
-    };
+    using eSeverity = DocIssue::eSeverity;
 
     /**
      * \enum    eKind
@@ -64,9 +63,9 @@ public:
     {
           Draft         //!< The guard is a draft -- generation refuses.
         , Shadowing     //!< A referenced stimulus parameter hides an attribute/constant.
-, RawFragment   //!< One verbatim raw-C++ fragment (the audit).
+        , RawFragment   //!< One verbatim raw-C++ fragment (the audit).
         , BrokenRef     //!< A referenced symbol no longer exists / left the scope.
-, ParamRebind   //!< A stale parameter matches the new stimulus (info).
+        , ParamRebind   //!< A stale parameter matches the new stimulus (info).
     };
 
     /**
@@ -86,6 +85,9 @@ public:
 // Operations
 //////////////////////////////////////////////////////////////////////////
 public:
+    //!< Why a finding of this kind is a finding, and what resolves it (the results list detail).
+    static QString describe(eKind kind);
+
     //!< Every guard finding of the document, in state/transition order.
     static QList<Finding> validate(const StateMachineData& data);
 

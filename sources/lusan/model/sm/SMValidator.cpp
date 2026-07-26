@@ -19,6 +19,9 @@
 
 #include "lusan/model/sm/SMValidator.hpp"
 
+#include "lusan/model/sm/SMGuardValidation.hpp"
+#include "lusan/model/sm/SMOperationValidation.hpp"
+
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
@@ -139,6 +142,7 @@ namespace
 
         // Warning rules (10.2 rules 1-11).
         void checkWarnings(const QList<LevelInfo>& levels);
+        void checkGuards();
 
     private:
         const StateMachineData& mData;
@@ -318,9 +322,20 @@ namespace
             }
         };
 
+        // Methods are unique per KIND, not per name: a trigger, an action and a condition may
+        // all be called `on` -- each becomes a member of a different generated class, so they
+        // can never collide. Two triggers named `on` is the error. Qualifying the name with
+        // its kind expresses exactly that.
         QStringList mNames; QList<uint32_t> mIds;
         for (SMMethodEntry* m : mData.getMethods().getElements())
-            if (m != nullptr) { mNames << m->getName(); mIds << m->getId(); }
+        {
+            if (m != nullptr)
+            {
+                mNames << (QString::fromLatin1(SMMethodEntry::toString(m->getMethodType())) + QLatin1Char(' ') + m->getName());
+                mIds << m->getId();
+            }
+        }
+
         dupWithin(mNames, mIds, eDocElementKind::Method);
 
         QStringList eNames; QList<uint32_t> eIds;
@@ -495,28 +510,36 @@ namespace
         scope.inTransition = true;
         scope.stimKind = tr.getStimulusKind();
         const QString& stim = tr.getStimulus();
-        switch (tr.getStimulusKind())
+
+        // Start is a pseudo-state: its outgoing transition is the initial one, taken as the
+        // machine enters the level, so it needs no stimulus to trigger it. An empty stimulus
+        // there is the normal case, not a missing declaration.
+        const bool initialTransition = (owner.getKind() == SMStateEntry::eStateKind::Start) && stim.isEmpty();
+        if (initialTransition == false)
         {
-        case SMTransitionEntry::eStimulusKind::Trigger:
-        {
-            SMMethodEntry* m = mData.getMethods().findTrigger(stim);
-            if (m == nullptr)
-                add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Trigger '%1' is not declared").arg(stim));
-            scope.stimParams = m;
-            break;
-        }
-        case SMTransitionEntry::eStimulusKind::Event:
-        {
-            SMEventEntry* e = mData.getEvents().findEvent(stim);
-            if (e == nullptr)
-                add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Event '%1' is not declared").arg(stim));
-            scope.stimParams = e;
-            break;
-        }
-        case SMTransitionEntry::eStimulusKind::Timer:
-            if (mData.getTimers().findElement(stim) == nullptr)
-                add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Timer '%1' is not declared").arg(stim));
-            break;
+            switch (tr.getStimulusKind())
+            {
+            case SMTransitionEntry::eStimulusKind::Trigger:
+            {
+                SMMethodEntry* m = mData.getMethods().findTrigger(stim);
+                if (m == nullptr)
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Trigger '%1' is not declared").arg(stim));
+                scope.stimParams = m;
+                break;
+            }
+            case SMTransitionEntry::eStimulusKind::Event:
+            {
+                SMEventEntry* e = mData.getEvents().findEvent(stim);
+                if (e == nullptr)
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Event '%1' is not declared").arg(stim));
+                scope.stimParams = e;
+                break;
+            }
+            case SMTransitionEntry::eStimulusKind::Timer:
+                if (mData.getTimers().findElement(stim) == nullptr)
+                    add(id, eDocElementKind::Transition, eSeverity::Error, 6, vtr("Timer '%1' is not declared").arg(stim));
+                break;
+            }
         }
 
         validateOperations(tr.getOperations(), scope);
@@ -536,10 +559,10 @@ namespace
             case SMOperationBase::eOperation::ActionCall:
             {
                 SMActionCall* call = static_cast<SMActionCall*>(op);
-                SMMethodEntry* action = mData.getMethods().findMethod(call->getAction());
-                if ((action == nullptr) || (action->isAction() == false))
+                SMMethodEntry* action = mData.getMethods().findAction(call->getAction());
+                if (action == nullptr)
                     add(id, eDocElementKind::Operation, eSeverity::Error, 6, vtr("Action '%1' is not declared").arg(call->getAction()));
-                validateArguments(id, eDocElementKind::Operation, (action != nullptr && action->isAction()) ? action : nullptr, call->getArguments(), scope);
+                validateArguments(id, eDocElementKind::Operation, action, call->getArguments(), scope);
                 break;
             }
             case SMOperationBase::eOperation::AttributeSet:
@@ -589,28 +612,15 @@ namespace
         QHash<QString, QString> paramTypes;
         if (target != nullptr)
         {
-            // Every argument must name a declared parameter, and every parameter without a
-            // default must be mapped.
-            QSet<QString> mapped;
-            for (const SMArgumentEntry& arg : args)
-                mapped.insert(arg.getName());
-            QSet<QString> declared;
             for (const MethodParameter& p : target->getElements())
             {
-                declared.insert(p.getName());
                 paramTypes.insert(p.getName(), p.getType());
             }
 
-            for (const SMArgumentEntry& arg : args)
-            {
-                if (declared.contains(arg.getName()) == false)
-                    add(ownerId, kind, eSeverity::Error, 10, vtr("Argument '%1' is not a declared parameter").arg(arg.getName()));
-            }
-            for (const MethodParameter& p : target->getElements())
-            {
-                if ((mapped.contains(p.getName()) == false) && (target->hasDefaultValue(p.getName()) == false))
-                    add(ownerId, kind, eSeverity::Error, 10, vtr("Required parameter '%1' is not mapped").arg(p.getName()));
-            }
+            // Orphan arguments and unmapped required formals are checked in exactly one place,
+            // which the canvas also calls per element -- so an edge glyph and a results row are
+            // always the same verdict.
+            mIssues += SMOperationValidation::argumentIssues(*target, args, ownerId, kind, QString());
         }
 
         for (const SMArgumentEntry& arg : args)
@@ -643,8 +653,8 @@ namespace
             break;
         case eValueSource::Condition:
         {
-            SMMethodEntry* c = mData.getMethods().findMethod(ref);
-            if ((c == nullptr) || (c->isCondition() == false))
+            SMMethodEntry* c = mData.getMethods().findCondition(ref);
+            if (c == nullptr)
                 add(ownerId, kind, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
             else if (valuePosition && c->hasElements())
                 add(ownerId, kind, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
@@ -710,8 +720,8 @@ namespace
             validateOperand(id, leaf->getLhsKind(), leaf->getLhs(), scope, false);
             if (leaf->getLhsKind() == eValueSource::Condition)
             {
-                SMMethodEntry* c = mData.getMethods().findMethod(leaf->getLhs());
-                if ((c != nullptr) && c->isCondition() && c->hasElements())
+                SMMethodEntry* c = mData.getMethods().findCondition(leaf->getLhs());
+                if ((c != nullptr) && c->hasElements())
                     validateArguments(id, eDocElementKind::Condition, c, leaf->getArguments(), scope);
             }
 
@@ -743,8 +753,8 @@ namespace
             break;
         case eValueSource::Condition:
         {
-            SMMethodEntry* c = mData.getMethods().findMethod(ref);
-            if ((c == nullptr) || (c->isCondition() == false))
+            SMMethodEntry* c = mData.getMethods().findCondition(ref);
+            if (c == nullptr)
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 6, vtr("Condition '%1' is not declared").arg(ref));
             else if (isRhs && c->hasElements())
                 add(ownerId, eDocElementKind::Condition, eSeverity::Error, 21, vtr("Parameterized condition '%1' can be used as a left operand only").arg(ref));
@@ -805,8 +815,8 @@ namespace
         }
         case eValueSource::Condition:
         {
-            SMMethodEntry* m = mData.getMethods().findMethod(ref);
-            return ((m != nullptr) && m->isCondition()) ? m->getReturn() : QString();
+            SMMethodEntry* m = mData.getMethods().findCondition(ref);
+            return (m != nullptr) ? m->getReturn() : QString();
         }
         default:
             return QString();
@@ -980,8 +990,28 @@ namespace
             if (d != nullptr) checkIdentifier(d->getId(), eDocElementKind::DataType, d->getName());
 
         checkWarnings(levels);
+        checkGuards();
 
         return mIssues;
+    }
+
+    void Ctx::checkGuards()
+    {
+        // The guard checker owns the grammar, the symbol binding and the raw-fragment audit, so
+        // it stays the place those rules live -- but its findings are the document's findings and
+        // are collected here, not merged by whatever happens to be displaying them.
+        for (const SMGuardValidation::Finding& finding : SMGuardValidation::validate(mData))
+        {
+            SMIssue issue;
+            issue.elementId = finding.transitionId;
+            issue.kind      = eDocElementKind::Transition;
+            issue.severity  = finding.severity;
+            issue.rule      = SMValidator::RULE_GUARD;
+            issue.message   = finding.message;
+            issue.location  = finding.location;
+            issue.detail    = SMGuardValidation::describe(finding.kind);
+            mIssues.append(issue);
+        }
     }
 
     void Ctx::checkWarnings(const QList<LevelInfo>& levels)

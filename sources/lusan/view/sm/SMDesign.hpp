@@ -50,7 +50,6 @@ class SMClipboardContent;
 class SMGraphicsView;
 class SMOutlinePanel;
 class SMPropertiesPanel;
-class SMValidationPanel;
 class SMScene;
 class SMSceneManager;
 class SMStateData;
@@ -132,6 +131,14 @@ public:
     bool isPropertiesVisible() const;
     void setOutlineVisible(bool visible);
     bool isOutlineVisible() const;
+
+    /**
+     * \brief   Reveals a validation finding: a registry entry switches the editor page; a
+     *          state, transition, condition or operation navigates the canvas to its level,
+     *          selects it, and (for transition-owned findings) focuses the Conditions tab.
+     *          Called by the output window's Validation tab, which owns the findings list.
+     **/
+    void navigateToIssue(uint32_t elementId, eDocElementKind kind);
 
     /**
      * \brief   Records where each of the three design widgets (toolbar, Properties, Outline)
@@ -386,6 +393,13 @@ signals:
     void signalPlaceDesignWidget(int widget, int place);
 
     /**
+     * \brief   Asks the owning window to bring the output window's Validation tab forward.
+     *          \p step is 0 to only show it, +1 for the next finding (F8), -1 for the previous
+     *          (Shift+F8). The findings list is global to the window, so the page can only ask.
+     **/
+    void signalShowValidation(int step);
+
+    /**
      * \brief   Emitted when a validation finding on a registry entry is activated; the owning
      *          window switches to that entry's editor page (states/transitions are handled on
      *          the canvas, so those never reach this signal).
@@ -408,6 +422,14 @@ protected:
      *          window-wide shortcuts of other pages cannot swallow them.
      **/
     virtual bool eventFilter(QObject* watched, QEvent* event) override;
+
+public:
+    /**
+     * \brief   Suppresses the stock dock/toolbar right-click list. Hiding a design widget
+     *          through it would bypass the placement the main window persists, so the panel
+     *          would reappear on the next activation. The View menus own these commands.
+     **/
+    virtual QMenu* createPopupMenu(void) override;
 
 //////////////////////////////////////////////////////////////////////////
 // Hidden methods
@@ -667,13 +689,6 @@ private:
      **/
     void focusSearchHit(int index);
 
-    /**
-     * \brief   Reveals a validation finding: a registry entry switches the editor page; a
-     *          state, transition, condition or operation navigates the canvas to its level,
-     *          selects it, and (for transition-owned findings) focuses the Conditions tab.
-     **/
-    void navigateToIssue(uint32_t elementId, eDocElementKind kind);
-
     //!< Navigates the canvas to the given level and selects/centers the canvas element.
     void revealOnCanvas(uint32_t levelId, uint32_t canvasElementId);
 
@@ -752,10 +767,8 @@ private:
     QToolBar*           mToolBar;       //!< The in-page drawing toolbar (movable to the page edges).
     QDockWidget*        mPropertiesDock;//!< The Properties dock (right, top) inside the Design page.
     QDockWidget*        mOutlineDock;   //!< The Outline dock (right, below Properties) inside the Design page.
-    QDockWidget*        mValidationDock;//!< The Validation results dock (bottom) inside the Design page.
     SMPropertiesPanel*  mProperties;    //!< The Properties editor hosted in mPropertiesDock.
     SMOutlinePanel*     mOutline;       //!< The Outline tree hosted in mOutlineDock.
-    SMValidationPanel*  mValidation;    //!< The validation results list hosted in mValidationDock.
     QAction*            mActZoomIn;     //!< Zoom one step in.
     QAction*            mActZoomOut;    //!< Zoom one step out.
     QAction*            mActZoomReset;  //!< Zoom to 100%.

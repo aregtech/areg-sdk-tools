@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/app/NEAppThemes.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -166,10 +166,25 @@ namespace
     //!< Minimal stylesheet used with the system default theme, keeps overview links consistent.
     QString baseStyleSheet()
     {
+        // The dock drop guides need explicit colors here too: their palette fallback paints the
+        // arrow in the icon's own background color, which leaves the guides blank (see the
+        // matching rule in theme-template.qss). The system palette is unknown at build time, so
+        // this uses a fixed accent that reads on both light and dark system themes.
         return QString::fromUtf8(
             "QPushButton#linkDataTypes, QPushButton#linkAttributes, QPushButton#linkMethods,"
             "QPushButton#linkConstants, QPushButton#linkIncludes"
-            "{ background: transparent; border: none; color: palette(link); text-align: left; padding: 2px 4px; }");
+            "{ background: transparent; border: none; color: palette(link); text-align: left; padding: 2px 4px; }"
+            "ads--CDockOverlayCross"
+            "{ qproperty-iconColors: \"Frame=#ff2f6fed Background=#ffffffff Overlay=#ff2f6fed"
+            " Arrow=#ff2f6fed Shadow=#ff000000\"; }"
+            // The dock resize grip is invisible with the stock style; mark it with a seam
+            // line that lights up on hover (see the matching rule in theme-template.qss).
+            "ads--CDockSplitter::handle:horizontal"
+            "{ width: 6px; border-left: 1px solid palette(mid); }"
+            "ads--CDockSplitter::handle:vertical"
+            "{ height: 6px; border-top: 1px solid palette(mid); }"
+            "ads--CDockSplitter::handle:hover"
+            "{ background: #ff2f6fed; }");
     }
 
     const QString& defaultStyleName()

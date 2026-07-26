@@ -22,6 +22,7 @@
 
 #include "lusan/model/sm/SMValidator.hpp"
 #include "lusan/model/sm/SMTypeCompat.hpp"
+#include "lusan/model/sm/SMOperationValidation.hpp"
 
 #include "lusan/data/sm/StateMachineData.hpp"
 #include "lusan/data/sm/SMState.hpp"
@@ -1000,6 +1001,139 @@ namespace
 }
 
 //////////////////////////////////////////////////////////////////////////
+// Pseudo-state and per-kind name space (reported 2026-07-26)
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testPseudoStateAndKindNamespace()
+    {
+        std::printf("- Start pseudo-state and the per-kind method name space\n");
+
+        {   // Negative: Start is a pseudo-state -- its outgoing transition is the initial one,
+            // taken on entering the level, so it needs no stimulus at all.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            doc.getStates().createState("Work", eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, QString(), stateId(doc, "Work"));
+            CHECK(hasRule(SMValidator::validate(doc), 6) == false);
+        }
+        {   // Positive: an ordinary state still has to name a declared stimulus.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
+            start->getTransitions().createTransition(eStim::Trigger, "begin", work->getId());
+            doc.getMethods().createMethod("begin", eMethod::Trigger);
+            work->getTransitions().createTransition(eStim::Trigger, "ghost", stateId(doc, "Idle"));
+            CHECK(hasRule(SMValidator::validate(doc), 6));
+        }
+
+        {   // Negative: a trigger, an action and a condition may all be called `on`. They become
+            // members of different generated classes, so the names can never collide -- and each
+            // must resolve to ITS OWN kind, not to whichever entry happens to be stored first.
+            StateMachineData doc;
+            SMStateEntry* start = addStart(doc);
+            SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Trigger) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Action) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Condition) != nullptr);
+
+            start->getTransitions().createTransition(eStim::Trigger, "on", work->getId());
+            work->getEntryList().addOperation(new SMActionCall(0, "on"));
+
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            CHECK(hasRule(issues, 6) == false);     // neither the trigger nor the action is "undeclared"
+            CHECK(hasRule(issues, 4) == false);     // and three kinds sharing one name is not a duplicate
+        }
+        {   // Positive: two entries of the SAME kind are still a duplicate.
+            StateMachineData doc;
+            addStart(doc);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Action) != nullptr);
+            CHECK(doc.getMethods().createMethod("on", eMethod::Action) == nullptr);
+
+            // The creator refuses the second one, so build the collision the way a hand-edited
+            // document would carry it.
+            SMMethodEntry* clone = new SMMethodEntry(doc.getNextId(), "on", eMethod::Action, &doc.getMethods());
+            doc.getMethods().addElement(clone, false);
+            CHECK(hasRule(SMValidator::validate(doc), 4));
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+// One engine: the canvas query and the document run are the same check
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+    void testUnifiedEngine()
+    {
+        std::printf("- one engine: canvas query and document run agree\n");
+
+        StateMachineData doc;
+        SMStateEntry* start = addStart(doc);
+        SMStateEntry* work = doc.getStates().createState("Work", eKind::Normal);
+        SMMethodEntry* act = doc.getMethods().createMethod("Walk", eMethod::Action);
+        CHECK(act != nullptr);
+        MethodParameter required(act);
+        required.setName("waiting");
+        required.setType("uint32");
+        act->addElement(std::move(required), true);
+
+        SMActionCall* call = new SMActionCall(0, "Walk");
+        work->getEntryList().addOperation(call);
+        const uint32_t stateId = work->getId();
+        start->getTransitions().createTransition(eStim::Trigger, QString(), stateId);
+
+        // The document run reports the unmapped formal WITH a message -- before unification the
+        // canvas knew about this fault and the results list could not say what it was.
+        {
+            const QList<SMIssue> issues = SMValidator::validate(doc);
+            int mappingFindings = 0;
+            for (const SMIssue& issue : issues)
+            {
+                if (issue.rule == SMValidator::RULE_ARGUMENT_MAPPING)
+                {
+                    ++mappingFindings;
+                    CHECK(issue.message.contains("waiting"));
+                    CHECK(issue.detail.isEmpty() == false);
+                }
+            }
+
+            CHECK(mappingFindings == 1);
+        }
+
+        // The canvas asks the SAME check, scoped to one element, and must agree with it.
+        {
+            DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+            CHECK(SMOperationValidation::worstForState(doc, stateId, worst));
+            CHECK(worst == DocIssue::eSeverity::Error);
+        }
+
+        // Mapping the formal clears both at once.
+        call->getArguments().append(SMArgumentEntry(0u, "waiting", eSource::Value, "5"));
+        {
+            DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+            CHECK(SMOperationValidation::worstForState(doc, stateId, worst) == false);
+            CHECK(countRule(SMValidator::validate(doc), SMValidator::RULE_ARGUMENT_MAPPING) == 0);
+        }
+
+        // An orphan argument is a mapping fault on both paths too.
+        call->getArguments().append(SMArgumentEntry(0u, "ghost", eSource::Value, "9"));
+        {
+            DocIssue::eSeverity worst = DocIssue::eSeverity::Info;
+            CHECK(SMOperationValidation::worstForState(doc, stateId, worst));
+            CHECK(countRule(SMValidator::validate(doc), SMValidator::RULE_ARGUMENT_MAPPING) == 1);
+        }
+
+        // Every finding of the one run speaks the one severity ladder, ordered so that a
+        // worst-of is a max -- the property the canvas and the results list both rely on.
+        CHECK(worstOf(DocIssue::eSeverity::Info, DocIssue::eSeverity::Error) == DocIssue::eSeverity::Error);
+        CHECK(worstOf(DocIssue::eSeverity::Warning, DocIssue::eSeverity::Info) == DocIssue::eSeverity::Warning);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 // main
 //////////////////////////////////////////////////////////////////////////
 
@@ -1024,6 +1158,8 @@ int main(int /*argc*/, char* /*argv*/[])
     testTypeRules();
     testWarnings();
     testErrorsDoNotBlock();
+    testPseudoStateAndKindNamespace();
+    testUnifiedEngine();
 
     std::printf("=== %d checks, %d failure(s) ===\n", gChecks, gFailures);
     return (gFailures == 0) ? 0 : 1;

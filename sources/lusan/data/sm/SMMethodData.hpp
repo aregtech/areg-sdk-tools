@@ -11,7 +11,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/sm/SMMethodData.hpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -198,12 +198,34 @@ public:
     SMMethodEntry* findMethod(uint32_t id) const;
 
     /**
+     * \brief   Finds the method of the given name AND kind. A name is unique only per kind:
+     *          a trigger, an action and a condition may all be called `on`, because each
+     *          becomes a member of a different generated class. Looking a name up without
+     *          its kind returns whichever entry happens to come first and reports the other
+     *          kinds as undeclared.
+     * \param   name    The method name to look up.
+     * \param   type    The kind the caller means.
+     * \return  Pointer to the matching method, or nullptr if no method of that kind is named so.
+     **/
+    SMMethodEntry* findMethod(const QString& name, SMMethodEntry::eMethodType type) const;
+
+    /**
      * \brief   Finds a method by name only if it is a Trigger (used by the shared
      *          stimulus name space.
      * \param   name    The trigger name to look up.
      * \return  Pointer to the trigger method, or nullptr if absent or not a trigger.
      **/
     SMMethodEntry* findTrigger(const QString& name) const;
+
+    /**
+     * \brief   Finds a method by name only if it is an Action.
+     **/
+    SMMethodEntry* findAction(const QString& name) const;
+
+    /**
+     * \brief   Finds a method by name only if it is a Condition.
+     **/
+    SMMethodEntry* findCondition(const QString& name) const;
 
     /**
      * \brief   Deletes and removes all methods.

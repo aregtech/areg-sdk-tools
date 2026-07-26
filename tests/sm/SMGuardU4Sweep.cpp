@@ -51,6 +51,8 @@
 #include "lusan/view/sm/SMTryStrip.hpp"
 #include "lusan/view/sm/SMValidationPanel.hpp"
 
+#include <QTreeWidget>
+
 #include <QApplication>
 #include <QComboBox>
 #include "lusan/view/sm/SMAccordion.hpp"
@@ -595,7 +597,7 @@ static void sweepItem21(const QString& docPath, const QString& tmpDir, const QSt
     panel.show();
     panel.refreshNow();
     pump(150);
-    check(panel.list()->count() >= 1, "the validation panel lists the guard findings");
+    check(panel.list()->topLevelItemCount() >= 1, "the validation panel lists the guard findings");
     grab(&panel, grabDir, "u4-validation-panel.png");
     panel.hide();
     bar.hide();

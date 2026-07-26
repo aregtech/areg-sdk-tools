@@ -21,6 +21,8 @@
 
 #include <QMainWindow>
 #include <QAction>
+#include <QHash>
+#include <QSize>
 
 #include "lusan/view/common/MdiArea.hpp"
 #include "lusan/view/common/NaviFileSystem.hpp"
@@ -213,6 +215,34 @@ public:
      *          Called on document / inner-tab activation and after a placement change.
      **/
     void syncDesignWidgets();
+
+    /**
+     * \brief   The active document's Design page, or nullptr unless a State Machine window is
+     *          active and its Design page is already built (it is never force-built for a menu).
+     **/
+    SMDesign* activeDesignPage() const;
+
+    /**
+     * \brief   Opens the output window and brings its Validation tab forward. \p step is 0 to
+     *          only show it, +1 for the next finding (F8), -1 for the previous (Shift+F8).
+     **/
+    void showValidationOutput(int step);
+
+    /**
+     * \brief   Re-applies a sane size to a dock that was just dragged back into the window.
+     *          A floating dock is usually far larger than the strip it occupied, and ADS keeps
+     *          that size on re-docking, so the dock lands taking most of the window. The docked
+     *          extent along the docking axis becomes min(size it had while floating, the
+     *          standard extent for that side); the cross axis takes all the room there is.
+     * \param   dock            The dock that has just been docked.
+     * \param   floatingSize    The size it had while floating.
+     **/
+    void restoreDockedSize(ads::CDockWidget* dock, const QSize& floatingSize);
+
+    /**
+     * \brief   Tracks a dock's floating size so restoreDockedSize() has something to clamp.
+     **/
+    void watchDockFloating(ads::CDockWidget* dock);
 
     /**
      * \brief   Displays the dialog to pen log database files. Loads files and returns the path of the opened database.
@@ -642,6 +672,7 @@ private:
     ads::CDockAreaWidget* mCentralArea; //!< The central dock area (anchor for the design-panel docks).
     ads::CDockWidget*  mNaviDockWidget; //!< The ADS dock hosting the Navigation content.
     ads::CDockWidget*  mOutputDockWidget; //!< The ADS dock hosting the Output content.
+    QHash<ads::CDockWidget*, QSize> mFloatingSizes; //!< Last known floating size per dock.
 
     //!< The Navigation Window host widgets for the movable FSM design widgets (issue #516).
     NaviFsmToolbar*    mNaviToolbar;    //!< Toolbar host (grouped toolbuttons) while placed in nav.
@@ -717,6 +748,7 @@ private:
     QAction*        mActDsgToolbar;     //!< Places the drawing toolbar in the Design page.
     QAction*        mActDsgProperties;  //!< Places the Properties panel in the Design page.
     QAction*        mActDsgOutline;     //!< Places the Outline panel in the Design page.
+    QAction*        mActDsgValidation;  //!< Shows the Design page's Validation results dock.
 
     //!< Actions for Tools sub-menus.
     QAction         mActToolsOptions;

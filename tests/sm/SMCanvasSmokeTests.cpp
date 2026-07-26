@@ -75,6 +75,8 @@
 #include <QScreen>
 #include <QSettings>
 #include <QDockWidget>
+#include <QShortcut>
+#include <QToolBar>
 #include <QStackedWidget>
 #include <QTabWidget>
 #include <QTextEdit>
@@ -2993,6 +2995,121 @@ int main(int argc, char* argv[])
         CHECK(page.getScene().getActiveTool() == NESMDesign::eCanvasTool::Select);
         CHECK(toolView.cursor().shape() == Qt::ArrowCursor);
         CHECK(toolView.viewport()->cursor().shape() == Qt::ArrowCursor);
+    }
+
+    std::printf("sect: issue #546 design panel placement survives a close\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        QDockWidget* propsDock = page.findChild<QDockWidget*>(QStringLiteral("SMPropertiesDock"));
+        QDockWidget* outlineDock = page.findChild<QDockWidget*>(QStringLiteral("SMOutlineDock"));
+        CHECK((propsDock != nullptr) && (outlineDock != nullptr));
+
+        // Left or right only: a panel dropped on the top edge squashed the canvas and had no
+        // usable height of its own.
+        const Qt::DockWidgetAreas sides = Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea;
+        CHECK((propsDock != nullptr) && (propsDock->allowedAreas() == sides));
+        CHECK((outlineDock != nullptr) && (outlineDock->allowedAreas() == sides));
+
+        // The toolbar keeps all four edges.
+        QToolBar* bar = page.findChild<QToolBar*>(QStringLiteral("SMDesignToolBar"));
+        CHECK((bar != nullptr) && (bar->allowedAreas() == Qt::AllToolBarAreas));
+
+        // The dock's own close button must announce the placement change; the main window
+        // persists it and stops re-showing the panel on the next activation.
+        int closedWidget = -1;
+        int closedPlace = -1;
+        QObject::connect(&page, &SMDesign::signalPlaceDesignWidget, [&closedWidget, &closedPlace](int w, int p) {
+            closedWidget = w;
+            closedPlace = p;
+        });
+
+        if (outlineDock != nullptr)
+        {
+            outlineDock->close();
+            QApplication::processEvents();
+        }
+
+        CHECK(closedWidget == 2);       // eDesignWidget::Outline
+        CHECK(closedPlace == 0);        // eDesignPlace::Hidden
+
+        closedWidget = -1;
+        closedPlace = -1;
+        if (propsDock != nullptr)
+        {
+            propsDock->close();
+            QApplication::processEvents();
+        }
+
+        CHECK(closedWidget == 1);       // eDesignWidget::Properties
+        CHECK(closedPlace == 0);
+
+        // The stock dock/toolbar right-click list would hide a widget behind the coordinator's
+        // back, so the page refuses to build one.
+        CHECK(page.createPopupMenu() == nullptr);
+    }
+
+    std::printf("sect: SM-26 verify -- the Validation dock has a way back, and the no-document menu matches\n");
+    {
+        StateMachineModel doc;
+        CHECK(doc.loadFromFile(sourcePath));
+        SMDesign page(doc);
+        page.resize(1400, 900);
+        page.show();
+        QApplication::processEvents();
+
+        // Findings live in the output window's Validation tab, not in a page dock. The page
+        // owns no validation widget at all; F8 / Shift+F8 and the canvas View entry can only
+        // ask the window for it, which is what keeps one findings list for the whole app.
+        CHECK(page.findChild<QDockWidget*>(QStringLiteral("SMValidationDock")) == nullptr);
+        CHECK(page.findChild<QWidget*>(QStringLiteral("smValidation")) == nullptr);
+
+        bool hasNextIssue = false;
+        bool hasPrevIssue = false;
+        for (QShortcut* shortcut : page.findChildren<QShortcut*>())
+        {
+            hasNextIssue = hasNextIssue || (shortcut->key() == QKeySequence(Qt::Key_F8));
+            hasPrevIssue = hasPrevIssue || (shortcut->key() == QKeySequence(Qt::SHIFT | Qt::Key_F8));
+        }
+
+        CHECK(hasNextIssue);
+        CHECK(hasPrevIssue);
+
+        // The Design menu built with no document open is a hand-written copy of toolGroups().
+        // Drift there is invisible in the running app (the two are never on screen together),
+        // so compare titles and labels position by position.
+        const QList<SMDesign::ToolGroup> live = page.toolGroups();
+        const QList<SMDesign::ToolGroup> standIn = SMDesign::placeholderToolGroups(page);
+        CHECK(live.size() == standIn.size());
+        for (int i = 0; (i < live.size()) && (i < standIn.size()); ++i)
+        {
+            if (live.at(i).title != standIn.at(i).title)
+                std::printf("  group %d: '%s' vs '%s'\n", i, live.at(i).title.toUtf8().constData()
+                                                           , standIn.at(i).title.toUtf8().constData());
+            CHECK(live.at(i).title == standIn.at(i).title);
+            CHECK(live.at(i).actions.size() == standIn.at(i).actions.size());
+            for (int j = 0; (j < live.at(i).actions.size()) && (j < standIn.at(i).actions.size()); ++j)
+            {
+                const QString liveText = live.at(i).actions.at(j)->text();
+                const QString standInText = standIn.at(i).actions.at(j)->text();
+                if (liveText != standInText)
+                    std::printf("  %s[%d]: '%s' vs '%s'\n", live.at(i).title.toUtf8().constData(), j
+                                                          , liveText.toUtf8().constData(), standInText.toUtf8().constData());
+                CHECK(liveText == standInText);
+            }
+        }
+
+        // Ctrl+F belongs to the window's Edit > Find. A second, page-local shortcut would make
+        // both ambiguous and neither would fire.
+        for (QShortcut* shortcut : page.findChildren<QShortcut*>())
+        {
+            CHECK(shortcut->key() != QKeySequence(QKeySequence::Find));
+        }
     }
 
     std::printf("Checks: %d, Failures: %d\n", gChecks, gFailures);

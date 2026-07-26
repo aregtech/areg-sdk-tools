@@ -95,6 +95,7 @@ private:
     QVBoxLayout*        mLayout;    //!< The single-child body layout.
     QWidget*            mContent;   //!< The current hosted widget (panel or placeholder).
     QPointer<SMDesign>  mBound;     //!< The currently bound Design page, if any.
+    bool                mEmpty;     //!< True while mContent is the placeholder, not a real panel.
 };
 
 #endif  // LUSAN_VIEW_COMMON_NAVIDESIGNPANEL_HPP

@@ -9,7 +9,7 @@
  *  For detailed licensing terms, please refer to the LICENSE file included
  *  with this distribution or contact us at info[at]areg.tech.
  *
- *  \copyright   © 2023-2026 Aregtech (Artak Avetyan).
+ *  \copyright   (c) 2023-2026 Aregtech (Artak Avetyan).
  *  \file        lusan/data/sm/SMMethodData.cpp
  *  \ingroup     Lusan - GUI Tool for Areg SDK
  *  \author      Artak Avetyan
@@ -427,13 +427,15 @@ void SMMethodData::writeToXml(QXmlStreamWriter& xml) const
 
 SMMethodEntry* SMMethodData::createMethod(const QString& name, SMMethodEntry::eMethodType type)
 {
-    if (findMethod(name) != nullptr)
+    // Unique per kind, not per name: a trigger, an action and a condition may all be called
+    // `on`. The container's own name-uniqueness is therefore too strict and is bypassed.
+    if (findMethod(name, type) != nullptr)
     {
         return nullptr;
     }
 
     SMMethodEntry* entry = new SMMethodEntry(getNextId(), name, type, this);
-    addElement(entry, true);
+    addElement(entry, false);
     return entry;
 }
 
@@ -449,10 +451,34 @@ SMMethodEntry* SMMethodData::findMethod(uint32_t id) const
     return (found != nullptr) ? *found : nullptr;
 }
 
+SMMethodEntry* SMMethodData::findMethod(const QString& name, SMMethodEntry::eMethodType type) const
+{
+    // Scans instead of reusing findMethod(name): the name space is per kind, so the first
+    // entry carrying the name may well be a different kind that happens to share it.
+    for (SMMethodEntry* entry : getElements())
+    {
+        if ((entry != nullptr) && (entry->getMethodType() == type) && (entry->getName() == name))
+        {
+            return entry;
+        }
+    }
+
+    return nullptr;
+}
+
 SMMethodEntry* SMMethodData::findTrigger(const QString& name) const
 {
-    SMMethodEntry* method = findMethod(name);
-    return ((method != nullptr) && method->isTrigger()) ? method : nullptr;
+    return findMethod(name, SMMethodEntry::eMethodType::Trigger);
+}
+
+SMMethodEntry* SMMethodData::findAction(const QString& name) const
+{
+    return findMethod(name, SMMethodEntry::eMethodType::Action);
+}
+
+SMMethodEntry* SMMethodData::findCondition(const QString& name) const
+{
+    return findMethod(name, SMMethodEntry::eMethodType::Condition);
 }
 
 void SMMethodData::removeAll()
