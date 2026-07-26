@@ -1352,7 +1352,7 @@ void SMDesign::openStateOperationsDialog(uint32_t stateId, bool entry)
     }
 
     SMOperationList& list = entry ? state->getEntryList() : state->getExitList();
-    const QString title = (entry ? tr("On Enter -- %1") : tr("On Exit -- %1")).arg(state->getName());
+    const QString title = (entry ? tr("On Enter: %1") : tr("On Exit: %1")).arg(state->getName());
     SMOperationsDialog dialog(mModel, title, stateId, eDocElementKind::State, 0u, state, &list, this);
     dialog.exec();
 }
@@ -1367,7 +1367,7 @@ void SMDesign::openTransitionOperationsDialog(uint32_t transitionId)
 
     const QString stim = transition->getStimulus().isEmpty() ? tr("transition") : transition->getStimulus();
     // The transition is its own Param scope: a transition operation may map stimulus params.
-    SMOperationsDialog dialog(mModel, tr("Operations -- %1").arg(stim), transitionId, eDocElementKind::Transition, transitionId, transition, &transition->getOperations(), this);
+    SMOperationsDialog dialog(mModel, tr("Operations: %1").arg(stim), transitionId, eDocElementKind::Transition, transitionId, transition, &transition->getOperations(), this);
     dialog.exec();
 }
 

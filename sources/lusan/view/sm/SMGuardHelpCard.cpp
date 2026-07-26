@@ -139,14 +139,35 @@ void SMGuardHelpCard::buildUi()
     title->setFont(titleFont);
     outer->addWidget(title);
 
+    // The letters are the ones a committed guard really draws on its chips (NEGuardStyle::ownerGlyph)
+    // -- an attribute and a constant genuinely share `f`, and the description is what tells them
+    // apart. The card used to list `#` and `K` here, which are the catalog's letters: a legend for
+    // badges the user never sees is worse than no legend.
     QGridLayout* uses = new QGridLayout();
     uses->setHorizontalSpacing(16);
-    addUseRow(uses, 0, NEGuardStyle::eOwner::Stimulus, QStringLiteral("a"),  tr("stimulus argument"), QStringLiteral("count"));
-    addUseRow(uses, 1, NEGuardStyle::eOwner::Fsm,      QStringLiteral("#"),  tr("FSM attribute"),     QStringLiteral("IsNightMode"));
-    addUseRow(uses, 2, NEGuardStyle::eOwner::Fsm,      QStringLiteral("K"),  tr("FSM constant"),      QStringLiteral("MIN_WAITING"));
-    addUseRow(uses, 3, NEGuardStyle::eOwner::Handler,  QStringLiteral("h"),  tr("handler condition"), QStringLiteral("HasWaiting()"));
-    addUseRow(uses, 4, NEGuardStyle::eOwner::Fsm,      QStringLiteral("{}"), tr("lambda"),            QStringLiteral("{ ... }"));
+    addUseRow(uses, 0, NEGuardStyle::eOwner::Stimulus, NEGuardStyle::ownerGlyph(NEGuardStyle::eOwner::Stimulus)
+             , tr("stimulus argument"), QStringLiteral("count"));
+    addUseRow(uses, 1, NEGuardStyle::eOwner::Fsm     , NEGuardStyle::ownerGlyph(NEGuardStyle::eOwner::Fsm)
+             , tr("FSM attribute"), QStringLiteral("IsNightMode"));
+    addUseRow(uses, 2, NEGuardStyle::eOwner::Fsm     , NEGuardStyle::ownerGlyph(NEGuardStyle::eOwner::Fsm)
+             , tr("FSM constant"), QStringLiteral("MIN_WAITING"));
+    addUseRow(uses, 3, NEGuardStyle::eOwner::Handler , NEGuardStyle::ownerGlyph(NEGuardStyle::eOwner::Handler)
+             , tr("handler condition"), QStringLiteral("HasWaiting()"));
+    addUseRow(uses, 4, NEGuardStyle::eOwner::Raw     , NEGuardStyle::ownerGlyph(NEGuardStyle::eOwner::Raw)
+             , tr("verbatim C++, never checked"), QStringLiteral("mCounter > 3"));
+    addUseRow(uses, 5, NEGuardStyle::eOwner::Fsm     , QStringLiteral("{}")
+             , tr("lambda"), QStringLiteral("{ ... }"));
     outer->addLayout(uses);
+
+    // The Data catalog keeps its own two letters where a chip can only show one: `f` says "the
+    // machine declares it", `#` and `K` say which. Naming the difference costs one line; leaving
+    // the reader to notice it costs a hunt for a letter that is not in this table.
+    QLabel* catalogNote = new QLabel(tr("The Data catalog narrows f to # attribute / K constant."), content);
+    catalogNote->setWordWrap(true);
+    QFont noteFont = catalogNote->font();
+    noteFont.setItalic(true);
+    catalogNote->setFont(noteFont);
+    outer->addWidget(catalogNote);
 
     QLabel* mapTitle = new QLabel(tr("you write        ->  it runs"), content);
     mapTitle->setStyleSheet(QStringLiteral("font-family: monospace; font-weight: bold;"));
@@ -175,7 +196,7 @@ void SMGuardHelpCard::buildUi()
     addGestureRow(gestures, 2, QStringLiteral("Enter"),       tr("commit the guard"));
     addGestureRow(gestures, 3, QStringLiteral("Esc"),         tr("revert to the committed guard"));
     addGestureRow(gestures, 4, QStringLiteral("Shift+Enter"), tr("insert a line break while writing"));
-    addGestureRow(gestures, 5, tr("click a chip icon"),      tr("reveal what the chip really is"));
+    addGestureRow(gestures, 5, tr("hover a chip"),           tr("what it is, and whether it is sound"));
     addGestureRow(gestures, 6, tr("double-click a chip"),    tr("edit it as plain text"));
     addGestureRow(gestures, 7, QStringLiteral("Alt+1..4"),    tr("jump to a section"));
     outer->addLayout(gestures);

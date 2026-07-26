@@ -33,6 +33,8 @@
 #include <QPolygonF>
 #include <QRectF>
 
+#include <algorithm>
+
 namespace
 {
     /**
@@ -59,6 +61,11 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
     painter.setBrush(Qt::NoBrush);
 
     const double midY = rect.center().y();
+    // The two stimulus marks are drawn inside a centered square scaled by StimulusGlyphScale, so the
+    // one constant resizes both. Square, not the caller's rect: a body row is taller than it is wide,
+    // and a bolt stretched to the row height would tower over the name it belongs to.
+    const double  markSide = std::min(rect.width(), rect.height()) * StimulusGlyphScale;
+    const QRectF  mark{ rect.center().x() - (markSide / 2.0), midY - (markSide / 2.0), markSide, markSide };
     switch (glyph)
     {
     case eGlyph::Entry:
@@ -103,28 +110,17 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
         break;
     }
 
-    case eGlyph::Trigger:
-    {
-        // `( )` -- a facing pair of arcs: a trigger IS a declared method, and this is the one
-        // mark of the family that says "call" rather than "signal". It stays distinct from the
-        // bolt and the clock at row size because it is the only outline-only pair.
-        const double inset = rect.width() * 0.22;
-        const QRectF left { rect.left() + inset - 2.0, midY - 4.5, 5.0, 9.0 };
-        const QRectF right{ rect.right() - inset - 3.0, midY - 4.5, 5.0, 9.0 };
-        painter.drawArc(left , 90 * 16, 180 * 16);
-        painter.drawArc(right, 270 * 16, 180 * 16);
-        break;
-    }
-
     case eGlyph::TimerStart:
     {
-        // Clock face with a play triangle (start).
-        const QRectF face{ rect.center().x() - 4.5, midY - 4.5, 9.0, 9.0 };
+        // Clock face with a play triangle (start). Every measure is a fraction of the face radius,
+        // so the mark keeps its proportions at any StimulusGlyphScale.
+        const double radius = mark.width() * 0.375;
+        const QRectF face{ mark.center().x() - radius, midY - radius, 2.0 * radius, 2.0 * radius };
         painter.drawEllipse(face);
         painter.setBrush(color);
-        painter.drawPolygon(QPolygonF({ QPointF(face.center().x() - 1.5, midY - 2.2)
-                                      , QPointF(face.center().x() + 2.5, midY)
-                                      , QPointF(face.center().x() - 1.5, midY + 2.2) }));
+        painter.drawPolygon(QPolygonF({ QPointF(face.center().x() - (radius * 0.33), midY - (radius * 0.49))
+                                      , QPointF(face.center().x() + (radius * 0.56), midY)
+                                      , QPointF(face.center().x() - (radius * 0.33), midY + (radius * 0.49)) }));
         painter.setBrush(Qt::NoBrush);
         break;
     }
@@ -132,10 +128,12 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
     case eGlyph::TimerStop:
     {
         // Clock face with a stop square.
-        const QRectF face{ rect.center().x() - 4.5, midY - 4.5, 9.0, 9.0 };
+        const double radius = mark.width() * 0.375;
+        const QRectF face{ mark.center().x() - radius, midY - radius, 2.0 * radius, 2.0 * radius };
         painter.drawEllipse(face);
         painter.setBrush(color);
-        painter.drawRect(QRectF(face.center().x() - 1.8, midY - 1.8, 3.6, 3.6));
+        painter.drawRect(QRectF(face.center().x() - (radius * 0.4), midY - (radius * 0.4)
+                              , radius * 0.8, radius * 0.8));
         painter.setBrush(Qt::NoBrush);
         break;
     }
@@ -145,10 +143,10 @@ void SMKindGlyph::paint(QPainter& painter, const QRectF& rect, eGlyph glyph, con
         // A filled lightning bolt -- the same mark as the Events page and the toolbar so "event"
         // reads the same way on every surface. Normalized coordinates (0..1 in the mark rect)
         // trace the bolt, then map onto the rect.
-        const double x = rect.left();
-        const double y = rect.top();
-        const double w = rect.width();
-        const double h = rect.height();
+        const double x = mark.left();
+        const double y = mark.top();
+        const double w = mark.width();
+        const double h = mark.height();
         QPainterPath bolt;
         bolt.moveTo(x + 0.62 * w, y + 0.05 * h);
         bolt.lineTo(x + 0.25 * w, y + 0.55 * h);
@@ -239,10 +237,16 @@ bool SMKindGlyph::isDrawn(eGlyph glyph)
     // spelling of its kind, so the Word style does not replace it.
     switch (glyph)
     {
+    case eGlyph::Trigger:
+        // A trigger carries NO mark, in either style. An event and a timer are marked because they
+        // name where the stimulus COMES FROM, and the two must be told apart; a trigger is the plain
+        // case, with nothing to distinguish it from. The `( )` arcs it used to draw read as an empty
+        // argument list in front of a signature that already ends in one -- `( )on()`.
+        return false;
+
     case eGlyph::Event:
     case eGlyph::TimerStart:
     case eGlyph::TimerStop:
-    case eGlyph::Trigger:
         return (Style == eStyle::Glyph);
     default:
         return true;

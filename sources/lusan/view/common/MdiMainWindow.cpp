@@ -1230,6 +1230,13 @@ StateMachine* MdiMainWindow::createStateMachineView(const QString& filePath /*= 
             QPushButton* restore = recovery.addButton(tr("Restore"), QMessageBox::AcceptRole);
             QPushButton* discard = recovery.addButton(tr("Discard"), QMessageBox::DestructiveRole);
             QPushButton* cancel  = recovery.addButton(QMessageBox::Cancel);
+            // Size it BEFORE showing it. QMessageBox computes its own final size in showEvent and
+            // pins it with setFixedSize -- by then the native window already exists at the default
+            // 100x30 a parented widget starts with, so the platform is handed a geometry its own
+            // fresh min == max forbids and logs "Unable to set geometry 125x38". Harmless (the box
+            // still appears at the right size) and only ever printed by a debug Qt, but it is
+            // console noise on every recovery prompt. Verified: with this call the warning is gone.
+            recovery.adjustSize();
             recovery.exec();
 
             if (recovery.clickedButton() == cancel)

@@ -37,6 +37,7 @@ class QLabel;
 class QPushButton;
 class QTimer;
 class QVBoxLayout;
+class StateMachineData;
 class StateMachineModel;
 
 /**
@@ -95,6 +96,17 @@ private:
 
     //!< Adds one content label; \p monospace selects the code font.
     QLabel* addLine(const QString& text, bool monospace = false);
+
+    //!< Adds the leading `<badge>  --  <noun>` line, in the owner hue.
+    QLabel* addBadgeLine(NEGuardStyle::eOwner owner, const QString& noun);
+
+    /**
+     * \brief   Adds one line per guard finding that is about THIS declaration in THIS transition's
+     *          guard, colored by severity. Nothing is added for a sound element -- silence is the
+     *          "no complaints" state, and a green "ok" line on every hover would train the eye to
+     *          skip the line that matters.
+     **/
+    void addValidationLines(const StateMachineData& data, uint32_t transitionId, uint32_t symbolId);
 
     void placeAt(const QPoint& globalPos);
 

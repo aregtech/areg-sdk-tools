@@ -79,6 +79,13 @@ public:
         uint32_t    transitionId;   //!< The owning transition (navigation target).
         QString     location;       //!< `State : stimulus -> target` (as where-used).
         QString     message;        //!< The human-readable finding text.
+        /**
+         * \brief   The declaration the finding is about, or 0 when it is about the guard as a whole
+         *          (a draft, a raw fragment). It is what lets a surface showing one symbol -- the
+         *          hover card over a chip -- ask "is THIS element sound?" instead of dumping every
+         *          finding of the transition. The results list ignores it.
+         **/
+        uint32_t    symbolId;
     };
 
 //////////////////////////////////////////////////////////////////////////

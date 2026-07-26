@@ -49,8 +49,10 @@
 #include "lusan/view/sm/SMTryStrip.hpp"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QClipboard>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFrame>
@@ -62,6 +64,7 @@
 #include <QPair>
 #include <QPlainTextEdit>
 #include <QSet>
+#include <QSettings>
 #include <QShortcut>
 #include <QStyle>
 #include <QTimer>
@@ -197,6 +200,7 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     , mHelp         (nullptr)
     , mClear        (nullptr)
     , mHelpBtn      (nullptr)
+    , mHintBox      (nullptr)
     , mInsertBtn    (nullptr)
     , mPopoutBtn    (nullptr)
     , mChrome       (nullptr)
@@ -262,7 +266,36 @@ SMGuardBar::SMGuardBar(StateMachineModel& model, QWidget* parent /*= nullptr*/)
     // the Arguments section already shows which formals are unmapped, and the
     // status line already states any error, so both advisory strips were duplicative clutter.
     mStatus = new SMGuardStatusLine(this);
-    mChrome->addBodyWidget(mStatus);
+
+    // `Hints` rides the status row rather than the icon strip because it governs what the surface
+    // says, not what it does, and because the status line is what remains when the hints are off.
+    // The row keeps its own visibility: the status line hides itself on an empty guard, and the
+    // checkbox must survive that.
+    mHintBox = new QCheckBox(tr("Hints"), this);
+    mHintBox->setObjectName(QStringLiteral("smGuardHints"));
+    mHintBox->setToolTip(tr("Explain the editor and its symbols while the pointer rests on them"));
+    QSettings hintSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    mHintBox->setChecked(hintSettings.value(QStringLiteral("sm/guardHints"), true).toBool());
+    mField->setHintsEnabled(mHintBox->isChecked());
+    connect(mHintBox, &QCheckBox::toggled, this, [this](bool on)
+    {
+        mField->setHintsEnabled(on);
+        if (mPopout != nullptr)
+        {
+            mPopout->field()->setHintsEnabled(on);
+        }
+
+        QSettings settings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+        settings.setValue(QStringLiteral("sm/guardHints"), on);
+    });
+
+    QWidget* statusRow = new QWidget(this);
+    QHBoxLayout* statusBox = new QHBoxLayout(statusRow);
+    statusBox->setContentsMargins(0, 0, 0, 0);
+    statusBox->setSpacing(6);
+    statusBox->addWidget(mHintBox);
+    statusBox->addWidget(mStatus, 1);
+    mChrome->addBodyWidget(statusRow);
 
     // The accordion (design 8.1): the Conditions outline lists the defined condition methods
     // (double-click inserts one), the caret's call drives the single Arguments table, and Generated
@@ -605,7 +638,7 @@ void SMGuardBar::runNameIsland(const QList<int>& islandPath, const QString& body
     const SMGuardNode* tree = guardTree();
     if ((tree == nullptr) || (mTransId == 0u))
     {
-        QMessageBox::information(this, tr("Name the lambda"), tr("Commit the guard first -- the island must be part of a resolved guard."));
+        QMessageBox::information(this, tr("Name the lambda"), tr("Commit the guard first. The island has to be part of a resolved guard before it can be named."));
         return;
     }
 
@@ -618,7 +651,7 @@ void SMGuardBar::runNameIsland(const QList<int>& islandPath, const QString& body
     bool accepted = false;
     const QString title = (implement == SMMethodEntry::eImplement::Embedded) ? tr("Name the lambda") : tr("Move to a handler condition");
     const QString name = QInputDialog::getText(this, title
-                                              , tr("Condition name -- %1").arg(hint)
+                                              , tr("Condition name (%1)").arg(hint)
                                               , QLineEdit::Normal, QString(), &accepted).trimmed();
     if ((accepted == false) || name.isEmpty())
     {
@@ -647,7 +680,7 @@ void SMGuardBar::runNameIsland(const QList<int>& islandPath, const QString& body
         const QString stub = handlerStub(data, mTransId, name, body);
         QApplication::clipboard()->setText(stub);
         QMessageBox::information(this, title
-                                , tr("'%1' is now a handler condition -- your handler implements it.\n\n"
+                                , tr("'%1' is now a handler condition, so your handler implements it.\n\n"
                                      "A stub was copied to the clipboard:\n\n%2").arg(name, stub));
     }
 }
@@ -674,7 +707,7 @@ void SMGuardBar::runMoveToHandler(uint32_t methodId)
     const QString stub = handlerStub(data, mTransId, name, body);
     QApplication::clipboard()->setText(stub);
     QMessageBox::information(this, tr("Move to handler")
-                            , tr("'%1' is now a handler condition -- Lusan no longer owns the body.\n\n"
+                            , tr("'%1' is now a handler condition, so Lusan no longer owns the body.\n\n"
                                  "A stub was copied to the clipboard:\n\n%2").arg(name, stub));
 }
 
@@ -944,6 +977,7 @@ void SMGuardBar::openPopout()
 
     SMGuardPopout* popout = new SMGuardPopout(mModel, mTransId, this);
     mPopout = popout;
+    popout->field()->setHintsEnabled(mHintBox->isChecked());   // one preference, both surfaces
 
     // The `Name it...` / `Move to handler...` ladder is bar-owned; run it over the shared model
     // (the island must be committed first so it exists in the tree the path is resolved against).

@@ -432,8 +432,8 @@ QTreeWidgetItem* SMMethod::createMethodNode(SMMethodEntry* method) const
         const bool isLambda = method->isLambdaCondition();
         item->setText(1, isLambda ? tr("{} lambda") : tr("h handler"));
         item->setToolTip(1, isLambda
-                         ? tr("condition -- body written in Lusan, generated as a std::function member")
-                         : tr("condition -- implemented by your handler"));
+                         ? tr("condition with its body written in Lusan, generated as a std::function member")
+                         : tr("condition implemented by your handler"));
     }
 
     const QString reason = nameCollisionReason(method, method->getName(), method->getId());
@@ -597,7 +597,7 @@ void SMMethod::showMethodForm(SMMethodEntry* method)
         const QString call = isEmbedded
                              ? QString::fromLatin1(SMGuardCodegenPreview::LAMBDA_MEMBER_PREFIX) + method->getName() + QStringLiteral("(...)")
                              : QString::fromLatin1(SMGuardCodegenPreview::HANDLER_ACCESSOR) + QLatin1Char('.') + method->getName() + QStringLiteral("(...)");
-        mDetails->ctrlGuardInfo()->setText(tr("%1 -- called as <tt>%2</tt> -- <a href=\"uses:%3\">used by %4 guard%5</a>")
+        mDetails->ctrlGuardInfo()->setText(tr("%1, called as <tt>%2</tt>, <a href=\"uses:%3\">used by %4 guard%5</a>")
                                            .arg(isEmbedded ? QStringLiteral("{} lambda") : QStringLiteral("h handler"))
                                            .arg(call.toHtmlEscaped())
                                            .arg(method->getId())

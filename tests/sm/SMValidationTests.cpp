@@ -28,6 +28,7 @@
 #include "lusan/data/sm/SMState.hpp"
 #include "lusan/data/sm/SMTransition.hpp"
 #include "lusan/data/sm/SMCondition.hpp"
+#include "lusan/data/sm/SMGuardTree.hpp"
 #include "lusan/data/sm/SMOperation.hpp"
 #include "lusan/data/sm/SMMethodData.hpp"
 #include "lusan/data/sm/SMEventData.hpp"
@@ -97,6 +98,17 @@ namespace
     bool hasWarn(const QList<SMIssue>& issues, int warnNumber)
     {
         return countWarn(issues, warnNumber) > 0;
+    }
+
+    //!< True when EVERY finding of 10.2 rule \p warnNumber carries \p severity (vacuously true when
+    //!< the rule produced none). Rule 4 is advisory for data and a warning for behaviour, so the
+    //!< severity is part of the contract and not only the rule number.
+    bool warnSeverityIs(const QList<SMIssue>& issues, int warnNumber, SMIssue::eSeverity severity)
+    {
+        for (const SMIssue& i : issues)
+            if ((i.rule == (SMValidator::WARNING_RULE_BASE + warnNumber)) && (i.severity != severity))
+                return false;
+        return true;
     }
 
     //!< A minimal single-level machine with one Start state, valid on its own.
@@ -877,11 +889,57 @@ namespace
             s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
             CHECK(countWarn(SMValidator::validate(doc), 3) == 0);
         }
-        {   // W4: a declared constant that is never referenced.
+        {   // W4: a declared constant that is never referenced. Data that nothing reads yet is
+            // legitimate at any point in a design, so it is reported as information, never a warning.
             StateMachineData doc;
             addStart(doc);
             doc.getConstants().createConstant("Unused")->setType("int32");
             CHECK(hasWarn(SMValidator::validate(doc), 4));
+            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Info));
+        }
+        {   // W4 severity, the other half: an unused ACTION is behaviour wired to nothing, and stays
+            // a warning. One rule number, two severities, decided by the kind of the declaration.
+            StateMachineData doc;
+            addStart(doc);
+            doc.getMethods().createMethod("orphan", eMethod::Action);
+            CHECK(hasWarn(SMValidator::validate(doc), 4));
+            CHECK(warnSeverityIs(SMValidator::validate(doc), 4, SMIssue::eSeverity::Warning));
+        }
+        {   // Negative W4, the guard path: a canonical guard binds by symbol ID, not by name, so a
+            // usage scan that only walked the legacy condition rows called this attribute unused.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            SMAttributeEntry* power = doc.getAttributes().createAttribute("Power");
+            power->setType("int32");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
+            tr->getGuard().setTree(SMGuardNode::makeCmp(SMGuardNode::eCmpOp::Ne
+                                                       , SMGuardNode::makeRef(SMGuardNode::eKind::Attr, power->getId())
+                                                       , SMGuardNode::makeVerbatim(SMGuardNode::eKind::Lit, "0")));
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
+        }
+        {   // Same for a constant and for a condition method called by the guard.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            ConstantEntry* limit = doc.getConstants().createConstant("Limit");
+            limit->setType("int32");
+            SMMethodEntry* cond = doc.getMethods().createMethod("isReady", eMethod::Condition);
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
+            tr->getGuard().setTree(SMGuardNode::makeCmp(SMGuardNode::eCmpOp::Lt
+                                                       , SMGuardNode::makeCall(cond->getId(), QList<SMGuardNode*>())
+                                                       , SMGuardNode::makeRef(SMGuardNode::eKind::Const, limit->getId())));
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
+        }
+        {   // A scope-qualified guard literal names its enumeration as plainly as a declaration does,
+            // so the type it names is not "never referenced" either.
+            StateMachineData doc;
+            SMStateEntry* s = addStart(doc);
+            doc.getMethods().createMethod("go", eMethod::Trigger);
+            doc.getDataTypes().addEnum("PowerState");
+            SMTransitionEntry* tr = s->getTransitions().createTransition(eStim::Trigger, "go", stateId(doc, "Idle"));
+            tr->getGuard().setTree(SMGuardNode::makeVerbatim(SMGuardNode::eKind::Lit, "PowerState::On"));
+            CHECK(countWarn(SMValidator::validate(doc), 4) == 0);
         }
         {   // Negative W4: the constant is referenced by an AttributeSet.
             StateMachineData doc;

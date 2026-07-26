@@ -26,13 +26,16 @@
 #include "lusan/model/sm/SMGuardCodegenPreview.hpp"
 #include "lusan/model/sm/SMGuardRender.hpp"
 #include "lusan/model/sm/SMGuardSymbols.hpp"
+#include "lusan/model/sm/SMGuardValidation.hpp"
 #include "lusan/model/sm/StateMachineModel.hpp"
 
 #include "lusan/view/sm/NEGuardStyle.hpp"
 
+#include <QFont>
 #include <QFontDatabase>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPalette>
 #include <QPushButton>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -115,7 +118,7 @@ SMHoverCard::SMHoverCard(QWidget* parent /*= nullptr*/)
 // Faces
 //////////////////////////////////////////////////////////////////////////
 
-void SMHoverCard::showSymbol(StateMachineModel& model, uint32_t /*transitionId*/, const SMGuardSymbol& symbol, const QPoint& globalPos)
+void SMHoverCard::showSymbol(StateMachineModel& model, uint32_t transitionId, const SMGuardSymbol& symbol, const QPoint& globalPos)
 {
     clearContent();
     mSymbolId = symbol.symbolId;
@@ -123,19 +126,19 @@ void SMHoverCard::showSymbol(StateMachineModel& model, uint32_t /*transitionId*/
     const StateMachineData& data = model.getData();
     const SMMethodEntry* method = symbol.isCall ? SMGuardSymbols::method(data, symbol.symbolId) : nullptr;
 
-    QString kindLine;
+    QString noun;
     QString declared;
     QString generated;
     switch (symbol.owner)
     {
     case NEGuardStyle::eOwner::Stimulus:
-        kindLine = tr("a  stimulus parameter");
+        noun = tr("stimulus parameter");
         declared = tr("declared: the trigger's payload");
         generated = symbol.name;
         break;
 
     case NEGuardStyle::eOwner::Handler:
-        kindLine = tr("h  condition method");
+        noun = tr("condition method");
         declared = tr("declared: Methods page");
         generated = QString::fromLatin1(SMGuardCodegenPreview::HANDLER_ACCESSOR) + QLatin1Char('.') + symbol.name + QStringLiteral("(...)");
         break;
@@ -144,26 +147,29 @@ void SMHoverCard::showSymbol(StateMachineModel& model, uint32_t /*transitionId*/
     default:
         if ((method != nullptr) && method->isLambdaCondition())
         {
-            kindLine = tr("{} named lambda");
-            declared = tr("declared: Methods page -- body written in Lusan");
+            noun = tr("named lambda");
+            declared = tr("declared on the Methods page, with the body written in Lusan");
             generated = QString::fromLatin1(SMGuardCodegenPreview::LAMBDA_MEMBER_PREFIX) + symbol.name + QStringLiteral("(...)");
         }
         else if (symbol.glyph == QStringLiteral("K"))
         {
-            kindLine = tr("K  FSM constant");
+            noun = tr("FSM constant");
             declared = tr("declared: Constants page");
             generated = QString::fromLatin1(SMGuardCodegenPreview::FSM_DATA_QUALIFIER) + QStringLiteral("::") + symbol.name;
         }
         else
         {
-            kindLine = tr("#  FSM attribute");
+            noun = tr("FSM attribute");
             declared = tr("declared: Attributes page");
             generated = symbol.name + QStringLiteral("()");
         }
         break;
     }
 
-    addLine(kindLine);
+    // The card leads with the badge the user is LOOKING at -- the owner letter the chip draws --
+    // not the catalog's own glyph vocabulary. Reading `#  FSM attribute` under the pointer while
+    // the chip says `[f]` is how a legend teaches the wrong letter.
+    addBadgeLine(symbol.owner, noun);
     addLine(symbol.display() + QStringLiteral(" -> ") + (symbol.typeText.isEmpty() ? QStringLiteral("bool") : symbol.typeText), true);
     addLine(declared);
     if ((method != nullptr) && method->isHandlerCondition())
@@ -177,6 +183,7 @@ void SMHoverCard::showSymbol(StateMachineModel& model, uint32_t /*transitionId*/
     }
 
     addLine(tr("called as %1").arg(generated), true);
+    addValidationLines(data, transitionId, symbol.symbolId);
 
     mButtonRow->setVisible(true);
     mMapArgs->setVisible(symbol.isCall);
@@ -210,7 +217,7 @@ void SMHoverCard::showCall(StateMachineModel& model, uint32_t transitionId, cons
 
     const bool isLambda = method->isLambdaCondition();
     addLine((isLambda ? QStringLiteral("{}  ") : QStringLiteral("h  ")) + method->getName()
-            + QStringLiteral(" -- ") + (isLambda ? tr("lambda") : tr("handler")));
+            + QStringLiteral(" : ") + (isLambda ? tr("lambda") : tr("handler")));
 
     const QList<MethodParameter>& params = method->getElements();
     for (int i = 0; i < params.size(); ++i)
@@ -262,6 +269,52 @@ void SMHoverCard::clearContent()
         QLayoutItem* item = mContent->takeAt(0);
         delete item->widget();
         delete item;
+    }
+}
+
+QLabel* SMHoverCard::addBadgeLine(NEGuardStyle::eOwner owner, const QString& noun)
+{
+    // `f : FSM attribute`, the badge and then what that badge means here. The letter is drawn in
+    // the owner hue so the eye ties it to the chip it came from.
+    const QString glyph = NEGuardStyle::ownerGlyph(owner);
+    QLabel* label = addLine(glyph.isEmpty() ? noun
+                                            : QStringLiteral("%1 : %2").arg(glyph, noun));
+    QPalette palette = label->palette();
+    palette.setColor(QPalette::WindowText, NEGuardStyle::ownerColor(owner));
+    label->setPalette(palette);
+    QFont font = label->font();
+    font.setBold(true);
+    label->setFont(font);
+    return label;
+}
+
+void SMHoverCard::addValidationLines(const StateMachineData& data, uint32_t transitionId, uint32_t symbolId)
+{
+    if ((transitionId == 0u) || (symbolId == 0u))
+    {
+        return;
+    }
+
+    // Only what this ELEMENT is guilty of. The transition's other findings belong to the status
+    // line and the results panel; repeating them here would make every chip of a troubled guard
+    // look equally broken.
+    for (const SMGuardValidation::Finding& finding : SMGuardValidation::validateTransition(data, transitionId))
+    {
+        if (finding.symbolId != symbolId)
+        {
+            continue;
+        }
+
+        QLabel* label = addLine(finding.message);
+        label->setWordWrap(true);
+        QPalette palette = label->palette();
+        palette.setColor(QPalette::WindowText
+                        , NEGuardStyle::severityColor((finding.severity == DocIssue::eSeverity::Error)
+                                                      ? NEGuardStyle::eSeverity::Err
+                                                      : (finding.severity == DocIssue::eSeverity::Warning)
+                                                        ? NEGuardStyle::eSeverity::Warn
+                                                        : NEGuardStyle::eSeverity::Ok));
+        label->setPalette(palette);
     }
 }
 

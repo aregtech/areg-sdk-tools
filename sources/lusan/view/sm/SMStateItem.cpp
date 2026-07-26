@@ -730,45 +730,51 @@ void SMStateItem::paintBodyRows(QPainter* painter, const QRectF& box, const QCol
     }
 }
 
-void SMStateItem::paintMiniature(QPainter* painter, const QRectF& box, const QColor& bodyColor)
+QRectF SMStateItem::miniatureRect() const
 {
     const double maxW = NESMDesign::MiniatureMaxWidth;
     const double maxH = NESMDesign::MiniatureMaxHeight;
     const double pad  = NESMDesign::MiniaturePadding;
-    if (mMiniature.isEmpty() || (box.height() < NESMDesign::StateHeaderHeight + maxH + 2.0 * pad))
+    const double height = visibleHeight();
+    if ((mComposite == false) || (mExpanded == false)
+        || (height < NESMDesign::StateHeaderHeight + maxH + (2.0 * pad)))
+    {
+        return QRectF();    // no room, or nothing to hint at
+    }
+
+    return QRectF(mSize.width() - pad - maxW, height - pad - maxH, maxW, maxH);
+}
+
+void SMStateItem::paintMiniature(QPainter* painter, const QRectF& /*box*/, const QColor& bodyColor)
+{
+    const QRectF avail = miniatureRect();
+    if (avail.isNull())
     {
         return;
     }
 
-    QRectF bounds = mMiniature.first();
-    for (const QRectF& rect : mMiniature)
-    {
-        bounds = bounds.united(rect);
-    }
-
-    if ((bounds.width() <= 0.0) || (bounds.height() <= 0.0))
-    {
-        return;
-    }
-
-    const double scale = std::min(maxW / bounds.width(), maxH / bounds.height());
-    const QRectF avail{ box.width() - pad - maxW, box.height() - pad - maxH, maxW, maxH };
-    const QPointF origin{ avail.center().x() - bounds.width() * scale / 2.0
-                        , avail.center().y() - bounds.height() * scale / 2.0 };
+    // A FIXED symbol -- one Start marker and two states -- never the real substates. The hint's job
+    // is to say "there is a machine inside", and it says exactly that whether the submachine holds
+    // three states or a million; drawing the real ones turned into an unreadable smear of hairlines
+    // the moment a level grew, and cost a scaled repaint of every substate on every frame. What is
+    // really inside is one Ctrl+Alt hover away (\ref SMScene::showSubmachinePeek).
+    const double w = avail.width();
+    const double h = avail.height();
+    const QRectF start{ avail.left(), avail.top() + (h * 0.34), w * 0.30, h * 0.32 };
+    const QRectF first{ avail.left() + (w * 0.44), avail.top() + (h * 0.06), w * 0.56, h * 0.36 };
+    const QRectF second{ avail.left() + (w * 0.44), avail.top() + (h * 0.58), w * 0.56, h * 0.36 };
 
     painter->save();
     painter->setOpacity(painter->opacity() * 0.55);
     painter->setPen(QPen(NESMDesign::contrastTextColor(bodyColor), 1.0));
     painter->setBrush(Qt::NoBrush);
-    for (const QRectF& rect : mMiniature)
-    {
-        const QRectF scaled{ origin.x() + (rect.x() - bounds.x()) * scale
-                           , origin.y() + (rect.y() - bounds.y()) * scale
-                           , std::max(rect.width() * scale, 2.0)
-                           , std::max(rect.height() * scale, 2.0) };
-        painter->drawRoundedRect(scaled, 1.5, 1.5);
-    }
-
+    painter->drawEllipse(start);                    // the Start marker, drawn as the pill it is
+    painter->drawRoundedRect(first, 1.5, 1.5);
+    painter->drawRoundedRect(second, 1.5, 1.5);
+    // One stub from the marker into the first state: three loose shapes read as three shapes, and a
+    // single connector is what makes them read as a machine.
+    painter->drawLine(QPointF(start.right(), start.center().y())
+                    , QPointF(first.left(), start.center().y()));
     painter->restore();
 }
 
@@ -951,19 +957,6 @@ void SMStateItem::updateFromModel()
 
     rebuildRows(*state);
 
-    mMiniature.clear();
-    if (mComposite)
-    {
-        for (const SMStateEntry* child : state->getNestedStates()->getElements())
-        {
-            const SMLayoutNode* childNode = data.getLayout().findNode(child->getId());
-            if (childNode != nullptr)
-            {
-                mMiniature.append(QRectF(childNode->x, childNode->y, childNode->width, childNode->height));
-            }
-        }
-    }
-
     const SMLayoutNode* node = data.getLayout().findNode(getElementId());
     if (node != nullptr)
     {
@@ -1133,9 +1126,31 @@ void SMStateItem::rebuildRows(const SMStateEntry& state)
 
 void SMStateItem::hoverMoveEvent(QGraphicsSceneHoverEvent* event)
 {
+    // Ctrl+Alt over the submachine hint opens the quick view. A DIFFERENT modifier from the link
+    // below on purpose: the hint sits inside the body, so Ctrl+Shift there would have to mean two
+    // things at once depending on a few pixels of pointer position.
+    const Qt::KeyboardModifiers mods = event->modifiers();
+    const bool peekMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::AltModifier);
+    const QRectF hint = miniatureRect();
+    if (peekMode && (hint.isNull() == false) && hint.contains(event->pos()))
+    {
+        if (SMScene* canvas = getCanvas())
+        {
+            canvas->showSubmachinePeek(getElementId(), event->screenPos());
+        }
+
+        setCursor(Qt::WhatsThisCursor);
+        SMCanvasItem::hoverMoveEvent(event);
+        return;
+    }
+
+    if (SMScene* canvas = getCanvas())
+    {
+        canvas->hideSubmachinePeek();
+    }
+
     // Ctrl+Shift held turns each referenced body row into a link: underline the row under the
     // pointer and switch to a link cursor, ahead of the normal resize-handle cursors.
-    const Qt::KeyboardModifiers mods = event->modifiers();
     const bool linkMode = mods.testFlag(Qt::ControlModifier) && mods.testFlag(Qt::ShiftModifier);
     const int linkRow = linkMode ? bodyRowAt(event->pos()) : -1;
     if (linkRow != mHoverRow)
@@ -1188,6 +1203,11 @@ void SMStateItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
     {
         mHoverRow = -1;
         update();
+    }
+
+    if (SMScene* canvas = getCanvas())
+    {
+        canvas->hideSubmachinePeek();
     }
 
     unsetCursor();

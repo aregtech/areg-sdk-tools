@@ -69,7 +69,7 @@ void SMSignatureCard::showFor(const SMGuardSymbol& call, int activeParam, const 
     }
     if (call.provenance.isEmpty() == false)
     {
-        sig += QStringLiteral(" -- ") + call.provenance.toHtmlEscaped();
+        sig += QStringLiteral(" : ") + call.provenance.toHtmlEscaped();
     }
 
     mSignature->setText(sig);
@@ -77,7 +77,7 @@ void SMSignatureCard::showFor(const SMGuardSymbol& call, int activeParam, const 
     if ((activeParam >= 0) && (activeParam < call.paramNames.size()))
     {
         const QString type = (activeParam < call.paramTypes.size()) ? call.paramTypes.at(activeParam) : QString();
-        mActive->setText(tr("%1 : %2 -- pick or type the value to pass")
+        mActive->setText(tr("%1 : %2, pick or type the value to pass")
                              .arg(call.paramNames.at(activeParam), type));
         mActive->show();
     }

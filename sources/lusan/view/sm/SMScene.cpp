@@ -28,6 +28,10 @@
 #include "lusan/view/sm/SMEdgeItem.hpp"
 #include "lusan/view/sm/SMNoteItem.hpp"
 #include "lusan/view/sm/SMStateItem.hpp"
+#include "lusan/view/sm/SMSubmachinePeek.hpp"
+
+#include "lusan/data/sm/SMLayoutData.hpp"
+#include "lusan/data/sm/SMState.hpp"
 
 #include <QCoreApplication>
 #include <QGraphicsProxyWidget>
@@ -65,6 +69,7 @@ SMScene::SMScene(StateMachineModel& model, uint32_t levelId, QObject* parent /*=
     , mSnapToGrid   (true)
     , mMouseDrag    (false)
     , mSyncSelection(false)
+    , mPeek         (nullptr)
 {
     const double half{ NESMDesign::SceneExtent / 2.0 };
     setSceneRect(-half, -half, NESMDesign::SceneExtent, NESMDesign::SceneExtent);
@@ -926,6 +931,57 @@ void SMScene::requestGotoRefs(const QList<SMReferences::Ref>& refs)
     if (refs.isEmpty() == false)
     {
         emit signalGotoRefsRequested(refs);
+    }
+}
+
+void SMScene::showSubmachinePeek(uint32_t stateId, const QPoint& globalPos)
+{
+    const StateMachineData& data = mModel.getData();
+    const SMStateEntry* state = data.findStateById(stateId);
+    if ((state == nullptr) || (state->hasNestedStates() == false))
+    {
+        hideSubmachinePeek();
+        return;
+    }
+
+    const QList<SMStateEntry*>& children = state->getNestedStates()->getElements();
+    QList<SMSubmachinePeek::Shape> shapes;
+    for (const SMStateEntry* child : children)
+    {
+        if (shapes.size() >= SMSubmachinePeek::MaxShapes)
+        {
+            break;      // a fixed-size view costs a fixed amount to build, too
+        }
+
+        const SMLayoutNode* node = (child != nullptr) ? data.getLayout().findNode(child->getId()) : nullptr;
+        if (node != nullptr)
+        {
+            shapes.append({ QRectF(node->x, node->y, node->width, node->height), child->getKind() });
+        }
+    }
+
+    if (shapes.isEmpty())
+    {
+        hideSubmachinePeek();   // a level whose nodes have no layout yet has no silhouette to show
+        return;
+    }
+
+    if (mPeek == nullptr)
+    {
+        // Parented to the view, not to the scene: the popup is a widget, and it must die with the
+        // window rather than outlive the level it belongs to.
+        const QList<QGraphicsView*> canvasViews = views();
+        mPeek = new SMSubmachinePeek(canvasViews.isEmpty() ? nullptr : canvasViews.first());
+    }
+
+    mPeek->showFor(state->getName(), shapes, static_cast<int>(children.size()), globalPos);
+}
+
+void SMScene::hideSubmachinePeek()
+{
+    if (mPeek != nullptr)
+    {
+        mPeek->hide();
     }
 }
 

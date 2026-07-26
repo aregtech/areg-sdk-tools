@@ -543,7 +543,7 @@ namespace
 
             default:
                 return unresolved(text, idTok.start, span
-                                , QStringLiteral("unknown type '%1' -- not a data type of this machine").arg(parts.first()));
+                                , QStringLiteral("unknown type '%1': this machine declares no such data type").arg(parts.first()));
             }
         }
 
@@ -560,7 +560,7 @@ namespace
                 const bool more = (members.size() > MAX_LISTED);
                 members = members.mid(0, MAX_LISTED);
                 if (more) { members.append(QStringLiteral("...")); }
-                message += QStringLiteral(" -- expected one of: %1").arg(members.join(QStringLiteral(", ")));
+                message += QStringLiteral(". Expected one of: %1").arg(members.join(QStringLiteral(", ")));
             }
 
             return message;
@@ -927,7 +927,7 @@ namespace
             // text verbatim without error. A named condition method is a call (`name(...)`) resolved
             // elsewhere; an inline lambda is an island (`{...}`); literals are handled before here.
             return unresolved(name, idTok.start, idTok.len
-                            , QStringLiteral("unknown symbol '%1' -- not a defined parameter, attribute, or constant").arg(name));
+                            , QStringLiteral("unknown symbol '%1': it is not a defined parameter, attribute, or constant").arg(name));
         }
 
         static bool cmpOp(eTok t, eCmpOp& op)

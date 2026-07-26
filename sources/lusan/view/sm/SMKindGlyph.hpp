@@ -60,7 +60,7 @@ namespace SMKindGlyph
         , Exit          //!< The state's exit band: an arrow running away from a bar, `<-|`.
         , ExitAlt       //!< The alternative exit mark, `|<-` -- see \c ExitBandGlyph in the .cpp.
         , Internal      //!< The do band and an internal transition: a self-loop.
-        , Trigger       //!< A trigger method as a stimulus: a small inbound call arrow.
+        , Trigger       //!< A trigger method as a stimulus. Carries NO mark -- see \ref isDrawn.
         , Event         //!< An event, sent or awaited: a lightning bolt.
         , TimerStart    //!< A timer start: a clock face with a play triangle.
         , TimerStop     //!< A timer stop: a clock face with a stop square.
@@ -85,6 +85,16 @@ namespace SMKindGlyph
 
     //!< The side of a drawn mark in device-independent pixels (the body-row and edge-label size).
     constexpr int       GlyphSize   { 12 };
+
+    /**
+     * \brief   How much of the room it is given a STIMULUS mark actually fills -- the event bolt and
+     *          the timer clock, the only two marks left that stand for a kind. At full size they
+     *          weighed as much as the name beside them; the mark is a cue, not a second word.
+     *          One number resizes both without touching either mark's proportions: raise it to 1.0
+     *          to restore the original size. Band marks (enter / exit / do) are deliberately NOT
+     *          scaled -- they are position markers, and shrinking them blurs the enter/exit pair.
+     **/
+    constexpr double    StimulusGlyphScale { 0.70 };
 
     /**
      * \brief   Draws the mark centered in \p rect, in \p color. Does nothing for \c eGlyph::None,

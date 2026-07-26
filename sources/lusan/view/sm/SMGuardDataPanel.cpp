@@ -345,7 +345,7 @@ void SMGuardDataPanel::rebuild(void)
             QListWidgetItem* row = new QListWidgetItem(label, mList);
             row->setForeground(NEGuardStyle::ownerColor(symbol.owner));
             row->setData(RoleSymbol, mSymbols.size());
-            row->setToolTip(tr("%1 -- double-click to insert %2")
+            row->setToolTip(tr("%1. Double-click to insert %2")
                             .arg(symbol.kindNoun(), symbol.mention()));
             mSymbols.append(symbol);
         }

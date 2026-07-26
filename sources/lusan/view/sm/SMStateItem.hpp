@@ -261,8 +261,16 @@ private:
     void paintBodyRows(QPainter* painter, const QRectF& box, const QColor& bodyColor);
 
     /**
-     * \brief   Paints the submachine miniature hint of a composite state into the
-     *          bottom-right body corner: the nested level's node boxes, scaled to fit.
+     * \brief   The bottom-right body corner the submachine hint occupies, in item coordinates, and
+     *          the hot zone of the Ctrl+Alt quick view. Null when nothing is drawn there: the state
+     *          has no real submachine, is collapsed, or is too short to give the corner away.
+     **/
+    QRectF miniatureRect() const;
+
+    /**
+     * \brief   Paints the submachine hint of a composite state into the bottom-right body corner:
+     *          a FIXED symbol (a Start marker and two states), not the substates themselves --
+     *          see the note in the definition.
      **/
     void paintMiniature(QPainter* painter, const QRectF& box, const QColor& bodyColor);
 
@@ -381,7 +389,6 @@ private:
     QString                     mColorName;     //!< The persisted body color (empty = theme).
     QString                     mHeaderColorName; //!< The persisted header color (empty = derived).
     QList<BodyRow>              mRows;          //!< The behavior rows, in display order.
-    QList<QRectF>               mMiniature;     //!< The nested level's node boxes (scene units).
     bool                        mHasNote;       //!< A note is bound to this state (badge shown).
     eHandle                     mResizeHandle;  //!< The handle grabbed by the resize drag.
     QRectF                      mResizeStart;   //!< The box scene geometry at resize start.

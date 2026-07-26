@@ -20,6 +20,7 @@
 #include "lusan/view/sm/NEGuardStyle.hpp"
 
 #include <QApplication>
+#include <QCoreApplication>
 #include <QPalette>
 
 bool NEGuardStyle::isDark()
@@ -86,5 +87,25 @@ QString NEGuardStyle::ownerGlyph(eOwner owner)
     case eOwner::Literal:   return QStringLiteral("=");
     case eOwner::Operator:
     default:                return QString();
+    }
+}
+
+QString NEGuardStyle::ownerMeaning(eOwner owner)
+{
+    switch (owner)
+    {
+    case eOwner::Stimulus:
+        return QCoreApplication::translate("NEGuardStyle", "an argument of the stimulus that fires this transition");
+    case eOwner::Fsm:
+        return QCoreApplication::translate("NEGuardStyle", "declared by the machine itself: an attribute, a constant, or a named lambda");
+    case eOwner::Handler:
+        return QCoreApplication::translate("NEGuardStyle", "a condition method your handler implements");
+    case eOwner::Raw:
+        return QCoreApplication::translate("NEGuardStyle", "verbatim C++: Lusan never parses it, so nothing inside is checked");
+    case eOwner::Literal:
+        return QCoreApplication::translate("NEGuardStyle", "a literal value written in place");
+    case eOwner::Operator:
+    default:
+        return QString();
     }
 }

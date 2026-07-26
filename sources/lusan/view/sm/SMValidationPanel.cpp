@@ -82,19 +82,29 @@ namespace
 
     /**
      * The message names the symbol; this names the RULE, so a row explains itself without a
-     * trip to the spec. Keyed by SMIssue::rule -- 10.1 error numbers plain, 10.2 warnings
-     * offset by SMValidator::WARNING_RULE_BASE.
+     * trip to the spec. Keyed by SMIssue::rule: 10.1 error numbers plain, 10.2 advisories (both
+     * warning and info) offset by SMValidator::WARNING_RULE_BASE.
      **/
     QString ruleDetail(int rule, SMIssue::eSeverity severity)
     {
+        // These numbers are the 10.2 rule numbers as the engine files them. They were off by one
+        // against the engine, so the one advisory a clean document actually produces fell through
+        // to the generic default and explained nothing.
         if (rule > SMValidator::WARNING_RULE_BASE)
         {
             switch (rule - SMValidator::WARNING_RULE_BASE)
             {
-            case 1:  return QObject::tr("Nothing in the machine reacts to this declaration. Either use it or remove it.");
-            case 2:  return QObject::tr("The state cannot be reached by any transition, so its behaviour never runs.");
-            case 3:  return QObject::tr("The state has no way out: once entered, the machine stays there.");
-            default: return QObject::tr("Advisory only -- the document still generates.");
+            case 1:  return QObject::tr("The state cannot be reached by any transition, so its behaviour never runs.");
+            case 2:  return QObject::tr("The state has no way out. Once the machine enters it, it stays there.");
+            case 3:  return QObject::tr("An earlier transition on the same stimulus always fires, so this one never gets its turn.");
+            case 4:  return QObject::tr("Nothing in the machine uses this declaration. Keep it if you are about to, or remove it.");
+            case 5:  return QObject::tr("Only one half of the event is here. An event needs something that sends it and a transition that reacts to it.");
+            case 6:  return QObject::tr("Only one half of the timer is here. A timer needs something that starts it and a transition that reacts to it.");
+            case 7:  return QObject::tr("The transition reacts to the stimulus and then does nothing with it, so it has no visible effect.");
+            case 8:  return QObject::tr("The attribute is used in one direction only. Check whether the missing read or write was forgotten.");
+            case 10: return QObject::tr("History restores the substate the machine left last time, but nothing ever comes back to this state to use it.");
+            case 11: return QObject::tr("The inline code block generates nothing. Write the code, or remove the block.");
+            default: return QObject::tr("Advisory only. The document still generates.");
             }
         }
 
@@ -103,9 +113,9 @@ namespace
         case 1:  return QObject::tr("Every machine level needs exactly one Start state; it marks where execution begins.");
         case 2:  return QObject::tr("A level may declare only one Start state, otherwise the entry point is ambiguous.");
         case 3:  return QObject::tr("A Final state is terminal and cannot have outgoing transitions.");
-        case 4:  return QObject::tr("Two entries of the SAME kind share this name. Names are unique per kind -- a trigger, an action and a condition may all be called the same, but two triggers may not.");
+        case 4:  return QObject::tr("Two entries of the SAME kind share this name. Names are unique per kind, so a trigger, an action and a condition may all be called the same, but two triggers may not.");
         case 5:  return QObject::tr("Identifiers must be usable in generated code: a letter or underscore first, then letters, digits or underscores.");
-        case 6:  return QObject::tr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind -- an action and a trigger of the same name are different declarations.");
+        case 6:  return QObject::tr("The name is referenced here but declared nowhere of that kind. Check the spelling, and check the kind: an action and a trigger of the same name are different declarations.");
         case 7:  return QObject::tr("A transition may only target a state of its own level. Cross-level jumps go through the parent.");
         case 8:  return QObject::tr("Every element ID must be unique in the document; a repeat breaks layout and reference tracking.");
         case 9:  return QObject::tr("Start and Final are pseudo-states: they mark entry and termination and cannot own substates or a submachine.");
@@ -117,7 +127,7 @@ namespace
         case 16: return QObject::tr("The declared type is not in the data-type registry.");
         case 18: return QObject::tr("A submachine belongs on a composite state; Start and Final cannot carry one.");
         case 20: return QObject::tr("The condition row is incomplete: an operator needs both operands.");
-        case 21: return QObject::tr("A condition that takes parameters may appear as the LEFT operand only -- the right side must be a plain value.");
+        case 21: return QObject::tr("A condition that takes parameters may appear as the LEFT operand only. The right side must be a plain value.");
         case 23: return QObject::tr("The value source and the target disagree; pick a source of a compatible kind.");
         case 24: return QObject::tr("The element refers to itself, directly or through a cycle.");
         default: return (severity == SMIssue::eSeverity::Error)

@@ -40,6 +40,7 @@ class SMCanvasItem;
 class SMEdgeItem;
 class SMNoteItem;
 class SMStateItem;
+class SMSubmachinePeek;
 class StateMachineModel;
 struct SMLayoutEdge;
 enum class eDocElementKind;
@@ -314,6 +315,19 @@ public:
      **/
     void requestGotoRefs(const QList<SMReferences::Ref>& refs);
 
+    /**
+     * \brief   Shows the submachine quick view over the composite state \p stateId (the Ctrl+Alt
+     *          hover on its corner hint). The scene builds it, not the item: reading the nested
+     *          level is a model read, and a canvas item holds no model data. Nothing is shown for
+     *          a state without a real submachine.
+     * \param   stateId     The composite state whose level is previewed.
+     * \param   globalPos   The pointer position, in screen coordinates.
+     **/
+    void showSubmachinePeek(uint32_t stateId, const QPoint& globalPos);
+
+    //!< Hides the submachine quick view; harmless when none is open.
+    void hideSubmachinePeek();
+
 //////////////////////////////////////////////////////////////////////////
 // Internal: item registry (called by SMCanvasItem on scene changes)
 //////////////////////////////////////////////////////////////////////////
@@ -504,6 +518,7 @@ private:
     bool                            mSnapToGrid;    //!< Snap interactive moves to the grid.
     bool                            mMouseDrag;     //!< A mouse drag is in progress.
     bool                            mSyncSelection; //!< Guards the two-way selection sync.
+    SMSubmachinePeek*               mPeek;          //!< The submachine quick view, built on first use.
 };
 
 //////////////////////////////////////////////////////////////////////////
