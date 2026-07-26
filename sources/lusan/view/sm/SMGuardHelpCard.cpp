@@ -112,6 +112,7 @@ namespace
 
 SMGuardHelpCard::SMGuardHelpCard(QWidget* parent /*= nullptr*/)
     : QFrame(parent)
+    , mScroll(nullptr)
     , mContent(nullptr)
 {
     setObjectName(QStringLiteral("smGuardHelpCard"));
@@ -123,10 +124,8 @@ SMGuardHelpCard::SMGuardHelpCard(QWidget* parent /*= nullptr*/)
 
 void SMGuardHelpCard::buildUi()
 {
-    // The content lives inside a scroll area so the card stays fully readable even when the screen is
-    // smaller than the card's natural size: popupAt() caps the card to the screen, and anything that
-    // no longer fits becomes scrollable rather than clipped or pushed off-screen.
     QScrollArea* scroll = new QScrollArea(this);
+    mScroll = scroll;
     scroll->setObjectName(QStringLiteral("smGuardHelpScroll"));
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
@@ -270,17 +269,11 @@ QSize SMGuardHelpCard::sizeHint() const
 
 void SMGuardHelpCard::popupAt(const QWidget& anchor)
 {
-    // resize(sizeHint()), not adjustSize(): adjustSize clamps a WINDOW to two thirds of the screen,
-    // which on a tall card silently cuts off its last section even though the screen has room. The
-    // real cap is the one below, against the screen's available geometry.
     resize(sizeHint());
     const QRect anchorRect(anchor.mapToGlobal(QPoint(0, 0)), anchor.size());
     const QRect hostRect = (anchor.window() != nullptr) ? anchor.window()->frameGeometry() : QRect();
     const QRect screenBounds = screenBoundsFor(anchor);
 
-    // Never let the card exceed the visible screen: a card larger than the screen cannot be brought
-    // fully on-screen by repositioning alone, so cap it (the scroll area keeps the content reachable).
-    // This guarantees the clamped position below leaves the whole popup inside screenBounds.
     if (screenBounds.isValid())
     {
         const int maxW = qMax(0, screenBounds.width() - 2 * PopupGap);
@@ -331,4 +324,9 @@ void SMGuardHelpCard::popupAt(const QWidget& anchor)
     move(x, y);
     show();
     raise();
+
+    if (mScroll != nullptr)
+    {
+        mScroll->setFocus(Qt::PopupFocusReason);
+    }
 }

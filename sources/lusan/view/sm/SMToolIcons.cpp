@@ -321,18 +321,10 @@ namespace
 
         case SMToolIcons::eIcon::NewTrigger:
         {
-            // A filled lightning bolt: the stimulus that fires a transition.
-            QPainterPath bolt;
-            bolt.moveTo(18.0, 5.0);
-            bolt.lineTo(9.0, 18.0);
-            bolt.lineTo(14.5, 18.0);
-            bolt.lineTo(13.0, 27.0);
-            bolt.lineTo(23.0, 13.5);
-            bolt.lineTo(17.0, 13.5);
-            bolt.closeSubpath();
-            p.setPen(QPen(color, 1.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            p.drawRoundedRect(QRectF(6.0, 16.0, 20.0, 10.0), 3.0, 3.0);
             p.setBrush(color);
-            p.drawPath(bolt);
+            p.drawRoundedRect(QRectF(10.5, 10.0, 11.0, 6.5), 2.5, 2.5);
+            p.setBrush(Qt::NoBrush);
             break;
         }
 
@@ -368,10 +360,6 @@ namespace
 
         case SMToolIcons::eIcon::NewEvent:
         {
-            // The event glyph is a lightning bolt, the same family as the trigger stimulus, shared by
-            // every event surface (the Events page and the state-body event row). The square signal
-            // pulse is kept below behind a compile-time switch so the look can be swapped while
-            // experimenting: flip EVENT_USE_PULSE to true to render the pulse instead of the bolt.
             constexpr bool EVENT_USE_PULSE = false;
             if constexpr (EVENT_USE_PULSE)
             {

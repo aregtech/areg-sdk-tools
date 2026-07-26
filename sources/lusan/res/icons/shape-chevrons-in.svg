@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Shape library: two chevrons running into a bar -- something arriving from outside.
+     Candidate glyph for a stimulus. Shares its idea with the state entry mark. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"
+     fill="none" stroke="#7c3aed" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M16 18 L28 32 L16 46"/>
+  <path d="M30 18 L42 32 L30 46"/>
+  <path d="M50 16 L50 48"/>
+</svg>

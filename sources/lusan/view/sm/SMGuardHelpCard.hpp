@@ -24,6 +24,8 @@
  ************************************************************************/
 #include <QFrame>
 
+class QScrollArea;
+
 /**
  * \class   SMGuardHelpCard
  * \brief   The one-screen static help card, opened by the `(?)` button or F1: what a condition
@@ -50,7 +52,8 @@ public:
 private:
     void buildUi();
 
-    QWidget*    mContent;   //!< The scrolled content, whose hint is the card's real size.
+    QScrollArea*    mScroll;    //!< Keeps the card reachable when the screen is smaller than it.
+    QWidget*        mContent;   //!< The scrolled content, whose hint is the card's real size.
 };
 
 #endif  // LUSAN_VIEW_SM_SMGUARDHELPCARD_HPP
